@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <child name="difference_map">
+			<child name="name" value="DM"/>
+            <child name="numiter" value="2000"/>
+            <child name="numiter_contiguous" value="1"/>
+            <child name="fourier_relax_factor" value="0.01"/>
+            <child name="alpha" value="1"/>
+            <child name="probe_update_start" value="2"/>
+            <child name="update_object_first" value="True"/>
+            <child name="overlap_converge_factor" value="0.05"/>
+            <child name="overlap_max_iterations" value="10"/>
+            <child name="probe_support" value="0.7"/>
+            <child name="probe_inertia" value="0.001"/>
+            <child name="object_inertia" value="0.1"/>
+            <child name="obj_smooth_std" value="20"/>
+            <child name="clip_object" value="None"/>
+        </child>
+        <child name="ML">
+            <child name="someone_has_to" value="fill_up_the_emptiness"/>
+        </child>
+		<child name="EPIE">
+		    <child name="stuff_missing_here" value="too"/>
+        </child>
+</root>
