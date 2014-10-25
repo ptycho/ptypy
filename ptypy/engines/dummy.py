@@ -9,11 +9,13 @@ This file is part of the PTYPY package.
 """
 
 import time
+import numpy as np
 
 import ptypy
 from .. import utils as u
 from ..utils import parallel
 from . import BaseEngine
+
 #import utils
 
 __all__ = ['Dummy']
@@ -60,7 +62,7 @@ class Dummy(BaseEngine):
         time.sleep(self.itertime)
         # virtual error reduces 10%
         self.error *= 0.9
-        return error
+        return self.error
         
     def engine_finalize(self):
         """
