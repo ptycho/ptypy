@@ -209,7 +209,7 @@ class Ptycho(Base):
         
     @property
     def pods(self):
-        return self._pool['P']
+        return self._pool.get('P', {})
         
     @property
     def containers(self):
