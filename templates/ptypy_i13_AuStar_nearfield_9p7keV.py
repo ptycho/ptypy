@@ -141,23 +141,23 @@ p.engine.ML = u.Param()
 p.engines = u.Param()                                  # (100) empty structure to be filled with engines
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter = 50
+p.engines.engine00.numiter = 3
 p.engines.engine00.object_inertia = 1.
 p.engines.engine00.fourier_relax_factor = 0.1
-p.engines.engine01 = u.Param()
-p.engines.engine01.name = 'ML'
-p.engines.engine01.numiter = 50
+#p.engines.engine01 = u.Param()
+#p.engines.engine01.name = 'ML'
+#p.engines.engine01.numiter = 50
 p.simulation = u.Param()
 p.simulation.position_noise = 1e-10               # (104) 
 p.simulation.detector = 'GenericCCD32bit' #None #'PILATUS_300K' #None #
 
 ## UNCOMMENT FOR SIMULATION ###
-P = sim.simulate_basic_with_pods(p,save=True) 
+#P = sim.simulate_basic_with_pods(p,save=True) 
 
 ## UNCOMMENT FOR RECONTRUCTIOON ####
-#p.model.sample.source=None
-#p.model.xy.scan_type=None
-#p.model.illumination.phase_noise_rms=None
-#P = Ptycho(p,level=3)
-#P.save_run(kind='minimal')
+p.model.sample.source=None
+p.model.xy.scan_type=None
+p.model.illumination.phase_noise_rms=None
+P = Ptycho(p,level=3)
+P.save_run(kind='minimal')
          
