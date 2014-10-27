@@ -80,8 +80,10 @@ def from_pars(shape,lam,pars=None,dtype=np.complex):
         if p.formula is not None or ri is not None:
             # use only magnitude of obj and scale to [0 1]
             if ri is None:
-                logger.info("Quering cxro database for refractive index in object creation")
-                energy, delta,beta = iofr(p.formula,lam/keV2m(1e-3),density=p.density)
+                en = u.keV2m(1e-3)/lam
+                logger.info("Quering cxro database for refractive index \
+                 in object creation with paramters:\n Formula=%s Energy=%d Density=%.2f" % (p.formula,en,p.density))
+                energy, delta,beta = iofr(p.formula,en,density=p.density)
                 ri = - delta +1j*beta
                 
             else:
@@ -182,12 +184,13 @@ def iofr(formula, energy,density=-1, npts=100):
     t = response.read()
     datafile = t[t.find('/tmp/'):].split('"')[0]
 
-    url = server + datafile
+    url = cxro_server + datafile
     req = urllib2.Request(url)
     response = urllib2.urlopen(req)
     data = response.read()
 
     d = data.split('\n')
+    print d
     dt = np.array([[float(x) for x in dd.split()] for dd in d[2:] if dd])
 
     #u.logger.info('done, retrieved: ' +  d[0].strip())

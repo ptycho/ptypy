@@ -8,7 +8,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import os
-from .. import io
 
 __all__ = ['Param', 'asParam'] # 'load',]
 
@@ -390,6 +389,8 @@ def load(filename):
     """\
     Helper function to load a parameter file
     """
+    from .. import io
+
     filename = os.path.abspath(os.path.expanduser(filename)) 
     param_dict = io.h5read(filename)
     param = Param(param_dict)
