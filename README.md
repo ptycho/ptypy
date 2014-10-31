@@ -1,6 +1,8 @@
 PTYPY - Ptychography Reconstruction for Python
 ==============================================
 
+[![DOI](https://zenodo.org/badge/6834/ptycho/ptypy.png)](http://dx.doi.org/10.5281/zenodo.12480)
+
 Ptypy (pronounced typy, forget the p, as in ptychography or psychology) is a
 reconstruction package for ptychographic datasets.
 
@@ -21,7 +23,6 @@ Currently implemented:
 - Difference map algorithm with power bound constraint
 - Maximum Likelihood with preconditioners and regularizers.
 - Mixed-state reconstructions of probe and object
-- Multiple-wavelength reconstruction
 - On-the-fly reconstructions (while data is being acquired) 
 
 Installation
