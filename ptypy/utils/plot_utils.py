@@ -47,7 +47,7 @@ else:
     mpl_backend = None
 
 __all__ = ['P1A_to_HSV', 'HSV_to_RGB', 'imsave', 'imload', 'franzmap',\
-           'pause', 'plot_3d_array']
+           'pause', 'plot_3d_array', 'rmphaseramp']
 
 # Fix tif import problem
 Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
@@ -312,5 +312,62 @@ def plot_3d_array(data, axis=0, title='3d', cmap='gray', interpolation='nearest'
 
     sframe.on_changed(update)
     return ax     
+
+def rmphaseramp(a, weight=None, return_phaseramp=False):
+    """\
+    Attempts to remove the phase ramp in a two-dimensional complex array ``a``.
+
+    Parameters
+    ----------
+    a : complex 2D-array
+        Input image as complex 2D-array.
+
+    weight : {'abs', None}, Defualt=None, optional
+        Use 'abs' for weighted phaseramp.
+
+    return_phaseramp : {Ture, False}, Defualt=False, optional
+        Use Ture to get also the phaseramp array ``p``.
+
+
+    Returns
+    --------
+    a*p : 2D-array
+        Modified 2D-array.
+    (a*p, p) : tuple
+        Modified 2D-array and phaseramp if ``return_phaseramp`` = True.
+
+
+    Examples
+    --------
+    >>> b = rmphaseramp(image)
+    >>> b, p = rmphaseramp(image , return_phaseramp=True)
+    """
+
+    useweight = True
+    if weight is None:
+        useweight = False
+    elif weight=='abs':
+        weight = np.abs(a)
+
+    ph = np.exp(1j*np.angle(a))
+    [gx, gy] = np.gradient(ph)
+    gx = -np.real(1j*gx/ph)
+    gy = -np.real(1j*gy/ph)
+
+    if useweight:
+        nrm = weight.sum()
+        agx = (gx*weight).sum() / nrm
+        agy = (gy*weight).sum() / nrm
+    else:
+	agx = gx.mean()
+        agy = gy.mean()
+
+    (xx,yy) = np.indices(a.shape)
+    p = np.exp(-1j*(agx*xx + agy*yy))
+
+    if return_phaseramp:
+        return a*p, p
+    else:
+        return a*p
 
 

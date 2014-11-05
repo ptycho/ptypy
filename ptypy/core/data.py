@@ -390,8 +390,14 @@ class DataScan(object):
             raise RuntimeError("Attempting to save DataScan instance that does not contain data.")
 
         # There is some work to do here if the data is distributed among many processes
-        # In the long run consider using hdf5 support to do this more cleanly. 
-        Nframes = len(self.datalist)
+        # In the long run consider using hdf5 support to do this more cleanly.
+        
+        # If data was attached dynamically it is possible that datalist is not consistent)
+        if len(self.data) != len(self.datalist):
+            if parallel.MPIenabled:
+                raise RuntimeError('Inconsistent datalist while running MPI.')
+            Nframes = len(self.data)
+            
         if parallel.MPIenabled:
             for i in range(Nframes):
                 if parallel.master:
@@ -433,14 +439,18 @@ class DataScan(object):
             parallel.barrier()
             return
         
-        # Transform into a numpy array for saving.
-        data = np.asarray(self.datalist)
-        mask = np.asarray(self.masklist)
-        
+        if parallel.MPIenabled:
+            # Transform into a numpy array for saving.
+            data = np.asarray(self.datalist)
+            mask = np.asarray(self.masklist)
+        else:
+            data = self.data
+            mask = self.mask
+
         # Sanity check
         if data.shape != self.scan_info.shape:
             error_string = "Attempting to save DataScan instance with non-native data dimension "
-            error_string += "[data.shape = %s, while scan_info.shape = %s]" % (str(self.data.shape), str(self.scan_info.shape))
+            error_string += "[data.shape = %s, while scan_info.shape = %s]" % (str(data.shape), str(self.scan_info.shape))
             raise RuntimeError(error_string)
             
         # Sanity check for mask too?

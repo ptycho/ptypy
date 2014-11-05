@@ -525,7 +525,7 @@ def h5info(filename, output=None):
     
     [17/01/2012 guillaume potdevin]
     added optional argument output:
-    	if output is set to 1, then the printed string is returned
+        if output is set to 1, then the printed string is returned
     """
 
     indent = 4
@@ -671,5 +671,5 @@ def h5info(filename, output=None):
     
     # return string if output variable passed as option
     if output != None:
-	    return outstring
+        return outstring
     

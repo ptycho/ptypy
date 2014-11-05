@@ -58,6 +58,7 @@ def ID_generator(size=6, chars=string.ascii_uppercase + string.digits):
     """
     return ''.join(random.choice(chars) for x in range(size))
 
+
 def is_str(s):
     """\
     Test if s behaves like a string.

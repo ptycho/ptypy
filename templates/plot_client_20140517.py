@@ -4,14 +4,12 @@ mpl.rcParams['backend']='Qt4Agg'
 from matplotlib import gridspec
 
 from matplotlib import pyplot as plt
-from pyE17 import utils as U
 
 from ptypy import utils as u
-from ptypy.interaction import Client
+from ptypy.io.interaction import Client
 import time
 import numpy as np
 from numpy import fft as FFT
-from pyE17 import utils as U
 
 
 interaction= u.Param()
@@ -397,10 +395,10 @@ class Plot_Client(object):
             if ind[1]=='p' or ind[1]=='c':
                 if pp.rm_pr:                    
                     if weight is None:
-                        ndat = U.rmphaseramp(dat, np.abs(dat) * plot_mask.astype(float))
+                        ndat = u.rmphaseramp(dat, np.abs(dat) * plot_mask.astype(float))
                         mean_ndat = (ndat*plot_mask).sum() / plot_mask.sum()
                     else:
-                        ndat = U.rmphaseramp(dat, np.abs(dat) * weight)
+                        ndat = u.rmphaseramp(dat, np.abs(dat) * weight)
                         mean_ndat = (ndat*weight).sum() / weight.sum()
                 else:
                     ndat=dat.copy()
@@ -416,7 +414,7 @@ class Plot_Client(object):
                 info = 'P=%1.1e' % mm
                 
             if ind[1]=='c':
-                dat_i = U.imsave(np.flipud(ndat))
+                dat_i = u.imsave(np.flipud(ndat))
                 if not axes[ii].images:
                     axes[ii].imshow(dat_i)
                     self.pp.setp(axes[ii].get_xticklabels(), fontsize=8)
@@ -468,7 +466,7 @@ class Plot_Client(object):
         while True:
             if len(self.client.pending) != 0:
                 # at this point the gui should be able to react again
-                U.pause(timeout)
+                u.pause(timeout)
             else:
                 self.mv_data_from_client_buffer()
                 self.plot_all()

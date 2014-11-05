@@ -16,3 +16,4 @@ import illumination
 import sample
 import geometry
 import save_load
+import data

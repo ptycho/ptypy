@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+"""\
 Plotting tool.
 
 This file is part of the PTYPY package.
@@ -73,14 +73,15 @@ templates= dict(
     ),
     default = default_template
 )
-"""
+"""\
 class Plot_Client(Client):
     
     DEFAULT_PLOT = 
     
     def __init__(self, client_pars=None, plot_template=None, interactive=True, **kwargs)
         
-"""    
+"""
+   
 class Plotter(object):
 
     def __init__(self, pdict=None, plot_template=None, interactive=True, **kwargs):
