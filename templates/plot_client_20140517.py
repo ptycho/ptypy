@@ -2,20 +2,12 @@
 import matplotlib as mpl
 mpl.rcParams['backend']='Qt4Agg'
 from matplotlib import gridspec
-
-from matplotlib import pyplot as plt
-
-from ptypy import utils as u
-from ptypy.io.interaction import Client
 import time
 import numpy as np
-from numpy import fft as FFT
 
+from ptypy import utils as u
+from ptypy.io.interaction import Client, network_DEFAULT
 
-interaction= u.Param()
-interaction.primary_address = "tcp://127.0.0.2"
-interaction.primary_port = 5570
-interaction.port_range = range(5571,5580)
 
 Container_DEFAULT = u.Param(
     # maybe we would want this container specific
@@ -41,6 +33,27 @@ DEFAULT.plot_error = [True,True,True]  # decide which error to plot
 templates= u.Param()
 
 
+# class SimpleClient(Client):
+#     """
+#     A simplified client for plotting purposes.
+#     """
+#
+#     def __init__(self, pars=None):
+#         """
+#         SimpleCreate a client instance.
+#         """
+#         super(SimpleClient, Client).__init__(pars)
+#
+#     def initialize(self):
+#         """
+#         Get all useful parameters from Server.
+#         """
+#
+#         # Get probe dimensions
+#         # Get object dimensions
+#         # Get runtime dictionary
+
+
 class Plot_Client(object):
     """
     Plotting Client for Ptypy
@@ -52,22 +65,26 @@ class Plot_Client(object):
     DEFAULT=DEFAULT
     
     def __init__(self, client_pars=None, plot_template=None, interactive=True, **kwargs):
+        """
+        Create a client and attempt to connect to a running reconstruction server.
+        """
+
         self.client=Client(client_pars)
         self.connect()
-        # initialize data containers
+
+        # Initialize data containers
         self.pr=u.Param()
         self.ob=u.Param()
         self.err=[]
         self.ferr=None
-        # initialize the plotter
+
+        # Initialize the plotter
         from matplotlib import pyplot
         self.interactive = interactive
         self.pp = pyplot
         pyplot.interactive(interactive)
         
-        #self.template_default = default_template
         self.templates = templates
-        #self.template = u.Param()
         self.p = u.Param(DEFAULT)
         #self.update_plot_layout(plot_template=plot_template)
 
@@ -79,49 +96,89 @@ class Plot_Client(object):
         self.server_dcts={}
         
     def connect(self):
+        """
+        Connect to the reconstruction server.
+        """
         self.client.activate()
+
         # pause until connected
         while not self.client.connected:
             time.sleep(0.1)
             
     def disconnect(self):
+        """
+        Disconnect from reconstruction server.
+        """
         self.client.stop()
         
     
     def get_data(self,cmd_list,flush=True):
+        """
+        Request data from server (waiting for data to be processed).
+        """
+
         c=self.client
         tlist=[]
+
         # get tickets for requests
         for cmd in cmd_list:
             ticket=c.get(cmd)
             tlist+=[ticket]
+
         # wait for the last ticket to be processed
         completed = c.wait(ticket)
+
         # change data for tickets
         data=[c.data[ticket] for ticket in tlist]
-        #data = c.data[ticket]
+
         # empty buffer
         if flush: c.flush()
+
         return data
-    # get the probe
-    
-    def init_client_dict(self,server_dict_list):
+
+    def get_data_now(self, cmd_list):
+        """
+        Request data from server (asynchronously).
+        """
+        data = [self.client.get_now(cmd) for cmd in cmd_list]
+        return data
+
+    def init_client_dict(self, server_dict_list):
+        """
+        Some useful documentation once I have figure what this is doing.
+        """
         # makes client dict after server dct. This can be solved nicer I guess
-        c=self.client
-        keys_list = self.get_data([server_dict+'.keys()' for server_dict in server_dict_list])
+        keys_list = self.get_data_now([server_dict+'.keys()' for server_dict in server_dict_list])
         
         self.server_dcts.update(dict(zip(server_dict_list,[u.Param([(key,u.Param()) for key in keys]) for keys in keys_list])))
         #print self.server_dcts
         return self.server_dcts #
         
     def initialize(self):
+        """
+
+        """
+        # Remote objects we are interested in
         pr_base='Ptycho.probe.S'
         ob_base='Ptycho.obj.S'
         runtime='Ptycho.runtime'
 
+        # Get the runtime dictionary and wait until reconstruction starts.
+        dct=self.init_client_dict([runtime])
+        rt = dct[runtime]
+        while 'start' not in rt:
+            time.sleep(.1)
+            dct = self.init_client_dict([runtime])
+            rt = dct[runtime]
+
+        self.runtime=dct[runtime]
+
+        # Get the keys for the object and probe containers.
         dct=self.init_client_dict([pr_base,ob_base])
         self.pr=dct[pr_base] 
-        self.ob=dct[ob_base] 
+        self.ob=dct[ob_base]
+
+        # FIXME: This is hard to read. Why not extract these quantities one by one?
         storage_keys=['data','psize','center']
         for kb,base in dct.iteritems():
             for ks,storage in base.iteritems():
@@ -133,8 +190,7 @@ class Plot_Client(object):
                 for skey in storage_keys:
                     self.cmd_dct[kb+'['+kkey+'].' +skey]=  [None,storage,skey]
         
-        dct=self.init_client_dict([runtime]) 
-        self.runtime=dct[runtime]
+        # FIXME: what is this doing?
         for key in self.runtime.keys():
             if key==str(key):
                 kkey='\''+key+'\''
@@ -143,6 +199,9 @@ class Plot_Client(object):
             self.cmd_dct[runtime+'['+kkey+']']=[None,self.runtime,key]
             
     def request_data(self):
+        """
+        Request all data to the server (asynchronous).
+        """
         for cmd,item in self.cmd_dct.iteritems():
             #print cmd,item[0]
             item[0]=self.client.get(cmd) 
@@ -153,27 +212,7 @@ class Plot_Client(object):
             item[1][item[2]] = self.client.data[item[0]]
             
         self.client.flush()
-        
-    """
-    def get_all_data(self):
-        cmds=[]
-        buffers=[]
-        storage_keys=['data','psize','center']
-        for kb,base in self.server_dicts.items():
-            for ks,storage in base.items():
-                if ks==str(ks):
-                    kkey='\''+ks+'\''
-                else:
-                    kkey=str(ks)
-                    
-                for skey in storage_keys:
-                    cmds.append(kb+'['+kkey+'].' +skey)
-                    buffers.append((storage,skey))
-        print cmds
-        data=self.get_data(cmds)
-        for d,b in zip(data,buffers):
-            b[0][b[1]]=d
-    """
+
     def update_plot_layout(self,plot_template=None,**kwargs):
         # generate the plot frame
         def simplify_aspect_ratios(sh):
@@ -473,7 +512,7 @@ class Plot_Client(object):
                 self.draw()
                 self.request_data()
                 
-C=Plot_Client(interaction)
+C=Plot_Client()#(network_DEFAULT)
 C.loop_plot()
 #C.get_all_data()
 #C.update_plot_layout()
