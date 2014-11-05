@@ -128,14 +128,14 @@ class Ptycho(Base):
             # Create the inteaction server
             self.interactor = interaction.Server(p.interaction)
             
-            # Start the thread 
-            self.interactor.activate()
-            
             # Register self as an accessible object for the client
             self.interactor.objects['Ptycho'] = self
 
+            # Start the thread
+            self.interactor.activate()
+
         # Check if there is already a runtime container
-        if not hasattr(self,'runtime'):
+        if not hasattr(self, 'runtime'):
             self.runtime = u.Param()
             
         # Generate all the paths
@@ -214,8 +214,7 @@ class Ptycho(Base):
     @property
     def containers(self):
         return self._pool['C']
-        
-      
+
     def run(self):
         """
         Start the reconstruction and take additionnal 
@@ -297,6 +296,7 @@ class Ptycho(Base):
         from .. import io
         
         # determine if this is a .pty file
+        # FIXME: do not rely on ".pty" extension.
         if not runfile.endswith('.pty'):
             logger.warning('Only ptypy file type allowed for continuing a reconstruction')
             logger.warning('Exiting..')
