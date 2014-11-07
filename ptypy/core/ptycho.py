@@ -450,4 +450,3 @@ class Ptycho(Base):
         logger.info(info,extra={'allprocesses':True})
         #logger.debug(info,extra={'allprocesses':True})
 
-    
