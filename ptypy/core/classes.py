@@ -680,7 +680,6 @@ class Storage(Base):
         self.reformat()
         # reformat everything
 
-        
     def grids(self):
         """
         Returns x and y grids in the shape of internal buffer
@@ -702,8 +701,17 @@ class Storage(Base):
             coverage[v.slice]+=1
         
         return coverage
-        
-        
+
+    def report(self):
+        """
+        Returns a formatted string giving a report on this storage.
+        """
+        info = "Shape: %s\n" % str(self.data.shape)
+        info += "Pixel size (meters): %g x %g\n" % tuple(self.psize)
+        info += "Dimensions (meters): %g x %g\n" % (self.psize[0] * self.data.shape[-2], self.psize[1] * self.data.shape[-1])
+        info += "Number of views: %d\n" % len(self.views)
+        return info
+
     def __getitem__(self, v):
         """
         Storage[v]
@@ -1032,6 +1040,17 @@ class Container(Base):
             if AlsoInCopies:
                 for c in self.copies:
                     c.S[ID].reformat()
+
+    def report(self):
+        """
+        Returns a formatted string giving a report on all storages in this container.
+        """
+        info = "Containers ID: %s\n" % str(self.ID)
+        for ID,s in self.S.iteritems():
+            info += "Storage %s\n" % ID
+            info += s.report()
+        return info
+
 
     def __getitem__(self,view):
         """

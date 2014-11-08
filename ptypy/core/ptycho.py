@@ -447,6 +447,10 @@ class Ptycho(Base):
             info += other 
             total += space
         info += "%15s : %7.2f MB\n" % ('Total memory',total /1e6)
+
+        for ID,C in self.containers.iteritems():
+            info += C.report()
+
         logger.info(info,extra={'allprocesses':True})
         #logger.debug(info,extra={'allprocesses':True})
 
