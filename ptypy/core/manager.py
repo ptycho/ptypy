@@ -331,6 +331,8 @@ class ModelManager(object):
             scan.iterable = []
             
             # prepare the scan geometry if not already done.
+            # FIXME: It should be allowed to let "N" be figured out from the data
+            # but for now it needs to be set in the initial parameters.
             if scan.get('geometries') is None:              
                 # ok now that we have meta we can check if the geometry fits
                 scan.geometries=[]
