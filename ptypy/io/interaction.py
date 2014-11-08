@@ -29,27 +29,26 @@ __all__ = ['Server', 'Client']
 DEBUG = lambda x: None
 #DEBUG = print
 
-DEFAULT_PRIMARY_ADDRESS = "tcp://127.0.0.1"   # Default address for primary connection
-DEFAULT_PRIMARY_PORT = 5560    # Default port for primary connection
-DEFAULT_PORT_RANGE = range(5561,5571)  # Port range for secondary connections
+# Default parameters for networking
+network_DEFAULT = u.Param(
+    primary_address = "tcp://127.0.0.1",   # Default address for primary connection
+    primary_port = 5560,            # Default port for primary connection
+    port_range = range(5561,5571)   # Port range for secondary connections
+)
 
-Server_DEFAULT = u.Param(
-    primary_address = DEFAULT_PRIMARY_ADDRESS,
-    primary_port = DEFAULT_PRIMARY_PORT,
-    port_range = DEFAULT_PORT_RANGE,
+# Default parameters for the server
+Server_DEFAULT = u.Param(network_DEFAULT,
     poll_timeout = 10,   # Network polling interval (in milliseconds!)
     pinginterval = 2, # Interval to check pings (in seconds)
     pingtimeout = 10  # Ping time out: a client is disconnected if no news is sent within this period (in seconds)
 )
 
-Client_DEFAULT = u.Param(
-    primary_address = DEFAULT_PRIMARY_ADDRESS,
-    primary_port = DEFAULT_PRIMARY_PORT,
-    port_range = DEFAULT_PORT_RANGE,
+# Default parameters for the client
+Client_DEFAULT = u.Param(network_DEFAULT,
     poll_timeout = 100,   # Network polling interval (in milliseconds!)
     pinginterval = 1 # Interval to check pings (in seconds)
-
 )
+
 
 def ID_generator(size=6, chars=string.ascii_uppercase + string.digits):
     """\
@@ -69,6 +68,7 @@ def is_str(s):
     except:
         pass
     return False
+
 
 class NumpyEncoder(json.JSONEncoder):
     """\
@@ -102,7 +102,7 @@ NE = NumpyEncoder()
 # This is the string to match against when decoding
 NPYARRAYmatch = re.compile("NPYARRAY\[([0-9]{3})\]")
 
-def NPY_replace(obj, arraylist):
+def numpy_replace(obj, arraylist):
     """\
     Takes an object decoded by JSON and replaces the arrays where
     they should be. (this function is recursive).
@@ -115,14 +115,14 @@ def NPY_replace(obj, arraylist):
     elif isinstance(obj, dict):
         newobj = {}
         for k,v in obj.iteritems():
-            newobj[k] = NPY_replace(v, arraylist)
+            newobj[k] = numpy_replace(v, arraylist)
         return newobj
     elif isinstance(obj, list):
-        return [NPY_replace(x, arraylist) for x in obj]
+        return [numpy_replace(x, arraylist) for x in obj]
     else:
         return obj        
 
-def NPY_zmq_send(out_socket, obj):
+def numpy_zmq_send(out_socket, obj):
     """\
     Send the given object using JSON, taking care of numpy arrays.
     """
@@ -155,20 +155,20 @@ def NPY_zmq_send(out_socket, obj):
     return
   
 
-def NPY_zmq_recv(in_socket):
+def numpy_zmq_recv(in_socket):
     """\
     Receive a JSON object, taking care of numpy arrays
     """
-    NPY_container = in_socket.recv_json()
-    message = NPY_container['message']
-    if NPY_container['hasarray']:
+    numpy_container = in_socket.recv_json()
+    message = numpy_container['message']
+    if numpy_container['hasarray']:
         # Arrays are transmitted after the header
         arraylist = []
-        for arrayinfo in NPY_container['arraylist']:
+        for arrayinfo in numpy_container['arraylist']:
             msg = in_socket.recv()
             buf = buffer(msg)
             arraylist.append(np.frombuffer(buf, dtype=arrayinfo['dtype']).reshape(arrayinfo['shape']))
-        return NPY_replace(message, arraylist)
+        return numpy_replace(message, arraylist)
     else:
         # No array to process.
         return message
@@ -180,7 +180,7 @@ class Server(object):
     
     DEFAULT = Server_DEFAULT
 
-    def __init__(self, pars={}, **kwargs):
+    def __init__(self, pars=None, **kwargs):
         """
         Interaction server, meant to run asynchronously with process 0 to manage client requests.
         
@@ -289,7 +289,9 @@ class Server(object):
         self.in_socket = self.context.socket(zmq.REP)
         fulladdress = self.address + ':' + str(self.port)
         self.in_socket.bind(fulladdress)
-        
+
+        print("listening on %s, port %s" % (str(self.address), str(self.port)))
+
         # Initialize list of requests
         self.out_sockets = {}
 
@@ -337,7 +339,8 @@ class Server(object):
         message is {'ID':ID, 'cmd':command, 'args':kwargs}
         """
         
-        DEBUG('Replying with new message with command %s from client ID %s' % (message['cmd'], message['ID']))
+        #print('Replying with new message with command %s from client ID %s' % (message['cmd'], message['ID']))
+        #print('Arguments: %s' % repr(message['args']))
         reply = self.cmds[message['cmd']](message['ID'], args=message['args'])
         return reply
 
@@ -477,13 +480,17 @@ class Server(object):
         """\
         Send the given object using JSON, taking care of numpy arrays.
         """
-        NPY_zmq_send(out_socket, obj)    
+        try:
+            numpy_zmq_send(out_socket, obj)
+        except:
+            print('Problem sending object %s' % repr(obj))
+            raise
 
     def _recv(self, in_socket):
         """\
         Receive a JSON object, taking care of numpy arrays
         """
-        return NPY_zmq_recv(in_socket)
+        return numpy_zmq_recv(in_socket)
       
     def _process(self):
         """\                
@@ -585,6 +592,7 @@ class Server(object):
             self._stopping = True
             self._thread.join(3)
 
+
 class Client(object):
     """
     Basic but complete client to interact with the server. 
@@ -592,7 +600,7 @@ class Client(object):
 
     DEFAULT = Client_DEFAULT
     
-    def __init__(self, pars={}, **kwargs):
+    def __init__(self, pars=None, **kwargs):
 
         p = u.Param(self.DEFAULT)
         p.update(pars)
@@ -635,13 +643,21 @@ class Client(object):
         
         # list of completed transactions
         self.completed = []
-              
+
+        # Access to data with user-defined tags
+        self.datatag = {}
+        self.tickets_to_tags = {}
+        self.tags_to_tickets = {}
+
         self.lastping = 0        
 
         self._thread = None
         self._stopping = False
 
     def activate(self):
+        """
+        Create the thread.
+        """
         self._stopping = False
         self._thread = Thread(target=self._run)
         self._thread.daemon = True
@@ -651,6 +667,7 @@ class Client(object):
         """
         Thread initialization: Connect to the server and create transmission sockets.
         """
+
         # Initialize socket for entry point
         self.context = zmq.Context()
         self.req_socket = self.context.socket(zmq.REQ)
@@ -678,9 +695,13 @@ class Client(object):
         self.poller.register(self.bind_socket, zmq.POLLIN)
         self.connected = True
         
-        # Create one "Event" if synchronization is required.
-        self.flag_event = Event()
-        self.flag_event.clear()
+        # Create "Event" flags for calls that require synchronization.
+        self.getnow_flag = Event()
+        self.getnow_flag.clear()
+        self.avail_flag = Event()
+        self.avail_flag.clear()
+        self.shutdown_flag = Event()
+        self.shutdown_flag.clear()
 
         # Start main listening loop
         self._listen()
@@ -701,11 +722,22 @@ class Client(object):
 
                 # Wait for the reply and store it
                 reply = self._recv(self.req_socket)
+
+                # Ignore pongs
+                if reply['status'] == 'pong': continue
+
                 self.last_reply = reply
 
-                # Flip the flag in case other threads were waiting for this to complete
-                self.flag_event.set()
-                self.flag_event.clear()
+                # Flip the flag in case other threads were waiting for a synchronous call.
+                if cmd['cmd'] == 'GETNOW':
+                    self.getnow_flag.set()
+                    self.getnow_flag.clear()
+                elif cmd['cmd'] == 'AVAIL':
+                    self.avail_flag.set()
+                    self.avail_flag.clear()
+                elif cmd['cmd'] == 'SHUTDOWN':
+                    self.shutdown_flag.set()
+                    self.shutdown_flag.clear()
 
             # Check for data
             if self.poller.poll(self.poll_timeout):
@@ -726,26 +758,34 @@ class Client(object):
         """\
         Send the given object using JSON, taking care of numpy arrays.
         """
-        NPY_zmq_send(out_socket, obj)
+        numpy_zmq_send(out_socket, obj)
 
     def _recv(self, in_socket):
         """\
         Receive a JSON object, taking care of numpy arrays
         """
-        return NPY_zmq_recv(in_socket)
+        return numpy_zmq_recv(in_socket)
     
     def _read_message(self):
         """\
-        Read the message sent by the interactor and store the accompanying data
+        Read the message sent by the server and store the accompanying data
         if needed.
         """
         
         message = self._recv(self.bind_socket)
         ticket = message['ticket']
         
+        # Store data
         self.data[ticket] = message['out']
         self.status[ticket] = message['status']
-             
+
+        # Assign data to tag if asked by the user.
+        if ticket in self.tickets_to_tags:
+            tag = self.tickets_to_tags[ticket]
+            self.datatag[tag] = self.data[ticket]
+            del self.tickets_to_tags[ticket]
+            del self.tags_to_tickets[tag]
+
         # Done with this ticket!
         if ticket in self.pending:
             self.tickets[ticket] = 'completed'
@@ -762,24 +802,39 @@ class Client(object):
         """
         self.data = {}
         self.status = {}
+        self.datatag = {}
         
-    def poll(self, ticket=None):
+    def poll(self, ticket=None, tag=None):
         """\
         Returns true if the transaction for a given ticket is completed.
-        If ticket is None, returns true only if no transaction is pending
+        If ticket and tag are None, returns true only if no transaction is pending
         """
-        if ticket is None: return not self.pending
-        return ticket in self.completed
+        if ticket is None and tag is None:
+            return not self.pending
+        if ticket is not None:
+            return ticket in self.completed
+        if tag is not None:
+            ticket = self.tags_to_tickets.get(tag, None)
+            return ticket in self.completed
 
-    def wait(self, ticket=None, timeout=None):
+
+    def wait(self, ticket=None, tag=None, timeout=None):
         """\
         Blocks and return True only when the transaction for a given ticket is completed.
         If ticket is None, returns only when no more transaction are pending.
         If timeout is a positive number, wait will return False after timeout seconds if the ticket(s)
         had not been processed yet.
         """
+
+        # Prepare timeout
         if timeout is None: timeout = 1e10
         t0 = time.time()
+
+        # Deal with the case where a tag was given instead of a ticket
+        if ticket is None and tag is not None:
+            ticket = self.tags_to_tickets.get(tag, None)
+
+        # Wait for completed ticket.
         while True:
             if (ticket is None and not self.pending) or (ticket in self.completed): return True
             time.sleep(0.01)
@@ -803,7 +858,7 @@ class Client(object):
         Send a SHUTDOWN command - is this a good idea?
         """
         self.cmds.append({'ID':self.ID, 'cmd':'SHUTDOWN', 'args':None})
-        self.flag_event.wait()
+        self.shutdown_flag.wait()
         return self.last_reply #self.last_reply['avail']
         
     def stop(self):
@@ -818,10 +873,10 @@ class Client(object):
         ! Synchronous call !
         """
         self.cmds.append({'ID':self.ID, 'cmd':'AVAIL', 'args':None})
-        self.flag_event.wait()
+        self.avail_flag.wait()
         return self.last_reply #self.last_reply['avail']
         
-    def do(self, execstr, timeout=0):
+    def do(self, execstr, timeout=0, tag=None):
         """\
         Modify and object using an exec string.
         This function returns the "ticket number" which identifies the object once 
@@ -833,12 +888,15 @@ class Client(object):
         self.cmds.append({'ID':self.ID, 'cmd':'DO', 'args':{'ticket':ticket, 'str': execstr}})
         self.tickets[ticket] = 'pending'
         self.pending.append(ticket)
+        if tag is not None:
+            self.tags_to_tickets[tag] = ticket
+            self.tickets_to_tags[ticket] = tag
         if timeout > 0:
             if self.wait(ticket, timeout):
                 return (ticket, self.data[ticket])
         return ticket
         
-    def get(self, evalstr, timeout=0):
+    def get(self, evalstr, timeout=0, tag=None):
         """\
         Requests an object (or part of it) using an eval string.
         This function returns the "ticket number" which identifies the object once 
@@ -850,12 +908,15 @@ class Client(object):
         self.cmds.append({'ID':self.ID, 'cmd':'GET', 'args':{'ticket':ticket, 'str': evalstr}})
         self.tickets[ticket] = 'pending'
         self.pending.append(ticket)
+        if tag is not None:
+            self.tags_to_tickets[tag] = ticket
+            self.tickets_to_tags[ticket] = tag
         if timeout > 0:
             if self.wait(ticket, timeout):
                 return (ticket, self.data[ticket])
         return ticket
 
-    def set(self, varname, varvalue, timeout=0):
+    def set(self, varname, varvalue, timeout=0, tag=None):
         """\
         Sets an object named varname to the value varvalue. 
         """
@@ -864,6 +925,9 @@ class Client(object):
         self.cmds.append({'ID':self.ID, 'cmd':'SET', 'args':{'ticket':ticket, 'str': varname, 'val':varvalue}})
         self.tickets[ticket] = 'pending'
         self.pending.append(ticket)
+        if tag is not None:
+            self.tags_to_tickets[tag] = ticket
+            self.tickets_to_tags[ticket] = tag
         if timeout > 0:
             if self.wait(ticket, timeout):
                 return (ticket, self.data[ticket])
@@ -871,8 +935,12 @@ class Client(object):
 
     def get_now(self, evalstr):
         """
-        Asynchronous get. May be dangerous, but should be safe for small objects like parameters.
+        Synchronous get. May be dangerous, but should be safe for small objects like parameters.
         """
         self.cmds.append({'ID':self.ID, 'cmd':'GETNOW', 'args':{'str':evalstr}})
-        self.flag_event.wait()
+        self.getnow_flag.wait()
+
         return self.last_reply['out']
+
+
+
