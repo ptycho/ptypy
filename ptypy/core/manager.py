@@ -57,6 +57,8 @@ scan_DEFAULT = u.Param(
     source = None,
     sharing = None,
     tags = "", # For now only used to declare an empty scan
+    weight = 1. # Weight of this data relative to other scans
+    # FIXME: implement weights. Need to propagate to pods, and modify the reconstruction algorithms to take these weights into account
 )
 
 model_DEFAULT = u.Param(scan_DEFAULT,
