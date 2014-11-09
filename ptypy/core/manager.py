@@ -56,16 +56,13 @@ scan_DEFAULT = u.Param(
         if_conflict_use_meta = False, # take geometric and position information from incoming meta_data if possible parameters are specified both in script and in meta data
         source = None,
         sharing = None,
-        tags = "", 
+        tags = "", # For now only used to declare an empty scan
     )
 
-model_DEFAULT = u.Param(
+model_DEFAULT = u.Param(scan_DEFAULT,
         sharing = {},              # rules for linking
         scans = {},             # Sub-structure that can contain scan-specific parameters
     )
-# DEFAULT contains also a standard scan dictionary
-model_DEFAULT.update(scan_DEFAULT)
-
 
 class ModelManager(object):
     """
@@ -237,11 +234,7 @@ class ModelManager(object):
         
         info={'label':scan.label,'max':scan.diff.max_power,'tot':scan.diff.tot_power,'mean':mean_frame.sum()}
         logger.info('--- Scan %(label)s photon report ---\nTotal photons   : %(tot).2e \nAverage photons : %(mean).2e\nMaximum photons : %(max).2e\n' %info +'-'*34)
-        """
-        scan.stats = {'Itotal':Itotal, 'DPCX':DPCX, 'DPCY':DPCY, 
-                      'max_frame':max_frame, 'min_frame':min_frame, 'mean_frame':mean_frame}
-        """
-            
+
     def make_datasource(self,data_pars=None):
         """
         This function will make a static datasource from
