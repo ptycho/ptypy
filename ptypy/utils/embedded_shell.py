@@ -7,10 +7,11 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+
+__all__ = ['ipshell']
+
 try:
     from IPython.config.loader import Config
-   
-    __all__ = ['ipshell']
 
     try:
         get_ipython
@@ -35,8 +36,8 @@ try:
     # IPython at the system command line. Any parameters you want to define for
     # configuration can thus be specified here.
     ipshell = InteractiveShellEmbed(config=cfg,
-                           banner1 = 'Dropping into IPython. Hit ctrl-D to resume execution.',
-                           exit_msg = 'Leaving Interpreter, back to program.')
+                                    banner1='Dropping into IPython. Hit ctrl-D to resume execution.',
+                                    exit_msg='Leaving Interpreter, back to program.')
 except:
     def ipshell():
         print('IPython shell embedding failed')

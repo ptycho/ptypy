@@ -50,6 +50,8 @@ def from_pars(sh,psize,lam,pars=None,dtype=np.complex128):
         
     if p.probe is not None: return p
     #print p.paramdict
+
+    # FIXME
     if os.path.isfile(p.probe_type):
         logger.info('File for probe found, attempt to load')
         try:
@@ -85,7 +87,8 @@ def from_pars(sh,psize,lam,pars=None,dtype=np.complex128):
             p.probe = np.load(probe_type)
         except:
             pass
-       
+
+    # FIXME: warn user because most of the time this is deduced from the data.
     if p.photons is not None:
         p.probe *= np.sqrt(p.photons / np.sum(np.abs(p.probe)**2)) 
 

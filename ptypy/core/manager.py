@@ -2,7 +2,7 @@
 """
 Scan management
 
-This main task of this module is to prepare the data structure for 
+The main task of this module is to prepare the data structure for
 reconstruction, taking a data feed and connecting individual diffraction
 measurements to the other containers. The way this connection is done
 is defined by the user through a model definition. The connections are
@@ -42,27 +42,27 @@ __all__ = ['ModelManager']
 DESCRIPTION = u.Param()
 
 coherence_DEFAULT = u.Param(
-        Nprobe_modes = 1,   # number of mutually spatially incoherent probes per diffraction pattern
-        Nobject_modes = 1,  # number of mutually spatially incoherent objects per diffraction pattern
-        energies = [1.0]    # list of energies / wavelength relative to mean energy / wavelength
-    )
+    Nprobe_modes = 1,   # number of mutually spatially incoherent probes per diffraction pattern
+    Nobject_modes = 1,  # number of mutually spatially incoherent objects per diffraction pattern
+    energies = [1.0]    # list of energies / wavelength relative to mean energy / wavelength
+)
 
 scan_DEFAULT = u.Param(
-        illumination = {},      # All information about the probe
-        sample = {},            # All information about the object
-        geometry = {},          # Geometry of experiment - most of it provided by data
-        xy = {},                # Information on scanning paramaters to yield position arrays - If positions are provided by the DataScan object, set xy.scan_type to None
-        coherence = coherence_DEFAULT,
-        if_conflict_use_meta = False, # take geometric and position information from incoming meta_data if possible parameters are specified both in script and in meta data
-        source = None,
-        sharing = None,
-        tags = "", # For now only used to declare an empty scan
-    )
+    illumination = {},      # All information about the probe
+    sample = {},            # All information about the object
+    geometry = {},          # Geometry of experiment - most of it provided by data
+    xy = {},                # Information on scanning paramaters to yield position arrays - If positions are provided by the DataScan object, set xy.scan_type to None
+    coherence = coherence_DEFAULT,
+    if_conflict_use_meta = False, # take geometric and position information from incoming meta_data if possible parameters are specified both in script and in meta data
+    source = None,
+    sharing = None,
+    tags = "", # For now only used to declare an empty scan
+)
 
 model_DEFAULT = u.Param(scan_DEFAULT,
-        sharing = {},              # rules for linking
-        scans = {},             # Sub-structure that can contain scan-specific parameters
-    )
+    sharing = {},              # rules for linking
+    scans = {},             # Sub-structure that can contain scan-specific parameters
+)
 
 class ModelManager(object):
     """
@@ -101,7 +101,7 @@ class ModelManager(object):
 
         # Initialize the input parameters
         p = u.Param(self.DEFAULT)
-        if pars is not None: p.update(pars)
+        p.update(pars)
         self.p = p
 
         self.ptycho = ptycho
@@ -109,7 +109,7 @@ class ModelManager(object):
         if self.ptycho is None:
             return
         # Prepare the list of scan_labels (important because they are sorted)
-        # BE I don't think this is the way to go. This is only needed for sharing 
+        # FIXME: BE I don't think this is the way to go. This is only needed for sharing
         # For the user it might be better to mark the sharing behavior directly
         self.scan_labels = []
         
@@ -124,8 +124,9 @@ class ModelManager(object):
         for label in self.scans_pars.keys():
             self.prepare_scan(label)
             
-        # sharing dictionary that stores sharing behavior
+        # Sharing dictionary that stores sharing behavior
         self.sharing = {'probe_ids':{},'object_ids':{}}
+
         # Initialize sharing rules for POD creations
         self.sharing_rules = model.parse_model(p.sharing,self.sharing)
         
@@ -157,12 +158,12 @@ class ModelManager(object):
             return self.scans[label]
               
         except KeyError:
-            # get standarad parameters
+            # get standard parameters
             # Create a dictionary specific for the scan.
             scan = u.Param() 
             self.scans[label] = scan
             scan.label = label
-            # make a copy of model ditionary
+            # make a copy of model dictionary
             scan.pars = self.p.copy(depth=3)  
             # Look for a scan-specific entry in the input parameters
             scan_specific_parameters = self.scans_pars.get(label, None)
@@ -176,13 +177,12 @@ class ModelManager(object):
             scan.pos_theory = xy.from_pars(scan.pars.xy)
             return scan
             
-    def _update_stats(self, scan,mask_views=None,diff_views=None):
+    def _update_stats(self, scan, mask_views=None, diff_views=None):
         """
         (Re)compute the statistics for the data stored in a scan.
         These statistics are:
          * Itotal: The integrated power per frame
-         * DPCX, DPCY: The center of mass in X and Y
-         * max/min/mean_frame: pixel-by-pixel maximum, minimum and 
+         * max/min/mean_frame: pixel-by-pixel maximum, minimum and
            average among all frames.
         """
         if mask_views is None:
