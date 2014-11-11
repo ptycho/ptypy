@@ -51,7 +51,7 @@ def from_pars(sh,psize,lam,pars=None,dtype=np.complex128):
     if p.probe is not None: return p
     #print p.paramdict
 
-    # FIXME
+    # FIXME: implement loading probe from data.
     if os.path.isfile(p.probe_type):
         logger.info('File for probe found, attempt to load')
         try:
@@ -111,6 +111,7 @@ def create_modes(layers,pars):
     w/=w.sum()
     # make it an array now: flattens
     pr = u.crop_pad(pr, [[0,layers-pr.shape[0]]] ,axes=[0],filltype='project')
+    # FIXME: mode initialization has to be diverse!
     #if p.mode_diversity=='noise'
     p.mode_weights = w
     p.probe = pr * w.reshape((layers,1,1))
