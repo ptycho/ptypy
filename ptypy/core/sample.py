@@ -190,7 +190,7 @@ def iofr(formula, energy,density=-1, npts=100):
     data = response.read()
 
     d = data.split('\n')
-    print d
+    #print d
     dt = np.array([[float(x) for x in dd.split()] for dd in d[2:] if dd])
 
     #u.logger.info('done, retrieved: ' +  d[0].strip())

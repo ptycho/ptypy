@@ -47,7 +47,7 @@ else:
     mpl_backend = None
 
 __all__ = ['P1A_to_HSV', 'HSV_to_RGB', 'imsave', 'imload', 'franzmap',\
-           'pause', 'plot_3d_array', 'rmphaseramp']
+           'pause', 'plot_3d_array','length_units','plot_storage', 'rmphaseramp']
 
 # Fix tif import problem
 Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
@@ -369,5 +369,67 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
         return a*p, p
     else:
         return a*p
+
+
+def plot_storage(S,fignum=100,modulus='linear',slice_tupel=(slice(1),slice(None),slice(None)),**kwargs): #filename=None,vmin=None,vmax=None):
+    """\
+    is basically pyE17.utils.imsave wrapped in imshow. 
+    accepts same arguments as imsave
+    can however select a roi (pixel dimensions)
+    has different scales for the modulus: 'linear','log','sqrt'
+    """
+    slc = slice_tupel
+    R,C = S.grids()
+    R = R[slc][0]
+    C = C[slc][0]   
+    im = S.data[slc].copy()
+    ext=[C[0,0],C[0,-1],R[0,0],R[-1,0]]
+    
+    if modulus=='sqrt':
+        im=np.sqrt(np.abs(im))*np.exp(1j*np.pi*np.angle(im)).astype(im.dtype)
+    elif modulus=='log':
+        im=np.log10(np.abs(im)+1)*np.exp(1j*np.pi*np.angle(im)).astype(im.dtype)
+    else:
+        modulus='linear'
+    
+    ttl= str(S.ID) +'#%d' + ', ' + modulus + ' scaled modulus'
+    unit,mag,num=length_units(np.abs(ext[0]))
+    ext2=[a*mag for a in ext]
+    fig = plt.figure(fignum)
+    layers = im.shape[0]
+    print im.shape
+    for l in range(layers):
+        ax = fig.add_subplot(1,layers,l+1)
+        a = ax.imshow(imsave(im[l],**kwargs),extent=ext2)
+        #a.axes.xaxis.get_major_formatter().set_powerlimits((-3,3))
+        #a.axes.yaxis.get_major_formatter().set_powerlimits((-3,3))
+        ax.title.set_text(ttl % l )
+        ax.set_xlabel('x [' + unit +']')   
+        ax.set_ylabel('y [' + unit +']')
+    return fig
+
+
+def length_units(number):
+    """\
+    Doc TODO
+    """
+    a = np.floor(np.log10(np.abs(number)))
+    if a<-6.0:
+        unit='nm'
+        mag=1e9
+    elif a<-3.0:
+        unit='um'
+        mag=1e6
+    elif a<0.0:
+        unit='mm'
+        mag=1e3
+    elif a<3.0:
+        unit='m'
+        mag=1e0
+    else:
+        unit='km'
+        mag=1e-3
+    num=number*mag
+    return unit,mag,num
 
 

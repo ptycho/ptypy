@@ -12,7 +12,7 @@ This file is part of the PTYPY package.
 from scipy.special import erf 
 import numpy as np
 
-__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho']
+__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho','gauss_fwhm']
 
 def abs2(A):
     """
@@ -37,6 +37,19 @@ def smooth_step(x,mfs):
     smooth error-function step.
     """
     return 0.5*erf(x*2.35/mfs) +0.5
+
+def gaussian(x,std=1.0,off=0.):
+    """
+    evaluates gaussian standard normal
+    """
+    return np.exp(-(x-off)**2/(2*std**2)) / (std * np.sqrt(2*np.pi))
+    
+def gauss_fwhm(x,fwhm=1.0,off=0.):
+    """
+    evaluates Gaussian of full width at half maximum `fwhm` with optional
+    offset `off`
+    """
+    return gaussian(x,fwhm/2/np.sqrt(2*np.log(2)),off)
 
 def delxf(a, axis = -1, out = None):
     """\

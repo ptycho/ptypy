@@ -13,7 +13,7 @@ from scipy.special import erf
 import numpy as np
 
 __all__ = ['confine','translate_to_pix','mass_center','center_2d','grids',\
-           'length_units','rebin','expect2','expect3','c_zoom','c_gf','c_shift_zoom',\
+           'rebin','expect2','expect3','c_zoom','c_gf','c_shift_zoom',\
            'shift_zoom','keV2m', 'clean_path','zoom','gf','rebin']
 
 def rebin(a, *args):
@@ -154,30 +154,6 @@ def grids(sh,psize=None,center='geometric',FFTlike=True):
             psize = psize * np.ones((len(sh),))
         psize = np.asarray(psize).reshape( (len(sh),) + len(sh)*(1,))
         return grid * psize
-
-
-def length_units(number):
-    """\
-    Doc TODO
-    """
-    a = np.floor(np.log10(np.abs(number)))
-    if a<-6.0:
-        unit='nm'
-        mag=1e9
-    elif a<-3.0:
-        unit='um'
-        mag=1e6
-    elif a<0.0:
-        unit='mm'
-        mag=1e3
-    elif a<3.0:
-        unit='m'
-        mag=1e0
-    else:
-        unit='km'
-        mag=1e-3
-    num=number*mag
-    return unit,mag,num
 
 
 def rebin(a, *args):

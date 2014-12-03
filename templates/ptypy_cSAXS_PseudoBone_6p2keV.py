@@ -163,5 +163,5 @@ P = sim.simulate_basic_with_pods(p,save=True)
 #p.model.sample.source = None
 #p.model.illumination.prop_dist = 0.0
 #p.model.illumination.aperture_size = 2e-6
-#P = Ptycho(p,level=3)
+#P = Ptycho(p,level=2)
 #P.save_run(kind='minimal')

@@ -37,13 +37,15 @@ DEFAULT=u.Param(
     probe = None,
     photons = 1e8,                  # photons in the probe
     mode_diversity = 'noise',
-    mode_weights = [1.,0.1]         # first weight is main mode, last weight will be copied if
+    mode_weights = [1.,0.1],         # first weight is main mode, last weight will be copied if
                                     # more modes requested than weight given
+    spectrum = None,                # energy spectrum of source, choose None, 'Gauss' or 'Box'
+    bandwidth = 0.1,              # bandwidth of source
 )
 
 
 
-def from_pars(sh,psize,lam,pars=None,dtype=np.complex128):
+def from_pars(sh,psize,lam,off=0.,pars=None,dtype=np.complex128):
     p = u.Param(DEFAULT)
     if pars is not None:
         p.update(pars)
@@ -92,6 +94,9 @@ def from_pars(sh,psize,lam,pars=None,dtype=np.complex128):
     if p.photons is not None:
         p.probe *= np.sqrt(p.photons / np.sum(np.abs(p.probe)**2)) 
 
+    if str(p.spectrum) == 'Gauss':
+        p.probe *= u.gauss_fwhm(off,p.bandwidth)*p.bandwidth
+  
     return p
 
 def create_modes(layers,pars):
@@ -115,6 +120,10 @@ def create_modes(layers,pars):
     #if p.mode_diversity=='noise'
     p.mode_weights = w
     p.probe = pr * w.reshape((layers,1,1))
+    if p.mode_diversity=='noise':
+        noise = np.exp(1j*u.parallel.MPIrand_normal(0.0,np.pi,pr.shape))
+        noise[0] = 1.0+0.j
+        p.probe*= noise
     return p
 ##### other Functions ###########
 

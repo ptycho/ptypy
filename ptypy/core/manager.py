@@ -44,14 +44,16 @@ DESCRIPTION = u.Param()
 coherence_DEFAULT = u.Param(
     Nprobe_modes=1,  # number of mutually spatially incoherent probes per diffraction pattern
     Nobject_modes=1,  # number of mutually spatially incoherent objects per diffraction pattern
-    energies=[1.0]  # list of energies / wavelength relative to mean energy / wavelength
+    energies=[1.0],  # list of energies / wavelength relative to mean energy / wavelength
+    probe_is_achromatic =False, # if True, the same probe is used for all energies
+    object_is_nondispersive = False # if True, the same object is used for all energies
 )
 
 scan_DEFAULT = u.Param(
-    illumination={},  # All information about the probe
-    sample={},  # All information about the object
-    geometry={},  # Geometry of experiment - most of it provided by data
-    xy={},
+    illumination=u.Param(),  # All information about the probe
+    sample=u.Param(),  # All information about the object
+    geometry=u.Param(),  # Geometry of experiment - most of it provided by data
+    xy=u.Param(),
     # Information on scanning paramaters to yield position arrays
     # If positions are provided by the DataScan object, set xy.scan_type to None
     coherence=coherence_DEFAULT,
@@ -68,8 +70,8 @@ scan_DEFAULT = u.Param(
 )
 
 model_DEFAULT = u.Param(scan_DEFAULT,
-                        sharing={},  # rules for linking
-                        scans={},  # Sub-structure that can contain scan-specific parameters
+                        sharing=u.Param(),  # rules for linking
+                        scans=u.Param(),  # Sub-structure that can contain scan-specific parameters
 )
 
 
@@ -110,7 +112,7 @@ class ModelManager(object):
 
         # Initialize the input parameters
         p = u.Param(self.DEFAULT)
-        p.update(pars)
+        p.update(pars,Replace=False)
         self.p = p
 
         self.ptycho = ptycho
@@ -351,7 +353,11 @@ class ModelManager(object):
                     g = geometry.Geo(self.ptycho, geoID, pars=geo)
                     # now we fix the sample pixel size, This will make the frame size adapt
                     g.p.psize_sam_is_fix = True
+                    # save old energy value:
+                    g.p.energy_orig = g.energy
+                    # change energy
                     g.energy *= fac
+                    # append the geometry
                     scan.geometries.append(g)
 
                 # create a buffer
@@ -526,12 +532,27 @@ class ModelManager(object):
             else:
                 logger.info('Initializing probe storage %s using scan %s' % (pid, scan.label))
 
+            # if photon count is None, assign a number from the stats. 
+            phot =  illu_pars.get('photons')
+            phot_max = scan.diff.max_power
+            
+            if phot is None:
+                logger.info('Found no photon count for probe in parameters.\n \
+                            Using photon count %.2e from photon report' %phot_max)
+                illu_pars['photons'] = phot_max
+            elif np.abs(np.log10(phot)-np.log10(phot_max)) > 1:
+                logger.warn('Photon count from input parameters (%.2e) differs from \
+                            statistics (%.2e) by more than a magnitude' %(phot,phot_max))
+
             # find out energy or wavelength. Maybe store that information 
             # in the storages in future too avoid this weird call.
-            lam = s.views[0].pod.geometry.lam
-
+            geo = s.views[0].pod.geometry
+                        
+            # pass info how far off center energy /wavelength of spectrum you are.
+            off = (geo.energy - geo.p.energy_orig)/ geo.p.energy_orig
+                                        
             # make this a single call in future
-            pr = illumination.from_pars(s.shape[-2:], s.psize, lam, illu_pars)
+            pr = illumination.from_pars(s.shape[-2:], s.psize, geo.lam, off, illu_pars)
             pr = illumination.create_modes(s.shape[-3], pr)
             s.fill(pr.probe)
             s.reformat()  # maybe not needed
@@ -608,6 +629,13 @@ class ModelManager(object):
             positions = scan.new_positions
             di_views = scan.new_diff_views
             ma_views = scan.new_mask_views
+            
+            # Compute sharing rules
+            alt_obj = scan.pars.sharing.object_shared_with
+            alt_pr = scan.pars.sharing.probe_shared_with
+            obj_label = label if alt_obj is None else alt_obj
+            pr_label = label if alt_pr is None else alt_pr
+            
             # Loop through diffraction patterns             
             for i in range(len(di_views)):
                 dv, mv = di_views.pop(0), ma_views.pop(0)
@@ -618,11 +646,7 @@ class ModelManager(object):
                 pos_pr = u.expect2(0.0)
                 pos_obj = positions[i] if 'empty' not in scan.pars.tags else 0.0
 
-                # Compute sharing rules
-                alt_obj = scan.pars.sharing.object_shared_with
-                alt_pr = scan.pars.sharing.probe_shared_with
-                obj_label = label if alt_obj is None else alt_obj
-                pr_label = label if alt_pr is None else alt_pr
+
 
                 t, object_id = self.sharing_rules(obj_label, index)
                 probe_id, t = self.sharing_rules(pr_label, index)
@@ -630,15 +654,16 @@ class ModelManager(object):
                 # For multiwavelength reconstructions: loop here over
                 # geometries, and modify probe_id and object_id.
                 for ii, geometry in enumerate(scan.geometries):
-                    suffix = 'G%02d' % ii
-
                     # make new IDs and keep them in record
                     # sharing_rules is not aware of IDs with suffix
-                    probe_id_suf = probe_id + suffix
+                    
+                    gind = 0 if scan.pars.coherence.probe_is_achromatic else ii                 
+                    probe_id_suf = probe_id + 'G%02d' % gind
                     if probe_id_suf not in new_probe_ids.keys() and probe_id_suf not in existing_probes:
                         new_probe_ids[probe_id_suf] = self.sharing_rules.probe_ids[probe_id]
 
-                    object_id_suf = object_id + suffix
+                    gind = 0 if scan.pars.coherence.object_is_nondispersive else ii
+                    object_id_suf = object_id + 'G%02d' % gind
                     if object_id_suf not in new_object_ids.keys() and object_id_suf not in existing_objects:
                         new_object_ids[object_id_suf] = self.sharing_rules.object_ids[object_id]
 

@@ -26,7 +26,7 @@ Container_DEFAULT = u.Param(
 )
 
 DEFAULT = u.Param()
-DEFAULT.figsize = (12,10)
+DEFAULT.figsize = (14,10)
 DEFAULT.ob=Container_DEFAULT.copy()
 DEFAULT.pr=Container_DEFAULT.copy()
 DEFAULT.pr.auto_display = ['c']

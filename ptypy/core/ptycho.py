@@ -454,3 +454,19 @@ class Ptycho(Base):
         logger.info(info,extra={'allprocesses':True})
         #logger.debug(info,extra={'allprocesses':True})
 
+    def plot_overview(self):
+        """
+        plots whole the first four layers of every storage in probe, object % diff
+        """
+        from matplotlib import pyplot as plt
+        plt.ion()
+        fignum=100
+        for s in self.obj.S.values():
+            u.plot_storage(s,fignum,'linear',(slice(0,4),slice(None),slice(None)))
+            fignum+=1
+        for s in self.probe.S.values():
+            u.plot_storage(s,fignum,'linear',(slice(0,4),slice(None),slice(None)))
+            fignum+=1
+        for s in self.diff.S.values():
+            u.plot_storage(s,fignum,'log',(slice(0,4),slice(None),slice(None)))
+            fignum+=1
