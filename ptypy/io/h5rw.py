@@ -326,7 +326,7 @@ def h5read(filename, *args, **kwargs):
     Reads sequentially all globbed filenames. 
  
     """
-    doglob = kwargs.get('doglob', None)
+    doglob = kwargs.pop('doglob', None)
 
     # Used if we read a list of files
     fnames = []
