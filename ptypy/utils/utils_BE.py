@@ -11,7 +11,8 @@ import parallel
 
 __all__ = ['hdr_image','mirror','pad_lr','crop_pad_axis','crop_pad',
             'xradia_star','png2mpg','mass_center','phase_from_dpc',
-            'radial_distribution','str2range','stxm_analysis','stxm_analysis']
+            'radial_distribution','str2range','stxm_analysis','stxm_analysis',
+            'str2int']
 
 def str2range(s):
     """
@@ -40,7 +41,24 @@ def str2range(s):
         
     return range(start,stop,step)
 
-
+def str2int(A):
+    """
+    Transforms numpy array A of strings to uint8 and back
+    """
+    A=np.asarray(A)
+    dt = A.dtype.str
+    if '|S' in A.dtype.str:
+        depth = int(A.dtype.str.split('S')[-1])
+        # make all the same length
+        sh = A.shape +(depth,)
+        #B = np.empty(sh,dtype=np.uint8)
+        return np.array([[ord(l) for l in s.ljust(depth,'\x00')] for s in A.flat],dtype=np.uint8).reshape(sh)
+    elif 'u' in dt or 'i' in dt:
+        return np.array([s.tostring() for s in np.split(A.astype(np.uint8).ravel(),np.prod(A.shape[:-1]))]).reshape(A.shape[:-1])
+    else:
+        raise TypeError('Data type `%s` not understood for string - ascii conversion' % dt)
+    
+    
 def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],avg_type='highest',mask_list=[],ClipLongestExposure=False,ClipShortestExposure=False):
     """
     generate high dynamic range image from a list of images "img_list" and 

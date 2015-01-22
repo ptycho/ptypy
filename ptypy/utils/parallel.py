@@ -7,7 +7,9 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-__all__ = ['MPIenabled', 'psize', 'prank', 'comm', 'MPI', 'master', 'LoadManager', 'loadmanager','MPIrand_normal','MPIrand_uniform']
+__all__ = ['MPIenabled', 'psize', 'prank', 'comm', 'MPI', 'master', 
+            'LoadManager', 'loadmanager','MPIrand_normal','MPIrand_uniform',
+            'gather_list','scatter_list','bcast_dict','gather_dict']
 
 import numpy as np
 
@@ -212,8 +214,8 @@ def send(data, dest=0, tag=0):
     
     Parameters
     ----------
-    data : numpy array
-           The array so send
+    data : numpy array or 2 tuple (key,numpy array)
+           The array to send with optional key
     dest : int
            The rank of the destination process. Defaults to 0 (master).
     tag : int
@@ -221,15 +223,16 @@ def send(data, dest=0, tag=0):
     """
 
     # Send array info
-    header = (data.shape, data.dtype.str)
+    key, npdata = _check(data)
+    header = (npdata.shape, npdata.dtype.str, key)
     comm.send(header, dest=dest, tag=1)
 
     # Send data
     # mpi4py has in issue sending booleans. we convert to uint8 (same size)
-    if data.dtype.str=='|b1': 
-        comm.Send(data.astype('uint8'), dest=dest, tag=tag)
+    if npdata.dtype.str=='|b1': 
+        comm.Send(npdata.astype('uint8'), dest=dest, tag=tag)
     else:
-        comm.Send(data, dest=dest, tag=tag)
+        comm.Send(npdata, dest=dest, tag=tag)
         
 def receive(source=None, tag=0, out=None):
     """
@@ -248,13 +251,13 @@ def receive(source=None, tag=0, out=None):
           
     Returns
     -------
-    out : numpy array
+    out : numpy array or 2tuple (key, numpy array)
     """
 
     if source is None: source = MPI.ANY_SOURCE
 
     # Receive array info
-    shape, dtypestr = comm.recv(source=source, tag=1)
+    shape, dtypestr, key = comm.recv(source=source, tag=1)
     
     newdtype = '|u1' if dtypestr=='|b1' else dtypestr
     # Create array if none is provided
@@ -265,10 +268,54 @@ def receive(source=None, tag=0, out=None):
     comm.Recv(out, source=source, tag=tag)
 
     if dtypestr=='|b1':
-        return out.astype('bool')
+        out = out.astype('bool')
+    
+    if str(key)!="":
+        return (key,out)
     else:
         return out
 
+def bcast(data,source=0,key=""):
+    """
+    Wrapper for comm.bcast
+    """
+    #Communicate size
+    if rank == source:
+        key,npdata = _check(data) 
+        shape, dtypestr,key = comm.bcast((npdata.shape, npdata.dtype.str, key), source)
+    else:
+        shape, dtypestr,key = comm.bcast(None, source)
+        
+    # Prepare buffers
+    newdtype = '|u1' if dtypestr=='|b1' else dtypestr
+    if rank == source:
+        buf = npdata.astype(newdtype)
+    else:
+        buf = np.empty(shape, dtype=newdtype)
+    
+    # Send
+    comm.Bcast(buf, source)
+    
+    if str(key)=="":
+        return buf.astype(dtypestr)
+    else:
+        return (key,buf)
+
+def _check(data):
+    """
+    checks if data is compatible for sending
+    """
+    if type(data) is np.ndarray:
+        key=""
+        if not data.flags.contiguous:
+            data=np.ascontiguousarray(data)
+    elif np.iterable(data):
+        key=data[0]
+        data=_check(data[1])[1]
+    else:
+        raise TypeError("Input data %s incompatible for broadcast" % str(type(data)))     
+    return key,data
+    
 def MPIrand_normal(loc=0.0,scale=1.0,size=(1)):
     """
     wrapper for np.random.normal for same random sample across all nodes.
@@ -291,3 +338,150 @@ def MPIrand_uniform(low=0.0,high=1.0,size=(1)):
     allreduce(sample)
     return sample
 
+def gather_list(lst,length,indices):
+    """
+    gathers list `lst` of all processes to a list of length `length` 
+    according to order given by `indices`. definitely not foolproof
+    The user has to make sure that no index appears twice in all processes
+    
+    return list of length `length`. has only meaning in master process
+    """
+    new = [None]*length
+    for index,item in zip(indices,lst):
+        if index<length:
+            new[index]=item
+    if MPIenabled:
+        for i in range(length):
+            if master:
+                # Root receives the data if it doesn't have it yet
+                if new[i] is None:
+                    new[i] = receive()
+                barrier()
+            else:
+                if new[i] is not None:
+                    # Send data to root.
+                    send(new[i])
+                barrier()
+        barrier()
+    
+    return new
+    
+def scatter_list(lst,length,indices):
+    """
+    master process scatters a list `lst` of length `length`
+    to non-masters that have the respective index in their `indeces` list
+    
+    functional, but maybe not 100% foolproof
+    
+    return list of length len(indices) for all processes. 
+    indices that extend boyond length are filled with None 
+    """
+    new = [None]*len(indices)
+    if MPIenabled:
+        for i in range(length):
+            if master:
+                data = bcast(lst[i])
+                # Root broadcasts the data
+            else:
+                data = bcast(None)
+                
+            #data = pp.bcast(data)
+            try:
+                new[indices.index(i)] = data
+            except:
+                pass
+    
+    return new
+
+def gather_list(lst,target=0):
+    out = []
+    for r in range(size):
+        if r==target: 
+            if rank==target:
+                out+=lst
+            continue
+            
+        if rank == target:
+            l = comm.recv(source=r)
+            for i in range(l):
+                out.append(receive(r))
+                #out[k] = v
+        elif r == rank:
+            # your turn to send
+            l = len(lst)
+            comm.send(l,dest=target)
+            for item in lst:
+                send(item,dest=target)
+        barrier()
+    
+    return out
+
+def gather_dict(dct,target=0):
+    """
+    Gathers broadcasted dict `dct` at rank `target`.
+    Input dictionaries remain unaltered
+    Double key access will cause an overwrite 
+    without complains.
+    
+    returns : gathered dict at rank==target
+              empty dict at other ranks
+    """
+    out = {}
+    for r in range(size):
+        if r==target: 
+            if rank==target:
+                out.update(dct)
+            continue
+            
+        if rank == target:
+            l = comm.recv(source=r)
+            for i in range(l):
+                k,v = receive(r)
+                out[k] = v
+        elif r == rank:
+            # your turn to send
+            l = len(dct)
+            comm.send(l,dest=target)
+            for item in dct.iteritems():
+                send(item,dest=target)
+        barrier()
+    
+    return out
+        
+def bcast_dict(dct,keys_accepted='all',source=0):
+    """
+    Broadcasts a dict of where all values are numpy arrays
+    Fills dict `dct` in place for receiving nodes
+    
+    There is no guarantee that each key,value pair is accepted at other 
+    nodes. Deleting reference to input dictionary may result in data loss.
+    
+    returns:
+        dict, length : a reduced dictionary with only accepted keys 
+                      and the length of the original dictionary
+    """
+    # communicate the dict length  
+    if rank == source:
+        out ={}
+        length = comm.bcast(len(dct), source)
+        for k,v in dct.items():
+            bcast((k,v))
+            if str(keys_accepted)=='all' or k in keys_accepted:
+                out[k]= v 
+
+        return out
+    else:
+        if dct is None:
+            dct = {}
+        length = comm.bcast(None, source)
+        for k in range(length):
+            k,v = bcast(None)
+            if str(keys_accepted)=='all' or k in keys_accepted:
+                dct[k]= v 
+
+        return dct
+
+    
+    
+    
+    
