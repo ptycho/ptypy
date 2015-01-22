@@ -1,0 +1,82 @@
+<html>
+<head>
+<title>Basic ptypy plotter</title>
+</head>
+<body>
+<script type="text/javascript">
+    // Submitting data to the backend
+    function xml_http_post(url, data, callback) {
+        var req = false;
+        try {
+            // Firefox, Opera 8.0+, Safari
+            req = new XMLHttpRequest();
+        }
+        catch (e) {
+            // Internet Explorer
+            try {
+                req = new ActiveXObject("Msxml2.XMLHTTP");
+            }
+            catch (e) {
+                try {
+                    req = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                catch (e) {
+                    alert("Your browser does not support AJAX!");
+                    return false;
+                }
+            }
+    }
+
+    req.open("POST", url, true);
+    req.onreadystatechange = function() {
+        if (req.readyState === 4) {
+            callback(req);
+        }
+    };
+    req.send(data);
+}
+	//Define what happens when the button is pressed
+        
+//Immediately request an image and then request an image every second
+function startTimer() {
+test_button();
+timer = setInterval(test_button, 1000);
+}
+//Assign an arbitrary value for data and send it as a POST request
+function test_button() {
+    var data = 2;           
+    xml_http_post("frontend2.html", data, test_handle);
+}
+//Stop requesting images every second
+function abortTimer() {
+    clearInterval(timer);
+}
+	//The response from the python back end is shown in the place of	
+	//"test_result" with content defined by the back end.
+
+function test_handle(req) {
+    var elem = document.getElementById('test_result');
+    elem.innerHTML =  req.responseText;
+}
+
+function disableStart() {
+    document.getElementById("startButton").disabled = true;
+    document.getElementById("startButton").value = "Started";
+    document.getElementById("stopButton").disabled = false;
+}
+
+function enableStart() {
+    document.getElementById("startButton").disabled = false;
+    document.getElementById("startButton").value = "Start";
+    document.getElementById("stopButton").disabled = true;
+}
+
+
+</script>
+<span id="test_result">The image will be here after you clicked.</span>
+<form name=test_form>
+<input id = "startButton" type=button onClick="startTimer(); disableStart()" value = "Start">
+<input id = "stopButton" type=button onClick="abortTimer(); enableStart()" value = "Stop" disabled/>
+</form>
+</body>
+</html>
