@@ -9,9 +9,12 @@ from matplotlib import gridspec
 import time
 import numpy as np
 
+import ptypy
 from ptypy import utils as u
+from ptypy.utils.verbose import logger
 from ptypy.io.interaction import Client, network_DEFAULT
 
+ptypy.utils.verbose.set_level(3)
 
 Container_DEFAULT = u.Param(
     # maybe we would want this container specific
@@ -26,7 +29,7 @@ Container_DEFAULT = u.Param(
 )
 
 DEFAULT = u.Param()
-DEFAULT.figsize = (14,10)
+DEFAULT.figsize = (12,10)
 DEFAULT.ob=Container_DEFAULT.copy()
 DEFAULT.pr=Container_DEFAULT.copy()
 DEFAULT.pr.auto_display = ['c']
@@ -83,10 +86,11 @@ class Plot_Client(object):
         Connect to the reconstruction server.
         """
         self.client.activate()
-
+        logger.info('Connecting to server...')
         # pause until connected
         while not self.client.connected:
             time.sleep(0.1)
+        logger.info('Connected.')
             
     def disconnect(self):
         """
@@ -126,10 +130,13 @@ class Plot_Client(object):
         """
 
         # Wait until reconstruction starts.
+        logger.info('Waiting for reconstruction to start...')
         ready = self.client.get_now("'start' in Ptycho.runtime")
         while not ready:
             time.sleep(.1)
             ready = self.client.get_now("'start' in Ptycho.runtime")
+
+        logger.info('Ready')
 
         # Build local containers
         self.ob = u.Param()
@@ -137,6 +144,7 @@ class Plot_Client(object):
         self.runtime = u.Param()
 
         ob_IDs = self.client.get_now("Ptycho.obj.S.keys()")
+        logger.info('%d Object(s)' % len(ob_IDs))
         for ID in ob_IDs:
             S = u.Param()
             self.ob[ID] = S
@@ -145,6 +153,7 @@ class Plot_Client(object):
             self.cmd_dct["Ptycho.obj.S['%s'].center" % str(ID)] = [None, S, 'center']
 
         pr_IDs = self.client.get_now("Ptycho.probe.S.keys()")
+        logger.info('%d probe(s)' % len(ob_IDs))
         for ID in pr_IDs:
             S = u.Param()
             self.pr[ID] = S
