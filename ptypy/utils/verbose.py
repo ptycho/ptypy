@@ -121,3 +121,83 @@ def set_level(level):
 def _(label, value):
     return '%-25s%s' % (label + ':', str(value))
 
+
+def report(thing,depth=4,maxchar=80):
+    """
+    no protection for circular references
+    """
+    import time
+    import numpy as np
+    
+    header = '##### NODE %02d ###### ' % parallel.rank + time.asctime() + ' ######\n' 
+    indent = 2
+    level = 0
+    
+    def _(label,level,obj):
+        pre = " "*indent*level +  '* ' 
+        extra = str(type(obj)).split("'")[1]
+        pre+=str(label) if label is not None else "id"+np.base_repr(id(obj),base=32)
+        if len(pre)>=25:
+            pre = pre[:21] + '... '
+        return "%-25s:" % pre, extra
+        
+    def _format_dict(label, level, obj):
+        header,extra = _(label, level, obj) 
+        header+= ' %s(%d)\n' % (extra,len(obj))
+        if level <= depth:
+            #level +=1
+            for k,v in obj.iteritems():
+                header += _format(k,level+1,v)
+        return header
+    
+    def _format_iterable(label, level, lst):
+        l = len(lst)
+        header,extra = _(label, level, lst)
+        header+= ' %s(%d)' % (extra,l)
+        string = str(lst)
+        if len(string) <= maxchar-25 or level>=depth:
+            return header +'= '+ string +'\n'
+        elif l >0:
+            header +='\n'
+            for v in lst[:5]:
+                header += _format(None,level+1,v)
+            header += _('...',level+1,' ')[0] + ' ....\n'
+            return header
+        else:
+            pass
+    
+    def _format_other(label, level, obj):
+        header,extra = _(label, level, obj)
+        if np.isscalar(obj):
+            header += ' '+str(obj)
+        else:
+            header += ' ' +extra+' = '+str(obj)
+        return header[:maxchar]+'\n'
+         
+    def _format_numpy(key, level,a):
+        header,extra = _(key, level, a)
+        if len(a) < 5 and a.ndim == 1:
+            stringout = header + ' [array = ' + str(a.ravel()) + ']\n'
+        else:
+            stringout = header + ' [' + (('%dx'*(a.ndim-1) + '%d') % a.shape) + ' ' + str(a.dtype) + ' array]\n'
+        return stringout
+        
+    def _format_None(key,level, obj):
+        return _(key, level, obj)[0] + ' None\n'
+
+    def _format(key,level, obj):
+        if hasattr(obj,'iteritems'):
+            stringout = _format_dict(key,level, obj)
+        elif type(obj) is np.ndarray:
+            stringout = _format_numpy(key,level, obj)
+        elif str(obj)==obj:
+            stringout = _format_other(key,level, obj)
+        elif obj is None:
+            stringout = _format_None(key,level, obj)
+        elif np.iterable(obj):
+            stringout = _format_iterable(key,level, obj)
+        else:
+            stringout = _format_other(key,level, obj)
+        return stringout
+    
+    return header +_format(None,0,thing)

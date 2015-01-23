@@ -240,8 +240,14 @@ def _h5write(filename, mode, *args, **kwargs):
         f.attrs['ctime'] = ctime
         f.attrs['mtime'] = mtime
         for k,v in d.iteritems():
+            # if the first group key exists, make an overwrite, i.e. delete group `k`
+            # Otherwise it was not possible in this framework to write
+            # into an existing file, where a key is already occupied,
+            # i.e. a replace operation. On the other hand we are violating
+            # the pure 'appending' nature of h5append
+            if k in f.keys():
+                del f[k]
             _store(f,v,k)
-    
     return
     
 def h5write(filename, *args, **kwargs):
@@ -522,10 +528,6 @@ def h5info(filename, output=None):
     h5info(filename)
 
     Prints out a tree structure of given h5 file.
-    
-    [17/01/2012 guillaume potdevin]
-    added optional argument output:
-        if output is set to 1, then the printed string is returned
     """
 
     indent = 4
@@ -534,7 +536,7 @@ def h5info(filename, output=None):
     def _format_dict(key, dset):
         stringout = ' '*key[0] + ' * %s [dict]:\n' % key[1] 
         for k,v in dset.items():
-            if v.attrs.get('escaped', None) is not None:
+            if v is not None and v.attrs.get('escaped', None) is not None:
                 k = k.replace(h5options['SLASH_ESCAPE'], '/')
             stringout += _format((key[0]+indent, k), v)
         return stringout
@@ -618,7 +620,7 @@ def h5info(filename, output=None):
         return stringout
 
     def _format(key, dset):
-        dset_type = dset.attrs.get('type',None)
+        dset_type = 'None' if dset is None else dset.attrs.get('type',None)
       
         # Treat groups as dicts
         if (dset_type is None) and (type(dset) is h5py.Group):
@@ -643,17 +645,14 @@ def h5info(filename, output=None):
         elif dset_type == 'scalar':
             stringout = _format_scalar(key, dset)
         elif dset_type == 'None':
-            try:
-                stringout = _format_numpy(key, dset)
-            except:
-                stringout = _format_None(key, dset)
+            stringout = _format_None(key, dset)
         elif dset_type == 'pickle':
             stringout = _format_pickle(dset)
         elif dset_type is None:
             stringout = _format_numpy(key, dset)
         else:
             stringout = _format_unknown(key, dset)
-        return stringouttest_ptycho_server_with_recon_20140512.py
+        return stringout
         
     with h5py.File(filename,'r') as f:
         h5rw_version = f.attrs.get('h5rw_version',None)

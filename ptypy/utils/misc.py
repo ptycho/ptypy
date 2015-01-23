@@ -16,7 +16,7 @@ __all__ = ['confine','translate_to_pix','mass_center','center_2d','grids',\
            'rebin','expect2','expect3','c_zoom','c_gf','c_shift_zoom',\
            'shift_zoom','keV2m', 'clean_path','zoom','gf','rebin']
 
-def rebin(a, *args):
+def rebin(a, *args,**kwargs):
     '''\
     Rebin ndarray data into a smaller ndarray of the same rank whose dimensions
     are factors of the original dimensions.
@@ -56,7 +56,8 @@ def rebin(a, *args):
              ['args[%d],factor[%d],'%(i,i) for i in range(lenShape)] + \
              [')'] + ['.sum(%d)'%(i+1) for i in range(lenShape)] + \
              ['*( 1.'] + ['/factor[%d]'%i for i in range(lenShape)] + [')']
-    print ''.join(evList)
+    if kwargs.get('verbose',False):
+        print ''.join(evList)
     return eval(''.join(evList))
            
 def confine(A):
