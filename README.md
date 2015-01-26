@@ -32,6 +32,17 @@ Installation should be as simple as
     sudo python setup.py install
 or, as a user,
     python setup.py install --user
+    
+First steps :
+--------------
+
+- In templates/, open one of the templates with an editor of your choice (they are called ptypy_xxxx.py)
+- Scroll to the end of the script and <b>un</b>comment the part needed for simulation BUT comment the part for reconstruction
+- In a terminal run "python ptypy_xxxx.py", that will create the dataset for you
+- In the editor, croll to the end of the script and comment the part needed for simulation BUT <b>un</b>comment the part for reconstruction
+- In a terminal run "python ptypy_xxxx.py", that will reconstruct the dataset for you
+- If you have mpi installed on system and 4 cores available, run "mpiexec -n 4 python ptypy_xxxx.py" for faster reconstruction
+- In a seperate terminal run "python plot_client_20141106.py" for visual feedback of the reconstruction
 
 Dependencies
 ------------
