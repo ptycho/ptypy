@@ -138,10 +138,7 @@ p.scans = u.Param()
 p.scans.scan001 = u.Param()
 p.scans.scan001.source = None #"Sim_id22ni_AuStar_defoc_1p40.ptyd"# (14) Address or path to data ressource.
 
-p.interaction = u.Param()
-p.interaction.primary_address = "tcp://127.0.0.2" # (80) 
-p.interaction.primary_port = 5570                 # (81) 
-p.interaction.port_range = "5571:5580"     # (82) 
+p.interaction = None
 
 
 p.engine = u.Param()
