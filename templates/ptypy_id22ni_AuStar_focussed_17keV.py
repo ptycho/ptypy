@@ -110,11 +110,7 @@ p.scans = u.Param()
 p.scans.scan001 = u.Param()
 p.scans.scan001.source = None #"Sim_id22ni_AuStar_defoc_1p40.ptyd"# (14) Address or path to data ressource.
 
-p.interaction = u.Param()
-p.interaction.primary_address = "tcp://127.0.0.2" # (80) 
-p.interaction.primary_port = 5570                 # (81) 
-p.interaction.port_range = "5571:5580"     # (82) 
-
+p.interaction = None
 
 p.engine = u.Param()
 p.engine.common = u.Param()
@@ -161,30 +157,3 @@ P = sim.simulate_basic_with_pods(p,save=True)
 #p.model.illumination.focal_dist = 0.06
 #P = Ptycho(p,level=3)
 #P.save_run(kind='minimal')
-
-def RGB_to_HSV(rgb):
-    eps = 1e-6
-    rgb=np.asarray(rgb).astype(float)
-    maxc = rgb.max(axis=-1)
-    minc = rgb.min(axis=-1)
-    v = maxc
-    s = (maxc-minc) / maxc
-    s[maxc==0.0]=0.0
-    rc = (maxc-rgb[:,:,0]) / (maxc-minc+eps)
-    gc = (maxc-rgb[:,:,1]) / (maxc-minc+eps)
-    bc = (maxc-rgb[:,:,2]) / (maxc-minc+eps)
-    
-    h =  4.0+gc-rc
-    maxgreen = (rgb[:,:,1] == maxc)
-    h[maxgreen] = 2.0+rc[maxgreen]-bc[maxgreen]
-    maxred = (rgb[:,:,0] == maxc)
-    h[maxred] = bc[maxred]-gc[maxred]
-    h[minc==maxc]=0.0
-    h = (h/6.0) % 1.0
-
-    return h, s, v
-    
-def HSV_to_P1A(cin):
-    h,s,v = cin
-    return v * np.exp(np.pi*2j*h) 
-
