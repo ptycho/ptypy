@@ -117,11 +117,7 @@ p.scans.scan002.illumination = u.Param(aperture_type = "rect")
 p.scans.scan002.sharing= u.Param(object_shared_with = 'scan001')
 #p.scans.scan002.sample = u.Param(offset = (50,370))
 
-p.interaction = u.Param()
-p.interaction.primary_address = "tcp://127.0.0.2" # (80) 
-p.interaction.primary_port = 5570                 # (81) 
-p.interaction.port_range = "5571:5580"     # (82) 
-
+p.interaction = None
 
 p.engine = u.Param()
 p.engine.common = u.Param()
