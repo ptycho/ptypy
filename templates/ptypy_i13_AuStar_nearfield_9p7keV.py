@@ -112,10 +112,7 @@ p.data.file = None                                # (77)
 p.data.sourcetype = "static"                      # (78) 
 
 
-p.interaction = u.Param()
-p.interaction.primary_address = "tcp://127.0.0.2" # (80) 
-p.interaction.primary_port = 5570                 # (81) 
-p.interaction.port_range = "5571:5580"     # (82) 
+p.interaction = None
 
 p.engine = u.Param()
 p.engine.common = u.Param()
