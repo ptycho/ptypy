@@ -86,9 +86,9 @@ class FliSpecScanMultexp(PtyScan):
             motor_mult = 1e-3
             x=self.scaninfo.data['samy'][::self.nexp]
             y=self.scaninfo.data['samx'][::self.nexp]
-            common.scanpositions = motor_mult * np.array([x, y]).T
+            common.positions_scan = motor_mult * np.array([x, y]).T
         else:
-            common.scanpositions = None
+            common.positions_scan = None
         
         return common._to_dict()
         
@@ -99,8 +99,8 @@ class FliSpecScanMultexp(PtyScan):
         frames_accessible = min((frames_requested,npos-start))
         stop = self.frames_accessible + start
         # essential!
-        print start, npos, frames_requested
-        print frames_accessible
+        #print start, npos, frames_requested
+        #print frames_accessible
         return frames_accessible,(stop >= self.num_frames)
 
         
