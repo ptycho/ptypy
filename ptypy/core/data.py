@@ -163,10 +163,11 @@ class PtyScan(object):
         self.info = info
         # update internal dict    
         
-        # print a report
+        # Print a report
         logger.info('Ptypy Scan instance got the following parameters:\n')
         logger.info(u.verbose.report(info))
         
+        # Dump all input parameters as class attributes.
         self.__dict__.update(info)
         
         # check mpi settings
@@ -193,33 +194,39 @@ class PtyScan(object):
             if parallel.master:
                 if os.path.exists(filename):
                     backup = filename +'.old'
-                    logger.warning('File %s already exist. Renamed to %s' % (filename,backup))
-                    os.rename(filename,backup)
+                    logger.warning('File %s already exist. Renamed to %s' % (filename, backup))
+                    os.rename(filename, backup)
+                # Prepare an empty file with the appropriate structure
                 io.h5write(filename, PTYD.copy())
-            # wait for master
+            # Wait for master
             parallel.barrier()
 
-            
         self.common = self.load_common() if (parallel.master or self.load_common_in_parallel) else {}
         # broadcast
         if not self.load_common_in_parallel:
             parallel.bcast_dict(self.common)
         logger.info('\n ---------- Analysis of the "common" arrays  ---------- \n')
-        
+
+        # Check if weights (or mask) have been loaded by load_common.
         self.has_weight2d = self.common.has_key('weight2d')
         logger.info('Check for weight or mask,  "weight2d"  .... %s\n' % str(self.has_weight2d))
-        
+
+        # Check if positions have been loaded by load_common
         positions = self.common.get('positions_scan')
         self.has_positions = positions is not None
         logger.info('Check for positions, "positions_scan" .... %s' % str(self.has_positions))
         if self.has_positions:
+            # Store positions in the info dictionary
             self.info['positions_scan'] = positions
-            frames = len(positions)
+            num_pos = len(positions)
             if self.num_frames is None:
-                logger.info('Setting number of frames for preparation from `None` to %d\n' % frames)
-                self.num_frames = frames
+                # Frame number was not known. We just set it now.
+                logger.info('Setting number of frames for preparation from `None` to %d\n' % num_pos)
+                self.num_frames = num_pos
             else:
-                logger.warning('Going to prepare %d frames of %d\n'  % (self.num_frames,frames))
+                # Frame number was already specified. Maybe we didn't want to use everything?
+                logger.warning('Going to prepare %d frames of %d\n' % (self.num_frames, num_pos))
+                # FIXME: what is self.num_frames > num_pos?
     
         parallel.barrier()
         logger.info('#######  MPI Report: ########\n')
@@ -228,8 +235,8 @@ class PtyScan(object):
         logger.info(' ----------  Analyis done   ---------- \n\n')
                 
         if self.save is not None and parallel.master:
-            logger.info('Appending common dict to file %s\n' %  self.filename)
-            io.h5append(self.filename,common=self.common, info=self.info)
+            logger.info('Appending common dict to file %s\n' % self.filename)
+            io.h5append(self.filename, common=self.common, info=self.info)
         # wait for master
         parallel.barrier()
         
@@ -359,7 +366,7 @@ class PtyScan(object):
             
             if not has_weights:
                 # peak at first item
-                altweight = self.common.get('weight2d',np.ones(dsh))
+                altweight = self.common.get('weight2d', np.ones(dsh))
                 weights = dict.fromkeys(data.keys(), altweight)
                 
             assert len(weights)==len(data), 'Data and Weight frames unbalanced %d vs %d' %(len(data),len(weights))
@@ -445,7 +452,7 @@ class PtyScan(object):
             # slice positions from common if they are empty too
             if positions is None or len(positions)==0:
                 try:
-                    chunk.positions = self.common.get('positions_scan',self.info.get('positions_theory'))[indices.chunk]
+                    chunk.positions = self.common.get('positions_scan', self.info.get('positions_theory'))[indices.chunk]
                 except:
                     logger.info('slicing position information failed')
                     chunk.positions = None
@@ -539,20 +546,20 @@ class PtyScan(object):
         """
         if self.load_in_parallel:
             # all nodes load raw_data and slice according to indices
-            raw, pos, weights = self.load(indices = indices.node)
+            raw, pos, weights = self.load(indices=indices.node)
             
             # gather postion information as every node needs it later
             pos = parallel.gather_dict(pos)
         else:
             if parallel.master:
-                raw, pos,weights = self.load(indices = indices.chunk) 
+                raw, pos, weights = self.load(indices=indices.chunk)
             else:
                 raw = {}
                 pos = {}
                 weights = {}
             # distribute raw data across nodes according to indices
-            raw = parallel.bcast_dict(raw,indices.node)
-            weights = parallel.bcast_dict(weights,indices.node)
+            raw = parallel.bcast_dict(raw, indices.node)
+            weights = parallel.bcast_dict(weights, indices.node)
             
         # (re)distribute position information - every node should now be 
         # aware of all positions
@@ -564,7 +571,7 @@ class PtyScan(object):
         return data, pos, weights
 
     
-    def check(self,frames=None, start=None):
+    def check(self, frames=None, start=None):
         """
         ! Overwrite in child class !
         
@@ -618,7 +625,7 @@ class PtyScan(object):
         Overwrite in child class
         loads data according to indices given
         
-        must return 3 dicts with indices as keys
+        must return 3 dicts with indices as keys: one for the raw frames, one for the
         """
         # dummy fill
         raw = dict((i,i*np.ones(self.roi)) for i in indices)
