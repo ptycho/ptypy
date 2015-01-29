@@ -15,9 +15,10 @@ This file is part of the PTYPY package.
 
 # Import nstrument-specific modules 
 #import cSAXS
-#import I13DLS
+from I13 import I13Scan
 from optiklabor import FliSpecScanMultexp
 
 PtyScanTypes = dict(
-    fli_spec_multexp = FliSpecScanMultexp,
+    fli_spec_multexp=FliSpecScanMultexp,
+    i13dls=I13Scan
 )
