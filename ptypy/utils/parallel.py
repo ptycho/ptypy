@@ -279,6 +279,14 @@ def bcast(data,source=0,key=""):
     """
     Wrapper for comm.bcast
     """
+    # FIXME: what is this function supposed to do? Is the following non-parallel case ok?
+    if not MPIenabled:
+        key, npdata = _check(data)
+        if str(key)== "":
+            return npdata
+        else:
+            return (key, npdata)
+
     #Communicate size
     if rank == source:
         key,npdata = _check(data) 
@@ -303,7 +311,10 @@ def bcast(data,source=0,key=""):
 
 def _check(data):
     """
-    checks if data is compatible for sending
+    Check if data is compatible for MPI broadcast.
+
+    FIXME: is the following true?
+    data can be either a numpy array or a pair (key, array)
     """
     if type(data) is np.ndarray:
         key=""
@@ -427,6 +438,10 @@ def gather_dict(dct,target=0):
               empty dict at other ranks
     """
     out = {}
+    if not MPIenabled:
+        out.update(dct)
+        return out
+
     for r in range(size):
         if r==target: 
             if rank==target:
@@ -460,7 +475,11 @@ def bcast_dict(dct,keys_accepted='all',source=0):
         dict, length : a reduced dictionary with only accepted keys 
                       and the length of the original dictionary
     """
-    # communicate the dict length  
+    if not MPIenabled:
+        out = dict(dct)
+        return out, len(out)
+
+    # communicate the dict length
     if rank == source:
         out ={}
         length = comm.bcast(len(dct), source)
