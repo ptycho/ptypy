@@ -159,7 +159,11 @@ class PtyScan(object):
             for k,v in info.geometry.items():
                 info[k] = v if info.get(k) is None else None
             info.roi = u.expect2(info.geometry.get('N')) if info.roi is None else info.roi
-            
+
+        # None for rebin should be allowed, as in "don't rebin".
+        if info.rebin is None:
+            info.rebin = 1
+
         self.info = info
         # update internal dict    
         
@@ -168,6 +172,7 @@ class PtyScan(object):
         logger.info(u.verbose.report(info))
         
         # Dump all input parameters as class attributes.
+        # FIXME: This can lead to much confusion...
         self.__dict__.update(info)
         
         # check mpi settings
@@ -393,6 +398,7 @@ class PtyScan(object):
 
             # adapt roi if not set
             self.roi = u.expect2(self.roi) if self.roi is not None else dsh
+            self.shape = self.roi
             
             # determine if the arrays require further processing
             do_flip=np.array(self.orientation).any()
@@ -441,12 +447,13 @@ class PtyScan(object):
             chunk.indices_node = indices.node
             chunk.num = self.chunknum
             chunk.data = data
-            
+
             # if there were weights we add them to chunk, 
             # otherwise we push it into meta
             if has_weights:
                 chunk.weights = weights
             elif has_data:
+                chunk.weights = {}
                 self.meta.weight2d = weights.values()[0]
                 
             # slice positions from common if they are empty too
@@ -509,28 +516,33 @@ class PtyScan(object):
     def return_chunk_as(self,chunk,kind='dp'):
         """
         Returns the loaded data chunk `chunk` in the format `kind`
-        For now only kind=='dp' is valid.
+        For now only kind=='dp' (data package) is valid.
         """
         # this is a bit ugly now
         if kind=='dp':
             out={}
+
+            # The "common" part
             out['common'] = self.meta
-            lst = []
-            for pos,index in zip(chunk.positions,chunk.indices):
-                tmp={}
-                tmp['index'] = index
-                tmp['data'] = chunk.data.get(index)
-                tmp['mask'] = tmp['data']
-                if tmp['mask'] is not None:
+
+            # The "iterable" part
+            iterables = []
+            for pos, index in zip(chunk.positions, chunk.indices):
+                frame = {}
+                frame['index'] = index
+                frame['data'] = chunk.data.get(index)
+                if frame['data'] is None:
+                    frame['mask'] = None
+                else:
                     # ok we now know that we need a mask since data is not None
                     # first look in chunk for a weight to this index, then
                     # look for a 2d-weight in meta, then arbitrarily set
                     # weight to ones. 
-                    w = chunk.weights.get(index,self.meta.get('weight2d',np.ones_like(tmp['data'])))
-                    tmp['mask']= (w>0) 
-                tmp['position']=pos
-                lst.append(tmp)
-            out['iterable']=lst
+                    w = chunk.weights.get(index, self.meta.get('weight2d', np.ones_like(frame['data'])))
+                    frame['mask'] = (w > 0)
+                frame['position'] = pos
+                iterables.append(frame)
+            out['iterable'] = iterables
         return out
         
     def _mpi_pipeline_with_dictionarys(self,indices):
@@ -858,7 +870,7 @@ class DataSource(object):
         
     def feed_data(self):
         """
-        
+        Yield data packages.
         """
         # get PtyScan instance to scan_number
         PS = self.PS[self.scan_current]
