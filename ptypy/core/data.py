@@ -58,7 +58,6 @@ This file is part of the PTYPY package.
 if __name__ == "__main__":
     from ptypy import utils as u
     from ptypy import io
-    import ptypy
     import numpy as np
     import os
     import h5py
@@ -68,45 +67,46 @@ else:
     import numpy as np
     import os
     import h5py
-    
-parallel=u.parallel
+
+parallel = u.parallel
 logger = u.verbose.logger
 
 META = dict(
-    label_original = 'foo',
-    label = 'scanfoo',
-    version = '0.1',
-    shape = None,
-    psize_det = None,
-    lam = None,
-    energy= None,
+    label_original='foo',
+    label='scanfoo',
+    version='0.1',
+    shape=None,
+    psize_det=None,
+    lam=None,
+    energy=None,
 )
 
 PTYD = dict(
-    data = {},                        # frames, positions
-    meta = {},                        # important to understand data. loaded by every process
-    info = {},                        # this dictionary is not loaded from a ptyd. Mainly for documentation
-    common = {},
+    data={},  # frames, positions
+    meta={},  # important to understand data. loaded by every process
+    info={},  # this dictionary is not loaded from a ptyd. Mainly for documentation
+    common={},
 )
 
 GENERIC = dict(
-    filename='./foo.ptyd',            # filename
-    label = 'scan001',                # a scan label
-    chunk_format = '.chunk%02d',      # Format for chunk file appendix.
-    num_frames = 60,                  # frame size of saved ptyd or load. Can be None.
-    roi = None,                       # 2-tuple or int for the desired fina frame size
-    save=None,                        # None, 'merge', 'append', 'extlink'
-    center=None,                      # 2-tuple, 'auto', None. If 'auto', center is chosen automatically   
-    load_parallel = 'data',           # None, 'data', 'common', 'all'
-    rebin = 1,                         # rebin diffraction data
-    orientation = (False,False,False), # 3-tuple switch, actions are (transpose, invert rows, invert cols)
-    min_frames = parallel.size         # minimum number of frames if one chunk if not at end of scan           
+    filename='./foo.ptyd',  # filename
+    label='scan001',  # a scan label
+    chunk_format='.chunk%02d',  # Format for chunk file appendix.
+    num_frames=60,  # frame size of saved ptyd or load. Can be None.
+    roi=None,  # 2-tuple or int for the desired fina frame size
+    save=None,  # None, 'merge', 'append', 'extlink'
+    center=None,  # 2-tuple, 'auto', None. If 'auto', center is chosen automatically
+    load_parallel='data',  # None, 'data', 'common', 'all'
+    rebin=1,  # rebin diffraction data
+    orientation=(False, False, False),  # 3-tuple switch, actions are (transpose, invert rows, invert cols)
+    min_frames=parallel.size  # minimum number of frames if one chunk if not at end of scan
 )
 
 WAIT = 'msg1'
-EOS =  'msgEOS'
-CODES = {WAIT : 'Scan unfinished. More frames available after a pause',
-         EOS : 'End of scan reached'}
+EOS = 'msgEOS'
+CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
+         EOS: 'End of scan reached'}
+
 
 class PtyScan(object):
     """\
@@ -121,42 +121,46 @@ class PtyScan(object):
      - mpi capable, child classes should not worry about mpi
      
     """
-    def __init__(self,pars=None,**kwargs): #filename='./foo.ptyd',shape=None, save=True):
+
+    def __init__(self, pars=None, **kwargs):  # filename='./foo.ptyd',shape=None, save=True):
         """
         Class creation with minimum set of parameters, see DEFAULT dict in core/data.py
-        Please note the the class create does not necessatily load data.
+        Please note the the class creation does not necessarily load data.
         Call <cls_instance>.initialize() to begin
         """
         info = u.Param(GENERIC.copy())
         if pars is not None:
             info.update(pars)
         info.update(kwargs)
-        
+
         # a copy for important information
         self.meta = u.Param(META.copy())
-        
+
         if info.num_frames is None:
-            logger.info('Total number of frames for scan %s not specified.\n Looking for position information input parameter structure ....\n')
-            
+            logger.info('Total number of frames for scan %s not specified.')
+            logger.info('Looking for position information input parameter structure ....\n')
+
             # check if we got position information in the parameters
             if info.get('positions_theory') is None:
-                
+
                 if info.get('pattern') is not None:
                     from ptypy.core import pattern
-                    info.positions_theory= pattern.from_pars(info['pattern'])
+
+                    info.positions_theory = pattern.from_pars(info['pattern'])
 
                 elif info.get('xy') is not None:
                     from ptypy.core import xy
-                    info.positions_theory= xy.from_pars(info['xy'])
-            
+
+                    info.positions_theory = xy.from_pars(info['xy'])
+
             if info.get('positions_theory') is not None:
                 num = len(info.positions_theory)
-                logger.info('%d positions found. Setting frame count to this number\n')
-                info.num_frames = len(info.positions_theory) 
-                
-        # check if we got information on geometry from ptycho
+                logger.info('%d positions found. Setting frame count to this number\n' % num)
+                info.num_frames = len(info.positions_theory)
+
+                # check if we got information on geometry from ptycho
         if info.get('geometry') is not None:
-            for k,v in info.geometry.items():
+            for k, v in info.geometry.items():
                 info[k] = v if info.get(k) is None else None
             info.roi = u.expect2(info.geometry.get('N')) if info.roi is None else info.roi
 
@@ -166,27 +170,27 @@ class PtyScan(object):
 
         self.info = info
         # update internal dict    
-        
+
         # Print a report
         logger.info('Ptypy Scan instance got the following parameters:\n')
         logger.info(u.verbose.report(info))
-        
+
         # Dump all input parameters as class attributes.
         # FIXME: This can lead to much confusion...
         self.__dict__.update(info)
-        
+
         # check mpi settings
         lp = str(self.load_parallel)
-        self.load_common_in_parallel = (lp=='all' or lp=='common')
-        self.load_in_parallel = (lp=='all' or lp=='data')
-        
+        self.load_common_in_parallel = (lp == 'all' or lp == 'common')
+        self.load_in_parallel = (lp == 'all' or lp == 'data')
+
         # set data chunk and frame counters to zero
-        self.framestart = 0 
+        self.framestart = 0
         self.chunknum = 0
         self.start = 0
-        
+
         # initialize flags
-        self._flags = np.array([0,0,0],dtype=int)
+        self._flags = np.array([0, 0, 0], dtype=int)
         self.is_initialized = False
 
     def initialize(self):
@@ -198,7 +202,7 @@ class PtyScan(object):
             # ok we want to create a .ptyd
             if parallel.master:
                 if os.path.exists(filename):
-                    backup = filename +'.old'
+                    backup = filename + '.old'
                     logger.warning('File %s already exist. Renamed to %s' % (filename, backup))
                     os.rename(filename, backup)
                 # Prepare an empty file with the appropriate structure
@@ -232,29 +236,29 @@ class PtyScan(object):
                 # Frame number was already specified. Maybe we didn't want to use everything?
                 logger.warning('Going to prepare %d frames of %d\n' % (self.num_frames, num_pos))
                 # FIXME: what is self.num_frames > num_pos?
-    
+
         parallel.barrier()
         logger.info('#######  MPI Report: ########\n')
         self.report(what=self.common)
         parallel.barrier()
         logger.info(' ----------  Analyis done   ---------- \n\n')
-                
+
         if self.save is not None and parallel.master:
             logger.info('Appending common dict to file %s\n' % self.filename)
             io.h5append(self.filename, common=self.common, info=self.info)
         # wait for master
         parallel.barrier()
-        
+
         self.is_initialized = True
-    
+
     def _finalize(self):
         """
         Last actions when Eon-of-Scan is reached
         """
         # maybe do this at end of everything
         if self.save is not None and parallel.master:
-            io.h5append(self.filename,common=dict(self.common), info=dict(self.info))
-            
+            io.h5append(self.filename, common=dict(self.common), info=dict(self.info))
+
     def load_common(self):
         """
         ! Overwrite in child class for custom behavior !
@@ -277,11 +281,11 @@ class PtyScan(object):
         """
         # dummy fill
         common = {}
-        common['weight2d'] = np.ones(self.roi,dtype='bool')
-        common['positions_scan'] = np.indices((self.num_frames,2)).sum(0)
+        common['weight2d'] = np.ones(self.roi, dtype='bool')
+        common['positions_scan'] = np.indices((self.num_frames, 2)).sum(0)
         return common
-        
-    def _mpi_check(self, chunksize=10,start=None):
+
+    def _mpi_check(self, chunksize=10, start=None):
         """
         Executes the check() function on master node and communicates
         the result with the other nodes.
@@ -298,7 +302,7 @@ class PtyScan(object):
         # check may contain data system access, so we keep it to one process
         if parallel.master:
             self.frames_accessible, eos = self.check(chunksize, start=s)
-            self.end_of_scan = (s+self.frames_accessible >= self.num_frames) if eos is None else eos
+            self.end_of_scan = (s + self.frames_accessible >= self.num_frames) if eos is None else eos
         # wait for master
         parallel.barrier()
         # communicate result
@@ -306,141 +310,140 @@ class PtyScan(object):
 
         N = self.frames_accessible
         # wait if too few frames are available and we are not at the end
-        if N<self.min_frames and not self.end_of_scan:
-            return WAIT 
-        elif self.end_of_scan and N<=0:
+        if N < self.min_frames and not self.end_of_scan:
+            return WAIT
+        elif self.end_of_scan and N <= 0:
             return EOS
         else:
             # move forward,set new starting point
             self.framestart += N
-            return s,N
-        
-    def _mpi_indices(self,start,step):
+            return s, N
+
+    def _mpi_indices(self, start, step):
         """
         Funtion to generate the diffraction data index lists that
         determine which node contains which data.
         """
         indices = u.Param()
-        
+
         # all indices in this chunk of data
-        indices.chunk = range(start,start+step)
-        
+        indices.chunk = range(start, start + step)
+
         # let parallel.loadmanager take care of assigning these indices to nodes
         indices.lm = parallel.loadmanager.assign(indices.chunk)
         # this one contains now a list of indices listed after ranke
-        
+
         # index list (node specific)
         indices.node = [indices.chunk[i] for i in indices.lm[parallel.rank]]
-        
+
         # store internally
-        self.indices = indices   
-        return indices        
-         
-    def get_data_chunk(self,chunksize=10,start=None):
+        self.indices = indices
+        return indices
+
+    def get_data_chunk(self, chunksize=10, start=None):
         """
         This function prepares a container that is compatible to data package
         This function is called from the auto() function.
-
         """
-        msg = self._mpi_check(chunksize,start)
-        if msg in [EOS,WAIT]:
+        msg = self._mpi_check(chunksize, start)
+        if msg in [EOS, WAIT]:
             logger.info(CODES[msg])
             return msg
         else:
-            start,step = msg
-            
-            # get scanpoint index distribution
-            indices = self._mpi_indices(start,step)
-            
+            start, step = msg
+
+            # get scan point index distribution
+            indices = self._mpi_indices(start, step)
+
             # what did we get?
-            data, positions, weights = self._mpi_pipeline_with_dictionarys(indices)
+            data, positions, weights = self._mpi_pipeline_with_dictionaries(indices)
             # all these dictionaries could be empty
             # fill weights dictionary with references to the weights in common
-            
-            has_data = (len(data)>0) 
-            has_weights = (len(weights)>0)           
+
+            has_data = (len(data) > 0)
+            has_weights = (len(weights) > 0)
 
             if has_data:
                 dsh = np.array(data.values()[0].shape[-2:])
             else:
-                dsh = np.zeros([0,0])
-                
+                dsh = np.zeros([0, 0])
+
             # communicate result
-            # print dsh
             parallel.MPImax(dsh)
-            
+
             if not has_weights:
                 # peak at first item
                 altweight = self.common.get('weight2d', np.ones(dsh))
                 weights = dict.fromkeys(data.keys(), altweight)
-                
-            assert len(weights)==len(data), 'Data and Weight frames unbalanced %d vs %d' %(len(data),len(weights))
-            
+
+            assert len(weights) == len(data), 'Data and Weight frames unbalanced %d vs %d' % (len(data), len(weights))
+
             cen = self.center
-            
+
             # get center in diffraction image
-            if str(cen)=='auto':
-                cen  = self._mpi_autocenter(data,weights)
-            elif cen  == None:
-                cen  = dsh // 2
+            if str(cen) == 'auto':
+                cen = self._mpi_autocenter(data, weights)
+            elif cen is None:
+                cen = dsh // 2
             else:
                 # center is number or tuple
                 cen = u.expect2(cen[-2:])
-            
+
             # It is important to set center again in order to NOT have different centers for each chunk
             # the downside is that the center may be off if only a few diffraction patterns were
             # used for the analysis. It such case it is benficial to set the center in the parameters
             self.center = cen
-            self.info.center = cen # for documentation
-            
+            self.info.center = cen  # for documentation
+
             # make sure center is in the image frame
-            assert (cen > 0).all() and (dsh-cen > 0).all(), 'Optical axes (center = (%.1f,%.1f) outside diffraction image frame' % tuple(cen)   
+            assert (cen > 0).all() and (
+                dsh - cen > 0).all(), 'Optical axes (center = (%.1f,%.1f) outside diffraction image frame' % tuple(cen)
 
             # adapt roi if not set
             self.roi = u.expect2(self.roi) if self.roi is not None else dsh
             self.shape = self.roi
-            
+
             # determine if the arrays require further processing
-            do_flip=np.array(self.orientation).any()
-            do_crop=(np.abs(self.roi-dsh)>0.5).any()
-            do_rebin=(self.rebin!=1)
-            
+            do_flip = np.array(self.orientation).any()
+            do_crop = (np.abs(self.roi - dsh) > 0.5).any()
+            do_rebin = (self.rebin != 1)
+
             if do_flip or do_crop or do_rebin:
-                logger.info('Enter preprocessing (crop/pad %s, rebin %s, flip/rotate %s) ... \n' % (str(do_crop),str(do_flip),str(do_rebin)))
+                logger.info('Enter preprocessing (crop/pad %s, rebin %s, flip/rotate %s) ... \n' %
+                            (str(do_crop), str(do_flip), str(do_rebin)))
                 # we proceed with numpy arrays. That is probably now
                 # more memory intensive but shorter in writing                       
                 d = np.array([data[ind] for ind in indices.node])
                 w = np.array([weights[ind] for ind in indices.node])
-                
+
                 # flip, rotate etc.
-                if len(d)>0:
+                if len(d) > 0:
 
                     # flip, rotate etc.
-                    d,cen = switch_frame_orientation(d,self.orientation,cen)
-                    w,tmp = switch_frame_orientation(w,self.orientation,cen)
-                    
+                    d, cen = switch_frame_orientation(d, self.orientation, cen)
+                    w, tmp = switch_frame_orientation(w, self.orientation, cen)
+
                     # crop
-                    d,cen = crop_pad_symmetric_2d(d,self.roi,cen)
-                    w,tmp = crop_pad_symmetric_2d(w,self.roi,cen)
-                    
+                    d, cen = crop_pad_symmetric_2d(d, self.roi, cen)
+                    w, tmp = crop_pad_symmetric_2d(w, self.roi, cen)
+
                     # rebin, check if rebinning is neither to strong nor impossible
                     rebin = self.rebin
-                    if self.rebin in range(2,6) and (((self.roi/ float(rebin)) % 1) ==0.0).all():
+                    if self.rebin in range(2, 6) and (((self.roi / float(rebin)) % 1) == 0.0).all():
                         mask = w > 0
-                        d = rebin_2d(d,rebin)
-                        w = rebin_2d(w,rebin)
-                        mask = rebin_2d(mask,rebin)
-                        w[mask<1]=0
+                        d = rebin_2d(d, rebin)
+                        w = rebin_2d(w, rebin)
+                        mask = rebin_2d(mask, rebin)
+                        w[mask < 1] = 0
                         cen /= float(rebin)
                         self.shape = u.expect2(self.roi) / rebin
                         if self.__dict__.get('psize_det') is not None:
                             self.psize_det = u.expect2(self.psize_det) * rebin
 
-                            
-                # translate back to dictionarys
-                data = dict(zip(indices.node,d))
-                weights = dict(zip(indices.node,w))
-                
+                # translate back to dictionaries
+                data = dict(zip(indices.node, d))
+                weights = dict(zip(indices.node, w))
+
             # prepare chunk of data
             chunk = u.Param()
             chunk.indices = indices.chunk
@@ -455,36 +458,37 @@ class PtyScan(object):
             elif has_data:
                 chunk.weights = {}
                 self.meta.weight2d = weights.values()[0]
-                
+
             # slice positions from common if they are empty too
-            if positions is None or len(positions)==0:
+            if positions is None or len(positions) == 0:
                 try:
-                    chunk.positions = self.common.get('positions_scan', self.info.get('positions_theory'))[indices.chunk]
+                    chunk.positions = self.common.get('positions_scan', self.info.get('positions_theory'))[
+                        indices.chunk]
                 except:
                     logger.info('slicing position information failed')
                     chunk.positions = None
             else:
                 # a dict : sort positions to indices.chunk
                 # this may fail if there a less positions than scan points (unlikely)
-                chunk.positions = np.asarray([positions[i] for i in indices.chunk])  
-            # positions complete
-            
+                chunk.positions = np.asarray([positions[i] for i in indices.chunk])
+                # positions complete
+
             # with first chunk we update meta
             if self.chunknum < 1:
-                for k,v in self.meta.items():
+                for k, v in self.meta.items():
                     self.meta[k] = self.__dict__.get(k, self.info.get(k)) if v is None else v
                 self.meta['center'] = cen
-                
+
                 if self.save is not None and parallel.master:
-                    io.h5append(self.filename,meta=dict(self.meta))
+                    io.h5append(self.filename, meta=dict(self.meta))
                 parallel.barrier()
-            
+
             self.chunk = chunk
-            self.chunknum+=1
-            
+            self.chunknum += 1
+
             return chunk
-    
-    def auto(self,frames = parallel.size, chunk_form='dp'):
+
+    def auto(self, frames=parallel.size, chunk_form='dp'):
         """
         Repeated calls to this function will process the data
         
@@ -496,31 +500,31 @@ class PtyScan(object):
         """
         # attempt to get data:
         msg = self.get_data_chunk(frames)
-        if msg==WAIT:
+        if msg == WAIT:
             return msg
-        elif msg==EOS:
+        elif msg == EOS:
             # cleanup maybe?
             self._finalize()
-            #del self.common
-            #del self.chunk
+            # del self.common
+            # del self.chunk
             return msg
         else:
-            out = self.return_chunk_as(msg,chunk_form)
+            out = self.return_chunk_as(msg, chunk_form)
             # save chunk
             if self.save is not None:
                 self._mpi_save_chunk()
             # delete chunk
             del self.chunk
             return out
-    
-    def return_chunk_as(self,chunk,kind='dp'):
+
+    def return_chunk_as(self, chunk, kind='dp'):
         """
         Returns the loaded data chunk `chunk` in the format `kind`
         For now only kind=='dp' (data package) is valid.
         """
         # this is a bit ugly now
-        if kind=='dp':
-            out={}
+        if kind == 'dp':
+            out = {}
 
             # The "common" part
             out['common'] = self.meta
@@ -544,8 +548,8 @@ class PtyScan(object):
                 iterables.append(frame)
             out['iterable'] = iterables
         return out
-        
-    def _mpi_pipeline_with_dictionarys(self,indices):
+
+    def _mpi_pipeline_with_dictionaries(self, indices):
         """
         example processing pipeline using dictionaries.
         
@@ -559,7 +563,7 @@ class PtyScan(object):
         if self.load_in_parallel:
             # all nodes load raw_data and slice according to indices
             raw, pos, weights = self.load(indices=indices.node)
-            
+
             # gather postion information as every node needs it later
             pos = parallel.gather_dict(pos)
         else:
@@ -572,17 +576,16 @@ class PtyScan(object):
             # distribute raw data across nodes according to indices
             raw = parallel.bcast_dict(raw, indices.node)
             weights = parallel.bcast_dict(weights, indices.node)
-            
+
         # (re)distribute position information - every node should now be 
         # aware of all positions
         parallel.bcast_dict(pos)
-       
+
         # prepare data across nodes    
         data, weights = self.correct(raw, weights, self.common)
 
         return data, pos, weights
 
-    
     def check(self, frames=None, start=None):
         """
         ! Overwrite in child class !
@@ -608,31 +611,32 @@ class PtyScan(object):
                               None : can't say
                     
         """
-        if start is None: start = self.framestart
-        if frames is None: frames = self.min_frames
-        
-        frames_accessible = min((frames,self.num_frames-start))
-       
-        return frames_accessible,  None
+        if start is None:
+            start = self.framestart
+        if frames is None:
+            frames = self.min_frames
+
+        frames_accessible = min((frames, self.num_frames - start))
+
+        return frames_accessible, None
 
     @property
     def end_of_scan(self):
-        return not(self._flags[1]==0)
-    
+        return not (self._flags[1] == 0)
+
     @end_of_scan.setter
-    def end_of_scan(self,eos):
-        self._flags[1]=int(eos)
-        
+    def end_of_scan(self, eos):
+        self._flags[1] = int(eos)
+
     @property
     def frames_accessible(self):
         return self._flags[0]
-    
+
     @frames_accessible.setter
-    def frames_accessible(self,frames):
+    def frames_accessible(self, frames):
         self._flags[0] = frames
-    
-        
-    def load(self,indices):
+
+    def load(self, indices):
         """
         Overwrite in child class
         loads data according to indices given
@@ -640,9 +644,9 @@ class PtyScan(object):
         must return 3 dicts with indices as keys: one for the raw frames, one for the
         """
         # dummy fill
-        raw = dict((i,i*np.ones(self.roi)) for i in indices)
-        return raw , {}, {}
-        
+        raw = dict((i, i * np.ones(self.roi)) for i in indices)
+        return raw, {}, {}
+
     def correct(self, raw, weights, common):
         """
         Overwrite in child class
@@ -650,41 +654,40 @@ class PtyScan(object):
         Corrects the raw data with arrays given in `common`
         Adjust the weights accordinlgy
         """
-        #c=dict(indices=None,data=None,weight=None)
-        data =raw
-        return data , weights
-               
-    def _mpi_autocenter(self,data,weights):
+        # c=dict(indices=None,data=None,weight=None)
+        data = raw
+        return data, weights
+
+    def _mpi_autocenter(self, data, weights):
         """
         Calculates the frame center across all nodes.
         Data and weights are dicts of the same length and different on each node
         """
-        cen=dict([(k,u.mass_center(d*(weights[k]>0))) for k,d in data.iteritems()])
+        cen = dict([(k, u.mass_center(d * (weights[k] > 0))) for k, d in data.iteritems()])
         # for some nodes, cen may still be empty. Therefore we use gather_dict to be save
-        cen=parallel.gather_dict(cen)
+        cen = parallel.gather_dict(cen)
         parallel.barrier()
         # now master possesses all calcuated centers
         if parallel.master:
-            cen=np.array(cen.values()).mean(0)
+            cen = np.array(cen.values()).mean(0)
         else:
-            cen=np.array([0.,0.])
-            #print cen
+            cen = np.array([0., 0.])
+            # print cen
         parallel.allreduce(cen)
         return cen
 
-        
-    def report(self,what = None, shout=True):
+    def report(self, what=None, shout=True):
         """
         Make a report on internal structure
         """
-        what  = what if what is not None else self.__dict__
+        what = what if what is not None else self.__dict__
         msg = u.verbose.report(what)
         if shout:
             logger.info(msg, extra={'allprocesses': True})
         else:
             return msg
-            
-    def _mpi_save_chunk(self,kind='extlink',chunk=None):
+
+    def _mpi_save_chunk(self, kind='extlink', chunk=None):
         """
         Saves data chunk to hdf5 file specified with `filename`
         It works by gathering wieghts and data to the master node.
@@ -715,78 +718,81 @@ class PtyScan(object):
         todisk = dict(self.chunk)
         num = todisk.pop('num')
         ind = todisk.pop('indices_node')
-        for k in ['data','weights']: 
+        for k in ['data', 'weights']:
             if k in c.keys():
-                if hasattr(c[k],'iteritems'):
+                if hasattr(c[k], 'iteritems'):
                     v = c[k]
-                else :
-                    v = dict(zip(ind,np.asarray(c[k])))
+                else:
+                    v = dict(zip(ind, np.asarray(c[k])))
                 parallel.barrier()
                 # gather the content
                 newv = parallel.gather_dict(v)
-                todisk[k] = np.asarray([newv[i] for i in sorted(newv.keys())] )
-                
+                todisk[k] = np.asarray([newv[i] for i in sorted(newv.keys())])
+
         parallel.barrier()
         # all information is at master node.
         if parallel.master:
             # form a dictionary
             if kind == 'append':
                 h5address = 'chunks/%d' % num
-                io.h5append(self.filename,{h5address: todisk})
+                io.h5append(self.filename, {h5address: todisk})
             elif kind == 'extlink':
                 import h5py
-                h5address = 'chunks/%d' % num
-                hddaddress = self.filename+'.part%03d' % num
-                with h5py.File(self.filename) as f:
-                    f[h5address]=h5py.ExternalLink(hddaddress,'/')
-                    f.close()
-                io.h5write(hddaddress,todisk)
-                
-class PtydScan(PtyScan):
-    
-    def __init__(self,pars=None,**kwargs):
-        super(PtydScan,self).__init__(pars,**kwargs)
 
-        self.meta = io.h5read(self.filename,'meta')['meta']
+                h5address = 'chunks/%d' % num
+                hddaddress = self.filename + '.part%03d' % num
+                with h5py.File(self.filename) as f:
+                    f[h5address] = h5py.ExternalLink(hddaddress, '/')
+                    f.close()
+                io.h5write(hddaddress, todisk)
+
+
+class PtydScan(PtyScan):
+    def __init__(self, pars=None, **kwargs):
+        super(PtydScan, self).__init__(pars, **kwargs)
+
+        self.meta = io.h5read(self.filename, 'meta')['meta']
         # update internal dict, making sure
-        for k,v in self.meta.items():
+        for k, v in self.meta.items():
             if self.__dict__.get(k) is None:
                 self.__dict__[k] = v
-                
-    def check(self,frames=None, start=None):
-        
-        if start is None: start = self.framestart
-        if frames is None: frames = self.minframes
+
+    def check(self, frames=None, start=None):
+
+        if start is None:
+            start = self.framestart
+        if frames is None:
+            frames = self.minframes
         # Get info about size of currently available chunks.
         # Dead external links will produce None and are excluded
-        with h5py.File(self.filename,'r') as f:
-            d={}
-            
-            chitems = sorted([(int(k),v) for k,v in  f['chunks'].iteritems() if v is not None], key = lambda t:t[0]) 
-            for chkey in chitems[0][1].keys(): 
-                d[chkey] = [(int(k),v[chkey].shape) for k,v in chitems if v is not None]
+        with h5py.File(self.filename, 'r') as f:
+            d = {}
+
+            chitems = sorted([(int(k), v) for k, v in f['chunks'].iteritems() if v is not None], key=lambda t: t[0])
+            for chkey in chitems[0][1].keys():
+                d[chkey] = [(int(k), v[chkey].shape) for k, v in chitems if v is not None]
             f.close()
 
         self._checked = d
         self.allframes = int(sum([ch[1][0] for ch in d['data']]))
-        self._ch_frame_ind = np.array([(dd[0],frame) for dd in d['data'] for frame in range(dd[1][0])])
-        
-        return self.allframes-start, None
-    
-    def _coord_to_h5_calls(self,key,coord):
-        return ('chunks/%d/%s' % (coord[0],key),slice(coord[1],coord[1]+1)) 
-        
+        self._ch_frame_ind = np.array([(dd[0], frame) for dd in d['data'] for frame in range(dd[1][0])])
+
+        return self.allframes - start, None
+
+    def _coord_to_h5_calls(self, key, coord):
+        return ('chunks/%d/%s' % (coord[0], key), slice(coord[1], coord[1] + 1))
+
     def load_common(self):
         """
         In ptyd, 'common' does not necessarily exist. Only meta is essential
         """
         try:
-            common = io.h5read(self.filename,'common')['common']
+            common = io.h5read(self.filename, 'common')['common']
         except:
             common = {}
         return common
-        
-    def load(self,indices):
+
+    def load(self, indices):
         """
         Load from ptyd. Due to possible chunked data, slicing frames is 
         non-trivial
@@ -794,62 +800,61 @@ class PtydScan(PtyScan):
         # get the coordinates in the chunks
         coords = self._ch_frame_ind[indices]
         calls = {}
-        for key in self._checked.keys(): 
-            calls[key] = [self._coord_to_h5_calls(key,c) for c in coords]
-        
+        for key in self._checked.keys():
+            calls[key] = [self._coord_to_h5_calls(key, c) for c in coords]
+
         # get our data from the ptyd file
         out = {}
-        with h5py.File(self.filename,'r') as f:
-            for array,call in calls.iteritems(): 
-                out[array] = [f[path][slce] for path,slce in call]
+        with h5py.File(self.filename, 'r') as f:
+            for array, call in calls.iteritems():
+                out[array] = [f[path][slce] for path, slce in call]
             f.close()
-            
+
         # if the chunk provided indices, we use those instead of our own
         # Dangerous and not yet implemented
         # indices = out.get('indices',indices)
-        
+
         # wrap in a dict 
-        for k,v in out.iteritems():
-            out[k] = dict(zip(indices,v))
-            
-        return (out.get(key,{}) for key in ['data','positions','weights'] ) 
+        for k, v in out.iteritems():
+            out[k] = dict(zip(indices, v))
+
+        return (out.get(key, {}) for key in ['data', 'positions', 'weights'])
 
 
 class DataSource(object):
-    
-    def __init__(self,scans, frames = 5*parallel.size, feed_format = 'dp'):
-        
+    def __init__(self, scans, frames=5 * parallel.size, feed_format='dp'):
+
         from ..experiment import PtyScanTypes
-        
+
         self.frames_per_call = frames
         self.feed_format = 'dp'
         self.scans = scans
         # sort after keys given
         labels = sorted(scans.keys())
-        
+
         # empty list for the scans
-        self.PS =[]
-        
+        self.PS = []
+
         for label in labels:
             # we are making a copy of the root as we want to fill it
             s = scans[label]['pars']
 
-            ptype = None # preparation type
+            ptype = None  # preparation type
             logger.info(u.verbose.report(s))
             # first question: do we want to rebin, crop etc
-            if s.prepare_data and s.has_key('preparation'):                          # alternatively we could check for the preparation entry
+            if s.prepare_data and s.has_key('preparation'):  # alternatively we could check for the preparation entry
                 prep = u.Param()
                 # update s with "generic" preparation
-                prep.update(s.preparation.get("generic",{}))
+                prep.update(s.preparation.get("generic", {}))
                 ptype = s.preparation.get("type")
                 if ptype is not None:
-                    prep.update(s.preparation.get(ptype,{}))
-                
+                    prep.update(s.preparation.get(ptype, {}))
+
             # copy other relevant information
             prep.filename = s.data_file
             prep.geometry = s.geometry.copy()
             prep.xy = s.xy.copy()
-            
+
             if ptype is not None:
                 logger.info('Search Data Preparation Class for key: "%s"' % ptype)
                 PS = PtyScanTypes[ptype.lower()]
@@ -858,43 +863,44 @@ class DataSource(object):
                 self.PS.append(PtydScan(prep))
             else:
                 logger.warning('Generating PtyScan for scan "%s" failed - This label will source no data')
-                
+
         # Initialize flags
         self.scan_current = -1
         self.data_available = True
         self.scan_total = len(self.PS)
-    
+
     @property
     def scan_available(self):
-        return self.scan_current < (self.scan_total -1)
-        
+        return self.scan_current < (self.scan_total - 1)
+
     def feed_data(self):
         """
         Yield data packages.
         """
         # get PtyScan instance to scan_number
         PS = self.PS[self.scan_current]
-        
+
         # initialize if that has not been done yet
         if not PS.is_initialized:
             PS.initialize()
-        
+
         msg = PS.auto(self.frames_per_call, self.feed_format)
         # if we catch a scan that has ended look for an unfinished scan
-        while msg==EOS and self.scan_available:
+        while msg == EOS and self.scan_available:
             self.scan_current += 1
             PS = self.PS[self.scan_current]
             if not PS.is_initialized:
                 PS.initialize()
             msg = PS.auto(self.frames_per_call, self.feed_format)
-            
-        self.data_available = (msg!=EOS or self.scan_available)
+
+        self.data_available = (msg != EOS or self.scan_available)
         logger.info(u.verbose.report(msg))
-        if msg!=WAIT and msg!=EOS:
+        if msg != WAIT and msg != EOS:
             # ok that would be a data package
             yield msg
-        
-def switch_frame_orientation(A,orientation,center=None):
+
+
+def switch_frame_orientation(A, orientation, center=None):
     """
     Switches orientation of Array A along the last two axes (-2,-1)
         
@@ -906,27 +912,28 @@ def switch_frame_orientation(A,orientation,center=None):
     """
     # switch orientation
     if orientation[0]:
-        axes = tuple(range(A.ndim-2))+(-1,-2)
-        A = np.transpose(A,axes)
-        center = (center[1],center[0]) if center is not None else None
+        axes = list(range(A.ndim - 2)) + [-1, -2]
+        A = np.transpose(A, axes)
+        center = (center[1], center[0]) if center is not None else None
     if orientation[1]:
-        A = A[...,::-1,:]
-        center = (A.shape[-2]-1-center[0],center[1]) if center is not None else None
+        A = A[..., ::-1, :]
+        center = (A.shape[-2] - 1 - center[0], center[1]) if center is not None else None
     if orientation[2]:
-        A = A[...,::-1]
-        center = (center[0],A.shape[-1]-1-center[1]) if center is not None else None
-        
-    return A,np.array(center)
+        A = A[..., ::-1]
+        center = (center[0], A.shape[-1] - 1 - center[1]) if center is not None else None
 
-def rebin_2d(A,rebin=1):
+    return A, np.array(center)
+
+
+def rebin_2d(A, rebin=1):
     """
     Rebins array A symmetrically along last 2 axes with a factor `rebin`
     """
-    newdim = np.asarray(A.shape[-2:])/rebin
-    return A.reshape(-1,newdim[0],rebin,newdim[1],rebin).sum(-1).sum(-2)
-    
-    
-def crop_pad_symmetric_2d(A,newshape,center=None):
+    newdim = np.asarray(A.shape[-2:]) / rebin
+    return A.reshape(-1, newdim[0], rebin, newdim[1], rebin).sum(-1).sum(-2)
+
+
+def crop_pad_symmetric_2d(A, newshape, center=None):
     """
     Crops or pads Array A symmetrically along the last two axes (-2,-1)
     around center `center` to a new shape `newshape`
@@ -934,22 +941,22 @@ def crop_pad_symmetric_2d(A,newshape,center=None):
     """
     # crop / pad symmetrically around center
     osh = np.array(A.shape[-2:])
-    c = np.round(center) if center is not None else osh//2
+    c = np.round(center) if center is not None else osh // 2
     sh = np.array(newshape[-2:])
-    low = -c + sh//2
-    high = -osh + c + (sh+1)//2
-    hplanes = np.array([[low[0],high[0]],[low[1],high[1]]])
-    
-    if (hplanes!=0).any():
-        A = u.crop_pad(A,hplanes)
+    low = -c + sh // 2
+    high = -osh + c + (sh + 1) // 2
+    hplanes = np.array([[low[0], high[0]], [low[1], high[1]]])
 
-    return A , c+low
- 
+    if (hplanes != 0).any():
+        A = u.crop_pad(A, hplanes)
+
+    return A, c + low
+
 
 if __name__ == "__main__":
     u.verbose.set_level(3)
-    shape = (40,256,256)
-    PS = PtyScan(roi=256,save='extlink')
+    shape = (40, 256, 256)
+    PS = PtyScan(roi=256, save='extlink')
     PS.initialize()
     for i in range(50):
         msg = PS.auto()

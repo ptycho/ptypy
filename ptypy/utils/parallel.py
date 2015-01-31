@@ -7,9 +7,9 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-__all__ = ['MPIenabled', 'psize', 'prank', 'comm', 'MPI', 'master', 
-            'LoadManager', 'loadmanager','MPIrand_normal','MPIrand_uniform',
-            'gather_list','scatter_list','bcast_dict','gather_dict']
+__all__ = ['MPIenabled', 'psize', 'prank', 'comm', 'MPI', 'master',
+           'LoadManager', 'loadmanager', 'MPIrand_normal', 'MPIrand_uniform',
+           'gather_list', 'scatter_list', 'bcast_dict', 'gather_dict']
 
 import numpy as np
 
@@ -20,14 +20,16 @@ comm = None
 
 try:
     from mpi4py import MPI
+
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
     rank = comm.Get_rank()
 except:
     print 'MPI initialization failed. Proceeding with one processor'
 
-MPIenabled = not (size==1)
-master = (rank==0)
+MPIenabled = not (size == 1)
+master = (rank == 0)
+
 
 def useMPI(do=None):
     """\
@@ -47,16 +49,15 @@ def useMPI(do=None):
 ###################################
 
 class LoadManager(object):
-    
     def __init__(self):
         """
         LoadManager: keep track of the amount of data managed by each
         process and help keeping it balanced.
         """
-        
+
         self.load = np.zeros((size,), dtype=int)
         self.rank_of = {}
-    
+
     def assign(self, idlist=None):
         """
         
@@ -73,34 +74,34 @@ class LoadManager(object):
         return R, a list of list such that
         R[rank] = list of indices of idlist managed by process of given rank. 
         """
-        
+
         # Simplest case
         if idlist is None:
             r = size - 1 - self.load[::-1].argmin()
-            self.load[r] +=1
-            return [[0] if rr==r else [] for rr in range(size)]
-        
+            self.load[r] += 1
+            return [[0] if rr == r else [] for rr in range(size)]
+
         # Total load
         Nid = len(idlist)
         total_load = (self.load.sum() + Nid)
 
         # Eliminate nodes that are too busy already
-        li = total_load > self.load*size
+        li = total_load > self.load * size
 
         # Recompute total load among available nodes
         nsize = li.sum()
         total_load = (self.load[li].sum() + Nid)
 
         # Numerator part of the number of elements to assign to each node
-        partition = total_load - self.load[li]*nsize
+        partition = total_load - self.load[li] * nsize
 
         # Integer part
         ipart = partition // nsize
-        
+
         # Spread the fractional remainder among the nodes, starting from the
         # last one.
         rem = (partition % nsize).sum() // nsize
-        ipart[:-int(1+rem):-1] += 1
+        ipart[:-int(1 + rem):-1] += 1
 
         # Update the loads
         part = np.zeros_like(self.load)
@@ -109,11 +110,11 @@ class LoadManager(object):
 
         # Cumulative sum give the index boundaries between the ranks 
         cumpart = np.cumsum(part)
-        
+
         # Now assign the rank
         rlist = np.arange(size)
         out = [[] for x in range(size)]
-        for i,k in enumerate(idlist):
+        for i, k in enumerate(idlist):
             r = rlist[i < cumpart][0]
             out[r].append(i)
             self.rank_of[k] = r
@@ -121,6 +122,7 @@ class LoadManager(object):
 
 # Create one instance - typically only this one should be used
 loadmanager = LoadManager()
+
 
 def allreduce(a, op=None):
     """
@@ -136,26 +138,30 @@ def allreduce(a, op=None):
          If None, use MPI.SUM.
     """
 
-    if not MPIenabled: return
+    if not MPIenabled:
+        return
     if op is None:
-        #print a.shape
+        # print a.shape
         comm.Allreduce(MPI.IN_PLACE, a)
     else:
         comm.Allreduce(MPI.IN_PLACE, a, op=op)
     return
+
 
 def _MPIop(a, op, axis=None):
     """
     Apply operation op on accross a list of arrays distributed between
     processes. Supported operations are SUM, MAX, MIN, and PROD. 
     """
-    
-    MPIop, npop = {'SUM':(MPI.SUM, np.sum), 'MAX':(MPI.MAX, np.max), 'MIN':(MPI.MIN, np.min), 'PROD':(MPI.PROD, np.prod)}[op.upper()]
+
+    MPIop, npop = \
+        {'SUM': (MPI.SUM, np.sum), 'MAX': (MPI.MAX, np.max), 'MIN': (MPI.MIN, np.min), 'PROD': (MPI.PROD, np.prod)}[
+            op.upper()]
 
     # Total op
     if axis is None:
         # Apply op on locally owned data (and wrap the scalar result in a numpy array
-        s = np.array([ npop( [npop(ai) for ai in a if ai is not None] ) ])
+        s = np.array([npop([npop(ai) for ai in a if ai is not None])])
 
         # Reduce and return scalar
         if MPIenabled:
@@ -163,7 +169,7 @@ def _MPIop(a, op, axis=None):
         return s[0]
 
     # Axis across the processes
-    elif axis==0:
+    elif axis == 0:
         # Apply op on locally owned arrays
         s = npop(ai for ai in a if ai is not None)
 
@@ -174,7 +180,8 @@ def _MPIop(a, op, axis=None):
 
     else:
         # No cross-talk needed
-        return [npop(ai, axis=axis-1) if ai is not None else None for ai in a]
+        return [npop(ai, axis=axis - 1) if ai is not None else None for ai in a]
+
 
 def MPIsum(a, axis=None):
     """
@@ -182,17 +189,20 @@ def MPIsum(a, axis=None):
     """
     return _MPIop(a, op='SUM', axis=axis)
 
+
 def MPImin(a, axis=None):
     """
     Compute the minimum over a list of arrays distributed over multiple processes.
     """
     return _MPIop(a, op='MIN', axis=axis)
-    
+
+
 def MPImax(a, axis=None):
     """
     Compute the maximum over a list of arrays distributed over multiple processes.
     """
     return _MPIop(a, op='MAX', axis=axis)
+
 
 def MPIprod(a, axis=None):
     """
@@ -200,14 +210,17 @@ def MPIprod(a, axis=None):
     """
     return _MPIop(a, op='PROD', axis=axis)
 
+
 def barrier():
     """
     Wrapper for comm.Barrier.
     """
 
-    if not MPIenabled: return
+    if not MPIenabled:
+        return
     comm.Barrier()
-    
+
+
 def send(data, dest=0, tag=0):
     """
     Wrapper for comm.Send
@@ -229,11 +242,12 @@ def send(data, dest=0, tag=0):
 
     # Send data
     # mpi4py has in issue sending booleans. we convert to uint8 (same size)
-    if npdata.dtype.str=='|b1': 
+    if npdata.dtype.str == '|b1':
         comm.Send(npdata.astype('uint8'), dest=dest, tag=tag)
     else:
         comm.Send(npdata, dest=dest, tag=tag)
-        
+
+
 def receive(source=None, tag=0, out=None):
     """
     Wrapper for comm.Recv
@@ -254,12 +268,13 @@ def receive(source=None, tag=0, out=None):
     out : numpy array or 2tuple (key, numpy array)
     """
 
-    if source is None: source = MPI.ANY_SOURCE
+    if source is None:
+        source = MPI.ANY_SOURCE
 
     # Receive array info
     shape, dtypestr, key = comm.recv(source=source, tag=1)
-    
-    newdtype = '|u1' if dtypestr=='|b1' else dtypestr
+
+    newdtype = '|u1' if dtypestr == '|b1' else dtypestr
     # Create array if none is provided
     if out is None:
         out = np.empty(shape, dtype=newdtype)
@@ -267,47 +282,49 @@ def receive(source=None, tag=0, out=None):
     # Receive raw data
     comm.Recv(out, source=source, tag=tag)
 
-    if dtypestr=='|b1':
+    if dtypestr == '|b1':
         out = out.astype('bool')
-    
-    if str(key)!="":
-        return (key,out)
+
+    if str(key) != "":
+        return (key, out)
     else:
         return out
 
-def bcast(data,source=0,key=""):
+
+def bcast(data, source=0, key=""):
     """
     Wrapper for comm.bcast
     """
     # FIXME: what is this function supposed to do? Is the following non-parallel case ok?
     if not MPIenabled:
         key, npdata = _check(data)
-        if str(key)== "":
+        if str(key) == "":
             return npdata
         else:
             return (key, npdata)
 
-    #Communicate size
+    # Communicate size
     if rank == source:
-        key,npdata = _check(data) 
-        shape, dtypestr,key = comm.bcast((npdata.shape, npdata.dtype.str, key), source)
+        key, npdata = _check(data)
+        shape, dtypestr, key = comm.bcast((npdata.shape, npdata.dtype.str, key), source)
     else:
-        shape, dtypestr,key = comm.bcast(None, source)
-        
+        shape, dtypestr, key = comm.bcast(None, source)
+
     # Prepare buffers
-    newdtype = '|u1' if dtypestr=='|b1' else dtypestr
+    newdtype = '|u1' if (dtypestr == '|b1') else dtypestr
     if rank == source:
         buf = npdata.astype(newdtype)
     else:
         buf = np.empty(shape, dtype=newdtype)
-    
+
     # Send
     comm.Bcast(buf, source)
-    
-    if str(key)=="":
+
+    if str(key) == "":
         return buf.astype(dtypestr)
     else:
-        return (key,buf)
+        return (key, buf)
+
 
 def _check(data):
     """
@@ -317,39 +334,42 @@ def _check(data):
     data can be either a numpy array or a pair (key, array)
     """
     if type(data) is np.ndarray:
-        key=""
+        key = ""
         if not data.flags.contiguous:
-            data=np.ascontiguousarray(data)
+            data = np.ascontiguousarray(data)
     elif np.iterable(data):
-        key=data[0]
-        data=_check(data[1])[1]
+        key = data[0]
+        data = _check(data[1])[1]
     else:
-        raise TypeError("Input data %s incompatible for broadcast" % str(type(data)))     
-    return key,data
-    
-def MPIrand_normal(loc=0.0,scale=1.0,size=(1)):
+        raise TypeError("Input data %s incompatible for broadcast" % str(type(data)))
+    return key, data
+
+
+def MPIrand_normal(loc=0.0, scale=1.0, size=(1)):
     """
     wrapper for np.random.normal for same random sample across all nodes.
     """
     if master:
-        sample = np.array(np.random.normal(loc=loc,scale=scale,size=size))
+        sample = np.array(np.random.normal(loc=loc, scale=scale, size=size))
     else:
         sample = np.zeros(size)
     allreduce(sample)
     return sample
 
-def MPIrand_uniform(low=0.0,high=1.0,size=(1)):
+
+def MPIrand_uniform(low=0.0, high=1.0, size=(1)):
     """
      wrapper for np.random.uniform for same random sample across all nodes.
     """
     if master:
-        sample = np.array(np.random.uniform(low=low,high=high,size=size))
+        sample = np.array(np.random.uniform(low=low, high=high, size=size))
     else:
         sample = np.zeros(size)
     allreduce(sample)
     return sample
 
-def gather_list(lst,length,indices):
+
+def gather_list(lst, length, indices):
     """
     gathers list `lst` of all processes to a list of length `length` 
     according to order given by `indices`. definitely not foolproof
@@ -357,10 +377,10 @@ def gather_list(lst,length,indices):
     
     return list of length `length`. has only meaning in master process
     """
-    new = [None]*length
-    for index,item in zip(indices,lst):
-        if index<length:
-            new[index]=item
+    new = [None] * length
+    for index, item in zip(indices, lst):
+        if index < length:
+            new[index] = item
     if MPIenabled:
         for i in range(length):
             if master:
@@ -374,10 +394,11 @@ def gather_list(lst,length,indices):
                     send(new[i])
                 barrier()
         barrier()
-    
+
     return new
-    
-def scatter_list(lst,length,indices):
+
+
+def scatter_list(lst, length, indices):
     """
     master process scatters a list `lst` of length `length`
     to non-masters that have the respective index in their `indeces` list
@@ -387,7 +408,7 @@ def scatter_list(lst,length,indices):
     return list of length len(indices) for all processes. 
     indices that extend boyond length are filled with None 
     """
-    new = [None]*len(indices)
+    new = [None] * len(indices)
     if MPIenabled:
         for i in range(length):
             if master:
@@ -395,39 +416,41 @@ def scatter_list(lst,length,indices):
                 # Root broadcasts the data
             else:
                 data = bcast(None)
-                
-            #data = pp.bcast(data)
+
+            # data = pp.bcast(data)
             try:
                 new[indices.index(i)] = data
             except:
                 pass
-    
+
     return new
 
-def gather_list(lst,target=0):
+
+def gather_list(lst, target=0):
     out = []
     for r in range(size):
-        if r==target: 
-            if rank==target:
-                out+=lst
+        if r == target:
+            if rank == target:
+                out += lst
             continue
-            
+
         if rank == target:
             l = comm.recv(source=r)
             for i in range(l):
                 out.append(receive(r))
-                #out[k] = v
+                # out[k] = v
         elif r == rank:
             # your turn to send
             l = len(lst)
-            comm.send(l,dest=target)
+            comm.send(l, dest=target)
             for item in lst:
-                send(item,dest=target)
+                send(item, dest=target)
         barrier()
-    
+
     return out
 
-def gather_dict(dct,target=0):
+
+def gather_dict(dct, target=0):
     """
     Gathers broadcasted dict `dct` at rank `target`.
     Input dictionaries remain unaltered
@@ -443,27 +466,28 @@ def gather_dict(dct,target=0):
         return out
 
     for r in range(size):
-        if r==target: 
-            if rank==target:
+        if r == target:
+            if rank == target:
                 out.update(dct)
             continue
-            
+
         if rank == target:
             l = comm.recv(source=r)
             for i in range(l):
-                k,v = receive(r)
+                k, v = receive(r)
                 out[k] = v
         elif r == rank:
             # your turn to send
             l = len(dct)
-            comm.send(l,dest=target)
+            comm.send(l, dest=target)
             for item in dct.iteritems():
-                send(item,dest=target)
+                send(item, dest=target)
         barrier()
-    
+
     return out
-        
-def bcast_dict(dct,keys_accepted='all',source=0):
+
+
+def bcast_dict(dct, keys_accepted='all', source=0):
     """
     Broadcasts a dict of where all values are numpy arrays
     Fills dict `dct` in place for receiving nodes
@@ -481,12 +505,12 @@ def bcast_dict(dct,keys_accepted='all',source=0):
 
     # communicate the dict length
     if rank == source:
-        out ={}
+        out = {}
         length = comm.bcast(len(dct), source)
-        for k,v in dct.items():
-            bcast((k,v))
-            if str(keys_accepted)=='all' or k in keys_accepted:
-                out[k]= v 
+        for k, v in dct.items():
+            bcast((k, v))
+            if str(keys_accepted) == 'all' or k in keys_accepted:
+                out[k] = v
 
         return out
     else:
@@ -494,13 +518,8 @@ def bcast_dict(dct,keys_accepted='all',source=0):
             dct = {}
         length = comm.bcast(None, source)
         for k in range(length):
-            k,v = bcast(None)
-            if str(keys_accepted)=='all' or k in keys_accepted:
-                dct[k]= v 
+            k, v = bcast(None)
+            if str(keys_accepted) == 'all' or k in keys_accepted:
+                dct[k] = v
 
         return dct
-
-    
-    
-    
-    
