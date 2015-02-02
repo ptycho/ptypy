@@ -8,11 +8,12 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-from ptypy import utils as u
+from parameters import Param
 import pkg_resources
 import csv
 
-DEFAULT = u.Param()
+# FIXME: These defaults are not used
+DEFAULT = Param()
 DEFAULT.report_level = 1
 DEFAULT.report_format = '%(entry_point)'
 

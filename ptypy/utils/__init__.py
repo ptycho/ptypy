@@ -14,6 +14,8 @@ from misc import *
 from parameters import *
 import propagation as prop
 from embedded_shell import ipshell
+import validator
+import parallel
 
 try:
     from wave import *
