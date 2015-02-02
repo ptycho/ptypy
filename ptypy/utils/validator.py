@@ -213,8 +213,5 @@ def validate(pars, entry_point=None, level=0):
     if (level == 0) and failed:
         return failed
     elif (level == 1) and (failed or warning):
-        out = dict(failed)
-        out.update(warning)
-        return out
-
+        return failed, warning
 
