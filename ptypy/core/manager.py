@@ -175,7 +175,7 @@ class ModelManager(object):
             self.scans[label] = scan
             scan.label = label
             # make a copy of model dictionary
-            scan.pars = self.p.copy(depth=3)
+            scan.pars = self.p.copy(depth=5)
             # Look for a scan-specific entry in the input parameters
             scan_specific_parameters = self.scans_pars.get(label, None)
             scan.pars.update(scan_specific_parameters, Replace=False)
@@ -259,21 +259,15 @@ class ModelManager(object):
         if filelist is not None:
             for f in filelist:
                 scan = self.prepare_scan()
-                scan.source = f
+                scan.pars.data_file = f
         # now there should be little suprises. every scan is listed in 
         # self.scans
-        labels = []
-        sources = []
-        pars = []
         for label, scan in self.scans.items():
-            if scan.pars.source is None:
-                sources.append(self.ptycho.paths.get_data_file(label=label))
-            else:
-                sources.append(scan.pars.source)
-            labels.append(label)
-            pars.append(None)
-
-        return data.StaticDataSource(sources, pars, labels)
+            if scan.pars.get('data_file') is None:
+                scan.pars['data_file'] = self.ptycho.paths.get_data_file(label=label)
+            scan.pars['label'] = label
+             
+        return data.DataSource(self.scans)
 
     def new_data(self):
         """

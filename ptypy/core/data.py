@@ -1,806 +1,965 @@
-# -*- coding: utf-8 -*-
 """
 data - diffraction data access
 
-This module defines a DataScan, a container to hold the experimental 
+This module defines a PtyScan, a container to hold the experimental 
 data of a ptychography scan. Instrument-specific reduction routines should
-create an empty DataScan and store information in it. One should then call 
-DataScan.save() to dump the file to disk in a uniform format, or pass
-along the DataScan object directly to a Ptycho instance. Once saved, DataScan
-also loads data.
+inherit PtyScan to prepare data for the Ptycho Instance in a uniform format.
 
+The experiment specific child class only needs to overwrite 2 functions
+of the base class:
+
+check(self,frames,start):
+
+    returns :
+        (frames_available, end_of_scan)
+        - the number of frames available from a starting point `start`
+        - bool if the end of scan was reached (None if this routine doesn't know)
+
+load(self,indices):
+    loads data according to node specific scanpoint indeces that have 
+    been determined by the loadmanager from utils.parallel
+    returns :
+        (raw, positions, weight)
+        - dictionaries whose keys are `indices` and who hold the respective
+          frame / position according to the scan point index
+        - weight and positions may be empty
+
+load_common(self):
+    loads common arrays for all processes. excuted once on initialize()
+    Especially scan point position and correction arrays like dark field, mask 
+    and flat field are handy to be loaded here
+    The returned dictionary is available throughout preparation at 
+    self.common
+    
+    returns :
+        (common)
+        - a dictionary with only numpy arrays as values. These arrays are 
+          the same among all processes. 
+        - fill items `positions_scan` and `wieght2d` with the 
+        
+correct(self,raw,weights,common):
+    place holder for dark and flat_field correction. 
+    may get merged with load
+    use common for correction 
+    
+    returns:
+        (data,weights)
+        - corrected data and weights
+        
 For the moment the module contains two main objects:
-DataScan, which holds a single ptychography scan, and DataSource, which
+PtyScan, which holds a single ptychography scan, and DataSource, which
 holds a collection of datascans and feeds the data as required.
-
-TODO: Introduce another class that streams data as it is read.
-TODO: Read/write using hdf5 MPI support, add support for cxi files.
-TODO: Add possibility to not jump over bad data in DS.feed_data (PT ?)
-TODO: Make names more uniform (e.g. scan_info -> meta) to avoid confusion.
 
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from threading import Thread, Event
-import time
-import os
-import numpy as np
-import copy
+if __name__ == "__main__":
+    from ptypy import utils as u
+    from ptypy import io
+    import numpy as np
+    import os
+    import h5py
+else:
+    from .. import utils as u
+    from .. import io
+    import numpy as np
+    import os
+    import h5py
 
-from ..utils import expect2, clean_path, mass_center, parallel
-from ..utils.verbose import logger
-from .. import io
-from .. import utils as u
+parallel = u.parallel
+logger = u.verbose.logger
 
-__all__=['DataScan', 'StaticDataSource','make_datasource']
-
-DEFAULT_scan_info = u.Param(
-    scan_number =  None, #Scan number
-    scan_label =  'Scan%(idx)02d', #A string associated with the scan number
-    data_filename =  None, #The file name the data file is going to be saved to
-    wavelength =  None, #The radiation wavelength in meters
-    energy =  None, #The photon energy 
-    detector_pixel_size =  None, #Detector pixel dimensions in meters
-    detector_distance =  None, #Distance between the detector and the sample in meters
-    initial_ctr =  None, #The coordinate that locate the center of the frame in the full detector frame
-    date_collected =  None, #Date data was collected
-    date_processed =  None, #Date data was processed
-    exposure_time =  None, #Exposure time in seconds
-    preparation_basepath =  None, #Base path used for the data preparation
-    preparation_other =  None, #Other information about preparation (may be beamline-specific)
-    shape =  (10,96,96), #The shape of data array (3D!!)
-    positions = None, #Positions (if possible measured) of the sample for each frame in meters
-    positions_theory = None, #Expected positions of the sample in meters
-    scan_command =  None #The command entered to run the scan
+META = dict(
+    label_original='foo',
+    label='scanfoo',
+    version='0.1',
+    shape=None,
+    psize_det=None,
+    lam=None,
+    energy=None,
 )
 
-DEFAULT_DATA = u.Param(
-    sourcetype = 'static',   # Source type: 'static' or 'dynamic' (only 'static' is supported for the moment)
-    filelist = [],           # File list to load data from
-    unique_scan_labels = True,    # If True, raise an error if multiple scans have the same name.
+PTYD = dict(
+    data={},  # frames, positions
+    meta={},  # important to understand data. loaded by every process
+    info={},  # this dictionary is not loaded from a ptyd. Mainly for documentation
+    common={},
 )
 
-class DataScan(object):
+GENERIC = dict(
+    filename='./foo.ptyd',  # filename
+    label='scan001',  # a scan label
+    chunk_format='.chunk%02d',  # Format for chunk file appendix.
+    num_frames=None,  # frame size of saved ptyd or load. Can be None.
+    roi=None,  # 2-tuple or int for the desired fina frame size
+    save=None,  # None, 'merge', 'append', 'extlink'
+    center=None,  # 2-tuple, 'auto', None. If 'auto', center is chosen automatically
+    load_parallel='data',  # None, 'data', 'common', 'all'
+    rebin=1,  # rebin diffraction data
+    orientation=(False, False, False),  # 3-tuple switch, actions are (transpose, invert rows, invert cols)
+    min_frames=parallel.size  # minimum number of frames if one chunk if not at end of scan
+)
+
+WAIT = 'msg1'
+EOS = 'msgEOS'
+CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
+         EOS: 'End of scan reached'}
+
+
+class PtyScan(object):
     """\
-    DataScan: A single ptychography scan, created on the fly or read from file.
+    PtyScan: A single ptychography scan, created on the fly or read from file.
+    BASECLASS
     
-    Main methods:
-     - set_source: set a source file and load meta information (scan_info)
-     - load: Loads data in memory
-     - save: Store data and meta data on file
+    Objectives:
+     - Stand alone functionality
+     - Can be produce .ptyd data formats
+     - Child instances should be able to prepare from raw data
+     - On-the-fly support in form of chunked data.
+     - mpi capable, child classes should not worry about mpi
      
-    Main attibutes:
-     - scan_info: meta data on this scan - all physical distances in meters
-     - data, mask, dark, flat: 3D or 2D arrays containing the data (mask, etc) frames.
-     - datalist, masklist, darklist, flatlist: lists of frames giving access to the data 
-       in a uniform way, and compatible with MPI sharing (datalist[i] is None if the ith
-       frame in the scan is not managed by the current node).   
     """
-    
-    DEFAULT_scan_info=DEFAULT_scan_info
 
-    def __init__(self, pars=None, source=None, sink=None):
-        """\
-        DataScan: A single ptychography scan.
-        
-        Parameters
-        ----------
-        pars   : Param or dict
-                 scan_info (meta data) will be updated from this input
-        source : str or None or dict
-                   The filename to read from. If None, create an empty
-                   structure. This empty structue will still have a functional load function
-                   but just deliver zeros for data and dark, ones for mask and flat.
-        sink : str or None
-                File destination to write to. (This is not yet really functional)
-                If None, defaults to same value as source.
+    def __init__(self, pars=None, **kwargs):  # filename='./foo.ptyd',shape=None, save=True):
         """
-
-        # Initialize main class attributes
-        self.data = None
-        self.mask = None
-        self.flat = None
-        self.dark = None
-        self.datalist = []
-        self.masklist = []
-        self.flatlist = []
-        self.darklist = []
-        self.indices = None
-        self.scan_info = u.Param(self.DEFAULT_scan_info)
+        Class creation with minimum set of parameters, see DEFAULT dict in core/data.py
+        Please note the the class creation does not necessarily load data.
+        Call <cls_instance>.initialize() to begin
+        """
+        info = u.Param(GENERIC.copy())
         if pars is not None:
-            self.scan_info.update(pars)
-            
-        self.label =  self.scan_info.get('scan_label')
-        
-        self.sink = sink if sink is not None else source
-        
+            info.update(pars)
+        info.update(kwargs)
 
-        self.set_source(source)
-        #self.set_sink(sink)
+        # a copy for important information
+        self.meta = u.Param(META.copy())
 
-    def set_source(self, other_source):
+        if info.num_frames is None:
+            logger.info('Total number of frames for scan %s not specified.')
+            logger.info('Looking for position information input parameter structure ....\n')
+
+            # check if we got position information in the parameters
+            if info.get('positions_theory') is None:
+
+                if info.get('pattern') is not None:
+                    from ptypy.core import pattern
+
+                    info.positions_theory = pattern.from_pars(info['pattern'])
+
+                elif info.get('xy') is not None:
+                    from ptypy.core import xy
+
+                    info.positions_theory = xy.from_pars(info['xy'])
+
+            if info.get('positions_theory') is not None:
+                num = len(info.positions_theory)
+                logger.info('%d positions found. Setting frame count to this number\n' % num)
+                info.num_frames = len(info.positions_theory)
+
+                # check if we got information on geometry from ptycho
+        if info.get('geometry') is not None:
+            for k, v in info.geometry.items():
+                info[k] = v if info.get(k) is None else None
+            info.roi = u.expect2(info.geometry.get('N')) if info.roi is None else info.roi
+
+        # None for rebin should be allowed, as in "don't rebin".
+        if info.rebin is None:
+            info.rebin = 1
+
+        self.info = info
+        # update internal dict    
+
+        # Print a report
+        logger.info('Ptypy Scan instance got the following parameters:\n')
+        logger.info(u.verbose.report(info))
+
+        # Dump all input parameters as class attributes.
+        # FIXME: This can lead to much confusion...
+        self.__dict__.update(info)
+
+        # check mpi settings
+        lp = str(self.load_parallel)
+        self.load_common_in_parallel = (lp == 'all' or lp == 'common')
+        self.load_in_parallel = (lp == 'all' or lp == 'data')
+
+        # set data chunk and frame counters to zero
+        self.framestart = 0
+        self.chunknum = 0
+        self.start = 0
+
+        # initialize flags
+        self._flags = np.array([0, 0, 0], dtype=int)
+        self.is_initialized = False
+
+    def initialize(self):
         """
-        Set source and load only information (scan_info) from prepared file.
-        Onbe could think to later implement only the loadaer in Childs of a general 
-        DataScan object
-        
-        Parameters
-        ----------
-        other_source : str or None or dict
-                   The file name from which to obtain all parameters.
+        Time for some read /write access
         """
-        
-        self.source = other_source
-        # local reference
-        source = self.source
-        
-        if self.source is None:
-            # set a label
-            self.label = self.scan_info.get('scan_label')
-
-            # define how data is accessed
-            def loader(key,slc=None):
-  
-                if key in ['flat','mask']:
-                    buf = np.ones(self.scan_info.shape)
-                else:
-                    buf = np.zeros(self.scan_info.shape)
-                    
-                return buf if slc is None else buf[slc]
-                            
-        elif str(source)==source:
-            # ok that is probably a file. Try
-            if source.endswith('.h5') or source.endswith('.ptyd'):
-                
-                # scan_info is a field in the file - one just needs to load it.
-                self.scan_info.update(u.Param(io.h5read(source,'scan_info')['scan_info']))
-                
-                # Update the filename, just in case the internal one is incompatible
-                self.scan_info.data_filename = source
-                
-                # set a label if there is one
-                self.label = self.scan_info.get('scan_label')
-                
-                # define how data is accessed
-                def loader(key,slc=None):
-
-                    return io.h5read(self.source,key,slice=slc)[key]
-        
-            else:
-                # No other file sources yet implemented
-                pass
-        
-        elif hasattr(source,'items'):
-            # a dictionary!
-            self.scan_info.update(u.asParam(source.get('scan_info',{})))
-            
-            # set a label if there is one
-            self.label = self.scan_info.get('scan_label')
-            
-            # define how data is accessed
-            def loader(key,slc=None):
-
-                return self.source[key] if slc is None else self.source[key][slc]
-                
-        # attach loader
-        self.loader = loader
-        
-    def load(self, first=0, last=None, roidim=None, roictr=None, MPIsplit=True):
-        """\
-        Load data (or portion of it). If MPIsplit is True, the data will be divided in contiguous
-        blocks among processes using parallel.loadmanager. While self.data
-        is a numpy array, seld.datalist is a list as long as the total number
-        of frames containing either None if the data is owned by another process
-        or view on the corresponding frame in self.data.
-        
-        Parameters
-        ----------
-        roidim : None or 2-tuple
-                 If not None, the size of a region of interest.
-        roictr : None or 2-tuple
-                 If not None, the center of the region of interest.
-        first :  0, int
-                 First data frame to read.
-                 If list is provided in MPIsplit, this parameter will not be used
-        last :  None or int > 0
-                Last data frame to read. If None it will use scan_info.shape[0]
-                If list is provided in MPIsplit, this parameter will not be used
-        MPIsplit : list, True or False (default: True)
-                   If a list in integers, read only the given frames, all others 
-                   being set to None. If True, automatically determine which
-                   frame to read (using parallel.loadmanager). If False,
-                   load all data regardless of MPI state. 
-        """
-        """
-        # I/O
-        if filename is None:
-            # Filename to read from
-            filename = self.scan_info.data_filename
-        else:
-            # Get or update file metadata if filename is provided
-            self.load_info(filename)
-        logger.info('Loading data file %s' % filename)
-        """
-        # only required info here is scan_info.shape
-        last = self.scan_info.shape[0] if last is None else last
-        Nframes = last - first
-        assert Nframes > 0 
-        # Diffraction pattern size
-        dpsize = expect2(self.scan_info.shape[1:])
-        logger.info('Frame size is %dx%d' % tuple(dpsize))
-        
-        # Indentify which indices to read
-        if MPIsplit is False:
-            # Read all frames
-            indices = range(first,last)
-            frame_slice = slice(None)
-        elif MPIsplit is True:
-            # Split things automatically
-            idlist = [(self.scan_info.scan_label, i) for i in range(first,last)]
-            indices = parallel.loadmanager.assign(idlist)[parallel.rank]
-
-            # We are supporting only sequential indice assignments. This will fail
-            # if the rules change in parallel.loadmanager.
-            assert indices==range(indices[0],indices[-1]+1)
-            
-            frame_slice = slice(indices[0],indices[-1]+1)
-            logger.info('Process %d takes data slice %s' % (parallel.rank, str(frame_slice)), extra={'allprocesses':True})
-        else:
-            # Load the provided indices
-            indices = MPIsplit
-            frame_slice = None
-        
-        self.indices = indices
-        self.Nframes = Nframes
-        self.frame_slice = frame_slice
-
-
-        # ROI need to be loaded differently
-        if roidim is not None:
-            
-            roidim = expect2(roidim)
-            logger.info('Loading a region of interest %dx%d' % tuple(roidim)) 
- 
-            # Default ctr for the ROI is the center of the frame.
-            if roictr is None:
-                roictr = np.asarray(dpsize) // 2
-            else:
-                roictr = expect2(roictr)
-            logger.info('Region of interest centered at (%d,%d)' % tuple(roictr))
-
-            # Prepare for slicing
-            self.asize = roidim
-            roislice = (slice(int(np.ceil(roictr[0] - roidim[0]/2.)), int(np.ceil(roictr[0] + roidim[0]/2.))),
-                         slice(int(np.ceil(roictr[1] - roidim[1]/2.)), int(np.ceil(roictr[1] + roidim[1]/2.))) )
-        else:
-            self.asize = self.scan_info.shape[1:]
-            logger.info('Loading full frames (%dx%d)' % tuple(self.asize))
-            roislice = (slice(None), slice(None))
-            
-        # Read data: h5read allows for a slice argument to get only the portion that we need. 
-        if frame_slice is not None:
-            # Concatenate the frame and roi slices
-            sl = (frame_slice,) + roislice
-        else:
-            # Pass the list of indices
-            sl = (tuple(indices),) + roislice
-
-        #data = self.loader('data', slice=sl)
-        #logger.debug('Process %d - loaded data with argument "slice=%s"' % (parallel.rank, str(sl)), extra={'allprocesses':True})
-        
-        def probe_n_load(key,slc, altkey=None):
-            if key is None: return None
-            try:
-                a = self.loader(key,slc=slc)
-                logger.debug('Process %d - Loaded %s with argument "slice=%s"' % (parallel.rank,key,str(slc)), extra={'allprocesses':True})
-                return a
-            except (IndexError,TypeError): # catch all esceptions associated with slice access here.
-                logger.debug('Process %d - Index error for "%s", Reducing slice by 1 dimension', (parallel.rank,str(slc)), extra={'allprocesses':True})
-                a = probe_n_load(key,slc[1:])
-                return a
-            except KeyError:
-                if altkey is None:
-                    logger.debug('Process %d - No %s frame(s) were found' % (parallel.rank,key), extra={'allprocesses':True}) 
-                    return None
-                else:
-                    logger.debug('Process %d - Trying alternate key %s' % (parallel.rank,altkey), extra={'allprocesses':True})
-                    a = probe_n_load(altkey,slc)
-                return a
-                
-        """
-        # Load the mask. For backward compatibility, we need to try "fmask" and "mask"
-        # We also need to check if the mask is 2D or 3D. 
-        try:
-            m0 = io.h5read(filename, 'mask[0]')['mask']
-            maskname = 'mask'
-        except KeyError:
-            m0 = io.h5read(filename, 'fmask[0]')['fmask']
-            maskname = 'fmask'
-
-        # Stored mask is a 2D frame if the slice just loaded is 1D.
-        mask_is_2D = (m0.ndim==1)
-        mask_sl = roislice if mask_is_2D else sl
-        mask = io.h5read(filename, maskname, slice=mask_sl)[maskname]
-        logger.debug('Loaded mask ("%s") with argument "slice=%s"' % (maskname, str(mask_sl)))
-    
-        # Load a flat frame, if available. 
-        try:
-            flat = io.h5read(filename, 'flat', slice=roislice)['flat']
-            logger.debug('Loaded flat with argument "slice=%s"' % str(roislice))
-        except KeyError:
-            flat = None
-            logger.info('No flat frame was found.')
-
-        # Load a dark frame, if available. 
-        try:
-            dark = io.h5read(filename, 'dark', slice=roislice)['dark']
-            logger.debug('Loaded dark frame with argument "slice=%s"' % str(roislice))
-        except KeyError:
-            dark = None
-            logger.info('No dark frame was found.')
-        """
-        
-        self.data = probe_n_load('data',sl)
-        self.mask = probe_n_load('mask',sl,'fmask')
-        self.dark = probe_n_load('dark',sl)
-        self.flat = probe_n_load('flat',sl)
-
-        # Populate the flat lists
-        self.datalist = [None] * Nframes 
-        self.masklist = [None] * Nframes  
-        self.flatlist = [None] * Nframes  
-        self.darklist = [None] * Nframes  
-        for k,i in enumerate(indices):
-            self.datalist[i] = self.data[k]
-            self.masklist[i] = self.mask if self.mask.ndim==2 else self.mask[k]
-            self.flatlist[i] = self.flat #if self.flat.ndim==2 else self.flat[k]
-            self.darklist[i] = self.dark #if self.dark.ndim==2 else self.dark[k]
-
-        #print [n is not None for n in self.datalist]
-        
-    def unload_data(self):
-        """\
-        Deletes the numpy arrays. This might not be very efficient
-        if references to these lists or their content exist somewhere else.        
-        """
-        del self.datalist, self.masklist, self.darklist, self.flatlist
-        # Could check with sys.getrefcount(self.data) if it is at all useful to delete it.
-        del self.data, self.mask, self.dark, self.flat
-
-    def save(self, filename=None, force_overwrite=True):
-        """\
-        Store the dataset in a standard format.
-        
-        Parameters
-        ----------
-        filename : str or None (default)
-                   File to write to. If None, use default (scan_info.data_filename)
-        force_overwrite : True (default) or False or None
-                          If True the file will be saved even if it already exists.
-                          If None the user is asked to confirm.
-                          
-        NOTE: this function is MPI compatible: it will join all pieces together
-        in the master node before writing. BUT: it is assumed that all data is
-        spread 
-        """
-        # Check if data is available
-        if not hasattr(self, 'data'):
-            raise RuntimeError("Attempting to save DataScan instance that does not contain data.")
-
-        # There is some work to do here if the data is distributed among many processes
-        # In the long run consider using hdf5 support to do this more cleanly.
-        
-        # If data was attached dynamically it is possible that datalist is not consistent)
-        if len(self.data) != len(self.datalist):
-            if parallel.MPIenabled:
-                raise RuntimeError('Inconsistent datalist while running MPI.')
-            Nframes = len(self.data)
-            
-        if parallel.MPIenabled:
-            for i in range(Nframes):
-                if parallel.master:
-
-                    # Root receives the data if it doesn't have it yet
-                    if self.datalist[i] is None:
-                        self.datalist[i] = parallel.receive()
-                        
-                    # The barrier is needed to make sure that we receive data in the right order
-                    parallel.barrier()
-
-                else:
-                    if self.datalist[i] is not None:
-                        # Send data to root.
-                        parallel.send(self.datalist[i])
-
-                    parallel.barrier()
-                    
+        filename = self.filename
+        if self.save is not None:
+            # ok we want to create a .ptyd
+            if parallel.master:
+                if os.path.exists(filename):
+                    backup = filename + '.old'
+                    logger.warning('File %s already exist. Renamed to %s' % (filename, backup))
+                    os.rename(filename, backup)
+                # Prepare an empty file with the appropriate structure
+                io.h5write(filename, PTYD.copy())
+            # Wait for master
             parallel.barrier()
-            for i in range(Nframes):
-                if parallel.master:
 
-                    # Root receives the data if it doesn't have it yet
-                    if self.masklist[i] is None:
-                        self.masklist[i] = parallel.receive()
-                        
-                    # The barrier is needed to make sure that we receive data in the right order
-                    parallel.barrier()
+        self.common = self.load_common() if (parallel.master or self.load_common_in_parallel) else {}
+        # broadcast
+        if not self.load_common_in_parallel:
+            parallel.bcast_dict(self.common)
+        logger.info('\n ---------- Analysis of the "common" arrays  ---------- \n')
 
-                else:
-                    if self.masklist[i] is not None:
-                        # Send data to root.
-                        parallel.send(self.masklist[i])
+        # Check if weights (or mask) have been loaded by load_common.
+        self.has_weight2d = self.common.has_key('weight2d')
+        logger.info('Check for weight or mask,  "weight2d"  .... %s\n' % str(self.has_weight2d))
 
-                    parallel.barrier()
+        # Check if positions have been loaded by load_common
+        positions = self.common.get('positions_scan')
+        self.has_positions = positions is not None
+        logger.info('Check for positions, "positions_scan" .... %s' % str(self.has_positions))
+        if self.has_positions:
+            # Store positions in the info dictionary
+            self.info['positions_scan'] = positions
+            num_pos = len(positions)
+            if self.num_frames is None:
+                # Frame number was not known. We just set it now.
+                logger.info('Setting number of frames for preparation from `None` to %d\n' % num_pos)
+                self.num_frames = num_pos
+            else:
+                # Frame number was already specified. Maybe we didn't want to use everything?
+                logger.warning('Going to prepare %d frames of %d\n' % (self.num_frames, num_pos))
+                # FIXME: what is self.num_frames > num_pos?
 
-        # All the rest is done by the master node
-        if parallel.rank > 0: 
-            parallel.barrier()
-            return
-        
-        if parallel.MPIenabled:
-            # Transform into a numpy array for saving.
-            data = np.asarray(self.datalist)
-            mask = np.asarray(self.masklist)
-        else:
-            data = self.data
-            mask = self.mask
-
-        # Sanity check
-        if data.shape != self.scan_info.shape:
-            error_string = "Attempting to save DataScan instance with non-native data dimension "
-            error_string += "[data.shape = %s, while scan_info.shape = %s]" % (str(data.shape), str(self.scan_info.shape))
-            raise RuntimeError(error_string)
-            
-        # Sanity check for mask too?
-        # Filename to save to
-        if filename is None:
-            filename = self.scan_info.data_filename           
-
-        filename = clean_path(filename)
-        if os.path.exists(filename):
-            if force_overwrite:
-                logger.warn('Save file exists but will be overwritten (force_overwrite is True)')
-            elif not force_overwrite:
-                raise RuntimeError('File %s exists! Operation cancelled.' % filename)
-            elif force_overwrite is None:
-                ans = raw_input('File %s exists! Overwrite? [Y]/N' % filename)
-                if ans and ans.upper() != 'Y':
-                    raise RuntimeError('Operation cancelled by user.') 
-
-        # Store using h5write - will be changed at some point
-        h5opt = io.h5options['UNSUPPORTED']
-        io.h5options['UNSUPPORTED'] = 'ignore'
-        io.h5write(filename, data=data, mask=mask, flat=self.flat, dark=self.dark, scan_info=self.scan_info._to_dict())
-        io.h5options['UNSUPPORTED'] = h5opt
-        logger.info('Scan %s data saved to %s.' % (self.scan_info.scan_label, filename))
-        
         parallel.barrier()
-        return
+        logger.info('#######  MPI Report: ########\n')
+        self.report(what=self.common)
+        parallel.barrier()
+        logger.info(' ----------  Analyis done   ---------- \n\n')
 
-    def as_data_package(self,start=0,stop=None):
+        if self.save is not None and parallel.master:
+            logger.info('Appending common dict to file %s\n' % self.filename)
+            io.h5append(self.filename, common=self.common, info=self.info)
+        # wait for master
+        parallel.barrier()
+
+        self.is_initialized = True
+
+    def _finalize(self):
         """
-        returns a part of a DataScan in the format expect by model.new_data()
+        Last actions when Eon-of-Scan is reached
         """
-        if stop is None or stop >self.Nframes:
-            stop = self.Nframes
-            
-        outdict = u.Param()
-        outdict.common = u.Param(MT.as_meta(self.scan_info))
-        outdict.common.label = self.label
-        outdict.iterable=[]
-        for i in range(start,stop):
-            dct={}
-            dct['data']=self.datalist[i]
-            dct['mask']=self.masklist[i]
-            dct['index']=i
-            dct['position']=self.scan_info.positions[i]
-            outdict.iterable.append(dct)
-            
-        return outdict
+        # maybe do this at end of everything
+        if self.save is not None and parallel.master:
+            io.h5append(self.filename, common=dict(self.common), info=dict(self.info))
+
+    def load_common(self):
+        """
+        ! Overwrite in child class for custom behavior !
         
-class StaticDataSource(object):
-    """
-    Static Data Source: for completed scans entirely available on disk.
-    """
-    
-    def __init__(self, sources, pars_list, recon_labels):
-        """
-        Static Data Source: for completed scans entirely available on disk.
+        Loads arrays that are common and needed for preparation of all 
+        other data frames coming in. Any array loaded here and returned 
+        in a dict will be distributed afterwards through a broadcoast. 
+        It is not intended to load diffraction data in this step.
+                       
+        Main purpose ist to load dark field, flat field, etc
+        Also positions may be handy to load here
         
-        Parameters:
+        If `load_parallel` is set to `all` or common`, this function is 
+        executed by all nodes, otherwise the master node executes this
+        function and braodcasts the results to other nodes. 
+        
+        returns:
+            common : dict of numpy arrays
+                - fill items to keys `weight2d` or `positons_scan`
+        """
+        # dummy fill
+        common = {}
+        common['weight2d'] = np.ones(self.roi, dtype='bool')
+        common['positions_scan'] = np.indices((self.num_frames, 2)).sum(0)
+        return common
+
+    def _mpi_check(self, chunksize=10, start=None):
+        """
+        Executes the check() function on master node and communicates
+        the result with the other nodes.
+        This function determines if the end of the scan is reached
+        or if there is more data after a pause.
+        
+        returns:
+            - codes WAIT or EOS
+            - or (start, frames) if data can be loaded 
+        """
+        # take internal counter if not specified
+        s = self.framestart if start is None else int(start)
+
+        # check may contain data system access, so we keep it to one process
+        if parallel.master:
+            self.frames_accessible, eos = self.check(chunksize, start=s)
+            self.end_of_scan = (s + self.frames_accessible >= self.num_frames) if eos is None else eos
+        # wait for master
+        parallel.barrier()
+        # communicate result
+        self._flags = parallel.bcast(self._flags)
+
+        N = self.frames_accessible
+        # wait if too few frames are available and we are not at the end
+        if N < self.min_frames and not self.end_of_scan:
+            return WAIT
+        elif self.end_of_scan and N <= 0:
+            return EOS
+        else:
+            # move forward,set new starting point
+            self.framestart += N
+            return s, N
+
+    def _mpi_indices(self, start, step):
+        """
+        Funtion to generate the diffraction data index lists that
+        determine which node contains which data.
+        """
+        indices = u.Param()
+
+        # all indices in this chunk of data
+        indices.chunk = range(start, start + step)
+
+        # let parallel.loadmanager take care of assigning these indices to nodes
+        indices.lm = parallel.loadmanager.assign(indices.chunk)
+        # this one contains now a list of indices listed after ranke
+
+        # index list (node specific)
+        indices.node = [indices.chunk[i] for i in indices.lm[parallel.rank]]
+
+        # store internally
+        self.indices = indices
+        return indices
+
+    def get_data_chunk(self, chunksize=10, start=None):
+        """
+        This function prepares a container that is compatible to data package
+        This function is called from the auto() function.
+        """
+        msg = self._mpi_check(chunksize, start)
+        if msg in [EOS, WAIT]:
+            logger.info(CODES[msg])
+            return msg
+        else:
+            start, step = msg
+
+            # get scan point index distribution
+            indices = self._mpi_indices(start, step)
+
+            # what did we get?
+            data, positions, weights = self._mpi_pipeline_with_dictionaries(indices)
+            # all these dictionaries could be empty
+            # fill weights dictionary with references to the weights in common
+
+            has_data = (len(data) > 0)
+            has_weights = (len(weights) > 0)
+
+            if has_data:
+                dsh = np.array(data.values()[0].shape[-2:])
+            else:
+                dsh = np.zeros([0, 0])
+
+            # communicate result
+            parallel.MPImax(dsh)
+
+            if not has_weights:
+                # peak at first item
+                altweight = self.common.get('weight2d', np.ones(dsh))
+                weights = dict.fromkeys(data.keys(), altweight)
+
+            assert len(weights) == len(data), 'Data and Weight frames unbalanced %d vs %d' % (len(data), len(weights))
+
+            cen = self.center
+
+            # get center in diffraction image
+            if str(cen) == 'auto':
+                cen = self._mpi_autocenter(data, weights)
+            elif cen is None:
+                cen = dsh // 2
+            else:
+                # center is number or tuple
+                cen = u.expect2(cen[-2:])
+
+            # It is important to set center again in order to NOT have different centers for each chunk
+            # the downside is that the center may be off if only a few diffraction patterns were
+            # used for the analysis. It such case it is benficial to set the center in the parameters
+            self.center = cen
+            self.info.center = cen  # for documentation
+
+            # make sure center is in the image frame
+            assert (cen > 0).all() and (
+                dsh - cen > 0).all(), 'Optical axes (center = (%.1f,%.1f) outside diffraction image frame' % tuple(cen)
+
+            # adapt roi if not set
+            self.roi = u.expect2(self.roi) if self.roi is not None else dsh
+            self.shape = self.roi
+
+            # determine if the arrays require further processing
+            do_flip = np.array(self.orientation).any()
+            do_crop = (np.abs(self.roi - dsh) > 0.5).any()
+            do_rebin = (self.rebin != 1)
+
+            if do_flip or do_crop or do_rebin:
+                logger.info('Enter preprocessing (crop/pad %s, rebin %s, flip/rotate %s) ... \n' %
+                            (str(do_crop), str(do_flip), str(do_rebin)))
+                # we proceed with numpy arrays. That is probably now
+                # more memory intensive but shorter in writing                       
+                d = np.array([data[ind] for ind in indices.node])
+                w = np.array([weights[ind] for ind in indices.node])
+
+                # flip, rotate etc.
+                if len(d) > 0:
+
+                    # flip, rotate etc.
+                    d, cen = switch_frame_orientation(d, self.orientation, cen)
+                    w, tmp = switch_frame_orientation(w, self.orientation, cen)
+
+                    # crop
+                    d, cen = crop_pad_symmetric_2d(d, self.roi, cen)
+                    w, tmp = crop_pad_symmetric_2d(w, self.roi, cen)
+
+                    # rebin, check if rebinning is neither to strong nor impossible
+                    rebin = self.rebin
+                    if self.rebin in range(2, 6) and (((self.roi / float(rebin)) % 1) == 0.0).all():
+                        mask = w > 0
+                        d = rebin_2d(d, rebin)
+                        w = rebin_2d(w, rebin)
+                        mask = rebin_2d(mask, rebin)
+                        w[mask < 1] = 0
+                        cen /= float(rebin)
+                        self.shape = u.expect2(self.roi) / rebin
+                        if self.__dict__.get('psize_det') is not None:
+                            self.psize_det = u.expect2(self.psize_det) * rebin
+
+                # translate back to dictionaries
+                data = dict(zip(indices.node, d))
+                weights = dict(zip(indices.node, w))
+
+            # prepare chunk of data
+            chunk = u.Param()
+            chunk.indices = indices.chunk
+            chunk.indices_node = indices.node
+            chunk.num = self.chunknum
+            chunk.data = data
+
+            # if there were weights we add them to chunk, 
+            # otherwise we push it into meta
+            if has_weights:
+                chunk.weights = weights
+            elif has_data:
+                chunk.weights = {}
+                self.meta.weight2d = weights.values()[0]
+
+            # slice positions from common if they are empty too
+            if positions is None or len(positions) == 0:
+                try:
+                    chunk.positions = self.common.get('positions_scan', self.info.get('positions_theory'))[
+                        indices.chunk]
+                except:
+                    logger.info('slicing position information failed')
+                    chunk.positions = None
+            else:
+                # a dict : sort positions to indices.chunk
+                # this may fail if there a less positions than scan points (unlikely)
+                chunk.positions = np.asarray([positions[i] for i in indices.chunk])
+                # positions complete
+
+            # with first chunk we update meta
+            if self.chunknum < 1:
+                for k, v in self.meta.items():
+                    self.meta[k] = self.__dict__.get(k, self.info.get(k)) if v is None else v
+                self.meta['center'] = cen
+
+                if self.save is not None and parallel.master:
+                    io.h5append(self.filename, meta=dict(self.meta))
+                parallel.barrier()
+
+            self.chunk = chunk
+            self.chunknum += 1
+
+            return chunk
+
+    def auto(self, frames=parallel.size, chunk_form='dp'):
+        """
+        Repeated calls to this function will process the data
+        
+        returns:
+        ----------
+        None  ,if scan's end is not reached, but no data could be prepared yet
+        False ,if scan's end is reached
+        a data package otherwise
+        """
+        # attempt to get data:
+        msg = self.get_data_chunk(frames)
+        if msg == WAIT:
+            return msg
+        elif msg == EOS:
+            # cleanup maybe?
+            self._finalize()
+            # del self.common
+            # del self.chunk
+            return msg
+        else:
+            out = self.return_chunk_as(msg, chunk_form)
+            # save chunk
+            if self.save is not None:
+                self._mpi_save_chunk()
+            # delete chunk
+            del self.chunk
+            return out
+
+    def return_chunk_as(self, chunk, kind='dp'):
+        """
+        Returns the loaded data chunk `chunk` in the format `kind`
+        For now only kind=='dp' (data package) is valid.
+        """
+        # this is a bit ugly now
+        if kind == 'dp':
+            out = {}
+
+            # The "common" part
+            out['common'] = self.meta
+
+            # The "iterable" part
+            iterables = []
+            for pos, index in zip(chunk.positions, chunk.indices):
+                frame = {}
+                frame['index'] = index
+                frame['data'] = chunk.data.get(index)
+                if frame['data'] is None:
+                    frame['mask'] = None
+                else:
+                    # ok we now know that we need a mask since data is not None
+                    # first look in chunk for a weight to this index, then
+                    # look for a 2d-weight in meta, then arbitrarily set
+                    # weight to ones. 
+                    w = chunk.weights.get(index, self.meta.get('weight2d', np.ones_like(frame['data'])))
+                    frame['mask'] = (w > 0)
+                frame['position'] = pos
+                iterables.append(frame)
+            out['iterable'] = iterables
+        return out
+
+    def _mpi_pipeline_with_dictionaries(self, indices):
+        """
+        example processing pipeline using dictionaries.
+        
+        return :
+            positions, data, weights
+             -- Dictionaries. Keys are the respective scan point indices
+                `positions` and `weights` may be empty. If so, the information
+                is taken from the self.common dictionary
+        
+        """
+        if self.load_in_parallel:
+            # all nodes load raw_data and slice according to indices
+            raw, pos, weights = self.load(indices=indices.node)
+
+            # gather postion information as every node needs it later
+            pos = parallel.gather_dict(pos)
+        else:
+            if parallel.master:
+                raw, pos, weights = self.load(indices=indices.chunk)
+            else:
+                raw = {}
+                pos = {}
+                weights = {}
+            # distribute raw data across nodes according to indices
+            raw = parallel.bcast_dict(raw, indices.node)
+            weights = parallel.bcast_dict(weights, indices.node)
+
+        # (re)distribute position information - every node should now be 
+        # aware of all positions
+        parallel.bcast_dict(pos)
+
+        # prepare data across nodes    
+        data, weights = self.correct(raw, weights, self.common)
+
+        return data, pos, weights
+
+    def check(self, frames=None, start=None):
+        """
+        ! Overwrite in child class !
+        
+        This method checks how many frames the preparation routine may
+        process, starting from frame `start` at a request of `frames_requested`
+        
+        The method is supposed to return the number of accessible frames
+        for preparation and should detemernie if data acquistion for this
+        scan is finished
+        
+        Parameters
         -----------
-        filelist : list of str
-                   The filenames to load data from.
-        recon_labels : list of str
-                    Label that the reconstruction algorithm assigns to the scans
+        frames : (int) or None, Number of frames requested
+        start  : (int) or None, scanpoint index to start checking from
+        
+        Returns 
+        ---------------
+        (frames_accessible, : Number of frames readable  
+            end_of_scan)    : int or None
+                               0 : end of the scan is not reached
+                               1 : end of scan will be reached or is
+                              None : can't say
+                    
         """
-        # Store file list
-        self.sources = sources
+        if start is None:
+            start = self.framestart
+        if frames is None:
+            frames = self.min_frames
 
-        self.recon_labels = recon_labels
+        frames_accessible = min((frames, self.num_frames - start))
 
-        # Prepare to load all datasets
-        self.scans = {}
-        self.labels = []
-        Nframes = 0
-        for i, source in enumerate(sources):
-            # Create en empty structure and get only the meta-information
-            DS = DataScan(pars=pars_list[i])
-            DS.set_source(source)
-            
-            # Append the name of this scan to the list - useful to treat them
-            # In the order they came.
-            label = self.recon_labels[i] if i < len(self.recon_labels) else None
-            if label is None or label in self.labels:
-                label = DS.label % {'idx':i}
-                
-            if label in self.labels:
-                raise RuntimeError('Scan label "%s" is not unique! Are you loading the same data twice?\n Please assign a different internal label' % scan_label)
-            
-            DS.label = label
-            #self.scan_labels.append(scan_label)
-            
-            # Store the DataScan object
-            self.scans[label] = DS 
-            
-            # Save information that could be useful
-            Nframes += DS.scan_info.shape[0]
-            
-        # Total number of frames
-        self.Nframes = Nframes
+        return frames_accessible, None
 
-        # Set a flag to inform that data is available.
-        self.data_available = (self.Nframes > 0)
-        
-        self.count = 0
-        
-    def feed_data(self):
+    @property
+    def end_of_scan(self):
+        return not (self._flags[1] == 0)
+
+    @end_of_scan.setter
+    def end_of_scan(self, eos):
+        self._flags[1] = int(eos)
+
+    @property
+    def frames_accessible(self):
+        return self._flags[0]
+
+    @frames_accessible.setter
+    def frames_accessible(self, frames):
+        self._flags[0] = frames
+
+    def load(self, indices):
         """
-        Generator aggregating data of multiple scans.
+        Overwrite in child class
+        loads data according to indices given
         
-        For now, simply pass the complete DataScan object.
+        must return 3 dicts with indices as keys: one for the raw frames, one for the
         """
-        # Loop through scans
-        for label,DS in self.scans.iteritems():
-            
-            # Load the data from disk only at this point
-            DS.load()
+        # dummy fill
+        raw = dict((i, i * np.ones(self.roi)) for i in indices)
+        return raw, {}, {}
 
-            outdict = DS.as_data_package()
-            parallel.barrier()
-            yield outdict
-
-            # Try to free memory
-            DS.unload_data()
-            
-        # Just in case, a flag that says that we are done.
-        self.data_available = False
-        #self.data_available = (self.count < self.Nframes)
-
-class PseudoDynamicDataSource(StaticDataSource):
-    """
-    Pseudo dynamic Data Source that feeds as much diffraction patterns
-    as specified with `patterns_per_call`
-    
-    Prepares and creates Data Scan objects just like StaticDataSource 
-    from which it inherits.
-    """
-    def __init__(self, filelist, unique_scan_labels,patterns_per_call=5):
-        super(DynamicDataSource,self).__init__(filelist, unique_scan_labels)
-        self.ppc = patterns_per_call
-        self.calls = 0
-        self.frame_count = 0
-        self.scan_items = self.scans.items()
-        self.scan_item = self.scan_items.pop(0)   
-             
-    def feed_data(self):
+    def correct(self, raw, weights, common):
+        """
+        Overwrite in child class
         
-        for label,DS in self.scans.iteritems():
-            
-            # Load the data from disk only at this point
-            DS.load_data()
+        Corrects the raw data with arrays given in `common`
+        Adjust the weights accordinlgy
+        """
+        # c=dict(indices=None,data=None,weight=None)
+        data = raw
+        return data, weights
 
-            # overwrite the label in scan_info
-            DS.scan_info.scan_label = label
-            #for calls in range(0,min(DS.frames // self.ppc,1)):
-            outdict = DS.as_data_package(self.calls*self.ppc,(self.calls+1)*self.ppc)
-            self.calls +=1
-            self.frame_count += len(outdict.iterable)
-            yield outdict
-
-            # Try to free memory
-            DS.unload_data()
-            
-        # Just in case, a flag that says that we are done.
-        
-        #self.data_available = False
-        self.data_available = (self.frame_count < self.Nframes)
-
-        
-            
-DEFAULT = DEFAULT_DATA
-def make_datasource(ptycho, pars=None):
-    """
-    Produce a DataSource object according to given parameters. For now this
-    function merely creates an instance of StaticDataSource, but this could
-    change when streaming data in real time.
-    """
-    # Prepare input parameters
-    p = u.Param(make_datasource.DEFAULT)
-    if pars is not None: p.update(pars)
-    
-    if p.sourcetype != 'static':
-        return PseudoDynamicDataSource(p.filelist, p.unique_scan_labels)
-        #raise ValueError("Only data sources of type 'static' are supported")
-    
-    # Create and return the data source
-    return StaticDataSource(p.filelist, p.unique_scan_labels)
-    
-# Attach default parameters as function attribute
-make_datasource.DEFAULT = DEFAULT_DATA
-
-class MetaTranslator(object):
-    """
-    Le Traducteur
-    """
-    PAIRS = dict(
-    scan_label = 'label_original', 
-    wavelength = 'lam' ,
-    detector_distance = 'z',    
-    detector_pixel_size = 'psize_det',   
-    )
-    
-    def __init__(self):
-        self.to_meta_dct = dict(DEFAULT_scan_info.copy())
-        # reaplace all values bye keys:
-        for k in self.to_meta_dct.keys():
-            self.to_meta_dct[k]=k
-        # update with translations
-        self.to_meta_dct.update(self.PAIRS)
-        
-        # invert it
-        self.to_scan_info_dct = {v:k for k,v in self.to_meta_dct.iteritems()}
-    
-    def as_meta(self,key):
-        if hasattr(key,'items'):
-            new ={}
-            for k,v in key.items():
-                newk = self.as_meta(k)
-                if newk is None:
-                    # uh an unknown key. we skip
-                    continue
-                else:
-                    new[newk]=v
-            return new
+    def _mpi_autocenter(self, data, weights):
+        """
+        Calculates the frame center across all nodes.
+        Data and weights are dicts of the same length and different on each node
+        """
+        cen = dict([(k, u.mass_center(d * (weights[k] > 0))) for k, d in data.iteritems()])
+        # for some nodes, cen may still be empty. Therefore we use gather_dict to be save
+        cen = parallel.gather_dict(cen)
+        parallel.barrier()
+        # now master possesses all calcuated centers
+        if parallel.master:
+            cen = np.array(cen.values()).mean(0)
         else:
-            return self.to_meta_dct.get(key)
-    
-    def as_scan_info(self,key):
-        if hasattr(key,'items'):
-            new ={}
-            for k,v in key.items():
-                newk = self.as_scan_info(k)
-                if newk is None:
-                    # uh an unknown key. we skip
-                    continue
-                else:
-                    new[newk]=v
-            return new
+            cen = np.array([0., 0.])
+            # print cen
+        parallel.allreduce(cen)
+        return cen
+
+    def report(self, what=None, shout=True):
+        """
+        Make a report on internal structure
+        """
+        what = what if what is not None else self.__dict__
+        msg = u.verbose.report(what)
+        if shout:
+            logger.info(msg, extra={'allprocesses': True})
         else:
-            return self.to_scan_info_dct.get(key)
-            
-MT = MetaTranslator()
-"""
-class DynamicDataSource(StaticDataSource):
-    
-    #Pseudo Data Source for real-time data feeds.
+            return msg
 
-    #Note : This is not even beta. Very unstable. 
-      
-    def __init__(self, filelist, unique_scan_labels,delay=0.5):
-        super(DynamicDataSource,self).__init__(filelist, unique_scan_labels)
-        self._thread = None
-        self._buff = [u.Param()] * len(self.scan_labels)
-        self._active = 0
-        self.delay = delay
-        self.last_index = 0
-
-        self.activate()
-        # little head start for the thread:
-        time.sleep(12)
+    def _mpi_save_chunk(self, kind='extlink', chunk=None):
+        """
+        Saves data chunk to hdf5 file specified with `filename`
+        It works by gathering wieghts and data to the master node.
+        Master node then writes to disk.
         
-    def activate(self):
-
-        self._stopping = False
-        self._thread = Thread(target=self._ct)
-        self._thread.daemon = True
-        self._thread.start()
+        In case you support parallel hdf5 writing, please modify this 
+        function to suit your installation.
         
-    def _ct(self):
+        2 out of 3 modes currently supported
         
-        for num,label in enumerate(self.scan_labels):
-            outdict = self._buff[num]
-            self._active = num
-            DS = self.scans[label]
-            # Load the data from disk only at this point
-            DS.load_data()
+        kind : 'merge','append','link'
+            
+            'append' : appends chunks of data in same file
+            'extlink' : saves chunks in seperate files and adds ExternalLinks
+            
+        TODO: 
+            * For the 'extlink case, saving still requires access to
+              main file `filename` even so for just adding the link.
+              This may result in conflict if main file is polled often
+              by seperate read process.
+              Workaraound would be to write the links on startup in
+              initialise() 
+            
+        """
+        # gather all distributed dictionary data.
+        c = chunk if chunk is not None else self.chunk
+        # shallow copy
+        todisk = dict(self.chunk)
+        num = todisk.pop('num')
+        ind = todisk.pop('indices_node')
+        for k in ['data', 'weights']:
+            if k in c.keys():
+                if hasattr(c[k], 'iteritems'):
+                    v = c[k]
+                else:
+                    v = dict(zip(ind, np.asarray(c[k])))
+                parallel.barrier()
+                # gather the content
+                newv = parallel.gather_dict(v)
+                todisk[k] = np.asarray([newv[i] for i in sorted(newv.keys())])
 
-            # overwrite the label in scan_info
-            DS.scan_info.scan_label = label
-            try:
-                del DS.scan_info['simulation']
-            except:
-                pass
-            # maybe filter better here in future. scan_info can consist of quite a bit of other data
-            outdict.common = DS.scan_info.copy()
-            outdict.common.lam = DS.scan_info.wavelength
-            outdict.common.z = DS.scan_info.detector_distance
-            outdict.common.psize_det = DS.scan_info.detector_pixel_size
-            outdict.iterable=[]
-            for i in range(len(DS.datalist)):
-                dct={}
-                dct['data']=DS.datalist[i]
-                dct['mask']=DS.masklist[i]
-                dct['index']=i
-                dct['position']=DS.scan_info.positions[i]
-                outdict.iterable.append(dct)
-                self.data_available = True
-                time.sleep(self.delay)
-            
-            # Try to free memory
-            DS.unload_data()
-            
-        # Just in case, a flag that says that we are done.
-        self.data_available = False
-            
+        parallel.barrier()
+        # all information is at master node.
+        if parallel.master:
+            # form a dictionary
+            if kind == 'append':
+                h5address = 'chunks/%d' % num
+                io.h5append(self.filename, {h5address: todisk})
+            elif kind == 'extlink':
+                import h5py
+
+                h5address = 'chunks/%d' % num
+                hddaddress = self.filename + '.part%03d' % num
+                with h5py.File(self.filename) as f:
+                    f[h5address] = h5py.ExternalLink(hddaddress, '/')
+                    f.close()
+                io.h5write(hddaddress, todisk)
+
+
+class PtydScan(PtyScan):
+    def __init__(self, pars=None, **kwargs):
+        super(PtydScan, self).__init__(pars, **kwargs)
+
+        self.meta = io.h5read(self.filename, 'meta')['meta']
+        # update internal dict, making sure
+        for k, v in self.meta.items():
+            if self.__dict__.get(k) is None:
+                self.__dict__[k] = v
+
+    def check(self, frames=None, start=None):
+
+        if start is None:
+            start = self.framestart
+        if frames is None:
+            frames = self.minframes
+        # Get info about size of currently available chunks.
+        # Dead external links will produce None and are excluded
+        with h5py.File(self.filename, 'r') as f:
+            d = {}
+
+            chitems = sorted([(int(k), v) for k, v in f['chunks'].iteritems() if v is not None], key=lambda t: t[0])
+            for chkey in chitems[0][1].keys():
+                d[chkey] = [(int(k), v[chkey].shape) for k, v in chitems if v is not None]
+            f.close()
+
+        self._checked = d
+        self.allframes = int(sum([ch[1][0] for ch in d['data']]))
+        self._ch_frame_ind = np.array([(dd[0], frame) for dd in d['data'] for frame in range(dd[1][0])])
+
+        return self.allframes - start, None
+
+    def _coord_to_h5_calls(self, key, coord):
+        return ('chunks/%d/%s' % (coord[0], key), slice(coord[1], coord[1] + 1))
+
+    def load_common(self):
+        """
+        In ptyd, 'common' does not necessarily exist. Only meta is essential
+        """
+        try:
+            common = io.h5read(self.filename, 'common')['common']
+        except:
+            common = {}
+        return common
+
+    def load(self, indices):
+        """
+        Load from ptyd. Due to possible chunked data, slicing frames is 
+        non-trivial
+        """
+        # get the coordinates in the chunks
+        coords = self._ch_frame_ind[indices]
+        calls = {}
+        for key in self._checked.keys():
+            calls[key] = [self._coord_to_h5_calls(key, c) for c in coords]
+
+        # get our data from the ptyd file
+        out = {}
+        with h5py.File(self.filename, 'r') as f:
+            for array, call in calls.iteritems():
+                out[array] = [f[path][slce] for path, slce in call]
+            f.close()
+
+        # if the chunk provided indices, we use those instead of our own
+        # Dangerous and not yet implemented
+        # indices = out.get('indices',indices)
+
+        # wrap in a dict 
+        for k, v in out.iteritems():
+            out[k] = dict(zip(indices, v))
+
+        return (out.get(key, {}) for key in ['data', 'positions', 'weights'])
+
+
+class DataSource(object):
+    def __init__(self, scans, frames=5 * parallel.size, feed_format='dp'):
+
+        from ..experiment import PtyScanTypes
+
+        self.frames_per_call = frames
+        self.feed_format = 'dp'
+        self.scans = scans
+        # sort after keys given
+        labels = sorted(scans.keys())
+
+        # empty list for the scans
+        self.PS = []
+
+        for label in labels:
+            # we are making a copy of the root as we want to fill it
+            s = scans[label]['pars']
+
+            ptype = None  # preparation type
+            logger.info(u.verbose.report(s))
+            # first question: do we want to rebin, crop etc
+            if s.prepare_data and s.has_key('preparation'):  # alternatively we could check for the preparation entry
+                prep = u.Param()
+                # update s with "generic" preparation
+                prep.update(s.preparation.get("generic", {}))
+                ptype = s.preparation.get("type")
+                if ptype is not None:
+                    prep.update(s.preparation.get(ptype, {}))
+
+            # copy other relevant information
+            prep.filename = s.data_file
+            prep.geometry = s.geometry.copy()
+            prep.xy = s.xy.copy()
+
+            if ptype is not None:
+                logger.info('Search Data Preparation Class for key: "%s"' % ptype)
+                PS = PtyScanTypes[ptype.lower()]
+                self.PS.append(PS(prep))
+            elif prep.filename.endswith('.ptyd'):
+                self.PS.append(PtydScan(prep))
+            else:
+                logger.warning('Generating PtyScan for scan "%s" failed - This label will source no data')
+
+        # Initialize flags
+        self.scan_current = -1
+        self.data_available = True
+        self.scan_total = len(self.PS)
+
+    @property
+    def scan_available(self):
+        return self.scan_current < (self.scan_total - 1)
+
     def feed_data(self):
-        new_last_index = len(self._buff[self._active]['iterable'])
-        iterable = self._buff[self._active]['iterable'][self.last_index:new_last_index]
-        self.last_index = new_last_index
-        common = self._buff[self._active]['common']
-        out = u.Param()
-        out.iterable=iterable
-        out.common = common
-        self.data_available = False
-        yield out.copy()
+        """
+        Yield data packages.
+        """
+        # get PtyScan instance to scan_number
+        PS = self.PS[self.scan_current]
 
-"""
-"""
-# Loop through frames
-for i in range(DS.Nframes):
-    # Empty structure
-    outdct = u.Param()
-    
-    # Data frame - could be None in MPI
-    outdct.data = DS.datalist[i]
-    outdct.mask = DS.masklist[i]
-    outdct.flat = DS.flatlist[i]
-    outdct.dark = DS.darklist[i]
-     
-    # The metadata is identical to scan_info with a few exceptions
-    si = DS.scan_info.copy()
-    
-    # The frame is related to a single position, so we remove the list
-    # and replace it with a single coordinate
-    del si.positions
-    del si.positions_theory
-    # for now we assume only the object to be moving
-    pos = DS.scan_info.positions[i]
-    post = DS.scan_info.positions_theory[i]
-    si.position =np.array([(0.0,0.0), pos,(0.0,0.0)]) if pos is not None else None
-    si.position_theory = np.array([(0.0,0.0), post ,(0.0,0.0)]) if post is not None else None
-    
-    # The frame is 2D, so the shape is adapted accordingly
-    si.shape = si.shape[-2:]
+        # initialize if that has not been done yet
+        if not PS.is_initialized:
+            PS.initialize()
 
-    # Keep the scanpoint index for later 
-    si.index = i
+        msg = PS.auto(self.frames_per_call, self.feed_format)
+        # if we catch a scan that has ended look for an unfinished scan
+        while msg == EOS and self.scan_available:
+            self.scan_current += 1
+            PS = self.PS[self.scan_current]
+            if not PS.is_initialized:
+                PS.initialize()
+            msg = PS.auto(self.frames_per_call, self.feed_format)
+
+        self.data_available = (msg != EOS or self.scan_available)
+        logger.info(u.verbose.report(msg))
+        if msg != WAIT and msg != EOS:
+            # ok that would be a data package
+            yield msg
+
+
+def switch_frame_orientation(A, orientation, center=None):
+    """
+    Switches orientation of Array A along the last two axes (-2,-1)
+        
+    orientation : 3-tuple (transpose,flipud,fliplr)
     
-    outdct.update({'meta':si})
+    returns
+    --------
+        Flipped array, new center
+    """
+    # switch orientation
+    if orientation[0]:
+        axes = list(range(A.ndim - 2)) + [-1, -2]
+        A = np.transpose(A, axes)
+        center = (center[1], center[0]) if center is not None else None
+    if orientation[1]:
+        A = A[..., ::-1, :]
+        center = (A.shape[-2] - 1 - center[0], center[1]) if center is not None else None
+    if orientation[2]:
+        A = A[..., ::-1]
+        center = (center[0], A.shape[-1] - 1 - center[1]) if center is not None else None
+
+    return A, np.array(center)
+
+
+def rebin_2d(A, rebin=1):
+    """
+    Rebins array A symmetrically along last 2 axes with a factor `rebin`
+    """
+    newdim = np.asarray(A.shape[-2:]) / rebin
+    return A.reshape(-1, newdim[0], rebin, newdim[1], rebin).sum(-1).sum(-2)
+
+
+def crop_pad_symmetric_2d(A, newshape, center=None):
+    """
+    Crops or pads Array A symmetrically along the last two axes (-2,-1)
+    around center `center` to a new shape `newshape`
     
-    # Generator output
-    yield outdct
-"""
-            
+    """
+    # crop / pad symmetrically around center
+    osh = np.array(A.shape[-2:])
+    c = np.round(center) if center is not None else osh // 2
+    sh = np.array(newshape[-2:])
+    low = -c + sh // 2
+    high = -osh + c + (sh + 1) // 2
+    hplanes = np.array([[low[0], high[0]], [low[1], high[1]]])
+
+    if (hplanes != 0).any():
+        A = u.crop_pad(A, hplanes)
+
+    return A, c + low
+
+
+if __name__ == "__main__":
+    u.verbose.set_level(3)
+    shape = (40, 256, 256)
+    PS = PtyScan(roi=256, save='extlink')
+    PS.initialize()
+    for i in range(50):
+        msg = PS.auto()
+        logger.info(u.verbose.report(msg), extra={'allprocesses': True})
+        parallel.barrier()
+

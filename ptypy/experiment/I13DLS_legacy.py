@@ -44,10 +44,10 @@ EXPERIMENT_IN_NEXUS_FILE = 'entry1/experiment_identifier'
 
 # Standard parameter stucture for prepare_data
 DEFAULT = u.Param(
-    verbose_level = 2, # Verbosity level 
+    verbose_level = 2, # Verbosity level
     base_path = None, #'The root directory where all experiment information can be found'
     detector_name = None, # That is the name of the detector in the nexus file
-    experimentID = None, #'Experiment identifier' 
+    experimentID = None, #'Experiment identifier'
     scan = None, #'Scan number' or file
     dpsize = None, #'Cropped array size for one frame'
     ctr = None, #'Center of the diffraction pattern.'
