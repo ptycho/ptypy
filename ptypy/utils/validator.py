@@ -8,14 +8,8 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-from parameters import Param
 import pkg_resources
 import csv
-
-# FIXME: These defaults are not used
-DEFAULT = Param()
-DEFAULT.report_level = 1
-DEFAULT.report_format = '%(entry_point)'
 
 
 class PDesc(object):
@@ -72,14 +66,22 @@ class PDesc(object):
     def validate(self, pars, walk=True):
         """
         Verify that the parameter structure pars is consistent with internal description.
-        If walk is True (default), validate also all chidren entry points.
+        If walk is True (default), validate also all sub-parameters.
 
-        Return a dictionary with True/False entries.
+        Returns a list of failures and a list of warnings.
         """
-        d, _ = self._validate(pars, walk, report=False)
-        return d
+        d = self._do_check(pars, walk)
+        failed = []
+        warning = []
+        for ep, v in d.items():
+            for tocheck, outcome in v.items():
+                if outcome is None:
+                    warning.append(ep + ':' + tocheck)
+                if outcome is False:
+                    failed.append(ep + ':' + tocheck)
+        return failed, warning
 
-    def report(self, pars, walk=True):
+    def report(self, pars, walk=True, level=1):
         """
         Create a report on the validity of the passed parameters in addition to the
         validity structure.
@@ -87,8 +89,20 @@ class PDesc(object):
 
         Return validity_dict, report
         """
-        _, r = self._validate(pars, walk, report=True)
-        return '\n'.join(r)
+        d = self._do_check(pars, walk)
+        report = ''
+        for ep, v in d.items():
+            report += '%s\n' % ep
+            report += '-'*len(ep) + '\n'
+            for tocheck, outcome in v.items():
+                if (outcome is True) and (level == 2):
+                    report += ' * %10s%7s\n' % (tocheck, 'PASS')
+                elif (outcome is None) and (level >= 1):
+                    report += ' * %10s%7s\n' % (tocheck, '????')
+                elif (outcome is False) and (level >= 0):
+                    report += ' * %10s%7s\n' % (tocheck, 'FAIL')
+            report += '\n'
+        return report
 
     @property
     def entry_point(self):
@@ -97,15 +111,12 @@ class PDesc(object):
         else:
             return '.'.join([self.parent.entry_point, self.name])
 
-    def _validate(self, pars, walk, report):
+    def _do_check(self, pars, walk):
         """
         """
         ep = self.entry_point
         out = {}
         val = {}
-        rep = None
-        if report:
-            rep = ['%s' % ep, '-' * len(ep)]
 
         # 1. Data type
         if self.type is None:
@@ -124,10 +135,6 @@ class PDesc(object):
         else:
             val['uplim'] = (pars <= self.uplim)
 
-        if report:
-            for k, v in val.items():
-                rep += ['%-10s%10s' % (k, str(v))]
-
         # 3. Extra work for parameter entries
         if self.type == ['Param']:
             # Check for missing entries
@@ -141,14 +148,12 @@ class PDesc(object):
                     val[k] = False
                 elif walk:
                     # Validate child
-                    d, newrep = self.children[k]._validate(v, walk, report)
-                    # Append indented report
-                    rep += ['    ' + x for x in newrep]
+                    d, newrep = self.children[k]._do_check(v, walk)
                     # Append dict
                     out[self.children[k].entry_point] = d
 
         out[ep] = val
-        return out, rep
+        return out
 
     def __str__(self):
         return ''
@@ -196,7 +201,7 @@ for num, desc in enumerate(desc_list):
         entry_level = level+1
 
 
-def validate(pars, entry_point=None):
+def validate(pars, entry_point=None, level=0):
     """
     Verify that the parameter structure "pars" matches the documented constraints.
 
@@ -204,6 +209,12 @@ def validate(pars, entry_point=None):
     :param entry_point: the Node in the structure to match to.
     """
     pdesc = parameter_descriptions[entry_point]
-    pdesc.validate(pars)
+    failed, warning = pdesc.validate(pars)
+    if (level == 0) and failed:
+        return failed
+    elif (level == 1) and (failed or warning):
+        out = dict(failed)
+        out.update(warning)
+        return out
 
 
