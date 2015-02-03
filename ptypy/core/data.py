@@ -72,8 +72,8 @@ parallel = u.parallel
 logger = u.verbose.logger
 
 META = dict(
-    label_original='foo',
-    label='scanfoo',
+    label_original=None,
+    label=None,
     version='0.1',
     shape=None,
     psize_det=None,
@@ -89,8 +89,8 @@ PTYD = dict(
 )
 
 GENERIC = dict(
-    filename='./foo.ptyd',  # filename
-    label='scan001',  # a scan label
+    filename=None,  # filename (e.g. 'foo.ptyd')
+    label=None,  # a scan label (e.g. 'scan0001')
     chunk_format='.chunk%02d',  # Format for chunk file appendix.
     num_frames=None,  # frame size of saved ptyd or load. Can be None.
     roi=None,  # 2-tuple or int for the desired fina frame size
@@ -99,7 +99,8 @@ GENERIC = dict(
     load_parallel='data',  # None, 'data', 'common', 'all'
     rebin=1,  # rebin diffraction data
     orientation=(False, False, False),  # 3-tuple switch, actions are (transpose, invert rows, invert cols)
-    min_frames=parallel.size  # minimum number of frames if one chunk if not at end of scan
+    min_frames=parallel.size,  # minimum number of frames of one chunk if not at end of scan
+    positions_theory=None # Theoretical position list
 )
 
 WAIT = 'msg1'
@@ -128,19 +129,23 @@ class PtyScan(object):
         Please note the the class creation does not necessarily load data.
         Call <cls_instance>.initialize() to begin
         """
+
+        # Load default parameter structure
         info = u.Param(GENERIC.copy())
-        if pars is not None:
-            info.update(pars)
+        info.update(pars)
         info.update(kwargs)
 
-        # a copy for important information
+        # validate(pars, '.scan.preparation')
+
+        # Prepare meta data
         self.meta = u.Param(META.copy())
 
+        # Attempt to get number of frames.
         if info.num_frames is None:
-            logger.info('Total number of frames for scan %s not specified.')
+            logger.info('Total number of frames for scan {0.label} not specified.'.format(info))
             logger.info('Looking for position information input parameter structure ....\n')
 
-            # check if we got position information in the parameters
+            # Check if we got position information in the parameters
             if info.get('positions_theory') is None:
 
                 if info.get('pattern') is not None:
@@ -285,7 +290,7 @@ class PtyScan(object):
         common['positions_scan'] = np.indices((self.num_frames, 2)).sum(0)
         return common
 
-    def _mpi_check(self, chunksize=10, start=None):
+    def _mpi_check(self, chunksize, start=None):
         """
         Executes the check() function on master node and communicates
         the result with the other nodes.
@@ -340,7 +345,7 @@ class PtyScan(object):
         self.indices = indices
         return indices
 
-    def get_data_chunk(self, chunksize=10, start=None):
+    def get_data_chunk(self, chunksize, start=None):
         """
         This function prepares a container that is compatible to data package
         This function is called from the auto() function.
@@ -488,7 +493,7 @@ class PtyScan(object):
 
             return chunk
 
-    def auto(self, frames=parallel.size, chunk_form='dp'):
+    def auto(self, frames, chunk_form='dp'):
         """
         Repeated calls to this function will process the data
         
@@ -822,13 +827,25 @@ class PtydScan(PtyScan):
 
 
 class DataSource(object):
-    def __init__(self, scans, frames=5 * parallel.size, feed_format='dp'):
+    """
+    A source of data for ptychographic reconstructions. The important method is "feed_data", which returns
+    packets of diffraction patterns with their meta-data.
+    """
+    def __init__(self, scans, frames_per_call=10000000, feed_format='dp'):
+        """
+        DataSource initialization.
+
+        scans: a dictionnary of scan structures.
+        frames_per_call: (optional) number of frames to load in one call. By default, load as many as possible.
+        feed_format: the format in with the data is packaged. For now only 'dp' is implemented.
+        """
 
         from ..experiment import PtyScanTypes
 
-        self.frames_per_call = frames
-        self.feed_format = 'dp'
+        self.frames_per_call = frames_per_call
+        self.feed_format = feed_format
         self.scans = scans
+
         # sort after keys given
         labels = sorted(scans.keys())
 
@@ -841,14 +858,12 @@ class DataSource(object):
 
             ptype = None  # preparation type
             logger.info(u.verbose.report(s))
-            # first question: do we want to rebin, crop etc
-            if s.prepare_data and s.has_key('preparation'):  # alternatively we could check for the preparation entry
-                prep = u.Param()
-                # update s with "generic" preparation
-                prep.update(s.preparation.get("generic", {}))
-                ptype = s.preparation.get("type")
-                if ptype is not None:
-                    prep.update(s.preparation.get(ptype, {}))
+
+            # Get parameters for preparation from raw data if required.
+            if s.prepare_data:
+                prep = u.Param(s.preparation.generic.copy())
+                ptype = s.preparation.type
+                prep.update(s.preparation[ptype])
 
             # copy other relevant information
             prep.filename = s.data_file
@@ -856,13 +871,14 @@ class DataSource(object):
             prep.xy = s.xy.copy()
 
             if ptype is not None:
-                logger.info('Search Data Preparation Class for key: "%s"' % ptype)
                 PS = PtyScanTypes[ptype.lower()]
+                logger.info('Scan %s will be prepared with the recipe "%s"' % (label, ptype))
                 self.PS.append(PS(prep))
             elif prep.filename.endswith('.ptyd'):
                 self.PS.append(PtydScan(prep))
             else:
-                logger.warning('Generating PtyScan for scan "%s" failed - This label will source no data')
+                raise RuntimeError('Could not manage scan %s' % label)
+                # logger.warning('Generating PtyScan for scan "%s" failed - This label will source no data')
 
         # Initialize flags
         self.scan_current = -1

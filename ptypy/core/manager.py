@@ -63,13 +63,13 @@ scan_DEFAULT = u.Param(
     source=None,
     sharing=None,
     tags="",  # For now only used to declare an empty scan
-    probe_weight=1., # Weight of this dataset relative to other scans that share the same probe
-    object_weight=1. # Weight of this dataset relative to other scans that share the same object
+    probe_weight=1.,  # Weight of this dataset relative to other scans that share the same probe
+    object_weight=1.  # Weight of this dataset relative to other scans that share the same object
     # FIXME: implement weights. Need to propagate to pods, and modify the reconstruction
     # algorithms to take these weights into account
 )
 
-model_DEFAULT = u.Param(scan_DEFAULT,
+model_DEFAULT = u.Param(scan_DEFAULT.copy(),
                         sharing=u.Param(),  # rules for linking
                         scans=u.Param(),  # Sub-structure that can contain scan-specific parameters
 )
@@ -111,14 +111,16 @@ class ModelManager(object):
         """
 
         # Initialize the input parameters
-        p = u.Param(self.DEFAULT)
-        p.update(pars,Replace=False)
+        p = u.Param(self.DEFAULT.copy())
+        p.update(pars, Replace=False)
         self.p = p
 
         self.ptycho = ptycho
+
         # abort if ptycho is None:
         if self.ptycho is None:
             return
+
         # Prepare the list of scan_labels (important because they are sorted)
         # FIXME: BE I don't think this is the way to go. This is only needed for sharing
         # For the user it might be better to mark the sharing behavior directly

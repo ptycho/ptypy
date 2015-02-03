@@ -65,8 +65,7 @@ class I13Scan(PtyScan):
         """
         # Initialise parent class with input parameters
         p = DEFAULT.copy()
-        if pars is not None:
-            p.update(pars)
+        p.update(pars)
         super(I13Scan, self).__init__(p, **kwargs)
 
         # Attempt to extract base_path if missing
