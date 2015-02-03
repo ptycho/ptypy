@@ -19,7 +19,7 @@ import os
 from .. import utils as u
 from ..utils import prop 
 from ..utils.verbose import logger
-
+from ..utils import validator
 
 DEFAULT=u.Param(
     probe_type = 'parallel',		# 'focus','parallel','path_to_file'
@@ -49,7 +49,9 @@ def from_pars(sh,psize,lam,off=0.,pars=None,dtype=np.complex128):
     p = u.Param(DEFAULT)
     if pars is not None:
         p.update(pars)
-        
+
+    #validator.validate(p, '.scan.illumination')
+
     if p.probe is not None: return p
     #print p.paramdict
 

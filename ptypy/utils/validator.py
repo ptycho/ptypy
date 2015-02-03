@@ -8,14 +8,46 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
+from .parameters import Param
 import pkg_resources
 import csv
+from .verbose import logger
+import logging
+# Message codes
+codes = Param(
+    PASS=1,
+    FAIL=0,
+    UNKNOWN=2,
+    MISSING=3,
+    INVALID=4)
+
+code_label = dict((v, k) for k, v in codes.items())
+
+# Logging levels
+logging_levels = Param(
+    PASS=logging.INFO,
+    FAIL=logging.CRITICAL,
+    UNKNOWN=logging.WARN,
+    MISSING=logging.WARN,
+    INVALID=logging.ERROR)
+
+typemap = {'int': 'int',
+           'float': 'float',
+           'str': 'str',
+           'bool': 'bool',
+           'tuple': 'tuple',
+           'list': 'list',
+           'array': 'ndarray',
+           'Param': 'Param',
+           'None': 'NoneType',
+           '': 'NoneType'}
 
 
 class PDesc(object):
     """
 
     """
+
     def __init__(self, description, parent=None):
         """
         Store description list for validation and documentation.
@@ -24,13 +56,14 @@ class PDesc(object):
         # Type can be a comma-separated list of types
         self.type = description.get('type', None)
         if self.type is not None:
-            self.type = [x.strip() for x in self.type.split(',')]
+            self.type = [typemap[x.strip()] if x.strip() in typemap else x.strip() for x in self.type.split(',')]
 
         # Name is a string
         self.name = description.get('name', '')
 
-        # Default value is a string
-        self.default = description.get('default', '')
+        # Default value can be any type. None if unknown
+        dflt = description.get('default', '')
+        self.default = dflt if dflt else None
 
         # Static is 'TRUE' or 'FALSE'
         self.static = (description.get('static', 'TRUE') == 'TRUE')
@@ -63,47 +96,6 @@ class PDesc(object):
 
         parameter_descriptions[self.entry_point] = self
 
-    def validate(self, pars, walk=True):
-        """
-        Verify that the parameter structure pars is consistent with internal description.
-        If walk is True (default), validate also all sub-parameters.
-
-        Returns a list of failures and a list of warnings.
-        """
-        d = self._do_check(pars, walk)
-        failed = []
-        warning = []
-        for ep, v in d.items():
-            for tocheck, outcome in v.items():
-                if outcome is None:
-                    warning.append(ep + ':' + tocheck)
-                if outcome is False:
-                    failed.append(ep + ':' + tocheck)
-        return failed, warning
-
-    def report(self, pars, walk=True, level=1):
-        """
-        Create a report on the validity of the passed parameters in addition to the
-        validity structure.
-        If walk is True (default), validate also all chidren entry points.
-
-        Return validity_dict, report
-        """
-        d = self._do_check(pars, walk)
-        report = ''
-        for ep, v in d.items():
-            report += '%s\n' % ep
-            report += '-'*len(ep) + '\n'
-            for tocheck, outcome in v.items():
-                if (outcome is True) and (level == 2):
-                    report += ' * %10s%7s\n' % (tocheck, 'PASS')
-                elif (outcome is None) and (level >= 1):
-                    report += ' * %10s%7s\n' % (tocheck, '????')
-                elif (outcome is False) and (level >= 0):
-                    report += ' * %10s%7s\n' % (tocheck, 'FAIL')
-            report += '\n'
-        return report
-
     @property
     def entry_point(self):
         if self.parent is None:
@@ -111,8 +103,11 @@ class PDesc(object):
         else:
             return '.'.join([self.parent.entry_point, self.name])
 
-    def _do_check(self, pars, walk):
+    def check(self, pars, walk):
         """
+        Check that input parameter pars is consistent with parameter description.
+        If walk is True and pars is a Param object, checks are also conducted for all
+        sub-parameters.
         """
         ep = self.entry_point
         out = {}
@@ -121,36 +116,34 @@ class PDesc(object):
         # 1. Data type
         if self.type is None:
             # Unconclusive
-            val['type'] = None
+            val['type'] = codes.UNKNOWN
         else:
-            val['type'] = (type(pars).__name__ in self.type)
+            val['type'] = codes.PASS if (type(pars).__name__ in self.type) else codes.FAIL
 
         # 2. limits
         if self.lowlim is None:
-            val['lowlim'] = None
+            val['lowlim'] = codes.UNKNOWN
         else:
-            val['lowlim'] = (pars >= self.lowlim)
+            val['lowlim'] = codes.PASS if (pars >= self.lowlim) else codes.FAIL
         if self.uplim is None:
-            val['uplim'] = None
+            val['uplim'] = codes.UNKNOWN
         else:
-            val['uplim'] = (pars <= self.uplim)
+            val['uplim'] = codes.PASS if (pars <= self.uplim) else codes.FAIL
 
         # 3. Extra work for parameter entries
-        if self.type == ['Param']:
+        if 'Param' in self.type:
             # Check for missing entries
             for k, v in self.children.items():
                 if k not in pars:
-                    val[k] = None
+                    val[k] = codes.MISSING
 
             # Check for excess entries
             for k, v in pars.items():
                 if k not in self.children:
-                    val[k] = False
+                    val[k] = codes.INVALID
                 elif walk:
                     # Validate child
-                    d, newrep = self.children[k]._do_check(v, walk)
-                    # Append dict
-                    out[self.children[k].entry_point] = d
+                    out.update(self.children[k].check(v, walk))
 
         out[ep] = val
         return out
@@ -158,11 +151,11 @@ class PDesc(object):
     def __str__(self):
         return ''
 
-    def make_doc(self, format=None):
+    def make_doc(self):
         """
         Create documentation.
         """
-        pass
+        return '{self.entry_point}\n\n{self.shortdoc}\n{self.longdoc}'.format(self=self)
 
 # Load all documentation on import
 csvfile = pkg_resources.resource_filename('ptypy', 'resources/parameters_descriptions.csv')
@@ -174,7 +167,7 @@ parameter_descriptions = {}
 # Create the root
 pdroot = PDesc(description={'name': '', 'type': 'Param'}, parent=None)
 entry_pts = ['']
-entry_dcts = [pdroot] # [{}]
+entry_dcts = [pdroot]  # [{}]
 entry_level = 0
 for num, desc in enumerate(desc_list):
     # Get parameter name and level in the hierarchy
@@ -184,8 +177,8 @@ for num, desc in enumerate(desc_list):
     # Manage end of branches
     if level < entry_level:
         # End of a branch
-        entry_pts = entry_pts[:(level+1)]
-        entry_dcts = entry_dcts[:(level+1)]
+        entry_pts = entry_pts[:(level + 1)]
+        entry_dcts = entry_dcts[:(level + 1)]
         entry_level = level
     elif level > entry_level:
         raise RuntimeError('Problem parsing csv file %s, entry %d' % (csvfile, num))
@@ -198,20 +191,30 @@ for num, desc in enumerate(desc_list):
         # A new node
         entry_pt = pd.entry_point
         entry_dcts.append(pd)  # entry_dcts.append(new_desc)
-        entry_level = level+1
+        entry_level = level + 1
 
 
-def validate(pars, entry_point=None, level=0):
+def validate(pars, entry_point, walk=True, raisecode=[codes.FAIL, codes.INVALID]):
     """
-    Verify that the parameter structure "pars" matches the documented constraints.
+    Check that the parameter structure "pars" matches the documented constraints at
+    the given entry_point.
+
+    The function raises a RuntimeError if one of the code in the list 'raisecode' has
+    been found. If raisecode is empty, the function will always return successfully
+    but problems will be logged using logger.
 
     :param pars: A Param object
     :param entry_point: the Node in the structure to match to.
+    :param walk: if True (default), navigate sub-parameters.
+    :param raisecode: list of codes that will raise a RuntimeError.
     """
     pdesc = parameter_descriptions[entry_point]
-    failed, warning = pdesc.validate(pars)
-    if (level == 0) and failed:
-        return failed
-    elif (level == 1) and (failed or warning):
-        return failed, warning
+    d = pdesc.check(pars, walk=walk)
+    do_raise = False
+    for ep, v in d.items():
+        for tocheck, outcome in v.items():
+            logger.log(logging_levels[code_label[outcome]], '%-50s %-20s %7s' % (ep, tocheck, code_label[outcome]))
+            do_raise |= (outcome in raisecode)
+    if do_raise:
+        raise RuntimeError('Parameter validation failed.')
 

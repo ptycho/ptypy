@@ -112,7 +112,7 @@ None: Do not share
 3,ly,2E-05,float,yes,0,,"ROI dimension in y",,0,
 1,illumination,,Param,yes,0,,"Illumination model (probe)",,,
 2,from,None,str,yes,,,"User-defined probe (if type is None)","`None`, path to a *.ptyr file or any python evaluable statement yielding a 2d numpy array. If `None` illumination is modeled.",0,
-2,photons,None,int,yes,0,,"Number of photons in the incident illumination",,2,
+2,photons,None,"int,float,None",yes,0,,"Number of photons in the incident illumination",,2,
 2,antialiasing,1,float,yes,,,"Antialiasing factor","Antialiasing factor used when generating the probe. (numbers larger than 2 or 3 are memory hungry)",2,
 2,aperture,'',Param,yes,,,"Beam aperture parameters",,,
 3,type,circ,str,yes,0,,"One of None, 'rect' or 'circ'","One of:
