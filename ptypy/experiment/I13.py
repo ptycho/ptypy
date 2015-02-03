@@ -26,17 +26,18 @@ NEXUS_PATHS.command = 'entry1/scan_command'
 NEXUS_PATHS.label = 'entry1/entry_identifier'
 NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 
+# Generic defaults
 DEFAULT = u.Param()
 DEFAULT.experimentID = None   # Experiment identifier
-DEFAULT.scan_number = 74      # scan number
+DEFAULT.scan_number = None      # scan number
 DEFAULT.dark_number = None
 DEFAULT.flat_number = None
-DEFAULT.energy = 9.7
-DEFAULT.lam = 1.2398e-9 / DEFAULT.energy
-DEFAULT.z = 7.5                                          # Distance from object to screen
-DEFAULT.psize_det = 55e-6    # Camera pixel size
-DEFAULT.center = 'auto'
-DEFAULT.orientation = (True, True, False)
+DEFAULT.energy = None
+DEFAULT.lam = None # 1.2398e-9 / DEFAULT.energy
+DEFAULT.z = None                                          # Distance from object to screen
+DEFAULT.psize_det = None  # 55e-6    # Camera pixel size
+DEFAULT.center = None
+DEFAULT.orientation = None  # (True, True, False)
 DEFAULT.experimentID = None
 # IO
 DEFAULT.base_path = './'
@@ -66,6 +67,7 @@ class I13Scan(PtyScan):
         # Initialise parent class with input parameters
         p = DEFAULT.copy()
         p.update(pars)
+
         super(I13Scan, self).__init__(p, **kwargs)
 
         # Attempt to extract base_path if missing

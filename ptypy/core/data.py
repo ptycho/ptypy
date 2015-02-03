@@ -92,7 +92,6 @@ GENERIC = dict(
     filename=None,  # filename (e.g. 'foo.ptyd')
     label=None,  # a scan label (e.g. 'scan0001')
     chunk_format='.chunk%02d',  # Format for chunk file appendix.
-    num_frames=None,  # frame size of saved ptyd or load. Can be None.
     roi=None,  # 2-tuple or int for the desired fina frame size
     save=None,  # None, 'merge', 'append', 'extlink'
     center=None,  # 2-tuple, 'auto', None. If 'auto', center is chosen automatically
@@ -100,7 +99,9 @@ GENERIC = dict(
     rebin=1,  # rebin diffraction data
     orientation=(False, False, False),  # 3-tuple switch, actions are (transpose, invert rows, invert cols)
     min_frames=parallel.size,  # minimum number of frames of one chunk if not at end of scan
-    positions_theory=None # Theoretical position list
+    positions_theory=None,  # Theoretical position list
+    xy=None,  # Possibly sub-structure giving probe positions
+    geometry=None  # Possibly geometry information
 )
 
 WAIT = 'msg1'
@@ -141,50 +142,41 @@ class PtyScan(object):
         self.meta = u.Param(META.copy())
 
         # Attempt to get number of frames.
-        if info.num_frames is None:
-            logger.info('Total number of frames for scan {0.label} not specified.'.format(info))
-            logger.info('Looking for position information input parameter structure ....\n')
+        self.num_frames = None
+        logger.info('Looking for position information input parameter structure ....\n')
+        if (info.positions_theory is None) and (info.xy is not None):
+            from ptypy.core import xy
+            info.positions_theory = xy.from_pars(info.xy)
 
-            # Check if we got position information in the parameters
-            if info.get('positions_theory') is None:
+        if info.positions_theory is not None:
+            num = len(info.positions_theory)
+            logger.info('Theoretical positions are available. There will be %d frames.' % num)
+            self.num_frames = num
 
-                if info.get('pattern') is not None:
-                    from ptypy.core import pattern
-
-                    info.positions_theory = pattern.from_pars(info['pattern'])
-
-                elif info.get('xy') is not None:
-                    from ptypy.core import xy
-
-                    info.positions_theory = xy.from_pars(info['xy'])
-
-            if info.get('positions_theory') is not None:
-                num = len(info.positions_theory)
-                logger.info('%d positions found. Setting frame count to this number\n' % num)
-                info.num_frames = len(info.positions_theory)
-
-                # check if we got information on geometry from ptycho
-        if info.get('geometry') is not None:
+        # check if we got information on geometry from ptycho
+        if info.geometry is not None:
             for k, v in info.geometry.items():
+                # FIXME: This is a bit ugly - some parameters are added to info without documentation.
                 info[k] = v if info.get(k) is None else None
-            info.roi = u.expect2(info.geometry.get('N')) if info.roi is None else info.roi
+            # FIXME: This should probably be done more transparently: it is not clear for the user that info.roi has precedence over geometry.N
+            if info.roi is None:
+                info.roi = u.expect2(info.geometry.N)
 
         # None for rebin should be allowed, as in "don't rebin".
         if info.rebin is None:
             info.rebin = 1
 
         self.info = info
-        # update internal dict    
 
         # Print a report
         logger.info('Ptypy Scan instance got the following parameters:\n')
         logger.info(u.verbose.report(info))
 
         # Dump all input parameters as class attributes.
-        # FIXME: This can lead to much confusion...
+        # FIXME: This duplication of parameters can lead to much confusion...
         self.__dict__.update(info)
 
-        # check mpi settings
+        # Check MPI settings
         lp = str(self.load_parallel)
         self.load_common_in_parallel = (lp == 'all' or lp == 'common')
         self.load_in_parallel = (lp == 'all' or lp == 'data')
@@ -194,6 +186,12 @@ class PtyScan(object):
         self.chunknum = 0
         self.start = 0
 
+        # Initialize other instance attributes
+        self.common = {}
+        self.has_weight2d = None
+        self.has_positions = None
+        self.filename = None
+
         # initialize flags
         self._flags = np.array([0, 0, 0], dtype=int)
         self.is_initialized = False
@@ -202,45 +200,55 @@ class PtyScan(object):
         """
         Time for some read /write access
         """
-        filename = self.filename
+
+        # Prepare writing to file
         if self.save is not None:
-            # ok we want to create a .ptyd
+            # We will create a .ptyd
+            self.filename = self.info.filename
             if parallel.master:
-                if os.path.exists(filename):
-                    backup = filename + '.old'
-                    logger.warning('File %s already exist. Renamed to %s' % (filename, backup))
-                    os.rename(filename, backup)
+                if os.path.exists(self.filename):
+                    backup = self.filename + '.old'
+                    logger.warning('File %s already exist. Renamed to %s' % (self.filename, backup))
+                    os.rename(self.filename, backup)
                 # Prepare an empty file with the appropriate structure
-                io.h5write(filename, PTYD.copy())
+                io.h5write(self.filename, PTYD.copy())
             # Wait for master
             parallel.barrier()
 
-        self.common = self.load_common() if (parallel.master or self.load_common_in_parallel) else {}
+        if parallel.master or self.load_common_in_parallel:
+            self.common = u.Param(self.load_common())
+
         # broadcast
         if not self.load_common_in_parallel:
             parallel.bcast_dict(self.common)
-        logger.info('\n ---------- Analysis of the "common" arrays  ---------- \n')
 
+        logger.info('\n ---------- Analysis of the "common" arrays  ---------- \n')
         # Check if weights (or mask) have been loaded by load_common.
-        self.has_weight2d = self.common.has_key('weight2d')
+        self.has_weight2d = self.common.weight2d is not None
         logger.info('Check for weight or mask,  "weight2d"  .... %s\n' % str(self.has_weight2d))
 
         # Check if positions have been loaded by load_common
-        positions = self.common.get('positions_scan')
+        positions = self.common.positions_scan
         self.has_positions = positions is not None
         logger.info('Check for positions, "positions_scan" .... %s' % str(self.has_positions))
+
         if self.has_positions:
             # Store positions in the info dictionary
-            self.info['positions_scan'] = positions
+            self.info.positions_scan = positions
             num_pos = len(positions)
             if self.num_frames is None:
                 # Frame number was not known. We just set it now.
-                logger.info('Setting number of frames for preparation from `None` to %d\n' % num_pos)
+                logger.info('Scanning positions found. There will be %d frames' % num_pos)
                 self.num_frames = num_pos
             else:
                 # Frame number was already specified. Maybe we didn't want to use everything?
-                logger.warning('Going to prepare %d frames of %d\n' % (self.num_frames, num_pos))
-                # FIXME: what is self.num_frames > num_pos?
+                if num_pos == self.num_frames:
+                    logger.info('Scanning positions have the same number of points as the theoretical ones (%d).' % num_pos)
+                else:
+                    raise RuntimeError('Scanning positions have a number of poins (%d) inconsistent with what was previously deduced (%d).'
+                                        % (num_pos, self.info.num_frames))
+        elif self.info.positions_theory is None:
+            logger.info('No scanning position have been provided at this stage.')
 
         parallel.barrier()
         logger.info('#######  MPI Report: ########\n')
@@ -248,9 +256,9 @@ class PtyScan(object):
         parallel.barrier()
         logger.info(' ----------  Analyis done   ---------- \n\n')
 
-        if self.save is not None and parallel.master:
-            logger.info('Appending common dict to file %s\n' % self.filename)
-            io.h5append(self.filename, common=self.common, info=self.info)
+        if self.info.save is not None and parallel.master:
+            logger.info('Appending common dict to file %s\n' % self.info.filename)
+            io.h5append(self.info.filename, common=dict(self.common), info=dict(self.info))
         # wait for master
         parallel.barrier()
 
@@ -261,8 +269,8 @@ class PtyScan(object):
         Last actions when Eon-of-Scan is reached
         """
         # maybe do this at end of everything
-        if self.save is not None and parallel.master:
-            io.h5append(self.filename, common=dict(self.common), info=dict(self.info))
+        if self.info.save is not None and parallel.master:
+            io.h5append(self.info.filename, common=dict(self.common), info=dict(self.info))
 
     def load_common(self):
         """
@@ -282,13 +290,11 @@ class PtyScan(object):
         
         returns:
             common : dict of numpy arrays
-                - fill items to keys `weight2d` or `positons_scan`
+                    At least two keys, `weight2d` and `positions_scan` must be given (they can be None)
         """
-        # dummy fill
-        common = {}
-        common['weight2d'] = np.ones(self.roi, dtype='bool')
-        common['positions_scan'] = np.indices((self.num_frames, 2)).sum(0)
-        return common
+
+        return {'weight2d': np.ones(self.info.roi, dtype='bool'),
+                'positions_scan': np.indices((self.info.num_frames, 2)).sum(0)}
 
     def _mpi_check(self, chunksize, start=None):
         """
