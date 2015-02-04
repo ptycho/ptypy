@@ -18,24 +18,27 @@ from .. import utils as u
 from ..core.data import PtyScan
 
 logger = u.verbose.logger
+
+# Recipe defaults
 DEFAULT = u.Param()
 DEFAULT.file = None             # Mandatory: plugin filename
 DEFAULT.classname = None    # Optional: PtyScan subclass. If None, such a class will be found dynamically.
 DEFAULT.pars = u.Param()        # Parameters to pass to the preparation plugin
 
 
-def makeScanPlugin(pars=None, **kwargs):
+def makeScanPlugin(pars=None):
     """
     Factory wrapper that provides a PtyScan object.
 
     """
-    p = DEFAULT.copy()
-    p.update(pars)
-    p.update(kwargs)
+
+    # Recipe defaults
+    rinfo = DEFAULT.copy()
+    rinfo.update(pars.recipe)
 
     # Sanity checks (for user-friendliness)
-    filename = os.path.abspath(os.path.expanduser(p.file))
-    if not os.path.exists(p.file):
+    filename = os.path.abspath(os.path.expanduser(rinfo.file))
+    if not os.path.exists(rinfo.file):
         raise IOError('Plugin file %s does not exist.' % str(filename))
 
     plugin_name, file_ext = os.path.splitext(os.path.split(filename)[-1])
@@ -45,8 +48,8 @@ def makeScanPlugin(pars=None, **kwargs):
     # Load plugin
     plugin = imp.load_source(plugin_name, filename)
 
-    # Find and instantiate the PtyScan class
-    if p.classname is None:
+    # Find the PtyScan class
+    if rinfo.classname is None:
         # We try to find the class
         ptyscan_objects = {}
         for name, obj in plugin.__dict__.iteritems():
@@ -60,10 +63,13 @@ def makeScanPlugin(pars=None, **kwargs):
         ptyscan_obj_name = ptyscan_objects.keys()[0]
         ptyscan_obj = ptyscan_objects[ptyscan_obj_name]
     else:
-        ptyscan_obj_name = p.classname
+        ptyscan_obj_name = rinfo.classname
         ptyscan_obj = getattr(plugin, ptyscan_obj_name)
 
     logger.info('Using plugin preparation class "%s.%s".' % (plugin_name, ptyscan_obj_name))
 
+    # Replac the plugin recipe structure with the plugin parameters
+    pars.recipe = rinfo.pars
+
     # Create the object and return it
-    return ptyscan_obj(p.pars)
+    return ptyscan_obj(pars)

@@ -27,7 +27,7 @@ load(self,indices):
 load_common(self):
     loads common arrays for all processes. excuted once on initialize()
     Especially scan point position and correction arrays like dark field, mask 
-    and flat field are handy to be loaded here
+    and flat field should be loaded here.
     The returned dictionary is available throughout preparation at 
     self.common
     
@@ -35,7 +35,7 @@ load_common(self):
         (common)
         - a dictionary with only numpy arrays as values. These arrays are 
           the same among all processes. 
-        - fill items `positions_scan` and `wieght2d` with the 
+        - `positions_scan` and `weight2d` are known and useful.
         
 correct(self,raw,weights,common):
     place holder for dark and flat_field correction. 
@@ -101,7 +101,8 @@ GENERIC = dict(
     min_frames=parallel.size,  # minimum number of frames of one chunk if not at end of scan
     positions_theory=None,  # Theoretical position list
     xy=None,  # Possibly sub-structure giving probe positions
-    geometry=None  # Possibly geometry information
+    geometry=None,  # Possibly geometry information
+    recipe=None  # Recipe structure
 )
 
 WAIT = 'msg1'
@@ -174,10 +175,10 @@ class PtyScan(object):
 
         # Dump all input parameters as class attributes.
         # FIXME: This duplication of parameters can lead to much confusion...
-        self.__dict__.update(info)
+        # self.__dict__.update(info)
 
         # Check MPI settings
-        lp = str(self.load_parallel)
+        lp = str(self.info.load_parallel)
         self.load_common_in_parallel = (lp == 'all' or lp == 'common')
         self.load_in_parallel = (lp == 'all' or lp == 'data')
 
@@ -185,12 +186,19 @@ class PtyScan(object):
         self.framestart = 0
         self.chunknum = 0
         self.start = 0
+        self.chunk = None
 
         # Initialize other instance attributes
         self.common = {}
         self.has_weight2d = None
         self.has_positions = None
         self.filename = None
+
+        self.center = None  # Center will be set later
+        self.roi = None  # ROI will be set later
+        self.shape = None
+        self.orientation = self.info.orientation
+        self.rebin = self.info.rebin
 
         # initialize flags
         self._flags = np.array([0, 0, 0], dtype=int)
@@ -202,7 +210,7 @@ class PtyScan(object):
         """
 
         # Prepare writing to file
-        if self.save is not None:
+        if self.info.save is not None:
             # We will create a .ptyd
             self.filename = self.info.filename
             if parallel.master:
@@ -222,9 +230,11 @@ class PtyScan(object):
         if not self.load_common_in_parallel:
             parallel.bcast_dict(self.common)
 
+        self.common = u.Param(self.common)
+
         logger.info('\n ---------- Analysis of the "common" arrays  ---------- \n')
         # Check if weights (or mask) have been loaded by load_common.
-        self.has_weight2d = self.common.weight2d is not None
+        self.has_weight2d = self.common.get('weight2d', False)
         logger.info('Check for weight or mask,  "weight2d"  .... %s\n' % str(self.has_weight2d))
 
         # Check if positions have been loaded by load_common
@@ -321,7 +331,7 @@ class PtyScan(object):
 
         N = self.frames_accessible
         # wait if too few frames are available and we are not at the end
-        if N < self.min_frames and not self.end_of_scan:
+        if N < self.info.min_frames and not self.end_of_scan:
             return WAIT
         elif self.end_of_scan and N <= 0:
             return EOS
@@ -384,12 +394,15 @@ class PtyScan(object):
 
             if not has_weights:
                 # peak at first item
-                altweight = self.common.get('weight2d', np.ones(dsh))
+                if self.has_weight2d:
+                    altweight = self.common.weight2d
+                else:
+                    altweight = np.ones(dsh)
                 weights = dict.fromkeys(data.keys(), altweight)
 
             assert len(weights) == len(data), 'Data and Weight frames unbalanced %d vs %d' % (len(data), len(weights))
 
-            cen = self.center
+            cen = self.info.center
 
             # get center in diffraction image
             if str(cen) == 'auto':
@@ -402,7 +415,7 @@ class PtyScan(object):
 
             # It is important to set center again in order to NOT have different centers for each chunk
             # the downside is that the center may be off if only a few diffraction patterns were
-            # used for the analysis. It such case it is benficial to set the center in the parameters
+            # used for the analysis. In such case it is beneficial to set the center in the parameters
             self.center = cen
             self.info.center = cen  # for documentation
 
@@ -411,7 +424,7 @@ class PtyScan(object):
                 dsh - cen > 0).all(), 'Optical axes (center = (%.1f,%.1f) outside diffraction image frame' % tuple(cen)
 
             # adapt roi if not set
-            self.roi = u.expect2(self.roi) if self.roi is not None else dsh
+            self.roi = u.expect2(self.info.roi) if self.info.roi is not None else dsh
             self.shape = self.roi
 
             # determine if the arrays require further processing
@@ -448,8 +461,8 @@ class PtyScan(object):
                         w[mask < 1] = 0
                         cen /= float(rebin)
                         self.shape = u.expect2(self.roi) / rebin
-                        if self.__dict__.get('psize_det') is not None:
-                            self.psize_det = u.expect2(self.psize_det) * rebin
+                        # FIXME: It is better to keep the detector size fixed and instead take rebin into account later.
+                        # self.psize_det = u.expect2(self.info.psize_det) * rebin
 
                 # translate back to dictionaries
                 data = dict(zip(indices.node, d))
@@ -487,10 +500,11 @@ class PtyScan(object):
             # with first chunk we update meta
             if self.chunknum < 1:
                 for k, v in self.meta.items():
+                    # FIXME: I would like to avoid this "blind copying"
                     self.meta[k] = self.__dict__.get(k, self.info.get(k)) if v is None else v
                 self.meta['center'] = cen
 
-                if self.save is not None and parallel.master:
+                if self.info.save is not None and parallel.master:
                     io.h5append(self.filename, meta=dict(self.meta))
                 parallel.barrier()
 
@@ -522,7 +536,7 @@ class PtyScan(object):
         else:
             out = self.return_chunk_as(msg, chunk_form)
             # save chunk
-            if self.save is not None:
+            if self.info.save is not None:
                 self._mpi_save_chunk()
             # delete chunk
             del self.chunk
@@ -534,30 +548,31 @@ class PtyScan(object):
         For now only kind=='dp' (data package) is valid.
         """
         # this is a bit ugly now
-        if kind == 'dp':
-            out = {}
+        if kind != 'dp':
+            raise RuntimeError('Unknown kind of chunck format: %s' % str(kind))
 
-            # The "common" part
-            out['common'] = self.meta
+        out = {}
 
-            # The "iterable" part
-            iterables = []
-            for pos, index in zip(chunk.positions, chunk.indices):
-                frame = {}
-                frame['index'] = index
-                frame['data'] = chunk.data.get(index)
-                if frame['data'] is None:
-                    frame['mask'] = None
-                else:
-                    # ok we now know that we need a mask since data is not None
-                    # first look in chunk for a weight to this index, then
-                    # look for a 2d-weight in meta, then arbitrarily set
-                    # weight to ones. 
-                    w = chunk.weights.get(index, self.meta.get('weight2d', np.ones_like(frame['data'])))
-                    frame['mask'] = (w > 0)
-                frame['position'] = pos
-                iterables.append(frame)
-            out['iterable'] = iterables
+        # The "common" part
+        out['common'] = self.meta
+
+        # The "iterable" part
+        iterables = []
+        for pos, index in zip(chunk.positions, chunk.indices):
+            frame = {'index': index,
+                     'data': chunk.data.get(index),
+                     'position': pos}
+            if frame['data'] is None:
+                frame['mask'] = None
+            else:
+                # ok we now know that we need a mask since data is not None
+                # first look in chunk for a weight to this index, then
+                # look for a 2d-weight in meta, then arbitrarily set
+                # weight to ones.
+                w = chunk.weights.get(index, self.meta.get('weight2d', np.ones_like(frame['data'])))
+                frame['mask'] = (w > 0)
+            iterables.append(frame)
+        out['iterable'] = iterables
         return out
 
     def _mpi_pipeline_with_dictionaries(self, indices):
@@ -625,7 +640,7 @@ class PtyScan(object):
         if start is None:
             start = self.framestart
         if frames is None:
-            frames = self.min_frames
+            frames = self.info.min_frames
 
         frames_accessible = min((frames, self.num_frames - start))
 
@@ -678,7 +693,7 @@ class PtyScan(object):
         # for some nodes, cen may still be empty. Therefore we use gather_dict to be save
         cen = parallel.gather_dict(cen)
         parallel.barrier()
-        # now master possesses all calcuated centers
+        # now master possesses all calculated centers
         if parallel.master:
             cen = np.array(cen.values()).mean(0)
         else:
@@ -726,6 +741,7 @@ class PtyScan(object):
         # gather all distributed dictionary data.
         c = chunk if chunk is not None else self.chunk
         # shallow copy
+        # FIXME: Should this be self.chunk? or "c"?
         todisk = dict(self.chunk)
         num = todisk.pop('num')
         ind = todisk.pop('indices_node')
@@ -759,7 +775,14 @@ class PtyScan(object):
 
 
 class PtydScan(PtyScan):
+    """
+    PtyScan provided by native "ptyd" file format.
+    """
     def __init__(self, pars=None, **kwargs):
+        """
+        PtyScan provided by native "ptyd" file format.
+        """
+        # Initialize parent class
         super(PtydScan, self).__init__(pars, **kwargs)
 
         self.meta = io.h5read(self.filename, 'meta')['meta']
@@ -768,30 +791,45 @@ class PtydScan(PtyScan):
             if self.__dict__.get(k) is None:
                 self.__dict__[k] = v
 
+        # Other instance attributes
+        self._checked = None
+        self._ch_frame_ind = None
+
+
     def check(self, frames=None, start=None):
+        """
+        Return the number of frames available from starting index `start`, and whether the end of the scan
+        was reached.
+
+        :param frames: Number of frames to load
+        :param start: starting point
+        :return: (frames_available, end_of_scan)
+        - the number of frames available from a starting point `start`
+        - bool if the end of scan was reached (None if this routine doesn't know)
+        """
 
         if start is None:
             start = self.framestart
         if frames is None:
             frames = self.minframes
+
         # Get info about size of currently available chunks.
         # Dead external links will produce None and are excluded
         with h5py.File(self.filename, 'r') as f:
             d = {}
-
             chitems = sorted([(int(k), v) for k, v in f['chunks'].iteritems() if v is not None], key=lambda t: t[0])
             for chkey in chitems[0][1].keys():
                 d[chkey] = [(int(k), v[chkey].shape) for k, v in chitems if v is not None]
             f.close()
 
         self._checked = d
-        self.allframes = int(sum([ch[1][0] for ch in d['data']]))
+        allframes = int(sum([ch[1][0] for ch in d['data']]))
         self._ch_frame_ind = np.array([(dd[0], frame) for dd in d['data'] for frame in range(dd[1][0])])
 
-        return self.allframes - start, None
+        return allframes - start, None
 
     def _coord_to_h5_calls(self, key, coord):
-        return ('chunks/%d/%s' % (coord[0], key), slice(coord[1], coord[1] + 1))
+        return 'chunks/%d/%s' % (coord[0], key), slice(coord[1], coord[1] + 1)
 
     def load_common(self):
         """
@@ -862,25 +900,20 @@ class DataSource(object):
             # we are making a copy of the root as we want to fill it
             s = scans[label]['pars']
 
-            ptype = None  # preparation type
             logger.info(u.verbose.report(s))
 
-            # Get parameters for preparation from raw data if required.
-            if s.prepare_data:
-                prep = u.Param(s.preparation.generic.copy())
-                ptype = s.preparation.type
-                prep.update(s.preparation[ptype])
-
-            # copy other relevant information
+            # Copy other relevant information
+            prep = s.preparation.copy()
             prep.filename = s.data_file
             prep.geometry = s.geometry.copy()
             prep.xy = s.xy.copy()
 
-            if ptype is not None:
-                PS = PtyScanTypes[ptype.lower()]
-                logger.info('Scan %s will be prepared with the recipe "%s"' % (label, ptype))
+            if s.prepare_data:
+                recipe_name = prep.recipe.name
+                PS = PtyScanTypes[recipe_name.lower()]
+                logger.info('Scan %s will be prepared with the recipe "%s"' % (label, recipe_name))
                 self.PS.append(PS(prep))
-            elif prep.filename.endswith('.ptyd'):
+            elif s.data_file.endswith('.ptyd'):
                 self.PS.append(PtydScan(prep))
             else:
                 raise RuntimeError('Could not manage scan %s' % label)

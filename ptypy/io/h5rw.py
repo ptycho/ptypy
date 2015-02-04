@@ -476,9 +476,9 @@ def h5read(filename, *args, **kwargs):
         raise
     else:
         with f:
-            h5rw_version = f.attrs.get('h5rw_version',None)
-            if h5rw_version is None:
-                print('Warning: this file does not seem to follow h5read format.')
+            # h5rw_version = f.attrs.get('h5rw_version',None)
+            # if h5rw_version is None:
+            #     print('Warning: this file does not seem to follow h5read format.')
             ctime = f.attrs.get('ctime', None)
             if ctime is not None:
                 print('File created : ' + ctime)
@@ -655,9 +655,9 @@ def h5info(filename, output=None):
         return stringout
         
     with h5py.File(filename,'r') as f:
-        h5rw_version = f.attrs.get('h5rw_version',None)
-        if h5rw_version is None:
-            print('Warning: this file does not seem to follow h5read format.')
+        # h5rw_version = f.attrs.get('h5rw_version',None)
+        # if h5rw_version is None:
+        #     print('Warning: this file does not seem to follow h5read format.')
         ctime = f.attrs.get('ctime', None)
         if ctime is not None:
             print('File created : ' + ctime)

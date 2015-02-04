@@ -105,7 +105,7 @@ def mass_center(A, axes=None):
         axes=tuple(range(1,A.ndim+1))
     else:
         axes=tuple(np.array(axes)+1)
-        
+
     return np.sum(A*np.indices(A.shape),axis=axes)/np.sum(A)
 
 def center_2d(sh,center):

@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
 """\
-Scan loading specific to the I13 beamline, Diamond.
+Scan loading recipe for the I13 beamline, Diamond.
 
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
-
-
 """
 
 import numpy as np
 import os
 from .. import io
 from .. import utils as u
+from .. import core
 from ..core.data import PtyScan
 
 logger = u.verbose.logger
@@ -27,6 +26,11 @@ NEXUS_PATHS.label = 'entry1/entry_identifier'
 NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 
 # Generic defaults
+PREP_DEFAULT = u.Param()
+PREP_DEFAULT.psize_det = 55e-6    # Camera pixel size
+PREP_DEFAULT.orientation = (True, True, False)
+
+# Recipe defaults
 DEFAULT = u.Param()
 DEFAULT.experimentID = None   # Experiment identifier
 DEFAULT.scan_number = None      # scan number
@@ -35,43 +39,47 @@ DEFAULT.flat_number = None
 DEFAULT.energy = None
 DEFAULT.lam = None # 1.2398e-9 / DEFAULT.energy
 DEFAULT.z = None                                          # Distance from object to screen
-DEFAULT.psize_det = None  # 55e-6    # Camera pixel size
-DEFAULT.center = None
-DEFAULT.orientation = None  # (True, True, False)
-DEFAULT.experimentID = None
-# IO
+DEFAULT.motors = ['lab_sy', 'lab_sx']     # 'Motor names to determine the sample translation'
+DEFAULT.motors_multiplier = 1e-6       # 'Motor conversion factor to meters'
 DEFAULT.base_path = './'
 DEFAULT.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 DEFAULT.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
 DEFAULT.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
 DEFAULT.mask_file = '%(base_path)s' + 'processing/mask.h5'
-DEFAULT.motors = ['lab_sy', 'lab_sx']     # 'Motor names to determine the sample translation'
-DEFAULT.motors_multiplier = 1e-6       # 'Motor conversion factor to meters'
-
-pp = u.Param()
-pp.filename = './foo.ptyd'
-pp.roi = None
-pp.num_frames = 50
-pp.save = 'extlink'
 
 
 class I13Scan(PtyScan):
-    
+    """
+    Subclass of PtyScan.
+    """
+
     def __init__(self, pars=None, **kwargs):
         """
         Create a PtyScan object that will load I13 data.
 
-        :param pars: Input parameters (on top of DEFAULT)
+        :param pars: preparation parameters
         :param kwargs: Additive parameters
         """
-        # Initialise parent class with input parameters
-        p = DEFAULT.copy()
-        p.update(pars)
+        # Apply preparation defaults
+        # FIXME: is there a better way of doing this?
+        core.data.GENERIC.update(PREP_DEFAULT)
 
-        super(I13Scan, self).__init__(p, **kwargs)
+        # Initialise parent class with input parameters
+        super(I13Scan, self).__init__(pars, **kwargs)
+
+        # Update recipe information
+        rinfo = DEFAULT.copy()
+        rinfo.update(pars.recipe)
+
+        # Default scan label
+        if self.info.label is None:
+            self.info.label = 'S%5d' % rinfo.scan_number
+
+        # Store recipe parameters in self.info
+        self.info.recipe = rinfo
 
         # Attempt to extract base_path if missing
-        if self.info.base_path is None:
+        if rinfo.base_path is None:
             d = os.getcwd()
             base_path = None
             while True:
@@ -84,20 +92,24 @@ class I13Scan(PtyScan):
             if base_path is None:
                 raise RuntimeError('Could guess base_path.')
             else:
-                self.info.base_path = base_path
+                rinfo.base_path = base_path
 
-        self.info.data_file = self.info.data_file_pattern % self.info
-        self.info.dark_file = None if self.info.dark_number is None else self.info.dark_file_pattern % self.info
-        self.info.flat_file = None if self.info.flat_number is None else self.info.flat_file_pattern % self.info
+        rinfo.data_file = rinfo.data_file_pattern % rinfo
+        rinfo.dark_file = None if rinfo.dark_number is None else rinfo.dark_file_pattern % rinfo
+        rinfo.flat_file = None if rinfo.flat_number is None else rinfo.flat_file_pattern % rinfo
 
         # Attempt to extract experiment ID
-        if self.info.experimentID is None:
+        if rinfo.experimentID is None:
             try:
-                experimentID = io.h5read(self.info.data_file, NEXUS_PATHS.experiment)[NEXUS_PATHS.experiment]
+                experimentID = io.h5read(rinfo.data_file, NEXUS_PATHS.experiment)[NEXUS_PATHS.experiment]
             except:
-                logger.debug('Could not find experiment ID from nexus file %s.' % self.info.data_file)
-                experimentID = os.path.split(self.info.base_path[:-1])[1]
-            self.info.experimentID = experimentID
+                experimentID = os.path.split(rinfo.base_path[:-1])[1]
+                logger.debug('Could not find experiment ID from nexus file %s. Using %s instead.' %
+                             (rinfo.data_file, experimentID))
+            rinfo.experimentID = experimentID
+
+        self.rinfo = rinfo
+        self.info.recipe = rinfo
 
         logger.info(u.verbose.report(self.info))
 
@@ -108,15 +120,16 @@ class I13Scan(PtyScan):
         common = u.Param()
 
         # Get positions
-        motor_positions = io.h5read(self.info.data_file, NEXUS_PATHS.motors)[NEXUS_PATHS.motors]
-        mmult = u.expect2(self.info.motors_multiplier)
-        pos_list = [mmult[i] * np.array(motor_positions[motor_name]) for i, motor_name in enumerate(self.info.motors)]
+        motor_positions = io.h5read(self.rinfo.data_file, NEXUS_PATHS.motors)[NEXUS_PATHS.motors]
+        mmult = u.expect2(self.rinfo.motors_multiplier)
+        pos_list = [mmult[i] * np.array(motor_positions[motor_name]) for i, motor_name in enumerate(self.rinfo.motors)]
         common.positions_scan = np.array(pos_list).T
 
         # FIXME: do something better here. (detector-dependent)
         # Load mask
-        if self.info.mask_file is not None:
-            common.weight2d = io.h5read('self.info.mask_file', 'mask')['mask'].astype(float)
+        # common.weight2d = None
+        if self.rinfo.mask_file is not None:
+            common.weight2d = io.h5read(self.rinfo.mask_file, 'mask')['mask'].astype(float)
 
         return common._to_dict()
         
@@ -147,8 +160,8 @@ class I13Scan(PtyScan):
         pos = {}
         weights = {}
         for j in indices:
-            key = NEXUS_PATHS.frame_pattern % self.info
-            raw[j] = io.h5read(self.info.data_file, NEXUS_PATHS.frame_pattern % self.info, slice=j)[key]
+            key = NEXUS_PATHS.frame_pattern % self.rinfo
+            raw[j] = io.h5read(self.rinfo.data_file, NEXUS_PATHS.frame_pattern % self.rinfo, slice=j)[key].astype(np.float32)
             
         return raw, pos, weights
         
@@ -162,5 +175,5 @@ class I13Scan(PtyScan):
         """
         # FIXME: this will depend on the detector type used.
         data = raw
-        weights = {}
+        weights = weights
         return data, weights
