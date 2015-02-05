@@ -95,6 +95,7 @@ GENERIC = dict(
     roi=None,  # 2-tuple or int for the desired fina frame size
     save=None,  # None, 'merge', 'append', 'extlink'
     center=None,  # 2-tuple, 'auto', None. If 'auto', center is chosen automatically
+    psize_det=None,  # Detector pixel size
     load_parallel='data',  # None, 'data', 'common', 'all'
     rebin=1,  # rebin diffraction data
     orientation=(False, False, False),  # 3-tuple switch, actions are (transpose, invert rows, invert cols)
@@ -124,6 +125,8 @@ class PtyScan(object):
      - mpi capable, child classes should not worry about mpi
      
     """
+
+    DEFAULTS = GENERIC
 
     def __init__(self, pars=None, **kwargs):  # filename='./foo.ptyd',shape=None, save=True):
         """
@@ -234,7 +237,7 @@ class PtyScan(object):
 
         logger.info('\n ---------- Analysis of the "common" arrays  ---------- \n')
         # Check if weights (or mask) have been loaded by load_common.
-        self.has_weight2d = self.common.get('weight2d', False)
+        self.has_weight2d = 'weight2d' in self.common
         logger.info('Check for weight or mask,  "weight2d"  .... %s\n' % str(self.has_weight2d))
 
         # Check if positions have been loaded by load_common

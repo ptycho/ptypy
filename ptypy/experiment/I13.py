@@ -28,7 +28,7 @@ NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 # Generic defaults
 PREP_DEFAULT = u.Param()
 PREP_DEFAULT.psize_det = 55e-6    # Camera pixel size
-PREP_DEFAULT.orientation = (True, True, False)
+PREP_DEFAULT.orientation = (False, True, False)
 
 # Recipe defaults
 DEFAULT = u.Param()
@@ -53,6 +53,8 @@ class I13Scan(PtyScan):
     Subclass of PtyScan.
     """
 
+    DEFAULT = PtyScan.DEFAULTS.copy().update(PREP_DEFAULT)
+
     def __init__(self, pars=None, **kwargs):
         """
         Create a PtyScan object that will load I13 data.
@@ -60,10 +62,6 @@ class I13Scan(PtyScan):
         :param pars: preparation parameters
         :param kwargs: Additive parameters
         """
-        # Apply preparation defaults
-        # FIXME: is there a better way of doing this?
-        core.data.GENERIC.update(PREP_DEFAULT)
-
         # Initialise parent class with input parameters
         super(I13Scan, self).__init__(pars, **kwargs)
 
