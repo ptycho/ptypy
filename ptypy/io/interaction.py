@@ -38,15 +38,15 @@ network_DEFAULT = u.Param(
 
 # Default parameters for the server
 Server_DEFAULT = u.Param(network_DEFAULT,
-    poll_timeout = 10,   # Network polling interval (in milliseconds!)
-    pinginterval = 2, # Interval to check pings (in seconds)
-    pingtimeout = 10  # Ping time out: a client is disconnected if no news is sent within this period (in seconds)
+                         poll_timeout=10,   # Network polling interval (in milliseconds!)
+                         pinginterval=2,  # Interval to check pings (in seconds)
+                         pingtimeout=10  # Ping time out: client disconnected after this period (in seconds)
 )
 
 # Default parameters for the client
 Client_DEFAULT = u.Param(network_DEFAULT,
-    poll_timeout = 100,   # Network polling interval (in milliseconds!)
-    pinginterval = 1 # Interval to check pings (in seconds)
+                         poll_timeout=100,   # Network polling interval (in milliseconds!)
+                         pinginterval=1  # Interval to check pings (in seconds)
 )
 
 
@@ -55,7 +55,7 @@ def ID_generator(size=6, chars=string.ascii_uppercase + string.digits):
     Generate a random ID string made of capital letters and digits.
     size [default=6] is the length of the string.
     """
-    return ''.join(random.choice(chars) for x in range(size))
+    return ''.join(random.choice(chars) for _ in range(size))
 
 
 def is_str(s):
@@ -102,6 +102,7 @@ NE = NumpyEncoder()
 # This is the string to match against when decoding
 NPYARRAYmatch = re.compile("NPYARRAY\[([0-9]{3})\]")
 
+
 def numpy_replace(obj, arraylist):
     """\
     Takes an object decoded by JSON and replaces the arrays where
@@ -122,6 +123,7 @@ def numpy_replace(obj, arraylist):
     else:
         return obj        
 
+
 def numpy_zmq_send(out_socket, obj):
     """\
     Send the given object using JSON, taking care of numpy arrays.
@@ -135,7 +137,7 @@ def numpy_zmq_send(out_socket, obj):
         
     if not npy_arrays:
         # Simple case, just send the object as-is
-        out = {'hasarray':False, 'message':obj}
+        out = {'hasarray': False, 'message': obj}
         out_socket.send_json(out)
         return
         
@@ -143,15 +145,15 @@ def numpy_zmq_send(out_socket, obj):
     npy_arrays = [a if a.flags.contiguous else a.copy() for a in npy_arrays]
     
     # Prepare the shape and datatype information for each array 
-    arrayprops = [{'dtype':a.dtype.str, 'shape':a.shape} for a in npy_arrays]
+    arrayprops = [{'dtype': a.dtype.str, 'shape': a.shape} for a in npy_arrays]
     
     # Send the header
-    out_socket.send_json({'hasarray':True, 'message':s, 'arraylist':arrayprops}, flags=zmq.SNDMORE)
+    out_socket.send_json({'hasarray': True, 'message': s, 'arraylist': arrayprops}, flags=zmq.SNDMORE)
 
     # Send the numpy arrays as raw binary data
     for a in npy_arrays[:-1]:
         out_socket.send(a, copy=False, track=True, flags=zmq.SNDMORE)
-    out_socket.send(npy_arrays[-1],copy=False, track=True)
+    out_socket.send(npy_arrays[-1], copy=False, track=True)
     return
   
 
@@ -172,6 +174,7 @@ def numpy_zmq_recv(in_socket):
     else:
         # No array to process.
         return message
+
 
 class Server(object):
     """\
@@ -265,7 +268,7 @@ class Server(object):
         """
         DEBUG('Queuing a WARN command')
         for ID in self.names.keys():
-            self.queue.put({'ID':ID, 'cmd':'WARN', 'ticket':'WARN', 'str':warning_message})
+            self.queue.put({'ID': ID, 'cmd': 'WARN', 'ticket': 'WARN', 'str': warning_message})
         self._need_process = True
         return {'status':'ok'}
 
@@ -275,9 +278,9 @@ class Server(object):
         """
         DEBUG('Queuing a ERROR command')
         for ID in self.names.keys():
-            self.queue.put({'ID':ID, 'cmd':'ERROR', 'ticket':'ERROR', 'str':error_message})
+            self.queue.put({'ID': ID, 'cmd': 'ERROR', 'ticket': 'ERROR', 'str': error_message})
         self._need_process = True
-        return {'status':'ok'}
+        return {'status': 'ok'}
 
     def _run(self):
         """
@@ -338,9 +341,7 @@ class Server(object):
         
         message is {'ID':ID, 'cmd':command, 'args':kwargs}
         """
-        
-        #print('Replying with new message with command %s from client ID %s' % (message['cmd'], message['ID']))
-        #print('Arguments: %s' % repr(message['args']))
+
         reply = self.cmds[message['cmd']](message['ID'], args=message['args'])
         return reply
 
@@ -360,8 +361,6 @@ class Server(object):
             for ID in todisconnect: self._cmd_disconnect(ID, None)
             self.pingtime = now
 
-
-
     def _cmd_connect(self, ID, args):
         """\
         Process a CONNECT command.
@@ -373,7 +372,7 @@ class Server(object):
             newID, newport = self.ID_pool.pop()
         except IndexError:
             # No more connections are allowed
-            return {'ID':None, 'status':'Error: no more connection allowed'}
+            return {'ID': None, 'status': 'Error: no more connection allowed'}
             
         # New connection socket for the client (PUB means one way)
         out_socket = self.context.socket(zmq.PUB)
@@ -383,7 +382,7 @@ class Server(object):
         self.names[newID] = args['name']
         logger.debug('Connected new client "%s" (ID=%s) on port %s' % (args['name'], newID, str(newport)))
 
-        return {'status':'ok', 'ID':newID, 'port':newport}
+        return {'status': 'ok', 'ID': newID, 'port': newport}
 
     def _cmd_disconnect(self, ID, args):
         """\
@@ -415,7 +414,7 @@ class Server(object):
         """
         self._stopping = True
         self._can_process = True
-        return {'status':'ok'}
+        return {'status': 'ok'}
         
     def _cmd_avail(self, ID, args):
         """\
@@ -423,43 +422,43 @@ class Server(object):
         Send available objects.
         """
         DEBUG('Processing an AVAIL command')
-        return {'status':'ok', 'avail':self.objects.keys()}
+        return {'status': 'ok', 'avail': self.objects.keys()}
         
     def _cmd_ping(self, ID, args):
         """\
         Process a PING command
         send back a PONG.
         """
-        #DEBUG('Processing a PING command')
+        DEBUG('Processing a PING command')
         self.pings[ID] = time.time()
-        return {'status':'pong'}
+        return {'status': 'pong'}
 
     def _cmd_queue_do(self, ID, args):
         """\
         Process a DO command (put it in the queue).
         """
         DEBUG('Queuing a DO command')
-        self.queue.put({'ID':ID, 'cmd':'DO', 'ticket':args['ticket'], 'str':args['str']})
+        self.queue.put({'ID': ID, 'cmd': 'DO', 'ticket': args['ticket'], 'str': args['str']})
         self._need_process = True
-        return {'status':'ok'}
+        return {'status': 'ok'}
 
     def _cmd_queue_get(self, ID, args):
         """\
         Process a GET command (put it in the queue).
         """
         DEBUG('Queuing a GET command')
-        self.queue.put({'ID':ID, 'cmd':'GET', 'ticket':args['ticket'], 'str':args['str']})
+        self.queue.put({'ID': ID, 'cmd': 'GET', 'ticket': args['ticket'], 'str': args['str']})
         self._need_process = True
-        return {'status':'ok'}
+        return {'status': 'ok'}
 
     def _cmd_queue_set(self, ID, args):
         """\
         Process a SET command (put it in the queue).
         """
         DEBUG('Queuing a SET command')
-        self.queue.put({'ID':ID, 'cmd':'SET', 'ticket':args['ticket'], 'str':args['str'], 'val':args['val']})
+        self.queue.put({'ID': ID, 'cmd': 'SET', 'ticket': args['ticket'], 'str': args['str'], 'val': args['val']})
         self._need_process = True
-        return {'status':'ok'}
+        return {'status': 'ok'}
         
     def _cmd_get_now(self, ID, args):
         """\
@@ -474,7 +473,7 @@ class Server(object):
             status = sys.exc_info()[0]
             out = None
 
-        return {'status':status, 'out':out}
+        return {'status': status, 'out': out}
             
     def _send(self, out_socket, obj):
         """\
@@ -518,7 +517,8 @@ class Server(object):
                 continue
                 
             # Measure how long a transfer takes
-            if t0 is None: t0 = time.time()
+            if t0 is None:
+                t0 = time.time()
             
             status = 'ok'
 
@@ -551,10 +551,10 @@ class Server(object):
             
             # Send the data
             try:
-                self._send(out_socket, {'ticket':ticket, 'status':status, 'out':out})
+                self._send(out_socket, {'ticket': ticket, 'status': status, 'out': out})
             except TypeError:
                 # We have tried to send something that JSON doesn't support.
-                self._send(out_socket, {'ticket':ticket, 'status':'TypeError', 'out':None})
+                self._send(out_socket, {'ticket': ticket, 'status': 'TypeError', 'out': None})
             
             # Task completed!
             self.queue.task_done()
@@ -675,7 +675,7 @@ class Client(object):
         self.req_socket.connect(fulladdress)
         
         # Establish connection with the interactor by sending a "CONNECT" command
-        self._send(self.req_socket, {'ID':None, 'cmd':'CONNECT', 'args':{'name':self.name}})
+        self._send(self.req_socket, {'ID': None, 'cmd': 'CONNECT', 'args': {'name':self.name}})
         reply = self._recv(self.req_socket)
         if reply['status'] != 'ok':
             raise RuntimeError('Connection failed! (answer: %s)' % reply['status'])
@@ -706,7 +706,6 @@ class Client(object):
         # Start main listening loop
         self._listen()
 
-
     def _listen(self):
         """\
         Main event loop (running on a thread).
@@ -731,13 +730,10 @@ class Client(object):
                 # Flip the flag in case other threads were waiting for a synchronous call.
                 if cmd['cmd'] == 'GETNOW':
                     self.getnow_flag.set()
-                    self.getnow_flag.clear()
                 elif cmd['cmd'] == 'AVAIL':
                     self.avail_flag.set()
-                    self.avail_flag.clear()
                 elif cmd['cmd'] == 'SHUTDOWN':
                     self.shutdown_flag.set()
-                    self.shutdown_flag.clear()
 
             # Check for data
             if self.poller.poll(self.poll_timeout):
@@ -750,7 +746,7 @@ class Client(object):
         """
         now = time.time()
         if now - self.lastping > self.pinginterval:
-            self.cmds.append({'ID':self.ID, 'cmd':'PING', 'args':None})
+            self.cmds.append({'ID': self.ID, 'cmd': 'PING', 'args': None})
             self.lastping = now
         return
   
@@ -817,7 +813,6 @@ class Client(object):
             ticket = self.tags_to_tickets.get(tag, None)
             return ticket in self.completed
 
-
     def wait(self, ticket=None, tag=None, timeout=None):
         """\
         Blocks and return True only when the transaction for a given ticket is completed.
@@ -857,9 +852,10 @@ class Client(object):
         """
         Send a SHUTDOWN command - is this a good idea?
         """
-        self.cmds.append({'ID':self.ID, 'cmd':'SHUTDOWN', 'args':None})
+        self.cmds.append({'ID': self.ID, 'cmd': 'SHUTDOWN', 'args': None})
+        self.shutdown_flag.clear()
         self.shutdown_flag.wait()
-        return self.last_reply #self.last_reply['avail']
+        return self.last_reply
         
     def stop(self):
         if not self._stopping:
@@ -872,9 +868,10 @@ class Client(object):
         Queries the server for the name of objects available.
         ! Synchronous call !
         """
-        self.cmds.append({'ID':self.ID, 'cmd':'AVAIL', 'args':None})
+        self.cmds.append({'ID': self.ID, 'cmd': 'AVAIL', 'args': None})
+        self.avail_flag.clear()
         self.avail_flag.wait()
-        return self.last_reply #self.last_reply['avail']
+        return self.last_reply
         
     def do(self, execstr, timeout=0, tag=None):
         """\
@@ -885,7 +882,7 @@ class Client(object):
         """
         ticket = self.masterticket + 1
         self.masterticket += 1
-        self.cmds.append({'ID':self.ID, 'cmd':'DO', 'args':{'ticket':ticket, 'str': execstr}})
+        self.cmds.append({'ID': self.ID, 'cmd': 'DO', 'args': {'ticket': ticket, 'str': execstr}})
         self.tickets[ticket] = 'pending'
         self.pending.append(ticket)
         if tag is not None:
@@ -893,7 +890,7 @@ class Client(object):
             self.tickets_to_tags[ticket] = tag
         if timeout > 0:
             if self.wait(ticket, timeout):
-                return (ticket, self.data[ticket])
+                return ticket, self.data[ticket]
         return ticket
         
     def get(self, evalstr, timeout=0, tag=None):
@@ -905,7 +902,7 @@ class Client(object):
         """
         ticket = self.masterticket + 1
         self.masterticket += 1
-        self.cmds.append({'ID':self.ID, 'cmd':'GET', 'args':{'ticket':ticket, 'str': evalstr}})
+        self.cmds.append({'ID': self.ID, 'cmd': 'GET', 'args': {'ticket': ticket, 'str': evalstr}})
         self.tickets[ticket] = 'pending'
         self.pending.append(ticket)
         if tag is not None:
@@ -913,7 +910,7 @@ class Client(object):
             self.tickets_to_tags[ticket] = tag
         if timeout > 0:
             if self.wait(ticket, timeout):
-                return (ticket, self.data[ticket])
+                return ticket, self.data[ticket]
         return ticket
 
     def set(self, varname, varvalue, timeout=0, tag=None):
@@ -922,7 +919,7 @@ class Client(object):
         """
         ticket = self.masterticket + 1
         self.masterticket += 1
-        self.cmds.append({'ID':self.ID, 'cmd':'SET', 'args':{'ticket':ticket, 'str': varname, 'val':varvalue}})
+        self.cmds.append({'ID': self.ID, 'cmd': 'SET', 'args': {'ticket': ticket, 'str': varname, 'val': varvalue}})
         self.tickets[ticket] = 'pending'
         self.pending.append(ticket)
         if tag is not None:
@@ -930,14 +927,15 @@ class Client(object):
             self.tickets_to_tags[ticket] = tag
         if timeout > 0:
             if self.wait(ticket, timeout):
-                return (ticket, self.data[ticket])
+                return ticket, self.data[ticket]
         return ticket
 
     def get_now(self, evalstr):
         """
         Synchronous get. May be dangerous, but should be safe for small objects like parameters.
         """
-        self.cmds.append({'ID':self.ID, 'cmd':'GETNOW', 'args':{'str':evalstr}})
+        self.cmds.append({'ID': self.ID, 'cmd': 'GETNOW', 'args': {'str': evalstr}})
+        self.getnow_flag.clear()
         self.getnow_flag.wait()
 
         return self.last_reply['out']
