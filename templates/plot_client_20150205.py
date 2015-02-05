@@ -68,7 +68,7 @@ class MPLClient(object):
         self.templates = templates
         self.p = u.Param(DEFAULT)
 
-    def _update_plot_layout(self, plot_template=None):
+    def update_plot_layout(self, plot_template=None):
         """
         Generate the plot layout.
         """
@@ -349,8 +349,8 @@ class MPLClient(object):
         while True:
             if self.pc.new_data:
                 self.pr, self.ob, self.runtime = self.pc.get_data()
-            if not initialized:
-                self.update_plot_layout()
+                if not initialized:
+                    self.update_plot_layout()
             u.pause(.1)
 
 if __name__ == '__main__':

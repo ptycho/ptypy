@@ -6,7 +6,6 @@ import time
 import numpy as np
 from threading import Thread, Lock
 
-from ..io.interaction import Client
 from .verbose import logger
 from .parameters import Param
 
@@ -23,6 +22,8 @@ class PlotClient(object):
         """
         Create a client and attempt to connect to a running reconstruction server.
         """
+        # This avoids circular imports.
+        from ..io.interaction import Client
 
         # If client_pars is None, connect with the defaults defined in ptypy.io.interaction
         self.client = Client(client_pars)
