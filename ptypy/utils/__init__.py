@@ -14,6 +14,7 @@ from misc import *
 from parameters import *
 import propagation as prop
 from embedded_shell import ipshell
+from plot_client import PlotClient
 
 try:
     from wave import *
