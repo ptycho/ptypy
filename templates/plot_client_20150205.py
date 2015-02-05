@@ -351,6 +351,8 @@ class MPLClient(object):
                 self.pr, self.ob, self.runtime = self.pc.get_data()
                 if not initialized:
                     self.update_plot_layout()
+                self.plot_all()
+                self.draw()
             u.pause(.1)
 
 if __name__ == '__main__':
