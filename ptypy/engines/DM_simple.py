@@ -29,7 +29,7 @@ class DM_simple(BaseEngine):
 
     def __init__(self, ptycho_parent, pars=None):
         """
-        Simpliest possible Difference map reconstruction engine.
+        Simplest possible Difference map reconstruction engine.
         """
         super(DM_simple,self).__init__(ptycho_parent,pars)
         
