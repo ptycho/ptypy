@@ -19,7 +19,7 @@ try:
     from wave import *
 except ImportError as ie:
     print "Wave dependencies are not met: %s" % ie.message
-    print "Continueing without import of wave ..."
+    print "Continuing without import of wave ..."
     pass
     
 
