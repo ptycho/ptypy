@@ -72,7 +72,6 @@ parallel = u.parallel
 logger = u.verbose.logger
 
 META = dict(
-    label_original=None,
     label=None,
     version='0.1',
     shape=None,
@@ -89,21 +88,25 @@ PTYD = dict(
 )
 
 GENERIC = dict(
-    filename=None,  # filename (e.g. 'foo.ptyd')
+    dfile=None,  # filename (e.g. 'foo.ptyd')
     label=None,  # a scan label (e.g. 'scan0001')
     chunk_format='.chunk%02d',  # Format for chunk file appendix.
     roi=None,  # 2-tuple or int for the desired fina frame size
     save=None,  # None, 'merge', 'append', 'extlink'
+    #geometry parameters
     center=None,  # 2-tuple, 'auto', None. If 'auto', center is chosen automatically
     psize_det=None,  # Detector pixel size
+    energy=None,
+    distance = None,
+    
     load_parallel='data',  # None, 'data', 'common', 'all'
     rebin=1,  # rebin diffraction data
     orientation=(False, False, False),  # 3-tuple switch, actions are (transpose, invert rows, invert cols)
     min_frames=parallel.size,  # minimum number of frames of one chunk if not at end of scan
     positions_theory=None,  # Theoretical position list
-    xy=None,  # Possibly sub-structure giving probe positions
-    geometry=None,  # Possibly geometry information
-    recipe=None  # Recipe structure
+    #xy=None,  # Possibly sub-structure giving probe positions
+    #geometry=None,  # Possibly geometry information
+    #recipe=None  # Recipe structure
 )
 
 WAIT = 'msg1'
@@ -147,10 +150,10 @@ class PtyScan(object):
 
         # Attempt to get number of frames.
         self.num_frames = None
-        logger.info('Looking for position information input parameter structure ....\n')
-        if (info.positions_theory is None) and (info.xy is not None):
-            from ptypy.core import xy
-            info.positions_theory = xy.from_pars(info.xy)
+        #logger.info('Looking for position information input parameter structure ....\n')
+        #if (info.positions_theory is None) and (info.xy is not None):
+        #    from ptypy.core import xy
+        #    info.positions_theory = xy.from_pars(info.xy)
 
         if info.positions_theory is not None:
             num = len(info.positions_theory)
@@ -419,15 +422,26 @@ class PtyScan(object):
             # It is important to set center again in order to NOT have different centers for each chunk
             # the downside is that the center may be off if only a few diffraction patterns were
             # used for the analysis. In such case it is beneficial to set the center in the parameters
-            self.center = cen
-            self.info.center = cen  # for documentation
+
+            self.info.center = cen  
 
             # make sure center is in the image frame
             assert (cen > 0).all() and (
-                dsh - cen > 0).all(), 'Optical axes (center = (%.1f,%.1f) outside diffraction image frame' % tuple(cen)
+                dsh - cen > 0).all(), 'Optical axes (center = (%.1f,%.1f) outside diffraction image frame (%d,%d)' % tuple(cen)+tuple(dsh)
 
             # adapt roi if not set
-            self.roi = u.expect2(self.info.roi) if self.info.roi is not None else dsh
+            if self.roi is None:
+                logger.info('ROI not set. Using full frame shape of (%d,%d).' % tuple(dsh))
+                self.roi = dsh
+            else:
+                self.roi = u.expect2(roi)
+                
+            # only allow square slices in data
+            if self.roi[0]!=self.roi[1]:
+                roi = u.expect2(self.roi.min())
+                logger.warning('Asymmetric data ROI not allowed. Setting ROI from (%d,%d) to (%d,%d)' % (self.roi[0],self.roi[1],roi[0],roi[1]))
+                self.roi = roi
+            
             self.shape = self.roi
 
             # determine if the arrays require further processing
@@ -465,7 +479,8 @@ class PtyScan(object):
                         cen /= float(rebin)
                         self.shape = u.expect2(self.roi) / rebin
                         # FIXME: It is better to keep the detector size fixed and instead take rebin into account later.
-                        # self.psize_det = u.expect2(self.info.psize_det) * rebin
+                        # BE: No
+                        self.psize_det = u.expect2(self.info.psize_det) * rebin
 
                 # translate back to dictionaries
                 data = dict(zip(indices.node, d))
@@ -504,6 +519,7 @@ class PtyScan(object):
             if self.chunknum < 1:
                 for k, v in self.meta.items():
                     # FIXME: I would like to avoid this "blind copying"
+                    # BE: This is not a blind copy as only keys 
                     self.meta[k] = self.__dict__.get(k, self.info.get(k)) if v is None else v
                 self.meta['center'] = cen
 
@@ -910,7 +926,8 @@ class DataSource(object):
             prep.filename = s.data_file
             prep.geometry = s.geometry.copy()
             prep.xy = s.xy.copy()
-
+            
+            # FIXME make data preparation decision base on a more general 'source' entry
             if s.prepare_data:
                 recipe_name = prep.recipe.name
                 PS = PtyScanTypes[recipe_name.lower()]
@@ -919,9 +936,10 @@ class DataSource(object):
             elif s.data_file.endswith('.ptyd'):
                 self.PS.append(PtydScan(prep))
             else:
-                raise RuntimeError('Could not manage scan %s' % label)
-                # logger.warning('Generating PtyScan for scan "%s" failed - This label will source no data')
-
+                #raise RuntimeError('Could not manage scan %s' % label)
+                logger.warning('Generating dummy PtyScan for scan "%s" - This label will source only zeros as data')
+                self.PS.append(PtyScan(prep))
+                
         # Initialize flags
         self.scan_current = -1
         self.data_available = True

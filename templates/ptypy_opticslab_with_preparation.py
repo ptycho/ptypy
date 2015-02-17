@@ -89,6 +89,19 @@ s1.preparation.fli_spec_multexp = u.Param()
 s1.preparation.fli_spec_multexp.data_number = 74
 s1.preparation.fli_spec_multexp.dark_number = 72
 
+s1.data_file = None #"Sim_id22ni_AuStar_defoc_1p40.ptyd"# (14) Address or path to data ressource.
+s1.prepare_data = True
+s1.preparation = u.Param()
+s1.preparation.generic = u.Param()
+s1.preparation.generic.rebin = 3
+s1.preparation.generic.roi = 768
+s1.preparation.generic.orientation = (True,True,True)
+
+s1.preparation.type = "fli_spec_multexp"
+s1.preparation.fli_spec_multexp = u.Param()
+s1.preparation.fli_spec_multexp.data_number = 74
+s1.preparation.fli_spec_multexp.dark_number = 72
+
 # list the scan
 p.scans = u.Param()
 p.scans.scan001 = s1
