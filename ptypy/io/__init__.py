@@ -11,3 +11,4 @@ This file is part of the PTYPY package.
 from h5rw import *
 from json_rw import *
 import interaction
+from image_read import image_read

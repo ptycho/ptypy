@@ -24,7 +24,6 @@ import core
 #from core import *
 #from modules import *
 import simulations 
-import resources
 
 if __name__ == "__main__":
     # TODO: parse command line arguments for extra options

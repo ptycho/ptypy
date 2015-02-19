@@ -12,7 +12,7 @@ from .. import io
 import spec
 import sys
 from .. import utils as u
-from pyE17 import io as io17
+#from pyE17 import io as io17
 from ..core.data import PtyScan
 
 logger = u.verbose.logger
@@ -75,7 +75,7 @@ class FliSpecScanMultexp(PtyScan):
         dark_imgs = []
         exposures =[]
         for j in range(self.nexp):
-            darks,meta = io17.image_read(self.info.dark_dir + '/ccd*_%02d.raw' % j)
+            darks,meta = u.image_read(self.info.dark_dir + '/ccd*_%02d.raw' % j)
             dark_imgs.append(np.array(darks,dtype=np.float).mean(0))
             exposures.append(meta[0][self.exp_string])
         
@@ -110,7 +110,7 @@ class FliSpecScanMultexp(PtyScan):
         pos = {}
         weights = {}
         for j in indices:
-            data,meta = io17.image_read(self.info.data_dir + '/ccd*_%05d_??.raw' % j)
+            data,meta = u.image_read(self.info.data_dir + '/ccd*_%05d_??.raw' % j)
             raw[j] = np.asarray(data)
             
         return raw, pos, weights

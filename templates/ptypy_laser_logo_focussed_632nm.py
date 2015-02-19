@@ -18,33 +18,6 @@ import numpy as np
 p = u.Param()
 
 
-def RGB_to_HSV(rgb):
-    eps = 1e-6
-    rgb=np.asarray(rgb).astype(float)
-    maxc = rgb.max(axis=-1)
-    minc = rgb.min(axis=-1)
-    v = maxc
-    s = (maxc-minc) / maxc
-    s[maxc==0.0]=0.0
-    rc = (maxc-rgb[:,:,0]) / (maxc-minc+eps)
-    gc = (maxc-rgb[:,:,1]) / (maxc-minc+eps)
-    bc = (maxc-rgb[:,:,2]) / (maxc-minc+eps)
-    
-    h =  4.0+gc-rc
-    maxgreen = (rgb[:,:,1] == maxc)
-    h[maxgreen] = 2.0+rc[maxgreen]-bc[maxgreen]
-    maxred = (rgb[:,:,0] == maxc)
-    h[maxred] = bc[maxred]-gc[maxred]
-    h[minc==maxc]=0.0
-    h = (h/6.0) % 1.0
-
-    return h, s, v
-    
-def HSV_to_P1A(cin):
-    h,s,v = cin
-    return v * np.exp(np.pi*2j*h) /v.max()
-
-
 ### PTYCHO PARAMETERS
 p.verbose_level = 3                               # (00) Verbosity level
 

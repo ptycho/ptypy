@@ -47,7 +47,8 @@ else:
     mpl_backend = None
 
 __all__ = ['P1A_to_HSV', 'HSV_to_RGB', 'imsave', 'imload', 'franzmap',\
-           'pause', 'plot_3d_array','length_units','plot_storage', 'rmphaseramp']
+           'pause', 'plot_3d_array','length_units','plot_storage',\
+            'rmphaseramp','HSV_to_P1A','RGB_to_HSV']
 
 # Fix tif import problem
 Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
@@ -184,7 +185,38 @@ def HSV_to_RGB(cin):
 
     return imout
 
+def RGB_to_HSV(rgb):
+    """
+    Reverse to 'HSV_to_RGB'
+    """
+    eps = 1e-6
+    rgb=np.asarray(rgb).astype(float)
+    maxc = rgb.max(axis=-1)
+    minc = rgb.min(axis=-1)
+    v = maxc
+    s = (maxc-minc) / maxc
+    s[maxc==0.0]=0.0
+    rc = (maxc-rgb[:,:,0]) / (maxc-minc+eps)
+    gc = (maxc-rgb[:,:,1]) / (maxc-minc+eps)
+    bc = (maxc-rgb[:,:,2]) / (maxc-minc+eps)
+    
+    h =  4.0+gc-rc
+    maxgreen = (rgb[:,:,1] == maxc)
+    h[maxgreen] = 2.0+rc[maxgreen]-bc[maxgreen]
+    maxred = (rgb[:,:,0] == maxc)
+    h[maxred] = bc[maxred]-gc[maxred]
+    h[minc==maxc]=0.0
+    h = (h/6.0) % 1.0
 
+    return h, s, v
+    
+def HSV_to_P1A(cin):
+    """
+    Maps hue and value
+    """
+    h,s,v = cin
+    return v * np.exp(np.pi*2j*(h-.5)) /v.max()
+    
 def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
     """
     imsave(a) converts array a into, and returns a PIL image

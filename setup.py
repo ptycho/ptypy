@@ -15,6 +15,7 @@ setup(
                 'ptypy.simulations',\
                 'ptypy.engines',\
                 'ptypy.io',\
+                'ptypy.resources',\
                 'ptypy.experiment'],
     package_data={'ptypy':['resources/*',]},
     include_package_data=True 
