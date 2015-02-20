@@ -332,14 +332,12 @@ class ModelManager(object):
             scan.iterable = []
 
             # prepare the scan geometry if not already done.
-            # FIXME: It should be allowed to let "N" be figured out from the data
-            # but for now it needs to be set in the initial parameters.
             if scan.get('geometries') is None:
                 # ok now that we have meta we can check if the geometry fits
                 scan.geometries = []
                 geo = scan.pars.geometry
-                for key in ['lam', 'energy', 'psize_det', 'z', 'prop_type']:
-                    if geo[key] is None or scan.pars.if_conflict_use_meta:
+                for key in geometry.DEFAULT.keys():
+                    if geo.get(key) is None or scan.pars.if_conflict_use_meta:
                         mk = scan.meta.get(key)
                         if mk is not None:  # None existing key or None values in meta dict are treated alike
                             geo[key] = mk

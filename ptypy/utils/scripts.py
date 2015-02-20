@@ -1,7 +1,10 @@
 """
-Created on 2013-04-02
+longer script-like functions 
 
-@author: Bjoern Enders
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: GPLv2, see LICENSE for details.
 """
 
 from scipy import ndimage as ndi
@@ -9,55 +12,11 @@ import numpy as np
 from misc import *
 import parallel
 
-__all__ = ['hdr_image','mirror','pad_lr','crop_pad_axis','crop_pad',
+__all__ = ['hdr_image',
             'xradia_star','png2mpg','mass_center','phase_from_dpc',
-            'radial_distribution','str2range','stxm_analysis','stxm_analysis',
-            'str2int']
+            'radial_distribution','stxm_analysis','stxm_analysis',
+             ]
 
-def str2range(s):
-    """
-    generates an index list
-    range_from_string('1:4:2') == range(1,4,2)
-    BUT
-    range_from_string('1') == range(1,2)
-     
-    Author: Bjoern Enders
-    """
-    start = 0
-    stop = 1
-    step = 1
-    l=s.split(':')
-    
-    il = [int(ll) for ll in l]
-    
-    if len(il)==0:
-        pass    
-    elif len(il)==1:
-        start=il[0]; stop=start+1
-    elif len(il)==2:
-        start, stop= il
-    elif len(il)==3:
-        start, stop, step = il
-        
-    return range(start,stop,step)
-
-def str2int(A):
-    """
-    Transforms numpy array A of strings to uint8 and back
-    """
-    A=np.asarray(A)
-    dt = A.dtype.str
-    if '|S' in A.dtype.str:
-        depth = int(A.dtype.str.split('S')[-1])
-        # make all the same length
-        sh = A.shape +(depth,)
-        #B = np.empty(sh,dtype=np.uint8)
-        return np.array([[ord(l) for l in s.ljust(depth,'\x00')] for s in A.flat],dtype=np.uint8).reshape(sh)
-    elif 'u' in dt or 'i' in dt:
-        return np.array([s.tostring() for s in np.split(A.astype(np.uint8).ravel(),np.prod(A.shape[:-1]))]).reshape(A.shape[:-1])
-    else:
-        raise TypeError('Data type `%s` not understood for string - ascii conversion' % dt)
-    
     
 def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],avg_type='highest',mask_list=[],ClipLongestExposure=False,ClipShortestExposure=False):
     """
@@ -269,206 +228,6 @@ def png2mpg(listoffiles,framefile='frames.txt',fps=5,bitrate=2000,codec='wmv2',E
     else:
         return encoderstring        
      
-def mirror(A,axis):
-    """\
-    mirrors array A along one axis 
-    """
-    return np.flipud(A.swapaxes(axis,0)).swapaxes(0,axis)
-    
-def pad_lr(A,axis,l,r,fillpar=0.0, filltype='scalar'):
-    """\
-    Pads ndarray 'A' orthogonal to 'axis' with 'l' layers (pixels,lines,planes,...)
-    on low side an 'r' layers on high side. 
-    if filltype=
-        'scalar' : uniformly pad with fillpar
-        'mirror' : mirror A
-        'periodic' : well, periodic fill
-        'custom' : pad according arrays found in fillpar
-         
-    """ 
-    fsh=np.array(A.shape)
-    if l>fsh[axis]: #rare case
-        l-=fsh[axis]
-        A=pad_lr(A,axis,fsh[axis],0,fillpar, filltype)
-        return pad_lr(A,axis,l,r,fillpar, filltype)
-    elif r>fsh[axis]: 
-        r-=fsh[axis]
-        A=pad_lr(A,axis,0,fsh[axis],fillpar, filltype)
-        return pad_lr(A,axis,l,r,fillpar, filltype)
-    elif filltype=='mirror':        
-        left=mirror(np.split(A,[l],axis)[0],axis)
-        right=mirror(np.split(A,[A.shape[axis]-r],axis)[1],axis)
-    elif filltype=='periodic':
-        right=np.split(A,[r],axis)[0]
-        left=np.split(A,[A.shape[axis]-l],axis)[1]
-    elif filltype=='project':
-        fsh[axis]=l
-        left=np.ones(fsh,A.dtype)*np.split(A,[1],axis)[0]
-        fsh[axis]=r
-        right=np.ones(fsh,A.dtype)*np.split(A,[A.shape[axis]-1],axis)[1] 
-    if filltype=='scalar' or l==0:
-        fsh[axis]=l
-        left=np.ones(fsh,A.dtype)*fillpar
-    if filltype=='scalar' or r==0:
-        fsh[axis]=r
-        right=np.ones(fsh,A.dtype)*fillpar 
-    if filltype=='custom':
-        left=fillpar[0].astype(A.dtype)
-        rigth=fillpar[1].astype(A.dtype)   
-    return np.concatenate((left,A,right),axis=axis)
-
-
-def _roll_from_pixcenter(sh,center):
-    """\
-    returns array of ints as input for np.roll
-    use np.roll(A,-roll_from_pixcenter(sh,cen)[ax],ax) to put 'cen' in geometric center of array A
-    """
-    sh=np.array(sh)
-    if center != None:
-        if center=='fftshift':
-            cen=sh//2.0
-        elif center=='geometric':
-            cen=sh/2.0-0.5
-        elif center=='fft':
-            cen=sh*0.0
-        elif center is not None:
-            cen=sh*np.asarray(center) % sh - 0.5
-            
-        roll=np.ceil(cen - sh/2.0) % sh
-    else:
-        roll=np.zeros_like(sh)
-    return roll.astype(int)
-    
-
-
-def _translate_to_pix(sh,center):
-    """\
-    takes arbitrary input and translates it to a pixelpositions with respect to sh.
-    """
-    sh=np.array(sh)
-    if center=='fftshift':
-        cen=sh//2.0
-    elif center=='geometric':
-        cen=sh/2.0-0.5
-    elif center=='fft':
-        cen=sh*0.0
-    elif center is not None:
-        cen=sh*np.asarray(center) % sh - 0.5
-
-    return cen
-    
-    
-
-def crop_pad_axis(A,hplanes,axis,roll=0,fillpar=0.0, filltype='scalar'):
-    """\
-    crops or pads a volume array 'A' at beginning and end of axis 'axis' 
-    with a number of hyperplanes specified by 'hplanes'
-
-    Paramters:
-    -------------
-    A : nd-numpy array
-    
-    hplanes: tuple or scalar int
-    axis: int, axis to be used for cropping / padding
-    roll: int, roll array backwards by this number prior to padding / cropping. the roll is reversed afterwards
-   
-    if 'hplanes' is,
-    -scalar and negativ : 
-        crops symmetrically, low-index end of axis is preferred if hplane is odd,
-    -scalar and positiv : 
-        pads symmetrically with a fill specified with 'fillpar' and 'filltype'
-        look at function pad_lr() for detail.
-    -is tupel : function pads /crops asymmetrically according to the tupel.
-    
-    Usage:
-    -------------
-    A=np.ones((8,9))
-    B=crop_pad_axis(A,2,0)
-    -> a total of 2 rows, one at top, one at bottom (same as crop_pad_axis(A,(1,1),0))
-    B=crop_pad_axis(A,(-3,2),1)
-    -> crop 3 columns on left side and pad 2 columns on right
-    V=np.random.rand(3,5,5)
-    B=crop_pad_axis(V,-2,0)
-    -> crop one plane on low-side and high-side (total of 2) of Volume V
-    B=crop_pad_axis(V,(3,-2),1,filltype='mirror')
-    -> mirror volume 3 planes on low side of row axis, crop 2 planes on high side
-    
-    Author: Bjoern Enders
-    """
-    if np.isscalar(hplanes):
-        hplanes=int(hplanes)
-        r=np.abs(hplanes) / 2 * np.sign(hplanes)
-        l=hplanes - r
-    elif len(hplanes)==2:
-        l=int(hplanes[0])
-        r=int(hplanes[1])
-    else:
-        raise RuntimeError('unsupoorted input for \'hplanes\'')
-        
-    if roll!=0:
-        A=np.roll(A,-roll,axis=axis)
-        
-    if l<=0 and r<=0:
-        A=np.split(A,[-l,A.shape[axis]+r],axis)[1]
-    elif l>0 and r>0:
-        A=pad_lr(A,axis,l,r,fillpar,filltype)
-    elif l>0 and r<=0:
-        A=pad_lr(A,axis,l,0,fillpar,filltype)
-        A=np.split(A,[0,A.shape[axis]+r],axis)[1]
-    elif l<=0 and r>0:
-        A=pad_lr(A,axis,0,r,fillpar,filltype)
-        A=np.split(A,[-l,A.shape[axis]],axis)[1]
-        
-        
-    if roll!=0:
-        return np.roll(A,roll+r,axis=axis)
-    else:
-        return A
-
- 
-def crop_pad(A,hplane_list,axes=None,cen=None,fillpar=0.0,filltype='scalar'):
-    """\
-    crops or pads a volume array 'A' with a number of hyperplanes according to parameters in 'hplanes'
-    wrapper for crop_pad_axis
-    
-    Parameters
-    ----------------------
-    hplane_list : 
-     -list of scalars or tupels counting the number of hyperplanes to crop / pad 
-     -see crop_pad_axis() for detail
-     -if N=len(hplane_list) has less entries than dimensions of A, the last N axes are used 
-
-    axes: list of axes to be used for cropping / padding, has to be same length as hplanes
-    
-    cen: center of array, padding/cropping occurs at cen + A.shape / 2
-    
-    Usage:
-    ----------------------
-    V=np.random.rand(3,5,5)
-    B=crop_pad(V,[3,4])
-    ->  pads 4 planes of zeros on the last axis (2 on low side and 2 on high side),
-        and pads 3 planes of zeros on the second last axis (2 on low side and 1 on high side)
-        equivalent: B=crop_pad(V,[(2,1),(2,2)])
-                    B=crop_pad(V,[(2,1),(2,2)], axes=[-2,-1],fillpar=0.0,filltype='scalar')
-    
-    C=pyE17.utils.fgrid_2d((4,5))
-    cropped_fgrid=crop_pad(V,[-2,4],cen='fft')
-    -> note that cropping/ padding now occurs at the start and end of fourier coordinates
-    -> useful for cropping /padding high frequencies in fourier space.
-    
-    Author: Bjoern Enders
-    """
-    if axes is None:
-        axes=np.arange(len(hplane_list))-len(hplane_list)
-    elif not(len(axes)==len(hplane_list)):
-        raise RuntimeError('if axes is specified, hplane_list has to be same length as axes')
-    
-    sh=np.array(A.shape)
-    roll = _roll_from_pixcenter(sh,cen)
-        
-    for ax,cut in zip(axes,hplane_list):
-        A=crop_pad_axis(A,cut,ax,roll[ax],fillpar,filltype)
-    return A
         
 
 def xradia_star(sh,spokes=48,std=0.5,minfeature=5,ringfact=2,rings=4,contrast=1.,Fast=False):

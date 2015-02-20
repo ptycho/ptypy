@@ -11,8 +11,9 @@ This file is part of the PTYPY package.
 
 from scipy.special import erf 
 import numpy as np
+from misc import *
 
-__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho','gauss_fwhm']
+__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho','gauss_fwhm','gf']
 
 def abs2(A):
     """
@@ -164,3 +165,14 @@ def ortho(modes):
     amp = np.array([norm2(npi) for npi in nplist])
     amp /= amp.sum()
     return amp, nplist
+
+
+@complex_overload
+def c_gf(c,*arg,**kwargs):
+    return ndi.gaussian_filter(c,*arg,**kwargs)
+    
+def gf(c,*arg,**kwargs):
+    if np.iscomplexobj(c):
+        return c_gf(c,*arg,**kwargs)
+    else:
+        return ndi.gaussian_filter(c,*arg,**kwargs)

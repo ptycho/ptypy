@@ -11,6 +11,7 @@ if __name__ == "__main__":
     from ptypy import utils as u
     from ptypy.utils.verbose import logger
     from ptypy.core import Base
+    GEO_PREFIX='G'
 else:
 # for in package use #####
     from .. import utils as u
@@ -20,21 +21,30 @@ else:
 import numpy as np
 
 
-__all__=['Geo']
+__all__=['Geo','translate_to_pix']
 
 DEFAULT=u.Param(
-    energy = 7.2,                # Incident photon energy (in keV)
+    energy = 6.2,                # Incident photon energy (in keV)
     lam = None,                 # Wavelength (in meters)
-    z = 2.19,                    # Distance from object to screen 
-    psize_det = 172e-6,  # Pixel size (in meters) at detector plane
-    psize_sam = None,               # Pixel sixe (in meters) at sample plane  
-    N = 220,                     # Number of detector pixels
-    prop_type = 'farfield',      # propagation type 
-    misfit=0,
-    origin_det = 'fftshift',
-    origin_sam = 'fftshift',
+    distance = 7.0,                    # Distance from object to screen 
+    psize = 172e-6,  # Pixel size (in meters) at detector plane
+    resolution = None,               # Pixel sixe (in meters) at sample plane  
+    shape = 256,                     # Number of detector pixels
+    propagation = 'farfield',      # propagation type 
+    misfit = 0,
+    center = 'fftshift',
+    origin = 'fftshift',
 )
 
+_old2new = u.Param(
+    z = 'distance',                    # Distance from object to screen 
+    psize_det = 'psize',  # Pixel size (in meters) at detector plane
+    psize_sam = 'resolution',               # Pixel sixe (in meters) at sample plane  
+    N = 'shape',                     # Number of detector pixels
+    prop_type='propagation',
+    origin_det= 'center', 
+    origin_sam= 'origin', 
+)
 
 
 class Geo(Base):
@@ -68,6 +78,9 @@ class Geo(Base):
         p=u.Param(DEFAULT)
         if pars is not None:
             p.update(pars)
+            for k,v in p.items():
+                if k in _old2new.keys():
+                    p[_old2new[k]] = v
         for k,v in kwargs.iteritems():
             if p.has_key(k): p[k] = v
         
@@ -75,14 +88,14 @@ class Geo(Base):
         self.interact = False
         
         # set distance
-        if self.p.z is None or self.p.z==0:
-            raise ValueError('Distance (geometry.z) must not be None or 0')
+        if self.p.distance is None or self.p.distance==0:
+            raise ValueError('Distance (geometry.distance) must not be None or 0')
         
         # set frame shape
-        if self.p.N is None or (np.array(self.p.N)==0).any():
-            raise ValueError('Frame size (geometry.N) must not be None or 0')
+        if self.p.shape is None or (np.array(self.p.shape)==0).any():
+            raise ValueError('Frame size (geometry.shape) must not be None or 0')
         else:
-            self.p.N = u.expect2(p.N)
+            self.p.shape = u.expect2(p.shape)
             
         # Set energy and wavelength
         if p.energy is None:
@@ -100,15 +113,15 @@ class Geo(Base):
         self.p.misfit = u.expect2(0.)
         
         # Pixel size
-        self.p.psize_det_is_fix = p.psize_det is not None
-        self.p.psize_sam_is_fix = p.psize_sam is not None
+        self.p.psize_is_fix = p.psize is not None
+        self.p.resolution_is_fix = p.resolution is not None
         
-        if not self.p.psize_det_is_fix and not self.p.psize_sam_is_fix:
-            raise ValueError('Pixel size in sample plane (geometry.psize_sam) and detector plane \n(geometry.psize_det) must not both be None')
+        if not self.p.psize_is_fix and not self.p.resolution_is_fix:
+            raise ValueError('Pixel size in sample plane (geometry.resolution) and detector plane \n(geometry.psize) must not both be None')
         
         # fill pixel sizes
-        self.p.psize_sam = u.expect2(p.psize_sam) if self.p.psize_sam_is_fix else u.expect2(1.0)
-        self.p.psize_det = u.expect2(p.psize_det) if self.p.psize_det_is_fix else u.expect2(1.0)
+        self.p.resolution = u.expect2(p.resolution) if self.p.resolution_is_fix else u.expect2(1.0)
+        self.p.psize = u.expect2(p.psize) if self.p.psize_is_fix else u.expect2(1.0)
         
         # update other values
         self.update(False)
@@ -120,33 +133,33 @@ class Geo(Base):
     def update(self,update_propagator=True):
         """
         Update the internal pixel sizes, giving precedence to the sample
-        pixel size (psize_sam) if self.psize_is_fixed is True.
+        pixel size (resolution) if self.psize_is_fixed is True.
         """
         # 4 cases
-        if not self.p.psize_sam_is_fix and not self.p.psize_det_is_fix:
+        if not self.p.resolution_is_fix and not self.p.psize_is_fix:
             # this is a rare case
             logger.debug('No pixel size is marked as constant. Setting detector pixel size as fix')
-            self.psize_det_is_fix = True
+            self.psize_is_fix = True
             self.update()
             return
-        elif not self.p.psize_sam_is_fix and self.p.psize_det_is_fix:
-            if self.p.prop_type=='farfield':
-                self.p.psize_sam[:] = self.lz / self.p.psize_det / self.p.N
+        elif not self.p.resolution_is_fix and self.p.psize_is_fix:
+            if self.p.propagation=='farfield':
+                self.p.resolution[:] = self.lz / self.p.psize / self.p.shape
             else:
-                self.p.psize_sam[:] = self.p.psize_det
+                self.p.resolution[:] = self.p.psize
                 
-        elif self.p.psize_sam_is_fix and not self.p.psize_det_is_fix:
-            if self.p.prop_type=='farfield':
-                self.p.psize_det[:] = self.lz / self.p.psize_sam / self.p.N
+        elif self.p.resolution_is_fix and not self.p.psize_is_fix:
+            if self.p.propagation=='farfield':
+                self.p.psize[:] = self.lz / self.p.resolution / self.p.shape
             else:
-                self.p.psize_det[:] = self.p.psize
+                self.p.psize[:] = self.p.psize
         else:
             # both psizes are fix
-            if self.p.prop_type=='farfield':
+            if self.p.propagation=='farfield':
                 # frame misfit that would make it work
-                self.p.misfit[:] = self.lz / self.p.psize_sam / self.p.psize_det  - self.p.N 
+                self.p.misfit[:] = self.lz / self.p.resolution / self.p.psize  - self.p.shape 
             else: 
-                self.p.misfit[:] = self.p.psize_sam - self.p.psize_det
+                self.p.misfit[:] = self.p.resolution - self.p.psize
             
         # Update the propagator too (optionally pass the dictionary,
         # but Geometry & Propagator should share a dict
@@ -177,40 +190,40 @@ class Geo(Base):
         if self.interact: self.update()
             
     @property
-    def psize_sam(self):
-        return self.p.psize_sam
+    def resolution(self):
+        return self.p.resolution
     
-    @psize_sam.setter
-    def psize_sam(self,v):
+    @resolution.setter
+    def resolution(self,v):
         """
         changing source space pixel size 
         """
-        self.p.psize_sam[:] = u.expect2(v)
+        self.p.resolution[:] = u.expect2(v)
         if self.interact: self.update()
         
     @property
-    def psize_det(self):
-        return self.p.psize_det
+    def psize(self):
+        return self.p.psize
     
-    @psize_det.setter
-    def psize_det(self,v):
+    @psize.setter
+    def psize(self,v):
         """
         changing propagated space pixel size 
         """
-        self.p.psize_det[:] = u.expect2(v)
+        self.p.psize[:] = u.expect2(v)
         if self.interact: self.update()
         
     @property
     def lz(self):
-        return self.p.lam * self.p.z
+        return self.p.lam * self.p.distance
         
     @property
-    def N(self):
-        return self.p.N
+    def shape(self):
+        return self.p.shape
     
-    @N.setter
-    def N(self,v):
-        self.p.N[:] = u.expect2(v).astype(int)
+    @shape.setter
+    def shape(self,v):
+        self.p.shape[:] = u.expect2(v).astype(int)
         if self.interact: self.update()
     
     @property
@@ -252,7 +265,7 @@ def get_propagator(geo_dct,**kwargs):
     """
     helper function to determine which propagator should be attached to Geometry class
     """
-    if geo_dct['prop_type']=='farfield':
+    if geo_dct['propagation']=='farfield':
         return BasicFarfieldPropagator(geo_dct,**kwargs)
     else:
         return BasicNearfieldPropagator(geo_dct,**kwargs)
@@ -292,18 +305,18 @@ class BasicFarfieldPropagator(object):
             if p.has_key(k): p[k] = v
                
         # wavelength * distance factor
-        lz= p.lam * p.z
+        lz= p.lam * p.distance
         
         #calculate real space pixel size. 
-        psize_sam = p.psize_sam if p.psize_sam is not None else lz / p.N / p.psize_det
+        resolution = p.resolution if p.resolution is not None else lz / p.shape / p.psize
         
         # calculate array shape from misfit 
         self.crop_pad = np.round(u.expect2(p.misfit) /2.0).astype(int) * 2
-        self.sh = p.N + self.crop_pad
+        self.sh = p.shape + self.crop_pad
         
         # calculate the grids
-        [X,Y] = u.grids(self.sh,psize_sam,p.origin_sam)
-        [V,W] = u.grids(self.sh,p.psize_det,p.origin_det)
+        [X,Y] = u.grids(self.sh,resolution,p.origin)
+        [V,W] = u.grids(self.sh,p.psize,p.center)
         
         # maybe useful later. delete this references if space is short
         self.grids_sam = [X,Y]  
@@ -375,6 +388,23 @@ class BasicFarfieldPropagator(object):
             #self.fft = scipy.fftpack.fft2
             #self.ifft = scipy.fftpack.ifft2
 
+def translate_to_pix(sh,center):
+    """\
+    Take arbitrary input and translate it to a pixel position with respect to sh.
+    """
+    sh=np.array(sh)
+    if center=='fftshift':
+        cen=sh//2.0
+    elif center=='geometric':
+        cen=sh/2.0-0.5
+    elif center=='fft':
+        cen=sh*0.0
+    elif center is not None:
+        #cen=sh*np.asarray(center) % sh - 0.5
+        cen = np.asarray(center) % sh
+        
+    return cen
+
 class BasicNearfieldPropagator(object):
     """
     Basic two step (i.e. two ffts) Nearfield Propagator.
@@ -407,21 +437,21 @@ class BasicNearfieldPropagator(object):
             if p.has_key(k): p[k] = v
                
 
-        self.sh = p.N
+        self.sh = p.shape
         
         # calculate the grids
-        [X,Y] = u.grids(self.sh,p.psize_sam,p.origin_sam)
+        [X,Y] = u.grids(self.sh,p.resolution,p.origin)
                 
         # maybe useful later. delete this references if space is short
         self.grids_sam = [X,Y]  
         self.grids_det = [X,Y] 
         
         # calculating kernel
-        psize_fspace = p.lam * p.z / p.N / p.psize_det
+        psize_fspace = p.lam * p.distance / p.shape / p.psize
         [V,W] = u.grids(self.sh,psize_fspace,'fft')
-        a2 = (V**2+W**2) /p.z**2          
+        a2 = (V**2+W**2) /p.distance**2          
         
-        self.kernel = np.exp(2j * np.pi * (p.z / p.lam) * (np.sqrt(1 - a2) - 1))
+        self.kernel = np.exp(2j * np.pi * (p.distance / p.lam) * (np.sqrt(1 - a2) - 1))
         #self.kernel = np.fft.fftshift(self.kernel)
         self.ikernel = self.kernel.conj()
         

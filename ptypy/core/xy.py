@@ -16,16 +16,16 @@ import os
 
 DEFAULT=u.Param(
     #### Paramaters for popular scan methods 
-    scan_type = None, # [None,'round', 'raster', 'round_roi','spiral','spiral_roi','custom']
-    dr = 0.3e-6,             # round,round_roi :width of shell 
-    nr = 10,                 # round : number of intervals (# of shells - 1) 
+    scan_type = 'round_roi', # [None,'round', 'raster', 'round_roi','spiral','spiral_roi','custom']
+    dr = 1.5e-6,             # round,round_roi :width of shell 
+    nr = 5,                 # round : number of intervals (# of shells - 1) 
     nth = 5,                 # round,round_roi: number of points in the first shell 
-    lx = 6e-6,               # round_roi: Width of ROI 
-    ly = 3e-6,               # round_roi: Height of ROI 
+    lx = 15e-6,               # round_roi: Width of ROI 
+    ly = 15e-6,               # round_roi: Height of ROI 
     nx = 10,                 # raster scan: number of steps in x
     ny = 10,                 # raster scan: number of steps in y
-    dx = 1e-6,               # raster scan: step size (grid spacing)
-    dy = 1e-6,               # raster scan: step size (grid spacing)
+    dx = 1.5e-6,               # raster scan: step size (grid spacing)
+    dy = 1.5e-6,               # raster scan: step size (grid spacing)
     #### other 
     positions = None,        # fill this list with your own script if you want other scan patterns, choose 'custom' as san type
 )

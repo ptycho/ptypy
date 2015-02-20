@@ -24,6 +24,6 @@ def moon_pr(shape=None):
     if shape is not None:
         sh = u.expect2(shape)
         ish = np.array(im.shape[:2]).astype(float)
-        im = u.c_zoom(im,sh/ish)
+        im = u.zoom(im,sh/ish)
         
     return im

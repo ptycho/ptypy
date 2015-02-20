@@ -58,12 +58,16 @@ This file is part of the PTYPY package.
 if __name__ == "__main__":
     from ptypy import utils as u
     from ptypy import io
+    from ptypy import resources
+    from ptypy.core import geometry
     import numpy as np
     import os
     import h5py
 else:
     from .. import utils as u
     from .. import io
+    from .. import resources
+    import geometry
     import numpy as np
     import os
     import h5py
@@ -71,14 +75,7 @@ else:
 parallel = u.parallel
 logger = u.verbose.logger
 
-META = dict(
-    label=None,
-    version='0.1',
-    shape=None,
-    psize_det=None,
-    lam=None,
-    energy=None,
-)
+
 
 PTYD = dict(
     data={},  # frames, positions
@@ -87,27 +84,35 @@ PTYD = dict(
     common={},
 )
 
-GENERIC = dict(
-    dfile=None,  # filename (e.g. 'foo.ptyd')
-    label=None,  # a scan label (e.g. 'scan0001')
-    chunk_format='.chunk%02d',  # Format for chunk file appendix.
-    roi=None,  # 2-tuple or int for the desired fina frame size
-    save=None,  # None, 'merge', 'append', 'extlink'
-    #geometry parameters
-    center=None,  # 2-tuple, 'auto', None. If 'auto', center is chosen automatically
-    psize_det=None,  # Detector pixel size
+META = dict(
+    label=None,   # a scan label (e.g. 'scan0001')
+    version='0.1',
+    shape=None,
+    psize=None,
+    #lam=None,
     energy=None,
+    center=None,
     distance = None,
-    
-    load_parallel='data',  # None, 'data', 'common', 'all'
-    rebin=1,  # rebin diffraction data
-    orientation=(False, False, False),  # 3-tuple switch, actions are (transpose, invert rows, invert cols)
-    min_frames=parallel.size,  # minimum number of frames of one chunk if not at end of scan
-    positions_theory=None,  # Theoretical position list
-    #xy=None,  # Possibly sub-structure giving probe positions
-    #geometry=None,  # Possibly geometry information
-    #recipe=None  # Recipe structure
 )
+GENERIC = dict(
+    dfile = None,  # filename (e.g. 'foo.ptyd')
+    chunk_format='.chunk%02d',  # Format for chunk file appendix.
+    #roi = None,  # 2-tuple or int for the desired fina frame size
+    save = None,  # None, 'merge', 'append', 'extlink'
+    auto_center = None,  # False: no automatic center,None only  if center is None, True it will be enforced
+    #psize = None,  # Detector pixel size
+    #energy = None,
+    #distance = None,
+    
+    load_parallel = 'data',  # None, 'data', 'common', 'all'
+    rebin = None,  # rebin diffraction data
+    orientation = (False, False, False),  # 3-tuple switch, actions are (transpose, invert rows, invert cols)
+    min_frames = parallel.size,  # minimum number of frames of one chunk if not at end of scan
+    positions_theory = None,  # Theoretical position list (This input parameter may get deprecated)
+    num_frames = None, # Total number of frames to be prepared
+    recipe = {},
+)
+GENERIC.update(META)
 
 WAIT = 'msg1'
 EOS = 'msgEOS'
@@ -122,7 +127,7 @@ class PtyScan(object):
     
     Objectives:
      - Stand alone functionality
-     - Can be produce .ptyd data formats
+     - Can produce .ptyd data formats
      - Child instances should be able to prepare from raw data
      - On-the-fly support in form of chunked data.
      - mpi capable, child classes should not worry about mpi
@@ -139,7 +144,7 @@ class PtyScan(object):
         """
 
         # Load default parameter structure
-        info = u.Param(GENERIC.copy())
+        info = u.Param(self.DEFAULTS.copy())
         info.update(pars)
         info.update(kwargs)
 
@@ -149,17 +154,20 @@ class PtyScan(object):
         self.meta = u.Param(META.copy())
 
         # Attempt to get number of frames.
-        self.num_frames = None
+        self.num_frames = info.num_frames
+        
         #logger.info('Looking for position information input parameter structure ....\n')
         #if (info.positions_theory is None) and (info.xy is not None):
         #    from ptypy.core import xy
         #    info.positions_theory = xy.from_pars(info.xy)
 
         if info.positions_theory is not None:
-            num = len(info.positions_theory)
+            num = len(info.positions_theory )
             logger.info('Theoretical positions are available. There will be %d frames.' % num)
+            logger.info('Any experimental position information will be ignored.')
+            logger.info('Former input value of frame number `num_frames` %d is overriden to %d' %(self.num_frames,num))
             self.num_frames = num
-
+        """
         # check if we got information on geometry from ptycho
         if info.geometry is not None:
             for k, v in info.geometry.items():
@@ -168,11 +176,11 @@ class PtyScan(object):
             # FIXME: This should probably be done more transparently: it is not clear for the user that info.roi has precedence over geometry.N
             if info.roi is None:
                 info.roi = u.expect2(info.geometry.N)
-
+        """
         # None for rebin should be allowed, as in "don't rebin".
         if info.rebin is None:
             info.rebin = 1
-
+        
         self.info = info
 
         # Print a report
@@ -198,11 +206,14 @@ class PtyScan(object):
         self.common = {}
         self.has_weight2d = None
         self.has_positions = None
-        self.filename = None
+        self.dfile = None
 
-        self.center = None  # Center will be set later
-        self.roi = None  # ROI will be set later
-        self.shape = None
+        # copy all values for meta
+        for k in self.meta.keys():
+            self.meta[k] = self.info[k]
+        #self.center = None  # Center will be set later
+        #self.roi = self.info.roi #None  # ROI will be set later
+        #self.shape = None
         self.orientation = self.info.orientation
         self.rebin = self.info.rebin
 
@@ -218,14 +229,14 @@ class PtyScan(object):
         # Prepare writing to file
         if self.info.save is not None:
             # We will create a .ptyd
-            self.filename = self.info.filename
+            self.dfile = self.info.dfile
             if parallel.master:
-                if os.path.exists(self.filename):
-                    backup = self.filename + '.old'
-                    logger.warning('File %s already exist. Renamed to %s' % (self.filename, backup))
-                    os.rename(self.filename, backup)
+                if os.path.exists(self.dfile):
+                    backup = self.dfile + '.old'
+                    logger.warning('File %s already exist. Renamed to %s' % (self.dfile, backup))
+                    os.rename(self.dfile, backup)
                 # Prepare an empty file with the appropriate structure
-                io.h5write(self.filename, PTYD.copy())
+                io.h5write(self.dfile, PTYD.copy())
             # Wait for master
             parallel.barrier()
 
@@ -237,18 +248,22 @@ class PtyScan(object):
             parallel.bcast_dict(self.common)
 
         self.common = u.Param(self.common)
-
+        assert 'weight2d' in self.common and 'positions_scan' in self.common
+        
         logger.info('\n ---------- Analysis of the "common" arrays  ---------- \n')
         # Check if weights (or mask) have been loaded by load_common.
-        self.has_weight2d = 'weight2d' in self.common
+        weight2d = self.common.weight2d
+        self.has_weight2d = weight2d is not None
         logger.info('Check for weight or mask,  "weight2d"  .... %s\n' % str(self.has_weight2d))
 
         # Check if positions have been loaded by load_common
         positions = self.common.positions_scan
-        self.has_positions = positions is not None
+        self.has_positions = positions is not None and len(positions)>0
         logger.info('Check for positions, "positions_scan" .... %s' % str(self.has_positions))
 
-        if self.has_positions:
+        if self.info.positions_theory  is not None:
+            logger.info('Skipping experimental positions `positions_scan`')
+        elif self.has_positions:
             # Store positions in the info dictionary
             self.info.positions_scan = positions
             num_pos = len(positions)
@@ -258,23 +273,32 @@ class PtyScan(object):
                 self.num_frames = num_pos
             else:
                 # Frame number was already specified. Maybe we didn't want to use everything?
-                if num_pos == self.num_frames:
-                    logger.info('Scanning positions have the same number of points as the theoretical ones (%d).' % num_pos)
-                else:
-                    raise RuntimeError('Scanning positions have a number of poins (%d) inconsistent with what was previously deduced (%d).'
-                                        % (num_pos, self.info.num_frames))
-        elif self.info.positions_theory is None:
+                if num_pos > self.num_frames:
+                    #logger.info('Scanning positions have the same number of points as the theoretical ones (%d).' % num_pos)
+                    logger.info('Scanning positions (%d) exceed the desired number of scan points (%d).' % (num_pos,self.num_frames))
+                    logger.info('Set `num_frames` to None or to a larger value for more scan points')
+                elif num_pos < self.num_frames:
+                    logger.info('Scanning positions (%d) are fewer than the desired number of scan points (%d).' % (num_pos,self.num_frames))
+                    logger.info('Resetting `num_frames` to lower value')
+                    self.num_frames = num_pos
+                    #raise RuntimeError('Scanning positions have a number of points (%d) inconsistent with what was previously deduced (%d).'
+                    #                    % (num_pos, self.info.num_frames))
+        else:
             logger.info('No scanning position have been provided at this stage.')
-
+        
+        if self.num_frames is None:
+            logger.warning('Number of frames `num_frames` not specified at this stage\n.')
+        
         parallel.barrier()
+        
         logger.info('#######  MPI Report: ########\n')
         self.report(what=self.common)
         parallel.barrier()
         logger.info(' ----------  Analyis done   ---------- \n\n')
 
         if self.info.save is not None and parallel.master:
-            logger.info('Appending common dict to file %s\n' % self.info.filename)
-            io.h5append(self.info.filename, common=dict(self.common), info=dict(self.info))
+            logger.info('Appending common dict to file %s\n' % self.info.dfile)
+            io.h5append(self.info.dfile, common=dict(self.common), info=dict(self.info))
         # wait for master
         parallel.barrier()
 
@@ -286,7 +310,7 @@ class PtyScan(object):
         """
         # maybe do this at end of everything
         if self.info.save is not None and parallel.master:
-            io.h5append(self.info.filename, common=dict(self.common), info=dict(self.info))
+            io.h5append(self.info.dfile, common=dict(self.common), info=dict(self.info))
 
     def load_common(self):
         """
@@ -329,12 +353,19 @@ class PtyScan(object):
         # check may contain data system access, so we keep it to one process
         if parallel.master:
             self.frames_accessible, eos = self.check(chunksize, start=s)
+            if self.num_frames is None and eos is None:
+                logger.warning('Number of frames not specified and .check() cannot determine end-of-scan. Aborting..')
+                self.abort = True
             self.end_of_scan = (s + self.frames_accessible >= self.num_frames) if eos is None else eos
         # wait for master
         parallel.barrier()
         # communicate result
         self._flags = parallel.bcast(self._flags)
-
+        
+        # abort here if the flag was set
+        if self.abort:
+            raise RuntimeError('Load routine incapable to determine end-of-scan.')
+            
         N = self.frames_accessible
         # wait if too few frames are available and we are not at the end
         if N < self.info.min_frames and not self.end_of_scan:
@@ -408,84 +439,99 @@ class PtyScan(object):
 
             assert len(weights) == len(data), 'Data and Weight frames unbalanced %d vs %d' % (len(data), len(weights))
 
-            cen = self.info.center
+            sh = self.info.shape
+            # adapt roi if not set
+            if sh is None:
+                logger.info('ROI not set. Using full frame shape of (%d,%d).' % tuple(dsh))
+                sh = dsh
+            else:
+                sh = u.expect2(sh)
+                
+            # only allow square slices in data
+            if sh[0] != sh[1]:
+                roi = u.expect2(sh.min())
+                logger.warning('Asymmetric data ROI not allowed. Setting ROI from (%d,%d) to (%d,%d)' % (sh[0],sh[1],roi[0],roi[1]))
+                sh = roi
+            
+            self.info.shape = sh
 
+            cen = self.info.center
+            if str(cen)==cen:
+                cen=geometry.translate_to_pix(sh,cen)
+                
+            auto = self.info.auto_center 
             # get center in diffraction image
-            if str(cen) == 'auto':
-                cen = self._mpi_autocenter(data, weights)
-            elif cen is None:
+            if auto is None or auto is True:
+                auto_cen = self._mpi_autocenter(data, weights)
+            else:
+                auto_cen = None
+                
+            if cen is None or auto is True:
+                logger.info('Setting center for ROI from %s to %s.' %(str(tuple(cen)),str(tuple(auto_cen))))
+                cen = auto_cen
+            elif cen is None and auto is False:
                 cen = dsh // 2
             else:
                 # center is number or tuple
                 cen = u.expect2(cen[-2:])
-
+                if auto_cen is not None:
+                    logger.info('ROI center is %s, automatic guess is %s.' %(str(tuple(cen)),str(tuple(auto_cen))))
+                    
             # It is important to set center again in order to NOT have different centers for each chunk
             # the downside is that the center may be off if only a few diffraction patterns were
             # used for the analysis. In such case it is beneficial to set the center in the parameters
-
             self.info.center = cen  
-
+            print cen
             # make sure center is in the image frame
             assert (cen > 0).all() and (
                 dsh - cen > 0).all(), 'Optical axes (center = (%.1f,%.1f) outside diffraction image frame (%d,%d)' % tuple(cen)+tuple(dsh)
 
-            # adapt roi if not set
-            if self.roi is None:
-                logger.info('ROI not set. Using full frame shape of (%d,%d).' % tuple(dsh))
-                self.roi = dsh
-            else:
-                self.roi = u.expect2(roi)
-                
-            # only allow square slices in data
-            if self.roi[0]!=self.roi[1]:
-                roi = u.expect2(self.roi.min())
-                logger.warning('Asymmetric data ROI not allowed. Setting ROI from (%d,%d) to (%d,%d)' % (self.roi[0],self.roi[1],roi[0],roi[1]))
-                self.roi = roi
-            
-            self.shape = self.roi
-
             # determine if the arrays require further processing
             do_flip = np.array(self.orientation).any()
-            do_crop = (np.abs(self.roi - dsh) > 0.5).any()
+            do_crop = (np.abs(sh - dsh) > 0.5).any()
             do_rebin = (self.rebin != 1)
 
             if do_flip or do_crop or do_rebin:
                 logger.info('Enter preprocessing (crop/pad %s, rebin %s, flip/rotate %s) ... \n' %
                             (str(do_crop), str(do_flip), str(do_rebin)))
                 # we proceed with numpy arrays. That is probably now
-                # more memory intensive but shorter in writing                       
-                d = np.array([data[ind] for ind in indices.node])
-                w = np.array([weights[ind] for ind in indices.node])
+                # more memory intensive but shorter in writing
+                if has_data:                       
+                    d = np.array([data[ind] for ind in indices.node])
+                    w = np.array([weights[ind] for ind in indices.node])
+                else:
+                    d = np.ones((1,)+tuple(dsh))
+                    w = np.ones((1,)+tuple(dsh))    
 
                 # flip, rotate etc.
-                if len(d) > 0:
+                d, cen = u.switch_frame_orientation(d, self.orientation, cen)
+                w, tmp = u.switch_frame_orientation(w, self.orientation, cen)
 
-                    # flip, rotate etc.
-                    d, cen = switch_frame_orientation(d, self.orientation, cen)
-                    w, tmp = switch_frame_orientation(w, self.orientation, cen)
+                # crop
+                d, cen = u.crop_pad_symmetric_2d(d, sh, cen)
+                w, tmp = u.crop_pad_symmetric_2d(w, sh, cen)
 
-                    # crop
-                    d, cen = crop_pad_symmetric_2d(d, self.roi, cen)
-                    w, tmp = crop_pad_symmetric_2d(w, self.roi, cen)
+                # rebin, check if rebinning is neither to strong nor impossible
+                rebin = self.rebin
+                if rebin in range(2, 6) and (((self.roi / float(rebin)) % 1) == 0.0).all():
+                    mask = w > 0
+                    d = u.rebin_2d(d, rebin)
+                    w = u.rebin_2d(w, rebin)
+                    mask = u.rebin_2d(mask, rebin)
+                    w[mask < 1] = 0
+                else:
+                    raise RuntimeError('Binning (%d) is to large or incompatible with array shape (%s)' % (rebin,str(tuple(sh))))
+                                    
+                if has_data:
+                    # translate back to dictionaries
+                    data = dict(zip(indices.node, d))
+                    weights = dict(zip(indices.node, w))
 
-                    # rebin, check if rebinning is neither to strong nor impossible
-                    rebin = self.rebin
-                    if self.rebin in range(2, 6) and (((self.roi / float(rebin)) % 1) == 0.0).all():
-                        mask = w > 0
-                        d = rebin_2d(d, rebin)
-                        w = rebin_2d(w, rebin)
-                        mask = rebin_2d(mask, rebin)
-                        w[mask < 1] = 0
-                        cen /= float(rebin)
-                        self.shape = u.expect2(self.roi) / rebin
-                        # FIXME: It is better to keep the detector size fixed and instead take rebin into account later.
-                        # BE: No
-                        self.psize_det = u.expect2(self.info.psize_det) * rebin
-
-                # translate back to dictionaries
-                data = dict(zip(indices.node, d))
-                weights = dict(zip(indices.node, w))
-
+            # adapt meta info
+            self.meta.center = cen / float(self.rebin)
+            self.meta.shape = u.expect2(sh) / self.rebin
+            self.meta.psize = u.expect2(self.info.psize) * self.rebin
+            
             # prepare chunk of data
             chunk = u.Param()
             chunk.indices = indices.chunk
@@ -504,7 +550,7 @@ class PtyScan(object):
             # slice positions from common if they are empty too
             if positions is None or len(positions) == 0:
                 try:
-                    chunk.positions = self.common.get('positions_scan', self.info.get('positions_theory'))[
+                    chunk.positions = self.common.get('positions_scan', self.info.get('positions'))[
                         indices.chunk]
                 except:
                     logger.info('slicing position information failed')
@@ -517,14 +563,16 @@ class PtyScan(object):
 
             # with first chunk we update meta
             if self.chunknum < 1:
+                """
                 for k, v in self.meta.items():
                     # FIXME: I would like to avoid this "blind copying"
-                    # BE: This is not a blind copy as only keys 
+                    # BE: This is not a blind copy as only keys in META above are used
                     self.meta[k] = self.__dict__.get(k, self.info.get(k)) if v is None else v
                 self.meta['center'] = cen
-
+                """
+                
                 if self.info.save is not None and parallel.master:
-                    io.h5append(self.filename, meta=dict(self.meta))
+                    io.h5append(self.dfile, meta=dict(self.meta))
                 parallel.barrier()
 
             self.chunk = chunk
@@ -680,6 +728,14 @@ class PtyScan(object):
     @frames_accessible.setter
     def frames_accessible(self, frames):
         self._flags[0] = frames
+    
+    @property
+    def abort(self):
+        return not (self._flags[2] == 0)
+
+    @abort.setter
+    def abort(self, abort):
+        self._flags[2] = int(abort)
 
     def load(self, indices):
         """
@@ -734,7 +790,7 @@ class PtyScan(object):
 
     def _mpi_save_chunk(self, kind='extlink', chunk=None):
         """
-        Saves data chunk to hdf5 file specified with `filename`
+        Saves data chunk to hdf5 file specified with `dfile`
         It works by gathering wieghts and data to the master node.
         Master node then writes to disk.
         
@@ -750,7 +806,7 @@ class PtyScan(object):
             
         TODO: 
             * For the 'extlink case, saving still requires access to
-              main file `filename` even so for just adding the link.
+              main file `dfile` even so for just adding the link.
               This may result in conflict if main file is polled often
               by seperate read process.
               Workaraound would be to write the links on startup in
@@ -781,13 +837,13 @@ class PtyScan(object):
             # form a dictionary
             if kind == 'append':
                 h5address = 'chunks/%d' % num
-                io.h5append(self.filename, {h5address: todisk})
+                io.h5append(self.dfile, {h5address: todisk})
             elif kind == 'extlink':
                 import h5py
 
                 h5address = 'chunks/%d' % num
-                hddaddress = self.filename + '.part%03d' % num
-                with h5py.File(self.filename) as f:
+                hddaddress = self.dfile + '.part%03d' % num
+                with h5py.File(self.dfile) as f:
                     f[h5address] = h5py.ExternalLink(hddaddress, '/')
                     f.close()
                 io.h5write(hddaddress, todisk)
@@ -804,7 +860,7 @@ class PtydScan(PtyScan):
         # Initialize parent class
         super(PtydScan, self).__init__(pars, **kwargs)
 
-        self.meta = io.h5read(self.filename, 'meta')['meta']
+        self.meta = io.h5read(self.dfile, 'meta')['meta']
         # update internal dict, making sure
         for k, v in self.meta.items():
             if self.__dict__.get(k) is None:
@@ -834,7 +890,7 @@ class PtydScan(PtyScan):
 
         # Get info about size of currently available chunks.
         # Dead external links will produce None and are excluded
-        with h5py.File(self.filename, 'r') as f:
+        with h5py.File(self.dfile, 'r') as f:
             d = {}
             chitems = sorted([(int(k), v) for k, v in f['chunks'].iteritems() if v is not None], key=lambda t: t[0])
             for chkey in chitems[0][1].keys():
@@ -855,7 +911,7 @@ class PtydScan(PtyScan):
         In ptyd, 'common' does not necessarily exist. Only meta is essential
         """
         try:
-            common = io.h5read(self.filename, 'common')['common']
+            common = io.h5read(self.dfile, 'common')['common']
         except:
             common = {}
         return common
@@ -873,7 +929,7 @@ class PtydScan(PtyScan):
 
         # get our data from the ptyd file
         out = {}
-        with h5py.File(self.filename, 'r') as f:
+        with h5py.File(self.dfile, 'r') as f:
             for array, call in calls.iteritems():
                 out[array] = [f[path][slce] for path, slce in call]
             f.close()
@@ -888,6 +944,76 @@ class PtydScan(PtyScan):
 
         return (out.get(key, {}) for key in ['data', 'positions', 'weights'])
 
+
+class MoonFlowerScan(PtyScan):
+    """
+    Test Ptyscan class producing a romantic ptychographic dataset of a moon
+    illuminating flowers.
+    """
+    
+    DEFAULT = GENERIC.copy().update(geometry.DEFAULT.copy())
+    
+    def __init__(self, pars = None, **kwargs):
+        """
+        Parent pars are for the 
+        """
+        p = geometry.DEFAULT.copy()
+        if pars is not None:
+            p.update(pars)
+        # Initialize parent class
+        super(MoonFlowerScan, self).__init__(p, **kwargs)
+        
+        from ptypy import resources
+        from ptypy.core import xy
+        
+        # derive geometry from input
+        G = geometry.Geo()
+        G._initialize(self.meta)
+        
+        # derive scan pattern
+        pos = u.Param()
+        dr = G.resolution * G.shape / 3.
+        pos.dr = dr.min()
+        pos.nr = np.int(np.round(np.sqrt(self.num_frames))) 
+        pos.nth = 5
+        pos.scan_type = 'round'
+        self.pos = xy.from_pars(pos)[:self.num_frames]
+
+        # calculate pixel positions
+        pixel = self.pos / G.resolution
+        pixel -= pixel.min(0)
+        self.pixel = np.round(pixel).astype(int) + 10
+        frame = self.pixel.max(0) + 10 + G.shape
+        self.G = G
+        
+        # get object
+        self.obj = resources.flower_obj(frame) 
+        
+        # get probe
+        moon = resources.moon_pr(self.G.shape)
+        moon /= np.abs(moon).sum() / 1e8
+        self.pr = moon
+        
+    def load_common(self):
+        """
+        Transmit positions
+        """
+        return {'weight2d': None,
+                'positions_scan': self.pos}
+
+    def load(self, indices):
+        """
+        Forward propagation
+        """
+        # dummy fill
+        p=self.pixel
+        s=self.G.shape
+        raw = {}
+        for i in indices:
+            raw[i]=u.abs2(self.G.propagator.fw(self.pr * self.obj[p[i][0]:p[i][0]+s[0],p[i][1]:p[i][1]+s[1]]))
+        return raw, {}, {}
+
+        
 
 class DataSource(object):
     """
@@ -917,24 +1043,33 @@ class DataSource(object):
 
         for label in labels:
             # we are making a copy of the root as we want to fill it
-            s = scans[label]['pars']
+            scan = scans[label]
+            s = s['pars']
 
             logger.info(u.verbose.report(s))
 
             # Copy other relevant information
-            prep = s.preparation.copy()
-            prep.filename = s.data_file
-            prep.geometry = s.geometry.copy()
-            prep.xy = s.xy.copy()
+            data = s.data.copy()
+            source = s.data.source
+            recipe = s.data.recipe
+            if s.positions_theory is None:
+                s.positions_theory = scan['pos_theory']
+            #prep.dfile = s.data_file
+            #prep.geometry = s.geometry.copy()
+            #prep.xy = s.xy.copy()
             
+            source = source.lower()
             # FIXME make data preparation decision base on a more general 'source' entry
-            if s.prepare_data:
-                recipe_name = prep.recipe.name
-                PS = PtyScanTypes[recipe_name.lower()]
-                logger.info('Scan %s will be prepared with the recipe "%s"' % (label, recipe_name))
-                self.PS.append(PS(prep))
-            elif s.data_file.endswith('.ptyd'):
-                self.PS.append(PtydScan(prep))
+            if source in PtyScanTypes
+                PS = PtyScanTypes[source]
+                logger.info('Scan %s will be prepared with the recipe "%s"' % (label, source))
+                self.PS.append(PS(prep, recipe= recipe))
+            elif source.endswith('.ptyd') or source.endswith('.pty'):
+                self.PS.append(PtydScan(prep, recipe=source))
+            elif source=='file':
+                self.PS.append(PtydScan(prep, recipe=None))
+            elif source=='test':
+                self.PS.append(MoonFlowerScan(prep))
             else:
                 #raise RuntimeError('Could not manage scan %s' % label)
                 logger.warning('Generating dummy PtyScan for scan "%s" - This label will source only zeros as data')
@@ -976,66 +1111,12 @@ class DataSource(object):
             yield msg
 
 
-def switch_frame_orientation(A, orientation, center=None):
-    """
-    Switches orientation of Array A along the last two axes (-2,-1)
-        
-    orientation : 3-tuple (transpose,flipud,fliplr)
-    
-    returns
-    --------
-        Flipped array, new center
-    """
-    # switch orientation
-    if orientation[0]:
-        axes = list(range(A.ndim - 2)) + [-1, -2]
-        A = np.transpose(A, axes)
-        center = (center[1], center[0]) if center is not None else None
-    if orientation[1]:
-        A = A[..., ::-1, :]
-        center = (A.shape[-2] - 1 - center[0], center[1]) if center is not None else None
-    if orientation[2]:
-        A = A[..., ::-1]
-        center = (center[0], A.shape[-1] - 1 - center[1]) if center is not None else None
-
-    return A, np.array(center)
-
-
-def rebin_2d(A, rebin=1):
-    """
-    Rebins array A symmetrically along last 2 axes with a factor `rebin`
-    """
-    newdim = np.asarray(A.shape[-2:]) / rebin
-    return A.reshape(-1, newdim[0], rebin, newdim[1], rebin).sum(-1).sum(-2)
-
-
-def crop_pad_symmetric_2d(A, newshape, center=None):
-    """
-    Crops or pads Array A symmetrically along the last two axes (-2,-1)
-    around center `center` to a new shape `newshape`
-    
-    """
-    # crop / pad symmetrically around center
-    osh = np.array(A.shape[-2:])
-    c = np.round(center) if center is not None else osh // 2
-    sh = np.array(newshape[-2:])
-    low = -c + sh // 2
-    high = -osh + c + (sh + 1) // 2
-    hplanes = np.array([[low[0], high[0]], [low[1], high[1]]])
-
-    if (hplanes != 0).any():
-        A = u.crop_pad(A, hplanes)
-
-    return A, c + low
-
-
 if __name__ == "__main__":
     u.verbose.set_level(3)
-    shape = (40, 256, 256)
-    PS = PtyScan(roi=256, save='extlink')
-    PS.initialize()
+    MS = MoonFlowerScan(num_frames=100)
+    MS.initialize()
     for i in range(50):
-        msg = PS.auto()
+        msg = MS.auto(10)
         logger.info(u.verbose.report(msg), extra={'allprocesses': True})
         parallel.barrier()
 
