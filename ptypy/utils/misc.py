@@ -12,7 +12,7 @@ import numpy as np
 
 __all__ = ['str2int','str2range',\
            'complex_overload','expect2','expect3',\
-           'keV2m', 'clean_path']
+           'keV2m', 'clean_path','unique_path']
 
 def str2range(s):
     """
@@ -114,8 +114,17 @@ def complex_overload(func):
     return overloaded
     
 
-
-
+def unique_path(filename):
+    """\
+    Makes path absolute and unique
+    
+    Parameters
+    ----------
+    filename : str
+               A filename. 
+    """
+    return os.path.abspath(os.path.expanduser(filename))
+    
 def clean_path(filename):
     """\
     Makes path absolute and create all sub directories if needed.

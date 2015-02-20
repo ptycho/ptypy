@@ -78,7 +78,7 @@ logger = u.verbose.logger
 
 
 PTYD = dict(
-    data={},  # frames, positions
+    chunks={},  # frames, positions
     meta={},  # important to understand data. loaded by every process
     info={},  # this dictionary is not loaded from a ptyd. Mainly for documentation
     common={},
@@ -208,7 +208,8 @@ class PtyScan(object):
         self.has_weight2d = None
         self.has_positions = None
         self.dfile = None
-
+        self.save = self.info.save
+        
         # copy all values for meta
         for k in self.meta.keys():
             self.meta[k] = self.info[k]
@@ -605,7 +606,7 @@ class PtyScan(object):
             out = self.return_chunk_as(msg, chunk_form)
             # save chunk
             if self.info.save is not None:
-                self._mpi_save_chunk()
+                self._mpi_save_chunk(self.save,msg)
             # delete chunk
             del self.chunk
             return out
@@ -789,10 +790,10 @@ class PtyScan(object):
         else:
             return msg
 
-    def _mpi_save_chunk(self, kind='extlink', chunk=None):
+    def _mpi_save_chunk(self, kind='link', chunk=None):
         """
         Saves data chunk to hdf5 file specified with `dfile`
-        It works by gathering wieghts and data to the master node.
+        It works by gathering weights and data to the master node.
         Master node then writes to disk.
         
         In case you support parallel hdf5 writing, please modify this 
@@ -803,10 +804,10 @@ class PtyScan(object):
         kind : 'merge','append','link'
             
             'append' : appends chunks of data in same file
-            'extlink' : saves chunks in seperate files and adds ExternalLinks
+            'link' : saves chunks in seperate files and adds ExternalLinks
             
         TODO: 
-            * For the 'extlink case, saving still requires access to
+            * For the 'link case, saving still requires access to
               main file `dfile` even so for just adding the link.
               This may result in conflict if main file is polled often
               by seperate read process.
@@ -816,9 +817,9 @@ class PtyScan(object):
         """
         # gather all distributed dictionary data.
         c = chunk if chunk is not None else self.chunk
+        
         # shallow copy
-        # FIXME: Should this be self.chunk? or "c"?
-        todisk = dict(self.chunk)
+        todisk = dict(c)
         num = todisk.pop('num')
         ind = todisk.pop('indices_node')
         for k in ['data', 'weights']:
@@ -835,38 +836,85 @@ class PtyScan(object):
         parallel.barrier()
         # all information is at master node.
         if parallel.master:
+
             # form a dictionary
-            if kind == 'append':
+            if str(kind) == 'append':
                 h5address = 'chunks/%d' % num
                 io.h5append(self.dfile, {h5address: todisk})
-            elif kind == 'extlink':
-                import h5py
 
+            elif str(kind) == 'link':
+                import h5py
                 h5address = 'chunks/%d' % num
                 hddaddress = self.dfile + '.part%03d' % num
                 with h5py.File(self.dfile) as f:
                     f[h5address] = h5py.ExternalLink(hddaddress, '/')
                     f.close()
                 io.h5write(hddaddress, todisk)
-
-
+            elif str(kind) == 'merge':
+                raise NotImplementedError('Merging all data into single chunk is not yet implemented')
+        parallel.barrier()
+        
 class PtydScan(PtyScan):
     """
     PtyScan provided by native "ptyd" file format.
     """
-    def __init__(self, pars=None, **kwargs):
+    DEFAULT = GENERIC.copy()
+    
+    def __init__(self, pars=None, source=None,**kwargs):
         """
         PtyScan provided by native "ptyd" file format.
+        
+        :param source: Explicit source file. If not None or 'file', 
+                       the data may get processed depending on user input
+                       
+        :param pars: Input like PtyScan
         """
-        # Initialize parent class
-        super(PtydScan, self).__init__(pars, **kwargs)
+        # create parameter set
+        p = DEFAULT.copy()
 
-        self.meta = io.h5read(self.dfile, 'meta')['meta']
-        # update internal dict, making sure
-        for k, v in self.meta.items():
-            if self.__dict__.get(k) is None:
-                self.__dict__[k] = v
-
+        if source is None or str(source)=='file':
+            # this is the case of absolutely no additional work
+            logger.info('No explicit source file was given. Will continue read only')
+            source = pars['dfile']
+            manipulate = False
+        elif pars is None or len(pars)==0:
+            logger.info('No parameters provided. Saving / modification disabled')
+            manipulate = False
+        else:
+            logger.info('Explicit source file given. Modification is possible\n')
+            dfile = pars['dfile']
+            # check for conflict
+            if str(u.unique_path(source))==str(u.unique_path(dfile)):
+                logger.info('Source and Sink files are the same.')
+                dfile = os.path.splitext(dfile)
+                dfile = dfile[0] +'_n.'+ dfile[1]
+                logger.info('Will instead save to %s if necessary.' % os.path.split(dfile)[1])
+            
+            pars['dfile']= dfile
+            manipulate = True
+            
+        
+        # make sure the source exists.
+        assert os.path.exists(u.unique_path(source)), 'Source File (%s) not found' % source
+        
+        self.source = source
+        
+        # get meta information
+        meta = u.Param(io.h5read(self.source, 'meta')['meta'])
+        
+        # update given parameters when they are None
+        if not manipulate:
+            # Only meta as input allowed
+            super(PtydScan, self).__init__(meta, **kwargs)
+        else:
+            # overwrite only those set to None
+            for k, v in self.meta.items():
+                if p.get(k) is None:
+                    p[k] = v
+            # Initialize parent class and fill self
+            super(PtydScan, self).__init__(p, **kwargs)
+        
+        # enforce that orientations are correct
         # Other instance attributes
         self._checked = None
         self._ch_frame_ind = None
@@ -930,7 +978,7 @@ class PtydScan(PtyScan):
 
         # get our data from the ptyd file
         out = {}
-        with h5py.File(self.dfile, 'r') as f:
+        with h5py.File(self.source, 'r') as f:
             for array, call in calls.iteritems():
                 out[array] = [f[path][slce] for path, slce in call]
             f.close()
@@ -1011,7 +1059,7 @@ class MoonFlowerScan(PtyScan):
         s=self.G.shape
         raw = {}
         for i in indices:
-            raw[i]=u.abs2(self.G.propagator.fw(self.pr * self.obj[p[i][0]:p[i][0]+s[0],p[i][1]:p[i][1]+s[1]]))
+            raw[i]=np.random.poisson(u.abs2(self.G.propagator.fw(self.pr * self.obj[p[i][0]:p[i][0]+s[0],p[i][1]:p[i][1]+s[1]]))).astype(np.int32)
         return raw, {}, {}
 
         

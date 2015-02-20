@@ -18,6 +18,8 @@ else:
     from ..utils.verbose import logger
     from classes import Base,GEO_PREFIX
 
+from scipy import fftpack
+
 import numpy as np
 
 
@@ -279,7 +281,7 @@ class BasicFarfieldPropagator(object):
     """
     DEFAULT = DEFAULT
     
-    def __init__(self,geo_dct=None,ffttype='std',**kwargs):
+    def __init__(self,geo_dct=None,ffttype='scipy',**kwargs):
         """
         Basic single step Farfield Propagator.
         
@@ -375,18 +377,18 @@ class BasicFarfieldPropagator(object):
     def _assign_fft(self,ffttype='std'):
         self.sc = 1./np.sqrt(np.prod(self.sh))
         self.isc = np.sqrt(np.prod(self.sh))
-        if ffttype!='std':
+        if str(ffttype)=='scipy':
+            self.fft = lambda x: fftpack.fft2(x).astype(x.dtype)
+            self.ifft = lambda x: fftpack.ifft2(x).astype(x.dtype)          
+        elif str(ffttype)=='numpy':
+            self.fft = lambda x: np.fft.fft2(x).astype(x.dtype)
+            self.ifft = lambda x: np.fft.ifft2(x).astype(x.dtype)
+        else:
             self.fft = ffttype[0]
             self.ifft = ffttype[1]
             if len(ffttype) > 2:
                 self.sc = ffttype[2]
                 self.isc = ffttype[3]
-        else:
-            self.fft = lambda x: np.fft.fft2(x).astype(x.dtype)
-            self.ifft = lambda x: np.fft.ifft2(x).astype(x.dtype)
-            # We could also do this:
-            #self.fft = scipy.fftpack.fft2
-            #self.ifft = scipy.fftpack.ifft2
 
 def translate_to_pix(sh,center):
     """\
@@ -411,7 +413,7 @@ class BasicNearfieldPropagator(object):
     """
     DEFAULT = DEFAULT
     
-    def __init__(self,geo_dct=None,ffttype='std',**kwargs):
+    def __init__(self,geo_dct=None,ffttype='scipy',**kwargs):
         """
         Basic two step Nearfield Propagator.
         
@@ -470,15 +472,19 @@ class BasicNearfieldPropagator(object):
     def _assign_fft(self,ffttype='std'):
         self.sc = 1./np.sqrt(np.prod(self.sh))
         self.isc = np.sqrt(np.prod(self.sh))
-        if ffttype!='std':
+        if str(ffttype)=='scipy':
+            self.fft = lambda x: fftpack.fft2(x).astype(x.dtype)
+            self.ifft = lambda x: fftpack.ifft2(x).astype(x.dtype)          
+        elif str(ffttype)=='numpy':
+            self.fft = lambda x: np.fft.fft2(x).astype(x.dtype)
+            self.ifft = lambda x: np.fft.ifft2(x).astype(x.dtype)
+        else:
             self.fft = ffttype[0]
             self.ifft = ffttype[1]
             if len(ffttype) > 2:
                 self.sc = ffttype[2]
                 self.isc = ffttype[3]
-        else:
-            self.fft = np.fft.fft2
-            self.ifft = np.fft.ifft2
+
 
 ############
 # TESTING ##
