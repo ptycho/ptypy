@@ -22,13 +22,13 @@ __all__=['DM']
 parallel = u.parallel
 
 DEFAULT = u.Param(
-    fourier_relax_factor = 0.01,
+    fourier_relax_factor = 0.05,
     alpha = 1,
     update_object_first = True,
     overlap_converge_factor = .1,
     overlap_max_iterations = 10,
-    probe_inertia = 1e-9,               # Portion of probe that is kept from iteraiton to iteration, formally cfact
-    object_inertia = 1e-4,              # Portion of object that is kept from iteraiton to iteration, formally DM_smooth_amplitude
+    #probe_inertia = 1e-9,               # Portion of probe that is kept from iteraiton to iteration, formally cfact
+    #object_inertia = 1e-4,              # Portion of object that is kept from iteraiton to iteration, formally DM_smooth_amplitude
     obj_smooth_std = None,              # Standard deviation for smoothing of object between iterations
     clip_object = None,                 # None or tuple(min,max) of desired limits of the object modulus
 )
@@ -185,7 +185,7 @@ class DM(BaseEngine):
         for name,pod in self.pods.iteritems():
             if not pod.active: continue
             pod.object += pod.probe.conj() * pod.exit
-            ob_nrm[pod.ob_view] += u.abs2(pod.probe)
+            ob_nrm[pod.ob_view] += u.cabs2(pod.probe)
         
         ### distribute result with MPI
         for name,s in self.ob.S.iteritems():
@@ -231,7 +231,7 @@ class DM(BaseEngine):
         for name,pod in self.pods.iteritems():
             if not pod.active: continue
             pod.probe += pod.object.conj() * pod.exit
-            pr_nrm[pod.pr_view] += u.abs2(pod.object)
+            pr_nrm[pod.pr_view] += u.cabs2(pod.object)
 
         change = 0.
         

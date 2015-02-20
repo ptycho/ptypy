@@ -12,7 +12,7 @@ import time
 
 from .. import utils as u
 from ..utils import parallel
-from ..utils.verbose import logger, _
+from ..utils.verbose import logger, _, report
 #from .. import experiment
 from .. import engines
 #from .. import io
@@ -39,6 +39,7 @@ Ptycho_DEFAULT = u.Param(
         #geometry = {},          # Geometry of experiment - most of it provided by data
         paths = {},                # How to load and save
         engines = [u.Param(name='Dummy')],           # Reconstruction algorithms
+        engine = engines.DEFAULTS.copy(),
         interaction = {}, # Client-server communication,
         plotting = {}          # Plotting parameters for a client
     )
@@ -124,7 +125,7 @@ class Ptycho(Base):
         #################################
         # Prepare interaction server
         #################################
-        if parallel.master:
+        if parallel.master and p.interaction is not None:
             # Create the inteaction server
             self.interactor = interaction.Server(p.interaction)
             
@@ -133,7 +134,13 @@ class Ptycho(Base):
 
             # Start the thread
             self.interactor.activate()
-
+        
+            # inform the audience
+            logger.info('Started interaction server with the following parameters:\n'+report(self.interactor.p))
+        else:
+            # no interaction wanted
+            self.interactor = None
+            
         # Check if there is already a runtime container
         if not hasattr(self, 'runtime'):
             self.runtime = u.Param()
@@ -241,7 +248,7 @@ class Ptycho(Base):
             # Start the iteration loop
             while not engine.finished:
                 # Check for client requests
-                if parallel.master: 
+                if parallel.master and self.interactor is not None: 
                     self.interactor.process_requests()
                 
                 parallel.barrier()

@@ -17,20 +17,19 @@ from ..utils import parallel
 
 __all__ = ['BaseEngine']
 
-DEFAULT = u.Param(
-    itertime = 2.,    # Sleep time for a single iteration (in seconds)
-)
 
-DEFAULT_BASE = u.Param(
+DEFAULT = u.Param(
     numiter = 10,             # Total number of iterations
     numiter_contiguous = 1,    # number of iterations until next interactive release   
     probe_support = 0.8,       # relative area of probe array to which the probe is constraint if probe support becomes of more complex nature, consider putting it in illumination.py
-    subpix = False,           # subpixel interpolation
     subpix_start = 0,         # Number of iterations before starting subpixel interpolation
-    subpix_method = 'linear',  # 'fourier','linear' subpixel interpolation 
-    probe_update_start = 0
+    subpix = 'linear',  # 'fourier','linear' subpixel interpolation or None for no interpolation
+    probe_inertia = 0.001,             # (88) Probe fraction kept from iteration to iteration
+    object_inertia = 0.1,              # (89) Object fraction kept from iteration to iteration
+    clip_object = None,                # (91) Clip object amplitude into this intrervall
+    obj_smooth_std = 20,               # (90) Gaussian smoothing (pixel) of kept object fraction
+    probe_update_start =0,
 )
-
 
 class BaseEngine(object):
     """
@@ -44,8 +43,7 @@ class BaseEngine(object):
     engine_finalize
     """
     
-    DEFAULT_BASE = DEFAULT_BASE
-    DEFAULT = {}
+    DEFAULT= DEFAULT.copy()
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -59,8 +57,8 @@ class BaseEngine(object):
               Initialization parameters
         """
         self.ptycho = ptycho_parent
-        p = u.Param(self.DEFAULT_BASE)
-        p.update(self.DEFAULT)
+        p = u.Param(self.DEFAULT)
+
         if pars is not None: p.update(pars)
         self.p = p
         self.itermeta = []

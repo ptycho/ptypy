@@ -13,13 +13,21 @@ from scipy.special import erf
 import numpy as np
 from misc import *
 
-__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho','gauss_fwhm','gf']
+__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho','gauss_fwhm','gf','cabs2']
+
+def cabs2(A):
+    """
+    Squared absolute value (for complex)
+    """
+    
+    return A * A.conj()
 
 def abs2(A):
     """
     Squared absolute value
     """
     return np.square(np.abs(A))
+
     
 def norm2(A):
     """

@@ -16,7 +16,7 @@ import os
 
 DEFAULT=u.Param(
     #### Paramaters for popular scan methods 
-    scan_type = 'round_roi', # [None,'round', 'raster', 'round_roi','spiral','spiral_roi','custom']
+    scan_type = None, # [None,'round', 'raster', 'round_roi','spiral','spiral_roi','custom']
     dr = 1.5e-6,             # round,round_roi :width of shell 
     nr = 5,                 # round : number of intervals (# of shells - 1) 
     nth = 5,                 # round,round_roi: number of points in the first shell 

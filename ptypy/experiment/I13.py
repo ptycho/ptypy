@@ -108,7 +108,7 @@ class I13Scan(PtyScan):
 
         self.rinfo = rinfo
         self.info.recipe = rinfo
-
+        self.meta.experimentID = experimentID
         logger.info(u.verbose.report(self.info))
 
     def load_common(self):

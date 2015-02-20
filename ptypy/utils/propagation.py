@@ -12,6 +12,7 @@ This file is part of the PTYPY package.
 import numpy as np
 
 from misc import *
+from array_utils import *
 from parameters import *
 from utils_BE import *
 from .. import *

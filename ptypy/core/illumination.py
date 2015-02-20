@@ -41,6 +41,8 @@ DEFAULT=u.Param(
                                     # more modes requested than weight given
     spectrum = None,                # energy spectrum of source, choose None, 'Gauss' or 'Box'
     bandwidth = 0.1,              # bandwidth of source
+    phase_noise_rms = None,
+    phase_noise_mfs = 0.0,
 )
 
 
@@ -80,7 +82,7 @@ def from_pars(sh,psize,lam,off=0.,pars=None,dtype=np.complex128):
         p.incoming = p.incoming.astype(np.complex) *np.exp(1j * noise)
         
     if p.spot_size is None:
-        p.spot_size = 50*psize
+        p.spot_size = np.array(sh)*psize / 3
     #print p
     if p.probe_type == 'focus':
         p.probe = simple_probe(p.incoming,lam,psize,p.focal_dist,p.prop_dist,p.aperture_type,p.aperture_size,p.spot_size,p.antialiasing,p.aperture_edge)
@@ -153,7 +155,7 @@ def simple_probe(w,l,psize,fdist=None,defocus=0.0,pupil='rect',pupildims=None,fo
     ew=edgewidth
     #print ew
     if focusdims==None:
-        focusdims=0.1*np.array(sh)*u.expect2(psize)
+        focusdims=0.5*np.array(sh)*u.expect2(psize)
     
     if antialiasing>1.0:
         lines=np.round(sh*(antialiasing-1.0))

@@ -85,7 +85,8 @@ PTYD = dict(
 )
 
 META = dict(
-    label=None,   # a scan label (e.g. 'scan0001')
+    label=None,   # label will be set internally 
+    experimentID=None, # a unique label of user choice
     version='0.1',
     shape=None,
     psize=None,
@@ -165,7 +166,7 @@ class PtyScan(object):
             num = len(info.positions_theory )
             logger.info('Theoretical positions are available. There will be %d frames.' % num)
             logger.info('Any experimental position information will be ignored.')
-            logger.info('Former input value of frame number `num_frames` %d is overriden to %d' %(self.num_frames,num))
+            logger.info('Former input value of frame number `num_frames` %s is overriden to %d' %(str(self.num_frames),num))
             self.num_frames = num
         """
         # check if we got information on geometry from ptycho
@@ -972,7 +973,7 @@ class MoonFlowerScan(PtyScan):
         
         # derive scan pattern
         pos = u.Param()
-        dr = G.resolution * G.shape / 3.
+        dr = G.resolution * G.shape / 5.
         pos.dr = dr.min()
         pos.nr = np.int(np.round(np.sqrt(self.num_frames))) 
         pos.nth = 5
@@ -991,14 +992,14 @@ class MoonFlowerScan(PtyScan):
         
         # get probe
         moon = resources.moon_pr(self.G.shape)
-        moon /= np.abs(moon).sum() / 1e8
+        moon /= np.sqrt(u.abs2(moon).sum() / 1e8)
         self.pr = moon
         
     def load_common(self):
         """
         Transmit positions
         """
-        return {'weight2d': None,
+        return {'weight2d': np.ones(self.pr.shape),
                 'positions_scan': self.pos}
 
     def load(self, indices):
@@ -1044,23 +1045,27 @@ class DataSource(object):
         for label in labels:
             # we are making a copy of the root as we want to fill it
             scan = scans[label]
-            s = s['pars']
+            s = scan['pars']
 
             logger.info(u.verbose.report(s))
 
             # Copy other relevant information
-            data = s.data.copy()
-            source = s.data.source
-            recipe = s.data.recipe
-            if s.positions_theory is None:
-                s.positions_theory = scan['pos_theory']
+            prep = s.data.copy()
+            
+            # Assign label
+            prep.label = label
+            
+            source = prep.source
+            recipe = prep.get('recipe',{})
+            if prep.get('positions_theory') is None:
+                prep.positions_theory = scan['pos_theory']
             #prep.dfile = s.data_file
             #prep.geometry = s.geometry.copy()
             #prep.xy = s.xy.copy()
             
             source = source.lower()
             # FIXME make data preparation decision base on a more general 'source' entry
-            if source in PtyScanTypes
+            if source in PtyScanTypes:
                 PS = PtyScanTypes[source]
                 logger.info('Scan %s will be prepared with the recipe "%s"' % (label, source))
                 self.PS.append(PS(prep, recipe= recipe))
