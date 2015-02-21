@@ -26,15 +26,21 @@ def switch_orientation(A, orientation, center=None):
     --------
         Flipped array, new center
     """
+    o = 0 if orientation is None else orientation
+    
+    if np.isscalar(o):
+        o = [i=='1' for i in '%03d' % int(np.base_repr(o))]
+    
+    assert len(o)==3
     # switch orientation
-    if orientation[0]:
+    if o[0]:
         axes = list(range(A.ndim - 2)) + [-1, -2]
         A = np.transpose(A, axes)
         center = (center[1], center[0]) if center is not None else None
-    if orientation[1]:
+    if o[1]:
         A = A[..., ::-1, :]
         center = (A.shape[-2] - 1 - center[0], center[1]) if center is not None else None
-    if orientation[2]:
+    if o[2]:
         A = A[..., ::-1]
         center = (center[0], A.shape[-1] - 1 - center[1]) if center is not None else None
 
