@@ -107,8 +107,8 @@ GENERIC = dict(
     
     load_parallel = 'data',  # None, 'data', 'common', 'all'
     rebin = None,  # rebin diffraction data
-    orientation = (False, False, False),  # 3-tuple switch, actions are (transpose, invert rows, invert cols)
-    min_frames = parallel.size,  # minimum number of frames of one chunk if not at end of scan
+    orientation = None,  # None,int or 3-tuple switch, actions are (transpose, invert rows, invert cols)
+    min_frames = 1,  # minimum number of frames of one chunk if not at end of scan
     positions_theory = None,  # Theoretical position list (This input parameter may get deprecated)
     num_frames = None, # Total number of frames to be prepared
     recipe = {},
@@ -156,7 +156,7 @@ class PtyScan(object):
 
         # Attempt to get number of frames.
         self.num_frames = info.num_frames
-        
+        self.min_frames = info.num_frames * parallel.size
         #logger.info('Looking for position information input parameter structure ....\n')
         #if (info.positions_theory is None) and (info.xy is not None):
         #    from ptypy.core import xy
@@ -370,7 +370,7 @@ class PtyScan(object):
             
         N = self.frames_accessible
         # wait if too few frames are available and we are not at the end
-        if N < self.info.min_frames and not self.end_of_scan:
+        if N < self.min_frames and not self.end_of_scan:
             return WAIT
         elif self.end_of_scan and N <= 0:
             return EOS
@@ -489,7 +489,7 @@ class PtyScan(object):
                 dsh - cen > 0).all(), 'Optical axes (center = (%.1f,%.1f) outside diffraction image frame (%d,%d)' % tuple(cen)+tuple(dsh)
 
             # determine if the arrays require further processing
-            do_flip = np.array(self.orientation).any()
+            do_flip = self.orientation is not None and np.array(self.orientation).any()
             do_crop = (np.abs(sh - dsh) > 0.5).any()
             do_rebin = (self.rebin != 1)
 
@@ -709,7 +709,7 @@ class PtyScan(object):
         if start is None:
             start = self.framestart
         if frames is None:
-            frames = self.info.min_frames
+            frames = self.min_frames
 
         frames_accessible = min((frames, self.num_frames - start))
 
