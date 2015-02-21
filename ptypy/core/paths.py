@@ -30,11 +30,11 @@ DEFAULT.plot_dir = "plots/%(run)s/"                  # (06) directory to dump pl
 DEFAULT.plot_file = "%(run)s_%(engine)s_%(iteration)04d.png"# (07) filename for dumping plots
 DEFAULT.plot_interval = 2                       # (08) iteration interval for dumping plots
 DEFAULT.save_dir = "recons/%(run)s/"                 # (10) directory to save final reconstruction
-DEFAULT.save_file = "test.pty" #"%(run)s_%(algorithm)s_%(it)04d.h5"# (11) filename for saving 
+DEFAULT.save_file = "test.ptyr" #"%(run)s_%(algorithm)s_%(it)04d.h5"# (11) filename for saving 
 DEFAULT.dump_dir = "dumps/%(run)s/"                  # (12) directory to save intermediate results
-DEFAULT.dump_file = "%(run)s_%(engine)s_%(iteration)04d.pty"# (13) 
+DEFAULT.dump_file = "%(run)s_%(engine)s_%(iteration)04d.ptyr"# (13) 
 DEFAULT.data_dir = "analysis/%(run)s/"
-DEFAULT.data_file = "%(label)s.h5"
+DEFAULT.data_file = "%(label)s.ptyd"
 # runtime parameters
 DEFAULT.engine = "Dummy"
 DEFAULT.iteration = 0

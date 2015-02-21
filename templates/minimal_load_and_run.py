@@ -15,9 +15,8 @@ p.model = u.Param()
 p.scans = u.Param()
 p.scans.MF = u.Param()
 p.scans.MF.data= u.Param()
-p.scans.MF.data.source = 'test'
-p.scans.MF.data.shape = 128
-p.scans.MF.data.num_frames = 100
+p.scans.MF.data.source = 'sample.ptyd'#'file'
+p.scans.MF.data.dfile = None#'sample.ptyd'
 
 p.engines = u.Param()                                  # (100) empty structure to be filled with engines
 p.engines.engine00 = u.Param()

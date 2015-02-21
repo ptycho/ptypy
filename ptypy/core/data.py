@@ -156,7 +156,7 @@ class PtyScan(object):
 
         # Attempt to get number of frames.
         self.num_frames = info.num_frames
-        self.min_frames = info.num_frames * parallel.size
+        self.min_frames = info.min_frames * parallel.size
         #logger.info('Looking for position information input parameter structure ....\n')
         #if (info.positions_theory is None) and (info.xy is not None):
         #    from ptypy.core import xy
@@ -243,7 +243,7 @@ class PtyScan(object):
             parallel.barrier()
 
         if parallel.master or self.load_common_in_parallel:
-            self.common = u.Param(self.load_common())
+            self.common = self.load_common()
 
         # broadcast
         if not self.load_common_in_parallel:
@@ -419,9 +419,9 @@ class PtyScan(object):
             data, positions, weights = self._mpi_pipeline_with_dictionaries(indices)
             # all these dictionaries could be empty
             # fill weights dictionary with references to the weights in common
-
-            has_data = (len(data) > 0)
-            has_weights = (len(weights) > 0)
+            
+            has_data = (len(data) > 0) 
+            has_weights = (len(weights) > 0) and len(weights.values()[0])>0
 
             if has_data:
                 dsh = np.array(data.values()[0].shape[-2:])
@@ -436,11 +436,14 @@ class PtyScan(object):
                 if self.has_weight2d:
                     altweight = self.common.weight2d
                 else:
-                    altweight = np.ones(dsh)
+                    try:
+                        altweight = self.meta.weight2d
+                    except:
+                        altweight = np.ones(dsh)
                 weights = dict.fromkeys(data.keys(), altweight)
 
             assert len(weights) == len(data), 'Data and Weight frames unbalanced %d vs %d' % (len(data), len(weights))
-
+                       
             sh = self.info.shape
             # adapt roi if not set
             if sh is None:
@@ -606,7 +609,7 @@ class PtyScan(object):
             out = self.return_chunk_as(msg, chunk_form)
             # save chunk
             if self.info.save is not None:
-                self._mpi_save_chunk(self.save,msg)
+                self._mpi_save_chunk(self.info.save,msg)
             # delete chunk
             del self.chunk
             return out
@@ -870,8 +873,12 @@ class PtydScan(PtyScan):
         :param pars: Input like PtyScan
         """
         # create parameter set
-        p = DEFAULT.copy()
+        p = u.Param(self.DEFAULT.copy())
 
+        # copy the label
+        #if pars is not None:
+        #    p.label = pars.get('label')
+        
         if source is None or str(source)=='file':
             # this is the case of absolutely no additional work
             logger.info('No explicit source file was given. Will continue read only')
@@ -892,6 +899,7 @@ class PtydScan(PtyScan):
             
             pars['dfile']= dfile
             manipulate = True
+            p.update(pars)
             
         
         # make sure the source exists.
@@ -904,11 +912,10 @@ class PtydScan(PtyScan):
         
         # update given parameters when they are None
         if not manipulate:
-            # Only meta as input allowed
-            super(PtydScan, self).__init__(meta, **kwargs)
+            super(PtydScan, self).__init__(meta, label = pars.get('label'), **kwargs)
         else:
             # overwrite only those set to None
-            for k, v in self.meta.items():
+            for k, v in meta.items():
                 if p.get(k) is None:
                     p[k] = v
             # Initialize parent class and fill self
@@ -935,11 +942,11 @@ class PtydScan(PtyScan):
         if start is None:
             start = self.framestart
         if frames is None:
-            frames = self.minframes
+            frames = self.min_frames
 
         # Get info about size of currently available chunks.
         # Dead external links will produce None and are excluded
-        with h5py.File(self.dfile, 'r') as f:
+        with h5py.File(self.source, 'r') as f:
             d = {}
             chitems = sorted([(int(k), v) for k, v in f['chunks'].iteritems() if v is not None], key=lambda t: t[0])
             for chkey in chitems[0][1].keys():
@@ -957,13 +964,9 @@ class PtydScan(PtyScan):
 
     def load_common(self):
         """
-        In ptyd, 'common' does not necessarily exist. Only meta is essential
+        In ptyd, 'common' must exist
         """
-        try:
-            common = io.h5read(self.dfile, 'common')['common']
-        except:
-            common = {}
-        return common
+        return io.h5read(self.source, 'common')['common']
 
     def load(self, indices):
         """
@@ -980,7 +983,7 @@ class PtydScan(PtyScan):
         out = {}
         with h5py.File(self.source, 'r') as f:
             for array, call in calls.iteritems():
-                out[array] = [f[path][slce] for path, slce in call]
+                out[array] = [np.squeeze(f[path][slce]) for path, slce in call]
             f.close()
 
         # if the chunk provided indices, we use those instead of our own
@@ -1107,7 +1110,8 @@ class DataSource(object):
             recipe = prep.get('recipe',{})
             if prep.get('positions_theory') is None:
                 prep.positions_theory = scan['pos_theory']
-            #prep.dfile = s.data_file
+            
+            prep.dfile = s.data_file
             #prep.geometry = s.geometry.copy()
             #prep.xy = s.xy.copy()
             
@@ -1117,10 +1121,8 @@ class DataSource(object):
                 PS = PtyScanTypes[source]
                 logger.info('Scan %s will be prepared with the recipe "%s"' % (label, source))
                 self.PS.append(PS(prep, recipe= recipe))
-            elif source.endswith('.ptyd') or source.endswith('.pty'):
-                self.PS.append(PtydScan(prep, recipe=source))
-            elif source=='file':
-                self.PS.append(PtydScan(prep, recipe=None))
+            elif source.endswith('.ptyd') or source.endswith('.pty') or str(source)=='file' or source is None:
+                self.PS.append(PtydScan(prep, source=source))
             elif source=='test':
                 self.PS.append(MoonFlowerScan(prep))
             else:
