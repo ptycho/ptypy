@@ -12,6 +12,7 @@ This file is part of the PTYPY package.
 from scipy.special import erf 
 import numpy as np
 from misc import *
+from scipy import ndimage as ndi
 
 __all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho','gauss_fwhm','gf','cabs2']
 

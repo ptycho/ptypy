@@ -449,7 +449,7 @@ class BasicNearfieldPropagator(object):
         self.grids_det = [X,Y] 
         
         # calculating kernel
-        psize_fspace = p.lam * p.distance / p.shape / p.psize
+        psize_fspace = p.lam * p.distance / p.shape / p.resolution
         [V,W] = u.grids(self.sh,psize_fspace,'fft')
         a2 = (V**2+W**2) /p.distance**2          
         
