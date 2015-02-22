@@ -14,7 +14,7 @@ import numpy as np
 from misc import *
 from scipy import ndimage as ndi
 
-__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho','gauss_fwhm','gf','cabs2']
+__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho','gauss_fwhm','gf','cabs2','gf_2d']
 
 def cabs2(A):
     """
@@ -185,3 +185,13 @@ def gf(c,*arg,**kwargs):
         return c_gf(c,*arg,**kwargs)
     else:
         return ndi.gaussian_filter(c,*arg,**kwargs)
+
+def gf_2d(c,sigma,**kwargs):
+    """\
+    Gaussian filter along the last 2 dimensions
+    """
+    if c.ndim > 2:
+        n=c.ndim
+        return gf(c,(0,)*(n-2)+tuple(expect2(sigma)),**kwargs)
+    else:
+        return gf(c,sigma,**kwargs)

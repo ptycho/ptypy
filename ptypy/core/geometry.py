@@ -154,7 +154,7 @@ class Geo(Base):
             if self.p.propagation=='farfield':
                 self.p.psize[:] = self.lz / self.p.resolution / self.p.shape
             else:
-                self.p.psize[:] = self.p.psize
+                self.p.psize[:] = self.p.resolution
         else:
             # both psizes are fix
             if self.p.propagation=='farfield':
@@ -281,7 +281,7 @@ class BasicFarfieldPropagator(object):
     """
     DEFAULT = DEFAULT
     
-    def __init__(self,geo_dct=None,ffttype='scipy',**kwargs):
+    def __init__(self,geo_dct=None,ffttype='numpy',**kwargs):
         """
         Basic single step Farfield Propagator.
         
@@ -347,7 +347,7 @@ class BasicFarfieldPropagator(object):
             w = W
             
         # compute transform
-        w = self.sc * self.post_fft * self.fft(self.pre_fft * w)
+        w = self.post_fft * self.sc * self.fft(self.pre_fft * w) 
         
         # cropping again
         if (self.crop_pad != 0).any() : 
@@ -366,7 +366,7 @@ class BasicFarfieldPropagator(object):
             w = W
             
         # compute transform
-        w = self.isc * self.post_ifft * self.ifft(self.pre_ifft * w)
+        w = self.ifft(self.pre_ifft * w) * self.isc * self.post_ifft
         
         # cropping again
         if (self.crop_pad != 0).any() : 

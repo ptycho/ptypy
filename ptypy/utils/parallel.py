@@ -9,7 +9,7 @@ This file is part of the PTYPY package.
 """
 __all__ = ['MPIenabled', 'psize', 'prank', 'comm', 'MPI', 'master',
            'LoadManager', 'loadmanager', 'MPIrand_normal', 'MPIrand_uniform',
-           'gather_list', 'scatter_list', 'bcast_dict', 'gather_dict']
+           'gather_list', 'scatter_list', 'bcast_dict', 'gather_dict','MPInoise2d']
 
 import numpy as np
 
@@ -367,6 +367,31 @@ def MPIrand_uniform(low=0.0, high=1.0, size=(1)):
         sample = np.zeros(size)
     allreduce(sample)
     return sample
+
+def MPInoise2d(sh,rms=1.0, mfs=2,rms_mod=None, mfs_mod=2):
+    """
+    creates noise in the shape of `sh` consistent across all nodes.
+    
+    :param sh: output shape
+    :param rms: root mean square of noise in phase
+    :param mfs: minimum feature [pixel] of noise in phase    
+    :param rms_mod: root mean square of noise in amplitude / modulus
+    :param mfs_mod: minimum feature [pixel]  of noise in amplitude / modulus  
+    """
+    from ..utils import gf_2d
+    sh = tuple(sh)
+    A=np.ones(sh,dtype=complex)
+    if rms is not None and float(rms)!=0.:
+        mfs /= 2.35
+        phnoise = MPIrand_normal(0.0,rms,sh)
+        phnoise[:] = gf_2d(phnoise,mfs)
+        A *= np.exp(1j*phnoise)
+    if rms_mod is not None and float(rms_mod)!=0.:
+        ampnoise = MPIrand_normal(1.0,rms_mod,sh)
+        mfs_mod /=2.35
+        ampnoise[:] = gf_2d(ampnoise,mfs_mod)
+        A *= ampnoise
+    return A
 
 
 def gather_list(lst, length, indices):
