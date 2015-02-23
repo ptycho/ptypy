@@ -15,6 +15,7 @@ from ptypy import utils as u
 import ptypy
 from detector import Detector, conv
 from ptysim_utils import *
+from ptypy.core.data import Ptyscan
 
 DEFAULT = u.Param(
     pos_noise = 1e-10,  # (float) unformly distributed noise in xy experimental positions
@@ -76,4 +77,54 @@ def simulate_basic_with_pods(ptypy_pars_tree=None,sim_pars=None,save=False):
     u.parallel.barrier()
     return P
     
+class SimulatedScan(Ptyscan):
+    """
+    Test Ptyscan class producing a romantic ptychographic dataset of a moon
+    illuminating flowers.
+    """
+    
+    def __init__(self, pars = None, recipe=None **kwargs):
+
+        p = u.Param(self.DEFAULT.copy()
+        if pars is not None:
+            p.update(pars)
+        # Initialize parent class
+        super(SimulatedScan, self).__init__(pars, **kwargs)
+        
+        from ptypy.core.manager import scan_DEFAULT
+        pp = u.Param()
+        pp.interaction = None
+        pp.verbose_level = 1
+        pp.data_type = 'single'
+        pp.model = scan_DEFAULT.copy(depth=4)
+        pp.model.update(recipe)
+        pp.scans=u.Param()
+        pp.scans.sim = u.Param()
+        pp.scans.sim.data=u.Param()
+        pp.scans.sim.data.soure ='empty'
+        P=Ptycho(pp,level=2)
+        P.modelm.new_data()
+        u.parallel.barrier()
+        P.print_stats()
+                
+        self.P=P
+        
+    def load_common(self):
+        """
+        Transmit positions
+        """
+        return {'weight2d': np.ones(self.pr.shape),
+                'positions_scan': self.pos}
+
+    def load(self, indices):
+        """
+        Forward propagation
+        """
+        # dummy fill
+        p=self.pixel
+        s=self.G.shape
+        raw = {}
+        for i in indices:
+            raw[i]=np.random.poisson(u.abs2(self.G.propagator.fw(self.pr * self.obj[p[i][0]:p[i][0]+s[0],p[i][1]:p[i][1]+s[1]]))).astype(np.int32)
+        return raw, {}, {}
 
