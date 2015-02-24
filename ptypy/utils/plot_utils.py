@@ -418,18 +418,18 @@ def plot_storage(S,fignum=100,modulus='linear',slice_tupel=(slice(1),slice(None)
     ext=[C[0,0],C[0,-1],R[0,0],R[-1,0]]
     
     if modulus=='sqrt':
-        im=np.sqrt(np.abs(im))*np.exp(1j*np.pi*np.angle(im)).astype(im.dtype)
+        im=np.sqrt(np.abs(im)).astype(im.dtype)*np.exp(1j*np.pi*np.angle(im)).astype(im.dtype)
     elif modulus=='log':
-        im=np.log10(np.abs(im)+1)*np.exp(1j*np.pi*np.angle(im)).astype(im.dtype)
+        im=np.log10(np.abs(im)+1).astype(im.dtype)*np.exp(1j*np.pi*np.angle(im)).astype(im.dtype)
     else:
         modulus='linear'
     
     ttl= str(S.ID) +'#%d' + ', ' + modulus + ' scaled modulus'
     unit,mag,num=length_units(np.abs(ext[0]))
     ext2=[a*mag for a in ext]
-    fig = plt.figure(fignum)
+
     layers = im.shape[0]
-    print im.shape
+    fig = plt.figure(fignum,figsize=(6*layers,6))
     for l in range(layers):
         ax = fig.add_subplot(1,layers,l+1)
         a = ax.imshow(imsave(im[l],**kwargs),extent=ext2)

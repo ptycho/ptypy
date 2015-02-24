@@ -20,5 +20,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from ptysim_utils import *
-from ptysim import *
-
+#from ptysim import *
+import detector 
+import cxro 
+from simscan import SimScan

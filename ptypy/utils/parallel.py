@@ -119,6 +119,12 @@ class LoadManager(object):
             out[r].append(i)
             self.rank_of[k] = r
         return out
+    
+    def reset(self):
+        """
+        resets loadmanager to initial state
+        """
+        self.__init__()
 
 # Create one instance - typically only this one should be used
 loadmanager = LoadManager()
@@ -337,9 +343,9 @@ def _check(data):
         key = ""
         if not data.flags.contiguous:
             data = np.ascontiguousarray(data)
-    elif np.iterable(data):
+    elif type(data) is tuple:
         key = data[0]
-        data = _check(data[1])[1]
+        data = data[1] #_check(data[1])[1]
     else:
         raise TypeError("Input data %s incompatible for broadcast" % str(type(data)))
     return key, data
@@ -526,7 +532,7 @@ def bcast_dict(dct, keys_accepted='all', source=0):
     """
     if not MPIenabled:
         out = dict(dct)
-        return out, len(out)
+        return out
 
     # communicate the dict length
     if rank == source:

@@ -11,15 +11,12 @@ import numpy as np
 import time
 
 from .. import utils as u
-from ..utils import parallel
 from ..utils.verbose import logger, _, report
-#from .. import experiment
 from .. import engines
-#from .. import io
 from ..io import interaction
 from classes import *
 from classes import PTYCHO_PREFIX
-from paths import Paths
+import paths 
 from manager import *
 
 parallel = u.parallel
@@ -32,12 +29,13 @@ Ptycho_DEFAULT = u.Param(
         data_type = 'single',   # 'single' or 'double' precision for reconstruction
         data = {},              # Experimental scan information (probably empty at first)
         model = {},          # POD creation rules.
+        scans=u.Param(),
         # The following 4 are now subset of model
         #scans = {},             # Sub-structure that can contain scan-specific parameters for categories 'illumination', 'sample', 'geometry'
         #illumination = {},      # Information about the probe
         #sample = {},            # All information about the object
         #geometry = {},          # Geometry of experiment - most of it provided by data
-        paths = {},                # How to load and save
+        paths = paths.DEFAULT.copy(),                # How to load and save
         engines = [u.Param(name='Dummy')],           # Reconstruction algorithms
         engine = engines.DEFAULTS.copy(),
         interaction = {}, # Client-server communication,
@@ -146,7 +144,7 @@ class Ptycho(Base):
             self.runtime = u.Param()
             
         # Generate all the paths
-        self.paths = Paths(self.p.paths,self.runtime)
+        self.paths = paths.Paths(self.p.paths,self.runtime)
         
     def init_structures(self):
         """

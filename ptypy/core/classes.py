@@ -522,7 +522,11 @@ class Storage(Base):
             new_shape = (sh[0], sh[1]+misfit[0].sum(), sh[2]+misfit[1].sum())
             logger.debug('%s[%s] :: center: %s -> %s' % (self.owner.ID, self.ID, str(self.center), str(new_center)))
             #logger.debug('%s[%s] :: shape: %s -> %s' % (self.owner.ID, self.ID, str(sh), str(new_shape)))
-     
+            
+            Mpixels = np.array(new_shape).astype(float).prod()/1e6
+            if Mpixels > 20:
+                raise RuntimeError('Arrays larger than 20M not supported. You requested %.2fM pixels, Bitch' % (Mpixels))
+
             # Apply 2d misfit
             if self.data is not None:
                 new_data = u.crop_pad(self.data, misfit, fillpar=self.fill_value).astype(self.dtype)

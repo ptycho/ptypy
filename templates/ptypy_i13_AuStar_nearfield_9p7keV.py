@@ -100,7 +100,7 @@ p.model.sharing.probe_share_power = 1             # (74) contribution to the sha
 
 p.scans = u.Param()
 p.scans.scan001 = u.Param()
-p.scans.scan001.source = None 
+p.scans.scan001.source = 'sim' 
 
 #p.scans.scan002 = u.Param()
 #p.scans.scan002.sharing = u.Param()
@@ -113,9 +113,9 @@ p.data.sourcetype = "static"                      # (78)
 
 
 p.interaction = u.Param()
-p.interaction.primary_address = "tcp://127.0.0.2" # (80) 
-p.interaction.primary_port = 5570                 # (81) 
-p.interaction.port_range = "5571:5580"     # (82) 
+#p.interaction.primary_address = "tcp://127.0.0.2" # (80) 
+#p.interaction.primary_port = 5570                 # (81) 
+#p.interaction.port_range = "5571:5580"     # (82) 
 
 p.engine = u.Param()
 p.engine.common = u.Param()

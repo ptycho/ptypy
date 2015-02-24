@@ -74,18 +74,13 @@ scan_DEFAULT = u.Param(
     tags="",  # For now only used to declare an empty scan
 )
 
-model_DEFAULT = u.Param(scan_DEFAULT.copy(),
-                        #sharing=u.Param(),  # rules for linking
-                        scans=u.Param(),  # Sub-structure that can contain scan-specific parameters
-)
-
 
 class ModelManager(object):
     """
     ModelManager : Manage object creation and update according to the physical
     model of the ptychography experiment
     """
-    DEFAULT = model_DEFAULT
+    DEFAULT = scan_DEFAULT
     _PREFIX = MODEL_PREFIX
 
     def __init__(self, ptycho, pars=None, scans=None, **kwargs):
@@ -119,8 +114,8 @@ class ModelManager(object):
         p = u.Param(self.DEFAULT.copy())
         p.update(pars, Replace=False)
         self.p = p
-        print '############### HERE'
-        print u.verbose.report(p)
+        #print '############### HERE'
+        #print u.verbose.report(p)
         
         self.ptycho = ptycho
 
@@ -324,13 +319,13 @@ class ModelManager(object):
                                     scan position 
             """
             meta = dp['common']
-            label = meta['label']
+            label = meta['ptylabel']
 
             # we expect a string for the label.
             assert label == str(label)
 
             used_scans.append(label)
-            logger.info('Importing data from %s as scan %s.' % (meta['experimentID'], label))
+            logger.info('Importing data from %s as scan %s.' % (meta['label'], label))
 
             # prepare scan dictionary or dig up the already prepared one
             scan = self.prepare_scan(label)
@@ -635,7 +630,6 @@ class ModelManager(object):
             di_views = scan.new_diff_views
             ma_views = scan.new_mask_views
             
-            print scan.pars.sharing
             # Compute sharing rules
             alt_obj = scan.pars.sharing.object_shared_with
             alt_pr = scan.pars.sharing.probe_shared_with

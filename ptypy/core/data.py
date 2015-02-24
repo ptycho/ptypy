@@ -244,7 +244,7 @@ class PtyScan(object):
 
         if parallel.master or self.load_common_in_parallel:
             self.common = self.load_common()
-
+            
         # broadcast
         if not self.load_common_in_parallel:
             parallel.bcast_dict(self.common)
@@ -335,8 +335,8 @@ class PtyScan(object):
                     At least two keys, `weight2d` and `positions_scan` must be given (they can be None)
         """
 
-        return {'weight2d': np.ones(self.info.roi, dtype='bool'),
-                'positions_scan': np.indices((self.info.num_frames, 2)).sum(0)}
+        return {'weight2d': np.ones(u.expect2(self.info.shape), dtype='bool'),
+                'positions_scan': np.indices((self.num_frames, 2)).sum(0)}
 
     def _mpi_check(self, chunksize, start=None):
         """
@@ -471,8 +471,8 @@ class PtyScan(object):
             else:
                 auto_cen = None
                 
-            if cen is None or auto is True:
-                logger.info('Setting center for ROI from %s to %s.' %(str(tuple(cen)),str(tuple(auto_cen))))
+            if cen is None and auto_cen is not None:
+                logger.info('Setting center for ROI from %s to %s.' %(str(cen),str(auto_cen)))
                 cen = auto_cen
             elif cen is None and auto is False:
                 cen = dsh // 2
@@ -480,13 +480,13 @@ class PtyScan(object):
                 # center is number or tuple
                 cen = u.expect2(cen[-2:])
                 if auto_cen is not None:
-                    logger.info('ROI center is %s, automatic guess is %s.' %(str(tuple(cen)),str(tuple(auto_cen))))
+                    logger.info('ROI center is %s, automatic guess is %s.' %(str(cen),str(auto_cen)))
                     
             # It is important to set center again in order to NOT have different centers for each chunk
             # the downside is that the center may be off if only a few diffraction patterns were
             # used for the analysis. In such case it is beneficial to set the center in the parameters
             self.info.center = cen  
-            print cen
+
             # make sure center is in the image frame
             assert (cen > 0).all() and (
                 dsh - cen > 0).all(), 'Optical axes (center = (%.1f,%.1f) outside diffraction image frame (%d,%d)' % tuple(cen)+tuple(dsh)
@@ -535,7 +535,7 @@ class PtyScan(object):
             # adapt meta info
             self.meta.center = cen / float(self.rebin)
             self.meta.shape = u.expect2(sh) / self.rebin
-            self.meta.psize = u.expect2(self.info.psize) * self.rebin
+            self.meta.psize = u.expect2(self.info.psize) * self.rebin if self.info.psize is not None else None
             
             # prepare chunk of data
             chunk = u.Param()
@@ -555,7 +555,7 @@ class PtyScan(object):
             # slice positions from common if they are empty too
             if positions is None or len(positions) == 0:
                 try:
-                    chunk.positions = self.common.get('positions_scan', self.info.get('positions'))[
+                    chunk.positions = self.info.get('positions_theory', self.info.get('positions_scan'))[
                         indices.chunk]
                 except:
                     logger.info('slicing position information failed')
@@ -750,7 +750,7 @@ class PtyScan(object):
         must return 3 dicts with indices as keys: one for the raw frames, one for the
         """
         # dummy fill
-        raw = dict((i, i * np.ones(self.roi)) for i in indices)
+        raw = dict((i, i * np.ones(u.expect2(self.info.shape))) for i in indices)
         return raw, {}, {}
 
     def correct(self, raw, weights, common):
@@ -912,7 +912,7 @@ class PtydScan(PtyScan):
         
         # update given parameters when they are None
         if not manipulate:
-            super(PtydScan, self).__init__(meta, label = pars.get('label'), **kwargs)
+            super(PtydScan, self).__init__(meta,  **kwargs)
         else:
             # overwrite only those set to None
             for k, v in meta.items():
@@ -923,7 +923,7 @@ class PtydScan(PtyScan):
         
         # enforce that orientations are correct
         # Other instance attributes
-        self._checked = None
+        self._checked = {}
         self._ch_frame_ind = None
 
 
@@ -950,12 +950,12 @@ class PtydScan(PtyScan):
             d = {}
             chitems = sorted([(int(k), v) for k, v in f['chunks'].iteritems() if v is not None], key=lambda t: t[0])
             for chkey in chitems[0][1].keys():
-                d[chkey] = [(int(k), v[chkey].shape) for k, v in chitems if v is not None]
+                d[chkey] = np.array([((int(k),) + v[chkey].shape) for k, v in chitems if v is not None])
             f.close()
 
         self._checked = d
-        allframes = int(sum([ch[1][0] for ch in d['data']]))
-        self._ch_frame_ind = np.array([(dd[0], frame) for dd in d['data'] for frame in range(dd[1][0])])
+        allframes = int(sum([ch[1] for ch in d['data']]))
+        self._ch_frame_ind = np.array([(dd[0], frame) for dd in d['data'] for frame in range(dd[1])])
 
         return allframes - start, None
 
@@ -973,6 +973,12 @@ class PtydScan(PtyScan):
         Load from ptyd. Due to possible chunked data, slicing frames is 
         non-trivial
         """
+        # ok we need to communicate the some internal info
+        parallel.barrier()
+        self._ch_frame_ind=parallel.bcast(self._ch_frame_ind)
+        parallel.barrier()
+        parallel.bcast_dict(self._checked)
+        
         # get the coordinates in the chunks
         coords = self._ch_frame_ind[indices]
         calls = {}
@@ -1088,12 +1094,12 @@ class DataSource(object):
         self.scans = scans
 
         # sort after keys given
-        labels = sorted(scans.keys())
+        self.labels = sorted(scans.keys())
 
         # empty list for the scans
         self.PS = []
 
-        for label in labels:
+        for label in self.labels:
             # we are making a copy of the root as we want to fill it
             scan = scans[label]
             s = scan['pars']
@@ -1115,21 +1121,28 @@ class DataSource(object):
             #prep.geometry = s.geometry.copy()
             #prep.xy = s.xy.copy()
             
-            source = source.lower()
-            # FIXME make data preparation decision base on a more general 'source' entry
+            if source is not None:
+                source = source.lower()
+
             if source in PtyScanTypes:
                 PS = PtyScanTypes[source]
                 logger.info('Scan %s will be prepared with the recipe "%s"' % (label, source))
                 self.PS.append(PS(prep, recipe= recipe))
-            elif source.endswith('.ptyd') or source.endswith('.pty') or str(source)=='file' or source is None:
+            elif source.endswith('.ptyd') or source.endswith('.pty') or str(source)=='file':
                 self.PS.append(PtydScan(prep, source=source))
             elif source=='test':
                 self.PS.append(MoonFlowerScan(prep))
-            else:
-                #raise RuntimeError('Could not manage scan %s' % label)
-                logger.warning('Generating dummy PtyScan for scan "%s" - This label will source only zeros as data')
+            elif source=='sim':
+                from ..simulations import SimScan
+                logger.info('Scan %s will simulated' % (label))
+                self.PS.append(SimScan(prep,s.copy()))
+            elif source=='empty' or source is None:
+                prep.recipe = None
+                logger.warning('Generating dummy PtyScan for scan `%s` - This label will source only zeros as data' % label)
                 self.PS.append(PtyScan(prep))
-                
+            else:
+                raise RuntimeError('Could not manage source "%s" for scan `%s`' % (str(source),label))
+
         # Initialize flags
         self.scan_current = -1
         self.data_available = True
@@ -1145,7 +1158,8 @@ class DataSource(object):
         """
         # get PtyScan instance to scan_number
         PS = self.PS[self.scan_current]
-
+        label = self.labels[self.scan_current]
+        
         # initialize if that has not been done yet
         if not PS.is_initialized:
             PS.initialize()
@@ -1163,6 +1177,9 @@ class DataSource(object):
         logger.info(u.verbose.report(msg))
         if msg != WAIT and msg != EOS:
             # ok that would be a data package
+            # attach inner label
+            msg['common']['ptylabel'] = label
+            #print u.verbose.report(msg)
             yield msg
 
 

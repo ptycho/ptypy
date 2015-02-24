@@ -14,7 +14,7 @@ import numpy as np
 from misc import *
 from scipy import ndimage as ndi
 
-__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho','gauss_fwhm','gf','cabs2','gf_2d']
+__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho','gauss_fwhm','gf','cabs2','gf_2d','c_gf']
 
 def cabs2(A):
     """

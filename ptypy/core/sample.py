@@ -70,10 +70,10 @@ def from_pars(shape,lam,pars=None,dtype=np.complex):
         off = u.expect2(p.offset)
         
         if p.zoom is not None:
-            obj = u.c_zoom(obj,p.zoom)
+            obj = u.zoom(obj,p.zoom)
             
         if p.smoothing_mfs is not None:
-            obj = u.c_gf(obj,p.smoothing_mfs / 2.35)
+            obj = u.gf(obj,p.smoothing_mfs / 2.35)
         
         k = 2 * np.pi / lam
         ri = p.ref_index
@@ -81,9 +81,14 @@ def from_pars(shape,lam,pars=None,dtype=np.complex):
             # use only magnitude of obj and scale to [0 1]
             if ri is None:
                 en = u.keV2m(1e-3)/lam
-                logger.info("Quering cxro database for refractive index \
-                 in object creation with paramters:\n Formula=%s Energy=%d Density=%.2f" % (p.formula,en,p.density))
-                energy, delta,beta = iofr(p.formula,en,density=p.density)
+                if u.parallel.master:
+                    logger.info("Quering cxro database for refractive index \
+                     in object creation with paramters:\n Formula=%s Energy=%d Density=%.2f" % (p.formula,en,p.density))
+                    result = np.array(iofr(p.formula,en,density=p.density))
+                else:
+                    result = None
+                result = u.parallel.bcast(result)
+                energy, delta,beta = result
                 ri = - delta +1j*beta
                 
             else:
@@ -104,7 +109,7 @@ def from_pars(shape,lam,pars=None,dtype=np.complex):
             n = u.expect2(p.noise_rms)
             noise = np.random.normal(1.0,n[0]+1e-10,obj.shape)*np.exp(2j*np.pi*np.random.normal(0.0,n[1]+1e-10,obj.shape))
             if p.noise_mfs is not None:
-                noise=u.c_gf(noise,p.noise_mfs / 2.35)
+                noise=u.gf(noise,p.noise_mfs / 2.35)
             obj*=noise
             
 
