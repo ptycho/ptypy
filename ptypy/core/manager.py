@@ -537,12 +537,10 @@ class ModelManager(object):
             phot_max = scan.diff.max_power
             
             if phot is None:
-                logger.info('Found no photon count for probe in parameters.\n \
-                            Using photon count %.2e from photon report' %phot_max)
+                logger.info('Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' %phot_max)
                 illu_pars['photons'] = phot_max
             elif np.abs(np.log10(phot)-np.log10(phot_max)) > 1:
-                logger.warn('Photon count from input parameters (%.2e) differs from \
-                            statistics (%.2e) by more than a magnitude' %(phot,phot_max))
+                logger.warn('Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' %(phot,phot_max))
 
             # find out energy or wavelength. Maybe store that information 
             # in the storages in future too avoid this weird call.

@@ -436,25 +436,39 @@ class Ptycho(Base):
         parallel.barrier()
         return destfile
         
-    def print_stats(self):
+    def print_stats(self,table_format = None, detail='summary'):
         """
         Calculates the memrory usage and other info of ptycho instance 
         """
-        space=0
+        offset = 9
         active_pods = sum(1 for pod in self.pods.values() if pod.active)
-        info ="------ Process #%d -------\n" % parallel.rank
-        info += "%15s : %7d (%7d active)\n" %('Total Pods',len(self.pods.values()), active_pods)
-        info_dbg = info
-        total = 0
+        all_pods = len(self.pods.values())
+        info = '\n'
+        info += "Process #%d ---- Total Pods %d (%d active) ----" % (parallel.rank,all_pods,active_pods )+'\n'
+        info += '-'*80 +'\n'
+        desc =dict([('memory','Memory'),('shape','Shape'),('psize','Pixel size'),('dimension','Dimensions'),('views','Views')])
+        units = dict([('memory','(MB)'),('shape','(Pixel)'),('psize','(meters)'),('dimension','(meters)'),('views','act.')])
+        _table = [('memory',6),('shape',15),('psize',15),('dimension',15),('views',5)]
+        table_format = _table if table_format is None else table_format
+        offset = 9
+        h1="(C)ontnr".ljust(offset)
+        h2="(S)torgs".ljust(offset)
+        for key,column in table_format:
+            h1 += " : " + desc[key].ljust(column)
+            h2 += " : " + units[key].ljust(column)
+        
+        info += h1 + '\n' + h2 +'\n'
+        info += '-'*80 +'\n'
+           
+        
         for ID,C in self.containers.iteritems():
-            space,other = C.info()
-            info += "Container %5s : %7.2f MB\n" % (ID,space / 1e6)
-            info += other 
-            total += space
-        info += "%15s : %7.2f MB\n" % ('Total memory',total /1e6)
-
-        for ID,C in self.containers.iteritems():
-            info += C.report()
+            info += C.formatted_report(offset,table_format)
+        
+        info += '\n'
+        if str(detail)!='summary':
+            for ID,C in self.containers.iteritems():
+                info += C.report()
+        
 
         logger.info(info,extra={'allprocesses':True})
         #logger.debug(info,extra={'allprocesses':True})

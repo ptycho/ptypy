@@ -715,7 +715,54 @@ class Storage(Base):
         info += "Dimensions (meters): %g x %g\n" % (self.psize[0] * self.data.shape[-2], self.psize[1] * self.data.shape[-1])
         info += "Number of views: %d\n" % len(self.views)
         return info
-
+    
+    def formatted_report(self,table_format=None,align='right',seperator=" : "):
+        """
+        Returns formatted string and a dict with the respective information
+        
+        :param: table_format, list of key,value pairs where key is the 
+                requested item and value the format
+        
+        :returns: formated string and dict with the respective info
+        """
+        dct ={}
+        fstring = ""
+        _table = [('memory',8),('shape',17),('psize',15),('dimension',15),('views',5),('dtype',8)]
+        table_format = _table if table_format is None else table_format
+        for key,column in table_format:
+            if str(key)=='shape':
+                dct[key] = tuple(self.data.shape)
+                info = '%d x %d x %d' % dct[key]
+            elif str(key)=='psize':
+                dct[key] = tuple(self.psize)
+                info = '%.2e x %.2e' % tuple(dct[key])
+                info = info.split('e',1)[0]+info.split('e',1)[1][3:]
+            elif str(key)=='dimension':
+                dct[key] = (self.psize[0] * self.data.shape[-2], self.psize[1] * self.data.shape[-1])
+                info = '%.2e x %.2e' % tuple(dct[key])
+                info = info.split('e',1)[0]+info.split('e',1)[1][3:]
+            elif str(key)=='memory':
+                dct[key] = float(self.data.nbytes) /1e6
+                info = '%.1f' % dct[key]
+            elif str(key)=='dtype':
+                dct[key] = self.data.dtype
+                info = dct[key].str
+            elif str(key)=='views':
+                dct[key] = len(self.views)
+                info = str(dct[key])
+            else:
+                dct[key] = None
+                info = ""
+                
+            fstring += seperator
+            if str(align)=='right':
+                fstring += info.rjust(column)[-column:]
+            else:
+                fstring += info.ljust(column)[:column]
+                
+        return fstring, dct
+    
+            
     def __getitem__(self, v):
         """
         Storage[v]
@@ -1055,6 +1102,38 @@ class Container(Base):
             info += s.report()
         return info
 
+    def formatted_report(self,offset=8,table_format=None,align='right',seperator=" : "):
+        """
+        Returns formatted string and a dict with the respective information
+        
+        :param: table_format, list of key,value pairs where key is the 
+                requested item and value the format
+        
+        :returns: formated string and dict with the respective info
+        """
+        dct ={}
+        id_length = offset
+        _table = [('memory',6),('shape',15),('psize',15),('dimension',15),('views',4)]
+        table_format = _table if table_format is None else table_format
+        mem = 0
+        info = ""
+        for ID,s in self.S.iteritems():
+            fstring, stats = s.formatted_report(table_format,align,seperator)
+            info += str(ID).ljust(id_length) 
+            info += fstring
+            info += '\n'
+            mem += stats.get('memory',0)
+            
+        fstring = str(self.ID).ljust(id_length)+seperator  
+        fstring += ('%.1f' % mem).rjust(table_format[0][1]) + seperator
+        try:
+            t = str(self.dtype).split("'")[1].split(".")[1]
+        except:
+            t = str(self.dtype)
+        fstring += t.rjust(table_format[0][1])
+        fstring += '\n'
+        fstring += info
+        return fstring
 
     def __getitem__(self,view):
         """

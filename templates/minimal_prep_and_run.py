@@ -30,5 +30,5 @@ p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'ML'
 p.engines.engine01.numiter = 100
 
-P = Ptycho(p,level=3)
-P.save_run(kind='minimal')
+P = Ptycho(p,level=2)
+#P.save_run(kind='minimal')

@@ -106,17 +106,29 @@ logger.addFilter(consolefilter)
 
 level_from_verbosity = {0:logging.CRITICAL, 1:logging.ERROR, 2:logging.WARN, 3:logging.INFO, 4:logging.DEBUG}
 level_from_string = {'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 'INFO':logging.INFO, 'DEBUG':logging.DEBUG}
+vlevel_from_logging = dict([(v,k) for k,v in level_from_verbosity.items()]) 
+slevel_from_logging = dict([(v,k) for k,v in level_from_string.items()]) 
 
 def set_level(level):
     """
     Set verbosity level. Kept here for backward compatibility
     """
+    logger.info('Verbosity set to %s' % str(level))
     if str(level) == level:
         logger.setLevel(level_from_string[level.upper()])
     else:
         logger.setLevel(level_from_verbosity[level])
     logger.info('Verbosity set to %s' % str(level))
 
+def get_level(num_or_string='num'):
+    """
+    inverse to get level
+    """
+    if num_or_string=='num':
+        return vlevel_from_logging[logger.level]
+    else:
+        return slevel_from_logging[logger.level]
+        
 # Formatting helper
 def _(label, value):
     return '%-25s%s' % (label + ':', str(value))
@@ -129,7 +141,7 @@ def report(thing,depth=4,maxchar=80):
     import time
     import numpy as np
     
-    header = '##### NODE %02d ###### ' % parallel.rank + time.asctime() + ' ######\n' 
+    header = '\n---- Process #%d ---- ' % parallel.rank + time.asctime() + ' -----\n' 
     indent = 2
     level = 0
     

@@ -244,24 +244,32 @@ class PtyScan(object):
 
         if parallel.master or self.load_common_in_parallel:
             self.common = self.load_common()
-            
+            # FIXME
+            # Replace Nones, because we cannot broadcast them later
+            # I don't get it, why didn't we allow for a missing key?
+            # Also I disagree that we should enforce a 'weight2d' or 
+            # positions. The user can very well add them later. 
+            self.common = dict([(k,v) if v is not None else (k,np.array([])) for k,v in self.common.items() ])
+
         # broadcast
         if not self.load_common_in_parallel:
             parallel.bcast_dict(self.common)
 
         self.common = u.Param(self.common)
         assert 'weight2d' in self.common and 'positions_scan' in self.common
-        
+            
         logger.info('\n ---------- Analysis of the "common" arrays  ---------- \n')
         # Check if weights (or mask) have been loaded by load_common.
         weight2d = self.common.weight2d
-        self.has_weight2d = weight2d is not None
-        logger.info('Check for weight or mask,  "weight2d"  .... %s\n' % str(self.has_weight2d))
+        self.has_weight2d = weight2d is not None and len(weight2d)>0
+        logger.info('Check for weight or mask,  "weight2d"  .... %s : shape = %s\n' % (str(self.has_weight2d),str(weight2d.shape)))
 
+            
         # Check if positions have been loaded by load_common
         positions = self.common.positions_scan
         self.has_positions = positions is not None and len(positions)>0
-        logger.info('Check for positions, "positions_scan" .... %s' % str(self.has_positions))
+        logger.info('Check for positions, "positions_scan" .... %s : shape = %s' % (str(self.has_positions),str(positions.shape)))
+
 
         if self.info.positions_theory  is not None:
             logger.info('Skipping experimental positions `positions_scan`')
@@ -293,10 +301,10 @@ class PtyScan(object):
         
         parallel.barrier()
         
-        logger.info('#######  MPI Report: ########\n')
+        #logger.info('#######  MPI Report: ########\n')
         self.report(what=self.common)
         parallel.barrier()
-        logger.info(' ----------  Analyis done   ---------- \n\n')
+        logger.info('\n ----------  Analyis done   ---------- \n\n')
 
         if self.info.save is not None and parallel.master:
             logger.info('Appending common dict to file %s\n' % self.info.dfile)
@@ -333,10 +341,15 @@ class PtyScan(object):
         returns:
             common : dict of numpy arrays
                     At least two keys, `weight2d` and `positions_scan` must be given (they can be None)
+                    
+        FIXME : I am not so much in favor of the fact that we are forced to transmit Nones
+                here or that the user is forced to know about that here.
+                This part was originally considered optional
         """
-
-        return {'weight2d': np.ones(u.expect2(self.info.shape), dtype='bool'),
-                'positions_scan': np.indices((self.num_frames, 2)).sum(0)}
+        weight2d = None if self.info.shape is None else np.ones(u.expect2(self.info.shape), dtype='bool') 
+        positions_scan = None if self.num_frames is None else np.indices((self.num_frames, 2)).sum(0)
+        return {'weight2d': weight2d,
+                'positions_scan': positions_scan}
 
     def _mpi_check(self, chunksize, start=None):
         """
@@ -554,12 +567,15 @@ class PtyScan(object):
 
             # slice positions from common if they are empty too
             if positions is None or len(positions) == 0:
-                try:
-                    chunk.positions = self.info.get('positions_theory', self.info.get('positions_scan'))[
-                        indices.chunk]
-                except:
-                    logger.info('slicing position information failed')
-                    chunk.positions = None
+                pt =  self.info.positions_theory
+                if pt is not None:
+                    chunk.positions = pt[indices.chunk]
+                else:
+                    try:
+                        chunk.positions = self.info.positions_scan[indices.chunk]
+                    except:
+                        logger.info('Unable to slice position information from experimental or theoretical ressource')
+                        chunk.positions = [None]*len(indices.chunk)
             else:
                 # a dict : sort positions to indices.chunk
                 # this may fail if there a less positions than scan points (unlikely)
@@ -1051,6 +1067,7 @@ class MoonFlowerScan(PtyScan):
         moon = resources.moon_pr(self.G.shape)
         moon /= np.sqrt(u.abs2(moon).sum() / 1e8)
         self.pr = moon
+        self.load_common_in_parallel = True
         
     def load_common(self):
         """

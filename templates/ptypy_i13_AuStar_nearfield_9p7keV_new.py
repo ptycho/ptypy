@@ -84,7 +84,7 @@ sim.sample.fill = 1.0+0.j                     # (62) if object is smaller than t
 sim.sample.obj = None                         # (63) override
 
 sim.detector = 'GenericCCD32bit' 
-
+p.model.update(sim.copy(depth=4))
 p.model.coherence = u.Param()
 p.model.coherence.Nprobe_modes = 1               # (65) 
 p.model.coherence.Nobject_modes = 1               # (66) 
@@ -98,19 +98,21 @@ p.model.sharing.object_share_power = 1            # (72) contribution to the sha
 p.model.sharing.probe_shared_with = None          # (73) `scan_label` of scan for the shared probe
 p.model.sharing.probe_share_power = 1             # (74) contribution to the shared probe
 
-p.model.sample = u.Param()
+#p.model.sample = u.Param()
 p.model.sample.source=None
-p.model.xy = u.Param()
+#p.model.xy = u.Param()
 p.model.xy.scan_type=None
-p.model.illumination = sim.illumination.copy()
+#p.model.illumination = sim.illumination.copy()
 p.model.illumination.phase_noise_rms = None
 
 p.scans = u.Param()
 p.scans.sim = u.Param()
 p.scans.sim.data=u.Param()
 p.scans.sim.data.source = 'sim' 
-p.scans.sim.data.recipe = sim 
-p.scans.sim.data.save = 'append'
+p.scans.sim.data.recipe = sim.copy(depth=4) 
+p.scans.sim.data.save = None #'append'
+p.scans.sim.data.shape = None
+p.scans.sim.data.num_frame = None
 #p.scans.scan002 = u.Param()
 #p.scans.scan002.sharing = u.Param()
 #p.scans.scan002.sharing.probe_shared_with = 'scan001'
@@ -154,6 +156,6 @@ p.engines.engine00.fourier_relax_factor = 0.1
 #p.engines.engine01.numiter = 50
 
 
-P = Ptycho(p,level=3)
-P.save_run(kind='minimal')
+P = Ptycho(p,level=2)
+#P.save_run(kind='minimal')
          

@@ -24,7 +24,8 @@ else:
     from ..core.ptycho import Ptycho
     from ..core.manager import scan_DEFAULT
 
-    
+logger = u.verbose.logger
+
 DEFAULT = u.Param(
     pos_noise = 1e-10,  # (float) unformly distributed noise in xy experimental positions
     pos_scale = 0,      # (float, list) amplifier for noise. Will be extended to match number of positions. Maybe used to only put nois on individual points  
@@ -33,6 +34,7 @@ DEFAULT = u.Param(
     frame_size = None ,   # (None, or float, 2-tuple) final frame size when saving if None, no cropping/padding happens
     psf = None,          # (None or float, 2-tuple, array) Parameters for gaussian convolution or convolution kernel after propagation
                         # use it for simulating partial coherence
+    verbose_level = 1, # verbose level when simulating
 )
 
 __all__ = ['SimScan']
@@ -55,9 +57,6 @@ class SimScan(PtyScan):
         
         # we don't want a server
         pp.interaction = None
-        
-        # be as silent as possible
-        pp.verbose_level = 3
        
         # get scan parameters
         if scan_pars is None:
@@ -74,6 +73,10 @@ class SimScan(PtyScan):
         self.rinfo = rinfo
         self.info.recipe = rinfo
         
+        # be as silent as possible
+        self.verbose_level = u.verbose.get_level()
+        pp.verbose_level = rinfo.verbose_level
+        
         # update changes specified in recipe
         pp.model.update(rinfo, Replace=False)
 
@@ -88,18 +91,22 @@ class SimScan(PtyScan):
         pp.scans.sim.data.auto_center = False
         
         # Now we let Ptycho sort out things
+        logger.info('Generating simulating Ptycho instance for scan `%s`.' % str(self.info.get('label')))
         P=Ptycho(pp,level=2)
         P.modelm.new_data()
-        
         u.parallel.barrier()
+        
+        # Be now as verbose as before
+        u.verbose.set_level(self.verbose_level )
         
         #############################################################
         # Place here additional manipulation on position and sample #
-        
+        logger.info('Calling inline manipulation function.')
         P = self.manipulate_ptycho(P)
         #############################################################        
         
         # Simulate diffraction signal
+        logger.info('Propagating exit waves.')
         for name,pod in P.pods.iteritems():
             if not pod.active: continue
             pod.diff += conv(u.abs2(pod.fw(pod.exit)),rinfo.psf)
@@ -121,6 +128,7 @@ class SimScan(PtyScan):
    
         ID,Sdiff = P.diff.S.items()[0]
         for view in Sdiff.views:
+            logger.info('Collectiong simulated `raw` data.')
             ind = view.layer
             dat, mask = acquire(view.data) 
             view.data = dat
@@ -135,10 +143,11 @@ class SimScan(PtyScan):
         # Fix the number of available frames
         num = np.array([len(self.diff)])
         u.parallel.allreduce(num)
-        self.num_frames = np.min((num[0],self.num_frames))
-        
+        self.num_frames = np.min((num[0],self.num_frames)) if self.num_frames is not None else num[0]
+        logger.info('Setting frame count to %d.' %self.num_frames)
         # Create 'raw' ressource buffers. We will let the master node keep them
         # as memary may be short (Not that this is the most efficient type)
+        logger.debug('Gathering data at master node.')
         self.diff = u.parallel.gather_dict(self.diff)
         self.mask = u.parallel.gather_dict(self.mask)
         self.pos = u.parallel.gather_dict(self.pos)
@@ -148,6 +157,7 @@ class SimScan(PtyScan):
         
         
         # RESET THE loadmanager
+        logger.debug('Resetting loadmanager().')
         u.parallel.loadmanager.reset()
         
     
@@ -172,7 +182,7 @@ class SimScan(PtyScan):
         ptycho.print_stats()
         #ptycho.plot_overview()
         #u.pause(20.)
-        
+        u.parallel.barrier()
         return ptycho
     
 if __name__ == "__main__":
