@@ -325,12 +325,14 @@ class BasicFarfieldPropagator(object):
         self.grids_det = [V,W]
         
         # quadratic phase + shift factor before fft
-        pre = np.exp(1j * np.pi * (X**2+Y**2) / lz ).astype(self.dtype)
-        self.pre_fft = pre*np.exp(-2.0*np.pi*1j*((X-X[0,0])*V[0,0]+(Y-Y[0,0])*W[0,0])/ lz).astype(self.dtype)
+        self.pre_curve = np.exp(1j * np.pi * (X**2+Y**2) / lz ).astype(self.dtype)
+        #self.pre_check = np.exp(-2.0*np.pi*1j*((X-X[0,0])*V[0,0]+(Y-Y[0,0])*W[0,0])/ lz).astype(self.dtype)
+        self.pre_fft = self.pre_curve*np.exp(-2.0*np.pi*1j*((X-X[0,0])*V[0,0]+(Y-Y[0,0])*W[0,0])/ lz).astype(self.dtype)
         
         # quadratic phase + shift factor before fft
-        post=np.exp(1j * np.pi * (V**2+W**2) / lz ).astype(self.dtype)
-        self.post_fft = post*np.exp(-2.0*np.pi*1j*(X[0,0]*V+Y[0,0]*W)/ lz).astype(self.dtype)
+        self.post_curve = np.exp(1j * np.pi * (V**2+W**2) / lz ).astype(self.dtype)
+        #self.post_check = np.exp(-2.0*np.pi*1j*(X[0,0]*V+Y[0,0]*W)/ lz).astype(self.dtype)
+        self.post_fft = self.post_curve*np.exp(-2.0*np.pi*1j*(X[0,0]*V+Y[0,0]*W)/ lz).astype(self.dtype)
 
         # factors for inverse operation
         self.pre_ifft = self.post_fft.conj()

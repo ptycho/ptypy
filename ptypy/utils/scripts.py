@@ -11,12 +11,43 @@ from scipy import ndimage as ndi
 import numpy as np
 from misc import *
 import parallel
+from math_utils import *
+from array_utils import *
 
-__all__ = ['hdr_image',
+__all__ = ['hdr_image','diversify',
             'xradia_star','png2mpg','mass_center','phase_from_dpc',
             'radial_distribution','stxm_analysis','stxm_analysis',
-             ]
+             'load_from_ptyr']
 
+def diversify(A,noise = None,shift = None,power = 1.0):
+    """
+    add diversity to 3d numpy array A, acts in place
+    
+    :noise: noise-tuple, see parallel.MPInoise2d
+    :power: relative power of layers with respect to the first (0) layer.
+            can be scalar or tuple / array
+    """
+    if noise is not None:
+        noise = parallel.MPInoise2d(A.shape, *noise)
+        # no noise where the  main mode is
+        noise[0] = 1.0
+        A*=noise
+        
+    if shift is not None:
+        raise NotImplementedError('Diversity introduced by lateral shifts is not yet implemented')
+        
+    # expand power to length
+    p = (power,) if np.isscalar(power) else tuple(power)
+    # check
+    append = A.shape[0]-1-len(p)
+    if append >= 1:
+        p += (p[-1],)*append
+    else:
+        p  = p[:A.shape[0]-1]
+    power = np.array((1.0,)+p).reshape((A.shape[0],)+(1,)*(len(A.shape)-1))
+    power /= power.sum()
+    A*=np.sqrt(power)
+    
     
 def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],avg_type='highest',mask_list=[],ClipLongestExposure=False,ClipShortestExposure=False):
     """
@@ -372,7 +403,7 @@ def stxm_analysis(storage,probe=None):
     v = s.views[0]
     pp = v.pods.values()[0].pr_view
     if probe is None:
-        pr = np.abs(pp.data).sum(0)
+        pr = np.abs(pp.data)#.sum(0)
     elif np.isscalar(probe):
         x,y = grids(pp.shape[-2:])
         pr = np.exp(-(x**2+y**2)/probe**2)
@@ -385,7 +416,8 @@ def stxm_analysis(storage,probe=None):
         if not pod.active: continue
         t = pod.diff.sum()
         if t > t2: t2=t
-        ss = (v.layer,slice(v.roi[0,0],v.roi[1,0]),slice(v.roi[0,1],v.roi[1,1]))
+        ss = v.slice
+        #ss = (v.layer,slice(v.roi[0,0],v.roi[1,0]),slice(v.roi[0,1],v.roi[1,1]))
         #bufview=buf[ss]
         m = mass_center(pod.diff) #+ 1.
         q = pod.di_view.storage._to_phys(m)
@@ -408,7 +440,25 @@ def stxm_init(storage,probe=None):
     trans,dpc_row,dpc_col = stxm_analysis(storage,probe)
     s.data = trans*np.exp(-1j*phase_from_dpc(dpc_row,dpc_col))
     
-
+def load_from_ptyr(filename,what='probe',ID=None,layer=None):
+    from .. import io
+    
+    header = io.h5read(filename,'header')['header']
+    if str(header['kind']) == 'fullflat':
+        raise NotImplementedError('Loading specific data from flattened dump not yet supported')
+    else:
+        if ID is not None:
+            address ='content/'+str(what)+'/'+str(ID)
+            storage = io.h5read(filename,address)[address]
+        else:
+            address = 'content/'+str(what)
+            conti = io.h5read(filename,address)[address]
+            storage = conti.values()[0]
+        if layer is None:
+            return storage['data']
+        else:
+            return storage['data'][layer]
+        
 def phase_from_dpc(dpc_row,dpc_col):
     """
     Implements fourier integration method for two diffential quantities.

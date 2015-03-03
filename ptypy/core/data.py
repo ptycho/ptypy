@@ -1059,7 +1059,9 @@ class MoonFlowerScan(PtyScan):
         self.pixel = np.round(pixel).astype(int) + 10
         frame = self.pixel.max(0) + 10 + G.shape
         self.G = G
-        
+        #from matplotlib import pyplot as plt
+        #plt.figure(200);plt.imshow(u.imsave(G.propagator.pre_ifft))
+        #plt.figure(101);plt.imshow(G.propagator.grids_det[0]**2+G.propagator.grids_det[1]**2)
         # get object
         self.obj = resources.flower_obj(frame) 
         

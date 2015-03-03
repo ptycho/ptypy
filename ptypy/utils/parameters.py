@@ -254,7 +254,7 @@ class Param(dict):
         else:
             return []
 
-    def update(self, __d__=None,Convert=False,Replace=True, **kwargs):
+    def update(self, __d__=None,in_place_depth=0,Convert=False, **kwargs):
         """
         Update Param - almost same behavior as dict.update, except
         that all dictionaries are converted to Param, and update
@@ -266,8 +266,8 @@ class Param(dict):
                   If True, convert all dict-like values in self also to Param
                   *WARNING* 
                   This mey result in misdirected references in your environment
-        Replace : bool (True)
-                  If False, values in self are not replaced by but 
+        in_place_depth : int (0)
+                  Counter for recursive in-place updates 
                   updated with the new values.
         """
         def _k_v_update(k,v):
@@ -275,9 +275,17 @@ class Param(dict):
             if Convert and hasattr(v, 'keys'):
                 #print 'converting'
                 v = Param(v)
+            # new key 
+            if not self.has_key(k):
+                self[k] = v
             # If this key already exists and is already dict-like, update it
-            if not Replace and hasattr(self.get(k, None), 'keys'):
-                self[k].update(v)
+            elif in_place_depth > 0  and hasattr(v,'keys'):
+                if isinstance(self[k],self.__class__):
+                    # Param gets recursive in_place updates
+                    self[k].update(v, in_place_depth - 1)
+                else:
+                    # dicts are only updated in-place once
+                    self[k].update(v)
             # Otherwise just replace it
             else:
                 self[k] = v

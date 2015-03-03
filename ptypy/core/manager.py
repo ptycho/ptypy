@@ -112,7 +112,7 @@ class ModelManager(object):
 
         # Initialize the input parameters
         p = u.Param(self.DEFAULT.copy())
-        p.update(pars, Replace=False)
+        p.update(pars, in_place_depth = 4)
         self.p = p
         #print '############### HERE'
         #print u.verbose.report(p)

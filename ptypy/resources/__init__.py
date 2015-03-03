@@ -3,6 +3,7 @@ import pkg_resources
 flowerfile = pkg_resources.resource_filename(__name__,'flowers.jpg')
 moonfile = pkg_resources.resource_filename(__name__,'moon.jpg')
 
+
 def flower_obj(shape=None):
     from ptypy import utils as u
     import numpy as np
@@ -27,3 +28,15 @@ def moon_pr(shape=None):
         im = u.zoom(im,sh/ish)
         
     return im
+
+
+
+
+
+objects = dict(
+    flower = flower_obj
+)
+
+probes = dict(
+    moon = moon_pr
+)

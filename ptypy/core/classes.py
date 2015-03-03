@@ -975,9 +975,9 @@ class Container(Base):
     def dtype(self):
         # get datatype
         if self.data_type == 'complex':
-            return self.owner.CType
+            return self.owner.CType if self.owner is not None else np.complex128
         elif self.data_type == 'real':
-            return self.owner.FType
+            return self.owner.FType if self.owner is not None else np.float64
         else:
             return self.data_type
             

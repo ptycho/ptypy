@@ -416,7 +416,8 @@ class Ptycho(Base):
                 #io.h5write(destfile,header=header,content=content)
                 
             elif kind == 'minimal':
-                self.interactor.stop()
+                if self.interactor is not None:
+                    self.interactor.stop()
                 logger.info('Generating copies of probe, object and parameters and runtime')
                 minimal = u.Param()
                 minimal.probe = {ID : S._to_dict() for ID,S in self.probe.S.items()}
