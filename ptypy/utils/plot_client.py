@@ -6,8 +6,12 @@ import time
 import numpy as np
 from threading import Thread, Lock
 
-from .verbose import logger
-from .parameters import Param
+if __name__ == "__main__":
+    from ptypy.utils.verbose import logger, report
+    from ptypy.utils.parameters import Param
+else:
+    from .verbose import logger, report
+    from .parameters import Param
 
 class PlotClient(object):
     """
@@ -23,7 +27,7 @@ class PlotClient(object):
         Create a client and attempt to connect to a running reconstruction server.
         """
         # This avoids circular imports.
-        from ..io.interaction import Client
+        from ptypy.io.interaction import Client
 
         # If client_pars is None, connect with the defaults defined in ptypy.io.interaction
         self.client = Client(client_pars)
@@ -101,7 +105,12 @@ class PlotClient(object):
         Wait for reconstruction to start, then grab synchronously basic information
         for initialization.
         """
-
+        logger.info('Requesting configuration parameters')
+        self.config = self.client.get_now("Ptycho.p.plotclient")
+        logger.info('I have received the following configuration:')
+        logger.info(report(self.config))
+        
+        
         # Wait until reconstruction starts.
         logger.info('Waiting for reconstruction to start...')
         ready = self.client.get_now("'start' in Ptycho.runtime")
@@ -153,7 +162,7 @@ class PlotClient(object):
             for cmd, item in self.cmd_dct.iteritems():
                 item[1][item[2]] = self.client.data[item[0]]
             # An extra step for the error. This should be handled differently at some point.
-            self.error = np.array([info['error'].sum(0) for info in self.runtime.iter_info])
+            # self.error = np.array([info['error'].sum(0) for info in self.runtime.iter_info])
             self._new_data = True
         self.client.flush()
 

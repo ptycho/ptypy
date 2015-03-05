@@ -47,6 +47,9 @@ def basic_fourier_update(diff_view,mask_view,pbound=None,alpha=1.):
     # buffer for accumulated photons
     af2= np.zeros_like(diff_view.data) 
     
+    # for log likelihood error
+    LL= np.zeros_like(diff_view.data) 
+    
     # get the mask
     fmask = mask_view.data if mask_view is not None else np.ones_like(af2)
     
@@ -55,10 +58,12 @@ def basic_fourier_update(diff_view,mask_view,pbound=None,alpha=1.):
         if not pod.active: continue
         f[name]=( pod.fw( (1+alpha)*pod.probe*pod.object - alpha* pod.exit ))
         af2 += u.abs2(f[name])
+        LL +=  u.abs2(pod.fw( pod.probe*pod.object))
         
     # calculate deviations from measured data
-    I = np.abs(diff_view.data)
-    err_phot = np.sum(fmask*(af2 - I)**2/(I+1.))/fmask.sum()
+    I = diff_view.data
+    err_phot = np.sum(fmask*np.square(LL - I)/(I+1.)) /np.prod(LL.shape)
+
     fmag = np.sqrt(np.abs(I))
     af=np.sqrt(af2)
     fdev = af - fmag 

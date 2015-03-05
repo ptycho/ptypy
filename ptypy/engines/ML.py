@@ -101,7 +101,7 @@ class ML(BaseEngine):
         # Compute new gradient
         ########################
         
-        new_ob_grad, new_pr_grad = self.ML_model.new_grad() 
+        new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad() 
 
         if (self.p.probe_update_start <= self.curiter):
             # Apply probe support if needed
@@ -186,7 +186,7 @@ class ML(BaseEngine):
             s.data += tmin*self.pr_h.S[name].data
         # Newton-Raphson loop would end here
 
-        return np.array([[self.ML_model.LL[0]] * 3]) 
+        return error_dct  #np.array([[self.ML_model.LL[0]] * 3]) 
 
     def engine_finalize(self):
         """
@@ -305,7 +305,8 @@ class ML_Gaussian(object):
             DI = Imodel - I
 
             # Second pod loop: gradients computation
-            LLL = 0.
+            LLL = np.sum((w * DI**2).astype(np.float64))
+            #print LLL
             for name,pod in diff_view.pods.iteritems():
                 if not pod.active: continue
                 xi = pod.bw(w*DI*f[name])
@@ -313,10 +314,11 @@ class ML_Gaussian(object):
                 pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
                 # Negative log-likelihood term
-                LLL += (w * DI**2).sum()
+                #LLL += (w * DI**2).sum()
 
-            LLL /= self.tot_measpts
+            #LLL 
             diff_view.error = LLL
+            error_dct[dname]= np.array([0,LLL / np.prod(DI.shape),0])
             LL += LLL
 
         # MPI reduction of gradients
@@ -331,9 +333,9 @@ class ML_Gaussian(object):
             for name,s in self.ob.S.iteritems():
                 ob_grad.S[name].data += self.regularizer.grad(s.data)
 
-        self.LL = LL
+        self.LL = LL / self.tot_measpts
         
-        return ob_grad, pr_grad
+        return ob_grad, pr_grad, error_dct
 
     def poly_line_coeffs(self, ob_h, pr_h):
         """

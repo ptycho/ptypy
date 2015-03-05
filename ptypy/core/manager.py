@@ -258,12 +258,14 @@ class ModelManager(object):
         For any additional file in data.filelist it will create a new entry in 
         self.scans with generic parameters given by the current model.
         """
+        """
         if data_pars is not None:
             filelist = data_pars.get('filelist')
         if filelist is not None:
             for f in filelist:
                 scan = self.prepare_scan()
                 scan.pars.data_file = f
+        """
         # now there should be little suprises. every scan is listed in 
         # self.scans
         for label, scan in self.scans.items():
@@ -542,6 +544,7 @@ class ModelManager(object):
             elif np.abs(np.log10(phot)-np.log10(phot_max)) > 1:
                 logger.warn('Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' %(phot,phot_max))
 
+            """
             # find out energy or wavelength. Maybe store that information 
             # in the storages in future too avoid this weird call.
             geo = s.views[0].pod.geometry
@@ -553,6 +556,9 @@ class ModelManager(object):
             pr = illumination.from_pars(s.shape[-2:], s.psize, geo.lam, off, illu_pars)
             pr = illumination.create_modes(s.shape[-3], pr)
             s.fill(pr.probe)
+            """
+            illumination.init_storage(s,illu_pars)
+            
             s.reformat()  # maybe not needed
             s.model_initialized = True
 
@@ -573,7 +579,9 @@ class ModelManager(object):
                 continue
             else:
                 logger.info('Initializing object storage %s using scan %s' % (oid, scan.label))
-
+            
+            sample.init_storage(s,sample_pars)
+            """
             if sample_pars.get('source') == 'diffraction':
                 logger.info('STXM initialization using diffraction data')
                 trans, dpc_row, dpc_col = u.stxm_analysis(s)
@@ -586,7 +594,7 @@ class ModelManager(object):
                 obj = sample.from_pars(s.shape[-2:], lam, sample_pars)
                 obj = sample.create_modes(s.shape[-3], obj)
                 s.fill(obj.obj)
-
+            """
             s.reformat()  # maybe not needed
             s.model_initialized = True
 

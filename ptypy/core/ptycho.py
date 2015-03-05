@@ -24,11 +24,29 @@ import data
 
 __all__ = ['Ptycho']
 
+DEFAULT_plotclient = u.Param(
+    active = True,
+    interval = 1,
+    layout = {},
+    dump = True,
+    dump_interval = None,
+    make_movie = True,
+)
+
+DEFAULT_autosave = u.Param(
+    interval = 10,  # if None or False : no saving else save with this given interval
+    probes = None,  # list of probe IDs for autosaving, if None save all [Not implemented]
+    objects = None, # list of object IDs for autosaving, if None, save all [Not implemented]
+)
+
+
+
 Ptycho_DEFAULT = u.Param(
         verbose_level = 3,      # Verbosity level
         data_type = 'single',   # 'single' or 'double' precision for reconstruction
-        data = {},              # Experimental scan information (probably empty at first)
-        model = {},          # POD creation rules.
+        dry_run = False,        # do actually nothing if True [not implemented]
+        autosave = DEFAULT_autosave,        # (None or False, int) If an integer, specifies autosave interval, if None or False: no autosave
+        scan = {},          # POD creation rules.
         scans=u.Param(),
         # The following 4 are now subset of model
         #scans = {},             # Sub-structure that can contain scan-specific parameters for categories 'illumination', 'sample', 'geometry'
@@ -39,7 +57,7 @@ Ptycho_DEFAULT = u.Param(
         engines = [u.Param(name='Dummy')],           # Reconstruction algorithms
         engine = engines.DEFAULTS.copy(),
         interaction = {}, # Client-server communication,
-        plotting = {}          # Plotting parameters for a client
+        plotclient = DEFAULT_plotclient   # Plotting parameters for a client
     )
 
 
@@ -165,12 +183,12 @@ class Ptycho(Base):
         ###################################
         
         # Initialize the model manager
-        self.modelm = ModelManager(self, p.model)
+        self.modelm = ModelManager(self, p.scan)
     
     def init_data(self):
         # Create the data source object, which give diffraction frames one
         # at a time, supporting MPI sharing.
-        self.datasource = self.modelm.make_datasource(self.p.data) 
+        self.datasource = self.modelm.make_datasource() 
        
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs.
@@ -233,6 +251,14 @@ class Ptycho(Base):
         if self.runtime.get('iter_info') is None:
             self.runtime.iter_info = []
         
+        # Note when the last autosave was carried out
+        if self.runtime.get('last_save') is None:
+            self.runtime.last_save = 0
+        
+        # maybe not needed
+        if self.runtime.get('last_plot') is None:
+            self.runtime.last_plot = 0
+            
         # Run all engines sequentially
         for run_label in self.run_labels:
             
@@ -260,11 +286,23 @@ class Ptycho(Base):
                 # One iteration
                 engine.iterate()
                 
-                # Display runtime information
+                # Display runtime information and do saving
                 if parallel.master: 
                     info = self.runtime.iter_info[-1]
-                    logger.info(('Iteration #%(iteration)d of %(engine)s :: Time %(duration).2f \t' % info) + ('Error ' + str(info['error'].sum(0))))
-            
+                    # calculate Error:
+                    err = np.array(info['error'].values()).mean(0)
+                    logger.info('Iteration #%(iteration)d of %(engine)s :: Time %(duration).2f' % info) 
+                    logger.info('Errors :: Fourier %.2e, Photons %.2e, Exit %.2e' % tuple(err) )
+                    
+                if self.p.autosave is not None and self.p.autosave.interval > 1:
+                    if engine.curiter >= self.runtime.last_save + self.p.autosave.interval:
+                        auto = self.paths.auto_file
+                        logger.info('----- Autosaving -----')
+                        self.save_run(auto,'dump')
+                        self.runtime.last_save = engine.curiter
+                        logger.info('----------------------')
+                        
+                parallel.barrier()
             # Done. Let the engine finish up    
             engine.finalize()
     
@@ -373,7 +411,7 @@ class Ptycho(Base):
         import save_load
         from .. import io
         
-        destfile = self.paths.save_file
+        destfile = self.paths.recon_file
         if alt_file is not None: 
             destfile = u.clean_path(alt_file)
 
@@ -415,21 +453,35 @@ class Ptycho(Base):
                 content = save_load.unlink(self)
                 #io.h5write(destfile,header=header,content=content)
                 
-            elif kind == 'minimal':
-                if self.interactor is not None:
-                    self.interactor.stop()
+            elif kind == 'dump':
+                #if self.interactor is not None:
+                #    self.interactor.stop()
                 logger.info('Generating copies of probe, object and parameters and runtime')
+                dump = u.Param()
+                dump.probe = {ID : S._to_dict() for ID,S in self.probe.S.items()}
+                dump.obj = {ID : S._to_dict() for ID,S in self.obj.S.items()}
+                dump.pars = self.p.copy()#_to_dict(Recursive=True)
+                dump.runtime = self.runtime.copy()
+                # discard some bits of runtime to save space
+                dump.runtime.iter_info = [self.runtime.iter_info[-1]]
+
+                content=dump
+                
+            elif kind == 'minimal':
+                #if self.interactor is not None:
+                #    self.interactor.stop()
+                logger.info('Generating shallow copies of probe, object and parameters and runtime')
                 minimal = u.Param()
                 minimal.probe = {ID : S._to_dict() for ID,S in self.probe.S.items()}
                 minimal.obj = {ID : S._to_dict() for ID,S in self.obj.S.items()}
                 minimal.pars = self.p.copy()#_to_dict(Recursive=True)
-                minimal.runtime =self.runtime.copy()
+                minimal.runtime = self.runtime.copy()
                 content=minimal
                         
             h5opt = io.h5options['UNSUPPORTED']
             io.h5options['UNSUPPORTED'] = 'ignore'
             logger.info('Saving to %s' % destfile)
-            io.h5write(destfile,header=header,content=minimal)
+            io.h5write(destfile,header=header,content=content)
             io.h5options['UNSUPPORTED'] = h5opt
         else:
             pass

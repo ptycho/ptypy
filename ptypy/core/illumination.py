@@ -9,28 +9,346 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 
-TODO:
-- loading a probe from file
-
 """
 import numpy as np
-import os
+#import os
 
 from .. import utils as u
-from ..utils import prop 
+from ..core import geometry
 from ..utils.verbose import logger
-from ..utils import validator
+from .. import resources
 
-DEFAULT=u.Param(
-    probe_type = 'parallel',		# 'focus','parallel','path_to_file'
+TEMPLATES = dict()
+
+DEFAULT_aperture = u.Param(
+    form='circ',        # (str) One of None, 'rect' or 'circ'
+                        #  One of:
+                        # - None: no aperture, this may be useful for nearfield
+                        # - 'rect': rectangular aperture
+                        # - 'circ': circular aperture
+    diffuser=None,      # (float) Static Noise in the transparent part of the aperture
+                        # Can act like a diffuser but has no wavelength dependency
+                        # Can be either:
+                        # - None : no noise
+                        # - 2-tuple: noise in phase (amplitude (rms), minimum feature size)
+                        # - 4-tuple: noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+    size=None,          # (float) Aperture width or diameter
+                        # May also be a tuple (vertical,horizontal) for size in case of an asymmetric aperture
+    edge=2,             # (int) Edge width of aperture in pixel to suppress aliasing
+    central_stop=None,  # (float) size of central stop as a fraction of aperture.size
+                        # If not None: places a central beam stop in aperture.
+                        #  The value given here is the fraction of the stop compared to size
+    offset=0.,          # (float) offset between center of aperture and optical axes
+                        # May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset
+    rotate=0.,          # (float) rotate aperture by this value
+)
+
+DEFAULT_propagation = u.Param(    # Parameters for propagation after aperture plane
+                        # Propagation to focus takes precedence to parallel propagation if focused is not None
+    parallel=None,      # (float) Parallel propagation distance
+                        # If None or 0 : No parallel propagation
+    focussed=None,      # (float) Propagation distance from aperture to focus
+                        # If None or 0 : No focus propagation
+    spot_size=None,     # (float) Focal spot diameter 
+    antialiasing=None,  # (float) antialiasing factor [not implemented]
+                        # Antialiasing factor used when generating the probe.
+                        # (numbers larger than 2 or 3 are memory hungry)
+)
+
+DEFAULT_diversity = u.Param(
+    noise = None,       # (float) Noise added on top add the end of initialisation
+                        # Can be either:
+                        # - None : no noise
+                        # - 2-tuple: noise in phase (amplitude (rms), minimum feature size)
+                        # - 4-tuple: noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+    shift = None,
+    power = 1.0,
+)
+
+DEFAULT = u.Param(
+    ovveride = None,
+    model=None,             # (str) User-defined probe (if type is None)
+                            # `None`, path to a *.ptyr file or any python evaluable statement yielding a 3d numpy array.
+                            #  If `None` illumination is modeled.
+    photons=None,           # (int,float,None) Number of photons in the incident illumination
+    recon = u.Param(
+        rfile = '*.ptyr',
+        ID = None,
+        layer = None,
+    ),
+    stxm = u.Param(
+        label=None,                 # label of the scan of whose diffraction data to initialize stxm. If None, use own scan_label
+    ), 
+    diversity=DEFAULT_diversity,       # diversity parameters, can be None = no diversity
+    aperture=DEFAULT_aperture,         # aperture parameters, can be None = no aperture
+    propagation=DEFAULT_propagation,   # propagation parameters, can be None = no propagation
+)
+
+
+
+def rectangle(grids, dims=None, ew=2):
+    if dims is None:
+        dims = (grids.shape[-2]/2., grids.shape[-1]/2.)
+    v, h = dims
+    V, H = grids
+    return u.smooth_step(-np.abs(V)+v/2,ew) * u.smooth_step(-np.abs(H)+h/2,ew)
+
+def ellipsis(grids, dims=None, ew=2):
+    if dims is None:
+        dims = (grids.shape[-2]/2., grids.shape[-1]/2.)
+    v, h = dims
+    V, H = grids
+    return u.smooth_step(0.5 - np.sqrt(V**2 / v**2 + H**2 / h**2),ew/np.sqrt(v*h))
+
+
+def aperture(A,grids=None,pars=None, **kwargs):
+    """
+    Creates an aperture in the shape and dtype of A according to x,y grids `grids`
+    
+    :Param A: Buffer array to place aperture on top
+    :Param pars: DEFAULT_aperture
+    :Param grid: cartesion grids, like np.indices((Nv,Nh))
+    :Param model: 2d numpa.array of the right output shape.
+
+    returns: Aperture array (complex) in shape of A
+    """
+    p=u.Param(DEFAULT_aperture.copy())
+    if pars is not None:
+        p.update(pars)
+        p.update(**kwargs)
+    
+    sh = A.shape
+    if grids is not None:
+        grids = np.array(grids).copy()
+        psize = np.array((grids[0,1,0]-grids[0,0,0],grids[1,0,1]-grids[1,0,0]))
+        assert ((np.array(grids.shape[-2:])-np.array(sh[-2:]))==0).any(), 'Grid and Input dimensions do not match'
+    else:
+        psize = u.expect2(1.0)
+        grids = u.grids(sh[-2:],psize=psize)
+        
+    ap = np.ones(sh[-2:],dtype=A.dtype)
+
+    if p.diffuser is not None:
+        ap *= u.parallel.MPInoise2d(sh[-2:],*p.diffuser)
+        
+    if p.form is not None:
+        off = u.expect2(p.offset)
+        cgrid = grids[0].astype(complex)+1j*grids[1]
+        cgrid -= np.complex(off[0],off[1])
+        cgrid *= np.exp(1j*p.rotate)
+        grids[0] = cgrid.real / psize[0]
+        grids[1] = cgrid.imag / psize[1]
+
+        if str(p.form)=='circ':
+            apert = lambda x: ellipsis(grids,x,p.edge)
+        elif str(p.form)=='rect':
+            apert = lambda x: rectangle(grids,x,p.edge)
+        else:
+            raise NotImplementedError('Only elliptical `circ` or rectangular `rect` apertures supported for now')
+
+        dims = u.expect2(p.size)/ psize if p.size is not None else np.array(cgrid.shape)/3.
+        print dims
+        ap *= apert(dims)
+        if p.central_stop is not None:
+            dims *= u.expect2(p.central_stop)
+            ap *= 1-apert(dims)
+
+    return np.resize(ap,sh)
+        
+def init_storage(storage, pars, energy =None,**kwargs):
+    s =storage
+    p = DEFAULT.copy(depth=3)
+    model = None
+    if hasattr(pars,'items') or hasattr(pars,'iteritems'):
+        # this is a dict
+        p.update(pars, in_place_depth=3)    
+    
+        print u.verbose.report(p)
+    # first we check for scripting shortcuts. This is only convenience
+    elif str(pars)==pars:
+        # this maybe a template now or a file
+        
+        # deactivate further processing
+        p.aperture = None
+        p.propagation = None
+        p.diversity = None
+        
+        if pars.endswith('.ptyr'):
+            recon = u.Param(rfile=pars,layer=None,ID=s.ID)
+            p.recon = recon
+            p.model = 'recon'
+            try:
+                init_storage(s,p,energy = 1.0)
+            except KeyError:
+                logger.warning('Loading of probe storage `%s` failed. Trying any storage.' % s.ID)
+                p.recon.ID = None
+                init_storage(s,p,energy = 1.0)
+            return
+        elif pars in TEMPLATES.keys():
+            init_storage(s,TEMPLATES[pars])
+            return 
+        elif resources.probes.has_key(pars) or pars =='stxm':
+            p.model = pars
+            init_storage(s,p)
+            return
+        else:
+            raise RuntimeError('Shortcut string `%s` for probe creation is not understood' %pars)
+    elif type(pars) is np.ndarray:
+        p.model=pars
+        p.aperture = None
+        p.propagation = None
+        p.diversity = None
+        init_storage(s,p)
+        return
+    else:
+        ValueError('Shortcut for probe creation is not understood')
+        
+    if p.model is None:
+        model = np.ones(s.shape,s.dtype)
+        if p.photons is not None:
+            model*=np.sqrt(p.photons)/np.prod(s.shape) 
+    elif type(p.model) is np.ndarray:
+        model = p.model
+    elif resources.probes.has_key(p.model):
+        model = resources.probes[p.model](A.shape)
+    elif str(p.model) == 'recon':
+        # loading from a reconstruction file
+        layer = p.recon.get('layer')
+        ID = p.recon.get('ID')
+        logger.info('Attempt to load layer `%s` of probe storage with ID `%s` from `%s`' %(str(layer),str(ID),p.recon.rfile))
+        model = u.load_from_ptyr(p.recon.rfile,'probe',ID,layer)
+        # this could be more sophisticated, i.e. matching the real spac grids etc.
+        
+    elif str(p.model) == 'stxm':
+        logger.info('Probe initialization using averaged diffraction data')
+        # pick a pod
+        pod = s.views[0].pod
+        alldiff = np.zeros_like(pod.diff)
+        for v in s.views:
+            alldiff += u.abs2(v.pod.diff)
+        alldiff /= len(s.views)
+        #pick a propagator
+        # in far field we will have to know the wavefront curvature
+        try:
+            curve = pod.geometry.propagator.post_curve
+        except:
+            # ok this is nearfield
+            curve = 1.0 
+            
+        model = pod.bw(curve * np.sqrt(alldiff))
+    else:
+        raise ValueError('Value to `model` key not understood in probe creation')
+        
+    assert type(model) is np.ndarray, "Internal model should be numpy array now but it is %s" %str(type(model))
+    # expand model to the right length filling with copies
+    sh = model.shape[-2:]
+    model = np.resize(model,(s.shape[0],sh[0],sh[1]))
+
+    # find out about energy if not set
+    if energy is None:
+        energy  =  s.views[0].pod.geometry.energy
+
+    # perform aperture multiplication, propagation etc.
+    model = process(model,p.aperture,p.propagation, p.photons, energy, s.psize)
+    
+    # apply diversity
+    if p.diversity is not None:
+        u.diversify(model,**(p.diversity))
+    
+    # fill storage array
+    s.fill(model)
+    
+def process(model,aperture_pars=None,prop_pars=None, photons = 1e7, energy=6.,resolution=7e-8,**kwargs):
+
+    # create the propagator
+    ap_size, grids, prop  = _propagation(prop_pars,model.shape[-2:],resolution,energy)
+        
+    # form the aperture on top of the model
+    if type(aperture_pars) is np.ndarray:
+        model *= np.resize(aperture_pars, model.shape)
+    elif aperture_pars is not None:
+        if ap_size is not None:
+            aperture_pars.size = ap_size
+        model *= aperture(model, grids, aperture_pars)
+    else:
+        logger.warning('No aperture defined in probe creation. This may lead to artifacts if the probe model is not choosen carefully.')
+    # propagate
+    model = prop(model)
+    
+    # apply photon count
+    if photons is not None:
+        model *= np.sqrt( photons / u.norm2(model))
+    
+    
+    return model
+
+def _propagation(prop_pars,shape=256,resolution=7e-8,energy=6.):
+    p = prop_pars
+    grids = None
+    if p is not None and len(p)>0:
+        ap_size = p.spot_size if p.spot_size is not None else None 
+        ffGeo = None
+        nfGeo = None
+        fdist = p.focussed
+        if fdist is not None:
+            geodct = u.Param(
+                energy=energy,
+                shape=shape,
+                psize=resolution,
+                resolution=None,
+                distance=fdist,
+                propagation='farfield'
+                )
+            ffGeo = geometry.Geo()
+            ffGeo._initialize(geodct)
+            #print ffGeo
+            if p.spot_size is not None:
+                ap_size = ffGeo.lam*fdist/np.array(p.spot_size)*2*np.sqrt(np.sqrt(2))
+            else:
+                ap_size = None
+            grids = ffGeo.propagator.grids_sam
+            phase=np.exp(-1j*np.pi/ffGeo.lam/fdist*(grids[0]**2+grids[1]**2))
+            #from matplotlib import pyplot as plt
+            #plt.figure(100);plt.imshow(u.imsave(ffGeo.propagator.post_fft))
+        if p.parallel is not None:
+            geodct = u.Param(
+                energy=energy,
+                shape=shape,
+                resolution=resolution,
+                psize=None,
+                distance=p.parallel,
+                propagation='nearfield'
+                )
+            nfGeo = geometry.Geo()
+            nfGeo._initialize(geodct)
+            grids = nfGeo.propagator.grids_sam if grids is None else grids
+            
+        if ffGeo is not None and nfGeo is not None:
+            prop = lambda x: nfGeo.propagator.fw(ffGeo.propagator.fw(x*phase))
+        elif ffGeo is not None and nfGeo is None:
+            prop = lambda x: ffGeo.propagator.fw(x*phase)
+        elif ffGeo is None and nfGeo is not None:
+            prop = lambda x: nfGeo.propagator.fw(x)
+        else:
+            grids = u.grids(u.expect2(shape),psize=u.expect2(resolution))
+            prop = lambda x: x
+    else:
+        grids = u.grids(u.expect2(shape),psize=u.expect2(resolution))
+        prop = lambda x: x
+        ap_size = None
+        
+    return ap_size, grids, prop
+
+DEFAULT_old = u.Param(
+    probe_type='parallel',		# 'focus','parallel','path_to_file'
     aperture_type = 'circ',			# 'rect','circ','path_to_file'
     aperture_size = None,           # aperture diameter
-    aperture_edge = 1,              # edge smoothing width of aperture in pixel        
+    aperture_edge = 1,              # edge smoothing width of aperture in pixel
     focal_dist = None,              # distance from prefocus aperture to focus
     prop_dist = 0.001,              # propagation distance from focus (or from aperture if parallel)
     UseConjugate = False,           # use the conjugate of the probe instef of the probe
     antialiasing = 2.0,             # antialiasing factor used when generating the probe
-    spot_size = None,                # if aperture_size = None this parameter is used instead. 
+    spot_size = None,                # if aperture_size = None this parameter is used instead.
                                     # Gives the desired probe size in sample plane
                                     # if spot_size = None, a 50 pixel aperture will be used
     incoming = None,                # incomin
@@ -47,185 +365,28 @@ DEFAULT=u.Param(
 
 
 
-def from_pars(sh,psize,lam,off=0.,pars=None,dtype=np.complex128):
-    p = u.Param(DEFAULT)
-    if pars is not None:
-        p.update(pars)
+if __name__=='__main__':
+    energy=6.
+    shape=512
+    resolution=8e-8
+    p = u.Param()
+    p.aperture = u.Param()
+    p.aperture.form='circ'
+    p.aperture.diffuser=(10.0,5,0.1,20.0)
+    p.aperture.size=100e-6
+    p.aperture.edge=2             # (int) Edge width of aperture in pixel to suppress aliasing
+    p.aperture.central_stop=0.3
+    p.aperture.offset=0. 
+    p.aperture.rotate=0.          # (float) rotate aperture by this value
+    p.propagation=u.Param()    # Parameters for propagation after aperture plane
+    p.propagation.parallel=0.015      # (float) Parallel propagation distance
+    p.propagation.focussed=0.1     # (float) Propagation distance from aperture to focus
+    p.propagation.spot_size=None     # (float) Focal spot diameter
+    p.propagation.antialiasing=None  # (float) antialiasing factor
+    p.probe=None             # (str) User-defined probe (if type is None)
+    p.photons=None           # (int,float,None) Number of photons in the incident illumination
+    p.noise=None             # (float) Noise added on top add the end of initialisation
 
-    #validator.validate(p, '.scan.illumination')
-
-    if p.probe is not None: return p
-    #print p.paramdict
-
-    # FIXME: implement loading probe from data.
-    if os.path.isfile(p.probe_type):
-        logger.info('File for probe found, attempt to load')
-        try:
-            # io.load.....
-            # p.probe =
-            # return p 
-            pass
-        except:
-            pass
-            
-    if p.incoming is None:
-        p.incoming=np.ones(sh)
-    else:
-        shorg = u.expect2(p.incoming.shape).astype(int)
-        shtar = u.expect2(sh).astype(int)        
-        if (shtar != shorg).any() : 
-            p.incoming = czoom(p.incoming, shtar.astype(float)/shorg) 
-    
-    if p.phase_noise_rms is not None:
-        noise = u.parallel.MPIrand_normal(0.0,p.phase_noise_rms,sh)
-        noise = u.gf(noise,u.expect2(p.phase_noise_mfs/ 2.35))
-        p.incoming = p.incoming.astype(np.complex) *np.exp(1j * noise)
-        
-    if p.spot_size is None:
-        p.spot_size = np.array(sh)*psize / 3
-    #print p
-    if p.probe_type == 'focus':
-        p.probe = simple_probe(p.incoming,lam,psize,p.focal_dist,p.prop_dist,p.aperture_type,p.aperture_size,p.spot_size,p.antialiasing,p.aperture_edge)
-    elif p.probe_type == 'parallel':
-        p.probe = simple_probe(p.incoming,lam,psize,None,p.prop_dist,p.aperture_type,p.aperture_size,p.spot_size,p.antialiasing,p.aperture_edge)
-    else:
-        try:
-            p.probe = np.load(probe_type)
-        except:
-            pass
-
-    # FIXME: warn user because most of the time this is deduced from the data.
-    if p.photons is not None:
-        p.probe *= np.sqrt(p.photons / np.sum(np.abs(p.probe)**2)) 
-
-    if str(p.spectrum) == 'Gauss':
-        p.probe *= u.gauss_fwhm(off,p.bandwidth)*p.bandwidth
-  
-    return p
-
-def create_modes(layers,pars):
-    p=u.Param(pars)
-    pr=p.probe
-    sh_old = pr.shape
-    if pr.ndim==2:
-        ppr=np.zeros((1,) + pr.shape).astype(pr.dtype) 
-        ppr[0] = pr
-        pr=ppr
-    elif pr.ndim==4:
-        pr=pr[0]
-    w = p.mode_weights 
-    # press w into 1d flattened array:
-    w=np.atleast_1d(w).flatten()
-    w=u.crop_pad(w,[[0,layers-w.shape[0]]],filltype='project')
-    w/=w.sum()
-    # make it an array now: flattens
-    pr = u.crop_pad(pr, [[0,layers-pr.shape[0]]] ,axes=[0],filltype='project')
-    # FIXME: mode initialization has to be diverse!
-    #if p.mode_diversity=='noise'
-    p.mode_weights = w
-    p.probe = pr * w.reshape((layers,1,1))
-    if p.mode_diversity=='noise':
-        noise = np.exp(1j*u.parallel.MPIrand_normal(0.0,np.pi,pr.shape))
-        noise[0] = 1.0+0.j
-        p.probe*= noise
-    return p
-##### other Functions ###########
-
-def simple_probe(w,l,psize,fdist=None,defocus=0.0,pupil='rect',pupildims=None,focusdims=None,antialiasing=1.0,edgewidth=1):
-    """\
-    Generates a focussed probe from standard pupils (rectangle,ellipsoid)
-    
-    PARAMETERS
-    -----------------------------------
-    w : input illumination. use np.zeros() if uniform illumination is wanted. 
-        l : wavelength.
-    psize : pixelsize at focal area
-    fdist (None)   : distance to focal plane, if None then we assume a parallel beam and pupil is in focus
-    defocus (0.0)  : free propagation distance of prop close to focus (note that it is nearfield propagation):
-    pupil ('rect')     : ['rect','circ','other'] 
-                         entrance pupil type prior focussing, if nor 'rect' or 'circ' it interprets it as file and tries to load it.
-    pupildims (None)   : chractetiscic size(s) of pupil. corresponds to length (rect) or diameter (circ)
-    focusdims (None    : if pupildims are not set they can be guessed from a desired focal size
-    antialiasing (1.0) : set higher than 1.0, pads array in focal plane to suppress aliasing.
-    """    
-    if w.ndim != 2:
-        raise RunTimeError("A 2-dimensional array 'w' was expected")
-    sh=u.expect2(w.shape)
-    psize= u.expect2(psize)
-    ew=edgewidth
-    #print ew
-    if focusdims==None:
-        focusdims=0.5*np.array(sh)*u.expect2(psize)
-    
-    if antialiasing>1.0:
-        lines=np.round(sh*(antialiasing-1.0))
-        sh+=lines
-        w = u.crop_pad(w,lines,fillpar=0.0)
-
-    if fdist is not None:
-        Pfocus=prop.Propagator(sh,[None,psize],l,fdist, ffttype='std',org = ['fftshift','fftshift'])
-        fgrid=Pfocus.get_grids()[0]
-        ew=ew*Pfocus.psize[0]
-               
-        if pupil=='rect':
-            if pupildims==None:
-                pupildims=u.expect2(l*fdist/np.array(focusdims)*2)
-            pdims = u.expect2(pupildims) 
-            apert=u.smooth_step(-np.abs(fgrid[0])+pdims[0]/2,ew[0]) * u.smooth_step(-np.abs(fgrid[1])+pdims[1]/2,ew[1])
-
-        elif pupil=='circ':
-            if pupildims==None:
-                pupildims=l*fdist/np.array(focusdims)*2*np.sqrt(np.sqrt(2))
-            pdims = u.expect2(pupildims)
-            apert=u.smooth_step(0.5 - np.sqrt(fgrid[0]**2 / pdims[0]**2 + fgrid[1]**2 / pdims[1]**2),ew[0]/np.sqrt(pdims[0]*pdims[1]))
-        else:
-            try:
-                apert=np.load(pupil)
-            except:
-                print('Expected path to .npy dexcribing the aperture if not specified as "circ" or "rect"')
-                print('Using no pupil... I hope your incoming illumination is structured...')
-                apert=np.ones(sh)
-
-        phase=np.exp(-1j*np.pi/l/fdist*(fgrid[0]**2+fgrid[1]**2))
-        field=Pfocus.ff(apert*phase*w)
-        if defocus!=0.:
-            Pdefoc = prop.Propagator(sh,[psize,None],l,defocus, ffttype='std',org = ['fftshift','fftshift'])
-            field = Pdefoc.nf(field)
-             
-    else:
-        if defocus!=0. and defocus is not None:
-            Pdefoc = prop.Propagator(sh,[psize,None],l,defocus, ffttype='std',org = ['fftshift','fftshift'])
-            rgrid=Pdefoc.get_grids()[0]
-            ew=ew*Pdefoc.psize[0]
-        else:
-            rgrid = u.grids(sh,psize,center='fftshift')
-            ew = u.expect2(ew*psize)
-            
-        if pupil=='rect':
-            if pupildims==None:
-                pupildims=focusdims
-            pdims = u.expect2(pupildims)
-            apert=u.smooth_step(-np.abs(rgrid[0])+pdims[0]/2,ew[0]) * u.smooth_step(-np.abs(rgrid[1])+pdims[1]/2,ew[1])
-        elif pupil=='circ':
-            if pupildims==None:
-                pupildims=focusdims
-            pdims = u.expect2(pupildims)
-            apert=u.smooth_step(-np.sqrt(rgrid[0]**2 / pdims[0]**2 + rgrid[1]**2 / pdims[1]**2) + 0.5,ew[0]/np.sqrt(pdims[0]*pdims[1]))
-        else:
-            try:
-                apert=np.load(pupil)
-            except:
-                print('Expected path to .npy dexcribing the aperture if not specified as "circ" or "rect"')
-                print('Using no pupil... I hope your incoming illumination is structured...')
-                apert=np.ones(sh)
-
-        field=apert*w
-        
-        if defocus!=0.:
-            field = Pdefoc.nf(field)                  
-    
-    if antialiasing>1.0:
-        field=u.crop_pad(field,-lines,fillpar=0.0)
-        
-    return field
-
+    probe = from_pars_no_storage(pars=p, energy=energy,shape=shape,resolution=resolution)
+    from matplotlib import pyplot as plt
+    plt.imshow(u.imsave(abs(probe[0])))

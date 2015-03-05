@@ -237,7 +237,7 @@ class MPLClient(object):
             try:
                 axis = self.axes_list[self.error_axes_index][self.error_frame]
                 # get runtime info
-                error = np.array([info['error'].mean(0) for info in self.runtime.iter_info])
+                error = np.array([np.array(info['error'].values()).mean(0) for info in self.runtime.iter_info])
                 err_fmag = error[:, 0]
                 err_phot = error[:, 1]
                 err_exit = error[:, 2]

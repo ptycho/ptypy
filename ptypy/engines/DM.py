@@ -83,16 +83,19 @@ class DM(BaseEngine):
         t = time.time() 
         # Fourier update  
         for name,di_view in self.di.V.iteritems():
+            if not di_view.active: continue
             ma_view = di_view.pod.ma_view 
-            error_dct[name] = basic_fourier_update(di_view, ma_view, pbound=self.pbound)
+            error_dct[name] = basic_fourier_update(di_view, ma_view, pbound=self.pbound, alpha = self.p.alpha)
         logger.info('Time spent in Fourier update: %.2f' % (time.time()-t))    
 
         ## make a sorted error array for MPI reduction
         ## error is sorted after the di_view IDs. This is needed for local error analysis later.
+        """
         error = np.array([error_dct[k] for k in np.sort(error_dct.keys())])
         error[error<0]=0.
         parallel.allreduce(error)
-        
+        """
+        error = parallel.gather_dict(error_dct)
         # store error. maybe better in runtime?
         self.error = error
         self.overlap_update()

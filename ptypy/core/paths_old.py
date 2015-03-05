@@ -24,14 +24,18 @@ else:
 __all__=['Paths']
 
 DEFAULT=u.Param()
-DEFAULT.home = "./"    # (03) Relative base path for all other paths
-DEFAULT.plots = "plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png"# (07) filename for dumping plots
-DEFAULT.recons = "recons/%(run)s/%(run)s_%(engine)s.ptyr"                 # (10) directory to save final reconstruction
-DEFAULT.autosave = "dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr"                  # (12) directory to save intermediate results
-DEFAULT.movie = "plots/%(run)s/%(run)s_%(engine)s.mpg"# (13) 
-DEFAULT.data = "analysis/%(run)s/%(label)s.ptyd"
-# runtime parameters
+DEFAULT.base_dir = "./"    # (03) Relative base path for all other paths
 DEFAULT.run = None                                   # (04) Name of reconstruction run
+DEFAULT.plot_dir = "plots/%(run)s/"                  # (06) directory to dump plot images
+DEFAULT.plot_file = "%(run)s_%(engine)s_%(iteration)04d.png"# (07) filename for dumping plots
+DEFAULT.plot_interval = 2                       # (08) iteration interval for dumping plots
+DEFAULT.save_dir = "recons/%(run)s/"                 # (10) directory to save final reconstruction
+DEFAULT.save_file = "test.ptyr" #"%(run)s_%(algorithm)s_%(it)04d.h5"# (11) filename for saving 
+DEFAULT.dump_dir = "dumps/%(run)s/"                  # (12) directory to save intermediate results
+DEFAULT.dump_file = "%(run)s_%(engine)s_%(iteration)04d.ptyr"# (13) 
+DEFAULT.data_dir = "analysis/%(run)s/"
+DEFAULT.data_file = "%(label)s.ptyd"
+# runtime parameters
 DEFAULT.engine = "Dummy"
 DEFAULT.iteration = 0
 DEFAULT.args = ""
@@ -51,10 +55,9 @@ class Paths(object):
         self.make_dirs = make_dirs
         
         sep = os.path.sep
-        if not self.p.home.endswith(sep):
-            self.p.home+=sep
-        
-        """
+        if not self.p.base_dir.endswith(sep):
+            self.p.base_dir+=sep
+            
         for key in ['plot','save','dump','data']:
             d = key+'_dir'
             if not self.p[d].startswith(sep):
@@ -66,27 +69,26 @@ class Paths(object):
             if not self.p[f].startswith(sep):
                 # append predir
                 self.p[f]=self.p[key+'_dir']+self.p[f]
-        """
+
+    @property
+    def dump_file(self):
+                    
+        return self.get_path(self.p.dump_file)
         
     @property
-    def auto_file(self):
+    def save_file(self):
                     
-        return self.get_path(self.p.autosave)
-        
-    @property
-    def recon_file(self):
-                    
-        return self.get_path(self.p.recons)
+        return self.get_path(self.p.save_file)
         
     @property
     def plot_file(self):
                     
-        return self.get_path(self.p.plots)
+        return self.get_path(self.p.plot_file)
         
     def get_data_file(self,**kwargs):
         
         self.p.update(**kwargs)
-        return self.get_path(self.p.data)
+        return self.get_path(self.p.data_file)
         
     def get_path(self,path):
         try:
@@ -105,7 +107,6 @@ class Paths(object):
 
 if __name__ == "__main__":
     pa = Paths()
-    print pa.auto_file
-    print pa.plot_file
-    print pa.recon_file
+    print pa.save_file
+    print pa.dump_file
     print pa.p
