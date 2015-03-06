@@ -224,7 +224,9 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
     imsave(a, ..., vmin=vmin, vmax=vmax) clips the array to values between vmin and vmax.
     imsave(a, ..., cmap=cmap) uses a matplotlib colormap.
     """
-
+    if str(cmap) == cmap:
+        cmap= mpl.cm.get_cmap(cmap)
+        
     if a.dtype.kind == 'c':
         # Image is complex
         if cmap is not None:

@@ -7,8 +7,8 @@ TODO: add masking function to mask out hot/dead pixels of detector
 """
 import os
 import glob
-from pyE17 import utils
-from pyE17 import verbose
+#from pyE17 import utils
+#from pyE17 import verbose
 import numpy as np
 #import cbf_uncompress as c
 

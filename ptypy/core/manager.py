@@ -50,8 +50,8 @@ coherence_DEFAULT = u.Param(
 )
 
 sharing_DEFAULT = u.Param(
-    scan_per_probe = 1,                # (69) number of scans per object
-    scan_per_object = 1,              # (70) number of scans per probe
+    #scan_per_probe = 1,                # (69) number of scans per object
+    #scan_per_object = 1,              # (70) number of scans per probe
     object_shared_with = None,         # (71) `scan_label` of scan for the shared obejct
     object_share_power = 1,            # (72) contribution to the shared object
     probe_shared_with = None,          # (73) `scan_label` of scan for the shared probe
@@ -182,7 +182,7 @@ class ModelManager(object):
             scan.pars = self.p.copy(depth=5)
             # Look for a scan-specific entry in the input parameters
             scan_specific_parameters = self.scans_pars.get(label, None)
-            scan.pars.update(scan_specific_parameters, Replace=False)
+            scan.pars.update(scan_specific_parameters, in_place_depth=5)
 
             # prepare the tags
             t = scan.pars.tags
@@ -282,13 +282,16 @@ class ModelManager(object):
         """
         parallel.barrier()
         # Nothing to do if there are no new data.
-        if not self.ptycho.datasource.data_available: return 'ok'
+        if not self.ptycho.datasource.data_available: return 'No Data'
 
         logger.info('Processing new data.')
         used_scans = []
         not_initialized = []
-
-        for dp in self.ptycho.datasource.feed_data():
+        
+        # For some funny reason the Generator constuct used to fail.
+        while True:
+            dp =  self.ptycho.datasource.feed_data()
+            if dp is None: break
             """
             A dp (data package) contains the following:
             
@@ -452,8 +455,8 @@ class ModelManager(object):
                     old_active = old_view.active
                     old_view.active = active
                     # also set this for the attached pods' exit views
-                    for pod in old_view.pods.itervalues():
-                        pod.ex_view.active = active
+                    #for pod in old_view.pods.itervalues():
+                    #    pod.ex_view.active = active
 
                     logger.debug(
                         'Diff view with layer/index %s of scan %s exists. \nSetting view active state from %s to %s' % (
@@ -637,8 +640,10 @@ class ModelManager(object):
             ma_views = scan.new_mask_views
             
             # Compute sharing rules
-            alt_obj = scan.pars.sharing.object_shared_with
-            alt_pr = scan.pars.sharing.probe_shared_with
+            share = scan.pars.sharing 
+            alt_obj = share.object_shared_with if share is not None else None
+            alt_pr = share.probe_shared_with if share is not None else None
+                
             obj_label = label if alt_obj is None else alt_obj
             pr_label = label if alt_pr is None else alt_pr
             
@@ -701,8 +706,8 @@ class ModelManager(object):
                             views = {'probe': pv, 'obj': ov, 'diff': dv, 'mask': mv}
                             pod = POD(ptycho=self.ptycho, ID=None, views=views, geometry=geometry)   #, meta=meta)
                             new_pods.append(pod)
-                            pod.probe_weight = scan.pars.sharing.probe_share_power
-                            pod.object_weight = scan.pars.sharing.object_share_power
+                            pod.probe_weight = share.probe_share_power if share is not None else 1.
+                            pod.object_weight = share.object_share_power if share is not None else 1.
                             pod.is_empty = True if 'empty' in scan.pars.tags else False
                             #exit_index += 1
 

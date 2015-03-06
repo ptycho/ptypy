@@ -279,13 +279,16 @@ class Param(dict):
             if not self.has_key(k):
                 self[k] = v
             # If this key already exists and is already dict-like, update it
-            elif in_place_depth > 0  and hasattr(v,'keys'):
+            elif in_place_depth > 0  and hasattr(v,'keys') and isinstance(self[k],self.__class__):
+                self[k].update(v, in_place_depth - 1)
+                """
                 if isinstance(self[k],self.__class__):
                     # Param gets recursive in_place updates
                     self[k].update(v, in_place_depth - 1)
                 else:
                     # dicts are only updated in-place once
                     self[k].update(v)
+                """
             # Otherwise just replace it
             else:
                 self[k] = v

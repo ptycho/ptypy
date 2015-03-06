@@ -230,7 +230,8 @@ def init_storage(storage,sample_pars = None):
         model = simulate(model,p.process,energy,p.fill )
     
     # add diversity
-    u.diversify(model,**(p.diversity))
+    if p.diversity is not None:
+        u.diversify(model,**(p.diversity))
     # return back to storage
     s.fill(model)
     
@@ -317,7 +318,7 @@ def simulate(A,pars, energy, fill =1.0, **kwargs):
     shape = u.expect2(A.shape[-2])
     crops = list(-np.array(obj.shape[-2]) + shape + 2*np.abs(off))
     obj = u.crop_pad(obj,crops,fillpar=fill)
-    obj = obj.astype(A.dtype)
+
     off +=np.abs(off)
     return np.array(obj[...,off[0]:off[0]+shape[0],off[1]:off[1]+shape[1]])
 

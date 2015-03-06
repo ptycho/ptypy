@@ -732,14 +732,14 @@ class Storage(Base):
         for key,column in table_format:
             if str(key)=='shape':
                 dct[key] = tuple(self.data.shape)
-                info = '%d x %d x %d' % dct[key]
+                info = '%d*%d*%d' % dct[key]
             elif str(key)=='psize':
                 dct[key] = tuple(self.psize)
-                info = '%.2e x %.2e' % tuple(dct[key])
+                info = '%.2e*%.2e' % tuple(dct[key])
                 info = info.split('e',1)[0]+info.split('e',1)[1][3:]
             elif str(key)=='dimension':
                 dct[key] = (self.psize[0] * self.data.shape[-2], self.psize[1] * self.data.shape[-1])
-                info = '%.2e x %.2e' % tuple(dct[key])
+                info = '%.2e*%.2e' % tuple(dct[key])
                 info = info.split('e',1)[0]+info.split('e',1)[1][3:]
             elif str(key)=='memory':
                 dct[key] = float(self.data.nbytes) /1e6

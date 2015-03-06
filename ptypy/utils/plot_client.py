@@ -145,7 +145,7 @@ class PlotClient(object):
             self.cmd_dct["Ptycho.probe.S['%s'].center" % str(ID)] = [None, S, 'center']
 
         # Data request for the error.
-        self.cmd_dct["Ptycho.runtime['iter_info']"] = [None, self.runtime, 'iter_info']
+        self.cmd_dct["Ptycho.runtime['iter_info'][-1]"] = [None, self.runtime, 'last_info']
 
     def _request_data(self):
         """

@@ -57,8 +57,9 @@ class MPLClient(object):
         # Initialize data containers
         self.pr = None
         self.ob = None
-        self.runtime = None
-
+        self.runtime = u.Param()
+        self.runtime.iter_info = []
+        
         # Initialize the plotter
         from matplotlib import pyplot
         self.interactive = interactive
@@ -348,7 +349,9 @@ class MPLClient(object):
         initialized = False
         while True:
             if self.pc.new_data:
-                self.pr, self.ob, self.runtime = self.pc.get_data()
+                self.pr, self.ob, runtime = self.pc.get_data()
+                self.runtime.update(runtime)
+                self.runtime['iter_info'].append(runtime['last_info'])
                 if not initialized:
                     self.update_plot_layout()
                 self.plot_all()

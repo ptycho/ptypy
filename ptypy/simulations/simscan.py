@@ -35,6 +35,7 @@ DEFAULT = u.Param(
     psf = None,          # (None or float, 2-tuple, array) Parameters for gaussian convolution or convolution kernel after propagation
                         # use it for simulating partial coherence
     verbose_level = 1, # verbose level when simulating
+    plot = True,
 )
 
 __all__ = ['SimScan']
@@ -60,16 +61,16 @@ class SimScan(PtyScan):
        
         # get scan parameters
         if scan_pars is None:
-            pp.model = scan_DEFAULT.copy(depth =4)
+            pp.scan = scan_DEFAULT.copy(depth =4)
         else:
-            pp.model = scan_pars.copy(depth =4)
+            pp.scan = scan_pars.copy(depth =4)
             
         # note that shape cannot be None
         if self.info.shape is None:
-            self.info.shape = pp.model.geometry.shape
+            self.info.shape = pp.scan.geometry.shape
         
         rinfo = DEFAULT.copy()
-        rinfo.update(self.info.recipe)
+        rinfo.update(self.info.recipe, in_place_depth = 4)
         self.rinfo = rinfo
         self.info.recipe = rinfo
         
@@ -78,7 +79,7 @@ class SimScan(PtyScan):
         pp.verbose_level = rinfo.verbose_level
         
         # update changes specified in recipe
-        pp.model.update(rinfo, Replace=False)
+        pp.scan.update(rinfo, in_place_depth = 4)
 
         # Create a Scan that will deliver empty diffraction patterns
         # FIXME: This may be obsolete if the dry_run switch works.
@@ -87,8 +88,10 @@ class SimScan(PtyScan):
         pp.scans.sim = u.Param()
         pp.scans.sim.data=u.Param()
         pp.scans.sim.data.source = 'empty'
-        pp.scans.sim.data.shape = pp.model.geometry.shape
+        pp.scans.sim.data.shape = pp.scan.geometry.shape
         pp.scans.sim.data.auto_center = False
+        # deactivate sharing since we create a seperate Ptycho instance fro each scan
+        pp.scans.sim.sharing = None
         
         # Now we let Ptycho sort out things
         logger.info('Generating simulating Ptycho instance for scan `%s`.' % str(self.info.get('label')))
@@ -119,7 +122,7 @@ class SimScan(PtyScan):
         else:
             save_dtype = None
             acquire = lambda x: x
-                    
+        
         # create dictionaries for 'raw' data
         self.diff = {}
         self.mask = {}
@@ -127,8 +130,8 @@ class SimScan(PtyScan):
         
    
         ID,Sdiff = P.diff.S.items()[0]
+        logger.info('Collectiong simulated `raw` data.')
         for view in Sdiff.views:
-            logger.info('Collectiong simulated `raw` data.')
             ind = view.layer
             dat, mask = acquire(view.data) 
             view.data = dat
@@ -139,6 +142,13 @@ class SimScan(PtyScan):
             self.mask[ind] = mask
             self.pos[ind] = pos
 
+        # plot overview
+        if self.rinfo.plot and u.parallel.master:
+            logger.info('Plotting simulation overview')
+            P.plot_overview(200)
+            u.pause(5.)
+        u.parallel.barrier()
+        
         #self.P=P
         # Fix the number of available frames
         num = np.array([len(self.diff)])
@@ -179,10 +189,8 @@ class SimScan(PtyScan):
         Overwrite in child class for inline manipulation 
         of the ptycho instance that is created by the Simulation
         """
-        ptycho.print_stats()
-        #ptycho.plot_overview()
-        #u.pause(20.)
-        u.parallel.barrier()
+        #ptycho.print_stats()
+        
         return ptycho
     
 if __name__ == "__main__":

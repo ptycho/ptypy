@@ -221,13 +221,20 @@ def init_storage(storage, pars, energy =None,**kwargs):
         
     elif str(p.model) == 'stxm':
         logger.info('Probe initialization using averaged diffraction data')
-        # pick a pod
+        # pick a pod that no matter if active or not
         pod = s.views[0].pod
-        alldiff = np.zeros_like(pod.diff)
+           
+        alldiff = np.zeros(pod.geometry.shape)
+        n = 0
         for v in s.views:
+            if not v.pod.active : continue
             alldiff += u.abs2(v.pod.diff)
-        alldiff /= len(s.views)
-        #pick a propagator
+            n+=1
+        if n> 0:
+            alldiff /= n
+        # communicate result
+        u.parallel.allreduce(alldiff)
+        #pick a propagator and a pod
         # in far field we will have to know the wavefront curvature
         try:
             curve = pod.geometry.propagator.post_curve

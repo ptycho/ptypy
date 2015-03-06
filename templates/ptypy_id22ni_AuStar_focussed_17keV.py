@@ -22,20 +22,11 @@ p.verbose_level = 3                               # (00) Verbosity level
 p.interaction = u.Param()
 
 p.data_type = "single"                            # (01) Reconstruction floatine number precision
-
+p.run = None
+p.autosave = None
 p.paths = u.Param()
-p.paths.base_dir = "./"             # (03) Relative base path for all other paths
-p.paths.run = None                                # (04) Name of reconstruction run
-p.paths.data_dir = "analysis/%(run)s/"                    # (05) directory where diffraction data is stored
-p.paths.data_file = "%(label)s.ptyd"              
-p.paths.plot_dir = "plots/%(run)s/"               # (06) directory to dump plot images
-p.paths.plot_file = "%(run)s_%(engine)s_%(iterations)04d.png"# (07) filename for dumping plots
-p.paths.plot_interval = 2                         # (08) iteration interval for dumping plots
-p.paths.save_dir = "recons/%(run)s/"              # (09) directory to save final reconstruction
-p.paths.save_file = "%(run)s_%(engine)s_%(iterations)04d.h5"# (10) filename for saving 
-p.paths.dump_dir = "dumps/%(run)s/"               # (11) directory to save intermediate results
-p.paths.dump_file = "%(run)s_%(engine)s_%(iterations)04d.h5"# (12) 
-
+p.paths.home = "/tmp/ptypy/"             # (03) Relative base path for all other paths
+p.paths.run = None
 
 
 sim = u.Param()
@@ -53,58 +44,61 @@ sim.xy.dy = 1e-6                              # (34) raster scan: step size (gri
 sim.xy.positions = None                       # (35) override
 
 sim.illumination = u.Param()
-sim.illumination.probe_type = "focus"         # (37) 'focus' or 'parallel'
-sim.illumination.incoming = None              # (38) `None`, path to a file or any python evaluable statement yielding a 2d numpy array. If `None` defaults to array of ones
-sim.illumination.phase_noise_rms = None        # (39) phase noise amplitude on incoming wave before aperture 
-sim.illumination.phase_noise_mfs = 2.0        # (40) phase noise minimum feature size on incoming wave before aperture 
-sim.illumination.aperture_type = "rect"       # (41) type of aperture: use 
-sim.illumination.aperture_size = 35e-6        # (42) aperture diameter (meter)
-sim.illumination.aperture_edge = 2            # (43) edge width of aperture (pixel)
-sim.illumination.focal_dist = 0.08            # (44) distance from aperture to focus (meter)
-sim.illumination.prop_dist = 1.4e-3           # (45) focus: propagation distance (meter) from focus. parallel: propagation distance (meter) from aperture 
-sim.illumination.UseConjugate = False         # (46) use the conjugate of the probe instef of the probe
-sim.illumination.antialiasing = 2.0           # (47) antialiasing factor used when generating the probe
-sim.illumination.spot_size = None             # (48) focal spot diameter (meter)
-sim.illumination.photons = 3e7                # (49) number of photons in illumination
-sim.illumination.probe = None                 # (50) override if not None
+sim.illumination.model = None
+sim.illumination.photons = 3e8                # (49) number of photons in illumination
+sim.illumination.aperture = u.Param()
+sim.illumination.aperture.diffuser = None
+sim.illumination.aperture.form = "rect"
+sim.illumination.aperture.size = 35e-6
+sim.illumination.aperture.central_stop = None
+sim.illumination.propagation = u.Param()
+sim.illumination.propagation.focussed = 0.08 
+sim.illumination.propagation.parallel = 0.0014
+sim.illumination.propagation.spot_size = None
 
 sim.sample = u.Param()
-sim.sample.source = u.xradia_star((1000,1000),minfeature=3,contrast=0.)# (52) 'diffraction', None, path to a file or nd-array 
-sim.sample.offset = (0,0)                     # (53) offset between center of object array and scan pattern
-sim.sample.zoom = 1.0                         # (54) None, scalar or 2-tupel
-sim.sample.formula = "Au"                     # (55) chemical formula (string)
-sim.sample.density = 19.3                     # (56) density in [g/ccm]
-sim.sample.thickness = 2000e-9                 # (57) max thickness of sample
-sim.sample.ref_index = None                   # (58) assigned refractive index
-sim.sample.smoothing_mfs = None                  # (59) smooth the projection with gaussian kernel of with x pixels
-sim.sample.noise_rms = None                   # (60) noise applied, relative to 2*pi in phase and relative to 1 in amplitude
-sim.sample.noise_mfs = 10                     # (61) see noise rms.
+sim.sample.model = u.xradia_star((1000,1000),minfeature=3,contrast=0.0)# (52) 'diffraction', None, path to a file or nd-array 
+sim.sample.process = u.Param()
+sim.sample.process.offset = (200,200)                     # (53) offset between center of object array and scan pattern
+sim.sample.process.zoom = 1.0                         # (54) None, scalar or 2-tupel
+sim.sample.process.formula = "Au"                     # (55) chemical formula (string)
+sim.sample.process.density = 19.3                     # (56) density in [g/ccm]
+sim.sample.process.thickness = 2000e-9                 # (57) max thickness of sample
+sim.sample.process.ref_index = None                   # (58) assigned refractive index
+sim.sample.process.smoothing = None                  # (59) smooth the projection with gaussian kernel of with x pixels
 sim.sample.fill = 1.0+0.j                     # (62) if object is smaller than the objectframe, fill with fill
-sim.sample.obj = None                         # (63) override
 
-sim.detector = 'FRELON_TAPER'
+#sim.detector = 'FRELON_TAPER'
+sim.detector = 'GenericCCD32bit'
+sim.verbose_level = 1
+sim.coherence = u.Param()
+sim.coherence.Nprobe_modes = 1
+sim.psf = 1.
 
-p.model = sim.copy(depth=4)
+p.scan = sim.copy(depth=4)
 
-p.model.geometry = u.Param()
-p.model.geometry.energy = 17.0                    # (17) Energy (in keV)
-p.model.geometry.lam = None                       # (18) wavelength
-p.model.geometry.z = 2.886                        # (19) distance from object to screen
-p.model.geometry.psize_det = 51e-6                # (20) Pixel size in Detector plane
-p.model.geometry.psize_sam = None                 # (21) Pixel size in Sample plane
-p.model.geometry.shape = 256                          # (22) Number of detector pixels
-p.model.geometry.prop_type = "farfield"           # (23) propagation type
-
-
-p.model.coherence = u.Param()
-p.model.coherence.Nprobe_modes = 4                # (65) 
-p.model.coherence.Nobject_modes = 1               # (66) 
-p.model.coherence.energies = [1.0]                # (67) 
+p.scan.geometry = u.Param()
+p.scan.geometry.energy = 17.0                    # (17) Energy (in keV)
+p.scan.geometry.lam = None                       # (18) wavelength
+p.scan.geometry.distance = 2.886                        # (19) distance from object to screen
+p.scan.geometry.psize = 51e-6                # (20) Pixel size in Detector plane
+p.scan.geometry.shape = 256                          # (22) Number of detector pixels
+p.scan.geometry.propagation = "farfield"           # (23) propagation type
 
 
-p.model.sample.source = None
-p.model.illumination.aperture_type = 'circ'
-p.model.illumination.focal_dist = 0.06
+p.scan.coherence = u.Param()
+p.scan.coherence.Nprobe_modes = 4                # (65) 
+p.scan.coherence.Nobject_modes = 1               # (66) 
+p.scan.coherence.energies = [1.0]                # (67) 
+
+
+p.scan.sample.model = 'stxm'
+p.scan.sample.process =  None
+p.scan.illumination.aperture.form = 'circ'
+p.scan.illumination.propagation.focussed = 0.06
+p.scan.illumination.diversity = u.Param()
+p.scan.illumination.diversity.power = 0.1
+p.scan.illumination.diversity.noise = (np.pi,2.0)
 
 p.scans = u.Param()
 p.scans.sim = u.Param()

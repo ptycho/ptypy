@@ -1188,6 +1188,7 @@ class DataSource(object):
         while msg == EOS and self.scan_available:
             self.scan_current += 1
             PS = self.PS[self.scan_current]
+            label = self.labels[self.scan_current]
             if not PS.is_initialized:
                 PS.initialize()
             msg = PS.auto(self.frames_per_call, self.feed_format)
@@ -1199,8 +1200,9 @@ class DataSource(object):
             # attach inner label
             msg['common']['ptylabel'] = label
             #print u.verbose.report(msg)
-            yield msg
-
+            return msg
+        else:
+            return None
 
 if __name__ == "__main__":
     u.verbose.set_level(3)

@@ -412,7 +412,7 @@ class Ptycho(Base):
         from .. import io
         
         destfile = self.paths.recon_file
-        if alt_file is not None: 
+        if alt_file is not None and parallel.master: 
             destfile = u.clean_path(alt_file)
 
         header = {}
@@ -493,7 +493,7 @@ class Ptycho(Base):
         """
         Calculates the memrory usage and other info of ptycho instance 
         """
-        offset = 9
+        offset = 8
         active_pods = sum(1 for pod in self.pods.values() if pod.active)
         all_pods = len(self.pods.values())
         info = '\n'
@@ -501,9 +501,8 @@ class Ptycho(Base):
         info += '-'*80 +'\n'
         desc =dict([('memory','Memory'),('shape','Shape'),('psize','Pixel size'),('dimension','Dimensions'),('views','Views')])
         units = dict([('memory','(MB)'),('shape','(Pixel)'),('psize','(meters)'),('dimension','(meters)'),('views','act.')])
-        _table = [('memory',6),('shape',15),('psize',15),('dimension',15),('views',5)]
+        _table = [('memory',6),('shape',16),('psize',15),('dimension',15),('views',5)]
         table_format = _table if table_format is None else table_format
-        offset = 9
         h1="(C)ontnr".ljust(offset)
         h2="(S)torgs".ljust(offset)
         for key,column in table_format:
@@ -526,13 +525,12 @@ class Ptycho(Base):
         logger.info(info,extra={'allprocesses':True})
         #logger.debug(info,extra={'allprocesses':True})
 
-    def plot_overview(self):
+    def plot_overview(self,fignum=100):
         """
         plots whole the first four layers of every storage in probe, object % diff
         """
         from matplotlib import pyplot as plt
         plt.ion()
-        fignum=100
         for s in self.obj.S.values():
             u.plot_storage(s,fignum,'linear',(slice(0,4),slice(None),slice(None)))
             fignum+=1
@@ -540,5 +538,5 @@ class Ptycho(Base):
             u.plot_storage(s,fignum,'linear',(slice(0,4),slice(None),slice(None)))
             fignum+=1
         for s in self.diff.S.values():
-            u.plot_storage(s,fignum,'log',(slice(0,4),slice(None),slice(None)))
+            u.plot_storage(s,fignum,'log',(slice(0,4),slice(None),slice(None)), cmap='CMRmap')
             fignum+=1
