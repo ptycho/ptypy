@@ -1226,7 +1226,7 @@ class POD(Base):
         self.di_view = self.V['diff']
         self.ex_view = self.V['exit']
         self.ma_view = self.V['mask']
-        self.exit = np.ones_like(self.geometry.N,dtype=self.owner.CType)
+        self.exit = np.ones_like(self.geometry.N,dtype=self.owner.CType) if self.active else None
         # Check whether this pod is active it should maybe also have a check for an active mask view?
         # Maybe this should be tight to to the diff views activeness through a property
     @property
