@@ -18,9 +18,9 @@ from classes import *
 from classes import PTYCHO_PREFIX
 import paths 
 from manager import *
+from . import model
 
 parallel = u.parallel
-import data
 
 __all__ = ['Ptycho']
 
