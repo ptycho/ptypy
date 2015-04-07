@@ -18,13 +18,26 @@ __all__ = ['grids','switch_orientation',\
 
 def switch_orientation(A, orientation, center=None):
     """
-    Switches orientation of Array A along the last two axes (-2,-1)
-        
-    orientation : 3-tuple of booleans (transpose,flipud,fliplr)
+    Switches orientation of Array `A` along the last two axes ``(-2,-1)``
     
-    returns
-    --------
-        Flipped array, new center
+    Parameters
+    ----------
+    A :  array-like
+        input array, must be at least twodimensional
+         
+    orientation : tuple
+        3-tuple of booleans (transpose,flipud,fliplr)
+    
+    center : tuple, optional
+        move this coordinate alomg with the transformations
+        
+    Returns
+    -------
+    out : array-like
+        A view of `A` where either rows, columns and axis may be reversed
+    
+    center : tuple
+        new center        
     """
     o = 0 if orientation is None else orientation
     
@@ -44,24 +57,58 @@ def switch_orientation(A, orientation, center=None):
         A = A[..., ::-1]
         center = (center[0], A.shape[-1] - 1 - center[1]) if center is not None else None
 
-    return A, np.array(center)
+    if center is None:
+        return A
+    else: 
+        return A, np.array(center)
 
 
 def rebin_2d(A, rebin=1):
     """
-    Rebins array A symmetrically along last 2 axes with a factor `rebin`
+    Rebins array `A` symmetrically along the last 2 axes 
+    with factor `rebin`.
+    
+    Parameters
+    ----------
+    A : array-like
+        input array, must be at least two-dimensional.
+        
+    rebin : int
+        rebin factor, `rebin=2` means that a square of 4 pixels will be
+        binned into one. 
+        
+    Returns
+    -------
+    out : array-like
+
+    See also
+    --------
+    rebin
     """
-    newdim = np.asarray(A.shape[-2:]) / rebin
-    return A.reshape(-1, newdim[0], rebin, newdim[1], rebin).sum(-1).sum(-2)
+    sh = np.asarray(A.shape[-2:])
+    newdim = sh / rebin
+    if not (sh % rebin == 0).all():
+        raise ValueError('Last two axes %s of input array `A` cannot be binned by %s' % (str(tuple(sh)),str(rebin))) 
+    else:
+        return A.reshape(-1, newdim[0], rebin, newdim[1], rebin).sum(-1).sum(-2)
 
 
 def crop_pad_symmetric_2d(A, newshape, center=None):
     """
-    Crops or pads Array A symmetrically along the last two axes (-2,-1)
-    around center `center` to a new shape `newshape`
+    Crops or pads Array `A` symmetrically along the last two axes `(-2,-1)`
+    around center `center` to a new shape `newshape`.
+    
+    Parameters
+    ----------
+    A : array-like
+        input array, must be at least two-dimensional.
+        
+    newshape : tuple, array_like
+        requested output shape.
+    Returns
+    -------
     
     """
-    # crop / pad symmetrically around center
     osh = np.array(A.shape[-2:])
     c = np.round(center) if center is not None else osh // 2
     sh = np.array(newshape[-2:])
@@ -75,7 +122,7 @@ def crop_pad_symmetric_2d(A, newshape, center=None):
     return A, c + low
 
 def rebin(a, *args,**kwargs):
-    '''\
+    """
     Rebin ndarray data into a smaller ndarray of the same rank whose dimensions
     are factors of the original dimensions.
     
@@ -93,7 +140,7 @@ def rebin(a, *args,**kwargs):
     
     Returns
     -------
-    out : nd-numpy-array
+    out : ndarray
         Rebined array.
           
     Examples
@@ -106,7 +153,7 @@ def rebin(a, *args,**kwargs):
     >>> a2=np.random.rand(6)
     >>> b2=ptypy.utils.rebin(a2,2)
     a.reshape(args[0],factor[0],).sum(1)*( 1./factor[0])
-    '''
+    """
     shape = a.shape
     lenShape = a.ndim
     factor = np.asarray(shape)/np.asarray(args)
@@ -248,11 +295,25 @@ def fill3D(A,B,offset=[0,0,0]):
         =B[Bo[0]:min(Alim[0]-off[0],Blim[0]),Bo[1]:min(Alim[1]-off[1],Blim[1]),Bo[2]:min(Alim[2]-off[2],Blim[2])] 
         
 
-def mirror(A,axis):
+def mirror(A,axis=-1):
     """\
-    mirrors array A along one axis 
+    Mirrors array `A` along one axis `axis`
+    
+    Parameters
+    ----------
+    A : array-like
+        Input array 
+    
+    axis: int, optional
+        Axis along which the array will be mirrored
+    
+    Returns
+    -------
+    array-like
+        A view to the mirrored array.
+    
     """
-    return np.flipud(A.swapaxes(axis,0)).swapaxes(0,axis)
+    return np.flipud(np.asarray(A).swapaxes(axis,0)).swapaxes(0,axis)
     
 def pad_lr(A,axis,l,r,fillpar=0.0, filltype='scalar'):
     """\
@@ -320,41 +381,68 @@ def _roll_from_pixcenter(sh,center):
        
     
 
-def crop_pad_axis(A,hplanes,axis,roll=0,fillpar=0.0, filltype='scalar'):
-    """\
-    crops or pads a volume array 'A' at beginning and end of axis 'axis' 
-    with a number of hyperplanes specified by 'hplanes'
+def crop_pad_axis(A,hplanes,axis=-1,roll=0,fillpar=0.0, filltype='scalar'):
+    """
+    Crops or pads a volume array `A` at beginning and end of axis `axis`
+    with a number of hyperplanes specified by `hplanes`
 
-    Paramters:
-    -------------
-    A : nd-numpy array
+    Parameters
+    ---------
+    A : array-like
+        Input array, should be at least one-dimensional
     
-    hplanes: tuple or scalar int
-    axis: int, axis to be used for cropping / padding
-    roll: int, roll array backwards by this number prior to padding / cropping. the roll is reversed afterwards
-   
-    if 'hplanes' is,
-    -scalar and negativ : 
+    hplanes: int or tuple of int
+        Number of hyperplanes to add or remove in total. 
+        If tuple of 2 ints, this value is interpreted as `(begin, end)`.
+        See the ``Note`` for more information.
+        
+    axis: int, optional 
+        axis to be used for cropping / padding
+    
+    roll: int, 
+        Roll array backwards by this number prior to padding / cropping. 
+        The roll is reversed afterwards
+        
+    fillpar, filltype
+        See ``pad_lr`` for explqanation
+        
+    Returns
+    -------
+    array-like
+        Cropped / padded array
+        
+    See also
+    --------
+    pad_lr
+    
+    Note
+    ----
+    - if `hplanes` is scalar and negativ : 
         crops symmetrically, low-index end of axis is preferred if hplane is odd,
-    -scalar and positiv : 
+    - if `hplanes` is scalar and positiv : 
         pads symmetrically with a fill specified with 'fillpar' and 'filltype'
         look at function pad_lr() for detail.
-    -is tupel : function pads /crops asymmetrically according to the tupel.
+    - if `hplanes` is tupel : 
+        function pads /crops at (begin, end) according to the tupel.
     
-    Usage:
-    -------------
-    A=np.ones((8,9))
-    B=crop_pad_axis(A,2,0)
-    -> a total of 2 rows, one at top, one at bottom (same as crop_pad_axis(A,(1,1),0))
-    B=crop_pad_axis(A,(-3,2),1)
-    -> crop 3 columns on left side and pad 2 columns on right
-    V=np.random.rand(3,5,5)
-    B=crop_pad_axis(V,-2,0)
-    -> crop one plane on low-side and high-side (total of 2) of Volume V
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from ptypy.utils import crop_pad_axis
+    >>> A=np.ones((8,9))
+    Add a total of 2 rows, one at top, one at bottom.
+    >>> B=crop_pad_axis(A,2,0)
+    Same as 
+    >>> B = crop_pad_axis(A,(1,1),0))
+    Crop 3 columns on left side and pad 2 columns on right
+    >>> B = crop_pad_axis(A,(-3,2),1)
+ 
+    >>> V=np.random.rand(3,5,5)
+    Crop one plane on low-side and high-side (total of 2) of Volume V
+    >>> B=crop_pad_axis(V,-2,0)
+    
+    Mirror volume 3 planes on low side of row axis, crop 2 planes on high side
     B=crop_pad_axis(V,(3,-2),1,filltype='mirror')
-    -> mirror volume 3 planes on low side of row axis, crop 2 planes on high side
-    
-    Author: Bjoern Enders
     """
     if np.isscalar(hplanes):
         hplanes=int(hplanes)
@@ -389,35 +477,50 @@ def crop_pad_axis(A,hplanes,axis,roll=0,fillpar=0.0, filltype='scalar'):
  
 def crop_pad(A,hplane_list,axes=None,cen=None,fillpar=0.0,filltype='scalar'):
     """\
-    crops or pads a volume array 'A' with a number of hyperplanes according to parameters in 'hplanes'
-    wrapper for crop_pad_axis
+    Crops or pads a volume array `A` with a number of hyperplanes according to parameters in `hplanes`
+    Wrapper for crop_pad_axis.
     
     Parameters
-    ----------------------
-    hplane_list : 
-     -list of scalars or tupels counting the number of hyperplanes to crop / pad 
-     -see crop_pad_axis() for detail
-     -if N=len(hplane_list) has less entries than dimensions of A, the last N axes are used 
+    ----------
+    A : array-like
+        input array of any shape
+        
+    hplane_list : array-like, list
+        list of scalars or tupels counting the number of hyperplanes to crop / pad 
+        see crop_pad_axis() for detail. If N=len(hplane_list) has less entries than dimensions of A, the last N axes are used 
 
-    axes: list of axes to be used for cropping / padding, has to be same length as hplanes
+    axes: tuple, list
+        tuple / list of axes to be used for cropping / padding, has to be same length as hplanes
     
-    cen: center of array, padding/cropping occurs at cen + A.shape / 2
+    cen: 
+        center of array, padding/cropping occurs at cen + A.shape / 2
     
-    Usage:
-    ----------------------
-    V=np.random.rand(3,5,5)
-    B=crop_pad(V,[3,4])
-    ->  pads 4 planes of zeros on the last axis (2 on low side and 2 on high side),
-        and pads 3 planes of zeros on the second last axis (2 on low side and 1 on high side)
-        equivalent: B=crop_pad(V,[(2,1),(2,2)])
-                    B=crop_pad(V,[(2,1),(2,2)], axes=[-2,-1],fillpar=0.0,filltype='scalar')
+    Returns
+    -------
+    array-like
+        Cropped or padded array.
+        
+    See also
+    --------
+    crop_pad_axis
     
-    C=pyE17.utils.fgrid_2d((4,5))
-    cropped_fgrid=crop_pad(V,[-2,4],cen='fft')
-    -> note that cropping/ padding now occurs at the start and end of fourier coordinates
-    -> useful for cropping /padding high frequencies in fourier space.
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from ptypy.utils import crop_pad
+    >>> V=np.random.rand(3,5,5)
+    >>> B=crop_pad(V,[3,4])
+    pads 4 planes of zeros on the last axis (2 on low side and 2 on high side),
+    and pads 3 planes of zeros on the second last axis (2 on low side and 1 on high side)
+    equivalent: 
+    >>> B=crop_pad(V,[(2,1),(2,2)])
+    >>> B=crop_pad(V,[(2,1),(2,2)], axes=[-2,-1],fillpar=0.0,filltype='scalar')
+    >>> from ptypy.utils import grids
+    >>> fftshift_grid = grids((6,4),center = 'fft')
+    >>> cropped_grid=crop_pad(V,[-2,4],cen='fft')
+    note that cropping/ padding now occurs at the start and end of fourier coordinates
+    useful for cropping /padding high frequencies in fourier space.
     
-    Author: Bjoern Enders
     """
     if axes is None:
         axes=np.arange(len(hplane_list))-len(hplane_list)

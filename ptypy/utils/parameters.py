@@ -225,7 +225,13 @@ class Param(dict):
     def __delattr__(self, name):
         return super(Param, self).__delitem__(name)
         
-    __getattr__ = __getitem__
+    #__getattr__ = __getitem__
+    def __getattr__(self, name):
+        try: 
+            return self.__getitem__(name)
+        except KeyError as ke:
+            raise AttributeError(ke)
+            
     __setattr__ = __setitem__
 
     def copy(self,depth=0):

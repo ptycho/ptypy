@@ -8,7 +8,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .. import utils as u
-from ..utils import prop 
+#from ..utils import prop 
 from ..utils.verbose import logger
 import numpy as np
 import os

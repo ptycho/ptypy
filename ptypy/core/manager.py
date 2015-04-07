@@ -25,7 +25,7 @@ from classes import MODEL_PREFIX
 
 from ..utils import parallel
 import geometry
-from ..utils import prop
+#from ..utils import prop
 import illumination
 import sample
 import geometry
