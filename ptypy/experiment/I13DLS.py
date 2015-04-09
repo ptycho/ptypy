@@ -42,7 +42,7 @@ EXPERIMENT_IN_NEXUS_FILE = 'entry1/experiment_identifier'
 #FILENAME_PATTERN = '{read_path}/{index}.{file_extension}'
 #INDEX_REPLACEMENT_STRING = '????'
 
-# Standard parameter stucture for prepare_data
+# Standard parameter structure for prepare_data
 DEFAULT = u.Param(
     verbose_level = 2, # Verbosity level 
     base_path = None, #'The root directory where all experiment information can be found'
@@ -99,9 +99,9 @@ class DataReader(object):
 
     def __init__(self, pars=None):#base_path, experimentID=None, mask=None, flat=None, dark=None):
         """\
-        I13 DLS data reading class. The only mendatory argument for this constructor are 'base_path' and 'user'. 
+        I13 DLS data reading class. The only mandatory argument for this constructor are 'base_path' and 'user'.
         
-        Mask, flat or dark should be either None, scan numbers (interger) or file paths
+        Mask, flat or dark should be either None, scan numbers (integer) or file paths
         """
         # Semi-smart base path detection: we are looking for a "raw" directory
         p = u.Param(DEFAULT)
