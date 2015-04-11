@@ -64,10 +64,10 @@ class Geo(Base):
         """
         Hold and keep consistant the information about experimental parameters.  
 
-        additional Parameters in kwargs:
-        -----------
+        Keyword Args
+        ------------
         pars : dict or Param
-               The configuration parameters. See Geo.DEFAULT.
+            The configuration parameters. See Geo.DEFAULT.
         
         any other kwarg will update internal p dictionary if the key exists in DEFAULTS
         """

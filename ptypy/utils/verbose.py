@@ -134,19 +134,23 @@ def _(label, value):
     return '%-25s%s' % (label + ':', str(value))
 
 
-def report(thing,depth=4,maxchar=80):
+def report(thing,depth=4,noheader=False):
     """
     no protection for circular references
     """
     import time
     import numpy as np
     
-    header = '\n---- Process #%d ---- ' % parallel.rank + time.asctime() + ' -----\n' 
-    indent = 2
-    level = 0
+    indent = report.indent
+    level = report.level
+    maxchar = report.maxchar
+    hn = report.headernewline
+    star = report.asterisk
     
+    header = '\n---- Process #%d ---- ' % parallel.rank + time.asctime() + ' -----\n'
+
     def _(label,level,obj):
-        pre = " "*indent*level +  '* ' 
+        pre = " "*indent*level + star + ' ' 
         extra = str(type(obj)).split("'")[1]
         pre+=str(label) if label is not None else "id"+np.base_repr(id(obj),base=32)
         if len(pre)>=25:
@@ -155,7 +159,7 @@ def report(thing,depth=4,maxchar=80):
         
     def _format_dict(label, level, obj):
         header,extra = _(label, level, obj) 
-        header+= ' %s(%d)\n' % (extra,len(obj))
+        header+= ' %s(%d)' % (extra,len(obj)) + hn
         if level <= depth:
             #level +=1
             for k,v in obj.iteritems():
@@ -165,7 +169,7 @@ def report(thing,depth=4,maxchar=80):
     def _format_iterable(label, level, lst):
         l = len(lst)
         header,extra = _(label, level, lst)
-        header+= ' %s(%d)' % (extra,l)
+        header+= ' %s(%d)' % (extra,l) + hn
         string = str(lst)
         if len(string) <= maxchar-25 or level>=depth:
             return header +'= '+ string +'\n'
@@ -212,4 +216,13 @@ def report(thing,depth=4,maxchar=80):
             stringout = _format_other(key,level, obj)
         return stringout
     
-    return header +_format(None,0,thing)
+    if noheader:
+        return _format(None,0,thing)
+    else:
+        return header +_format(None,0,thing)
+
+report.indent = 2
+report.level = 0
+report.maxchar = 80
+report.headernewline='\n'
+report.asterisk='*'

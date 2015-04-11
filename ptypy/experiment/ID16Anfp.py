@@ -80,8 +80,8 @@ class ID16AScan(PtyScan):
         pars.update(**kwargs)
         
         # Apply beamline parameters ("recipe")
-		rinfo = DEFAULT.copy()
-		rinfo.update(pars.recipe)
+        rinfo = DEFAULT.copy()
+        rinfo.update(pars.recipe)
         
         # Initialise parent class with input parameters
         super(self.__class__, self).__init__(pars)
@@ -92,14 +92,14 @@ class ID16AScan(PtyScan):
         # Default scan label
         if self.info.label is not None:
             assert (self.info.label == rinfo.scan_label), 'Incompatible scan labels'
-		self.info.label = rinfo.scan_label
-		logger.info('Scan label: %s' % rinfo.scan_label)
-		
-		# Default flat and dark labels.
-		if rinfo.flat_label is None:
-			rinfo.flat_label = rinfo.scan_label
-		if rinfo.dark_label is None:
-			ringo.dark_label = ringo.scan_label
+        self.info.label = rinfo.scan_label
+        logger.info('Scan label: %s' % rinfo.scan_label)
+        
+        # Default flat and dark labels.
+        if rinfo.flat_label is None:
+            rinfo.flat_label = rinfo.scan_label
+        if rinfo.dark_label is None:
+            ringo.dark_label = ringo.scan_label
 
         # Attempt to extract base_path if missing
         if rinfo.base_path is None:
@@ -118,33 +118,33 @@ class ID16AScan(PtyScan):
                 rinfo.base_path = base_path
                 logger.info('Base path: %s' % base_path)
 
-		# Data file names
+        # Data file names
         rinfo.data_file = rinfo.data_file_pattern.format(rinfo)
         rinfo.dark_file = rinfo.dark_file_pattern.format(rinfo)
         rinfo.flat_file = rinfo.flat_file_pattern.format(rinfo)
 
-		# Read metadata
-		h = io.h5read(rinfo.data_file)
-		entry = h.keys()[0]
-		rinfo.entry = entry
-		
-		# Energy
-		k = H5_PATHS.energy.format(rinfo)
-		energy = float(io.h5read(rinfo.data_file, k)[k])
-		if self.info.energy is not None:
-			assert self.info.energy == energy, "Energy (%f keV) is read from file - please don't attempt to overwrite it" % energy
+        # Read metadata
+        h = io.h5read(rinfo.data_file)
+        entry = h.keys()[0]
+        rinfo.entry = entry
+        
+        # Energy
+        k = H5_PATHS.energy.format(rinfo)
+        energy = float(io.h5read(rinfo.data_file, k)[k])
+        if self.info.energy is not None:
+            assert self.info.energy == energy, "Energy (%f keV) is read from file - please don't attempt to overwrite it" % energy
 
         # Attempt to extract experiment ID
         if rinfo.experimentID is None:
-			# We use the path structure for this
-			experimentID = os.path.split(os.path.split(rinfo.base_path[:-1])[0])[1]
-			logger.info('experiment ID: %s' % experimentID)
-			rinfo.experimentID = experimentID
-		
-		# Effective pixel size
+            # We use the path structure for this
+            experimentID = os.path.split(os.path.split(rinfo.base_path[:-1])[0])[1]
+            logger.info('experiment ID: %s' % experimentID)
+            rinfo.experimentID = experimentID
+        
+        # Effective pixel size
 
 
-		# Data file names
+        # Data file names
         rinfo.data_file = rinfo.data_file_pattern.format(rinfo)
         rinfo.dark_file = rinfo.dark_file_pattern.format(rinfo)
         rinfo.flat_file = rinfo.flat_file_pattern.format(rinfo)
@@ -160,24 +160,24 @@ class ID16AScan(PtyScan):
         """
         common = u.Param()
 
-		h = io.h5read(self.rinfo.data_file)
-		entry = h.keys()[0]
-		
+        h = io.h5read(self.rinfo.data_file)
+        entry = h.keys()[0]
+        
         # Get positions
         motor_positions = io.h5read(self.rinfo.data_file, H5_PATHS.motors)[H5_PATHS.motors]
         mmult = u.expect2(self.rinfo.motors_multiplier)
         pos_list = [mmult[i] * np.array(motor_positions[motor_name]) for i, motor_name in enumerate(self.rinfo.motors)]
         common.positions_scan = np.array(pos_list).T
 
-		# Load dark
-		h = io.h5read(self.rinfo.dark_file)
-		entry_name = h.keys()[0]
-		darks = h[entry_name]['ptycho']['data']
-		if darks.ndim == 2:
-			common.dark = darks
-		else:
-			common.dark = darks.median(axis=0)
-		
+        # Load dark
+        h = io.h5read(self.rinfo.dark_file)
+        entry_name = h.keys()[0]
+        darks = h[entry_name]['ptycho']['data']
+        if darks.ndim == 2:
+            common.dark = darks
+        else:
+            common.dark = darks.median(axis=0)
+        
         # Load white field
         common.white = io.edfread(self.rinfo.whitefield_file)[0]
         
@@ -185,7 +185,7 @@ class ID16AScan(PtyScan):
         dh = io.edfread(self.rinfo.distortion_h_file)[0]
         dv = io.edfread(self.rinfo.distortion_v_file)[0]
 
-		common.distortion = (dh, dv)
+        common.distortion = (dh, dv)
 
         return common._to_dict()
         
@@ -233,7 +233,7 @@ class ID16AScan(PtyScan):
         assert (raw.shape == (2048,2048)), 'Wrong frame dimension! Is this a frelon camera?'
         
         # Whitefield correction
-		raw_wf = raw / common.white
+        raw_wf = raw / common.white
 
         # Missing line correction
         raw_wf_ml = raw_wf.copy()
@@ -251,18 +251,20 @@ class ID16AScan(PtyScan):
 def undistort(frame, delta):
     """
     Frame distortion correction (linear interpolation)
+    Any value outside the frame is replaced with a constang value (mean of
+    the complete frame)
     
     Parameters:
     -----------
-    frame: the input frame data
-    delta: a 2-tuple containing the horizontal and vertical displacements respectively.
-
-	Any value outside the frame is replaced with a constang value (mean of
-	the complete frame)
+    frame: ndarray
+        the input frame data
+    delta: 2-tuple 
+        containing the horizontal and vertical displacements respectively.
     
-    returns:
+    Returns:
     --------
-    The corrected frame of same dimension and type as frame.
+    ndarray
+        The corrected frame of same dimension and type as frame.
 
     """
     # FIXME: this function should attempt to use scipy.interpolate.interpn if available.

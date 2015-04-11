@@ -236,7 +236,7 @@ class Param(dict):
 
     def copy(self,depth=0):
         """
-        P.copy() -> A (recursive) copy of P with depth `depth` 
+        :returns Param: A (recursive) copy of P with depth `depth` 
         """
         d = Param(self)
         if depth>0:
@@ -251,7 +251,7 @@ class Param(dict):
         tab completion in e.g. ipython.
         If you do not wish the dict key's be displayed as attributes
         (although they are still accessible as such) set the class 
-        attribute '_display_items_as_attributes' to False. Default is
+        attribute `_display_items_as_attributes` to False. Default is
         True.
         """
         if self._display_items_as_attributes:
@@ -263,18 +263,20 @@ class Param(dict):
     def update(self, __d__=None,in_place_depth=0,Convert=False, **kwargs):
         """
         Update Param - almost same behavior as dict.update, except
-        that all dictionaries are converted to Param, and update
-        is done recursively, in such a way that as little info is lost.
+        that all dictionaries are converted to Param if `Convert` is set 
+        to True, and update may occur in-place recursively for other Param
+        instances that self refers to.
         
-        additional Parameters:
-        ----------------------
-        Convert : bool (False)
-                  If True, convert all dict-like values in self also to Param
+        Parameters
+        ----------
+        Convert : bool 
+                  If True, convert all dict-like values in self also to Param.
                   *WARNING* 
                   This mey result in misdirected references in your environment
-        in_place_depth : int (0)
+        in_place_depth : int 
                   Counter for recursive in-place updates 
-                  updated with the new values.
+                  If the counter reaches zero, the Param to a key is
+                  replaced instead of updated
         """
         def _k_v_update(k,v):
             # If an element is itself a dict, convert it to Param

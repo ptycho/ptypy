@@ -1,5 +1,5 @@
 """
-data - diffraction data access
+data - Diffraction data access
 
 This module defines a PtyScan, a container to hold the experimental 
 data of a ptychography scan. Instrument-specific reduction routines should
@@ -7,44 +7,6 @@ inherit PtyScan to prepare data for the Ptycho Instance in a uniform format.
 
 The experiment specific child class only needs to overwrite 2 functions
 of the base class:
-
-check(self,frames,start):
-
-    returns :
-        (frames_available, end_of_scan)
-        - the number of frames available from a starting point `start`
-        - bool if the end of scan was reached (None if this routine doesn't know)
-
-load(self,indices):
-    loads data according to node specific scanpoint indeces that have 
-    been determined by the loadmanager from utils.parallel
-    returns :
-        (raw, positions, weight)
-        - dictionaries whose keys are `indices` and who hold the respective
-          frame / position according to the scan point index
-        - weight and positions may be empty
-
-load_common(self):
-    loads common arrays for all processes. excuted once on initialize()
-    Especially scan point position and correction arrays like dark field, mask 
-    and flat field should be loaded here.
-    The returned dictionary is available throughout preparation at 
-    self.common
-    
-    returns :
-        (common)
-        - a dictionary with only numpy arrays as values. These arrays are 
-          the same among all processes. 
-        - `positions_scan` and `weight2d` are known and useful.
-        
-correct(self,raw,weights,common):
-    place holder for dark and flat_field correction. 
-    may get merged with load
-    use common for correction 
-    
-    returns:
-        (data,weights)
-        - corrected data and weights
         
 For the moment the module contains two main objects:
 PtyScan, which holds a single ptychography scan, and DataSource, which
@@ -75,14 +37,13 @@ else:
 parallel = u.parallel
 logger = u.verbose.logger
 
-
-
 PTYD = dict(
     chunks={},  # frames, positions
     meta={},  # important to understand data. loaded by every process
     info={},  # this dictionary is not loaded from a ptyd. Mainly for documentation
     common={},
 )
+""" Basic Structure of a .ptyd datafile """
 
 META = dict(
     label=None,   # label will be set internally 
@@ -113,6 +74,7 @@ GENERIC = dict(
     num_frames = None, # Total number of frames to be prepared
     recipe = {},
 )
+"""See unflattened representation below"""
 GENERIC.update(META)
 
 WAIT = 'msg1'
@@ -120,6 +82,7 @@ EOS = 'msgEOS'
 CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
          EOS: 'End of scan reached'}
 
+__all__ = ['GENERIC','PtyScan','PTYD','PtydScan','MoonFlowerScan']
 
 class PtyScan(object):
     """\
@@ -324,27 +287,38 @@ class PtyScan(object):
 
     def load_common(self):
         """
-        ! Overwrite in child class for custom behavior !
+        **Overwrite in child class**
         
         Loads arrays that are common and needed for preparation of all 
         other data frames coming in. Any array loaded here and returned 
         in a dict will be distributed afterwards through a broadcoast. 
         It is not intended to load diffraction data in this step.
+        
+        The main purpose is that there may be common data to all processes, that
+        is slow to retrieve or large files, such that if all processes
+        attempt to get the data, perfomance will decline or RAM usage 
+        may be too large.
                        
-        Main purpose ist to load dark field, flat field, etc
+        It is a good idea to load dark field, flat field, etc
         Also positions may be handy to load here
         
         If `load_parallel` is set to `all` or common`, this function is 
         executed by all nodes, otherwise the master node executes this
         function and braodcasts the results to other nodes. 
         
-        returns:
-            common : dict of numpy arrays
-                    At least two keys, `weight2d` and `positions_scan` must be given (they can be None)
+        Returns
+        -------
+        common : dict of numpy arrays
+            At least two keys, `weight2d` and `positions_scan` must be 
+            given (they can be None). The return dictionary is available
+            throught
                     
-        FIXME : I am not so much in favor of the fact that we are forced to transmit Nones
-                here or that the user is forced to know about that here.
-                This part was originally considered optional
+        Note
+        ----
+        The return signature of this function is not yet fixed and may 
+        get altered in near future. One Option would be to include
+        `weight2d` and `positions_scan` as part of the return signature
+        and thus fixing them in the Base class.
         """
         weight2d = None if self.info.shape is None else np.ones(u.expect2(self.info.shape), dtype='bool') 
         positions_scan = None if self.num_frames is None else np.indices((self.num_frames, 2)).sum(0)
@@ -605,11 +579,18 @@ class PtyScan(object):
         """
         Repeated calls to this function will process the data
         
-        returns:
+        Parameters
         ----------
-        None  ,if scan's end is not reached, but no data could be prepared yet
-        False ,if scan's end is reached
-        a data package otherwise
+        frames : int
+            Number of frames to process.
+            
+        Returns
+        -------
+        variable
+            one of the following
+              - None, if scan's end is not reached, but no data could be prepared yet
+              - False, if scan's end is reached
+              - a data package otherwise
         """
         # attempt to get data:
         msg = self.get_data_chunk(frames)
@@ -702,27 +683,31 @@ class PtyScan(object):
 
     def check(self, frames=None, start=None):
         """
-        ! Overwrite in child class !
+        **Overwrite in child class**
         
         This method checks how many frames the preparation routine may
-        process, starting from frame `start` at a request of `frames_requested`
+        process, starting from frame `start` at a request of `frames_requested`.
         
-        The method is supposed to return the number of accessible frames
+        This method is supposed to return the number of accessible frames
         for preparation and should detemernie if data acquistion for this
-        scan is finished
+        scan is finished.
         
         Parameters
-        -----------
-        frames : (int) or None, Number of frames requested
-        start  : (int) or None, scanpoint index to start checking from
+        ----------
+        frames : int or None 
+            Number of frames requested.
+        start : int or None
+            Scanpoint index to start checking from.
         
         Returns 
-        ---------------
-        (frames_accessible, : Number of frames readable  
-            end_of_scan)    : int or None
-                               0 : end of the scan is not reached
-                               1 : end of scan will be reached or is
-                              None : can't say
+        -------
+        frames_accessible : int
+            Number of frames readable.  
+        end_of_scan : int or None
+            is one of the following:
+             - 0, end of the scan is not reached
+             - 1, end of scan will be reached or is
+             - None, can't say
                     
         """
         if start is None:
@@ -760,10 +745,17 @@ class PtyScan(object):
 
     def load(self, indices):
         """
-        Overwrite in child class
-        loads data according to indices given
+        **Overwrite in child class**
         
-        must return 3 dicts with indices as keys: one for the raw frames, one for the
+        Loads data according to node specific scanpoint indeces that have 
+        been determined by the loadmanager from utils.parallel or otherwise
+    
+        Returns
+        -------
+        raw, positions, weight : dict
+            Dictionaries whose keys are the given scan point `indices` 
+            and whose values are the respective frame / position according 
+            to the scan point index. `weight` and `positions` may be empty
         """
         # dummy fill
         raw = dict((i, i * np.ones(u.expect2(self.info.shape))) for i in indices)
@@ -771,10 +763,22 @@ class PtyScan(object):
 
     def correct(self, raw, weights, common):
         """
-        Overwrite in child class
+        **Overwrite in child class**
         
-        Corrects the raw data with arrays given in `common`
-        Adjust the weights accordinlgy
+        Place holder for dark and flatfield correction. If :any:`load` 
+        already provides data in the form of photon counts, and no frame
+        specific weight is needed, this method may be left as is
+        
+        May get *merged* with :any:`load` in future.
+    
+        Returns
+        -------
+        data,weights : dict
+            Flat and dark-corrected data dictionaries. These dictionaries
+            must have the same keys as the input `raw` and contain 
+            corrected frames (`data`) and statistical weights (`weights`)
+            which are zero for invalid or masked pixel other the number
+            of detector counts that correspond to one photon count
         """
         # c=dict(indices=None,data=None,weight=None)
         data = raw
@@ -945,14 +949,11 @@ class PtydScan(PtyScan):
 
     def check(self, frames=None, start=None):
         """
-        Return the number of frames available from starting index `start`, and whether the end of the scan
-        was reached.
-
-        :param frames: Number of frames to load
-        :param start: starting point
-        :return: (frames_available, end_of_scan)
-        - the number of frames available from a starting point `start`
-        - bool if the end of scan was reached (None if this routine doesn't know)
+        Implementation of the check routine for a .ptyd file format
+        
+        See also
+        --------
+        Ptyscan.check
         """
 
         if start is None:

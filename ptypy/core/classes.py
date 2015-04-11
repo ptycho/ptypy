@@ -34,7 +34,12 @@ TODO: Rethink layer access (BE is not happy with current state)
 
 import numpy as np
 import weakref
-
+try: 
+    from pympler.asizeof import asizeof
+    use_asizeof=True
+except ImportError:
+    use_asizeof=False
+    
 from .. import utils as u
 from ..utils.parameters import PARAM_PREFIX
 from ..utils.verbose import logger
@@ -77,17 +82,19 @@ class Base(object):
         conversion to and from dictionarys as well as a 'cross-node' ID
         managament of python objects
         
-        Parameters:
-        -----------
-        owner : Other subclass of Base or Base.
-                Owner gives IDs to other ptypy objects that refer to him
-                as owner. Owner also keeps a reference to these objects in
-                its internal _pool where objects are key-sorted according 
-                to their ID prfix
+        Parameters
+        ----------
+        owner : Other subclass of Base or Base
+            Owner gives IDs to other ptypy objects that refer to him
+            as owner. Owner also keeps a reference to these objects in
+            its internal _pool where objects are key-sorted according 
+            to their ID prfix
         
-        ID : (None, string or scalar)
-             
-        BeOwner : (True) Set to False if this instance is not intended to own other other ptypy objects
+        ID : None, str or int
+            
+        BeOwner : bool
+            Set to `False` if this instance is not intended to own other
+            ptypy objects.
         """
         self.owner = owner
         self.ID = ID
@@ -109,7 +116,7 @@ class Base(object):
         Parameters:
         -----------
         obj : [any object] or None
-              The object to register.
+            The object to register.
         """
         try:
             prefix=obj._PREFIX
@@ -183,9 +190,37 @@ class Base(object):
         """
         return self.__dict__.copy()
 
+    def calc_mem_usage(self):
+        space = 64 # that is for the class itself
+        pool_space = 0
+        npy_space = 0
+        if hasattr(self,'_pool'):
+            if use_asizeof:
+                space+=asizeof(self._pool,limit=0) 
+            for k, v in self._pool.iteritems():
+                if use_asizeof:
+                    space+=asizeof(v,limit=0)
+                for kk,vv in v.iteritems():
+                    pool_space += vv.calc_mem_usage()[0]
+                
+        for k,v in self.__dict__.iteritems():
+            if issubclass(v.__class__,Base):
+                #print 'jump ' + str(v.__class__)
+                continue
+            elif str(k)=='_pool' or str(k)=='pods':
+                continue
+            else:
+                if use_asizeof:
+                    s= asizeof(v)
+                    space += s
+                if type(v) is np.ndarray:
+                    npy_space+=v.nbytes
+            #print str(k)+":"+str(s)       
+        return space+pool_space+npy_space, pool_space, npy_space
+        
 def get_class(ID):
     """
-    Determine ptypy class from unique ID
+    Determine ptypy class from unique `ID`
     """
     #typ,idx=ID[0]
     if ID.startswith(VIEW_PREFIX):
@@ -204,7 +239,7 @@ def get_class(ID):
     elif ID.startswith(PARAM_PREFIX):
         return u.Param
     elif ID.startswith(MODEL_PREFIX):
-        from scanmanager import ModelManager
+        from manager import ModelManager
         return ModelManager
     elif ID.startswith(GEO_PREFIX):
         from geometry import Geo
@@ -214,7 +249,7 @@ def get_class(ID):
         
 def valid_ID(obj):
     """
-    check if ID of object is compatible with the current format
+    check if ID of object `obj` is compatible with the current format
     """
     valid = False
     try:
@@ -227,9 +262,11 @@ def valid_ID(obj):
 
 class Storage(Base):
     """
-    Storage: Inner container handling acces to data arrays.
+    Inner container handling acces to data arrays.
 
-    * It returns view to coordinates given (slicing)
+    This class essentially manages access to an internal numpy array buffer.
+                
+    * It returns a view to coordinates given (slicing)
     * It contains a physical coordinate grid
     
     """
@@ -238,11 +275,6 @@ class Storage(Base):
 
     def __init__(self, container, ID=None, **kwargs):
         """
-        Storage: Inner container hangling access to arrays.
-
-        This class essentially manages access to an internal numpy array 
-        buffer.
-                
         Parameters
         ----------
         ID : ...
@@ -370,9 +402,9 @@ class Storage(Base):
         
         Parameters
         ----------
-        ID : ...
+        ID : str or int
              A unique ID, managed by the parent
-        fill : number or None
+        fill : scalar or None
                If float, set the content to this value. If None, copy the
                current content. 
         """
@@ -391,7 +423,7 @@ class Storage(Base):
         
         Parameters
         ----------
-        fill : float, numpy array or None.
+        fill : scalar, numpy array or None.
                Fill value to use. If fill is a numpy array, it is cast
                as self.dtype and self.shape is updated to reflect the 
                new buffer shape. If fill is None, use default value
@@ -458,13 +490,17 @@ class Storage(Base):
         """
         Crop or pad if required.
         
-        Parameters:
-        -----------
-        newID : int
-                If None (default) act on self. Otherwise create a copy of self
-                before doing the cropping and padding.
-                
-        return the cropped storage (a new one or self)
+        Parameters
+        ----------
+        newID : str or int
+            If None (default) act on self. Otherwise create a copy 
+            of self before doing the cropping and padding.
+            
+        Returns
+        -------
+        s : Storage
+            returns new Storage instance in same :any:`Container` if
+            `newId` is not None.
         """
 
         # If a new storage is requested, make a copy.
@@ -571,30 +607,30 @@ class Storage(Base):
 
     def _to_pix(self, coord):
         """
-        Transforms physical coordinates 'coord' to pixel coordinates.
+        Transforms physical coordinates `coord` to pixel coordinates.
         
         Parameters
         ----------
-        coord : (N,2) numpy array
-            the coordinate
+        coord : tuple or array-like
+            A ``(N,2)``-array of the coordinates to be trasnformed
         """
         return (coord - self.origin)/self.psize
 
     def _to_phys(self, pix):
         """
-        Transforms pixcel coordinates 'pix' to physical coordinates.
+        Transforms pixcel coordinates `pix` to physical coordinates.
         
         Parameters
         ----------
-        pix : (N,2) numpy array
-            the coordinate
+        pix : tuple or array-like
+            A ``(N,2)``-array of the coordinates to be transformed
         """
         return pix*self.psize + self.origin
         
     @property
     def psize(self):
         """
-        Return the pixel size.
+        :returns: The pixel size.
         """
         return self._psize
     
@@ -652,13 +688,13 @@ class Storage(Base):
 
     def zoom_to_psize(self,new_psize,**kwargs):
         """
-        ---- untested!!! ----
-        changes pixel size and zooms the data buffer along last two axis accordingly
-        updates all attached views and reformats if neccessary
+        Changes pixel size and zooms the data buffer along last two axis 
+        accordingly, updates all attached views and reformats if neccessary.
+        **untested!!**
         
-        Parameters:
-        -----------
-        new_psize : scalar, 2-tuple or (1,2)-array
+        Parameters
+        ----------
+        new_psize : scalar or array_like
                     new pixel size 
         """
         new_psize = u.expect2(new_psize)
@@ -686,7 +722,10 @@ class Storage(Base):
 
     def grids(self):
         """
-        Returns x and y grids in the shape of internal buffer
+        Returns
+        ------- 
+        x, y: ndarray 
+            grids in the shape of internal buffer
         """
         sh = self.data.shape 
         nm = np.indices(sh)[-2:]
@@ -697,8 +736,13 @@ class Storage(Base):
     
     def get_view_coverage(self):
         """
-        Returns an array of the shape of internal buffer
-        showing the view coverage of this storage 
+        Creates an array in the shape of internal buffer where the value
+        of each pixel represents the number of views that cover that pixel
+                
+        Returns
+        ------- 
+        ndarray 
+            view coverage in the shape of internal buffer 
         """
         coverage = np.zeros_like(self.data)
         for v in self.views:
@@ -708,7 +752,10 @@ class Storage(Base):
 
     def report(self):
         """
-        Returns a formatted string giving a report on this storage.
+        Returns
+        -------
+        str
+            a formatted string giving a report on this storage.
         """
         info = "Shape: %s\n" % str(self.data.shape)
         info += "Pixel size (meters): %g x %g\n" % tuple(self.psize)
@@ -720,10 +767,20 @@ class Storage(Base):
         """
         Returns formatted string and a dict with the respective information
         
-        :param: table_format, list of key,value pairs where key is the 
-                requested item and value the format
+        Parameters
+        ----------
+        table_format : list 
+            list of key(`str`),value(`str`) pairs where key is the item 
+            to be listed in the report and value is a string formatter
         
-        :returns: formated string and dict with the respective info
+        Returns
+        -------
+        fstring : str
+            formatted string 
+            
+        dct :dict
+            dictionary containing with the respective info to the keys
+            in `table_format`
         """
         dct ={}
         fstring = ""
@@ -767,7 +824,10 @@ class Storage(Base):
         """
         Storage[v]
         
-        Return the numpy array corresponding to the view on this storage.
+        Returns
+        -------
+        ndarray
+            The view to internal data buffe correspondieng to View `v`
         """
         if not isinstance(v,View):
             raise ValueError
@@ -781,7 +841,15 @@ class Storage(Base):
         """
         Storage[v] = newdata
 
-        Set the data to newdata for view v.
+        Set internal data buffer to `newdata` for the region of view `v`.
+        
+        Parameters
+        ----------
+        v : View
+            A View for this storage
+        
+        newdata : ndarray
+            Two-dimensional array that fits the view's shape
         """
         if not isinstance(v,View):
             raise ValueError
@@ -940,11 +1008,8 @@ class Container(Base):
 
         Parameters
         ----------
-        ID : ...
+        ID : str or int
              A unique ID, managed by the parent
-        name : str or None
-               The name of this container. For documentation and debugging
-               purposes only. Defaults to str(ID)
         ptycho : Ptycho
                  The instance of Ptycho associated with this pod. If None,
                  defaults to ptypy.currentPtycho
@@ -969,11 +1034,16 @@ class Container(Base):
         
     @property
     def copies(self):
+        """
+        Property that returns list of all copies of this :any:`Container`
+        """
         return [c for c in self.owner.containers.itervalues() if c.original is self and c is not self]
         
     @property
     def dtype(self):
-        # get datatype
+        """
+        Property that returns numpy datatype of all internal data buffers
+        """
         if self.data_type == 'complex':
             return self.owner.CType if self.owner is not None else np.complex128
         elif self.data_type == 'real':
@@ -983,6 +1053,10 @@ class Container(Base):
             
     @property
     def S(self):
+        """
+        A property that returns the internal dictionary of all 
+        :any:`Storage`'s in this :any:`Container`
+        """
         return self._pool.get(STORAGE_PREFIX,{})
 
     @property
@@ -998,11 +1072,15 @@ class Container(Base):
         
     @property
     def V(self):
+        """
+        A property that returns the internal dictionary of all 
+        :any:`View`'s in this :any:`Container`
+        """
         return self._pool.get(VIEW_PREFIX,{})
         
     def views_in_storage(self, s, active=True):
         """
-        Return a list of views on Storage s.
+        Return a list of views on :any:`Storage` `s`.
         
         Parameters
         ----------
@@ -1018,14 +1096,15 @@ class Container(Base):
            
     def copy(self, ID=None, fill=None):
         """
-        Create a new container matching self. 
+        Create a new :any:`Container` matching self. 
         
         The copy does not manage views. 
         
         Parameters
         ----------
-        fill : ...
-               If None (default), copy content. If a float, initialize to this value
+        fill : scalar or None
+            If None (default), copy content. If scalar, initializes 
+            to this value
         """
         # Create an ID for this copy
         ID = self.ID + '_copy%d' % (len(self.copies)) if ID is None else ID
@@ -1042,7 +1121,7 @@ class Container(Base):
         
     def fill(self, fill=0.0):
         """
-        Fill all storages.
+        Fill all storages with scalar value `fill`
         """
         for s in self.S.itervalues(): 
             s.fill(fill)
@@ -1050,7 +1129,7 @@ class Container(Base):
         
     def clear(self):
         """
-        reduce / delete all data in attached storages
+        Reduce / delete all data in attached storages
         """
         for s in self.S.itervalues():
             s.data = np.empty((s.data.shape[0],1,1),dtype=self.dtype)
@@ -1059,17 +1138,16 @@ class Container(Base):
     def new_storage(self, ID=None, **kwargs):
         """
         Create and register a storage object.
-        
-        Assign the provided ID is assigned automatically.
-        
+                
         Parameters
         ----------
         ID : str
              An ID for the storage. If None, a new ID is created. An
              error will be raised if the ID already exists.
-        **kwargs : ...
-                   Arguments for new storage creation. See doc for
-                   Storage.
+             
+        kwargs : ...
+            Arguments for new storage creation. See doc for
+            :any:`Storage`.
         
         """
         if self.S is not None:
@@ -1084,7 +1162,12 @@ class Container(Base):
 
     def reformat(self,AlsoInCopies=False):
         """
-        Reformat all storages in this container.
+        Reformats all storages in this container.
+        
+        Parameters
+        ----------
+        AlsoInCopies : bool
+            If True, also reformat associated copies of this container 
         """
         for ID,s in self.S.iteritems():
             s.reformat()
@@ -1106,10 +1189,24 @@ class Container(Base):
         """
         Returns formatted string and a dict with the respective information
         
-        :param: table_format, list of key,value pairs where key is the 
-                requested item and value the format
+        Parameters
+        ----------
+        table_format : list 
+            list of key(`str`),value(`str`) pairs where key is the item 
+            to be listed in the report and value is a string formatter
         
-        :returns: formated string and dict with the respective info
+        Returns
+        -------
+        fstring : str
+            formatted string 
+            
+        dct :dict
+            dictionary containing with the respective info to the keys
+            in `table_format`
+            
+        See also
+        --------
+        Storage.formatted_report
         """
         dct ={}
         id_length = offset
@@ -1142,7 +1239,7 @@ class Container(Base):
         Parameters
         ----------
         view : View
-               A valid view object.
+               A valid :any:`View` object.
         """
         if not isinstance(view,View):
             raise ValueError
@@ -1161,9 +1258,10 @@ class Container(Base):
         Parameters
         ----------
         view : View
-               A valid view for this object
-        newdata : array_like, 2D
-                  The data to be stored.
+               A valid :any:`View` for this object
+               
+        newdata : array_like
+                  The data to be stored 2D.
         """
         if not isinstance(view,View):
             raise ValueError
@@ -1178,6 +1276,23 @@ class Container(Base):
     def info(self):
         """
         Return the total buffer space for this container in bytes and storage info
+        
+        Returns
+        -------
+        space : int
+            Accumulated memory usage of all data buffers in this Container
+            
+        fstring : str
+            Formatted string 
+            
+        Note
+        ----
+        May get **deprecated** in future. Use formatted_report instead.
+        
+        See also
+        --------
+        report
+        formatted_report
         """
         self.space=0
         info_str =''

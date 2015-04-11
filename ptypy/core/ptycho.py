@@ -90,7 +90,7 @@ class Ptycho(Base):
                If dict or Param, the input parameters required for the
                reconstruction. See Ptycho.DEFAULT
                If str, the filename of a past reconstruction to load from.
-        level : int,
+        level : int
                 Determines how much the Ptycho instance will initialize:
                 <=0 : empty ptypy structure
                 1 : reads parameters, configures interaction server
@@ -328,12 +328,12 @@ class Ptycho(Base):
         Load a previous run.
         
         Parameters
-        -----------
+        ----------
         runfile : str
                 file dump of Ptycho class
-        load_data : (True)
-                  also load data (thus regenerating pods & views for 
-                  'minimal' dump 
+        load_data : bool
+                If `True` also load data (thus regenerating pods & views 
+                for 'minimal' dump 
         """
         import save_load
         from .. import io
@@ -399,14 +399,16 @@ class Ptycho(Base):
         
         As for now, diffraction / mask data is not stored
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         alt_file : str
-                Alternative filepath, will override io.save_file
-        kind : str ('minimal'(default) or 'full_flat')
-               type of saving. If 'minimal', only initial paramters,
-               probe and object storages and runtime information is stored.
-               If 'full_flat', (almost) complete environment
+            Alternative filepath, will override io.save_file
+        kind : str
+            Type of saving, one of:
+             - 'minimal', only initial paraeters, probe and object 
+                storages and runtime information is stored.
+             - 'full_flat', (almost) complete environment
+               
         """
         import save_load
         from .. import io

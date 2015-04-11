@@ -9,6 +9,7 @@ This file is part of the PTYPY package.
 """
 import os
 import numpy as np
+from functools import wraps
 
 __all__ = ['str2int','str2range',\
            'complex_overload','expect2','expect3',\
@@ -107,8 +108,13 @@ def expect3(a):
  
 def complex_overload(func):
     """\
-    Doc TODO
+    Overloads function specified only for floats in the following manner
+    
+    .. math::
+     
+        \mathrm{complex\_overload}\{f\}(c) = f(\Re(c)) + \mathrm{i} f(\Im(c)) 
     """
+    @wraps(func)
     def overloaded(c,*args,**kwargs):
         return func(np.real(c),*args,**kwargs) +1j *func(np.imag(c),*args,**kwargs)
     return overloaded

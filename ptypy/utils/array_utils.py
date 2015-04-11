@@ -12,13 +12,13 @@ import scipy.ndimage as ndi
 import numpy as np
 from misc import *
 
-__all__ = ['grids','switch_orientation',\
-           'mirror','crop_pad_axis','crop_pad',\
-           'zoom','shift_zoom','rebin','rebin_2d','crop_pad_symmetric_2d']
+__all__ = ['grids','switch_orientation','mirror','c_zoom',\
+           'crop_pad_symmetric_2d','crop_pad_axis','crop_pad','pad_lr',\
+           'zoom','shift_zoom','c_zoom','c_affine_transform','rebin','rebin_2d']
 
 def switch_orientation(A, orientation, center=None):
     """
-    Switches orientation of Array `A` along the last two axes ``(-2,-1)``
+    Switches orientation of Array `A` along the last two axes `(-2,-1)`
     
     Parameters
     ----------
@@ -33,7 +33,7 @@ def switch_orientation(A, orientation, center=None):
         
     Returns
     -------
-    out : array-like
+    out : ndarray
         A view of `A` where either rows, columns and axis may be reversed
     
     center : tuple
@@ -74,12 +74,13 @@ def rebin_2d(A, rebin=1):
         input array, must be at least two-dimensional.
         
     rebin : int
-        rebin factor, `rebin=2` means that a square of 4 pixels will be
+        rebin factor, ``rebin=2`` means that a square of 4 pixels will be
         binned into one. 
         
     Returns
     -------
-    out : array-like
+    out : ndarray
+        rebinned array
 
     See also
     --------
@@ -101,12 +102,27 @@ def crop_pad_symmetric_2d(A, newshape, center=None):
     Parameters
     ----------
     A : array-like
-        input array, must be at least two-dimensional.
+        Input array, must be at least two-dimensional.
         
     newshape : tuple, array_like
-        requested output shape.
+        New shape (for the last two axes). Must have at least 2 entries.
+        
+    center : tuple, array_like, optional
+        This coordinate tuple marks the center for cropping / padding
+        If None, ``np.array(A.shape[-2:]) // 2`` will be the center
+        
     Returns
     -------
+    out : ndarray
+        Cropped or padded array with shape ``A.shape[:-2]+newshape[-2:]``
+    
+    center : tuple
+        Center in returned array, should be in the actual center of array.
+        
+    See also
+    --------
+    crop_pad_axis
+    crop_pad
     
     """
     osh = np.array(A.shape[-2:])
@@ -132,11 +148,12 @@ def rebin(a, *args,**kwargs):
     
     Parameters
     ----------
-    a : nd-numpy-array
+    a : ndarray
         Input array.
         
     axis : int, Default=-1, optional
-        The laplacian is computed along the provided axis or list of axes, or all axes if None
+        The laplacian is computed along the provided axis or list of axes, 
+        or all axes if None
     
     Returns
     -------
@@ -211,15 +228,23 @@ def grids(sh,psize=None,center='geometric',FFTlike=True):
     
     Parameters
     ----------
-    sh : the shape of the N-dimensional array
+    sh : tuple of int
+        The shape of the N-dimensional array
     
-    psize : pixel size in each dimensions
+    psize : float or tuple of float
+        Pixel size in each dimensions
     
-    center : tupel of pixels, or use center='fftshift' for fftshift-like grid
-             and center='geometric' for the matrix center as grid origin
+    center : tupel of int
+        Tuple of pixel, or use ``center='fftshift'`` for fftshift-like grid
+        and ``center='geometric'`` for the matrix center as grid origin
     
-    FFTlike : if False, grids ar not bound by the interval [-sh//2:sh//2[
+    FFTlike : bool
+        If False, grids ar not bound by the interval [-sh//2:sh//2[
     
+    Returns
+    -------
+    ndarray
+        The coordinate grids
     """
     sh=np.asarray(sh)
     
@@ -244,24 +269,56 @@ def grids(sh,psize=None,center='geometric',FFTlike=True):
 @complex_overload
 def c_zoom(c,*arg,**kwargs):
     return ndi.zoom(c,*arg,**kwargs)
-
-
     
 def zoom(c,*arg,**kwargs):
+    """
+    Wrapper to dynamically decide whether to use the complex overloaded
+    zoom function or the original one. For parameters see :any:`c_zoom`.
+    Use this function instead of the aforementioned to profit from a faster
+    execution in case of float arrays.
+    
+    See also
+    --------
+    c_zoom
+    """
     if np.iscomplexobj(c):
         return c_zoom(c,*arg,**kwargs)
     else:
         return ndi.zoom(c,*arg,**kwargs)
-        
-@complex_overload
-def c_affine_transform(c,*args,**kwargs):
-    return ndi.affine_transform(c,*args,**kwargs)
+
+c_zoom = complex_overload(ndi.zoom)
+
+c_affine_transform=complex_overload(ndi.affine_transform)
     
 def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
     """\
-    Move array from center cen_old to cen_new and perform a zoom.
-
-    This function uses scipy.ndimage.affine_transfrom.
+    Move array from center `cen_old` to `cen_new` and perform a zoom `zoom`.
+    
+    This function wraps scipy.ndimage.affine_transfrom or the complex
+    overloaded version :any:`c_affine_transform`, which the user is 
+    refered to for keyword args.
+    
+    Parameters
+    ----------
+    c : ndarray
+        Array to shiftzoom. Can be float or complex
+    
+    zoom : float
+        Zoom factor
+    
+    cen_old : array_like
+        Center in input array `c`
+    
+    cen_new : array_like
+        Desired new center position in shiftzoomed array
+    
+    See also
+    --------
+    c_affine_transform
+    
+    Returns
+    -------
+    Shifted and zoomed array
     """
     zoom = np.diag(zoom)
     offset=np.asarray(cen_old)-np.asarray(cen_new).dot(zoom)
@@ -269,8 +326,6 @@ def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
         return c_affine_transform(c,zoom,offset,**kwargs)
     else:
         return ndi.affine_transform(c,zoom,offset,**kwargs)
-
-
 
 
 def fill3D(A,B,offset=[0,0,0]):
@@ -316,15 +371,38 @@ def mirror(A,axis=-1):
     return np.flipud(np.asarray(A).swapaxes(axis,0)).swapaxes(0,axis)
     
 def pad_lr(A,axis,l,r,fillpar=0.0, filltype='scalar'):
-    """\
-    Pads ndarray 'A' orthogonal to 'axis' with 'l' layers (pixels,lines,planes,...)
-    on low side an 'r' layers on high side. 
-    if filltype=
-        'scalar' : uniformly pad with fillpar
-        'mirror' : mirror A
-        'periodic' : well, periodic fill
-        'custom' : pad according arrays found in fillpar
-         
+    """
+    Pads ndarray `A` orthogonal to `axis` with `l` layers 
+    (pixels,lines,planes,...) on low side an `r` layers on high side.
+    
+    Parameters
+    ----------
+    A : array-like
+        Input array
+    
+    axis,l,r : int
+        Pads orthogonal to `axis` on with `l` layers (pixels,lines,
+        planes,...) on low side an `r` layers on high side.
+        
+    fillpar : scalar
+        Scalar fill parameter for ``filltype=scalar`` fill.
+        
+    filltype : str
+            - `'scalar'`, uniformly pad with fillpar
+            - `'mirror'`, mirror `A`
+            - `'periodic'`, periodic fill
+            - `'custom'`, pad according arrays found in `fillpar`
+    
+    Returns
+    -------
+    ndarray
+        Padded array
+        
+    See also
+    --------
+    crop_pad_axis
+    crop_pad
+    crop_pad_symmetric_2d
     """ 
     fsh=np.array(A.shape)
     if l>fsh[axis]: #rare case
@@ -387,7 +465,7 @@ def crop_pad_axis(A,hplanes,axis=-1,roll=0,fillpar=0.0, filltype='scalar'):
     with a number of hyperplanes specified by `hplanes`
 
     Parameters
-    ---------
+    ----------
     A : array-like
         Input array, should be at least one-dimensional
     
@@ -404,7 +482,7 @@ def crop_pad_axis(A,hplanes,axis=-1,roll=0,fillpar=0.0, filltype='scalar'):
         The roll is reversed afterwards
         
     fillpar, filltype
-        See ``pad_lr`` for explqanation
+        See :any:`pad_lr` for explqanation
         
     Returns
     -------
@@ -414,6 +492,7 @@ def crop_pad_axis(A,hplanes,axis=-1,roll=0,fillpar=0.0, filltype='scalar'):
     See also
     --------
     pad_lr
+    crop_pad
     
     Note
     ----
@@ -430,19 +509,17 @@ def crop_pad_axis(A,hplanes,axis=-1,roll=0,fillpar=0.0, filltype='scalar'):
     >>> import numpy as np
     >>> from ptypy.utils import crop_pad_axis
     >>> A=np.ones((8,9))
-    Add a total of 2 rows, one at top, one at bottom.
+    >>> # Add a total of 2 rows, one at top, one at bottom.
     >>> B=crop_pad_axis(A,2,0)
-    Same as 
+    >>> # Same as 
     >>> B = crop_pad_axis(A,(1,1),0))
-    Crop 3 columns on left side and pad 2 columns on right
+    >>> # Crop 3 columns on left side and pad 2 columns on right
     >>> B = crop_pad_axis(A,(-3,2),1)
- 
-    >>> V=np.random.rand(3,5,5)
-    Crop one plane on low-side and high-side (total of 2) of Volume V
-    >>> B=crop_pad_axis(V,-2,0)
-    
-    Mirror volume 3 planes on low side of row axis, crop 2 planes on high side
-    B=crop_pad_axis(V,(3,-2),1,filltype='mirror')
+    >>> V=np.random.rand(3,5,5)    
+    >>> #Crop one plane on low-side and high-side (total of 2) of Volume V
+    >>> B=crop_pad_axis(V,-2,0)    
+    >>> #Mirror volume 3 planes on low side of row axis, crop 2 planes on high side
+    >>> B=crop_pad_axis(V,(3,-2),1,filltype='mirror')
     """
     if np.isscalar(hplanes):
         hplanes=int(hplanes)

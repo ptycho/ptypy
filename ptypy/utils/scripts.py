@@ -16,16 +16,30 @@ from array_utils import *
 
 __all__ = ['hdr_image','diversify',
             'xradia_star','png2mpg','mass_center','phase_from_dpc',
-            'radial_distribution','stxm_analysis','stxm_analysis',
+            'radial_distribution','stxm_analysis','stxm_init',
              'load_from_ptyr']
 
 def diversify(A,noise = None,shift = None,power = 1.0):
     """
-    add diversity to 3d numpy array A, acts in place
+    Add diversity to 3d numpy array `A`, *acts in-place*.
     
-    :noise: noise-tuple, see parallel.MPInoise2d
-    :power: relative power of layers with respect to the first (0) layer.
-            can be scalar or tuple / array
+    Parameters
+    ----------
+    noise : 2-tuple or 4-tuple
+        For detailed descriptiom see :any:`ptypy.utils.parallel.MPInoise2d`
+    
+    power : float, tuple
+        Relative power of layers with respect to the first (0) layer.
+        Can be scalar or tuple / array
+        
+    shift : float, tuple
+        Relative shift of layers with respect to the first (0) layer.
+        Can be scalar or tuple / array
+        **not implemented yet**
+           
+    See also
+    --------
+    ptypy.utils.parallel.MPInoise2d
     """
     if noise is not None:
         noise = parallel.MPInoise2d(A.shape, *noise)
@@ -51,28 +65,52 @@ def diversify(A,noise = None,shift = None,power = 1.0):
     
 def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],avg_type='highest',mask_list=[],ClipLongestExposure=False,ClipShortestExposure=False):
     """
-    generate high dynamic range image from a list of images "img_list" and 
-    exposure information "exp_list".
+    Generate a  high dynamic range image from a list of images `img_list` 
+    and corresponding exposure information in `exp_list`.
     
-    Usage:
-    >> dark_list,meta=io.image_read('/path/to/dark/images/ccd*.raw')
-    >> img_list,meta=io.image_read('/path/to/images/ccd*.raw')
-    >> exp_list=[meta[j]['exposure_time__key'] for j in range(len(meta))]
-    >> hdr,masks = hdr_image(img_list, exp_list, dark_list=dark_list)
+    Parameters
+    ----------
+    img_list : list
+        Sequence of images (as 2d np.ndarray)
+    
+    exp_list : list of float
+        Associated exposures to each element of above sequence `img_list`
         
-    PARAMETERS:
+    thresholds : list, 2-tuple
+        Tuple of lower limit (noise floor) and upper limit (overexposure) 
+        in the images.
+        
+    dark_list : list
+        Single frame or sequence of dark images (as 2d np.array) of the
+        same length as `img_list`. These frames are used for dark-field
+        correction
+        
+    avg_type : str
+        Type of combining all valid pixels:
+          -`'highest'`, the next longest exposure is used to replace 
+            overexposed pixels.
+          -`<other_string>`, overexposed pixels are raplaced by the 
+            pixel average of all other images with valid pixel values 
+            for that pixel.
+            
+    mask_list : list 
+        Single frame or sequence of 2d np.array.
+        Provide additional masking (dead pixels, hot pixels)
+                
+    ClipLongestExposure : bool
+        If True, also mask the noise floor in the longest exposure.
+        
+    ClipShortestExposure : bool
+        if True, also mask the overexposed pixels in the shortest exposure.
     
-    img_list : sequence of images (as 2d np.array)
-    exp_list : associated exposures to each element of above sequence
-    thresholds: sequence of upper limit (overexposure) and lower limit (noise floor) in the images
-    dark_list : single or sequence of dark images (as 2d np.array)
-    avg_type : 'highest' -> the next longest exposure is used to replace overexposed pixels.
-               'other_string' -> each overexposed pixel is raplaced by the pixel average of 
-                                 all other images with valid pixel values for that pixel.
-    mask_list : provide additional masking (dead pixels, hot pixels),
-                single or sequence of 2d np.array
-    ClipLongestExposure (False) : if True, also mask the noise floor in the longest exposure
-    ClipShortestExposure (False) : if True, also mask the overexposed pixels in the shortest exposure
+    Examples
+    --------
+    >>> from ptypy import io
+    >>> dark_list,meta=io.image_read('/path/to/dark/images/ccd*.raw')
+    >>> img_list,meta=io.image_read('/path/to/images/ccd*.raw')
+    >>> exp_list=[meta[j]['exposure_time__key'] for j in range(len(meta))]
+    >>> hdr,masks = hdr_image(img_list, exp_list, dark_list=dark_list)
+        
     
     """
     min_exp=min(exp_list)
@@ -133,28 +171,61 @@ def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],avg_type
 
 def png2mpg(listoffiles,framefile='frames.txt',fps=5,bitrate=2000,codec='wmv2',Encode=True,RemoveImages=False):
     """
-    makes movie (*.mpg) from png or jpeg 
-    Usage:
+    Makes a movie (\*.mpg) from a collection of \*.png or \*.jpeg frames.
+    *Requires* binary of **mencoder** installed on system
     
-    - png2mpg(['/path/to/image_000.png'])
-        1) search for files similar to image_*.png in '/path/to/'
-        2) found files get listed in a file '/path/to/frames.txt'
-        3) calls mencoder to use that file to encode a movie with the default args.
-        4) movie is in the same folder as 'frames.txt' 
+    Parameters
+    ----------
+    listoffiles : list of str
+        A list of paths to files. Each file will be reinterpreted as a 
+        collection files in the same directory, e.g. only the first file
+        in a series needs to be selected. All series for which a first
+        file was given will be concatenated in the mavie.
     
-    - png2mpg(['/path1/to/imageA_040.png','/path2/to/imageB_001.png'],framefile='./banana.txt')
-        generates list file 'banana_text' in current folder
-        list file contains in order every path compatible with wildcard
-            '/path1/to/imageA_*.png'
-            '/path2/to/imageB_*.png'
+    framefile : str
+        Filapath, the respective file will be created to store a list
+        of all frames. This file will be used by mencoder later.
     
-    - str=png2mpg(...,Encode=False)
-        returns encoder string. Use os.system(encoderstring) for later encoding
+    fps : scalar 
+        Frames per second in final movie
         
-    PARAMETER:
-    fps : desired fps-rate
-    bitrate : encoding detail, determines video quality
-    conde : defines the used codec
+    bitrate : int
+        Encoding detail, determines video quality
+    
+    codec : str
+        Defines the codec to Use
+        
+    Encode : bool
+        If True, video will be encoded calling mencocder
+        If False, mencoder will not be called, but the necessary command 
+        expression will be returned instead. Very well suited for a dry-run
+        
+    RemoveImages : bool
+        If True, all images refered to by framefile are deleted except 
+        for the last frame.
+        
+    Returns
+    -------
+    cmd : str
+        Command string for the shell to encode the video later manually.
+    
+    Examples
+    --------
+    >>> png2mpg(['/path/to/image_000.png'])
+    1) search for files similar to image_*.png in '/path/to/'
+    2) found files get listed in a file '/path/to/frames.txt'
+    3) calls mencoder to use that file to encode a movie with the default args.
+    4) movie is in the same folder as 'frames.txt' 
+    
+    >>> png2mpg(['/path1/to/imageA_040.png','/path2/to/imageB_001.png'],framefile='./banana.txt')
+    Generates list file 'banana_text' in current folder. The list file 
+    contains in order every path compatible with the wildcards
+    '/path1/to/imageA_*.png' and '/path2/to/imageB_*.png'
+    
+    >>> str=png2mpg(['/path/to/image_000.png'],Encode=False)
+    Returns encoder argument string. Use os.system(encoderstring) for 
+    encoding manually later
+
     """
     import os
     import glob
@@ -262,22 +333,62 @@ def png2mpg(listoffiles,framefile='frames.txt',fps=5,bitrate=2000,codec='wmv2',E
         
 
 def xradia_star(sh,spokes=48,std=0.5,minfeature=5,ringfact=2,rings=4,contrast=1.,Fast=False):
-    """\
-    creates an Xradia-like star pattern on on array of shape sh
-    std: "resolution" of xradia star, i.e. standard deviation of the 
-         errorfunction used for smoothing the step (in pixel)
-    spokes : number of spokes
-    minfeature : smallest spoke width (in pixel)
-    ringfact : factorial increase in featuresize from ring to ring.
-    rings : number of rings
-    contrast : minimum contrast, set to 0 for gradual color change from zero to 1 
-               set to 1 for no gradient in the spokes
+    """
+    Creates an Xradia-like star pattern on an array of shape `sh`
+    Works superb as test pattern in ptychography
+    
+    *requires scipy*
+        
+    Parameters
+    ----------
+    std: float 
+        "Resolution" of xradia star, i.e. standard deviation of the 
+         errorfunction used for smoothing the edges (in pixel).
+         
+    spokes : int, optional
+        Number of spokes
+        
+    minfeature : float, optional
+        Spoke width at the smallest (inner) tip (in pixel).
+        
+    ringfact : float
+        Increase in featuresize from ring to ring (factor). Determines
+        position of the rings.
+        
+    rings : int
+        Number of rings with spokes.
+        
+    contrast : float 
+        Minimum contrast, set to zero for a gradual increase of the profile
+        from zero to 1, set to 1 for no gradient in profile
                   
-    Fast : if set to False, the error function is evaluated at the edges
-            -> preferred when using fft, as its features are less prone to antiaaliasing
-           if set to True, simple boolean comparison will be used instead and the 
-           result is later blurred with a gaussian filter.
-            -> roughly a factor 2 faster
+    Fast : bool
+        If set to False, the error function is evaluated at the edges.
+        Prefered choice when using fft, as edges are less prone to 
+        antiaaliasing in this case. If set to True, simple boolean 
+        comparison will be used instead to draw the edges and the 
+        result is later smoothed with a gaussian filter. Prefered choice
+        for unpatient users, as this choice is roughly a factor 2 faster
+        for larger arrays
+        
+    Examples
+    --------
+    >>> from ptypy.utils import xradia_star
+    >>> # Base configuration
+    >>> X1 = xradia_star(1024)
+    >>> # Few spokes single ring
+    >>> X2 = xradia_star(1024, 12, std=4, rings=1, minfeature=10, ringfact=10)
+    >>> # Very fine plus gradient
+    >>> X3 = xradia_star(1024, 64, std = 0.2, rings = 10, minfeature=1, contrast=0)
+    >>> from matplotlib import pyplot as plt
+    >>> ax=plt.subplot(131)
+    >>> ax.imshow(X1,cmap='gray')
+    >>> ax=plt.subplot(132)
+    >>> ax.imshow(X2,cmap='gray')
+    >>> ax=plt.subplot(133)
+    >>> ax.imshow(X3,cmap='gray')
+    >>> plt.show()
+    
     """
     from scipy.ndimage import gaussian_filter as gf
     from scipy.special import erf
@@ -294,8 +405,9 @@ def xradia_star(sh,spokes=48,std=0.5,minfeature=5,ringfact=2,rings=4,contrast=1.
     def rectint(x,a,b):
         return step(x,a,std) * step(-x,-b,std)
     
+    sh = expect2(sh)
     ind=np.indices(sh)
-    cen=(np.array(sh)-1)/2.0
+    cen=(sh-1)/2.0
     ind=ind-cen.reshape(cen.shape+len(cen)*(1,))
     z=ind[1]+1j*ind[0]
     spokeint,spokestep=np.linspace(0.0*np.pi,1.0*np.pi,spokes/2,False,True)   
@@ -333,9 +445,23 @@ def xradia_star(sh,spokes=48,std=0.5,minfeature=5,ringfact=2,rings=4,contrast=1.
         return spokes
         
 def mass_center(A, axes=None):
-    """\
-    returns mass center of n-dimensional array 'A' 
-    along tuple of axis 'axes'
+    """
+    Calculates mass center of n-dimensional array `A` 
+    along tuple of axis `axes`.
+    
+    Parameters
+    ----------
+    A : ndarray
+        input array
+        
+    axes : list,tuple
+        Sequence of axes that contribute to distributed mass. If 
+        ``axes==None``, all axes are considered.
+        
+    Returns
+    -------
+    mass : 1darray
+        Center of mass in pixel for each `axis` selected.
     """
     A=np.asarray(A)
     
@@ -348,11 +474,26 @@ def mass_center(A, axes=None):
     
 def radial_distribution(A,radii=None):
     """\
-    return radial mass distribution
-    radii: sequence of radii to calculate enclosed mass
+    Returns radial mass distribution up to radii in `radii`
+    
+    Parameters
+    ----------
+    A : ndarray
+        input array
+        
+    radii : list,tuple
+        Sequence of radii to calculate enclosed mass. If `None`, 
+        the sequence defaults to ``range(1,np.min(A.shape)/2)``
+        
+    Returns
+    -------
+    radii, masses : list
+        Sequence of used `radii` and corresponding intergrated mass
+        `masses`. Sequences have the same length
+    
     """
     if radii is None:
-        radii=range(1,np.max(A.shape))
+        radii=range(1,np.min(A.shape)/2)
        
     coords=np.indices(A.shape)-np.reshape(mass_center(A),(A.ndim,) +A.ndim*(1,))
     masses=[np.sum(A*(np.sqrt(np.sum(coords**2,0)) < r)) for r in radii]
@@ -365,30 +506,29 @@ def stxm_analysis(storage,probe=None):
     Performs a stxm analysis on a storage using the pods.
     This function is MPI compatible.
     
-    Parameters:
+    Parameters
     ----------
-    
-    storage : A ptypy.core.Storage instance
-    
-    probe   : None, scalar or array
+    storage : ptypy.core.Storage instance
+        A :any:`Storage` instance to be analysed
+        
+    probe : None, scalar or array
            
-            if None, picks a probe from the first view's pod
-            if scalar, uses a Gaussian with probe as standard deviation
-            else: attempts to use passed value directly as 2d-probe
+        - If None, picks a probe from the first view's pod
+        - If scalar, uses a Gaussian with probe as standard deviation
+        - Else: attempts to use passed value directly as 2d-probe
            
-    Returns:
-    --------
-    trans, dpc_row, dpc_col : Nd-array of shape storage.shape
-            
-            trans 
-                is transmission 
-            dpc_row 
-                is differential phase contrast along row-coordinates,
-                i.e. vertical direction (y-direction)
-            dpc_col
-                is differential phase contrast along column-coordinates,
-                i.e. horizontal direction (x-direction)
-            
+    Returns
+    -------
+    trans : ndarray 
+        Transmission  of shape ``storage.shape``.
+        
+    dpc_row : ndarray
+        Differential phase contrast along row-coordinates, i.e. vertical 
+        direction (y-direction) of shape ``storage.shape``.
+        
+    dpc_col : ndarray
+        Differential phase contrast along column-coordinates, i.e. 
+        horizontal direction (x-direction) of shape ``storage.shape``.
     """
     s=storage
     
@@ -437,10 +577,44 @@ def stxm_analysis(storage,probe=None):
     return trans,dpc_row,dpc_col
 
 def stxm_init(storage,probe=None):
+    """
+    Convnenience script that performs a STXM analyis for storage
+    `storage` given a probe array `probe` and stores result back
+    in storage
+    
+    See also
+    --------
+    stxm_analysis
+    """
     trans,dpc_row,dpc_col = stxm_analysis(storage,probe)
-    s.data = trans*np.exp(-1j*phase_from_dpc(dpc_row,dpc_col))
+    storage.data = trans*np.exp(-1j*phase_from_dpc(dpc_row,dpc_col))
     
 def load_from_ptyr(filename,what='probe',ID=None,layer=None):
+    """
+    Convenience script to extract data from ``*.ptyr``-file.
+    
+    Parameters
+    ----------
+    filename : str
+        Full Path to a ``*.ptyr`` data file. No check on the file suffix
+        is done. Any compatible hdf5 formatted file is allowed.
+    what : str
+        Type of container to retrieve. Only `'probe'` and `'obj'` makes
+        sense. Default is `'probe'`
+    ID : str
+        ID of storage in chosen container. If ``None`` the first stored
+        storage is choosen
+    layer : int, optional
+        If an interger, the data buffer of chosen storage gets sliced 
+        with `layer` for its first index
+    
+    Returns
+    -------
+    data : ndarray
+        If `layer` is provided, that layer ``storaga,data[layer]``
+        will be sliced from the 3d data buffer, else the whole buffer 
+        ``storage.data`` will be returned.
+    """
     from .. import io
     
     header = io.h5read(filename,'header')['header']
@@ -466,14 +640,17 @@ def phase_from_dpc(dpc_row,dpc_col):
     Assumes 2 arrays of N-dimensions who contain differential quantities 
     in X and Y, i.e. the LAST two dimensions (-2 & -1) in this case.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
+    dpc_row, dpc_col: ndarray
+        Differential information along 2nd last dimension
+        and last dimension respectively. Must be the same shape
     
-    dpc_row : Nd-array
-            Differential information along 2nd last dimension
-    dpc_col : Nd-array
-            Differential information along last dimension
-    
+    Returns
+    -------
+    out : ndarray
+        Integrated array of same shape as `dpc_row` and `dpc_col`.
+        
     """
     py=-dpc_row
     px=-dpc_col
@@ -497,3 +674,69 @@ def phase_from_dpc(dpc_row,dpc_col):
     
     return np.real(nf[...,:sh[-2],:sh[-1]])
 
+_cxro_server = 'http://henke.lbl.gov'
+
+_cxro_POST_query = ('Material=Enter+Formula' +
+             '&Formula=%(formula)s&Density=%(density)s&Scan=Energy' +
+             '&Min=%(emin)s&Max=%(emax)s&Npts=%(npts)s&Output=Text+File')
+
+def cxro_iref(formula, energy,density=-1, npts=100):
+    """\
+    Query CXRO database for index of refraction values.
+
+    Parameters
+    ----------
+    formula: str
+        String representation of the Formula to use.
+    energy: float or (float,float)
+        Either a single energy (in keV) or the minimum/maximum bounds
+    npts: int, optional
+        Number of points between the min and max energies. 
+
+    Returns
+    -------
+    energy, delta, beta : scalar or vector
+        Energy used and the respective `delta` and `beta` values.
+    """
+    import urllib
+    import urllib2
+    import numpy as np
+    
+    if np.isscalar(energy):
+        emin = energy
+        emax = energy
+        npts = 1
+    else:
+        emin,emax = energy
+
+    data = cxro_POST_query % {'formula':formula,
+                     'emin':emin,
+                     'emax':emax,
+                     'npts':npts,
+                     'density':density}
+
+    url = cxro_server+'/cgi-bin/getdb.pl'
+    #u.logger.info('Querying CRXO database...')
+    req = urllib2.Request(url, data)
+    response = urllib2.urlopen(req)
+    t = response.read()
+    datafile = t[t.find('/tmp/'):].split('"')[0]
+
+    url = cxro_server + datafile
+    req = urllib2.Request(url)
+    response = urllib2.urlopen(req)
+    data = response.read()
+
+    d = data.split('\n')
+    #print d
+    dt = np.array([[float(x) for x in dd.split()] for dd in d[2:] if dd])
+
+    #u.logger.info('done, retrieved: ' +  d[0].strip())
+    #print d[0].strip()
+    if npts==1:
+        return dt[-1,0], dt[-1,1], dt[-1,2]
+    else:
+        return dt[:,0], dt[:,1], dt[:,2]
+        
+cxro_iref.cxro_server = _cxro_server
+cxro_iref.cxro_query = _cxro_POST_query

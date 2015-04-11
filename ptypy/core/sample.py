@@ -58,8 +58,9 @@ DEFAULT = u.Param(
     process = DEFAULT_process,
     diversity = DEFAULT_diversity , # see other for noise
 )
+""" docstring"""
 
-
+__all__=['DEFAULT','init_storage','iofr','simulate']
 
 DEFAULT_old=u.Param(
     source = None,      # None,path to a previous recon, or nd-array
@@ -355,17 +356,19 @@ def iofr(formula, energy,density=-1, npts=100):
     """\
     Query CXRO database for index of refraction values.
 
-    Parameters:
+    Parameters
     ----------
     formula: str
         String representation of the Formula to use.
     energy: float or (float,float)
         Either a single energy (in keV) or the minimum/maximum bounds
-    npts: int [optional]
+    npts: int, optional
         Number of points between the min and max energies. 
 
-    Returns:
-        (energy, delta, beta), either scalars or vectors.
+    Returns
+    -------
+    energy, delta, beta : scalar or vector
+        Energy used and the respective `delta` and `beta` values.
     """
     import urllib
     import urllib2

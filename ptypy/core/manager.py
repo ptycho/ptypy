@@ -37,7 +37,7 @@ import data
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager']
+__all__ = ['ModelManager', 'coherence_DEFAULT']
 
 DESCRIPTION = u.Param()
 
@@ -81,6 +81,7 @@ class ModelManager(object):
     model of the ptychography experiment
     """
     DEFAULT = scan_DEFAULT
+    """Default doc string %s""" % u.verbose.report(DEFAULT)            
     _PREFIX = MODEL_PREFIX
 
     def __init__(self, ptycho, pars=None, scans=None, **kwargs):
@@ -89,9 +90,9 @@ class ModelManager(object):
         
         The main task of ModelManager is to follow the rules for a given
         reconstruction model and create:
-         1. the probe, object, exit, diff and mask containers
-         2. the views
-         3. the PODs 
+         - the probe, object, exit, diff and mask containers
+         - the views
+         - the PODs 
          
         A ptychographic problem is defined by the combination of one or
         multiple scans. ModelManager uses encapsulate
@@ -100,14 +101,14 @@ class ModelManager(object):
         Parameters
         ----------
         ptycho: Ptycho
-                The parent Ptycho object
+            The parent Ptycho object
         pars : dict or Param
-               Input parameters (see ModelManager.DEFAULT)
-               If None uses defaults
+            Input parameters (see ModelManager.DEFAULT)
+            If None uses defaults
         scans : dict or Param
-                scan-specific parameters, Values should be dict Param that
-                follow the structure of `pars` (see ModelManager.DEFAULT)
-                If None, tries in ptycho.p.scans else becomes empty dict  
+            Scan-specific parameters, Values should be dict Param that
+            follow the structure of `pars` (see ModelManager.DEFAULT)
+            If None, tries in ptycho.p.scans else becomes empty dict  
         """
 
         # Initialize the input parameters
@@ -720,10 +721,11 @@ class ModelManager(object):
 
     def collect_diff_mask_meta(self, label=None, filename=None, save=False, dtype=None, **kwargs):
         """
+        *DEPRECATED*
         attempt to save diffraction data
         
-        PARAMETERS
-        -----------
+        Parameters
+        ----------
         
         label : str
                 ptypy label of the scan to save 

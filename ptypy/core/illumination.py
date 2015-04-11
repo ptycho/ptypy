@@ -83,8 +83,9 @@ DEFAULT = u.Param(
     aperture=DEFAULT_aperture,         # aperture parameters, can be None = no aperture
     propagation=DEFAULT_propagation,   # propagation parameters, can be None = no propagation
 )
+"""See unflattened DEFAULTS below"""
 
-
+__all__ =['DEFAULT','init_storage','aperture','process']
 
 def rectangle(grids, dims=None, ew=2):
     if dims is None:
