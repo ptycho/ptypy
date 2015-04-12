@@ -17,12 +17,14 @@ __all__ = ['str2int','str2range',\
 
 def str2range(s):
     """
-    generates an index list
-    range_from_string('1:4:2') == range(1,4,2)
-    BUT
-    range_from_string('1') == range(1,2)
-     
-    Author: Bjoern Enders
+    Generates an index list from string input `s`
+    
+    Examples
+    --------
+    >>> # Same as range(1,4,2)
+    >>> str2range('1:4:2')
+    >>> # Same as range(1,2)
+    >>> str2range('1') 
     """
     start = 0
     stop = 1
@@ -44,7 +46,18 @@ def str2range(s):
 
 def str2int(A):
     """
-    Transforms numpy array A of strings to uint8 and back
+    Transforms numpy array `A` of strings to ``np.uint8`` and back
+    
+    Examples
+    --------
+    >>> from ptypy.utils import str2int
+    >>> A=np.array('hallo')
+    >>> A 
+    array('hallo', dtype='|S5')
+    >>> str2int(A)
+    array([104,  97, 108, 108, 111], dtype=uint8)
+    >>> str2int(str2int(A))
+    array('hallo', dtype='|S5')
     """
     A=np.asarray(A)
     dt = A.dtype.str
@@ -69,17 +82,22 @@ def keV2m(keV):
 
 
 def expect2(a):
-    """\
-    generates 1d numpy array with 2 entries generated from multiple inputs 
-    (tuples, arrays, scalars). main puprose of this function is to circumvent
-    debugging of input.
+    """\ 
+    Generates 1d numpy array with 2 entries generated from multiple inputs 
+    (tuples, arrays, scalars). Main puprose of this function is to circumvent
+    debugging of input as very often a 2-vector is requred in scripts
     
-    expect2( 3.0 ) -> np.array([3.0,3.0])
-    expect2( (3.0,4.0) ) -> np.array([3.0,4.0])
-    
-    even higher order inputs possible, though not tested much
+    Examples
+    --------
+    >>> from ptypy.utils import expect2
+    >>> expect2( 3.0 )
+    array([ 3.,  3.])
+    >>> expect2( (3.0,4.0) ) 
+    array([ 3.,  4.])
+    >>> expect2( (1.0, 3.0,4.0) )
+    array([ 1.,  3.])
     """
-    a=np.atleast_1d(a)
+    a=np.atleast_1d(np.asarray(a))
     if len(a)==1:
         b=np.array([a.flat[0],a.flat[0]])
     else: #len(psize)!=2:
@@ -88,14 +106,20 @@ def expect2(a):
     
 def expect3(a):
     """\
-    generates 1d numpy array with 3 entries generated from multiple inputs 
-    (tuples, arrays, scalars). main puprose of this function is to circumvent
+    Generates 1d numpy array with 3 entries generated from multiple inputs 
+    (tuples, arrays, scalars). Main puprose of this function is to circumvent
     debugging of input.
+
+    Examples
+    --------
+    >>> from ptypy.utils import expect3
+    >>> expect3( 3.0 )
+    array([ 3.,  3.,  3.])
+    >>> expect3( (3.0,4.0) ) 
+    array([ 3.,  4.,  4.])
+    >>> expect3( (1.0, 3.0,4.0) )
+    array([ 1.,  3.,  4.])
     
-    expect2( 3.0 ) -> np.array([3.0,3.0,3.0])
-    expect2( (3.0,4.0) ) -> np.array([3.0,4.0,4.0])
-    
-    even higher order inputs possible, though not tested much
     """
     a=np.atleast_1d(a)
     if len(a)==1:
@@ -117,6 +141,7 @@ def complex_overload(func):
     @wraps(func)
     def overloaded(c,*args,**kwargs):
         return func(np.real(c),*args,**kwargs) +1j *func(np.imag(c),*args,**kwargs)
+    
     return overloaded
     
 
@@ -127,7 +152,7 @@ def unique_path(filename):
     Parameters
     ----------
     filename : str
-               A filename. 
+                A filename. 
     """
     return os.path.abspath(os.path.expanduser(filename))
     

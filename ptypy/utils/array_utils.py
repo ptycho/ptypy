@@ -12,7 +12,7 @@ import scipy.ndimage as ndi
 import numpy as np
 from misc import *
 
-__all__ = ['grids','switch_orientation','mirror','c_zoom',\
+__all__ = ['grids','switch_orientation','mirror',\
            'crop_pad_symmetric_2d','crop_pad_axis','crop_pad','pad_lr',\
            'zoom','shift_zoom','c_zoom','c_affine_transform','rebin','rebin_2d']
 
@@ -264,12 +264,6 @@ def grids(sh,psize=None,center='geometric',FFTlike=True):
         psize = np.asarray(psize).reshape( (len(sh),) + len(sh)*(1,))
         return grid * psize
 
-
-
-@complex_overload
-def c_zoom(c,*arg,**kwargs):
-    return ndi.zoom(c,*arg,**kwargs)
-    
 def zoom(c,*arg,**kwargs):
     """
     Wrapper to dynamically decide whether to use the complex overloaded
@@ -287,9 +281,11 @@ def zoom(c,*arg,**kwargs):
         return ndi.zoom(c,*arg,**kwargs)
 
 c_zoom = complex_overload(ndi.zoom)
+c_zoom.__doc__='*complex input*\n\n'+c_zoom.__doc__
 
 c_affine_transform=complex_overload(ndi.affine_transform)
-    
+c_affine_transform.__doc__='*complex input*\n\n'+c_affine_transform.__doc__
+
 def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
     """\
     Move array from center `cen_old` to `cen_new` and perform a zoom `zoom`.

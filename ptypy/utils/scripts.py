@@ -87,12 +87,13 @@ def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],avg_type
         
     avg_type : str
         Type of combining all valid pixels:
-          -`'highest'`, the next longest exposure is used to replace 
+          
+          - `'highest'`, the next longest exposure is used to replace 
             overexposed pixels.
-          -`<other_string>`, overexposed pixels are raplaced by the 
+          - `<other_string>`, overexposed pixels are raplaced by the 
             pixel average of all other images with valid pixel values 
             for that pixel.
-            
+        
     mask_list : list 
         Single frame or sequence of 2d np.array.
         Provide additional masking (dead pixels, hot pixels)
@@ -103,6 +104,11 @@ def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],avg_type
     ClipShortestExposure : bool
         if True, also mask the overexposed pixels in the shortest exposure.
     
+    Returns
+    -------
+    out : ndarray
+        Combined hdr-image with shape of one of the frame in `img_list`
+        
     Examples
     --------
     >>> from ptypy import io
