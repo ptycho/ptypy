@@ -1,8 +1,10 @@
 """
 Plotting utilities.
 
-Author: Pierre Thibault
-Date: June 23rd 2010
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
 import time
@@ -13,7 +15,11 @@ import matplotlib as mpl
 import matplotlib.cm
 import matplotlib.pyplot as plt
 import pylab
-
+from .verbose import logger
+ 
+__all__ = ['pause','rmphaseramp','plot_storage','imsave','imload',\
+         'complex2hsv', 'complex2rgb', 'hsv2rgb','rgb2complex', 'rgb2hsv',\
+         'hsv2complex', 'franzmap']
 # importing pyplot may fail when no display is available.
 import os
 if os.getenv("DISPLAY") is None:
@@ -46,10 +52,6 @@ elif matplotlib.get_backend().lower().startswith('gtk'):
 else:
     mpl_backend = None
 
-__all__ = ['P1A_to_HSV', 'HSV_to_RGB', 'imsave', 'imload', 'franzmap',\
-           'pause', 'plot_3d_array','length_units','plot_storage',\
-            'rmphaseramp','HSV_to_P1A','RGB_to_HSV']
-
 # Fix tif import problem
 Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
 
@@ -75,9 +77,19 @@ if mpl_backend is not None:
 
     def pause(timeout=-1, message=None):
         """\
-        Pause the execution of a script while leaving matplotlib figures responsive.
-        By default, execution is resumed only after hitting return. If timeout >= 0,
-        the execution is resumed after timeout seconds.
+        Pause the execution of a script while leaving matplotlib figures 
+        responsive.
+        *Gui aware*
+        
+        Parameters
+        ----------
+        timeout : float, optional
+            By default, execution is resumed only after hitting return. 
+            If timeout >= 0, the execution is resumed after timeout seconds.
+            
+        message : str, optional
+            Message to diplay on terminal while pausing
+        
         """
         if message is None:
             if timeout < 0:
@@ -91,11 +103,19 @@ if mpl_backend is not None:
 else:
     def pause(timeout=-1, message=None):
         """\
-        Pause the execution of a script.
-        By default, execution is resumed only after hitting return. If timeout >= 0,
-        the execution is resumed after timeout seconds.
-        This version of pause is not GUI-aware (this happens it the matplotlib
-        backend is not supported).
+        Pause the execution of a script while leaving matplotlib figures 
+        responsive.
+        **Not** *Gui aware*
+        
+        Parameters
+        ----------
+        timeout : float, optional
+            By default, execution is resumed only after hitting return. 
+            If timeout >= 0, the execution is resumed after timeout seconds.
+            
+        message : str, optional
+            Message to diplay on terminal while pausing
+        
         """
         if timeout < 0:
             if message is None:
@@ -139,12 +159,32 @@ def P1A_to_HSV(cin):
 
     return imout
 '''
+# aliases. maybe get deleted
 
-def P1A_to_HSV(cin, vmin=None, vmax=None):
+def complex2hsv(cin, vmin=None, vmax=None):
     """\
-    Transform a complex array into an RGB image,
+    Transforms a complex array into an RGB image,
     mapping phase to hue, amplitude to value and
     keeping maximum saturation.
+    
+    Parameters
+    ----------
+    cin : ndarray
+        Complex input. Must be two-dimensional.
+    
+    vmin,vmax : float
+        Clip amplitude of input into this interval.
+        
+    Returns
+    -------
+    rgb : ndarray
+        Three dimensional output.   
+        
+    See also
+    --------
+    complex2rgb
+    hsv2rgb
+    hsv2complex
     """
     # HSV channels
     h = .5*np.angle(cin)/np.pi + .5
@@ -155,16 +195,45 @@ def P1A_to_HSV(cin, vmin=None, vmax=None):
     if vmax is None: vmax = v.max()
     assert vmin < vmax
     v = (v.clip(vmin,vmax)-vmin)/(vmax-vmin)
+    
+    return np.asarray((h,s,v))
 
-    return HSV_to_RGB((h,s,v))
-
-def HSV_to_RGB(cin):
-    """\
-    HSV to RGB transformation.
+def complex2rgb(cin, **kwargs):
     """
+    Executes `complex2hsv` and then `hsv2rgb`
 
+    See also
+    --------
+    complex2hsv
+    hsv2rgb
+    rgb2complex
+    """
+    return hsv2rgb(complex2hsv(cin,**kwargs))
+    
+def hsv2rgb(hsv):
+    """\
+    HSV (Hue,Saturation,Value) to RGB (Red,Green,Blue) transformation.
+
+    Parameters
+    ----------
+    hsv : array-like
+        Input must be two-dimensional. **First** axis is interpreted
+        as hue,saturation,value channels.
+    
+    Returns
+    -------
+    rgb : ndarray
+        Three dimensional output. **Last** axis is interpreted as
+        red, green, blue channels.  
+        
+    See also
+    --------
+    complex2rgb
+    complex2hsv
+    rgb2hsv
+    """
     # HSV channels
-    h,s,v = cin
+    h,s,v = hsv
 
     i = (6.*h).astype(int)
     f = (6.*h) - i
@@ -178,16 +247,17 @@ def HSV_to_RGB(cin):
     i4 = (i == 4)
     i5 = (i == 5)
 
-    imout = np.zeros(h.shape + (3,), dtype=h.dtype)
-    imout[:,:,0] = 255*(i0*v + i1*q + i2*p + i3*p + i4*t + i5*v)
-    imout[:,:,1] = 255*(i0*t + i1*v + i2*v + i3*q + i4*p + i5*p)
-    imout[:,:,2] = 255*(i0*p + i1*p + i2*t + i3*v + i4*v + i5*q)
+    rgb = np.zeros(h.shape + (3,), dtype=h.dtype)
+    rgb[:,:,0] = 255*(i0*v + i1*q + i2*p + i3*p + i4*t + i5*v)
+    rgb[:,:,1] = 255*(i0*t + i1*v + i2*v + i3*q + i4*p + i5*p)
+    rgb[:,:,2] = 255*(i0*p + i1*p + i2*t + i3*v + i4*v + i5*q)
 
-    return imout
+    return rgb
+    
 
-def RGB_to_HSV(rgb):
+def rgb2hsv(rgb):
     """
-    Reverse to 'HSV_to_RGB'
+    Reverse to :any:`hsv2rgb`
     """
     eps = 1e-6
     rgb=np.asarray(rgb).astype(float)
@@ -208,21 +278,82 @@ def RGB_to_HSV(rgb):
     h[minc==maxc]=0.0
     h = (h/6.0) % 1.0
 
-    return h, s, v
-    
-def HSV_to_P1A(cin):
+    return np.asarray((h, s, v))
+
+def hsv2complex(cin):
     """
-    Maps hue and value
+    Reverse to :any:`complex2hsv`
     """
     h,s,v = cin
     return v * np.exp(np.pi*2j*(h-.5)) /v.max()
-    
+
+def rgb2complex(rgb):
+    """
+    Reverse to :any:`complex2rgb`
+    """
+    return hsv2complex(rgb2hsv(rgb))
+
+HSV_to_RGB = hsv2rgb  
+RGB_to_HSV = rgb2hsv    
+P1A_to_HSV = complex2hsv
+HSV_to_P1A = hsv2complex
+
 def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
     """
-    imsave(a) converts array a into, and returns a PIL image
-    imsave(a, filename) returns the image and also saves it to filename
-    imsave(a, ..., vmin=vmin, vmax=vmax) clips the array to values between vmin and vmax.
-    imsave(a, ..., cmap=cmap) uses a matplotlib colormap.
+    Take array `a` and transform to `PIL.Image` object that may be used
+    by `pyplot.imshow` for example. Also save image buffer directly 
+    without the sometimes unnecessary Gui-frame and overhead.
+    
+    Parameters
+    ----------
+    a : ndarray
+        Two dimensional array. Can be complex, in which case the amplitude
+        will be optionally clipped by `vmin` and `vmax` if set. 
+    
+    filename : str, optionsl
+        File path to save the image buffer to. Use '\*.png' or '\*.png'
+        as image formats.
+    
+    vmin,vmax : float, optional
+        Value limits ('clipping') to fit the color scale.
+        If not set, color scale will span from minimum to maximum value
+        in array
+        
+    cmap : str, optional
+        Name of the colormap for colorencoding.
+        
+    Returns
+    -------
+    im : PIL.Image
+        a `PIL.Image` object.
+         
+    See also
+    --------
+    complex2rgb
+    
+    Examples
+    --------
+    >>> from ptypy.utils import imsave
+    >>> from matplotlib import pyplot as plt
+    >>> from ptypy.resources import flower_obj
+    >>> a = flower_obj(512)
+    >>> pil = imsave(a)
+    >>> plt.imshow(pil)
+    >>> plt.show()
+    
+    converts array a into, and returns a PIL image and displays it.
+    
+    >>> pil = imsave(a, /tmp/moon.png) 
+    
+    returns the image and also saves it to filename
+    
+    >>> imsave(a, vmin=0, vmax=0.5) 
+    
+    clips the array to values between 0 and 0.5.
+    
+    >>> imsave(abs(a), cmap='gray') 
+    
+    uses a matplotlib colormap with name 'gray'
     """
     if str(cmap) == cmap:
         cmap= mpl.cm.get_cmap(cmap)
@@ -230,8 +361,8 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
     if a.dtype.kind == 'c':
         # Image is complex
         if cmap is not None:
-            print('imsave: Ignoring provided cmap - input array is complex')
-        i = P1A_to_HSV(a, vmin, vmax)
+            logger.info('imsave: Ignoring provided cmap - input array is complex')
+        i = complex2rgb(a, vmin, vmax)
         im = Image.fromarray(np.uint8(i), mode='RGB')
 
     else:
@@ -254,7 +385,7 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
 
 def imload(filename):
     """\
-    Load an image and returns a numpy array
+    Load an image and returns a numpy array. *May get deleted*
     """
     a = np.array(Image.open(filename))
     #a = np.fromstring(im.tostring(), dtype='uint8')
@@ -301,7 +432,7 @@ def franzmap():
     mpl.pyplot.draw_if_interactive()
     
     
-def plot_3d_array(data, axis=0, title='3d', cmap='gray', interpolation='nearest', vmin=None, vmax=None,**kwargs):
+def _plot_3d_array(data, axis=0, title='3d', cmap='gray', interpolation='nearest', vmin=None, vmax=None,**kwargs):
     '''
     plots 3d data with a slider to change the third dimension
     unfortunately the number that the slider shows is rounded weirdly.. be careful!
@@ -349,26 +480,26 @@ def plot_3d_array(data, axis=0, title='3d', cmap='gray', interpolation='nearest'
 
 def rmphaseramp(a, weight=None, return_phaseramp=False):
     """\
-    Attempts to remove the phase ramp in a two-dimensional complex array ``a``.
+    Attempts to remove the phase ramp in a two-dimensional complex array 
+    ``a``.
 
     Parameters
     ----------
-    a : complex 2D-array
+    a : ndarray
         Input image as complex 2D-array.
-
-    weight : {'abs', None}, Defualt=None, optional
-        Use 'abs' for weighted phaseramp.
-
-    return_phaseramp : {Ture, False}, Defualt=False, optional
-        Use Ture to get also the phaseramp array ``p``.
-
-
+    
+    weight : str, optional
+        Use 'abs' for a modulus-weighted phaseramp and`None` for no weights.
+        
+    return_phaseramp : bool, optional
+        Use True to get also the phaseramp array ``p``.
+    
     Returns
-    --------
-    a*p : 2D-array
-        Modified 2D-array.
-    (a*p, p) : tuple
-        Modified 2D-array and phaseramp if ``return_phaseramp`` = True.
+    -------
+    out : ndarray
+        Modified 2D-array, ``out=a*p``
+    p : ndarray, optional
+        Phaseramp if ``return_phaseramp = True``, otherwise omitted 
 
 
     Examples
@@ -393,7 +524,7 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
         agx = (gx*weight).sum() / nrm
         agy = (gy*weight).sum() / nrm
     else:
-	agx = gx.mean()
+        agx = gx.mean()
         agy = gy.mean()
 
     (xx,yy) = np.indices(a.shape)
@@ -407,10 +538,35 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
 
 def plot_storage(S,fignum=100,modulus='linear',slice_tupel=(slice(1),slice(None),slice(None)),**kwargs): #filename=None,vmin=None,vmax=None):
     """\
-    is basically pyE17.utils.imsave wrapped in imshow. 
-    accepts same arguments as imsave
-    can however select a roi (pixel dimensions)
-    has different scales for the modulus: 'linear','log','sqrt'
+    Quickly displat the data buffer of a :any:`Storage` instance.
+
+    Keyword arguments are those of :any:`imsave`
+    
+    Parameters
+    ----------
+    S : Storage
+        Storage instance
+        
+    fignum : int, optional
+        Number of the figure. 
+        
+    slice_tupel : tuple of slices, optional
+        Determines what part of Storage buffer is displayed, i.e. which
+        layers and which region-of-interest. Layers are subplotted 
+        horizontically next to each other. Figsize is (6,6*layers)
+    
+    modulus : str, optional
+        One of `sqrt`, `log` or `linear` to apply to modulus of array 
+        buffer. Useful to reduce dynamic range for diffraction images.
+        
+    Returns
+    -------
+    fig : maplotlib.pyplot.figure
+        
+    See also
+    --------
+    imsave
+    :any:`Storage`
     """
     slc = slice_tupel
     R,C = S.grids()
@@ -445,7 +601,7 @@ def plot_storage(S,fignum=100,modulus='linear',slice_tupel=(slice(1),slice(None)
 
 def length_units(number):
     """\
-    Doc TODO
+    Doc Todo
     """
     a = np.floor(np.log10(np.abs(number)))
     if a<-6.0:

@@ -7,8 +7,9 @@ moonfile = pkg_resources.resource_filename(__name__,'moon.jpg')
 def flower_obj(shape=None):
     from ptypy import utils as u
     import numpy as np
-    
-    im = u.HSV_to_P1A(u.RGB_to_HSV(u.imload(flowerfile)))
+    from PIL import Image
+
+    im = u.rgb2complex(np.asarray(Image.open(flowerfile)))
     if shape is not None:
         sh = u.expect2(shape)
         ish = np.array(im.shape[:2])
@@ -20,8 +21,9 @@ def flower_obj(shape=None):
 def moon_pr(shape=None):
     from ptypy import utils as u
     import numpy as np
-    
-    im = u.HSV_to_P1A(u.RGB_to_HSV(u.imload(moonfile)))
+    from PIL import Image
+
+    im = u.rgb2complex(np.asarray(Image.open(moonfile)))
     if shape is not None:
         sh = u.expect2(shape)
         ish = np.array(im.shape[:2]).astype(float)

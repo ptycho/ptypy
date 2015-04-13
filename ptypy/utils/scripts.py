@@ -217,18 +217,24 @@ def png2mpg(listoffiles,framefile='frames.txt',fps=5,bitrate=2000,codec='wmv2',E
     
     Examples
     --------
+    >>> from ptypy.utils import png2mpg
     >>> png2mpg(['/path/to/image_000.png'])
+    
+    The following happens:
     1) search for files similar to image_*.png in '/path/to/'
     2) found files get listed in a file '/path/to/frames.txt'
     3) calls mencoder to use that file to encode a movie with the default args.
-    4) movie is in the same folder as 'frames.txt' 
+    4) movie is in the same folder as 'frames.txt' and is called 'frames.mpg'
+    
     
     >>> png2mpg(['/path1/to/imageA_040.png','/path2/to/imageB_001.png'],framefile='./banana.txt')
+    
     Generates list file 'banana_text' in current folder. The list file 
     contains in order every path compatible with the wildcards
     '/path1/to/imageA_*.png' and '/path2/to/imageB_*.png'
     
     >>> str=png2mpg(['/path/to/image_000.png'],Encode=False)
+    
     Returns encoder argument string. Use os.system(encoderstring) for 
     encoding manually later
 

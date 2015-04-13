@@ -505,16 +505,26 @@ def crop_pad_axis(A,hplanes,axis=-1,roll=0,fillpar=0.0, filltype='scalar'):
     >>> import numpy as np
     >>> from ptypy.utils import crop_pad_axis
     >>> A=np.ones((8,9))
-    >>> # Add a total of 2 rows, one at top, one at bottom.
+    
+    Add a total of 2 rows, one at top, one at bottom.
+    
     >>> B=crop_pad_axis(A,2,0)
-    >>> # Same as 
+    
+    That is the same as
+     
     >>> B = crop_pad_axis(A,(1,1),0))
-    >>> # Crop 3 columns on left side and pad 2 columns on right
+    
+    Crop 3 columns on the left side and pad 2 columns on the right:
+    
     >>> B = crop_pad_axis(A,(-3,2),1)
+    
+    Crop one plane on low-side and high-side (total of 2) of Volume V:
+    
     >>> V=np.random.rand(3,5,5)    
-    >>> #Crop one plane on low-side and high-side (total of 2) of Volume V
     >>> B=crop_pad_axis(V,-2,0)    
-    >>> #Mirror volume 3 planes on low side of row axis, crop 2 planes on high side
+    
+    Mirror volume 3 planes on low side of row axis, crop 2 planes on high side:
+    
     >>> B=crop_pad_axis(V,(3,-2),1,filltype='mirror')
     """
     if np.isscalar(hplanes):
@@ -582,16 +592,25 @@ def crop_pad(A,hplane_list,axes=None,cen=None,fillpar=0.0,filltype='scalar'):
     >>> import numpy as np
     >>> from ptypy.utils import crop_pad
     >>> V=np.random.rand(3,5,5)
+    
+    Pads 4 planes of zeros on the last axis (2 on low side and 2 on high 
+    side) and pads 3 planes of zeros on the second last axis (2 on low 
+    side and 1 on high side):
+    
     >>> B=crop_pad(V,[3,4])
-    pads 4 planes of zeros on the last axis (2 on low side and 2 on high side),
-    and pads 3 planes of zeros on the second last axis (2 on low side and 1 on high side)
-    equivalent: 
+    
+    Also equivalent: 
+    
     >>> B=crop_pad(V,[(2,1),(2,2)])
     >>> B=crop_pad(V,[(2,1),(2,2)], axes=[-2,-1],fillpar=0.0,filltype='scalar')
+    
+    None-peripheral cropping /padding:
+    
     >>> from ptypy.utils import grids
     >>> fftshift_grid = grids((6,4),center = 'fft')
     >>> cropped_grid=crop_pad(V,[-2,4],cen='fft')
-    note that cropping/ padding now occurs at the start and end of fourier coordinates
+    
+    Note that cropping/ padding now occurs at the start and end of fourier coordinates
     useful for cropping /padding high frequencies in fourier space.
     
     """
