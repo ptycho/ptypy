@@ -1,2 +1,4 @@
 *.pyc
 build/
+doc/sphinx/_build
+
