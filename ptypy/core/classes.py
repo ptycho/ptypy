@@ -1370,11 +1370,7 @@ class POD(Base):
     
     def __init__(self,ptycho=None,ID=None,**kwargs):
         """
-        POD : Ptychographic Object Descriptor
-    
-        A POD brings together probe view, object view and diff view. It also
-        gives access to "exit", a (coherent) exit wave, and to propagation
-        objects to go from exit to diff space. 
+        Init
         
         Parameters
         ----------

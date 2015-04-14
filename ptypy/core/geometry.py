@@ -23,7 +23,7 @@ from scipy import fftpack
 import numpy as np
 
 
-__all__=['Geo','translate_to_pix']
+__all__=['DEFAULT','Geo','BasicNearfieldPropagator','BasicFarfieldPropagator']
 
 DEFAULT=u.Param(
     energy = 6.2,                # Incident photon energy (in keV)
@@ -37,6 +37,7 @@ DEFAULT=u.Param(
     center = 'fftshift',
     origin = 'fftshift',
 )
+""" Default geometry parameters. See unflattened representation below """
 
 _old2new = u.Param(
     z = 'distance',                    # Distance from object to screen 
@@ -51,25 +52,42 @@ _old2new = u.Param(
 
 class Geo(Base):
     """
-    Interactive Geometry class! Bam!
-    switch resolution, shape etc.
-    and provide the propagator too.
+    Hold and keep consistant the information about experimental parameters.  
+    
+    Keeps also reference to the Propagator and updates this reference
+    when resolution, pixel size, etc. is changed in `Geo`.
+    
+    Attributes
+    ----------
+    interact : bool (True)
+        If set to True, changes to properties like :py:meth:`energy`,
+        :py:meth:`lam`, :py:meth:`shape` or :py:meth:`psize` will cause 
+        a call to :py:meth:`update`
+    
     """
     
     DEFAULT=DEFAULT
-    keV2m=1.240597288e-09
+    _keV2m=1.240597288e-09
     _PREFIX = GEO_PREFIX
     
     def __init__(self,owner=None,ID=None,**kwargs):
         """
-        Hold and keep consistant the information about experimental parameters.  
-
+        
         Keyword Args
         ------------
         pars : dict or Param
-            The configuration parameters. See Geo.DEFAULT.
+            The configuration parameters. See `Geo.DEFAULT`.
+            Any other kwarg will update internal p dictionary 
+            if the key exists in `Geo.DEFAULT`.
         
-        any other kwarg will update internal p dictionary if the key exists in DEFAULTS
+        Parameters
+        ----------
+        owner : Base or subclass
+            Instance of a subclass of :any:`Base` or None. That is usually
+            :any:`Ptycho` for a Geo instance.
+        
+        ID : str or int
+            Identifier. Use ``ID=None`` for automatic ID assignment.
         """
         super(Geo,self).__init__(owner,ID)
         if len(kwargs)>0:
@@ -170,17 +188,23 @@ class Geo(Base):
            
     @property
     def energy(self):
+        """
+        Property to get and set the energy
+        """
         return self.p.energy
         
     @energy.setter
     def energy(self,v):
         self.p.energy = v
         # actively change inner variables
-        self.p.lam = self.keV2m / v
+        self.p.lam = self._keV2m / v
         if self.interact: self.update()
         
     @property
     def lam(self):
+        """
+        Property to get and set the wavelength
+        """
         return self.p.lam
         
     @lam.setter
@@ -188,11 +212,14 @@ class Geo(Base):
         # changing wavelengths never changes N, only psize
         # for changing N, please do so manually
         self.p.lam = v
-        self.p.energy = v / self.keV2m
+        self.p.energy = v / self._keV2m
         if self.interact: self.update()
             
     @property
     def resolution(self):
+        """
+        Property to get and set the pixel size in source plane
+        """
         return self.p.resolution
     
     @resolution.setter
@@ -205,22 +232,28 @@ class Geo(Base):
         
     @property
     def psize(self):
+        """
+        Property to get and set the pixel size in the propagated plane
+        """
         return self.p.psize
     
     @psize.setter
     def psize(self,v):
-        """
-        changing propagated space pixel size 
-        """
         self.p.psize[:] = u.expect2(v)
         if self.interact: self.update()
         
     @property
     def lz(self):
+        """
+        Retrieves product of wavelength and propagation distance
+        """
         return self.p.lam * self.p.distance
         
     @property
     def shape(self):
+        """
+        Property to get and set the *shape* i.e. the frame dimensions
+        """
         return self.p.shape
     
     @shape.setter
@@ -230,6 +263,9 @@ class Geo(Base):
     
     @property
     def propagator(self):
+        """
+        Retrieves propagator, createas propagator instance if necessary.
+        """
         if not hasattr(self,'_propagator'):
             self._propagator = self._get_propagator()
         
@@ -265,7 +301,7 @@ class Geo(Base):
         
 def get_propagator(geo_dct,**kwargs):
     """
-    helper function to determine which propagator should be attached to Geometry class
+    Helper function to determine which propagator should be attached to Geometry class
     """
     if geo_dct['propagation']=='farfield':
         return BasicFarfieldPropagator(geo_dct,**kwargs)
@@ -275,24 +311,32 @@ def get_propagator(geo_dct,**kwargs):
 class BasicFarfieldPropagator(object):
     """
     Basic single step Farfield Propagator.
+    
     Includes quadratic phase factors and arbitrary origin in array.
+    
     Be aware though, that if the origin is not in the center of the frame, 
     coordinates are rolled peridically, just like in the conventional fft case.
     """
     DEFAULT = DEFAULT
     
-    def __init__(self,geo_dct=None,ffttype='numpy',**kwargs):
+    def __init__(self,geo_pars=None,ffttype='numpy',**kwargs):
         """
-        Basic single step Farfield Propagator.
+        Parameters
+        ----------
+        geo_pars : Param or dict
+            Parameter dictionary as in :any:`DEFAULT`.
         
-        Parameters:
-        ------------
-        pars : Param or dict
-               Parameter dictionary as in DEFAULT.
+        ffttype : str or other
+            Type of CPU-based FFT implementation. One of
+            
+            - 'numpy' for numpy.fft.fft2 
+            - 'scipy' for scipy.fft.fft2
+            - 2 or 4-tupel of (forward_fft2(),invese_fft2(),
+              [scaling,inverse_scaling])
         """
         self.p=u.Param(DEFAULT)
         self.dtype = kwargs['dtype'] if kwargs.has_key('dtype') else np.complex128
-        self.update(geo_dct,**kwargs)
+        self.update(geo_pars,**kwargs)
         self._assign_fft(ffttype=ffttype)
     
     def update(self,geo_pars=None,**kwargs):
@@ -417,12 +461,18 @@ class BasicNearfieldPropagator(object):
     
     def __init__(self,geo_dct=None,ffttype='scipy',**kwargs):
         """
-        Basic two step Nearfield Propagator.
+        Parameters
+        ----------
+        geo_pars : Param or dict
+            Parameter dictionary as in :any:`DEFAULT`.
         
-        Parameters:
-        ------------
-        pars : Param or dict
-               Parameter dictionary as in DEFAULT.
+        ffttype : str or other
+            Type of CPU-based FFT implementation. One of
+            
+            - 'numpy' for numpy.fft.fft2 
+            - 'scipy' for scipy.fft.fft2
+            - 2 or 4-tupel of (forward_fft2(),invese_fft2(),
+              [scaling,inverse_scaling])
         """
         self.p=u.Param(DEFAULT)
         self.dtype = kwargs['dtype'] if kwargs.has_key('dtype') else np.complex128

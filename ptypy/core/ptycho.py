@@ -41,7 +41,7 @@ DEFAULT_autosave = u.Param(
 
 
 
-Ptycho_DEFAULT = u.Param(
+DEFAULT_ptycho = u.Param(
         verbose_level = 3,      # Verbosity level
         data_type = 'single',   # 'single' or 'double' precision for reconstruction
         dry_run = False,        # do actually nothing if True [not implemented]
@@ -77,25 +77,24 @@ class Ptycho(Base):
     be used as a managed container to load past runs. 
     """
     
-    DEFAULT = Ptycho_DEFAULT
+    DEFAULT = DEFAULT_ptycho    
     _PREFIX = PTYCHO_PREFIX
     
     def __init__(self, pars=None, level=2,**kwargs):
-        """
-        Ptycho : A ptychographic data holder and reconstruction manager.
-        
+        """        
         Parameters
         ----------
-        pars : dict, Param or str
-               If dict or Param, the input parameters required for the
-               reconstruction. See Ptycho.DEFAULT
-               If str, the filename of a past reconstruction to load from.
+        pars : dict or Param
+            If dict or Param, the input parameters required for the
+            reconstruction. See :any:`DEFAULT`
+        
         level : int
-                Determines how much the Ptycho instance will initialize:
-                <=0 : empty ptypy structure
-                1 : reads parameters, configures interaction server
-                2 : configures Containers, initializes Modelmanager
-                >3 : initializes reconstruction engines.
+            Determines how much the Ptycho instance will initialize.
+            
+            - <=0 : empty ptypy structure
+            - 1 : reads parameters, configures interaction server
+            - 2 : configures Containers, initializes Modelmanager
+            - >3 : initializes reconstruction engines and starts them
         """
         super(Ptycho,self).__init__(None,'Ptycho')
         
