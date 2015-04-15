@@ -46,19 +46,14 @@ DEFAULT_ptycho = u.Param(
         data_type = 'single',   # 'single' or 'double' precision for reconstruction
         dry_run = False,        # do actually nothing if True [not implemented]
         autosave = DEFAULT_autosave,        # (None or False, int) If an integer, specifies autosave interval, if None or False: no autosave
-        scan = {},          # POD creation rules.
+        scan = u.Param(),          # POD creation rules.
         scans=u.Param(),
-        # The following 4 are now subset of model
-        #scans = {},             # Sub-structure that can contain scan-specific parameters for categories 'illumination', 'sample', 'geometry'
-        #illumination = {},      # Information about the probe
-        #sample = {},            # All information about the object
-        #geometry = {},          # Geometry of experiment - most of it provided by data
         paths = paths.DEFAULT.copy(),                # How to load and save
-        engines = [u.Param(name='Dummy')],           # Reconstruction algorithms
+        engines = {},           # Reconstruction algorithms
         engine = engines.DEFAULTS.copy(),
         interaction = {}, # Client-server communication,
         plotclient = DEFAULT_plotclient   # Plotting parameters for a client
-    )
+)
 
 
 class Ptycho(Base):
@@ -74,7 +69,34 @@ class Ptycho(Base):
     diffraction data.
     
     By default Ptycho is instantiated once per process, but it can also
-    be used as a managed container to load past runs. 
+    be used as a managed container to load past runs.
+    
+    Attributes
+    ----------
+    p : Param
+        Internal Parameters. Stucture like `DEFAULT`
+    
+    CType,FType : type
+        numpy dtype for arrays. `FType` is for data, i.e. real-valued
+        arrays, `CType` is for complex-valued arrays
+        
+    interactor : ptypy.io.interaction.Server
+        ZeroMQ interaction server for communication with e.g. plotting
+        clients
+    
+    runtime : Param
+        Runtime information, e.g. errors, iteration etc.
+        
+    paths : ptypy.core.path.Paths
+        File paths
+    
+    modelm : ModelManager
+        THE managing instance for :any:`POD`, :any:`View` and 
+        :any:`Geo` instances
+        
+    probe,obj,exit,diff,mask : Container
+        Container instances for illuminations, samples, exit waves,
+        diffraction data and detector masks / weights
     """
     
     DEFAULT = DEFAULT_ptycho    
@@ -84,17 +106,22 @@ class Ptycho(Base):
         """        
         Parameters
         ----------
-        pars : dict or Param
-            If dict or Param, the input parameters required for the
+        pars : Param
+            The input parameters required for the
             reconstruction. See :any:`DEFAULT`
         
         level : int
-            Determines how much the Ptycho instance will initialize.
+            Determines how much is initialized.
             
             - <=0 : empty ptypy structure
-            - 1 : reads parameters, configures interaction server
-            - 2 : configures Containers, initializes Modelmanager
-            - >3 : initializes reconstruction engines and starts them
+            - 1 : reads parameters, configures interaction server, 
+                  see :py:meth:`init_structures`
+            - 2 : also configures Containers, initializes Modelmanager
+                  see :py:meth:`init_data`
+            - 3 : also initializes reconstruction engines
+                  see :py:meth:`init_engines`
+            - >=4 : also and starts reconstruction
+                    see :py:meth:`run`
         """
         super(Ptycho,self).__init__(None,'Ptycho')
         
@@ -103,12 +130,13 @@ class Ptycho(Base):
             return
 
         # Blank state
-        self.p = u.Param(self.DEFAULT)
+        self.p = self.DEFAULT.copy(depth=99)
         
         # Continue with initialization from parameters
         if pars is not None:
             self.p.update(pars)
         
+        # that may be a little dangerous
         self.p.update(kwargs)
         
         self._configure()
@@ -118,6 +146,7 @@ class Ptycho(Base):
             self.init_data()
         if level >=3:
             self.init_engines()
+        if level >=4:
             self.run()
                 
     def _configure(self):
@@ -165,7 +194,13 @@ class Ptycho(Base):
         
     def init_structures(self):
         """
-        Prepare everything for reconstruction.
+        Called on __init__ if ``level>=1``.
+        
+        Prepare everything for reconstruction. Creates attributes
+        :py:attr:`modelm` and the containers :py:attr:`probe` for 
+        illumination, :py:attr:`obj` for the samples, :py:attr:`exit` for
+        the exit waves, :py:attr:`diff` for diffraction data and 
+        :py:attr:`mask` for detectors masks
         """
         
         p = self.p
@@ -184,7 +219,13 @@ class Ptycho(Base):
         # Initialize the model manager
         self.modelm = ModelManager(self, p.scan)
     
-    def init_data(self):
+    def init_data(self, print_stats=True):
+        """
+        Called on __init__ if ``level>=2``.
+        
+        Creates a datasource and calls for :py:meth`ModelManager.new_data()`
+        Prints statistics on the ptypy structure if ``print_stats=True``
+        """
         # Create the data source object, which give diffraction frames one
         # at a time, supporting MPI sharing.
         self.datasource = self.modelm.make_datasource() 
@@ -195,12 +236,13 @@ class Ptycho(Base):
         
         # print stats
         parallel.barrier()
-        self.print_stats()
+        if print_stats:
+            self.print_stats()
 
     def init_engines(self):
-        ####################################
-        # Initialize engines
-        ####################################
+        """
+        Initialize engines from paramters. Sets :py:attr:`engines`
+        """
                
         # Store the engines in a dict
         self.engines = {}
@@ -231,10 +273,12 @@ class Ptycho(Base):
         
     @property
     def pods(self):
+        """ Dict of all :any:`POD` instances in the pool of self """
         return self._pool.get('P', {})
         
     @property
     def containers(self):
+        """ Dict of all :any:`Container` instances in the pool of self """
         return self._pool['C']
 
     def run(self):
@@ -306,7 +350,7 @@ class Ptycho(Base):
             engine.finalize()
     
             # Save
-	    # deactivated for now as something fishy happens through MPI 
+        # deactivated for now as something fishy happens through MPI 
             #self.save_run()
 
         # Clean up - if needed.
@@ -332,7 +376,12 @@ class Ptycho(Base):
                 file dump of Ptycho class
         load_data : bool
                 If `True` also load data (thus regenerating pods & views 
-                for 'minimal' dump 
+                for 'minimal' dump
+        
+        Returns
+        -------
+        P : Ptycho
+            Ptycho instance with ``level==2``
         """
         import save_load
         from .. import io
@@ -402,11 +451,13 @@ class Ptycho(Base):
         ----------
         alt_file : str
             Alternative filepath, will override io.save_file
+            
         kind : str
             Type of saving, one of:
-             - 'minimal', only initial paraeters, probe and object 
-                storages and runtime information is stored.
-             - 'full_flat', (almost) complete environment
+            
+                - 'minimal', only initial parameters, probe and object 
+                  storages and runtime information is saved.
+                - 'full_flat', (almost) complete environment
                
         """
         import save_load

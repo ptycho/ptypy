@@ -77,8 +77,23 @@ scan_DEFAULT = u.Param(
 
 class ModelManager(object):
     """
-    ModelManager : Manage object creation and update according to the physical
-    model of the ptychography experiment
+    Manage ptypy objects creation and update.
+    
+    The main task of ModelManager is to follow the rules for a given
+    reconstruction model and create:
+     - the probe, object, exit, diff and mask containers
+     - the views
+     - the PODs 
+     
+    A ptychographic problem is defined by the combination of one or
+    multiple scans. ModelManager uses encapsulate
+    scan-specific elements in .scans und .scans_pars
+    
+    Note
+    ----
+    This class is densely connected to :any:`Ptycho` the seperation
+    in two classes is more history than reason and these classes may get 
+    merged in future reeases
     """
     DEFAULT = scan_DEFAULT
     """Default doc string %s""" % u.verbose.report(DEFAULT)            
@@ -86,17 +101,6 @@ class ModelManager(object):
 
     def __init__(self, ptycho, pars=None, scans=None, **kwargs):
         """
-        ModelManager : Manage object creation and update.
-        
-        The main task of ModelManager is to follow the rules for a given
-        reconstruction model and create:
-         - the probe, object, exit, diff and mask containers
-         - the views
-         - the PODs 
-         
-        A ptychographic problem is defined by the combination of one or
-        multiple scans. ModelManager uses encapsulate
-        scan-specific elements in .scans und .scans_pars
         
         Parameters
         ----------

@@ -104,14 +104,26 @@ def ellipsis(grids, dims=None, ew=2):
 
 def aperture(A,grids=None,pars=None, **kwargs):
     """
-    Creates an aperture in the shape and dtype of A according to x,y grids `grids`
+    Creates an aperture in the shape and dtype of `A` according 
+    to x,y-grids `grids`. Keyword Arguments may be any of 
+    :any:`DEFAULT`.aperture.
     
-    :Param A: Buffer array to place aperture on top
-    :Param pars: DEFAULT_aperture
-    :Param grid: cartesion grids, like np.indices((Nv,Nh))
-    :Param model: 2d numpa.array of the right output shape.
-
-    returns: Aperture array (complex) in shape of A
+    Parameters
+    ----------
+    A : ndarray
+        Model array (at least 2-dimensional) to place aperture on top.
+        
+    pars: dict or ptypy.utils.Param
+        Parameters, see :any:`DEFAULT`.aperture
+        
+    grids : ndarray
+        Cartesion coordinate grids, if None, they will be created with
+        ``grids = u.grids(sh[-2:],psize=(1.0,1.0))``
+        
+    Returns
+    -------
+    ap : ndarray
+        Aperture array (complex) in shape of A
     """
     p=u.Param(DEFAULT_aperture.copy())
     if pars is not None:
@@ -157,6 +169,23 @@ def aperture(A,grids=None,pars=None, **kwargs):
     return np.resize(ap,sh)
         
 def init_storage(storage, pars, energy =None,**kwargs):
+    """
+    Initializes :any:`Storage` `storage` with parameters from `pars`
+    
+    Parameters
+    ----------
+    storage : ptypy.core.Storage
+        A :any:`Storage` instance in the *probe* container of :any:`Ptycho`
+        
+    pars : Param
+        Parameter structure for creating a probe / illumination. 
+        See :any:`DEFAULT`
+        
+    energy : float, optional
+        Energy associated with this storage. If None, tries to retrieve
+        the energy from the already initialized ptypy network. 
+    """
+    
     s =storage
     p = DEFAULT.copy(depth=3)
     model = None
@@ -164,7 +193,6 @@ def init_storage(storage, pars, energy =None,**kwargs):
         # this is a dict
         p.update(pars, in_place_depth=3)    
     
-        print u.verbose.report(p)
     # first we check for scripting shortcuts. This is only convenience
     elif str(pars)==pars:
         # this maybe a template now or a file
@@ -266,8 +294,12 @@ def init_storage(storage, pars, energy =None,**kwargs):
     # fill storage array
     s.fill(model)
     
-def process(model,aperture_pars=None,prop_pars=None, photons = 1e7, energy=6.,resolution=7e-8,**kwargs):
-
+def _process(model,aperture_pars=None,prop_pars=None, photons = 1e7, energy=6.,resolution=7e-8,**kwargs):
+    """
+    Processes 3d stack of incoming wavefronts `model`. Applies aperture
+    accoridng to `aperture_pars` and propagates according to `prop_pars`
+    and other keywords arguments. 
+    """
     # create the propagator
     ap_size, grids, prop  = _propagation(prop_pars,model.shape[-2:],resolution,energy)
         
