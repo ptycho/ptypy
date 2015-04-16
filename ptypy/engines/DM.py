@@ -66,9 +66,9 @@ class DM(BaseEngine):
         """
         last minute initialization, everything, that needs to be recalculated, when new data arrives
         """
-        mxlist = [np.sum(diview.data) if diview.active else self.ptycho.FType(0.0) for diview in self.di.V.values()]
-        self.max_power = parallel.MPImax(mxlist) 
-        self.pbound = .25 *  self.p.fourier_relax_factor**2 * self.max_power / self.di.S.values()[0].shape[-1]**2
+        self.pbound = {}
+        for name,s in self.di.S.iteritems():
+            self.pbound[name] = .25 *  self.p.fourier_relax_factor**2 * s.pbound_stub
         
         # fill object with coverage of views
         for name,s in self.ob_viewcover.S.iteritems():
@@ -85,7 +85,8 @@ class DM(BaseEngine):
         for name,di_view in self.di.V.iteritems():
             if not di_view.active: continue
             ma_view = di_view.pod.ma_view 
-            error_dct[name] = basic_fourier_update(di_view, ma_view, pbound=self.pbound, alpha = self.p.alpha)
+            pbound = self.pbound[di_view.storage.ID]
+            error_dct[name] = basic_fourier_update(di_view, ma_view, pbound=pbound, alpha = self.p.alpha)
         logger.info('Time spent in Fourier update: %.2f' % (time.time()-t))    
 
         ## make a sorted error array for MPI reduction

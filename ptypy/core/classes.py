@@ -45,7 +45,7 @@ from ..utils.parameters import PARAM_PREFIX
 from ..utils.verbose import logger
 #import ptypy
 
-__all__=['Container','Storage','View','POD','Base']#IDManager']
+__all__=['Container','Storage','View','POD','Base','DEFAULT_PSIZE','DEFAULT_SHAPE' ]#IDManager']
 
 # Default pixel size
 DEFAULT_PSIZE = 1.
@@ -59,7 +59,7 @@ DEFAULT_ACCESSRULE = u.Param(
         shape = None, # (2-tuple) shape of the view in pixels
         coord = None, # (2-tuple) physical coordinates of the center of the view
         psize = DEFAULT_PSIZE, # (float or None) pixel size (required for storage initialization)
-        layer = 0 # (int) index of the third dimension if applicable.
+        layer = 0, # (int) index of the third dimension if applicable.
 )
 
 BASE_PREFIX = 'B'
@@ -878,51 +878,80 @@ class View(Base):
     
     A view stores all the slicing information to extract a 2D piece
     of Container. 
+    
+    Note
+    ----
+    The final structure of this class is yet up to debate
+    and the constructor signature may change. Especially since
+    "DEFAULT_ACCESSRULE" is yet so small, its contents could be
+    incorporated in the constructor call.
+    
     """
     DEFAULT_ACCESSRULE = DEFAULT_ACCESSRULE
     _PREFIX = VIEW_PREFIX
       
     def __init__(self, container,ID=None, **kwargs):
         """
-        A "window" on a container.
-        
-        A view stores all the slicing information to extract a 2D piece
-        of Container. 
-        
         Parameters
         ----------
         container : Container
-                    The Container instance this view applies to.
+            The Container instance this view applies to.
+        
+        ID : str or int
+            ID for this view. Automatically built from ID if None.
+        
         accessrule : dict
-                   All the information necessary to access the wanted slice.
-                   Maybe subject to change as code evolve. See DEFAULT_ACCESSRULE
-        name : str or None
-               name for this view. Automatically built from ID if None.
+            All the information necessary to access the wanted slice.
+            Maybe subject to change as code evolve. See keyword arguments
+        
+        Keyword Args
+        ------------
         active : bool
-                 Whether this view is active (default to True) 
+            Whether this view is active (*default* is ``True``) 
+            
+        storageID : str
+            ID of storage, If the Storage does not exist 
+            it will be created! *(default = None)*
+            
+        shape : int or tuple of int
+            Shape of the view in pixels (*default* is ``None``)
+            
+        coord : 2-tuple of float, 
+            Physical coordinates [meter] of the center of the view.
+            
+        psize : float or tuple of float
+            Pixel size (required for storage initialization)
+            See :any:`DEFAULT_PSIZE`
+            
+        layer : int
+            Index of the third dimension if applicable.
+            (*default* is ``0``)
         """
         super(View,self).__init__(container,ID,False)
         if len(kwargs) >0 :
             self._initialize(**kwargs)
             
-    def _initialize(self,accessrule=None, active=True):
+    def _initialize(self,accessrule=None, active=True, **kwargs):
 
         # Prepare a dictionary for PODs (volatile!)
-        self.pods = weakref.WeakValueDictionary()
+        if not self.__dict__.has_key('pods'):
+            self.pods = weakref.WeakValueDictionary()
 
         # Set active state
         self.active = active
 
         # The messy stuff
-        self._set_accessrule(accessrule)
+        self._set_accessrule(accessrule,**kwargs )
         
-    def _set_accessrule(self, accessrule):
+    def _set_accessrule(self, accessrule,**kwargs ):
         """
         Store internal info to get/set the 2D data in the container. 
         """
         rule = u.Param(self.DEFAULT_ACCESSRULE)
-        rule.update(accessrule)
-
+        if accessrule is not None:
+            rule.update(accessrule)
+        rule.update(kwargs)
+        
         # The storage ID this view will apply to
         self.storageID = rule.storageID
 
@@ -992,20 +1021,41 @@ class Container(Base):
     High-level container class.
     
     Container can be seen as a "super-numpy-array" which can contain multiple
-    sub-containers, potentially of different shape. 
-    Typically there will be only 5 such containers in a reconstruction:
-    "probe", "object", "exit", "diff" and "mask"
-    A container can duplicate its internal storage and apply views on them.
+    sub-containers of type :any:`Storage`, potentially of different shape,
+    along with all :any:`View` instances that act on these Storages to extract
+    data from the internal data buffer :any:`Storage.data`. 
+    
+    Typically there will be five such base containers in a :any:`Ptycho`
+    reconstruction instance:
+    
+        - `Cprobe`, Storages for the illumination, i.e. **probe**, 
+        - `Cobj`, Storages for the sample transmission, i.e. **object**, 
+        - `Cexit`, Storages for the **exit waves**, 
+        - `Cdiff`, Storages for **diffraction data**, usually one per scan,
+        - `Cmask`, Strorages for **masks** (and weights), usually one per scan,
+        
+    A container can conveniently duplicate all its internal :any:`Storage` 
+    instances into a new Container using :py:meth:`copy`. This feature is 
+    intensively used in the reconstruction engines where buffer copies 
+    are needed to temporarily store results. These copies are referred 
+    by the "original" container through the property :py:meth:`copies` and
+    a copy refers to its original through the attribute :py:attr:`original` 
+    In order to reduce the number of :any:`View` instances, Container copies 
+    do not hold views and use instead the Views held by the original container 
+    
+    Attributes
+    ----------
+    original : Container
+        If self is copy of a Container, this attribute refers to the original
+        Container. Otherwise it is None.
+    
+    data_type : str
+        Either "single" or "double"
     """
     _PREFIX = CONTAINER_PREFIX
     
     def __init__(self, ptycho=None,ID=None, **kwargs):
         """
-        High-level container class.
-        Typically there will be only 4 such containers in a reconstruction:
-        "probe", "object", "exit" and "diff"
-        A container knows how to duplicate its internal storage and apply views on them.
-
         Parameters
         ----------
         ID : str or int
@@ -1042,7 +1092,7 @@ class Container(Base):
     @property
     def dtype(self):
         """
-        Property that returns numpy datatype of all internal data buffers
+        Property that returns numpy dtype of all internal data buffers
         """
         if self.data_type == 'complex':
             return self.owner.CType if self.owner is not None else np.complex128
@@ -1055,10 +1105,34 @@ class Container(Base):
     def S(self):
         """
         A property that returns the internal dictionary of all 
-        :any:`Storage`'s in this :any:`Container`
+        :any:`Storage` instances in this :any:`Container`
         """
         return self._pool.get(STORAGE_PREFIX,{})
 
+    @property
+    def Sp(self):
+        """
+        A property that returns the internal dictionary of all 
+        :any:`Storage` instances in this :any:`Container` as a :any:`Param`
+        """
+        return u.Param(self.S)
+
+    @property
+    def V(self):
+        """
+        A property that returns the internal dictionary of all 
+        :any:`View` instances in this :any:`Container`
+        """
+        return self._pool.get(VIEW_PREFIX,{})
+        
+    @property
+    def Vp(self):
+        """
+        A property that returns the internal dictionary of all 
+        :any:`View` instances in this :any:`Container` as a :any:`Param`
+        """
+        return self._pool.get(VIEW_PREFIX,{})
+        
     @property
     def size(self):
         """
@@ -1069,14 +1143,20 @@ class Container(Base):
             if s.data is not None:
                 sz += s.data.size
         return sz
-        
+    
     @property
-    def V(self):
+    def nbytes(self):
         """
-        A property that returns the internal dictionary of all 
-        :any:`View`'s in this :any:`Container`
+        Return total number of bytes used by numpy array buffers
+        in this container. This is not the actual size in memory of the
+        whole contianer, as it does not include the views nor dictionary
+        overhead.
         """
-        return self._pool.get(VIEW_PREFIX,{})
+        sz = 0
+        for ID,s in self.S.iteritems():
+            if s.data is not None:
+                sz += s.data.nbytes
+        return sz
         
     def views_in_storage(self, s, active=True):
         """
@@ -1370,8 +1450,6 @@ class POD(Base):
     
     def __init__(self,ptycho=None,ID=None,**kwargs):
         """
-        Init
-        
         Parameters
         ----------
         ID : ...

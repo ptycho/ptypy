@@ -246,8 +246,10 @@ class ModelManager(object):
         parallel.allreduce(max_frame, parallel.MPI.MIN)
         mean_frame /= (norm + (norm == 0))
 
+        scan.diff.norm = norm
         scan.diff.max_power = parallel.MPImax(Itotal)
         scan.diff.tot_power = parallel.MPIsum(Itotal)
+        scan.diff.pbound_stub = scan.diff.max_power / mean_frame.shape[-1]**2
         scan.diff.mean = mean_frame
         scan.diff.max = max_frame
         scan.diff.min = min_frame

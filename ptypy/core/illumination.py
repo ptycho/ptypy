@@ -285,7 +285,7 @@ def init_storage(storage, pars, energy =None,**kwargs):
         energy  =  s.views[0].pod.geometry.energy
 
     # perform aperture multiplication, propagation etc.
-    model = process(model,p.aperture,p.propagation, p.photons, energy, s.psize)
+    model = _process(model,p.aperture,p.propagation, p.photons, energy, s.psize)
     
     # apply diversity
     if p.diversity is not None:
