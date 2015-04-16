@@ -1452,28 +1452,27 @@ class POD(Base):
         """
         Parameters
         ----------
-        ID : ...
-            The view ID, managed by the parent.
-        info : dict or Param
-                This dict is needed for the modelmanager to figure out to
-                which storage and layer the views should point to
-        views : dict or Param
-                The views. See POD.DEFAULT_VIEWS.
-        geometry : geometry class
-                it also handles propagation
         ptycho : Ptycho
-                 The instance of Ptycho associated with this pod. If None,
-                 defaults to ptypy.currentPtycho
+            The instance of Ptycho associated with this pod. 
+            
+        ID : str or int
+            The pod ID, If None it is managed by the ptycho.
+            
+        Keyword Args
+        ------------
+        views : dict or Param
+            The views. See POD.DEFAULT_VIEWS.
+            
+        geometry : Geo
+            Geometry class instance and attached propagator
+
         """
         super(POD,self).__init__(ptycho,ID,False)
         if len(kwargs) > 0:
             self._initialize(**kwargs)
             
     def _initialize(self,views=None,geometry=None):#,meta=None):
-        # store meta data 
-        # this maybe not so clever if meta_data is large
-        #self.meta = meta
-        
+       
         # other defaults:
         self.is_empty=False
         self.probe_weight = 1.
@@ -1497,24 +1496,48 @@ class POD(Base):
         self.pr_view = self.V['probe']
         self.di_view = self.V['diff']
         self.ex_view = self.V['exit']
+        
+        if self.ex_view is None:
+            self.use_exit_container = False
+            self._exit = np.ones_like(self.geometry.shape,dtype=self.owner.CType)
+        else:
+            self.use_exit_container = True
+            self._exit = None
+            
         self.ma_view = self.V['mask']
-        self.exit = np.ones_like(self.geometry.shape,dtype=self.owner.CType)
         # Check whether this pod is active it should maybe also have a check for an active mask view?
         # Maybe this should be tight to to the diff views activeness through a property
+
     @property
-    def active(self):    
+    def active(self):
+        """
+        Convenience property that describes where this pod is active or not.
+        Equivalent to ``self.di_view.active``
+        """    
         return self.di_view.active
         
     @property
     def fw(self):
+        """
+        Convenience property that returns forward propagator of attached 
+        Geometry instance. Equivalent to ``self.geometry.propagator.fw``
+        """  
         return self.geometry.propagator.fw
     
     @property
     def bw(self):
+        """
+        Convenience property that returns backward propagator of attached 
+        Geometry instance. Equivalent to ``self.geometry.propagator.bw``
+        """
         return self.geometry.propagator.bw
     
     @property
     def object(self):
+        """
+        Convenience property that links to slice of object :any:`Storage`
+        Usually equivalent to ``self.ob_view.data``
+        """
         if not self.is_empty:
             return self.ob_view.data
         else:
@@ -1526,22 +1549,40 @@ class POD(Base):
 
     @property
     def probe(self):
+        """
+        Convenience property that links to slice of probe :any:`Storage`
+        Usually equivalent to ``self.pr_view.data``
+        """
         return self.pr_view.data
         
     @probe.setter
     def probe(self,v):
         self.pr_view.data=v
 
-    #@property
-    #def exit(self):
-    #    return self.ex_view.data
-        
-    #@exit.setter
-    #def exit(self,v):
-    #    self.ex_view.data=v
+    @property
+    def exit(self):
+        """
+        Convenience property that links to slice of exit wave 
+        :any:`Storage`. Equivalent to ``self.pr_view.data``
+        """
+        if self.use_exit_container:
+            return self.ex_view.data
+        else:
+            return self._exit
+            
+    @exit.setter
+    def exit(self,v):
+        if self.use_exit_container:
+            self.ex_view.data = v
+        else:
+            self._exit=v
 
     @property
     def diff(self):
+        """
+        Convenience property that links to slice of diffraction 
+        :any:`Storage`. Equivalent to ``self.di_view.data``
+        """
         return self.di_view.data
         
     @diff.setter
@@ -1550,6 +1591,10 @@ class POD(Base):
         
     @property
     def mask(self):
+        """
+        Convenience property that links to slice of masking 
+        :any:`Storage`. Equivalent to ``self.ma_view.data``
+        """
         return self.ma_view.data
         
     @mask.setter

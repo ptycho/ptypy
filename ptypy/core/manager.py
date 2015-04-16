@@ -709,8 +709,15 @@ class ModelManager(object):
                                                   'storageID': object_id_suf,
                                                   'layer': om},
                                       active=True)
-
-                            views = {'probe': pv, 'obj': ov, 'diff': dv, 'mask': mv}
+                            ev = View(container=self.ptycho.exit,
+                                      accessrule={'shape': geometry.shape,
+                                                  'psize': geometry.resolution,
+                                                  'coord': pos_pr,
+                                                  'storageID': probe_id+object_id_suf,
+                                                  'layer': exit_index},
+                                      active=dv.active)
+                            views = {'probe': pv, 'obj': ov, 'diff': dv, 'mask': mv, 'exit':ev}
+                            #views = {'probe': pv, 'obj': ov, 'diff': dv, 'mask': mv}
                             pod = POD(ptycho=self.ptycho, ID=None, views=views, geometry=geometry)   #, meta=meta)
                             new_pods.append(pod)
                             pod.probe_weight = share.probe_share_power if share is not None else 1.
