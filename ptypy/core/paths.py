@@ -37,8 +37,23 @@ DEFAULT.iteration = 0
 DEFAULT.args = ""
 
 class Paths(object):
-
+    """
+    Path managing class
+    """
+    DEFAULT = DEFAULT
     def __init__(self,pars=None,runtime=None,make_dirs=True):
+        """
+        Parameters
+        ----------
+        pars : Param or dict
+            Parameter set. See :any:`DEFAULT`
+            
+        runtime : dict
+            Optional runtime dictionary for dynamic file names.
+            
+        makedirs : bool
+            Create directories if they do not exist already.
+        """
         self.runtime = runtime
         self.p=DEFAULT.copy()
         if pars is not None:
@@ -67,27 +82,29 @@ class Paths(object):
                 # append predir
                 self.p[f]=self.p[key+'_dir']+self.p[f]
         """
-        
+    
     @property
     def auto_file(self):
-                    
+        """ File path for autosave file """
         return self.get_path(self.p.autosave)
-        
+    
     @property
     def recon_file(self):
-                    
+        """ File path for reconstruction file """           
         return self.get_path(self.p.recons)
-        
+    
     @property
     def plot_file(self):
-                    
+        """ 
+        File path for plot file 
+        """
         return self.get_path(self.p.plots)
-        
+    
     def get_data_file(self,**kwargs):
         
         self.p.update(**kwargs)
         return self.get_path(self.p.data)
-        
+    
     def get_path(self,path):
         try:
             d = dict(self.runtime.iter_info[-1])
@@ -98,7 +115,7 @@ class Paths(object):
         path = os.path.abspath(os.path.expanduser(path % self.p))
 
         return path
-        
+    
 ############
 # TESTING ##
 ############

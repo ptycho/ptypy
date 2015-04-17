@@ -1042,8 +1042,8 @@ class MoonFlowerScan(PtyScan):
         from ptypy.core import xy
         
         # derive geometry from input
-        G = geometry.Geo()
-        G._initialize(self.meta)
+        G = geometry.Geo(pars = self.meta)
+        #G._initialize(self.meta)
         
         # derive scan pattern
         pos = u.Param()

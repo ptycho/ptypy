@@ -70,16 +70,8 @@ class Geo(Base):
     _keV2m=1.240597288e-09
     _PREFIX = GEO_PREFIX
     
-    def __init__(self,owner=None,ID=None,**kwargs):
+    def __init__(self,owner=None,ID=None,pars=None,**kwargs):
         """
-        
-        Keyword Args
-        ------------
-        pars : dict or Param
-            The configuration parameters. See `Geo.DEFAULT`.
-            Any other kwarg will update internal p dictionary 
-            if the key exists in `Geo.DEFAULT`.
-        
         Parameters
         ----------
         owner : Base or subclass
@@ -88,12 +80,17 @@ class Geo(Base):
         
         ID : str or int
             Identifier. Use ``ID=None`` for automatic ID assignment.
+            
+        pars : dict or Param
+            The configuration parameters. See `Geo.DEFAULT`.
+            Any other kwarg will update internal p dictionary 
+            if the key exists in `Geo.DEFAULT`.
         """
         super(Geo,self).__init__(owner,ID)
-        if len(kwargs)>0:
-            self._initialize(**kwargs)
+        #if len(kwargs)>0:
+            #self._initialize(**kwargs)
     
-    def _initialize(self,pars=None,**kwargs):
+    #def _initialize(self,pars=None,**kwargs):
         # Starting parameters
         p=u.Param(DEFAULT)
         if pars is not None:
@@ -544,6 +541,6 @@ class BasicNearfieldPropagator(object):
 
 if __name__ == "__main__":
     G = Geo()
-    G._initialize()
+    #G._initialize()
     GD = G._to_dict()
     G2 = Geo._from_dict(GD)

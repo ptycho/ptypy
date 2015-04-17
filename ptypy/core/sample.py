@@ -26,7 +26,7 @@ logger = u.verbose.logger
 
 TEMPLATES = dict()
 
-DEFAULT_process = u.Param(
+DEFAULT_sim = u.Param(
     diffuser = None,            # (float) Noise in the object fill
     offset = 0,               # (float,tuple) Offset between center of object array and scan pattern (in pixel)
     zoom = None,                #(float,tuple) Zoom value for object simulation.
@@ -55,12 +55,203 @@ DEFAULT = u.Param(
     stxm = u.Param(
         label=None,                 # label of the scan of whose diffraction data to initialize stxm. If None, use own scan_label
     ),                # STXM analysis parameters
-    process = DEFAULT_process,
+    simulate = DEFAULT_sim,
     diversity = DEFAULT_diversity , # see other for noise
 )
 """ docstring"""
 
 __all__=['DEFAULT','init_storage','iofr','simulate']
+
+
+def init_storage(storage,sample_pars = None, energy = None):
+    """
+    Initializes a storage as sample transmission.
+    
+    Parameters
+    ----------
+    storage : Storage
+        The object :any:`Storage` to initialize
+        
+    sample_pars : Param
+        Parameter structure that defines how the sample is created.
+        See :any:`DEFAULT` for the parameters.
+    
+    energy : float, optional
+        Energy associated in the experiment for this sample object.
+        If None, the ptypy structure is searched for the appropriate
+        :any:`Geo` instance:  ``storage.views[0].pod.geometry.energy``
+    """
+    s = storage
+    
+    sam = sample_pars
+    p = DEFAULT.copy(depth=3)
+    model = None
+    if hasattr(sam,'items') or hasattr(sam,'iteritems'):
+        # this is a dict
+        p.update(sam, in_place_depth = 3)    
+    
+    # first we check for scripting shortcuts. This is only convenience
+    elif str(sam)==sam:
+        # this maybe a template now or a file
+        
+        # deactivate further processing
+        p.process = None
+        
+        if sam.endswith('.ptyr'):
+            recon = u.Param(rfile=sam,layer=None,ID=s.ID)
+            p.recon = recon
+            p.model = 'recon'
+            p.process = None
+            init_storage(s,p)
+        elif sam in TEMPLATES.keys():
+            init_storage(s,TEMPLATES[sam])
+        elif resources.objects.has_key(sam) or sam =='stxm':
+            p.model = sam
+            init_storage(s,p)            
+        else:
+            raise RuntimeError('Shortcut string `%s` for object creation is not understood' %sam)
+    elif type(sam) is np.ndarray:
+        p.model=sam
+        p.process = None
+        init_storage(s,p)
+    else:
+        ValueError('Shortcut for object creation is not understood')
+        
+    if p.model is None or str(p.model)=='sim':
+        model = np.ones(s.shape,s.dtype)*p.fill
+    elif type(p.model) is np.ndarray:
+        model = p.model
+    elif resources.objects.has_key(p.model):
+        model = resources.objects[p.model](A.shape)
+    elif str(p.model) == 'recon':
+        # loading from a reconstruction file
+        layer = p.recon.get('layer')
+        ID = p.recon.get('ID')
+        logger.info('Attempt to load object storage with ID %s from %s' %(str(p.ID),p.recon.rfile))
+        model = u.load_from_ptyr(p.recon.rfile,'obj',ID,layer)
+        # this could be more sophisticated, i.e. matching the real spac grids etc.
+        
+    elif str(p.model) == 'stxm':
+        logger.info('STXM initialization using diffraction data')
+        #print s.data.shape, s.shape
+        trans, dpc_row, dpc_col = u.stxm_analysis(s)
+        model = trans * np.exp(1j * u.phase_from_dpc(dpc_row, dpc_col))
+    else:
+        raise ValueError('Value to `model` key not understood in object creation')
+        
+    assert type(model) is np.ndarray, "Internal model should be numpy array now but it is %s" %str(type(model))
+    # expand model to the right length filling with copies
+    sh = model.shape[-2:]
+    model = np.resize(model,(s.shape[0],sh[0],sh[1]))
+    
+    # process the given model
+    if str(p.model)=='sim' or p.process is not None:
+        # try to retrieve the energy
+        if energy is None:
+            energy  =  s.views[0].pod.geometry.energy
+        # make this a single call in future
+        model = simulate(model,p.process,energy,p.fill )
+    
+    # add diversity
+    if p.diversity is not None:
+        u.diversify(model,**(p.diversity))
+    # return back to storage
+    s.fill(model)
+    
+def simulate(A,pars, energy, fill =1.0, **kwargs):
+    """
+    Simulates a sample object into model numpy array `A`
+    
+    Parameters
+    ----------
+    A : ndarray
+        Numpy array as buffer. Must be at least twodimensional
+        
+    pars : Param
+        Simulation parameters. See :any:`DEFAULT` .simulate
+    """
+    lam = u.keV2m(energy)
+    p = DEFAULT_process.copy()
+    p.update(pars)
+    p.update(kwargs)
+        
+    """
+    res = p.resource 
+    if res is None:
+        raise RuntimeError("Resource for simulation cannot be None. Please specify one of ptypy's resources or load numpy array into this key")
+    elif str(res)==res:
+        # check if we have a ptypy resource for this
+
+        else:
+            # try loading as if it was an image
+            try:
+                res = u.imload(res).astype(float)
+                if res.ndmim > 2:
+                    res = res.mean(-1)
+            except:
+                raise RuntimeError("Loading resource %s as image has failed")
+        
+    assert type(res) is np.ndarray, "Resource should be a numpy array now"
+    """
+    
+    # Resize along first index
+    #newsh = (A.shape[0], res.shape[-2],res.shape[-1])
+    #obj = np.resize(res,newsh)
+    obj = A.copy()
+    
+    if p.zoom is not None:
+        zoom = u.expect3(p.zoom)
+        zoom[0] = 1
+        obj = u.zoom(obj,zoom)
+        
+    if p.smoothing is not None:
+        obj = u.gf_2d(obj,p.smoothing / 2.35)
+       
+    off = u.expect2(p.offset)
+    k = 2 * np.pi / lam
+    ri = p.ref_index
+    d = p.thickness
+    # Check what we got for an array
+    if np.iscomplexobj(obj) and d is None:
+        logger.info("Simulation resource is object transmission")
+    elif np.iscomplexobj(obj) and d is not None:
+        logger.info("Simulation resource is integrated refractive index")
+        obj = np.exp(1.j*obj*k*d)
+    else:
+        logger.info("Simulation resource is a thickness profile")
+        # enforce floats
+        ob = obj.astype(np.float)
+        ob -= ob.min()
+        if d is not None:
+            logger.info("Rescaling to maximum thickness")
+            ob /= ob.max()/d
+            
+        if p.formula is not None or ri is not None:
+            # use only magnitude of obj and scale to [0 1]
+            if ri is None:
+                en = u.keV2m(1e-3)/lam
+                if u.parallel.master:
+                    logger.info("Quering cxro database for refractive index \
+                     in object creation with paramters:\n Formula=%s Energy=%d Density=%.2f" % (p.formula,en,p.density))
+                    result = np.array(u.cxro_iref(p.formula,en,density=p.density))
+                else:
+                    result = None
+                result = u.parallel.bcast(result)
+                energy, delta,beta = result
+                ri = - delta +1j*beta
+                
+            else:
+                logger.info("Using given refractive index in object creation")
+
+        obj = np.exp(1.j*ob*k*ri)
+
+    shape = u.expect2(A.shape[-2])
+    crops = list(-np.array(obj.shape[-2]) + shape + 2*np.abs(off))
+    obj = u.crop_pad(obj,crops,fillpar=fill)
+
+    off +=np.abs(off)
+    return np.array(obj[...,off[0]:off[0]+shape[0],off[1]:off[1]+shape[1]])
+
 
 DEFAULT_old=u.Param(
     source = None,      # None,path to a previous recon, or nd-array
@@ -91,6 +282,9 @@ DEFAULT_old=u.Param(
 
 
 def from_pars_old(shape,lam,pars=None,dtype=np.complex):
+    """
+    *DEPRECATED*
+    """
     p=u.Param(DEFAULT)
     if pars is not None and (isinstance(pars,dict) or isinstance(pars,u.Param)):
         p.update(pars)
@@ -159,171 +353,10 @@ def from_pars_old(shape,lam,pars=None,dtype=np.complex):
         
         return p
 
-def init_storage(storage,sample_pars = None):
-    s = storage
-    
-    sam = sample_pars
-    p = DEFAULT.copy(depth=3)
-    model = None
-    if hasattr(sam,'items') or hasattr(sam,'iteritems'):
-        # this is a dict
-        p.update(sam, in_place_depth = 3)    
-    
-    # first we check for scripting shortcuts. This is only convenience
-    elif str(sam)==sam:
-        # this maybe a template now or a file
-        
-        # deactivate further processing
-        p.process = None
-        
-        if sam.endswith('.ptyr'):
-            recon = u.Param(rfile=sam,layer=None,ID=s.ID)
-            p.recon = recon
-            p.model = 'recon'
-            p.process = None
-            init_storage(s,p)
-        elif sam in TEMPLATES.keys():
-            init_storage(s,TEMPLATES[sam])
-        elif resources.objects.has_key(sam) or sam =='stxm':
-            p.model = sam
-            init_storage(s,p)            
-        else:
-            raise RuntimeError('Shortcut string `%s` for object creation is not understood' %sam)
-    elif type(sam) is np.ndarray:
-        p.model=sam
-        p.process = None
-        init_storage(s,p)
-    else:
-        ValueError('Shortcut for object creation is not understood')
-        
-    if p.model is None or str(p.model)=='sim':
-        model = np.ones(s.shape,s.dtype)*p.fill
-    elif type(p.model) is np.ndarray:
-        model = p.model
-    elif resources.objects.has_key(p.model):
-        model = resources.objects[p.model](A.shape)
-    elif str(p.model) == 'recon':
-        # loading from a reconstruction file
-        layer = p.recon.get('layer')
-        ID = p.recon.get('ID')
-        logger.info('Attempt to load object storage with ID %s from %s' %(str(p.ID),p.recon.rfile))
-        model = u.load_from_ptyr(p.recon.rfile,'obj',ID,layer)
-        # this could be more sophisticated, i.e. matching the real spac grids etc.
-        
-    elif str(p.model) == 'stxm':
-        logger.info('STXM initialization using diffraction data')
-        print s.data.shape, s.shape
-        trans, dpc_row, dpc_col = u.stxm_analysis(s)
-        model = trans * np.exp(1j * u.phase_from_dpc(dpc_row, dpc_col))
-    else:
-        raise ValueError('Value to `model` key not understood in object creation')
-        
-    assert type(model) is np.ndarray, "Internal model should be numpy array now but it is %s" %str(type(model))
-    # expand model to the right length filling with copies
-    sh = model.shape[-2:]
-    model = np.resize(model,(s.shape[0],sh[0],sh[1]))
-    
-    # process the given model
-    if str(p.model)=='sim' or p.process is not None:
-        # try to retrieve the energy
-        energy  =  s.views[0].pod.geometry.energy
-        # make this a single call in future
-        model = simulate(model,p.process,energy,p.fill )
-    
-    # add diversity
-    if p.diversity is not None:
-        u.diversify(model,**(p.diversity))
-    # return back to storage
-    s.fill(model)
-    
-def simulate(A,pars, energy, fill =1.0, **kwargs):
+def _create_modes(layers,pars):
     """
-    Creates a simulated object into model numpy array A
+    **DEPRECATED**
     """
-    lam = u.keV2m(energy)
-    p = DEFAULT_process.copy()
-    if pars is not None:
-        p.update(pars)
-        p.update(kwargs)
-        
-    """
-    res = p.resource 
-    if res is None:
-        raise RuntimeError("Resource for simulation cannot be None. Please specify one of ptypy's resources or load numpy array into this key")
-    elif str(res)==res:
-        # check if we have a ptypy resource for this
-
-        else:
-            # try loading as if it was an image
-            try:
-                res = u.imload(res).astype(float)
-                if res.ndmim > 2:
-                    res = res.mean(-1)
-            except:
-                raise RuntimeError("Loading resource %s as image has failed")
-        
-    assert type(res) is np.ndarray, "Resource should be a numpy array now"
-    """
-    
-    # Resize along first index
-    #newsh = (A.shape[0], res.shape[-2],res.shape[-1])
-    #obj = np.resize(res,newsh)
-    obj = A.copy()
-    
-    if p.zoom is not None:
-        zoom = u.expect3(p.zoom)
-        zoom[0] = 1
-        obj = u.zoom(obj,zoom)
-        
-    if p.smoothing is not None:
-        obj = u.gf_2d(obj,p.smoothing / 2.35)
-       
-    off = u.expect2(p.offset)
-    k = 2 * np.pi / lam
-    ri = p.ref_index
-    d = p.thickness
-    # Check what we got for an array
-    if np.iscomplexobj(obj) and d is None:
-        logger.info("Simulation resource is object transmission")
-    elif np.iscomplexobj(obj) and d is not None:
-        logger.info("Simulation resource is integrated refractive index")
-        obj = np.exp(1.j*obj*k*d)
-    else:
-        logger.info("Simulation resource is a thickness profile")
-        # enforce floats
-        ob = obj.astype(np.float)
-        ob -= ob.min()
-        if d is not None:
-            logger.info("Rescaling to maximum thickness")
-            ob /= ob.max()/d
-            
-        if p.formula is not None or ri is not None:
-            # use only magnitude of obj and scale to [0 1]
-            if ri is None:
-                en = u.keV2m(1e-3)/lam
-                if u.parallel.master:
-                    logger.info("Quering cxro database for refractive index \
-                     in object creation with paramters:\n Formula=%s Energy=%d Density=%.2f" % (p.formula,en,p.density))
-                    result = np.array(iofr(p.formula,en,density=p.density))
-                else:
-                    result = None
-                result = u.parallel.bcast(result)
-                energy, delta,beta = result
-                ri = - delta +1j*beta
-                
-            else:
-                logger.info("Using given refractive index in object creation")
-
-        obj = np.exp(1.j*ob*k*ri)
-
-    shape = u.expect2(A.shape[-2])
-    crops = list(-np.array(obj.shape[-2]) + shape + 2*np.abs(off))
-    obj = u.crop_pad(obj,crops,fillpar=fill)
-
-    off +=np.abs(off)
-    return np.array(obj[...,off[0]:off[0]+shape[0],off[1]:off[1]+shape[1]])
-
-def create_modes(layers,pars):
     p=u.Param(pars)
     pr=p.obj
     sh_old = pr.shape
@@ -345,67 +378,3 @@ def create_modes(layers,pars):
     p.obj = pr * w.reshape((layers,1,1))
     return p
 
-
-cxro_server = 'http://henke.lbl.gov'
-
-cxro_POST_query = ('Material=Enter+Formula' +
-             '&Formula=%(formula)s&Density=%(density)s&Scan=Energy' +
-             '&Min=%(emin)s&Max=%(emax)s&Npts=%(npts)s&Output=Text+File')
-
-def iofr(formula, energy,density=-1, npts=100):
-    """\
-    Query CXRO database for index of refraction values.
-
-    Parameters
-    ----------
-    formula: str
-        String representation of the Formula to use.
-    energy: float or (float,float)
-        Either a single energy (in keV) or the minimum/maximum bounds
-    npts: int, optional
-        Number of points between the min and max energies. 
-
-    Returns
-    -------
-    energy, delta, beta : scalar or vector
-        Energy used and the respective `delta` and `beta` values.
-    """
-    import urllib
-    import urllib2
-    import numpy as np
-    
-    if np.isscalar(energy):
-        emin = energy
-        emax = energy
-        npts = 1
-    else:
-        emin,emax = energy
-
-    data = cxro_POST_query % {'formula':formula,
-                     'emin':emin,
-                     'emax':emax,
-                     'npts':npts,
-                     'density':density}
-
-    url = cxro_server+'/cgi-bin/getdb.pl'
-    #u.logger.info('Querying CRXO database...')
-    req = urllib2.Request(url, data)
-    response = urllib2.urlopen(req)
-    t = response.read()
-    datafile = t[t.find('/tmp/'):].split('"')[0]
-
-    url = cxro_server + datafile
-    req = urllib2.Request(url)
-    response = urllib2.urlopen(req)
-    data = response.read()
-
-    d = data.split('\n')
-    #print d
-    dt = np.array([[float(x) for x in dd.split()] for dd in d[2:] if dd])
-
-    #u.logger.info('done, retrieved: ' +  d[0].strip())
-    #print d[0].strip()
-    if npts==1:
-        return dt[-1,0], dt[-1,1], dt[-1,2]
-    else:
-        return dt[:,0], dt[:,1], dt[:,2]

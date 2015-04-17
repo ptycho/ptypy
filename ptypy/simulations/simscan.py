@@ -43,12 +43,27 @@ __all__ = ['SimScan']
 
 class SimScan(PtyScan):
     """
-    Test Ptyscan class producing a romantic ptychographic dataset of a moon
-    illuminating flowers.
-    """
+    Simulates a ptychographic scan and acts as Virtual data source.
+    The simulation is carried out in the following way.
     
-    def __init__(self, pars = None,scan_pars=None,**kwargs):
-
+    TO BE FILLED WITH CONTENT
+    """
+    DEFAULT = DEFAULT
+    
+    def __init__(self, pars = None,scan_pars=None,recipe_pars=None,**kwargs):
+        """
+        Parameters
+        ----------
+        pars : Param
+            PtyScan parameters including a *recipe*. See :any:`data.GENERIC`.
+            
+        scan_pars : Param or dict
+            Parameters for a single scan. Use this especially to set 
+            positions, illumination and sample.
+            
+        recipe_pars : Param or dict
+            Equivalent alternative to *pars['recipe']*.
+        """
         # Initialize parent class
         super(SimScan, self).__init__(pars, **kwargs)
         
@@ -69,8 +84,12 @@ class SimScan(PtyScan):
         if self.info.shape is None:
             self.info.shape = pp.scan.geometry.shape
         
-        rinfo = DEFAULT.copy()
+        rinfo = self.DEFAULT.copy()
         rinfo.update(self.info.recipe, in_place_depth = 4)
+        if recipe_pars is not None:
+            rinfo.update(recipe_pars, in_place_depth = 4)
+        rinfo.update(kwargs, in_place_depth = 4)
+        
         self.rinfo = rinfo
         self.info.recipe = rinfo
         
@@ -122,7 +141,7 @@ class SimScan(PtyScan):
         else:
             save_dtype = None
             acquire = lambda x: x
-        
+    
         # create dictionaries for 'raw' data
         self.diff = {}
         self.mask = {}

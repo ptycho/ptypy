@@ -339,8 +339,8 @@ def _propagation(prop_pars,shape=256,resolution=7e-8,energy=6.):
                 distance=fdist,
                 propagation='farfield'
                 )
-            ffGeo = geometry.Geo()
-            ffGeo._initialize(geodct)
+            ffGeo = geometry.Geo(pars = geodct)
+            #ffGeo._initialize(geodct)
             #print ffGeo
             if p.spot_size is not None:
                 ap_size = ffGeo.lam*fdist/np.array(p.spot_size)*2*np.sqrt(np.sqrt(2))
@@ -359,8 +359,8 @@ def _propagation(prop_pars,shape=256,resolution=7e-8,energy=6.):
                 distance=p.parallel,
                 propagation='nearfield'
                 )
-            nfGeo = geometry.Geo()
-            nfGeo._initialize(geodct)
+            nfGeo = geometry.Geo(pars = geodct )
+            #nfGeo._initialize(geodct)
             grids = nfGeo.propagator.grids_sam if grids is None else grids
             
         if ffGeo is not None and nfGeo is not None:

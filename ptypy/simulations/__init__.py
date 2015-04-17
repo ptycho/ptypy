@@ -2,18 +2,6 @@
 """\
 Ptychographic simulation module.
 
-======
-TODO:
-* ..
-
-
-=======
-BUGS:
-* ....
-
-Author: Bjoern Enders
-Date Nov 27th 2013
-
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
@@ -22,5 +10,5 @@ This file is part of the PTYPY package.
 from ptysim_utils import *
 #from ptysim import *
 import detector 
-import cxro 
+#import cxro 
 from simscan import SimScan

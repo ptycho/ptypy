@@ -166,10 +166,11 @@ class Base(object):
         create new instance from dictionary dct
         should be compatible with _to_dict()
         """
-        ID = dct.pop('ID',None)
-        owner = dct.pop('owner',None)
+        #ID = dct.pop('ID',None)
+        #owner = dct.pop('owner',None)
         #print cls,ID,owner
-        inst = cls(owner,ID)
+        #inst = cls(owner,ID)
+        inst = cls.__new__(cls)
         inst.__dict__.update(dct)
         #calling post dictionary import routine (empty in base)
         inst._post_dict_import()
@@ -273,42 +274,51 @@ class Storage(Base):
 
     _PREFIX = STORAGE_PREFIX
 
-    def __init__(self, container, ID=None, **kwargs):
+    def __init__(self, container, ID=None,data=None,shape=(1,1,1), fill=0., \
+                psize=None, origin=None, layermap=None, padonly=False, **kwargs):
         """
         Parameters
         ----------
-        ID : ...
-             A unique ID, managed by the parent
         container : Container
-                    The container instance
-        name : str or None
-               A name for this storage. If None, build a default name from ID
-        data: numpy.ndarray or None
-              A numpy array to use as initial buffer.
-        shape : tuple or None
-                The shape of the buffer (BE: CANNOT BE NONE)
-        fill : float
-               The default value to fill storage with.
-        psize : float
-                The physical pixel size.
-        origin : 2-tuple
-                 The physical coordinates of the [0,0] pixel (upper-left
-                 corner of the storage buffer). 
+            The container instance
+
+        ID : None,str or int
+            A unique ID, managed by the parent, if None ID is generated
+            by parent.
+            
+        data: ndarray or None
+            A numpy array to use as initial buffer.
+        
+        shape : 3-tuple
+            The shape of the buffer
+            
+        fill : float or complex
+            The default value to fill storage with, will be converted to
+            data type of owner.
+            
+        psize : float or 2-tuple of float
+            The physical pixel size.
+            
+        origin : 2-tuple of int
+            The physical coordinates of the [0,0] pixel (upper-left
+            corner of the storage buffer). 
+        
         layermap : list or None
-                   A list (or 1D numpy array) mapping input layer indices
-                   to the internal buffer. This may be useful if the buffer
-                   contains only a portion of a larger dataset (as when using
-                   distributed data with MPI). If None, provide direct access.
-                   to the 3d internal data.
+            A list (or 1D numpy array) mapping input layer indices
+            to the internal buffer. This may be useful if the buffer
+            contains only a portion of a larger dataset (as when using
+            distributed data with MPI). If None, provide direct access.
+            to the 3d internal data.
+        
         padonly: bool
-                 If True, reformat() will enlarge the internal buffer if needed,
-                 but will not shrink it.
+            If True, reformat() will enlarge the internal buffer if needed,
+            but will not shrink it.
         """
         super(Storage,self).__init__(container,ID)
-        if len(kwargs)>0:
-            self._initialize(**kwargs)
+        #if len(kwargs)>0:
+            #self._initialize(**kwargs)
 
-    def _initialize(self,data=None, shape=(1,1,1), fill=0., psize=None, origin=None, layermap=None, padonly=False):
+    #def _initialize(self,data=None, shape=(1,1,1), fill=0., psize=None, origin=None, layermap=None, padonly=False):
 
         # Default fill value
         self.fill_value = fill
@@ -887,10 +897,17 @@ class View(Base):
     incorporated in the constructor call.
     
     """
+    ########
+    # TODO #
+    ########
+    # - remove numpy array overhead by having only a few numpy arrays stored
+    # in view; access via properties
+    # - get rid of self.pods dictionary also due to unnecessary overhead
+    
     DEFAULT_ACCESSRULE = DEFAULT_ACCESSRULE
     _PREFIX = VIEW_PREFIX
       
-    def __init__(self, container,ID=None, **kwargs):
+    def __init__(self, container,ID=None, accessrule=None, active=True,**kwargs):
         """
         Parameters
         ----------
@@ -904,11 +921,11 @@ class View(Base):
             All the information necessary to access the wanted slice.
             Maybe subject to change as code evolve. See keyword arguments
         
-        Keyword Args
-        ------------
         active : bool
             Whether this view is active (*default* is ``True``) 
-            
+        
+        Keyword Args
+        ------------
         storageID : str
             ID of storage, If the Storage does not exist 
             it will be created! *(default = None)*
@@ -928,10 +945,10 @@ class View(Base):
             (*default* is ``0``)
         """
         super(View,self).__init__(container,ID,False)
-        if len(kwargs) >0 :
-            self._initialize(**kwargs)
+        #if len(kwargs) >0 :
+            #self._initialize(**kwargs)
             
-    def _initialize(self,accessrule=None, active=True, **kwargs):
+    #def _initialize(self,accessrule=None, active=True, **kwargs):
 
         # Prepare a dictionary for PODs (volatile!)
         if not self.__dict__.has_key('pods'):
@@ -1054,33 +1071,35 @@ class Container(Base):
     """
     _PREFIX = CONTAINER_PREFIX
     
-    def __init__(self, ptycho=None,ID=None, **kwargs):
+    def __init__(self, ptycho=None,ID=None,data_type='complex', **kwargs):
         """
         Parameters
         ----------
         ID : str or int
              A unique ID, managed by the parent
+             
         ptycho : Ptycho
-                 The instance of Ptycho associated with this pod. If None,
-                 defaults to ptypy.currentPtycho
-        dtype : str or numpy.dtype
-                data type - either a numpy.dtype object or 'complex' or 
-                'real' (precision is taken from ptycho.FType or ptycho.CType) 
+            The instance of Ptycho associated with this pod.
+             
+        data_type : str or numpy.dtype
+            data type - either a numpy.dtype object or 'complex' or 
+            'real' (precision is taken from ptycho.FType or ptycho.CType)
+        
         """
         #if ptycho is None:
         #    ptycho = ptypy.currentPtycho
     
         super(Container,self).__init__(ptycho,ID)
-        if len(kwargs) > 0:
-            self._initialize(**kwargs)
+        #if len(kwargs) > 0:
+            #self._initialize(**kwargs)
         
-    def _initialize(self,original=None, data_type='complex'):
+    #def _initialize(self,original=None, data_type='complex'):
 
         self.data_type = data_type
              
         # Prepare for copy
-        self.original = original if original is not None else self
-        
+        #self.original = original if original is not None else self
+        self.original = self
         
     @property
     def copies(self):
@@ -1190,8 +1209,9 @@ class Container(Base):
         ID = self.ID + '_copy%d' % (len(self.copies)) if ID is None else ID
 
         # Create new container
-        newCont = self.__class__(ptycho=self.owner,ID=ID, original = self,data_type=self.data_type)
-
+        newCont = self.__class__(ptycho=self.owner,ID=ID, data_type=self.data_type)
+        newCont.original = self
+        
         # Copy storage objects
         for storageID, s in self.S.iteritems():
             news = s.copy(newCont,storageID, fill)
@@ -1448,7 +1468,7 @@ class POD(Base):
     DEFAULT_VIEWS={'probe':None,'obj':None,'exit':None,'diff':None,'mask':None}
     _PREFIX = POD_PREFIX
     
-    def __init__(self,ptycho=None,ID=None,**kwargs):
+    def __init__(self,ptycho=None,ID=None,views=None,geometry=None,**kwargs):
         """
         Parameters
         ----------
@@ -1458,8 +1478,6 @@ class POD(Base):
         ID : str or int
             The pod ID, If None it is managed by the ptycho.
             
-        Keyword Args
-        ------------
         views : dict or Param
             The views. See POD.DEFAULT_VIEWS.
             
@@ -1468,10 +1486,10 @@ class POD(Base):
 
         """
         super(POD,self).__init__(ptycho,ID,False)
-        if len(kwargs) > 0:
-            self._initialize(**kwargs)
+        #if len(kwargs) > 0:
+            #self._initialize(**kwargs)
             
-    def _initialize(self,views=None,geometry=None):#,meta=None):
+    #def _initialize(self,views=None,geometry=None):#,meta=None):
        
         # other defaults:
         self.is_empty=False

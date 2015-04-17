@@ -14,7 +14,7 @@ import parallel
 from math_utils import *
 from array_utils import *
 
-__all__ = ['hdr_image','diversify',
+__all__ = ['hdr_image','diversify','cxro_iref',
             'xradia_star','png2mpg','mass_center','phase_from_dpc',
             'radial_distribution','stxm_analysis','stxm_init',
              'load_from_ptyr']
@@ -694,15 +694,21 @@ _cxro_POST_query = ('Material=Enter+Formula' +
 
 def cxro_iref(formula, energy,density=-1, npts=100):
     """\
-    Query CXRO database for index of refraction values.
+    Query CXRO database for index of refraction values for a solid
 
     Parameters
     ----------
     formula: str
         String representation of the Formula to use.
-    energy: float or (float,float)
-        Either a single energy (in keV) or the minimum/maximum bounds
-    npts: int, optional
+        
+    energy : float or (float,float)
+        Either a single energy (in eV) or the minimum/maximum bounds
+        
+    density : None or float, optional
+        Density of the material [g/ccm]. If ``None`` or ``<0`` the 
+        regular density at ambiente temperatures is used.
+        
+    npts : int, optional
         Number of points between the min and max energies. 
 
     Returns
@@ -721,20 +727,23 @@ def cxro_iref(formula, energy,density=-1, npts=100):
     else:
         emin,emax = energy
 
-    data = cxro_POST_query % {'formula':formula,
+    if density is None or density<0:
+        density = -1
+        
+    data = cxro_iref.cxro_query % {'formula':formula,
                      'emin':emin,
                      'emax':emax,
                      'npts':npts,
                      'density':density}
 
-    url = cxro_server+'/cgi-bin/getdb.pl'
+    url = cxro_iref.cxro_server+'/cgi-bin/getdb.pl'
     #u.logger.info('Querying CRXO database...')
     req = urllib2.Request(url, data)
     response = urllib2.urlopen(req)
     t = response.read()
     datafile = t[t.find('/tmp/'):].split('"')[0]
 
-    url = cxro_server + datafile
+    url = cxro_iref.cxro_server + datafile
     req = urllib2.Request(url)
     response = urllib2.urlopen(req)
     data = response.read()

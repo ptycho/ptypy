@@ -14,9 +14,9 @@ from scipy import ndimage
 from matplotlib import pyplot as plt
 
 from ptypy import utils as u
-from ptypy.core import data
+#from ptypy.core import data
 
-__all__ = ['framepositions','czoom','make_sim_datasource']
+__all__ = ['exp_positions']
 
 def czoom(input,*args,**kwargs):
     return ndimage.zoom(input.real, *args, **kwargs) + 1j*ndimage.zoom(input.imag, *args, **kwargs)

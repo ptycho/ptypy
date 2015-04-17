@@ -87,7 +87,7 @@ class Ptycho(Base):
     runtime : Param
         Runtime information, e.g. errors, iteration etc.
         
-    paths : ptypy.core.path.Paths
+    paths : Paths
         File paths
     
     modelm : ModelManager
@@ -388,7 +388,7 @@ class Ptycho(Base):
         
         # determine if this is a .pty file
         # FIXME: do not rely on ".pty" extension.
-        if not runfile.endswith('.pty'):
+        if not runfile.endswith('.pty') and not runfile.endswith('.ptyr') :
             logger.warning('Only ptypy file type allowed for continuing a reconstruction')
             logger.warning('Exiting..')
             return None
@@ -422,9 +422,11 @@ class Ptycho(Base):
             P._configure()
 
             logger.info('Reconfiguring sharing rules')# and loading data')
-            P.modelm.sharing_rules = model.parse_model(P.p.model['sharing'],P.modelm.sharing)
+            print u.verbose.report(P.p)
+            P.modelm.sharing_rules = model.parse_model(P.modelm.p['sharing'],P.modelm.sharing)
             
             logger.info('Regenerating exit waves')
+            P.exit.reformat()
             P.modelm._initialize_exit(P.pods.values())
             """
             logger.info('Attaching datasource')
@@ -455,9 +457,9 @@ class Ptycho(Base):
         kind : str
             Type of saving, one of:
             
-                - 'minimal', only initial parameters, probe and object 
+                - *'minimal'*, only initial parameters, probe and object 
                   storages and runtime information is saved.
-                - 'full_flat', (almost) complete environment
+                - *'full_flat'*, (almost) complete environment
                
         """
         import save_load
@@ -497,8 +499,12 @@ class Ptycho(Base):
 
                 logger.info('Clearing numpy arrays for exit, diff and mask containers.')
                 #self.exit.clear()
-                for pod in self.pods.values():
-                    del pod.exit
+                try:
+                    for pod in self.pods.values():
+                        del pod.exit
+                except AttributeError:
+                    self.exit.clear()
+                    
                 self.diff.clear()
                 self.mask.clear()
                 logger.info('Unlinking and saving to %s' % destfile)
