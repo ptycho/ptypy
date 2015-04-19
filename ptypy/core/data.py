@@ -74,7 +74,7 @@ GENERIC = dict(
     num_frames = None, # Total number of frames to be prepared
     recipe = {},
 )
-"""See unflattened representation below"""
+"""Default data parameters. See :py:data:`.scan.data` and a short listing below"""
 GENERIC.update(META)
 
 WAIT = 'msg1'

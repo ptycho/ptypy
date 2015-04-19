@@ -37,16 +37,69 @@ extensions = [
 
 def remove_mod_docstring(app, what, name, obj, options, lines):
     from ptypy import utils as u
+    import numpy as np
     u.verbose.report.headernewline='\n\n'
-    print name
+    searchstr = ':py:data:'
+    
+    def get_refs(dct,pd,depth=2, indent = ''):
+        if depth<0:
+            return
+        
+        for k, value in dct.iteritems():
+            ref = ', see :py:data:`~%s`' % pd.children[k].entry_point if pd.children.has_key(k) else ''
+            if hasattr(value,'items'):
+                v = str(value.__class__.__name__)
+            elif str(value)==value:
+                v='"%s"' % value
+            else:
+                v=str(value)
+                
+            lines.append(indent+'* *' +k+'* = ``'+v+'``' +ref)#+'\n')
+            
+            if hasattr(value,'items'):
+                #lines.append('\n\n')
+                lines.append("")
+                get_refs(value,pd.children[k],depth=depth-1, indent = indent+'  ')
+                lines.append("")
+                #lines.append('\n\n')
+    #print name
     #if name.find('DEFAULT')>=0:
     if isinstance(obj,u.Param) or isinstance(obj,dict):
-        lines += u.verbose.report(obj).splitlines()[3:]
-    #if str(what)=='attribute':
-        print name
-        print obj
-        print lines
+        keys = obj.keys()
+        pd = None
+        
 
+        """
+        # auto_matching
+        for entry,pdesc in u.validator.entry_points_Param.iteritems():
+            chkeys = ':'.join([k.split('.')[-1] for k in pdesc.children.keys()])
+            #print chkeys
+            #print keys
+            matches = [key in chkeys for key in keys]
+            #print matches
+            print np.mean(matches)
+            if np.mean(matches)>0.8:
+                print 'Param match'
+                e=entry
+                print e
+                pd = pdesc
+                break
+        """
+        for l in lines:
+            start = l.find(searchstr)
+            if start > -1:
+                newstr= l[start:]
+                newstr=newstr.split('`')[1]
+                newstr=newstr.replace('~','')
+                #print newstr, what, name, options
+                pd = u.validator.entry_points_Param.get(newstr,None)
+                break
+                
+        if pd is not None:
+            #lines.append('Match with :py:data:`.%s` \n\n' %pd.entry_point)
+            get_refs(obj,pd,depth=2, indent = '')
+            #print lines
+        
 def setup(app):
     app.connect('autodoc-process-docstring', remove_mod_docstring)
 
@@ -209,7 +262,7 @@ htmlhelp_basename = 'ptypydoc'
 
 latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
+'papersize': 'a4paper',
 
 # The font size ('10pt', '11pt' or '12pt').
 #'pointsize': '10pt',
@@ -222,7 +275,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('ptypy', 'ptypy.tex', u'ptypy Documentation',
+  ('index', 'index.tex', u'ptypy Documentation',
    u'Pierre Thibault, Bjoern Enders and others', 'manual'),
 ]
 
@@ -245,6 +298,8 @@ latex_use_parts = False
 
 # If false, no module index is generated.
 #latex_domain_indices = True
+
+latex_use_parts = False
 
 
 # -- Options for manual page output ---------------------------------------

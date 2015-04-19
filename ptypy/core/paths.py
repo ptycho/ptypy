@@ -21,20 +21,22 @@ else:
     from .. import utils as u
     from ..utils.verbose import logger
     
-__all__=['Paths']
+__all__=['DEFAULT','Paths']
 
-DEFAULT=u.Param()
-DEFAULT.home = "./"    # (03) Relative base path for all other paths
-DEFAULT.plots = "plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png"# (07) filename for dumping plots
-DEFAULT.recons = "recons/%(run)s/%(run)s_%(engine)s.ptyr"                 # (10) directory to save final reconstruction
-DEFAULT.autosave = "dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr"                  # (12) directory to save intermediate results
-DEFAULT.movie = "plots/%(run)s/%(run)s_%(engine)s.mpg"# (13) 
-DEFAULT.data = "analysis/%(run)s/%(label)s.ptyd"
+DEFAULT=u.Param(
+home = "./",    # (03) Relative base path for all other paths
+plots = "plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png",# (07) filename for dumping plots
+recons = "recons/%(run)s/%(run)s_%(engine)s.ptyr",                 # (10) directory to save final reconstruction
+autosave = "dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr",                  # (12) directory to save intermediate results
+movie = "plots/%(run)s/%(run)s_%(engine)s.mpg",# (13) 
+data = "analysis/%(run)s/%(label)s.ptyd",
 # runtime parameters
-DEFAULT.run = None                                   # (04) Name of reconstruction run
-DEFAULT.engine = "Dummy"
-DEFAULT.iteration = 0
-DEFAULT.args = ""
+run = None,                                   # (04) Name of reconstruction run
+engine = "Dummy",
+iteration = 0,
+args = "",
+)
+"""Default path parameters. See :py:data:`.io.paths` and a short listing below"""
 
 class Paths(object):
     """

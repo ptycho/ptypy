@@ -11,7 +11,9 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
-
+   readme
+   ptypy
+   parameters   
 
 Indices and tables
 ==================

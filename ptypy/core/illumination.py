@@ -42,6 +42,7 @@ DEFAULT_aperture = u.Param(
                         # May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset
     rotate=0.,          # (float) rotate aperture by this value
 )
+"""Default illumination.aperture parameters. See :py:data:`.scan.illumination.aperture` and a short listing below"""
 
 DEFAULT_propagation = u.Param(    # Parameters for propagation after aperture plane
                         # Propagation to focus takes precedence to parallel propagation if focused is not None
@@ -83,9 +84,9 @@ DEFAULT = u.Param(
     aperture=DEFAULT_aperture,         # aperture parameters, can be None = no aperture
     propagation=DEFAULT_propagation,   # propagation parameters, can be None = no propagation
 )
-"""See unflattened DEFAULTS below"""
+"""Default illumination parameters. See :py:data:`.scan.illumination` and a short listing below"""
 
-__all__ =['DEFAULT','init_storage','aperture','process']
+__all__ =['DEFAULT','init_storage','aperture']
 
 def rectangle(grids, dims=None, ew=2):
     if dims is None:

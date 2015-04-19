@@ -37,19 +37,20 @@ import data
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager', 'coherence_DEFAULT']
+__all__ = ['DEFAULT','ModelManager']
 
 DESCRIPTION = u.Param()
 
-coherence_DEFAULT = u.Param(
-    Nprobe_modes=1,  # number of mutually spatially incoherent probes per diffraction pattern
-    Nobject_modes=1,  # number of mutually spatially incoherent objects per diffraction pattern
-    energies=[1.0],  # list of energies / wavelength relative to mean energy / wavelength
-    probe_is_achromatic =False, # if True, the same probe is used for all energies
-    object_is_nondispersive = False # if True, the same object is used for all energies
+DEFAULT_coherence = u.Param(
+    num_probe_modes=1,  # number of mutually spatially incoherent probes per diffraction pattern
+    num_object_modes =1,  # number of mutually spatially incoherent objects per diffraction pattern
+    energies =[1.0],
+    spectrum=[1.0],  # list of energies / wavelength relative to mean energy / wavelength
+    probe_dispersion = None, # if True, the same probe is used for all energies
+    object_dispersion = None # if True, the same object is used for all energies
 )
 
-sharing_DEFAULT = u.Param(
+DEFAULT_sharing = u.Param(
     #scan_per_probe = 1,                # (69) number of scans per object
     #scan_per_object = 1,              # (70) number of scans per probe
     object_shared_with = None,         # (71) `scan_label` of scan for the shared obejct
@@ -58,15 +59,15 @@ sharing_DEFAULT = u.Param(
     probe_share_power = 1,             # (74) contribution to the shared probe
 )
 
-scan_DEFAULT = u.Param(
+DEFAULT = u.Param(
     illumination=u.Param(),  # All information about the probe
     sample=u.Param(),  # All information about the object
     geometry=u.Param(),  # Geometry of experiment - most of it provided by data
     xy=u.Param(),
     # Information on scanning paramaters to yield position arrays
     # If positions are provided by the DataScan object, set xy.scan_type to None
-    coherence=coherence_DEFAULT.copy(),
-    sharing = sharing_DEFAULT.copy(),
+    coherence=DEFAULT_coherence.copy(),
+    sharing = DEFAULT_sharing.copy(),
     if_conflict_use_meta=False,
     # Take geometric and position information from incoming meta_data
     # if possible parameters are specified both in script and in meta data
@@ -81,6 +82,7 @@ class ModelManager(object):
     
     The main task of ModelManager is to follow the rules for a given
     reconstruction model and create:
+    
      - the probe, object, exit, diff and mask containers
      - the views
      - the PODs 
@@ -95,8 +97,9 @@ class ModelManager(object):
     in two classes is more history than reason and these classes may get 
     merged in future reeases
     """
-    DEFAULT = scan_DEFAULT
-    """Default doc string %s""" % u.verbose.report(DEFAULT)            
+    DEFAULT = DEFAULT
+    """Default scan parameters. See :py:data:`.scan` and a short listing below"""
+
     _PREFIX = MODEL_PREFIX
 
     def __init__(self, ptycho, pars=None, scans=None, **kwargs):
@@ -106,12 +109,14 @@ class ModelManager(object):
         ----------
         ptycho: Ptycho
             The parent Ptycho object
+            
         pars : dict or Param
-            Input parameters (see ModelManager.DEFAULT)
+            Input parameters (see :any:`~ModelManager.DEFAULT`)
             If None uses defaults
+            
         scans : dict or Param
             Scan-specific parameters, Values should be dict Param that
-            follow the structure of `pars` (see ModelManager.DEFAULT)
+            follow the structure of `pars`.
             If None, tries in ptycho.p.scans else becomes empty dict  
         """
 
@@ -686,8 +691,8 @@ class ModelManager(object):
                         new_object_ids[object_id_suf] = self.sharing_rules.object_ids[object_id]
 
                     # Loop through modes
-                    for pm in range(scan.pars.coherence.Nprobe_modes):
-                        for om in range(scan.pars.coherence.Nobject_modes):
+                    for pm in range(scan.pars.coherence.num_probe_modes):
+                        for om in range(scan.pars.coherence.num_object_modes):
                             # Make a unique layer index for exit view
                             # The actual number does not matter due to the layermap access
                             exit_index = index * 10000 + pm * 100 + om

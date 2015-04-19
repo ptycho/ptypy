@@ -29,6 +29,7 @@ DEFAULT=u.Param(
     #### other 
     positions = None,        # fill this list with your own script if you want other scan patterns, choose 'custom' as san type
 )
+"""Default patterb parameters. See :py:data:`.scan.xy` and a short listing below"""
 
 def from_pars(pars=None):
 

@@ -37,7 +37,7 @@ DEFAULT=u.Param(
     center = 'fftshift',
     origin = 'fftshift',
 )
-""" Default geometry parameters. See unflattened representation below """
+""" Default geometry parameters. See also :py:data:`.scan.geometry` and an unflattened representation below """
 
 _old2new = u.Param(
     z = 'distance',                    # Distance from object to screen 
@@ -55,7 +55,8 @@ class Geo(Base):
     Hold and keep consistant the information about experimental parameters.  
     
     Keeps also reference to the Propagator and updates this reference
-    when resolution, pixel size, etc. is changed in `Geo`.
+    when resolution, pixel size, etc. is changed in `Geo`. Reference to
+    :py:data:`.io.paths.recons`.          
     
     Attributes
     ----------
@@ -76,7 +77,7 @@ class Geo(Base):
         ----------
         owner : Base or subclass
             Instance of a subclass of :any:`Base` or None. That is usually
-            :any:`Ptycho` for a Geo instance.
+            :any:`Ptycho` for a Geo instance.            
         
         ID : str or int
             Identifier. Use ``ID=None`` for automatic ID assignment.
@@ -321,7 +322,7 @@ class BasicFarfieldPropagator(object):
         Parameters
         ----------
         geo_pars : Param or dict
-            Parameter dictionary as in :any:`DEFAULT`.
+            Parameter dictionary as in :py:attr:`DEFAULT`.
         
         ffttype : str or other
             Type of CPU-based FFT implementation. One of
@@ -460,7 +461,7 @@ class BasicNearfieldPropagator(object):
         Parameters
         ----------
         geo_pars : Param or dict
-            Parameter dictionary as in :any:`DEFAULT`.
+            Parameter dictionary as in :py:data:`DEFAULT`.
         
         ffttype : str or other
             Type of CPU-based FFT implementation. One of

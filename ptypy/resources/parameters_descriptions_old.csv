@@ -1,0 +1,204 @@
+level,name,default,type,static,lowlim,uplim,shortdoc,longdoc,userlevel,validity
+0,verbose_level,1,int,yes,0,3,"Verbosity level","Verbosity level for information logging
+
+0: Only errors
+1: Warning
+2: Information
+3: Debug",0,
+0,data_type,single,str,yes,,,"Reconstruction floating number precision","Reconstruction floating number precision ('single' or 'double')",1,
+0,run,None,str,yes,,,"Reconstruction identifier","Reconstruction run identifier. If None (default), the run name will be constructed at run time from other information.",0,
+0,dry_run,FALSE,bool,yes,,,"Dry run switch","Run everything skipping all memory and cpu-heavy steps (and file saving)",2,
+0,io,,Param,yes,,,"Global parameters for I/O",,,
+1,paths,,Param,yes,,,Paths,"The paths parameters can contain format strings with keywords from the runtime directory. The most likely are ""run"", ""engine"", ""iterations"".",,
+2,home,./,str,yes,,,"Base directory for all I/O","home is the root directory for all input/output operations. All other path parameters that are relative paths will be relative to this directory.",1,
+2,recons,recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr,str,yes,,,"Reconstruction file name (or format string)","Reconstruction file name or format string (constructed against runtime dictionary)",1,
+2,autosave,dumps/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr,str,yes,,,"Auto-save file name (or format string)","Auto-save file name or format string (constructed against runtime dictionary)",1,
+2,data,analysis/%(run)s/%...,str,yes,,,"Processed data file name (or format string)",,1,
+2,plot,plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png,str,yes,,,"Plot images file name (or format string)",,1,
+2,movie,plots/%(run)s/%(run)s_%(engine)s.mpg,str,yes,,,"Movie file name (or format string)",,1,
+1,autosave,,Param,yes,,,"Auto-save options",,,
+2,active,TRUE,bool,yes,,,"Activation switch","If True the current reconstruction will be saved at regular intervals.",1,
+2,interval,10,int,yes,1,,"Auto-save interval",,1,
+0,interaction,,Param,yes,,,"Server / Client parameters",,,
+1,primary_address,tcp://127.0.0.2,str,yes,,,"The address the server is listening to.","The address the server is listening to.
+TODO: allow for automatic address definition when running on a cluster.",2,
+1,primary_port,5570,int,yes,,,"The port the server is listening to.","The port the server is listening to.",2,
+1,port_range,5664:00:00,str,yes,,,"The port range opened to clients.","The port range opened to clients.",2,
+0,plotclient,,Param,yes,,,"Plotting client parameters",,,
+1,active,TRUE,bool,yes,,,"Live plotting switch","If True, a plotting client will be spawned and connected at initialization. This option should be set to False when ptypy is run on a cluster.",1,
+1,interval,1,int,yes,1,,"Number of iterations between plot updates","Requests to the server will happen with this iteration intervals. Note that this will work only if interaction.polling_interval is smaller or equal to this number.",1,
+1,some_plotting_options,None,str,,,,"Options for default plotter (not implemented yet)","Options for default plotter (not implemented yet)",2,
+1,dump,TRUE,bool,yes,,,"Switch to dump plots as image files",,1,
+1,dump_interval,None,int,yes,,,"Iteration interval for dumping plots","If None, no image will be saved. If 0, only a final image will be saved.",1,
+1,make_movie,TRUE,bool,yes,,,"Produce reconstruction movie after the reconstruction.","Switch to request the production of a movie from the dumped plots at the end of the reconstruction.",1,
+0,scan,,Param,yes,,,"Scan parameters","This categrogy specifies defaults for all scans. Scan-specific parameters are stored in scans.scan_%%",,
+1,prepare_data,TRUE,bool,yes,,,"If True, prepare from raw data files","If True, the diffraction data will be prepared from raw files in an instrument-specific way. If false, data will be loaded from specified file. If None, prepare only if necessary. See scan.preparation.type for the available instruments.",0,
+1,file,None,str,yes,,,"File to load data from","This parameter is used only if prepare_data is False or None.",0,"not prepare_data"
+1,tags,None,str,yes,,,"Comma seperated string tags describing the data input","[may be deprecated]",2,
+1,if_conflict_use_meta,TRUE,bool,yes,,,"Give priority to metadata relative to input parameters",,2,
+1,preparation,,Param,yes,,,"Data preparation parameters",,,prepare_data
+2,save_prepared_data,TRUE,bool,yes,,,"If true the compiled data structure will be stored on file",,1,
+2,type,"""generic""",str,yes,,,"Data preparation recipe",,0,
+2,generic,,Param,yes,,,"Generic data preparation recipe","[not implemented]",,"type==""generic"""
+3,detector_name,None,str,yes,,,"Detector name","[not implemented]",1,
+3,frame_orientation,None,str,yes,,,"Orientation of the frame","[not implemented]",1,
+3,experimentID,None,str,yes,,,"Name of the experiment","[not implemented]",1,
+3,other_meta,None,str,yes,,,"[some other parameters]","[not implemented]",1,
+2,cSAXS,,Param,yes,,,"cSAXS data preparation recipe","[to refactor]",,"type==""cSAXS"""
+3,cSAXS_specific_parameters,None,str,yes,,,"[to refactor]",,1,
+2,I13DLS,,Param,yes,,,"I13 (Diamond Light Source) preparation recipe",,,"type==""I13DLS"""
+3,I13_specific_parameter,None,str,yes,,,"[to be implemented]",,1,
+2,plugin,,Param,yes,,,"Plugin recipe","[not implemented]",,"type==""plugin"""
+3,name,,,,,,"Plugin name","[not implemented]",1,
+3,parameter_file,,,,,,"Plugin parameter input","[not implemented]",1,
+2,simulation,,Param,yes,,,"Simulated data as a preparation","[not implemented]",,"type==""simulation"""
+3,detector,,Param,yes,,,"Detector parameters",,,
+4,type,None,str,yes,,,"Detector type","[not implemented]",1,
+4,rebin,1,int,yes,,,"Rebinning factor",,1,
+1,sharing,,Param,yes,,,"Scan sharing options",,,
+2,object_share_with,None,str,yes,,,"Label or index of scan to share object with.","Possible values:
+
+None: Do not share
+(string): label of the scan to share with
+(int):index of scan to share with",1,
+2,object_share_power,1,float,yes,0,,"Relative power for object sharing",,1,
+2,probe_share_with,None,str,yes,,,"Label or index of scan to share probe with.","Possible values:
+
+None: Do not share
+(string): label of the scan to share with
+(int):index of scan to share with",1,
+2,probe_share_power,1,float,yes,0,,"Relative power for probe sharing",,1,
+1,geometry,,Param,yes,,,"Physical parameters","All distances are in meters. Other units are specified in the documentation strings.",,
+2,energy,7.2,float,yes,0,,"Energy (in keV)","If None, use the wavelength instead.",0,
+2,lam,None,float,yes,0,,Wavelength,"Used only if energy is None",0,"energy is None"
+2,z,7.19,float,yes,0,,"Distance from object to detector",,0,
+2,psize_det,0.000172,float,yes,0,,"Pixel size in Detector plane",,1,
+2,psize_sam,None,float,yes,0,,"Pixel size in Sample plane","This parameter is used only for simulations",2,
+2,prop_type,farfield,str,yes,,,"Propagation type","Either ""farfield"" or ""nearfield""",1,
+1,pattern,,Param,yes,,,"Parameters for scan patterns","These parameters are useful in two cases:
+
+ - When the experimental positions are not known (no encoders)
+ - When using the package to simulate data.",,
+2,type,None,str,,0,,"Pattern type","The type must be one of the following:
+
+ - None (default): positions are read from data file.
+ - 'custom': positions are read from parameter structure
+ - 'raster': raster grid pattern
+ - 'round': concentric circles pattern
+ - 'round_roi': concentric circles cropped to a region-of-interest
+ - 'spiral': spiral pattern
+ - 'spiral_roi': spiral pattern cropped to a region-of-interest",0,
+2,positions,None,list,yes,,,"List of positions","This list is to be used if scan_type == 'custom' no proper positions are found in the prepared data file.",0,"type==""custom"""
+2,raster,,Param,yes,,,"Raster pattern parameters",,,"type==""raster"""
+3,nx,10,int,yes,0,,"Number of steps in x",,0,
+3,ny,10,int,yes,0,,"Number of steps in y",,0,
+3,dx,1E-06,float,yes,0,,"Step size (grid spacing)",,0,
+3,dy,1E-06,float,yes,0,,"Step size (grid spacing)",,0,
+2,round,,Param,yes,,,"Round pattern parameters",,,"type==""round"""
+3,dr,3E-07,float,yes,0,,"Spacing of concentric circles",,0,
+3,nr,10,int,yes,0,,"Number of radial steps (number of circles - 1)",,0,
+3,nth,5,int,yes,0,,"Number of points in the inner circle",,0,
+2,round_roi,,Param,yes,,,"Round - ROI pattern parameters",,,"type==""round_roi"""
+3,dr,3E-07,float,yes,0,,"Spacing of concentric circles",,0,
+3,nth,5,int,yes,0,,"Number of points in the inner circle",,0,
+3,lx,3E-06,float,yes,0,,"ROI dimension in x",,0,
+3,ly,3E-06,float,yes,0,,"ROI dimension in y",,0,
+2,spiral,,Param,yes,,,"Spiral scan parameters",,,"type==""spiral"""
+3,dr,2E-06,float,yes,0,,"Spiral arm spacing",,0,
+3,r_out,3E-05,float,yes,0,,"Outer radius",,0,
+2,spiral_roi,,Param,yes,,,"Spiral - ROI pattern parameters",,,"type==""spiral_roi"""
+3,dr,2E-06,float,yes,0,,"Spiral arm spacing",,0,
+3,lx,2E-05,float,yes,0,,"ROI dimension in x",,0,
+3,ly,2E-05,float,yes,0,,"ROI dimension in y",,0,
+1,illumination,,Param,yes,0,,"Illumination model (probe)",,,
+2,from,None,str,yes,,,"User-defined probe (if type is None)","`None`, path to a *.ptyr file or any python evaluable statement yielding a 2d numpy array. If `None` illumination is modeled.",0,
+2,photons,None,"int,float,None",yes,0,,"Number of photons in the incident illumination",,2,
+2,antialiasing,1,float,yes,,,"Antialiasing factor","Antialiasing factor used when generating the probe. (numbers larger than 2 or 3 are memory hungry)",2,
+2,aperture,'',Param,yes,,,"Beam aperture parameters",,,
+3,type,circ,str,yes,0,,"One of None, 'rect' or 'circ'","One of:
+
+ - None: no aperture, this may be useful for nearfield
+ - 'rect': rectangular aperture
+ - 'circ': circular aperture",0,
+3,noise,None,float,yes,0,,"Noise in the transparen part of the aperture","Can be either:
+
+- None : no noise
+- 2-tuple: noise in phase (amplitude (rms), minimum feature size)
+- 4-tuple: noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)",2,
+3,size,None,float,yes,0,,"Aperture width or diameter","May also be a tuple (vertical,horizontal) for size in case of an asymmetric aperture",0,
+3,edge,2,int,yes,0,,"Edge width of aperture (in pixels!)",,2,
+3,central_stop,None,float,yes,0,1,"size of central stop as a fraction of aperture.size","If not None: places a central beam stop in aperture. The value given here is the fraction of the stop compared to size",1,
+3,offset,0,,yes,,,"Offset between center of aperture and optical axes","May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset",2,
+2,propagation,,Param,yes,,,"Parameters for propagation after aperture plane","Propagation to focus takes precedence to parallel propagation if foccused is not None",,
+3,parallel,None,float,yes,,,"Parallel propagation distance","If None or 0 : No parallel propagation",0,
+3,focussed,None,float,yes,,,"Propagation distance from aperture to focus","If None or 0 : No focus propagation",0,
+3,spot_size,None,float,yes,0,,"Focal spot diameter","If not None, this parameter is used to generate the appropriate aperture size instead of aperture.size",1,"foccussed is not None and foccused!=0"
+1,sample,,Param,yes,0,,"Initial object modelization parameters",,,
+2,from,None,str,yes,,,"User-defined object (no modelization)","`None`, path to a *.ptyr file or any python evaluable statement yielding a 2d numpy array. If `None` the object is modeled instead",0,
+2,model,fill,str,yes,0,,"Type of object model","Can be either:
+
+ - 'fill': The object array has a constant value
+( - 'file': load object from file)
+ - 'stxm': result of a STXM analysis on data.",0,"from is None"
+2,offset,"(0,0)",tuple,yes,0,,"Offset between center of object array and scan pattern",,2,
+2,fill,,Param,yes,,,"Fill parameters",,,"model == ""fill"""
+3,value,1,float,yes,,,"Fill value",,0,
+3,noise,None,float,yes,0,,"Noise in the object fill","Can be either:
+
+- None : no noise
+- 2-tuple: noise in phase (amplitude (rms), minimum feature size)
+- 4-tuple: noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)",2,
+2,stxm,,Param,yes,,,"STXM analysis parameters",,,"model == ""stxm"""
+3,stxm_parameters,None,float,yes,,,"[not yet implemented]",,0,
+2,sim,,Param,yes,,,"Sample simulation parameters",,,
+3,source,None,str,yes,,,"Source of the object [need more documentation]",,2,
+3,zoom,None,tuple,yes,0,,"Zoom value for object simulation.","If None, leave the array untouched. Otherwise the modeled or loaded image will be resized using scipy.ndimage.zoom.",2,
+3,formula,None,str,yes,,,"Chemical formula",,2,
+3,density,1,float,yes,,,"Density in [g/ccm]","Only used if formula is not None",2,
+3,thickness,1E-06,float,yes,,,"Maximum thickness of sample","if None, the absolute values of loaded source array will be used",2,
+3,ref_index,0.5+0.j,float,yes,0,,"Assigned refractive index","If None, treat source array as projection of refractive index. If a refractive index is provided the array's absolute value will be used to scale the refractive index.",2,
+3,smoothing_mfs,2,int,yes,0,,"Smoothing scale","Smooth the projection with gaussian kernel of width given by smoothing_mfs",2,
+1,coherence,,Param,yes,0,,"Coherence parameters",,,
+2,num_probe_modes,1,int,yes,0,,"Number of probe modes",,0,
+2,num_object_modes,1,int,yes,0,,"Number of object modes",,0,
+2,spectrum,None,list,yes,0,,"Amplitude of relative energy bins if the probe modes have a different energy",,2,
+2,object_dispersion,None,,yes,,,"Energy dispersive response of the object","One of:
+
+ - None or 'achromatic': no dispersion
+ - 'linear': linear response model
+ - 'irregular': no assumption",2,
+2,probe_dispersion,None,,yes,,,"Energy dispersive response of the probe","One of:
+
+ - None or 'achromatic': no dispersion
+ - 'linear': linear response model
+ - 'irregular': no assumption",2,
+0,scans,,Param,yes,,,"Container for instances of 'scan' parameters",,,
+1,scan_%d,,scan,no,,,,,0,
+0,engine,,Param,yes,,,"Reconstruction engine parameters",,,
+1,common,,Param,yes,,,"Parameters common to all engines",,,
+2,numiter,2000,int,yes,0,,"Total number of iterations",,0,
+2,numiter_contiguous,1,int,yes,0,,"Number of iterations without interruption","The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...)",2,
+2,probe_support,0.7,float,yes,0,,"Fraction of valid probe area (circular) in probe frame",,0,
+2,clip_object,None,tuple,yes,0,,"Clip object amplitude into this intrervall",,1,
+1,DM,,Param,yes,,,"Parameters for Difference map engine",,,
+2,alpha,1,int,yes,0,,"Difference map parameter",,1,
+2,probe_update_start,2,int,yes,0,,"Number of iterations before probe update starts",,1,
+2,update_object_first,TRUE,bool,yes,0,,"If False update object before probe",,2,
+2,overlap_converge_factor,0.05,float,yes,0,,"Threshold for interruption of the inner overlap loop","The inner overlap loop refines the probe and the object simultaneously. This loop is escaped as soon as the overall change in probe, relative to the first iteration, is less than this value.",2,
+2,overlap_max_iterations,10,int,yes,0,,"Maximum of iterations for the overlap constraint inner loop",,2,
+2,probe_inertia,0.001,float,yes,0,,"Weight of the current probe estimate in the update",,2,
+2,object_inertia,0.1,float,yes,0,,"Weight of the current object in the update",,2,
+2,fourier_relax_factor,0.01,float,yes,0,,"If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met","Set this value higher for noisy data",1,
+2,obj_smooth_std,20,int,yes,0,,"Gaussian smoothing (pixel) of the current object prior to update","If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.",2,
+1,ML,,Param,yes,,,"Maximum Likelihood parameters",,,
+2,type,gaussian,str,yes,0,,"Likelihood model. One of 'gaussian', 'poisson' or 'euclid'","[only 'gaussian' is implemented for now]",2,
+2,floating_intensities,FALSE,bool,yes,,,"If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).",,2,
+2,intensity_renormalization,1,float,yes,0,,"A rescaling of the intensity so they can be interpreted as Poisson counts.",,0,
+2,reg_del2,TRUE,bool,yes,0,,"Whether to use a Gaussian prior (smoothing) regularizer.",,0,
+2,reg_del2_amplitude,0.01,float,yes,0,,"Amplitude of the Gaussian prior if used.",,0,reg_del2
+2,smooth_gradient,0,float,yes,0,,"Smoothing preconditioner. If 0, not used, if > 0 gaussian filter if < 0 Hann window.",,1,
+2,scale_precond,FALSE,bool,yes,0,,"Whether to use the object/probe scaling preconditioner.","This parameter can give faster convergence for weakly scattering samples.",2,
+2,scale_probe_object,1,float,yes,0,,"Relative scale of probe to object.",,2,
+2,probe_update_start,0,int,yes,,,"Number of iterations before probe update starts",,1,
+0,engines,,Param,yes,,,"Container for instances of ""engine"" parameters","All engines registered in this structure will be executed sequentially.",,
+1,engine_%d,,engine,no,,,,,0,

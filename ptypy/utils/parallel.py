@@ -7,7 +7,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-__all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier'
+__all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
            'LoadManager', 'loadmanager','allreduce','send','receive','bcast',
            'bcast_dict', 'gather_dict','MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
 

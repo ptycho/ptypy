@@ -58,9 +58,9 @@ DEFAULT = u.Param(
     process = DEFAULT_process,
     diversity = DEFAULT_diversity , # see other for noise
 )
-""" docstring"""
+"""Default sample parameters. See :py:data:`.scan.sample` and a short listing below"""
 
-__all__=['DEFAULT','init_storage','iofr','simulate']
+__all__=['DEFAULT','init_storage','simulate']
 
 
 def init_storage(storage,sample_pars = None, energy = None):

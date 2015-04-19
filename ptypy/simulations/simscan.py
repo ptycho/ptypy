@@ -16,13 +16,13 @@ if __name__ == "__main__":
     from detector import Detector, conv
     from ptypy.core.data import PtyScan
     from ptypy.core.ptycho import Ptycho
-    from ptypy.core.manager import scan_DEFAULT
+    from ptypy.core.manager import DEFAULT as scan_DEFAULT
 else:
     from .. import utils as u
     from detector import Detector, conv
     from ..core.data import PtyScan
     from ..core.ptycho import Ptycho
-    from ..core.manager import scan_DEFAULT
+    from ..core.manager import DEFAULT as scan_DEFAULT
 
 logger = u.verbose.logger
 

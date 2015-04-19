@@ -52,14 +52,23 @@ class PDesc(object):
         """
         Store description list for validation and documentation.
         """
-
-        # Type can be a comma-separated list of types
-        self.type = description.get('type', None)
-        if self.type is not None:
-            self.type = [typemap[x.strip()] if x.strip() in typemap else x.strip() for x in self.type.split(',')]
-
         # Name is a string
         self.name = description.get('name', '')
+        
+        self.parent = parent
+            
+        if parent is not None:
+            parent.children[self.name] = self
+            
+        # Type can be a comma-separated list of types
+        self.type = description.get('type', None)
+
+        if 'param' in self.type.lower() or 'dict' in self.type.lower():
+            self.children = {}
+            entry_points_Param[self.entry_point] = self
+            
+        if self.type is not None:
+            self.type = [typemap[x.strip()] if x.strip() in typemap else x.strip() for x in self.type.split(',')]
 
         # Default value can be any type. None if unknown
         dflt = description.get('default', '')
@@ -71,8 +80,12 @@ class PDesc(object):
         # lowlim/uplim are floats, None if unknown
         ll = description.get('lowlim', None)
         ul = description.get('uplim', None)
-        self.lowlim = float(ll) if ll else None
-        self.uplim = float(ul) if ul else None
+        if 'int' in self.type:
+            self.lowlim = int(ll) if ll else None
+            self.uplim = int(ul) if ul else None
+        else:
+            self.lowlim = float(ll) if ll else None
+            self.uplim = float(ul) if ul else None
 
         # Doc is a string
         self.shortdoc = description.get('shortdoc', '')
@@ -85,14 +98,6 @@ class PDesc(object):
         # Validity is a string (the name of another parameter)
         # FIXME: this is not used currently
         self.validity = description.get('validity', '')
-
-        self.parent = parent
-
-        if self.type == ['Param']:
-            self.children = {}
-
-        if parent is not None:
-            parent.children[self.name] = self
 
         parameter_descriptions[self.entry_point] = self
 
@@ -162,7 +167,9 @@ csvfile = pkg_resources.resource_filename('ptypy', 'resources/parameters_descrip
 desc_list = list(csv.DictReader(file(csvfile, 'r')))
 
 # Populate the dictionary of all entry points.
-parameter_descriptions = {}
+from collections import OrderedDict
+parameter_descriptions = OrderedDict()
+entry_points_Param = {}
 
 # Create the root
 pdroot = PDesc(description={'name': '', 'type': 'Param'}, parent=None)
@@ -181,13 +188,16 @@ for num, desc in enumerate(desc_list):
         entry_dcts = entry_dcts[:(level + 1)]
         entry_level = level
     elif level > entry_level:
-        raise RuntimeError('Problem parsing csv file %s, entry %d' % (csvfile, num))
+        raise RuntimeError('Problem parsing csv file %s, entry %d, name %s' % (csvfile, num,name))
 
     # Create Parameter description object
     pd = PDesc(desc, parent=entry_dcts[level])
 
+    # save a number
+    pd.ID = num
+    
     # Manage new branches
-    if desc['type'] == 'Param':
+    if 'param' in desc['type'].lower() or 'dict' in desc['type'].lower():
         # A new node
         entry_pt = pd.entry_point
         entry_dcts.append(pd)  # entry_dcts.append(new_desc)

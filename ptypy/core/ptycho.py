@@ -22,7 +22,7 @@ from . import model
 
 parallel = u.parallel
 
-__all__ = ['Ptycho']
+__all__ = ['Ptycho','DEFAULT']
 
 DEFAULT_plotclient = u.Param(
     active = True,
@@ -41,7 +41,7 @@ DEFAULT_autosave = u.Param(
 
 
 
-DEFAULT_ptycho = u.Param(
+DEFAULT = u.Param(
         verbose_level = 3,      # Verbosity level
         data_type = 'single',   # 'single' or 'double' precision for reconstruction
         dry_run = False,        # do actually nothing if True [not implemented]
@@ -54,7 +54,6 @@ DEFAULT_ptycho = u.Param(
         interaction = {}, # Client-server communication,
         plotclient = DEFAULT_plotclient   # Plotting parameters for a client
 )
-
 
 class Ptycho(Base):
     """
@@ -76,7 +75,7 @@ class Ptycho(Base):
     p : Param
         Internal Parameters. Stucture like `DEFAULT`
     
-    CType,FType : type
+    CType,FType : numpy.dtype
         numpy dtype for arrays. `FType` is for data, i.e. real-valued
         arrays, `CType` is for complex-valued arrays
         
@@ -99,7 +98,9 @@ class Ptycho(Base):
         diffraction data and detector masks / weights
     """
     
-    DEFAULT = DEFAULT_ptycho    
+    DEFAULT = DEFAULT
+    """Default ptycho parameters. See :py:data:`.` and a short listing below"""
+    
     _PREFIX = PTYCHO_PREFIX
     
     def __init__(self, pars=None, level=2,**kwargs):
@@ -223,7 +224,7 @@ class Ptycho(Base):
         """
         Called on __init__ if ``level>=2``.
         
-        Creates a datasource and calls for :py:meth`ModelManager.new_data()`
+        Creates a datasource and calls for :py:meth:`ModelManager.new_data()`
         Prints statistics on the ptypy structure if ``print_stats=True``
         """
         # Create the data source object, which give diffraction frames one
