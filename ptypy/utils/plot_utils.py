@@ -362,7 +362,7 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
         # Image is complex
         if cmap is not None:
             logger.info('imsave: Ignoring provided cmap - input array is complex')
-        i = complex2rgb(a, vmin, vmax)
+        i = complex2rgb(a, vmin=None, vmax=None)
         im = Image.fromarray(np.uint8(i), mode='RGB')
 
     else:

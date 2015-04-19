@@ -12,7 +12,7 @@ This file is part of the PTYPY package.
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
-from utils import basic_fourier_update, foo
+from utils import basic_fourier_update
 from . import BaseEngine
 import numpy as np
 import time

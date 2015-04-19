@@ -10,14 +10,15 @@ This file is part of the PTYPY package.
 
 #from .. import core
 from .. import utils as u
-from utils import basic_fourier_update
+from utils import basic_fourier_update, C_allreduce
 import numpy as np
+import time
 
 parallel = u.parallel
 
 DEFAULT = u.Param(
     fourier_relax_factor = 0.01,
-    alpha = 1.0    
+    alpha = 1.0,    
     probe_inertia = 0.001,             
     object_inertia = 0.1,              
 )
@@ -71,7 +72,7 @@ class DM_pub(object):
         Last-minute preparation before iterating.
         """
         self.finished = False
-        for s in self.di.S.values()
+        for s in self.di.S.values():
             s.pbound = .25 *  self.p.fourier_relax_factor**2 * s.max_power / s.shape[-1]**2
             
     def iterate(self, num=None):
@@ -90,7 +91,7 @@ class DM_pub(object):
         for n in range(N):
             if self.finished: break 
             # for benchmarking
-            t = time.time()
+            self.t = time.time()
             
             self.errors = {}
             
@@ -98,13 +99,13 @@ class DM_pub(object):
             for name,di_view in self.di.V.iteritems():
                 if not di_view.active: continue
                 pbound = di_view.storage.pbound
-                self.errors[name] = basic_fourier_update(di_view,pbound=self.pbound,alpha=self.p.alpha)
+                self.errors[name] = basic_fourier_update(di_view,pbound,alpha=self.p.alpha)
             
             ###### probe update  ##################
             self.probe_update(self.pr_nrm,self.pr, self.p.probe_inertia)
             
             ###### object update ##################
-            self.object_update(self.ob_nrm,self.ob_buf,self.p.probe_inertia)
+            self.object_update(self.ob_nrm,self.ob,self.p.object_inertia)
                        
             self.curiter += 1
             self.finished = (self.curiter >= self.numiter)
@@ -119,11 +120,10 @@ class DM_pub(object):
         """
         # Object update
         ob_buf *= cfact
-        ob_num << cfact + 1e-10
+        ob_nrm << cfact + 1e-10
             
         for pod in self.pods.itervalues():
             if not pod.active: continue
-            # pod.ob_view[ob1] += pod.pr * pod.psi.conj()
             ob_buf[pod.ob_view] += pod.probe.conj() * pod.exit
             ob_nrm[pod.ob_view] += pod.probe * pod.probe.conj()
             
@@ -139,7 +139,7 @@ class DM_pub(object):
         pr_nrm, pr_buf
         """
         pr_buf *= cfact
-        pr_num << cfact + 1e-10
+        pr_nrm << cfact + 1e-10
             
         for name,pod in self.pods.iteritems():
             if not pod.active: continue
@@ -158,8 +158,11 @@ class DM_pub(object):
             iteration = self.curiter,
             iterations = len(self.ptycho.runtime.iter_info),
             engine = self.__class__.__name__,
-            duration = time.time()-t,
+            duration = time.time()-self.t,
             error = error
+            )
 
         self.ptycho.runtime.iter_info.append(info)
-
+    
+    def finalize(self):
+        pass

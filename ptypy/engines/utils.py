@@ -121,9 +121,9 @@ def Cdot(c1,c2):
         r += np.vdot(c1.S[name].data.flat, c2.S[name].data.flat)
     return r
     
-def Callreduce(c):
+def C_allreduce(c):
     for s in c.S.itervalues():
-        allreduce(s.data)    
+        parallel.allreduce(s.data)    
     
     
     
