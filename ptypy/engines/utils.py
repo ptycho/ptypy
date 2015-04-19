@@ -12,8 +12,8 @@ This file is part of the PTYPY package.
 import numpy as np
 from .. import utils as u
 from ..utils import parallel
-
-def basic_fourier_update(diff_view,mask_view,pbound=None,alpha=1.):
+    
+def basic_fourier_update(diff_view,pbound=None,alpha=1.,LL_error=True):
     """\
     fourier update one a single view using its associated pods.
     updates on all pods' exit waves.
@@ -46,30 +46,35 @@ def basic_fourier_update(diff_view,mask_view,pbound=None,alpha=1.):
     
     # buffer for accumulated photons
     af2= np.zeros_like(diff_view.data) 
-    
-    # for log likelihood error
-    LL= np.zeros_like(diff_view.data) 
-    
+
+    # calculate deviations from measured data
+    I = diff_view.data
+
     # get the mask
-    fmask = mask_view.data if mask_view is not None else np.ones_like(af2)
+    #fmask = mask_view.data if mask_view is not None else np.ones_like(af2)
+    fmask = diff_view.pod.mask
+        
+    # for log likelihood error
+    if LL_error is True:
+        LL= np.zeros_like(diff_view.data) 
+        for name,pod in diff_view.pods.iteritems():
+            LL +=  u.abs2(pod.fw( pod.probe*pod.object))
+        err_phot = np.sum(fmask*np.square(LL - I)/(I+1.)) /np.prod(LL.shape)           
+    else:
+        err_phot=0.
     
     # propagate the exit waves
     for name,pod in diff_view.pods.iteritems():
         if not pod.active: continue
-        f[name]=( pod.fw( (1+alpha)*pod.probe*pod.object - alpha* pod.exit ))
-        af2 += u.abs2(f[name])
-        LL +=  u.abs2(pod.fw( pod.probe*pod.object))
-        
-    # calculate deviations from measured data
-    I = diff_view.data
-    err_phot = np.sum(fmask*np.square(LL - I)/(I+1.)) /np.prod(LL.shape)
-
+        f[name]= pod.fw( (1+alpha)*pod.probe*pod.object - alpha* pod.exit )
+        af2 += u.cabs2(f[name]).real
+    
     fmag = np.sqrt(np.abs(I))
     af=np.sqrt(af2)
     fdev = af - fmag 
     err_fmag = np.sum(fmask*fdev**2)/fmask.sum()
     err_exit = 0.
-
+    
     # apply changes and backpropagate
     if pbound is None or err_fmag > pbound:
         renorm = np.sqrt(pbound / err_fmag) if pbound is not None else 0.0 # don't know if that is correct
@@ -78,14 +83,14 @@ def basic_fourier_update(diff_view,mask_view,pbound=None,alpha=1.):
             if not pod.active: continue
             df = pod.bw(fm*f[name])-pod.probe*pod.object
             pod.exit += df
-            err_exit +=np.mean(u.abs2(df))
+            err_exit +=np.mean(u.cabs2(df).real)
     else:
         for name,pod in diff_view.pods.iteritems():
             if not pod.active: continue
             df = pod.probe*pod.object-pod.exit
             pod.exit += df
-            err_exit +=np.mean(u.abs2(df))
-     
+            err_exit +=np.mean(u.cabs2(df).real)
+    
     return np.array([err_fmag,err_phot,err_exit])
 
 def FourierProjectionBasic(psi,fmag,out=None):
@@ -116,7 +121,9 @@ def Cdot(c1,c2):
         r += np.vdot(c1.S[name].data.flat, c2.S[name].data.flat)
     return r
     
-    
+def Callreduce(c):
+    for s in c.S.itervalues():
+        allreduce(s.data)    
     
     
     

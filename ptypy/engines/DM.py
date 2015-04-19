@@ -12,10 +12,11 @@ This file is part of the PTYPY package.
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
-from utils import basic_fourier_update
+from utils import basic_fourier_update, foo
 from . import BaseEngine
 import numpy as np
 import time
+
 
 __all__=['DM']
 
@@ -33,7 +34,7 @@ DEFAULT = u.Param(
     clip_object = None,                 # None or tuple(min,max) of desired limits of the object modulus
 )
 
-
+    
 class DM(BaseEngine):
     
     DEFAULT = DEFAULT
@@ -87,6 +88,7 @@ class DM(BaseEngine):
             ma_view = di_view.pod.ma_view 
             pbound = self.pbound[di_view.storage.ID]
             error_dct[name] = basic_fourier_update(di_view, ma_view, pbound=pbound, alpha = self.p.alpha)
+        
         logger.info('Time spent in Fourier update: %.2f' % (time.time()-t))    
 
         ## make a sorted error array for MPI reduction

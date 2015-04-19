@@ -264,8 +264,8 @@ def rgb2hsv(rgb):
     maxc = rgb.max(axis=-1)
     minc = rgb.min(axis=-1)
     v = maxc
-    s = (maxc-minc) / maxc
-    s[maxc==0.0]=0.0
+    s = (maxc-minc) / (maxc+eps)
+    s[maxc<=eps]=0.0
     rc = (maxc-rgb[:,:,0]) / (maxc-minc+eps)
     gc = (maxc-rgb[:,:,1]) / (maxc-minc+eps)
     bc = (maxc-rgb[:,:,2]) / (maxc-minc+eps)

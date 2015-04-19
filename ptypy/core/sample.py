@@ -26,7 +26,7 @@ logger = u.verbose.logger
 
 TEMPLATES = dict()
 
-DEFAULT_sim = u.Param(
+DEFAULT_process = u.Param(
     diffuser = None,            # (float) Noise in the object fill
     offset = 0,               # (float,tuple) Offset between center of object array and scan pattern (in pixel)
     zoom = None,                #(float,tuple) Zoom value for object simulation.
@@ -55,7 +55,7 @@ DEFAULT = u.Param(
     stxm = u.Param(
         label=None,                 # label of the scan of whose diffraction data to initialize stxm. If None, use own scan_label
     ),                # STXM analysis parameters
-    simulate = DEFAULT_sim,
+    process = DEFAULT_process,
     diversity = DEFAULT_diversity , # see other for noise
 )
 """ docstring"""

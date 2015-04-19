@@ -954,6 +954,9 @@ class View(Base):
         if not self.__dict__.has_key('pods'):
             self.pods = weakref.WeakValueDictionary()
 
+        # a single pod lookup.
+        self._pod = None
+        
         # Set active state
         self.active = active
 
@@ -1017,7 +1020,8 @@ class View(Base):
         returns first pod in the pod dict. This is a common call in the code 
         and has therefore found its way here
         """
-        return self.pods.values()[0]
+        return self._pod()
+        #return self.pods.values()[0]
         
     @property
     def data(self):
@@ -1503,6 +1507,8 @@ class POD(Base):
             if v is None:
                 continue
             v.pods[self.ID]=self
+            v._pod = weakref.ref(self)
+            
         # Get geometry with propagators
         self.geometry = geometry
         

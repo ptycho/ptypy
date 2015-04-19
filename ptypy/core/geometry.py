@@ -388,8 +388,7 @@ class BasicFarfieldPropagator(object):
             w = u.crop_pad(W,self.crop_pad)
         else:
             w = W
-            
-        # compute transform
+        
         w = self.post_fft * self.sc * self.fft(self.pre_fft * w) 
         
         # cropping again
