@@ -284,10 +284,8 @@ class Ptycho(Base):
 
     def run(self):
         """
-        Start the reconstruction and take additionnal 
-        commands interactively.
+        Start the reconstruction.
         """
-    
         # Time the initialization
         self.runtime.start = time.asctime()
     

@@ -1,7 +1,7 @@
 
 from ptypy import utils as u
 
-prst = open('sphinx/parameters.rst','w')
+prst = open('rst/parameters.rst','w')
 
 Header = 'Ptypy parameter structure\n'
 Header+= '=========================\n\n'

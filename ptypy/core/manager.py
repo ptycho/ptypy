@@ -680,12 +680,22 @@ class ModelManager(object):
                     # make new IDs and keep them in record
                     # sharing_rules is not aware of IDs with suffix
                     
-                    gind = 0 if scan.pars.coherence.probe_is_achromatic else ii                 
+                    pdis = scan.pars.coherence.probe_dispersion
+                    if pdis is None or str(pdis)=='achromatic':
+                        gind = 0 
+                    else:
+                        gind = ii
+                                         
                     probe_id_suf = probe_id + 'G%02d' % gind
                     if probe_id_suf not in new_probe_ids.keys() and probe_id_suf not in existing_probes:
                         new_probe_ids[probe_id_suf] = self.sharing_rules.probe_ids[probe_id]
 
-                    gind = 0 if scan.pars.coherence.object_is_nondispersive else ii
+                    odis = scan.pars.coherence.object_dispersion
+                    if odis is None or str(odis)=='achromatic':
+                        gind = 0 
+                    else:
+                        gind = ii
+                    
                     object_id_suf = object_id + 'G%02d' % gind
                     if object_id_suf not in new_object_ids.keys() and object_id_suf not in existing_objects:
                         new_object_ids[object_id_suf] = self.sharing_rules.object_ids[object_id]

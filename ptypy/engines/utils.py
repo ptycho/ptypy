@@ -15,31 +15,46 @@ from ..utils import parallel
     
 def basic_fourier_update(diff_view,pbound=None,alpha=1.,LL_error=True):
     """\
-    fourier update one a single view using its associated pods.
-    updates on all pods' exit waves.
+    Fourier update one a single view using its associated pods.
+    Updates on all pods' exit waves.
     
-    Parameters:
-    -----------
-    diff_view : view to diffraction data
-    alpha :  [0,1] mixing between old and new exit wave
-    pbound : (float, None) power bound. If None pbound is deactivated
+    Parameters
+    ----------
+    diff_view : View
+        View to diffraction data
+        
+    alpha : float, optional
+        Mixing between old and new exit wave. Valid interval ``[0, 1]``
     
-    Returns:
-    --------
-    error array consisting of
-    err_fmag : Fourier magnitude error; quadratic deviation from root of experimental data
-    err_phot : quadratic deviation from experimental data (photons)
-    err_exit : quadratic deviation of exit waves before and after Fourier iteration
+    pbound : float, optional
+        Power bound. Fourier update is bypassed if the quadratic deviation
+        between diffraction data and `diff_view` is below this value.
+        If ``None``, fourier update always happens.
+        
+    LL_error : bool
+        If ``True``, calculates log-likehood and puts it in the last entry 
+        of the returned error vector, else puts in ``0.0``
+    
+    Returns
+    -------
+    error : ndarray
+        1d array, ``error = np.array([err_fmag, err_phot, err_exit])``. 
+                
+        - `err_fmag`, Fourier magnitude error; quadratic deviation from 
+          root of experimental data
+        - `err_phot`, quadratic deviation from experimental data (photons)
+        - `err_exit`, quadratic deviation of exit waves before and after 
+          Fourier iteration
     """
     
     #pods = self.pty.pods
-    # Fourier modulus constraint
-    err_fmag = -1
-    err_phot = -1
-    err_exit = -1
+    ## Fourier modulus constraint
+    #err_fmag = -1
+    #err_phot = -1
+    #err_exit = -1
     
-    # exit function with Nones if view is not used by this process
-    if not diff_view.active: return np.array([err_fmag,err_phot,err_exit])
+    ## exit function with Nones if view is not used by this process
+    #if not diff_view.active: return np.array([err_fmag,err_phot,err_exit])
     
     # prepare dict for storing propagated waves
     f = {}
@@ -92,19 +107,17 @@ def basic_fourier_update(diff_view,pbound=None,alpha=1.,LL_error=True):
             err_exit +=np.mean(u.cabs2(df).real)
     
     return np.array([err_fmag,err_phot,err_exit])
-
-def FourierProjectionBasic(psi,fmag,out=None):
-    pass
-    
-def FourierProjectionPowerBound(psi,fmag,out=None):
-    pass
-
-def FourierProjectionModes(psilist,fmag,out=None):
-    pass
     
 def Cnorm2(c):
     """\
-    Compute a norm2 on a whole container.
+    Computes a norm2 on whole container `c`.
+    
+    :param Container c: Input
+    :returns: The norm2 (*scalar*)
+    
+    See also
+    --------
+    ptypy.utils.math_utils.norm2
     """
     r = 0.
     for name, s in c.S.iteritems():
@@ -113,15 +126,28 @@ def Cnorm2(c):
 
 def Cdot(c1,c2):
     """\
-    Compute the dot product on two containers.
+    Compute the dot product on two containers `c1` and `c2`.
     No check is made to ensure they are of the same kind.
+    
+    :param Container c1,c2: Input
+    :returns: The dot product (*scalar*)
     """
     r = 0.
     for name, s in c1.S.iteritems():
         r += np.vdot(c1.S[name].data.flat, c2.S[name].data.flat)
     return r
     
-def C_allreduce(c):
+def Callreduce(c):
+    """
+    Performs MPI parallel ``allreduce`` with a sum as reduction
+    for all :any:`Storage` instances held by this :any:`Container`
+    
+    :param Container c: Input
+    
+    See also
+    --------
+    ptypy.utils.parallel.allreduce
+    """
     for s in c.S.itervalues():
         parallel.allreduce(s.data)    
     

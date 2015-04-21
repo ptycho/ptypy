@@ -11,9 +11,11 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
-   readme
-   ptypy
-   parameters   
+   rst/readme
+   rst/engineprimer
+   rst/ptypyclasses
+   rst/ptypy
+   rst/parameters   
 
 Indices and tables
 ==================

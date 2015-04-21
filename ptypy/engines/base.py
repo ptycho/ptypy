@@ -45,24 +45,25 @@ class BaseEngine(object):
     
     DEFAULT= DEFAULT.copy()
 
-    def __init__(self, ptycho_parent, pars=None):
+    def __init__(self, ptycho, pars=None):
         """
         Base reconstruction engine.
         
-        Parameters:
+        Parameters
         ----------
-        ptycho_parent: ptycho object
-                       The parent ptycho class.
+        ptycho : Ptycho 
+            The parent :any:`Ptycho` object.
+            
         pars: Param or dict
-              Initialization parameters
+            Initialization parameters
         """
         self.ptycho = ptycho_parent
         p = u.Param(self.DEFAULT)
 
         if pars is not None: p.update(pars)
         self.p = p
-        self.itermeta = []
-        self.meta = u.Param()
+        #self.itermeta = []
+        #self.meta = u.Param()
         self.finished = False
         self.numiter = self.p.numiter
         #self.initialize()
@@ -127,7 +128,7 @@ class BaseEngine(object):
             # call engine specific iteration routine
             ###########################
             
-            error = self.engine_iterate()
+            self.error = self.engine_iterate()
             
             self.errorlist.append(error)
             
@@ -141,20 +142,34 @@ class BaseEngine(object):
             # Prepare meta
             # PT: Should this be done only by the master node?
             ############################
-            self.meta.iteration = self.curiter
-            self.meta.engine = self.__class__.__name__
-            self.meta.duration = time.time()-t
-            self.meta.error = error #np.array(self.errorlist)
-            self.itermeta.append(self.meta.copy())
-            # inform ptycho in runtime information
-            meta = {'iterations':len(self.ptycho.runtime.iter_info)}
-            meta.update(self.meta.copy())
-            self.ptycho.runtime.iter_info.append(meta)
+            self._fill_runtime()
+            #self.meta.iteration = self.curiter
+            #self.meta.engine = self.__class__.__name__
+            #self.meta.duration = time.time()-t
+            #self.meta.error = error #np.array(self.errorlist)
+            #self.itermeta.append(self.meta.copy())
+            ## inform ptycho in runtime information
+            #meta = {'iterations':len(self.ptycho.runtime.iter_info)}
+            #meta.update(self.meta.copy())
+            #self.ptycho.runtime.iter_info.append(meta)
             ############################
             # Join all processes here
             ############################
             parallel.barrier()
 
+    def _fill_runtime(self):
+        error = u.parallel.gather_dict(self.errors)
+        
+        info = dict(
+            iteration = self.curiter,
+            iterations = len(self.ptycho.runtime.iter_info),
+            engine = self.__class__.__name__,
+            duration = time.time()-self.t,
+            error = error
+            )
+        
+        self.ptycho.runtime.iter_info.append(info)
+        
     def finalize(self):
         """
         Clean up after iterations are done

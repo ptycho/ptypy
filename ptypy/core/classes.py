@@ -5,21 +5,22 @@ Container management.
 This module defines flexible containers for the various quantities needed
 for ptychographic reconstructions.
 
-Container class:
+**Container class**
     A high-level container that keeps track of sub-containers (Storage)
     and Views onto them. A container can copy itself to produce a buffer
     needed for calculations. Mathematical operations are not implemented at
     this level. Operations on arrays should be done using the Views, which
     simply return numpyarrays.
 
-Storage class:
+
+**Storage class**
     The sub-container, wrapping a numpy array buffer. A Storage defines a
     system of coordinate (for now only a scaled translation of the pixel
     coordinates, but more complicated affine transformation could be
     implemented if needed). The sub-class DynamicStorage can adapt the size
     of its buffer (cropping and/or padding) depending on the Views.
-    
-View class:
+
+**View class**
     A low-weight class that contains all information to access a 2D piece
     of a Storage within a Container.
 
@@ -351,7 +352,7 @@ class Storage(Base):
         self._center = u.expect2(self.shape[-2:])//2
 
         # Set pixel size (in physical units)
-        if psize is not None: self.psize = psize
+        self.psize = psize if psize is not None else DEFAULT_PSIZE
 
         # Set origin (in physical units - same as psize)
         if origin is not None: self.origin = origin
@@ -773,30 +774,55 @@ class Storage(Base):
         info += "Number of views: %d\n" % len(self.views)
         return info
     
-    def formatted_report(self,table_format=None,align='right',seperator=" : "):
+    def formatted_report(self,table_format=None,offset=8, align='right',separator=" : ", include_header=True):
         """
         Returns formatted string and a dict with the respective information
         
         Parameters
         ----------
-        table_format : list 
-            list of key(`str`),value(`str`) pairs where key is the item 
-            to be listed in the report and value is a string formatter
+        table_format : list, optional
+            List of (*item*,*length*) pairs where item is name of the info 
+            to be listed in the report and length is the column width. 
+            The following items are allowed:
+            
+            - *memory*, for memory usage of the storages and total use
+            - *shape*, for shape of internal storages
+            - *dimensions*, is ``shape \* psize``
+            - *psize*, for pixel size of storages
+            - *views*, for number of views in each storage
         
+        offset : int, optional
+            First column width
+        
+        separator : str, optional
+            Column separator.
+        
+        align : str, optional
+            Column alignment, either ``'right'`` or ``'left'``.
+            
+        include_header : bool, optional
+            Include a header if True.
+            
         Returns
         -------
         fstring : str
-            formatted string 
+            Formatted string 
             
         dct :dict
-            dictionary containing with the respective info to the keys
+            Dictionary containing with the respective info to the keys
             in `table_format`
         """
+        fr = _Freport()
+        if offset is not None:
+            fr.offset = offset 
+        if table_format is not None:
+            fr.table = table_format 
+        if separator is not None:
+            fr.separator = separator
         dct ={}
-        fstring = ""
-        _table = [('memory',8),('shape',17),('psize',15),('dimension',15),('views',5),('dtype',8)]
-        table_format = _table if table_format is None else table_format
-        for key,column in table_format:
+        fstring = self.ID.ljust(fr.offset)
+        
+        for key,column in fr.table:
             if str(key)=='shape':
                 dct[key] = tuple(self.data.shape)
                 info = '%d*%d*%d' % dct[key]
@@ -821,14 +847,16 @@ class Storage(Base):
                 dct[key] = None
                 info = ""
                 
-            fstring += seperator
+            fstring += fr.separator
             if str(align)=='right':
                 fstring += info.rjust(column)[-column:]
             else:
                 fstring += info.ljust(column)[:column]
                 
-        return fstring, dct
-    
+        if not include_header:
+            return fstring, dct
+        else:
+            return fr.header()+fstring, dct
             
     def __getitem__(self, v):
         """
@@ -1289,52 +1317,78 @@ class Container(Base):
             info += s.report()
         return info
 
-    def formatted_report(self,offset=8,table_format=None,align='right',seperator=" : "):
+    def formatted_report(self,table_format=None,offset=8,align='right',separator=" : ", include_header=True):
         """
         Returns formatted string and a dict with the respective information
         
         Parameters
         ----------
         table_format : list 
-            list of key(`str`),value(`str`) pairs where key is the item 
-            to be listed in the report and value is a string formatter
+            List of (*item*,*length*) pairs where item is name of the info 
+            to be listed in the report and length is the column width. 
+            The following items are allowed:
+            
+            - *memory*, for memory usage of the storages and total use
+            - *shape*, for shape of internal storages
+            - *dimensions*, is ``shape \* psize``
+            - *psize*, for pixel size of storages
+            - *views*, for number of views in each storage
         
+        offset : int, optional
+            First column width
+        
+        separator : str, optional
+            Column separator
+        
+        align : str, optional
+            Column alignment, either ``'right'`` or ``'left'``
+            
+        include_header : bool
+            Include a header if True
+            
         Returns
         -------
         fstring : str
-            formatted string 
+            Formatted string 
             
         dct :dict
-            dictionary containing with the respective info to the keys
+            Dictionary containing with the respective info to the keys
             in `table_format`
             
         See also
         --------
         Storage.formatted_report
         """
+        fr = _Freport()
+        if offset is not None:
+            fr.offset = offset 
+        if table_format is not None:
+            fr.table = table_format 
+        if separator is not None:
+            fr.separator = separator
         dct ={}
-        id_length = offset
-        _table = [('memory',6),('shape',15),('psize',15),('dimension',15),('views',4)]
-        table_format = _table if table_format is None else table_format
         mem = 0
         info = ""
         for ID,s in self.S.iteritems():
-            fstring, stats = s.formatted_report(table_format,align,seperator)
-            info += str(ID).ljust(id_length) 
+            fstring, stats = s.formatted_report(fr.table,fr.offset,align,fr.separator,False)
             info += fstring
             info += '\n'
             mem += stats.get('memory',0)
             
-        fstring = str(self.ID).ljust(id_length)+seperator  
-        fstring += ('%.1f' % mem).rjust(table_format[0][1]) + seperator
+        fstring = str(self.ID).ljust(fr.offset)+fr.separator  
+        fstring += ('%.1f' % mem).rjust(fr.table[0][1]) + fr.separator
         try:
             t = str(self.dtype).split("'")[1].split(".")[1]
         except:
             t = str(self.dtype)
-        fstring += t.rjust(table_format[0][1])
+        fstring += t.rjust(fr.table[0][1])
         fstring += '\n'
         fstring += info
-        return fstring
+        print fstring
+        if include_header:
+            return fr.header()+fstring
+        else:
+            return fstring
 
     def __getitem__(self,view):
         """
@@ -1624,3 +1678,29 @@ class POD(Base):
     @mask.setter
     def mask(self,v):
         self.ma_view.data=v
+
+
+class _Freport(object):
+    
+    def __init__(self):
+        self.offset = 8
+        self.desc =dict([('memory','Memory'),('shape','Shape'),('psize','Pixel size'),('dimension','Dimensions'),('views','Views')])
+        self.units = dict([('memory','(MB)'),('shape','(Pixel)'),('psize','(meters)'),('dimension','(meters)'),('views','act.')])
+        self.table = [('memory',6),('shape',16),('psize',15),('dimension',15),('views',5)]
+        self.h1="(C)ontnr"
+        self.h2="(S)torgs"
+        self.separator = " : "
+        self.headline= "-"
+        
+    def header(self,as_string=True):
+        header=[]
+        header.append(self.h1.ljust(self.offset))
+        header.append(self.h2.ljust(self.offset))
+        for key,column in self.table:
+            header[0] += self.separator + self.desc[key].ljust(column)
+            header[1] += self.separator + self.units[key].ljust(column)
+        header.append(self.headline * len(header[1]))
+        if as_string:
+            return '\n'.join(header)+'\n'
+        else:
+            return header
