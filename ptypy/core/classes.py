@@ -1138,8 +1138,25 @@ class Container(Base):
         """
         Property that returns list of all copies of this :any:`Container`
         """
-        return [c for c in self.owner.containers.itervalues() if c.original is self and c is not self]
+        return [c for c in self.owner._pool[CONTAINER_PREFIX].itervalues() if c.original is self and c is not self]
         
+    def delete_copy(self,copyIDs=None):
+        """
+        Delet a copy or all copies of this container from owner instance.
+        
+        Parameters
+        ----------
+        copyIDS : str
+            ID of copy to be deleted. If None, deletes *all* copies
+        """
+        if self.original is self:
+            if copyIDs == None:
+                copyIDs = [c.ID for c in self.copies]
+            for cid in copyIDs:
+                del self.owner._pool[CONTAINER_PREFIX][cid]
+        else:
+            raise RuntimeError('Container copy is not allowed to delete anything')
+            
     @property
     def dtype(self):
         """

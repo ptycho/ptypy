@@ -33,6 +33,7 @@ logging_levels = Param(
 
 typemap = {'int': 'int',
            'float': 'float',
+           'complex': 'complex',
            'str': 'str',
            'bool': 'bool',
            'tuple': 'tuple',
@@ -42,6 +43,8 @@ typemap = {'int': 'int',
            'None': 'NoneType',
            '': 'NoneType'}
 
+evaltypes = ['int','float','tuple','list','complex']
+copytypes = ['str','file']
 
 class PDesc(object):
     """
@@ -203,20 +206,76 @@ for num, desc in enumerate(desc_list):
         entry_dcts.append(pd)  # entry_dcts.append(new_desc)
         entry_level = level + 1
 
-
-def validate(pars, entry_point, walk=True, raisecode=[codes.FAIL, codes.INVALID]):
+def make_sub_default(entry_point, depth=1):
     """
-    Check that the parameter structure "pars" matches the documented constraints at
-    the given entry_point.
+    Creates a default parameter structure, from the loaded parameter
+    descriptions in this module
+    
+    Parameters
+    ----------
+    entry_point : str
+        The node in the default parameter file
+        
+    depth : int
+        The depth in the structure to which all sub nodes are expanded
+        All nodes beyond depth will be returned as empty :any:`Param` 
+        structure.
+        
+    Returns
+    -------
+    pars : Param
+        A parameter branch.
+    
+    Examples
+    --------
+    >>> from ptypy.utils import validator
+    >>> print validator.make_sub_default('.io')
+    """
+    pd = entry_points_Param[entry_point]
+    out = Param()
+    if depth<=0:
+        return out
+    for name,child in pd.children.iteritems():
+        if hasattr(child,'children'):
+            out[name] = make_sub_default(child.entry_point, depth=depth-1)
+        elif child.default is None:
+            out[name] = None
+        # should be strings only now
+        elif child.default.lower()=='none':
+            out[name] = None
+        elif child.default.lower()=='true':
+            out[name] = True
+        elif child.default.lower()=='false':
+            out[name] = False
+        elif child.type in evaltypes:
+            out[name] = eval(child.default)
+        else:
+            out[name] = child.default
+    
+    return out
+    
+def validate(pars, entry_point, walk=True, raisecodes=[codes.FAIL, codes.INVALID]):
+    """
+    Check that the parameter structure `pars` matches the documented 
+    constraints at the given entry_point.
 
-    The function raises a RuntimeError if one of the code in the list 'raisecode' has
-    been found. If raisecode is empty, the function will always return successfully
-    but problems will be logged using logger.
+    The function raises a RuntimeError if one of the code in the list 
+    `raisecodes` has been found. If raisecode is empty, the function will 
+    always return successfully but problems will be logged using logger.
 
-    :param pars: A Param object
-    :param entry_point: the Node in the structure to match to.
-    :param walk: if True (default), navigate sub-parameters.
-    :param raisecode: list of codes that will raise a RuntimeError.
+    Parameters
+    ----------
+    pars : Param
+        A parameter set to validate
+        
+    entry_point : str
+        The node in the parameter structure to match to.
+    
+    walk : bool
+        If ``True`` (*default*), navigate sub-parameters.
+    
+    raisecodes: list
+        List of codes that will raise a RuntimeError.
     """
     pdesc = parameter_descriptions[entry_point]
     d = pdesc.check(pars, walk=walk)

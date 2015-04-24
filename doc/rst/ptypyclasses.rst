@@ -34,6 +34,8 @@ Import some modules
    >>> import ptypy
    >>> from ptypy import utils as u
    >>> from ptypy.core import View,Container,Storage,Base
+   >>> import matplotlib as mpl
+   >>> plt = mpl.pyplot
 
 A single Storage in one Container
 ---------------------------------
@@ -167,6 +169,23 @@ still filled with the not so exciting ones. We can use
      [-0.14 -0.04  0.06  0.16  0.26  0.36  0.46]
      [-0.04  0.06  0.16  0.26  0.36  0.46  0.56]]]
    
+
+Test
+
+   >>> fig = plt.figure()
+   >>> ax = fig.add_subplot(111)
+   >>> ax.imshow(S1.data[0])
+   >>> fig.tight_layout()
+   >>> plt.show(block=False)
+
+.. figure:: ../_img/ptypyclasses_001.png
+   :width: 70 %
+   :figclass: highlights
+   :alt: Test figure
+
+   This is a test of a figure plot
+
+
 
 Adding View as a way to access data
 -----------------------------------

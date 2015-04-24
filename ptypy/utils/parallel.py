@@ -86,7 +86,7 @@ class LoadManager(object):
         process. :any:`rank_of` is not updated in this case.
         
         Paramaters
-        ---------
+        ----------
         idlist : list
             List of objects that can also be keys in a `dict`, i.e. hashable
             objects.

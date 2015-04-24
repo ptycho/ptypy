@@ -208,6 +208,10 @@ class Param(dict):
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, dict.__repr__(self))
 
+    def __str__(self):
+        from .verbose import report
+        return report(self,depth=7,noheader=True)
+        
     def __setitem__(self, key, value):
         # BE: original behavior modified as implicit conversion may destroy references
         # Use update(value,Convert=True) instead

@@ -33,6 +33,8 @@ for ptychographic reconstructions.
 import ptypy
 from ptypy import utils as u
 from ptypy.core import View,Container,Storage,Base
+import matplotlib as mpl
+plt = mpl.pyplot
 
 #A single Storage in one Container
 #---------------------------------
@@ -87,6 +89,15 @@ print S1.center
 # :any:`Storage.fill` to fill that container
 S1.fill(S1.grids()[0]+S1.grids()[1])
 print S1.data
+
+# Test
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.imshow(S1.data[0])
+fig.tight_layout()
+plt.show(block=False)
+
+# make fig ;Test figure; This is a test of a figure plot
 
 # Adding View as a way to access data
 # -----------------------------------
