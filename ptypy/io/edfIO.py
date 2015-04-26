@@ -13,7 +13,8 @@ import numpy as np
 import os
 import glob
 from .. import utils
-from .. import verbose
+
+logger = utils.verbose.logger
 
 
 __all__ = ['edfread']
@@ -66,18 +67,18 @@ def edfread(filename, doglob=None, roi=None):
     ldat = []
     lmeta = []
     for f in fnames:
-        verbose(3, 'Reading "%s"' % f)
+        logger.info('Reading "%s"' % f)
         meta = readHeader(f)
         dat = _readImage(f,DATATYPES[meta["DataType"]], meta["Dim_1"],meta["Dim_2"],meta["headerlength"])
         meta['filename'] = f
         lmeta.append(meta)
         if meta["DataType"]=="Float" or meta["DataType"]=="FloatValue":
             if meta["ByteOrder"]=="HighByteFirst":
-                print "EDF File ByteOrder = HighByteFirst. Converting array to Big Endian"                
+                logger.debug("EDF File ByteOrder = HighByteFirst. Converting array to Big Endian")                
                 dat=dat.newbyteorder("B")
             else:
                 dat=dat.newbyteorder("L")
-                print "EDF File ByteOrder = Not HighByteFirst. Converting array to Little Endian"                
+                logger.debug("EDF File ByteOrder = Not HighByteFirst. Converting array to Little Endian")                
 
         if roi is not None:
             ldat.append(dat[roi[0]:roi[1],roi[2]:roi[3]].copy())
@@ -127,7 +128,7 @@ def readData(filenameprefix,imgstart=0,imgnumber = 1,xi = 0, xf = 0, bin_fact = 
             raise ValueError('The last row has to be equal or larger than the first row.\n')
         for imgnum in range(imgnumber):
             filename = filenameprefix + '_' + utils.num2str(imgstart,'%04d') + '_' + utils.num2str(imgnum,'%04d') + '.edf'
-            print('loading %s' % filename)
+            logger.info('loading %s' % filename)
             # needed from header are meta[i]["counter"]["mon"] and meta[i]["count_time"]
             meta.append(readHeader(filename,headerlength=headerlength))
             col_beg = meta[imgnum]["col_beg"]
@@ -159,7 +160,7 @@ def readData(filenameprefix,imgstart=0,imgnumber = 1,xi = 0, xf = 0, bin_fact = 
             filename = filenameprefix
         else:
             filename = filenameprefix + '.edf'
-        print('loading %s' % filename)
+        logger.info('loading %s' % filename)
         # needed from header are meta[i]["counter"]["mon"] and meta[i]["count_time"]
         meta.append(readHeader(filename,headerlength=headerlength))
         # load the data ('dat' will be np.array)
@@ -212,16 +213,28 @@ def readHeader(filename, headerlength=None):
 
     # split read string into a list of 2-element lists
     hlist = [elem.split("=") for elem in s.replace("\n","").split(";")]
-    hlist = [[utils.convertStr(elem.strip()) for elem in elem2] for elem2 in hlist]
+    hlist = [[convertStr(elem.strip()) for elem in elem2] for elem2 in hlist]
     # convert to dictionary
     hdict = dict(hlist[0:-1])
     # convert counter and motor settings in separate dictionaries inside hdict
     if hdict.has_key('counter_mne'):
-        hdict["counter"] = dict(zip(hdict["counter_mne"].split(" "),[utils.convertStr(elem) for elem in hdict["counter_pos"].split(" ")]))
+        hdict["counter"] = dict(zip(hdict["counter_mne"].split(" "),[convertStr(elem) for elem in hdict["counter_pos"].split(" ")]))
     if hdict.has_key('motor_mne'):
-        hdict["motor"] = dict(zip(hdict["motor_mne"].split(" "),[utils.convertStr(elem) for elem in hdict["motor_pos"].split(" ")]))
+        hdict["motor"] = dict(zip(hdict["motor_mne"].split(" "),[convertStr(elem) for elem in hdict["motor_pos"].split(" ")]))
     # add header length in meta-data
     hdict["headerlength"] = headerlength
     # add local filename in meta-data
     hdict["local_filename"] = filename
     return hdict
+    
+def convertStr(s):
+    try:
+        ret = int(s)
+    except ValueError:
+        # then try float.
+        try:
+            ret = float(s)
+        except ValueError:
+            # neither int nor float
+            ret = s
+    return ret

@@ -11,7 +11,7 @@ import numpy as np
 import time
 
 from .. import utils as u
-from ..utils.verbose import logger, _, report
+from ..utils.verbose import logger, _, report, headerline
 from .. import engines
 from ..io import interaction
 from classes import *
@@ -119,8 +119,10 @@ class Ptycho(Base):
                   see :py:meth:`init_structures`
             - 2 : also configures Containers, initializes Modelmanager
                   see :py:meth:`init_data`
-            - 3 : also initializes reconstruction engines
-                  see :py:meth:`init_engines`
+            - 3 : also initializes ZeroMQ-communication 
+                  :py:meth:`init_communication`
+            - 4 : also initializes reconstruction engines, 
+                  see :py:meth:`init_engine`
             - >=4 : also and starts reconstruction
                     see :py:meth:`run`
         """
@@ -146,8 +148,10 @@ class Ptycho(Base):
         if level >=2:
             self.init_data()
         if level >=3:
-            self.init_engines()
+            self.init_communication()
         if level >=4:
+            self.init_engine()
+        if level >=5:
             self.run()
                 
     def _configure(self):
@@ -167,9 +171,27 @@ class Ptycho(Base):
         self.CType = np.dtype('c' + str(2*np.dtype(np.typeDict[p.data_type]).itemsize)).type
         logger.info(_('Data type', self.data_type))
 
-        #################################
-        # Prepare interaction server
-        #################################
+        # Check if there is already a runtime container
+        if not hasattr(self, 'runtime'):
+            self.runtime = u.Param()
+            
+        if not hasattr(self,'engines'):
+            # Create an engines entry if it does not already exist
+            from collections import OrderedDict
+            self.engines = OrderedDict()
+        
+        # Generate all the paths
+        self.paths = paths.Paths(self.p.paths,self.runtime)
+    
+    def init_communication(self):
+        u"""
+        Called on __init__ if ``level>=3``.
+        
+        Initializes \u2205MQ communication on the master node and
+        spawns an optional plotting client.
+        """
+        p = self.p
+        
         if parallel.master and p.interaction is not None:
             # Create the inteaction server
             self.interactor = interaction.Server(p.interaction)
@@ -182,17 +204,19 @@ class Ptycho(Base):
         
             # inform the audience
             logger.info('Started interaction server with the following parameters:\n'+report(self.interactor.p))
+            
+            # start automated plot client
+            self.plotter = None
+            if parallel.master and p.plotclient is not None and p.plotclient.active:
+                from multiprocessing import Process
+                self.plotter = Process(target=u.spawn_MPLClient, args=(p.plotclient,))
+                self.plotter.start()
         else:
             # no interaction wanted
             self.interactor = None
-            
-        # Check if there is already a runtime container
-        if not hasattr(self, 'runtime'):
-            self.runtime = u.Param()
-            
-        # Generate all the paths
-        self.paths = paths.Paths(self.p.paths,self.runtime)
         
+        parallel.barrier()
+    
     def init_structures(self):
         """
         Called on __init__ if ``level>=1``.
@@ -240,8 +264,9 @@ class Ptycho(Base):
         if print_stats:
             self.print_stats()
 
-    def init_engines(self):
+    def _init_engines(self):
         """
+        * deprecated*
         Initialize engines from paramters. Sets :py:attr:`engines`
         """
                
@@ -271,7 +296,69 @@ class Ptycho(Base):
             # Store info
             self.engines[run_label] = engine
             self.run_labels.append(run_label)
+    
+    def init_engine(self, label=None,epars=None):
+        """
+        Called on __init__ if ``level>=4``.
         
+        Initializes engine with label `label` from paramaters and lists
+        it internally in ``self.engines`` which is an ordered dictinoary.
+        
+        Parameters
+        ----------
+        label : str
+            Label of engine which is to be created from parameter set of 
+            the same label in input parameter tree. If ``None``, an engine 
+            is created for each available parameter set in input parameter 
+            tree sorted by label.
+        
+        epars : Param or dict
+            Set of engine parameters. The created engine is listed as
+            *auto00*, *auto01* , etc in ``self.engines``
+        """
+            
+        if epars is not None:
+            # Receiving a parameter set means a new engine parameters
+            # need to be listed in self.p
+            engine_label =  'auto%02d'+len(self.engines)
+            
+            # list parameters
+            self.p.engines[engine_label] = epars
+            
+            # start over
+            self._init_engine(engine_label)
+        
+            return engine_label
+            
+        elif label is not None:
+            try:
+                pars = self.p.engines[label]
+            except KeyError('No parameter set available for engine label %s\nSkipping..' %label):
+                pass
+            # copy common parameters
+            engine_pars = self.p.engine.common.copy()
+            
+            # Identify engine by name
+            engine_class = engines.by_name(pars.name)
+            
+            # update engine type specific parameters
+            engine_pars.update(self.p.engine[pars.name])
+            
+            # update engine instance specific parameters
+            engine_pars.update(pars)
+            
+            # Create instance
+            engine = engine_class(self, engine_pars)
+            
+            # Attach label
+            engine.label = label
+            
+            # Store info
+            self.engines[label] = engine
+        else:
+            # No label = prepare all engines
+            for label in sorted(self.p.engines.keys()):
+                self._init_engine(label)
     @property
     def pods(self):
         """ Dict of all :any:`POD` instances in the pool of self """
@@ -282,12 +369,127 @@ class Ptycho(Base):
         """ Dict of all :any:`Container` instances in the pool of self """
         return self._pool['C']
 
-    def run(self):
+    def run(self,label=None,epars=None,engine=None):
         """
-        Start the reconstruction.
+        Called on __init__ if ``level>=5``.
+        
+        Start the reconstruction with at least one engine.
+        As a consequence, ``self.runtime`` will be filled with content.
+        
+        Parameters
+        ----------
+        label : str, optional
+            Engine label of engine to run. If ``None`` all available 
+            engines are run in the order they were stored in 
+            ``self.engines``. If the engine is not yet created, 
+            :py:meth:`init_engine` is called for that label.
+        
+        epars : dict or Param, optional
+            Engine parameter set. An engine is created from this set,
+            using :py:meth:`init_engine` and run immediately afterwards.
+            For parameters see :py:data:`.engine`
+            
+        engine : BaseEngine, optional
+            An engine instance that should be a subclass of 
+            :py:class:`BaseEngine` or have the same methods.
+        """
+        if engine is not None:
+            # work with that engine
+            
+            if self.runtime.get('start') is None:
+                self.runtime.start = time.asctime()
+        
+            # Check if there is already a runtime info collector
+            if self.runtime.get('iter_info') is None:
+                self.runtime.iter_info = []
+            
+            # Note when the last autosave was carried out
+            if self.runtime.get('last_save') is None:
+                self.runtime.last_save = 0
+            
+            # maybe not needed
+            if self.runtime.get('last_plot') is None:
+                self.runtime.last_plot = 0
+            
+            # Prepare the engine
+            engine.initialize()
+    
+            # Start the iteration loop
+            while not engine.finished:
+                # Check for client requests
+                if parallel.master and self.interactor is not None: 
+                    self.interactor.process_requests()
+                
+                parallel.barrier()
+                
+                # Check for new data
+                self.modelm.new_data()
+                
+                # Last minute preparation before a contiguous block of iterations
+                engine.prepare()
+                
+                if self.p.autosave is not None and self.p.autosave.interval > 1:
+                    if engine.curiter % self.p.autosave.interval==0:
+                        auto = self.paths.auto_file
+                        logger.info(headerline('Autosaving'))
+                        self.save_run(auto,'dump')
+                        self.runtime.last_save = engine.curiter
+                        logger.info(headerline())
+                        
+                # One iteration
+                engine.iterate()
+                
+                # Display runtime information and do saving
+                if parallel.master: 
+                    info = self.runtime.iter_info[-1]
+                    # calculate Error:
+                    err = np.array(info['error'].values()).mean(0)
+                    logger.info('Iteration #%(iteration)d of %(engine)s :: Time %(duration).2f' % info) 
+                    logger.info('Errors :: Fourier %.2e, Photons %.2e, Exit %.2e' % tuple(err) )
+                
+                parallel.barrier()
+
+            # Done. Let the engine finish up    
+            engine.finalize()
+    
+            #Save
+            self.save_run()
+            
+            # Time the initialization
+            self.runtime.stop = time.asctime()
+        
+        elif epars is not None:
+        
+            # A fresh set of engine parameters arrived.
+            label = self._init_engine(epars=epars)
+            self.run_engine(label=label)
+        
+        elif label is not None:
+            
+            # Looks if there already exists a prepared engine
+            # If so, use it, else create one and use it
+            engine = self.engines.get(label,None)
+            if engine is not None:
+                self.run_engine(engine=engine)
+            else:
+                self._init_engine(label=label)
+                self.run_engine(label=label)
+        else:
+            # prepare and run ALL engines in self.p.engines
+            self._init_engine()
+            for engine in self.engines.values():
+                self.run_engine(engine=engine)
+
+        
+        
+    def _run(self, run_label=None):
+        """
+        *deprecated*
+        Start the reconstruction. Former method
         """
         # Time the initialization
-        self.runtime.start = time.asctime()
+        if self.runtime.get('start') is None:
+            self.runtime.start = time.asctime()
     
         # Check if there is already a runtime info collector
         if self.runtime.get('iter_info') is None:
@@ -325,6 +527,14 @@ class Ptycho(Base):
                 # Last minute preparation before a contiguous block of iterations
                 engine.prepare()
                 
+                if self.p.autosave is not None and self.p.autosave.interval > 1:
+                    if engine.curiter % self.p.autosave.interval==0:
+                        auto = self.paths.auto_file
+                        logger.info(headerline('Autosaving'),'l')
+                        self.save_run(auto,'dump')
+                        self.runtime.last_save = engine.curiter
+                        logger.info(headerline())
+                        
                 # One iteration
                 engine.iterate()
                 
@@ -335,22 +545,14 @@ class Ptycho(Base):
                     err = np.array(info['error'].values()).mean(0)
                     logger.info('Iteration #%(iteration)d of %(engine)s :: Time %(duration).2f' % info) 
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, Exit %.2e' % tuple(err) )
-                    
-                if self.p.autosave is not None and self.p.autosave.interval > 1:
-                    if engine.curiter >= self.runtime.last_save + self.p.autosave.interval:
-                        auto = self.paths.auto_file
-                        logger.info('----- Autosaving -----')
-                        self.save_run(auto,'dump')
-                        self.runtime.last_save = engine.curiter
-                        logger.info('----------------------')
-                        
+                
                 parallel.barrier()
             # Done. Let the engine finish up    
             engine.finalize()
     
-            # Save
-        # deactivated for now as something fishy happens through MPI 
-            #self.save_run()
+            #Save
+            # deactivated for now as something fishy happens through MPI 
+            self.save_run()
 
         # Clean up - if needed.
         
@@ -520,7 +722,8 @@ class Ptycho(Base):
                 dump.pars = self.p.copy()#_to_dict(Recursive=True)
                 dump.runtime = self.runtime.copy()
                 # discard some bits of runtime to save space
-                dump.runtime.iter_info = [self.runtime.iter_info[-1]]
+                if len(self.runtime.iter_info)>0:
+                    dump.runtime.iter_info = [self.runtime.iter_info[-1]]
 
                 content=dump
                 
@@ -556,23 +759,12 @@ class Ptycho(Base):
         info = '\n'
         info += "Process #%d ---- Total Pods %d (%d active) ----" % (parallel.rank,all_pods,active_pods )+'\n'
         info += '-'*80 +'\n'
-        desc =dict([('memory','Memory'),('shape','Shape'),('psize','Pixel size'),('dimension','Dimensions'),('views','Views')])
-        units = dict([('memory','(MB)'),('shape','(Pixel)'),('psize','(meters)'),('dimension','(meters)'),('views','act.')])
-        _table = [('memory',6),('shape',16),('psize',15),('dimension',15),('views',5)]
-        table_format = _table if table_format is None else table_format
-        h1="(C)ontnr".ljust(offset)
-        h2="(S)torgs".ljust(offset)
-        for key,column in table_format:
-            h1 += " : " + desc[key].ljust(column)
-            h2 += " : " + units[key].ljust(column)
-        
-        info += h1 + '\n' + h2 +'\n'
-        info += '-'*80 +'\n'
            
-        
+        header = True
         for ID,C in self.containers.iteritems():
-            info += C.formatted_report(offset,table_format)
-        
+            info += C.formatted_report(table_format,offset, include_header=header)
+            if header: header = False
+            
         info += '\n'
         if str(detail)!='summary':
             for ID,C in self.containers.iteritems():
@@ -596,4 +788,7 @@ class Ptycho(Base):
             fignum+=1
         for s in self.diff.S.values():
             u.plot_storage(s,fignum,'log',(slice(0,4),slice(None),slice(None)), cmap='CMRmap')
+            fignum+=1
+        for s in self.mask.S.values():
+            u.plot_storage(s,fignum,'log',(slice(0,1),slice(None),slice(None)), cmap='gray')
             fignum+=1

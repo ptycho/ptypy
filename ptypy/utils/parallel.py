@@ -451,7 +451,7 @@ def bcast_dict(dct, keys='all', source=0):
         for k, v in dct.items():
             comm.bcast(k,source)
             bcast(v,source)
-            if str(keys_accepted) == 'all' or k in keys_accepted:
+            if str(keys) == 'all' or k in keys:
                 out[k] = v
 
         return out
@@ -462,7 +462,7 @@ def bcast_dict(dct, keys='all', source=0):
         for k in range(length):
             k = comm.bcast(None,source)
             v = bcast(None,source)
-            if str(keys_accepted) == 'all' or k in keys_accepted:
+            if str(keys) == 'all' or k in keys:
                 dct[k] = v
 
         return dct

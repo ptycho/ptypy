@@ -87,7 +87,7 @@ class DM(BaseEngine):
             if not di_view.active: continue
             ma_view = di_view.pod.ma_view 
             pbound = self.pbound[di_view.storage.ID]
-            error_dct[name] = basic_fourier_update(di_view, ma_view, pbound=pbound, alpha = self.p.alpha)
+            error_dct[name] = basic_fourier_update(di_view,pbound=pbound, alpha = self.p.alpha)
         
         logger.info('Time spent in Fourier update: %.2f' % (time.time()-t))    
 
@@ -190,8 +190,8 @@ class DM(BaseEngine):
         ### DM update per node
         for name,pod in self.pods.iteritems():
             if not pod.active: continue
-            pod.object += pod.probe.conj() * pod.exit
-            ob_nrm[pod.ob_view] += u.cabs2(pod.probe)
+            pod.object += pod.probe.conj() * pod.exit * pod.object_weight
+            ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
         
         ### distribute result with MPI
         for name,s in self.ob.S.iteritems():
@@ -236,8 +236,8 @@ class DM(BaseEngine):
         ### DM update per node
         for name,pod in self.pods.iteritems():
             if not pod.active: continue
-            pod.probe += pod.object.conj() * pod.exit
-            pr_nrm[pod.pr_view] += u.cabs2(pod.object)
+            pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
+            pr_nrm[pod.pr_view] += u.cabs2(pod.object) * pod.probe_weight
 
         change = 0.
         

@@ -35,6 +35,9 @@ FILE_FORMAT = {logging.ERROR : '%(asctime)s ERROR %(name)s - %(message)s',
                   logging.WARNING : '%(asctime)s WARNING %(name)s - %(message)s',
                   logging.INFO : '%(asctime)s %(message)s',
                   logging.DEBUG : '%(asctime)s DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
+            
+# How many characters per line in console
+LINEMAX = 80
 
 # Monkey patching logging.Logger - is this a good idea?
 
@@ -133,7 +136,26 @@ def get_level(num_or_string='num'):
 def _(label, value):
     return '%-25s%s' % (label + ':', str(value))
 
-
+def headerline(info='',align = 'c',fill='-'):
+    li = len(info)
+    if li>=60:
+        return headerline(info[li/2:],align,fill)+'\n'+headerline(info[:li/2],align,fill)
+    else:
+        if li != 0:
+            li+=2
+            info = ' '+info+' '
+        empty = LINEMAX-li
+        if align=='c':
+            left = empty/2
+            right = empty-left
+        elif align=='l':
+            left = 4
+            right = empty-left
+        else:
+            right = 4
+            left = empty-right
+    return fill*left+info+fill*right
+    
 def report(thing,depth=4,noheader=False):
     """
     no protection for circular references
@@ -223,6 +245,6 @@ def report(thing,depth=4,noheader=False):
 
 report.indent = 2
 report.level = 0
-report.maxchar = 80
+report.maxchar = LINEMAX
 report.headernewline='\n'
 report.asterisk='*'

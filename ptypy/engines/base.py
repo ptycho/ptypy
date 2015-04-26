@@ -14,6 +14,7 @@ import time
 import ptypy
 from .. import utils as u
 from ..utils import parallel
+from ..utils.verbose import logger, headerline
 
 __all__ = ['BaseEngine']
 
@@ -57,7 +58,7 @@ class BaseEngine(object):
         pars: Param or dict
             Initialization parameters
         """
-        self.ptycho = ptycho_parent
+        self.ptycho = ptycho
         p = u.Param(self.DEFAULT)
 
         if pars is not None: p.update(pars)
@@ -72,6 +73,10 @@ class BaseEngine(object):
         """
         Prepare for reconstruction.
         """
+        logger.info('\n'+headerline('Starting %s-algoritm.' % str(self.__class__.__name__),'l','=')+'\n')
+        logger.info('Parameter set:')
+        logger.info(u.verbose.report(self.p,noheader=True).strip()) 
+        logger.info(headerline('','l','='))
         self.curiter = 0
         self.errorlist = []
         
@@ -122,7 +127,7 @@ class BaseEngine(object):
         for n in range(N):
             if self.finished: break 
             # for benchmarking
-            t = time.time()
+            self.t = time.time()
             
             ############################
             # call engine specific iteration routine
@@ -130,7 +135,7 @@ class BaseEngine(object):
             
             self.error = self.engine_iterate()
             
-            self.errorlist.append(error)
+            self.errorlist.append(self.error)
             
             ############################
             # Increment the iterate number
@@ -158,7 +163,7 @@ class BaseEngine(object):
             parallel.barrier()
 
     def _fill_runtime(self):
-        error = u.parallel.gather_dict(self.errors)
+        error = u.parallel.gather_dict(self.error)
         
         info = dict(
             iteration = self.curiter,

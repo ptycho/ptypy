@@ -773,7 +773,7 @@ class Storage(Base):
         info += "Dimensions (meters): %g x %g\n" % (self.psize[0] * self.data.shape[-2], self.psize[1] * self.data.shape[-1])
         info += "Number of views: %d\n" % len(self.views)
         return info
-    
+
     def formatted_report(self,table_format=None,offset=8, align='right',separator=" : ", include_header=True):
         """
         Returns formatted string and a dict with the respective information
@@ -1401,7 +1401,6 @@ class Container(Base):
         fstring += t.rjust(fr.table[0][1])
         fstring += '\n'
         fstring += info
-        print fstring
         if include_header:
             return fr.header()+fstring
         else:

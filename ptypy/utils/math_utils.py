@@ -72,7 +72,7 @@ def gaussian(x,std=1.0,off=0.):
     gauss_fwhm
     smooth_step
     """
-    return np.exp(-(x-off)**2/(2*sigma**2)) / (sigma * np.sqrt(2*np.pi))
+    return np.exp(-(x-off)**2/(2*std**2)) / (std * np.sqrt(2*np.pi))
     
 def gauss_fwhm(x,fwhm=1.0,off=0.):
     """

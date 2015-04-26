@@ -18,9 +18,9 @@ ptypy.utils.verbose.set_level(3)
 
 Container_DEFAULT = u.Param(
     # maybe we would want this container specific
-    clims=[None, [-np.pi, np.pi]],
-    cmaps=['gray', 'hsv'],
-    crop=[0.4, 0.4],  # fraction of array to crop for display
+    clims=[None,None],# [-np.pi, np.pi]],
+    cmaps=['gray', 'bone'],
+    crop=[0.9, 0.9],  # fraction of array to crop for display
     rm_pr=True,  # remove_phase_ramp = True
     shape=None,  # if None the shape is determining
     auto_display=['a', 'p'],  # quantities to display
@@ -32,7 +32,8 @@ DEFAULT = u.Param()
 DEFAULT.figsize = (12, 10)
 DEFAULT.ob = Container_DEFAULT.copy()
 DEFAULT.pr = Container_DEFAULT.copy()
-DEFAULT.pr.auto_display = ['c']
+DEFAULT.pr.auto_display = ['a', 'p']#['c']
+DEFAULT.pr.cmaps=['jet', 'hsv']
 DEFAULT.simplified_aspect_ratios = False
 DEFAULT.gridspecpars = (0.1, 0.12, 0.07, 0.95, 0.05, 0.93)
 DEFAULT.plot_error = [True, True, True]  # decide which error to plot

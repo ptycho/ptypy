@@ -678,6 +678,7 @@ def phase_from_dpc(dpc_row,dpc_col):
     f[...,sh[-2]:,sh[-1]:]=c[...,::-1,::-1]
     # fft conform grids in the boundaries of [-pi:pi]
     g = grids(f.shape,psize=np.pi/np.asarray(f.shape),center='fft')
+    g[...,0,0]=1e-6
     qx = g[-2]
     qy = g[-1]
     inv_qc = 1./(qx+1j*qy)

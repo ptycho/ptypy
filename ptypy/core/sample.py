@@ -32,7 +32,7 @@ DEFAULT_process = u.Param(
     zoom = None,                #(float,tuple) Zoom value for object simulation.
     formula = None,             #(str) Chemical formula
     density = None,             #(None,float) Density in [g/ccm]
-    thickness = 1e-6,            # (float) Maximum thickness of sample in meter
+    thickness = None,            # (float) Maximum thickness of sample in meter
     ref_index = 0.5+0.j,         # (complex float) Assigned refractive index (maximum) relative to air
     smoothing = 2,            # (float,tuple) Gaussian filter smoorthing with this FWHM (pixel)
 )
@@ -244,7 +244,9 @@ def simulate(A,pars, energy, fill =1.0, **kwargs):
                 logger.info("Using given refractive index in object creation")
 
         obj = np.exp(1.j*ob*k*ri)
-
+    if p.diffuser is not None:
+        obj*=u.parallel.MPInoise2d(obj.shape,*p.diffuser)
+        
     shape = u.expect2(A.shape[-2])
     crops = list(-np.array(obj.shape[-2]) + shape + 2*np.abs(off))
     obj = u.crop_pad(obj,crops,fillpar=fill)

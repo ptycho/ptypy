@@ -481,7 +481,7 @@ class PtyScan(object):
             # determine if the arrays require further processing
             do_flip = self.orientation is not None and np.array(self.orientation).any()
             do_crop = (np.abs(sh - dsh) > 0.5).any()
-            do_rebin = (self.rebin != 1)
+            do_rebin = self.rebin is not None and (self.rebin != 1)
 
             if do_flip or do_crop or do_rebin:
                 logger.info('Enter preprocessing (crop/pad %s, rebin %s, flip/rotate %s) ... \n' %
@@ -496,16 +496,18 @@ class PtyScan(object):
                     w = np.ones((1,)+tuple(dsh))    
 
                 # flip, rotate etc.
-                d, cen = u.switch_frame_orientation(d, self.orientation, cen)
-                w, tmp = u.switch_frame_orientation(w, self.orientation, cen)
+                d, tmp = u.switch_orientation(d, self.orientation, cen)
+                w, cen = u.switch_orientation(w, self.orientation, cen)
 
                 # crop
-                d, cen = u.crop_pad_symmetric_2d(d, sh, cen)
-                w, tmp = u.crop_pad_symmetric_2d(w, sh, cen)
+                d, tmp = u.crop_pad_symmetric_2d(d, sh, cen)
+                w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
 
                 # rebin, check if rebinning is neither to strong nor impossible
                 rebin = self.rebin
-                if rebin in range(2, 6) and (((self.roi / float(rebin)) % 1) == 0.0).all():
+                if rebin<=1:
+                    pass
+                elif rebin in range(2, 6) and (((self.roi / float(rebin)) % 1) == 0.0).all():
                     mask = w > 0
                     d = u.rebin_2d(d, rebin)
                     w = u.rebin_2d(w, rebin)
@@ -974,7 +976,7 @@ class PtydScan(PtyScan):
         allframes = int(sum([ch[1] for ch in d['data']]))
         self._ch_frame_ind = np.array([(dd[0], frame) for dd in d['data'] for frame in range(dd[1])])
 
-        return allframes - start, None
+        return min((frames, allframes - start)), allframes < start+frames
 
     def _coord_to_h5_calls(self, key, coord):
         return 'chunks/%d/%s' % (coord[0], key), slice(coord[1], coord[1] + 1)
@@ -983,7 +985,8 @@ class PtydScan(PtyScan):
         """
         In ptyd, 'common' must exist
         """
-        return io.h5read(self.source, 'common')['common']
+        # this total buggy right now
+        return {'weight2d' : self.info.weight2d, 'positions_scan' : None}
 
     def load(self, indices):
         """
