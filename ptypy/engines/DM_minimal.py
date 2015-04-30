@@ -9,7 +9,7 @@ This file is part of the PTYPY package.
 """
 
 from .. import utils as u
-from utils import basic_fourier_update, Callreduce
+from utils import basic_fourier_update
 import numpy as np
 import time
 
@@ -102,8 +102,8 @@ class DM_minimal(object):
                 self.pr_nrm[pod.pr_view] += pod.object * pod.object.conj()
             
             # Mpi sum
-            Callreduce(self.pr)
-            Callreduce(self.pr_nrm)
+            self.pr.allreduce()
+            self.pr_nrm.allreduce()
             
             self.pr /= self.pr_nrm
             
@@ -117,8 +117,8 @@ class DM_minimal(object):
                 self.ob_nrm[pod.ob_view] += pod.probe * pod.probe.conj()
                 
             # Mpi sum
-            Callreduce(self.ob)
-            Callreduce(self.ob_nrm)
+            self.ob.allreduce()
+            self.ob_nrm.allreduce()
             
             self.ob /= self.ob_nrm
             

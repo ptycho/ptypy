@@ -161,7 +161,6 @@ def aperture(A,grids=None,pars=None, **kwargs):
             raise NotImplementedError('Only elliptical `circ` or rectangular `rect` apertures supported for now')
 
         dims = u.expect2(p.size)/ psize if p.size is not None else np.array(cgrid.shape)/3.
-        print dims
         ap *= apert(dims)
         if p.central_stop is not None:
             dims *= u.expect2(p.central_stop)

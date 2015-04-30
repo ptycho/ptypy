@@ -144,12 +144,16 @@ class Ptycho(Base):
         
         self._configure()
         if level >=1:
+            logger.info('\n'+headerline('Ptycho init level 1','l'))
             self.init_structures()
         if level >=2:
+            logger.info('\n'+headerline('Ptycho init level 2','l'))
             self.init_data()
         if level >=3:
+            logger.info('\n'+headerline('Ptycho init level 3','l'))
             self.init_communication()
         if level >=4:
+            logger.info('\n'+headerline('Ptycho init level 4','l'))
             self.init_engine()
         if level >=5:
             self.run()
@@ -184,10 +188,10 @@ class Ptycho(Base):
         self.paths = paths.Paths(self.p.paths,self.runtime)
     
     def init_communication(self):
-        u"""
+        """
         Called on __init__ if ``level>=3``.
         
-        Initializes \u2205MQ communication on the master node and
+        Initializes ZeroMQ communication on the master node and
         spawns an optional plotting client.
         """
         p = self.p
@@ -326,7 +330,7 @@ class Ptycho(Base):
             self.p.engines[engine_label] = epars
             
             # start over
-            self._init_engine(engine_label)
+            self.init_engine(engine_label)
         
             return engine_label
             
@@ -358,7 +362,7 @@ class Ptycho(Base):
         else:
             # No label = prepare all engines
             for label in sorted(self.p.engines.keys()):
-                self._init_engine(label)
+                self.init_engine(label)
     @property
     def pods(self):
         """ Dict of all :any:`POD` instances in the pool of self """
@@ -461,8 +465,8 @@ class Ptycho(Base):
         elif epars is not None:
         
             # A fresh set of engine parameters arrived.
-            label = self._init_engine(epars=epars)
-            self.run_engine(label=label)
+            label = self.init_engine(epars=epars)
+            self.run(label=label)
         
         elif label is not None:
             
@@ -470,15 +474,15 @@ class Ptycho(Base):
             # If so, use it, else create one and use it
             engine = self.engines.get(label,None)
             if engine is not None:
-                self.run_engine(engine=engine)
+                self.run(engine=engine)
             else:
-                self._init_engine(label=label)
-                self.run_engine(label=label)
+                self.init_engine(label=label)
+                self.run(label=label)
         else:
             # prepare and run ALL engines in self.p.engines
-            self._init_engine()
+            self.init_engine()
             for engine in self.engines.values():
-                self.run_engine(engine=engine)
+                self.run(engine=engine)
 
         
         

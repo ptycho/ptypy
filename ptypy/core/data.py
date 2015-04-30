@@ -22,6 +22,7 @@ if __name__ == "__main__":
     from ptypy import io
     from ptypy import resources
     from ptypy.core import geometry
+    from ptypy.utils.verbose import logger, log, headerline
     import numpy as np
     import os
     import h5py
@@ -29,13 +30,14 @@ else:
     from .. import utils as u
     from .. import io
     from .. import resources
+    from ..utils.verbose import logger, log, headerline
     import geometry
     import numpy as np
     import os
     import h5py
 
 parallel = u.parallel
-logger = u.verbose.logger
+
 
 PTYD = dict(
     chunks={},  # frames, positions
@@ -61,11 +63,7 @@ GENERIC = dict(
     chunk_format='.chunk%02d',  # Format for chunk file appendix.
     #roi = None,  # 2-tuple or int for the desired fina frame size
     save = None,  # None, 'merge', 'append', 'extlink'
-    auto_center = None,  # False: no automatic center,None only  if center is None, True it will be enforced
-    #psize = None,  # Detector pixel size
-    #energy = None,
-    #distance = None,
-    
+    auto_center = None,  # False: no automatic center,None only  if center is None, True it will be enforced   
     load_parallel = 'data',  # None, 'data', 'common', 'all'
     rebin = None,  # rebin diffraction data
     orientation = None,  # None,int or 3-tuple switch, actions are (transpose, invert rows, invert cols)
@@ -148,8 +146,8 @@ class PtyScan(object):
         self.info = info
 
         # Print a report
-        logger.info('Ptypy Scan instance got the following parameters:\n')
-        logger.info(u.verbose.report(info))
+        log(4,'Ptypy Scan instance got the following parameters:')
+        log(4,u.verbose.report(info))
 
         # Dump all input parameters as class attributes.
         # FIXME: This duplication of parameters can lead to much confusion...
@@ -221,11 +219,11 @@ class PtyScan(object):
         self.common = u.Param(self.common)
         assert 'weight2d' in self.common and 'positions_scan' in self.common
             
-        logger.info('\n ---------- Analysis of the "common" arrays  ---------- \n')
+        logger.info('\n'+headerline('Analysis of the "common" arrays','l'))
         # Check if weights (or mask) have been loaded by load_common.
         weight2d = self.common.weight2d
         self.has_weight2d = weight2d is not None and len(weight2d)>0
-        logger.info('Check for weight or mask,  "weight2d"  .... %s : shape = %s\n' % (str(self.has_weight2d),str(weight2d.shape)))
+        logger.info('Check for weight or mask,  "weight2d"  .... %s : shape = %s' % (str(self.has_weight2d),str(weight2d.shape)))
 
             
         # Check if positions have been loaded by load_common
@@ -265,9 +263,9 @@ class PtyScan(object):
         parallel.barrier()
         
         #logger.info('#######  MPI Report: ########\n')
-        self.report(what=self.common)
+        log(4,u.verbose.report(self.common),True)
         parallel.barrier()
-        logger.info('\n ----------  Analyis done   ---------- \n\n')
+        logger.info(headerline('Analysis done','l')+'\n')
 
         if self.info.save is not None and parallel.master:
             logger.info('Appending common dict to file %s\n' % self.info.dfile)
@@ -1050,12 +1048,12 @@ class MoonFlowerScan(PtyScan):
         
         # derive scan pattern
         pos = u.Param()
-        dr = G.resolution * G.shape / 5.
-        pos.dr = dr.min()
-        pos.nr = np.int(np.round(np.sqrt(self.num_frames))) 
-        pos.nth = 5
-        pos.scan_type = 'round'
-        self.pos = xy.from_pars(pos)[:self.num_frames]
+        pos.spacing = G.resolution * G.shape / 5.
+        pos.layers = np.int(np.round(np.sqrt(self.num_frames)))+1
+        pos.extent = pos.layers * pos.spacing
+        pos.model = 'round'
+        pos.count = self.num_frames
+        self.pos = xy.from_pars(pos)
 
         # calculate pixel positions
         pixel = self.pos / G.resolution
@@ -1127,8 +1125,6 @@ class DataSource(object):
             scan = scans[label]
             s = scan['pars']
 
-            logger.info(u.verbose.report(s))
-
             # Copy other relevant information
             prep = s.data.copy()
             
@@ -1198,12 +1194,14 @@ class DataSource(object):
             msg = PS.auto(self.frames_per_call, self.feed_format)
 
         self.data_available = (msg != EOS or self.scan_available)
-        logger.info(u.verbose.report(msg))
+
+        logger.debug(u.verbose.report(msg))
         if msg != WAIT and msg != EOS:
             # ok that would be a data package
             # attach inner label
             msg['common']['ptylabel'] = label
             #print u.verbose.report(msg)
+            logger.info('Feeding data chunk')
             return msg
         else:
             return None

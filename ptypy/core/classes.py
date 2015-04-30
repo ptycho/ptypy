@@ -697,6 +697,21 @@ class Storage(Base):
         else: 
             return None
 
+    def allreduce(self,op=None):
+        """
+        Performs MPI parallel ``allreduce`` with a default sum as 
+        reduction operation for internal data buffer ``self.data``
+        
+        :param Container c: Input
+        :param op: Reduction operation. If ``None`` uses sum.
+           
+        See also
+        --------
+        ptypy.utils.parallel.allreduce
+        Container.allreduce
+        """
+        u.parallel.allreduce(self.data, op=op)
+    
     def zoom_to_psize(self,new_psize,**kwargs):
         """
         Changes pixel size and zooms the data buffer along last two axis 
@@ -1275,7 +1290,23 @@ class Container(Base):
         for s in self.S.itervalues(): 
             s.fill(fill)
             s._make_datalist() 
+    
+    def allreduce(self,op=None):
+        """
+        Performs MPI parallel ``allreduce`` with a sum as reduction
+        for all :any:`Storage` instances held by *self*
         
+        :param Container c: Input
+        :param op: Reduction operation. If ``None`` uses sum.
+           
+        See also
+        --------
+        ptypy.utils.parallel.allreduce
+        Storage.allreduce
+        """
+        for s in self.S.itervalues():
+            s.allreduce(op=op)
+    
     def clear(self):
         """
         Reduce / delete all data in attached storages

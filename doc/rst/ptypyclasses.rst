@@ -197,9 +197,15 @@ and the corresponding *numpy* syntax, ptypy offers acces through a
    >>> from ptypy.core.classes import DEFAULT_ACCESSRULE
    >>> ar = DEFAULT_ACCESSRULE.copy()
    >>> print ar
-   Param({'psize': 1.0, 'shape': None, 'storageID': None, 'layer': 0, 'coord': None})
+   * id3VBIM059Q0           : ptypy.utils.parameters.Param(5)
+     * psize                : 1.0
+     * shape                : None
+     * storageID            : None
+     * layer                : 0
+     * coord                : None
+   
    
 
-Hallo lieber Marco
+Hallo lieber Martin
 
 

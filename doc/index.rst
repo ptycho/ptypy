@@ -14,6 +14,8 @@ Contents:
    rst/readme
    rst/engineprimer
    rst/ptypyclasses
+   rst/ownengine
+   rst/mathtest
    rst/ptypy
    rst/parameters   
 

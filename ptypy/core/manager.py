@@ -18,7 +18,7 @@ import numpy as np
 import weakref
 
 from .. import utils as u
-from ..utils.verbose import logger
+from ..utils.verbose import logger, headerline, log
 from classes import *
 from classes import DEFAULT_ACCESSRULE
 from classes import MODEL_PREFIX
@@ -261,7 +261,7 @@ class ModelManager(object):
 
         info = {'label': scan.label, 'max': scan.diff.max_power, 'tot': scan.diff.tot_power, 'mean': mean_frame.sum()}
         logger.info(
-            '--- Scan %(label)s photon report ---\nTotal photons   : %(tot).2e \nAverage photons : %(mean).2e\nMaximum photons : %(max).2e\n' % info + '-' * 34)
+            '\n--- Scan %(label)s photon report ---\nTotal photons   : %(tot).2e \nAverage photons : %(mean).2e\nMaximum photons : %(max).2e\n' % info + '-' * 29)
 
     def make_datasource(self, data_pars=None):
         """
@@ -535,6 +535,7 @@ class ModelManager(object):
         """
         initializes the probe storages referred to by the probe_ids
         """
+        logger.info('\n'+headerline('Probe initialization','l'))
         for pid, labels in probe_ids.items():
 
             # pick scanmanagers from scan_label for illumination parameters
@@ -581,6 +582,7 @@ class ModelManager(object):
         """
         initializes the probe storages referred to by the object_ids
         """
+        logger.info('\n'+headerline('Object initialization','l'))
         for oid, labels in object_ids.items():
 
             # pick scanmanagers from scan_label for illumination parameters
@@ -617,11 +619,12 @@ class ModelManager(object):
         """
         initializes exit waves ousing the pods
         """
+        logger.info('\n'+headerline('Creating exit waves','l'))
         for pod in pods:
             if not pod.active:
                 continue
             pod.exit = pod.probe * pod.object
-
+        
     def _create_pods(self, new_scans):
         """
         Create all pods associated with the scan labels in 'scans'.
@@ -629,7 +632,7 @@ class ModelManager(object):
         Return the list of new pods, probe and object ids (to allow for
         initialization).
         """
-
+        logger.info('\n'+headerline('Creating PODS','l'))
         new_pods = []
         new_probe_ids = {}
         new_object_ids = {}
@@ -637,8 +640,8 @@ class ModelManager(object):
         # Get a list of probe and object that already exist
         existing_probes = self.ptycho.probe.S.keys()  #self.sharing_rules.probe_ids.keys()
         existing_objects = self.ptycho.obj.S.keys()  #self.sharing_rules.object_ids.keys()
-        logger.info('Found these probes:\n' + '\n'.join(existing_probes))
-        logger.info('Found these objects:\n' + '\n'.join(existing_objects))
+        logger.info('Found these probes : ' + ', '.join(existing_probes))
+        logger.info('Found these objects: ' + ', '.join(existing_objects))
         #exit_index = 0
         # Loop through scans
         for label in new_scans:
@@ -728,7 +731,7 @@ class ModelManager(object):
                                       accessrule={'shape': geometry.shape,
                                                   'psize': geometry.resolution,
                                                   'coord': pos_pr,
-                                                  'storageID': probe_id+object_id_suf,
+                                                  'storageID': probe_id+object_id_suf[1:],
                                                   'layer': exit_index},
                                       active=dv.active)
                             views = {'probe': pv, 'obj': ov, 'diff': dv, 'mask': mv, 'exit':ev}

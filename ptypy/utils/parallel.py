@@ -184,7 +184,20 @@ def allreduce(a, op=None):
         comm.Allreduce(MPI.IN_PLACE, a, op=op)
     return
 
-
+def allreduceC(c):
+    """
+    Performs MPI parallel ``allreduce`` with a sum as reduction
+    for all :any:`Storage` instances held by :any:`Container` *c*
+    
+    :param Container c: Input
+    
+    See also
+    --------
+    ptypy.utils.parallel.allreduce
+    """
+    for s in c.S.itervalues():
+        allreduce(s.data)
+           
 def _MPIop(a, op, axis=None):
     """
     Apply operation op on accross a list of arrays distributed between

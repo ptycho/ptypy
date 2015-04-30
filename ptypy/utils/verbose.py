@@ -26,18 +26,24 @@ from . import parallel
 
 __all__ = ['logger', 'set_level', '_']
 
+# custom logging level to diplay python objects (not as detailed as debug but also not that important for info)
+INSPECT = 15
+
 CONSOLE_FORMAT = {logging.ERROR : 'ERROR %(name)s - %(message)s',
                   logging.WARNING : 'WARNING %(name)s - %(message)s',
                   logging.INFO : '%(message)s',
+                  INSPECT : 'INSPECT %(message)s',
                   logging.DEBUG : 'DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
 
 FILE_FORMAT = {logging.ERROR : '%(asctime)s ERROR %(name)s - %(message)s',
                   logging.WARNING : '%(asctime)s WARNING %(name)s - %(message)s',
                   logging.INFO : '%(asctime)s %(message)s',
+                  INSPECT : '%(asctime)s INSPECT %(message)s',
                   logging.DEBUG : '%(asctime)s DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
             
 # How many characters per line in console
 LINEMAX = 80
+
 
 # Monkey patching logging.Logger - is this a good idea?
 
@@ -96,7 +102,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.WARNING)
 
 # Create console handler
-consolehandler = logging.StreamHandler()
+consolehandler = logging.StreamHandler(stream = sys.stdout)
 logger.addHandler(consolehandler)
 
 # Add formatter
@@ -107,11 +113,17 @@ consolehandler.setFormatter(consoleformatter)
 consolefilter = MPIFilter()
 logger.addFilter(consolefilter)
 
-level_from_verbosity = {0:logging.CRITICAL, 1:logging.ERROR, 2:logging.WARN, 3:logging.INFO, 4:logging.DEBUG}
-level_from_string = {'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 'INFO':logging.INFO, 'DEBUG':logging.DEBUG}
+level_from_verbosity = {0:logging.CRITICAL, 1:logging.ERROR, 2:logging.WARN, 3:logging.INFO, 4: INSPECT, 5:logging.DEBUG}
+level_from_string = {'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 'INFO':logging.INFO, 'INSPECT': INSPECT, 'DEBUG':logging.DEBUG}
 vlevel_from_logging = dict([(v,k) for k,v in level_from_verbosity.items()]) 
 slevel_from_logging = dict([(v,k) for k,v in level_from_string.items()]) 
 
+def log(level,msg,parallel=False):
+    if not parallel:
+        logger.log(level_from_verbosity[level], msg)
+    else:
+        logger.log(level_from_verbosity[level], msg,extra={'allprocesses':True})
+        
 def set_level(level):
     """
     Set verbosity level. Kept here for backward compatibility
@@ -191,12 +203,12 @@ def report(thing,depth=4,noheader=False):
     def _format_iterable(label, level, lst):
         l = len(lst)
         header,extra = _(label, level, lst)
-        header+= ' %s(%d)' % (extra,l) + hn
+        header+= ' %s(%d)' % (extra,l) 
         string = str(lst)
         if len(string) <= maxchar-25 or level>=depth:
-            return header +'= '+ string +'\n'
+            return header +'= '+ string + hn
         elif l >0:
-            header +='\n'
+            header += hn
             for v in lst[:5]:
                 header += _format(None,level+1,v)
             header += _('...',level+1,' ')[0] + ' ....\n'

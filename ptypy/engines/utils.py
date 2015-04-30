@@ -137,19 +137,7 @@ def Cdot(c1,c2):
         r += np.vdot(c1.S[name].data.flat, c2.S[name].data.flat)
     return r
     
-def Callreduce(c):
-    """
-    Performs MPI parallel ``allreduce`` with a sum as reduction
-    for all :any:`Storage` instances held by this :any:`Container`
-    
-    :param Container c: Input
-    
-    See also
-    --------
-    ptypy.utils.parallel.allreduce
-    """
-    for s in c.S.itervalues():
-        parallel.allreduce(s.data)    
+ 
     
     
     

@@ -488,8 +488,9 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
     a : ndarray
         Input image as complex 2D-array.
     
-    weight : str, optional
-        Use 'abs' for a modulus-weighted phaseramp and`None` for no weights.
+    weight : ndarray, str, optional
+        Pass weighting array or use 'abs' for a modulus-weighted 
+        phaseramp and `None` for no weights.
         
     return_phaseramp : bool, optional
         Use True to get also the phaseramp array ``p``.
@@ -513,7 +514,7 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
         useweight = False
     elif weight=='abs':
         weight = np.abs(a)
-
+        
     ph = np.exp(1j*np.angle(a))
     [gx, gy] = np.gradient(ph)
     gx = -np.real(1j*gx/ph)
@@ -536,9 +537,9 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
         return a*p
 
 
-def plot_storage(S,fignum=100,modulus='linear',slice_tupel=(slice(1),slice(None),slice(None)),**kwargs): #filename=None,vmin=None,vmax=None):
+def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slice(None)),**kwargs): #filename=None,vmin=None,vmax=None):
     """\
-    Quickly displat the data buffer of a :any:`Storage` instance.
+    Quickly display the data buffer of a :any:`Storage` instance.
 
     Keyword arguments are those of :any:`imsave`
     
@@ -550,7 +551,7 @@ def plot_storage(S,fignum=100,modulus='linear',slice_tupel=(slice(1),slice(None)
     fignum : int, optional
         Number of the figure. 
         
-    slice_tupel : tuple of slices, optional
+    slices : tuple of slices, optional
         Determines what part of Storage buffer is displayed, i.e. which
         layers and which region-of-interest. Layers are subplotted 
         horizontically next to each other. Figsize is (6,6*layers)
@@ -568,7 +569,7 @@ def plot_storage(S,fignum=100,modulus='linear',slice_tupel=(slice(1),slice(None)
     imsave
     :any:`Storage`
     """
-    slc = slice_tupel
+    slc = slices
     R,C = S.grids()
     R = R[slc][0]
     C = C[slc][0]   
