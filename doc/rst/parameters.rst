@@ -5,12 +5,12 @@ Ptypy parameter structure
 
    *(0)* Verbosity level
 
-   Verbosity level for information logging
-   
-   0: Only errors
-   1: Warning
-   2: Information
-   3: Debug
+   Verbosity level for information logging.
+    - ``0``: Only errors
+    - ``1``: Warning
+    - ``2``: Process Information
+    - ``3``: Object Information
+    - ``4``: Debug
 
    *default* = ``1 (>0, <3)``
 
@@ -18,7 +18,7 @@ Ptypy parameter structure
 
    *(1)* Reconstruction floating number precision
 
-   Reconstruction floating number precision ('single' or 'double')
+   Reconstruction floating number precision (``'single'`` or ``'double'``)
 
    *default* = ``single``
 
@@ -26,15 +26,16 @@ Ptypy parameter structure
 
    *(2)* Reconstruction identifier
 
-   Reconstruction run identifier. If None (default), the run name will be constructed at run time from other information.
+   Reconstruction run identifier. If ``None``, the run name will be constructed at run time from other information.
 
    *default* = ``None``
 
 .. py:data:: .dry_run(bool)
 
-   *(3)* Dry run switch - NOT IMPLEMENTED
+   *(3)* Dry run switch 
 
-   Run everything skipping all memory and cpu-heavy steps (and file saving)
+   Run everything skipping all memory and cpu-heavy steps (and file saving).
+   **NOT IMPLEMENTED**
 
    *default* = ``FALSE``
 
@@ -118,7 +119,7 @@ Ptypy parameter structure
 
    *(13)* Activation switch
 
-   If True the current reconstruction will be saved at regular intervals.
+   If ``True`` the current reconstruction will be saved at regular intervals according to the pattern in :py:data:`paths.autosave`
 
    *default* = ``TRUE``
 
@@ -134,17 +135,26 @@ Ptypy parameter structure
 .interaction
 ------------
 
-.. py:data:: .interaction(Param, NoneType)
+.. py:data:: .interaction(Param)
 
    *(15)* Server / Client parameters
 
-   Can be `None` i.e. no ZeroMQ interaction server
+   If ``None`` is passed here in script instead of a Param, it translates to  ``active=False`` i.e. no ZeroMQ interaction server. 
 
    *default* = ``None``
 
+.. py:data:: .interaction.active(bool)
+
+   *(16)* Activation switch
+
+   Set to ``False`` for no  ZeroMQ interaction server
+   
+
+   *default* = ``TRUE``
+
 .. py:data:: .interaction.primary_address(str)
 
-   *(16)* The address the server is listening to.
+   *(17)* The address the server is listening to.
 
    The address the server is listening to.
    TODO: allow for automatic address definition when running on a cluster.
@@ -153,7 +163,7 @@ Ptypy parameter structure
 
 .. py:data:: .interaction.primary_port(int)
 
-   *(17)* The port the server is listening to.
+   *(18)* The port the server is listening to.
 
    The port the server is listening to.
 
@@ -161,7 +171,7 @@ Ptypy parameter structure
 
 .. py:data:: .interaction.port_range(str)
 
-   *(18)* The port range opened to clients.
+   *(19)* The port range opened to clients.
 
    The port range opened to clients.
 
@@ -173,7 +183,7 @@ Ptypy parameter structure
 
 .. py:data:: .plotclient(Param)
 
-   *(19)* Plotting client parameters
+   *(20)* Plotting client parameters
 
    
 
@@ -181,7 +191,7 @@ Ptypy parameter structure
 
 .. py:data:: .plotclient.active(bool)
 
-   *(20)* Live plotting switch
+   *(21)* Live plotting switch
 
    If True, a plotting client will be spawned and connected at initialization. This option should be set to False when ptypy is run on a cluster.
 
@@ -189,7 +199,7 @@ Ptypy parameter structure
 
 .. py:data:: .plotclient.interval(int)
 
-   *(21)* Number of iterations between plot updates
+   *(22)* Number of iterations between plot updates
 
    Requests to the server will happen with this iteration intervals. Note that this will work only if interaction.polling_interval is smaller or equal to this number.
 
@@ -197,7 +207,7 @@ Ptypy parameter structure
 
 .. py:data:: .plotclient.some_plotting_options(str)
 
-   *(22)* Options for default plotter (not implemented yet)
+   *(23)* Options for default plotter (not implemented yet)
 
    Options for default plotter (not implemented yet)
 
@@ -205,7 +215,7 @@ Ptypy parameter structure
 
 .. py:data:: .plotclient.dump(bool)
 
-   *(23)* Switch to dump plots as image files
+   *(24)* Switch to dump plots as image files
 
    
 
@@ -213,7 +223,7 @@ Ptypy parameter structure
 
 .. py:data:: .plotclient.dump_interval(int)
 
-   *(24)* Iteration interval for dumping plots
+   *(25)* Iteration interval for dumping plots
 
    If None, no image will be saved. If 0, only a final image will be saved.
 
@@ -221,7 +231,7 @@ Ptypy parameter structure
 
 .. py:data:: .plotclient.make_movie(bool)
 
-   *(25)* Produce reconstruction movie after the reconstruction.
+   *(26)* Produce reconstruction movie after the reconstruction.
 
    Switch to request the production of a movie from the dumped plots at the end of the reconstruction.
 
@@ -233,7 +243,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan(Param)
 
-   *(26)* Scan parameters
+   *(27)* Scan parameters
 
    This categrogy specifies defaults for all scans. Scan-specific parameters are stored in scans.scan_%%
 
@@ -241,7 +251,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.tags(str)
 
-   *(27)* Comma seperated string tags describing the data input
+   *(28)* Comma seperated string tags describing the data input
 
    [deprecated?]
 
@@ -249,7 +259,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.if_conflict_use_meta(bool)
 
-   *(28)* Give priority to metadata relative to input parameters
+   *(29)* Give priority to metadata relative to input parameters
 
    [useful?]
 
@@ -257,7 +267,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data(Param)
 
-   *(29)* Data preparation parameters
+   *(30)* Data preparation parameters
 
    
 
@@ -265,7 +275,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.recipe(ext)
 
-   *(30)* Data preparation recipe container
+   *(31)* Data preparation recipe container
 
    
 
@@ -273,28 +283,27 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.source(file)
 
-   *(31)* Origin of data
+   *(32)* Describes where to get the data from.
 
-   Describes where to get the data from.
-   
+
    Accepted values are:
-    - `file`: data will be read from a .ptyd file.
+    - ``'file'``: data will be read from a .ptyd file.
     - any valid recipe name: data will be prepared using the recipe.
-    - `sim` : data will be simulated according to parameters in simulation  
+    - ``'sim'`` : data will be simulated according to parameters in simulation  
 
    *default* = ``None``
 
 .. py:data:: .scan.data.dfile(file)
 
-   *(32)* Prepared data file path
+   *(33)* Prepared data file path
 
-   If source was None or `file`, data will be loaded from this file and processing as well as saving is deactivated. If source is the name of an experiment recipe or path to a file, data will be saved to this file
+   If source was ``None`` or ``'file'``, data will be loaded from this file and processing as well as saving is deactivated. If source is the name of an experiment recipe or path to a file, data will be saved to this file
 
    *default* = ``None``
 
 .. py:data:: .scan.data.label(str)
 
-   *(33)* The scan label
+   *(34)* The scan label
 
    Unique string identifying the scan
 
@@ -302,7 +311,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.shape(int, tuple)
 
-   *(34)* Shape of the region of interest cropped from the raw data.
+   *(35)* Shape of the region of interest cropped from the raw data.
 
    Cropping dimension of the diffraction frame
    Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
@@ -311,27 +320,27 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.save(str)
 
-   *(35)* Saving mode
+   *(36)* Saving mode
 
    Mode to use to save data to file.
-   None: 
-   'merge': attemts to merge data in single chunk [not implemented]
-   'append': appends each chunk in master *.ptyd file
-   'link': appends external links in master *.ptyd file and stores chunk separately in the path to the link. Links are relative file paths
+    - ``None``: No saving 
+    - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
+    - ``'append'``: appends each chunk in master *.ptyd file
+    - ``'link'``: appends external links in master *.ptyd file and stores chunks separately in the path given by the link. Links file paths are relative to master file.
 
    *default* = ``None``
 
 .. py:data:: .scan.data.center(tuple)
 
-   *(36)* Center (pixel) of the optical axes in data
+   *(37)* Center (pixel) of the optical axes in raw data
 
-   If None, this parameter will be set by 'auto_center' or elsewhere
+   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
 
    *default* = ``None``
 
 .. py:data:: .scan.data.psize(float, tuple)
 
-   *(37)* Detector pixel size
+   *(38)* Detector pixel size
 
    Dimensions of the detector pixels (in meters)
 
@@ -339,7 +348,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.distance(float)
 
-   *(38)* Sample-to-detector distance
+   *(39)* Sample-to-detector distance
 
    In meters.
 
@@ -347,30 +356,30 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.rebin(int)
 
-   *(39)* Rebinning factor
+   *(40)* Rebinning factor
 
-   Rebinning factor for the raw data frames. 'None' or 1 both mean 'no binning'
+   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
 
    *default* = ``None (>1, <8)``
 
 .. py:data:: .scan.data.orientation(int, tuple)
 
-   *(40)* Data frame orientation
+   *(41)* Data frame orientation
 
-   None or 0: correct orientation
-   1: invert columns (numpy.flip_lr)
-   2: invert columns, invert rows
-   3: invert rows  (numpy.flip_ud)
-   4: transpose (numpy.transpose)
-   4+i: tranpose + other operations from above
+    - ``None`` or ``0``: correct orientation
+    - ``1``: invert columns (numpy.flip_lr)
+    - ``2``: invert columns, invert rows
+    - ``3``: invert rows  (numpy.flip_ud)
+    - ``4``: transpose (numpy.transpose)
+    - ``4+i``: tranpose + other operations from above
    
-   Alternative a 3-tuple of booleans may be provided (do_transpose, do_flipud, do_fliplr)
+   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, do_flipud, do_fliplr)``
 
    *default* = ``None``
 
 .. py:data:: .scan.data.energy(float)
 
-   *(41)* Photon energy of the incident radiation
+   *(42)* Photon energy of the incident radiation
 
    
 
@@ -378,7 +387,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.min_frames(int)
 
-   *(42)* Minimum number of frames loaded by each node
+   *(43)* Minimum number of frames loaded by each node
 
    
 
@@ -386,7 +395,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.num_frames(int)
 
-   *(43)* Maximum number of frames to be prepared
+   *(44)* Maximum number of frames to be prepared
 
    If `positions_theory` are provided, num_frames will be ovverriden with the number of positions available
 
@@ -394,7 +403,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.chunk_format(str)
 
-   *(44)* Appendix to saved files if save == 'link'
+   *(45)* Appendix to saved files if save == 'link'
 
    
 
@@ -402,33 +411,33 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.auto_center(bool)
 
-   *(45)* Determine if center in data is calculated automatically
+   *(46)* Determine if center in data is calculated automatically
 
-   False: no automatic center 
-   None: only if center is None 
-   True: it will be enforced
+    - ``False``, no automatic centering 
+    - ``None``, only if :any:`center` is ``None`` 
+    - ``True``, it will be enforced
 
    *default* = ``None``
 
 .. py:data:: .scan.data.load_parallel(str)
 
-   *(46)* Determines what will be loaded in parallel
+   *(47)* Determines what will be loaded in parallel
 
-   Choose among [None, 'data', 'common', 'all']
+   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
 
    *default* = ``data``
 
 .. py:data:: .scan.data.positions_theory(ndarray)
 
-   *(47)* Theoretical positions for this scan
+   *(48)* Theoretical positions for this scan
 
-   If provided, experimental positions from child class will be ignored. If data preparation is called from Ptycho instance, the calculated positions from the `pattern` dict will be inserted here
+   If provided, experimental positions from :any:`Ptyscan` subclass will be ignored. If data preparation is called from Ptycho instance, the calculated positions from the :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
 
    *default* = ``None``
 
 .. py:data:: .scan.data.experimentID(str)
 
-   *(48)* Name of the experiment
+   *(49)* Name of the experiment
 
    If None, a default value will be provided by the recipe.
 
@@ -436,7 +445,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.simulation(Param)
 
-   *(49)* Simulated data as a preparation
+   *(50)* Simulated data as a preparation
 
    Similar to scan, simulation takes Parameters trees in the same form `illumination`, `sample` and `xy`. Any item in these trees will take precedence over scan specific parameters in the simulated scan.
 
@@ -444,23 +453,23 @@ Ptypy parameter structure
 
 .. py:data:: .scan.data.simulation.detector(Param, str, NoneType)
 
-   *(50)* Detector parameters
+   *(51)* Detector parameters
 
-   Can also be `None` if no detector specific filter is wanted or a string that matches one of the templates in the detector module
+   Can also be ``None`` if no detector specific filter is wanted or a string that matches one of the templates in the detector module
 
    *default* = ``None``
 
 .. py:data:: .scan.data.simulation.psf(float)
 
-   *(51)* Gaussian point spread with FWHM of `psf`
+   *(52)* Gaussian point spread in detector
 
-   `None` means no point spread
+   Value passed here represents the FWHM of a Gaussian. ``None`` means no point spread.
 
    *default* = ``None``
 
 .. py:data:: .scan.sharing(Param)
 
-   *(52)* Scan sharing options
+   *(53)* Scan sharing options
 
    
 
@@ -468,19 +477,18 @@ Ptypy parameter structure
 
 .. py:data:: .scan.sharing.object_share_with(str)
 
-   *(53)* Label or index of scan to share object with.
+   *(54)* Label or index of scan to share object with.
 
    Possible values:
-   
-   None: Do not share
-   (string): label of the scan to share with
-   (int):index of scan to share with
+    - ``None``: Do not share
+    - *(string)*: Label of the scan to share with
+    - *(int)*: Index of scan to share with
 
    *default* = ``None``
 
 .. py:data:: .scan.sharing.object_share_power(float)
 
-   *(54)* Relative power for object sharing
+   *(55)* Relative power for object sharing
 
    
 
@@ -488,19 +496,18 @@ Ptypy parameter structure
 
 .. py:data:: .scan.sharing.probe_share_with(str)
 
-   *(55)* Label or index of scan to share probe with.
+   *(56)* Label or index of scan to share probe with.
 
    Possible values:
-   
-   None: Do not share
-   (string): label of the scan to share with
-   (int):index of scan to share with
+    - ``None``: Do not share
+    - *(string)*: Label of the scan to share with
+    - *(int)*: Index of scan to share with
 
    *default* = ``None``
 
 .. py:data:: .scan.sharing.probe_share_power(float)
 
-   *(56)* Relative power for probe sharing
+   *(57)* Relative power for probe sharing
 
    
 
@@ -508,7 +515,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.geometry(Param)
 
-   *(57)* Physical parameters
+   *(58)* Physical parameters
 
    All distances are in meters. Other units are specified in the documentation strings.
 
@@ -516,23 +523,23 @@ Ptypy parameter structure
 
 .. py:data:: .scan.geometry.energy(float)
 
-   *(58)* Energy (in keV)
+   *(59)* Energy (in keV)
 
-   If None, use the wavelength instead.
+   If ``None``, uses `lam` instead.
 
    *default* = ``6.2 (>0.0)``
 
 .. py:data:: .scan.geometry.lam(float)
 
-   *(59)* Wavelength
+   *(60)* Wavelength
 
-   Used only if energy is None
+   Used only if `energy` is ``None``
 
    *default* = ``None (>0.0)``
 
 .. py:data:: .scan.geometry.distance(float)
 
-   *(60)* Distance from object to detector
+   *(61)* Distance from object to detector
 
    
 
@@ -540,7 +547,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.geometry.psize(float)
 
-   *(61)* Pixel size in Detector plane
+   *(62)* Pixel size in Detector plane
 
    
 
@@ -548,7 +555,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.geometry.resolution(float)
 
-   *(62)* Pixel size in Sample plane
+   *(63)* Pixel size in Sample plane
 
    This parameter is used only for simulations
 
@@ -556,7 +563,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.geometry.prop_type(str)
 
-   *(63)* Propagation type
+   *(64)* Propagation type
 
    Either "farfield" or "nearfield"
 
@@ -564,240 +571,116 @@ Ptypy parameter structure
 
 .. py:data:: .scan.xy(Param)
 
-   *(64)* Parameters for scan patterns
+   *(65)* Parameters for scan patterns
 
    These parameters are useful in two cases:
-   
     - When the experimental positions are not known (no encoders)
     - When using the package to simulate data.
+   
+   In script an array of shape *(N,2)* may be passed here instead of a Param or dictionary as an **override**
 
    *default* = ``None``
 
-.. py:data:: .scan.xy.type(str)
+.. py:data:: .scan.xy.model(str)
 
-   *(65)* Pattern type
+   *(66)* Scan pattern type
 
    The type must be one of the following:
+    - ``None``: positions are read from data file.
+    - ``'raster'``: raster grid pattern
+    - ``'round'``: concentric circles pattern
+    - ``'spiral'``: spiral pattern
    
-    - None (default): positions are read from data file.
-    - 'custom': positions are read from parameter structure
-    - 'raster': raster grid pattern
-    - 'round': concentric circles pattern
-    - 'round_roi': concentric circles cropped to a region-of-interest
-    - 'spiral': spiral pattern
-    - 'spiral_roi': spiral pattern cropped to a region-of-interest
+   In script an array of shape *(N,2)* may be passed here instead
 
    *default* = ``None (>0.0)``
 
-.. py:data:: .scan.xy.positions(list)
+.. py:data:: .scan.xy.spacing(float, tuple)
 
-   *(66)* List of positions
+   *(67)* Pattern spacing
 
-   This list is to be used if scan_type == 'custom' no proper positions are found in the prepared data file.
-
-   *default* = ``None``
-
-.. py:data:: .scan.xy.raster(Param)
-
-   *(67)* Raster pattern parameters
-
+   Spacing between scan positions. If the model supports asymmetric scans, a tuple passed here will be interpreted as *(dy,dx)* with *dx* as horizontal spacing and *dy* as vertical spacing. If ``None`` the value is calculated from `extent` and `steps`
    
 
-   *default* = ``None``
+   *default* = ``1.50E-06 (>0.0)``
 
-.. py:data:: .scan.xy.raster.nx(int)
+.. py:data:: .scan.xy.steps(int, tuple)
 
-   *(68)* Number of steps in x
+   *(68)* Pattern step count
 
-   
+   Number of steps with length *spacing* in the grid. A tuple *(ny,nx)* provided here can be used for a different step in vertical ( *ny* ) and horizontal direction ( *nx* ). If ``None`` the, step count is calculated from `extent` and `spacing`
 
    *default* = ``10 (>0)``
 
-.. py:data:: .scan.xy.raster.ny(int)
+.. py:data:: .scan.xy.extent(float, tuple)
 
-   *(69)* Number of steps in y
+   *(69)* Rectangular extent of pattern
 
-   
+   Defines the absolut maximum extent. If a tuple *(ly,lx)* is provided the extent may be rectangular rather than square. All positions outside of `extent` will be discarded. If ``None`` the extent will is `spacing` times `steps`
 
-   *default* = ``10 (>0)``
+   *default* = ``1.50E-05 (>0.0)``
 
-.. py:data:: .scan.xy.raster.dx(float)
+.. py:data:: .scan.xy.offset(float, tuple)
 
-   *(70)* Step size (grid spacing)
+   *(70)* Offset of scan pattern relative to origin
 
-   
 
-   *default* = ``1.00E-06 (>0.0)``
+   If tuple, the offset may differ in *x* and *y*. Please not that the offset will be included when removing scan points outside of `extend`.
 
-.. py:data:: .scan.xy.raster.dy(float)
+   *default* = ``0``
 
-   *(71)* Step size (grid spacing)
+.. py:data:: .scan.xy.jitter(float, tuple)
 
-   
+   *(71)* RMS of jitter on sample position
 
-   *default* = ``1.00E-06 (>0.0)``
+   **Only use in simulation**. Adds a random jitter to positions.
 
-.. py:data:: .scan.xy.round(Param)
+   *default* = ``0``
 
-   *(72)* Round pattern parameters
+.. py:data:: .scan.xy.count(int)
 
-   
+   *(72)* Number of scan points
 
-   *default* = ``None``
 
-.. py:data:: .scan.xy.round.dr(float)
-
-   *(73)* Spacing of concentric circles
-
-   
-
-   *default* = ``3.00E-07 (>0.0)``
-
-.. py:data:: .scan.xy.round.nr(int)
-
-   *(74)* Number of radial steps (number of circles - 1)
-
-   
-
-   *default* = ``10 (>0)``
-
-.. py:data:: .scan.xy.round.nth(int)
-
-   *(75)* Number of points in the inner circle
-
-   
-
-   *default* = ``5 (>0)``
-
-.. py:data:: .scan.xy.round_roi(Param)
-
-   *(76)* Round - ROI pattern parameters
-
-   
+   Only return return positions up to number of `count`.
 
    *default* = ``None``
-
-.. py:data:: .scan.xy.round_roi.dr(float)
-
-   *(77)* Spacing of concentric circles
-
-   
-
-   *default* = ``3.00E-07 (>0.0)``
-
-.. py:data:: .scan.xy.round_roi.nth(int)
-
-   *(78)* Number of points in the inner circle
-
-   
-
-   *default* = ``5 (>0)``
-
-.. py:data:: .scan.xy.round_roi.lx(float)
-
-   *(79)* ROI dimension in x
-
-   
-
-   *default* = ``3.00E-06 (>0.0)``
-
-.. py:data:: .scan.xy.round_roi.ly(float)
-
-   *(80)* ROI dimension in y
-
-   
-
-   *default* = ``3.00E-06 (>0.0)``
-
-.. py:data:: .scan.xy.spiral(Param)
-
-   *(81)* Spiral scan parameters
-
-   
-
-   *default* = ``None``
-
-.. py:data:: .scan.xy.spiral.dr(float)
-
-   *(82)* Spiral arm spacing
-
-   
-
-   *default* = ``2.00E-06 (>0.0)``
-
-.. py:data:: .scan.xy.spiral.r_out(float)
-
-   *(83)* Outer radius
-
-   
-
-   *default* = ``3.00E-05 (>0.0)``
-
-.. py:data:: .scan.xy.spiral_roi(Param)
-
-   *(84)* Spiral - ROI pattern parameters
-
-   
-
-   *default* = ``None``
-
-.. py:data:: .scan.xy.spiral_roi.dr(float)
-
-   *(85)* Spiral arm spacing
-
-   
-
-   *default* = ``2.00E-06 (>0.0)``
-
-.. py:data:: .scan.xy.spiral_roi.lx(float)
-
-   *(86)* ROI dimension in x
-
-   
-
-   *default* = ``2.00E-05 (>0.0)``
-
-.. py:data:: .scan.xy.spiral_roi.ly(float)
-
-   *(87)* ROI dimension in y
-
-   
-
-   *default* = ``2.00E-05 (>0.0)``
 
 .. py:data:: .scan.illumination(Param)
 
-   *(88)* Illumination model (probe)
+   *(73)* Illumination model (probe)
 
    
+   In script, you may pass directly a three dimensional  numpy.ndarray here instead of a `Param`. This array will be copied to the storage instance with no checking whatsoever. Used in `~ptypy.core.illumination`
 
    *default* = ``None (>0.0)``
 
 .. py:data:: .scan.illumination.model(str)
 
-   *(89)* Type of illumination model
+   *(74)* Type of illumination model
 
    One of:
-   `None` : model initialitziation defaults to flat array filled with the specified number of photons
-   `recon` : load model from previous reconstruction, see `recon` Parameters
-   `stxm` : Estimate model from autocorrelation of mean diffraction data
-   `<resource>` : one of ptypys internal image resource strings
-   `<template>` : one of the templates inillumination module
-   In script, you may pass a numpy.array here directly as the model
+    - ``None`` : model initialitziation defaults to flat array filled with the specified number of photons
+    - ``'recon'`` : load model from previous reconstruction, see `recon` Parameters
+    - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
+    - *<resource>* : one of ptypys internal image resource strings
+    - *<template>* : one of the templates inillumination module
+   
+   In script, you may pass a numpy.ndarray here directly as the model. It is considered as incoming wavefront and will be propagated according to `propagation` with an optional `aperture` applied before
 
    *default* = ``None``
 
 .. py:data:: .scan.illumination.photons(int)
 
-   *(90)* Number of photons in the incident illumination
+   *(75)* Number of photons in the incident illumination
 
-   
+   A value specified here will take precedence over calculated statistics from the loaded data.
 
    *default* = ``None (>0)``
 
 .. py:data:: .scan.illumination.recon(Param)
 
-   *(91)* Parameters to load from previous reconstruction
+   *(76)* Parameters to load from previous reconstruction
 
    
 
@@ -805,7 +688,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.illumination.recon.rfile(file)
 
-   *(92)* Path to a .ptyr compatible file
+   *(77)* Path to a ``.ptyr`` compatible file
 
    
 
@@ -813,23 +696,23 @@ Ptypy parameter structure
 
 .. py:data:: .scan.illumination.recon.ID(NoneType)
 
-   *(93)* ID (label) of storage data to load
+   *(78)* ID (label) of storage data to load
 
-   `None` is any ID
+   ``None`` means any ID
 
    *default* = ``None``
 
 .. py:data:: .scan.illumination.recon.layer(float)
 
-   *(94)* Layer (mode) of storage data to load
+   *(79)* Layer (mode) of storage data to load
 
-   `None` is all layers, choose `0` for main mode
+   ``None`` means all layers, choose ``0`` for main mode
 
    *default* = ``None``
 
 .. py:data:: .scan.illumination.stxm(Param)
 
-   *(95)* Parameters to initialize illumination from diffraction data
+   *(80)* Parameters to initialize illumination from diffraction data
 
    
 
@@ -837,15 +720,15 @@ Ptypy parameter structure
 
 .. py:data:: .scan.illumination.stxm.label(str)
 
-   *(96)* Scan label of diffraction that is to be used for probe estimate
+   *(81)* Scan label of diffraction that is to be used for probe estimate
 
-   `None`, own scan label is used
+   ``None``, own scan label is used
 
    *default* = ``None``
 
 .. py:data:: .scan.illumination.aperture(Param)
 
-   *(97)* Beam aperture parameters
+   *(82)* Beam aperture parameters
 
    
 
@@ -853,39 +736,37 @@ Ptypy parameter structure
 
 .. py:data:: .scan.illumination.aperture.form(str)
 
-   *(98)* One of None, 'rect' or 'circ'
+   *(83)* One of None, 'rect' or 'circ'
 
    One of:
-   
-    - None: no aperture, this may be useful for nearfield
-    - 'rect': rectangular aperture
-    - 'circ': circular aperture
+    - ``None`` : no aperture, this may be useful for nearfield
+    - ``'rect'`` : rectangular aperture
+    - ``'circ'`` : circular aperture
 
    *default* = ``circ (>0.0)``
 
 .. py:data:: .scan.illumination.aperture.diffuser(float)
 
-   *(99)* Noise in the transparen part of the aperture
+   *(84)* Noise in the transparen part of the aperture
 
    Can be either:
-   
-   - None : no noise
-   - 2-tuple: noise in phase (amplitude (rms), minimum feature size)
-   - 4-tuple: noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+   - ``None`` : no noise
+   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
 
    *default* = ``None (>0.0)``
 
 .. py:data:: .scan.illumination.aperture.size(float)
 
-   *(100)* Aperture width or diameter
+   *(85)* Aperture width or diameter
 
-   May also be a tuple (vertical,horizontal) for size in case of an asymmetric aperture 
+   May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture 
 
    *default* = ``None (>0.0)``
 
 .. py:data:: .scan.illumination.aperture.edge(int)
 
-   *(101)* Edge width of aperture (in pixels!)
+   *(86)* Edge width of aperture (in pixels!)
 
    
 
@@ -893,15 +774,15 @@ Ptypy parameter structure
 
 .. py:data:: .scan.illumination.aperture.central_stop(float)
 
-   *(102)* size of central stop as a fraction of aperture.size
+   *(87)* size of central stop as a fraction of aperture.size
 
-   If not None: places a central beam stop in aperture. The value given here is the fraction of the stop compared to size 
+   If not None: places a central beam stop in aperture. The value given here is the fraction of the beam stop compared to `size` 
 
    *default* = ``None (>0.0, <1.0)``
 
 .. py:data:: .scan.illumination.aperture.offset(float, tuple)
 
-   *(103)* Offset between center of aperture and optical axes
+   *(88)* Offset between center of aperture and optical axes
 
    May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset
 
@@ -909,67 +790,67 @@ Ptypy parameter structure
 
 .. py:data:: .scan.illumination.propagation(Param)
 
-   *(104)* Parameters for propagation after aperture plane
+   *(89)* Parameters for propagation after aperture plane
 
-   Propagation to focus takes precedence to parallel propagation if foccused is not None
+   Propagation to focus takes precedence to parallel propagation if `foccused` is not ``None``
 
    *default* = ``None``
 
 .. py:data:: .scan.illumination.propagation.parallel(float)
 
-   *(105)* Parallel propagation distance
+   *(90)* Parallel propagation distance
 
-   If None or 0 : No parallel propagation 
+   If ``None`` or ``0`` : No parallel propagation 
 
    *default* = ``None``
 
 .. py:data:: .scan.illumination.propagation.focussed(float)
 
-   *(106)* Propagation distance from aperture to focus
+   *(91)* Propagation distance from aperture to focus
 
-   If None or 0 : No focus propagation 
+   If ``None`` or ``0`` : No focus propagation 
 
    *default* = ``None``
 
 .. py:data:: .scan.illumination.propagation.antialiasing(float)
 
-   *(107)* Antialiasing factor
+   *(92)* Antialiasing factor
 
    Antialiasing factor used when generating the probe. (numbers larger than 2 or 3 are memory hungry)
+   **[Untested]**
 
    *default* = ``1``
 
 .. py:data:: .scan.illumination.propagation.spot_size(float)
 
-   *(108)* Focal spot diameter
+   *(93)* Focal spot diameter
 
-   If not None, this parameter is used to generate the appropriate aperture size instead of aperture.size
+   If not ``None``, this parameter is used to generate the appropriate aperture size instead of :any:`size`
 
    *default* = ``None (>0.0)``
 
 .. py:data:: .scan.illumination.diversity(Param)
 
-   *(109)* Probe mode(s) diversity parameters
+   *(94)* Probe mode(s) diversity parameters
 
-   Can be `None` i.e. no diversity
+   Can be ``None`` i.e. no diversity
 
    *default* = ``None``
 
 .. py:data:: .scan.illumination.diversity.noise(tuple)
 
-   *(110)* Noise in the generated modes of the illumination 
+   *(95)* Noise in the generated modes of the illumination 
 
    Can be either:
-   
-   - None : no noise
-   - 2-tuple: noise in phase (amplitude (rms), minimum feature size)
-   - 4-tuple: noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+   - ``None`` : no noise
+   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
 
    *default* = ``None``
 
 .. py:data:: .scan.illumination.diversity.power(tuple, float)
 
-   *(111)* Power of modes relative to main mode (zero-layer)
+   *(96)* Power of modes relative to main mode (zero-layer)
 
    
 
@@ -977,37 +858,38 @@ Ptypy parameter structure
 
 .. py:data:: .scan.illumination.diversity.shift(float)
 
-   *(112)* Lateral shift of modes relative to main mode
+   *(97)* Lateral shift of modes relative to main mode
 
-   [not implemented]
+   **[not implemented]**
 
    *default* = ``None``
 
 .. py:data:: .scan.sample(Param)
 
-   *(113)* Initial object modelization parameters
+   *(98)* Initial object modelization parameters
 
-   
+   In script, you may pass a numpy.array here directly as the model. This array will be passed to the storage instance with no checking whatsoever. Used in `~ptypy.core.sample`
 
    *default* = ``None (>0.0)``
 
 .. py:data:: .scan.sample.model(str)
 
-   *(114)* Type of initial object model
+   *(99)* Type of initial object model
 
    One of:
-   `None` : model initialitziation defaults to flat array filled `fill`
-   `recon` : load model from STXM analysis of diffraction data
-   `stxm` : Estimate model from autocorrelation of mean diffraction data
-   `<resource>` : one of ptypys internal model resource strings
-   `<template>` : one of the templates in sample module
-   In script, you may pass a numpy.array here directly as the model
+    - ``None`` : model initialitziation defaults to flat array filled `fill`
+    - ``'recon'`` : load model from STXM analysis of diffraction data
+    - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
+    - *<resource>* : one of ptypys internal model resource strings
+    - *<template>* : one of the templates in sample module
+   
+   In script, you may pass a numpy.array here directly as the model. This array will be processed according to `process` in order to *simulate* a sample from e.g. a thickness profile.
 
    *default* = ``None``
 
-.. py:data:: .scan.sample.fill(float)
+.. py:data:: .scan.sample.fill(float, complex)
 
-   *(115)* Default fill value
+   *(100)* Default fill value
 
    
 
@@ -1015,7 +897,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.sample.recon(Param)
 
-   *(116)* Parameters to load from previous reconstruction
+   *(101)* Parameters to load from previous reconstruction
 
    
 
@@ -1023,7 +905,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.sample.recon.rfile(file)
 
-   *(117)* Path to a .ptyr compatible file
+   *(102)* Path to a ``.ptyr`` compatible file
 
    
 
@@ -1031,23 +913,23 @@ Ptypy parameter structure
 
 .. py:data:: .scan.sample.recon.ID(NoneType)
 
-   *(118)* ID (label) of storage data to load
+   *(103)* ID (label) of storage data to load
 
-   `None` is any ID
+   ``None`` is any ID
 
    *default* = ``None``
 
 .. py:data:: .scan.sample.recon.layer(float)
 
-   *(119)* Layer (mode) of storage data to load
+   *(104)* Layer (mode) of storage data to load
 
-   `None` is all layers, choose `0` for main mode
+   ``None`` is all layers, choose ``0`` for main mode
 
    *default* = ``None``
 
 .. py:data:: .scan.sample.stxm(Param)
 
-   *(120)* STXM analysis parameters
+   *(105)* STXM analysis parameters
 
    
 
@@ -1055,23 +937,23 @@ Ptypy parameter structure
 
 .. py:data:: .scan.sample.stxm.label(str)
 
-   *(121)* Scan label of diffraction that is to be used for probe estimate
+   *(106)* Scan label of diffraction that is to be used for probe estimate
 
-   `None`, own scan label is used
+   ``None``, own scan label is used
 
    *default* = ``None``
 
 .. py:data:: .scan.sample.process(Param)
 
-   *(122)* Model processing parameters
+   *(107)* Model processing parameters
 
-   Can be `None`, i.e. no processing
+   Can be ``None``, i.e. no processing
 
    *default* = ``None``
 
 .. py:data:: .scan.sample.process.offset(tuple)
 
-   *(123)* Offset between center of object array and scan pattern
+   *(108)* Offset between center of object array and scan pattern
 
    
 
@@ -1079,75 +961,74 @@ Ptypy parameter structure
 
 .. py:data:: .scan.sample.process.zoom(tuple)
 
-   *(124)* Zoom value for object simulation.
+   *(109)* Zoom value for object simulation.
 
-   If None, leave the array untouched. Otherwise the modeled or loaded image will be resized using scipy.ndimage.zoom.
+   If ``None``, leave the array untouched. Otherwise the modeled or loaded image will be resized using :any:`zoom`.
 
    *default* = ``None (>0.0)``
 
 .. py:data:: .scan.sample.process.formula(str)
 
-   *(125)* Chemical formula
+   *(110)* Chemical formula
 
-   
+   A Formula compatible with a cxro database query,e.g. ``'Au'`` or ``'NaCl'`` or ``'H2O'`` 
 
    *default* = ``None``
 
 .. py:data:: .scan.sample.process.density(float)
 
-   *(126)* Density in [g/ccm]
+   *(111)* Density in [g/ccm]
 
-   Only used if formula is not None
+   Only used if `formula` is not None
 
    *default* = ``1``
 
 .. py:data:: .scan.sample.process.thickness(float)
 
-   *(127)* Maximum thickness of sample
+   *(112)* Maximum thickness of sample
 
-   if None, the absolute values of loaded source array will be used
+   If ``None``, the absolute values of loaded source array will be used
 
    *default* = ``1.00E-06``
 
 .. py:data:: .scan.sample.process.ref_index(complex)
 
-   *(128)* Assigned refractive index
+   *(113)* Assigned refractive index
 
-   If None, treat source array as projection of refractive index. If a refractive index is provided the array's absolute value will be used to scale the refractive index.
+   If ``None``, treat source array as projection of refractive index. If a refractive index is provided the array's absolute value will be used to scale the refractive index.
 
    *default* = ``0.5+0.j (>0.0)``
 
 .. py:data:: .scan.sample.process.smoothing(int)
 
-   *(129)* Smoothing scale
+   *(114)* Smoothing scale
 
-   Smooth the projection with gaussian kernel of width given by smoothing_mfs
+   Smooth the projection with gaussian kernel of width given by `smoothing_mfs`
 
    *default* = ``2 (>0)``
 
 .. py:data:: .scan.sample.diversity(Param)
 
-   *(130)* Probe mode(s) diversity parameters
+   *(115)* Probe mode(s) diversity parameters
 
-   Can be `None` i.e. no diversity
+   Can be ``None`` i.e. no diversity
 
    *default* = ``None``
 
 .. py:data:: .scan.sample.diversity.noise(tuple)
 
-   *(131)* Noise in the generated modes of the illumination 
+   *(116)* Noise in the generated modes of the illumination 
 
    Can be either:
-   
-   - None : no noise
-   - 2-tuple: noise in phase (amplitude (rms), minimum feature size)
-   - 4-tuple: noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+   - ``None`` : no noise
+   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
 
    *default* = ``None``
 
 .. py:data:: .scan.sample.diversity.power(tuple, float)
 
-   *(132)* Power of modes relative to main mode (zero-layer)
+   *(117)* Power of modes relative to main mode (zero-layer)
 
    
 
@@ -1155,15 +1036,15 @@ Ptypy parameter structure
 
 .. py:data:: .scan.sample.diversity.shift(float)
 
-   *(133)* Lateral shift of modes relative to main mode
+   *(118)* Lateral shift of modes relative to main mode
 
-   [not implemented]
+   **[not implemented]**
 
    *default* = ``None``
 
 .. py:data:: .scan.coherence(Param)
 
-   *(134)* Coherence parameters
+   *(119)* Coherence parameters
 
    
 
@@ -1171,7 +1052,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.coherence.num_probe_modes(int)
 
-   *(135)* Number of probe modes
+   *(120)* Number of probe modes
 
    
 
@@ -1179,7 +1060,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.coherence.num_object_modes(int)
 
-   *(136)* Number of object modes
+   *(121)* Number of object modes
 
    
 
@@ -1187,7 +1068,7 @@ Ptypy parameter structure
 
 .. py:data:: .scan.coherence.spectrum(list)
 
-   *(137)* Amplitude of relative energy bins if the probe modes have a different energy
+   *(122)* Amplitude of relative energy bins if the probe modes have a different energy
 
    
 
@@ -1195,25 +1076,27 @@ Ptypy parameter structure
 
 .. py:data:: .scan.coherence.object_dispersion(str)
 
-   *(138)* Energy dispersive response of the object
+   *(123)* Energy dispersive response of the object
 
    One of:
+    - ``None`` or ``'achromatic'``: no dispersion
+    - ``'linear'``: linear response model
+    - ``'irregular'``: no assumption
    
-    - None or 'achromatic': no dispersion
-    - 'linear': linear response model
-    - 'irregular': no assumption
+   **[not implemented]**
 
    *default* = ``None``
 
 .. py:data:: .scan.coherence.probe_dispersion(str)
 
-   *(139)* Energy dispersive response of the probe
+   *(124)* Energy dispersive response of the probe
 
    One of:
+    - ``None`` or ``'achromatic'``: no dispersion
+    - ``'linear'``: linear response model
+    - ``'irregular'``: no assumption
    
-    - None or 'achromatic': no dispersion
-    - 'linear': linear response model
-    - 'irregular': no assumption
+   **[not implemented]**
 
    *default* = ``None``
 
@@ -1223,7 +1106,7 @@ Ptypy parameter structure
 
 .. py:data:: .scans(Param)
 
-   *(140)* Container for instances of 'scan' parameters
+   *(125)* Param container for instances of `scan` parameters
 
    
 
@@ -1231,7 +1114,7 @@ Ptypy parameter structure
 
 .. py:data:: .scans.scan_%d(scan)
 
-   *(141)* 
+   *(126)* 
 
    
 
@@ -1243,7 +1126,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine(Param)
 
-   *(142)* Reconstruction engine parameters
+   *(127)* Reconstruction engine parameters
 
    
 
@@ -1251,7 +1134,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.common(Param)
 
-   *(143)* Parameters common to all engines
+   *(128)* Parameters common to all engines
 
    
 
@@ -1259,7 +1142,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.common.numiter(int)
 
-   *(144)* Total number of iterations
+   *(129)* Total number of iterations
 
    
 
@@ -1267,7 +1150,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.common.numiter_contiguous(int)
 
-   *(145)* Number of iterations without interruption
+   *(130)* Number of iterations without interruption
 
    The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...)
 
@@ -1275,7 +1158,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.common.probe_support(float)
 
-   *(146)* Fraction of valid probe area (circular) in probe frame
+   *(131)* Fraction of valid probe area (circular) in probe frame
 
    
 
@@ -1283,7 +1166,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.common.clip_object(tuple)
 
-   *(147)* Clip object amplitude into this intrervall
+   *(132)* Clip object amplitude into this intrervall
 
    
 
@@ -1291,7 +1174,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM(Param)
 
-   *(148)* Parameters for Difference map engine
+   *(133)* Parameters for Difference map engine
 
    
 
@@ -1299,7 +1182,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.alpha(int)
 
-   *(149)* Difference map parameter
+   *(134)* Difference map parameter
 
    
 
@@ -1307,7 +1190,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.probe_update_start(int)
 
-   *(150)* Number of iterations before probe update starts
+   *(135)* Number of iterations before probe update starts
 
    
 
@@ -1315,7 +1198,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.update_object_first(bool)
 
-   *(151)* If False update object before probe
+   *(136)* If False update object before probe
 
    
 
@@ -1323,7 +1206,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.overlap_converge_factor(float)
 
-   *(152)* Threshold for interruption of the inner overlap loop
+   *(137)* Threshold for interruption of the inner overlap loop
 
    The inner overlap loop refines the probe and the object simultaneously. This loop is escaped as soon as the overall change in probe, relative to the first iteration, is less than this value.
 
@@ -1331,7 +1214,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.overlap_max_iterations(int)
 
-   *(153)* Maximum of iterations for the overlap constraint inner loop
+   *(138)* Maximum of iterations for the overlap constraint inner loop
 
    
 
@@ -1339,7 +1222,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.probe_inertia(float)
 
-   *(154)* Weight of the current probe estimate in the update
+   *(139)* Weight of the current probe estimate in the update
 
    
 
@@ -1347,7 +1230,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.object_inertia(float)
 
-   *(155)* Weight of the current object in the update
+   *(140)* Weight of the current object in the update
 
    
 
@@ -1355,7 +1238,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.fourier_relax_factor(float)
 
-   *(156)* If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
+   *(141)* If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
 
    Set this value higher for noisy data
 
@@ -1363,7 +1246,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.obj_smooth_std(int)
 
-   *(157)* Gaussian smoothing (pixel) of the current object prior to update
+   *(142)* Gaussian smoothing (pixel) of the current object prior to update
 
    If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
 
@@ -1371,7 +1254,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML(Param)
 
-   *(158)* Maximum Likelihood parameters
+   *(143)* Maximum Likelihood parameters
 
    
 
@@ -1379,7 +1262,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.type(str)
 
-   *(159)* Likelihood model. One of 'gaussian', 'poisson' or 'euclid'
+   *(144)* Likelihood model. One of 'gaussian', 'poisson' or 'euclid'
 
    [only 'gaussian' is implemented for now]
 
@@ -1387,7 +1270,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.floating_intensities(bool)
 
-   *(160)* If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).
+   *(145)* If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).
 
    
 
@@ -1395,7 +1278,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.intensity_renormalization(float)
 
-   *(161)* A rescaling of the intensity so they can be interpreted as Poisson counts.
+   *(146)* A rescaling of the intensity so they can be interpreted as Poisson counts.
 
    
 
@@ -1403,7 +1286,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.reg_del2(bool)
 
-   *(162)* Whether to use a Gaussian prior (smoothing) regularizer.
+   *(147)* Whether to use a Gaussian prior (smoothing) regularizer.
 
    
 
@@ -1411,7 +1294,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.reg_del2_amplitude(float)
 
-   *(163)* Amplitude of the Gaussian prior if used.
+   *(148)* Amplitude of the Gaussian prior if used.
 
    
 
@@ -1419,7 +1302,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.smooth_gradient(float)
 
-   *(164)* Smoothing preconditioner. If 0, not used, if > 0 gaussian filter if < 0 Hann window.
+   *(149)* Smoothing preconditioner. If 0, not used, if > 0 gaussian filter if < 0 Hann window.
 
    
 
@@ -1427,7 +1310,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.scale_precond(bool)
 
-   *(165)* Whether to use the object/probe scaling preconditioner.
+   *(150)* Whether to use the object/probe scaling preconditioner.
 
    This parameter can give faster convergence for weakly scattering samples.
 
@@ -1435,7 +1318,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.scale_probe_object(float)
 
-   *(166)* Relative scale of probe to object.
+   *(151)* Relative scale of probe to object.
 
    
 
@@ -1443,7 +1326,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.probe_update_start(int)
 
-   *(167)* Number of iterations before probe update starts
+   *(152)* Number of iterations before probe update starts
 
    
 
@@ -1455,7 +1338,7 @@ Ptypy parameter structure
 
 .. py:data:: .engines(Param)
 
-   *(168)* Container for instances of "engine" parameters
+   *(153)* Container for instances of "engine" parameters
 
    All engines registered in this structure will be executed sequentially.
 
@@ -1463,7 +1346,7 @@ Ptypy parameter structure
 
 .. py:data:: .engines.engine_%d(engine)
 
-   *(169)* 
+   *(154)* 
 
    
 

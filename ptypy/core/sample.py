@@ -27,7 +27,6 @@ logger = u.verbose.logger
 TEMPLATES = dict()
 
 DEFAULT_process = u.Param(
-    diffuser = None,            # (float) Noise in the object fill
     offset = 0,               # (float,tuple) Offset between center of object array and scan pattern (in pixel)
     zoom = None,                #(float,tuple) Zoom value for object simulation.
     formula = None,             #(str) Chemical formula

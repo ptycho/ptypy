@@ -23,12 +23,11 @@ DEFAULT=u.Param(
     model = None,                # [None,'round', 'raster', 'spiral' or array-like]
     extent = 15e-6,               # round_roi: Width of ROI 
     spacing = 1.5e-6,               # raster scan: step size (grid spacing)
-    layers = 10,
+    steps = 10,
     offset = 0,               # raster scan: step size (grid spacing)
     jitter = None,
     count = None,
 )
-#DEFAULT = u.validator.make_sub_default('.scan.xy',depth=3)
 """Default pattern parameters. See :py:data:`.scan.xy` and a short listing below"""
 
 def from_pars(xypars=None):
@@ -65,13 +64,13 @@ def from_pars(xypars=None):
         if type(p.model) in [np.ndarray, list]:
             pos = np.asarray(p.model)
         elif p.model=='round':
-            e,l,s =_complete(p.extent,p.layers,p.spacing)
+            e,l,s =_complete(p.extent,p.steps,p.spacing)
             pos=round_scan(s[0],l[0]/2)
         elif p.model=='spiral':
-            e,l,s =_complete(p.extent,p.layers,p.spacing)
+            e,l,s =_complete(p.extent,p.steps,p.spacing)
             pos=spiral_scan(s[0],e[0]/2)
         elif p.model=='raster':
-            e,l,s =_complete(p.extent,p.layers,p.spacing)
+            e,l,s =_complete(p.extent,p.steps,p.spacing)
             pos=raster_scan(s[0],s[1],l[0],l[1])
         else:
             raise NameError('Unknown pattern type %s' % str(p.model))
@@ -97,20 +96,20 @@ def from_pars(xypars=None):
         logger.info('Prepared %d positions' % len(pos))
         return pos
         
-def _complete(extent,layers,spacing):
-    a = np.sum([item is None for item in [extent,layers,spacing]])
+def _complete(extent,steps,spacing):
+    a = np.sum([item is None for item in [extent,steps,spacing]])
     if a>=2:
         raise ValueError('Only one of <extent>, <layer> or <spacing> may be None')
-    elif layers is None:
+    elif steps is None:
         e = u.expect2(extent)
         s = u.expect2(spacing)
         l = e / s 
     elif spacing is None:
         e = u.expect2(extent)
-        l = u.expect2(layers)
+        l = u.expect2(steps)
         s = e / l
     else:
-        l = u.expect2(layers)
+        l = u.expect2(steps)
         s = u.expect2(spacing)
         e = l * s
         
@@ -184,7 +183,7 @@ def round_scan(dr=1.5e-6, nr=5, nth=5, bullseye=True):
     Returns
     -------
     pos : ndarray
-        A (N,2)-array of positions. It is ``N = (nx+1)*(nx+1)``
+        A (N,2)-array of positions. 
         
         
     Examples
@@ -223,7 +222,7 @@ def spiral_scan(dr=1.5e-6, r=7.5e-6,maxpts=None):
     Returns
     -------
     pos : ndarray
-        A (N,2)-array of positions. It is ``N = (nx+1)*(nx+1)``
+        A (N,2)-array of positions. It is 
         
         
     Examples
