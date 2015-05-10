@@ -16,6 +16,7 @@ Contents:
    rst/ptypyclasses
    rst/ownengine
    rst/mathtest
+   rst/ptyd
    rst/ptypy
    rst/parameters   
 

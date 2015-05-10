@@ -689,7 +689,7 @@ class PtyScan(object):
         process, starting from frame `start` at a request of `frames_requested`.
         
         This method is supposed to return the number of accessible frames
-        for preparation and should detemernie if data acquistion for this
+        for preparation and should determine if data acquistion for this
         scan is finished.
         
         Parameters

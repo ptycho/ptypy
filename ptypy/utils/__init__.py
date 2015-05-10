@@ -15,7 +15,7 @@ from scripts import *
 from parameters import *
 #import propagation as prop
 from embedded_shell import ipshell
-from plot_client import PlotClient, MPLClient, spawn_MPLClient
+from plot_client import PlotClient, MPLClient, spawn_MPLClient, MPLplotter
 import validator
 import parallel
 

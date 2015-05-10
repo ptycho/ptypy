@@ -23,6 +23,7 @@ __all__ = ['edfread']
 DATATYPES = {'UnsignedByte': np.uint8,
              'UnsignedShort': np.uint16,
              'SignedInteger': np.uint32,
+             'SignedLong' : np.int32,
              'UnsignedInteger': np.uint32,
              'UnsignedInt' : np.uint32,
              'UnsignedLong' : np.uint32,

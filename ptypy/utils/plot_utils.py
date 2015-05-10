@@ -10,13 +10,12 @@ import numpy as np
 import time
 import sys
 from PIL import Image
-import weakref
 import matplotlib as mpl
 import matplotlib.cm
 import matplotlib.pyplot as plt
-import pylab
 from .verbose import logger
- 
+from .array_utils import grids
+
 __all__ = ['pause','rmphaseramp','plot_storage','imsave','imload',\
          'complex2hsv', 'complex2rgb', 'hsv2rgb','rgb2complex', 'rgb2hsv',\
          'hsv2complex', 'franzmap']
@@ -125,41 +124,6 @@ else:
             if message is not None:
                 print message
             time.sleep(timeout)
-
-
-'''\
-def P1A_to_HSV(cin):
-    """\
-    Transform a complex array into an RGB image,
-    mapping phase to hue, amplitude to value and
-    keeping maximum saturation.
-    """
-
-    # HSV channels
-    h = .5*np.angle(cin)/np.pi + .5
-    s = np.ones(cin.shape)
-    v = abs(cin)
-    v /= v.max()
-
-    i = (6.*h).astype(int)
-    f = (6.*h) - i
-    q = v*(1. - f)
-    t = v*f
-    i0 = (i%6 == 0)
-    i1 = (i == 1)
-    i2 = (i == 2)
-    i3 = (i == 3)
-    i4 = (i == 4)
-    i5 = (i == 5)
-
-    imout = np.zeros(cin.shape + (3,), 'uint8')
-    imout[:,:,0] = 255*(i0*v + i1*q + i4*t + i5*v)
-    imout[:,:,1] = 255*(i0*t + i1*v + i2*v + i3*q)
-    imout[:,:,2] = 255*(i2*t + i3*v + i4*v + i5*q)
-
-    return imout
-'''
-# aliases. maybe get deleted
 
 def complex2hsv(cin, vmin=None, vmax=None):
     """\
@@ -361,7 +325,7 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
     if a.dtype.kind == 'c':
         # Image is complex
         if cmap is not None:
-            logger.info('imsave: Ignoring provided cmap - input array is complex')
+            #logger.debug('imsave: Ignoring provided cmap - input array is complex')
         i = complex2rgb(a, vmin=None, vmax=None)
         im = Image.fromarray(np.uint8(i), mode='RGB')
 
@@ -432,51 +396,51 @@ def franzmap():
     mpl.pyplot.draw_if_interactive()
     
     
-def _plot_3d_array(data, axis=0, title='3d', cmap='gray', interpolation='nearest', vmin=None, vmax=None,**kwargs):
-    '''
-    plots 3d data with a slider to change the third dimension
-    unfortunately the number that the slider shows is rounded weirdly.. be careful!
-    TODO: fix that!
+#def _plot_3d_array(data, axis=0, title='3d', cmap='gray', interpolation='nearest', vmin=None, vmax=None,**kwargs):
+    #'''
+    #plots 3d data with a slider to change the third dimension
+    #unfortunately the number that the slider shows is rounded weirdly.. be careful!
+    #TODO: fix that!
 
-    input:
-        - data: 3d numpy array containing the data
-        - axis: axis that should be changeable by the slider
+    #input:
+        #- data: 3d numpy array containing the data
+        #- axis: axis that should be changeable by the slider
 
-    author: Mathias Marschner
-    added: 30.10.2013
-    '''
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    plt.title(title)
+    #author: Mathias Marschner
+    #added: 30.10.2013
+    #'''
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111)
+    #plt.title(title)
 
-    if vmin == None:
-        vmin = data.min()
-    if vmax == None:
-        vmax = data.max()
+    #if vmin == None:
+        #vmin = data.min()
+    #if vmax == None:
+        #vmax = data.max()
 
-    if axis == 0:
-        cax = ax.imshow(data[data.shape[0]/2,:,:], cmap=cmap, vmin=vmin, vmax=vmax, interpolation=interpolation,**kwargs)
-    elif axis == 1:
-        cax = ax.imshow(data[:,data.shape[1]/2,:], cmap=cmap, vmin=vmin, vmax=vmax, interpolation=interpolation,**kwargs)
-    elif axis == 2:
-        cax = ax.imshow(data[:,:,data.shape[2]/2], cmap=cmap, vmin=vmin, vmax=vmax, interpolation=interpolation,**kwargs)
+    #if axis == 0:
+        #cax = ax.imshow(data[data.shape[0]/2,:,:], cmap=cmap, vmin=vmin, vmax=vmax, interpolation=interpolation,**kwargs)
+    #elif axis == 1:
+        #cax = ax.imshow(data[:,data.shape[1]/2,:], cmap=cmap, vmin=vmin, vmax=vmax, interpolation=interpolation,**kwargs)
+    #elif axis == 2:
+        #cax = ax.imshow(data[:,:,data.shape[2]/2], cmap=cmap, vmin=vmin, vmax=vmax, interpolation=interpolation,**kwargs)
 
-    cbar = fig.colorbar(cax)
-    axcolor = 'lightgoldenrodyellow'
-    ax4 = pylab.axes([0.1, 0.01, 0.8, 0.03], axisbg=axcolor)
-    sframe = pylab.Slider(ax4, '', 0, data.shape[axis]-1, valinit=data.shape[axis]/2, closedmin = True, closedmax = True, valfmt = '%d')
+    #cbar = fig.colorbar(cax)
+    #axcolor = 'lightgoldenrodyellow'
+    #ax4 = pylab.axes([0.1, 0.01, 0.8, 0.03], axisbg=axcolor)
+    #sframe = pylab.Slider(ax4, '', 0, data.shape[axis]-1, valinit=data.shape[axis]/2, closedmin = True, closedmax = True, valfmt = '%d')
 
-    def update(val):
-        frame = np.around(np.clip(sframe.val, 0, data.shape[axis]-1))
-        if axis == 0:
-            cax.set_data(data[frame,:,:])
-        elif axis == 1:
-            cax.set_data(data[:,frame,:])
-        elif axis == 2:
-            cax.set_data(data[:,:,frame])
+    #def update(val):
+        #frame = np.around(np.clip(sframe.val, 0, data.shape[axis]-1))
+        #if axis == 0:
+            #cax.set_data(data[frame,:,:])
+        #elif axis == 1:
+            #cax.set_data(data[:,frame,:])
+        #elif axis == 2:
+            #cax.set_data(data[:,:,frame])
 
-    sframe.on_changed(update)
-    return ax     
+    #sframe.on_changed(update)
+    #return ax     
 
 def rmphaseramp(a, weight=None, return_phaseramp=False):
     """\
@@ -600,6 +564,187 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
     return fig
 
 
+class PtyAxis(object):
+    def __init__(self,ax=None, data = None, channel='a',cmap = None, fontsize = 8):
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        self.ax = ax
+        if data is not None:
+            self.set_data(data, False)
+        else:
+            self.shape =None
+            self.data= None
+        self.set_channel(channel,False)
+        self.set_cmap(cmap, False)
+        self.remove_phase_ramp = True
+        self.cax = None
+        self.vmin = None
+        self.vmax = None
+        self.mn = None
+        self.mx = None
+        self.mask = None
+        self.fontsize = fontsize
+         
+    def set_psize(self,psize, update=True):
+        assert np.isscalar(psize) ,'Pixel size must be scalar value'
+        self.psize=np.abs(psize)
+        if update:
+            self._update()
+    
+    def set_channel(self,channel, update=True):
+        assert channel in ['a','c','p'], 'Channel must be either (a)bs, (p)hase or (c)omplex'
+        self.channel=channel
+        if update:
+            self._update()
+            self._update_colorscale()
+            
+    def set_cmap(self,cmap, update=True):
+        try:
+            self.cmap = mpl.cm.get_cmap(cmap)
+        except:
+            logger.debug("Colormap `%s` not found. Using `gray`" %str(cmap))
+            self.cmap = mpl.cm.get_cmap('gray')
+        if update:
+            self._update()
+            self._update_colorscale()
+            
+    def set_clim(self,vmin,vmax, update=True):
+        self.vmin=vmin
+        self.vmax=vmax
+        assert vmin<vmax
+        if update:
+            self._update()
+            
+    def set_mask(self,mask, update=True):
+        if mask is not None:
+            if np.isscalar(mask) and self.shape is not None:
+                x,y=grids(self.shape)
+                self.mask = (np.sqrt(x**2+y**2)<np.abs(mask))
+            else:
+                self.mask = mask
+                if self.shape is None:
+                    self.shape = self.mask.shape
+                else:
+                    assert self.shape == self.mask.shape
+        else:
+            self.mask=None
+        if update:
+            self._update()
+    
+    def set_data(self,data, update=True):
+        assert data.ndim ==2 ,'Data must be two dimensional. It is %d-dimensional' % data.ndim
+        self.data = data 
+        self.shape = self.data.shape
+        if update:
+            self._update()
+        
+    def _update(self):
+        if str(self.channel)=='a':
+            imdata = np.abs(self.data)
+        elif str(self.channel)=='p':
+            if self.remove_phase_ramp:
+                if self.mask is not None:
+                    imdata = np.angle(rmphaseramp(self.data,weight = self.mask))
+                else:
+                    imdata = np.angle(rmphaseramp(self.data))
+            else:
+                imdata = np.angle(self.data)
+        elif str(self.channel)=='c':
+            if self.remove_phase_ramp:
+                if self.mask is not None:
+                    imdata = rmphaseramp(self.data,weight = self.mask)
+                else:
+                    imdata = rmphaseramp(self.data)
+        else:
+            imdata = np.abs(self.data)
+        
+        if self.mask is not None:
+            cdata = imdata if str(self.channel) in ['a','p'] else np.abs(self.data) 
+            self.mx = np.max( cdata[self.mask])
+            if self.vmax is None or self.mx<self.vmax:
+                mx = self.mx 
+            self.mn = np.min(cdata[self.mask])
+            if self.vmin is None or self.mn>self.vmin:
+                mn = self.mn
+        else:
+            mn,mx = self.vmin,self.vmax
+        
+        pilim = imsave(imdata,cmap=self.cmap,vmin=mn,vmax=mx) 
+        if not self.ax.images:
+            self.ax.imshow(pilim)
+            plt.setp(self.ax.get_xticklabels(), fontsize=self.fontsize)
+            plt.setp(self.ax.get_yticklabels(), fontsize=self.fontsize, rotation='vertical')
+            self.ax.yaxis.set_major_locator(mpl.ticker.IndexLocator(50,0.5))
+            self.ax.xaxis.set_major_locator(mpl.ticker.IndexLocator(50,0.5))
+        else:
+            self.ax.images[0].set_data(pilim)
+             
+        #plt.draw()
+        self._update_colorbar(mn,mx)
+        
+
+    def _update_colorscale(self,resolution=256):
+        if self.cax is None:
+            return
+        sh = (resolution,int(resolution/self.cax_aspect))
+        psize = (1./sh[0],1./sh[1])
+        cax = self.cax
+        cax.cla()
+        ver, hor = np.indices(sh) * np.asarray(psize).reshape( (len(sh),) + len(sh)*(1,))
+        if str(self.channel)=='c':
+            comcax = ver *np.exp(2j*np.pi*hor)
+            cax.imshow(imsave(comcax),extent=[0,1,0,1], aspect=self.cax_aspect )
+            cax.xaxis.set_visible(True)
+            cax.set_xticks([0.,1.])
+            #cax.set_yticks(np.array([-1,-.5,0,0.5,1.]))
+            plt.setp(self.cax.get_xticklabels(), fontsize=self.fontsize, rotation='vertical')
+            plt.setp(self.cax.get_yticklabels(), fontsize=self.fontsize)
+        else:
+            cax.imshow(ver,cmap=self.cmap,extent=[0,1,0,1],aspect=self.cax_aspect )
+            plt.setp(self.cax.get_yticklabels(), fontsize=self.fontsize)
+            cax.xaxis.set_visible(False)
+        #self.cax.axis('tight')
+        self.cax.invert_yaxis()
+        self._update_colorbar()
+        plt.draw()
+        
+    def _update_colorbar(self,mn=None,mx=None):
+        mn = mn if mn is not None else self.mn
+        mn = 0 if mn is None else mn
+        mx = mx if mx is not None else self.mx
+        mx = 1 if mx is None else mx
+        try:
+            dyn = mx/(mn+1e-10)
+            dyn = max((4-np.log10(dyn),0))
+            form = '%1.'+str(int(np.ceil(dyn)))+'f'
+        except BaseException:
+            form = '%1.1f'
+        if self.cax is None:
+            return
+        a = self.ax.get_position().bounds
+        b = self.cax.get_position().bounds
+
+        self.cax.set_position((b[0],a[1],self.cax_width,a[3]))
+        
+        if self.channel =='c':
+            formatter = lambda x,y: '%1.2f' % ((1-x)*(2*np.pi)-np.pi)
+            self.cax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
+            
+        self.cax.yaxis.set_major_locator(mpl.ticker.LinearLocator(max((int(a[3]*20),5))))
+        formatter = lambda x,y: form % ((1-x)*(mx-mn)+mn)
+        self.cax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
+
+    def add_colorbar(self, aspect =10,fraction= 0.2, pad = 0.02,resolution=256):
+        if str(self.channel)=='c':
+            aspect/=2.
+        self.cax_aspect = aspect
+        cax, kw = mpl.colorbar.make_axes_gridspec(self.ax, aspect = aspect,fraction= fraction, pad =pad)
+        cax.yaxis.tick_right()
+        self.cax = cax
+        self.cax_width = cax.get_position().width
+        self._update_colorscale()
+    
 def length_units(number):
     """\
     Doc Todo

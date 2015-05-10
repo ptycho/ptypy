@@ -14,11 +14,11 @@ u.verbose.set_level(3)
 
 p.shape = 128
 p.num_frames = 100
-p.save = 'link'
+p.save = 'append'
 
 MF = data.MoonFlowerScan(p)
 MF.initialize()
-for i in range(10):
+for i in range(20):
     msg = MF.auto(10)
     time.sleep(2)
     u.verbose.logger.info(u.verbose.report(msg), extra={'allprocesses': True})

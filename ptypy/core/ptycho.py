@@ -24,8 +24,7 @@ parallel = u.parallel
 
 __all__ = ['Ptycho','DEFAULT']
 
-DEFAULT_plotclient = u.Param(
-    active = True,
+DEFAULT_autoplot = u.Param(
     interval = 1,
     layout = {},
     dump = True,
@@ -52,7 +51,7 @@ DEFAULT = u.Param(
         engines = {},           # Reconstruction algorithms
         engine = engines.DEFAULTS.copy(),
         interaction = {}, # Client-server communication,
-        plotclient = DEFAULT_plotclient   # Plotting parameters for a client
+        autoplot = DEFAULT_autoplot    # Plotting parameters for a client
 )
 
 class Ptycho(Base):
@@ -211,9 +210,9 @@ class Ptycho(Base):
             
             # start automated plot client
             self.plotter = None
-            if parallel.master and p.plotclient is not None and p.plotclient.active:
+            if parallel.master and p.autoplot and p.autoplot.interval > 0:
                 from multiprocessing import Process
-                self.plotter = Process(target=u.spawn_MPLClient, args=(p.plotclient,))
+                self.plotter = Process(target=u.spawn_MPLClient, args=(p.autoplot,))
                 self.plotter.start()
         else:
             # no interaction wanted

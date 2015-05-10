@@ -1636,7 +1636,7 @@ class POD(Base):
     @property
     def active(self):
         """
-        Convenience property that describes where this pod is active or not.
+        Convenience property that describes whether this pod is active or not.
         Equivalent to ``self.di_view.active``
         """    
         return self.di_view.active

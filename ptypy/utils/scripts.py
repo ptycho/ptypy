@@ -189,7 +189,7 @@ def png2mpg(listoffiles,framefile='frames.txt',fps=5,bitrate=2000,codec='wmv2',E
         file was given will be concatenated in the mavie.
     
     framefile : str
-        Filapath, the respective file will be created to store a list
+        Filepath, the respective file will be created to store a list
         of all frames. This file will be used by mencoder later.
     
     fps : scalar 
@@ -243,11 +243,19 @@ def png2mpg(listoffiles,framefile='frames.txt',fps=5,bitrate=2000,codec='wmv2',E
     import glob
     import re
     framelist=[]
+    
+    # in case of single file path
+    if str(listoffiles)==listoffiles:
+        listoffiles = [listoffiles]
+        
     for frame_or_list in listoffiles:
         if not os.path.isfile(frame_or_list):
             raise ValueError('File %s not found' % frame_or_list)
         else:
             head,tail=os.path.split(frame_or_list)
+            # in case of executing the script in the same directory
+            if str(head)=='': head = '.'
+            
             if os.path.splitext(tail)[1] in ['.txt','.dat']:
                 print('Found text file - try to interpret it as a list of image files.')
                 temp=open(frame_or_list)
@@ -275,7 +283,7 @@ def png2mpg(listoffiles,framefile='frames.txt',fps=5,bitrate=2000,codec='wmv2',E
                 imagfiles=glob.glob(wcard)
                 imagfiles.sort()
                 framelist+=imagfiles
-                
+    
     if os.path.split(framefile)[0]=='':                        
         ff=head+os.sep+framefile
     else:
