@@ -243,8 +243,8 @@ def simulate(A,pars, energy, fill =1.0, **kwargs):
                 logger.info("Using given refractive index in object creation")
 
         obj = np.exp(1.j*ob*k*ri)
-    if p.diffuser is not None:
-        obj*=u.parallel.MPInoise2d(obj.shape,*p.diffuser)
+    #if p.diffuser is not None:
+    #    obj*=u.parallel.MPInoise2d(obj.shape,*p.diffuser)
         
     shape = u.expect2(A.shape[-2])
     crops = list(-np.array(obj.shape[-2]) + shape + 2*np.abs(off))

@@ -324,7 +324,7 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
         
     if a.dtype.kind == 'c':
         # Image is complex
-        if cmap is not None:
+        #if cmap is not None:
             #logger.debug('imsave: Ignoring provided cmap - input array is complex')
         i = complex2rgb(a, vmin=None, vmax=None)
         im = Image.fromarray(np.uint8(i), mode='RGB')
@@ -443,7 +443,7 @@ def franzmap():
     #return ax     
 
 def rmphaseramp(a, weight=None, return_phaseramp=False):
-    """\
+    """
     Attempts to remove the phase ramp in a two-dimensional complex array 
     ``a``.
 
@@ -453,9 +453,9 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
         Input image as complex 2D-array.
     
     weight : ndarray, str, optional
-        Pass weighting array or use 'abs' for a modulus-weighted 
-        phaseramp and `None` for no weights.
-        
+        Pass weighting array or use ``'abs'`` for a modulus-weighted 
+        phaseramp and ``Non`` for no weights.
+    
     return_phaseramp : bool, optional
         Use True to get also the phaseramp array ``p``.
     
@@ -465,8 +465,7 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
         Modified 2D-array, ``out=a*p``
     p : ndarray, optional
         Phaseramp if ``return_phaseramp = True``, otherwise omitted 
-
-
+    
     Examples
     --------
     >>> b = rmphaseramp(image)

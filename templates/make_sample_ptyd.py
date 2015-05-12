@@ -18,7 +18,7 @@ p.save = 'append'
 
 MF = data.MoonFlowerScan(p)
 MF.initialize()
-for i in range(20):
-    msg = MF.auto(10)
+for i in range(2):
+    msg = MF.auto(100)
     time.sleep(2)
     u.verbose.logger.info(u.verbose.report(msg), extra={'allprocesses': True})

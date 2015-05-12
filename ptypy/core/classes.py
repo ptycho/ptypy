@@ -266,7 +266,8 @@ class Storage(Base):
     """
     Inner container handling acces to data arrays.
 
-    This class essentially manages access to an internal numpy array buffer.
+    This class essentially manages access to an internal numpy array 
+    buffer called :py:attr:`~Storage.data`
                 
     * It returns a view to coordinates given (slicing)
     * It contains a physical coordinate grid
@@ -314,6 +315,7 @@ class Storage(Base):
         padonly: bool
             If True, reformat() will enlarge the internal buffer if needed,
             but will not shrink it.
+            
         """
         super(Storage,self).__init__(container,ID)
         #if len(kwargs)>0:
@@ -323,8 +325,10 @@ class Storage(Base):
 
         # Default fill value
         self.fill_value = fill
-        
-        #self.zoom_cycle = 0 
+                
+        # For documentation
+        #: Three dimensional array as data buffer
+        self.data = None 
 
         if len(shape)==2:
             shape = (1,) + tuple(shape)
@@ -981,7 +985,7 @@ class View(Base):
             
         psize : float or tuple of float
             Pixel size (required for storage initialization)
-            See :any:`DEFAULT_PSIZE`
+            See :py:data:`DEFAULT_PSIZE`
             
         layer : int
             Index of the third dimension if applicable.

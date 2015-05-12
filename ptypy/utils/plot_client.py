@@ -15,6 +15,7 @@ mpl.rcParams['backend'] = 'Qt4Agg'
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
 
+__all__=['MPLClient','MPLplotter','PlotClient','spawn_MPLClient', 'TEMPLATES', 'DEFAULT']
 
 if __name__ == "__main__":
     from ptypy.utils.verbose import logger, report
@@ -31,7 +32,7 @@ Storage_DEFAULT = Param(
     # maybe we would want this container specific
     clims=[None, [-np.pi, np.pi]],
     cmaps=['gray', 'hsv'],
-    crop=[0.4, 0.4],  # fraction of array to crop for display
+    crop=[0.3, 0.3],  # fraction of array to crop for display
     rm_pr=True,  # remove_phase_ramp = True
     shape=None,  # if None the shape is determining
     auto_display=['a', 'p'],  # quantities to display
@@ -49,6 +50,8 @@ DEFAULT.simplified_aspect_ratios = False
 DEFAULT.gridspecpars = (0.1, 0.12, 0.07, 0.95, 0.05, 0.93)
 DEFAULT.plot_error = [True, True, True]  # decide which error to plot
 DEFAULT.interactive = True
+DEFAULT.pattern = None
+DEFAULT.movie = False
 
 TEMPLATES = Param({'default':DEFAULT})
 bnw = DEFAULT.copy(depth=4)
@@ -58,10 +61,12 @@ bnw.pr.clims=[None, None]
 bnw.ob.clims=[None, None]
 bnw.pr.auto_display=['a','p']
 TEMPLATES['black_and_white'] = bnw
+
 weak = DEFAULT.copy(depth=4)
 weak.ob.cmaps=['gray','bone']
-bnw.ob.clims=[None, None]
+weak.ob.clims=[None, None]
 TEMPLATES['weak'] = weak
+
 minimal = bnw.copy(depth=4)
 minimal.ob.cmaps=['gray','jet']
 minimal.ob.layers=[0]
@@ -69,6 +74,21 @@ minimal.pr.cmaps=['gray','jet']
 minimal.pr.layers=[0]
 minimal.simplified_aspect_ratios = True
 TEMPLATES['minimal'] = minimal
+
+nearfield = DEFAULT.copy(depth=4)
+nearfield.pr.clims=[None, [-np.pi, np.pi]]
+nearfield.pr.cmaps=['gray', 'hsv']
+nearfield.pr.crop=[0.0, 0.0]  # fraction of array to crop for display
+nearfield.pr.rm_pr=False  # 
+nearfield.ob.clims=[None, None]
+nearfield.ob.cmaps=['gray', 'jet']
+nearfield.ob.crop=[0.0, 0.0]  # fraction of array to crop for display
+nearfield.ob.rm_pr=False # 
+TEMPLATES['nearfield'] = nearfield
+del nearfield
+del bnw
+del weak
+del minimal
 
 class PlotClient(object):
     """
@@ -107,7 +127,8 @@ class PlotClient(object):
         self._lock = Lock()
 
         # Here you should initialize plotting capabilities.
-
+        self.config = None
+        
     @property
     def new_data(self):
         """
@@ -127,7 +148,17 @@ class PlotClient(object):
         self._thread = Thread(target=self._loop)
         self._thread.daemon = True
         self._thread.start()
-
+    
+    def stop(self):
+        """
+        Stop loop plot
+        """
+        self._stopping = True
+        # Gedenkminute
+        pause(0.1)
+        self.disconnect()
+        self._thread.join(0.2)
+        
     def get_data(self):
         """
         Thread-safe way to copy data buffer.
@@ -163,7 +194,7 @@ class PlotClient(object):
         for initialization.
         """
         logger.debug('Client requesting configuration parameters')
-        self.config = self.client.get_now("Ptycho.p.autoplot")
+        self.config = Param(self.client.get_now("Ptycho.p.autoplot"))
         logger.debug('Client received the following configuration:')
         logger.debug(report(self.config))
         
@@ -255,6 +286,7 @@ class MPLplotter(object):
         self._set_autolayout(pars)
         self.pr_plot=Param()
         self.ob_plot=Param()
+        
     def _set_autolayout(self,pars):
         self.p = self.DEFAULT.copy(depth=4)
         plt.interactive(self.p.interactive)
@@ -494,7 +526,10 @@ class MPLplotter(object):
             ptya.ax.set_title(ttl, size=12)
         
         pp.pty_axes = pty_axes
-
+    
+    def save(self):
+        pass
+        
     def plot_all(self, blocking = False):
         for key, storage in self.pr.items():
             #print key
@@ -505,7 +540,7 @@ class MPLplotter(object):
             pp = self.ob_plot[key]
             self.plot_storage(storage,pp, str(key), 'obj')
         self.plot_error()
-
+        self.draw()
 
 class MPLClient(MPLplotter):
     
@@ -513,7 +548,7 @@ class MPLClient(MPLplotter):
     
     def __init__(self, client_pars=None, plotting_pars=None):
         
-        super(MPLClient,self).__init__(plotting_pars)
+        super(MPLClient,self).__init__(pars = plotting_pars)
             
         self.pc = PlotClient(client_pars)
         self.pc.start()
@@ -530,6 +565,8 @@ class MPLClient(MPLplotter):
                 self.runtime.update(runtime)
                 self.runtime['iter_info'].append(runtime['last_info'])
                 if not initialized:
+                    if self.pc.config is not None:
+                        self._set_autolayout(self.pc.config.layout)
                     self.update_plot_layout()
                     initialized=True
                 self.plot_all()
@@ -864,8 +901,14 @@ def spawn_MPLClient(client_pars):
     A function that creates and runs an instance of MPLClient.
     """
     mplc = MPLClient(client_pars)
-    mplc.loop_plot()
-    
+    try:
+        mplc.loop_plot()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        print 'Stopping plot client...'
+        mplc.pc.stop()
+        
 if __name__ =='__main__':
     from ptypy.resources import moon_pr, flower_obj
     moon = moon_pr(256)

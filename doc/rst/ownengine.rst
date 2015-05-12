@@ -54,37 +54,37 @@ all necessary basic :any:`Container` instances like *probe*, *object*
    Model: sharing probe between scans (one new probe every 1 scan)
    
    ---- Ptycho init level 2 -------------------------------------------------------
-   Prepared 310 positions
+   Prepared 106 positions
    Processing new data.
-   
-   ---- Analysis of the "common" arrays -------------------------------------------
-   Check for weight or mask,  "weight2d"  .... True : shape = (128, 128)
-   Check for positions, "positions_scan" .... True : shape = (310, 2)
-   Scanning positions (310) are fewer than the desired number of scan points (400).
+   ---- Enter PtyScan.initialixe() ------------------------------------------------
+                Common weight : True
+                       shape = (128, 128)
+   All experimental positions : True
+                       shape = (106, 2)
+   Scanning positions (106) are fewer than the desired number of scan points (400).
    Resetting `num_frames` to lower value
-   ---- Analysis done -------------------------------------------------------------
-   
-   ROI center is [ 64.  64.], automatic guess is [ 63.55483871  63.56774194].
+   ---- Leaving PtyScan.initialixe() ----------------------------------------------
+   ROI center is [ 64.  64.], automatic guess is [ 63.45283019  63.54716981].
    Feeding data chunk
    Importing data from MF as scan MF.
    End of scan reached
    End of scan reached
    
    --- Scan MF photon report ---
-   Total photons   : 1.15e+10 
-   Average photons : 3.72e+07
-   Maximum photons : 7.86e+07
+   Total photons   : 4.16e+09 
+   Average photons : 3.93e+07
+   Maximum photons : 7.13e+07
    -----------------------------
    
    ---- Creating PODS -------------------------------------------------------------
    Found these probes : 
    Found these objects: 
-   Process 0 created 310 new PODs, 1 new probes and 1 new objects.
+   Process 0 created 106 new PODs, 1 new probes and 1 new objects.
    
    ---- Probe initialization ------------------------------------------------------
    Initializing probe storage S00G00 using scan MF
    Found no photon count for probe in parameters.
-   Using photon count 7.86e+07 from photon report
+   Using photon count 7.13e+07 from photon report
    
    ---- Object initialization -----------------------------------------------------
    Initializing object storage S00G00 using scan MF
@@ -92,21 +92,21 @@ all necessary basic :any:`Container` instances like *probe*, *object*
    
    ---- Creating exit waves -------------------------------------------------------
    
-   Process #0 ---- Total Pods 310 (310 active) ----
+   Process #0 ---- Total Pods 106 (106 active) ----
    --------------------------------------------------------------------------------
    (C)ontnr : Memory : Shape            : Pixel size      : Dimensions      : Views
    (S)torgs : (MB)   : (Pixel)          : (meters)        : (meters)        : act. 
    --------------------------------------------------------------------------------
    Cprobe   :    0.1 : complex64
-   S00G00   :    0.1 :        1*128*128 :   6.36*6.36e-08 :   8.14*8.14e-06 :   310
-   Cmask    :    5.1 :   bool
-   S0000    :    5.1 :      310*128*128 :   1.72*1.72e-04 :   2.20*2.20e-02 :   310
-   Cexit    :   40.6 : complex64
-   S0000G00 :   40.6 :      310*128*128 :   6.36*6.36e-08 :   8.14*8.14e-06 :   310
-   Cobj     :    3.5 : complex64
-   S00G00   :    3.5 :        1*664*652 :   6.36*6.36e-08 :   4.22*4.15e-05 :   310
-   Cdiff    :   20.3 : float32
-   S0000    :   20.3 :      310*128*128 :   1.72*1.72e-04 :   2.20*2.20e-02 :   310
+   S00G00   :    0.1 :        1*128*128 :   6.36*6.36e-08 :   8.14*8.14e-06 :   106
+   Cmask    :    1.7 :   bool
+   S0000    :    1.7 :      106*128*128 :   1.72*1.72e-04 :   2.20*2.20e-02 :   106
+   Cexit    :   13.9 : complex64
+   S0000G00 :   13.9 :      106*128*128 :   6.36*6.36e-08 :   8.14*8.14e-06 :   106
+   Cobj     :    1.5 : complex64
+   S00G00   :    1.5 :        1*434*436 :   6.36*6.36e-08 :   2.76*2.77e-05 :   106
+   Cdiff    :    6.9 : float32
+   S0000    :    6.9 :      106*128*128 :   1.72*1.72e-04 :   2.20*2.20e-02 :   106
    
    
    
@@ -243,9 +243,9 @@ We start of with a small number of iterations.
 ::
 
    >>> iterate(P,9)
-   438128.131012
-   315525.085239
-   238082.913346
+   121489.812114
+   108117.364551
+   90332.4140398
    
 
 We note that the error (here only displayed for 3 iterations) is 
@@ -286,18 +286,18 @@ Ok, let us do some more iterations. 36 will do.
 ::
 
    >>> iterate(P,36)
-   158772.734063
-   92001.2507792
-   61221.5036771
-   48127.1963039
-   38992.4460977
-   27961.8069756
-   22375.8444046
-   19797.2539501
-   18647.1967747
-   17682.6146338
-   17755.6180473
-   17796.2601212
+   73236.0986657
+   60798.1299538
+   46323.5850009
+   35256.1125484
+   28340.7981146
+   21096.2107122
+   14763.9953011
+   10776.5353326
+   8057.79303546
+   6496.59511599
+   5799.23301664
+   5692.20370563
    
 
 Error is still on a steady descent. Let us look at the final 

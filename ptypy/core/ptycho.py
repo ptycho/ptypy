@@ -11,7 +11,7 @@ import numpy as np
 import time
 
 from .. import utils as u
-from ..utils.verbose import logger, _, report, headerline
+from ..utils.verbose import logger, _, report, headerline, log
 from .. import engines
 from ..io import interaction
 from classes import *
@@ -26,7 +26,7 @@ __all__ = ['Ptycho','DEFAULT']
 
 DEFAULT_autoplot = u.Param(
     interval = 1,
-    layout = {},
+    layout = 'default',
     dump = True,
     dump_interval = None,
     make_movie = True,
@@ -72,7 +72,7 @@ class Ptycho(Base):
     Attributes
     ----------
     p : Param
-        Internal Parameters. Stucture like `DEFAULT`
+        Internal Parameters. Structure like `DEFAULT`
     
     CType,FType : numpy.dtype
         numpy dtype for arrays. `FType` is for data, i.e. real-valued
@@ -84,9 +84,6 @@ class Ptycho(Base):
     
     runtime : Param
         Runtime information, e.g. errors, iteration etc.
-        
-    paths : Paths
-        File paths
     
     modelm : ModelManager
         THE managing instance for :any:`POD`, :any:`View` and 
@@ -136,7 +133,7 @@ class Ptycho(Base):
         
         # Continue with initialization from parameters
         if pars is not None:
-            self.p.update(pars)
+            self.p.update(pars, in_place_depth = 3)
         
         # that may be a little dangerous
         self.p.update(kwargs)
@@ -156,7 +153,8 @@ class Ptycho(Base):
             self.init_engine()
         if level >=5:
             self.run()
-                
+            self.finalize()
+            
     def _configure(self):
         #################################
         # Global logging level
@@ -203,15 +201,17 @@ class Ptycho(Base):
             self.interactor.objects['Ptycho'] = self
 
             # Start the thread
+            logger.info('Starting interaction server.')
             self.interactor.activate()
         
             # inform the audience
-            logger.info('Started interaction server with the following parameters:\n'+report(self.interactor.p))
+            log(4,'Started interaction got the following parameters:'+report(self.interactor.p,noheader=True))
             
             # start automated plot client
             self.plotter = None
             if parallel.master and p.autoplot and p.autoplot.interval > 0:
                 from multiprocessing import Process
+                logger.info('Spawning plot client in new Process.')
                 self.plotter = Process(target=u.spawn_MPLClient, args=(p.autoplot,))
                 self.plotter.start()
         else:
@@ -483,7 +483,19 @@ class Ptycho(Base):
             for engine in self.engines.values():
                 self.run(engine=engine)
 
-        
+    def finalize(self):
+        """
+        Cleanup
+        """
+        try:
+            # not so clean. 
+            self.plotter.terminate()
+        except BaseException:
+            pass
+        try:
+            self.interaction.stop()
+        except BaseException:
+            pass
         
     def _run(self, run_label=None):
         """

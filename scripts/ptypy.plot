@@ -20,7 +20,7 @@ from ptypy import utils as u
 
 filename = sys.argv[1]
 pars = u.Param()
-pars.interactive=False
+pars.interactive=True
 
 header = io.h5read(filename,'header')['header']
 if str(header['kind']) == 'fullflat':
@@ -36,10 +36,18 @@ else:
 Plotter = u.MPLplotter(pars=pars, probes = probes, objects= objects, runtime= runtime)
 Plotter.update_plot_layout()
 Plotter.plot_all()
+Plotter.draw()
+Plotter.plot_all()
+Plotter.draw()
+
+def handle_close(evt):
+    sys.exit()
+Plotter.plot_fig.canvas.mpl_connect('close_event', handle_close)
 try:
     Plotter.plot_fig.savefig(sys.argv[2],dpi = 300)
 except IndexError:
     Plotter.draw()
+finally:
     while True:
         u.pause(0.1)
     

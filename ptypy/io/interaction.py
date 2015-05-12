@@ -287,6 +287,7 @@ class Server(object):
         Prepare the server and start listening for connections. 
         (runs on the separate thread)
         """
+
         # Initialize socket for entry point
         self.context = zmq.Context()
         self.in_socket = self.context.socket(zmq.REP)
@@ -301,10 +302,17 @@ class Server(object):
         # Initialize poller
         self.poller = zmq.Poller()
         self.poller.register(self.in_socket, zmq.POLLIN)
-                
-        # Start the main loop.
-        self._listen()
-
+                    
+        # Start the main loop with a little bit naive protection for
+        # rogue threads that block ports. Only works if thread raised
+        # an exception.
+        try:
+            self._listen()
+        finally:
+            print("stop listening on %s, port %s" % (str(self.address), str(self.port)))
+            self.in_socket.unbind(fulladdress)
+            self.in_socket.close()
+            
     def _listen(self):
         """
         Listen for connections and process requests when given permission
@@ -588,7 +596,7 @@ class Server(object):
 
     def stop(self):
         if not self._stopping:
-            logger.debug("Stopping.")
+            logger.debug("Stopping Interaction Server.")
             self._stopping = True
             self._thread.join(3)
 

@@ -54,12 +54,6 @@ class LoadManager(object):
         Keeps track of the amount of data managed by each
         process and helps keeping it balanced.
         
-        Attributes
-        ----------
-        load : int
-            Represents the number of elements assigned to this process
-        rank_of : int
-            Rank of specific `id`,i.e. element of `idlist`.
         Note
         ----
         A LoadManager should always be given the full range of ids, as
@@ -70,8 +64,11 @@ class LoadManager(object):
         """
         
         self.load = np.zeros((size,), dtype=int)
+        """ Represents the number of elements assigned to this process. """
+        
         self.rank_of = {}
-
+        """ Rank of specific *id*, i.e. element of *idlist*. """
+        
     def assign(self, idlist=None):
         """
         Subdivide the provided list of ids into contiguous blocks to balance
@@ -85,7 +82,7 @@ class LoadManager(object):
         If idlist is None, increase by one the load of the least busy 
         process. :any:`rank_of` is not updated in this case.
         
-        Paramaters
+        Parameters
         ----------
         idlist : list
             List of objects that can also be keys in a `dict`, i.e. hashable
@@ -410,7 +407,7 @@ def bcast(data, source=0):
                 buf = buf.astype('bool')
             
             return buf
-    except:
+    except BaseException:
         return thing
 
 def bcast_dict(dct, keys='all', source=0):

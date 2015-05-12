@@ -119,7 +119,7 @@ Ptypy parameter structure
 
    *(13)* Activation switch
 
-   If ``True`` the current reconstruction will be saved at regular intervals according to the pattern in :py:data:`paths.autosave`
+   If ``True`` the current reconstruction will be saved at regular intervals. **unused**
 
    *default* = ``TRUE``
 
@@ -127,7 +127,7 @@ Ptypy parameter structure
 
    *(14)* Auto-save interval
 
-   
+   If ``>0`` the current reconstruction will be saved at regular intervals according to the pattern in :py:data:`paths.autosave` . If ``<=0`` not automatic saving
 
    *default* = ``10 (>1)``
 
@@ -139,7 +139,7 @@ Ptypy parameter structure
 
    *(15)* Server / Client parameters
 
-   If ``None`` is passed here in script instead of a Param, it translates to  ``active=False`` i.e. no ZeroMQ interaction server. 
+   If ``None`` or ``False`` is passed here in script instead of a Param, it translates to  ``active=False`` i.e. no ZeroMQ interaction server. 
 
    *default* = ``None``
 
@@ -178,18 +178,19 @@ Ptypy parameter structure
    *default* = ``5664:00:00``
 
 
-.plotclient
------------
+.autoplot
+---------
 
-.. py:data:: .plotclient(Param)
+.. py:data:: .autoplot(Param)
 
    *(20)* Plotting client parameters
 
+   In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
    
 
    *default* = ``None``
 
-.. py:data:: .plotclient.active(bool)
+.. py:data:: .autoplot.active(bool)
 
    *(21)* Live plotting switch
 
@@ -197,7 +198,7 @@ Ptypy parameter structure
 
    *default* = ``TRUE``
 
-.. py:data:: .plotclient.interval(int)
+.. py:data:: .autoplot.interval(int)
 
    *(22)* Number of iterations between plot updates
 
@@ -205,7 +206,7 @@ Ptypy parameter structure
 
    *default* = ``1 (>1)``
 
-.. py:data:: .plotclient.some_plotting_options(str)
+.. py:data:: .autoplot.some_plotting_options(str)
 
    *(23)* Options for default plotter (not implemented yet)
 
@@ -213,7 +214,7 @@ Ptypy parameter structure
 
    *default* = ``None``
 
-.. py:data:: .plotclient.dump(bool)
+.. py:data:: .autoplot.dump(bool)
 
    *(24)* Switch to dump plots as image files
 
@@ -221,7 +222,7 @@ Ptypy parameter structure
 
    *default* = ``TRUE``
 
-.. py:data:: .plotclient.dump_interval(int)
+.. py:data:: .autoplot.dump_interval(int)
 
    *(25)* Iteration interval for dumping plots
 
@@ -229,7 +230,7 @@ Ptypy parameter structure
 
    *default* = ``None``
 
-.. py:data:: .plotclient.make_movie(bool)
+.. py:data:: .autoplot.make_movie(bool)
 
    *(26)* Produce reconstruction movie after the reconstruction.
 
@@ -325,8 +326,8 @@ Ptypy parameter structure
    Mode to use to save data to file.
     - ``None``: No saving 
     - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-    - ``'append'``: appends each chunk in master *.ptyd file
-    - ``'link'``: appends external links in master *.ptyd file and stores chunks separately in the path given by the link. Links file paths are relative to master file.
+    - ``'append'``: appends each chunk in master \*.ptyd file
+    - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately in the path given by the link. Links file paths are relative to master file.
 
    *default* = ``None``
 
@@ -414,7 +415,7 @@ Ptypy parameter structure
    *(46)* Determine if center in data is calculated automatically
 
     - ``False``, no automatic centering 
-    - ``None``, only if :any:`center` is ``None`` 
+    - ``None``, only if :py:data:`center` is ``None`` 
     - ``True``, it will be enforced
 
    *default* = ``None``
@@ -431,7 +432,7 @@ Ptypy parameter structure
 
    *(48)* Theoretical positions for this scan
 
-   If provided, experimental positions from :any:`Ptyscan` subclass will be ignored. If data preparation is called from Ptycho instance, the calculated positions from the :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
+   If provided, experimental positions from :any:`PtyScan` subclass will be ignored. If data preparation is called from Ptycho instance, the calculated positions from the :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
 
    *default* = ``None``
 
@@ -692,7 +693,7 @@ Ptypy parameter structure
 
    
 
-   *default* = ``*.ptyr``
+   *default* = ``\*.ptyr``
 
 .. py:data:: .scan.illumination.recon.ID(NoneType)
 
@@ -750,9 +751,9 @@ Ptypy parameter structure
    *(84)* Noise in the transparen part of the aperture
 
    Can be either:
-   - ``None`` : no noise
-   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
-   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+    - ``None`` : no noise
+    - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+    - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
 
    *default* = ``None (>0.0)``
 
@@ -825,7 +826,7 @@ Ptypy parameter structure
 
    *(93)* Focal spot diameter
 
-   If not ``None``, this parameter is used to generate the appropriate aperture size instead of :any:`size`
+   If not ``None``, this parameter is used to generate the appropriate aperture size instead of :py:data:`size`
 
    *default* = ``None (>0.0)``
 
@@ -842,9 +843,9 @@ Ptypy parameter structure
    *(95)* Noise in the generated modes of the illumination 
 
    Can be either:
-   - ``None`` : no noise
-   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
-   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+    - ``None`` : no noise
+    - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+    - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
 
    *default* = ``None``
 
@@ -909,7 +910,7 @@ Ptypy parameter structure
 
    
 
-   *default* = ``*.ptyr``
+   *default* = ``\*.ptyr``
 
 .. py:data:: .scan.sample.recon.ID(NoneType)
 
@@ -963,7 +964,7 @@ Ptypy parameter structure
 
    *(109)* Zoom value for object simulation.
 
-   If ``None``, leave the array untouched. Otherwise the modeled or loaded image will be resized using :any:`zoom`.
+   If ``None``, leave the array untouched. Otherwise the modeled or loaded image will be resized using :py:func:`zoom`.
 
    *default* = ``None (>0.0)``
 
@@ -1020,9 +1021,9 @@ Ptypy parameter structure
    *(116)* Noise in the generated modes of the illumination 
 
    Can be either:
-   - ``None`` : no noise
-   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
-   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+    - ``None`` : no noise
+    - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+    - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
 
    *default* = ``None``
 
