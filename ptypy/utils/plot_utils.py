@@ -608,7 +608,7 @@ class PtyAxis(object):
             self._update()
             self._update_colorscale()
             
-    def set_clim(self,vmin,vmax, update=True):
+    def set_clims(self,vmin,vmax, update=True):
         self.vmin=vmin
         self.vmax=vmax
         assert vmin<vmax
@@ -661,11 +661,15 @@ class PtyAxis(object):
         if self.mask is not None:
             cdata = imdata if str(self.channel) in ['a','p'] else np.abs(self.data) 
             self.mx = np.max( cdata[self.mask])
-            if self.vmax is None or self.mx<self.vmax:
+            if self.vmax is None: # or self.mx<self.vmax:
                 mx = self.mx 
+            else:
+                mx = self.vmax
             self.mn = np.min(cdata[self.mask])
-            if self.vmin is None or self.mn>self.vmin:
+            if self.vmin is None: # or self.mn>self.vmin:
                 mn = self.mn
+            else:
+                mn = self.vmin
         else:
             mn,mx = self.vmin,self.vmax
         

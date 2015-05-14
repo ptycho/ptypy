@@ -135,7 +135,7 @@ class BaseEngine(object):
             
             self.error = self.engine_iterate()
             
-            self.errorlist.append(self.error)
+            #self.errorlist.append(self.error)
             
             ############################
             # Increment the iterate number
@@ -148,23 +148,12 @@ class BaseEngine(object):
             # PT: Should this be done only by the master node?
             ############################
             self._fill_runtime()
-            #self.meta.iteration = self.curiter
-            #self.meta.engine = self.__class__.__name__
-            #self.meta.duration = time.time()-t
-            #self.meta.error = error #np.array(self.errorlist)
-            #self.itermeta.append(self.meta.copy())
-            ## inform ptycho in runtime information
-            #meta = {'iterations':len(self.ptycho.runtime.iter_info)}
-            #meta.update(self.meta.copy())
-            #self.ptycho.runtime.iter_info.append(meta)
-            ############################
-            # Join all processes here
-            ############################
+
             parallel.barrier()
 
     def _fill_runtime(self):
-        error = u.parallel.gather_dict(self.error)
-        
+        local_error = u.parallel.gather_dict(self.error)
+        error = np.array(local_error.values()).mean(0)
         info = dict(
             iteration = self.curiter,
             iterations = len(self.ptycho.runtime.iter_info),
@@ -174,6 +163,7 @@ class BaseEngine(object):
             )
         
         self.ptycho.runtime.iter_info.append(info)
+        self.ptycho.runtime.error_local = local_error
         
     def finalize(self):
         """

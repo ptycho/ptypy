@@ -23,8 +23,7 @@ level,name,default,type,static,lowlim,uplim,shortdoc,longdoc,userlevel,validity
 0,interaction,,Param,yes,,,Server / Client parameters,"If ``None`` or ``False`` is passed here in script instead of a Param, it translates to  ``active=False`` i.e. no ZeroMQ interaction server. ",,
 1,active,TRUE,bool,yes,,,Activation switch,"Set to ``False`` for no  ZeroMQ interaction server
 ",,
-1,primary_address,tcp://127.0.0.2,str,yes,,,The address the server is listening to.,"The address the server is listening to.
-TODO: allow for automatic address definition when running on a cluster.",2,
+1,primary_address,tcp://127.0.0.2,str,yes,,,The address the server is listening to.,The address the server is listening to.,2,
 1,primary_port,5570,int,yes,,,The port the server is listening to.,The port the server is listening to.,2,
 1,port_range,5664:00:00,str,yes,,,The port range opened to clients.,The port range opened to clients.,2,
 0,autoplot,,Param,yes,,,Plotting client parameters,"In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
@@ -96,7 +95,7 @@ Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, do_flipud,
 2,distance,7.19,float,yes,0,,Distance from object to detector,,0,
 2,psize,0.000172,float,yes,0,,Pixel size in Detector plane,,1,
 2,resolution,None,float,yes,0,,Pixel size in Sample plane,This parameter is used only for simulations,2,
-2,prop_type,farfield,str,yes,,,Propagation type,"Either ""farfield"" or ""nearfield""",1,
+2,propagation,farfield,str,yes,,,Propagation type,"Either ""farfield"" or ""nearfield""",1,
 1,xy,,Param,yes,,,Parameters for scan patterns,"These parameters are useful in two cases:
  - When the experimental positions are not known (no encoders)
  - When using the package to simulate data.
@@ -208,10 +207,11 @@ In script, you may pass a numpy.array here directly as the model. This array wil
  - ``'irregular'``: no assumption
 
 **[not implemented]**",2,
-0,scans,,Param,yes,,,Param container for instances of `scan` parameters,,,
-1,scan_%d,,scan,no,,,,,0,
+0,scans,,Param,yes,,,Param container for instances of `scan` parameters,"If not specified otherwise, entries in *scans* will use parameter defaults from :py:data:`.scan`",0,
+1,scan_00,None,scan,no,,,Default first scans entry,"If only a single scan is used in the reconstruction, this entry may be left unchanged. If more than one scan is used, please make an entry for each scan. The name *scan_00* is an arbitrary choice and may be set to any other string.",0,
 0,engine,,Param,yes,,,Reconstruction engine parameters,,,
 1,common,,Param,yes,,,Parameters common to all engines,,,
+2,name,DM,str,yes,,,Name of engine. ,"Dependent on the name given here, the default parameter set will be a superset of `common` and parameters to the entry of the same name.",,
 2,numiter,2000,int,yes,0,,Total number of iterations,,0,
 2,numiter_contiguous,1,int,yes,0,,Number of iterations without interruption,"The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...)",2,
 2,probe_support,0.7,float,yes,0,,Fraction of valid probe area (circular) in probe frame,,0,
@@ -237,4 +237,4 @@ In script, you may pass a numpy.array here directly as the model. This array wil
 2,scale_probe_object,1,float,yes,0,,Relative scale of probe to object.,,2,
 2,probe_update_start,0,int,yes,,,Number of iterations before probe update starts,,1,
 0,engines,,Param,yes,,,"Container for instances of ""engine"" parameters",All engines registered in this structure will be executed sequentially.,,
-1,engine_%d,,engine,no,,,,,0,
+1,engine_00,,engine,no,,,Default first engines entry,Default first engine is difference map (DM),0,

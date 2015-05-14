@@ -6,7 +6,7 @@ usage = """\
 Usage:
 %s [template]
 
-Spawn a plotting client
+Spawns a plotting client
 """ % sys.argv[0]
 
 if len(sys.argv) > 1:

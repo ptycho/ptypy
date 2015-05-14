@@ -139,6 +139,7 @@ def init_storage(storage,sample_pars = None, energy = None):
         raise ValueError('Value to `model` key not understood in object creation')
         
     assert type(model) is np.ndarray, "Internal model should be numpy array now but it is %s" %str(type(model))
+    
     # expand model to the right length filling with copies
     sh = model.shape[-2:]
     model = np.resize(model,(s.shape[0],sh[0],sh[1]))
@@ -150,6 +151,9 @@ def init_storage(storage,sample_pars = None, energy = None):
             energy  =  s.views[0].pod.geometry.energy
         # make this a single call in future
         model = simulate(model,p.process,energy,p.fill )
+    
+    # symmetrically cut to shape of data
+    model = u.crop_pad_symmetric_2d(model,s.shape)[0]
     
     # add diversity
     if p.diversity is not None:
@@ -245,12 +249,13 @@ def simulate(A,pars, energy, fill =1.0, **kwargs):
         obj = np.exp(1.j*ob*k*ri)
     #if p.diffuser is not None:
     #    obj*=u.parallel.MPInoise2d(obj.shape,*p.diffuser)
-        
-    shape = u.expect2(A.shape[-2])
-    crops = list(-np.array(obj.shape[-2]) + shape + 2*np.abs(off))
+    
+    # get obj back in original shape and apply a possible offset
+    shape = u.expect2(A.shape[-2:])
+    crops = list(-np.array(obj.shape[-2:]) + shape + 2*np.abs(off))
     obj = u.crop_pad(obj,crops,fillpar=fill)
-
     off +=np.abs(off)
+    
     return np.array(obj[...,off[0]:off[0]+shape[0],off[1]:off[1]+shape[1]])
 
 
@@ -339,7 +344,7 @@ def from_pars_old(shape,lam,pars=None,dtype=np.complex):
         shape = u.expect2(shape)
         crops = list(-np.array(obj.shape) + shape + 2*np.abs(off))
         obj = u.crop_pad(obj,crops,fillpar=p.fill)
-
+        
         if p.noise_rms is not None:
             n = u.expect2(p.noise_rms)
             noise = np.random.normal(1.0,n[0]+1e-10,obj.shape)*np.exp(2j*np.pi*np.random.normal(0.0,n[1]+1e-10,obj.shape))

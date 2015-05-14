@@ -1,15 +1,3 @@
-"""
-import ptypy
-from matplotlib import pyplot as plt
-from ptypy import utils as u
-from ptypy import *
-import numpy as np
-from pyE17 import utils as U
-import os
-import subprocess
-import sys
-import time
-"""
 import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
@@ -18,14 +6,12 @@ import numpy as np
 p = u.Param()
 
 ### PTYCHO PARAMETERS
-p.verbose_level = 3                               # (00) Verbosity level
-
-p.data_type = "single"                            # (01) Reconstruction floatine number precision
+p.verbose_level = 3                  
+p.data_type = "single"                            
 p.autosave = None
-p.data_type = "single"                            # (01) Reconstruction floatine number precision
 p.run = None
 p.paths = u.Param()
-p.paths.home = "/tmp/ptypy/"             # (03) Relative base path for all other paths
+p.paths.home = "/tmp/ptypy/"             
 p.paths.run = None
 
 p.scan = u.Param()
@@ -49,9 +35,9 @@ p.scan.sample.process = None
 p.scan.sample.diversity = None
 
 p.scan.coherence = u.Param()
-p.scan.coherence.Nprobe_modes = 1                # (65) 
-p.scan.coherence.Nobject_modes = 1               # (66) 
-p.scan.coherence.energies = [1.0]                # (67) 
+p.scan.coherence.Nprobe_modes = 1               
+p.scan.coherence.Nobject_modes = 1               
+p.scan.coherence.energies = [1.0]                
 
 p.scan.sharing = u.Param()
 p.scan.sharing.object_shared_with = None         # (71) `scan_label` of scan for the shared obejct
@@ -61,10 +47,10 @@ p.scan.sharing.probe_share_power = 1             # (74) contribution to the shar
 
 sim = u.Param()
 sim.xy = u.Param()
-sim.xy.model = "round"                # (25) None,'round', 'raster', 'round_roi','custom'
-sim.xy.spacing = 1e-6                             # (26) round,round_roi :width of shell
-sim.xy.steps = 10                                # (27) round : number of intervals (# of shells - 1) 
-sim.xy.extent = 10e-6                            # (29) round_roi: Width of ROI
+sim.xy.model = "round"                
+sim.xy.spacing = 1e-6                
+sim.xy.steps = 10        
+sim.xy.extent = 10e-6      
 
 sim.illumination = u.Param()
 sim.illumination.model = None

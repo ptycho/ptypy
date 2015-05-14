@@ -114,7 +114,7 @@ class Paths(object):
         except:
             logger.debug('Receiving runtime info for dumping/saving failed')
         
-        path = os.path.abspath(os.path.expanduser(path % self.p))
+        path = os.path.abspath(os.path.expanduser(self.p.home+path % self.p))
 
         return path
     

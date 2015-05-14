@@ -10,6 +10,7 @@ p.verbose_level = 3                               # (00) Verbosity level
 p.data_type = "single"                            # (01) Reconstruction floatine number precision
 
 p.paths = u.Param()
+p.paths.home = "/tmp/ptypy/"  
 p.autosave = None
 
 p.model = u.Param()
@@ -32,5 +33,5 @@ p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'ML'
 p.engines.engine01.numiter = 100
 
-P = Ptycho(p,level=4)
+P = Ptycho(p,level=5)
 #P.save_run(kind='minimal')

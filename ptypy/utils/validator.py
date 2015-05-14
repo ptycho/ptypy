@@ -11,7 +11,7 @@ This file is part of the PTYPY package.
 from .parameters import Param
 import pkg_resources
 import csv
-from .verbose import logger
+from .verbose import logger, headerline
 import logging
 # Message codes
 codes = Param(
@@ -110,7 +110,36 @@ class PDesc(object):
             return ''
         else:
             return '.'.join([self.parent.entry_point, self.name])
-
+    
+    @property
+    def is_evaluable(self):
+        for t in self.type:
+            if t in evaltypes:
+                return True
+                break
+        return False
+        
+    @property
+    def value(self):
+        """
+        Returns python type / object for default string if possible
+        """
+        if self.default is None:
+            out = None
+        # should be only strings now
+        elif self.default.lower()=='none':
+            out = None
+        elif self.default.lower()=='true':
+            out = True
+        elif self.default.lower()=='false':
+            out = False
+        elif self.is_evaluable:
+            out = eval(self.default)
+        else:
+            out = self.default
+            
+        return out
+        
     def check(self, pars, walk):
         """
         Check that input parameter pars is consistent with parameter description.
@@ -198,7 +227,6 @@ for num, desc in enumerate(desc_list):
 
     # save a number
     pd.ID = num
-    
     # Manage new branches
     if 'param' in desc['type'].lower() or 'dict' in desc['type'].lower():
         # A new node
@@ -238,20 +266,8 @@ def make_sub_default(entry_point, depth=1):
     for name,child in pd.children.iteritems():
         if hasattr(child,'children'):
             out[name] = make_sub_default(child.entry_point, depth=depth-1)
-        elif child.default is None:
-            out[name] = None
-        # should be strings only now
-        elif child.default.lower()=='none':
-            out[name] = None
-        elif child.default.lower()=='true':
-            out[name] = True
-        elif child.default.lower()=='false':
-            out[name] = False
-        elif child.type in evaltypes:
-            out[name] = eval(child.default)
         else:
-            out[name] = child.default
-    
+            out[name] = child.value
     return out
     
 def validate(pars, entry_point, walk=True, raisecodes=[codes.FAIL, codes.INVALID]):
@@ -287,3 +303,64 @@ def validate(pars, entry_point, walk=True, raisecodes=[codes.FAIL, codes.INVALID
     if do_raise:
         raise RuntimeError('Parameter validation failed.')
 
+def create_default_template(filename=None,user_level=0,doc_level=2):
+    """
+    Creates a descriptive template
+    """
+    def _format_longdoc(doc):
+        ld = doc.strip().split('\n')
+        out = []
+        for line in ld:
+            if len(line)==0:
+                continue
+            if len(line)>75:
+                words = line.split(' ')
+                nline = ''
+                count = 0
+                for word in words:
+                    nline+=word+' '
+                    count+=len(word)
+                    if count > 70:
+                        count = 0
+                        out.append(nline[:-1])
+                        nline=""
+                out.append(nline[:-1])
+            else:
+                out.append(line)
+        if out:
+            return '# '+'\n# '.join(out)+'\n' 
+        else:
+            return ''
+            
+    if filename is None:
+        f = open('ptypy_template.py','w')
+    else:
+        f = open(filename,'w')
+        
+    h = "import numpy as np\n"
+    h+= "import ptypy\n"
+    h+= "from ptypy.core import Ptycho\n"
+    h+= "from ptypy import utils as u\n\n"
+    h+= headerline('Ptypy Parameter Tree','l','#')+'\n'
+    #h+= "p = u.Param()\n"
+    f.write(h)
+    for entry, pd in parameter_descriptions.iteritems():
+        if user_level < pd.userlevel:
+            continue
+        if hasattr(pd,'children'):
+            value = "u.Param()"
+        else:
+            val = pd.value
+            if str(val)== val :
+                value = '"%s"' % str(val)
+            else:
+                value = str(val)
+        ID ="%02d" % pd.ID if hasattr(pd,'ID') else 'NA'
+        if doc_level > 0:
+            f.write('\n'+"## (%s) " % ID +pd.shortdoc.strip()+'\n')
+        if doc_level > 1:
+            f.write(_format_longdoc(pd.longdoc))
+        f.write('p'+entry+ ' = ' + value+'\n')
+        
+    f.write('\n\nPtycho(p,level=5)\n')
+    f.close()

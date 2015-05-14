@@ -28,6 +28,7 @@ setup(
     scripts = [
         'scripts/ptypy.plot',
         'scripts/ptypy.h5info',
-        'scripts/ptypy.plotclient'  
+        'scripts/ptypy.plotclient',
+        'scripts/ptypy.new'    
     ],
     )

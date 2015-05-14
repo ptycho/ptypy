@@ -20,12 +20,12 @@ __all__=['MPLClient','MPLplotter','PlotClient','spawn_MPLClient', 'TEMPLATES', '
 if __name__ == "__main__":
     from ptypy.utils.verbose import logger, report
     from ptypy.utils.parameters import Param
-    from ptypy.utils.array_utils import crop_pad
+    from ptypy.utils.array_utils import crop_pad, clean_path
     from ptypy.utils.plot_utils import PtyAxis, imsave, pause, rmphaseramp
 else:
     from .verbose import logger, report
     from .parameters import Param
-    from .array_utils import crop_pad
+    from .array_utils import crop_pad, clean_path
     from .plot_utils import PtyAxis, imsave, pause, rmphaseramp
 
 Storage_DEFAULT = Param(
@@ -39,6 +39,7 @@ Storage_DEFAULT = Param(
     layers=None,  # (int or list or None)
     local_error=False,  # plot a local error map (ignored in probe)
     use_colorbar = True,
+    mask = 0.3, # Fraction (radius) of data to use for clims (if None) or phase_ramp removal
 )
 
 DEFAULT = Param()
@@ -234,6 +235,9 @@ class PlotClient(object):
         # Data request for the error.
         self.cmd_dct["Ptycho.runtime['iter_info'][-1]"] = [None, self.runtime, 'last_info']
 
+        # Get the dump file path
+        self.cmd_dct["Ptycho.paths.plot_file"] = [None, self.runtime, 'plot_file']
+        
     def _request_data(self):
         """
         Request all data to the server (asynchronous).
@@ -457,7 +461,7 @@ class MPLplotter(object):
             try:
                 axis = self.axes_list[self.error_axes_index][self.error_frame]
                 # get runtime info
-                error = np.array([np.array(info['error'].values()).mean(0) for info in self.runtime.iter_info])
+                error = np.array([info['error'] for info in self.runtime.iter_info])
                 err_fmag = error[:, 0]
                 err_phot = error[:, 1]
                 err_exit = error[:, 2]
@@ -482,9 +486,11 @@ class MPLplotter(object):
         weight = pp.get('weight')
         # plotting mask for ramp removal
         sh = storage.data.shape[-2:]
-        x, y = np.indices(sh)-np.reshape(np.array(sh)//2, (len(sh),)+len(sh)*(1,))
-        mask = (x**2+y**2 < 0.1*min(sh)**2)
-        pp.mask = mask
+        if np.isscalar(pp.mask):
+            x, y = np.indices(sh)-np.reshape(np.array(sh)//2, (len(sh),)+len(sh)*(1,))
+            mask = (np.sqrt(x**2+y**2) < pp.mask*min(sh)/2.)
+            pp.mask = mask
+        
         # cropping
         crop = np.array(sh)*np.array(pp.crop)//2
         data = storage.data
@@ -493,38 +499,41 @@ class MPLplotter(object):
         #plot_mask = crop_pad(mask, crop, axes=[-2, -1])
         
         pty_axes = pp.get('pty_axes',[])
-        for ii, ind in enumerate([(l, a) for l in pp.layers for a in pp.auto_display]):
-            #print ii, ind
-            if ii >= len(axes):
-                break
-            try:
-                ptya = pty_axes[ii]
-            except IndexError:
-                cmap = pp.cmaps[1] if ind[1]=='p' else pp.cmaps[0]
-                ptya = PtyAxis(axes[ii], data = data[ind[0]], channel=ind[1],cmap = cmap)
-                ptya.set_mask(mask, False)
-                if pp.use_colorbar:
-                    ptya.add_colorbar()
-                pty_axes.append(ptya)
-            # get the layer
-            ptya.set_data(data[ind[0]])
-            ptya.ax.set_ylim(crop[0],sh[0]-crop[0])
-            ptya.ax.set_xlim(crop[1],sh[1]-crop[1])
-            #ptya._update_colorbar() 
-            if ind[1] == 'c':
-                if typ == 'obj':
-                    mm = np.mean(np.abs(data[ind[0]]*plot_mask)**2)
-                    info = 'T=%.2f' % mm
+        for layer in pp.layers:
+            for ind,channel in enumerate(pp.auto_display):
+                ii = layer*len(pp.auto_display)+ind
+                if ii >= len(axes):
+                    break
+                try:
+                    ptya = pty_axes[ii]
+                except IndexError:
+                    cmap = pp.cmaps[ind % len(pp.cmaps)] #if ind[1]=='p' else pp.cmaps[0]
+                    ptya = PtyAxis(axes[ii], data = data[layer], channel=channel,cmap = cmap)
+                    ptya.set_mask(mask, False)
+                    if pp.clims is not None and pp.clims[ind] is not None:
+                        ptya.set_clims(pp.clims[ind][0],pp.clims[ind][1], False)
+                    if pp.use_colorbar:
+                        ptya.add_colorbar()
+                    pty_axes.append(ptya)
+                # get the layer
+                ptya.set_data(data[layer])               
+                ptya.ax.set_ylim(crop[0],sh[0]-crop[0])
+                ptya.ax.set_xlim(crop[1],sh[1]-crop[1])
+                #ptya._update_colorbar() 
+                if channel == 'c':
+                    if typ == 'obj':
+                        mm = np.mean(np.abs(data[layer]*plot_mask)**2)
+                        info = 'T=%.2f' % mm
+                    else:
+                        mm = np.sum(np.abs(data[layer])**2)
+                        info = 'P=%1.1e' % mm
+                    ttl = '%s#%d (C)\n%s' % (title, layer, info)
+                elif channel == 'a':
+                    ttl = '%s#%d (P)' % (title, layer) 
                 else:
-                    mm = np.sum(np.abs(data[ind[0]])**2)
-                    info = 'P=%1.1e' % mm
-                ttl = '%s#%d (C)\n%s' % (title, ind[0], info)
-            elif ind[1] == 'a':
-                ttl = '%s#%d (P)' % (title, ind[0]) 
-            else:
-                ttl = '%s#%d (a)' % (title, ind[0]) 
-            ptya.ax.set_title(ttl, size=12)
-        
+                    ttl = '%s#%d (a)' % (title, layer) 
+                ptya.ax.set_title(ttl, size=12)
+            
         pp.pty_axes = pty_axes
     
     def save(self):
@@ -557,7 +566,7 @@ class MPLClient(MPLplotter):
         """
         Plot forever.
         """
-
+        count = 0
         initialized = False
         while True:
             if self.pc.new_data:
@@ -571,7 +580,15 @@ class MPLClient(MPLplotter):
                     initialized=True
                 self.plot_all()
                 self.draw()
+                if runtime.get('plot_file'):
+                    plot_file = clean_path(runtime['plot_file'])
+                    self.plot_fig.savefig(plot_file,dpi=300)
+                if runtime.get('allstop'):
+                    break
             pause(.1)
+        if self.pc.config.get('make_movie'):
+            from ptypy import utils as u
+            u.png2mpg(plot_file)
             
 class _MPLClient(object):
     """

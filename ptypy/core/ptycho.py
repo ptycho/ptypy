@@ -25,10 +25,10 @@ parallel = u.parallel
 __all__ = ['Ptycho','DEFAULT']
 
 DEFAULT_autoplot = u.Param(
+    threaded = True,
     interval = 1,
     layout = 'default',
     dump = True,
-    dump_interval = None,
     make_movie = True,
 )
 
@@ -209,7 +209,7 @@ class Ptycho(Base):
             
             # start automated plot client
             self.plotter = None
-            if parallel.master and p.autoplot and p.autoplot.interval > 0:
+            if parallel.master and p.autoplot and p.autoplot.threaded:
                 from multiprocessing import Process
                 logger.info('Spawning plot client in new Process.')
                 self.plotter = Process(target=u.spawn_MPLClient, args=(p.autoplot,))
@@ -446,7 +446,8 @@ class Ptycho(Base):
                 if parallel.master: 
                     info = self.runtime.iter_info[-1]
                     # calculate Error:
-                    err = np.array(info['error'].values()).mean(0)
+                    #err = np.array(info['error'].values()).mean(0)
+                    err = info['error']
                     logger.info('Iteration #%(iteration)d of %(engine)s :: Time %(duration).2f' % info) 
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, Exit %.2e' % tuple(err) )
                 
@@ -480,6 +481,8 @@ class Ptycho(Base):
         else:
             # prepare and run ALL engines in self.p.engines
             self.init_engine()
+            self.runtime.allstart = time.asctime()
+            self.runtime.allstop = None
             for engine in self.engines.values():
                 self.run(engine=engine)
 
@@ -487,6 +490,12 @@ class Ptycho(Base):
         """
         Cleanup
         """
+        self.runtime.allstop = time.asctime()
+        if parallel.master and self.interactor is not None: 
+            self.interactor.process_requests()
+        if self.plotter and self.p.autoplot.make_movie:
+            logger.info('Waiting for Client to make movie ')
+            u.pause(5)
         try:
             # not so clean. 
             self.plotter.terminate()
@@ -496,7 +505,7 @@ class Ptycho(Base):
             self.interaction.stop()
         except BaseException:
             pass
-        
+                    
     def _run(self, run_label=None):
         """
         *deprecated*
