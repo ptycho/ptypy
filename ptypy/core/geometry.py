@@ -334,8 +334,9 @@ class BasicFarfieldPropagator(object):
         """
         self.p=u.Param(DEFAULT)
         self.dtype = kwargs['dtype'] if kwargs.has_key('dtype') else np.complex128
+        self.ffttype = ffttype
         self.update(geo_pars,**kwargs)
-        self._assign_fft(ffttype=ffttype)
+        
     
     def update(self,geo_pars=None,**kwargs):
         """
@@ -355,8 +356,12 @@ class BasicFarfieldPropagator(object):
         resolution = p.resolution if p.resolution is not None else lz / p.shape / p.psize
         
         # calculate array shape from misfit 
-        self.crop_pad = np.round(u.expect2(p.misfit) /2.0).astype(int) * 2
+        mis = u.expect2(p.misfit)
+        self.crop_pad = np.round(mis /2.0).astype(int) * 2
         self.sh = p.shape + self.crop_pad
+
+        # undo rounding error
+        lz /= (self.sh[0] + mis[0] - self.crop_pad[0])/self.sh[0]
         
         # calculate the grids
         [X,Y] = u.grids(self.sh,resolution,p.origin)
@@ -379,6 +384,8 @@ class BasicFarfieldPropagator(object):
         # factors for inverse operation
         self.pre_ifft = self.post_fft.conj()
         self.post_ifft = self.pre_fft.conj()
+        
+        self._assign_fft(self.ffttype)
         
     def fw(self,W):
         """

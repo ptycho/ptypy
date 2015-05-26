@@ -186,7 +186,9 @@ def png2mpg(listoffiles,framefile='frames.txt',fps=5,bitrate=2000,codec='wmv2',E
         A list of paths to files. Each file will be reinterpreted as a 
         collection files in the same directory, e.g. only the first file
         in a series needs to be selected. All series for which a first
-        file was given will be concatenated in the mavie.
+        file was given will be concatenated in the movie. May also be 
+        a textfile with a listing of frames in which case the creation
+        of an intermediate file of frame paths will be skipped.
     
     framefile : str
         Filepath, the respective file will be created to store a list
@@ -243,57 +245,62 @@ def png2mpg(listoffiles,framefile='frames.txt',fps=5,bitrate=2000,codec='wmv2',E
     import glob
     import re
     framelist=[]
-    
-    # in case of single file path
-    if str(listoffiles)==listoffiles:
-        listoffiles = [listoffiles]
-        
-    for frame_or_list in listoffiles:
-        if not os.path.isfile(frame_or_list):
-            raise ValueError('File %s not found' % frame_or_list)
-        else:
-            head,tail=os.path.split(frame_or_list)
-            # in case of executing the script in the same directory
-            if str(head)=='': head = '.'
-            
-            if os.path.splitext(tail)[1] in ['.txt','.dat']:
-                print('Found text file - try to interpret it as a list of image files.')
-                temp=open(frame_or_list)
-                line='uiui'
-                while 'EOF' not in line and line!='':
-                    line=temp.readline()
-                    content=line.strip()
-                    #print content
-                    # look if the referenced file exists and then add the file to the list
-                    if os.path.isfile(content):
-                        framelist.append(content)
-                    elif os.path.isfile(head+os.sep+content):
-                        framelist.append(head+os.sep+content)
-                    else:
-                        print('File reference %s not found, continueing..' % content)
-                        continue
-                temp.close()
-            else:
-                #trying to find similar images
-                body,imagetype=os.path.splitext(tail)
-                #replace possible numbers by a wildcard
-                newbody=re.sub('\d+','*',body)
-                wcard=head+os.sep+newbody+imagetype
-                #print wcard
-                imagfiles=glob.glob(wcard)
-                imagfiles.sort()
-                framelist+=imagfiles
-    
-    if os.path.split(framefile)[0]=='':                        
-        ff=head+os.sep+framefile
+    if str(listoffiles).endswith('.txt'):
+        newframefile = open(listoffiles,'r')
+        framelist = [line.strip() for line in newframefile]
+        newframefile.close()
+        ff = listoffiles
     else:
-        ff=framefile
+        # in case of single file path
+        if str(listoffiles)==listoffiles:
+            listoffiles = [listoffiles]
+            
+        for frame_or_list in listoffiles:
+            if not os.path.isfile(frame_or_list):
+                raise ValueError('File %s not found' % frame_or_list)
+            else:
+                head,tail=os.path.split(frame_or_list)
+                # in case of executing the script in the same directory
+                if str(head)=='': head = '.'
+                
+                if os.path.splitext(tail)[1] in ['.txt','.dat']:
+                    print('Found text file - try to interpret it as a list of image files.')
+                    temp=open(frame_or_list)
+                    line='uiui'
+                    while 'EOF' not in line and line!='':
+                        line=temp.readline()
+                        content=line.strip()
+                        #print content
+                        # look if the referenced file exists and then add the file to the list
+                        if os.path.isfile(content):
+                            framelist.append(content)
+                        elif os.path.isfile(head+os.sep+content):
+                            framelist.append(head+os.sep+content)
+                        else:
+                            print('File reference %s not found, continueing..' % content)
+                            continue
+                    temp.close()
+                else:
+                    #trying to find similar images
+                    body,imagetype=os.path.splitext(tail)
+                    #replace possible numbers by a wildcard
+                    newbody=re.sub('\d+','*',body)
+                    wcard=head+os.sep+newbody+imagetype
+                    #print wcard
+                    imagfiles=glob.glob(wcard)
+                    imagfiles.sort()
+                    framelist+=imagfiles
         
-    newframefile=open(ff,'w')
-    #newframefile.writelines(framelist)
-    for frame in framelist:
-        newframefile.write('/'+os.path.relpath(frame,'/')+'\n')
-    newframefile.close()
+        if os.path.split(framefile)[0]=='':                        
+            ff=head+os.sep+framefile
+        else:
+            ff=framefile
+        
+        newframefile=open(ff,'w')
+        #newframefile.writelines(framelist)
+        for frame in framelist:
+            newframefile.write('/'+os.path.relpath(frame,'/')+'\n')
+        newframefile.close()
 
     last=os.path.relpath(framelist[-1])
     savelast=os.path.split(last)[0]+'/last'+os.path.splitext(last)[1]
@@ -301,7 +308,7 @@ def png2mpg(listoffiles,framefile='frames.txt',fps=5,bitrate=2000,codec='wmv2',E
     #print savelast
     os.system('cp %s %s' % (last,savelast))
 
-    frametype=os.path.splitext(frame)[1].split('.')[-1]    
+    frametype=os.path.splitext(last)[1].split('.')[-1]    
     body=os.path.splitext(ff)[0] 
     
     mencode_dict=dict(
@@ -321,7 +328,6 @@ def png2mpg(listoffiles,framefile='frames.txt',fps=5,bitrate=2000,codec='wmv2',E
     +'-oac copy'  
     
     encoderstring=encodepattern % mencode_dict  
-    
     if Encode:
         try:
             os.system(encoderstring)

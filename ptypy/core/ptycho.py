@@ -139,6 +139,7 @@ class Ptycho(Base):
         self.p.update(kwargs)
         
         self._configure()
+        
         if level >=1:
             logger.info('\n'+headerline('Ptycho init level 1','l'))
             self.init_structures()
@@ -217,7 +218,8 @@ class Ptycho(Base):
         else:
             # no interaction wanted
             self.interactor = None
-        
+            self.plotter = None
+            
         parallel.barrier()
     
     def init_structures(self):
@@ -490,6 +492,7 @@ class Ptycho(Base):
         """
         Cleanup
         """
+        # 'allstop' will be interpreted as 'quit' on threaded plot clients
         self.runtime.allstop = time.asctime()
         if parallel.master and self.interactor is not None: 
             self.interactor.process_requests()
@@ -498,7 +501,7 @@ class Ptycho(Base):
             u.pause(5)
         try:
             # not so clean. 
-            self.plotter.terminate()
+            self.plotter.join()
         except BaseException:
             pass
         try:

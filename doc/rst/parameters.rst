@@ -157,7 +157,6 @@ Ptypy parameter structure
    *(17)* The address the server is listening to.
 
    The address the server is listening to.
-   TODO: allow for automatic address definition when running on a cluster.
 
    *default* = ``tcp://127.0.0.2``
 
@@ -562,7 +561,7 @@ Ptypy parameter structure
 
    *default* = ``None (>0.0)``
 
-.. py:data:: .scan.geometry.prop_type(str)
+.. py:data:: .scan.geometry.propagation(str)
 
    *(64)* Propagation type
 
@@ -1109,15 +1108,15 @@ Ptypy parameter structure
 
    *(125)* Param container for instances of `scan` parameters
 
-   
+   If not specified otherwise, entries in *scans* will use parameter defaults from :py:data:`.scan`
 
    *default* = ``None``
 
-.. py:data:: .scans.scan_%d(scan)
+.. py:data:: .scans.scan_00(scan)
 
-   *(126)* 
+   *(126)* Default first scans entry
 
-   
+   If only a single scan is used in the reconstruction, this entry may be left unchanged. If more than one scan is used, please make an entry for each scan. The name *scan_00* is an arbitrary choice and may be set to any other string.
 
    *default* = ``None``
 
@@ -1141,9 +1140,17 @@ Ptypy parameter structure
 
    *default* = ``None``
 
+.. py:data:: .engine.common.name(str)
+
+   *(129)* Name of engine. 
+
+   Dependent on the name given here, the default parameter set will be a superset of `common` and parameters to the entry of the same name.
+
+   *default* = ``DM``
+
 .. py:data:: .engine.common.numiter(int)
 
-   *(129)* Total number of iterations
+   *(130)* Total number of iterations
 
    
 
@@ -1151,7 +1158,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.common.numiter_contiguous(int)
 
-   *(130)* Number of iterations without interruption
+   *(131)* Number of iterations without interruption
 
    The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...)
 
@@ -1159,7 +1166,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.common.probe_support(float)
 
-   *(131)* Fraction of valid probe area (circular) in probe frame
+   *(132)* Fraction of valid probe area (circular) in probe frame
 
    
 
@@ -1167,7 +1174,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.common.clip_object(tuple)
 
-   *(132)* Clip object amplitude into this intrervall
+   *(133)* Clip object amplitude into this intrervall
 
    
 
@@ -1175,7 +1182,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM(Param)
 
-   *(133)* Parameters for Difference map engine
+   *(134)* Parameters for Difference map engine
 
    
 
@@ -1183,7 +1190,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.alpha(int)
 
-   *(134)* Difference map parameter
+   *(135)* Difference map parameter
 
    
 
@@ -1191,7 +1198,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.probe_update_start(int)
 
-   *(135)* Number of iterations before probe update starts
+   *(136)* Number of iterations before probe update starts
 
    
 
@@ -1199,7 +1206,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.update_object_first(bool)
 
-   *(136)* If False update object before probe
+   *(137)* If False update object before probe
 
    
 
@@ -1207,7 +1214,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.overlap_converge_factor(float)
 
-   *(137)* Threshold for interruption of the inner overlap loop
+   *(138)* Threshold for interruption of the inner overlap loop
 
    The inner overlap loop refines the probe and the object simultaneously. This loop is escaped as soon as the overall change in probe, relative to the first iteration, is less than this value.
 
@@ -1215,7 +1222,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.overlap_max_iterations(int)
 
-   *(138)* Maximum of iterations for the overlap constraint inner loop
+   *(139)* Maximum of iterations for the overlap constraint inner loop
 
    
 
@@ -1223,7 +1230,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.probe_inertia(float)
 
-   *(139)* Weight of the current probe estimate in the update
+   *(140)* Weight of the current probe estimate in the update
 
    
 
@@ -1231,7 +1238,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.object_inertia(float)
 
-   *(140)* Weight of the current object in the update
+   *(141)* Weight of the current object in the update
 
    
 
@@ -1239,7 +1246,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.fourier_relax_factor(float)
 
-   *(141)* If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
+   *(142)* If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
 
    Set this value higher for noisy data
 
@@ -1247,7 +1254,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.DM.obj_smooth_std(int)
 
-   *(142)* Gaussian smoothing (pixel) of the current object prior to update
+   *(143)* Gaussian smoothing (pixel) of the current object prior to update
 
    If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
 
@@ -1255,7 +1262,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML(Param)
 
-   *(143)* Maximum Likelihood parameters
+   *(144)* Maximum Likelihood parameters
 
    
 
@@ -1263,7 +1270,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.type(str)
 
-   *(144)* Likelihood model. One of 'gaussian', 'poisson' or 'euclid'
+   *(145)* Likelihood model. One of 'gaussian', 'poisson' or 'euclid'
 
    [only 'gaussian' is implemented for now]
 
@@ -1271,7 +1278,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.floating_intensities(bool)
 
-   *(145)* If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).
+   *(146)* If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).
 
    
 
@@ -1279,7 +1286,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.intensity_renormalization(float)
 
-   *(146)* A rescaling of the intensity so they can be interpreted as Poisson counts.
+   *(147)* A rescaling of the intensity so they can be interpreted as Poisson counts.
 
    
 
@@ -1287,7 +1294,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.reg_del2(bool)
 
-   *(147)* Whether to use a Gaussian prior (smoothing) regularizer.
+   *(148)* Whether to use a Gaussian prior (smoothing) regularizer.
 
    
 
@@ -1295,7 +1302,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.reg_del2_amplitude(float)
 
-   *(148)* Amplitude of the Gaussian prior if used.
+   *(149)* Amplitude of the Gaussian prior if used.
 
    
 
@@ -1303,7 +1310,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.smooth_gradient(float)
 
-   *(149)* Smoothing preconditioner. If 0, not used, if > 0 gaussian filter if < 0 Hann window.
+   *(150)* Smoothing preconditioner. If 0, not used, if > 0 gaussian filter if < 0 Hann window.
 
    
 
@@ -1311,7 +1318,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.scale_precond(bool)
 
-   *(150)* Whether to use the object/probe scaling preconditioner.
+   *(151)* Whether to use the object/probe scaling preconditioner.
 
    This parameter can give faster convergence for weakly scattering samples.
 
@@ -1319,7 +1326,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.scale_probe_object(float)
 
-   *(151)* Relative scale of probe to object.
+   *(152)* Relative scale of probe to object.
 
    
 
@@ -1327,7 +1334,7 @@ Ptypy parameter structure
 
 .. py:data:: .engine.ML.probe_update_start(int)
 
-   *(152)* Number of iterations before probe update starts
+   *(153)* Number of iterations before probe update starts
 
    
 
@@ -1339,17 +1346,17 @@ Ptypy parameter structure
 
 .. py:data:: .engines(Param)
 
-   *(153)* Container for instances of "engine" parameters
+   *(154)* Container for instances of "engine" parameters
 
    All engines registered in this structure will be executed sequentially.
 
    *default* = ``None``
 
-.. py:data:: .engines.engine_%d(engine)
+.. py:data:: .engines.engine_00(engine)
 
-   *(154)* 
+   *(155)* Default first engines entry
 
-   
+   Default first engine is difference map (DM)
 
    *default* = ``None``
 

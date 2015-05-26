@@ -26,12 +26,12 @@ p.scans.MF.data.dfile = 'sample.ptyd'
 p.engines = u.Param()                                  # (100) empty structure to be filled with engines
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter = 100
+p.engines.engine00.numiter = 30
 p.engines.engine00.alpha = 1
 p.engines.engine00.fourier_relax_factor = 0.05
-p.engines.engine01 = u.Param()
-p.engines.engine01.name = 'ML'
-p.engines.engine01.numiter = 100
+#p.engines.engine01 = u.Param()
+#p.engines.engine01.name = 'ML'
+#p.engines.engine01.numiter = 40
 
 P = Ptycho(p,level=5)
 #P.save_run(kind='minimal')

@@ -14,6 +14,7 @@ import matplotlib as mpl
 mpl.rcParams['backend'] = 'Qt4Agg'
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
+import os 
 
 __all__=['MPLClient','MPLplotter','PlotClient','spawn_MPLClient', 'TEMPLATES', 'DEFAULT']
 
@@ -99,6 +100,10 @@ class PlotClient(object):
 
     This PlotClient doesn't actually plot.
     """
+    
+    ACTIVE = 1 
+    DATA = 2
+    STOPPED = 0
 
     def __init__(self, client_pars=None):
         """
@@ -126,20 +131,24 @@ class PlotClient(object):
         self._thread = None
         self._stopping = False
         self._lock = Lock()
-
+        self._has_stopped = False
+        
         # Here you should initialize plotting capabilities.
         self.config = None
         
+
     @property
-    def new_data(self):
+    def status(self):
         """
         True only if new data were acquired since last time checked.
         """
         if self._new_data:
             self._new_data = False
-            return True
+            return self.DATA
+        elif self._has_stopped:
+            return self.STOPPED
         else:
-            return False
+            return self.ACTIVE
 
     def start(self):
         """
@@ -238,6 +247,9 @@ class PlotClient(object):
         # Get the dump file path
         self.cmd_dct["Ptycho.paths.plot_file"] = [None, self.runtime, 'plot_file']
         
+        # Get info if it's all over
+        self.cmd_dct["Ptycho.runtime.get('allstop') is not None"] = [None, self.__dict__, '_stopping']
+        
     def _request_data(self):
         """
         Request all data to the server (asynchronous).
@@ -267,7 +279,9 @@ class PlotClient(object):
             self.client.wait()
             self._store_data()
             # logger.info('New data arrived.')
-
+        self.disconnect()
+        self._has_stopped = True
+        
 class MPLplotter(object):
     """
     Plotting Client for Ptypy, using matplotlib.
@@ -561,7 +575,8 @@ class MPLClient(MPLplotter):
             
         self.pc = PlotClient(client_pars)
         self.pc.start()
-        
+        self._framefile= None
+    
     def loop_plot(self):
         """
         Plot forever.
@@ -569,7 +584,8 @@ class MPLClient(MPLplotter):
         count = 0
         initialized = False
         while True:
-            if self.pc.new_data:
+            status = self.pc.status
+            if status == self.pc.DATA:
                 self.pr, self.ob, runtime = self.pc.get_data()
                 self.runtime.update(runtime)
                 self.runtime['iter_info'].append(runtime['last_info'])
@@ -580,15 +596,24 @@ class MPLClient(MPLplotter):
                     initialized=True
                 self.plot_all()
                 self.draw()
+                count+=1
                 if runtime.get('plot_file'):
                     plot_file = clean_path(runtime['plot_file'])
                     self.plot_fig.savefig(plot_file,dpi=300)
-                if runtime.get('allstop'):
-                    break
+                    folder,fname = os.path.split(plot_file)
+                    mode ='w' if count==1 else 'a'
+                    self._framefile = folder+os.path.sep+'frames.txt'
+                    with open(self._framefile,mode) as f:
+                        f.write(plot_file+'\n')
+                        f.close()
+            elif status == self.pc.STOPPED:
+                break
             pause(.1)
+        
         if self.pc.config.get('make_movie'):
+            
             from ptypy import utils as u
-            u.png2mpg(plot_file)
+            u.png2mpg(self._framefile)
             
 class _MPLClient(object):
     """
