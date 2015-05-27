@@ -53,9 +53,9 @@ DEFAULT_coherence = u.Param(
 DEFAULT_sharing = u.Param(
     #scan_per_probe = 1,                # (69) number of scans per object
     #scan_per_object = 1,              # (70) number of scans per probe
-    object_shared_with = None,         # (71) `scan_label` of scan for the shared obejct
+    object_share_with = None,         # (71) `scan_label` of scan for the shared obejct
     object_share_power = 1,            # (72) contribution to the shared object
-    probe_shared_with = None,          # (73) `scan_label` of scan for the shared probe
+    probe_share_with = None,          # (73) `scan_label` of scan for the shared probe
     probe_share_power = 1,             # (74) contribution to the shared probe
 )
 
@@ -111,7 +111,7 @@ class ModelManager(object):
             The parent Ptycho object
             
         pars : dict or Param
-            Input parameters (see :any:`~ModelManager.DEFAULT`)
+            Input parameters (see :py:attr:`DEFAULT`)
             If None uses defaults
             
         scans : dict or Param
@@ -460,7 +460,9 @@ class ModelManager(object):
                 AR_mask = AR_mask_base  #.copy()
                 AR_diff.layer = index
                 AR_mask.layer = index
-
+                AR_diff.active = active
+                AR_mask.active = active
+                
                 # check here: is there already a view to this layer? Is it active?
                 try:
                     old_view = old_diff_views[old_diff_layers.index(index)]
@@ -474,7 +476,7 @@ class ModelManager(object):
                         'Diff view with layer/index %s of scan %s exists. \nSetting view active state from %s to %s' % (
                             index, label, old_active, active))
                 except ValueError:
-                    v = View(self.ptycho.diff, accessrule=AR_diff, active=active)
+                    v = View(self.ptycho.diff, accessrule=AR_diff)
                     diff_views.append(v)
                     logger.debug(
                         'Diff view with layer/index %s of scan %s does not exist. \nCreating view with ID %s and set active state to %s' % (
@@ -486,7 +488,7 @@ class ModelManager(object):
                     old_view = old_mask_views[old_mask_layers.index(index)]
                     old_view.active = active
                 except ValueError:
-                    v = View(self.ptycho.mask, accessrule=AR_mask, active=active)
+                    v = View(self.ptycho.mask, accessrule=AR_mask)
                     mask_views.append(v)
             # so now we should have the right views to this storages. Let them reformat()
             # that will create the right sizes and the datalist access
@@ -656,8 +658,8 @@ class ModelManager(object):
             
             # Compute sharing rules
             share = scan.pars.sharing 
-            alt_obj = share.object_shared_with if share is not None else None
-            alt_pr = share.probe_shared_with if share is not None else None
+            alt_obj = share.object_share_with if share is not None else None
+            alt_pr = share.probe_share_with if share is not None else None
                 
             obj_label = label if alt_obj is None else alt_obj
             pr_label = label if alt_pr is None else alt_pr
@@ -718,22 +720,22 @@ class ModelManager(object):
                                                   'psize': geometry.resolution,
                                                   'coord': pos_pr,
                                                   'storageID': probe_id_suf,
-                                                  'layer': pm},
-                                      active=True)
+                                                  'layer': pm,
+                                                  'active' : True})
                             ov = View(container=self.ptycho.obj,
                                       accessrule={'shape': geometry.shape,
                                                   'psize': geometry.resolution,
                                                   'coord': pos_obj,
                                                   'storageID': object_id_suf,
-                                                  'layer': om},
-                                      active=True)
+                                                  'layer': om,
+                                                  'active' : True})
                             ev = View(container=self.ptycho.exit,
                                       accessrule={'shape': geometry.shape,
                                                   'psize': geometry.resolution,
                                                   'coord': pos_pr,
                                                   'storageID': probe_id+object_id_suf[1:],
-                                                  'layer': exit_index},
-                                      active=dv.active)
+                                                  'layer': exit_index,
+                                                  'active': dv.active})
                             views = {'probe': pv, 'obj': ov, 'diff': dv, 'mask': mv, 'exit':ev}
                             #views = {'probe': pv, 'obj': ov, 'diff': dv, 'mask': mv}
                             pod = POD(ptycho=self.ptycho, ID=None, views=views, geometry=geometry)   #, meta=meta)

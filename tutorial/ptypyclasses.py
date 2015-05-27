@@ -95,9 +95,8 @@ fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.imshow(S1.data[0])
 fig.tight_layout()
-plt.show(block=False)
-
-# make fig ;Test figure; This is a test of a figure plot
+fig.savefig('ptypyclasses_%d.png' % fig.number, dpi=300)
+# This is a test of a figure plot
 
 # Adding View as a way to access data
 # -----------------------------------
@@ -109,6 +108,5 @@ from ptypy.core.classes import DEFAULT_ACCESSRULE
 ar = DEFAULT_ACCESSRULE.copy()
 print ar
 
-# Hallo lieber Martin
- 
+print View.__doc__ 
 

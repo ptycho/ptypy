@@ -52,7 +52,7 @@ __all__=['Container','Storage','View','POD','Base','DEFAULT_PSIZE','DEFAULT_SHAP
 DEFAULT_PSIZE = 1.
 
 # Default shape
-DEFAULT_SHAPE = (0,0,0)
+DEFAULT_SHAPE = (1,1,1)
 
 # Expected structure for Views initialization.
 DEFAULT_ACCESSRULE = u.Param(
@@ -61,6 +61,7 @@ DEFAULT_ACCESSRULE = u.Param(
         coord = None, # (2-tuple) physical coordinates of the center of the view
         psize = DEFAULT_PSIZE, # (float or None) pixel size (required for storage initialization)
         layer = 0, # (int) index of the third dimension if applicable.
+        active = True,
 )
 
 BASE_PREFIX = 'B'
@@ -329,9 +330,14 @@ class Storage(Base):
         # For documentation
         #: Three dimensional array as data buffer
         self.data = None 
-
-        if len(shape)==2:
+        
+        if np.isscalar(shape): 
+            shape = (1,int(shape),int(shape))
+        elif len(shape)==2:
             shape = (1,) + tuple(shape)
+        elif len(shape)!=3:
+            raise ValueError('`shape` must be scalar or 2-tuple or 3-tuple of int')
+            
         # Set data buffer
         if data is None:
             # Create data buffer
@@ -954,7 +960,7 @@ class View(Base):
     DEFAULT_ACCESSRULE = DEFAULT_ACCESSRULE
     _PREFIX = VIEW_PREFIX
       
-    def __init__(self, container,ID=None, accessrule=None, active=True,**kwargs):
+    def __init__(self, container,ID=None, accessrule=None, **kwargs):
         """
         Parameters
         ----------
@@ -967,15 +973,14 @@ class View(Base):
         accessrule : dict
             All the information necessary to access the wanted slice.
             Maybe subject to change as code evolve. See keyword arguments
-        
-        active : bool
-            Whether this view is active (*default* is ``True``) 
+            Almost all keys of accessrule will be available as attributes
+            in the constructed View instance.
         
         Keyword Args
         ------------
         storageID : str
             ID of storage, If the Storage does not exist 
-            it will be created! *(default = None)*
+            it will be created! (*default* is ``None``)
             
         shape : int or tuple of int
             Shape of the view in pixels (*default* is ``None``)
@@ -984,33 +989,43 @@ class View(Base):
             Physical coordinates [meter] of the center of the view.
             
         psize : float or tuple of float
-            Pixel size (required for storage initialization)
+            Pixel size [meters]. Required for storage initialization, 
             See :py:data:`DEFAULT_PSIZE`
             
         layer : int
             Index of the third dimension if applicable.
             (*default* is ``0``)
+            
+        active : bool
+            Whether this view is active (*default* is ``True``) 
         """
         super(View,self).__init__(container,ID,False)
-        #if len(kwargs) >0 :
-            #self._initialize(**kwargs)
-            
-    #def _initialize(self,accessrule=None, active=True, **kwargs):
-
+        
         # Prepare a dictionary for PODs (volatile!)
-        if not self.__dict__.has_key('pods'):
-            self.pods = weakref.WeakValueDictionary()
-
-        # a single pod lookup.
+        #if not hasattr(self,'pods'):
+        #    self.pods = weakref.WeakValueDictionary()
+        self.pods = weakref.WeakValueDictionary()
+        """ Volatile dictionary for all :any:`POD`\ s that connect to 
+            this view """
+        
+        # a single pod lookup (weak reference).
         self._pod = None
         
-        # Set active state
-        self.active = active
-
-        # The messy stuff
-        self._set_accessrule(accessrule,**kwargs )
+        self.active = True
+        """ Active state. If False this view will be ignored when 
+            resizing the data buffer of the associated :any:`Storage`."""
         
-    def _set_accessrule(self, accessrule,**kwargs ):
+        #: The :any:`Storage` instance that this view applies to by default.
+        self.storage = None
+        
+        self.storageID = None
+        """ The storage ID that this view will be forward to if applied 
+            to a :any:`Container`."""
+        
+        # The messy stuff
+        self._set(accessrule,**kwargs )
+        
+    def _set(self, accessrule,**kwargs ):
         """
         Store internal info to get/set the 2D data in the container. 
         """
@@ -1019,7 +1034,8 @@ class View(Base):
             rule.update(accessrule)
         rule.update(kwargs)
         
-        # The storage ID this view will apply to
+        self.active = True if rule.active else False
+        
         self.storageID = rule.storageID
 
         # Information to access the slice within the storage buffer
@@ -1036,10 +1052,10 @@ class View(Base):
         # Look for storage, create one if necessary
         s = self.owner.S.get(self.storageID, None)
         if s is None:
-            s = self.owner.new_storage(ID=self.storageID, psize=rule.psize, shape=rule.shape)
+            s = self.owner.new_storage(ID=self.storageID, psize=rule.psize, shape=self.shape)
         self.storage = s
             
-        if (self.storage.psize != rule.psize).any():
+        if (self._storage.psize != rule.psize).any():
             raise RuntimeError('Inconsistent pixel size when creating view')
 
         # This ensures self-consistency (sets pixel coordinate and ROI)
@@ -1055,8 +1071,8 @@ class View(Base):
     @property
     def slice(self):
         """
-        returns a slice according to layer and roi
-        Please note, that this not always makes sense
+        Returns a slice-tuple according to ``self.layer`` and ``self.roi``
+        Please note, that this may not always makes sense
         """
         slayer = None if self.layer not in self.storage.layermap else self.storage.layermap.index(self.layer)
         return (slayer,slice(self.roi[0,0],self.roi[1,0]),slice(self.roi[0,1],self.roi[1,1]))
@@ -1064,23 +1080,24 @@ class View(Base):
     @property
     def pod(self):
         """
-        returns first pod in the pod dict. This is a common call in the code 
-        and has therefore found its way here
+        Returns first :any:`POD` in the ``self.pods`` dict. 
+        This is a common call in the code and has therefore found 
+        its way here. May return ``None`` if there is no pod connected.
         """
-        return self._pod()
+        return self._pod()  # weak reference
         #return self.pods.values()[0]
-        
+               
     @property
     def data(self):
         """
-        Return the view content
+        Return the view content in data buffer of associated storage,
         """
         return self.storage[self]
         
     @data.setter
     def data(self,v):
         """
-        Set the view content
+        Set the view content in data buffer of associated storage,
         """
         self.storage[self]=v
         
@@ -1574,7 +1591,9 @@ class POD(Base):
     gives access to "exit", a (coherent) exit wave, and to propagation
     objects to go from exit to diff space. 
     """
+    #: Default set of :any:`View`\ s used by a POD
     DEFAULT_VIEWS={'probe':None,'obj':None,'exit':None,'diff':None,'mask':None}
+    
     _PREFIX = POD_PREFIX
     
     def __init__(self,ptycho=None,ID=None,views=None,geometry=None,**kwargs):
@@ -1588,7 +1607,7 @@ class POD(Base):
             The pod ID, If None it is managed by the ptycho.
             
         views : dict or Param
-            The views. See POD.DEFAULT_VIEWS.
+            The views. See :py:attr:`DEFAULT_VIEWS`.
             
         geometry : Geo
             Geometry class instance and attached propagator
@@ -1614,7 +1633,7 @@ class POD(Base):
             v.pods[self.ID]=self
             v._pod = weakref.ref(self)
             
-        # Get geometry with propagators
+        #: :any:`Geo` instance with propagators
         self.geometry = geometry
         
         # Convenience access for all views. Note: assignement of the type
@@ -1623,6 +1642,9 @@ class POD(Base):
         # be useful, we should consider declaring ??_view as @property.
         self.ob_view = self.V['obj']
         self.pr_view = self.V['probe']
+        """ A reference to the (pr)obe-view. (ob)ject-, (ma)sk- and 
+        (di)ff-view are accessible in the same manner (``self.xx_view``). """
+
         self.di_view = self.V['diff']
         self.ex_view = self.V['exit']
         
@@ -1649,7 +1671,7 @@ class POD(Base):
     def fw(self):
         """
         Convenience property that returns forward propagator of attached 
-        Geometry instance. Equivalent to ``self.geometry.propagator.fw``
+        Geometry instance. Equivalent to ``self.geometry.propagator.fw``.
         """  
         return self.geometry.propagator.fw
     
@@ -1657,15 +1679,15 @@ class POD(Base):
     def bw(self):
         """
         Convenience property that returns backward propagator of attached 
-        Geometry instance. Equivalent to ``self.geometry.propagator.bw``
+        Geometry instance. Equivalent to ``self.geometry.propagator.bw``.
         """
         return self.geometry.propagator.bw
     
     @property
     def object(self):
         """
-        Convenience property that links to slice of object :any:`Storage`
-        Usually equivalent to ``self.ob_view.data``
+        Convenience property that links to slice of object :any:`Storage`.
+        Usually equivalent to ``self.ob_view.data``.
         """
         if not self.is_empty:
             return self.ob_view.data
@@ -1679,8 +1701,8 @@ class POD(Base):
     @property
     def probe(self):
         """
-        Convenience property that links to slice of probe :any:`Storage`
-        Usually equivalent to ``self.pr_view.data``
+        Convenience property that links to slice of probe :any:`Storage`.
+        Equivalent to ``self.pr_view.data``.
         """
         return self.pr_view.data
         
@@ -1692,7 +1714,7 @@ class POD(Base):
     def exit(self):
         """
         Convenience property that links to slice of exit wave 
-        :any:`Storage`. Equivalent to ``self.pr_view.data``
+        :any:`Storage`. Equivalent to ``self.pr_view.data``.
         """
         if self.use_exit_container:
             return self.ex_view.data
@@ -1710,7 +1732,7 @@ class POD(Base):
     def diff(self):
         """
         Convenience property that links to slice of diffraction 
-        :any:`Storage`. Equivalent to ``self.di_view.data``
+        :any:`Storage`. Equivalent to ``self.di_view.data``.
         """
         return self.di_view.data
         
@@ -1722,7 +1744,7 @@ class POD(Base):
     def mask(self):
         """
         Convenience property that links to slice of masking 
-        :any:`Storage`. Equivalent to ``self.ma_view.data``
+        :any:`Storage`. Equivalent to ``self.ma_view.data``.
         """
         return self.ma_view.data
         
