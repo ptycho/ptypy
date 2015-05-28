@@ -1,14 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from version import short_version, version, release
 """
-PTYPY: A ptychographic reconstruction package.
+PTYPY(v%(short)s): A ptychography reconstruction package.
 
 To cite PTYPY in publications, use
  @article{ ... }
  
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
-"""
+    :version: %(version)s
+    :status: %(devrel)s
+""" % {'version':version,'devrel':'release' if release else 'development','short':short_version}
+
+del short_version, release
 # Initialize MPI (eventually GPU)
 from utils import parallel
 

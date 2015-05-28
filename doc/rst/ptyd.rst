@@ -1,27 +1,73 @@
 Ptypy data structure
 ====================
 
+Ptypy uses the python module **h5py** [h5py]_ to store and load data in the
+**H**\ ierarchical **D**\ ata **F**\ ormat [HDF]_ . The HDF resembles very 
+much a directory/file tree of todays operating systems, while the "files"
+are (multidimensonial) datasets. 
+
+Ptyd file format
+----------------
+
+Ptypy stores and loads the (processed) experimental in a file with ending
+*.ptyd*, which is a hdf5-file with a data tree of very simple nature. 
+Comparable to tagged image file formats like *.edf* or *.tiff*, the ``ptyd`` data file seperates
+meta information (stored in ``meta/``) from the actual data payload 
+(stored in ``chunks/``). A schematic overview of the data tree is depicted below.
+
 ::
    
-   ptyd/
-     meta/
-        distance : float, 
-        center   : (float,float) or None, optional
-        psize    : 
-     chunks/
-        0/
-          data      : array(M,N,N) of float
-          indices   : array(M) of int
-          positions : array(M ,2) of float
-          weights   : same shape as data or empty
-        1/
-          ...
-        2/
-          ...
-        ...
+   *.ptyd/
      
+         meta/
+            
+            [general parameters; optional but very useful]
+            version     : str
+            num_frames  : int
+            shape       : int or (int,int)
+            label       : str
+            
+            [geometric porameters; all optional] 
+            energy      : float, optional
+            distance    : float, optional
+            center      : (float,float) or None, optional
+            psize       : float or (float,float), optional
+            propagation : "farfield" or "nearfield", optional
+            ...
+            
+         chunks/
+         
+            0/
+              data      : array(M,N,N) of float
+              indices   : array(M) of int, optional
+              positions : array(M ,2) of float
+              weights   : same shape as data or empty
+            1/
+              ...
+            2/
+              ...
+            ...
+
+All parameters of ``meta/`` are also in :py:data:`.scan.data`\ .
+The first set of parameters
+
+::
+   
+   version     : str
+   num_frames  : int
+   shape       : int or (int,int)
+   label       : str
+
+are general parameters. They tell with which version this set 
+As walking the data tree and extracting the data from the *hdf5* file 
+is a bit cumbersome with h5py, there are a few convenience function in the 
+:py:mod:`ptypy.io.h5rw` module.
       
-       
+Loading a data file
+-------------------
+
+All parameters in ``meta/`` are also in :py:data:`.scan.data`\ . When *.ptyd*-file
+is loaded from within a reconstruction run, the 
  * meta [dict]:
  
    * center [array = [ 64.  64.]]
@@ -97,3 +143,10 @@ Ptypy data structure
      * positions [10x2 float64 array]
      * weights [array = []]
      * ...
+
+
+References
+----------
+
+.. [h5py] http://www.h5py.org/
+.. [HDF] **H**\ ierarchical **D**\ ata **F**\ ormat, `<http://www.hdfgroup.org/HDF5/>`_

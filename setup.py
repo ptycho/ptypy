@@ -2,9 +2,61 @@
 
 from distutils.core import setup, Extension
 
+CLASSIFIERS = """\
+Development Status :: 3 - Alpha
+Intended Audience :: Science/Research
+License :: OSI Approved
+Programming Language :: Python
+Topic :: Scientific/Engineering
+Topic :: Software Development
+Operating System :: Unix
+"""
+
+MAJOR               = 0
+MINOR               = 2
+MICRO               = 0
+ISRELEASED          = False
+VERSION             = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
+
+#import os
+#if os.path.exists('MANIFEST'): os.remove('MANIFEST')
+
+def write_version_py(filename='ptypy/version.py'):
+    cnt = """
+# THIS FILE IS GENERATED FROM ptypy/setup.py
+short_version='%(version)s'
+version='%(version)s'
+release=%(isrelease)s
+
+if not release:
+    version += '.dev'
+    import subprocess
+    try:
+        git_commit = subprocess.Popen(["git","log","-1"],stdout=subprocess.PIPE).communicate()[0].split("\\n")[0].split()[1]
+    except:
+        pass
+    else:
+        version += git_commit.strip()
+
+#print version
+"""
+    a = open(filename, 'w')
+    try:
+        a.write(cnt % {'version': VERSION, 'isrelease': str(ISRELEASED)})
+    finally:
+        a.close()
+
+if __name__=='__main__':
+    write_version_py()
+    try:
+        execfile('ptypy/version.py')
+        vers= version
+    except:
+        vers = VERSION
+
 setup(
     name = 'Python Ptychography toolbox',
-    version = '0.1',
+    version = VERSION,
     author = 'Pierre Thibault, Bjoern Enders, Martin Dierolf and others',
     description = 'Ptychographic reconstruction toolbox', 
     long_description = file('README.md','r').read(),
