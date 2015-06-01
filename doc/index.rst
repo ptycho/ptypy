@@ -12,13 +12,13 @@ Contents:
    :maxdepth: 4
 
    rst/readme
-   rst/engineprimer
    rst/ptypyclasses
+   rst/simupod
    rst/ownengine
-   rst/mathtest
    rst/ptyd
-   rst/ptypy
+   rst/subclassptyscan
    rst/parameters   
+   rst/ptypy
 
 Indices and tables
 ==================

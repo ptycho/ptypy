@@ -53,7 +53,7 @@ class I13Scan(PtyScan):
     Subclass of PtyScan.
     """
 
-    DEFAULT = PtyScan.DEFAULTS.copy().update(PREP_DEFAULT)
+    DEFAULT = PtyScan.DEFAULT.copy().update(PREP_DEFAULT)
 
     def __init__(self, pars=None, **kwargs):
         """

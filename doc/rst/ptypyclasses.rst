@@ -1,8 +1,7 @@
+.. _ptypyclasses:
 
-::
-
-   >>> #Tutorial on ptypy classes
-   >>> #=========================
+Tutorial on ptypy classes
+=========================
 
 First a hort reminder from the classes Module about the classes
 this tutorial covers
@@ -36,14 +35,15 @@ Import some modules
 
 ::
 
+   >>> import matplotlib as mpl
+   >>> import numpy as np
    >>> import ptypy
    >>> from ptypy import utils as u
    >>> from ptypy.core import View,Container,Storage,Base
-   >>> import matplotlib as mpl
    >>> plt = mpl.pyplot
 
-   >>> #A single Storage in one Container
-   >>> #---------------------------------
+A single Storage in one Container
+---------------------------------
 
 As master class we create a :any:`Container` instance
 
@@ -90,13 +90,14 @@ for the last two dimensions of the stored data.
 
 Many attributes of a :any:`Storage` are in fact *properties*. Changing
 their value may have an impact on other methods or attributes of the
-class. For example. One convenient property is :py:meth:`Storage.grids`
-that creates grids for the last two dimensions (see also) 
-:py:func:`~ptypy.utils.array_utils.grids`
+class. For example. One convenient method is Storage.\ :py:meth:`~ptypy.core.classes.Storage.grids`
+that creates grids for the last two dimensions (see also
+:py:func:`ptypy.utils.array_utils.grids`)
 
 ::
 
-   >>> print S1.grids()[0]
+   >>> y,x = S1.grids()
+   >>> print y
    [[[-3. -3. -3. -3. -3. -3. -3.]
      [-2. -2. -2. -2. -2. -2. -2.]
      [-1. -1. -1. -1. -1. -1. -1.]
@@ -105,7 +106,7 @@ that creates grids for the last two dimensions (see also)
      [ 2.  2.  2.  2.  2.  2.  2.]
      [ 3.  3.  3.  3.  3.  3.  3.]]]
    
-   >>> print S1.grids()[1]
+   >>> print x
    [[[-3. -2. -1.  0.  1.  2.  3.]
      [-3. -2. -1.  0.  1.  2.  3.]
      [-3. -2. -1.  0.  1.  2.  3.]
@@ -130,7 +131,8 @@ So now we change a few properties. For example,
 
    >>> S1.center = (2,2)
    >>> S1.psize = 0.1
-   >>> print S1.grids()[0]
+   >>> g = S1.grids()
+   >>> print g[0]
    [[[-0.2 -0.2 -0.2 -0.2 -0.2 -0.2 -0.2]
      [-0.1 -0.1 -0.1 -0.1 -0.1 -0.1 -0.1]
      [ 0.   0.   0.   0.   0.   0.   0. ]
@@ -139,7 +141,7 @@ So now we change a few properties. For example,
      [ 0.3  0.3  0.3  0.3  0.3  0.3  0.3]
      [ 0.4  0.4  0.4  0.4  0.4  0.4  0.4]]]
    
-   >>> print S1.grids()[1]
+   >>> print g[1]
    [[[-0.2 -0.1  0.   0.1  0.2  0.3  0.4]
      [-0.2 -0.1  0.   0.1  0.2  0.3  0.4]
      [-0.2 -0.1  0.   0.1  0.2  0.3  0.4]
@@ -156,7 +158,8 @@ pixel to a new value, which shifts the center to a new position.
 ::
 
    >>> S1.origin -= 0.12
-   >>> print S1.grids()[0]
+   >>> y,x = S1.grids()
+   >>> print y
    [[[-0.32 -0.32 -0.32 -0.32 -0.32 -0.32 -0.32]
      [-0.22 -0.22 -0.22 -0.22 -0.22 -0.22 -0.22]
      [-0.12 -0.12 -0.12 -0.12 -0.12 -0.12 -0.12]
@@ -165,7 +168,7 @@ pixel to a new value, which shifts the center to a new position.
      [ 0.18  0.18  0.18  0.18  0.18  0.18  0.18]
      [ 0.28  0.28  0.28  0.28  0.28  0.28  0.28]]]
    
-   >>> print S1.grids()[1]
+   >>> print x
    [[[-0.32 -0.22 -0.12 -0.02  0.08  0.18  0.28]
      [-0.32 -0.22 -0.12 -0.02  0.08  0.18  0.28]
      [-0.32 -0.22 -0.12 -0.02  0.08  0.18  0.28]
@@ -184,7 +187,7 @@ still filled with the not so exciting ones. We can use
 
 ::
 
-   >>> S1.fill(S1.grids()[0]+S1.grids()[1])
+   >>> S1.fill(x+y)
    >>> print S1.data
    [[[-0.64 -0.54 -0.44 -0.34 -0.24 -0.14 -0.04]
      [-0.54 -0.44 -0.34 -0.24 -0.14 -0.04  0.06]
@@ -195,25 +198,24 @@ still filled with the not so exciting ones. We can use
      [-0.04  0.06  0.16  0.26  0.36  0.46  0.56]]]
    
 
-Test
+We can also plot the data using 
+:py:func:`~ptypy.utils.plot_utils.plot_storage` 
 
 ::
 
-   >>> fig = plt.figure()
-   >>> ax = fig.add_subplot(111)
-   >>> ax.imshow(S1.data[0])
-   >>> fig.tight_layout()
-See :numref:`ptypyclasses_01` for the plotted image.
+   >>> fig = u.plot_storage(S1,0)
 
-.. figure:: ../_img/ptypyclasses_01.png
+See :numref:`ptypyclasses_00` for the plotted image.
+
+.. figure:: ../_img/ptypyclasses_00.png
    :width: 70 %
    :figclass: highlights
-   :name: ptypyclasses_01
+   :name: ptypyclasses_00
 
    This is a test of a figure plot
 
-Adding View as a way to access data
------------------------------------
+Adding Views as a way to access data
+------------------------------------
 
 Besides being able to access the data directly through its attribute
 and the corresponding *numpy* syntax, ptypy offers acces through a
@@ -224,29 +226,276 @@ and the corresponding *numpy* syntax, ptypy offers acces through a
    >>> from ptypy.core.classes import DEFAULT_ACCESSRULE
    >>> ar = DEFAULT_ACCESSRULE.copy()
    >>> print ar
-   * id3VSQ405SU8           : ptypy.utils.parameters.Param(5)
+   * id3VAEB7CALO           : ptypy.utils.parameters.Param(6)
+     * layer                : 0
      * psize                : 1.0
      * shape                : None
-     * storageID            : None
-     * layer                : 0
      * coord                : None
+     * active               : True
+     * storageID            : None
    
    
 
-   >>> print View.__doc__
+Now let's say we want a 4x4 view on Storage ``S1`` around the origin.
+We set
+
+::
+
+   >>> ar.shape = (4,4)  # ar.shape = 4 would have been also valid
+   >>> ar.coord = 0.      # ar.coord = (0.,0.)
+   >>> ar.storageID = S1.ID
+   >>> ar.psize = None
+
+Now we can construct the View. The last step in this process is an 
+update of the View by the Storage ``S1`` which transfers data
+data ranges/coordinates to the View.
+
+::
+
+   >>> V1 = View(C1, ID=None, accessrule = ar)
+
+We see that a number of the accessrule items appear in the View now.
+
+::
+
+   >>> print V1.shape
+   [4 4]
    
-       A "window" on a Container.
-       
-       A view stores all the slicing information to extract a 2D piece
-       of Container. 
-       
-       Note
-       ----
-       The final structure of this class is yet up to debate
-       and the constructor signature may change. Especially since
-       "DEFAULT_ACCESSRULE" is yet so small, its contents could be
-       incorporated in the constructor call.
-       
-       
+   >>> print V1.coord
+   [ 0.  0.]
    
+   >>> print V1.storageID
+   S0000
+   
+
+A few other were set by the automatic update of Storage
+
+::
+
+   >>> print V1.psize
+   [ 0.1  0.1]
+   
+   >>> print V1.storage
+             S0000 :    0.00 MB :: data=(1, 7, 7) @float64 psize=[ 0.1  0.1] center=[ 3.2  3.2]
+   
+
+The update also set new attributes of the View that start with 
+a lower 'd' and are locally stored information about data access. 
+
+::
+
+   >>> print V1.dlayer, V1.dlow, V1.dhigh
+   0 [1 1] [5 5]
+   
+
+Finally, we can retrieve the data subset by applying the View to the storage.
+
+::
+
+   >>> data = S1[V1]
+   >>> print data
+   [[-0.44 -0.34 -0.24 -0.14]
+    [-0.34 -0.24 -0.14 -0.04]
+    [-0.24 -0.14 -0.04  0.06]
+    [-0.14 -0.04  0.06  0.16]]
+   
+
+It does not matter if we apply the View to Storage ``S1`` or the 
+container ``C1``, or use the View internal 
+View.\ :py:meth:`~ptypy.core.classes.View.data` property.
+
+::
+
+   >>> print np.allclose(data,C1[V1])
+   True
+   
+   >>> print np.allclose(data,V1.data)
+   True
+   
+
+The first access yielded a similar result because the 
+:py:attr:`~ptypy.core.classes.View.storageID` is in ``C1`` and the
+second acces method worked because it uses the View's 
+:py:attr:`~ptypy.core.classes.View.storage` attribute
+
+::
+
+   >>> print V1.storage is S1
+   True
+   
+   >>> print V1.storageID in C1.S.keys()
+   True
+   
+
+We observe that the coordinate [0.0,0.0] is not part of the grid
+in S1 anymore. Consequently, the View was put as close to [0.0,0.0]
+as possible. The coordinate in data space, that the View would have as
+center is the attribute :py:meth:`~ptypy.core.classes.View.pcoord` while
+:py:meth:`~ptypy.core.classes.View.dcoord` is the closest data coordinate
+The difference is held by :py:meth:`~ptypy.core.classes.View.sp` such 
+that a subpixel correction may be applied if needed (future release)
+
+::
+
+   >>> print V1.dcoord, V1.pcoord, V1.sp
+   [3 3] [ 3.2  3.2] [ 0.2  0.2]
+   
+
+.. note::
+   Please note that we cannot guarantee any API stability for other 
+   attributes / properties besides *.data*, *.shape* and *.coord*
+
+If we set the coordinate to some other value in the grid, we can eliminate
+the subpixel misfit. By changing the *.coord* property, we need to
+update the View manually, as the View-Storage interaction is non-automatic
+apart from the View construction - a measure of caution.
+
+::
+
+   >>> V1.coord = (0.08,0.08)
+   >>> S1.update_views(V1)
+   >>> print V1.dcoord, V1.pcoord, V1.sp
+   [4 4] [ 4.  4.] [ 0.  0.]
+   
+
+Oh we see that the high range limit of the View is close to the border 
+of the data buffer... so what happens if we push the coordinate further?
+
+::
+
+   >>> print V1.dhigh
+   [6 6]
+   
+   >>> V1.coord = (0.28,0.28)
+   >>> S1.update_views(V1)
+   >>> print V1.dhigh
+   [8 8]
+   
+
+Now the higher range limit of the View is certianly off bounds.
+Applying this View to the Storage can lead to undesired behavior, i.e.
+concatenation or data access errors.
+
+::
+
+   >>> print S1[V1]
+   [[ 0.16  0.26  0.36]
+    [ 0.26  0.36  0.46]
+    [ 0.36  0.46  0.56]]
+   
+   >>> print S1[V1].shape , V1.shape
+   (3, 3) [4 4]
+   
+
+One important feature of the :any:`Storage` class is that it can detect
+all out-of-bounds accesses and reformat the data buffer accordingly.
+A simple call to 
+*Storage*.\ :py:meth:`~ptypy.core.classes.Storage.reformat` should do. 
+
+::
+
+   >>> print S1.shape
+   (1, 7, 7)
+   
+   >>> mn = S1[V1].mean()
+   >>> S1.fill_value = mn
+   >>> S1.reformat()
+   >>> print S1.shape
+   (1, 4, 4)
+   
+
+Oh no, the Storage data buffer has shrunk! .. Don't worry. That is
+intended behavior. A call to *.reformat()* crops and pads the data 
+buffer around all **active** Views. 
+You need to set
+
+::
+
+   >>> S1.padonly = True
+if you want to avoid that the data buffer is cropped. We leave this
+as an exercise to the user. Instead we add a new View at different 
+location to verify that the buffer will try to reach both Views.
+
+::
+
+   >>> ar2 = ar.copy()
+   >>> ar2.coord = (-0.82,-0.82)
+   >>> V2 = View(C1, ID=None, accessrule = ar2)
+   >>> S1.fill_value = 0.
+   >>> S1.reformat()
+   >>> print S1.shape
+   (1, 15, 15)
+   
+
+Ok we see that the the buffer has grown in size. Now we give the new
+View a copied values of the other view for a nice figure
+
+::
+
+   >>> V2.data = V1.data.copy()
+   >>> fig = u.plot_storage(S1,2)
+
+See :numref:`ptypyclasses_02` for the plotted image.
+
+.. figure:: ../_img/ptypyclasses_02.png
+   :width: 70 %
+   :figclass: highlights
+   :name: ptypyclasses_02
+
+   Storage with 4x4 views of the same content.
+
+We observe that the data buffer spans both views.
+Now let us add more....
+
+::
+
+   >>> for i in range(1,11):
+   >>>     ar2 = ar.copy()
+   >>>     ar2.coord = (-0.82+i*0.1,-0.82+i*0.1)
+   >>>     View(C1, ID=None, accessrule = ar2)
+
+A handy method of the :any:`Storage` class is that it can determine
+its own coverage by views.
+
+::
+
+   >>> S1.data[:] = S1.get_view_coverage()
+   >>> fig = u.plot_storage(S1,3)
+
+See :numref:`ptypyclasses_03` for the plotted image.
+
+.. figure:: ../_img/ptypyclasses_03.png
+   :width: 70 %
+   :figclass: highlights
+   :name: ptypyclasses_03
+
+   View coverage in data buffer of ``S1``.
+
+Another handy feature of the :any:`View` class is that it automatically
+create a Storage instance to the ``storageID`` if it does not already
+exist.
+
+::
+
+   >>> ar = DEFAULT_ACCESSRULE.copy()
+   >>> ar.shape = 200
+   >>> ar.coord = 0.
+   >>> ar.storageID = 'S100'
+   >>> ar.psize = 1.0
+   >>> V3=View(C1,ID=None,accessrule = ar)
+
+Finally we have a look at the mischief we managed so far.
+
+::
+
+   >>> print C1.formatted_report()
+   (C)ontnr : Memory : Shape            : Pixel size      : Dimensions      : Views
+   (S)torgs : (MB)   : (Pixel)          : (meters)        : (meters)        : act. 
+   --------------------------------------------------------------------------------
+   None     :    0.3 : float64
+   S100     :    0.3 :        1*200*200 :   1.00*1.00e+00 :   2.00*2.00e+02 :     1
+   S0000    :    0.0 :          1*15*15 :   1.00*1.00e-01 :   1.50*1.50e+00 :    12
+   
+   
+
 

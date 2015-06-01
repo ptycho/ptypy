@@ -260,6 +260,13 @@ class Geo(Base):
         if self.interact: self.update()
     
     @property
+    def distance(self):
+        """
+        Propagation distance in meters
+        """
+        return self.p.distance
+        
+    @property
     def propagator(self):
         """
         Retrieves propagator, createas propagator instance if necessary.

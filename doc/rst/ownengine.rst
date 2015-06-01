@@ -1,3 +1,5 @@
+.. _ownengine:
+
 How to write an engine yourself
 ===============================
 
@@ -13,7 +15,13 @@ First we import ptypy and the utility module
    >>> from ptypy import utils as u
    >>> import numpy as np
 
-Next we need to create a most basic input paramater tree. While there 
+Preparing a managing Ptycho instance
+------------------------------------
+
+We need to prepare a managing :any:`Ptycho`\ . It requires a parameter
+tree, as specified by ..
+
+We need to create a most basic input paramater tree. While there 
 are many default values, we manually specify a more verbose output
 and single precision.
 
@@ -73,7 +81,7 @@ all necessary basic :any:`Container` instances like *probe*, *object*
    --- Scan MF photon report ---
    Total photons   : 4.16e+09 
    Average photons : 3.93e+07
-   Maximum photons : 7.13e+07
+   Maximum photons : 7.14e+07
    -----------------------------
    
    ---- Creating PODS -------------------------------------------------------------
@@ -84,7 +92,7 @@ all necessary basic :any:`Container` instances like *probe*, *object*
    ---- Probe initialization ------------------------------------------------------
    Initializing probe storage S00G00 using scan MF
    Found no photon count for probe in parameters.
-   Using photon count 7.13e+07 from photon report
+   Using photon count 7.14e+07 from photon report
    
    ---- Object initialization -----------------------------------------------------
    Initializing object storage S00G00 using scan MF
@@ -115,7 +123,9 @@ A quick look at the diffraction data
 
 ::
 
-   >>> fig = u.plot_storage(P.diff.S['S0000'],0,slices=(slice(2),slice(None),slice(None)),modulus='log')
+   >>> diff_storage = P.diff.storages.values()[0]
+   >>> fig = u.plot_storage(diff_storage,0,slices=(slice(2),slice(None),slice(None)),modulus='log')
+
 See :numref:`ownengine_00` for the plotted image.
 
 .. figure:: ../_img/ownengine_00.png
@@ -130,7 +140,9 @@ probes are initialized with an aperture like support.
 
 ::
 
+   >>> probe_storage = P.probe.storages.values()[0]
    >>> fig = u.plot_storage(P.probe.S['S00G00'],1)
+
 See :numref:`ownengine_01` for the plotted image.
 
 .. figure:: ../_img/ownengine_01.png
@@ -139,6 +151,11 @@ See :numref:`ownengine_01` for the plotted image.
    :name: ownengine_01
 
    Plot of the starting guess for the probe.
+
+.. _basic_algorithm:
+
+A most basic Difference-Map implementation
+------------------------------------------
 
 Now we can start implementing a simple DM algorithm. We need three basic
 functions, one is the ``fourier_update`` that implements the Fourier
@@ -243,9 +260,9 @@ We start of with a small number of iterations.
 ::
 
    >>> iterate(P,9)
-   121489.812114
-   108117.364551
-   90332.4140398
+   121527.479458
+   108120.012926
+   90583.9932563
    
 
 We note that the error (here only displayed for 3 iterations) is 
@@ -255,6 +272,7 @@ Let us have a look how the probe has developed.
 ::
 
    >>> fig = u.plot_storage(P.probe.S['S00G00'],2)
+
 See :numref:`ownengine_02` for the plotted image.
 
 .. figure:: ../_img/ownengine_02.png
@@ -271,6 +289,7 @@ Looks like the probe is on a good way. How about the object?
 ::
 
    >>> fig = u.plot_storage(P.obj.S['S00G00'],3,slices=(slice(1),slice(120,-120),slice(120,-120)))
+
 See :numref:`ownengine_03` for the plotted image.
 
 .. figure:: ../_img/ownengine_03.png
@@ -286,18 +305,18 @@ Ok, let us do some more iterations. 36 will do.
 ::
 
    >>> iterate(P,36)
-   73236.0986657
-   60798.1299538
-   46323.5850009
-   35256.1125484
-   28340.7981146
-   21096.2107122
-   14763.9953011
-   10776.5353326
-   8057.79303546
-   6496.59511599
-   5799.23301664
-   5692.20370563
+   73101.5121799
+   59342.5286091
+   47377.1917036
+   35248.6634592
+   28004.9562494
+   21878.8549277
+   16230.5171194
+   11469.0889412
+   8428.78922375
+   6581.98387953
+   5734.33557209
+   5675.11682716
    
 
 Error is still on a steady descent. Let us look at the final 
@@ -306,6 +325,7 @@ reconstructed probe and object.
 ::
 
    >>> fig = u.plot_storage(P.probe.S['S00G00'],4)
+
 See :numref:`ownengine_04` for the plotted image.
 
 .. figure:: ../_img/ownengine_04.png
@@ -318,6 +338,7 @@ See :numref:`ownengine_04` for the plotted image.
 
 
    >>> fig = u.plot_storage(P.obj.S['S00G00'],5,slices=(slice(1),slice(120,-120),slice(120,-120)))
+
 See :numref:`ownengine_05` for the plotted image.
 
 .. figure:: ../_img/ownengine_05.png

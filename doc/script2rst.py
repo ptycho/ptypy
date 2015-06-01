@@ -3,6 +3,8 @@ import StringIO
 import contextlib
 import os
 
+indent_keys = ['for','if','with','def','class']
+
 sout = StringIO.StringIO()
 @contextlib.contextmanager
 def stdoutIO(stdout=None):
@@ -26,6 +28,9 @@ name = script_name.replace('.py','').split(os.sep)[-1]
 frst=open('rst'+os.sep+name+'.rst','w')
 fig_path = '_img'+os.sep
 
+frst.write('.. note::\n   This tutorial was generated from the python source\
+ :file:`ptypy/tutorial/%s` using :file:`ptypy/doc/%s`.\n\n' % (os.path.split(script_name)[-1],sys.argv[0]))
+ 
 was_comment = True
 
 def check_for_fig(wline):
@@ -60,7 +65,7 @@ for line in fpy:
         fig_name = name + '_%02d'  % fig.number
         fname = fig_path + fig_name + '.png'
         fig.savefig(fname, dpi=300)
-        frst.write('See :numref:`%s` for the plotted image.\n\n' % fig_name)
+        frst.write('\nSee :numref:`%s` for the plotted image.\n\n' % fig_name)
         frst.write('.. figure:: '+'..'+os.sep+fname+'\n')
         frst.write('   :width: 70 %\n')
         frst.write('   :figclass: highlights\n')
@@ -82,7 +87,13 @@ for line in fpy:
             frst.write('   '+ line2)
         continue
     
-    if line.startswith('def'):
+    indent = False
+    for key in indent_keys:
+        if line.startswith(key): 
+            indent = True
+            break
+            
+    if indent:
         frst.write('\n::\n\n   >>> '+line)
         func = line
         for line2 in fpy:

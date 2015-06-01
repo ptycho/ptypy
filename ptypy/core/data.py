@@ -57,7 +57,7 @@ META = dict(
     center=None,
     distance = None,
 )
-GENERIC = dict(
+GENERIC = u.Param(
     dfile = None,  # filename (e.g. 'foo.ptyd')
     chunk_format='.chunk%02d',  # Format for chunk file appendix.
     #roi = None,  # 2-tuple or int for the desired fina frame size
@@ -96,7 +96,7 @@ class PtyScan(object):
      
     """
 
-    DEFAULTS = GENERIC
+    DEFAULT = GENERIC
 
     def __init__(self, pars=None, **kwargs):  # filename='./foo.ptyd',shape=None, save=True):
         """
@@ -107,7 +107,7 @@ class PtyScan(object):
         """
 
         # Load default parameter structure
-        info = u.Param(self.DEFAULTS.copy())
+        info = u.Param(self.DEFAULT.copy())
         info.update(pars)
         info.update(kwargs)
 

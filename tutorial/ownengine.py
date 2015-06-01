@@ -1,3 +1,5 @@
+# .. _ownengine:
+
 # How to write an engine yourself
 # ===============================
 
@@ -10,7 +12,13 @@ import ptypy
 from ptypy import utils as u
 import numpy as np
 
-# Next we need to create a most basic input paramater tree. While there 
+# Preparing a managing Ptycho instance
+# ------------------------------------
+
+# We need to prepare a managing :any:`Ptycho`\ . It requires a parameter
+# tree, as specified by ..
+
+# First, we create a most basic input paramater tree. While there 
 # are many default values, we manually specify a more verbose output
 # and single precision.
 p = u.Param()
@@ -36,15 +44,22 @@ p.scans.MF.data.num_frames = 400
 P = ptypy.core.Ptycho(p,level=2)
 
 # A quick look at the diffraction data
-fig = u.plot_storage(P.diff.S['S0000'],0,slices=(slice(2),slice(None),slice(None)),modulus='log')
+diff_storage = P.diff.storages.values()[0]
+fig = u.plot_storage(diff_storage,0,slices=(slice(2),slice(None),slice(None)),modulus='log')
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of simulated diffraction data for the first two positions.
 
 # Probe and object are not so exciting to look at for now. As default,
 # probes are initialized with an aperture like support.
+probe_storage = P.probe.storages.values()[0]
 fig = u.plot_storage(P.probe.S['S00G00'],1)
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the starting guess for the probe.
+
+# .. _basic_algorithm:
+
+# A basic Difference-Map implementation
+# -------------------------------------
 
 # Now we can start implementing a simple DM algorithm. We need three basic
 # functions, one is the ``fourier_update`` that implements the Fourier
