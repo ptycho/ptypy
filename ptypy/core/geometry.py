@@ -210,7 +210,7 @@ class Geo(Base):
         # changing wavelengths never changes N, only psize
         # for changing N, please do so manually
         self.p.lam = v
-        self.p.energy = v / self._keV2m
+        self.p.energy = self._keV2m / v 
         if self.interact: self.update()
             
     @property

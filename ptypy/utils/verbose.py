@@ -24,7 +24,7 @@ import logging
 
 from . import parallel
 
-__all__ = ['logger', 'set_level', '_']
+__all__ = ['logger', 'set_level', 'report']
 
 # custom logging level to diplay python objects (not as detailed as debug but also not that important for info)
 INSPECT = 15

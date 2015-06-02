@@ -12,20 +12,18 @@ __all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
            'bcast_dict', 'gather_dict','MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
 
 import numpy as np
-
 size = 1
 rank = 0
 MPI = None
 comm = None
 
-try:
+from .. import __has_mpi4py__ as hmpi
+if hmpi:
     from mpi4py import MPI
-
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
     rank = comm.Get_rank()
-except:
-    print 'MPI initialization failed. Proceeding with one processor'
+del hmpi
 
 MPIenabled = not (size == 1)
 master = (rank == 0)

@@ -3,7 +3,6 @@
 Beamline-specific data preparation modules.
 
 Currently available:
- * cSAXS
  * I13DLS
 
 This file is part of the PTYPY package.

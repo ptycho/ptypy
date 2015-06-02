@@ -97,7 +97,10 @@ class PtyScan(object):
     """
 
     DEFAULT = GENERIC
-
+    WAIT = WAIT
+    EOS = EOS
+    CODES = CODES
+    
     def __init__(self, pars=None, **kwargs):  # filename='./foo.ptyd',shape=None, save=True):
         """
         Class creation with minimum set of parameters, see :py:data:`GENERIC` 
@@ -291,7 +294,7 @@ class PtyScan(object):
         """
         # maybe do this at end of everything
         if self.info.save is not None and parallel.master:
-            io.h5append(self.info.dfile, common=dict(self.common), info=dict(self.info))
+            io.h5append(self.info.dfile, info=dict(self.info))
     
     def load_weight(self):
         """

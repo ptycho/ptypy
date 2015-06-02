@@ -111,7 +111,7 @@ class Param(dict):
         else:
             return []
 
-    def update(self, __d__=None,in_place_depth=0,Convert=False, **kwargs):
+    def update(self, __d__=None, in_place_depth=0, Convert=False, **kwargs):
         """
         Update Param - almost same behavior as dict.update, except
         that all dictionaries are converted to Param if `Convert` is set 
@@ -159,6 +159,7 @@ class Param(dict):
                     _k_v_update(k,v)
                     
             else:
+                # here we assume a (key,value) list.
                 for (k,v) in __d__:
                     _k_v_update(k,v)
                     
