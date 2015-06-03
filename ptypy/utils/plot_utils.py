@@ -500,7 +500,7 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
         return a*p
 
 
-def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slice(None)),**kwargs): #filename=None,vmin=None,vmax=None):
+def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slice(None)),si_axes='x',mask=None,**kwargs): #filename=None,vmin=None,vmax=None):
     """\
     Quickly display the data buffer of a :any:`Storage` instance.
 
@@ -523,6 +523,13 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
         One of `sqrt`, `log` or `linear` to apply to modulus of array 
         buffer. Useful to reduce dynamic range for diffraction images.
         
+    si_axes : str, optional
+        One of 'x','xy','y' or None, determins which axes display
+        length units instead of pixel units
+        
+    mask : ndarray or None
+        Bool array of valid pixel data for rescaling.
+        
     Returns
     -------
     fig : maplotlib.pyplot.figure
@@ -533,38 +540,69 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
     :any:`Storage`
     """
     slc = slices
-    R,C = S.grids()
-    R = R[slc][0]
-    C = C[slc][0]   
+    #R,C = S.grids()
+    #R = R[slc][0]
+    #C = C[slc][0]   
     im = S.data[slc].copy()
-    ext=[C[0,0],C[0,-1],R[0,0],R[-1,0]]
-    
+    imsh = im.shape[-2:]
+    #ext=[C[0,0],C[0,-1],R[0,0],R[-1,0]]
+    if np.iscomplex(im).any():
+        phase = np.exp(1j*np.pi*np.angle(im))
+        channel = 'c'
+    else:
+        phase = np.real(np.exp(1j*np.pi*np.angle(im))) # -1 or 1
+        channel = 'r'
     if modulus=='sqrt':
-        im=np.sqrt(np.abs(im)).astype(im.dtype)*np.exp(1j*np.pi*np.angle(im)).astype(im.dtype)
+        im=np.sqrt(np.abs(im)).astype(im.dtype)*phase
     elif modulus=='log':
-        im=np.log10(np.abs(im)+1).astype(im.dtype)*np.exp(1j*np.pi*np.angle(im)).astype(im.dtype)
+        im=np.log10(np.abs(im)+1).astype(im.dtype)*phase
     else:
         modulus='linear'
     
-    ttl= str(S.ID) +'#%d' + ', ' + modulus + ' scaled modulus'
-    unit,mag,num=length_units(np.abs(ext[0]))
-    ext2=[a*mag for a in ext]
-
+    ttl= str(S.ID) +'#%d' + ', ' + modulus + ' scaled'
+    y_unit,y_mag,y_num=length_units(S.psize[0]*imsh[0])
+    x_unit,x_mag,x_num=length_units(S.psize[1]*imsh[1])
+    #ext2=[a*mag for a in ext]
+    mask = np.ones(imsh,dtype=bool) if mask is None else mask.astype(bool)
+    
     layers = im.shape[0]
     fig = plt.figure(fignum,figsize=(6*layers,6))
     for l in range(layers):
         ax = fig.add_subplot(1,layers,l+1)
-        a = ax.imshow(imsave(im[l],**kwargs),extent=ext2)
+        pax = PtyAxis(ax,data=im[l],channel=channel,**kwargs)
+        pax.set_mask(mask)
+        pax.add_colorbar()
+        #pax._update()
+        plt.draw()
+        pax._update()
+        #a = ax.imshow(imsave(im[l],**kwargs),extent=ext2)
         #a.axes.xaxis.get_major_formatter().set_powerlimits((-3,3))
         #a.axes.yaxis.get_major_formatter().set_powerlimits((-3,3))
+        if si_axes is not None and 'x' in si_axes:
+            a = ax.get_position().bounds
+            ax.xaxis.set_major_locator(mpl.ticker.LinearLocator(max((int(a[2]*20),5))))
+            formatter = lambda x,y: pretty_length(S._to_phys((0,x))[1]*x_mag,digits=3)#'%1.2f' % ((1-x)*(2*np.pi)-np.pi)
+            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
+            ax.set_xlabel('x [' + x_unit +']')
+        else:
+            ax.set_xlabel('x [Pixel]')
+        if si_axes is not None and 'y' in si_axes:
+            a = ax.get_position().bounds
+            ax.yaxis.set_major_locator(mpl.ticker.LinearLocator(max((int(a[3]*20),5))))
+            formatter = lambda x,y: pretty_length(S._to_phys((x,0))[0]*y_mag,digits=3)#'%1.2f' % ((1-x)*(2*np.pi)-np.pi)
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
+            ax.set_ylabel('y [' + y_unit +']')
+        else:
+            ax.set_ylabel('y [Pixel]')
         ax.title.set_text(ttl % l )
-        ax.set_xlabel('x [' + unit +']')   
-        ax.set_ylabel('y [' + unit +']')
+        
+    plt.draw()
     return fig
 
 
 class PtyAxis(object):
-    def __init__(self,ax=None, data = None, channel='a',cmap = None, fontsize = 8):
+    def __init__(self,ax=None, data = None, channel='r',cmap = None, fontsize = 8, **kwargs):
+        
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -575,7 +613,7 @@ class PtyAxis(object):
             self.shape =None
             self.data= None
         self.set_channel(channel,False)
-        self.set_cmap(cmap, False)
+        self.set_cmap(kwargs.get('cmap',cmap), False)
         self.remove_phase_ramp = True
         self.cax = None
         self.vmin = None
@@ -584,7 +622,8 @@ class PtyAxis(object):
         self.mx = None
         self.mask = None
         self.fontsize = fontsize
-         
+        self.kwargs = kwargs
+        
     def set_psize(self,psize, update=True):
         assert np.isscalar(psize) ,'Pixel size must be scalar value'
         self.psize=np.abs(psize)
@@ -592,7 +631,7 @@ class PtyAxis(object):
             self._update()
     
     def set_channel(self,channel, update=True):
-        assert channel in ['a','c','p'], 'Channel must be either (a)bs, (p)hase or (c)omplex'
+        assert channel in ['a','c','p','r','i'], 'Channel must be either (a)bs, (p)hase, (c)omplex, (r)eal or (i)maginary'
         self.channel=channel
         if update:
             self._update()
@@ -641,6 +680,10 @@ class PtyAxis(object):
     def _update(self):
         if str(self.channel)=='a':
             imdata = np.abs(self.data)
+        elif str(self.channel)=='r':
+            imdata = np.real(self.data)
+        elif str(self.channel)=='i':
+            imdata = np.imag(self.data)
         elif str(self.channel)=='p':
             if self.remove_phase_ramp:
                 if self.mask is not None:
@@ -675,9 +718,9 @@ class PtyAxis(object):
         
         pilim = imsave(imdata,cmap=self.cmap,vmin=mn,vmax=mx) 
         if not self.ax.images:
-            self.ax.imshow(pilim)
+            self.ax.imshow(pilim, **(self.kwargs))
             plt.setp(self.ax.get_xticklabels(), fontsize=self.fontsize)
-            plt.setp(self.ax.get_yticklabels(), fontsize=self.fontsize, rotation='vertical')
+            plt.setp(self.ax.get_yticklabels(), fontsize=self.fontsize)#, rotation='vertical')
             self.ax.yaxis.set_major_locator(mpl.ticker.IndexLocator(50,0.5))
             self.ax.xaxis.set_major_locator(mpl.ticker.IndexLocator(50,0.5))
         else:
@@ -701,7 +744,7 @@ class PtyAxis(object):
             cax.xaxis.set_visible(True)
             cax.set_xticks([0.,1.])
             #cax.set_yticks(np.array([-1,-.5,0,0.5,1.]))
-            plt.setp(self.cax.get_xticklabels(), fontsize=self.fontsize, rotation='vertical')
+            plt.setp(self.cax.get_xticklabels(), fontsize=self.fontsize)#, rotation='vertical')
             plt.setp(self.cax.get_yticklabels(), fontsize=self.fontsize)
         else:
             cax.imshow(ver,cmap=self.cmap,extent=[0,1,0,1],aspect=self.cax_aspect )
@@ -717,26 +760,32 @@ class PtyAxis(object):
         mn = 0 if mn is None else mn
         mx = mx if mx is not None else self.mx
         mx = 1 if mx is None else mx
-        try:
-            dyn = mx/(mn+1e-10)
-            dyn = max((4-np.log10(dyn),0))
-            form = '%1.'+str(int(np.ceil(dyn)))+'f'
-        except BaseException:
-            form = '%1.1f'
+        #mag = np.power(10,self.cax.dec)
+        #self.cax.dec
         if self.cax is None:
             return
+        self.cax.dec = np.floor(np.log10(np.abs(mx-mn)))
         a = self.ax.get_position().bounds
         b = self.cax.get_position().bounds
 
         self.cax.set_position((b[0],a[1],self.cax_width,a[3]))
         
         if self.channel =='c':
-            formatter = lambda x,y: '%1.2f' % ((1-x)*(2*np.pi)-np.pi)
-            self.cax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
+            #formatter = lambda x,y: '%1.2f' % (x*(2*np.pi))
+            #self.cax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
+            self.cax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(['0','$\pi$','2$\pi$']))
+            self.cax.xaxis.set_major_locator(mpl.ticker.LinearLocator(3))
+            #self.cax.xaxis.set_major_locator(mpl.ticker.FixedLocator([0.1,0.5,0.9]))
+            self.cax.set_xlabel('phase [rad]',fontsize=self.fontsize+2)
+            self.cax.xaxis.set_label_position("top")
             
-        self.cax.yaxis.set_major_locator(mpl.ticker.LinearLocator(max((int(a[3]*20),5))))
-        formatter = lambda x,y: form % ((1-x)*(mx-mn)+mn)
+        locs = np.linspace(0.02,1.,max((int(a[3]*20),5)))
+        self.cax.yaxis.set_major_locator(mpl.ticker.FixedLocator(locs))
+        #self.cax.yaxis.set_major_locator(mpl.ticker.LinearLocator(max((int(a[3]*20),5))))
+        formatter = lambda x,y: pretty_length(((1-x)*(mx-mn)+mn),3) #()
         self.cax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
+        self.cax.set_ylabel('modulus $\\times 10^{%d}$' % self.cax.dec, fontsize=self.fontsize+2)
+        self.cax.yaxis.set_label_position("right")
 
     def add_colorbar(self, aspect =10,fraction= 0.2, pad = 0.02,resolution=256):
         if str(self.channel)=='c':
@@ -744,6 +793,7 @@ class PtyAxis(object):
         self.cax_aspect = aspect
         cax, kw = mpl.colorbar.make_axes_gridspec(self.ax, aspect = aspect,fraction= fraction, pad =pad)
         cax.yaxis.tick_right()
+        cax.xaxis.tick_top()
         self.cax = cax
         self.cax_width = cax.get_position().width
         self._update_colorscale()
@@ -771,4 +821,12 @@ def length_units(number):
     num=number*mag
     return unit,mag,num
 
-
+def pretty_length(num,digits=3):
+    #unit,mag,num = length_units(number)
+    strnum = ("%1." + "%(di)df" % {'di':digits}) % num
+    h = strnum.split('.')[0]
+    if len(h)>=digits:
+        return h
+    else:
+        return strnum[:digits+1]
+    

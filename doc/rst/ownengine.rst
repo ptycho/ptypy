@@ -1,3 +1,6 @@
+.. note::
+   This tutorial was generated from the python source :file:`ptypy/tutorial/ownengine.py` using :file:`ptypy/doc/script2rst.py`.
+
 .. _ownengine:
 
 How to write an engine yourself
@@ -21,7 +24,7 @@ Preparing a managing Ptycho instance
 We need to prepare a managing :any:`Ptycho`\ . It requires a parameter
 tree, as specified by ..
 
-We need to create a most basic input paramater tree. While there 
+First, we create a most basic input paramater tree. While there 
 are many default values, we manually specify a more verbose output
 and single precision.
 
@@ -81,7 +84,7 @@ all necessary basic :any:`Container` instances like *probe*, *object*
    --- Scan MF photon report ---
    Total photons   : 4.16e+09 
    Average photons : 3.93e+07
-   Maximum photons : 7.14e+07
+   Maximum photons : 7.13e+07
    -----------------------------
    
    ---- Creating PODS -------------------------------------------------------------
@@ -92,7 +95,7 @@ all necessary basic :any:`Container` instances like *probe*, *object*
    ---- Probe initialization ------------------------------------------------------
    Initializing probe storage S00G00 using scan MF
    Found no photon count for probe in parameters.
-   Using photon count 7.14e+07 from photon report
+   Using photon count 7.13e+07 from photon report
    
    ---- Object initialization -----------------------------------------------------
    Initializing object storage S00G00 using scan MF
@@ -154,8 +157,8 @@ See :numref:`ownengine_01` for the plotted image.
 
 .. _basic_algorithm:
 
-A most basic Difference-Map implementation
-------------------------------------------
+A basic Difference-Map implementation
+-------------------------------------
 
 Now we can start implementing a simple DM algorithm. We need three basic
 functions, one is the ``fourier_update`` that implements the Fourier
@@ -260,9 +263,9 @@ We start of with a small number of iterations.
 ::
 
    >>> iterate(P,9)
-   121527.479458
-   108120.012926
-   90583.9932563
+   121469.621647
+   108101.823126
+   90423.8745884
    
 
 We note that the error (here only displayed for 3 iterations) is 
@@ -305,18 +308,18 @@ Ok, let us do some more iterations. 36 will do.
 ::
 
    >>> iterate(P,36)
-   73101.5121799
-   59342.5286091
-   47377.1917036
-   35248.6634592
-   28004.9562494
-   21878.8549277
-   16230.5171194
-   11469.0889412
-   8428.78922375
-   6581.98387953
-   5734.33557209
-   5675.11682716
+   73057.5206257
+   61198.8515372
+   45570.7814634
+   36685.7338319
+   28932.5803157
+   21846.9429241
+   15377.671556
+   11317.2346677
+   8432.57885878
+   6447.58459776
+   5585.73645885
+   5402.98374865
    
 
 Error is still on a steady descent. Let us look at the final 

@@ -1,3 +1,6 @@
+.. note::
+   This tutorial was generated from the python source :file:`ptypy/tutorial/ptypyclasses.py` using :file:`ptypy/doc/script2rst.py`.
+
 .. _ptypyclasses:
 
 Tutorial on ptypy classes
@@ -226,7 +229,7 @@ and the corresponding *numpy* syntax, ptypy offers acces through a
    >>> from ptypy.core.classes import DEFAULT_ACCESSRULE
    >>> ar = DEFAULT_ACCESSRULE.copy()
    >>> print ar
-   * id3VAEB7CALO           : ptypy.utils.parameters.Param(6)
+   * id3V3PLHLJHG           : ptypy.utils.parameters.Param(6)
      * layer                : 0
      * psize                : 1.0
      * shape                : None

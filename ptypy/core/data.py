@@ -96,7 +96,7 @@ class PtyScan(object):
      
     """
 
-    DEFAULT = GENERIC
+    DEFAULT = GENERIC.copy()
     WAIT = WAIT
     EOS = EOS
     CODES = CODES
@@ -1145,7 +1145,8 @@ class MoonFlowerScan(PtyScan):
     illuminating flowers.
     """
     
-    DEFAULT = GENERIC.copy().update(geometry.DEFAULT.copy())
+    DEFAULT = GENERIC.copy()
+    DEFAULT.update(geometry.DEFAULT.copy())
     
     def __init__(self, pars = None, **kwargs):
         """

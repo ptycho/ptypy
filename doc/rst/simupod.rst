@@ -31,7 +31,7 @@ We start of with importing some modules
    >>> from ptypy.core import View,Container,Storage,Base, POD
    >>> plt = mpl.pyplot
    >>> import sys
-   >>> scriptname = sys.argv[0]
+   >>> scriptname = sys.argv[0].split('.')[0]
 
 We create a managing top level instance. We will not use the
 the :any:`Ptycho` class for now, as its rich set of methods may be
@@ -152,7 +152,7 @@ photons to 1 billion
 ::
 
    >>> for pp in [pr,pr2,pr3]:
-   >>>     pp.data *= np.sqrt(1e9/np.sum(pp.data*pp.data.conj()))
+   >>>     pp.data *= np.sqrt(1e8/np.sum(pp.data*pp.data.conj()))
 
 
 We quickly test if the propagation works.
@@ -437,8 +437,23 @@ Creating the rest of the pods is simple since the data accesses are similar.
    >>>     # diffraction images
    >>>     pod.diff = np.random.poisson(np.abs(pod.fw(pod.exit))**2)
    >>>     pod.mask = np.ones_like(pod.diff)
-   >>>     
 
+A quick check on the diffraction patterns
+
+::
+
+   >>> fig = u.plot_storage(diff_storage,8,slices=(slice(2),slice(None),slice(None)),modulus='log')
+
+See :numref:`simupod_08` for the plotted image.
+
+.. figure:: ../_img/simupod_08.png
+   :width: 70 %
+   :figclass: highlights
+   :name: simupod_08
+
+   Diffraction patterns with poisson statistics.
+
+**Well done!**
 We can now move forward to create and run a reconstruction engine
 as in section :ref:`basic_algorithm` in :ref:`ownengine`
 or store the generated diffraction patterns as in the next section.
