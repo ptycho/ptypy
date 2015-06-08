@@ -48,7 +48,7 @@ class SimScan(PtyScan):
     
     TO BE FILLED WITH CONTENT
     """
-    DEFAULT = DEFAULT
+    RECIPE = DEFAULT.copy(depth=4)
     
     def __init__(self, pars = None,scan_pars=None,recipe_pars=None,**kwargs):
         """
@@ -84,7 +84,7 @@ class SimScan(PtyScan):
         if self.info.shape is None:
             self.info.shape = pp.scan.geometry.shape
         
-        rinfo = self.DEFAULT.copy()
+        rinfo = self.RECIPE.copy()
         rinfo.update(self.info.recipe, in_place_depth = 4)
         if recipe_pars is not None:
             rinfo.update(recipe_pars, in_place_depth = 4)
@@ -155,7 +155,7 @@ class SimScan(PtyScan):
             dat, mask = acquire(view.data) 
             view.data = dat
             view.mask = mask
-            pos = view.pod.ob_view.physcoord
+            pos = view.pod.ob_view.coord
             dat = dat.astype(save_dtype) if save_dtype is not None else dat
             self.diff[ind] = dat
             self.mask[ind] = mask

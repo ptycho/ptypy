@@ -15,6 +15,13 @@ __all__ = ['str2int','str2range',\
            'complex_overload','expect2','expect3',\
            'keV2m', 'clean_path','unique_path']
 
+def str2index(s):
+    """
+    Converts a str that is supposed to represent a numpy index expression
+    into an index expression
+    """
+    return eval("np.index_exp["+s+"]")
+    
 def str2range(s):
     """
     Generates an index list from string input `s`

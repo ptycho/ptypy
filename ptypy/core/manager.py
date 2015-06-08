@@ -281,8 +281,8 @@ class ModelManager(object):
         # now there should be little suprises. every scan is listed in 
         # self.scans
         for label, scan in self.scans.items():
-            if scan.pars.get('data_file') is None:
-                scan.pars['data_file'] = self.ptycho.paths.get_data_file(label=label)
+            #if scan.pars.get('data_file') is None:
+            #    scan.pars['data_file'] = self.ptycho.paths.get_data_file(label=label)
             scan.pars['label'] = label
              
         return data.DataSource(self.scans)
@@ -503,8 +503,10 @@ class ModelManager(object):
                     continue
                 data = dct['data']
                 idx = dct['index']
-                scan.diff.datalist[idx][:] = data  #.astype(scan.diff.dtype)
-                scan.mask.datalist[idx][:] = dct.get('mask', np.ones_like(data))  #.astype(scan.mask.dtype)
+                #scan.diff.datalist[idx][:] = data  #.astype(scan.diff.dtype)
+                #scan.mask.datalist[idx][:] = dct.get('mask', np.ones_like(data))  #.astype(scan.mask.dtype)
+                scan.diff.data[scan.diff.layermap.index(idx)][:] = data
+                scan.mask.data[scan.mask.layermap.index(idx)][:] = dct.get('mask', np.ones_like(data))
                 #del dct['data']
 
             #print 'hallo'

@@ -18,7 +18,6 @@ from ..utils import parallel
 from utils import Cnorm2, Cdot
 from . import BaseEngine
 import numpy as np
-import time
 
 __all__=['ML']
 
@@ -60,6 +59,8 @@ class ML(BaseEngine):
         """
         Prepare for ML reconstruction.
         """
+        # Container for the "errors"
+        #self.error = np.
 
         # Object gradient and minimization direction
         self.ob_grad = self.ob.copy(self.ob.ID+'_grad',fill=0.) # Object gradient
@@ -69,8 +70,6 @@ class ML(BaseEngine):
         self.pr_grad = self.pr.copy(self.pr.ID+'_grad',fill=0.) # Probe gradient
         self.pr_h = self.pr.copy(self.pr.ID+'_h',fill=0.) # Probe minimization direction
    
-        self.tmin=1.
-        
         # Create noise model
         if self.p.ML_type.lower() == "gaussian":
             self.ML_model = ML_Gaussian(self)
@@ -101,14 +100,9 @@ class ML(BaseEngine):
         ########################
         # Compute new gradient
         ########################
-        tg = 0.
-        tc = 0.
-        ta = time.time()
         for it in range(num):
-            t1 = time.time()
             new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad() 
-            tg += time.time()-t1
-            
+    
             if (self.p.probe_update_start <= self.curiter):
                 # Apply probe support if needed
                 for name,s in new_pr_grad.S.iteritems():
@@ -145,21 +139,13 @@ class ML(BaseEngine):
     
             #verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
     
-            self.ob_grad << new_ob_grad
-            self.pr_grad << new_pr_grad
-            """
+            # It would be nice to have something more elegant than the following
             for name,s in self.ob_grad.S.iteritems():
                 s.data[:] = new_ob_grad.S[name].data
             for name,s in self.pr_grad.S.iteritems():
                 s.data[:] = new_pr_grad.S[name].data
-            """
+            
             # 3. Next conjugate
-            self.ob_h *= bt / self.tmin
-            self.ob_h -= self.ob_grad
-            self.pr_h *= bt / self.tmin
-            self.pr_grad *= scale_p_o
-            self.pr_h -= self.pr_grad
-            """
             for name,s in self.ob_h.S.iteritems():
                 s.data *= bt
                 s.data -= self.ob_grad.S[name].data
@@ -167,7 +153,7 @@ class ML(BaseEngine):
             for name,s in self.pr_h.S.iteritems():
                 s.data *= bt
                 s.data -= scale_p_o * self.pr_grad.S[name].data
-            """
+                
             # 3. Next conjugate
             #ob_h = self.ob_h
             #ob_h *= bt
@@ -185,29 +171,21 @@ class ML(BaseEngine):
             # Minimize - for now always use quadratic approximation (i.e. single Newton-Raphson step)
             # In principle, the way things are now programmed this part could be iterated over in
             # a real NR style.
-            t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
-            tc += time.time()-t2
-            
+    
             if np.isinf(B).any() or np.isnan(B).any():
                 print 'Warning! inf or nan found! Trying to continue...'
                 B[np.isinf(B)] = 0.
                 B[np.isnan(B)] = 0.
                 
-            self.tmin = -.5*B[1]/B[2]
-            self.ob_h *= self.tmin
-            self.pr_h *= self.tmin
-            self.ob += self.ob_h
-            self.pr += self.pr_h
-            """
+            tmin = -.5*B[1]/B[2]
+    
             for name,s in self.ob.S.iteritems():
                 s.data += tmin*self.ob_h.S[name].data
             for name,s in self.pr.S.iteritems():
                 s.data += tmin*self.pr_h.S[name].data
-            """
             # Newton-Raphson loop would end here
-        logger.info('Time spent in gradient calculation: %.2f' % tg)
-        logger.info('  ....  in coefficient calculation: %.2f' % tc)
+
         return error_dct  #np.array([[self.ML_model.LL[0]] * 3]) 
 
     def engine_finalize(self):
@@ -294,8 +272,10 @@ class ML_Gaussian(object):
         Note: The negative log-likelihood and local errors are also computed
         here.
         """
-        self.ob_grad.fill(0.)
-        self.pr_grad.fill(0.)
+        ob_grad = self.ob_grad
+        pr_grad = self.pr_grad
+        ob_grad.fill(0.)
+        pr_grad.fill(0.)
         
         LL = np.array([0.]) # We need an array for MPI
         error_dct={}
@@ -330,8 +310,8 @@ class ML_Gaussian(object):
             for name,pod in diff_view.pods.iteritems():
                 if not pod.active: continue
                 xi = pod.bw(w*DI*f[name])
-                self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
-                self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
+                ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
+                pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
                 # Negative log-likelihood term
                 #LLL += (w * DI**2).sum()
@@ -342,14 +322,10 @@ class ML_Gaussian(object):
             LL += LLL
 
         # MPI reduction of gradients
-        self.ob_grad.allreduce()
-        self.pr_grad.allreduce()
-        """
         for name,s in ob_grad.S.iteritems():
             parallel.allreduce(s.data)
         for name,s in pr_grad.S.iteritems():
             parallel.allreduce(s.data)
-        """
         parallel.allreduce(LL)
         
         # Object regularizer
@@ -359,7 +335,7 @@ class ML_Gaussian(object):
 
         self.LL = LL / self.tot_measpts
         
-        return self.ob_grad, self.pr_grad, error_dct
+        return ob_grad, pr_grad, error_dct
 
     def poly_line_coeffs(self, ob_h, pr_h):
         """

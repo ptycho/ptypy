@@ -397,9 +397,7 @@ class Storage(Base):
         #self._make_datalist()
         
     def _make_datalist(self):
-        """
-        Helper to build self.datalist, providing access to the data buffer
-        in a transparent way.
+        pass
         """
         # BE does not give the same result on all nodes
         #self._datalist = [None] * (max(self.layermap)+1)
@@ -408,7 +406,8 @@ class Storage(Base):
         self._datalist = [None] * max(self.nlayers,max(self.layermap)+1)
         for k,i in enumerate(self.layermap):
             self._datalist[i] = self.data[k]
-
+        """
+    """
     @property
     def datalist(self):
         
@@ -416,10 +415,11 @@ class Storage(Base):
             self._make_datalist()
         
         return self._datalist
-        
+    """
+    
     @property
     def dtype(self):
-        return self.owner.dtype
+        return self.owner.dtype if self.owner is not None else None
         
     def copy(self,owner=None, ID=None, fill=None):
         """
@@ -639,7 +639,7 @@ class Storage(Base):
         self.center = new_center
 
         # make datalist
-        self._make_datalist()
+        #self._make_datalist()
 
     def _to_pix(self, coord):
         """

@@ -77,8 +77,12 @@ class BaseEngine(object):
         logger.info('Parameter set:')
         logger.info(u.verbose.report(self.p,noheader=True).strip()) 
         logger.info(headerline('','l','='))
+        
         self.curiter = 0
-        self.errorlist = []
+        if self.ptycho.runtime.iter_info:
+            self.alliter = self.ptycho.runtime.iter_info[-1]['iterations']
+        else:
+            self.alliter = 0
         
         # common attributes for all reconstructions
         self.di = self.ptycho.diff
@@ -124,39 +128,32 @@ class BaseEngine(object):
         if num is not None:
             N = num
         
-        for n in range(N):
-            if self.finished: break 
-            # for benchmarking
-            self.t = time.time()
-            
-            ############################
-            # call engine specific iteration routine
-            ###########################
-            
-            self.error = self.engine_iterate()
-            
-            #self.errorlist.append(self.error)
-            
-            ############################
-            # Increment the iterate number
-            ############################
-            self.curiter += 1
-            if self.curiter == self.numiter: self.finished = True
-            
-            ############################
-            # Prepare meta
-            # PT: Should this be done only by the master node?
-            ############################
-            self._fill_runtime()
+        if self.finished: return 
 
-            parallel.barrier()
+        # for benchmarking
+        self.t = time.time()
+        
+        # call engine specific iteration routine 
+        # and collect the per-view error.      
+        self.error = self.engine_iterate(N)
+        
+        # Increment the iterate number
+        self.curiter += N
+        self.alliter += N
+        
+        if self.curiter >= self.numiter: self.finished = True
+        
+        # Prepare runtime
+        self._fill_runtime()
+
+        parallel.barrier()
 
     def _fill_runtime(self):
         local_error = u.parallel.gather_dict(self.error)
         error = np.array(local_error.values()).mean(0)
         info = dict(
             iteration = self.curiter,
-            iterations = len(self.ptycho.runtime.iter_info),
+            iterations = self.alliter,
             engine = self.__class__.__name__,
             duration = time.time()-self.t,
             error = error
@@ -187,7 +184,7 @@ class BaseEngine(object):
         """
         raise NotImplementedError()
     
-    def engine_iterate(self):
+    def engine_iterate(self, num):
         """
         Engine single-step iteration. All book-keeping is done in self.iterate(),
         so this routine only needs to implement the "core" actions.

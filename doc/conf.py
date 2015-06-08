@@ -147,6 +147,12 @@ release = short_version #'0.0.1'
 # Else, today_fmt is used as the format for a strftime call.
 #today_fmt = '%B %d, %Y'
 
+# Common abreviations
+rst_epilog = """
+.. |ptypy| replace:: PtyPy
+.. _ptypy: http://www.github.com/ptycho/ptypy/
+"""
+
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = ['_build']

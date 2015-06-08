@@ -8,11 +8,11 @@ p = u.Param()
 ### PTYCHO PARAMETERS
 p.verbose_level = 3                  
 p.data_type = "single"                            
-p.autosave = None
 p.run = None
-p.paths = u.Param()
-p.paths.home = "/tmp/ptypy/"             
-p.paths.run = None
+p.io = u.Param()
+p.io.home = "/tmp/ptypy/"             
+p.io.run = None
+p.io.autosave = None
 
 p.scan = u.Param()
 p.scan.geometry = u.Param()
@@ -90,7 +90,7 @@ p.scans.CircSim.data.recipe.illumination.aperture.form = "circ"
 p.scans.CircSim.data.save = None
 
 p.scans.RectSim = u.Param()
-p.scans.RectSim.sharing= u.Param(object_shared_with = 'CircSim')
+p.scans.RectSim.sharing= u.Param(object_share_with = 'CircSim')
 p.scans.RectSim.data=u.Param()
 p.scans.RectSim.data.source = 'sim' 
 p.scans.RectSim.data.recipe = sim.copy(depth=4)
@@ -122,14 +122,12 @@ p.engine.ML = u.Param()
 p.engines = u.Param()                                  # (100) empty structure to be filled with engines
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter = 100
+p.engines.engine00.numiter = 10
 p.engines.engine00.fourier_relax_factor = 0.05
 p.engines.engine01 = u.Param()
-p.engines.engine01.name = 'ML'
+p.engines.engine01.name = 'ML_new'
 p.engines.engine01.numiter = 100
-p.simulation = u.Param()
-p.simulation.position_noise = 1e-10               # (104) 
-p.simulation.detector = 'PILATUS_300K' #None #
+
 
 
 u.verbose.set_level(3)

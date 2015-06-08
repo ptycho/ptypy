@@ -1221,9 +1221,16 @@ class DataSource(object):
         """
         DataSource initialization.
 
-        scans: a dictionnary of scan structures.
-        frames_per_call: (optional) number of frames to load in one call. By default, load as many as possible.
-        feed_format: the format in with the data is packaged. For now only 'dp' is implemented.
+        Parameters
+        ----------
+        scans : 
+            a dictionnary of scan structures.
+        
+        frames_per_call : (optional) 
+            number of frames to load in one call. By default, load as many as possible.
+        
+        feed_format : 
+            the format in with the data is packaged. For now only 'dp' is implemented.
         """
 
         from ..experiment import PtyScanTypes
@@ -1254,7 +1261,7 @@ class DataSource(object):
             if prep.get('positions_theory') is None:
                 prep.positions_theory = scan['pos_theory']
             
-            prep.dfile = s.data_file
+            #prep.dfile = s.data_file
             #prep.geometry = s.geometry.copy()
             #prep.xy = s.xy.copy()
             

@@ -19,19 +19,22 @@ of new ideas. To this end, much of the "ugly" details have been hidden in
 advanced containers that manage data and access "views" onto them. 
 
 Currently implemented:
-- Fully parallelized (using MPI)
-- Difference map algorithm with power bound constraint
-- Maximum Likelihood with preconditioners and regularizers.
-- Mixed-state reconstructions of probe and object
-- On-the-fly reconstructions (while data is being acquired) 
+
+* Fully parallelized (using MPI)
+* Difference map algorithm with power bound constraint
+* Maximum Likelihood with preconditioners and regularizers.
+* Mixed-state reconstructions of probe and object
+* On-the-fly reconstructions (while data is being acquired) 
 
 Installation
 ------------
 
 Installation should be as simple as
-    sudo python setup.py install
+::
+   $ sudo python setup.py install
 or, as a user,
-    python setup.py install --user
+::
+   $ python setup.py install --user
 
 Dependencies
 ------------

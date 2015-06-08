@@ -75,34 +75,35 @@ class DM(BaseEngine):
         for name,s in self.ob_viewcover.S.iteritems():
             s.fill(s.get_view_coverage())
 
-    def engine_iterate(self):
+    def engine_iterate(self, num=1):
         """
-        Compute one iteration.
+        Compute `num` iterations.
         """
-        
+        to = 0.
+        tf = 0.
         error_dct={}
-        t = time.time() 
-        # Fourier update  
-        for name,di_view in self.di.V.iteritems():
-            if not di_view.active: continue
-            ma_view = di_view.pod.ma_view 
-            pbound = self.pbound[di_view.storage.ID]
-            error_dct[name] = basic_fourier_update(di_view,pbound=pbound, alpha = self.p.alpha)
-        
-        logger.info('Time spent in Fourier update: %.2f' % (time.time()-t))    
-
-        ## make a sorted error array for MPI reduction
-        ## error is sorted after the di_view IDs. This is needed for local error analysis later.
-        """
-        error = np.array([error_dct[k] for k in np.sort(error_dct.keys())])
-        error[error<0]=0.
-        parallel.allreduce(error)
-        """
+        for it in range(num):
+            t1 = time.time() 
+            
+            # Fourier update  
+            for name,di_view in self.di.V.iteritems():
+                if not di_view.active: continue
+                ma_view = di_view.pod.ma_view 
+                pbound = self.pbound[di_view.storage.ID]
+                error_dct[name] = basic_fourier_update(di_view,pbound=pbound, alpha = self.p.alpha)
+            
+            t2 = time.time()
+            tf += t2-t1
+            
+            # Overlap update
+            self.overlap_update()
+            
+            t3 = time.time()
+            to += t3-t2
+            
+        logger.info('Time spent in Fourier update: %.2f' % tf)
+        logger.info('Time spent in Overlap update: %.2f' % to)
         error = parallel.gather_dict(error_dct)
-        # store error. maybe better in runtime?
-        self.error = error
-        self.overlap_update()
-       
         return error
 
     def engine_finalize(self):
@@ -152,7 +153,7 @@ class DM(BaseEngine):
             # Update probe
             logger.debug(prestr + '----- probe update -----')
             change = self.probe_update()
-            logger.info(prestr + 'change in probe is %.3f' % change)
+            logger.debug(prestr + 'change in probe is %.3f' % change)
             
             # stop iteration if probe change is small
             if change < self.p.overlap_converge_factor: break

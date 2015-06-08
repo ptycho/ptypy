@@ -25,16 +25,10 @@ __all__=['DEFAULT','Paths']
 
 DEFAULT=u.Param(
 home = "./",    # (03) Relative base path for all other paths
-plots = "plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png",# (07) filename for dumping plots
-recons = "recons/%(run)s/%(run)s_%(engine)s.ptyr",                 # (10) directory to save final reconstruction
+autoplot = "plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png",# (07) filename for dumping plots
+recon = "recons/%(run)s/%(run)s_%(engine)s.ptyr",                 # (10) directory to save final reconstruction
 autosave = "dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr",                  # (12) directory to save intermediate results
-movie = "plots/%(run)s/%(run)s_%(engine)s.mpg",# (13) 
-data = "analysis/%(run)s/%(label)s.ptyd",
 # runtime parameters
-run = None,                                   # (04) Name of reconstruction run
-engine = "Dummy",
-iteration = 0,
-args = "",
 )
 """Default path parameters. See :py:data:`.io.paths` and a short listing below"""
 
@@ -43,80 +37,76 @@ class Paths(object):
     Path managing class
     """
     DEFAULT = DEFAULT
-    def __init__(self,pars=None,runtime=None,make_dirs=True):
+    def __init__(self,io=None):
         """
         Parameters
         ----------
-        pars : Param or dict
-            Parameter set. See :any:`DEFAULT`
-            
-        runtime : dict
-            Optional runtime dictionary for dynamic file names.
-            
-        makedirs : bool
-            Create directories if they do not exist already.
+        io : Param or dict
+            Parameter set to pick path info from. See :py:data:`.io`
         """
-        self.runtime = runtime
-        self.p=DEFAULT.copy()
-        if pars is not None:
-            self.p.update(pars)
-        
-        if self.p.run is None:
-            self.p.run = os.path.split(sys.argv[0])[1].split('.')[0]
-        
-        self.p.args = '#'.join(sys.argv[1:]) if len(sys.argv) != 0 else ''
-        self.make_dirs = make_dirs
+        self.runtime = u.Param(
+            run = os.path.split(sys.argv[0])[1].split('.')[0],
+            engine = "None",
+            iteration = 0,
+            iterations = 0,
+        )
+        self.home = io.get('home',self.DEFAULT.home)
+        try:
+            self.autosave = io.autosave.rfile
+        except:
+            self.autosave = self.DEFAULT.autosave
+        try:
+            self.autoplot = io.autoplot.imfile
+        except:
+            self.autoplot = self.DEFAULT.autoplot
+        try:
+            self.recon = io.rfile
+        except:
+            self.recon = self.DEFAULT.recon
         
         sep = os.path.sep
-        if not self.p.home.endswith(sep):
-            self.p.home+=sep
+        if not self.home.endswith(sep):
+            self.home+=sep
         
+        for key in ['autosave','autoplot','recon']:
+            v =  self.__dict__[key]
+            if not v.startswith(os.path.sep):
+                self.__dict__[key] = self.home + v
+
+    def run(self,run):
         """
-        for key in ['plot','save','dump','data']:
-            d = key+'_dir'
-            if not self.p[d].startswith(sep):
-                #append base
-                self.p[d]=self.p.base_dir+self.p[d]
-                
-        for key in ['plot','save','dump','data']:
-            f = key+'_file'
-            if not self.p[f].startswith(sep):
-                # append predir
-                self.p[f]=self.p[key+'_dir']+self.p[f]
+        Determine run name
         """
+        return self.runtime.run if run is None else run
     
-    @property
-    def auto_file(self):
+    def auto_file(self, runtime =None):
         """ File path for autosave file """
-        return self.get_path(self.p.autosave)
+        return self.get_path(self.autosave,runtime)
     
-    @property
-    def recon_file(self):
+    def recon_file(self, runtime =None):
         """ File path for reconstruction file """           
-        return self.get_path(self.p.recons)
+        return self.get_path(self.recon,runtime)
     
-    @property
-    def plot_file(self):
+    def plot_file(self, runtime =None):
         """ 
         File path for plot file 
         """
-        return self.get_path(self.p.plots)
+        p = self.get_path(self.autoplot,runtime)
+        print p
+        return self.get_path(self.autoplot,runtime)
     
-    def get_data_file(self,**kwargs):
-        
-        self.p.update(**kwargs)
-        return self.get_path(self.p.data)
-    
-    def get_path(self,path):
-        try:
-            d = dict(self.runtime.iter_info[-1])
-            self.p.update(d)
-        except:
-            logger.debug('Receiving runtime info for dumping/saving failed')
-        
-        path = os.path.abspath(os.path.expanduser(self.p.home+path % self.p))
+    def get_path(self,path ,runtime):
+        if runtime is not None:
+            try:
+                d = dict(runtime.iter_info[-1])
+            except IndexError:
+                d = dict(self.runtime)
+            d['run'] = runtime.run
+            out = os.path.abspath(os.path.expanduser(path % d))
+        else:
+            out = os.path.abspath(os.path.expanduser(path % self.runtime))
 
-        return path
+        return out
     
 ############
 # TESTING ##
@@ -124,7 +114,6 @@ class Paths(object):
 
 if __name__ == "__main__":
     pa = Paths()
-    print pa.auto_file
-    print pa.plot_file
-    print pa.recon_file
-    print pa.p
+    print pa.auto_file()
+    print pa.plot_file()
+    print pa.recon_file()

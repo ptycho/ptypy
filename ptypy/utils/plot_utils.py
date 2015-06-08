@@ -499,12 +499,15 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
     else:
         return a*p
 
-
+def plot_data(data,origin=0.,psize=1.,**kwargs):
+    from .core import Storage
+    return plot_storage(Storage(None,'Sdata',data=data,origin=origin,psize=psize), **kwargs)
+    
 def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slice(None)),si_axes='x',mask=None,**kwargs): #filename=None,vmin=None,vmax=None):
     """\
     Quickly display the data buffer of a :any:`Storage` instance.
 
-    Keyword arguments are those of :any:`imsave`
+    Keyword arguments are those of :any:`PtyAxis`
     
     Parameters
     ----------
@@ -514,7 +517,7 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
     fignum : int, optional
         Number of the figure. 
         
-    slices : tuple of slices, optional
+    slices : tuple of slices or string of numpy index expression, optional
         Determines what part of Storage buffer is displayed, i.e. which
         layers and which region-of-interest. Layers are subplotted 
         horizontically next to each other. Figsize is (6,6*layers)
@@ -542,7 +545,9 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
     slc = slices
     #R,C = S.grids()
     #R = R[slc][0]
-    #C = C[slc][0]   
+    #C = C[slc][0]
+    if str(slices)==slices:
+        slices=eval('np.index_exp['+slices+']')   
     im = S.data[slc].copy()
     imsh = im.shape[-2:]
     #ext=[C[0,0],C[0,-1],R[0,0],R[-1,0]]
@@ -764,7 +769,7 @@ class PtyAxis(object):
         #self.cax.dec
         if self.cax is None:
             return
-        self.cax.dec = np.floor(np.log10(np.abs(mx-mn)))
+        self.cax.dec = np.floor(np.log10(np.abs(mx-mn))) if mx!=mn else 0.
         a = self.ax.get_position().bounds
         b = self.cax.get_position().bounds
 
@@ -784,7 +789,7 @@ class PtyAxis(object):
         #self.cax.yaxis.set_major_locator(mpl.ticker.LinearLocator(max((int(a[3]*20),5))))
         formatter = lambda x,y: pretty_length(((1-x)*(mx-mn)+mn),3) #()
         self.cax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
-        self.cax.set_ylabel('modulus $\\times 10^{%d}$' % self.cax.dec, fontsize=self.fontsize+2)
+        self.cax.set_ylabel('modulus $\\times 10^{%d}$' % int(self.cax.dec), fontsize=self.fontsize+2)
         self.cax.yaxis.set_label_position("right")
 
     def add_colorbar(self, aspect =10,fraction= 0.2, pad = 0.02,resolution=256):

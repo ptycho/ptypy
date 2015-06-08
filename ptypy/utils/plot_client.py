@@ -52,7 +52,7 @@ DEFAULT.simplified_aspect_ratios = False
 DEFAULT.gridspecpars = (0.1, 0.12, 0.07, 0.95, 0.05, 0.93)
 DEFAULT.plot_error = [True, True, True]  # decide which error to plot
 DEFAULT.interactive = True
-DEFAULT.pattern = None
+DEFAULT.home = '/tmp/ptypy/'
 DEFAULT.movie = False
 
 TEMPLATES = Param({'default':DEFAULT})
@@ -204,7 +204,7 @@ class PlotClient(object):
         for initialization.
         """
         logger.debug('Client requesting configuration parameters')
-        self.config = Param(self.client.get_now("Ptycho.p.autoplot"))
+        self.config = Param(self.client.get_now("Ptycho.p.io.autoplot"))
         logger.debug('Client received the following configuration:')
         logger.debug(report(self.config))
         
@@ -245,7 +245,7 @@ class PlotClient(object):
         self.cmd_dct["Ptycho.runtime['iter_info'][-1]"] = [None, self.runtime, 'last_info']
 
         # Get the dump file path
-        self.cmd_dct["Ptycho.paths.plot_file"] = [None, self.runtime, 'plot_file']
+        self.cmd_dct["Ptycho.paths.plot_file(Ptycho.runtime)"] = [None, self.runtime, 'plot_file']
         
         # Get info if it's all over
         self.cmd_dct["Ptycho.runtime.get('allstop') is not None"] = [None, self.__dict__, '_stopping']
@@ -543,9 +543,9 @@ class MPLplotter(object):
                         info = 'P=%1.1e' % mm
                     ttl = '%s#%d (C)\n%s' % (title, layer, info)
                 elif channel == 'a':
-                    ttl = '%s#%d (P)' % (title, layer) 
-                else:
                     ttl = '%s#%d (a)' % (title, layer) 
+                else:
+                    ttl = '%s#%d (p)' % (title, layer) 
                 ptya.ax.set_title(ttl, size=12)
             
         pp.pty_axes = pty_axes

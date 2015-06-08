@@ -21,7 +21,7 @@ import ML
 import dummy
 #from ePIE import ePIE
 
-engine_names = ['Dummy','DM_simple','DM','DM_minimal', 'ML']
+engine_names = ['Dummy','DM_simple','DM','DM_minimal', 'ML','ML_new']
 DEFAULTS = u.Param(
     common = COMMON,
     Dummy = dummy.DEFAULT,
@@ -35,7 +35,7 @@ ENGINES = u.Param(
     DM_simple = DM_simple.DM_simple,
     DM = DM.DM,
     ML = ML.ML,
-    DM_minimal = DM_minimal.DM_minimal
+    DM_minimal = DM_minimal.DM_minimal,
 )
 def by_name(name):
     if name not in ENGINES.keys(): raise RuntimeError('Unknown engine: %s' % name)

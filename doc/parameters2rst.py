@@ -3,8 +3,10 @@ from ptypy import utils as u
 
 prst = open('rst/parameters.rst','w')
 
-Header = 'Ptypy parameter structure\n'
-Header+= '=========================\n\n'
+Header=  '.. _parameters:\n\n'
+Header+= '*************************\n'
+Header+= 'Ptypy parameter structure\n'
+Header+= '*************************\n\n'
 prst.write(Header)
 
 names = u.validator.parameter_descriptions
@@ -13,8 +15,11 @@ for name,desc in u.validator.parameter_descriptions.iteritems():
         continue
     if hasattr(desc,'children') and desc.parent is u.validator.pdroot:
         prst.write('\n'+name+'\n')
+        prst.write('='*len(name)+'\n\n')
+    if hasattr(desc,'children') and desc.parent.parent is u.validator.pdroot:
+        prst.write('\n'+name+'\n')
         prst.write('-'*len(name)+'\n\n')
-        
+    
     prst.write('.. py:data:: '+name)
     prst.write('('+', '.join([t for t in desc.type])+')')
     prst.write('\n\n')

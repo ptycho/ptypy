@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 4
 
    rst/readme
+   rst/getting_started
    rst/ptypyclasses
    rst/simupod
    rst/ownengine

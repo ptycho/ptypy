@@ -22,36 +22,45 @@ from . import model
 
 parallel = u.parallel
 
-__all__ = ['Ptycho','DEFAULT']
+__all__ = ['Ptycho','DEFAULT','DEFAULT_io']
+
+
 
 DEFAULT_autoplot = u.Param(
+    imfile = "plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png",
     threaded = True,
     interval = 1,
     layout = 'default',
     dump = True,
-    make_movie = True,
+    make_movie = False,
 )
 
 DEFAULT_autosave = u.Param(
     interval = 10,  # if None or False : no saving else save with this given interval
     probes = None,  # list of probe IDs for autosaving, if None save all [Not implemented]
     objects = None, # list of object IDs for autosaving, if None, save all [Not implemented]
+    rfile = "dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr",
 )
 
-
+DEFAULT_io = u.Param(
+    autosave = DEFAULT_autosave,        # (None or False, int) If an integer, specifies autosave interval, if None or False: no autosave
+    autoplot = DEFAULT_autoplot,    # Plotting parameters for a client
+    interaction = interaction.Server_DEFAULT.copy(), # Client-server communication,
+    home = './',
+    rfile = "recons/%(run)s/%(run)s_%(engine)s.ptyr"
+)
+"""Default io parameters. See :py:data:`.io` and a short listing below"""
 
 DEFAULT = u.Param(
         verbose_level = 3,      # Verbosity level
         data_type = 'single',   # 'single' or 'double' precision for reconstruction
         dry_run = False,        # do actually nothing if True [not implemented]
-        autosave = DEFAULT_autosave,        # (None or False, int) If an integer, specifies autosave interval, if None or False: no autosave
+        run = None,
         scan = u.Param(),          # POD creation rules.
         scans=u.Param(),
-        paths = paths.DEFAULT.copy(),                # How to load and save
         engines = {},           # Reconstruction algorithms
         engine = engines.DEFAULTS.copy(),
-        interaction = {}, # Client-server communication,
-        autoplot = DEFAULT_autoplot    # Plotting parameters for a client
+        io = DEFAULT_io.copy(depth=2)
 )
 
 class Ptycho(Base):
@@ -175,7 +184,7 @@ class Ptycho(Base):
 
         # Check if there is already a runtime container
         if not hasattr(self, 'runtime'):
-            self.runtime = u.Param()
+            self.runtime = u.Param() #DEFAULT_runtime.copy()
             
         if not hasattr(self,'engines'):
             # Create an engines entry if it does not already exist
@@ -183,7 +192,10 @@ class Ptycho(Base):
             self.engines = OrderedDict()
         
         # Generate all the paths
-        self.paths = paths.Paths(self.p.paths,self.runtime)
+        self.paths = paths.Paths(p.io)
+        
+        # Find run name
+        self.runtime.run = self.paths.run(p.run)
     
     def init_communication(self):
         """
@@ -192,11 +204,12 @@ class Ptycho(Base):
         Initializes ZeroMQ communication on the master node and
         spawns an optional plotting client.
         """
-        p = self.p
+        iaction = self.p.io.interaction 
+        autoplot = self.p.io.autoplot
         
-        if parallel.master and p.interaction is not None:
+        if parallel.master and iaction:
             # Create the inteaction server
-            self.interactor = interaction.Server(p.interaction)
+            self.interactor = interaction.Server(iaction)
             
             # Register self as an accessible object for the client
             self.interactor.objects['Ptycho'] = self
@@ -210,10 +223,10 @@ class Ptycho(Base):
             
             # start automated plot client
             self.plotter = None
-            if parallel.master and p.autoplot and p.autoplot.threaded:
+            if parallel.master and autoplot and autoplot.threaded:
                 from multiprocessing import Process
                 logger.info('Spawning plot client in new Process.')
-                self.plotter = Process(target=u.spawn_MPLClient, args=(p.autoplot,))
+                self.plotter = Process(target=u.spawn_MPLClient, args=(autoplot,))
                 self.plotter.start()
         else:
             # no interaction wanted
@@ -433,9 +446,10 @@ class Ptycho(Base):
                 # Last minute preparation before a contiguous block of iterations
                 engine.prepare()
                 
-                if self.p.autosave is not None and self.p.autosave.interval > 1:
-                    if engine.curiter % self.p.autosave.interval==0:
-                        auto = self.paths.auto_file
+                asave = self.p.io.autosave
+                if asave is not None and asave.interval > 1:
+                    if engine.curiter % asave.interval==0:
+                        auto = self.paths.auto_file(self.runtime)
                         logger.info(headerline('Autosaving'))
                         self.save_run(auto,'dump')
                         self.runtime.last_save = engine.curiter
@@ -496,7 +510,7 @@ class Ptycho(Base):
         self.runtime.allstop = time.asctime()
         if parallel.master and self.interactor is not None: 
             self.interactor.process_requests()
-        if self.plotter and self.p.autoplot.make_movie:
+        if self.plotter and self.p.io.autoplot.make_movie:
             logger.info('Waiting for Client to make movie ')
             u.pause(5)
         try:
@@ -556,7 +570,7 @@ class Ptycho(Base):
                 
                 if self.p.autosave is not None and self.p.autosave.interval > 1:
                     if engine.curiter % self.p.autosave.interval==0:
-                        auto = self.paths.auto_file
+                        auto = self.paths.auto_file(self.runtime)
                         logger.info(headerline('Autosaving'),'l')
                         self.save_run(auto,'dump')
                         self.runtime.last_save = engine.curiter
@@ -641,7 +655,7 @@ class Ptycho(Base):
                 
             logger.info('Attaching original runtime information')
             P.runtime = content['runtime']
-            P.paths.runtime = P.runtime
+            #P.paths.runtime = P.runtime
         
         elif header['kind']=='fullflat':
             P = save_load.link(io.h5read(runfile,'content')['content'])
@@ -693,7 +707,7 @@ class Ptycho(Base):
         import save_load
         from .. import io
         
-        destfile = self.paths.recon_file
+        destfile = self.paths.recon_file(self.runtime)
         if alt_file is not None and parallel.master: 
             destfile = u.clean_path(alt_file)
 
