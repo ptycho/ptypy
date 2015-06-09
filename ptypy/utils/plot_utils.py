@@ -760,6 +760,9 @@ class PtyAxis(object):
         self._update_colorbar()
         plt.draw()
         
+    def _after_resize_event(self,evt):
+        self._update_colorbar()
+        
     def _update_colorbar(self,mn=None,mx=None):
         mn = mn if mn is not None else self.mn
         mn = 0 if mn is None else mn

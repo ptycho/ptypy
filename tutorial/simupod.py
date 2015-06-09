@@ -1,7 +1,7 @@
 # .. _simupod:
 
-# Tutorial: Using Pods for simulation
-# ===================================
+# Tutorial: Mimicking the setup - Pod, Geometry
+# =============================================
 
 # In the :ref:`ptypyclasses` we have learned to deal with the
 # basic data storage-and-access class on small toy arrays.

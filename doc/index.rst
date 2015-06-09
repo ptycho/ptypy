@@ -13,11 +13,8 @@ Contents:
 
    rst/readme
    rst/getting_started
-   rst/ptypyclasses
-   rst/simupod
-   rst/ownengine
+   rst/concept
    rst/ptyd
-   rst/subclassptyscan
    rst/parameters   
    rst/ptypy
 

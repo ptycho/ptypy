@@ -78,7 +78,7 @@ setup(
     #include_package_data=True
     scripts = [
         'scripts/ptypy.plot',
-        'scripts/ptypy.h5info',
+        'scripts/ptypy.inspect',
         'scripts/ptypy.plotclient',
         'scripts/ptypy.new'    
     ],

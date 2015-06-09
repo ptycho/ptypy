@@ -38,7 +38,7 @@ p.io.home = "/tmp/ptypy/"
 # We want a state of the reconstruction to be dumped regularly every
 # 10 reconstructions
 p.io.autosave = u.Param()
-p.io.autosave.interval = 10
+p.io.autosave.interval = 20
 
 # In this tutorial we switch of the threaded plotting
 p.io.autoplot = False

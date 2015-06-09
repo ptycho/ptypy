@@ -528,6 +528,7 @@ class MPLplotter(object):
                         ptya.set_clims(pp.clims[ind][0],pp.clims[ind][1], False)
                     if pp.use_colorbar:
                         ptya.add_colorbar()
+                    ptya._resize_cid = self.plot_fig.canvas.mpl_connect('resize_event', ptya._after_resize_event)
                     pty_axes.append(ptya)
                 # get the layer
                 ptya.set_data(data[layer])               

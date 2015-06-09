@@ -1,7 +1,7 @@
 # .. _ptypyclasses:
 
-# Tutorial on ptypy classes
-# =========================
+# Tutorial: Data access abstraction - Storage, View, Container
+# ============================================================
 
 # First a hort reminder from the classes Module about the classes
 # this tutorial covers
@@ -203,8 +203,9 @@ print S1.shape
 # buffer around all **active** Views. 
 # You need to set
 S1.padonly = True
+
 # if you want to avoid that the data buffer is cropped. We leave this
-# as an exercise to the user. Instead we add a new View at different 
+# as an exercise to the user. Instead, we add a new View at different 
 # location to verify that the buffer will try to reach both Views.
 ar2 = ar.copy()
 ar2.coord = (-0.82,-0.82)

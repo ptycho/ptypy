@@ -1,7 +1,7 @@
 # .. _ownengine:
 
-# How to write an engine yourself
-# ===============================
+# Tutorial: A reconstruction engine from scratch
+# ==============================================
 
 # In this tutorial we want to to provide the ptypy user with the information
 # needed to create an engine compatible with the state mixture

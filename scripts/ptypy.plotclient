@@ -1,21 +1,26 @@
 #! /usr/bin/python
 
 import sys
+import argparse
 
-usage = """\
-Usage:
-%s [template]
+from ptypy.core.ptycho import DEFAULT_autoplot
 
-Spawns a plotting client
-""" % sys.argv[0]
+parser = argparse.ArgumentParser(description='Create a ZeroMQ plotting client.')
+parser.add_argument('-l', dest='layout', type=str, 
+                   help='layout of the plotter')
+parser.add_argument('--dump', dest='dump', action='store_true',
+                   help='dump .png images')
+parser.add_argument('--movie', dest='dump', action='store_false',
+                   help='create movie when reconstruction is finished')
+parser.add_argument('-i', dest='interval', type=int, 
+                   help='minimum plotting interval')
+parser.add_argument('-d', dest='directory', type=str, 
+                   help='image dump directory')
 
-if len(sys.argv) > 1:
-    template = sys.argv[1]
-else:
-    template = None
-    
+args = parser.parse_args()
+print args
 from ptypy import io
 from ptypy import utils as u
 u.verbose.set_level(5)
-plotter=u.MPLClient(plotting_pars=template)
+plotter=u.MPLClient(plotting_pars=args.layout)
 plotter.loop_plot()

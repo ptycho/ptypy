@@ -1147,7 +1147,11 @@ class MoonFlowerScan(PtyScan):
     
     DEFAULT = GENERIC.copy()
     DEFAULT.update(geometry.DEFAULT.copy())
-    
+    RECIPE = u.Param(
+        density = 0.2, # position distance in fraction of illumination frame
+        photons = 1e8,
+        psf = 0.
+    )
     def __init__(self, pars = None, **kwargs):
         """
         Parent pars are for the 
@@ -1163,11 +1167,14 @@ class MoonFlowerScan(PtyScan):
         
         # derive geometry from input
         G = geometry.Geo(pars = self.meta)
-        #G._initialize(self.meta)
+        
+        # recipe specific things
+        r = self.RECIPE.copy()
+        r.update(self.info.recipe)
         
         # derive scan pattern
         pos = u.Param()
-        pos.spacing = G.resolution * G.shape / 5.
+        pos.spacing = G.resolution * G.shape * r.density
         pos.layers = np.int(np.round(np.sqrt(self.num_frames)))+1
         pos.extent = pos.layers * pos.spacing
         pos.model = 'round'
@@ -1180,17 +1187,14 @@ class MoonFlowerScan(PtyScan):
         self.pixel = np.round(pixel).astype(int) + 10
         frame = self.pixel.max(0) + 10 + G.shape
         self.G = G
-        #from matplotlib import pyplot as plt
-        #plt.figure(200);plt.imshow(u.imsave(G.propagator.pre_ifft))
-        #plt.figure(101);plt.imshow(G.propagator.grids_det[0]**2+G.propagator.grids_det[1]**2)
-        # get object
         self.obj = resources.flower_obj(frame) 
         
         # get probe
         moon = resources.moon_pr(self.G.shape)
-        moon /= np.sqrt(u.abs2(moon).sum() / 1e8)
+        moon /= np.sqrt(u.abs2(moon).sum() / r.photons)
         self.pr = moon
         self.load_common_in_parallel = True
+        self.r = r
         
     def load_positions(self):
         return self.pos
@@ -1199,15 +1203,14 @@ class MoonFlowerScan(PtyScan):
         return np.ones(self.pr.shape)
 
     def load(self, indices):
-        """
-        Forward propagation
-        """
-        # dummy fill
         p=self.pixel
         s=self.G.shape
         raw = {}
         for i in indices:
-            raw[i]=np.random.poisson(u.abs2(self.G.propagator.fw(self.pr * self.obj[p[i][0]:p[i][0]+s[0],p[i][1]:p[i][1]+s[1]]))).astype(np.int32)
+            Ij = u.abs2(self.G.propagator.fw(self.pr * self.obj[p[i][0]:p[i][0]+s[0],p[i][1]:p[i][1]+s[1]]))
+            if self.r.psf>0. : 
+                Ij = u.gf(Ij,self.r.psf)
+            raw[i]=np.random.poisson(Ij).astype(np.int32)
         return raw, {}, {}
 
         

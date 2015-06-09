@@ -333,7 +333,9 @@ def h5read(filename, *args, **kwargs):
  
     """
     doglob = kwargs.pop('doglob', None)
-
+    depth = kwargs.pop('depth',None)
+    depth = 99 if depth is None else depth+1
+    
     # Used if we read a list of files
     fnames = []
     if not isinstance(filename, str):
@@ -371,20 +373,22 @@ def h5read(filename, *args, **kwargs):
             d[dk] = dv
         return d
 
-    def _load_dict(dset):
+    def _load_dict(dset,depth):
         d = {}
-        for k,v in dset.items():
-            if v.attrs.get('escaped', None) is not None:
-                k = k.replace(h5options['SLASH_ESCAPE'], '/')
-            d[k] = _load(v)
+        if depth>0:
+            for k,v in dset.items():
+                if v.attrs.get('escaped', None) is not None:
+                    k = k.replace(h5options['SLASH_ESCAPE'], '/')
+                d[k] = _load(v,depth-1)
         return d
         
-    def _load_list(dset):
+    def _load_list(dset,depth):
         l = []
-        keys = dset.keys()
-        keys.sort()
-        for k in keys:
-            l.append(_load(dset[k]))
+        if depth>0:
+            keys = dset.keys()
+            keys.sort()
+            for k in keys:
+                l.append(_load(dset[k],depth-1))
         return l
     
     def _load_numpy(dset,sl=None):
@@ -408,7 +412,7 @@ def h5read(filename, *args, **kwargs):
     def _load_pickle(dset):
         return cPickle.loads(dset[...])
 
-    def _load(dset, sl=None):
+    def _load(dset, depth,sl=None):
         dset_type = dset.attrs.get('type',None)
       
         # Treat groups as dicts
@@ -418,11 +422,11 @@ def h5read(filename, *args, **kwargs):
         if dset_type == 'dict' or dset_type =='param':
             if sl is not None:
                 raise RuntimeError('Dictionaries or ptypy.Param do not support slicing')
-            val = _load_dict(dset)
+            val = _load_dict(dset,depth)
             if dset_type =='param':
                 val = Param(val)
         elif dset_type == 'list':
-            val = _load_list(dset)
+            val = _load_list(dset,depth)
             if sl is not None:
                 val = val[sl]
         elif dset_type == 'array':
@@ -432,7 +436,7 @@ def h5read(filename, *args, **kwargs):
             if sl is not None:
                 val = val[sl]
         elif dset_type == 'tuple':
-            val = tuple(_load_list(dset))
+            val = tuple(_load_list(dset,depth))
             if sl is not None:
                 val = val[sl]
         elif dset_type == 'arraytuple':
@@ -515,46 +519,50 @@ def h5read(filename, *args, **kwargs):
                     gr = f[glist[0]]
                     for gname in glist[1:-1]:
                         gr = gr[gname]
-                    outdict[k] = _load(gr[k],sl)
+                    outdict[k] = _load(gr[k],depth,sl=sl)
                 else:
-                    outdict[k] = _load(f[k],sl)
+                    outdict[k] = _load(f[k],depth,sl=sl)
       
     return outdict      
 
     
 
-def h5info(filename, output=None):
+def h5info(filename, path='', output=None, depth=8):
     """\
     h5info(filename)
 
     Prints out a tree structure of given h5 file.
     """
-
+    depth=8 if depth is None else depth
     indent = 4
     filename = os.path.abspath(os.path.expanduser(filename))
 
-    def _format_dict(key, dset):
-        stringout = ' '*key[0] + ' * %s [dict]:\n' % key[1] 
-        for k,v in dset.items():
-            if v is not None and v.attrs.get('escaped', None) is not None:
-                k = k.replace(h5options['SLASH_ESCAPE'], '/')
-            stringout += _format((key[0]+indent, k), v)
+    def _format_dict(d,key, dset, isParam=False):
+        ss='Param' if isParam else 'dict' 
+        stringout = ' '*key[0] + ' * %s [%s %d]:\n' % (key[1],ss,len(dset))
+        if d>0: 
+            for k,v in dset.items():
+                if v is not None and v.attrs.get('escaped', None) is not None:
+                    k = k.replace(h5options['SLASH_ESCAPE'], '/')
+                stringout += _format(d-1,(key[0]+indent, k), v)
         return stringout
     
-    def _format_list(key, dset):
-        stringout = ' '*key[0] + ' * %s [list]:\n' % key[1] 
-        keys = dset.keys()
-        keys.sort()
-        for k in keys:
-            stringout += _format((key[0]+indent, ''), dset[k])
+    def _format_list(d,key, dset):
+        stringout = ' '*key[0] + ' * %s [list %d]:\n' % (key[1],len(dset))
+        if d>0: 
+            keys = dset.keys()
+            keys.sort()
+            for k in keys:
+                stringout += _format(d-1,(key[0]+indent, ''), dset[k])
         return stringout
 
     def _format_tuple(key, dset):
-        stringout = ' '*key[0] + ' * %s [tuple]:\n' % key[1] 
-        keys = dset.keys()
-        keys.sort()
-        for k in keys:
-            stringout += _format((key[0]+indent, ''), dset[k])
+        stringout = ' '*key[0] + ' * %s [tuple]:\n' % key[1]
+        if d>0: 
+            keys = dset.keys()
+            keys.sort()
+            for k in keys:
+                stringout += _format(d-1,(key[0]+indent, ''), dset[k])
         return stringout
 
     def _format_arraytuple(key, dset):
@@ -619,7 +627,7 @@ def h5info(filename, output=None):
         stringout = ' '*key[0] + ' * ' + key[1] + ' [unknown]\n'
         return stringout
 
-    def _format(key, dset):
+    def _format(d,key, dset):
         dset_type = 'None' if dset is None else dset.attrs.get('type',None)
       
         # Treat groups as dicts
@@ -627,15 +635,17 @@ def h5info(filename, output=None):
             dset_type = 'dict'
 
         if dset_type == 'dict':
-            stringout = _format_dict(key, dset)
+            stringout = _format_dict(d,key, dset,False)
+        elif dset_type == 'param':
+            stringout = _format_dict(d,key, dset,True)
         elif dset_type == 'list':
-            stringout = _format_list(key, dset)
+            stringout = _format_list(d,key, dset)
         elif dset_type == 'array':
             stringout = _format_numpy(key, dset)
         elif dset_type == 'arraylist':
             stringout = _format_arraylist(key, dset)
         elif dset_type == 'tuple':
-            stringout = _format_tuple(key, dset)
+            stringout = _format_tuple(d,key, dset)
         elif dset_type == 'arraytuple':
             stringout = _format_arraytuple(key, dset)
         elif dset_type == 'string':
@@ -661,10 +671,11 @@ def h5info(filename, output=None):
         ctime = f.attrs.get('ctime', None)
         if ctime is not None:
             print('File created : ' + ctime)
-        key_list = f.keys()
+        if not path.endswith('/'): path+='/'
+        key_list = f[path].keys()
         outstring = ''
         for k in key_list:
-            outstring += _format((0,k),f[k])
+            outstring += _format(depth,(0,k),f[path+k])
     
     print outstring
     

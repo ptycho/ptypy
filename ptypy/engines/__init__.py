@@ -21,6 +21,8 @@ import ML
 import dummy
 #from ePIE import ePIE
 
+__all__ = ['DM','ML','BaseEngine']
+
 engine_names = ['Dummy','DM_simple','DM','DM_minimal', 'ML','ML_new']
 DEFAULTS = u.Param(
     common = COMMON,

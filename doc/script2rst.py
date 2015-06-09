@@ -3,6 +3,19 @@ import StringIO
 import contextlib
 import os
 
+scripts = [
+'../tutorial/minimal_script.py',
+'../tutorial/ptypyclasses.py',
+'../tutorial/simupod.py',
+'../tutorial/ownengine.py',
+'../tutorial/subclassptyscan.py',
+]
+
+if len(sys.argv)==1:
+    for script in scripts:
+        os.system('python '+sys.argv[0]+' '+script)
+    sys.exit()
+
 indent_keys = ['for','if','with','def','class']
 
 sout = StringIO.StringIO()
@@ -25,8 +38,8 @@ def exec2str(statement):
 script_name= sys.argv[1]
 fpy=open(script_name,'r')
 name = script_name.replace('.py','').split(os.sep)[-1]
-frst=open('rst'+os.sep+name+'.rst','w')
-fig_path = '_img'+os.sep
+frst=open('_script2rst'+os.sep+name+'.tut','w')
+fig_path = '_script2rst'+os.sep
 
 frst.write('.. note::\n   This tutorial was generated from the python source\
  :file:`ptypy/tutorial/%s` using :file:`ptypy/doc/%s`.\n\n' % (os.path.split(script_name)[-1],sys.argv[0]))
