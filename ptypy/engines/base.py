@@ -121,7 +121,9 @@ class BaseEngine(object):
             N = num
         
         for n in range(N):
-            if self.finished: break 
+            if self.curiter >= self.numiter: 
+                self.finished = True
+                break 
             # for benchmarking
             t = time.time()
             
@@ -137,7 +139,7 @@ class BaseEngine(object):
             # Increment the iterate number
             ############################
             self.curiter += 1
-            if self.curiter == self.numiter: self.finished = True
+            
             
             ############################
             # Prepare meta
