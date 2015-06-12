@@ -123,7 +123,7 @@ source_suffix = '.rst'
 #source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = 'content'
 
 # General information about the project.
 project = u'ptypy'
@@ -188,15 +188,15 @@ numfig = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'sphinxdoc'#'classic'#'scrolls' #'sphinxdoc' #'alabaster' 
+html_theme = 'ptypysphinx'#'sphinxdoc'#'classic'#'scrolls' #'sphinxdoc' #'alabaster' 
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {'sidebarwidth':'280'}
 
 # Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
+html_theme_path = ['html_templates']
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -207,12 +207,12 @@ html_theme = 'sphinxdoc'#'classic'#'scrolls' #'sphinxdoc' #'alabaster'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = '../resources/ptypy_logo_1M.png'
+html_logo = 'html_templates/ptypysphinx/static/logo_100px.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-#html_favicon = None
+html_favicon = 'html_templates/ptypysphinx/static/ptypyicon.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -233,11 +233,14 @@ html_static_path = ['_static']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+html_sidebars = {
+   '**': ['localtoc.html','relations.html','sourcelink.html', 'searchbox.html'],
+   'index': ['download.html'],
+}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
-#html_additional_pages = {}
+html_additional_pages = {'start':'startpage.html'}
 
 # If false, no module index is generated.
 #html_domain_indices = True

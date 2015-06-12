@@ -32,6 +32,7 @@ Installation
 Installation should be as simple as
 ::
    $ sudo python setup.py install
+
 or, as a user,
 ::
    $ python setup.py install --user

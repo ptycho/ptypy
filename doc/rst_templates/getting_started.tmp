@@ -2,6 +2,8 @@
 Getting started with Ptypy
 **************************
 
+.. _installation:
+
 Installation
 ============
 

@@ -1,0 +1,23 @@
+{% extends "!sphinxdoc/layout.html" %}
+
+{# load free fonts #}
+{% block extrahead %}
+<link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
+{% endblock %}
+
+{# add a page header on top of doc #}
+{% block header %}
+<div class="pageheader">
+  <ul>
+    <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
+    <li><a href="http://www.github.com/ptycho/ptypy">Github</a></li>
+    <li><a href="{{pathto("content")}}">Docs</a></li>
+    <!-- <li><a href="develop.html">Extend/Develop</a></li> -->
+  </ul>
+  <div>
+    <a href="#"><img src="{{pathto("_static/logo_60px.png",1)}}" alt="SPHINX" /></a>
+    <h0>Ptychography for Python</h0>
+  </div>
+</div>
+{% endblock %}
+
