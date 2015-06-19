@@ -11,13 +11,13 @@ p.interaction = u.Param()
 
 p.data_type = "single"
 p.run = None
-p.autosave = None
-p.paths = u.Param()
-p.paths.home = "/tmp/ptypy/" 
-p.paths.run = None
-p.autoplot = u.Param()
-p.autoplot.layout='weak'
 
+p.io = u.Param()
+p.io.home = "/tmp/ptypy/" 
+p.io.run = None
+p.io.autoplot = u.Param()
+p.io.autoplot.layout='weak'
+p.io.autosave = None
 
 sim = u.Param()
 sim.xy = u.Param()
@@ -94,26 +94,26 @@ p.scans.sim.data.save = None
 
 p.engine = u.Param()
 p.engine.common = u.Param()
-p.engine.common.numiter = 100                    # (85) Total number of iterations
-p.engine.common.numiter_contiguous = 1            # (86) Number of iterations to be executed in one go
-p.engine.common.probe_support = 0.7               # (87) Fraction of valid probe area (circular) in probe frame
-p.engine.common.probe_inertia = 0.01             # (88) Probe fraction kept from iteration to iteration
-p.engine.common.object_inertia = 0.1              # (89) Object fraction kept from iteration to iteration
-p.engine.common.clip_object = [0,1.]                # (91) Clip object amplitude into this intrervall
+p.engine.common.numiter = 100       
+p.engine.common.numiter_contiguous = 1    
+p.engine.common.probe_support = 0.7    
+p.engine.common.probe_inertia = 0.01    
+p.engine.common.object_inertia = 0.1  
+p.engine.common.clip_object = [0,1.]        
 
 p.engine.DM = u.Param()
-p.engine.DM.name = "DM"                           # (93) abbreviation of algorithm
-p.engine.DM.alpha = 1                             # (94) Parameters that makes the difference
-p.engine.DM.probe_update_start = 2                # (95) Number of iterations before probe update starts
-p.engine.DM.update_object_first = True            # (96) If False update object before probe
-p.engine.DM.overlap_converge_factor = 0.05        # (97) Loop overlap constraint until probe change is smaller than this fraction
-p.engine.DM.overlap_max_iterations = 100           # (98) Maximum iterations to be spent inoverlap constraint
-p.engine.DM.fourier_relax_factor = 0.1           # (99) If rms of model vs diffraction data is smaller than this fraction, Fourier constraint is met
+p.engine.DM.name = "DM"             
+p.engine.DM.alpha = 1                
+p.engine.DM.probe_update_start = 2     
+p.engine.DM.update_object_first = True   
+p.engine.DM.overlap_converge_factor = 0.05 
+p.engine.DM.overlap_max_iterations = 100    
+p.engine.DM.fourier_relax_factor = 0.1     
 p.engine.DM.obj_smooth_std = 5 
 
 p.engine.ML = u.Param()
 
-p.engines = u.Param()                                  # (100) empty structure to be filled with engines
+p.engines = u.Param()                          
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
 p.engines.engine00.numiter = 150
@@ -121,10 +121,7 @@ p.engines.engine00.fourier_relax_factor = 0.05
 
 u.verbose.set_level(3)
 P = Ptycho(p,level=5)
-#if u.parallel.master:
-    #P.plot_overview()
-#u.pause(100.)
-#P.save_run(kind='minimal')
+
 
 
 

@@ -215,7 +215,7 @@ class Ptycho(Base):
             self.interactor.objects['Ptycho'] = self
 
             # Start the thread
-            logger.info('Starting interaction server.')
+            logger.info('Starting interaction server here: %s:%d' % (self.interactor.address, self.interactor.port))
             self.interactor.activate()
         
             # inform the audience

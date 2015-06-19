@@ -62,13 +62,13 @@ DEFAULT_sharing = u.Param(
 DEFAULT = u.Param(
     illumination=u.Param(),  # All information about the probe
     sample=u.Param(),  # All information about the object
-    geometry=u.Param(),  # Geometry of experiment - most of it provided by data
+    geometry=geometry.DEFAULT.copy(),  # Geometry of experiment - most of it provided by data
     xy=u.Param(),
     # Information on scanning paramaters to yield position arrays
     # If positions are provided by the DataScan object, set xy.scan_type to None
     coherence=DEFAULT_coherence.copy(),
     sharing = DEFAULT_sharing.copy(),
-    if_conflict_use_meta=False,
+    #if_conflict_use_meta=False,
     # Take geometric and position information from incoming meta_data
     # if possible parameters are specified both in script and in meta data
     #source=None,
@@ -357,7 +357,7 @@ class ModelManager(object):
                 scan.geometries = []
                 geo = scan.pars.geometry
                 for key in geometry.DEFAULT.keys():
-                    if geo.get(key) is None or scan.pars.if_conflict_use_meta:
+                    if geo.get(key) is None or not (geo.precedence=='meta'): #scan.pars.if_conflict_use_meta:
                         mk = scan.meta.get(key)
                         if mk is not None:  # None existing key or None values in meta dict are treated alike
                             geo[key] = mk
@@ -448,7 +448,7 @@ class ModelManager(object):
                 index = dct['index']
                 active = dct['active']
                 #tpos = positions_theory[index]
-                if not scan.pars.if_conflict_use_meta and scan.pos_theory is not None:
+                if scan.pars.geometry.precedence=='meta' and scan.pos_theory is not None:
                     pos = scan.pos_theory[index]
                 else:
                     pos = dct.get('position')  #,positions_theory[index])

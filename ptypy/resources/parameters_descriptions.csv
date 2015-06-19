@@ -133,8 +133,7 @@ In script, you may pass a numpy.ndarray here directly as the model. It is consid
 2,stxm,,Param,,,,,Parameters to initialize illumination from diffraction data,,1,
 3,label,None,str,yes,,,,Scan label of diffraction that is to be used for probe estimate,"``None``, own scan label is used",1,
 2,aperture,,Param,yes,,,,Beam aperture parameters,,,
-3,form,circ,str,yes,0,,"
-","One of None, 'rect' or 'circ'","One of:
+3,form,circ,str,yes,0,,,"One of None, 'rect' or 'circ'","One of:
  - ``None`` : no aperture, this may be useful for nearfield
  - ``'rect'`` : rectangular aperture
  - ``'circ'`` : circular aperture",0,

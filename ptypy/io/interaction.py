@@ -228,10 +228,11 @@ class Server(object):
         #    from ptypy.utils import str2range
         #    p.port_range = str2range(p.port_range)
         
-        
-        port_range = range(self.port+1,self.port+p.connections+1) 
         self.address = p.address
         self.port = p.port
+        
+        port_range = range(self.port+1,self.port+p.connections+1) 
+
         self.poll_timeout = p.poll_timeout
         self.pinginterval = p.pinginterval
         self.pingtimeout = p.pingtimeout

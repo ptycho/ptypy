@@ -36,6 +36,7 @@ DEFAULT=u.Param(
     misfit = 0,
     center = 'fftshift',
     origin = 'fftshift',
+    precedence = None,
 )
 """ Default geometry parameters. See also :py:data:`.scan.geometry` and an unflattened representation below """
 

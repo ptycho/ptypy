@@ -88,7 +88,7 @@ class PDesc(object):
 
     def __init__(self, description, parent=None):
         """
-        Store description list for validation and documentation.
+        Stores description list for validation and documentation.
         """
         #: Name of parameter
         self.name = description.get('name', '')
@@ -136,11 +136,12 @@ class PDesc(object):
             
         # choices is an evaluable list
         c =  description.get('choices', '')
+        #print c, self.name
         if str(c)=='':
             c=None
         else:
             try:
-                c = eval(c)
+                c = eval(c.strip())
             except SyntaxError('Evaluating `choices` %s for parameter %s failed' %(str(c),self.name)):
                 c = None
         
