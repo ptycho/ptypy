@@ -2,9 +2,23 @@
 
 import sys
 import argparse
+from ptypy import utils as u
 
-from ptypy.core.ptycho import DEFAULT_autoplot
+parser = argparse.ArgumentParser(description='Create a ZeroMQ plotting client.')
+excludes =['active','threaded','connections']
+u.validator._add2argparser(parser, entry_point = '.io.autoplot',excludes= excludes)
+parser = u.validator._add2argparser(parser, entry_point = '.io.interaction',excludes= excludes)
 
+parser.add_argument('-d','--dir', dest='directory', type=str, 
+                   help='image dump directory' )
+args = parser.parse_args()
+for key,pd in parser._ptypy_translator.items():
+    pd.set_default(getattr(args,key,pd.default))
+                   
+plot_pars = u.validator.make_sub_default('.io.autoplot')
+plot_pars['home'] = getattr(args,'directory',pd.value)
+client_pars = u.validator.make_sub_default('.io.interaction')
+"""
 parser = argparse.ArgumentParser(description='Create a ZeroMQ plotting client.')
 parser.add_argument('-l', dest='layout', type=str, 
                    help='layout of the plotter')
@@ -16,11 +30,11 @@ parser.add_argument('-i', dest='interval', type=int,
                    help='minimum plotting interval')
 parser.add_argument('-d', dest='directory', type=str, 
                    help='image dump directory')
-
-args = parser.parse_args()
-print args
+parser.add_argument('-a', dest='address', type=str, 
+                   help='address of reconstruction server')
+"""
+#args = parser.parse_args()
 from ptypy import io
-from ptypy import utils as u
 u.verbose.set_level(5)
-plotter=u.MPLClient(plotting_pars=args.layout)
+plotter=u.MPLClient(client_pars=client_pars, plotting_pars=plot_pars)
 plotter.loop_plot()

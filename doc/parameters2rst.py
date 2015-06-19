@@ -4,9 +4,9 @@ from ptypy import utils as u
 prst = open('rst/parameters.rst','w')
 
 Header=  '.. _parameters:\n\n'
-Header+= '*************************\n'
-Header+= 'Ptypy parameter structure\n'
-Header+= '*************************\n\n'
+Header+= '************************\n'
+Header+= 'Parameter tree structure\n'
+Header+= '************************\n\n'
 prst.write(Header)
 
 names = u.validator.parameter_descriptions

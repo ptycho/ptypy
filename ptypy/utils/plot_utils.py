@@ -542,21 +542,24 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
     imsave
     :any:`Storage`
     """
-    slc = slices
+    
     #R,C = S.grids()
     #R = R[slc][0]
     #C = C[slc][0]
     if str(slices)==slices:
-        slices=eval('np.index_exp['+slices+']')   
+        slc=eval('np.index_exp['+slices+']')
+    else:
+        slc = slices
     im = S.data[slc].copy()
     imsh = im.shape[-2:]
     #ext=[C[0,0],C[0,-1],R[0,0],R[-1,0]]
-    if np.iscomplex(im).any():
+    if np.iscomplexobj(im):
         phase = np.exp(1j*np.pi*np.angle(im))
         channel = 'c'
     else:
         phase = np.real(np.exp(1j*np.pi*np.angle(im))) # -1 or 1
         channel = 'r'
+    
     if modulus=='sqrt':
         im=np.sqrt(np.abs(im)).astype(im.dtype)*phase
     elif modulus=='log':
@@ -570,11 +573,14 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
     #ext2=[a*mag for a in ext]
     mask = np.ones(imsh,dtype=bool) if mask is None else mask.astype(bool)
     
+    if im.ndim==2:
+        im=im.reshape((1,)+im.shape)
+        
     layers = im.shape[0]
-    fig = plt.figure(fignum,figsize=(6*layers,6))
+    fig = plt.figure(fignum,figsize=(6*layers,5))
     for l in range(layers):
         ax = fig.add_subplot(1,layers,l+1)
-        pax = PtyAxis(ax,data=im[l],channel=channel,**kwargs)
+        pax = PtyAxis(ax,data=im[l],channel=kwargs.pop('channel',channel),**kwargs)
         pax.set_mask(mask)
         pax.add_colorbar()
         #pax._update()
@@ -585,7 +591,8 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
         #a.axes.yaxis.get_major_formatter().set_powerlimits((-3,3))
         if si_axes is not None and 'x' in si_axes:
             a = ax.get_position().bounds
-            ax.xaxis.set_major_locator(mpl.ticker.LinearLocator(max((int(a[2]*20),5))))
+            #nticks = min(max((int(a[2]*20),5)),pax.shape[1])
+            #ax.xaxis.set_major_locator(mpl.ticker.LinearLocator(nticks))
             formatter = lambda x,y: pretty_length(S._to_phys((0,x))[1]*x_mag,digits=3)#'%1.2f' % ((1-x)*(2*np.pi)-np.pi)
             ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
             ax.set_xlabel('x [' + x_unit +']')
@@ -593,7 +600,8 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
             ax.set_xlabel('x [Pixel]')
         if si_axes is not None and 'y' in si_axes:
             a = ax.get_position().bounds
-            ax.yaxis.set_major_locator(mpl.ticker.LinearLocator(max((int(a[3]*20),5))))
+            #nticks= min(max((int(a[3]*20),5)),pax.shape[0])
+            #ax.yaxis.set_major_locator(mpl.ticker.LinearLocator(nticks))
             formatter = lambda x,y: pretty_length(S._to_phys((x,0))[0]*y_mag,digits=3)#'%1.2f' % ((1-x)*(2*np.pi)-np.pi)
             ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
             ax.set_ylabel('y [' + y_unit +']')
@@ -707,7 +715,7 @@ class PtyAxis(object):
             imdata = np.abs(self.data)
         
         if self.mask is not None:
-            cdata = imdata if str(self.channel) in ['a','p'] else np.abs(self.data) 
+            cdata = imdata if str(self.channel)!='c' else np.abs(self.data) 
             self.mx = np.max( cdata[self.mask])
             if self.vmax is None: # or self.mx<self.vmax:
                 mx = self.mx 
@@ -726,8 +734,13 @@ class PtyAxis(object):
             self.ax.imshow(pilim, **(self.kwargs))
             plt.setp(self.ax.get_xticklabels(), fontsize=self.fontsize)
             plt.setp(self.ax.get_yticklabels(), fontsize=self.fontsize)#, rotation='vertical')
-            self.ax.yaxis.set_major_locator(mpl.ticker.IndexLocator(50,0.5))
-            self.ax.xaxis.set_major_locator(mpl.ticker.IndexLocator(50,0.5))
+            # determine number of points.
+            v,h = self.shape
+            steps = [1,2,5,10,20,50,100,200,500]
+            Nindex = steps[max([v/s<=4 for s in steps].index(True)-1,0)]
+            self.ax.yaxis.set_major_locator(mpl.ticker.IndexLocator(Nindex,0.5))
+            Nindex = steps[max([h/s<=4 for s in steps].index(True)-1,0)]
+            self.ax.xaxis.set_major_locator(mpl.ticker.IndexLocator(Nindex,0.5))
         else:
             self.ax.images[0].set_data(pilim)
              

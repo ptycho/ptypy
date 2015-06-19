@@ -3,15 +3,7 @@ ptypy.engines package
 
 Submodules
 ----------
-
-ptypy.engines.DM_minimal module
------------------------
-
-.. automodule:: ptypy.engines.DM_minimal
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    
+   
 ptypy.engines.DM module
 -----------------------
 
@@ -20,13 +12,6 @@ ptypy.engines.DM module
     :undoc-members:
     :show-inheritance:
 
-ptypy.engines.DM_simple module
-------------------------------
-
-.. automodule:: ptypy.engines.DM_simple
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 ptypy.engines.ML module
 -----------------------
@@ -40,14 +25,6 @@ ptypy.engines.base module
 -------------------------
 
 .. automodule:: ptypy.engines.base
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ptypy.engines.dummy module
---------------------------
-
-.. automodule:: ptypy.engines.dummy
     :members:
     :undoc-members:
     :show-inheritance:

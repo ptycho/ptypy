@@ -1,3 +1,5 @@
+.. _getting_started:
+
 **************************
 Getting started with Ptypy
 **************************
@@ -10,8 +12,9 @@ Installation
 General installation instructions
 ---------------------------------
 
-|ptypy|_ is a python package and depends on a number of other
-packages. Once its dependecies are met, ptypy should work *out-of-the-box*.
+Being a python package, |ptypy|_ depends on a number of other
+packages which are listed below.
+Once its dependecies are met, ptypy should work *out-of-the-box*.
 
 .. note:: 
    |ptypy| is developed for Python 2.7.x and is currently incompatible
@@ -30,9 +33,9 @@ Essential packages
 
 Recommended packages for additional functionality
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Please note that |ptypy| as alpha release still lacks rigorous import 
-checking. There may be parts of code that implicitly asks for any of the
-packages listed here. 
+Please note that |ptypy| is an alpha release and lacks rigorous import 
+checking. There may be parts of code that implicitly ask for any of the
+packages listed here. Therefore, we recommend to install these packages.
 
 * `Matplotlib <https://pypi.python.org/pypi/matplotlib/1.4.3>`_ 
   for any kind of plotting or image generation
@@ -40,16 +43,17 @@ packages listed here.
   `QT4 <https://pypi.python.org/pypi/PyQt4/4.11.3>`_
 
 * `mpi4py <https://pypi.python.org/pypi/mpi4py/1.3.1>`_ 
-  for CPU-node parallelization, python bindings for the
+  for CPU-node parallelisation,  contains python bindings for the
   `Message Passaging Interface <http://www.mcs.anl.gov/research/projects/mpi/>`_, 
   (homepage: `<https://bitbucket.org/mpi4py/mpi4py/>`_)
 
 * `pyzmq <https://pypi.python.org/pypi/pyzmq/14.6.0>`_ 
-  for a threaded server on the main node in threaded asynchronous 
-  client-server communication, python bindings for the
+  for a threaded server on the main node to perfrom asynchronous 
+  client-server communication, contains python bindings for the
   ZeroMQ protocol, 
-  (homepage: `<http://github.com/zeromq/pyzmq>`_)
-  This package is needed for non-blocking plots of the reconstruction run.
+  (homepage: `<http://github.com/zeromq/pyzmq>`_).
+  This package is needed for non-blocking plots of the reconstruction run
+  (e.g. for :ref:`plotclient`).
 
 Optional packages
 ^^^^^^^^^^^^^^^^^
@@ -60,12 +64,12 @@ Other very useful packages are
 
 Installation on Debian/Ubuntu
 -----------------------------
-|Ptypy| is developed on the current LTS version of Ubuntu and installation
-is straightforward.
+|ptypy| is developed on the current LTS version of Ubuntu which is the
+recommended operating system for |ptypy|
 
 Prerequisites
 ^^^^^^^^^^^^^
-For Debian/Ubuntu, many of the required python packages are
+Many of the required python packages are
 available in the repositories. Just type (with sudo rights)
 ::
 
@@ -88,8 +92,8 @@ CD into the download directory (e.g. /tmp/ptypy-master) and install |ptypy| with
 
     $ python setup.py install --user 
 
-The local --user install is generally recommended over the system wide
-sudo install, such that you are able to quickly apply fixes yourself.
+The local ``--user`` install is recommended over the system wide
+``sudo`` install, such that you are able to quickly apply fixes yourself.
 However, for an all-user system-wide install, type
 ::
 
@@ -101,7 +105,7 @@ Installation on Windows
 This installation instruction were contributed by M. Stockmar and tested
 with *Windows 8.1 Enterprise (64 bit)* on a core i7 Thinkpad w520 
 in February 2015. 
-No python was installed before on this machine. 
+No python was installed before on that machine. 
 
 .. note::
    There might be also simpler ways to get a full scientific python 
@@ -192,39 +196,51 @@ Change into that directly and install from commandline::
 Quickstart with a minimal script
 ================================
 
+
 .. note::
-   This tutorial was generated from the python source :file:`ptypy/tutorial/minimal_script.py` using :file:`ptypy/doc/script2rst.py`.
+   This tutorial was generated from the python source
+   :file:`[ptypy_root]/tutorial/minimal_script.py` using :file:`ptypy/doc/script2rst.py`. 
+   You are encouraged to modify the parameters and rerun the tutorial with::
+   
+     $ python [ptypy_root]/tutorial/minimal_script.py
 
 This tutorial explains the minimal settings to get a reconstruction
-runnig in |ptypy|. A |ptypy| script consists of 2 parts, creation of
-a parameter tree with parameters as listed in :ref:`parameters` and 
-finally calling a :any:`Ptycho` instance with these parameter tree 
-and a certain level that determines how much the Ptycho 
-instance will do.
+runnig in |ptypy|. A |ptypy| script consists of two parts:
+
+* Creation of a parameter tree with parameters 
+  as listed in :ref:`parameters` and 
+* calling a :any:`Ptycho` instance with this parameter tree 
+  at a certain level that determines how much the Ptycho 
+  instance will do.
 
 Preparing the parameter tree
 ----------------------------
 
-We begin with creating an empty parameter tree. In |ptypy| parameters
+We begin with opening an empty python file of arbitrary name
+in an editor of your choice, e.g.::
+
+  $ gedit minimal_script.py
+
+Next we create an empty parameter tree. In |ptypy|, parameters
 are managed by the :any:`Param` class which is a subclass of Pythons
-dict type and acts like a composite of 
-of dictionary and object: All items can be accessed as class attributes. 
+dict type. It acts like a composite of 
+of dictionary and object, meaning that all dictionary items may be accessed as class attributes. 
 
 ::
 
    >>> from ptypy import utils as u
    >>> p = u.Param()  # root level
 
-We set the verbosity to a high level, such that we information on the
-reconstruction process are printed into the terminal. 
+We set the verbosity to a high level, in order to have information of the
+reconstruction process printed to the terminal. 
 See :py:data:`.verbose_level`.
 
 ::
 
    >>> p.verbose_level = 3
 
-We limit this reconstruction to single precision, but yoy may as well
-use double precision
+We limit this reconstruction to single precision, but you may as well
+use double precision.
 
 ::
 
@@ -232,56 +248,66 @@ use double precision
 
 We give this reconstruction the name ``'minimal'`` although it 
 will automatically choose one from the script if we put in ``None``.
+(But then the tutorial may not work on your computer as the chosen
+run name may differ from the one that this tutorial was created with)
 
 ::
 
    >>> p.run = 'minimal'
 
-We set the home path. The reconstruction will save / dump anything
-into this base path if any other path in the tree lacks a leading "/" 
-(or "C:\" on windows). Make sure to replace all "/" with "\" if you run
-the scripts on a Windows system.
+Next, we set the home path. The :any:`Ptycho` instance will use this 
+path as base for any other file path (e.g :py:data:`.io.autosave.path` 
+or :py:data:`.io.rfile`) in the tree lacks a leading "/"
+(or "C:\\" on windows). Make sure to replace all "/" with "\\" 
+if you run the scripts on a Windows system.
 
 ::
 
    >>> p.io = u.Param()
    >>> p.io.home = "/tmp/ptypy/"
 
-We want a state of the reconstruction to be dumped regularly every
-10 reconstructions
+We want an intermediate result of the reconstruction 
+to be dumped regularly every 10 reconstructions.
 
 ::
 
    >>> p.io.autosave = u.Param()
    >>> p.io.autosave.interval = 20
 
-In this tutorial we switch of the threaded plotting
+In this tutorial we switch of the threaded plotting client.
 
 ::
 
    >>> p.io.autoplot = False
 
-Since we are not plotting we do not need the interaction server either.
+Since we do not want to plot anything, we don't need the 
+interaction server either.
 
 ::
 
    >>> p.io.interaction = False
 
-This branch of the tree would hold all *common* parameters for scans. 
-If there is only one scan, it does not matter if we specify parameters
-for illumination or sample in this branch or in ``scans``. In this
+Now we have to put in actual parameters associated with a 
+ptychographic scan.
+
+The ``scan`` branch of the tree holds all *common* parameters for scans
+and can be regarded as template in case of a many-scans reconstruction. 
+However, if there is only one scan, it does not matter if we specify 
+parameters for illumination or sample in this branch 
+or in ``scans``. In this tutorial
 case we do not bother to enter paramter but leave the branch empty
-(That will fill it with the defaults :py:data:`.scan` ) 
+(It will be filled with the defaults of :py:data:`.scan` ) .
 
 ::
 
    >>> p.scan = u.Param()
 
-The ``scans`` branch encloses all differences for a scan with respect
-to the ``scan`` branch mentioned above. For sure different for each 
-scan is the ``data`` branch :py:data:`.scan.data`. In this case we 
-create a new scan paramter branch ``MF``. We only specify the data
-branch and tell |ptypy| to use scan meta data when possible.
+The ``scans`` branch marks all differences for a scan with respect
+to the *default* ``scan`` branch mentioned above. 
+Different for each scan is at least the ``data`` branch
+:py:data:`.scan.data`. In this tutorial we 
+create a new scan parameter branch ``MF`` where we only specify 
+the data branch and tell |ptypy| to use scan meta data of when possible.
 
 ::
 
@@ -290,17 +316,19 @@ branch and tell |ptypy| to use scan meta data when possible.
    >>> p.scans.MF.if_conflict_use_meta = True
    >>> p.scans.MF.data= u.Param()
 
-As data source we choose the *'test'* source. This will make ptypy
-use the internal :py:class:`~ptypy.core.data.MoonFlowerScan` class.
-This class is a test class, that provides/ simulates diffraction 
-patterns without explicitly using the generic :any:`SimScan` class.
+As data source we have choosen the *'test'* source. 
+That will make |ptypy| use the internal 
+:py:class:`~ptypy.core.data.MoonFlowerScan` class.
+This class is meant for testing, and it provides/ simulates 
+diffraction patterns without using the more complex generic 
+:any:`SimScan` class.
 
 ::
 
    >>> p.scans.MF.data.source = 'test'
 
-We set the diffraction frame shape to a small value and only allow 
-a hundred diffraction patterns at max. The 
+We set the diffraction frame shape to a small value (128x128px) and 
+limit the number af diffraction patterns at 100. The 
 :py:class:`~ptypy.core.data.MoonFlowerScan` instance will balance the
 diffraction patterns accordingly.
 
@@ -310,14 +338,14 @@ diffraction patterns accordingly.
    >>> p.scans.MF.data.num_frames = 100
 
 We skip saving the "prepared" data file for now. The |ptypy| data
-file is described in detail in ...
+management is described in detail in :ref:`ptypy_data`
 
 ::
 
    >>> p.scans.MF.data.save = None
 
-Needlees to say we need to specify a reconstruction engine. We choose
-20 iterations of difference map
+Needlees to say, we need to specify a reconstruction engine. We choose
+20 iterations of difference map algorithm.
 
 ::
 
@@ -330,9 +358,9 @@ Needlees to say we need to specify a reconstruction engine. We choose
 Running ptypy
 -------------
 
-Next we import the Ptycho class and pass the tree at level 5 which
-will make the reconstruction start immediately and will sequentially 
-initialize and use 
+We import the :any:`Ptycho` class and pass the tree ``p`` at level 5.
+That will make the reconstruction start immediately after 
+and will sequentially initialize and use 
 all engines in ``p.engines``
 
 ::
@@ -357,7 +385,7 @@ all engines in ``p.engines``
    Scanning positions (92) are fewer than the desired number of scan points (100).
    Resetting `num_frames` to lower value
    ---- Leaving PtyScan.initialixe() ----------------------------------------------
-   ROI center is [ 64.  64.], automatic guess is [ 63.44565217  63.55434783].
+   ROI center is [ 64.  64.], automatic guess is [ 63.43478261  63.55434783].
    Feeding data chunk
    Importing data from MF as scan MF.
    End of scan reached
@@ -410,7 +438,7 @@ all engines in ``p.engines``
    ==== Starting DM-algoritm. =====================================================
    
    Parameter set:
-   * id3VV6HIIJHG           : ptypy.utils.parameters.Param(16)
+   * id3VUSECUSBO           : ptypy.utils.parameters.Param(16)
      * clip_object          : None
      * fourier_relax_factor : 0.05
      * numiter_contiguous   : 5
@@ -433,49 +461,50 @@ all engines in ``p.engines``
    Generating copies of probe, object and parameters and runtime
    Saving to /tmp/ptypy/dumps/minimal/minimal_None_0000.ptyr
    --------------------------------------------------------------------------------
-   Time spent in Fourier update: 1.16
+   Time spent in Fourier update: 1.17
    Time spent in Overlap update: 0.34
    Iteration #5 of DM :: Time 1.50
-   Errors :: Fourier 1.22e+03, Photons 1.60e+03, Exit 8.41e+02
-   Time spent in Fourier update: 1.17
+   Errors :: Fourier 1.21e+03, Photons 2.12e+03, Exit 8.43e+02
+   Time spent in Fourier update: 1.18
    Time spent in Overlap update: 0.21
-   Iteration #10 of DM :: Time 1.37
-   Errors :: Fourier 9.50e+02, Photons 7.99e+02, Exit 5.99e+02
-   Time spent in Fourier update: 1.16
+   Iteration #10 of DM :: Time 1.39
+   Errors :: Fourier 9.52e+02, Photons 8.26e+02, Exit 6.01e+02
+   Time spent in Fourier update: 1.15
    Time spent in Overlap update: 0.21
-   Iteration #15 of DM :: Time 1.37
-   Errors :: Fourier 8.75e+02, Photons 5.08e+02, Exit 4.09e+02
-   Time spent in Fourier update: 1.16
+   Iteration #15 of DM :: Time 1.36
+   Errors :: Fourier 9.02e+02, Photons 5.36e+02, Exit 4.17e+02
+   Time spent in Fourier update: 1.15
    Time spent in Overlap update: 0.21
-   Iteration #20 of DM :: Time 1.37
-   Errors :: Fourier 7.03e+02, Photons 2.82e+02, Exit 2.33e+02
+   Iteration #20 of DM :: Time 1.36
+   Errors :: Fourier 7.28e+02, Photons 2.99e+02, Exit 2.52e+02
    ---------------------------------- Autosaving ----------------------------------
    WARNING root - Save file exists but will be overwritten (force_overwrite is True)
    Generating copies of probe, object and parameters and runtime
    Saving to /tmp/ptypy/dumps/minimal/minimal_DM_0020.ptyr
    --------------------------------------------------------------------------------
+   Time spent in Fourier update: 1.15
+   Time spent in Overlap update: 0.21
+   Iteration #25 of DM :: Time 1.35
+   Errors :: Fourier 5.35e+02, Photons 1.51e+02, Exit 1.23e+02
+   Time spent in Fourier update: 1.17
+   Time spent in Overlap update: 0.21
+   Iteration #30 of DM :: Time 1.38
+   Errors :: Fourier 3.89e+02, Photons 6.78e+01, Exit 6.10e+01
    Time spent in Fourier update: 1.16
    Time spent in Overlap update: 0.21
-   Iteration #25 of DM :: Time 1.37
-   Errors :: Fourier 5.24e+02, Photons 1.36e+02, Exit 1.20e+02
-   Time spent in Fourier update: 1.15
-   Time spent in Overlap update: 0.21
-   Iteration #30 of DM :: Time 1.36
-   Errors :: Fourier 3.91e+02, Photons 6.46e+01, Exit 6.05e+01
-   Time spent in Fourier update: 1.15
-   Time spent in Overlap update: 0.20
-   Iteration #35 of DM :: Time 1.36
-   Errors :: Fourier 2.82e+02, Photons 3.59e+01, Exit 3.19e+01
+   Iteration #35 of DM :: Time 1.37
+   Errors :: Fourier 2.74e+02, Photons 3.68e+01, Exit 3.16e+01
    Time spent in Fourier update: 1.15
    Time spent in Overlap update: 0.21
    Iteration #40 of DM :: Time 1.36
-   Errors :: Fourier 1.74e+02, Photons 2.16e+01, Exit 1.60e+01
+   Errors :: Fourier 1.66e+02, Photons 2.19e+01, Exit 1.60e+01
    WARNING root - Save file exists but will be overwritten (force_overwrite is True)
    Generating shallow copies of probe, object and parameters and runtime
    Saving to /tmp/ptypy/recons/minimal/minimal_DM.ptyr
    
 
-
+From the terminal log, we note that there was an autosave every 20
+iterations and the error reduced itself from iteration to iteration.
 
 
 .. _morescripts:
@@ -483,17 +512,20 @@ all engines in ``p.engines``
 Utilies/Binaries for convenience
 ================================
 
-|ptypy| provides a few scripts to make life easier for the user. They 
-are located in ``[ptypy_root]/scripts``. In case of a user install on 
+|ptypy| provides a few utility scripts to make life easier for you, 
+the user. They are located in ``[ptypy_root]/scripts``. 
+In case of a user install on 
 Ubuntu Linux, they are copied to ``~/.local/bin``
 
-Due to the early stage of developmnet, these scripts will see substantial
-changes in further releases.
+.. note:: 
+   Due to the early stage of developmnet, 
+   these scripts may see substantial changes in further releases, i.e.
+   the call signature may change.
 
-Plot from a .ptyr
------------------
+Plotting from a reconstruction/dump file (\*.ptyr)
+--------------------------------------------------
 
-There is an automatic plotting script, that install on Unix systems
+``ptypy.plot`` is an automatic plotting script, that install on Unix systems
 It has the syntax
 ::
 
@@ -513,11 +545,11 @@ and the image looks like this (:numref:`minimal_result`)
    
    Example plot made with ``ptypy.plot`` using the *default* layput
 
-Inspect an hdf5 compatible file
--------------------------------
+Inspecting a hdf5 compatible file
+---------------------------------
 
-Sometimes it might be handy to quickly inspect what is in a *hdf5* file
-that was created by ptypy. In such cases we can use ``ptypy.inspect``.
+Sometimes we want to quickly inspect what is in a *hdf5* file
+that was created by |ptypy|. For such cases, we can use ``ptypy.inspect``.
 ::
 
     $ ptypy.inspect [-h] [-p PATH] [--report] [-d DEPTH] h5file
@@ -526,7 +558,9 @@ For example, a quick view at the top level can be realized with
 ::
 
     $ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM.ptyr -d 1
-    
+
+which has the following the output::
+
      * content [Param 4]:
          * obj [dict 1]:
          * pars [Param 9]:
@@ -536,10 +570,12 @@ For example, a quick view at the top level can be realized with
          * description [string = "Ptypy .h5 compatible storage format"]
          * kind [string = "minimal"]
 
-If we are interested solely in the probes we could further use::
+If we are interested solely in the probes we could use ::
 
     $ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM.ptyr -d 1 -p content/probe
-    
+
+which has the following the output::
+
      * S00G00 [dict 13]:
          * DataTooSmall [scalar = False]
          * ID [string = "S00G00"]
@@ -555,42 +591,49 @@ If we are interested solely in the probes we could further use::
          * padonly [scalar = False]
          * shape [tuple = (1, 128, 128)]
 
+We omitted the result for the complete file to save some space but you
+are encouraged to try::
+
+    $ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM.ptyr
+
+
 
 Create a new template for a reconstruction script
 -------------------------------------------------
 
-When we are about to create a reconstruction script from scratch, 
-it can be cumbersome to write out each and every parameter we want to
-change. |ptypy| can create blank python scripts prefilled with defaults
-with the help of ``ptypy.new``::
+In cases where we want to create a new reconstruction script from scratch, 
+it may be cumbersome to write out each and every parameter that we want to
+change. But, with the help of ``ptypy.new``, we can create a python 
+script which is prefilled with defaults::
 
     $ ptypy.new [-h] [-u ULEVEL] [--short-doc] [--long-doc] pyfile
     
-In the folder [ptypy_root]/templates we find to autogenerated scripts
-that where created with the calls
-::
+In the folder ``[ptypy_root]/templates`` you find two scripts
+that where auto-generated with the following calls::
 
     $ ptypy.new -u 0 --long-doc pars_few_alldoc.py
     $ ptypy.new -u 2  pars_all_nodoc.py
 
-And here is a quick view to the one with much documentation:
+And here is a quick view to the first one with much documentation 
+(only the first 50 lines).
 
 .. literalinclude:: ../../templates/pars_few_alldoc.py
    :language: python
    :linenos:
    :lines: 1-50
 
+.. _plotclient:
 
 Run a plotclient in a separate process
 --------------------------------------
 
 |ptypy| supports a Client/Server approach. That means that the
-reconstruction may run on a remote server (cluster) while we want to 
-view the progress of such reconstruction on a local machine.
+reconstruction process runs on a remote server (cluster) while we can 
+monitor the progress on a local machine.
 
-In such an aproach the plotting Client runs (on a seperate machine). You
-can implement your own plotting client but there is convenience script
-available::
+In this case, we need to start a plotting Client on a separate machine). 
+You can implement your own plotting client but you may find it convenient
+to use the plotting utility ``ptypy.plotclient``::
  
     $ ptypy.plotclient [-h] [-l LAYOUT] [--dump] [--movie] [-i INTERVAL] [-d DIRECTORY]
     
@@ -602,45 +645,49 @@ More script templates
 =====================
 
 Besides the script from which section :ref:`quickstart` was generated,
-there is a trinity of similar scripts to temper with. 
+there is a trinity of similar scripts at your disposal that
+you can temper with. 
 
 All-in-one
 ----------
 We encourage you to use the script ``[ptypy_root]/templates/minimal_prep_and_run.py``
-to modify the *recipe* part
-of the data preparation routine to see what changes in the reconstruction, 
-when physical paramaters change.
+and modify the *recipe* part
+of the data paramater branch.
+Observe what changes in the reconstruction, when scan paramaters change.
 
 .. literalinclude:: ../../templates/minimal_prep_and_run.py
    :language: python
    :linenos:
    :lines: 1-50
-   :emphasize-lines: 8,22,25
+   :emphasize-lines: 31,33,35
    
-Create a .ptyd file
--------------------
+Creating a .ptyd data-file
+--------------------------
+
 We encourage you to use this script ``[ptypy_root]/templates/make_sample_ptyd.py``
 to create varies different samples and see what happens if the data
-processing paramaters are changed. If you have become curious, jump
+processing paramaters are changed. If you have become curious, move
 forward to :ref:`ptypy_data` and take a look at |ptypy|'s data management.
+Check out the data parameter
+branch :py:data:`.scan.data` for detailed parameter descriptions.
 
 .. literalinclude:: ../../templates/make_sample_ptyd.py
    :language: python
    :linenos:
    :lines: 1-50
-   :emphasize-lines: 8,22,25
+   :emphasize-lines: 15-26
    
-Load from .ptyd and run
------------------------
+Loading a data file to run a reconstruction
+-------------------------------------------
 
 The script ``[ptypy_root]/templates/minimal_load_and_run.py``
-resemples more the case of data analysis after the experiment has taken
+should resembles the case of data analysis after the experiment has taken
 place. Take a challenging sample data from before
-and alter the reconstruction paramters and algorithms to find out if you
-can make the recontruction converge. 
+and alter the reconstruction parameters and algorithms to find out if you
+can make the recontruction converge. Check out the engine parameter
+branch :py:data:`.engine` for detailed parameter descriptions.
 
-.. literalinclude:: ../../templates/minimal_prep_and_run.py
+.. literalinclude:: ../../templates/minimal_load_and_run.py
    :language: python
    :linenos:
-   :lines: 1-50
-   :emphasize-lines: 8,22,25
+   :emphasize-lines: 25-56

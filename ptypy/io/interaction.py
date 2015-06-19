@@ -29,21 +29,21 @@ __all__ = ['Server', 'Client']
 DEBUG = lambda x: None
 #DEBUG = print
 
-# Default parameters for networking
+#: Default parameters for networking
 network_DEFAULT = u.Param(
-    primary_address = "tcp://127.0.0.1",   # Default address for primary connection
-    primary_port = 5560,            # Default port for primary connection
-    port_range = range(5561,5571)   # Port range for secondary connections
+    address = "tcp://127.0.0.1",   # Default address for primary connection
+    port = 5560,            # Default port for primary connection
+    connections = 10   # Port range for secondary connections
 )
 
-# Default parameters for the server
+#: Default parameters for the server
 Server_DEFAULT = u.Param(network_DEFAULT,
                          poll_timeout=10,   # Network polling interval (in milliseconds!)
                          pinginterval=2,  # Interval to check pings (in seconds)
                          pingtimeout=10  # Ping time out: client disconnected after this period (in seconds)
 )
 
-# Default parameters for the client
+#: Default parameters for the client
 Client_DEFAULT = u.Param(network_DEFAULT,
                          poll_timeout=100,   # Network polling interval (in milliseconds!)
                          pinginterval=1  # Interval to check pings (in seconds)
@@ -181,16 +181,38 @@ class Server(object):
     Main server class.
     """
     
+    #: Default parameters, see also :py:data:`.io.interaction`
     DEFAULT = Server_DEFAULT
-
+    
     def __init__(self, pars=None, **kwargs):
         """
         Interaction server, meant to run asynchronously with process 0 to manage client requests.
         
-        Constructor parameters:
-        address: primary address TODO:test this
-        port: primary port
-        params: parameter dictionary (takes precedence if interactor.address and interactor.port are defined)
+        Parameters
+        ----------
+        pars : dict or Param
+            Parameter set for the server. 
+            
+        Keyword Arguments
+        -----------------
+        address : str 
+            Primary address
+        
+        port : int
+            Primary port
+            
+        connections : int
+            number of ports to open on demand *behind* the primary port.
+            
+        poll_timeout : float
+            Network polling interval (in milliseconds!).
+                         
+        pinginterval : float
+            Interval to check pings (in seconds).
+                         
+        pingtimeout : float
+            Ping time out: client disconnected after this period (in seconds).
+
         """
         #################################
         # Initialize all parameters
@@ -200,13 +222,16 @@ class Server(object):
         p.update(kwargs)
         self.p = p
         
+        
         # sanity check for port range:
-        if str(p.port_range)==p.port_range:
-            from ptypy.utils import str2range
-            p.port_range = str2range(p.port_range)
-            
-        self.address = p.primary_address
-        self.port = p.primary_port
+        #if str(p.port_range)==p.port_range:
+        #    from ptypy.utils import str2range
+        #    p.port_range = str2range(p.port_range)
+        
+        
+        port_range = range(self.port+1,self.port+p.connections+1) 
+        self.address = p.address
+        self.port = p.port
         self.poll_timeout = p.poll_timeout
         self.pinginterval = p.pinginterval
         self.pingtimeout = p.pingtimeout
@@ -247,11 +272,11 @@ class Server(object):
         # Initial ID pool
         IDlist = []
         # This loop ensures all IDs are unique
-        while len(IDlist) < len(p.port_range):
+        while len(IDlist) < len(port_range):
             newID = ID_generator()
             if newID not in IDlist:
                 IDlist.append(newID)
-        self.ID_pool = zip(IDlist, p.port_range)
+        self.ID_pool = zip(IDlist, port_range)
 
     def activate(self):
         """
@@ -605,23 +630,47 @@ class Client(object):
     """
     Basic but complete client to interact with the server. 
     """
-
+    
+    #: Default parameters, see also :py:data:`.io.interaction`
     DEFAULT = Client_DEFAULT
     
     def __init__(self, pars=None, **kwargs):
-
+        """
+        Parameters
+        ----------
+        pars : dict or Param
+            Parameter set for the client, see :py:attr:`DEFAULT` 
+            
+        Keyword Arguments
+        -----------------
+        address : str 
+            Primary address of the remote server.
+        
+        port : int
+            Primary port of the remote server.
+            
+        poll_timeout : float
+            Network polling interval (in milliseconds!).
+                         
+        pinginterval : float
+            Interval to check pings (in seconds).
+                         
+        """
+        
         p = u.Param(self.DEFAULT)
         p.update(pars)
         p.update(kwargs)
         self.p = p
-
+        
+        """
         # sanity check for port range:
         if str(p.port_range)==p.port_range:
             from ptypy.utils import str2range
             p.port_range = str2range(p.port_range)
-            
-        self.req_address = p.primary_address
-        self.req_port = p.primary_port
+        """
+        
+        self.req_address = p.address
+        self.req_port = p.port
         self.poll_timeout = p.poll_timeout
         self.pinginterval = p.pinginterval
 

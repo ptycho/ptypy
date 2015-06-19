@@ -4,27 +4,36 @@
 Concepts and Classes
 ********************
 
-.. note::
-   This tutorial was generated from the python source :file:`ptypy/tutorial/ptypyclasses.py` using :file:`ptypy/doc/script2rst.py`.
-
 .. _ptypyclasses:
 
-Tutorial: Data access abstraction - Storage, View, Container
-============================================================
+Tutorial: Data access - Storage, View, Container
+================================================
 
-First a hort reminder from the classes Module about the classes
-this tutorial covers
+
+.. note::
+   This tutorial was generated from the python source
+   :file:`[ptypy_root]/tutorial/ptypyclasses.py` using :file:`ptypy/doc/script2rst.py`. 
+   You are encouraged to modify the parameters and rerun the tutorial with::
+   
+     $ python [ptypy_root]/tutorial/ptypyclasses.py
+
+This tutorial explains the way in which |ptypy| accesses data / memory.
+The data access is governed by three classes: 
+:py:class:`~ptypy.core.classes.Container`,
+:py:class:`~ptypy.core.classes.Storage`,
+and :py:class:`~ptypy.core.classes.View`
+
+First a short reminder from the :py:mod:`~ptypy.core.classes` Module 
+about the classes this tutorial covers.
 
 .. parsed-literal::
 
-   This module defines flexible containers for the various quantities needed
-   for ptychographic reconstructions.
-   
    **Container class**
        A high-level container that keeps track of sub-containers (Storage)
        and Views onto them. A container can copy itself to produce a buffer
-       needed for calculations. Mathematical operations are not implemented at
-       this level. Operations on arrays should be done using the Views, which
+       needed for calculations. Some basic Mathematical operations are 
+       implemented at this level as in place operations.
+       In General, operations on arrays should be done using the Views, which
        simply return numpyarrays.
    
    
@@ -35,11 +44,12 @@ this tutorial covers
        implemented if needed). The sub-class DynamicStorage can adapt the size
        of its buffer (cropping and/or padding) depending on the Views.
    
-   
    **View class**
        A low-weight class that contains all information to access a 2D piece
-       of a Storage within a Container.
-   
+       of a Storage within a Container. The basic idea is that the View
+       access is controlled by a physical position and its frame, such that
+       one is not bothered by memory/array addresses when accessing data.
+
 Import some modules
 
 ::
@@ -54,7 +64,9 @@ Import some modules
 A single Storage in one Container
 ---------------------------------
 
-As master class we create a :any:`Container` instance
+The governing object is a :any:`Container` instance, which we need 
+to construct as first object. It does not need much for an input but
+the data type.
 
 ::
 
@@ -67,7 +79,13 @@ This class itself holds nothing at first. In order to store data in
 
    >>> S1=C1.new_storage(shape=(1,7,7))
 
-Since we haven't specified an ID the Container class picks one for ``S1``
+Similarly we can contruct the Storage from a data buffer. 
+``S1=C1.new_storage(data=np.ones((1,7,7)))`` would have also worked.
+
+All of |ptypy|'s special classes carry a uniue ID, which is needed
+to communicate these classes across nodes and for savin and loading.
+
+As we haven't specified an ID the Container class picks one for ``S1``
 In this case that will be ``S0000`` where the *S* refers to the class type.
 
 ::
@@ -76,7 +94,7 @@ In this case that will be ``S0000`` where the *S* refers to the class type.
    S0000
    
 
-We can have a look now what kind of data Storage holds. 
+Let's have a look at what kind of data Storage holds. 
 
 ::
 
@@ -99,8 +117,9 @@ for the last two dimensions of the stored data.
 
 Many attributes of a :any:`Storage` are in fact *properties*. Changing
 their value may have an impact on other methods or attributes of the
-class. For example. One convenient method is Storage.\ :py:meth:`~ptypy.core.classes.Storage.grids`
-that creates grids for the last two dimensions (see also
+class. For example. One convenient method is 
+Storage.\ :py:meth:`~ptypy.core.classes.Storage.grids`
+that creates coordinate grids for the last two dimensions (see also
 :py:func:`ptypy.utils.array_utils.grids`)
 
 ::
@@ -125,8 +144,8 @@ that creates grids for the last two dimensions (see also
      [-3. -2. -1.  0.  1.  2.  3.]]]
    
 
-These are cooridinate grids for vertical and horizontal axes respectively
-We also see that these coordinates have their center at::
+which are coordinate grids for vertical and horizontal axes respectively.
+We note that these coordinates have their center at
 
 ::
 
@@ -134,7 +153,7 @@ We also see that these coordinates have their center at::
    [3 3]
    
 
-So now we change a few properties. For example,
+Now we change a few properties. For example,
 
 ::
 
@@ -160,9 +179,12 @@ So now we change a few properties. For example,
      [-0.2 -0.1  0.   0.1  0.2  0.3  0.4]]]
    
 
-We see that the center has moved one pixel up and one down. If we want 
-to use a physical quantity for the center, we may also set the top left
-pixel to a new value, which shifts the center to a new position.
+We observe that the center has in fact moved one pixel up and one left.
+The :py:func:`~ptypy.core.classes.Storage.center` property uses pixel
+units. 
+If we want to use a physical quantity to shift the center, 
+we may instead set the top left pixel to a new value, 
+which shifts the center to a new position.
 
 ::
 
@@ -191,8 +213,8 @@ pixel to a new value, which shifts the center to a new position.
    
 
 Up until now our actual *data* numpy array located at ``S1.data`` is 
-still filled with the not so exciting ones. We can use 
-:any:`Storage.fill` to fill that container
+still filled with ones, i.e. flat. We can use 
+:any:`Storage.fill` to fill that container with an array.
 
 ::
 
@@ -207,7 +229,7 @@ still filled with the not so exciting ones. We can use
      [-0.04  0.06  0.16  0.26  0.36  0.46  0.56]]]
    
 
-We can also plot the data using 
+We can have visual check on the data using 
 :py:func:`~ptypy.utils.plot_utils.plot_storage` 
 
 ::
@@ -221,7 +243,7 @@ See :numref:`ptypyclasses_00` for the plotted image.
    :figclass: highlights
    :name: ptypyclasses_00
 
-   This is a test of a figure plot
+   A plot of the data stored in ``S1``
 
 Adding Views as a way to access data
 ------------------------------------
@@ -235,7 +257,7 @@ and the corresponding *numpy* syntax, ptypy offers acces through a
    >>> from ptypy.core.classes import DEFAULT_ACCESSRULE
    >>> ar = DEFAULT_ACCESSRULE.copy()
    >>> print ar
-   * id3VLGGMQ788           : ptypy.utils.parameters.Param(6)
+   * id3V6DCTOBHG           : ptypy.utils.parameters.Param(6)
      * layer                : 0
      * psize                : 1.0
      * shape                : None
@@ -245,19 +267,20 @@ and the corresponding *numpy* syntax, ptypy offers acces through a
    
    
 
-Now let's say we want a 4x4 view on Storage ``S1`` around the origin.
+Let's say we want a 4x4 view on Storage ``S1`` around the origin.
 We set
 
 ::
 
-   >>> ar.shape = (4,4)  # ar.shape = 4 would have been also valid
-   >>> ar.coord = 0.      # ar.coord = (0.,0.)
+   >>> ar.shape = (4,4)  # ar.shape = 4 would have been also valid.
+   >>> ar.coord = 0.      # ar.coord = (0.,0.) would have been accepted, too.
    >>> ar.storageID = S1.ID
    >>> ar.psize = None
 
-Now we can construct the View. The last step in this process is an 
-update of the View by the Storage ``S1`` which transfers data
-data ranges/coordinates to the View.
+Now we can construct the View.
+The last step in this process is an 
+(automatic) update of the View by the Storage ``S1`` which transfers 
+data ranges/coordinates back to the View. 
 
 ::
 
@@ -277,7 +300,7 @@ We see that a number of the accessrule items appear in the View now.
    S0000
    
 
-A few other were set by the automatic update of Storage
+A few others were set by the automatic update of Storage ``S1``.
 
 ::
 
@@ -288,8 +311,8 @@ A few other were set by the automatic update of Storage
              S0000 :    0.00 MB :: data=(1, 7, 7) @float64 psize=[ 0.1  0.1] center=[ 3.2  3.2]
    
 
-The update also set new attributes of the View that start with 
-a lower 'd' and are locally stored information about data access. 
+The update also set new attributes of the View which all start with 
+a lower ``d`` and are locally cached information about data access. 
 
 ::
 
@@ -297,7 +320,8 @@ a lower 'd' and are locally stored information about data access.
    0 [1 1] [5 5]
    
 
-Finally, we can retrieve the data subset by applying the View to the storage.
+Finally, we can retrieve the data subset 
+by applying the View to the storage.
 
 ::
 
@@ -323,9 +347,9 @@ View.\ :py:meth:`~ptypy.core.classes.View.data` property.
    
 
 The first access yielded a similar result because the 
-:py:attr:`~ptypy.core.classes.View.storageID` is in ``C1`` and the
-second acces method worked because it uses the View's 
-:py:attr:`~ptypy.core.classes.View.storage` attribute
+:py:attr:`~ptypy.core.classes.View.storageID` ``S0000`` is in ``C1`` 
+and the second acces method worked because it uses the View's 
+:py:attr:`~ptypy.core.classes.View.storage` attribute.
 
 ::
 
@@ -357,7 +381,8 @@ that a subpixel correction may be applied if needed (future release)
 If we set the coordinate to some other value in the grid, we can eliminate
 the subpixel misfit. By changing the *.coord* property, we need to
 update the View manually, as the View-Storage interaction is non-automatic
-apart from the View construction - a measure of caution.
+apart from the moment the View is constructed - a measure to prevent 
+unwanted feedback loops.
 
 ::
 
@@ -367,23 +392,28 @@ apart from the View construction - a measure of caution.
    [4 4] [ 4.  4.] [ 0.  0.]
    
 
-Oh we see that the high range limit of the View is close to the border 
-of the data buffer... so what happens if we push the coordinate further?
+We observe that the high range limit of the View is close to the border
+of the data buffer.
 
 ::
 
    >>> print V1.dhigh
    [6 6]
    
+
+What happens if we push the coordinate further?
+
+::
+
    >>> V1.coord = (0.28,0.28)
    >>> S1.update_views(V1)
    >>> print V1.dhigh
    [8 8]
    
 
-Now the higher range limit of the View is certianly off bounds.
-Applying this View to the Storage can lead to undesired behavior, i.e.
-concatenation or data access errors.
+Now the higher range limit of the View is off bounds for sure.
+Applying this View to the Storage may lead to undesired behavior, i.e.
+array concatenation or data access errors.
 
 ::
 
@@ -413,17 +443,13 @@ A simple call to
    (1, 4, 4)
    
 
-Oh no, the Storage data buffer has shrunk! .. Don't worry. That is
+Oh no, the Storage data buffer has shrunk! But don't worry, that is
 intended behavior. A call to *.reformat()* crops and pads the data 
 buffer around all **active** Views. 
-You need to set
-
-::
-
-   >>> S1.padonly = True
-if you want to avoid that the data buffer is cropped. We leave this
-as an exercise to the user. Instead we add a new View at different 
-location to verify that the buffer will try to reach both Views.
+We would need to set ``S1.padonly = True``
+if we wanted to avoid that the data buffer is cropped. We leave this
+as an exercise for now. Instead, we add a new View at different 
+location to verify that the buffer will adapt to reach both Views.
 
 ::
 
@@ -436,8 +462,9 @@ location to verify that the buffer will try to reach both Views.
    (1, 15, 15)
    
 
-Ok we see that the the buffer has grown in size. Now we give the new
-View a copied values of the other view for a nice figure
+Ok, we note that the the buffer has grown in size. Now, we give the new
+View some copied values of the other view to make the View appear
+in a plot.
 
 ::
 
@@ -454,7 +481,7 @@ See :numref:`ptypyclasses_02` for the plotted image.
    Storage with 4x4 views of the same content.
 
 We observe that the data buffer spans both views.
-Now let us add more....
+Now let us add more and more Views!
 
 ::
 
@@ -463,8 +490,8 @@ Now let us add more....
    >>>     ar2.coord = (-0.82+i*0.1,-0.82+i*0.1)
    >>>     View(C1, ID=None, accessrule = ar2)
 
-A handy method of the :any:`Storage` class is that it can determine
-its own coverage by views.
+A handy method of the :any:`Storage` class is to determine
+the coverage by views.
 
 ::
 
@@ -478,10 +505,10 @@ See :numref:`ptypyclasses_03` for the plotted image.
    :figclass: highlights
    :name: ptypyclasses_03
 
-   View coverage in data buffer of ``S1``.
+   View coverage of data buffer of ``S1``.
 
 Another handy feature of the :any:`View` class is that it automatically
-create a Storage instance to the ``storageID`` if it does not already
+creates a Storage instance to a ``storageID`` if that ID does not already
 exist.
 
 ::
@@ -509,19 +536,25 @@ Finally we have a look at the mischief we managed so far.
 
 
 
-.. note::
-   This tutorial was generated from the python source :file:`ptypy/tutorial/simupod.py` using :file:`ptypy/doc/script2rst.py`.
-
 .. _simupod:
 
-Tutorial: Mimicking the setup - Pod, Geometry
-=============================================
+Tutorial: Modeling the experiment - Pod, Geometry
+=================================================
+
+
+.. note::
+   This tutorial was generated from the python source
+   :file:`[ptypy_root]/tutorial/simupod.py` using :file:`ptypy/doc/script2rst.py`. 
+   You are encouraged to modify the parameters and rerun the tutorial with::
+   
+     $ python [ptypy_root]/tutorial/simupod.py
 
 In the :ref:`ptypyclasses` we have learned to deal with the
-basic data storage-and-access class on small toy arrays.
+basic storage-and-access classes on small toy arrays.
 
-In this tutorial we will learn how to create :any:`POD` instances to 
-simulate a ptychography experiment and use larger arrays.
+In this tutorial we will learn how to create :any:`POD` and 
+:any:`Geo` instances to imitate a ptychography experiment
+and to use larger arrays.
 
 We would like to point out that the "data" created her is not actual
 data. There is neither light or other wave-like particle involved 
@@ -529,9 +562,9 @@ nor actual diffraction. You will also not find
 an actual movement of motors or stages, nor is there an actual detector
 Everything should be understood as a test for this software.
 
-The selected physical quantities only mimic a physical experiement.
+The selected physical quantities only imitate an experimental setup.
 
-We start of with importing some modules
+We start again with importing some modules.
 
 ::
 
@@ -544,9 +577,10 @@ We start of with importing some modules
    >>> import sys
    >>> scriptname = sys.argv[0].split('.')[0]
 
-We create a managing top level instance. We will not use the
+We create a managing top level class instance. We will not use the
 the :any:`Ptycho` class for now, as its rich set of methods may be
-a bit overwhelming to start. Instead we take a plain Base instance
+a bit overwhelming to start with. Instead we take a plain 
+:py:class:`~ptypy.core.classes.Base` instance.
 
 ::
 
@@ -554,10 +588,10 @@ a bit overwhelming to start. Instead we take a plain Base instance
    >>> P.CType = np.complex128
    >>> P.FType = np.float64
 
-Set "experimental" geometry and create propagator
--------------------------------------------------
+Set experimental setup geometry and create propagator
+-----------------------------------------------------
 
-In this tutorial we accept help from the :any:`Geo` class to provide
+Here, we accept a little help from the :any:`Geo` class to provide
 a propagator and pixel sizes for sample and detector space.
 
 ::
@@ -572,16 +606,17 @@ a propagator and pixel sizes for sample and detector space.
    >>> g.propagation = "farfield"
    >>> G = geometry.Geo(owner = P, pars=g)
 
-The Geo instance ``G`` has done a lot already at this moment. First
-of all we find forward and backward propagator at ``G.propagator.fw``
-and ``G.propagator.bw``. It has also calculated the appropriate sample
-space pixel size (aka resolution),
+The Geo instance ``G`` has done a lot already at this moment. For
+example, we find forward and backward propagator at ``G.propagator.fw``
+and ``G.propagator.bw``. It has also calculated the appropriate 
+pixel size in the sample plane (aka resolution),
 
 ::
 
    >>> print G.resolution
    [  1.29882812e-05   1.29882812e-05]
    
+
 which sets the shifting frame to be of the following size:
 
 ::
@@ -594,14 +629,14 @@ which sets the shifting frame to be of the following size:
 Create probing illumination
 ---------------------------
 
-Next we need to create a probing illumination. 
-We start of we a suited container that we call *probe*
+Next, we need to create a probing illumination. 
+We start with a suited container that we call *probe*
 
 ::
 
    >>> P.probe = Container(P,'Cprobe',data_type='complex')
 
-For convenience, there is a test probing illumination in ptypy's 
+For convenience, there is a test probing illumination in |ptypy|'s 
 resources.
 
 ::
@@ -614,25 +649,26 @@ resources.
 See :numref:`simupod_00` for the plotted image.
 
 .. figure:: ../_script2rst/simupod_00.png
-   :width: 70 %
+   :width: 84 %
    :figclass: highlights
    :name: simupod_00
 
    Ptypy's default testing illumination, an image of the moon.
 
-Of course we could have also used the coordinate grids from the propagator,
+Of course, we could have also used the coordinate grids 
+from the propagator to model a probe,
 
 ::
 
    >>> y,x = G.propagator.grids_sam
    >>> apert = u.smooth_step(fsize[0]/5-np.sqrt(x**2+y**2),3e-5)
    >>> pr2 = P.probe.new_storage(data=apert, psize=G.resolution)
-   >>> fig = u.plot_storage(pr2,1)
+   >>> fig = u.plot_storage(pr2,1,channel='c')
 
 See :numref:`simupod_01` for the plotted image.
 
 .. figure:: ../_script2rst/simupod_01.png
-   :width: 70 %
+   :width: 84 %
    :figclass: highlights
    :name: simupod_01
 
@@ -651,7 +687,7 @@ or the coordinate grids from the Storage itself.
 See :numref:`simupod_02` for the plotted image.
 
 .. figure:: ../_script2rst/simupod_02.png
-   :width: 70 %
+   :width: 84 %
    :figclass: highlights
    :name: simupod_02
 
@@ -666,7 +702,7 @@ photons to 1 billion
    >>>     pp.data *= np.sqrt(1e8/np.sum(pp.data*pp.data.conj()))
 
 
-We quickly test if the propagation works.
+and we quickly check if the propagation works.
 
 ::
 
@@ -679,11 +715,11 @@ We quickly test if the propagation works.
 See :numref:`simupod_03` for the plotted image.
 
 .. figure:: ../_script2rst/simupod_03.png
-   :width: 70 %
+   :width: 93 %
    :figclass: highlights
    :name: simupod_03
 
-   Logarhitmic intensity of propagated illumination
+   Logarithmic intensity of propagated illumination.
 
 Create scan pattern and object
 ------------------------------
@@ -705,14 +741,14 @@ We use the :py:mod:`ptypy.core.xy` module to create a scan pattern.
 See :numref:`simupod_04` for the plotted image.
 
 .. figure:: ../_script2rst/simupod_04.png
-   :width: 70 %
+   :width: 93 %
    :figclass: highlights
    :name: simupod_04
 
    Created scan pattern.
 
-Next we need to create an object transmisson/ 
-We start of with a suited container that we call *obj*
+Next, we need to model a sample through an object transmisson function. 
+We start of with a suited container which we call *obj*.
 
 ::
 
@@ -740,7 +776,7 @@ right size.
    >>>     r.coord = pos
    >>>     V = View(P.obj,None,r)
 
-Now we need to let the Storages in ``P.obj`` reformat to 
+We let the Storages in ``P.obj`` reformat in order to 
 include all Views. Conveniently, this can initiated from the top
 with Container.\ :py:meth:`~ptypy.core.classes.Container.reformat`
 
@@ -756,7 +792,7 @@ with Container.\ :py:meth:`~ptypy.core.classes.Container.reformat`
    
    
 
-We need to fill the object storag ``S00`` with an object transmission.
+At last we fill the object Storage ``S00`` with a complex transmission.
 Again there is a convenience transmission function in the resources
 
 ::
@@ -769,7 +805,7 @@ Again there is a convenience transmission function in the resources
 See :numref:`simupod_05` for the plotted image.
 
 .. figure:: ../_script2rst/simupod_05.png
-   :width: 70 %
+   :width: 84 %
    :figclass: highlights
    :name: simupod_05
 
@@ -777,7 +813,8 @@ See :numref:`simupod_05` for the plotted image.
 Creating additional Views and the PODs
 --------------------------------------
 
-A single coherent propagation in ptypy is represented by the pod class
+A single coherent propagation in |ptypy| is represented by 
+an instance of the :py:class:`~ptypy.core.classes.POD` class.
 
 ::
 
@@ -809,11 +846,12 @@ A single coherent propagation in ptypy is represented by the pod class
            
    
 
-For creating a single POD we need a View to *probe*, *object*,
+For creating a single POD we need a 
+:py:class:`~ptypy.core.classes.View` to *probe*, *object*,
 *exit* wave and *diff*\ raction containers as well as the :any:`Geo` 
-class instance. 
+class instance which represents the experimental setup. 
 
-First we create the missing contianers
+First we create the missing :py:class:`~ptypy.core.classes.Container`'s.
 
 ::
 
@@ -821,14 +859,14 @@ First we create the missing contianers
    >>> P.diff =  Container(P,'Cdiff',data_type='real')
    >>> P.mask =  Container(P,'Cmask',data_type='real')
 
-We start with the first POD and its views
+We start with one POD and its views.
 
 ::
 
    >>> objviews = P.obj.views.values()
    >>> obview = objviews[0]
 
-We construct the probe View
+We construct the probe View.
 
 ::
 
@@ -839,8 +877,8 @@ We construct the probe View
    >>> probe_ar.storageID = pr.ID
    >>> prview = View(P.probe,None,probe_ar)
 
-We construct exit wave View. This construction is shorter as we only 
-change a few bits in the acces rule.
+We construct the exit wave View. This construction is shorter as we only 
+change a few bits in the access rule.
 
 ::
 
@@ -849,8 +887,9 @@ change a few bits in the acces rule.
    >>> exit_ar.active = True
    >>> exview = View(P.exit,None,exit_ar)
 
-We construct diffraction and mask view. Even shorter as the mask is 
-essentially the same access as for the diffraction data.
+We construct diffraction and mask Views. Even shorter is the 
+construction of the mask View as, for the mask, we are 
+essentially using the same access as for the diffraction data.
 
 ::
 
@@ -862,7 +901,7 @@ essentially the same access as for the diffraction data.
    >>> maview = View(P.mask,None,mask_ar)
    >>> diview = View(P.diff,None,diff_ar)
 
-Now we can create the POD
+Now we can create the POD.
 
 ::
 
@@ -871,16 +910,18 @@ Now we can create the POD
    >>> pod = POD(P,ID=None,views=views,geometry=G)
    >>> pods.append(pod)
 
-The :any:`POD` is the most important class in ptycho. Its instances 
+The :any:`POD` is the most important class in |ptypy|. Its instances 
 are used to write the reconstruction algorithms using local references 
-from their attributes. For example we can create and store and exit
-wave in this convenient fashion:
+its attributes as local references. 
+For example we can create and store and exit
+wave in the following convenient fashion:
 
 ::
 
    >>> pod.exit = pod.probe * pod.object
 
-The result of the calculation is stored in the respective storage.
+The result of the calculation above is stored in the appropriate 
+storage of ``P.exit``.
 Therefore we can use this command to plot the result.
 
 ::
@@ -891,13 +932,13 @@ Therefore we can use this command to plot the result.
 See :numref:`simupod_06` for the plotted image.
 
 .. figure:: ../_script2rst/simupod_06.png
-   :width: 70 %
+   :width: 84 %
    :figclass: highlights
    :name: simupod_06
 
    Simulated exit wave using a pod
 
-The diffraction plane is also conveniently accessible
+The diffraction plane is also conveniently accessible with
 
 ::
 
@@ -913,13 +954,14 @@ The result is stored in the diffraction container.
 See :numref:`simupod_07` for the plotted image.
 
 .. figure:: ../_script2rst/simupod_07.png
-   :width: 70 %
+   :width: 84 %
    :figclass: highlights
    :name: simupod_07
 
 
 
-Creating the rest of the pods is simple since the data accesses are similar.
+Creating the rest of the pods is now straight-forward 
+since the data accesses are similar.
 
 ::
 
@@ -927,7 +969,7 @@ Creating the rest of the pods is simple since the data accesses are similar.
    >>>     # we keep the same probe access
    >>>     prview = View(P.probe,None,probe_ar)
    >>>     # For diffraction diffraction and exit wave we need to increase the
-   >>>     # layer index as exit wave and diffraction pattern is unique per
+   >>>     # layer index as exit wave and diffraction pattern are unique per
    >>>     # scan position
    >>>     exit_ar.layer +=1
    >>>     diff_ar.layer +=1
@@ -937,8 +979,15 @@ Creating the rest of the pods is simple since the data accesses are similar.
    >>>     views = {'probe':prview,'obj':obview,'exit':exview,'diff':diview,'mask':maview}
    >>>     pod = POD(P,ID=None,views=views,geometry=G)
    >>>     pods.append(pod)
-   >>>     
 
+We let the storage arrays adapt to the new Views.    
+
+::
+
+   >>> for C in [P.mask,P.exit,P.diff,P.probe]:
+   >>>     C.reformat()
+
+And the rest of the simulation fits in three lines of code!
 
 ::
 
@@ -949,23 +998,24 @@ Creating the rest of the pods is simple since the data accesses are similar.
    >>>     pod.diff = np.random.poisson(np.abs(pod.fw(pod.exit))**2)
    >>>     pod.mask = np.ones_like(pod.diff)
 
-A quick check on the diffraction patterns
+
+We make a quick check on the diffraction patterns
 
 ::
 
-   >>> fig = u.plot_storage(diff_storage,8,slices=(slice(2),slice(None),slice(None)),modulus='log')
+   >>> fig = u.plot_storage(diff_storage,8,slices=':2,:,:',modulus='log')
 
 See :numref:`simupod_08` for the plotted image.
 
 .. figure:: ../_script2rst/simupod_08.png
-   :width: 70 %
+   :width: 100 %
    :figclass: highlights
    :name: simupod_08
 
    Diffraction patterns with poisson statistics.
 
 **Well done!**
-We can now move forward to create and run a reconstruction engine
+We can move forward to create and run a reconstruction engine
 as in section :ref:`basic_algorithm` in :ref:`ownengine`
 or store the generated diffraction patterns as in the next section.
 
@@ -975,7 +1025,7 @@ or store the generated diffraction patterns as in the next section.
 Storing the simulation
 ----------------------
 
-On unix system we choose the /tmp folder
+On unix system we choose the ``/tmp`` folder
 
 ::
 
@@ -987,7 +1037,7 @@ On unix system we choose the /tmp folder
    >>> if not os.path.exists(save_path):
    >>>     os.makedirs(save_path)
 
-First we save the geometric info in a text file.
+First, we save the geometric info in a text file.
 
 ::
 
@@ -998,9 +1048,10 @@ First we save the geometric info in a text file.
    >>>     f.write('shape %d\n' % G.shape[0])
    >>>     f.close()
 
-Now we save positions and the diffraction images. We don't burden
-ouselves for now by selecting an image file format such as .tiff or 
-.hdf5 but use numpys binary storage format
+Next, we save positions and the diffraction images. We don't burden
+ourselves for now with converting to an image file format such as .tiff 
+or a data format like .hdf5 but instead we use numpys binary storage 
+format.
 
 ::
 
@@ -1018,15 +1069,20 @@ file (``.ptyd``), see to :ref:`subclassptyscan`
 
 
 
-.. note::
-   This tutorial was generated from the python source :file:`ptypy/tutorial/ownengine.py` using :file:`ptypy/doc/script2rst.py`.
-
 .. _ownengine:
 
 Tutorial: A reconstruction engine from scratch
 ==============================================
 
-In this tutorial we want to to provide the ptypy user with the information
+
+.. note::
+   This tutorial was generated from the python source
+   :file:`[ptypy_root]/tutorial/ownengine.py` using :file:`ptypy/doc/script2rst.py`. 
+   You are encouraged to modify the parameters and rerun the tutorial with::
+   
+     $ python [ptypy_root]/tutorial/ownengine.py
+
+In this tutorial, we want to provide the information
 needed to create an engine compatible with the state mixture
 expansion of ptychogrpahy as desribed in Thibault et. al 2012 [Thi2012]_ .
 
@@ -1041,12 +1097,12 @@ First we import ptypy and the utility module
 Preparing a managing Ptycho instance
 ------------------------------------
 
-We need to prepare a managing :any:`Ptycho`\ . It requires a parameter
-tree, as specified by ..
+We need to prepare a managing :any:`Ptycho` instance. 
+It requires a parameter tree, as specified in :ref:`parameters`
 
-First, we create a most basic input paramater tree. While there 
-are many default values, we manually specify a more verbose output
-and single precision.
+First, we create a most basic input paramater tree. There 
+are many default values, but we specify manually only a more verbose
+output and single precision for the data type.
 
 ::
 
@@ -1054,9 +1110,9 @@ and single precision.
    >>> p.verbose_level = 3
    >>> p.data_type = "single"
 
-Now we need to create a set of scans that we wish to reconstruct 
-in a single run. We will use a single scan that we call 'MF' and
-marking the data source as 'test' to use the Ptypy internal 
+Now, we need to create a set of scans that we wish to reconstruct 
+in the reconstruction run. We will use a single scan that we call 'MF' and
+mark the data source as 'test' to use the |ptypy| internal 
 :any:`MoonFlowerScan`
 
 ::
@@ -1069,7 +1125,7 @@ marking the data source as 'test' to use the Ptypy internal
    >>> p.scans.MF.data.num_frames = 400
 
 This bare parameter tree will be the input for the :any:`Ptycho`
-class which is constructed at level 2, which means that it creates
+class which is constructed at ``level=2``. It means that it creates
 all necessary basic :any:`Container` instances like *probe*, *object* 
 *diff* , etc. It also loads the first chunk of data and creates all 
 :any:`View` and :any:`POD` instances, as the verbose output will tell.
@@ -1152,11 +1208,15 @@ A quick look at the diffraction data
 See :numref:`ownengine_00` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_00.png
-   :width: 70 %
+   :width: 100 %
    :figclass: highlights
    :name: ownengine_00
 
    Plot of simulated diffraction data for the first two positions.
+
+We don't need to use |ptypy|'s :any:`Ptycho` class to arrive at this
+point. The structure ``P`` that we arrive with at the end of 
+:ref:`simupod` suffices completely. 
 
 Probe and object are not so exciting to look at for now. As default,
 probes are initialized with an aperture like support.
@@ -1169,7 +1229,7 @@ probes are initialized with an aperture like support.
 See :numref:`ownengine_01` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_01.png
-   :width: 70 %
+   :width: 72 %
    :figclass: highlights
    :name: ownengine_01
 
@@ -1283,9 +1343,9 @@ We start of with a small number of iterations.
 ::
 
    >>> iterate(P,9)
-   121460.248581
-   108074.186073
-   90265.5596637
+   121495.358335
+   108108.268989
+   90629.21201
    
 
 We note that the error (here only displayed for 3 iterations) is 
@@ -1299,7 +1359,7 @@ Let us have a look how the probe has developed.
 See :numref:`ownengine_02` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_02.png
-   :width: 70 %
+   :width: 72 %
    :figclass: highlights
    :name: ownengine_02
 
@@ -1311,12 +1371,12 @@ Looks like the probe is on a good way. How about the object?
 
 ::
 
-   >>> fig = u.plot_storage(P.obj.S['S00G00'],3,slices=(slice(1),slice(120,-120),slice(120,-120)))
+   >>> fig = u.plot_storage(P.obj.S['S00G00'],3,slices='0,120:-120,120:-120')
 
 See :numref:`ownengine_03` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_03.png
-   :width: 70 %
+   :width: 72 %
    :figclass: highlights
    :name: ownengine_03
 
@@ -1328,18 +1388,18 @@ Ok, let us do some more iterations. 36 will do.
 ::
 
    >>> iterate(P,36)
-   73505.6988351
-   60426.2629207
-   46878.8783637
-   35414.8450051
-   27620.1189331
-   21449.69478
-   15720.8855359
-   11323.0182742
-   8029.03131812
-   6328.31167126
-   5554.83945017
-   5617.04460605
+   72724.546877
+   60572.7358943
+   46568.6855428
+   35602.6636184
+   28225.0509219
+   21747.1225474
+   16202.8705483
+   11731.6061725
+   8551.63775673
+   6614.56727527
+   5724.64442108
+   5632.28585516
    
 
 Error is still on a steady descent. Let us look at the final 
@@ -1352,7 +1412,7 @@ reconstructed probe and object.
 See :numref:`ownengine_04` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_04.png
-   :width: 70 %
+   :width: 72 %
    :figclass: highlights
    :name: ownengine_04
 
@@ -1360,12 +1420,12 @@ See :numref:`ownengine_04` for the plotted image.
    It's a moon !
 
 
-   >>> fig = u.plot_storage(P.obj.S['S00G00'],5,slices=(slice(1),slice(120,-120),slice(120,-120)))
+   >>> fig = u.plot_storage(P.obj.S['S00G00'],5,slices='0,120:-120,120:-120')
 
 See :numref:`ownengine_05` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_05.png
-   :width: 70 %
+   :width: 72 %
    :figclass: highlights
    :name: ownengine_05
 

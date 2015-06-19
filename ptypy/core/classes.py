@@ -8,8 +8,9 @@ for ptychographic reconstructions.
 **Container class**
     A high-level container that keeps track of sub-containers (Storage)
     and Views onto them. A container can copy itself to produce a buffer
-    needed for calculations. Mathematical operations are not implemented at
-    this level. Operations on arrays should be done using the Views, which
+    needed for calculations. Some basic Mathematical operations are 
+    implemented at this level as in place operations.
+    In General, operations on arrays should be done using the Views, which
     simply return numpyarrays.
 
 
@@ -22,14 +23,14 @@ for ptychographic reconstructions.
 
 **View class**
     A low-weight class that contains all information to access a 2D piece
-    of a Storage within a Container.
+    of a Storage within a Container. The basic idea is that the View
+    access is controlled by a physical position and its frame, such that
+    one is not bothered by memory/array addresses when accessing data.
 
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
-
-TODO: Rethink layer access (BE is not happy with current state)
 
 """
 

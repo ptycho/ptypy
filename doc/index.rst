@@ -13,20 +13,20 @@ ptychographic analysis after the actual experiment
 The main idea of ptypy is: *"Flexibility and Scalabality through abstraction"*. 
 Most often, you will find a class for every concept of ptychography in 
 |ptypy|. Using these or other more abstract base classes, new ideas
-may be developed in a rapid manner without the cumbersome overhead of data 
-management, memory access or distributed computing.
+may be developed in a rapid manner without the cumbersome overhead of 
+:py:mod:`data<ptypy.core.data>` management 
+, memory access or :py:mod:`distributed <ptypy.utils.parallel>` computing. Additionally, |ptypy|
+provides a rich set of :py:mod:`utilities <ptypy.utils>` and helper functions,
+especially for :py:mod:`input/output <ptypy.io>`
 
+Get started quickly :ref:`here <getting_started>` or with one of the examples in the ``templates`` directory.
 
-To get started quickly, look at the examples in the template directory. You will
-also need to prepare your data in a hdf5 file and following a structure that
-ptypy can understand. Ptypy provides already routines to prepare data from three
-beamlines (cSAXS, PSI; I13, Diamond; and I22, ESRF) and more will come.
 
 Highlights
 ----------
 
-* **Difference Map** algorithm engine with power bound constraint
-* **Maximum Likelihood** engine with preconditioners and regularizers.
+* **Difference Map** [#dm]_ algorithm engine with power bound constraint
+* **Maximum Likelihood** [#ml]_ engine with preconditioners and regularizers.
 
 * **Fully parallelized** (CPU only) using the Massage Passing Interface 
   (`MPI <https://en.wikipedia.org/wiki/Message_Passing_Interface>`_). 
@@ -49,6 +49,7 @@ Highlights
 
 Quicklinks
 ----------
+* | The complete :ref:`documentation <contents>`.
 
 * | Starting from a **clean slate**?
   | Check out the :ref:`installation instructions <installation>` 
@@ -67,5 +68,10 @@ Quicklinks
 
 .. rubric:: Footnotes
 
-.. [#pronounciation] Pronounced typy, forget the p, as in ptychography or psychology.
-.. [#states] P. Thibault and A. Menzel, **Nature** 494, 68 (2013)
+.. [#pronounciation] Pronounced *typy*, forget the *p*, as in psychology.
+
+.. [#states] P.Thibault and A.Menzel, **Nature** 494, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`_
+
+.. [#ml] P.Thibault and M.Guizar-Sicairos, **New J. of Phys.** 14, 6 (2012), `doi <http://dx.doi.org/10.1126/science.1158573>`_
+
+.. [#dm] P.Thibault, M.Dierolf *et al.*, **New J. of Phys. 14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`_

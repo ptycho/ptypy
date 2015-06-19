@@ -1,10 +1,10 @@
+
 .. note::
-   This tutorial was generated from the python source :file:`ptypy/tutorial/subclassptyscan.py` using :file:`ptypy/doc/script2rst.py`.
-
-.. _subclassptyscan:
-
-Tutorial : Subclassing PtyScan
-==============================
+   This tutorial was generated from the python source
+   :file:`[ptypy_root]/tutorial/subclassptyscan.py` using :file:`ptypy/doc/script2rst.py`. 
+   You are encouraged to modify the parameters and rerun the tutorial with::
+   
+     $ python [ptypy_root]/tutorial/subclassptyscan.py
 
 In this tutorial, we learn how to subclass :any:`PtyScan` to make 
 ptypy work with any experimental setup.
@@ -123,7 +123,7 @@ Our defaults are now
 ::
 
    >>> print u.verbose.report(DEFAULT,noheader=True)
-   * id3VE7SOA57G           : ptypy.utils.parameters.Param(19)
+   * id3VPVPBDPQ0           : ptypy.utils.parameters.Param(19)
      * positions_theory     : None
      * auto_center          : False
      * chunk_format         : .chunk%02d
@@ -416,7 +416,7 @@ in parantheses.
 ::
 
    >>> print u.verbose.report(NPS.auto(80),noheader=True)
-   * id3VE7SNKS2G           : dict(2)
+   * id3VPVPAPS2G           : dict(2)
      * common               : ptypy.utils.parameters.Param(9)
        * distance           : 0.15
        * center             : [array = [ 128.  128.]]
@@ -428,27 +428,27 @@ in parantheses.
        * experimentID       : None
        * weight2d           : [256x256 bool array]
      * iterable             : list(80)
-       * id3VE7SNLQQ0       : dict(4)
+       * id3VPVPAPEQ0       : dict(4)
          * index            : 0
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [ 0.0014658  0.0020175]]
-       * id3VE7SNN1VO       : dict(4)
+       * id3VPVPAQHVO       : dict(4)
          * index            : 1
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [ 0.0018532  0.0016686]]
-       * id3VE7SNN2H8       : dict(4)
+       * id3VPVPAQIH8       : dict(4)
          * index            : 2
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0017546  0.0011135]]
-       * id3VE7SNLRK8       : dict(4)
+       * id3VPVPAPFK8       : dict(4)
          * index            : 3
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0014226  0.0015149]]
-       * id3VE7SNLEQ0       : dict(4)
+       * id3VPVPAM2Q0       : dict(4)
          * index            : 4
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
@@ -457,7 +457,7 @@ in parantheses.
    
    
    >>> print u.verbose.report(NPS.auto(80),noheader=True)
-   * id3VE7SNN15G           : dict(2)
+   * id3VPVPAQH5G           : dict(2)
      * common               : ptypy.utils.parameters.Param(9)
        * distance           : 0.15
        * center             : [array = [ 128.  128.]]
@@ -469,27 +469,27 @@ in parantheses.
        * experimentID       : None
        * weight2d           : [256x256 bool array]
      * iterable             : list(34)
-       * id3VE7SNLQH8       : dict(4)
+       * id3VPVPAPEH8       : dict(4)
          * index            : 80
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0021597 -0.0012469]]
-       * id3VE7SNJBK8       : dict(4)
+       * id3VPVPAMRK8       : dict(4)
          * index            : 81
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0023717  -0.00077061]]
-       * id3VE7SNMEQ0       : dict(4)
+       * id3VPVPAQ2Q0       : dict(4)
          * index            : 82
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0024801  -0.00026067]]
-       * id3VE7SNJ82G       : dict(4)
+       * id3VPVPAMO2G       : dict(4)
          * index            : 83
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0024801   0.00026067]]
-       * id3VE7SNJA8G       : dict(4)
+       * id3VPVPAMQ8G       : dict(4)
          * index            : 84
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
@@ -528,7 +528,7 @@ We can analyse the saved ``npy.ptyd`` with
 
    >>> from ptypy.io import h5info
    >>> print h5info(NPS.info.dfile)
-   File created : Tue Jun  9 23:20:19 2015
+   File created : Tue Jun 16 18:29:18 2015
     * chunks [dict 6]:
         * 0 [dict 4]:
             * data [20x256x256 int32 array]

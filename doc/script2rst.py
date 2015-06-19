@@ -41,8 +41,15 @@ name = script_name.replace('.py','').split(os.sep)[-1]
 frst=open('_script2rst'+os.sep+name+'.tut','w')
 fig_path = '_script2rst'+os.sep
 
-frst.write('.. note::\n   This tutorial was generated from the python source\
- :file:`ptypy/tutorial/%s` using :file:`ptypy/doc/%s`.\n\n' % (os.path.split(script_name)[-1],sys.argv[0]))
+frst.write("""
+.. note::
+   This tutorial was generated from the python source
+   :file:`[ptypy_root]/tutorial/%(fname)s` using :file:`ptypy/doc/%(this)s`. 
+   You are encouraged to modify the parameters and rerun the tutorial with::
+   
+     $ python [ptypy_root]/tutorial/%(fname)s
+
+""" % {'fname':os.path.split(script_name)[-1], 'this':sys.argv[0]})
  
 was_comment = True
 
@@ -53,6 +60,7 @@ def check_for_fig(wline):
         fig = plt.gcf()
         fig_name = name + '_%02d'  % fig.number
         fname = fig_path + fig_name + '.png'
+        plt.tight_layout()
         fig.savefig(fname, dpi=300)
 
         frst.write('.. figure:: '+'..'+os.sep+fname+'\n')
@@ -77,10 +85,12 @@ for line in fpy:
         fig = plt.gcf()
         fig_name = name + '_%02d'  % fig.number
         fname = fig_path + fig_name + '.png'
+        #plt.tight_layout()
         fig.savefig(fname, dpi=300)
         frst.write('\nSee :numref:`%s` for the plotted image.\n\n' % fig_name)
         frst.write('.. figure:: '+'..'+os.sep+fname+'\n')
-        frst.write('   :width: 70 %\n')
+        ratio = fig.get_figwidth()/fig.get_figheight()
+        frst.write('   :width: %d ' % min(int(ratio * 60),100)+'%\n')
         frst.write('   :figclass: highlights\n')
         frst.write('   :name: ' + fig_name+'\n\n')
         # jump the line to get the caption

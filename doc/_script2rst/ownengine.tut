@@ -1,12 +1,12 @@
+
 .. note::
-   This tutorial was generated from the python source :file:`ptypy/tutorial/ownengine.py` using :file:`ptypy/doc/script2rst.py`.
+   This tutorial was generated from the python source
+   :file:`[ptypy_root]/tutorial/ownengine.py` using :file:`ptypy/doc/script2rst.py`. 
+   You are encouraged to modify the parameters and rerun the tutorial with::
+   
+     $ python [ptypy_root]/tutorial/ownengine.py
 
-.. _ownengine:
-
-Tutorial: A reconstruction engine from scratch
-==============================================
-
-In this tutorial we want to to provide the ptypy user with the information
+In this tutorial, we want to provide the information
 needed to create an engine compatible with the state mixture
 expansion of ptychogrpahy as desribed in Thibault et. al 2012 [Thi2012]_ .
 
@@ -21,12 +21,12 @@ First we import ptypy and the utility module
 Preparing a managing Ptycho instance
 ------------------------------------
 
-We need to prepare a managing :any:`Ptycho`\ . It requires a parameter
-tree, as specified by ..
+We need to prepare a managing :any:`Ptycho` instance. 
+It requires a parameter tree, as specified in :ref:`parameters`
 
-First, we create a most basic input paramater tree. While there 
-are many default values, we manually specify a more verbose output
-and single precision.
+First, we create a most basic input paramater tree. There 
+are many default values, but we specify manually only a more verbose
+output and single precision for the data type.
 
 ::
 
@@ -34,9 +34,9 @@ and single precision.
    >>> p.verbose_level = 3
    >>> p.data_type = "single"
 
-Now we need to create a set of scans that we wish to reconstruct 
-in a single run. We will use a single scan that we call 'MF' and
-marking the data source as 'test' to use the Ptypy internal 
+Now, we need to create a set of scans that we wish to reconstruct 
+in the reconstruction run. We will use a single scan that we call 'MF' and
+mark the data source as 'test' to use the |ptypy| internal 
 :any:`MoonFlowerScan`
 
 ::
@@ -49,7 +49,7 @@ marking the data source as 'test' to use the Ptypy internal
    >>> p.scans.MF.data.num_frames = 400
 
 This bare parameter tree will be the input for the :any:`Ptycho`
-class which is constructed at level 2, which means that it creates
+class which is constructed at ``level=2``. It means that it creates
 all necessary basic :any:`Container` instances like *probe*, *object* 
 *diff* , etc. It also loads the first chunk of data and creates all 
 :any:`View` and :any:`POD` instances, as the verbose output will tell.
@@ -132,11 +132,15 @@ A quick look at the diffraction data
 See :numref:`ownengine_00` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_00.png
-   :width: 70 %
+   :width: 100 %
    :figclass: highlights
    :name: ownengine_00
 
    Plot of simulated diffraction data for the first two positions.
+
+We don't need to use |ptypy|'s :any:`Ptycho` class to arrive at this
+point. The structure ``P`` that we arrive with at the end of 
+:ref:`simupod` suffices completely. 
 
 Probe and object are not so exciting to look at for now. As default,
 probes are initialized with an aperture like support.
@@ -149,7 +153,7 @@ probes are initialized with an aperture like support.
 See :numref:`ownengine_01` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_01.png
-   :width: 70 %
+   :width: 72 %
    :figclass: highlights
    :name: ownengine_01
 
@@ -263,9 +267,9 @@ We start of with a small number of iterations.
 ::
 
    >>> iterate(P,9)
-   121460.248581
-   108074.186073
-   90265.5596637
+   121495.358335
+   108108.268989
+   90629.21201
    
 
 We note that the error (here only displayed for 3 iterations) is 
@@ -279,7 +283,7 @@ Let us have a look how the probe has developed.
 See :numref:`ownengine_02` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_02.png
-   :width: 70 %
+   :width: 72 %
    :figclass: highlights
    :name: ownengine_02
 
@@ -291,12 +295,12 @@ Looks like the probe is on a good way. How about the object?
 
 ::
 
-   >>> fig = u.plot_storage(P.obj.S['S00G00'],3,slices=(slice(1),slice(120,-120),slice(120,-120)))
+   >>> fig = u.plot_storage(P.obj.S['S00G00'],3,slices='0,120:-120,120:-120')
 
 See :numref:`ownengine_03` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_03.png
-   :width: 70 %
+   :width: 72 %
    :figclass: highlights
    :name: ownengine_03
 
@@ -308,18 +312,18 @@ Ok, let us do some more iterations. 36 will do.
 ::
 
    >>> iterate(P,36)
-   73505.6988351
-   60426.2629207
-   46878.8783637
-   35414.8450051
-   27620.1189331
-   21449.69478
-   15720.8855359
-   11323.0182742
-   8029.03131812
-   6328.31167126
-   5554.83945017
-   5617.04460605
+   72724.546877
+   60572.7358943
+   46568.6855428
+   35602.6636184
+   28225.0509219
+   21747.1225474
+   16202.8705483
+   11731.6061725
+   8551.63775673
+   6614.56727527
+   5724.64442108
+   5632.28585516
    
 
 Error is still on a steady descent. Let us look at the final 
@@ -332,7 +336,7 @@ reconstructed probe and object.
 See :numref:`ownengine_04` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_04.png
-   :width: 70 %
+   :width: 72 %
    :figclass: highlights
    :name: ownengine_04
 
@@ -340,12 +344,12 @@ See :numref:`ownengine_04` for the plotted image.
    It's a moon !
 
 
-   >>> fig = u.plot_storage(P.obj.S['S00G00'],5,slices=(slice(1),slice(120,-120),slice(120,-120)))
+   >>> fig = u.plot_storage(P.obj.S['S00G00'],5,slices='0,120:-120,120:-120')
 
 See :numref:`ownengine_05` for the plotted image.
 
 .. figure:: ../_script2rst/ownengine_05.png
-   :width: 70 %
+   :width: 72 %
    :figclass: highlights
    :name: ownengine_05
 

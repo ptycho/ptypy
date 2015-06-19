@@ -79,10 +79,7 @@ class Ptycho(Base):
     be used as a managed container to load past runs.
     
     Attributes
-    ----------
-    p : Param
-        Internal Parameters. Structure like `DEFAULT`
-    
+    ----------    
     CType,FType : numpy.dtype
         numpy dtype for arrays. `FType` is for data, i.e. real-valued
         arrays, `CType` is for complex-valued arrays
@@ -104,7 +101,8 @@ class Ptycho(Base):
     """
     
     DEFAULT = DEFAULT
-    """Default ptycho parameters. See :py:data:`.` and a short listing below"""
+    """Default ptycho parameters which is the trunk of the
+    default :ref:`ptypy parameter tree <parameters>`"""
     
     _PREFIX = PTYCHO_PREFIX
     
@@ -113,9 +111,9 @@ class Ptycho(Base):
         Parameters
         ----------
         pars : Param
-            The input parameters required for the
-            reconstruction. See :any:`DEFAULT`
-        
+            Input parameters, subset of the 
+            :ref:`ptypy parameter tree<parameters>`
+            
         level : int
             Determines how much is initialized.
             
@@ -137,8 +135,10 @@ class Ptycho(Base):
         if level <= 0: 
             return
 
-        # Blank state
         self.p = self.DEFAULT.copy(depth=99)
+        """  Reference for parameter tree, with which 
+        this instance was constructed.
+        """
         
         # Continue with initialization from parameters
         if pars is not None:

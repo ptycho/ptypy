@@ -1,9 +1,4 @@
-# .. _ownengine:
-
-# Tutorial: A reconstruction engine from scratch
-# ==============================================
-
-# In this tutorial we want to to provide the ptypy user with the information
+# In this tutorial, we want to provide the information
 # needed to create an engine compatible with the state mixture
 # expansion of ptychogrpahy as desribed in Thibault et. al 2012 [Thi2012]_ .
 
@@ -15,19 +10,19 @@ import numpy as np
 # Preparing a managing Ptycho instance
 # ------------------------------------
 
-# We need to prepare a managing :any:`Ptycho`\ . It requires a parameter
-# tree, as specified by ..
+# We need to prepare a managing :any:`Ptycho` instance. 
+# It requires a parameter tree, as specified in :ref:`parameters`
 
-# First, we create a most basic input paramater tree. While there 
-# are many default values, we manually specify a more verbose output
-# and single precision.
+# First, we create a most basic input paramater tree. There 
+# are many default values, but we specify manually only a more verbose
+# output and single precision for the data type.
 p = u.Param()
 p.verbose_level = 3                              
 p.data_type = "single"                           
 
-# Now we need to create a set of scans that we wish to reconstruct 
-# in a single run. We will use a single scan that we call 'MF' and
-# marking the data source as 'test' to use the Ptypy internal 
+# Now, we need to create a set of scans that we wish to reconstruct 
+# in the reconstruction run. We will use a single scan that we call 'MF' and
+# mark the data source as 'test' to use the |ptypy| internal 
 # :any:`MoonFlowerScan`
 p.scans = u.Param()
 p.scans.MF = u.Param()
@@ -37,7 +32,7 @@ p.scans.MF.data.shape = 128
 p.scans.MF.data.num_frames = 400
 
 # This bare parameter tree will be the input for the :any:`Ptycho`
-# class which is constructed at level 2, which means that it creates
+# class which is constructed at ``level=2``. It means that it creates
 # all necessary basic :any:`Container` instances like *probe*, *object* 
 # *diff* , etc. It also loads the first chunk of data and creates all 
 # :any:`View` and :any:`POD` instances, as the verbose output will tell.
@@ -48,6 +43,10 @@ diff_storage = P.diff.storages.values()[0]
 fig = u.plot_storage(diff_storage,0,slices=(slice(2),slice(None),slice(None)),modulus='log')
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of simulated diffraction data for the first two positions.
+
+# We don't need to use |ptypy|'s :any:`Ptycho` class to arrive at this
+# point. The structure ``P`` that we arrive with at the end of 
+# :ref:`simupod` suffices completely. 
 
 # Probe and object are not so exciting to look at for now. As default,
 # probes are initialized with an aperture like support.
@@ -160,7 +159,7 @@ fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # guess.
 
 # Looks like the probe is on a good way. How about the object?
-fig = u.plot_storage(P.obj.S['S00G00'],3,slices=(slice(1),slice(120,-120),slice(120,-120)))
+fig = u.plot_storage(P.obj.S['S00G00'],3,slices='0,120:-120,120:-120')
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the reconstructed obejct after 9 iterations. It is not quite
 # clear what object is reconstructed
@@ -176,7 +175,7 @@ fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # It's a moon !
 
 
-fig = u.plot_storage(P.obj.S['S00G00'],5,slices=(slice(1),slice(120,-120),slice(120,-120)))
+fig = u.plot_storage(P.obj.S['S00G00'],5,slices='0,120:-120,120:-120')
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the reconstructed object after a total of 45 iterations. 
 # It's a bunch of flowers !

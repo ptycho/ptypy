@@ -66,13 +66,12 @@ def remove_mod_docstring(app, what, name, obj, options, lines):
                 get_refs(value,pd.children[k],depth=depth-1, indent = indent+'  ')
                 lines.append("")
                 #lines.append('\n\n')
-    #print name
+
     #if name.find('DEFAULT')>=0:
     if isinstance(obj,u.Param) or isinstance(obj,dict):
         keys = obj.keys()
         pd = None
         
-
         """
         # auto_matching
         for entry,pdesc in u.validator.entry_points_Param.iteritems():
@@ -96,16 +95,18 @@ def remove_mod_docstring(app, what, name, obj, options, lines):
                 newstr=newstr.split('`')[1]
                 newstr=newstr.replace('~','')
                 #print newstr, what, name, options
-                pd = u.validator.entry_points_Param.get(newstr,None)
+                pd = u.validator.entry_points_dct.get(newstr,None)
                 break
                 
         if pd is not None:
             #lines.append('Match with :py:data:`.%s` \n\n' %pd.entry_point)
             get_refs(obj,pd,depth=2, indent = '')
             #print lines
+
         
 def setup(app):
     app.connect('autodoc-process-docstring', remove_mod_docstring)
+
 
 napoleon_use_ivar = True
 napoleon_include_special_with_doc = True
@@ -234,7 +235,7 @@ html_static_path = ['_static']
 
 # Custom sidebar templates, maps document names to template names.
 html_sidebars = {
-   '**': ['localtoc.html','relations.html','sourcelink.html', 'searchbox.html'],
+   '**': ['globaltoc.html','relations.html','sourcelink.html', 'searchbox.html'],
    'index': ['download.html'],
 }
 
@@ -289,7 +290,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'index.tex', u'ptypy Documentation',
+  ('content', 'content.tex', u'ptypy Documentation',
    u'Pierre Thibault, Bjoern Enders and others', 'manual'),
 ]
 
@@ -313,7 +314,6 @@ latex_use_parts = False
 # If false, no module index is generated.
 #latex_domain_indices = True
 
-latex_use_parts = False
 
 
 # -- Options for manual page output ---------------------------------------
@@ -326,7 +326,7 @@ man_pages = [
 ]
 
 # If true, show URL addresses after external links.
-#man_show_urls = False
+man_show_urls = True
 
 
 # -- Options for Texinfo output -------------------------------------------

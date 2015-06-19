@@ -1,73 +1,82 @@
 .. _ptypy_data:
 
-*********************
-Ptypy data management
-*********************
+***************
+Data management
+***************
 
+.. note::
+   In this chapter, We refer to the *raw input data* with *data* and not 
+   to data stored in memory of the computer by :any:`Storage` instances. 
+   With the term *preparation* we refer to all data processing 
+   steps prior to the reconstruction and avoid the ambiguous term
+   *processing* although it may be more familiar to the reader.
 
 For ptychography experiments we consider the following generic steps 
-which the user has to complete in order to begin a ptychographic
+which every researcher has to complete prior to a possible ptychographic
 reconstruction.
 
-**(A)** *Conduct a scanning diffraction experiment.* 
-   While or after this experiment
-   is performed, the user is left with *raw images* acquired from the 
-   detector, *meta data* that are in general the scanning position along
+**(A)** *Conducting a scanning diffraction experiment.* 
+   While or after the experiment
+   is performed, the researcher left with *raw images* acquired from the 
+   detector and *meta data* which, in general, consists of scanning position along
    with geometric information about the setup, e.g. photon *energy*, 
    propagation *distance*, *detector pixel size* etc.
 
-**(B)** *Preprocess the data.*
-   In this step, the user is faced to perform a subset of the actions
-   comprised in the following list. The user may need to
+**(B)** *Preparing the data.*
+   In this step, the researcher performs a subset of the actions
+   comprised in the following list. The user may need to.
    
-   * select the appropriate region of the detector where the scattering events where counted, 
-   * apply possible *frame correction* for converting the detector counts in the chosen
+   * select the appropriate region of the detector where the scattering events were counted, 
+   * apply possible *pixel corrections* to convert the detector counts of the chosen
      diffraction frame into photon counts, e.g. flat-field and dark-field
      correction,
    * switch image orientation to match with the coordinate system of the 
      reconstruction algorithms,
-   * find a suited mask to exclude invalid pixel data (hot or dead pixel, overexposure),
-   * or rebin the data
+   * assign a suited mask to exclude invalid pixel data (hot or dead pixel, overexposure),
+   * and/or simply rebin the data.
    
-   Finally the user needs to pack the diffraction image with the scanning positions. 
+   Finally the user needs to zip the diffraction frames together with the scanning positions. 
 
-**(C)** *Save the processed data or feed the data into recontruction process.*
+**(C)** *Saving the processed data or feed the data into recontruction process.*
    In this step the user needs to save the data in a suitable format
-   or provide the data directly for the reconstruction algorithm that
+   or provide the data directly for the reconstruction engine.
 
-Data management in ptypy deals with (B) and (C) as a ptychography 
-reconstruction software naturally cannot provide the actual experimental 
+**Data management** in |ptypy| deals with **(B)** and **(C)** as a ptychography 
+reconstruction software naturally **cannot** provide actual experimental 
 data. Nevertheless, the treatment of raw-data is usually very similar for 
-different experiments. Consequently, ptypy provides an abstract base class
-called :any:`PtyScan` which aims to help with steps (B) and (C). In order
-to adapt ptypy for a specific experimental setup, the user simply
-subclass :any:`PtyScan` and reimplement a subset of methods that are 
-affected by the specifics of the experiemental setup 
-(see `Tutorial: Subclassing PtyScan`_). 
+every experiment. Consequently, |ptypy| provides an abstract base class,
+called :any:`PtyScan`, which aims to help with steps (B) and (C). In order
+to adapt |ptypy| for a specific experimental setup, we simply
+subclass :any:`PtyScan` and reimplement only that subset of its methods which are 
+affected by the specifics of the experiemental setup
+(see :ref:`subclassptyscan`). 
 
 .. _sec_ptyscan:
 
 The PtyScan class
 =================
 
-A PtyScan instance is contstructed from a set of generic parameters,
+:any:`PtyScan` is the abstract base class in |ptypy| to manage raw input
+data.
+
+A PtyScan instance is constructed from a set of generic parameters,
 see :py:data:`.scan.data` in the ptypy parameter tree.
 
-:any:`PtyScan` provides the following features.
+It provides the following features:
 
 **Parallelization**
-  When ptypy is run in several MPI processes, PtyScan takes care of 
-  distributing the scan-point indeces among processes such that each
+  When |ptypy| is run across several MPI processes, PtyScan takes care of 
+  distributing the scan-point indices among processes such that each
   process only loads the data it will later use in the reconstruction.
   Hence, the load on the network is not affected by the number of
   processes.
   The parallel behavior of :any:`PtyScan`, is controlled by the parameter 
-  :py:data:`.scan.data.load_parallel`.  
+  :py:data:`.scan.data.load_parallel`. It uses the :py:class:`~ptypy.utils.parallel.LoadManager`
 
-**Preprocessing**
-  PtyScan can handle a few of the preprocessing steps mentioned above.
+**Preparation**
+  PtyScan can handle a few of the raw processing steps mentioned above.
   
-  * Selecting a region-of-interest from the raw detector image. This
+  * Selection a region-of-interest from the raw detector image. This
     selection is controlled by the parameters :py:data:`.scan.data.auto_center`,
     and :py:data:`.scan.data.shape` and :py:data:`.scan.data.center`.
   
@@ -83,17 +92,17 @@ see :py:data:`.scan.data` in the ptypy parameter tree.
     for detailed explanations.
     
 **Packaging**
-  PtyScan packs the processed *data* together with the used scan point 
+  PtyScan packs the prepared *data* together with the used scan point 
   *indices*, scan *positions* and a *weight* (=mask) and geometric *meta*
   information. This package is requested by the managing instance 
-  :py:class:`~ptypy.core.manager.ModelManager` with the call 
+  :py:class:`~ptypy.core.manager.ModelManager` on the call 
   :py:meth:`~ptypy.core.manager.ModelManager.new_data`.
   
   The minimum number of data frames passed to each process on a *new_data()*
-  call is set by :py:data:`~.scan.data.min_frames`. The total number
-  of frames processed for a scan is set by :py:data:`~.scan.data.num_frames`.
+  call is set by :py:data:`.scan.data.min_frames`. The total number
+  of frames processed for a scan is set by :py:data:`.scan.data.num_frames`.
   
-  If positions or other meta data is not extracted from other files, 
+  If not extracted from other files, 
   the user may set the photon energy with :py:data:`.scan.data.energy`,
   the propagation distance from sample to detector with 
   :py:data:`.scan.data.distance` and the detector pixelsize with
@@ -102,67 +111,135 @@ see :py:data:`.scan.data` in the ptypy parameter tree.
 **Storage**
   PtyScan and its subclass are capable of storing the data in an 
   *hfd5*-compatible [HDF]_ file format. The data file names have a custom 
-  suffix: *.ptyd*.
+  suffix: ``.ptyd``.
   
-  A detailed overview of the *.ptyd* data file tree is written below in 
-  the section `Ptyd file format`_
+  A detailed overview of the *.ptyd* data file tree is given below in 
+  the section :ref:`ptyd_file`
   
-  The saving behavior of :any:`PtyScan`, is controlled by the parameters 
+  The parameters 
   :py:data:`.scan.data.save` and :py:data:`.scan.data.chunk_format`
+  control the way how PtyScan saves the processed data.
   
   .. note::
      Although *h5py* [h5py]_ supports parallel write, this feature is not 
-     used in ptypy. At the moment, the mpi nodes send the ir 
+     used in ptypy. At the moment, all mpi nodes send their prepared data
+     to the master node which writes the date to a file.
+
 
 .. _ptyd_scenarios:
 
 Usage scenarios
 ===============
 
-Ptypy provides support for three data usage cases.
+The PtyScan class of |ptypy| provides support for three use cases.
 
-**Beamline integretion use.** 
+**Beamline integreted use.** 
   
-  In this use case 
-  
-  sadfsg
+  In this use case, the researcher has integrated |ptypy| into the beamline 
+  end-station or experimental setup
+  with the help of a custom subclass of :any:`PtyScan` that we call
+  ``UserScan``. This subclass has its own methods to extract many of the 
+  of the generic parameters of :py:data:`.scan.data` and also defaults
+  for specific custom parameters, for instance file paths or file name
+  patters (for a detailed introduction on how to subclass PtyScan, see
+  :ref:`subclassptyscan`). Once the experiment is completed, the researcher can initiate
+  a reconstruction directly from raw-data with a standard reconstruction
+  script. 
   
   .. figure:: ../img/data_case_integrated.png
      :width: 70 %
      :figclass: highlights
      :name: case_integrated
 
-     This is a test of a figure plot
+     Intergrated use case of :any:`PtyScan`.
+     
+     A custom subclass ``UserScan``
+     serves as a translator between |ptypy|'s generic parameters and 
+     data types and the raw image data and meta data from the experiment.
+     The experiment has to be completed to start a reconstruction or,
+     when the subclass ``UserScan`` was well written, the reconstruction
+     may even start with the first acquired frame. As data preparation
+     is blended in with the reconstruction process, the reconstruction
+     holds when new data is prepared. Optionally, the prepared data
+     is saved to ``.ptyd`` file to spare repraparation on secondary
+     reconstruction runs.
      
 **Post preparation use.**
-  bla bla
-
+  
+  In this use case, the experiment is long passed and the researcher has
+  either used custom subclass of PtyScan or *any other script* that 
+  generates a compatible .hdf5 file (see :ref:`here<ptyd_file>`) to save prepared data of that
+  experiment. Reconstruction is supposed to work when passing the
+  data file path in the parameter tree.
+  
+  Only the input file path needs
+  to be passed either with :py:data:`~.scan.data.source` or with
+  :py:data:`~.scan.data.dfile` when :py:data:`~.scan.data.source`
+  takes the value ``'file'``. In that latter case, secondary processing
+  and saving to another file is not supported, while it is allowed
+  in the first case. While the latter case seems infavorable due to the
+  lack of secondary preparation options, 
+  it is meant as a use-friendly transition switch from the first 
+  reconstruction at the experiment to 
+  post-experiment analysis. Only the :py:data:`~.scan.data.source` 
+  parameter needs to be altered in script from ``<..>.data.source=<recipe>``
+  to ``<..>.data.source='file'`` while the rest of the parameters are ignored
+  and may remain untouched.
+  
   .. figure:: ../img/data_case_prepared.png
      :width: 70 %
      :figclass: highlights
      :name: case_prepared
      
-     This is a test of a figure plot
+     Standard supported use case of :any:`PtyScan`.
      
-**Simultaneous acquisition and loading.**
-  bla bla
+     If a structure-compatible (see :ref:`ptyd_file`) ``*.hdf5``-file is 
+     available, |ptypy| can be used without customizing a subclass of 
+     :any:`PtyScan`. It will use the shipped subclass :any:`PtydScan`
+     to read in the (prepared) raw data. 
+     
+**Preparation and reconstruction on-the-fly with data acquisition.**
+  
+  This use case is for even tighter beamline integration
+  and on-the-fly scans. The researcher has mastered a suitable
+  subclass ``UserScan`` to prepare data from the setup. Now, the preparation 
+  happens in a separate process in the same pace as image frames are acquired
+  in. In that process runs a python script where the subclass ``UserScan``
+  prepares the data using the :py:meth:`~ptypy.core.data.PtyScan.auto`
+  method. The :py:data:`~.scan.data.save` parameter is set
+  to 'link' in order to create a separate file for each data chunk
+  and to avoid write access on the source file.
+  The chunk files are linked back into the main source ``.ptyd`` file. 
+  
+  All reconstruction processes may access the prepared data without 
+  overhead or notable pauses in the reconstruction. For |ptypy| there
+  is no difference if compared to a single source file (a feature of [HDF]_\ ).
   
   .. figure:: ../img/data_case_flyscan.png
      :width: 70 %
      :figclass: highlights
      :name: case_flyscan
 
-     This is a test of a figure plot
+     On-the-fly or demon-like use case of :any:`PtyScan`.
+     
+     A separate process prepares the data *chunks* and saves them 
+     in separate files which are
+     linked back into the source data file. This process
+     may run silently as a ''demon'' in the background. Reconstructions
+     can start immediately and run without delays or pauses due to data
+     preparation.
 
-Ptypy uses the python module **h5py** [h5py]_ to store and load data in the
-**H**\ ierarchical **D**\ ata **F**\ ormat [HDF]_ . The HDF resembles very 
-much a directory/file tree of todays operating systems, while the "files"
-are (multidimensonial) datasets. 
+
 
 .. _ptyd_file:
 
 Ptyd file format
 ================
+
+Ptypy uses the python module **h5py** [h5py]_ to store and load data in the
+**H**\ ierarchical **D**\ ata **F**\ ormat [HDF]_ . The HDF resembles very 
+much a directory/file tree of todays operating systems, while the "files"
+are (multidimensonial) datasets. 
 
 Ptypy stores and loads the (processed) experimental in a file with ending
 *.ptyd*, which is a hdf5-file with a data tree of very simple nature. 
@@ -272,15 +349,18 @@ is a bit cumbersome with h5py, there are a few convenience function in the
 :py:mod:`ptypy.io.h5rw` module.
 
 
-.. tutorial subclassing ptyscan
-
-.. note::
-   This tutorial was generated from the python source :file:`ptypy/tutorial/subclassptyscan.py` using :file:`ptypy/doc/script2rst.py`.
-
 .. _subclassptyscan:
 
 Tutorial : Subclassing PtyScan
 ==============================
+
+
+.. note::
+   This tutorial was generated from the python source
+   :file:`[ptypy_root]/tutorial/subclassptyscan.py` using :file:`ptypy/doc/script2rst.py`. 
+   You are encouraged to modify the parameters and rerun the tutorial with::
+   
+     $ python [ptypy_root]/tutorial/subclassptyscan.py
 
 In this tutorial, we learn how to subclass :any:`PtyScan` to make 
 ptypy work with any experimental setup.
@@ -399,7 +479,7 @@ Our defaults are now
 ::
 
    >>> print u.verbose.report(DEFAULT,noheader=True)
-   * id3VE7SOA57G           : ptypy.utils.parameters.Param(19)
+   * id3VPVPBDPQ0           : ptypy.utils.parameters.Param(19)
      * positions_theory     : None
      * auto_center          : False
      * chunk_format         : .chunk%02d
@@ -692,7 +772,7 @@ in parantheses.
 ::
 
    >>> print u.verbose.report(NPS.auto(80),noheader=True)
-   * id3VE7SNKS2G           : dict(2)
+   * id3VPVPAPS2G           : dict(2)
      * common               : ptypy.utils.parameters.Param(9)
        * distance           : 0.15
        * center             : [array = [ 128.  128.]]
@@ -704,27 +784,27 @@ in parantheses.
        * experimentID       : None
        * weight2d           : [256x256 bool array]
      * iterable             : list(80)
-       * id3VE7SNLQQ0       : dict(4)
+       * id3VPVPAPEQ0       : dict(4)
          * index            : 0
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [ 0.0014658  0.0020175]]
-       * id3VE7SNN1VO       : dict(4)
+       * id3VPVPAQHVO       : dict(4)
          * index            : 1
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [ 0.0018532  0.0016686]]
-       * id3VE7SNN2H8       : dict(4)
+       * id3VPVPAQIH8       : dict(4)
          * index            : 2
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0017546  0.0011135]]
-       * id3VE7SNLRK8       : dict(4)
+       * id3VPVPAPFK8       : dict(4)
          * index            : 3
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0014226  0.0015149]]
-       * id3VE7SNLEQ0       : dict(4)
+       * id3VPVPAM2Q0       : dict(4)
          * index            : 4
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
@@ -733,7 +813,7 @@ in parantheses.
    
    
    >>> print u.verbose.report(NPS.auto(80),noheader=True)
-   * id3VE7SNN15G           : dict(2)
+   * id3VPVPAQH5G           : dict(2)
      * common               : ptypy.utils.parameters.Param(9)
        * distance           : 0.15
        * center             : [array = [ 128.  128.]]
@@ -745,27 +825,27 @@ in parantheses.
        * experimentID       : None
        * weight2d           : [256x256 bool array]
      * iterable             : list(34)
-       * id3VE7SNLQH8       : dict(4)
+       * id3VPVPAPEH8       : dict(4)
          * index            : 80
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0021597 -0.0012469]]
-       * id3VE7SNJBK8       : dict(4)
+       * id3VPVPAMRK8       : dict(4)
          * index            : 81
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0023717  -0.00077061]]
-       * id3VE7SNMEQ0       : dict(4)
+       * id3VPVPAQ2Q0       : dict(4)
          * index            : 82
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0024801  -0.00026067]]
-       * id3VE7SNJ82G       : dict(4)
+       * id3VPVPAMO2G       : dict(4)
          * index            : 83
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
          * position         : [array = [-0.0024801   0.00026067]]
-       * id3VE7SNJA8G       : dict(4)
+       * id3VPVPAMQ8G       : dict(4)
          * index            : 84
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
@@ -804,7 +884,7 @@ We can analyse the saved ``npy.ptyd`` with
 
    >>> from ptypy.io import h5info
    >>> print h5info(NPS.info.dfile)
-   File created : Tue Jun  9 23:20:19 2015
+   File created : Tue Jun 16 18:29:18 2015
     * chunks [dict 6]:
         * 0 [dict 4]:
             * data [20x256x256 int32 array]
@@ -871,6 +951,28 @@ We can analyse the saved ``npy.ptyd`` with
    
    None
    
+
+
+
+List the new Subclass
+---------------------
+
+In order to make the subclass available in your local |ptypy|,
+navigate to ``[ptypy_root]/ptypy/experiment`` and paste the content
+into a new file ``user.py``::
+
+  $ touch [ptypy_root]/ptypy/experiment/user.py
+  
+Append the following lines into ``[ptypy_root]/ptypy/experiment.__init__.py``, ::
+
+  from user import NumpyScan
+  PtyScanTypes.update({'numpy':NumpyScan})
+
+Now, your our new subclass will be used whenever you pass ``'numpy'`` for
+the :py:data:`.scan.data.source`. All special parameters of the class
+have to passed through the dict :py:data:`.scan.data.recipe`. 
+
+
 
 
 

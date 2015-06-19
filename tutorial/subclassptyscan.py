@@ -1,8 +1,3 @@
-# .. _subclassptyscan:
-
-# Tutorial : Subclassing PtyScan
-# ==============================
-
 # In this tutorial, we learn how to subclass :any:`PtyScan` to make 
 # ptypy work with any experimental setup.
 

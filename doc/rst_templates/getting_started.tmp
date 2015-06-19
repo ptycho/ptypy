@@ -1,3 +1,5 @@
+.. _getting_started:
+
 **************************
 Getting started with Ptypy
 **************************
@@ -10,8 +12,9 @@ Installation
 General installation instructions
 ---------------------------------
 
-|ptypy|_ is a python package and depends on a number of other
-packages. Once its dependecies are met, ptypy should work *out-of-the-box*.
+Being a python package, |ptypy|_ depends on a number of other
+packages which are listed below.
+Once its dependecies are met, ptypy should work *out-of-the-box*.
 
 .. note:: 
    |ptypy| is developed for Python 2.7.x and is currently incompatible
@@ -30,9 +33,9 @@ Essential packages
 
 Recommended packages for additional functionality
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Please note that |ptypy| as alpha release still lacks rigorous import 
-checking. There may be parts of code that implicitly asks for any of the
-packages listed here. 
+Please note that |ptypy| is an alpha release and lacks rigorous import 
+checking. There may be parts of code that implicitly ask for any of the
+packages listed here. Therefore, we recommend to install these packages.
 
 * `Matplotlib <https://pypi.python.org/pypi/matplotlib/1.4.3>`_ 
   for any kind of plotting or image generation
@@ -40,16 +43,17 @@ packages listed here.
   `QT4 <https://pypi.python.org/pypi/PyQt4/4.11.3>`_
 
 * `mpi4py <https://pypi.python.org/pypi/mpi4py/1.3.1>`_ 
-  for CPU-node parallelization, python bindings for the
+  for CPU-node parallelisation,  contains python bindings for the
   `Message Passaging Interface <http://www.mcs.anl.gov/research/projects/mpi/>`_, 
   (homepage: `<https://bitbucket.org/mpi4py/mpi4py/>`_)
 
 * `pyzmq <https://pypi.python.org/pypi/pyzmq/14.6.0>`_ 
-  for a threaded server on the main node in threaded asynchronous 
-  client-server communication, python bindings for the
+  for a threaded server on the main node to perfrom asynchronous 
+  client-server communication, contains python bindings for the
   ZeroMQ protocol, 
-  (homepage: `<http://github.com/zeromq/pyzmq>`_)
-  This package is needed for non-blocking plots of the reconstruction run.
+  (homepage: `<http://github.com/zeromq/pyzmq>`_).
+  This package is needed for non-blocking plots of the reconstruction run
+  (e.g. for :ref:`plotclient`).
 
 Optional packages
 ^^^^^^^^^^^^^^^^^
@@ -60,12 +64,12 @@ Other very useful packages are
 
 Installation on Debian/Ubuntu
 -----------------------------
-|Ptypy| is developed on the current LTS version of Ubuntu and installation
-is straightforward.
+|ptypy| is developed on the current LTS version of Ubuntu which is the
+recommended operating system for |ptypy|
 
 Prerequisites
 ^^^^^^^^^^^^^
-For Debian/Ubuntu, many of the required python packages are
+Many of the required python packages are
 available in the repositories. Just type (with sudo rights)
 ::
 
@@ -88,8 +92,8 @@ CD into the download directory (e.g. /tmp/ptypy-master) and install |ptypy| with
 
     $ python setup.py install --user 
 
-The local --user install is generally recommended over the system wide
-sudo install, such that you are able to quickly apply fixes yourself.
+The local ``--user`` install is recommended over the system wide
+``sudo`` install, such that you are able to quickly apply fixes yourself.
 However, for an all-user system-wide install, type
 ::
 
@@ -101,7 +105,7 @@ Installation on Windows
 This installation instruction were contributed by M. Stockmar and tested
 with *Windows 8.1 Enterprise (64 bit)* on a core i7 Thinkpad w520 
 in February 2015. 
-No python was installed before on this machine. 
+No python was installed before on that machine. 
 
 .. note::
    There might be also simpler ways to get a full scientific python 
@@ -199,17 +203,20 @@ Quickstart with a minimal script
 Utilies/Binaries for convenience
 ================================
 
-|ptypy| provides a few scripts to make life easier for the user. They 
-are located in ``[ptypy_root]/scripts``. In case of a user install on 
+|ptypy| provides a few utility scripts to make life easier for you, 
+the user. They are located in ``[ptypy_root]/scripts``. 
+In case of a user install on 
 Ubuntu Linux, they are copied to ``~/.local/bin``
 
-Due to the early stage of developmnet, these scripts will see substantial
-changes in further releases.
+.. note:: 
+   Due to the early stage of developmnet, 
+   these scripts may see substantial changes in further releases, i.e.
+   the call signature may change.
 
-Plot from a .ptyr
------------------
+Plotting from a reconstruction/dump file (\*.ptyr)
+--------------------------------------------------
 
-There is an automatic plotting script, that install on Unix systems
+``ptypy.plot`` is an automatic plotting script, that install on Unix systems
 It has the syntax
 ::
 
@@ -229,11 +236,11 @@ and the image looks like this (:numref:`minimal_result`)
    
    Example plot made with ``ptypy.plot`` using the *default* layput
 
-Inspect an hdf5 compatible file
--------------------------------
+Inspecting a hdf5 compatible file
+---------------------------------
 
-Sometimes it might be handy to quickly inspect what is in a *hdf5* file
-that was created by ptypy. In such cases we can use ``ptypy.inspect``.
+Sometimes we want to quickly inspect what is in a *hdf5* file
+that was created by |ptypy|. For such cases, we can use ``ptypy.inspect``.
 ::
 
     $ ptypy.inspect [-h] [-p PATH] [--report] [-d DEPTH] h5file
@@ -242,7 +249,9 @@ For example, a quick view at the top level can be realized with
 ::
 
     $ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM.ptyr -d 1
-    
+
+which has the following the output::
+
      * content [Param 4]:
          * obj [dict 1]:
          * pars [Param 9]:
@@ -252,10 +261,12 @@ For example, a quick view at the top level can be realized with
          * description [string = "Ptypy .h5 compatible storage format"]
          * kind [string = "minimal"]
 
-If we are interested solely in the probes we could further use::
+If we are interested solely in the probes we could use ::
 
     $ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM.ptyr -d 1 -p content/probe
-    
+
+which has the following the output::
+
      * S00G00 [dict 13]:
          * DataTooSmall [scalar = False]
          * ID [string = "S00G00"]
@@ -271,42 +282,49 @@ If we are interested solely in the probes we could further use::
          * padonly [scalar = False]
          * shape [tuple = (1, 128, 128)]
 
+We omitted the result for the complete file to save some space but you
+are encouraged to try::
+
+    $ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM.ptyr
+
+
 
 Create a new template for a reconstruction script
 -------------------------------------------------
 
-When we are about to create a reconstruction script from scratch, 
-it can be cumbersome to write out each and every parameter we want to
-change. |ptypy| can create blank python scripts prefilled with defaults
-with the help of ``ptypy.new``::
+In cases where we want to create a new reconstruction script from scratch, 
+it may be cumbersome to write out each and every parameter that we want to
+change. But, with the help of ``ptypy.new``, we can create a python 
+script which is prefilled with defaults::
 
     $ ptypy.new [-h] [-u ULEVEL] [--short-doc] [--long-doc] pyfile
     
-In the folder [ptypy_root]/templates we find to autogenerated scripts
-that where created with the calls
-::
+In the folder ``[ptypy_root]/templates`` you find two scripts
+that where auto-generated with the following calls::
 
     $ ptypy.new -u 0 --long-doc pars_few_alldoc.py
     $ ptypy.new -u 2  pars_all_nodoc.py
 
-And here is a quick view to the one with much documentation:
+And here is a quick view to the first one with much documentation 
+(only the first 50 lines).
 
 .. literalinclude:: ../../templates/pars_few_alldoc.py
    :language: python
    :linenos:
    :lines: 1-50
 
+.. _plotclient:
 
 Run a plotclient in a separate process
 --------------------------------------
 
 |ptypy| supports a Client/Server approach. That means that the
-reconstruction may run on a remote server (cluster) while we want to 
-view the progress of such reconstruction on a local machine.
+reconstruction process runs on a remote server (cluster) while we can 
+monitor the progress on a local machine.
 
-In such an aproach the plotting Client runs (on a seperate machine). You
-can implement your own plotting client but there is convenience script
-available::
+In this case, we need to start a plotting Client on a separate machine). 
+You can implement your own plotting client but you may find it convenient
+to use the plotting utility ``ptypy.plotclient``::
  
     $ ptypy.plotclient [-h] [-l LAYOUT] [--dump] [--movie] [-i INTERVAL] [-d DIRECTORY]
     
@@ -318,45 +336,49 @@ More script templates
 =====================
 
 Besides the script from which section :ref:`quickstart` was generated,
-there is a trinity of similar scripts to temper with. 
+there is a trinity of similar scripts at your disposal that
+you can temper with. 
 
 All-in-one
 ----------
 We encourage you to use the script ``[ptypy_root]/templates/minimal_prep_and_run.py``
-to modify the *recipe* part
-of the data preparation routine to see what changes in the reconstruction, 
-when physical paramaters change.
+and modify the *recipe* part
+of the data paramater branch.
+Observe what changes in the reconstruction, when scan paramaters change.
 
 .. literalinclude:: ../../templates/minimal_prep_and_run.py
    :language: python
    :linenos:
    :lines: 1-50
-   :emphasize-lines: 8,22,25
+   :emphasize-lines: 31,33,35
    
-Create a .ptyd file
--------------------
+Creating a .ptyd data-file
+--------------------------
+
 We encourage you to use this script ``[ptypy_root]/templates/make_sample_ptyd.py``
 to create varies different samples and see what happens if the data
-processing paramaters are changed. If you have become curious, jump
+processing paramaters are changed. If you have become curious, move
 forward to :ref:`ptypy_data` and take a look at |ptypy|'s data management.
+Check out the data parameter
+branch :py:data:`.scan.data` for detailed parameter descriptions.
 
 .. literalinclude:: ../../templates/make_sample_ptyd.py
    :language: python
    :linenos:
    :lines: 1-50
-   :emphasize-lines: 8,22,25
+   :emphasize-lines: 15-26
    
-Load from .ptyd and run
------------------------
+Loading a data file to run a reconstruction
+-------------------------------------------
 
 The script ``[ptypy_root]/templates/minimal_load_and_run.py``
-resemples more the case of data analysis after the experiment has taken
+should resembles the case of data analysis after the experiment has taken
 place. Take a challenging sample data from before
-and alter the reconstruction paramters and algorithms to find out if you
-can make the recontruction converge. 
+and alter the reconstruction parameters and algorithms to find out if you
+can make the recontruction converge. Check out the engine parameter
+branch :py:data:`.engine` for detailed parameter descriptions.
 
-.. literalinclude:: ../../templates/minimal_prep_and_run.py
+.. literalinclude:: ../../templates/minimal_load_and_run.py
    :language: python
    :linenos:
-   :lines: 1-50
-   :emphasize-lines: 8,22,25
+   :emphasize-lines: 25-56

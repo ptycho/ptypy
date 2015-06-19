@@ -45,6 +45,8 @@ div.pageheader li a:hover {
 }
 
 h0 {
+    position: relative;
+    top: -18px;
     margin: 0;
     padding: 0.0em 0 .0em 0.9em;
     font-size: 2em;

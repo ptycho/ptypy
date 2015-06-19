@@ -254,15 +254,15 @@ def undistort(frame, delta):
     Any value outside the frame is replaced with a constang value (mean of
     the complete frame)
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     frame: ndarray
         the input frame data
     delta: 2-tuple 
         containing the horizontal and vertical displacements respectively.
     
-    Returns:
-    --------
+    Returns
+    -------
     ndarray
         The corrected frame of same dimension and type as frame.
 

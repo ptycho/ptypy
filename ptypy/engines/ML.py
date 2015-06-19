@@ -34,13 +34,6 @@ DEFAULT = u.Param(
     scale_precond = False,
     scale_probe_object = 1.
 
-
-    #overlap_converge_factor = .1,
-    #overlap_max_iterations = 10,
-    #probe_inertia = 1e-9,               # Portion of probe that is kept from iteraiton to iteration, formally cfact
-    #object_inertia = 1e-4,              # Portion of object that is kept from iteraiton to iteration, formally DM_smooth_amplitude
-    #obj_smooth_std = None,              # Standard deviation for smoothing of object between iterations
-    #clip_object = None,                 # None or tuple(min,max) of desired limits of the object modulus
 )
 
 
