@@ -17,6 +17,7 @@ from ..io import interaction
 from classes import *
 from classes import PTYCHO_PREFIX
 import paths 
+import os, sys
 from manager import *
 from . import model
 
@@ -24,7 +25,12 @@ parallel = u.parallel
 
 __all__ = ['Ptycho','DEFAULT','DEFAULT_io']
 
-
+DEFAULT_runtime = u.Param(
+    run = os.path.split(sys.argv[0])[1].split('.')[0],
+    engine = "None",
+    iteration = 0,
+    iterations = 0,
+)
 
 DEFAULT_autoplot = u.Param(
     imfile = "plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png",
@@ -52,15 +58,15 @@ DEFAULT_io = u.Param(
 """Default io parameters. See :py:data:`.io` and a short listing below"""
 
 DEFAULT = u.Param(
-        verbose_level = 3,      # Verbosity level
-        data_type = 'single',   # 'single' or 'double' precision for reconstruction
-        dry_run = False,        # do actually nothing if True [not implemented]
-        run = None,
-        scan = u.Param(),          # POD creation rules.
-        scans=u.Param(),
-        engines = {},           # Reconstruction algorithms
-        engine = engines.DEFAULTS.copy(),
-        io = DEFAULT_io.copy(depth=2)
+    verbose_level = 3,      # Verbosity level
+    data_type = 'single',   # 'single' or 'double' precision for reconstruction
+    dry_run = False,        # do actually nothing if True [not implemented]
+    run = None,
+    scan = u.Param(),          # POD creation rules.
+    scans=u.Param(),
+    engines = {},           # Reconstruction algorithms
+    engine = engines.DEFAULTS.copy(),
+    io = DEFAULT_io.copy(depth=2)
 )
 
 class Ptycho(Base):
@@ -223,10 +229,10 @@ class Ptycho(Base):
             
             # start automated plot client
             self.plotter = None
-            if parallel.master and autoplot and autoplot.threaded:
+            if parallel.master and autoplot and autoplot.threaded and autoplot.interval>0:
                 from multiprocessing import Process
                 logger.info('Spawning plot client in new Process.')
-                self.plotter = Process(target=u.spawn_MPLClient, args=(autoplot,))
+                self.plotter = Process(target=u.spawn_MPLClient, args=(iaction,autoplot,))
                 self.plotter.start()
         else:
             # no interaction wanted
@@ -281,7 +287,9 @@ class Ptycho(Base):
         parallel.barrier()
         if print_stats:
             self.print_stats()
-
+        
+        # create plotting instance (maybe)
+        
     def _init_engines(self):
         """
         * deprecated*

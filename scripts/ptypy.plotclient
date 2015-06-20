@@ -5,11 +5,11 @@ import argparse
 from ptypy import utils as u
 
 parser = argparse.ArgumentParser(description='Create a ZeroMQ plotting client.')
-excludes =['active','threaded','connections']
+excludes =['active','threaded','connections','interval']
 u.validator._add2argparser(parser, entry_point = '.io.autoplot',excludes= excludes)
 parser = u.validator._add2argparser(parser, entry_point = '.io.interaction',excludes= excludes)
 
-parser.add_argument('-d','--dir', dest='directory', type=str, 
+parser.add_argument('-d','--dir', dest='directory', type=str,default='./' ,
                    help='image dump directory' )
 args = parser.parse_args()
 for key,pd in parser._ptypy_translator.items():
@@ -35,6 +35,6 @@ parser.add_argument('-a', dest='address', type=str,
 """
 #args = parser.parse_args()
 from ptypy import io
-u.verbose.set_level(5)
-plotter=u.MPLClient(client_pars=client_pars, plotting_pars=plot_pars)
+u.verbose.set_level(3)
+plotter=u.MPLClient(client_pars=client_pars, autoplot_pars=plot_pars)
 plotter.loop_plot()

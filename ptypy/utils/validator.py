@@ -15,7 +15,7 @@ This file is part of the PTYPY package.
 import pkg_resources
 import csv
 # Load all documentation on import
-_csvfile = pkg_resources.resource_filename('ptypy', 'resources/parameters_descriptions.csv')
+_csvfile = pkg_resources.resource_filename('ptypy', 'resources/parameter_descriptions.csv')
 _desc_list = list(csv.DictReader(file(_csvfile, 'r')))
 del csv
 del pkg_resources
@@ -354,7 +354,7 @@ def make_sub_default(entry_point, depth=1):
     if depth<=0:
         return out
     for name,child in pd.children.iteritems():
-        if child.children is not None:
+        if child.children is not None and child.value is None:
             out[name] = make_sub_default(child.entry_point, depth=depth-1)
         else:
             out[name] = child.value
@@ -518,33 +518,48 @@ def _add2argparser(parser=None, entry_point='',root=None,\
     if has_children:
         entry = pd.entry_point
         if name !='':
-            group=parser.add_argument_group(title=name, description=None)
+            ngroup=parser.add_argument_group(title=name, description=None)
         else:
-            group=None
+            ngroup=None
         # recursive behavior here
         new_excludes = [e[len(entry):] for e in excludes if e.startswith(entry)]
         for key,child in pd.children.iteritems():
             _add2argparser(parser, entry_point=child.entry_point,root=root,\
-             excludes=excludes,mode = 'add',group=group)
-    else:
-        parse = parser if group is None else group
+             excludes=excludes,mode = 'add',group=ngroup)
+                 
+    if name=='': return parser
+    
+    parse = parser if group is None else group
+    
+    # this should be part of PDesc I guess.
+    typ = None
+    for t in pd.type:
         try:
-            typ= eval(pd.type[0])
+            typ= eval(t)
         except BaseException:
-            return
-        if type(typ) is not type:
-            u.verbose.logger.debug('Cannot parse type %s of parameter %s' % (str(typ),name))
-            return
-        elif typ is bool:
-            flag = '--no-'+name if pd.value else '--'+name
-            action='store_false' if pd.value else 'store_true'
-            parse.add_argument(flag, dest=name, action=action, 
-                             help=pd.shortdoc )
-        else:
-            parse.add_argument('--'+name, dest=name, type=typ, default = pd.value, choices=pd.choices, 
-                             help=pd.shortdoc +' (default=%s)' % pd.default.replace('%(','(') )            
+            continue
+        if typ is not None:
+            break
+    if typ is None:
+        u.verbose.logger.debug('Failed evaluate type strings %s of parameter %s in python' % (str(pd.type),name))
+        return parser
         
-        parser._ptypy_translator[name] = pd
+    if type(typ) is not type:
+        u.verbose.logger.debug('Type %s of parameter %s is not python type' % (str(typ),name))
+        return parser
+    
+    elif typ is bool:
+        flag = '--no-'+name if pd.value else '--'+name
+        action='store_false' if pd.value else 'store_true'
+        parse.add_argument(flag, dest=name, action=action, 
+                         help=pd.shortdoc )
+    else:
+        d = pd.default
+        defstr =  d.replace('%(','%%(') if str(d)==d else str(d)
+        parse.add_argument('--'+name, dest=name, type=typ, default = pd.value, choices=pd.choices, 
+                         help=pd.shortdoc +' (default=%s)' % defstr)            
+
+    parser._ptypy_translator[name] = pd
         
     return parser
     

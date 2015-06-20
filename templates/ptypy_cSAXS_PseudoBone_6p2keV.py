@@ -13,6 +13,7 @@ p.io = u.Param()
 p.io.home = "/tmp/ptypy/"             
 p.io.run = None
 p.io.autosave = None
+p.io.autoplot = False
 
 p.scan = u.Param()
 p.scan.geometry = u.Param()

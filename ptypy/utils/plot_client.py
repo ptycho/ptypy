@@ -19,12 +19,12 @@ import os
 __all__=['MPLClient','MPLplotter','PlotClient','spawn_MPLClient', 'TEMPLATES', 'DEFAULT']
 
 if __name__ == "__main__":
-    from ptypy.utils.verbose import logger, report
+    from ptypy.utils.verbose import logger, report, log
     from ptypy.utils.parameters import Param
     from ptypy.utils.array_utils import crop_pad, clean_path
     from ptypy.utils.plot_utils import PtyAxis, imsave, pause, rmphaseramp
 else:
-    from .verbose import logger, report
+    from .verbose import logger, report, log
     from .parameters import Param
     from .array_utils import crop_pad, clean_path
     from .plot_utils import PtyAxis, imsave, pause, rmphaseramp
@@ -105,13 +105,14 @@ class PlotClient(object):
     DATA = 2
     STOPPED = 0
 
-    def __init__(self, client_pars=None):
+    def __init__(self, client_pars=None, in_thread=False):
         """
         Create a client and attempt to connect to a running reconstruction server.
         """
         # This avoids circular imports.
         from ptypy.io.interaction import Client
 
+        self.log_level = 5 if in_thread else 3
         # If client_pars is None, connect with the defaults defined in ptypy.io.interaction
         self.client = Client(client_pars)
 
@@ -136,7 +137,9 @@ class PlotClient(object):
         # Here you should initialize plotting capabilities.
         self.config = None
         
-
+        # A small flag
+        self.is_initialized = False
+        
     @property
     def status(self):
         """
@@ -177,6 +180,7 @@ class PlotClient(object):
         with self._lock:
             pr = self.pr.copy(depth=10)
             ob = self.ob.copy(depth=10)
+            self.runtime['iter_info'].append(self.runtime['last_info'].copy())
             runtime = self.runtime.copy(depth=10)
         return pr, ob, runtime
 
@@ -185,12 +189,12 @@ class PlotClient(object):
         Connect to the reconstruction server.
         """
         self.client.activate()
-        logger.debug('Client connecting to server...')
+        log(self.log_level,'Client connecting to server...')
 
         # Pause until connected
         while not self.client.connected:
             time.sleep(0.1)
-        logger.debug('Client connected.')
+        log(self.log_level,'Client connected.')
 
     def disconnect(self):
         """
@@ -203,23 +207,33 @@ class PlotClient(object):
         Wait for reconstruction to start, then grab synchronously basic information
         for initialization.
         """
-        logger.debug('Client requesting configuration parameters')
-        self.config = Param(self.client.get_now("Ptycho.p.io.autoplot"))
-        logger.debug('Client received the following configuration:')
-        logger.debug(report(self.config))
+        log(self.log_level,'Client requesting configuration parameters')
+        autoplot = self.client.get_now("Ptycho.p.io.autoplot")
+        if hasattr(autoplot,'items'):
+            self.config = Param(autoplot) 
+            self.config.home = self.client.get_now("Ptycho.p.io.home")
+        else:
+            self.config = autoplot
+        log(self.log_level,'Client received the following configuration:')
+        log(self.log_level,report(self.config))
         
         # Wait until reconstruction starts.
-        logger.debug('Client waiting for reconstruction to start...')
+        log(self.log_level,'Client waiting for reconstruction to start...')
         ready = self.client.get_now("'iter_info' in Ptycho.runtime")
+        
+        # requesting fulll runtime 
+        log(self.log_level,'Client requesting runtime container')
+        self.runtime = Param(self.client.get_now("Ptycho.runtime"))
+        
         while not ready:
             time.sleep(.1)
             ready = self.client.get_now("'start' in Ptycho.runtime")
 
-        logger.debug('Client ready')
+        log(self.log_level,'Client ready')
 
         # Get the list of object IDs
         ob_IDs = self.client.get_now("Ptycho.obj.S.keys()")
-        logger.debug('1 object to plot.' if len(ob_IDs) == 1 else '%d objects to plot.' % len(ob_IDs))
+        log(self.log_level,'1 object to plot.' if len(ob_IDs) == 1 else '%d objects to plot.' % len(ob_IDs))
 
         # Prepare the data requests
         for ID in ob_IDs:
@@ -231,7 +245,7 @@ class PlotClient(object):
 
         # Get the list of probe IDs
         pr_IDs = self.client.get_now("Ptycho.probe.S.keys()")
-        logger.debug('1 probe to plot.' if len(pr_IDs) == 1 else '%d probes to plot.' % len(pr_IDs))
+        log(self.log_level,'1 probe to plot.' if len(pr_IDs) == 1 else '%d probes to plot.' % len(pr_IDs))
 
         # Prepare the data requests
         for ID in pr_IDs:
@@ -249,6 +263,7 @@ class PlotClient(object):
         
         # Get info if it's all over
         self.cmd_dct["Ptycho.runtime.get('allstop') is not None"] = [None, self.__dict__, '_stopping']
+        
         
     def _request_data(self):
         """
@@ -288,11 +303,11 @@ class MPLplotter(object):
     """
     DEFAULT = DEFAULT
     
-    def __init__(self, pars=None, probes = None, objects= None, runtime= None):
+    def __init__(self, pars=None, probes = None, objects= None, runtime= None, in_thread=False):
         """
         Create a client and attempt to connect to a running reconstruction server.
         """
-
+        self.log_level = 5 if in_thread else 3
         # Initialize data containers
         self.pr = probes
         self.ob = objects
@@ -313,7 +328,7 @@ class MPLplotter(object):
                 try:
                     pars = TEMPLATES[pars]
                 except KeyError:
-                    logger.debug('Plotting template "\%s" not found, using default settings' % str(pars))
+                    log(self.log_level,'Plotting template "\%s" not found, using default settings' % str(pars))
             
             if hasattr(pars,'items'):
                 self.p.update(pars,in_place_depth=4)
@@ -551,8 +566,22 @@ class MPLplotter(object):
             
         pp.pty_axes = pty_axes
     
-    def save(self):
-        pass
+    def save(self, pattern, count=0):
+        try:
+            r = self.runtime.copy(depth=1)
+            r.update(r.iter_info[-1])
+            plot_file = clean_path(pattern % r)
+        except BaseError('Could not auto generate dump file from runtime.'):
+            plot_file = 'ptypy_%05d.png' % count
+
+        log(self.log_level,'Dumping plot to %s' % plot_file)
+        self.plot_fig.savefig(plot_file,dpi=300)
+        folder,fname = os.path.split(plot_file)
+        mode ='w' if count==1 else 'a'
+        self._framefile = folder+os.path.sep+'frames.txt'
+        with open(self._framefile,mode) as f:
+            f.write(plot_file+'\n')
+            f.close()
         
     def plot_all(self, blocking = False):
         for key, storage in self.pr.items():
@@ -570,14 +599,22 @@ class MPLClient(MPLplotter):
     
     DEFAULT = DEFAULT
     
-    def __init__(self, client_pars=None, plotting_pars=None):
+    def __init__(self, client_pars=None, autoplot_pars=None,\
+                 layout_pars=None, in_thread=False, is_slave=False):
         
-        super(MPLClient,self).__init__(pars = plotting_pars)
+        from ptypy.core.ptycho import DEFAULT_autoplot
+        self.config = DEFAULT_autoplot.copy(depth=3)
+        self.config.update(autoplot_pars)
+        
+        layout = self.config.get('layout',layout_pars) 
+        
+        super(MPLClient,self).__init__(pars = layout, in_thread = in_thread)
             
-        self.pc = PlotClient(client_pars)
+        self.pc = PlotClient(client_pars,in_thread=in_thread)
         self.pc.start()
         self._framefile= None
-    
+        self.is_slave = is_slave
+        
     def loop_plot(self):
         """
         Plot forever.
@@ -589,39 +626,36 @@ class MPLClient(MPLplotter):
             if status == self.pc.DATA:
                 self.pr, self.ob, runtime = self.pc.get_data()
                 self.runtime.update(runtime)
-                self.runtime['iter_info'].append(runtime['last_info'])
                 if not initialized:
-                    if self.pc.config is not None:
-                        self._set_autolayout(self.pc.config.layout)
-                    self.update_plot_layout()
+                    if self.is_slave and self.pc.config:
+                        self.config.update(self.pc.config)
+
+                    self._set_autolayout(self.config.layout)
+                    self.update_plot_layout(self.config.layout)
                     initialized=True
+                    
                 self.plot_all()
                 self.draw()
                 count+=1
-                if runtime.get('plot_file'):
-                    plot_file = clean_path(runtime['plot_file'])
-                    self.plot_fig.savefig(plot_file,dpi=300)
-                    folder,fname = os.path.split(plot_file)
-                    mode ='w' if count==1 else 'a'
-                    self._framefile = folder+os.path.sep+'frames.txt'
-                    with open(self._framefile,mode) as f:
-                        f.write(plot_file+'\n')
-                        f.close()
+                if self.config.dump:
+                    self.save(self.config.home + self.config.imfile,count)
+                    #plot_file = clean_path(runtime['plot_file'])
+
             elif status == self.pc.STOPPED:
                 break
             pause(.1)
         
-        if self.pc.config.get('make_movie'):
+        if self.config.get('make_movie'):
             
             from ptypy import utils as u
             u.png2mpg(self._framefile)
 
 
-def spawn_MPLClient(client_pars):
+def spawn_MPLClient(client_pars, autoplot_pars):
     """
-    A function that creates and runs an instance of MPLClient.
+    A function that creates and runs a silent instance of MPLClient.
     """
-    mplc = MPLClient(client_pars)
+    mplc = MPLClient(client_pars,autoplot_pars, in_thread=True)
     try:
         mplc.loop_plot()
     except KeyboardInterrupt:
