@@ -19,5 +19,5 @@ p.scans.MF.data.num_frames = 100
 p.scans.MF.data.save = None
 p.scans.MF.data.dfile = 'sample.ptyd'
 
-P = ptypy.core.Ptycho(p,level=2)
+P = ptypy.core.Ptycho(p, level=2)
 
