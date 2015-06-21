@@ -78,7 +78,7 @@ available in the repositories. Just type (with sudo rights)
 
 Get ptypy
 ^^^^^^^^^
-Download and unpack or clone |ptypy|_ from the sources::
+Download and unpack |ptypy|_ from the sources::
 
     $ wget https://github.com/ptycho/ptypy/archive/master.zip
     $ unzip master.zip -d /tmp/; rm master.zip
@@ -92,8 +92,8 @@ CD into the download directory (e.g. /tmp/ptypy-master) and install |ptypy| with
 
     $ python setup.py install --user 
 
-The local ``--user`` install is recommended over the system wide
-``sudo`` install, such that you are able to quickly apply fixes yourself.
+The local ``--user`` install is recommended instead of a system-wide
+``sudo`` install. It makes it easier to quickly apply fixes yourself.
 However, for an all-user system-wide install, type
 ::
 
@@ -102,7 +102,7 @@ However, for an all-user system-wide install, type
 Installation on Windows
 -----------------------
 
-This installation instruction were contributed by M. Stockmar and tested
+These installation instructions were contributed by M. Stockmar and tested
 with *Windows 8.1 Enterprise (64 bit)* on a core i7 Thinkpad w520 
 in February 2015. 
 No python was installed before on that machine. 
@@ -117,15 +117,15 @@ Prerequisites
 
 * Download and install python 2.7.x from `<http://www.python.org>`_ 
   (Make sure you have the 64 bit version)
-  Click *yes* that you want add python to the path environment variable.
+  Click *yes* when asked to add python to the path environment variable.
 
 * Go to the command line and install wheel::
   
   $ pip install wheel
 
-* Install Microsofts implementation for MPI to use multiple CPUs from
+* Install Microsoft's implementation for MPI to use multiple CPUs from
   `<https://msdn.microsoft.com/en-us/library/bb524831(v=vs.85).aspx>`_
-  Other MPI implementation may work as well but were not tested.
+  Other MPI implementations may work as well but were not tested.
 
 * Install the QT-Framework if you don't have it already.
   `<http://qt-project.org/>`_
@@ -135,8 +135,7 @@ Download all other binaries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The binaries will be downloaded from a `website <http://www.lfd.uci.edu/~gohlke/pythonlibs/>`_ 
-which offers varies 
-builds for different python version for Windows (both 32 and 64 bit) in
+which offers various builds for different python versions for Windows (both 32 and 64 bit) in
 the form of a `python wheel <https://pypi.python.org/pypi/wheel>`_.
 Make sure you choose the correct version for your windows and system. 
 
@@ -162,7 +161,7 @@ Intel Math Kernel Library (MKL) which is supposed to be fast.
   
     $ pip install filename.whl
   
-  Downloaded and installed the binaries in the following order:
+  Download and install the binaries in the following order:
 
   #. ``numpy``
   #. ``pillow`` (replacement for PIL)
@@ -179,7 +178,7 @@ Intel Math Kernel Library (MKL) which is supposed to be fast.
    pip install pyqt4  (QT framework was installed before on the testing machine)
    pip install pyside
 
-   I hope I have not forgot anything but the website by C. Gohlke has everything you need.
+   In case these instructions are not sufficient, refer to the website by C. Gohlke.
 
 Get ptypy
 ^^^^^^^^^
@@ -216,13 +215,13 @@ Ubuntu Linux, they are copied to ``~/.local/bin``
 Plotting from a reconstruction/dump file (\*.ptyr)
 --------------------------------------------------
 
-``ptypy.plot`` is an automatic plotting script, that install on Unix systems
+``ptypy.plot`` is an automatic plotting script that installs on Unix systems
 It has the syntax
 ::
 
     $ ptypy.plot [-h] [-l LAYOUT] [-t IMFILE] ptyrfile
 
-In our case that translates to
+For our minimal example this translates to
 ::
 
     $ ptypy.plot /tmp/ptypy/recons/minimal/minimal_DM.ptyr -t minimal.png
@@ -261,7 +260,7 @@ which has the following the output::
          * description [string = "Ptypy .h5 compatible storage format"]
          * kind [string = "minimal"]
 
-If we are interested solely in the probes we could use ::
+If we are interested solely in the probe we could use ::
 
     $ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM.ptyr -d 1 -p content/probe
 
@@ -293,7 +292,7 @@ Create a new template for a reconstruction script
 -------------------------------------------------
 
 In cases where we want to create a new reconstruction script from scratch, 
-it may be cumbersome to write out each and every parameter that we want to
+it may be cumbersome to write each and every parameter that we want to
 change. But, with the help of ``ptypy.new``, we can create a python 
 script which is prefilled with defaults::
 
@@ -305,7 +304,7 @@ that where auto-generated with the following calls::
     $ ptypy.new -u 0 --long-doc pars_few_alldoc.py
     $ ptypy.new -u 2  pars_all_nodoc.py
 
-And here is a quick view to the first one with much documentation 
+And here is a quick view of the first one with much documentation
 (only the first 50 lines).
 
 .. literalinclude:: ../../templates/pars_few_alldoc.py
@@ -329,8 +328,8 @@ to use the plotting utility ``ptypy.plotclient``::
     $ ptypy.plotclient [-h] [-l LAYOUT] [--dump] [--movie] [-i INTERVAL] [-d DIRECTORY]
     
 .. note::
-   This plotting client receives all information from the server it 
-   connects to and None of the switches work. Work in progress ..
+   None of the options are currently implemented. The plotting client receives all
+   information from the server it connects to. Work in progress ..
    
 More script templates
 =====================
@@ -342,9 +341,8 @@ you can temper with.
 All-in-one
 ----------
 We encourage you to use the script ``[ptypy_root]/templates/minimal_prep_and_run.py``
-and modify the *recipe* part
-of the data paramater branch.
-Observe what changes in the reconstruction, when scan paramaters change.
+and modify the *recipe* part of the data parameter branch.
+Observe what changes in the reconstruction when scan parameters change.
 
 .. literalinclude:: ../../templates/minimal_prep_and_run.py
    :language: python
@@ -356,11 +354,11 @@ Creating a .ptyd data-file
 --------------------------
 
 We encourage you to use this script ``[ptypy_root]/templates/make_sample_ptyd.py``
-to create varies different samples and see what happens if the data
-processing paramaters are changed. If you have become curious, move
+to create various different samples and see what happens if the data
+processing parameters are changed. If you have become curious, move
 forward to :ref:`ptypy_data` and take a look at |ptypy|'s data management.
-Check out the data parameter
-branch :py:data:`.scan.data` for detailed parameter descriptions.
+Check out the data parameter branch :py:data:`.scan.data` for detailed parameter
+descriptions.
 
 .. literalinclude:: ../../templates/make_sample_ptyd.py
    :language: python

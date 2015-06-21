@@ -11,20 +11,17 @@ Data management
    steps prior to the reconstruction and avoid the ambiguous term
    *processing* although it may be more familiar to the reader.
 
-For ptychography experiments we consider the following generic steps 
-which every researcher has to complete prior to a possible ptychographic
-reconstruction.
+Consider the following generic steps which every ptychographer has to complete
+prior to a successful image reconstruction.
 
 **(A)** *Conducting a scanning diffraction experiment.* 
-   While or after the experiment
-   is performed, the researcher left with *raw images* acquired from the 
-   detector and *meta data* which, in general, consists of scanning position along
-   with geometric information about the setup, e.g. photon *energy*, 
+   While or after the experiment is performed, the researcher is left with *raw images*
+   acquired from the detector and *meta data* which, in general, consists of scanning
+   positions along with geometric information about the setup, e.g. photon *energy*,
    propagation *distance*, *detector pixel size* etc.
 
 **(B)** *Preparing the data.*
-   In this step, the researcher performs a subset of the actions
-   comprised in the following list. The user may need to.
+   In this step, the user performs a subset of the following actions
    
    * select the appropriate region of the detector where the scattering events were counted, 
    * apply possible *pixel corrections* to convert the detector counts of the chosen
@@ -43,7 +40,7 @@ reconstruction.
 
 **Data management** in |ptypy| deals with **(B)** and **(C)** as a ptychography 
 reconstruction software naturally **cannot** provide actual experimental 
-data. Nevertheless, the treatment of raw-data is usually very similar for 
+data. Nevertheless, the treatment of raw data is usually very similar for
 every experiment. Consequently, |ptypy| provides an abstract base class,
 called :any:`PtyScan`, which aims to help with steps (B) and (C). In order
 to adapt |ptypy| for a specific experimental setup, we simply
@@ -56,7 +53,7 @@ affected by the specifics of the experiemental setup
 The PtyScan class
 =================
 
-:any:`PtyScan` is the abstract base class in |ptypy| to manage raw input
+:any:`PtyScan` is the abstract base class in |ptypy| that manages raw input
 data.
 
 A PtyScan instance is constructed from a set of generic parameters,
@@ -98,14 +95,15 @@ It provides the following features:
   :py:class:`~ptypy.core.manager.ModelManager` on the call 
   :py:meth:`~ptypy.core.manager.ModelManager.new_data`.
   
-  The minimum number of data frames passed to each process on a *new_data()*
-  call is set by :py:data:`.scan.data.min_frames`. The total number
-  of frames processed for a scan is set by :py:data:`.scan.data.num_frames`.
+  Because data acquisition and preparation can happen during a reconstruction
+  process, it is possible to specify the minimum number of data frames passed
+  to each process on a *new_data()* by setting the value of :py:data:`.scan.data.min_frames`.
+  The total number of frames processed for a scan is set by :py:data:`.scan.data.num_frames`.
   
   If not extracted from other files, 
   the user may set the photon energy with :py:data:`.scan.data.energy`,
   the propagation distance from sample to detector with 
-  :py:data:`.scan.data.distance` and the detector pixelsize with
+  :py:data:`.scan.data.distance` and the detector pixel size with
   :py:data:`.scan.data.psize`.
 
 **Storage**
@@ -118,7 +116,7 @@ It provides the following features:
   
   The parameters 
   :py:data:`.scan.data.save` and :py:data:`.scan.data.chunk_format`
-  control the way how PtyScan saves the processed data.
+  control the way PtyScan saves the processed data.
   
   .. note::
      Although *h5py* [h5py]_ supports parallel write, this feature is not 
@@ -141,9 +139,9 @@ The PtyScan class of |ptypy| provides support for three use cases.
   ``UserScan``. This subclass has its own methods to extract many of the 
   of the generic parameters of :py:data:`.scan.data` and also defaults
   for specific custom parameters, for instance file paths or file name
-  patters (for a detailed introduction on how to subclass PtyScan, see
+  patterns (for a detailed introduction on how to subclass PtyScan, see
   :ref:`subclassptyscan`). Once the experiment is completed, the researcher can initiate
-  a reconstruction directly from raw-data with a standard reconstruction
+  a reconstruction directly from raw data with a standard reconstruction
   script. 
   
   .. figure:: ../img/data_case_integrated.png
@@ -156,12 +154,12 @@ The PtyScan class of |ptypy| provides support for three use cases.
      A custom subclass ``UserScan``
      serves as a translator between |ptypy|'s generic parameters and 
      data types and the raw image data and meta data from the experiment.
-     The experiment has to be completed to start a reconstruction or,
-     when the subclass ``UserScan`` was well written, the reconstruction
-     may even start with the first acquired frame. As data preparation
+     Typically the experiment has to be completed before a reconstruction
+     is started, but with some effort it is even possible to have the reconstruction
+     start immediately after acquisition of the first frame. As data preparation
      is blended in with the reconstruction process, the reconstruction
      holds when new data is prepared. Optionally, the prepared data
-     is saved to ``.ptyd`` file to spare repraparation on secondary
+     is saved to a ``.ptyd`` file to avoid having to run the preparation steps for subsequent
      reconstruction runs.
      
 **Post preparation use.**
@@ -179,7 +177,7 @@ The PtyScan class of |ptypy| provides support for three use cases.
   and saving to another file is not supported, while it is allowed
   in the first case. While the latter case seems infavorable due to the
   lack of secondary preparation options, 
-  it is meant as a use-friendly transition switch from the first 
+  it is meant as a user-friendly transition switch from the first
   reconstruction at the experiment to 
   post-experiment analysis. Only the :py:data:`~.scan.data.source` 
   parameter needs to be altered in script from ``<..>.data.source=<recipe>``
@@ -203,8 +201,8 @@ The PtyScan class of |ptypy| provides support for three use cases.
   This use case is for even tighter beamline integration
   and on-the-fly scans. The researcher has mastered a suitable
   subclass ``UserScan`` to prepare data from the setup. Now, the preparation 
-  happens in a separate process in the same pace as image frames are acquired
-  in. In that process runs a python script where the subclass ``UserScan``
+  happens in a separate process while image frames are acquired.
+  This process runs a python script where the subclass ``UserScan``
   prepares the data using the :py:meth:`~ptypy.core.data.PtyScan.auto`
   method. The :py:data:`~.scan.data.save` parameter is set
   to 'link' in order to create a separate file for each data chunk
@@ -237,11 +235,11 @@ Ptyd file format
 ================
 
 Ptypy uses the python module **h5py** [h5py]_ to store and load data in the
-**H**\ ierarchical **D**\ ata **F**\ ormat [HDF]_ . The HDF resembles very 
-much a directory/file tree of todays operating systems, while the "files"
+**H**\ ierarchical **D**\ ata **F**\ ormat [HDF]_ . HDF resembles very
+much a directory/file tree of today's operating systems, while the "files"
 are (multidimensonial) datasets. 
 
-Ptypy stores and loads the (processed) experimental in a file with ending
+Ptypy stores and loads the (processed) experimental data in a file with extension
 *.ptyd*, which is a hdf5-file with a data tree of very simple nature. 
 Comparable to tagged image file formats like *.edf* or *.tiff*, the ``ptyd`` data file seperates
 meta information (stored in ``meta/``) from the actual data payload 
@@ -371,7 +369,7 @@ Append the following lines into ``[ptypy_root]/ptypy/experiment.__init__.py``::
   from user import NumpyScan
   PtyScanTypes.update({'numpy':NumpyScan})
 
-Now, your our new subclass will be used whenever you pass ``'numpy'`` for
+Now, your new subclass will be used whenever you pass ``'numpy'`` for
 the :py:data:`.scan.data.source` parameter. All special parameters of the class
 should be passed via the dict :py:data:`.scan.data.recipe`. 
 

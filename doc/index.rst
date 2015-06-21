@@ -5,17 +5,17 @@ Welcome Ptychonaut!
 framework for scientific ptychography compiled by 
 P.Thibault and B. Enders amd licensed under the GPLv2 license.
 
-It comprises 7 years of experience in the field of ptychography condensed  
-to a veratile python package. The package covers the whole path of 
-ptychographic analysis after the actual experiment 
+It it the result of 7 years of experience in the field of ptychography condensed
+into a versatile python package. The package covers the whole path of
+ptychographic analysis after the actual experiment is completed
 - from data management to reconstruction to visualization.
 
 The main idea of ptypy is: *"Flexibility and Scalabality through abstraction"*. 
 Most often, you will find a class for every concept of ptychography in 
 |ptypy|. Using these or other more abstract base classes, new ideas
 may be developed in a rapid manner without the cumbersome overhead of 
-:py:mod:`data<ptypy.core.data>` management 
-, memory access or :py:mod:`distributed <ptypy.utils.parallel>` computing. Additionally, |ptypy|
+:py:mod:`data<ptypy.core.data>` management, memory access or
+:py:mod:`distributed <ptypy.utils.parallel>` computing. Additionally, |ptypy|
 provides a rich set of :py:mod:`utilities <ptypy.utils>` and helper functions,
 especially for :py:mod:`input/output <ptypy.io>`
 
@@ -41,7 +41,7 @@ Highlights
   
 
 * **Mixed-state** reconstructions of probe and object [#states]_ for 
-  overcoming partial coherence or related phenomane.
+  overcoming partial coherence or related phenomena.
   
 * **On-the-fly** reconstructions (while data is being acquired) using the
   the :any:`PtyScan` class in the linking mode :ref:`linking mode<case_flyscan>` 

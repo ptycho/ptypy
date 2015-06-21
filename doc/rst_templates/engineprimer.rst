@@ -2,7 +2,7 @@ Writing your own engine
 =======================
 
 This tutorial aims at providing you with the information you need to build 
-your own reconstruction engine from scratch. First, Lets have a look 
+your own reconstruction engine from scratch. First, let's have a look
 how the :any:`Ptycho` class expects an *Engine* to work. 
 
 In :any:`Ptycho.init_engines` we find that an Engine is constructed
@@ -26,7 +26,7 @@ In :any:`Ptycho.run` we find that three methods are called:
    :emphasize-lines: 8,22,25
    :dedent: 4
    
-Hence an *Engine* class should consist of at least the following methods
+Hence an *Engine* class should implement at least the following methods
 
 - Engine. *__init__(self,ptycho, parameters)*
 - Engine. *initialize()*
