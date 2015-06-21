@@ -17,23 +17,24 @@ from . import BaseEngine
 import numpy as np
 import time
 
+
 __all__=['DM']
 
 parallel = u.parallel
 
 DEFAULT = u.Param(
-    fourier_relax_factor = 0.01,
+    fourier_relax_factor = 0.05,
     alpha = 1,
     update_object_first = True,
     overlap_converge_factor = .1,
     overlap_max_iterations = 10,
-    probe_inertia = 1e-9,               # Portion of probe that is kept from iteraiton to iteration, formally cfact
-    object_inertia = 1e-4,              # Portion of object that is kept from iteraiton to iteration, formally DM_smooth_amplitude
+    #probe_inertia = 1e-9,               # Portion of probe that is kept from iteraiton to iteration, formally cfact
+    #object_inertia = 1e-4,              # Portion of object that is kept from iteraiton to iteration, formally DM_smooth_amplitude
     obj_smooth_std = None,              # Standard deviation for smoothing of object between iterations
     clip_object = None,                 # None or tuple(min,max) of desired limits of the object modulus
 )
 
-
+    
 class DM(BaseEngine):
     
     DEFAULT = DEFAULT
@@ -66,37 +67,43 @@ class DM(BaseEngine):
         """
         last minute initialization, everything, that needs to be recalculated, when new data arrives
         """
-        mxlist = [np.sum(diview.data) if diview.active else self.ptycho.FType(0.0) for diview in self.di.V.values()]
-        self.max_power = parallel.MPImax(mxlist) 
-        self.pbound = .25 *  self.p.fourier_relax_factor**2 * self.max_power / self.di.S.values()[0].shape[-1]**2
+        self.pbound = {}
+        for name,s in self.di.S.iteritems():
+            self.pbound[name] = .25 *  self.p.fourier_relax_factor**2 * s.pbound_stub
         
         # fill object with coverage of views
         for name,s in self.ob_viewcover.S.iteritems():
             s.fill(s.get_view_coverage())
 
-    def engine_iterate(self):
+    def engine_iterate(self, num=1):
         """
-        Compute one iteration.
+        Compute `num` iterations.
         """
-        
+        to = 0.
+        tf = 0.
         error_dct={}
-        t = time.time() 
-        # Fourier update  
-        for name,di_view in self.di.V.iteritems():
-            ma_view = di_view.pod.ma_view 
-            error_dct[name] = basic_fourier_update(di_view, ma_view, pbound=self.pbound)
-        logger.info('Time spent in Fourier update: %.2f' % (time.time()-t))    
-
-        ## make a sorted error array for MPI reduction
-        ## error is sorted after the di_view IDs. This is needed for local error analysis later.
-        error = np.array([error_dct[k] for k in np.sort(error_dct.keys())])
-        error[error<0]=0.
-        parallel.allreduce(error)
-        
-        # store error. maybe better in runtime?
-        self.error = error
-        self.overlap_update()
-       
+        for it in range(num):
+            t1 = time.time() 
+            
+            # Fourier update  
+            for name,di_view in self.di.V.iteritems():
+                if not di_view.active: continue
+                ma_view = di_view.pod.ma_view 
+                pbound = self.pbound[di_view.storage.ID]
+                error_dct[name] = basic_fourier_update(di_view,pbound=pbound, alpha = self.p.alpha)
+            
+            t2 = time.time()
+            tf += t2-t1
+            
+            # Overlap update
+            self.overlap_update()
+            
+            t3 = time.time()
+            to += t3-t2
+            
+        logger.info('Time spent in Fourier update: %.2f' % tf)
+        logger.info('Time spent in Overlap update: %.2f' % to)
+        error = parallel.gather_dict(error_dct)
         return error
 
     def engine_finalize(self):
@@ -146,7 +153,7 @@ class DM(BaseEngine):
             # Update probe
             logger.debug(prestr + '----- probe update -----')
             change = self.probe_update()
-            logger.info(prestr + 'change in probe is %.3f' % change)
+            logger.debug(prestr + 'change in probe is %.3f' % change)
             
             # stop iteration if probe change is small
             if change < self.p.overlap_converge_factor: break
@@ -184,8 +191,8 @@ class DM(BaseEngine):
         ### DM update per node
         for name,pod in self.pods.iteritems():
             if not pod.active: continue
-            pod.object += pod.probe.conj() * pod.exit
-            ob_nrm[pod.ob_view] += u.abs2(pod.probe)
+            pod.object += pod.probe.conj() * pod.exit * pod.object_weight
+            ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
         
         ### distribute result with MPI
         for name,s in self.ob.S.iteritems():
@@ -230,8 +237,8 @@ class DM(BaseEngine):
         ### DM update per node
         for name,pod in self.pods.iteritems():
             if not pod.active: continue
-            pod.probe += pod.object.conj() * pod.exit
-            pr_nrm[pod.pr_view] += u.abs2(pod.object)
+            pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
+            pr_nrm[pod.pr_view] += u.cabs2(pod.object) * pod.probe_weight
 
         change = 0.
         

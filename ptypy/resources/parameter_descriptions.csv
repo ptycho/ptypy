@@ -1,0 +1,238 @@
+level,name,default,type,static,lowlim,uplim,choices,shortdoc,longdoc,userlevel,validity
+0,verbose_level,1,int,yes,0,4,,Verbosity level,"Verbosity level for information logging.
+ - ``0``: Only errors
+ - ``1``: Warning
+ - ``2``: Process Information
+ - ``3``: Object Information
+ - ``4``: Debug",0,
+0,data_type,single,str,yes,,,"['single','double']",Reconstruction floating number precision,Reconstruction floating number precision (``'single'`` or ``'double'``),1,
+0,run,None,str,yes,,,,Reconstruction identifier,"Reconstruction run identifier. If ``None``, the run name will be constructed at run time from other information.",0,
+0,dry_run,FALSE,bool,yes,,,,Dry run switch ,"Run everything skipping all memory and cpu-heavy steps (and file saving).
+**NOT IMPLEMENTED**",2,
+0,io,,Param,yes,,,,Global parameters for I/O,,,
+1,home,./,dir,yes,,,,Base directory for all I/O,home is the root directory for all input/output operations. All other path parameters that are relative paths will be relative to this directory.,1,
+1,rfile,recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr,str,yes,,,,Reconstruction file name (or format string),Reconstruction file name or format string (constructed against runtime dictionary),1,
+1,autosave,,Param,yes,,,,Auto-save options,,,
+2,active,TRUE,bool,yes,,,,Activation switch,If ``True`` the current reconstruction will be saved at regular intervals. **unused**,1,
+2,interval,10,int,yes,-1,,,Auto-save interval,If ``>0`` the current reconstruction will be saved at regular intervals according to the pattern in :py:data:`paths.autosave` . If ``<=0`` not automatic saving,1,
+2,rfile,dumps/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr,str,yes,,,,Auto-save file name (or format string),Auto-save file name or format string (constructed against runtime dictionary),1,
+1,interaction,,Param,yes,,,,Server / Client parameters,"If ``None`` or ``False`` is passed here in script instead of a Param, it translates to  ``active=False`` i.e. no ZeroMQ interaction server. ",,
+2,active,TRUE,bool,yes,,,,Activation switch,"Set to ``False`` for no  ZeroMQ interaction server
+",,
+2,address,tcp://127.0.0.1,str,yes,,,,The address the server is listening to.,"Wenn running ptypy on a remote server, it is the servers network address. ",2,
+2,port,5560,int,yes,,,,The port the server is listening to.,Make sure to pick an unused port with a few unused ports close to it.,2,
+2,connections,10,int,yes,,,,Number of concurrent connections on the server,A range ``[port : port+connections]`` of ports adjacent :py:data:`~.io.interaction.port` will be opened on demand for connecting clients.,2,
+1,autoplot,,Param,yes,,,,Plotting client parameters,"In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
+",,
+2,imfile,plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png,str,yes,,,,Plot images file name (or format string),,1,
+2,interval,1,int,yes,-1,,,Number of iterations between plot updates,"Requests to the server will happen with this iteration intervals. Note that this will work only if interaction.polling_interval is smaller or equal to this number. If ``interval =0`` plotting is disabled which should be used, when ptypy is run on a cluster.",1,
+2,threaded,TRUE,bool,yes,,,,Live plotting switch,"If ``True``, a plotting client will be spawned in a new thread and connected at initialization. If ``False``, the master node will carry out the plotting, pausing the reconstruction. This option should be set to ``True`` when ptypy is run on an isolated workstation.",1,
+2,layout,None,"str, Param",yes,,,,Options for default plotter or template name,"Flexible layout for default plotter is not implemented yet. Please choose one of the templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``",2,
+2,dump,FALSE,bool,yes,,,,Switch to dump plots as image files,,1,
+2,make_movie,FALSE,bool,yes,,,,Produce reconstruction movie after the reconstruction.,Switch to request the production of a movie from the dumped plots at the end of the reconstruction.,1,
+0,scan,,Param,yes,,,,Scan parameters,This categrogy specifies defaults for all scans. Scan-specific parameters are stored in scans.scan_%%,,
+1,tags,None,str,yes,,,,Comma seperated string tags describing the data input,[deprecated?],2,
+1,if_conflict_use_meta,TRUE,bool,yes,,,,Give priority to metadata relative to input parameters,"[deprecated, use :py:data:`.scan.geometry.precedence` insteead]",2,
+1,data,,Param,yes,,,,Data preparation parameters,,,prepare_data
+2,recipe,,ext,yes,,,,Data preparation recipe container,,,
+2,source,None,file,yes,,,,"Describes where to get the data from.
+","Accepted values are:
+ - ``'file'``: data will be read from a .ptyd file.
+ - any valid recipe name: data will be prepared using the recipe.
+ - ``'sim'`` : data will be simulated according to parameters in simulation  ",0,
+2,dfile,None,file,yes,,,,Prepared data file path,"If source was ``None`` or ``'file'``, data will be loaded from this file and processing as well as saving is deactivated. If source is the name of an experiment recipe or path to a file, data will be saved to this file",0,
+2,label,None,str,yes,,,,The scan label,Unique string identifying the scan,1,
+2,shape,None,"int, tuple",yes,,,,Shape of the region of interest cropped from the raw data.,"Cropping dimension of the diffraction frame
+Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).",1,
+2,save,None,str,yes,,,"['merge','append','link']",Saving mode,"Mode to use to save data to file.
+ - ``None``: No saving 
+ - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
+ - ``'append'``: appends each chunk in master \*.ptyd file
+ - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately in the path given by the link. Links file paths are relative to master file.",1,
+2,center,None,tuple,yes,,,,Center (pixel) of the optical axes in raw data,"If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere",1,
+2,psize,None,"float, tuple",yes,0,,,Detector pixel size,Dimensions of the detector pixels (in meters),0,
+2,distance,None,float,yes,0,,,Sample-to-detector distance,In meters.,0,
+2,rebin,None,int,yes,1,8,,Rebinning factor,Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*,1,
+2,orientation,None,"int, tuple",yes,,,range(8),Data frame orientation," - ``None`` or ``0``: correct orientation
+ - ``1``: invert columns (numpy.flip_lr)
+ - ``2``: invert columns, invert rows
+ - ``3``: invert rows  (numpy.flip_ud)
+ - ``4``: transpose (numpy.transpose)
+ - ``4+i``: tranpose + other operations from above
+
+Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, do_flipud, do_fliplr)``",1,
+2,energy,None,float,yes,0,,,Photon energy of the incident radiation,,0,
+2,min_frames,1,int,yes,,,,Minimum number of frames loaded by each node,,2,
+2,num_frames,None,int,yes,,,,Maximum number of frames to be prepared,"If `positions_theory` are provided, num_frames will be ovverriden with the number of positions available",1,
+2,chunk_format,.chunk%02d,str,yes,,,,Appendix to saved files if save == 'link',,2,
+2,auto_center,None,bool,yes,,,,Determine if center in data is calculated automatically," - ``False``, no automatic centering 
+ - ``None``, only if :py:data:`center` is ``None`` 
+ - ``True``, it will be enforced",0,
+2,load_parallel,data,str,yes,,,"['data','common','all']",Determines what will be loaded in parallel,"Choose from ``None``, ``'data'``, ``'common'``, ``'all'``",,
+2,positions_theory,None,ndarray,yes,,,,Theoretical positions for this scan,"If provided, experimental positions from :any:`PtyScan` subclass will be ignored. If data preparation is called from Ptycho instance, the calculated positions from the :py:func:`ptypy.core.xy.from_pars` dict will be inserted here",2,
+2,experimentID,None,str,yes,,,,Name of the experiment,"If None, a default value will be provided by the recipe. **unused**",2,
+1,sharing,,Param,yes,,,,Scan sharing options,,,
+2,object_share_with,None,str,yes,,,,Label or index of scan to share object with.,"Possible values:
+ - ``None``: Do not share
+ - *(string)*: Label of the scan to share with
+ - *(int)*: Index of scan to share with",1,
+2,object_share_power,1,float,yes,0,,,Relative power for object sharing,,1,
+2,probe_share_with,None,str,yes,,,,Label or index of scan to share probe with.,"Possible values:
+ - ``None``: Do not share
+ - *(string)*: Label of the scan to share with
+ - *(int)*: Index of scan to share with",1,
+2,probe_share_power,1,float,yes,0,,,Relative power for probe sharing,,1,
+1,geometry,,Param,yes,,,,Physical parameters,"All distances are in meters. Other units are specified in the documentation strings.
+These paramters have very low priority in the :any:`Ptycho` construction process and can usually left out in script if either :py:data:`.scan.data` ot the invoked preparation subclass provide enough geometric information. You can change this behavior with the `precedence` parameter.",,
+2,precedence,None,str,yes,,,,Where geometry parameters take precence over others,"Possible options if parameters are not None:
+ - ``None``: Fill only missing parameters (default) at the very last moment making meta data from :any:`PtyScan` the default source of geometric information.
+ - ``'meta'``: Overwrite meta after data was loaded, does not affect data preparation.
+ - ``'data'``: Overwrite entries in :py:data:`.scan.data`. This affects data preparation too.",2,
+2,energy,6.2,float,yes,0,,,Energy (in keV),"If ``None``, uses `lam` instead.",0,
+2,lam,None,float,yes,0,,,Wavelength,Used only if `energy` is ``None``,0,energy is None
+2,distance,7.19,float,yes,0,,,Distance from object to detector,,0,
+2,psize,0.000172,float,yes,0,,,Pixel size in Detector plane,,1,
+2,resolution,None,float,yes,0,,,Pixel size in Sample plane,This parameter is used only for simulations,2,
+2,propagation,farfield,str,yes,,,,Propagation type,"Either ""farfield"" or ""nearfield""",1,
+1,xy,,Param,yes,,,,Parameters for scan patterns,"These parameters are useful in two cases:
+ - When the experimental positions are not known (no encoders)
+ - When using the package to simulate data.
+
+In script an array of shape *(N,2)* may be passed here instead of a Param or dictionary as an **override**",,
+2,model,None,str,,0,,,Scan pattern type,"The type must be one of the following:
+ - ``None``: positions are read from data file.
+ - ``'raster'``: raster grid pattern
+ - ``'round'``: concentric circles pattern
+ - ``'spiral'``: spiral pattern
+
+In script an array of shape *(N,2)* may be passed here instead",0,
+2,spacing,1.50E-06,"float, tuple",yes,0,,,Pattern spacing,"Spacing between scan positions. If the model supports asymmetric scans, a tuple passed here will be interpreted as *(dy,dx)* with *dx* as horizontal spacing and *dy* as vertical spacing. If ``None`` the value is calculated from `extent` and `steps`
+",0,
+2,steps,10,"int, tuple",yes,0,,,Pattern step count,"Number of steps with length *spacing* in the grid. A tuple *(ny,nx)* provided here can be used for a different step in vertical ( *ny* ) and horizontal direction ( *nx* ). If ``None`` the, step count is calculated from `extent` and `spacing`",0,
+2,extent,1.50E-05,"float, tuple",yes,0,,,Rectangular extent of pattern,"Defines the absolut maximum extent. If a tuple *(ly,lx)* is provided the extent may be rectangular rather than square. All positions outside of `extent` will be discarded. If ``None`` the extent will is `spacing` times `steps`",0,
+2,offset,0,"float, tuple",yes,,,,"Offset of scan pattern relative to origin
+","If tuple, the offset may differ in *x* and *y*. Please not that the offset will be included when removing scan points outside of `extend`.",2,
+2,jitter,0,"float, tuple",yes,,,,RMS of jitter on sample position,**Only use in simulation**. Adds a random jitter to positions.,2,
+2,count,None,int,yes,,,,"Number of scan points
+",Only return return positions up to number of `count`.,1,
+1,illumination,,Param,yes,0,,,Illumination model (probe),"
+In script, you may pass directly a three dimensional  numpy.ndarray here instead of a `Param`. This array will be copied to the storage instance with no checking whatsoever. Used in `~ptypy.core.illumination`",,
+2,model,None,str,yes,,,,Type of illumination model,"One of:
+ - ``None`` : model initialitziation defaults to flat array filled with the specified number of photons
+ - ``'recon'`` : load model from previous reconstruction, see `recon` Parameters
+ - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
+ - *<resource>* : one of ptypys internal image resource strings
+ - *<template>* : one of the templates inillumination module
+
+In script, you may pass a numpy.ndarray here directly as the model. It is considered as incoming wavefront and will be propagated according to `propagation` with an optional `aperture` applied before",0,
+2,photons,None,int,yes,0,,,Number of photons in the incident illumination,A value specified here will take precedence over calculated statistics from the loaded data.,2,
+2,recon,,Param,yes,,,,Parameters to load from previous reconstruction,,,
+3,rfile,\*.ptyr,file,yes,,,,Path to a ``.ptyr`` compatible file,,0,
+3,ID,None,,,,,,ID (label) of storage data to load,``None`` means any ID,0,
+3,layer,None,float,,,,,Layer (mode) of storage data to load,"``None`` means all layers, choose ``0`` for main mode",0,
+2,stxm,,Param,,,,,Parameters to initialize illumination from diffraction data,,1,
+3,label,None,str,yes,,,,Scan label of diffraction that is to be used for probe estimate,"``None``, own scan label is used",1,
+2,aperture,,Param,yes,,,,Beam aperture parameters,,,
+3,form,circ,str,yes,0,,,"One of None, 'rect' or 'circ'","One of:
+ - ``None`` : no aperture, this may be useful for nearfield
+ - ``'rect'`` : rectangular aperture
+ - ``'circ'`` : circular aperture",0,
+3,diffuser,None,float,yes,0,,,Noise in the transparen part of the aperture,"Can be either:
+ - ``None`` : no noise
+ - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+ - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)",2,
+3,size,None,float,yes,0,,,Aperture width or diameter,"May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture ",0,
+3,edge,2,int,yes,0,,,Edge width of aperture (in pixels!),,2,
+3,central_stop,None,float,yes,0,1,,size of central stop as a fraction of aperture.size,If not None: places a central beam stop in aperture. The value given here is the fraction of the beam stop compared to `size` ,1,
+3,offset,0,"float, tuple",yes,,,,Offset between center of aperture and optical axes,"May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset",2,
+2,propagation,,Param,yes,,,,Parameters for propagation after aperture plane,Propagation to focus takes precedence to parallel propagation if `foccused` is not ``None``,,
+3,parallel,None,float,yes,,,,Parallel propagation distance,If ``None`` or ``0`` : No parallel propagation ,0,
+3,focussed,None,float,yes,,,,Propagation distance from aperture to focus,If ``None`` or ``0`` : No focus propagation ,0,
+3,antialiasing,1,float,yes,,,,Antialiasing factor,"Antialiasing factor used when generating the probe. (numbers larger than 2 or 3 are memory hungry)
+**[Untested]**",2,
+3,spot_size,None,float,yes,0,,,Focal spot diameter,"If not ``None``, this parameter is used to generate the appropriate aperture size instead of :py:data:`size`",1,foccussed is not None and foccused!=0
+2,diversity,,Param,yes,,,,Probe mode(s) diversity parameters,Can be ``None`` i.e. no diversity,,
+3,noise,None,tuple,yes,,,,Noise in the generated modes of the illumination ,"Can be either:
+ - ``None`` : no noise
+ - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+ - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)",1,
+3,power,0.1,"tuple, float",yes,,,,Power of modes relative to main mode (zero-layer),,1,
+3,shift,None,float,yes,,,,Lateral shift of modes relative to main mode,**[not implemented]**,2,
+1,sample,,Param,yes,0,,,Initial object modelization parameters,"In script, you may pass a numpy.array here directly as the model. This array will be passed to the storage instance with no checking whatsoever. Used in `~ptypy.core.sample`",,
+2,model,None,str,yes,,,,Type of initial object model,"One of:
+ - ``None`` : model initialitziation defaults to flat array filled `fill`
+ - ``'recon'`` : load model from STXM analysis of diffraction data
+ - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
+ - *<resource>* : one of ptypys internal model resource strings
+ - *<template>* : one of the templates in sample module
+
+In script, you may pass a numpy.array here directly as the model. This array will be processed according to `process` in order to *simulate* a sample from e.g. a thickness profile.",0,
+2,fill,1,"float, complex",yes,,,,Default fill value,,,"model == ""fill"""
+2,recon,,Param,yes,,,,Parameters to load from previous reconstruction,,,
+3,rfile,\*.ptyr,file,yes,,,,Path to a ``.ptyr`` compatible file,,0,
+3,ID,None,,,,,,ID (label) of storage data to load,``None`` is any ID,1,
+3,layer,None,float,,,,,Layer (mode) of storage data to load,"``None`` is all layers, choose ``0`` for main mode",1,
+2,stxm,,Param,yes,,,,STXM analysis parameters,,1,
+3,label,None,str,yes,,,,Scan label of diffraction that is to be used for probe estimate,"``None``, own scan label is used",1,
+2,process,None,Param,yes,,,,Model processing parameters,"Can be ``None``, i.e. no processing",,
+3,offset,"(0,0)",tuple,yes,0,,,Offset between center of object array and scan pattern,,2,
+3,zoom,None,tuple,yes,0,,,Zoom value for object simulation.,"If ``None``, leave the array untouched. Otherwise the modeled or loaded image will be resized using :py:func:`zoom`.",2,
+3,formula,None,str,yes,,,,Chemical formula,"A Formula compatible with a cxro database query,e.g. ``'Au'`` or ``'NaCl'`` or ``'H2O'`` ",2,
+3,density,1,float,yes,,,,Density in [g/ccm],Only used if `formula` is not None,2,
+3,thickness,1.00E-06,float,yes,,,,Maximum thickness of sample,"If ``None``, the absolute values of loaded source array will be used",2,
+3,ref_index,0.5+0.j,complex,yes,0,,,Assigned refractive index,"If ``None``, treat source array as projection of refractive index. If a refractive index is provided the array's absolute value will be used to scale the refractive index.",2,
+3,smoothing,2,int,yes,0,,,Smoothing scale,Smooth the projection with gaussian kernel of width given by `smoothing_mfs`,2,
+2,diversity,,Param,yes,,,,Probe mode(s) diversity parameters,Can be ``None`` i.e. no diversity,,
+3,noise,None,tuple,yes,,,,Noise in the generated modes of the illumination ,"Can be either:
+ - ``None`` : no noise
+ - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+ - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)",1,
+3,power,0.1,"tuple, float",yes,,,,Power of modes relative to main mode (zero-layer),,1,
+3,shift,None,float,yes,,,,Lateral shift of modes relative to main mode,**[not implemented]**,2,
+1,coherence,,Param,yes,0,,,Coherence parameters,,,
+2,num_probe_modes,1,int,yes,0,,,Number of probe modes,,0,
+2,num_object_modes,1,int,yes,0,,,Number of object modes,,0,
+2,spectrum,None,list,yes,0,,,Amplitude of relative energy bins if the probe modes have a different energy,,2,
+2,object_dispersion,None,str,yes,,,,Energy dispersive response of the object,"One of:
+ - ``None`` or ``'achromatic'``: no dispersion
+ - ``'linear'``: linear response model
+ - ``'irregular'``: no assumption
+
+**[not implemented]**",2,
+2,probe_dispersion,None,str,yes,,,,Energy dispersive response of the probe,"One of:
+ - ``None`` or ``'achromatic'``: no dispersion
+ - ``'linear'``: linear response model
+ - ``'irregular'``: no assumption
+
+**[not implemented]**",2,
+0,scans,,Param,yes,,,,Param container for instances of `scan` parameters,"If not specified otherwise, entries in *scans* will use parameter defaults from :py:data:`.scan`",0,
+1,scan_00,None,scan,no,,,,Default first scans entry,"If only a single scan is used in the reconstruction, this entry may be left unchanged. If more than one scan is used, please make an entry for each scan. The name *scan_00* is an arbitrary choice and may be set to any other string.",0,
+0,engine,,Param,yes,,,,Reconstruction engine parameters,,,
+1,common,,Param,yes,,,,Parameters common to all engines,,,
+2,name,DM,str,yes,,,,Name of engine. ,"Dependent on the name given here, the default parameter set will be a superset of `common` and parameters to the entry of the same name.",,
+2,numiter,20,int,yes,0,,,Total number of iterations,,0,
+2,numiter_contiguous,1,int,yes,0,,,Number of iterations without interruption,"The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...)",2,
+2,probe_support,0.7,float,yes,0,,,Fraction of valid probe area (circular) in probe frame,,0,
+2,clip_object,None,tuple,yes,0,,,Clip object amplitude into this intrervall,,1,
+1,DM,,Param,yes,,,,Parameters for Difference map engine,,,
+2,alpha,1,int,yes,0,,,Difference map parameter,,1,
+2,probe_update_start,2,int,yes,0,,,Number of iterations before probe update starts,,1,
+2,update_object_first,TRUE,bool,yes,0,,,If False update object before probe,,2,
+2,overlap_converge_factor,0.05,float,yes,0,,,Threshold for interruption of the inner overlap loop,"The inner overlap loop refines the probe and the object simultaneously. This loop is escaped as soon as the overall change in probe, relative to the first iteration, is less than this value.",2,
+2,overlap_max_iterations,10,int,yes,0,,,Maximum of iterations for the overlap constraint inner loop,,2,
+2,probe_inertia,0.001,float,yes,0,,,Weight of the current probe estimate in the update,,2,
+2,object_inertia,0.1,float,yes,0,,,Weight of the current object in the update,,2,
+2,fourier_relax_factor,0.01,float,yes,0,,,"If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met",Set this value higher for noisy data,1,
+2,obj_smooth_std,20,int,yes,0,,,Gaussian smoothing (pixel) of the current object prior to update,"If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.",2,
+1,ML,,Param,yes,,,,Maximum Likelihood parameters,,,
+2,type,gaussian,str,yes,0,,,"Likelihood model. One of 'gaussian', 'poisson' or 'euclid'",[only 'gaussian' is implemented for now],2,
+2,floating_intensities,FALSE,bool,yes,,,,"If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).",,2,
+2,intensity_renormalization,1,float,yes,0,,,A rescaling of the intensity so they can be interpreted as Poisson counts.,,0,
+2,reg_del2,TRUE,bool,yes,0,,,Whether to use a Gaussian prior (smoothing) regularizer.,,0,
+2,reg_del2_amplitude,0.01,float,yes,0,,,Amplitude of the Gaussian prior if used.,,0,reg_del2
+2,smooth_gradient,0,float,yes,0,,,"Smoothing preconditioner. If 0, not used, if > 0 gaussian filter if < 0 Hann window.",,1,
+2,scale_precond,FALSE,bool,yes,0,,,Whether to use the object/probe scaling preconditioner.,This parameter can give faster convergence for weakly scattering samples.,2,
+2,scale_probe_object,1,float,yes,0,,,Relative scale of probe to object.,,2,
+2,probe_update_start,0,int,yes,,,,Number of iterations before probe update starts,,1,
+0,engines,,Param,yes,,,,"Container for instances of ""engine"" parameters",All engines registered in this structure will be executed sequentially.,,
+1,engine_00,,engine,no,,,,Default first engines entry,Default first engine is difference map (DM),0,

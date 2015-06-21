@@ -14,23 +14,23 @@ import time
 import ptypy
 from .. import utils as u
 from ..utils import parallel
+from ..utils.verbose import logger, headerline
 
 __all__ = ['BaseEngine']
 
-DEFAULT = u.Param(
-    itertime = 2.,    # Sleep time for a single iteration (in seconds)
-)
 
-DEFAULT_BASE = u.Param(
+DEFAULT = u.Param(
     numiter = 10,             # Total number of iterations
     numiter_contiguous = 1,    # number of iterations until next interactive release   
     probe_support = 0.8,       # relative area of probe array to which the probe is constraint if probe support becomes of more complex nature, consider putting it in illumination.py
-    subpix = False,           # subpixel interpolation
     subpix_start = 0,         # Number of iterations before starting subpixel interpolation
-    subpix_method = 'linear',  # 'fourier','linear' subpixel interpolation 
-    probe_update_start = 0
+    subpix = 'linear',  # 'fourier','linear' subpixel interpolation or None for no interpolation
+    probe_inertia = 0.001,             # (88) Probe fraction kept from iteration to iteration
+    object_inertia = 0.1,              # (89) Object fraction kept from iteration to iteration
+    clip_object = None,                # (91) Clip object amplitude into this intrervall
+    obj_smooth_std = 20,               # (90) Gaussian smoothing (pixel) of kept object fraction
+    probe_update_start =0,
 )
-
 
 class BaseEngine(object):
     """
@@ -44,27 +44,27 @@ class BaseEngine(object):
     engine_finalize
     """
     
-    DEFAULT_BASE = DEFAULT_BASE
-    DEFAULT = {}
+    DEFAULT= DEFAULT.copy()
 
-    def __init__(self, ptycho_parent, pars=None):
+    def __init__(self, ptycho, pars=None):
         """
         Base reconstruction engine.
         
-        Parameters:
+        Parameters
         ----------
-        ptycho_parent: ptycho object
-                       The parent ptycho class.
+        ptycho : Ptycho 
+            The parent :any:`Ptycho` object.
+            
         pars: Param or dict
-              Initialization parameters
+            Initialization parameters
         """
-        self.ptycho = ptycho_parent
-        p = u.Param(self.DEFAULT_BASE)
-        p.update(self.DEFAULT)
+        self.ptycho = ptycho
+        p = u.Param(self.DEFAULT)
+
         if pars is not None: p.update(pars)
         self.p = p
-        self.itermeta = []
-        self.meta = u.Param()
+        #self.itermeta = []
+        #self.meta = u.Param()
         self.finished = False
         self.numiter = self.p.numiter
         #self.initialize()
@@ -73,8 +73,16 @@ class BaseEngine(object):
         """
         Prepare for reconstruction.
         """
+        logger.info('\n'+headerline('Starting %s-algoritm.' % str(self.__class__.__name__),'l','=')+'\n')
+        logger.info('Parameter set:')
+        logger.info(u.verbose.report(self.p,noheader=True).strip()) 
+        logger.info(headerline('','l','='))
+        
         self.curiter = 0
-        self.errorlist = []
+        if self.ptycho.runtime.iter_info:
+            self.alliter = self.ptycho.runtime.iter_info[-1]['iterations']
+        else:
+            self.alliter = 0
         
         # common attributes for all reconstructions
         self.di = self.ptycho.diff
@@ -120,43 +128,40 @@ class BaseEngine(object):
         if num is not None:
             N = num
         
-        for n in range(N):
-            if self.finished: break 
-            # for benchmarking
-            t = time.time()
-            
-            ############################
-            # call engine specific iteration routine
-            ###########################
-            
-            error = self.engine_iterate()
-            
-            self.errorlist.append(error)
-            
-            ############################
-            # Increment the iterate number
-            ############################
-            self.curiter += 1
-            if self.curiter == self.numiter: self.finished = True
-            
-            ############################
-            # Prepare meta
-            # PT: Should this be done only by the master node?
-            ############################
-            self.meta.iteration = self.curiter
-            self.meta.engine = self.__class__.__name__
-            self.meta.duration = time.time()-t
-            self.meta.error = error #np.array(self.errorlist)
-            self.itermeta.append(self.meta.copy())
-            # inform ptycho in runtime information
-            meta = {'iterations':len(self.ptycho.runtime.iter_info)}
-            meta.update(self.meta.copy())
-            self.ptycho.runtime.iter_info.append(meta)
-            ############################
-            # Join all processes here
-            ############################
-            parallel.barrier()
+        if self.finished: return 
 
+        # for benchmarking
+        self.t = time.time()
+        
+        # call engine specific iteration routine 
+        # and collect the per-view error.      
+        self.error = self.engine_iterate(N)
+        
+        # Increment the iterate number
+        self.curiter += N
+        self.alliter += N
+        
+        if self.curiter >= self.numiter: self.finished = True
+        
+        # Prepare runtime
+        self._fill_runtime()
+
+        parallel.barrier()
+
+    def _fill_runtime(self):
+        local_error = u.parallel.gather_dict(self.error)
+        error = np.array(local_error.values()).mean(0)
+        info = dict(
+            iteration = self.curiter,
+            iterations = self.alliter,
+            engine = self.__class__.__name__,
+            duration = time.time()-self.t,
+            error = error
+            )
+        
+        self.ptycho.runtime.iter_info.append(info)
+        self.ptycho.runtime.error_local = local_error
+        
     def finalize(self):
         """
         Clean up after iterations are done
@@ -179,7 +184,7 @@ class BaseEngine(object):
         """
         raise NotImplementedError()
     
-    def engine_iterate(self):
+    def engine_iterate(self, num):
         """
         Engine single-step iteration. All book-keeping is done in self.iterate(),
         so this routine only needs to implement the "core" actions.

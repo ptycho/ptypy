@@ -24,17 +24,26 @@ import logging
 
 from . import parallel
 
-__all__ = ['logger', 'set_level', '_']
+__all__ = ['logger', 'set_level', 'report']
+
+# custom logging level to diplay python objects (not as detailed as debug but also not that important for info)
+INSPECT = 15
 
 CONSOLE_FORMAT = {logging.ERROR : 'ERROR %(name)s - %(message)s',
                   logging.WARNING : 'WARNING %(name)s - %(message)s',
                   logging.INFO : '%(message)s',
+                  INSPECT : 'INSPECT %(message)s',
                   logging.DEBUG : 'DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
 
 FILE_FORMAT = {logging.ERROR : '%(asctime)s ERROR %(name)s - %(message)s',
                   logging.WARNING : '%(asctime)s WARNING %(name)s - %(message)s',
                   logging.INFO : '%(asctime)s %(message)s',
+                  INSPECT : '%(asctime)s INSPECT %(message)s',
                   logging.DEBUG : '%(asctime)s DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
+            
+# How many characters per line in console
+LINEMAX = 80
+
 
 # Monkey patching logging.Logger - is this a good idea?
 
@@ -93,7 +102,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.WARNING)
 
 # Create console handler
-consolehandler = logging.StreamHandler()
+consolehandler = logging.StreamHandler(stream = sys.stdout)
 logger.addHandler(consolehandler)
 
 # Add formatter
@@ -104,37 +113,78 @@ consolehandler.setFormatter(consoleformatter)
 consolefilter = MPIFilter()
 logger.addFilter(consolefilter)
 
-level_from_verbosity = {0:logging.CRITICAL, 1:logging.ERROR, 2:logging.WARN, 3:logging.INFO, 4:logging.DEBUG}
-level_from_string = {'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 'INFO':logging.INFO, 'DEBUG':logging.DEBUG}
+level_from_verbosity = {0:logging.CRITICAL, 1:logging.ERROR, 2:logging.WARN, 3:logging.INFO, 4: INSPECT, 5:logging.DEBUG}
+level_from_string = {'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 'INFO':logging.INFO, 'INSPECT': INSPECT, 'DEBUG':logging.DEBUG}
+vlevel_from_logging = dict([(v,k) for k,v in level_from_verbosity.items()]) 
+slevel_from_logging = dict([(v,k) for k,v in level_from_string.items()]) 
 
+def log(level,msg,parallel=False):
+    if not parallel:
+        logger.log(level_from_verbosity[level], msg)
+    else:
+        logger.log(level_from_verbosity[level], msg,extra={'allprocesses':True})
+        
 def set_level(level):
     """
     Set verbosity level. Kept here for backward compatibility
     """
+    logger.info('Verbosity set to %s' % str(level))
     if str(level) == level:
         logger.setLevel(level_from_string[level.upper()])
     else:
         logger.setLevel(level_from_verbosity[level])
     logger.info('Verbosity set to %s' % str(level))
 
+def get_level(num_or_string='num'):
+    """
+    inverse to get level
+    """
+    if num_or_string=='num':
+        return vlevel_from_logging[logger.level]
+    else:
+        return slevel_from_logging[logger.level]
+        
 # Formatting helper
 def _(label, value):
     return '%-25s%s' % (label + ':', str(value))
 
-
-def report(thing,depth=4,maxchar=80):
+def headerline(info='',align = 'c',fill='-'):
+    li = len(info)
+    if li>=60:
+        return headerline(info[li/2:],align,fill)+'\n'+headerline(info[:li/2],align,fill)
+    else:
+        if li != 0:
+            li+=2
+            info = ' '+info+' '
+        empty = LINEMAX-li
+        if align=='c':
+            left = empty/2
+            right = empty-left
+        elif align=='l':
+            left = 4
+            right = empty-left
+        else:
+            right = 4
+            left = empty-right
+    return fill*left+info+fill*right
+    
+def report(thing,depth=4,noheader=False):
     """
     no protection for circular references
     """
     import time
     import numpy as np
     
-    header = '##### NODE %02d ###### ' % parallel.rank + time.asctime() + ' ######\n' 
-    indent = 2
-    level = 0
+    indent = report.indent
+    level = report.level
+    maxchar = report.maxchar
+    hn = report.headernewline
+    star = report.asterisk
     
+    header = '\n---- Process #%d ---- ' % parallel.rank + time.asctime() + ' -----\n'
+
     def _(label,level,obj):
-        pre = " "*indent*level +  '* ' 
+        pre = " "*indent*level + star + ' ' 
         extra = str(type(obj)).split("'")[1]
         pre+=str(label) if label is not None else "id"+np.base_repr(id(obj),base=32)
         if len(pre)>=25:
@@ -143,7 +193,7 @@ def report(thing,depth=4,maxchar=80):
         
     def _format_dict(label, level, obj):
         header,extra = _(label, level, obj) 
-        header+= ' %s(%d)\n' % (extra,len(obj))
+        header+= ' %s(%d)' % (extra,len(obj)) + hn
         if level <= depth:
             #level +=1
             for k,v in obj.iteritems():
@@ -153,12 +203,12 @@ def report(thing,depth=4,maxchar=80):
     def _format_iterable(label, level, lst):
         l = len(lst)
         header,extra = _(label, level, lst)
-        header+= ' %s(%d)' % (extra,l)
+        header+= ' %s(%d)' % (extra,l) 
         string = str(lst)
         if len(string) <= maxchar-25 or level>=depth:
-            return header +'= '+ string +'\n'
+            return header +'= '+ string + hn
         elif l >0:
-            header +='\n'
+            header += hn
             for v in lst[:5]:
                 header += _format(None,level+1,v)
             header += _('...',level+1,' ')[0] + ' ....\n'
@@ -200,4 +250,13 @@ def report(thing,depth=4,maxchar=80):
             stringout = _format_other(key,level, obj)
         return stringout
     
-    return header +_format(None,0,thing)
+    if noheader:
+        return _format(None,0,thing)
+    else:
+        return header +_format(None,0,thing)
+
+report.indent = 2
+report.level = 0
+report.maxchar = LINEMAX
+report.headernewline='\n'
+report.asterisk='*'

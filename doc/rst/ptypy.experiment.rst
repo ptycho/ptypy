@@ -1,0 +1,54 @@
+ptypy.experiment package
+========================
+
+Submodules
+----------
+
+ptypy.experiment.I13 module
+---------------------------
+
+.. automodule:: ptypy.experiment.I13
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ptypy.experiment.ID16Anfp module
+--------------------------------
+
+.. automodule:: ptypy.experiment.ID16Anfp
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ptypy.experiment.optiklabor module
+----------------------------------
+
+.. automodule:: ptypy.experiment.optiklabor
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ptypy.experiment.plugin module
+------------------------------
+
+.. automodule:: ptypy.experiment.plugin
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ptypy.experiment.spec module
+----------------------------
+
+.. automodule:: ptypy.experiment.spec
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: ptypy.experiment
+    :members:
+    :undoc-members:
+    :show-inheritance:

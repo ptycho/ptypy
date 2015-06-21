@@ -13,159 +13,6 @@ __all__ = ['Param', 'asParam'] # 'load',]
 
 PARAM_PREFIX = 'pars'
 
-class Param_legacy(object):
-    """Parameter container
-    
-    In normal use case, this class is not meant to be instantiated by the user.
-    See FSParamFactory and NetworkParamFactory.
-    
-    By default the class has "autovivification" disabled. When enabled, access to any
-    unknown attribute results in its automatic creation (an instance of Param). As a result,
-    this code is legal:
-        
-    >>> p = Param(autoviv=True)
-    >>> p.x = 1
-    >>> p.y.a = 1  # This creates p.y as a Param object
-    
-    To turn it off, one only needs to do
-    >>> p.autoviv = False
-    This will be propagated to all Param children as well.
-    """
-
-    def __init__(self, old_param=None, autoviv=False, none_if_absent=False, **kwargs):
-        """Parameter structure initialization
-        
-        (old_param can be a Param object or a nested dict).
-        """
-        self._autoviv = autoviv
-        self._none_if_absent = none_if_absent
-        if isinstance(old_param, dict):
-            self._from_dict(old_param)
-        elif isinstance(old_param, type(self)):
-            self._from_dict(old_param._to_dict())
-        if kwargs:
-            self._from_dict(kwargs)
-            
-    def __getattr__(self, item):
-        if self._autoviv:
-            if '(' in item: return
-            value = type(self)(autoviv=True)
-            setattr(self, item, value)
-            return value
-        elif self._none_if_absent:
-            setattr(self, item, None)
-            return None
-        else:
-            raise AttributeError
-            
-    def _to_dict(self):
-        return dict( (k,v._to_dict()) if isinstance(v, type(self)) else (k,v) for k,v in self.__dict__.iteritems() if not k.startswith('_'))
-
-    def _from_dict(self, d):
-        for k,v in d.iteritems():
-            if isinstance(v, dict):
-                setattr(self, k, type(self)(v))
-            else:
-                setattr(self, k, v)
-
-    def _copy(self):
-        return Param(self._to_dict())
-        
-    # These are properties to make sure that an error is raised if an attempt is made
-    # at overwriting them.
-    @property
-    def keys(self):
-        """Access the key method"""
-        return self.__dict__.keys
-
-    @property
-    def iteritems(self):
-        """Access the key method"""
-        return self.__dict__.iteritems
-
-
-    def update(self, *args, **kwargs):
-        """Append parameters or dict"""
-        if args:
-            self._from_dict(args[0])
-        if kwargs:
-            self._from_dict(kwargs)
-        
-    @property
-    def copy(self):
-        "Deep copy"
-        return self._copy
-
-    @property
-    def none_if_absent(self):
-        "Switch for returning None if absent"
-        return self._none_if_absent
-        
-    @none_if_absent.setter
-    def none_if_absent(self, value):
-        # propagate to children
-        self._none_if_absent = value
-        self._autoviv = False
-        for k,v in self.__dict__.iteritems():
-            if isinstance(v, type(self)) and k[0] != '_':
-                v.none_if_absent = value
-                v._autoviv = False
-
-    @property
-    def autoviv(self):
-        "Autovivication switch"
-        return self._autoviv
-
-    @autoviv.setter
-    def autoviv(self, value):
-        # propagate to children
-        self._autoviv = value
-        self._none_if_absent = False
-        for k,v in self.__dict__.iteritems():
-            if isinstance(v, type(self)) and k[0] != '_':
-                v.autoviv = value
-                v._none_if_absent = False
-        
-    def __repr__(self):
-        return 'Param(%s)' % repr(self._to_dict())      
-
-#class STDParam(Param):
-#    """\
-#    Standard parameters.
-#    """
-#    def __init__(self,**kwargs):
-#        Param.__init__(self, **kwargs)
-#        self.autoviv = False
-#
-#    def _validate(self, p=None):
-#        """\
-#        STDParam._validate(): internal check if all is ok.
-#        STDParam._validate(p): checks if the Param object p follows the convention.
-#        """
-#        if p is None:
-#            # Internal check
-#            return True
-#
-#        p = asParam(p)
-#        for k,v in p.iteritems():
-#            if k.startswith('_'): continue
-#            if k not in self.keys():
-#                raise ValueError('Parameter %s missing (%s)' % (k, self._format(k)))
-#
-#
-#    def _format(self, key=None):
-#        """\
-#        Pretty format the parameter for the provided key (all keys if None).
-#        """
-#        lines = []
-#        if key is None:
-#            for k in self.keys():
-#                lines += [self._format(k)]
-#            
-#        
-#        v = self.__dict__[k]
-#        if isinstance(v, Param):
-
 class Param(dict):
     """
     Convenience class: a dictionary that gives access to its keys
@@ -208,6 +55,10 @@ class Param(dict):
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, dict.__repr__(self))
 
+    def __str__(self):
+        from .verbose import report
+        return report(self,depth=7,noheader=True)
+        
     def __setitem__(self, key, value):
         # BE: original behavior modified as implicit conversion may destroy references
         # Use update(value,Convert=True) instead
@@ -225,12 +76,18 @@ class Param(dict):
     def __delattr__(self, name):
         return super(Param, self).__delitem__(name)
         
-    __getattr__ = __getitem__
+    #__getattr__ = __getitem__
+    def __getattr__(self, name):
+        try: 
+            return self.__getitem__(name)
+        except KeyError as ke:
+            raise AttributeError(ke)
+            
     __setattr__ = __setitem__
 
     def copy(self,depth=0):
         """
-        P.copy() -> A (recursive) copy of P with depth `depth` 
+        :returns Param: A (recursive) copy of P with depth `depth` 
         """
         d = Param(self)
         if depth>0:
@@ -245,7 +102,7 @@ class Param(dict):
         tab completion in e.g. ipython.
         If you do not wish the dict key's be displayed as attributes
         (although they are still accessible as such) set the class 
-        attribute '_display_items_as_attributes' to False. Default is
+        attribute `_display_items_as_attributes` to False. Default is
         True.
         """
         if self._display_items_as_attributes:
@@ -254,30 +111,43 @@ class Param(dict):
         else:
             return []
 
-    def update(self, __d__=None,Convert=False,Replace=True, **kwargs):
+    def update(self, __d__=None, in_place_depth=0, Convert=False, **kwargs):
         """
         Update Param - almost same behavior as dict.update, except
-        that all dictionaries are converted to Param, and update
-        is done recursively, in such a way that as little info is lost.
+        that all dictionaries are converted to Param if `Convert` is set 
+        to True, and update may occur in-place recursively for other Param
+        instances that self refers to.
         
-        additional Parameters:
-        ----------------------
-        Convert : bool (False)
-                  If True, convert all dict-like values in self also to Param
+        Parameters
+        ----------
+        Convert : bool 
+                  If True, convert all dict-like values in self also to Param.
                   *WARNING* 
                   This mey result in misdirected references in your environment
-        Replace : bool (True)
-                  If False, values in self are not replaced by but 
-                  updated with the new values.
+        in_place_depth : int 
+                  Counter for recursive in-place updates 
+                  If the counter reaches zero, the Param to a key is
+                  replaced instead of updated
         """
         def _k_v_update(k,v):
             # If an element is itself a dict, convert it to Param
             if Convert and hasattr(v, 'keys'):
                 #print 'converting'
                 v = Param(v)
+            # new key 
+            if not self.has_key(k):
+                self[k] = v
             # If this key already exists and is already dict-like, update it
-            if not Replace and hasattr(self.get(k, None), 'keys'):
-                self[k].update(v)
+            elif in_place_depth > 0  and hasattr(v,'keys') and isinstance(self[k],self.__class__):
+                self[k].update(v, in_place_depth - 1)
+                """
+                if isinstance(self[k],self.__class__):
+                    # Param gets recursive in_place updates
+                    self[k].update(v, in_place_depth - 1)
+                else:
+                    # dicts are only updated in-place once
+                    self[k].update(v)
+                """
             # Otherwise just replace it
             else:
                 self[k] = v
@@ -289,6 +159,7 @@ class Param(dict):
                     _k_v_update(k,v)
                     
             else:
+                # here we assume a (key,value) list.
                 for (k,v) in __d__:
                     _k_v_update(k,v)
                     

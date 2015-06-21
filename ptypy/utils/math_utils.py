@@ -11,14 +11,24 @@ This file is part of the PTYPY package.
 
 from scipy.special import erf 
 import numpy as np
+from misc import *
+from scipy import ndimage as ndi
 
-__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf','ortho','gauss_fwhm']
+__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf',\
+            'ortho','gauss_fwhm','gaussian','gf','cabs2','gf_2d','c_gf']
+
+def cabs2(A):
+    """
+    Squared absolute value (for complex array `A`)
+    """
+    return A * A.conj()
 
 def abs2(A):
     """
-    Squared absolute value
+    Squared absolute value (for real array `A`)
     """
     return np.square(np.abs(A))
+
     
 def norm2(A):
     """
@@ -34,20 +44,55 @@ def norm(A):
     
 def smooth_step(x,mfs):
     """
-    smooth error-function step.
+    Smoothed step function with fwhm `mfs` 
+    Evaluates the error function `scipy.special.erf`.
     """
     return 0.5*erf(x*2.35/mfs) +0.5
 
 def gaussian(x,std=1.0,off=0.):
     """
-    evaluates gaussian standard normal
+    Evaluates gaussian standard normal
+    
+    .. math::
+        g(x)=\\frac{1}{\mathrm{std}\sqrt{2\pi}}\,\exp \\left(-\\frac{(x-\mathrm{off})^2}{2 \mathrm{std}^2 }\\right)
+    
+    Parameters
+    ----------
+    x : ndarray
+        input array
+    
+    std : float,optional 
+        Standard deviation
+        
+    off : float, optional
+        Offset / shift
+    
+    See also
+    --------
+    gauss_fwhm
+    smooth_step
     """
     return np.exp(-(x-off)**2/(2*std**2)) / (std * np.sqrt(2*np.pi))
     
 def gauss_fwhm(x,fwhm=1.0,off=0.):
     """
-    evaluates Gaussian of full width at half maximum `fwhm` with optional
-    offset `off`
+    Evaluates gaussian with full width half maximum 
+    
+    Parameters
+    ----------
+    x : ndarray
+        input array
+    
+    fwhm : float,optional 
+        Full width at half maximum
+        
+    off : float, optional
+        Offset / shift
+    
+    See also
+    --------
+    gaussian
+    
     """
     return gaussian(x,fwhm/2/np.sqrt(2*np.log(2)),off)
 
@@ -61,18 +106,18 @@ def delxf(a, axis = -1, out = None):
     
     Parameters
     ----------
-    a : nd-numpy-array
+    a : ndarray
         Input array.
         
     axis : int, Default=-1, optional
         Which direction used for the derivative.
     
-    out : nd-array, Default=None, optional
+    out : ndarray, Default=None, optional
         Array in wich the resault is written (same size as ``a``).
     
     Returns
     -------
-    out : nd-numpy-array
+    out : ndarray
         Derived array.
     """
     nd   = len(a.shape)
@@ -102,7 +147,7 @@ def delxb(a,axis=-1):
     
     Parameters
     ----------
-    a : nd-numpy-array
+    a : ndarray
         Input array.
         
     axis : int, Default=-1, optional
@@ -110,9 +155,9 @@ def delxb(a,axis=-1):
     
     Returns
     -------
-    out : nd-numpy-array
+    out : ndarray
         Derived array.
-"""
+    """
 
     nd = len(a.shape)
     axis = range(nd)[axis]
@@ -154,7 +199,20 @@ def delxc(a,axis=-1):
 
 def ortho(modes):
     """\
-    Orthogonalize the given list of modes.
+    Orthogonalize the given list of modes or ndarray along first axis.
+    **specify procedure**
+    
+    Parameters
+    ----------
+    modes : array-like or list
+        List equally shaped arrays or array of higher dimension
+        
+    Returns
+    -------
+    amp : vector
+        relative power of each mode
+    nplist : list
+        List of modes, sorted in descending order
     """
     N = len(modes)
     A = np.array([[np.vdot(p2,p1) for p1 in modes] for p2 in modes])
@@ -164,3 +222,37 @@ def ortho(modes):
     amp = np.array([norm2(npi) for npi in nplist])
     amp /= amp.sum()
     return amp, nplist
+
+
+c_gf= complex_overload(ndi.gaussian_filter)
+# ndi.gaussian_filter is a little special in the docstring
+c_gf.__doc__='    *complex input*\n\n    '+c_gf.__doc__
+    
+def gf(c,*arg,**kwargs):
+    """
+    Wrapper for scipy.ndimage.gaussian_filter, that determines whether
+    original or the complex function shall be used.
+    
+    See also
+    --------
+    c_gf 
+    """
+    if np.iscomplexobj(c):
+        return c_gf(c,*arg,**kwargs)
+    else:
+        return ndi.gaussian_filter(c,*arg,**kwargs)
+
+def gf_2d(c,sigma,**kwargs):
+    """
+    Gaussian filter along the last 2 axes
+    
+    See also
+    --------
+    gf
+    c_gf
+    """
+    if c.ndim > 2:
+        n=c.ndim
+        return gf(c,(0,)*(n-2)+tuple(expect2(sigma)),**kwargs)
+    else:
+        return gf(c,sigma,**kwargs)

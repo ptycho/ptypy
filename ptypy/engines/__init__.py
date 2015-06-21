@@ -11,16 +11,34 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import os
-
+from .. import utils as u
 from base import BaseEngine
-from DM import DM
-from DM_simple import DM_simple
-from ML import ML
-from dummy import Dummy
+from base import DEFAULT as COMMON
+import DM
+import DM_minimal
+import DM_simple
+import ML
+import dummy
 #from ePIE import ePIE
 
-engine_names = ['Dummy','DM_simple','DM', 'ML']
+__all__ = ['DM','ML','BaseEngine']
 
+engine_names = ['Dummy','DM_simple','DM','DM_minimal', 'ML','ML_new']
+DEFAULTS = u.Param(
+    common = COMMON,
+    Dummy = dummy.DEFAULT,
+    DM_simple = DM_simple.DEFAULT,
+    DM = DM.DEFAULT,
+    ML = ML.DEFAULT,
+    DM_minimal = DM_minimal.DEFAULT,
+)
+ENGINES = u.Param(
+    Dummy = dummy.Dummy,
+    DM_simple = DM_simple.DM_simple,
+    DM = DM.DM,
+    ML = ML.ML,
+    DM_minimal = DM_minimal.DM_minimal,
+)
 def by_name(name):
-    if name not in engine_names: raise RuntimeError('Unknown engine: %s' % name)
-    return globals()[name]
+    if name not in ENGINES.keys(): raise RuntimeError('Unknown engine: %s' % name)
+    return ENGINES[name]
