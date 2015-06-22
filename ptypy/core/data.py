@@ -1175,8 +1175,8 @@ class MoonFlowerScan(PtyScan):
         # derive scan pattern
         pos = u.Param()
         pos.spacing = G.resolution * G.shape * r.density
-        pos.layers = np.int(np.round(np.sqrt(self.num_frames)))+1
-        pos.extent = pos.layers * pos.spacing
+        pos.steps = np.int(np.round(np.sqrt(self.num_frames)))+1
+        pos.extent = pos.steps * pos.spacing 
         pos.model = 'round'
         pos.count = self.num_frames
         self.pos = xy.from_pars(pos)
