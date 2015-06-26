@@ -122,8 +122,8 @@ References
 
 .. [#pronounciation] Pronounced *typy*, forget the *p*, as in psychology.
 
-.. [#states] P.Thibault and A.Menzel, **Nature** 494, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`_
+.. [#states] P. Thibault and A. Menzel, *Nature* **494**, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`_
 
-.. [#ml] P.Thibault and M.Guizar-Sicairos, **New J. of Phys.** 14, 6 (2012), `doi <http://dx.doi.org/10.1126/science.1158573>`_
+.. [#ml] P. Thibault, M. Dierolf *et al.*, *Science* **321**, 7 (2009), `doi <http://dx.doi.org/10.1126/science.1158573>`_
 
-.. [#dm] P.Thibault, M.Dierolf *et al.*, **New J. of Phys. 14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`_
+.. [#dm] P. Thibault and M. Guizar-Sicairos, *New J. of Phys.* **14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`_
