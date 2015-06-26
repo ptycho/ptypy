@@ -3,9 +3,9 @@ Welcome Ptychonaut!
      
 |ptypy| [#pronounciation]_ is a
 framework for scientific ptychography compiled by 
-P.Thibault and B. Enders amd licensed under the GPLv2 license.
+P. Thibault and B. Enders and licensed under the GPLv2 license.
 
-It it the result of 7 years of experience in the field of ptychography condensed
+It is the result of 7 years of experience in the field of ptychography condensed
 into a versatile python package. The package covers the whole path of
 ptychographic analysis after the actual experiment is completed
 - from data management to reconstruction to visualization.
@@ -44,7 +44,7 @@ Highlights
   overcoming partial coherence or related phenomena.
   
 * **On-the-fly** reconstructions (while data is being acquired) using the
-  the :any:`PtyScan` class in the linking mode :ref:`linking mode<case_flyscan>` 
+  the :any:`PtyScan` class in the linking mode :ref:`linking mode<case_flyscan>`. 
 
 
 Quicklinks
@@ -52,7 +52,7 @@ Quicklinks
 * | The complete :ref:`documentation <contents>`.
 
 * | Starting from a **clean slate**?
-  | Check out the :ref:`installation instructions <installation>` 
+  | Check out the :ref:`installation instructions <installation>`.
   
 * | You want to understand the **inner principles** of ptypy without 
     having to browse the source code?
@@ -70,8 +70,8 @@ Quicklinks
 
 .. [#pronounciation] Pronounced *typy*, forget the *p*, as in psychology.
 
-.. [#states] P.Thibault and A.Menzel, **Nature** 494, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`_
+.. [#states] P. Thibault and A. Menzel, *Nature* **494**, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`_
 
-.. [#ml] P.Thibault and M.Guizar-Sicairos, **New J. of Phys.** 14, 6 (2012), `doi <http://dx.doi.org/10.1126/science.1158573>`_
+.. [#ml] P. Thibault and M. Guizar-Sicairos, *New J. of Phys.* **14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`_
 
-.. [#dm] P.Thibault, M.Dierolf *et al.*, **New J. of Phys. 14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`_
+.. [#dm] P. Thibault, M. Dierolf *et al.*, *Science* **321**, 7 (2009), `doi <http://dx.doi.org/10.1126/science.1158573>`_
