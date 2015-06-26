@@ -88,9 +88,7 @@ Quicklinks
   | Have a look at the `tutorials about its special classes <http://ptycho.github.io/ptypy-test/rst/concept.html#concepts>`_ .
   
 * | Only interested in |ptypy|'s **data file structure** and 
-    **management**?
-  | Indulge yourself `here <http://ptycho.github.io/ptypy-test/rst/data_management.html#ptyd-file>`_  for the structure and 
-    `here <http://ptycho.github.io/ptypy-test/rst/data_management.html#ptypy-data>`_  for the concepts.
+    **management**? Indulge yourself `here <http://ptycho.github.io/ptypy-test/rst/data_management.html#ptyd-file>`_ for the structure and `here <http://ptycho.github.io/ptypy-test/rst/data_management.html#ptypy-data>`_  for the concepts.
 
 
 Contribute
