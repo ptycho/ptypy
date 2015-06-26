@@ -1,7 +1,7 @@
 PTYPY - Ptychography Reconstruction for Python
 ==============================================
 
-.. [![DOI](https://zenodo.org/badge/6834/ptycho/ptypy.png)](http://dx.doi.org/10.5281/zenodo.12480)
+|doi|
 
 Welcome Ptychonaut!
 -------------------
@@ -112,6 +112,10 @@ The project is licensed under a GPLv2 license.
 
 
 .. |ptypy| replace:: PtyPy
+
+.. |doi| image:: https://zenodo.org/badge/6834/ptycho/ptypy.png
+         :target: http://dx.doi.org/10.5281/zenodo.12480
+
 
 References
 ----------
