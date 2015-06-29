@@ -18,6 +18,7 @@ from ..utils import parallel
 from utils import Cnorm2, Cdot
 from . import BaseEngine
 import numpy as np
+import time
 
 __all__=['ML']
 
@@ -33,13 +34,6 @@ DEFAULT = u.Param(
     scale_precond = False,
     scale_probe_object = 1.
 
-
-    #overlap_converge_factor = .1,
-    #overlap_max_iterations = 10,
-    #probe_inertia = 1e-9,               # Portion of probe that is kept from iteraiton to iteration, formally cfact
-    #object_inertia = 1e-4,              # Portion of object that is kept from iteraiton to iteration, formally DM_smooth_amplitude
-    #obj_smooth_std = None,              # Standard deviation for smoothing of object between iterations
-    #clip_object = None,                 # None or tuple(min,max) of desired limits of the object modulus
 )
 
 
@@ -59,8 +53,6 @@ class ML(BaseEngine):
         """
         Prepare for ML reconstruction.
         """
-        # Container for the "errors"
-        #self.error = np.
 
         # Object gradient and minimization direction
         self.ob_grad = self.ob.copy(self.ob.ID+'_grad',fill=0.) # Object gradient
@@ -70,6 +62,8 @@ class ML(BaseEngine):
         self.pr_grad = self.pr.copy(self.pr.ID+'_grad',fill=0.) # Probe gradient
         self.pr_h = self.pr.copy(self.pr.ID+'_h',fill=0.) # Probe minimization direction
    
+        self.tmin=1.
+        
         # Create noise model
         if self.p.ML_type.lower() == "gaussian":
             self.ML_model = ML_Gaussian(self)
@@ -93,100 +87,121 @@ class ML(BaseEngine):
         pass
         
         
-    def engine_iterate(self):
+    def engine_iterate(self, num=1):
         """
-        Compute one iteration.
+        Compute `num` iterations.
         """
         ########################
         # Compute new gradient
         ########################
-        
-        new_ob_grad, new_pr_grad = self.ML_model.new_grad() 
-
-        if (self.p.probe_update_start <= self.curiter):
-            # Apply probe support if needed
-            for name,s in new_pr_grad.S.iteritems():
-                support = self.probe_support.get(name)
-                if support is not None: 
-                    s.data *= support
-        else:
-            new_pr_grad.fill(0.)
-
-        # Smoothing preconditioner
-        # !!! Lets make this consistent with the smoothing already done in DM
-        #if self.smooth_gradient:
-        #    for name,s in new_ob_grad.S.iteritems()
-        #    s.data[:] = self.smooth_gradient(s.data)
-
-        # probe/object rescaling
-        if self.p.scale_precond:
-            scale_p_o = self.p.scale_probe_object * Cnorm2(new_ob_grad) / Cnorm2(new_pr_grad)
-            logger.debug('Scale P/O: %6.3g' % scale_p_o)
-        else:
-            scale_p_o = self.p.scale_probe_object
-
-        ############################
-        # Compute next conjugate
-        ############################
-        if self.curiter == 0:
-            bt = 0.
-        else:
-            bt_num = scale_p_o * ( Cnorm2(new_pr_grad) - np.real(Cdot(new_pr_grad, self.pr_grad))) +\
-                                 ( Cnorm2(new_ob_grad) - np.real(Cdot(new_ob_grad, self.ob_grad))) 
-            bt_denom = scale_p_o * Cnorm2(self.pr_grad) + Cnorm2(self.ob_grad) 
-
-            bt = max(0,bt_num/bt_denom)
-
-        #verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
-
-        # It would be nice to have something more elegant than the following
-        for name,s in self.ob_grad.S.iteritems():
-            s.data[:] = new_ob_grad.S[name].data
-        for name,s in self.pr_grad.S.iteritems():
-            s.data[:] = new_pr_grad.S[name].data
-        
-        # 3. Next conjugate
-        for name,s in self.ob_h.S.iteritems():
-            s.data *= bt
-            s.data -= self.ob_grad.S[name].data
+        tg = 0.
+        tc = 0.
+        ta = time.time()
+        for it in range(num):
+            t1 = time.time()
+            new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad() 
+            tg += time.time()-t1
             
-        for name,s in self.pr_h.S.iteritems():
-            s.data *= bt
-            s.data -= scale_p_o * self.pr_grad.S[name].data
+            if (self.p.probe_update_start <= self.curiter):
+                # Apply probe support if needed
+                for name,s in new_pr_grad.S.iteritems():
+                    support = self.probe_support.get(name)
+                    if support is not None: 
+                        s.data *= support
+            else:
+                new_pr_grad.fill(0.)
+    
+            # Smoothing preconditioner
+            # !!! Lets make this consistent with the smoothing already done in DM
+            #if self.smooth_gradient:
+            #    for name,s in new_ob_grad.S.iteritems()
+            #    s.data[:] = self.smooth_gradient(s.data)
+    
+            # probe/object rescaling
+            if self.p.scale_precond:
+                scale_p_o = self.p.scale_probe_object * Cnorm2(new_ob_grad) / Cnorm2(new_pr_grad)
+                logger.debug('Scale P/O: %6.3g' % scale_p_o)
+            else:
+                scale_p_o = self.p.scale_probe_object
+    
+            ############################
+            # Compute next conjugate
+            ############################
+            if self.curiter == 0:
+                bt = 0.
+            else:
+                bt_num = scale_p_o * ( Cnorm2(new_pr_grad) - np.real(Cdot(new_pr_grad, self.pr_grad))) +\
+                                     ( Cnorm2(new_ob_grad) - np.real(Cdot(new_ob_grad, self.ob_grad))) 
+                bt_denom = scale_p_o * Cnorm2(self.pr_grad) + Cnorm2(self.ob_grad) 
+    
+                bt = max(0,bt_num/bt_denom)
+    
+            #verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
+    
+            self.ob_grad << new_ob_grad
+            self.pr_grad << new_pr_grad
+            """
+            for name,s in self.ob_grad.S.iteritems():
+                s.data[:] = new_ob_grad.S[name].data
+            for name,s in self.pr_grad.S.iteritems():
+                s.data[:] = new_pr_grad.S[name].data
+            """
+            # 3. Next conjugate
+            self.ob_h *= bt / self.tmin
+            self.ob_h -= self.ob_grad
+            self.pr_h *= bt / self.tmin
+            self.pr_grad *= scale_p_o
+            self.pr_h -= self.pr_grad
+            """
+            for name,s in self.ob_h.S.iteritems():
+                s.data *= bt
+                s.data -= self.ob_grad.S[name].data
+                
+            for name,s in self.pr_h.S.iteritems():
+                s.data *= bt
+                s.data -= scale_p_o * self.pr_grad.S[name].data
+            """
+            # 3. Next conjugate
+            #ob_h = self.ob_h
+            #ob_h *= bt
             
-        # 3. Next conjugate
-        #ob_h = self.ob_h
-        #ob_h *= bt
-        
-        # Smoothing preconditioner not implemented.
-        #if self.smooth_gradient:
-        #    ob_h -= object_smooth_filter(grad_obj)
-        #else:
-        #    ob_h -= ob_grad
-        
-        #ob_h -= ob_grad
-        #pr_h *= bt
-        #pr_h -= scale_p_o * pr_grad
-        
-        # Minimize - for now always use quadratic approximation (i.e. single Newton-Raphson step)
-        # In principle, the way things are now programmed this part could be iterated over in
-        # a real NR style.
-        B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
-
-        if np.isinf(B).any() or np.isnan(B).any():
-            print 'Warning! inf or nan found! Trying to continue...'
-            B[np.isinf(B)] = 0.
-            B[np.isnan(B)] = 0.
+            # Smoothing preconditioner not implemented.
+            #if self.smooth_gradient:
+            #    ob_h -= object_smooth_filter(grad_obj)
+            #else:
+            #    ob_h -= ob_grad
             
-        tmin = -.5*B[1]/B[2]
-
-        for name,s in self.ob.S.iteritems():
-            s.data += tmin*self.ob_h.S[name].data
-        for name,s in self.pr.S.iteritems():
-            s.data += tmin*self.pr_h.S[name].data
-        # Newton-Raphson loop would end here
-
-        return np.array([[self.ML_model.LL[0]] * 3]) 
+            #ob_h -= ob_grad
+            #pr_h *= bt
+            #pr_h -= scale_p_o * pr_grad
+            
+            # Minimize - for now always use quadratic approximation (i.e. single Newton-Raphson step)
+            # In principle, the way things are now programmed this part could be iterated over in
+            # a real NR style.
+            t2 = time.time()
+            B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
+            tc += time.time()-t2
+            
+            if np.isinf(B).any() or np.isnan(B).any():
+                print 'Warning! inf or nan found! Trying to continue...'
+                B[np.isinf(B)] = 0.
+                B[np.isnan(B)] = 0.
+                
+            self.tmin = -.5*B[1]/B[2]
+            self.ob_h *= self.tmin
+            self.pr_h *= self.tmin
+            self.ob += self.ob_h
+            self.pr += self.pr_h
+            """
+            for name,s in self.ob.S.iteritems():
+                s.data += tmin*self.ob_h.S[name].data
+            for name,s in self.pr.S.iteritems():
+                s.data += tmin*self.pr_h.S[name].data
+            """
+            # Newton-Raphson loop would end here
+        logger.info('Time spent in gradient calculation: %.2f' % tg)
+        logger.info('  ....  in coefficient calculation: %.2f' % tc)
+        return error_dct  #np.array([[self.ML_model.LL[0]] * 3]) 
 
     def engine_finalize(self):
         """
@@ -272,10 +287,8 @@ class ML_Gaussian(object):
         Note: The negative log-likelihood and local errors are also computed
         here.
         """
-        ob_grad = self.ob_grad
-        pr_grad = self.pr_grad
-        ob_grad.fill(0.)
-        pr_grad.fill(0.)
+        self.ob_grad.fill(0.)
+        self.pr_grad.fill(0.)
         
         LL = np.array([0.]) # We need an array for MPI
         error_dct={}
@@ -305,25 +318,31 @@ class ML_Gaussian(object):
             DI = Imodel - I
 
             # Second pod loop: gradients computation
-            LLL = 0.
+            LLL = np.sum((w * DI**2).astype(np.float64))
+            #print LLL
             for name,pod in diff_view.pods.iteritems():
                 if not pod.active: continue
                 xi = pod.bw(w*DI*f[name])
-                ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
-                pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
+                self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
+                self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
                 # Negative log-likelihood term
-                LLL += (w * DI**2).sum()
+                #LLL += (w * DI**2).sum()
 
-            LLL /= self.tot_measpts
+            #LLL 
             diff_view.error = LLL
+            error_dct[dname]= np.array([0,LLL / np.prod(DI.shape),0])
             LL += LLL
 
         # MPI reduction of gradients
+        self.ob_grad.allreduce()
+        self.pr_grad.allreduce()
+        """
         for name,s in ob_grad.S.iteritems():
             parallel.allreduce(s.data)
         for name,s in pr_grad.S.iteritems():
             parallel.allreduce(s.data)
+        """
         parallel.allreduce(LL)
         
         # Object regularizer
@@ -331,9 +350,9 @@ class ML_Gaussian(object):
             for name,s in self.ob.S.iteritems():
                 ob_grad.S[name].data += self.regularizer.grad(s.data)
 
-        self.LL = LL
+        self.LL = LL / self.tot_measpts
         
-        return ob_grad, pr_grad
+        return self.ob_grad, self.pr_grad, error_dct
 
     def poly_line_coeffs(self, ob_h, pr_h):
         """

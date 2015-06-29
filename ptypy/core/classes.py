@@ -5,48 +5,55 @@ Container management.
 This module defines flexible containers for the various quantities needed
 for ptychographic reconstructions.
 
-Container class:
+**Container class**
     A high-level container that keeps track of sub-containers (Storage)
     and Views onto them. A container can copy itself to produce a buffer
-    needed for calculations. Mathematical operations are not implemented at
-    this level. Operations on arrays should be done using the Views, which
+    needed for calculations. Some basic Mathematical operations are 
+    implemented at this level as in place operations.
+    In General, operations on arrays should be done using the Views, which
     simply return numpyarrays.
 
-Storage class:
+
+**Storage class**
     The sub-container, wrapping a numpy array buffer. A Storage defines a
     system of coordinate (for now only a scaled translation of the pixel
     coordinates, but more complicated affine transformation could be
     implemented if needed). The sub-class DynamicStorage can adapt the size
     of its buffer (cropping and/or padding) depending on the Views.
-    
-View class:
+
+**View class**
     A low-weight class that contains all information to access a 2D piece
-    of a Storage within a Container.
+    of a Storage within a Container. The basic idea is that the View
+    access is controlled by a physical position and its frame, such that
+    one is not bothered by memory/array addresses when accessing data.
 
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 
-TODO: Rethink layer access (BE is not happy with current state)
-
 """
 
 import numpy as np
 import weakref
-
+try: 
+    from pympler.asizeof import asizeof
+    use_asizeof=True
+except ImportError:
+    use_asizeof=False
+    
 from .. import utils as u
 from ..utils.parameters import PARAM_PREFIX
 from ..utils.verbose import logger
 #import ptypy
 
-__all__=['Container','Storage','View','POD','Base']#IDManager']
+__all__=['Container','Storage','View','POD','Base','DEFAULT_PSIZE','DEFAULT_SHAPE' ]#IDManager']
 
 # Default pixel size
 DEFAULT_PSIZE = 1.
 
 # Default shape
-DEFAULT_SHAPE = (0,0,0)
+DEFAULT_SHAPE = (1,1,1)
 
 # Expected structure for Views initialization.
 DEFAULT_ACCESSRULE = u.Param(
@@ -54,7 +61,8 @@ DEFAULT_ACCESSRULE = u.Param(
         shape = None, # (2-tuple) shape of the view in pixels
         coord = None, # (2-tuple) physical coordinates of the center of the view
         psize = DEFAULT_PSIZE, # (float or None) pixel size (required for storage initialization)
-        layer = 0 # (int) index of the third dimension if applicable.
+        layer = 0, # (int) index of the third dimension if applicable.
+        active = True,
 )
 
 BASE_PREFIX = 'B'
@@ -77,17 +85,19 @@ class Base(object):
         conversion to and from dictionarys as well as a 'cross-node' ID
         managament of python objects
         
-        Parameters:
-        -----------
-        owner : Other subclass of Base or Base.
-                Owner gives IDs to other ptypy objects that refer to him
-                as owner. Owner also keeps a reference to these objects in
-                its internal _pool where objects are key-sorted according 
-                to their ID prfix
+        Parameters
+        ----------
+        owner : Other subclass of Base or Base
+            Owner gives IDs to other ptypy objects that refer to him
+            as owner. Owner also keeps a reference to these objects in
+            its internal _pool where objects are key-sorted according 
+            to their ID prfix
         
-        ID : (None, string or scalar)
-             
-        BeOwner : (True) Set to False if this instance is not intended to own other other ptypy objects
+        ID : None, str or int
+            
+        BeOwner : bool
+            Set to `False` if this instance is not intended to own other
+            ptypy objects.
         """
         self.owner = owner
         self.ID = ID
@@ -109,7 +119,7 @@ class Base(object):
         Parameters:
         -----------
         obj : [any object] or None
-              The object to register.
+            The object to register.
         """
         try:
             prefix=obj._PREFIX
@@ -159,10 +169,11 @@ class Base(object):
         create new instance from dictionary dct
         should be compatible with _to_dict()
         """
-        ID = dct.pop('ID',None)
-        owner = dct.pop('owner',None)
+        #ID = dct.pop('ID',None)
+        #owner = dct.pop('owner',None)
         #print cls,ID,owner
-        inst = cls(owner,ID)
+        #inst = cls(owner,ID)
+        inst = cls.__new__(cls)
         inst.__dict__.update(dct)
         #calling post dictionary import routine (empty in base)
         inst._post_dict_import()
@@ -183,9 +194,37 @@ class Base(object):
         """
         return self.__dict__.copy()
 
+    def calc_mem_usage(self):
+        space = 64 # that is for the class itself
+        pool_space = 0
+        npy_space = 0
+        if hasattr(self,'_pool'):
+            if use_asizeof:
+                space+=asizeof(self._pool,limit=0) 
+            for k, v in self._pool.iteritems():
+                if use_asizeof:
+                    space+=asizeof(v,limit=0)
+                for kk,vv in v.iteritems():
+                    pool_space += vv.calc_mem_usage()[0]
+                
+        for k,v in self.__dict__.iteritems():
+            if issubclass(v.__class__,Base):
+                #print 'jump ' + str(v.__class__)
+                continue
+            elif str(k)=='_pool' or str(k)=='pods':
+                continue
+            else:
+                if use_asizeof:
+                    s= asizeof(v)
+                    space += s
+                if type(v) is np.ndarray:
+                    npy_space+=v.nbytes
+            #print str(k)+":"+str(s)       
+        return space+pool_space+npy_space, pool_space, npy_space
+        
 def get_class(ID):
     """
-    Determine ptypy class from unique ID
+    Determine ptypy class from unique `ID`
     """
     #typ,idx=ID[0]
     if ID.startswith(VIEW_PREFIX):
@@ -204,7 +243,7 @@ def get_class(ID):
     elif ID.startswith(PARAM_PREFIX):
         return u.Param
     elif ID.startswith(MODEL_PREFIX):
-        from scanmanager import ModelManager
+        from manager import ModelManager
         return ModelManager
     elif ID.startswith(GEO_PREFIX):
         from geometry import Geo
@@ -214,7 +253,7 @@ def get_class(ID):
         
 def valid_ID(obj):
     """
-    check if ID of object is compatible with the current format
+    check if ID of object `obj` is compatible with the current format
     """
     valid = False
     try:
@@ -227,64 +266,81 @@ def valid_ID(obj):
 
 class Storage(Base):
     """
-    Storage: Inner container handling acces to data arrays.
+    Inner container handling acces to data arrays.
 
-    * It returns view to coordinates given (slicing)
+    This class essentially manages access to an internal numpy array 
+    buffer called :py:attr:`~Storage.data`
+                
+    * It returns a view to coordinates given (slicing)
     * It contains a physical coordinate grid
     
     """
 
     _PREFIX = STORAGE_PREFIX
 
-    def __init__(self, container, ID=None, **kwargs):
+    def __init__(self, container, ID=None,data=None,shape=(1,1,1), fill=0., \
+                psize=None, origin=None, layermap=None, padonly=False, **kwargs):
         """
-        Storage: Inner container hangling access to arrays.
-
-        This class essentially manages access to an internal numpy array 
-        buffer.
-                
         Parameters
         ----------
-        ID : ...
-             A unique ID, managed by the parent
         container : Container
-                    The container instance
-        name : str or None
-               A name for this storage. If None, build a default name from ID
-        data: numpy.ndarray or None
-              A numpy array to use as initial buffer.
-        shape : tuple or None
-                The shape of the buffer (BE: CANNOT BE NONE)
-        fill : float
-               The default value to fill storage with.
-        psize : float
-                The physical pixel size.
-        origin : 2-tuple
-                 The physical coordinates of the [0,0] pixel (upper-left
-                 corner of the storage buffer). 
+            The container instance
+
+        ID : None,str or int
+            A unique ID, managed by the parent, if None ID is generated
+            by parent.
+            
+        data: ndarray or None
+            A numpy array to use as initial buffer.
+        
+        shape : 3-tuple
+            The shape of the buffer
+            
+        fill : float or complex
+            The default value to fill storage with, will be converted to
+            data type of owner.
+            
+        psize : float or 2-tuple of float
+            The physical pixel size.
+            
+        origin : 2-tuple of int
+            The physical coordinates of the [0,0] pixel (upper-left
+            corner of the storage buffer). 
+        
         layermap : list or None
-                   A list (or 1D numpy array) mapping input layer indices
-                   to the internal buffer. This may be useful if the buffer
-                   contains only a portion of a larger dataset (as when using
-                   distributed data with MPI). If None, provide direct access.
-                   to the 3d internal data.
+            A list (or 1D numpy array) mapping input layer indices
+            to the internal buffer. This may be useful if the buffer
+            contains only a portion of a larger dataset (as when using
+            distributed data with MPI). If None, provide direct access.
+            to the 3d internal data.
+        
         padonly: bool
-                 If True, reformat() will enlarge the internal buffer if needed,
-                 but will not shrink it.
+            If True, reformat() will enlarge the internal buffer if needed,
+            but will not shrink it.
+            
         """
         super(Storage,self).__init__(container,ID)
-        if len(kwargs)>0:
-            self._initialize(**kwargs)
+        #if len(kwargs)>0:
+            #self._initialize(**kwargs)
 
-    def _initialize(self,data=None, shape=(1,1,1), fill=0., psize=None, origin=None, layermap=None, padonly=False):
+    #def _initialize(self,data=None, shape=(1,1,1), fill=0., psize=None, origin=None, layermap=None, padonly=False):
 
-        # Default fill value
-        self.fill_value = fill
+        #: Default fill value
+        self.fill_value = fill if fill is not None else 0.
+                
+        # For documentation
+        #: Three dimensional array as data buffer
+        self.data = None 
         
-        #self.zoom_cycle = 0 
-
-        if len(shape)==2:
+        if shape is None:
+            shape = DEFAULT_SHAPE
+        elif np.isscalar(shape): 
+            shape = (1,int(shape),int(shape))
+        elif len(shape)==2:
             shape = (1,) + tuple(shape)
+        elif len(shape)!=3:
+            raise ValueError('`shape` must be None or scalar or 2-tuple or 3-tuple of int')
+            
         # Set data buffer
         if data is None:
             # Create data buffer
@@ -293,10 +349,14 @@ class Storage(Base):
             self.data.fill(self.fill_value) 
         else:
             # Set initial buffer. Casting the type makes a copy
-            self.data = data.astype(self.dtype)
-            if self.data.ndim == 2:
-                self.data.shape = (1,) + self.data.shape
-            self.shape = data.shape
+            data = np.asarray(data).astype(self.dtype)
+            if data.ndim < 2 or data.ndim > 3:
+                raise ValueError('Initial buffer must be 2D or 3D, this one is %dD.' % data.ndim)
+            elif data.ndim == 2:
+                self.data = data.reshape((1,) + data.shape)
+            else:
+                self.data = data
+            self.shape = self.data.shape
                 
         if layermap is None:
             layermap = range(len(self.data))
@@ -309,7 +369,7 @@ class Storage(Base):
         self._center = u.expect2(self.shape[-2:])//2
 
         # Set pixel size (in physical units)
-        if psize is not None: self.psize = psize
+        self.psize = psize if psize is not None else DEFAULT_PSIZE
 
         # Set origin (in physical units - same as psize)
         if origin is not None: self.origin = origin
@@ -338,9 +398,7 @@ class Storage(Base):
         #self._make_datalist()
         
     def _make_datalist(self):
-        """
-        Helper to build self.datalist, providing access to the data buffer
-        in a transparent way.
+        pass
         """
         # BE does not give the same result on all nodes
         #self._datalist = [None] * (max(self.layermap)+1)
@@ -349,7 +407,8 @@ class Storage(Base):
         self._datalist = [None] * max(self.nlayers,max(self.layermap)+1)
         for k,i in enumerate(self.layermap):
             self._datalist[i] = self.data[k]
-
+        """
+    """
     @property
     def datalist(self):
         
@@ -357,10 +416,11 @@ class Storage(Base):
             self._make_datalist()
         
         return self._datalist
-        
+    """
+    
     @property
     def dtype(self):
-        return self.owner.dtype
+        return self.owner.dtype if self.owner is not None else None
         
     def copy(self,owner=None, ID=None, fill=None):
         """
@@ -370,9 +430,9 @@ class Storage(Base):
         
         Parameters
         ----------
-        ID : ...
+        ID : str or int
              A unique ID, managed by the parent
-        fill : number or None
+        fill : scalar or None
                If float, set the content to this value. If None, copy the
                current content. 
         """
@@ -391,7 +451,7 @@ class Storage(Base):
         
         Parameters
         ----------
-        fill : float, numpy array or None.
+        fill : scalar, numpy array or None.
                Fill value to use. If fill is a numpy array, it is cast
                as self.dtype and self.shape is updated to reflect the 
                new buffer shape. If fill is None, use default value
@@ -406,8 +466,12 @@ class Storage(Base):
         elif np.isscalar(fill):
             # Fill with scalar value
             self.data.fill(fill)
-        else:
+        elif type(fill) is np.ndarray:
             # Replace the buffer
+            if fill.ndim<2 or fill.ndim>3: 
+                raise ValueError('Numpy ndarray fill must be 2D or 3D.')
+            elif fill.ndim == 2:
+                fill = np.resize(fill,(self.shape[0],fill.shape[0],fill.shape[1]))
             self.data = fill.astype(self.dtype)
             self.shape = self.data.shape
 
@@ -416,7 +480,7 @@ class Storage(Base):
         Update internal state, including all views on this storage to 
         ensure consistency with the physical coordinate system.
         """
-        # Update the access information for the views (i.e. pixcoord, roi and sp)
+        # Update the access information for the views (i.e. pcoord, dlow, dhigh and sp)
         self.update_views()
 
     def update_views(self, v=None):
@@ -440,31 +504,38 @@ class Storage(Base):
         # v.shape can be None upon initialization - this means "full frame"
         if v.shape is None:
             v.shape = u.expect2(self.shape[-2:])
-            v.pixcoord = v.shape/2.
-            v.physcoord = self._to_phys(v.pixcoord)
+            v.pcoord = v.shape/2.
+            v.coord = self._to_phys(v.pcoord)
         else:
             # Convert the physical coordinates of the view to pixel coordinates
-            v.pixcoord = self._to_pix(v.physcoord)
+            v.pcoord = self._to_pix(v.coord)
         
         # Integer part (note that np.round is not stable for odd arrays)
-        pix = np.round(v.pixcoord).astype(int)
+        v.dcoord = np.round(v.pcoord).astype(int)
         
         # These are the important attributes used when accessing the data
-        v.roi = np.array([pix - v.shape/2, pix + (v.shape+1)/2])
-        v.sp = v.pixcoord - pix
+        v.dlow = v.dcoord - v.shape/2
+        v.dhigh = v.dcoord + (v.shape+1)/2
+        
+        #v.roi = np.array([pix - v.shape/2, pix + (v.shape+1)/2])
+        v.sp = v.pcoord - v.dcoord
         #v.slayer = 0 if self.layermap is None else self.layermap.index(v.layer)
 
     def reformat(self, newID=None):
         """
         Crop or pad if required.
         
-        Parameters:
-        -----------
-        newID : int
-                If None (default) act on self. Otherwise create a copy of self
-                before doing the cropping and padding.
-                
-        return the cropped storage (a new one or self)
+        Parameters
+        ----------
+        newID : str or int
+            If None (default) act on self. Otherwise create a copy 
+            of self before doing the cropping and padding.
+            
+        Returns
+        -------
+        s : Storage
+            returns new Storage instance in same :any:`Container` if
+            `newId` is not None.
         """
 
         # If a new storage is requested, make a copy.
@@ -491,8 +562,10 @@ class Storage(Base):
             if not v.active: continue
 
             # Accumulate the regions of interest to compute the full field of view
-            rows+=[v.roi[0,0],v.roi[1,0]]
-            cols+=[v.roi[0,1],v.roi[1,1]]
+            #rows+=[v.roi[0,0],v.roi[1,0]]
+            #cols+=[v.roi[0,1],v.roi[1,1]]
+            rows+=[v.dlow[0],v.dhigh[0]]
+            cols+=[v.dlow[1],v.dhigh[1]]
 
             # Gather a (unique) list of layers
             if v.layer not in layers: layers.append(v.layer)
@@ -522,7 +595,11 @@ class Storage(Base):
             new_shape = (sh[0], sh[1]+misfit[0].sum(), sh[2]+misfit[1].sum())
             logger.debug('%s[%s] :: center: %s -> %s' % (self.owner.ID, self.ID, str(self.center), str(new_center)))
             #logger.debug('%s[%s] :: shape: %s -> %s' % (self.owner.ID, self.ID, str(sh), str(new_shape)))
-     
+            
+            Mpixels = np.array(new_shape).astype(float).prod()/1e6
+            if Mpixels > 20:
+                raise RuntimeError('Arrays larger than 20M not supported. You requested %.2fM pixels, Bitch' % (Mpixels))
+
             # Apply 2d misfit
             if self.data is not None:
                 new_data = u.crop_pad(self.data, misfit, fillpar=self.fill_value).astype(self.dtype)
@@ -554,7 +631,7 @@ class Storage(Base):
 
         # BE: set a layer index in the view the datalist access has proven to be too slow.
         for v in views:
-            v.slayer = self.layermap.index(v.layer)
+            v.dlayer = self.layermap.index(v.layer)
             
         logger.debug('%s[%s] :: shape: %s -> %s' % (self.owner.ID, self.ID,str(sh), str(new_shape)))
         # store new buffer
@@ -563,34 +640,34 @@ class Storage(Base):
         self.center = new_center
 
         # make datalist
-        self._make_datalist()
+        #self._make_datalist()
 
     def _to_pix(self, coord):
         """
-        Transforms physical coordinates 'coord' to pixel coordinates.
+        Transforms physical coordinates `coord` to pixel coordinates.
         
         Parameters
         ----------
-        coord : (N,2) numpy array
-            the coordinate
+        coord : tuple or array-like
+            A ``(N,2)``-array of the coordinates to be trasnformed
         """
         return (coord - self.origin)/self.psize
 
     def _to_phys(self, pix):
         """
-        Transforms pixcel coordinates 'pix' to physical coordinates.
+        Transforms pixcel coordinates `pix` to physical coordinates.
         
         Parameters
         ----------
-        pix : (N,2) numpy array
-            the coordinate
+        pix : tuple or array-like
+            A ``(N,2)``-array of the coordinates to be transformed
         """
         return pix*self.psize + self.origin
         
     @property
     def psize(self):
         """
-        Return the pixel size.
+        :returns: The pixel size.
         """
         return self._psize
     
@@ -646,15 +723,30 @@ class Storage(Base):
         else: 
             return None
 
+    def allreduce(self,op=None):
+        """
+        Performs MPI parallel ``allreduce`` with a default sum as 
+        reduction operation for internal data buffer ``self.data``
+        
+        :param Container c: Input
+        :param op: Reduction operation. If ``None`` uses sum.
+           
+        See also
+        --------
+        ptypy.utils.parallel.allreduce
+        Container.allreduce
+        """
+        u.parallel.allreduce(self.data, op=op)
+    
     def zoom_to_psize(self,new_psize,**kwargs):
         """
-        ---- untested!!! ----
-        changes pixel size and zooms the data buffer along last two axis accordingly
-        updates all attached views and reformats if neccessary
+        Changes pixel size and zooms the data buffer along last two axis 
+        accordingly, updates all attached views and reformats if neccessary.
+        **untested!!**
         
-        Parameters:
-        -----------
-        new_psize : scalar, 2-tuple or (1,2)-array
+        Parameters
+        ----------
+        new_psize : scalar or array_like
                     new pixel size 
         """
         new_psize = u.expect2(new_psize)
@@ -682,7 +774,10 @@ class Storage(Base):
 
     def grids(self):
         """
-        Returns x and y grids in the shape of internal buffer
+        Returns
+        ------- 
+        x, y: ndarray 
+            grids in the shape of internal buffer
         """
         sh = self.data.shape 
         nm = np.indices(sh)[-2:]
@@ -693,8 +788,13 @@ class Storage(Base):
     
     def get_view_coverage(self):
         """
-        Returns an array of the shape of internal buffer
-        showing the view coverage of this storage 
+        Creates an array in the shape of internal buffer where the value
+        of each pixel represents the number of views that cover that pixel
+                
+        Returns
+        ------- 
+        ndarray 
+            view coverage in the shape of internal buffer 
         """
         coverage = np.zeros_like(self.data)
         for v in self.views:
@@ -704,7 +804,10 @@ class Storage(Base):
 
     def report(self):
         """
-        Returns a formatted string giving a report on this storage.
+        Returns
+        -------
+        str
+            a formatted string giving a report on this storage.
         """
         info = "Shape: %s\n" % str(self.data.shape)
         info += "Pixel size (meters): %g x %g\n" % tuple(self.psize)
@@ -712,11 +815,98 @@ class Storage(Base):
         info += "Number of views: %d\n" % len(self.views)
         return info
 
+    def formatted_report(self,table_format=None,offset=8, align='right',separator=" : ", include_header=True):
+        """
+        Returns formatted string and a dict with the respective information
+        
+        Parameters
+        ----------
+        table_format : list, optional
+            List of (*item*,*length*) pairs where item is name of the info 
+            to be listed in the report and length is the column width. 
+            The following items are allowed:
+            
+            - *memory*, for memory usage of the storages and total use
+            - *shape*, for shape of internal storages
+            - *dimensions*, is ``shape \* psize``
+            - *psize*, for pixel size of storages
+            - *views*, for number of views in each storage
+        
+        offset : int, optional
+            First column width
+        
+        separator : str, optional
+            Column separator.
+        
+        align : str, optional
+            Column alignment, either ``'right'`` or ``'left'``.
+            
+        include_header : bool, optional
+            Include a header if True.
+            
+        Returns
+        -------
+        fstring : str
+            Formatted string 
+            
+        dct :dict
+            Dictionary containing with the respective info to the keys
+            in `table_format`
+        """
+        fr = _Freport()
+        if offset is not None:
+            fr.offset = offset 
+        if table_format is not None:
+            fr.table = table_format 
+        if separator is not None:
+            fr.separator = separator
+        dct ={}
+        fstring = self.ID.ljust(fr.offset)
+        
+        for key,column in fr.table:
+            if str(key)=='shape':
+                dct[key] = tuple(self.data.shape)
+                info = '%d*%d*%d' % dct[key]
+            elif str(key)=='psize':
+                dct[key] = tuple(self.psize)
+                info = '%.2e*%.2e' % tuple(dct[key])
+                info = info.split('e',1)[0]+info.split('e',1)[1][3:]
+            elif str(key)=='dimension':
+                dct[key] = (self.psize[0] * self.data.shape[-2], self.psize[1] * self.data.shape[-1])
+                info = '%.2e*%.2e' % tuple(dct[key])
+                info = info.split('e',1)[0]+info.split('e',1)[1][3:]
+            elif str(key)=='memory':
+                dct[key] = float(self.data.nbytes) /1e6
+                info = '%.1f' % dct[key]
+            elif str(key)=='dtype':
+                dct[key] = self.data.dtype
+                info = dct[key].str
+            elif str(key)=='views':
+                dct[key] = len(self.views)
+                info = str(dct[key])
+            else:
+                dct[key] = None
+                info = ""
+                
+            fstring += fr.separator
+            if str(align)=='right':
+                fstring += info.rjust(column)[-column:]
+            else:
+                fstring += info.ljust(column)[:column]
+                
+        if not include_header:
+            return fstring, dct
+        else:
+            return fr.header()+fstring, dct
+            
     def __getitem__(self, v):
         """
         Storage[v]
         
-        Return the numpy array corresponding to the view on this storage.
+        Returns
+        -------
+        ndarray
+            The view to internal data buffe correspondieng to View `v`
         """
         if not isinstance(v,View):
             raise ValueError
@@ -724,21 +914,31 @@ class Storage(Base):
         # Here things could get complicated. Coordinate transforms, 3D - 2D projection, ... 
         # Current implementation: ROI + subpixel shift
         #return shift(self.datalist[v.layer][v.roi[0,0]:v.roi[1,0],v.roi[0,1]:v.roi[1,1]], v.sp)
-        return shift(self.data[v.slayer,v.roi[0,0]:v.roi[1,0],v.roi[0,1]:v.roi[1,1]], v.sp)
+        #return shift(self.data[v.slayer,v.roi[0,0]:v.roi[1,0],v.roi[0,1]:v.roi[1,1]], v.sp)
+        return shift(self.data[v.dlayer,v.dlow[0]:v.dhigh[0],v.dlow[1]:v.dhigh[1]], v.sp)
         
     def __setitem__(self, v, newdata):
         """
         Storage[v] = newdata
 
-        Set the data to newdata for view v.
+        Set internal data buffer to `newdata` for the region of view `v`.
+        
+        Parameters
+        ----------
+        v : View
+            A View for this storage
+        
+        newdata : ndarray
+            Two-dimensional array that fits the view's shape
         """
         if not isinstance(v,View):
             raise ValueError
         
         # Only ROI and shift for now. This part must always be consistent with __getitem__!
         #self.datalist[v.layer][v.roi[0,0]:v.roi[1,0],v.roi[0,1]:v.roi[1,1]] = shift(newdata, -v.sp) 
-        self.data[v.slayer,v.roi[0,0]:v.roi[1,0],v.roi[0,1]:v.roi[1,1]] = shift(newdata, -v.sp)
-        
+        #self.data[v.slayer,v.roi[0,0]:v.roi[1,0],v.roi[0,1]:v.roi[1,1]] = shift(newdata, -v.sp)
+        self.data[v.dlayer,v.dlow[0]:v.dhigh[0],v.dlow[1]:v.dhigh[1]] = shift(newdata, -v.sp)
+    
     def __str__(self):
         info = '%15s : %7.2f MB :: '  % (self.ID,self.data.nbytes /1e6)
         if self.data is not None:
@@ -759,79 +959,138 @@ class View(Base):
     
     A view stores all the slicing information to extract a 2D piece
     of Container. 
+    
+    Note
+    ----
+    The final structure of this class is yet up to debate
+    and the constructor signature may change. Especially since
+    "DEFAULT_ACCESSRULE" is yet so small, its contents could be
+    incorporated in the constructor call.
+    
     """
+    ########
+    # TODO #
+    ########
+    # - remove numpy array overhead by having only a few numpy arrays stored
+    # in view; access via properties
+    # - get rid of self.pods dictionary also due to unnecessary overhead
+    
     DEFAULT_ACCESSRULE = DEFAULT_ACCESSRULE
     _PREFIX = VIEW_PREFIX
       
-    def __init__(self, container,ID=None, **kwargs):
+    def __init__(self, container,ID=None, accessrule=None, **kwargs):
         """
-        A "window" on a container.
-        
-        A view stores all the slicing information to extract a 2D piece
-        of Container. 
-        
         Parameters
         ----------
         container : Container
-                    The Container instance this view applies to.
+            The Container instance this view applies to.
+        
+        ID : str or int
+            ID for this view. Automatically built from ID if None.
+        
         accessrule : dict
-                   All the information necessary to access the wanted slice.
-                   Maybe subject to change as code evolve. See DEFAULT_ACCESSRULE
-        name : str or None
-               name for this view. Automatically built from ID if None.
+            All the information necessary to access the wanted slice.
+            Maybe subject to change as code evolve. See keyword arguments
+            Almost all keys of accessrule will be available as attributes
+            in the constructed View instance.
+        
+        Keyword Args
+        ------------
+        storageID : str
+            ID of storage, If the Storage does not exist 
+            it will be created! (*default* is ``None``)
+            
+        shape : int or tuple of int
+            Shape of the view in pixels (*default* is ``None``)
+            
+        coord : 2-tuple of float, 
+            Physical coordinates [meter] of the center of the view.
+            
+        psize : float or tuple of float
+            Pixel size [meters]. Required for storage initialization, 
+            See :py:data:`DEFAULT_PSIZE`
+            
+        layer : int
+            Index of the third dimension if applicable.
+            (*default* is ``0``)
+            
         active : bool
-                 Whether this view is active (default to True) 
+            Whether this view is active (*default* is ``True``) 
         """
         super(View,self).__init__(container,ID,False)
-        if len(kwargs) >0 :
-            self._initialize(**kwargs)
-            
-    def _initialize(self,accessrule=None, active=True):
-
-        # Prepare a dictionary for PODs (volatile!)
-        self.pods = weakref.WeakValueDictionary()
-
-        # Set active state
-        self.active = active
-
-        # The messy stuff
-        self._set_accessrule(accessrule)
         
-    def _set_accessrule(self, accessrule):
+        # Prepare a dictionary for PODs (volatile!)
+        #if not hasattr(self,'pods'):
+        #    self.pods = weakref.WeakValueDictionary()
+        self.pods = weakref.WeakValueDictionary()
+        """ Volatile dictionary for all :any:`POD`\ s that connect to 
+            this view """
+        
+        # a single pod lookup (weak reference).
+        self._pod = None
+        
+        self.active = True
+        """ Active state. If False this view will be ignored when 
+            resizing the data buffer of the associated :any:`Storage`."""
+        
+        #: The :any:`Storage` instance that this view applies to by default.
+        self.storage = None
+        
+        self.storageID = None
+        """ The storage ID that this view will be forward to if applied 
+            to a :any:`Container`."""
+        
+        # numpy buffer arrays
+        self._arint = np.zeros((4,2),dtype=np.int)
+        self._arfloat = np.zeros((4,2),dtype=np.float)
+        
+        #: The "layer" i.e. first axis index in Storage data buffer
+        self.dlayer = 0 
+        
+        # The messy stuff
+        self._set(accessrule,**kwargs )
+        
+    def _set(self, accessrule,**kwargs ):
         """
         Store internal info to get/set the 2D data in the container. 
         """
         rule = u.Param(self.DEFAULT_ACCESSRULE)
-        rule.update(accessrule)
-
-        # The storage ID this view will apply to
+        if accessrule is not None:
+            rule.update(accessrule)
+        rule.update(kwargs)
+        
+        self.active = True if rule.active else False
+        
         self.storageID = rule.storageID
 
         # Information to access the slice within the storage buffer
-        self.psize = u.expect2(rule.psize)
+        self.psize = rule.psize
         
         # shape == None means "full frame"
-        if rule.shape is not None:
-            self.shape = u.expect2(rule.shape)
-        else:
-            self.shape = None
-        self.physcoord = u.expect2(rule.coord)
+        self.shape = rule.shape
+        
+        #if rule.shape is not None:
+            #self.shape = u.expect2(rule.shape)
+        #else:
+            #self.shape = u.expect2(0)
+            
+        self.coord = rule.coord
         self.layer = rule.layer
 
         # Look for storage, create one if necessary
         s = self.owner.S.get(self.storageID, None)
         if s is None:
-            s = self.owner.new_storage(ID=self.storageID, psize=rule.psize, shape=rule.shape)
+            s = self.owner.new_storage(ID=self.storageID, psize=rule.psize, shape=self.shape)
         self.storage = s
             
-        if (self.storage.psize != rule.psize).any():
-            raise RuntimeError('Inconsistent pixel size when creating view')
+        if self.psize is not None and not np.allclose(self.storage.psize,self.psize):
+            logger.warn('Inconsistent pixel size when creating view.\n(%s vs %s)' % (str(self.storage.psize),str(self.psize)))
 
         # This ensures self-consistency (sets pixel coordinate and ROI)
         if self.active: self.storage.update_views(self)
 
     def __str__(self):
-        first = '%s -> %s[%s] : shape = %s layer = %s physcoord = %s' % (self.owner.ID, self.storage.ID, self.ID, self.shape, self.layer, self.physcoord)
+        first = '%s -> %s[%s] : shape = %s layer = %s coord = %s' % (self.owner.ID, self.storage.ID, self.ID, self.shape, self.layer, self.coord)
         if not self.active:
             return first+'\n INACTIVE : slice = ...  '
         else:
@@ -840,100 +1099,305 @@ class View(Base):
     @property
     def slice(self):
         """
-        returns a slice according to layer and roi
-        Please note, that this not always makes sense
+        Returns a slice-tuple according to ``self.layer``, ``self.dlow``
+        and ``self.dhigh``.
+        Please note, that this may not always makes sense
         """
-        slayer = None if self.layer not in self.storage.layermap else self.storage.layermap.index(self.layer)
-        return (slayer,slice(self.roi[0,0],self.roi[1,0]),slice(self.roi[0,1],self.roi[1,1]))
+        #slayer = None if self.layer not in self.storage.layermap else self.storage.layermap.index(self.layer)
+        return (self.dlayer,slice(self.dlow[0],self.dhigh[0]),slice(self.dlow[1],self.dhigh[1]))
         
     @property
     def pod(self):
         """
-        returns first pod in the pod dict. This is a common call in the code 
-        and has therefore found its way here
+        Returns first :any:`POD` in the ``self.pods`` dict. 
+        This is a common call in the code and has therefore found 
+        its way here. May return ``None`` if there is no pod connected.
         """
-        return self.pods.values()[0]
-        
+        return self._pod()  # weak reference
+        #return self.pods.values()[0]
+               
     @property
     def data(self):
         """
-        Return the view content
+        The view content in data buffer of associated storage.
         """
         return self.storage[self]
         
     @data.setter
     def data(self,v):
         """
-        Set the view content
+        Set the view content in data buffer of associated storage.
         """
         self.storage[self]=v
         
+    @property
+    def shape(self):
+        """
+        Two dimensional shape of View.
+        """
+        return self._arint[0] if (self._arint[0] > 0).all() else None
+    
+    @shape.setter
+    def shape(self,v):
+        """
+        Set two dimensional shape of View.
+        """
+        if v is None:
+            self._arint[0] = u.expect2(0)
+        else:
+            self._arint[0] = u.expect2(v)
+        
+    @property
+    def dlow(self):
+        """
+        Low side of the View's data range.
+        """
+        return self._arint[1] 
+    
+    @dlow.setter
+    def dlow(self,v):
+        """
+        Set low side of the View's data range.
+        """
+        self._arint[1] = v
+    
+    @property
+    def dhigh(self):
+        """
+        High side of the View's data range.
+        """
+        return self._arint[2] 
+    
+    @dhigh.setter
+    def dhigh(self,v):
+        """
+        Set high side of the View's data range.
+        """
+        self._arint[2] = v
+
+    @property
+    def dcoord(self):
+        """
+        Center coordinate (index) in data buffer.
+        """
+        return self._arint[3] 
+    
+    @dcoord.setter
+    def dcoord(self,v):
+        """
+        Set high side of the View's data range.
+        """
+        self._arint[3] = v
+        
+    @property
+    def psize(self):
+        """
+        Pixel size of the View.
+        """
+        return self._arfloat[0] if (self._arfloat[0] > 0.).all() else None
+    
+    @psize.setter
+    def psize(self,v):
+        """
+        Set pixel size
+        """
+        if v is None:
+            self._arfloat[0] = u.expect2(0.)
+        else:
+            self._arfloat[0] = u.expect2(v)
+    
+    @property
+    def coord(self):
+        """
+        The View's physical coordinate (meters)
+        """
+        return self._arfloat[1]
+    
+    @coord.setter
+    def coord(self,v):
+        """
+        Set the View's physical coordinate (meters)
+        """
+        if v is None:
+            self._arfloat[1] = u.expect2(0.)
+        elif type(v) is not np.ndarray:
+            self._arfloat[1] = u.expect2(v)
+        else:
+            self._arfloat[1] = v
+    
+    @property
+    def sp(self):
+        """
+        The subpixel difference (meters) between physical coordinate
+        and data coordinate.
+        """
+        return self._arfloat[2]
+    
+    @sp.setter
+    def sp(self,v):
+        """
+        Set the subpixel difference (meters) between physical coordinate
+        and data coordinate.
+        """
+        if v is None:
+            self._arfloat[2] = u.expect2(0.)
+        elif type(v) is not np.ndarray:
+            self._arfloat[2] = u.expect2(v)
+        else:
+            self._arfloat[2] = v
+            
 class Container(Base):
     """
     High-level container class.
     
     Container can be seen as a "super-numpy-array" which can contain multiple
-    sub-containers, potentially of different shape. 
-    Typically there will be only 5 such containers in a reconstruction:
-    "probe", "object", "exit", "diff" and "mask"
-    A container can duplicate its internal storage and apply views on them.
+    sub-containers of type :any:`Storage`, potentially of different shape,
+    along with all :any:`View` instances that act on these Storages to extract
+    data from the internal data buffer :any:`Storage.data`. 
+    
+    Typically there will be five such base containers in a :any:`Ptycho`
+    reconstruction instance:
+    
+        - `Cprobe`, Storages for the illumination, i.e. **probe**, 
+        - `Cobj`, Storages for the sample transmission, i.e. **object**, 
+        - `Cexit`, Storages for the **exit waves**, 
+        - `Cdiff`, Storages for **diffraction data**, usually one per scan,
+        - `Cmask`, Strorages for **masks** (and weights), usually one per scan,
+        
+    A container can conveniently duplicate all its internal :any:`Storage` 
+    instances into a new Container using :py:meth:`copy`. This feature is 
+    intensively used in the reconstruction engines where buffer copies 
+    are needed to temporarily store results. These copies are referred 
+    by the "original" container through the property :py:meth:`copies` and
+    a copy refers to its original through the attribute :py:attr:`original` 
+    In order to reduce the number of :any:`View` instances, Container copies 
+    do not hold views and use instead the Views held by the original container 
+    
+    Attributes
+    ----------
+    original : Container
+        If self is copy of a Container, this attribute refers to the original
+        Container. Otherwise it is None.
+    
+    data_type : str
+        Either "single" or "double"
     """
     _PREFIX = CONTAINER_PREFIX
     
-    def __init__(self, ptycho=None,ID=None, **kwargs):
+    def __init__(self, ptycho=None,ID=None,data_type='complex', **kwargs):
         """
-        High-level container class.
-        Typically there will be only 4 such containers in a reconstruction:
-        "probe", "object", "exit" and "diff"
-        A container knows how to duplicate its internal storage and apply views on them.
-
         Parameters
         ----------
-        ID : ...
+        ID : str or int
              A unique ID, managed by the parent
-        name : str or None
-               The name of this container. For documentation and debugging
-               purposes only. Defaults to str(ID)
+             
         ptycho : Ptycho
-                 The instance of Ptycho associated with this pod. If None,
-                 defaults to ptypy.currentPtycho
-        dtype : str or numpy.dtype
-                data type - either a numpy.dtype object or 'complex' or 
-                'real' (precision is taken from ptycho.FType or ptycho.CType) 
+            The instance of Ptycho associated with this pod.
+             
+        data_type : str or numpy.dtype
+            data type - either a numpy.dtype object or 'complex' or 
+            'real' (precision is taken from ptycho.FType or ptycho.CType)
+        
         """
         #if ptycho is None:
         #    ptycho = ptypy.currentPtycho
     
         super(Container,self).__init__(ptycho,ID)
-        if len(kwargs) > 0:
-            self._initialize(**kwargs)
+        #if len(kwargs) > 0:
+            #self._initialize(**kwargs)
         
-    def _initialize(self,original=None, data_type='complex'):
+    #def _initialize(self,original=None, data_type='complex'):
 
         self.data_type = data_type
              
         # Prepare for copy
-        self.original = original if original is not None else self
-        
+        #self.original = original if original is not None else self
+        self.original = self
         
     @property
     def copies(self):
-        return [c for c in self.owner.containers.itervalues() if c.original is self and c is not self]
+        """
+        Property that returns list of all copies of this :any:`Container`
+        """
+        return [c for c in self.owner._pool[CONTAINER_PREFIX].itervalues() if c.original is self and c is not self]
         
+    def delete_copy(self,copyIDs=None):
+        """
+        Delet a copy or all copies of this container from owner instance.
+        
+        Parameters
+        ----------
+        copyIDS : str
+            ID of copy to be deleted. If None, deletes *all* copies
+        """
+        if self.original is self:
+            if copyIDs == None:
+                copyIDs = [c.ID for c in self.copies]
+            for cid in copyIDs:
+                del self.owner._pool[CONTAINER_PREFIX][cid]
+        else:
+            raise RuntimeError('Container copy is not allowed to delete anything')
+            
     @property
     def dtype(self):
-        # get datatype
+        """
+        Property that returns numpy dtype of all internal data buffers
+        """
         if self.data_type == 'complex':
-            return self.owner.CType
+            return self.owner.CType if self.owner is not None else np.complex128
         elif self.data_type == 'real':
-            return self.owner.FType
+            return self.owner.FType if self.owner is not None else np.float64
         else:
             return self.data_type
             
     @property
     def S(self):
+        """
+        A property that returns the internal dictionary of all 
+        :any:`Storage` instances in this :any:`Container`
+        """
         return self._pool.get(STORAGE_PREFIX,{})
 
+    @property
+    def storages(self):
+        """
+        A property that returns the internal dictionary of all 
+        :any:`Storage` instances in this :any:`Container`
+        """
+        return self._pool.get(STORAGE_PREFIX,{})
+        
+    @property
+    def Sp(self):
+        """
+        A property that returns the internal dictionary of all 
+        :any:`Storage` instances in this :any:`Container` as a :any:`Param`
+        """
+        return u.Param(self.S)
+
+    @property
+    def V(self):
+        """
+        A property that returns the internal dictionary of all 
+        :any:`View` instances in this :any:`Container`
+        """
+        return self._pool.get(VIEW_PREFIX,{})
+    
+    @property
+    def views(self):
+        """
+        A property that returns the internal dictionary of all 
+        :any:`View` instances in this :any:`Container`
+        """
+        return self._pool.get(VIEW_PREFIX,{})
+    
+    @property
+    def Vp(self):
+        """
+        A property that returns the internal dictionary of all 
+        :any:`View` instances in this :any:`Container` as a :any:`Param`
+        """
+        return u.Param(self.V)
+        
     @property
     def size(self):
         """
@@ -944,14 +1408,24 @@ class Container(Base):
             if s.data is not None:
                 sz += s.data.size
         return sz
-        
+    
     @property
-    def V(self):
-        return self._pool.get(VIEW_PREFIX,{})
+    def nbytes(self):
+        """
+        Return total number of bytes used by numpy array buffers
+        in this container. This is not the actual size in memory of the
+        whole contianer, as it does not include the views nor dictionary
+        overhead.
+        """
+        sz = 0
+        for ID,s in self.S.iteritems():
+            if s.data is not None:
+                sz += s.data.nbytes
+        return sz
         
     def views_in_storage(self, s, active=True):
         """
-        Return a list of views on Storage s.
+        Return a list of views on :any:`Storage` `s`.
         
         Parameters
         ----------
@@ -967,21 +1441,23 @@ class Container(Base):
            
     def copy(self, ID=None, fill=None):
         """
-        Create a new container matching self. 
+        Create a new :any:`Container` matching self. 
         
         The copy does not manage views. 
         
         Parameters
         ----------
-        fill : ...
-               If None (default), copy content. If a float, initialize to this value
+        fill : scalar or None
+            If None (default), copy content. If scalar, initializes 
+            to this value
         """
         # Create an ID for this copy
         ID = self.ID + '_copy%d' % (len(self.copies)) if ID is None else ID
 
         # Create new container
-        newCont = self.__class__(ptycho=self.owner,ID=ID, original = self,data_type=self.data_type)
-
+        newCont = self.__class__(ptycho=self.owner,ID=ID, data_type=self.data_type)
+        newCont.original = self
+        
         # Copy storage objects
         for storageID, s in self.S.iteritems():
             news = s.copy(newCont,storageID, fill)
@@ -991,15 +1467,31 @@ class Container(Base):
         
     def fill(self, fill=0.0):
         """
-        Fill all storages.
+        Fill all storages with scalar value `fill`
         """
         for s in self.S.itervalues(): 
             s.fill(fill)
             s._make_datalist() 
+    
+    def allreduce(self,op=None):
+        """
+        Performs MPI parallel ``allreduce`` with a sum as reduction
+        for all :any:`Storage` instances held by *self*
         
+        :param Container c: Input
+        :param op: Reduction operation. If ``None`` uses sum.
+           
+        See also
+        --------
+        ptypy.utils.parallel.allreduce
+        Storage.allreduce
+        """
+        for s in self.S.itervalues():
+            s.allreduce(op=op)
+    
     def clear(self):
         """
-        reduce / delete all data in attached storages
+        Reduce / delete all data in attached storages
         """
         for s in self.S.itervalues():
             s.data = np.empty((s.data.shape[0],1,1),dtype=self.dtype)
@@ -1008,17 +1500,16 @@ class Container(Base):
     def new_storage(self, ID=None, **kwargs):
         """
         Create and register a storage object.
-        
-        Assign the provided ID is assigned automatically.
-        
+                
         Parameters
         ----------
         ID : str
              An ID for the storage. If None, a new ID is created. An
              error will be raised if the ID already exists.
-        **kwargs : ...
-                   Arguments for new storage creation. See doc for
-                   Storage.
+             
+        kwargs : ...
+            Arguments for new storage creation. See doc for
+            :any:`Storage`.
         
         """
         if self.S is not None:
@@ -1033,7 +1524,12 @@ class Container(Base):
 
     def reformat(self,AlsoInCopies=False):
         """
-        Reformat all storages in this container.
+        Reformats all storages in this container.
+        
+        Parameters
+        ----------
+        AlsoInCopies : bool
+            If True, also reformat associated copies of this container 
         """
         for ID,s in self.S.iteritems():
             s.reformat()
@@ -1051,6 +1547,77 @@ class Container(Base):
             info += s.report()
         return info
 
+    def formatted_report(self,table_format=None,offset=8,align='right',separator=" : ", include_header=True):
+        """
+        Returns formatted string and a dict with the respective information
+        
+        Parameters
+        ----------
+        table_format : list 
+            List of (*item*,*length*) pairs where item is name of the info 
+            to be listed in the report and length is the column width. 
+            The following items are allowed:
+            
+            - *memory*, for memory usage of the storages and total use
+            - *shape*, for shape of internal storages
+            - *dimensions*, is ``shape \* psize``
+            - *psize*, for pixel size of storages
+            - *views*, for number of views in each storage
+        
+        offset : int, optional
+            First column width
+        
+        separator : str, optional
+            Column separator
+        
+        align : str, optional
+            Column alignment, either ``'right'`` or ``'left'``
+            
+        include_header : bool
+            Include a header if True
+            
+        Returns
+        -------
+        fstring : str
+            Formatted string 
+            
+        dct :dict
+            Dictionary containing with the respective info to the keys
+            in `table_format`
+            
+        See also
+        --------
+        Storage.formatted_report
+        """
+        fr = _Freport()
+        if offset is not None:
+            fr.offset = offset 
+        if table_format is not None:
+            fr.table = table_format 
+        if separator is not None:
+            fr.separator = separator
+        dct ={}
+        mem = 0
+        info = ""
+        for ID,s in self.S.iteritems():
+            fstring, stats = s.formatted_report(fr.table,fr.offset,align,fr.separator,False)
+            info += fstring
+            info += '\n'
+            mem += stats.get('memory',0)
+            
+        fstring = str(self.ID).ljust(fr.offset)+fr.separator  
+        fstring += ('%.1f' % mem).rjust(fr.table[0][1]) + fr.separator
+        try:
+            t = str(self.dtype).split("'")[1].split(".")[1]
+        except:
+            t = str(self.dtype)
+        fstring += t.rjust(fr.table[0][1])
+        fstring += '\n'
+        fstring += info
+        if include_header:
+            return fr.header()+fstring
+        else:
+            return fstring
 
     def __getitem__(self,view):
         """
@@ -1059,7 +1626,7 @@ class Container(Base):
         Parameters
         ----------
         view : View
-               A valid view object.
+               A valid :any:`View` object.
         """
         if not isinstance(view,View):
             raise ValueError
@@ -1078,9 +1645,10 @@ class Container(Base):
         Parameters
         ----------
         view : View
-               A valid view for this object
-        newdata : array_like, 2D
-                  The data to be stored.
+               A valid :any:`View` for this object
+               
+        newdata : array_like
+                  The data to be stored 2D.
         """
         if not isinstance(view,View):
             raise ValueError
@@ -1095,6 +1663,23 @@ class Container(Base):
     def info(self):
         """
         Return the total buffer space for this container in bytes and storage info
+        
+        Returns
+        -------
+        space : int
+            Accumulated memory usage of all data buffers in this Container
+            
+        fstring : str
+            Formatted string 
+            
+        Note
+        ----
+        May get **deprecated** in future. Use formatted_report instead.
+        
+        See also
+        --------
+        report
+        formatted_report
         """
         self.space=0
         info_str =''
@@ -1167,41 +1752,34 @@ class POD(Base):
     gives access to "exit", a (coherent) exit wave, and to propagation
     objects to go from exit to diff space. 
     """
+    #: Default set of :any:`View`\ s used by a POD
     DEFAULT_VIEWS={'probe':None,'obj':None,'exit':None,'diff':None,'mask':None}
+    
     _PREFIX = POD_PREFIX
     
-    def __init__(self,ptycho=None,ID=None,**kwargs):
+    def __init__(self,ptycho=None,ID=None,views=None,geometry=None,**kwargs):
         """
-        POD : Ptychographic Object Descriptor
-    
-        A POD brings together probe view, object view and diff view. It also
-        gives access to "exit", a (coherent) exit wave, and to propagation
-        objects to go from exit to diff space. 
-        
         Parameters
         ----------
-        ID : ...
-            The view ID, managed by the parent.
-        info : dict or Param
-                This dict is needed for the modelmanager to figure out to
-                which storage and layer the views should point to
-        views : dict or Param
-                The views. See POD.DEFAULT_VIEWS.
-        geometry : geometry class
-                it also handles propagation
         ptycho : Ptycho
-                 The instance of Ptycho associated with this pod. If None,
-                 defaults to ptypy.currentPtycho
+            The instance of Ptycho associated with this pod. 
+            
+        ID : str or int
+            The pod ID, If None it is managed by the ptycho.
+            
+        views : dict or Param
+            The views. See :py:attr:`DEFAULT_VIEWS`.
+            
+        geometry : Geo
+            Geometry class instance and attached propagator
+
         """
         super(POD,self).__init__(ptycho,ID,False)
-        if len(kwargs) > 0:
-            self._initialize(**kwargs)
+        #if len(kwargs) > 0:
+            #self._initialize(**kwargs)
             
-    def _initialize(self,views=None,geometry=None,meta=None):
-        # store meta data 
-        # this maybe not so clever if meta_data is large
-        self.meta = meta
-        
+    #def _initialize(self,views=None,geometry=None):#,meta=None):
+       
         # other defaults:
         self.is_empty=False
         self.probe_weight = 1.
@@ -1214,7 +1792,9 @@ class POD(Base):
             if v is None:
                 continue
             v.pods[self.ID]=self
-        # Get geometry with propagators
+            v._pod = weakref.ref(self)
+            
+        #: :any:`Geo` instance with propagators
         self.geometry = geometry
         
         # Convenience access for all views. Note: assignement of the type
@@ -1223,26 +1803,53 @@ class POD(Base):
         # be useful, we should consider declaring ??_view as @property.
         self.ob_view = self.V['obj']
         self.pr_view = self.V['probe']
+        """ A reference to the (pr)obe-view. (ob)ject-, (ma)sk- and 
+        (di)ff-view are accessible in the same manner (``self.xx_view``). """
+
         self.di_view = self.V['diff']
         self.ex_view = self.V['exit']
+        
+        if self.ex_view is None:
+            self.use_exit_container = False
+            self._exit = np.ones_like(self.geometry.shape,dtype=self.owner.CType)
+        else:
+            self.use_exit_container = True
+            self._exit = None
+            
         self.ma_view = self.V['mask']
-        self.exit = np.ones_like(self.geometry.N,dtype=self.owner.CType) if self.active else None
         # Check whether this pod is active it should maybe also have a check for an active mask view?
         # Maybe this should be tight to to the diff views activeness through a property
+
     @property
-    def active(self):    
+    def active(self):
+        """
+        Convenience property that describes whether this pod is active or not.
+        Equivalent to ``self.di_view.active``
+        """    
         return self.di_view.active
         
     @property
     def fw(self):
+        """
+        Convenience property that returns forward propagator of attached 
+        Geometry instance. Equivalent to ``self.geometry.propagator.fw``.
+        """  
         return self.geometry.propagator.fw
     
     @property
     def bw(self):
+        """
+        Convenience property that returns backward propagator of attached 
+        Geometry instance. Equivalent to ``self.geometry.propagator.bw``.
+        """
         return self.geometry.propagator.bw
     
     @property
     def object(self):
+        """
+        Convenience property that links to slice of object :any:`Storage`.
+        Usually equivalent to ``self.ob_view.data``.
+        """
         if not self.is_empty:
             return self.ob_view.data
         else:
@@ -1254,22 +1861,40 @@ class POD(Base):
 
     @property
     def probe(self):
+        """
+        Convenience property that links to slice of probe :any:`Storage`.
+        Equivalent to ``self.pr_view.data``.
+        """
         return self.pr_view.data
         
     @probe.setter
     def probe(self,v):
         self.pr_view.data=v
 
-    #@property
-    #def exit(self):
-    #    return self.ex_view.data
-        
-    #@exit.setter
-    #def exit(self,v):
-    #    self.ex_view.data=v
+    @property
+    def exit(self):
+        """
+        Convenience property that links to slice of exit wave 
+        :any:`Storage`. Equivalent to ``self.pr_view.data``.
+        """
+        if self.use_exit_container:
+            return self.ex_view.data
+        else:
+            return self._exit
+            
+    @exit.setter
+    def exit(self,v):
+        if self.use_exit_container:
+            self.ex_view.data = v
+        else:
+            self._exit=v
 
     @property
     def diff(self):
+        """
+        Convenience property that links to slice of diffraction 
+        :any:`Storage`. Equivalent to ``self.di_view.data``.
+        """
         return self.di_view.data
         
     @diff.setter
@@ -1278,8 +1903,38 @@ class POD(Base):
         
     @property
     def mask(self):
+        """
+        Convenience property that links to slice of masking 
+        :any:`Storage`. Equivalent to ``self.ma_view.data``.
+        """
         return self.ma_view.data
         
     @mask.setter
     def mask(self,v):
         self.ma_view.data=v
+
+
+class _Freport(object):
+    
+    def __init__(self):
+        self.offset = 8
+        self.desc =dict([('memory','Memory'),('shape','Shape'),('psize','Pixel size'),('dimension','Dimensions'),('views','Views')])
+        self.units = dict([('memory','(MB)'),('shape','(Pixel)'),('psize','(meters)'),('dimension','(meters)'),('views','act.')])
+        self.table = [('memory',6),('shape',16),('psize',15),('dimension',15),('views',5)]
+        self.h1="(C)ontnr"
+        self.h2="(S)torgs"
+        self.separator = " : "
+        self.headline= "-"
+        
+    def header(self,as_string=True):
+        header=[]
+        header.append(self.h1.ljust(self.offset))
+        header.append(self.h2.ljust(self.offset))
+        for key,column in self.table:
+            header[0] += self.separator + self.desc[key].ljust(column)
+            header[1] += self.separator + self.units[key].ljust(column)
+        header.append(self.headline * len(header[1]))
+        if as_string:
+            return '\n'.join(header)+'\n'
+        else:
+            return header

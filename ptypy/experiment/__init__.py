@@ -3,7 +3,6 @@
 Beamline-specific data preparation modules.
 
 Currently available:
- * cSAXS
  * I13DLS
 
 This file is part of the PTYPY package.
@@ -15,4 +14,12 @@ This file is part of the PTYPY package.
 
 # Import nstrument-specific modules 
 #import cSAXS
-import I13DLS
+from I13 import I13Scan
+from optiklabor import FliSpecScanMultexp
+from plugin import makeScanPlugin
+
+PtyScanTypes = dict(
+    fli_spec_multexp=FliSpecScanMultexp,
+    i13dls=I13Scan,
+    plugin=makeScanPlugin
+)
