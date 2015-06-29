@@ -58,7 +58,7 @@ setup(
     version = VERSION,
     author = 'Pierre Thibault, Bjoern Enders, Martin Dierolf and others',
     description = 'Ptychographic reconstruction toolbox', 
-    long_description = file('README.md','r').read(),
+    long_description = file('README.rst','r').read(),
     #install_requires = ['numpy>=1.8',\
                         #'h5py>=2.2',\
                         #'matplotlib>=1.3',\

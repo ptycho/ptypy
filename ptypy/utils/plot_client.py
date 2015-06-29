@@ -605,6 +605,8 @@ class MPLClient(MPLplotter):
         from ptypy.core.ptycho import DEFAULT_autoplot
         self.config = DEFAULT_autoplot.copy(depth=3)
         self.config.update(autoplot_pars)
+        # set a home directory
+        self.config.home = self.config.get('home',self.DEFAULT.get('home'))
         
         layout = self.config.get('layout',layout_pars) 
         
@@ -655,7 +657,7 @@ def spawn_MPLClient(client_pars, autoplot_pars):
     """
     A function that creates and runs a silent instance of MPLClient.
     """
-    mplc = MPLClient(client_pars,autoplot_pars, in_thread=True)
+    mplc = MPLClient(client_pars,autoplot_pars, in_thread=True, is_slave=True)
     try:
         mplc.loop_plot()
     except KeyboardInterrupt:
