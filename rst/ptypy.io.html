@@ -1,0 +1,653 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ptypy.io package &mdash; ptypy 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/header.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
+    <link rel="top" title="ptypy 0.2.0 documentation" href="../content.html" />
+    <link rel="up" title="ptypy package" href="ptypy.html" />
+    <link rel="next" title="ptypy.resources package" href="ptypy.resources.html" />
+    <link rel="prev" title="ptypy.experiment package" href="ptypy.experiment.html" />
+<link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
+
+  </head>
+  <body role="document">
+<div class="pageheader">
+  <ul>
+    <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
+    <li><a href="http://www.github.com/ptycho/ptypy">Github</a></li>
+    <li><a href="../content.html">Docs</a></li>
+    <!-- <li><a href="develop.html">Extend/Develop</a></li> -->
+  </ul>
+  <div>
+    <a href="../index.html"><img src="../_static/logo_60px.png" alt="SPHINX" /></a>
+
+    <h0 style="padding-bottom:40px">Ptychography for Python</h0>
+  </div>
+</div>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ptypy.resources.html" title="ptypy.resources package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="ptypy.experiment.html" title="ptypy.experiment package"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../content.html">
+              <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
+            </a></p>
+<h3><a href="../content.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_management.html">Data management</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="ptypy.html">ptypy package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="ptypy.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ptypy.core.html">ptypy.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.engines.html">ptypy.engines package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.experiment.html">ptypy.experiment package</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="">ptypy.io package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.resources.html">ptypy.resources package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.simulations.html">ptypy.simulations package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.utils.html">ptypy.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.html#module-ptypy">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="ptypy.experiment.html"
+                        title="previous chapter">ptypy.experiment package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="ptypy.resources.html"
+                        title="next chapter">ptypy.resources package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/rst/ptypy.io.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ptypy-io-package">
+<h1>ptypy.io package<a class="headerlink" href="#ptypy-io-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-ptypy.io.edfIO">
+<span id="ptypy-io-edfio-module"></span><h2>ptypy.io.edfIO module<a class="headerlink" href="#module-ptypy.io.edfIO" title="Permalink to this headline">¶</a></h2>
+<p>IO module for handling the file format EDF used by the ESRF beamline id19
+Provides read, write and readHeader functions.</p>
+<p>translated to python: April 2010, Dieter Hahn</p>
+<dl class="docutils">
+<dt>Among other, contains the functions</dt>
+<dd>readData
+writeData WHICH IS NOT YET IMPLEMENTED</dd>
+</dl>
+<dl class="function">
+<dt id="ptypy.io.edfIO.edfread">
+<code class="descclassname">ptypy.io.edfIO.</code><code class="descname">edfread</code><span class="sig-paren">(</span><em>filename</em>, <em>doglob=None</em>, <em>roi=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.edfIO.edfread" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>d,meta = edfread(filename)</dt>
+<dd>reads array in edf file filename and returns it as a numpy array, along with metadata (from header).
+d and meta are lists if filename is a list of file names.</dd>
+<dt>... = edfread(filename, doglob=True)</dt>
+<dd>reads all matching files if filename contains unix-style wildcards, and returns lists.</dd>
+<dt>... = edfread(filename, doglob=False)</dt>
+<dd>ignores wildcards</dd>
+<dt>... = edfread(filename, doglob=None) [default]</dt>
+<dd>behaves like doglob=True, except that it returns a list only if filename contains wildcards,
+while doglob=True always returns a list, even if there is only one match.</dd>
+<dt>... = edfread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))</dt>
+<dd>returns a region of interest (applied on all files if gobbing or if filename is a list)</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.io.h5rw">
+<span id="ptypy-io-h5rw-module"></span><h2>ptypy.io.h5rw module<a class="headerlink" href="#module-ptypy.io.h5rw" title="Permalink to this headline">¶</a></h2>
+<p>Wrapper to store nearly anything in an hdf5 file.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="function">
+<dt id="ptypy.io.h5rw.h5write">
+<code class="descclassname">ptypy.io.h5rw.</code><code class="descname">h5write</code><span class="sig-paren">(</span><em>filename</em>, <em>{'var1'=...</em>, <em>'var2'=...</em>, <em>...}</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5write" title="Permalink to this definition">¶</a></dt>
+<dd><p>h5write(filename, var1=..., var2=..., ...)
+h5write(filename, dict, var1=..., var2=...)</p>
+<p>Writes variables var1, var2, ... to file filename. The key-value
+arguments have precedence on the provided dictionnary.</p>
+<p>supported variable types are:
+* scalars
+* numpy arrays
+* strings
+* lists
+* dictionaries</p>
+<p>(if the option UNSUPPORTED is equal to &#8216;pickle&#8217;, any other type
+is pickled and saved. UNSUPPORTED = &#8216;ignore&#8217; silently eliminates
+unsupported types. Default is &#8216;fail&#8217;, which raises an error.)</p>
+<p>The file mode can be chosen according to the h5py documentation.
+It defaults to overwriting an existing file.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.io.h5rw.h5append">
+<code class="descclassname">ptypy.io.h5rw.</code><code class="descname">h5append</code><span class="sig-paren">(</span><em>filename</em>, <em>{'var1'=...</em>, <em>'var2'=...</em>, <em>...}</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5append" title="Permalink to this definition">¶</a></dt>
+<dd><p>h5append(filename, var1=..., var2=..., ...)
+h5append(filename, dict, var1=..., var2=...)</p>
+<p>Appends variables var1, var2, ... to file filename. The
+key-value arguments have precedence on the provided dictionnary.</p>
+<p>supported variable types are:
+* scalars
+* numpy arrays
+* strings
+* lists
+* dictionaries</p>
+<p>(if the option UNSUPPORTED is equal to &#8216;pickle&#8217;, any other type
+is pickled and saved. UNSUPPORTED = &#8216;ignore&#8217; silently eliminates
+unsupported types. Default is &#8216;fail&#8217;, which raises an error.)</p>
+<p>The file mode can be chosen according to the h5py documentation.
+It defaults to overwriting an existing file.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.io.h5rw.h5read">
+<code class="descclassname">ptypy.io.h5rw.</code><code class="descname">h5read</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5read" title="Permalink to this definition">¶</a></dt>
+<dd><p>h5read(filename, s1, s2, ...)
+h5read(filename, (s1,s2, ...))</p>
+<p>Read variables from a hdf5 file created with h5write and returns them as
+a dictionary.</p>
+<p>If specified, only variable named s1, s2, ... are loaded.</p>
+<p>Variable names support slicing and group access. For instance, provided
+that the file contains the appropriate objects, the following syntax is
+valid:</p>
+<p>a = h5read(&#8216;file.h5&#8217;, &#8216;myarray[2:4]&#8217;)
+a = h5read(&#8216;file.h5&#8217;, &#8216;adict.thekeyIwant&#8217;)</p>
+<p>Another way of slicing, is with the slice keyword argument, which will take
+the provided slice object and apply it on the last variable name:</p>
+<p>a = h5read(&#8216;file.h5&#8217;, &#8216;array1&#8217;, &#8216;array2&#8217;, slice=slice(1,2))
+# Will read array2[1:2]</p>
+<p>h5read(filename_with_wildcard, ... , doglob=True)
+Reads sequentially all globbed filenames.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.io.h5rw.h5info">
+<code class="descclassname">ptypy.io.h5rw.</code><code class="descname">h5info</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints out a tree structure of given h5 file.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.io.imageIO">
+<span id="ptypy-io-imageio-module"></span><h2>ptypy.io.imageIO module<a class="headerlink" href="#module-ptypy.io.imageIO" title="Permalink to this headline">¶</a></h2>
+<p>Wrapper over Python Imaging Library to read images (+ metadata) and write images.</p>
+<dl class="function">
+<dt id="ptypy.io.imageIO.imread">
+<code class="descclassname">ptypy.io.imageIO.</code><code class="descname">imread</code><span class="sig-paren">(</span><em>filename</em>, <em>doglob=None</em>, <em>roi=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.imageIO.imread" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>d,meta = imread(filename)</dt>
+<dd>reads array in image file and returns it as a numpy array, along with metadata (from header).
+d and meta are lists if filename is a list of file names.</dd>
+<dt>... = imread(filename, doglob=True)</dt>
+<dd>reads all matching files if filename contains unix-style wildcards, and returns lists.</dd>
+<dt>... = imread(filename, doglob=False)</dt>
+<dd>ignores wildcards</dd>
+<dt>... = imread(filename, doglob=None) [default]</dt>
+<dd>behaves like doglob=True, except that it returns a list only if filename contains wildcards,
+while doglob=True always returns a list, even if there is only one match.</dd>
+<dt>... = imread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))</dt>
+<dd>returns a region of interest (applied on all files if gobbing or if filename is a list)</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.io.image_read">
+<span id="ptypy-io-image-read-module"></span><h2>ptypy.io.image_read module<a class="headerlink" href="#module-ptypy.io.image_read" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="ptypy.io.image_read.image_read">
+<code class="descclassname">ptypy.io.image_read.</code><code class="descname">image_read</code><span class="sig-paren">(</span><em>filename</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.image_read.image_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempts to import image data from any file.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.io.interaction">
+<span id="ptypy-io-interaction-module"></span><h2>ptypy.io.interaction module<a class="headerlink" href="#module-ptypy.io.interaction" title="Permalink to this headline">¶</a></h2>
+<p>Interaction module</p>
+<p>Provides the server and a basic client to interact with it.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="class">
+<dt id="ptypy.io.interaction.Server">
+<em class="property">class </em><code class="descclassname">ptypy.io.interaction.</code><code class="descname">Server</code><span class="sig-paren">(</span><em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Main server class.</p>
+<p>Interaction server, meant to run asynchronously with process 0 to manage client requests.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pars</strong> (<em>dict or Param</em>) &#8211; Parameter set for the server.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Keyword Arguments:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><ul class="first last simple">
+<li><strong>address</strong> (<em>str</em>) &#8211;
+Primary address</li>
+<li><strong>port</strong> (<em>int</em>) &#8211;
+Primary port</li>
+<li><strong>connections</strong> (<em>int</em>) &#8211;
+number of ports to open on demand <em>behind</em> the primary port.</li>
+<li><strong>poll_timeout</strong> (<em>float</em>) &#8211;
+Network polling interval (in milliseconds!).</li>
+<li><strong>pinginterval</strong> (<em>float</em>) &#8211;
+Interval to check pings (in seconds).</li>
+<li><strong>pingtimeout</strong> (<em>float</em>) &#8211;
+Ping time out: client disconnected after this period (in seconds).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="ptypy.io.interaction.Server.DEFAULT">
+<code class="descname">DEFAULT</code><em class="property"> = Param({'poll_timeout': 10, 'connections': 10, 'pingtimeout': 10, 'pinginterval': 2, 'port': 5560, 'address': 'tcp://127.0.0.1'})</em><a class="headerlink" href="#ptypy.io.interaction.Server.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default parameters, see also <a class="reference internal" href="parameters.html#.io.interaction" title=".io.interaction"><code class="xref py py-data docutils literal"><span class="pre">io.interaction</span></code></a></p>
+<ul class="simple">
+<li><em>poll_timeout</em> = <code class="docutils literal"><span class="pre">10</span></code></li>
+<li><em>connections</em> = <code class="docutils literal"><span class="pre">10</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.connections" title=".io.interaction.connections"><code class="xref py py-data docutils literal"><span class="pre">connections</span></code></a></li>
+<li><em>pingtimeout</em> = <code class="docutils literal"><span class="pre">10</span></code></li>
+<li><em>pinginterval</em> = <code class="docutils literal"><span class="pre">2</span></code></li>
+<li><em>port</em> = <code class="docutils literal"><span class="pre">5560</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.port" title=".io.interaction.port"><code class="xref py py-data docutils literal"><span class="pre">port</span></code></a></li>
+<li><em>address</em> = <code class="docutils literal"><span class="pre">&quot;tcp://127.0.0.1&quot;</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.address" title=".io.interaction.address"><code class="xref py py-data docutils literal"><span class="pre">address</span></code></a></li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Server.activate">
+<code class="descname">activate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.activate" title="Permalink to this definition">¶</a></dt>
+<dd><p>This needs to be run for the thread to initialize.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Server.process_requests">
+<code class="descname">process_requests</code><span class="sig-paren">(</span><em>tinterval=0.001</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.process_requests" title="Permalink to this definition">¶</a></dt>
+<dd><p>Give permission to the serving thread to send objects and
+wait for it to complete (safer!)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Server.register">
+<code class="descname">register</code><span class="sig-paren">(</span><em>obj</em>, <em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.register" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exposes the content of an object for transmission and interaction.
+For now this is equivalent to Interactor.object[name] = obj, but maybe
+use weakref in the future?</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Server.send_error">
+<code class="descname">send_error</code><span class="sig-paren">(</span><em>error_message</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.send_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Queue an ERROR message for all connected clients.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Server.send_warning">
+<code class="descname">send_warning</code><span class="sig-paren">(</span><em>warning_message</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.send_warning" title="Permalink to this definition">¶</a></dt>
+<dd><p>Queue a warning message for all connected clients.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Server.stop">
+<code class="descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ptypy.io.interaction.Client">
+<em class="property">class </em><code class="descclassname">ptypy.io.interaction.</code><code class="descname">Client</code><span class="sig-paren">(</span><em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Basic but complete client to interact with the server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pars</strong> (<em>dict or Param</em>) &#8211; Parameter set for the client, see <a class="reference internal" href="#ptypy.io.interaction.Client.DEFAULT" title="ptypy.io.interaction.Client.DEFAULT"><code class="xref py py-attr docutils literal"><span class="pre">DEFAULT</span></code></a></p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Keyword Arguments:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><ul class="first last simple">
+<li><strong>address</strong> (<em>str</em>) &#8211;
+Primary address of the remote server.</li>
+<li><strong>port</strong> (<em>int</em>) &#8211;
+Primary port of the remote server.</li>
+<li><strong>poll_timeout</strong> (<em>float</em>) &#8211;
+Network polling interval (in milliseconds!).</li>
+<li><strong>pinginterval</strong> (<em>float</em>) &#8211;
+Interval to check pings (in seconds).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="ptypy.io.interaction.Client.DEFAULT">
+<code class="descname">DEFAULT</code><em class="property"> = Param({'connections': 10, 'poll_timeout': 100, 'pinginterval': 1, 'port': 5560, 'address': 'tcp://127.0.0.1'})</em><a class="headerlink" href="#ptypy.io.interaction.Client.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default parameters, see also <a class="reference internal" href="parameters.html#.io.interaction" title=".io.interaction"><code class="xref py py-data docutils literal"><span class="pre">io.interaction</span></code></a></p>
+<ul class="simple">
+<li><em>connections</em> = <code class="docutils literal"><span class="pre">10</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.connections" title=".io.interaction.connections"><code class="xref py py-data docutils literal"><span class="pre">connections</span></code></a></li>
+<li><em>poll_timeout</em> = <code class="docutils literal"><span class="pre">100</span></code></li>
+<li><em>pinginterval</em> = <code class="docutils literal"><span class="pre">1</span></code></li>
+<li><em>port</em> = <code class="docutils literal"><span class="pre">5560</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.port" title=".io.interaction.port"><code class="xref py py-data docutils literal"><span class="pre">port</span></code></a></li>
+<li><em>address</em> = <code class="docutils literal"><span class="pre">&quot;tcp://127.0.0.1&quot;</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.address" title=".io.interaction.address"><code class="xref py py-data docutils literal"><span class="pre">address</span></code></a></li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.activate">
+<code class="descname">activate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.activate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the thread.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.avail">
+<code class="descname">avail</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.avail" title="Permalink to this definition">¶</a></dt>
+<dd><p>Queries the server for the name of objects available.
+! Synchronous call !</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.do">
+<code class="descname">do</code><span class="sig-paren">(</span><em>execstr</em>, <em>timeout=0</em>, <em>tag=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.do" title="Permalink to this definition">¶</a></dt>
+<dd><p>Modify and object using an exec string.
+This function returns the &#8220;ticket number&#8221; which identifies the object once
+it will have been transmitted. If timeout &gt; 0 and the requested object has
+been transmitted within timeout seconds, return a tuple (ticket, data).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.flush">
+<code class="descname">flush</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.flush" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete all stored data (and accompanying status).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>evalstr</em>, <em>timeout=0</em>, <em>tag=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Requests an object (or part of it) using an eval string.
+This function returns the &#8220;ticket number&#8221; which identifies the object once
+it will have been transmitted. If timeout &gt; 0 and the requested object has
+been transmitted within timeout seconds, return a tuple (ticket, data).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.get_now">
+<code class="descname">get_now</code><span class="sig-paren">(</span><em>evalstr</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.get_now" title="Permalink to this definition">¶</a></dt>
+<dd><p>Synchronous get. May be dangerous, but should be safe for small objects like parameters.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.newdata">
+<code class="descname">newdata</code><span class="sig-paren">(</span><em>ticket</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.newdata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Meant to be replaced, e.g. to send signals to a GUI.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.io.interaction.Client.p">
+<code class="descname">p</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.io.interaction.Client.p" title="Permalink to this definition">¶</a></dt>
+<dd><p># sanity check for port range:
+if str(p.port_range)==p.port_range:</p>
+<blockquote>
+<div>from ptypy.utils import str2range
+p.port_range = str2range(p.port_range)</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.poll">
+<code class="descname">poll</code><span class="sig-paren">(</span><em>ticket=None</em>, <em>tag=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.poll" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns true if the transaction for a given ticket is completed.
+If ticket and tag are None, returns true only if no transaction is pending</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.set">
+<code class="descname">set</code><span class="sig-paren">(</span><em>varname</em>, <em>varvalue</em>, <em>timeout=0</em>, <em>tag=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets an object named varname to the value varvalue.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.stop">
+<code class="descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.stop_server">
+<code class="descname">stop_server</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.stop_server" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send a SHUTDOWN command - is this a good idea?</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.unexpected_ticket">
+<code class="descname">unexpected_ticket</code><span class="sig-paren">(</span><em>ticket</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.unexpected_ticket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to deal with warnings sent by the server.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Client.wait">
+<code class="descname">wait</code><span class="sig-paren">(</span><em>ticket=None</em>, <em>tag=None</em>, <em>timeout=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.wait" title="Permalink to this definition">¶</a></dt>
+<dd><p>Blocks and return True only when the transaction for a given ticket is completed.
+If ticket is None, returns only when no more transaction are pending.
+If timeout is a positive number, wait will return False after timeout seconds if the ticket(s)
+had not been processed yet.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.io.json_rw">
+<span id="ptypy-io-json-rw-module"></span><h2>ptypy.io.json_rw module<a class="headerlink" href="#module-ptypy.io.json_rw" title="Permalink to this headline">¶</a></h2>
+<p>Wrapper to store nearly anything in a file using JSON encoding.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="function">
+<dt id="ptypy.io.json_rw.jwrite">
+<code class="descclassname">ptypy.io.json_rw.</code><code class="descname">jwrite</code><span class="sig-paren">(</span><em>filename</em>, <em>{'var1'=...</em>, <em>'var2'=...</em>, <em>...}</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.json_rw.jwrite" title="Permalink to this definition">¶</a></dt>
+<dd><p>jwrite(filename, var1=..., var2=..., ...)
+jwrite(filename, dict, var1=..., var2=...)</p>
+<p>Writes variables var1, var2, ... to file filename using JSON encoding.
+The key-value arguments have precedence on the provided dictionary.</p>
+<p>All JSON supported types are supported, as well as numpy arrays, which
+are replaced by a base64 encoding.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.io.json_rw.jread">
+<code class="descclassname">ptypy.io.json_rw.</code><code class="descname">jread</code><span class="sig-paren">(</span><em>filename</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.json_rw.jread" title="Permalink to this definition">¶</a></dt>
+<dd><p>h5read(filename)
+h5read(filename, s1, s2, ...)
+h5read(filename, (s1,s2, ...))</p>
+<p>Read variables from a JSON file created with jwrite and returns them as
+a dictionary.</p>
+<p>The following features are meant to have an interface identical to h5read.
+Note however that no time of memory is saved by &#8220;loading&#8221; only a subset
+of variables or slices.</p>
+<p>If specified, only variable named s1, s2, ... are loaded.</p>
+<p>Variable names support slicing and group access. For instance, provided
+that the file contains the appropriate objects, the following syntax is
+valid:</p>
+<p>a = jread(&#8216;file.h5&#8217;, &#8216;myarray[2:4]&#8217;)
+a = jread(&#8216;file.h5&#8217;, &#8216;adict.thekeyIwant&#8217;)</p>
+<p>Another way of slicing is with the slice keyword argument which will take
+the provided slice object and apply it on the last variable name:</p>
+<p>a = jread(&#8216;file.json&#8217;, &#8216;array1&#8217;, &#8216;array2&#8217;, slice=slice(1,2))
+# Will read array2[1:2]</p>
+<p>jread(filename_with_wildcard, ... , doglob=True)
+Reads sequentially all globbed filenames.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.io.rawIO">
+<span id="ptypy-io-rawio-module"></span><h2>ptypy.io.rawIO module<a class="headerlink" href="#module-ptypy.io.rawIO" title="Permalink to this headline">¶</a></h2>
+<p>read .raw images from FLI camera
+Created in Nov 2013
+TODO: add masking function to mask out hot/dead pixels of detector
+&#64;author: Bjoern Enders</p>
+<dl class="function">
+<dt id="ptypy.io.rawIO.rawread">
+<code class="descclassname">ptypy.io.rawIO.</code><code class="descname">rawread</code><span class="sig-paren">(</span><em>filename</em>, <em>doglob=None</em>, <em>roi=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.rawIO.rawread" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>d,meta = rawread(filename)</dt>
+<dd>reads array in CDF file filename and returns it as a numpy array, along with metadata (from header).
+d and meta are lists if filename is a list of file names.</dd>
+<dt>... = rawread(filename, doglob=True)</dt>
+<dd>reads all matching files if filename contains unix-style wildcards, and returns lists.</dd>
+<dt>... = rawread(filename, doglob=False)</dt>
+<dd>ignores wildcards</dd>
+<dt>... = rawread(filename, doglob=None) [default]</dt>
+<dd>behaves like doglob=True, except that it returns a list only if filename contains wildcards,
+while doglob=True always returns a list, even if there is only one match.</dd>
+<dt>... = rawread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))</dt>
+<dd>returns a region of interest (applied on all files if gobbing or if filename is a list)</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.io">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ptypy.io" title="Permalink to this headline">¶</a></h2>
+<p>Input/Output utilities.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ptypy.resources.html" title="ptypy.resources package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="ptypy.experiment.html" title="ptypy.experiment package"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

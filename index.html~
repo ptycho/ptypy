@@ -62,13 +62,13 @@
               <img class="logo" src="_static/logo_100px.png" alt="Logo"/>
             </a></p><p><h3> Download </h3></p>
 <p class="topless"> Current version: <b>0.2.0</b></p>
-Download Ptypy from its github repository:
+Download Ptypy from its github repository,
 <ul>
 <li><a href="https://github.com/ptycho/ptypy/zipball/master">Download <strong>ZIP File</strong></a></li>
 <li><a href="https://github.com/ptycho/ptypy/tarball/master">Download <strong>TAR Ball</strong></a></li>
 <!--<li><a href="https://github.com/ptycho/ptypy">View On <strong>GitHub</strong></a></li>-->
 </ul>
-Unpack and install with setuptools:
+and inpack and install with setuptools:
 <div class="highlight-python"><div class="highlight" style="fontsize: 90%"><pre>python setup.py install --user</pre>
 
 </div>

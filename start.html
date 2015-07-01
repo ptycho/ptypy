@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title> &mdash; ptypy 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/header.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/ptypyicon.ico"/>
+    <link rel="top" title="ptypy 0.2.0 documentation" href="content.html" />
+<link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
+
+  </head>
+  <body role="document">
+<div class="pageheader">
+  <ul>
+    <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
+    <li><a href="http://www.github.com/ptycho/ptypy">Github</a></li>
+    <li><a href="content.html">Docs</a></li>
+    <!-- <li><a href="develop.html">Extend/Develop</a></li> -->
+  </ul>
+  <div>
+    <a href="index.html"><img src="_static/logo_60px.png" alt="SPHINX" /></a>
+
+    <h0 style="padding-bottom:40px">Ptychography for Python</h0>
+  </div>
+</div>
+
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="content.html">
+              <img class="logo" src="_static/logo_100px.png" alt="Logo"/>
+            </a></p>
+<h3><a href="content.html">Table Of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="rst/getting_started.html">Getting started with Ptypy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rst/concept.html">Concepts and Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rst/data_management.html">Data management</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rst/parameters.html">Parameter tree structure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rst/ptypy.html">ptypy package</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+<p>Ptypy (pronounced typy, forget the p, as in ptychography or psychology) is a
+reconstruction package for ptychographic datasets.</p>
+
+<p>To get started quickly, look at the examples in the template directory. You will
+also need to prepare your data in a hdf5 file and following a structure that
+ptypy can understand. Ptypy provides already routines to prepare data from three
+beamlines (cSAXS, PSI; I13, Diamond; and I22, ESRF) and more will come.</p>
+
+<h2>
+<a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h2>
+
+<p>Ptypy was designed with flexibility in mind: it should allow rapid development
+of new ideas. To this end, much of the "ugly" details have been hidden in
+advanced containers that manage data and access "views" onto them. </p>
+
+<p>Currently implemented:</p>
+
+<ul>
+<li>Fully parallelized (using MPI)</li>
+<li>Difference map algorithm with power bound constraint</li>
+<li>Maximum Likelihood with preconditioners and regularizers.</li>
+<li>Mixed-state reconstructions of probe and object</li>
+<li>Multiple-wavelength reconstruction</li>
+<li>On-the-fly reconstructions (while data is being acquired) </li>
+</ul>
+
+<h2>
+<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<p>Installation should be as simple as
+    sudo python setup.py install
+or, as a user,
+    python setup.py install --user</p>
+
+<h2>
+<a name="dependencies" class="anchor" href="#dependencies"><span class="octicon octicon-link"></span></a>Dependencies</h2>
+
+<p>Ptypy depends on standard python packages:</p>
+
+<ul>
+<li>numpy</li>
+<li>scipy</li>
+<li>matplotlib</li>
+<li>h5py</li>
+<li>mpi4py (optional - required for parallel computing)</li>
+<li>zeromq (optional - required for the offline plotting client)</li>
+<li>maybe some more we forgot to put in this list.</li>
+</ul>
+
+<h2>
+<a name="contribute" class="anchor" href="#contribute"><span class="octicon octicon-link"></span></a>Contribute</h2>
+
+<ul>
+<li>Issue Tracker: github.com/ptycho/ptypy/issues</li>
+<li>Source Code: github.com/ptycho/ptypy</li>
+</ul>
+
+<h2>
+<a name="support" class="anchor" href="#support"><span class="octicon octicon-link"></span></a>Support</h2>
+
+<p>If you are having issues, please let us know.</p>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="content.html">ptypy 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

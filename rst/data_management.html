@@ -1,0 +1,1019 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Data management &mdash; ptypy 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/header.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
+    <link rel="top" title="ptypy 0.2.0 documentation" href="../content.html" />
+    <link rel="next" title="Parameter tree structure" href="parameters.html" />
+    <link rel="prev" title="Concepts and Classes" href="concept.html" />
+<link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
+
+  </head>
+  <body role="document">
+<div class="pageheader">
+  <ul>
+    <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
+    <li><a href="http://www.github.com/ptycho/ptypy">Github</a></li>
+    <li><a href="../content.html">Docs</a></li>
+    <!-- <li><a href="develop.html">Extend/Develop</a></li> -->
+  </ul>
+  <div>
+    <a href="../index.html"><img src="../_static/logo_60px.png" alt="SPHINX" /></a>
+
+    <h0 style="padding-bottom:40px">Ptychography for Python</h0>
+  </div>
+</div>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="parameters.html" title="Parameter tree structure"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="concept.html" title="Concepts and Classes"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../content.html">
+              <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
+            </a></p>
+<h3><a href="../content.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Data management</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-ptyscan-class">The PtyScan class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-scenarios">Usage scenarios</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ptyd-file-format">Ptyd file format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-subclassing-ptyscan">Tutorial : Subclassing PtyScan</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#writing-a-subclass">Writing a subclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loading-the-data">Loading the data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#listing-the-new-subclass">Listing the new subclass</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ptypy.html">ptypy package</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="concept.html"
+                        title="previous chapter">Concepts and Classes</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="parameters.html"
+                        title="next chapter">Parameter tree structure</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/rst/data_management.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="data-management">
+<span id="ptypy-data"></span><h1>Data management<a class="headerlink" href="#data-management" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In this chapter, We refer to the <em>raw input data</em> with <em>data</em> and not
+to data stored in memory of the computer by <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a> instances.
+With the term <em>preparation</em> we refer to all data processing
+steps prior to the reconstruction and avoid the ambiguous term
+<em>processing</em> although it may be more familiar to the reader.</p>
+</div>
+<p>Consider the following generic steps which every ptychographer has to complete
+prior to a successful image reconstruction.</p>
+<dl class="docutils">
+<dt><strong>(A)</strong> <em>Conducting a scanning diffraction experiment.</em></dt>
+<dd>While or after the experiment is performed, the researcher is left with <em>raw images</em>
+acquired from the detector and <em>meta data</em> which, in general, consists of scanning
+positions along with geometric information about the setup, e.g. photon <em>energy</em>,
+propagation <em>distance</em>, <em>detector pixel size</em> etc.</dd>
+<dt><strong>(B)</strong> <em>Preparing the data.</em></dt>
+<dd><p class="first">In this step, the user performs a subset of the following actions</p>
+<ul class="simple">
+<li>select the appropriate region of the detector where the scattering events were counted,</li>
+<li>apply possible <em>pixel corrections</em> to convert the detector counts of the chosen
+diffraction frame into photon counts, e.g. flat-field and dark-field
+correction,</li>
+<li>switch image orientation to match with the coordinate system of the
+reconstruction algorithms,</li>
+<li>assign a suited mask to exclude invalid pixel data (hot or dead pixel, overexposure),</li>
+<li>and/or simply rebin the data.</li>
+</ul>
+<p class="last">Finally the user needs to zip the diffraction frames together with the scanning positions.</p>
+</dd>
+<dt><strong>(C)</strong> <em>Saving the processed data or feed the data into recontruction process.</em></dt>
+<dd>In this step the user needs to save the data in a suitable format
+or provide the data directly for the reconstruction engine.</dd>
+</dl>
+<p><strong>Data management</strong> in PtyPy deals with <strong>(B)</strong> and <strong>(C)</strong> as a ptychography
+reconstruction software naturally <strong>cannot</strong> provide actual experimental
+data. Nevertheless, the treatment of raw data is usually very similar for
+every experiment. Consequently, PtyPy provides an abstract base class,
+called <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a>, which aims to help with steps (B) and (C). In order
+to adapt PtyPy for a specific experimental setup, we simply
+subclass <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a> and reimplement only that subset of its methods which are
+affected by the specifics of the experiemental setup
+(see <a class="reference internal" href="#subclassptyscan"><span>Tutorial : Subclassing PtyScan</span></a>).</p>
+<div class="section" id="the-ptyscan-class">
+<span id="sec-ptyscan"></span><h2>The PtyScan class<a class="headerlink" href="#the-ptyscan-class" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a> is the abstract base class in PtyPy that manages raw input
+data.</p>
+<p>A PtyScan instance is constructed from a set of generic parameters,
+see <a class="reference internal" href="parameters.html#.scan.data" title=".scan.data"><code class="xref py py-data docutils literal"><span class="pre">scan.data</span></code></a> in the ptypy parameter tree.</p>
+<p>It provides the following features:</p>
+<dl class="docutils">
+<dt><strong>Parallelization</strong></dt>
+<dd>When PtyPy is run across several MPI processes, PtyScan takes care of
+distributing the scan-point indices among processes such that each
+process only loads the data it will later use in the reconstruction.
+Hence, the load on the network is not affected by the number of
+processes.
+The parallel behavior of <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a>, is controlled by the parameter
+<a class="reference internal" href="parameters.html#.scan.data.load_parallel" title=".scan.data.load_parallel"><code class="xref py py-data docutils literal"><span class="pre">scan.data.load_parallel</span></code></a>. It uses the <a class="reference internal" href="ptypy.utils.html#ptypy.utils.parallel.LoadManager" title="ptypy.utils.parallel.LoadManager"><code class="xref py py-class docutils literal"><span class="pre">LoadManager</span></code></a></dd>
+<dt><strong>Preparation</strong></dt>
+<dd><p class="first">PtyScan can handle a few of the raw processing steps mentioned above.</p>
+<ul class="last simple">
+<li>Selection a region-of-interest from the raw detector image. This
+selection is controlled by the parameters <a class="reference internal" href="parameters.html#.scan.data.auto_center" title=".scan.data.auto_center"><code class="xref py py-data docutils literal"><span class="pre">scan.data.auto_center</span></code></a>,
+and <a class="reference internal" href="parameters.html#.scan.data.shape" title=".scan.data.shape"><code class="xref py py-data docutils literal"><span class="pre">scan.data.shape</span></code></a> and <a class="reference internal" href="parameters.html#.scan.data.center" title=".scan.data.center"><code class="xref py py-data docutils literal"><span class="pre">scan.data.center</span></code></a>.</li>
+<li>Switching of orientation and rebinning are controlled by
+<a class="reference internal" href="parameters.html#.scan.data.orientation" title=".scan.data.orientation"><code class="xref py py-data docutils literal"><span class="pre">scan.data.orientation</span></code></a> and <a class="reference internal" href="parameters.html#.scan.data.rebin" title=".scan.data.rebin"><code class="xref py py-data docutils literal"><span class="pre">scan.data.rebin</span></code></a>.</li>
+<li>Finding a suitable mask or weight for pixel correction is left
+to the user, as this is a setup-specific implementation.
+See <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan.load_weight" title="ptypy.core.data.PtyScan.load_weight"><code class="xref py py-meth docutils literal"><span class="pre">load_weight()</span></code></a>,
+<a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan.load_common" title="ptypy.core.data.PtyScan.load_common"><code class="xref py py-meth docutils literal"><span class="pre">load_common()</span></code></a>,
+<a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan.load" title="ptypy.core.data.PtyScan.load"><code class="xref py py-meth docutils literal"><span class="pre">load()</span></code></a>
+and <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan.correct" title="ptypy.core.data.PtyScan.correct"><code class="xref py py-meth docutils literal"><span class="pre">correct()</span></code></a>
+for detailed explanations.</li>
+</ul>
+</dd>
+<dt><strong>Packaging</strong></dt>
+<dd><p class="first">PtyScan packs the prepared <em>data</em> together with the used scan point
+<em>indices</em>, scan <em>positions</em> and a <em>weight</em> (=mask) and geometric <em>meta</em>
+information. This package is requested by the managing instance
+<a class="reference internal" href="ptypy.core.html#ptypy.core.manager.ModelManager" title="ptypy.core.manager.ModelManager"><code class="xref py py-class docutils literal"><span class="pre">ModelManager</span></code></a> on the call
+<a class="reference internal" href="ptypy.core.html#ptypy.core.manager.ModelManager.new_data" title="ptypy.core.manager.ModelManager.new_data"><code class="xref py py-meth docutils literal"><span class="pre">new_data()</span></code></a>.</p>
+<p>Because data acquisition and preparation can happen during a reconstruction
+process, it is possible to specify the minimum number of data frames passed
+to each process on a <em>new_data()</em> by setting the value of <a class="reference internal" href="parameters.html#.scan.data.min_frames" title=".scan.data.min_frames"><code class="xref py py-data docutils literal"><span class="pre">scan.data.min_frames</span></code></a>.
+The total number of frames processed for a scan is set by <a class="reference internal" href="parameters.html#.scan.data.num_frames" title=".scan.data.num_frames"><code class="xref py py-data docutils literal"><span class="pre">scan.data.num_frames</span></code></a>.</p>
+<p class="last">If not extracted from other files,
+the user may set the photon energy with <a class="reference internal" href="parameters.html#.scan.data.energy" title=".scan.data.energy"><code class="xref py py-data docutils literal"><span class="pre">scan.data.energy</span></code></a>,
+the propagation distance from sample to detector with
+<a class="reference internal" href="parameters.html#.scan.data.distance" title=".scan.data.distance"><code class="xref py py-data docutils literal"><span class="pre">scan.data.distance</span></code></a> and the detector pixel size with
+<a class="reference internal" href="parameters.html#.scan.data.psize" title=".scan.data.psize"><code class="xref py py-data docutils literal"><span class="pre">scan.data.psize</span></code></a>.</p>
+</dd>
+<dt><strong>Storage</strong></dt>
+<dd><p class="first">PtyScan and its subclass are capable of storing the data in an
+<em>hfd5</em>-compatible <a class="reference internal" href="#hdf" id="id1">[HDF]</a> file format. The data file names have a custom
+suffix: <code class="docutils literal"><span class="pre">.ptyd</span></code>.</p>
+<p>A detailed overview of the <em>.ptyd</em> data file tree is given below in
+the section <a class="reference internal" href="#ptyd-file"><span>Ptyd file format</span></a></p>
+<p>The parameters
+<a class="reference internal" href="parameters.html#.scan.data.save" title=".scan.data.save"><code class="xref py py-data docutils literal"><span class="pre">scan.data.save</span></code></a> and <a class="reference internal" href="parameters.html#.scan.data.chunk_format" title=".scan.data.chunk_format"><code class="xref py py-data docutils literal"><span class="pre">scan.data.chunk_format</span></code></a>
+control the way PtyScan saves the processed data.</p>
+<div class="last admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Although <em>h5py</em> <a class="reference internal" href="#h5py" id="id2">[h5py]</a> supports parallel write, this feature is not
+used in ptypy. At the moment, all mpi nodes send their prepared data
+to the master node which writes the date to a file.</p>
+</div>
+</dd>
+</dl>
+</div>
+<div class="section" id="usage-scenarios">
+<span id="ptyd-scenarios"></span><h2>Usage scenarios<a class="headerlink" href="#usage-scenarios" title="Permalink to this headline">¶</a></h2>
+<p>The PtyScan class of PtyPy provides support for three use cases.</p>
+<p><strong>Beamline integreted use.</strong></p>
+<blockquote>
+<div><p>In this use case, the researcher has integrated PtyPy into the beamline
+end-station or experimental setup
+with the help of a custom subclass of <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a> that we call
+<code class="docutils literal"><span class="pre">UserScan</span></code>. This subclass has its own methods to extract many of the
+of the generic parameters of <a class="reference internal" href="parameters.html#.scan.data" title=".scan.data"><code class="xref py py-data docutils literal"><span class="pre">scan.data</span></code></a> and also defaults
+for specific custom parameters, for instance file paths or file name
+patterns (for a detailed introduction on how to subclass PtyScan, see
+<a class="reference internal" href="#subclassptyscan"><span>Tutorial : Subclassing PtyScan</span></a>). Once the experiment is completed, the researcher can initiate
+a reconstruction directly from raw data with a standard reconstruction
+script.</p>
+<div class="highlights figure" id="id6">
+<a class="reference internal image-reference" href="../_images/data_case_integrated.png" id="case-integrated"><img alt="../_images/data_case_integrated.png" id="case-integrated" src="../_images/data_case_integrated.png" style="width: 70%;" /></a>
+<p class="caption"><span class="caption-number">Fig. 20 </span><span class="caption-text">Intergrated use case of <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a>.</span><a class="headerlink" href="#case-integrated" title="Permalink to this image">¶</a></p>
+<div class="legend">
+A custom subclass <code class="docutils literal"><span class="pre">UserScan</span></code>
+serves as a translator between PtyPy&#8216;s generic parameters and
+data types and the raw image data and meta data from the experiment.
+Typically the experiment has to be completed before a reconstruction
+is started, but with some effort it is even possible to have the reconstruction
+start immediately after acquisition of the first frame. As data preparation
+is blended in with the reconstruction process, the reconstruction
+holds when new data is prepared. Optionally, the prepared data
+is saved to a <code class="docutils literal"><span class="pre">.ptyd</span></code> file to avoid having to run the preparation steps for subsequent
+reconstruction runs.</div>
+</div>
+</div></blockquote>
+<p><strong>Post preparation use.</strong></p>
+<blockquote>
+<div><p>In this use case, the experiment is long passed and the researcher has
+either used custom subclass of PtyScan or <em>any other script</em> that
+generates a compatible .hdf5 file (see <a class="reference internal" href="#ptyd-file"><span>here</span></a>) to save prepared data of that
+experiment. Reconstruction is supposed to work when passing the
+data file path in the parameter tree.</p>
+<p>Only the input file path needs
+to be passed either with <a class="reference internal" href="parameters.html#.scan.data.source" title=".scan.data.source"><code class="xref py py-data docutils literal"><span class="pre">source</span></code></a> or with
+<a class="reference internal" href="parameters.html#.scan.data.dfile" title=".scan.data.dfile"><code class="xref py py-data docutils literal"><span class="pre">dfile</span></code></a> when <a class="reference internal" href="parameters.html#.scan.data.source" title=".scan.data.source"><code class="xref py py-data docutils literal"><span class="pre">source</span></code></a>
+takes the value <code class="docutils literal"><span class="pre">'file'</span></code>. In that latter case, secondary processing
+and saving to another file is not supported, while it is allowed
+in the first case. While the latter case seems infavorable due to the
+lack of secondary preparation options,
+it is meant as a user-friendly transition switch from the first
+reconstruction at the experiment to
+post-experiment analysis. Only the <a class="reference internal" href="parameters.html#.scan.data.source" title=".scan.data.source"><code class="xref py py-data docutils literal"><span class="pre">source</span></code></a>
+parameter needs to be altered in script from <code class="docutils literal"><span class="pre">&lt;..&gt;.data.source=&lt;recipe&gt;</span></code>
+to <code class="docutils literal"><span class="pre">&lt;..&gt;.data.source='file'</span></code> while the rest of the parameters are ignored
+and may remain untouched.</p>
+<div class="highlights figure" id="id7">
+<a class="reference internal image-reference" href="../_images/data_case_prepared.png" id="case-prepared"><img alt="../_images/data_case_prepared.png" id="case-prepared" src="../_images/data_case_prepared.png" style="width: 70%;" /></a>
+<p class="caption"><span class="caption-number">Fig. 21 </span><span class="caption-text">Standard supported use case of <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a>.</span><a class="headerlink" href="#case-prepared" title="Permalink to this image">¶</a></p>
+<div class="legend">
+If a structure-compatible (see <a class="reference internal" href="#ptyd-file"><span>Ptyd file format</span></a>) <code class="docutils literal"><span class="pre">*.hdf5</span></code>-file is
+available, PtyPy can be used without customizing a subclass of
+<a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a>. It will use the shipped subclass <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtydScan" title="ptypy.core.data.PtydScan"><code class="xref any py py-class docutils literal"><span class="pre">PtydScan</span></code></a>
+to read in the (prepared) raw data.</div>
+</div>
+</div></blockquote>
+<p><strong>Preparation and reconstruction on-the-fly with data acquisition.</strong></p>
+<blockquote>
+<div><p>This use case is for even tighter beamline integration
+and on-the-fly scans. The researcher has mastered a suitable
+subclass <code class="docutils literal"><span class="pre">UserScan</span></code> to prepare data from the setup. Now, the preparation
+happens in a separate process while image frames are acquired.
+This process runs a python script where the subclass <code class="docutils literal"><span class="pre">UserScan</span></code>
+prepares the data using the <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan.auto" title="ptypy.core.data.PtyScan.auto"><code class="xref py py-meth docutils literal"><span class="pre">auto()</span></code></a>
+method. The <a class="reference internal" href="parameters.html#.scan.data.save" title=".scan.data.save"><code class="xref py py-data docutils literal"><span class="pre">save</span></code></a> parameter is set
+to &#8216;link&#8217; in order to create a separate file for each data chunk
+and to avoid write access on the source file.
+The chunk files are linked back into the main source <code class="docutils literal"><span class="pre">.ptyd</span></code> file.</p>
+<p>All reconstruction processes may access the prepared data without
+overhead or notable pauses in the reconstruction. For PtyPy there
+is no difference if compared to a single source file (a feature of <a class="reference internal" href="#hdf" id="id3">[HDF]</a>).</p>
+<div class="highlights figure" id="id8">
+<a class="reference internal image-reference" href="../_images/data_case_flyscan.png" id="case-flyscan"><img alt="../_images/data_case_flyscan.png" id="case-flyscan" src="../_images/data_case_flyscan.png" style="width: 70%;" /></a>
+<p class="caption"><span class="caption-number">Fig. 22 </span><span class="caption-text">On-the-fly or demon-like use case of <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a>.</span><a class="headerlink" href="#case-flyscan" title="Permalink to this image">¶</a></p>
+<div class="legend">
+A separate process prepares the data <em>chunks</em> and saves them
+in separate files which are
+linked back into the source data file. This process
+may run silently as a &#8216;&#8217;demon&#8217;&#8217; in the background. Reconstructions
+can start immediately and run without delays or pauses due to data
+preparation.</div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="ptyd-file-format">
+<span id="ptyd-file"></span><h2>Ptyd file format<a class="headerlink" href="#ptyd-file-format" title="Permalink to this headline">¶</a></h2>
+<p>Ptypy uses the python module <strong>h5py</strong> <a class="reference internal" href="#h5py" id="id4">[h5py]</a> to store and load data in the
+<strong>H</strong>ierarchical <strong>D</strong>ata <strong>F</strong>ormat <a class="reference internal" href="#hdf" id="id5">[HDF]</a> . HDF resembles very
+much a directory/file tree of today&#8217;s operating systems, while the &#8220;files&#8221;
+are (multidimensonial) datasets.</p>
+<p>Ptypy stores and loads the (processed) experimental data in a file with extension
+<em>.ptyd</em>, which is a hdf5-file with a data tree of very simple nature.
+Comparable to tagged image file formats like <em>.edf</em> or <em>.tiff</em>, the <code class="docutils literal"><span class="pre">ptyd</span></code> data file seperates
+meta information (stored in <code class="docutils literal"><span class="pre">meta/</span></code>) from the actual data payload
+(stored in <code class="docutils literal"><span class="pre">chunks/</span></code>). A schematic overview of the data tree is depicted below.</p>
+<div class="highlight-python"><div class="highlight"><pre>*.ptyd/
+
+      meta/
+
+         [general parameters; optional but very useful]
+         version     : str
+         num_frames  : int
+         label       : str
+
+         [geometric porameters; all optional]
+         shape       : int or (int,int)
+         energy      : float, optional
+         distance    : float, optional
+         center      : (float,float) or None, optional
+         psize       : float or (float,float), optional
+         propagation : &quot;farfield&quot; or &quot;nearfield&quot;, optional
+         ...
+
+      chunks/
+
+         0/
+           data      : array(M,N,N) of float
+           indices   : array(M) of int, optional
+           positions : array(M ,2) of float
+           weights   : same shape as data or empty
+         1/
+           ...
+         2/
+           ...
+         ...
+</pre></div>
+</div>
+<p>All parameters of <code class="docutils literal"><span class="pre">meta/</span></code> are a subset of <a class="reference internal" href="parameters.html#.scan.data" title=".scan.data"><code class="xref py py-data docutils literal"><span class="pre">scan.data</span></code></a>.
+Omitting any of these parameters or setting the value of the dataset to
+<code class="docutils literal"><span class="pre">'None'</span></code> has the same effect.</p>
+<p>The first set of parameters</p>
+<div class="highlight-python"><div class="highlight"><pre>version     : str
+num_frames  : int
+label       : str
+</pre></div>
+</div>
+<p>are general (optional) parameters.</p>
+<blockquote>
+<div><ul class="simple">
+<li><code class="docutils literal"><span class="pre">version</span></code> is ptypy version this dataset was prepared with
+(current version is 0.2.0.dev400dfea, see <code class="xref py py-data docutils literal"><span class="pre">version</span></code>).</li>
+<li><code class="docutils literal"><span class="pre">label</span></code> is a custom user label. Choose a unique label to your liking.</li>
+<li><code class="docutils literal"><span class="pre">num_frames</span></code> indicates how many diffraction image frames are
+expected in the dataset (see <a class="reference internal" href="parameters.html#.scan.data.num_frames" title=".scan.data.num_frames"><code class="xref py py-data docutils literal"><span class="pre">num_frames</span></code></a>)
+It is important to set this parameter when the data acquisition is not
+finished but the reconstruction has already started. If the dataset
+is complete, the loading class <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtydScan" title="ptypy.core.data.PtydScan"><code class="xref any py py-class docutils literal"><span class="pre">PtydScan</span></code></a> retrieves the
+total number of frames from the payload <code class="docutils literal"><span class="pre">chunks/</span></code></li>
+</ul>
+</div></blockquote>
+<p>The next set of optional parameters are</p>
+<div class="highlight-python"><div class="highlight"><pre>shape       : int or (int,int)
+energy      : float
+distance    : float
+center      : (float,float)
+psize       : float or (float,float)
+propagation : &quot;farfield&quot; or &quot;nearfield&quot;
+</pre></div>
+</div>
+<p>which refer to the experimental scanning geometry.</p>
+<blockquote>
+<div><ul class="simple">
+<li><code class="docutils literal"><span class="pre">shape</span></code>
+(see <a class="reference internal" href="parameters.html#.scan.data.shape" title=".scan.data.shape"><code class="xref py py-data docutils literal"><span class="pre">scan.data.shape</span></code></a>)</li>
+<li><code class="docutils literal"><span class="pre">energy</span></code>
+(see <a class="reference internal" href="parameters.html#.scan.data.energy" title=".scan.data.energy"><code class="xref py py-data docutils literal"><span class="pre">scan.data.energy</span></code></a> or <a class="reference internal" href="parameters.html#.scan.geometry.energy" title=".scan.geometry.energy"><code class="xref py py-data docutils literal"><span class="pre">scan.geometry.energy</span></code></a>)</li>
+<li><code class="docutils literal"><span class="pre">distance</span></code>
+(see <a class="reference internal" href="parameters.html#.scan.data.distance" title=".scan.data.distance"><code class="xref py py-data docutils literal"><span class="pre">scan.data.distance</span></code></a>)</li>
+<li><code class="docutils literal"><span class="pre">center</span></code>      : (float,float)
+(see <a class="reference internal" href="parameters.html#.scan.data.center" title=".scan.data.center"><code class="xref py py-data docutils literal"><span class="pre">scan.data.center</span></code></a>)</li>
+<li><code class="docutils literal"><span class="pre">psize</span></code>       : float or (float,float)
+(see <a class="reference internal" href="parameters.html#.scan.data.psize" title=".scan.data.psize"><code class="xref py py-data docutils literal"><span class="pre">scan.data.psize</span></code></a>)</li>
+<li><code class="docutils literal"><span class="pre">propagation</span></code> : &#8220;farfield&#8221; or &#8220;nearfield&#8221;
+(see <code class="xref py py-data docutils literal"><span class="pre">scan.data.propagation</span></code>)</li>
+</ul>
+</div></blockquote>
+<p>Finally these parameters will be digested by the
+<a class="reference internal" href="ptypy.core.html#module-ptypy.core.geometry" title="ptypy.core.geometry"><code class="xref py py-mod docutils literal"><span class="pre">geometry</span></code></a> module in order to provide a suited propagator.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>As you may have already noted, there are three ways to specify the
+geometry of the experiment.</p>
+<div class="last highlight-python"><div class="highlight"><pre><span class="n">bla</span>
+</pre></div>
+</div>
+</div>
+<p>As walking the data tree and extracting the data from the <em>hdf5</em> file
+is a bit cumbersome with h5py, there are a few convenience function in the
+<a class="reference internal" href="ptypy.io.html#module-ptypy.io.h5rw" title="ptypy.io.h5rw"><code class="xref py py-mod docutils literal"><span class="pre">ptypy.io.h5rw</span></code></a> module.</p>
+</div>
+<div class="section" id="tutorial-subclassing-ptyscan">
+<span id="subclassptyscan"></span><h2>Tutorial : Subclassing PtyScan<a class="headerlink" href="#tutorial-subclassing-ptyscan" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>This tutorial was generated from the python source
+<code class="file docutils literal"><span class="pre">[ptypy_root]/tutorial/subclassptyscan.py</span></code> using <code class="file docutils literal"><span class="pre">ptypy/doc/script2rst.py</span></code>.
+You are encouraged to modify the parameters and rerun the tutorial with:</p>
+<div class="last highlight-python"><div class="highlight"><pre>$ python [ptypy_root]/tutorial/subclassptyscan.py
+</pre></div>
+</div>
+</div>
+<p>In this tutorial, we learn how to subclass <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a> to make
+ptypy work with any experimental setup.</p>
+<p>This tutorial can be used as a direct follow-up to <a class="reference internal" href="concept.html#simupod"><span>Tutorial: Modeling the experiment - Pod, Geometry</span></a>
+if section <a class="reference internal" href="concept.html#store"><span>Storing the simulation</span></a> was completed</p>
+<p>Again, the imports first.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib</span> <span class="kn">as</span> <span class="nn">mpl</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ptypy</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span> <span class="o">=</span> <span class="n">mpl</span><span class="o">.</span><span class="n">pyplot</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sys</span>
+</pre></div>
+</div>
+<p>For this tutorial we assume that the data and meta information is
+in this path:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">save_path</span> <span class="o">=</span> <span class="s">&#39;/tmp/ptypy/sim/&#39;</span>
+</pre></div>
+</div>
+<p>Furthermore, we assume that a file about the experimental geometry is
+located at</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">geofilepath</span> <span class="o">=</span> <span class="n">save_path</span> <span class="o">+</span> <span class="s">&#39;geometry.txt&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">geofilepath</span>
+<span class="go">/tmp/ptypy/sim/geometry.txt</span>
+</pre></div>
+</div>
+<p>and has contents of the following form</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">geofilepath</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)])</span>
+<span class="go">distance 1.5000e-01</span>
+<span class="go">energy 2.3319e-03</span>
+<span class="go">psize 2.4000e-05</span>
+<span class="go">shape 256</span>
+</pre></div>
+</div>
+<p>The scanning positions are in</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">positionpath</span> <span class="o">=</span> <span class="n">save_path</span> <span class="o">+</span> <span class="s">&#39;positions.txt&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">positionpath</span>
+<span class="go">/tmp/ptypy/sim/positions.txt</span>
+</pre></div>
+</div>
+<p>with a list of positions for vertical and horizontanl movement and the
+image frame from the &#8220;camera&#8221;</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">positionpath</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)][:</span><span class="mi">6</span><span class="p">])</span><span class="o">+</span><span class="s">&#39;....&#39;</span>
+<span class="go">ccd/diffraction_0000.npy 1.4658e-03 2.0175e-03</span>
+<span class="go">ccd/diffraction_0001.npy 1.8532e-03 1.6686e-03</span>
+<span class="go">ccd/diffraction_0002.npy -1.7546e-03 1.1135e-03</span>
+<span class="go">ccd/diffraction_0003.npy -1.4226e-03 1.5149e-03</span>
+<span class="go">ccd/diffraction_0004.npy -2.0740e-03 1.3049e-04</span>
+<span class="go">ccd/diffraction_0005.npy -1.9764e-03 6.4218e-04</span>
+<span class="go">....</span>
+</pre></div>
+</div>
+<div class="section" id="writing-a-subclass">
+<h3>Writing a subclass<a class="headerlink" href="#writing-a-subclass" title="Permalink to this headline">¶</a></h3>
+<p>A subclass of <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a> takes the same input parameter
+tree as PtyScan itself, i.e <a class="reference internal" href="parameters.html#.scan.data" title=".scan.data"><code class="xref py py-data docutils literal"><span class="pre">scan.data</span></code></a>. As the subclass
+will most certainly require additional parameters, there has to be
+a flexible additional container. For PtyScan, that is the
+<a class="reference internal" href="parameters.html#.scan.data.recipe" title=".scan.data.recipe"><code class="xref py py-data docutils literal"><span class="pre">scan.data.recipe</span></code></a> parameter. A subclass must extract all
+additional parameters from this source and, in script, you fill
+the recipe with the appropriate items.</p>
+<p>In this case we can assume that the only parameter of the recipe
+is the base path <code class="docutils literal"><span class="pre">/tmp/ptypy/sim/</span></code>. Hence we write</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">RECIPE</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">RECIPE</span><span class="o">.</span><span class="n">base_path</span> <span class="o">=</span> <span class="s">&#39;/tmp/ptypy/sim/&#39;</span>
+</pre></div>
+</div>
+<p>Now we import the default generic parameter set from</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core.data</span> <span class="kn">import</span> <span class="n">PtyScan</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">DEFAULT</span> <span class="o">=</span> <span class="n">PtyScan</span><span class="o">.</span><span class="n">DEFAULT</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This would be the perfect point to change any default value.
+For sure we need to set the recipe parameter</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">DEFAULT</span><span class="o">.</span><span class="n">recipe</span> <span class="o">=</span> <span class="n">RECIPE</span>
+</pre></div>
+</div>
+<p>A default data file location may be handy too and we allow saving of
+data in a single file. And since we know it is simulated data we do not
+have to find the optical axes in the diffraction pattern with
+the help of auto_center</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">DEFAULT</span><span class="o">.</span><span class="n">dfile</span> <span class="o">=</span> <span class="s">&#39;/tmp/ptypy/sim/npy.ptyd&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">DEFAULT</span><span class="o">.</span><span class="n">auto_center</span> <span class="o">=</span> <span class="bp">False</span>
+</pre></div>
+</div>
+<p>Our defaults are now</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">DEFAULT</span><span class="p">,</span> <span class="n">noheader</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="go">* id3VSFF3C638           : ptypy.utils.parameters.Param(19)</span>
+<span class="go">  * positions_theory     : None</span>
+<span class="go">  * auto_center          : False</span>
+<span class="go">  * chunk_format         : .chunk%02d</span>
+<span class="go">  * min_frames           : 1</span>
+<span class="go">  * orientation          : None</span>
+<span class="go">  * num_frames           : None</span>
+<span class="go">  * energy               : None</span>
+<span class="go">  * center               : None</span>
+<span class="go">  * recipe               : ptypy.utils.parameters.Param(1)</span>
+<span class="go">    * base_path          : /tmp/ptypy/sim/</span>
+<span class="go">  * psize                : None</span>
+<span class="go">  * label                : None</span>
+<span class="go">  * load_parallel        : data</span>
+<span class="go">  * shape                : None</span>
+<span class="go">  * rebin                : None</span>
+<span class="go">  * experimentID         : None</span>
+<span class="go">  * version              : 0.1</span>
+<span class="go">  * save                 : None</span>
+<span class="go">  * dfile                : /tmp/ptypy/sim/npy.ptyd</span>
+<span class="go">  * distance             : None</span>
+</pre></div>
+</div>
+<p>The simplest subclass of PtyScan would look like this</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">NumpyScan</span><span class="p">(</span><span class="n">PtyScan</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># We overwrite the DEFAULT with the new DEFAULT.</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">DEFAULT</span> <span class="o">=</span> <span class="n">DEFAULT</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="c"># In init we need to call the parent.</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="nb">super</span><span class="p">(</span><span class="n">NumpyScan</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">pars</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Of course this class does nothing special beyond PtyScan.</p>
+<p>An additional step of initialisation would be to retrieve
+the geometric information that we stored in <code class="docutils literal"><span class="pre">geofilepath</span></code> and update
+the input parameters with it.</p>
+<p>We write a tiny file parser.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">extract_geo</span><span class="p">(</span><span class="n">base_path</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">out</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">base_path</span><span class="o">+</span><span class="s">&#39;geometry.txt&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>            <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>            <span class="n">out</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">out</span>
+</pre></div>
+</div>
+<p>We test it.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">extract_geo</span><span class="p">(</span><span class="n">save_path</span><span class="p">)</span>
+<span class="go">{&#39;distance&#39;: 0.15, &#39;energy&#39;: 0.0023319, &#39;shape&#39;: 256, &#39;psize&#39;: 2.4e-05}</span>
+</pre></div>
+</div>
+<p>That seems to work. We can integrate this parser into
+the initialisation as we assume that this small access can be
+done by all MPI nodes without data access problems. Hence,
+our subclass becomes</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">NumpyScan</span><span class="p">(</span><span class="n">PtyScan</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># We overwrite the DEFAULT with the new DEFAULT.</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">DEFAULT</span> <span class="o">=</span> <span class="n">DEFAULT</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span> <span class="o">=</span> <span class="n">DEFAULT</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">recipe</span><span class="o">.</span><span class="n">base_path</span><span class="o">+</span><span class="s">&#39;geometry.txt&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="c"># we only replace Nones or missing keys</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>                    <span class="n">p</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="nb">super</span><span class="p">(</span><span class="n">NumpyScan</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Good! Next, we need to implement how the class finds out about
+the positions in the scan. The method
+<a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan.load_positions" title="ptypy.core.data.PtyScan.load_positions"><code class="xref py py-meth docutils literal"><span class="pre">load_positions()</span></code></a> can be used
+for this purpose.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">PtyScan</span><span class="o">.</span><span class="n">load_positions</span><span class="o">.</span><span class="n">__doc__</span>
+
+<span class="go">        **Override in subclass for custom implementation**</span>
+
+<span class="go">        *Called in* :py:meth:`initialize`</span>
+
+<span class="go">        Loads all positions for all diffraction patterns in this scan.</span>
+<span class="go">        The positions loaded here will be available by all processes</span>
+<span class="go">        through the attribute ``self.positions``. If you specify position</span>
+<span class="go">        on a per frame basis in :py:meth:`load` , this function has no</span>
+<span class="go">        effect.</span>
+
+<span class="go">        If theoretical positions :py:data:`positions_theory` are</span>
+<span class="go">        provided in the initial parameter set :py:data:`DEFAULT`,</span>
+<span class="go">        specifyiing positions here has NO effect and will be ignored.</span>
+
+<span class="go">        The purpose of this function is to avoid reloading and parallel</span>
+<span class="go">        reads on files that may require intense parsing to retrieve the</span>
+<span class="go">        information, e.g. long SPEC log files. If parallel reads or</span>
+<span class="go">        log file parsing for each set of frames is not a time critical</span>
+<span class="go">        issue of the subclass, reimplementing this function can be ignored</span>
+<span class="go">        and it is recommended to only reimplement the :py:meth:`load`</span>
+<span class="go">        method.</span>
+
+<span class="go">        If `load_parallel` is set to `all` or common`, this function is</span>
+<span class="go">        executed by all nodes, otherwise the master node executes this</span>
+<span class="go">        function and braodcasts the results to other nodes.</span>
+
+<span class="go">        Returns</span>
+<span class="go">        -------</span>
+<span class="go">        positions : ndarray</span>
+<span class="go">            A (N,2)-array where *N* is the number of positions.</span>
+
+<span class="go">        Note</span>
+<span class="go">        ----</span>
+<span class="go">        Be aware that this method sets attribute :py:attr:`num_frames`</span>
+<span class="go">        in the following manner.</span>
+
+<span class="go">        * If ``num_frames == None`` : ``num_frames = N``.</span>
+<span class="go">        * If ``num_frames &lt; N`` , no effect.</span>
+<span class="go">        * If ``num_frames &gt; N`` : ``num_frames = N``.</span>
+</pre></div>
+</div>
+<p>The parser for the positions file would look like this.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">extract_pos</span><span class="p">(</span><span class="n">base_path</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">pos</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">files</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">base_path</span><span class="o">+</span><span class="s">&#39;positions.txt&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>            <span class="n">fname</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>            <span class="n">pos</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">eval</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="nb">eval</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
+<span class="gp">&gt;&gt;&gt; </span>            <span class="n">files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">files</span><span class="p">,</span> <span class="n">pos</span>
+</pre></div>
+</div>
+<p>And the test:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">files</span><span class="p">,</span> <span class="n">pos</span> <span class="o">=</span> <span class="n">extract_pos</span><span class="p">(</span><span class="n">save_path</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">files</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+<span class="go">[&#39;ccd/diffraction_0000.npy&#39;, &#39;ccd/diffraction_0001.npy&#39;]</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">pos</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+<span class="go">[(0.0014658, 0.0020175), (0.0018532, 0.0016686)]</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">NumpyScan</span><span class="p">(</span><span class="n">PtyScan</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># We overwrite the DEFAULT with the new DEFAULT.</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">DEFAULT</span> <span class="o">=</span> <span class="n">DEFAULT</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pars</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span> <span class="o">=</span> <span class="n">DEFAULT</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">recipe</span><span class="o">.</span><span class="n">base_path</span><span class="o">+</span><span class="s">&#39;geometry.txt&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="c"># we only replace Nones or missing keys</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>                    <span class="n">p</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span><span class="nb">eval</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="nb">super</span><span class="p">(</span><span class="n">NumpyScan</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="c"># all input data is now in self.info</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">load_positions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="c"># the base path is now stored in</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">base_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">recipe</span><span class="o">.</span><span class="n">base_path</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">base_path</span><span class="o">+</span><span class="s">&#39;positions.txt&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="n">fname</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="n">pos</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">eval</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="nb">eval</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="n">files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>One nice thing about rewriting <code class="docutils literal"><span class="pre">self.load_positions</span></code> is that
+the maximum number of frames will be set and we do not need to
+manually adapt <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan.check" title="ptypy.core.data.PtyScan.check"><code class="xref py py-meth docutils literal"><span class="pre">check()</span></code></a></p>
+<p>The last step is to overwrite the actual loading of data.
+Loading happens (MPI-compatible) in
+<a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan.load" title="ptypy.core.data.PtyScan.load"><code class="xref py py-meth docutils literal"><span class="pre">load()</span></code></a></p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">PtyScan</span><span class="o">.</span><span class="n">load</span><span class="o">.</span><span class="n">__doc__</span>
+
+<span class="go">        **Override in subclass for custom implementation**</span>
+
+<span class="go">        Loads data according to node specific scanpoint indeces that have</span>
+<span class="go">        been determined by :py:class:`LoadManager` or otherwise</span>
+
+<span class="go">        Returns</span>
+<span class="go">        -------</span>
+<span class="go">        raw, positions, weight : dict</span>
+<span class="go">            Dictionaries whose keys are the given scan point `indices`</span>
+<span class="go">            and whose values are the respective frame / position according</span>
+<span class="go">            to the scan point index. `weight` and `positions` may be empty</span>
+
+<span class="go">        Note</span>
+<span class="go">        ----</span>
+<span class="go">        This is the *most* important method to change when subclassing</span>
+<span class="go">        :any:`PtyScan`. Most often it suffices to override the constructor</span>
+<span class="go">        and this method to createa subclass of suited for a specific</span>
+<span class="go">        experiment.</span>
+</pre></div>
+</div>
+<p>Load seems a bit more complex than <code class="docutils literal"><span class="pre">self.load_positions</span></code> for its
+return values. However, we can opt-out of providing weights (masks)
+and positions, as we have already adapted <code class="docutils literal"><span class="pre">self.load_positions</span></code>
+and there were no bad pixels in the (linear) detector</p>
+<p>The final subclass looks like this.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">NumpyScan</span><span class="p">(</span><span class="n">PtyScan</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># We overwrite the DEFAULT with the new DEFAULT.</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">DEFAULT</span> <span class="o">=</span> <span class="n">DEFAULT</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pars</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span> <span class="o">=</span> <span class="n">DEFAULT</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">recipe</span><span class="o">.</span><span class="n">base_path</span><span class="o">+</span><span class="s">&#39;geometry.txt&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="c"># we only replace Nones or missing keys</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>                    <span class="n">p</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span><span class="nb">eval</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="nb">super</span><span class="p">(</span><span class="n">NumpyScan</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="c"># all input data is now in self.info</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">load_positions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="c"># the base path is now stored in</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">pos</span><span class="o">=</span><span class="p">[]</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">base_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">recipe</span><span class="o">.</span><span class="n">base_path</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">base_path</span><span class="o">+</span><span class="s">&#39;positions.txt&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="n">fname</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="n">pos</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">eval</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="nb">eval</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
+<span class="gp">&gt;&gt;&gt; </span>                <span class="n">files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">raw</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">bp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">recipe</span><span class="o">.</span><span class="n">base_path</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>            <span class="n">raw</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">bp</span><span class="o">+</span><span class="s">&#39;ccd/diffraction_</span><span class="si">%04d</span><span class="s">.npy&#39;</span> <span class="o">%</span> <span class="n">ii</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="n">raw</span><span class="p">,</span> <span class="p">{},</span> <span class="p">{}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="loading-the-data">
+<h3>Loading the data<a class="headerlink" href="#loading-the-data" title="Permalink to this headline">¶</a></h3>
+<p>With the subclass we create a scan only using defaults</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">NPS</span> <span class="o">=</span> <span class="n">NumpyScan</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">NPS</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>In order to process the data. We need to call
+<a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan.auto" title="ptypy.core.data.PtyScan.auto"><code class="xref py py-meth docutils literal"><span class="pre">auto()</span></code></a> with the chunk size
+as arguments. It returns a data chunk that we can inspect
+with <a class="reference internal" href="ptypy.utils.html#ptypy.utils.verbose.report" title="ptypy.utils.verbose.report"><code class="xref py py-func docutils literal"><span class="pre">ptypy.utils.verbose.report()</span></code></a>. The information is
+concatenated, but the length of iterables or dicts is always indicated
+in parantheses.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">80</span><span class="p">),</span> <span class="n">noheader</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="go">* id3VSFF2N0SO           : dict(2)</span>
+<span class="go">  * common               : ptypy.utils.parameters.Param(9)</span>
+<span class="go">    * distance           : 0.15</span>
+<span class="go">    * center             : [array = [ 128.  128.]]</span>
+<span class="go">    * energy             : 0.0023319</span>
+<span class="go">    * psize              : [array = [  2.40000000e-05   2.40000000e-05]]</span>
+<span class="go">    * label              : None</span>
+<span class="go">    * shape              : [array = [256 256]]</span>
+<span class="go">    * version            : 0.1</span>
+<span class="go">    * experimentID       : None</span>
+<span class="go">    * weight2d           : [256x256 bool array]</span>
+<span class="go">  * iterable             : list(80)</span>
+<span class="go">    * id3VSFF2OGSO       : dict(4)</span>
+<span class="go">      * index            : 0</span>
+<span class="go">      * data             : [256x256 int32 array]</span>
+<span class="go">      * mask             : [256x256 bool array]</span>
+<span class="go">      * position         : [array = [ 0.0014658  0.0020175]]</span>
+<span class="go">    * id3VSFF2N15G       : dict(4)</span>
+<span class="go">      * index            : 1</span>
+<span class="go">      * data             : [256x256 int32 array]</span>
+<span class="go">      * mask             : [256x256 bool array]</span>
+<span class="go">      * position         : [array = [ 0.0018532  0.0016686]]</span>
+<span class="go">    * id3VSFF2NEH8       : dict(4)</span>
+<span class="go">      * index            : 2</span>
+<span class="go">      * data             : [256x256 int32 array]</span>
+<span class="go">      * mask             : [256x256 bool array]</span>
+<span class="go">      * position         : [array = [-0.0017546  0.0011135]]</span>
+<span class="go">    * id3VSFF2NCK0       : dict(4)</span>
+<span class="go">      * index            : 3</span>
+<span class="go">      * data             : [256x256 int32 array]</span>
+<span class="go">      * mask             : [256x256 bool array]</span>
+<span class="go">      * position         : [array = [-0.0014226  0.0015149]]</span>
+<span class="go">    * id3VSFF2LFK8       : dict(4)</span>
+<span class="go">      * index            : 4</span>
+<span class="go">      * data             : [256x256 int32 array]</span>
+<span class="go">      * mask             : [256x256 bool array]</span>
+<span class="go">      * position         : [array = [-0.002074    0.00013049]]</span>
+<span class="go">    * ...                : ....</span>
+
+
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">80</span><span class="p">),</span> <span class="n">noheader</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="go">* id3VSFF2O1VO           : dict(2)</span>
+<span class="go">  * common               : ptypy.utils.parameters.Param(9)</span>
+<span class="go">    * distance           : 0.15</span>
+<span class="go">    * center             : [array = [ 128.  128.]]</span>
+<span class="go">    * energy             : 0.0023319</span>
+<span class="go">    * psize              : [array = [  2.40000000e-05   2.40000000e-05]]</span>
+<span class="go">    * label              : None</span>
+<span class="go">    * shape              : [array = [256 256]]</span>
+<span class="go">    * version            : 0.1</span>
+<span class="go">    * experimentID       : None</span>
+<span class="go">    * weight2d           : [256x256 bool array]</span>
+<span class="go">  * iterable             : list(34)</span>
+<span class="go">    * id3VSFF2OH5G       : dict(4)</span>
+<span class="go">      * index            : 80</span>
+<span class="go">      * data             : [256x256 int32 array]</span>
+<span class="go">      * mask             : [256x256 bool array]</span>
+<span class="go">      * position         : [array = [-0.0021597 -0.0012469]]</span>
+<span class="go">    * id3VSFF2ND5G       : dict(4)</span>
+<span class="go">      * index            : 81</span>
+<span class="go">      * data             : [256x256 int32 array]</span>
+<span class="go">      * mask             : [256x256 bool array]</span>
+<span class="go">      * position         : [array = [-0.0023717  -0.00077061]]</span>
+<span class="go">    * id3VSFF2LCB8       : dict(4)</span>
+<span class="go">      * index            : 82</span>
+<span class="go">      * data             : [256x256 int32 array]</span>
+<span class="go">      * mask             : [256x256 bool array]</span>
+<span class="go">      * position         : [array = [-0.0024801  -0.00026067]]</span>
+<span class="go">    * id3VSFF2OGK0       : dict(4)</span>
+<span class="go">      * index            : 83</span>
+<span class="go">      * data             : [256x256 int32 array]</span>
+<span class="go">      * mask             : [256x256 bool array]</span>
+<span class="go">      * position         : [array = [-0.0024801   0.00026067]]</span>
+<span class="go">    * id3VSFF2O1N0       : dict(4)</span>
+<span class="go">      * index            : 84</span>
+<span class="go">      * data             : [256x256 int32 array]</span>
+<span class="go">      * mask             : [256x256 bool array]</span>
+<span class="go">      * position         : [array = [-0.00051848 -0.0024393 ]]</span>
+<span class="go">    * ...                : ....</span>
+</pre></div>
+</div>
+<p>We observe the second chunk was not 80 frames deep but 34
+as we only had 114 frames of data.</p>
+<p>So where is the <em>.ptyd</em> data-file? As default, PtyScan does not
+actually save data. We have to manually activate it in in the
+input paramaters.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">NPS</span><span class="o">.</span><span class="n">DEFAULT</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">save</span> <span class="o">=</span> <span class="s">&#39;append&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">NPS</span> <span class="o">=</span> <span class="n">NumpyScan</span><span class="p">(</span><span class="n">pars</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">NPS</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
+<span class="go">WARNING root - File /tmp/ptypy/sim/npy.ptyd already exist. Renamed to /tmp/ptypy/sim/npy.ptyd.old</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">50</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">msg</span> <span class="o">=</span> <span class="n">NPS</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">if</span> <span class="n">msg</span> <span class="o">==</span> <span class="n">NPS</span><span class="o">.</span><span class="n">EOS</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">break</span>
+</pre></div>
+</div>
+<p>We can analyse the saved <code class="docutils literal"><span class="pre">npy.ptyd</span></code> with
+<code class="xref py py-func docutils literal"><span class="pre">h5info()</span></code></p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.io</span> <span class="kn">import</span> <span class="n">h5info</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">h5info</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">dfile</span><span class="p">)</span>
+<span class="go">File created : Mon Jun 22 11:27:49 2015</span>
+<span class="go"> * chunks [dict 6]:</span>
+<span class="go">     * 0 [dict 4]:</span>
+<span class="go">         * data [20x256x256 int32 array]</span>
+<span class="go">         * indices [list = [0.000000, 1.000000, 2.000000, 3.000000,  ...]]</span>
+<span class="go">         * positions [20x2 float64 array]</span>
+<span class="go">         * weights [array = []]</span>
+<span class="go">     * 1 [dict 4]:</span>
+<span class="go">         * data [20x256x256 int32 array]</span>
+<span class="go">         * indices [list = [20.000000, 21.000000, 22.000000, 23.000000,  ...]]</span>
+<span class="go">         * positions [20x2 float64 array]</span>
+<span class="go">         * weights [array = []]</span>
+<span class="go">     * 2 [dict 4]:</span>
+<span class="go">         * data [20x256x256 int32 array]</span>
+<span class="go">         * indices [list = [40.000000, 41.000000, 42.000000, 43.000000,  ...]]</span>
+<span class="go">         * positions [20x2 float64 array]</span>
+<span class="go">         * weights [array = []]</span>
+<span class="go">     * 3 [dict 4]:</span>
+<span class="go">         * data [20x256x256 int32 array]</span>
+<span class="go">         * indices [list = [60.000000, 61.000000, 62.000000, 63.000000,  ...]]</span>
+<span class="go">         * positions [20x2 float64 array]</span>
+<span class="go">         * weights [array = []]</span>
+<span class="go">     * 4 [dict 4]:</span>
+<span class="go">         * data [20x256x256 int32 array]</span>
+<span class="go">         * indices [list = [80.000000, 81.000000, 82.000000, 83.000000,  ...]]</span>
+<span class="go">         * positions [20x2 float64 array]</span>
+<span class="go">         * weights [array = []]</span>
+<span class="go">     * 5 [dict 4]:</span>
+<span class="go">         * data [14x256x256 int32 array]</span>
+<span class="go">         * indices [list = [100.000000, 101.000000, 102.000000, 103.000000,  ...]]</span>
+<span class="go">         * positions [14x2 float64 array]</span>
+<span class="go">         * weights [array = []]</span>
+<span class="go"> * info [dict 20]:</span>
+<span class="go">     * auto_center [scalar = False]</span>
+<span class="go">     * center [array = [128 128]]</span>
+<span class="go">     * chunk_format [string = &quot;.chunk%02d&quot;]</span>
+<span class="go">     * dfile [string = &quot;/tmp/ptypy/sim/npy.ptyd&quot;]</span>
+<span class="go">     * distance [scalar = 0.15]</span>
+<span class="go">     * energy [scalar = 0.0023319]</span>
+<span class="go">     * experimentID [None]</span>
+<span class="go">     * label [None]</span>
+<span class="go">     * load_parallel [string = &quot;data&quot;]</span>
+<span class="go">     * min_frames [scalar = 1]</span>
+<span class="go">     * num_frames [None]</span>
+<span class="go">     * orientation [None]</span>
+<span class="go">     * positions_scan [114x2 float64 array]</span>
+<span class="go">     * positions_theory [None]</span>
+<span class="go">     * psize [scalar = 2.4e-05]</span>
+<span class="go">     * rebin [scalar = 1]</span>
+<span class="go">     * recipe [Param 1]:</span>
+<span class="go">         * base_path [string = &quot;/tmp/ptypy/sim/&quot;]</span>
+<span class="go">     * save [string = &quot;append&quot;]</span>
+<span class="go">     * shape [array = [256 256]]</span>
+<span class="go">     * version [string = &quot;0.1&quot;]</span>
+<span class="go"> * meta [dict 9]:</span>
+<span class="go">     * center [array = [ 128.  128.]]</span>
+<span class="go">     * distance [scalar = 0.15]</span>
+<span class="go">     * energy [scalar = 0.0023319]</span>
+<span class="go">     * experimentID [None]</span>
+<span class="go">     * label [None]</span>
+<span class="go">     * psize [array = [  2.40000000e-05   2.40000000e-05]]</span>
+<span class="go">     * shape [array = [256 256]]</span>
+<span class="go">     * version [string = &quot;0.1&quot;]</span>
+<span class="go">     * weight2d [256x256 bool array]</span>
+
+<span class="go">None</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="listing-the-new-subclass">
+<h3>Listing the new subclass<a class="headerlink" href="#listing-the-new-subclass" title="Permalink to this headline">¶</a></h3>
+<p>In order to make the subclass available in your local PtyPy,
+navigate to <code class="docutils literal"><span class="pre">[ptypy_root]/ptypy/experiment</span></code> and paste the content
+into a new file <code class="docutils literal"><span class="pre">user.py</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ touch [ptypy_root]/ptypy/experiment/user.py
+</pre></div>
+</div>
+<p>Append the following lines into <code class="docutils literal"><span class="pre">[ptypy_root]/ptypy/experiment.__init__.py</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">user</span> <span class="kn">import</span> <span class="n">NumpyScan</span>
+<span class="n">PtyScanTypes</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s">&#39;numpy&#39;</span><span class="p">:</span><span class="n">NumpyScan</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>Now, your new subclass will be used whenever you pass <code class="docutils literal"><span class="pre">'numpy'</span></code> for
+the <a class="reference internal" href="parameters.html#.scan.data.source" title=".scan.data.source"><code class="xref py py-data docutils literal"><span class="pre">scan.data.source</span></code></a> parameter. All special parameters of the class
+should be passed via the dict <a class="reference internal" href="parameters.html#.scan.data.recipe" title=".scan.data.recipe"><code class="xref py py-data docutils literal"><span class="pre">scan.data.recipe</span></code></a>.</p>
+<table class="docutils citation" frame="void" id="h5py" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[h5py]</td><td><em>(<a class="fn-backref" href="#id2">1</a>, <a class="fn-backref" href="#id4">2</a>)</em> <a class="reference external" href="http://www.h5py.org/">http://www.h5py.org/</a></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="hdf" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[HDF]</td><td><em>(<a class="fn-backref" href="#id1">1</a>, <a class="fn-backref" href="#id3">2</a>, <a class="fn-backref" href="#id5">3</a>)</em> <strong>H</strong>ierarchical <strong>D</strong>ata <strong>F</strong>ormat, <a class="reference external" href="http://www.hdfgroup.org/HDF5/">http://www.hdfgroup.org/HDF5/</a></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="parameters.html" title="Parameter tree structure"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="concept.html" title="Concepts and Classes"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

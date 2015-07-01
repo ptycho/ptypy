@@ -1,0 +1,511 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ptypy.experiment package &mdash; ptypy 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/header.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
+    <link rel="top" title="ptypy 0.2.0 documentation" href="../content.html" />
+    <link rel="up" title="ptypy package" href="ptypy.html" />
+    <link rel="next" title="ptypy.io package" href="ptypy.io.html" />
+    <link rel="prev" title="ptypy.engines package" href="ptypy.engines.html" />
+<link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
+
+  </head>
+  <body role="document">
+<div class="pageheader">
+  <ul>
+    <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
+    <li><a href="http://www.github.com/ptycho/ptypy">Github</a></li>
+    <li><a href="../content.html">Docs</a></li>
+    <!-- <li><a href="develop.html">Extend/Develop</a></li> -->
+  </ul>
+  <div>
+    <a href="../index.html"><img src="../_static/logo_60px.png" alt="SPHINX" /></a>
+
+    <h0 style="padding-bottom:40px">Ptychography for Python</h0>
+  </div>
+</div>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ptypy.io.html" title="ptypy.io package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="ptypy.engines.html" title="ptypy.engines package"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../content.html">
+              <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
+            </a></p>
+<h3><a href="../content.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_management.html">Data management</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="ptypy.html">ptypy package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="ptypy.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ptypy.core.html">ptypy.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.engines.html">ptypy.engines package</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="">ptypy.experiment package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.io.html">ptypy.io package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.resources.html">ptypy.resources package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.simulations.html">ptypy.simulations package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.utils.html">ptypy.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.html#module-ptypy">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="ptypy.engines.html"
+                        title="previous chapter">ptypy.engines package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="ptypy.io.html"
+                        title="next chapter">ptypy.io package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/rst/ptypy.experiment.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ptypy-experiment-package">
+<h1>ptypy.experiment package<a class="headerlink" href="#ptypy-experiment-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-ptypy.experiment.I13">
+<span id="ptypy-experiment-i13-module"></span><h2>ptypy.experiment.I13 module<a class="headerlink" href="#module-ptypy.experiment.I13" title="Permalink to this headline">¶</a></h2>
+<p>Scan loading recipe for the I13 beamline, Diamond.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="class">
+<dt id="ptypy.experiment.I13.I13Scan">
+<em class="property">class </em><code class="descclassname">ptypy.experiment.I13.</code><code class="descname">I13Scan</code><span class="sig-paren">(</span><em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.I13.I13Scan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.data.PtyScan</span></code></a></p>
+<p>Subclass of PtyScan.</p>
+<p>Create a PtyScan object that will load I13 data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>pars</strong> &#8211; preparation parameters</li>
+<li><strong>kwargs</strong> &#8211; Additive parameters</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="ptypy.experiment.I13.I13Scan.DEFAULT">
+<code class="descname">DEFAULT</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.experiment.I13.I13Scan.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.experiment.I13.I13Scan.check">
+<code class="descname">check</code><span class="sig-paren">(</span><em>frames</em>, <em>start=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.I13.I13Scan.check" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the number of frames available from starting index <cite>start</cite>, and whether the end of the scan
+was reached.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frames</strong> &#8211; Number of frames to load</li>
+<li><strong>start</strong> &#8211; starting point</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">(frames_available, end_of_scan)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li>the number of frames available from a starting point <cite>start</cite></li>
+<li>bool if the end of scan was reached (None if this routine doesn&#8217;t know)</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.experiment.I13.I13Scan.correct">
+<code class="descname">correct</code><span class="sig-paren">(</span><em>raw</em>, <em>weights</em>, <em>common</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.I13.I13Scan.correct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply (eventual) corrections to the frames. Convert from &#8220;raw&#8221; frames to usable data.
+:param raw:
+:param weights:
+:param common:
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.experiment.I13.I13Scan.load">
+<code class="descname">load</code><span class="sig-paren">(</span><em>indices</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.I13.I13Scan.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load frames given by the indices.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>indices</strong> &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.experiment.I13.I13Scan.load_common">
+<code class="descname">load_common</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.I13.I13Scan.load_common" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load scanning positions and mask file.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.experiment.ID16Anfp">
+<span id="ptypy-experiment-id16anfp-module"></span><h2>ptypy.experiment.ID16Anfp module<a class="headerlink" href="#module-ptypy.experiment.ID16Anfp" title="Permalink to this headline">¶</a></h2>
+<p>Scan loading recipe for the ID16A beamline at ESRF - near-field ptycho setup.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="class">
+<dt id="ptypy.experiment.ID16Anfp.ID16AScan">
+<em class="property">class </em><code class="descclassname">ptypy.experiment.ID16Anfp.</code><code class="descname">ID16AScan</code><span class="sig-paren">(</span><em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.ID16Anfp.ID16AScan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.data.PtyScan</span></code></a></p>
+<p>Subclass of PtyScan for ID16A beamline (specifically for near-field
+ptychography).</p>
+<p>Create a PtyScan object that will load ID16A data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>pars</strong> &#8211; preparation parameters</li>
+<li><strong>kwargs</strong> &#8211; Additive parameters</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="ptypy.experiment.ID16Anfp.ID16AScan.check">
+<code class="descname">check</code><span class="sig-paren">(</span><em>frames</em>, <em>start=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.ID16Anfp.ID16AScan.check" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the number of frames available from starting index <cite>start</cite>, and whether the end of the scan
+was reached.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frames</strong> &#8211; Number of frames to load</li>
+<li><strong>start</strong> &#8211; starting point</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">(frames_available, end_of_scan)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li>the number of frames available from a starting point <cite>start</cite></li>
+<li>bool if the end of scan was reached (None if this routine doesn&#8217;t know)</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.experiment.ID16Anfp.ID16AScan.correct">
+<code class="descname">correct</code><span class="sig-paren">(</span><em>raw</em>, <em>weights</em>, <em>common</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.ID16Anfp.ID16AScan.correct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply (eventual) corrections to the raw frames. Convert from &#8220;raw&#8221; frames to usable data.
+:param raw:
+:param weights:
+:param common:
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.experiment.ID16Anfp.ID16AScan.load">
+<code class="descname">load</code><span class="sig-paren">(</span><em>indices</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.ID16Anfp.ID16AScan.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load frames given by the indices.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>indices</strong> &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.experiment.ID16Anfp.ID16AScan.load_common">
+<code class="descname">load_common</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.ID16Anfp.ID16AScan.load_common" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load scanning positions, dark, white field and distortion files.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.experiment.ID16Anfp.undistort">
+<code class="descclassname">ptypy.experiment.ID16Anfp.</code><code class="descname">undistort</code><span class="sig-paren">(</span><em>frame</em>, <em>delta</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.ID16Anfp.undistort" title="Permalink to this definition">¶</a></dt>
+<dd><p>Frame distortion correction (linear interpolation)
+Any value outside the frame is replaced with a constang value (mean of
+the complete frame)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frame</strong> (<em>ndarray</em>) &#8211; the input frame data</li>
+<li><strong>delta</strong> (<em>2-tuple</em>) &#8211; containing the horizontal and vertical displacements respectively.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The corrected frame of same dimension and type as frame.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.experiment.optiklabor">
+<span id="ptypy-experiment-optiklabor-module"></span><h2>ptypy.experiment.optiklabor module<a class="headerlink" href="#module-ptypy.experiment.optiklabor" title="Permalink to this headline">¶</a></h2>
+<p>Created on Nov 22 2013</p>
+<p>&#64;author: Bjeorn Enders</p>
+<dl class="class">
+<dt id="ptypy.experiment.optiklabor.FliSpecScanMultexp">
+<em class="property">class </em><code class="descclassname">ptypy.experiment.optiklabor.</code><code class="descname">FliSpecScanMultexp</code><span class="sig-paren">(</span><em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.optiklabor.FliSpecScanMultexp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.data.PtyScan</span></code></a></p>
+<dl class="method">
+<dt id="ptypy.experiment.optiklabor.FliSpecScanMultexp.check">
+<code class="descname">check</code><span class="sig-paren">(</span><em>frames_requested</em>, <em>start=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.optiklabor.FliSpecScanMultexp.check" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.experiment.optiklabor.FliSpecScanMultexp.correct">
+<code class="descname">correct</code><span class="sig-paren">(</span><em>raw</em>, <em>weights</em>, <em>common</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.optiklabor.FliSpecScanMultexp.correct" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.experiment.optiklabor.FliSpecScanMultexp.load">
+<code class="descname">load</code><span class="sig-paren">(</span><em>indices</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.optiklabor.FliSpecScanMultexp.load" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.experiment.optiklabor.FliSpecScanMultexp.load_common">
+<code class="descname">load_common</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.optiklabor.FliSpecScanMultexp.load_common" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.experiment.plugin">
+<span id="ptypy-experiment-plugin-module"></span><h2>ptypy.experiment.plugin module<a class="headerlink" href="#module-ptypy.experiment.plugin" title="Permalink to this headline">¶</a></h2>
+<p>Scan loading plugin. Meant to make easier user-generated, problem-specific
+data preparation.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="function">
+<dt id="ptypy.experiment.plugin.makeScanPlugin">
+<code class="descclassname">ptypy.experiment.plugin.</code><code class="descname">makeScanPlugin</code><span class="sig-paren">(</span><em>pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.plugin.makeScanPlugin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Factory wrapper that provides a PtyScan object.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.experiment.spec">
+<span id="ptypy-experiment-spec-module"></span><h2>ptypy.experiment.spec module<a class="headerlink" href="#module-ptypy.experiment.spec" title="Permalink to this headline">¶</a></h2>
+<p>Utility module to read spec files
+Adapted from spec_read.m by Andreas Menzel (PSI)</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="class">
+<dt id="ptypy.experiment.spec.SpecInfo">
+<em class="property">class </em><code class="descclassname">ptypy.experiment.spec.</code><code class="descname">SpecInfo</code><span class="sig-paren">(</span><em>spec_filename</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.spec.SpecInfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="ptypy.experiment.spec.SpecInfo.parse">
+<code class="descname">parse</code><span class="sig-paren">(</span><em>rehash=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.spec.SpecInfo.parse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse the spec dat-file and extract information.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ptypy.experiment.spec.SpecScan">
+<em class="property">class </em><code class="descclassname">ptypy.experiment.spec.</code><code class="descname">SpecScan</code><a class="headerlink" href="#ptypy.experiment.spec.SpecScan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.experiment.spec.verbose">
+<code class="descclassname">ptypy.experiment.spec.</code><code class="descname">verbose</code><span class="sig-paren">(</span><em>n</em>, <em>s</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.experiment.spec.verbose" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function should be replaced by the real verbose class after import.
+It is here for convenience since this module has no other external dependencies.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.experiment">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ptypy.experiment" title="Permalink to this headline">¶</a></h2>
+<p>Beamline-specific data preparation modules.</p>
+<dl class="docutils">
+<dt>Currently available:</dt>
+<dd><ul class="first last simple">
+<li>I13DLS</li>
+</ul>
+</dd>
+</dl>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ptypy.io.html" title="ptypy.io package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="ptypy.engines.html" title="ptypy.engines package"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>
