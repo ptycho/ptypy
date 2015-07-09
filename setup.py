@@ -33,8 +33,8 @@ if not release:
     import subprocess
     try:
         git_commit = subprocess.Popen(["git","log","-1","--pretty=oneline","--abbrev-commit"],
-                                      stdout=subprocess.PIPE,
-                                      stderr=subprocess.DEVNULL).communicate()[0].split()[0]
+                     stdout=subprocess.PIPE,
+                     stderr=subprocess.DEVNULL).communicate()[0].split()[0]
     except:
         pass
     else:
