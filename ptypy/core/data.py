@@ -111,6 +111,8 @@ class PtyScan(object):
 
         # Load default parameter structure
         info = u.Param(self.DEFAULT.copy())
+
+        # FIXME this overwrites the child's recipe defaults
         info.update(pars)
         info.update(kwargs)
 

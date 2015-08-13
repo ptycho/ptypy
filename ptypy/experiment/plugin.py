@@ -53,7 +53,7 @@ def makeScanPlugin(pars=None):
         # We try to find the class
         ptyscan_objects = {}
         for name, obj in plugin.__dict__.iteritems():
-            if inspect.isclass(obj) and issubclass(obj, PtyScan):
+            if inspect.isclass(obj) and issubclass(obj, PtyScan) and obj is not PtyScan:
                 ptyscan_objects[name] = obj
         if not ptyscan_objects:
             raise RuntimeError('Failed to find a PtyScan subclass in plugin %s' % plugin_name)
