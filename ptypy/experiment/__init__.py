@@ -17,9 +17,11 @@ This file is part of the PTYPY package.
 from I13 import I13Scan
 from optiklabor import FliSpecScanMultexp
 from plugin import makeScanPlugin
+from I08 import I08_Scan
 
 PtyScanTypes = dict(
     fli_spec_multexp=FliSpecScanMultexp,
     i13dls=I13Scan,
-    plugin=makeScanPlugin
+    plugin=makeScanPlugin,
+    i08dls=I08_Scan
 )
