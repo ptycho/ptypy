@@ -458,7 +458,7 @@ def create_default_template(filename=None,user_level=0,doc_level=2):
     for entry, pd in parameter_descriptions.iteritems():
         if user_level < pd.userlevel:
             continue
-        if hasattr(pd,'children'):
+        if pd.children is not None:
             value = "u.Param()"
         else:
             val = pd.value
