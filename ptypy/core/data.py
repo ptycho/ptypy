@@ -609,7 +609,7 @@ class PtyScan(object):
                 rebin = self.rebin
                 if rebin<=1:
                     pass
-                elif rebin in range(2, 6) and (((self.roi / float(rebin)) % 1) == 0.0).all():
+                elif rebin in range(2, 6) and (((sh / float(rebin)) % 1) == 0.0).all():
                     mask = w > 0
                     d = u.rebin_2d(d, rebin)
                     w = u.rebin_2d(w, rebin)
