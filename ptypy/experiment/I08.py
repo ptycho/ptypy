@@ -19,11 +19,17 @@ if True: #__name__ == "__main__":
     from ptypy import utils as u
     from ptypy import io
     from ptypy.utils.verbose import log
+    from ptypy.core.paths import Paths
+    # FIXME: Accessing the real "io" from the parent Ptycho class would be much better
+    from ptypy.core import DEFAULT_io as io_par
 else:
     from .. import utils as u
     from .. import io
     from ..core.data import PtyScan
     from ..utils.verbose import log
+    from ..core.paths import Paths
+    from ..core import DEFAULT_io as io_par
+
 
 # Parameters for the nexus file saved by GDA
 NXS_PATHS = u.Param()
@@ -50,7 +56,6 @@ RECIPE.date = None
 RECIPE.stxm_file_pattern = '%(base_path)s/%(date)s/Sample_Image_%(date)s_%(scan_number_stxm)03d.hdf5'
 
 
-
 RECIPE.motors = ['sample_y','sample_x'] # same orientation as I13 for now
 RECIPE.energy = None
 RECIPE.lam=None
@@ -62,10 +67,6 @@ I08DEFAULT = ptypy.core.data.PtyScan.DEFAULT.copy()
 
 I08DEFAULT.recipe = RECIPE
 
-# A default data file location may be handy too and we allow saving of
-# data in a single file. And since we know it is simulated data we do not
-# have to find the optical axes in the diffraction pattern with
-# the help of auto_center
 I08DEFAULT.dfile = '/tmp/ptypy/sim/npy.ptyd'
 I08DEFAULT.auto_center = False
 
@@ -84,10 +85,7 @@ class I08_Scan(ptypy.core.data.PtyScan):
         pars.recipe.update(RDEFAULT)
         
         super(I08_Scan, self).__init__(pars, **kwargs)
-        
-        #self.info.recipe.update(RECIPE)
-        #self.info.recipe.update(pars.recipe)
-        
+
         # Try to extract base_path to access data files
         if self.info.recipe.base_path is None:
             d = os.getcwd()
@@ -119,6 +117,12 @@ class I08_Scan(ptypy.core.data.PtyScan):
         self.stxm_filename = self.info.recipe.stxm_file_pattern % self.info.recipe
         log(3, 'Will read from nxs file %s' % self.nxs_filename)
         log(3, 'Will read from STXM file %s' % self.stxm_filename)
+
+        # Create the ptyd file name if not specified
+        if self.info.dfile is None:
+            home = Paths(io_par).home
+            self.info.dfile = '%s/prepdata/%s.ptyd' % (home, self.info.label)
+            log(3, 'Save file is %s' % self.info.dfile)
 
     def load_common(self):
         """
