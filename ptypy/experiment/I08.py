@@ -120,7 +120,7 @@ class I08_Scan(ptypy.core.data.PtyScan):
         # Create the ptyd file name if not specified
         if self.info.dfile is None:
             home = Paths(io_par).home
-            self.info.dfile = '%s/prepdata/%s.ptyd' % (home, self.info.label)
+            self.info.dfile = '%s/prepdata/data_%d.ptyd' % (home, self.info.recipe.scan_number)
             log(3, 'Save file is %s' % self.info.dfile)
 
     def load_common(self):
