@@ -42,6 +42,7 @@ RECIPE.scan_number = None
 RECIPE.scan_number_stxm = None
 RECIPE.dark_number = None
 RECIPE.dark_number_stxm = None
+RECIPE.dark_value = 200.   # Used if dark_number is None
 RECIPE.detector_flat_file = None
 RECIPE.nxs_file_pattern = '%(base_path)s/nexus/i08-%(scan_number)d.nxs'
 RECIPE.dark_nxs_file_pattern = '%(base_path)s/nexus/i08-%(dark_number)d.nxs'
@@ -130,10 +131,14 @@ class I08_Scan(ptypy.core.data.PtyScan):
         key = NXS_PATHS.frame_pattern
         if self.info.recipe.dark_number is not None:
             self.dark_nxs_filename = self.info.recipe.dark_nxs_file_pattern % self.info.recipe
-            dark = io.h5read(self.dark_nxs_filename,key)[key][0,0,:,:]# this was a problem with the dark collection. a 2x2 grid was collected.
-
+            #dark = io.h5read(self.dark_nxs_filename,key)[key][0,0,:,:]# this was a problem with the dark collection. a 2x2 grid was collected.
+            dark = io.h5read(self.dark_nxs_filename, key)[key]
+            if dark.ndim == 4:
+                dark.resize((dark.shape[0] * dark.shape[1], dark.shape[2], dark.shape[3]))
+            if dark.ndim == 3:
+                dark = np.median(dark, axis=0)
         else:
-            dark = 200.
+            dark = self.info.recipe.dark_value
         
         if self.info.recipe.detector_flat_file is not None:
             flat = io.h5read(self.info.recipe.detector_flat_file,FLAT_PATHS.key)[FLAT_PATHS.key]
@@ -175,19 +180,19 @@ class I08_Scan(ptypy.core.data.PtyScan):
         :return:
         """
 
-        raw = {}
-        pos = {}
-        weights = {}
+        raw = {}  # Container for the frames
+        pos = {}  # Container for the positions. Left empty here because positions are provided by self.load_positions
+        weights = {}  # Container for the weights
         key = NXS_PATHS.frame_pattern
         ix = np.zeros(len(indices))        
         iy = np.zeros(len(indices))
         
         # data from I08 comes in as a [npts_x,npts_y,framesize_x,framesize_y]
         for i in range(len(indices)):
-            ix[i]=int(np.mod(indices[i],self.common.scan_dimensions[1])) #find the remainder - works out the column
-            iy[i] = int(indices[i]//self.common.scan_dimensions[0])# works out the row
-            raw[i] = (io.h5read(self.nxs_filename, key,slice=(ix[i],iy[i]))[key].astype(np.float32)-self.common.dark)/ (self.common.flat)#-self.common.dark) # load in the data and convert type
-
+            ix[i] = int(np.mod(indices[i], self.common.scan_dimensions[1]))  # find the remainder - works out the column
+            iy[i] = int(indices[i]//self.common.scan_dimensions[0])  # works out the row
+            raw[i] = (io.h5read(self.nxs_filename, key, slice=(ix[i], iy[i]))[key].astype(np.float32)-self.common.dark)/ (self.common.flat)  #-self.common.dark) # load in the data and convert type
+            weights[i] = float(raw[i] >= 0.)
         return raw, pos, weights
 
 #io.h5read('somefile.h5', data[(slice1, slice2)]
