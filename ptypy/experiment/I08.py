@@ -67,7 +67,6 @@ I08DEFAULT = ptypy.core.data.PtyScan.DEFAULT.copy()
 
 I08DEFAULT.recipe = RECIPE
 
-I08DEFAULT.dfile = '/tmp/ptypy/sim/npy.ptyd'
 I08DEFAULT.auto_center = False
 
 
