@@ -290,7 +290,7 @@ class PDesc(object):
 
 ## maybe this should be a function in the end.
 # Create the root
-pdroot = PDesc(description={'name': '', 'type': 'Param'}, parent=None)
+pdroot = PDesc(description={'name': '', 'type': 'Param', 'shortdoc': 'Parameter root'}, parent=None)
 entry_pts = ['']
 entry_dcts = [pdroot]  # [{}]
 entry_level = 0
