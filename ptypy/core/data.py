@@ -1100,7 +1100,10 @@ class PtydScan(PtyScan):
         return 'chunks/%d/%s' % (coord[0], key), slice(coord[1], coord[1] + 1)
 
     def load_weight(self):
-        return self.info.weight2d
+        if self.info.has_key('weight2d'):
+            return self.info.weight2d
+        else:
+            return None
     
     def load_positions(self):
         return None
