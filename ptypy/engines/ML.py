@@ -348,7 +348,7 @@ class ML_Gaussian(object):
         # Object regularizer
         if self.regularizer:
             for name,s in self.ob.S.iteritems():
-                ob_grad.S[name].data += self.regularizer.grad(s.data)
+                self.ob_grad.S[name].data += self.regularizer.grad(s.data)
 
         self.LL = LL / self.tot_measpts
         
@@ -491,11 +491,11 @@ def prepare_smoothing_preconditioner(amplitude):
                 yf[i] = correlate2d(xf[i], np.array([[.0625, .125, .0625], [.125, .25, .125], [.0625, .125, .0625]]), mode='same')
             return y
 
-    if object_smooth_gradient > 0.:
+    if amplitude > 0.:
         logger.debug('Using a smooth gradient filter (Gaussian blur - only for ML)')
-        return GaussFilt(object_smooth_gradient)
+        return GaussFilt(amplitude)
 
-    elif object_smooth_gradient < 0.:
+    elif amplitude < 0.:
         logger.debug('Using a smooth gradient filter (Hann window - only for ML)')
         return HannFilt()
 
