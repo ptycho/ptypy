@@ -204,7 +204,7 @@ class PtyScan(object):
         * Sets :py:attr:`num_frames` if needed
         * Calls :py:meth:`post_initialize`
         """
-        logger.info(u.verbose.headerline('Enter PtyScan.initialixe()','l'))
+        logger.info(u.verbose.headerline('Enter PtyScan.initialize()','l'))
         # Prepare writing to file
         if self.info.save is not None:
             # We will create a .ptyd
@@ -288,7 +288,7 @@ class PtyScan(object):
 
         self.is_initialized = True
         self.post_initialize()
-        logger.info(u.verbose.headerline('Leaving PtyScan.initialixe()','l'))
+        logger.info(u.verbose.headerline('Leaving PtyScan.initialize()','l'))
         
     def _finalize(self):
         """
