@@ -12,7 +12,7 @@ This file is part of the PTYPY package.
 """
 import os
 from .. import utils as u
-from base import BaseEngine
+from base import BaseEngine, DEFAULT_iter_info
 from base import DEFAULT as COMMON
 import DM
 import DM_minimal
