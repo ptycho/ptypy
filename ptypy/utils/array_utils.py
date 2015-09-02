@@ -80,7 +80,7 @@ def rebin_2d(A, rebin=1):
     Returns
     -------
     out : ndarray
-        rebinned array
+        rebinned array. Note that data type casting follows numpy rules, so that boolean arrays are converted to int.
 
     See also
     --------
