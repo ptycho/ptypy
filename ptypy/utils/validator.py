@@ -290,7 +290,7 @@ class PDesc(object):
 
 ## maybe this should be a function in the end.
 # Create the root
-pdroot = PDesc(description={'name': '', 'type': 'Param'}, parent=None)
+pdroot = PDesc(description={'name': '', 'type': 'Param', 'shortdoc': 'Parameter root'}, parent=None)
 entry_pts = ['']
 entry_dcts = [pdroot]  # [{}]
 entry_level = 0
@@ -458,7 +458,7 @@ def create_default_template(filename=None,user_level=0,doc_level=2):
     for entry, pd in parameter_descriptions.iteritems():
         if user_level < pd.userlevel:
             continue
-        if hasattr(pd,'children'):
+        if pd.children is not None:
             value = "u.Param()"
         else:
             val = pd.value

@@ -111,6 +111,8 @@ class PtyScan(object):
 
         # Load default parameter structure
         info = u.Param(self.DEFAULT.copy())
+
+        # FIXME this overwrites the child's recipe defaults
         info.update(pars)
         info.update(kwargs)
 
@@ -607,12 +609,14 @@ class PtyScan(object):
                 rebin = self.rebin
                 if rebin<=1:
                     pass
-                elif rebin in range(2, 6) and (((self.roi / float(rebin)) % 1) == 0.0).all():
+                elif rebin in range(2, 6) and (((sh / float(rebin)) % 1) == 0.0).all():
                     mask = w > 0
                     d = u.rebin_2d(d, rebin)
                     w = u.rebin_2d(w, rebin)
                     mask = u.rebin_2d(mask, rebin)
-                    w[mask < 1] = 0
+                    # We keep only the pixels that do not include a masked pixel
+                    # w[mask < 1] = 0
+                    w[mask < mask.max()] = 0
                 else:
                     raise RuntimeError('Binning (%d) is to large or incompatible with array shape (%s)' % (rebin,str(tuple(sh))))
                                     
@@ -1098,7 +1102,7 @@ class PtydScan(PtyScan):
         return 'chunks/%d/%s' % (coord[0], key), slice(coord[1], coord[1] + 1)
 
     def load_weight(self):
-        return self.info.weight2d
+        return self.weight2d
     
     def load_positions(self):
         return None
@@ -1175,8 +1179,8 @@ class MoonFlowerScan(PtyScan):
         # derive scan pattern
         pos = u.Param()
         pos.spacing = G.resolution * G.shape * r.density
-        pos.layers = np.int(np.round(np.sqrt(self.num_frames)))+1
-        pos.extent = pos.layers * pos.spacing
+        pos.steps = np.int(np.round(np.sqrt(self.num_frames)))+1
+        pos.extent = pos.steps * pos.spacing 
         pos.model = 'round'
         pos.count = self.num_frames
         self.pos = xy.from_pars(pos)

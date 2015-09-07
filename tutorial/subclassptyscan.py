@@ -12,24 +12,24 @@ from ptypy import utils as u
 plt = mpl.pyplot
 import sys
 
-# For this tutorial we assume, that the data and meta information is 
+# For this tutorial we assume that the data and meta information is
 # in this path:
 save_path = '/tmp/ptypy/sim/'
 
 # Furthermore, we assume that a file about the experimental geometry is
 # located at 
-geofilepath = save_path+ 'geometry.txt'
+geofilepath = save_path + 'geometry.txt'
 print geofilepath
 # and has contents of the following form
-print ''.join([line for line in open(geofilepath,'r')])
+print ''.join([line for line in open(geofilepath, 'r')])
 
 # The scanning positions are in 
-positionpath = save_path+ 'positions.txt'
+positionpath = save_path + 'positions.txt'
 print positionpath
 
 # with a list of positions for vertical and horizontanl movement and the
 # image frame from the "camera" 
-print ''.join([line for line in open(positionpath,'r')][:6])+'....'
+print ''.join([line for line in open(positionpath, 'r')][:6])+'....'
 
 # Writing a subclass
 # ------------------
@@ -47,30 +47,30 @@ print ''.join([line for line in open(positionpath,'r')][:6])+'....'
 RECIPE = u.Param()
 RECIPE.base_path = '/tmp/ptypy/sim/'
 
-# Now we import the deafult generic parameter set from
+# Now we import the default generic parameter set from
 from ptypy.core.data import PtyScan
 DEFAULT = PtyScan.DEFAULT.copy()
 
 # This would be the perfect point to change any default value.
-# For sure we set.
+# For sure we need to set the recipe parameter
 DEFAULT.recipe = RECIPE
 
 # A default data file location may be handy too and we allow saving of
-# data in a single file. And since we now it is simulated dat we do not
+# data in a single file. And since we know it is simulated data we do not
 # have to find the optical axes in the diffraction pattern with
 # the help of auto_center
 DEFAULT.dfile = '/tmp/ptypy/sim/npy.ptyd'
 DEFAULT.auto_center = False
 
 # Our defaults are now
-print u.verbose.report(DEFAULT,noheader=True)
+print u.verbose.report(DEFAULT, noheader=True)
 
 # The simplest subclass of PtyScan would look like this
 class NumpyScan(PtyScan):
     # We overwrite the DEFAULT with the new DEFAULT.
     DEFAULT = DEFAULT
     
-    def __init__(self,pars=None, **kwargs):
+    def __init__(self, pars=None, **kwargs):
         # In init we need to call the parent.
         super(NumpyScan, self).__init__(pars, **kwargs)
 
@@ -86,7 +86,7 @@ def extract_geo(base_path):
     with open(base_path+'geometry.txt') as f:
         for line in f:
             key, value = line.strip().split()
-            out[key]=eval(value)
+            out[key] = eval(value)
     return out
 
 # We test it.
@@ -100,7 +100,7 @@ class NumpyScan(PtyScan):
     # We overwrite the DEFAULT with the new DEFAULT.
     DEFAULT = DEFAULT
     
-    def __init__(self,pars=None, **kwargs):
+    def __init__(self, pars=None, **kwargs):
         p = DEFAULT.copy(depth=2)
         p.update(pars) 
         
@@ -109,7 +109,7 @@ class NumpyScan(PtyScan):
                 key, value = line.strip().split()
                 # we only replace Nones or missing keys
                 if p.get(key) is None:
-                    p[key]=eval(value)
+                    p[key] = eval(value)
         
         super(NumpyScan, self).__init__(p, **kwargs)
 
@@ -122,13 +122,13 @@ print PtyScan.load_positions.__doc__
 # The parser for the positions file would look like this.
 def extract_pos(base_path):
     pos = []
-    files =[]
+    files = []
     with open(base_path+'positions.txt') as f:
         for line in f:
             fname, y, x = line.strip().split()
-            pos.append((eval(y),eval(x)))
+            pos.append((eval(y), eval(x)))
             files.append(fname)
-    return files,pos
+    return files, pos
 
 # And the test:
 files, pos = extract_pos(save_path)
@@ -163,7 +163,7 @@ class NumpyScan(PtyScan):
                 files.append(fname)
         return np.asarray(pos)
 
-# One nice thing about rewriting ``self.load_positions`` is that the 
+# One nice thing about rewriting ``self.load_positions`` is that
 # the maximum number of frames will be set and we do not need to
 # manually adapt :py:meth:`~ptypy.core.data.PtyScan.check`
 
@@ -175,7 +175,7 @@ print PtyScan.load.__doc__
 # Load seems a bit more complex than ``self.load_positions`` for its 
 # return values. However, we can opt-out of providing weights (masks)
 # and positions, as we have already adapted ``self.load_positions``
-# and we there were no bad pixels in the (linear) detector
+# and there were no bad pixels in the (linear) detector
 
 # The final subclass looks like this.
 class NumpyScan(PtyScan):
@@ -207,12 +207,12 @@ class NumpyScan(PtyScan):
                 files.append(fname)
         return np.asarray(pos)
     
-    def load(self,indices):
+    def load(self, indices):
         raw = {}
         bp = self.info.recipe.base_path
         for ii in indices:
-            raw[ii] = np.load(bp+'ccd/diffraction_%04d.npy' % ii )
-        return raw, {},{}
+            raw[ii] = np.load(bp+'ccd/diffraction_%04d.npy' % ii)
+        return raw, {}, {}
 
 # Loading the data
 # ----------------
@@ -225,12 +225,12 @@ NPS.initialize()
 # :py:meth:`~ptypy.core.data.PtyScan.auto` with the chunk size
 # as arguments. It returns a data chunk that we can inspect
 # with :py:func:`ptypy.utils.verbose.report`. The information is 
-# concetanated, but the length of iterables or dicts is always indicated
+# concatenated, but the length of iterables or dicts is always indicated
 # in parantheses.
-print u.verbose.report(NPS.auto(80),noheader=True)
-print u.verbose.report(NPS.auto(80),noheader=True)
+print u.verbose.report(NPS.auto(80), noheader=True)
+print u.verbose.report(NPS.auto(80), noheader=True)
 
-# We observe the the second chunk was not 80 frames deep but 34
+# We observe the second chunk was not 80 frames deep but 34
 # as we only had 114 frames of data.
 
 # So where is the *.ptyd* data-file? As default, PtyScan does not
@@ -238,11 +238,11 @@ print u.verbose.report(NPS.auto(80),noheader=True)
 # input paramaters.
 data = NPS.DEFAULT.copy(depth=2)
 data.save = 'append'
-NPS = NumpyScan(pars = data)
+NPS = NumpyScan(pars=data)
 NPS.initialize()
 for i in range(50):
     msg = NPS.auto(20)
-    if msg==NPS.EOS:
+    if msg == NPS.EOS:
         break
 
 # We can analyse the saved ``npy.ptyd`` with 

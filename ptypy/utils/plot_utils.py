@@ -326,7 +326,7 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
         # Image is complex
         #if cmap is not None:
             #logger.debug('imsave: Ignoring provided cmap - input array is complex')
-        i = complex2rgb(a, vmin=None, vmax=None)
+        i = complex2rgb(a, vmin=vmin, vmax=vmax)
         im = Image.fromarray(np.uint8(i), mode='RGB')
 
     else:
@@ -530,7 +530,7 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
         One of 'x','xy','y' or None, determins which axes display
         length units instead of pixel units
         
-    mask : ndarray or None
+    mask : ndarray, scalar or None
         Bool array of valid pixel data for rescaling.
         
     Returns
@@ -571,8 +571,8 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
     y_unit,y_mag,y_num=length_units(S.psize[0]*imsh[0])
     x_unit,x_mag,x_num=length_units(S.psize[1]*imsh[1])
     #ext2=[a*mag for a in ext]
-    mask = np.ones(imsh,dtype=bool) if mask is None else mask.astype(bool)
-    
+    #mask = np.ones(imsh,dtype=bool) if mask is None else mask.astype(bool)
+    #print mask
     if im.ndim==2:
         im=im.reshape((1,)+im.shape)
         
@@ -582,6 +582,7 @@ def plot_storage(S,fignum=100,modulus='linear',slices=(slice(1),slice(None),slic
         ax = fig.add_subplot(1,layers,l+1)
         pax = PtyAxis(ax,data=im[l],channel=kwargs.pop('channel',channel),**kwargs)
         pax.set_mask(mask)
+        #if pax.mask is not None: pax.set_data(pax.mask)
         pax.add_colorbar()
         #pax._update()
         plt.draw()
