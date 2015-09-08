@@ -180,7 +180,11 @@ class PlotClient(object):
         with self._lock:
             pr = self.pr.copy(depth=10)
             ob = self.ob.copy(depth=10)
-            self.runtime['iter_info'].append(self.runtime['last_info'].copy())
+            if self.runtime.get('last_info') is not None:
+                self.runtime['iter_info'].append(self.runtime['last_info'].copy())
+            else:
+                from ptypy.engines import DEFAULT_iter_info
+                self.runtime['iter_info'].append(DEFAULT_iter_info)
             runtime = self.runtime.copy(depth=10)
         return pr, ob, runtime
 
@@ -571,7 +575,8 @@ class MPLplotter(object):
             r = self.runtime.copy(depth=1)
             r.update(r.iter_info[-1])
             plot_file = clean_path(pattern % r)
-        except BaseError('Could not auto generate dump file from runtime.'):
+        except BaseException:
+            log(self.log_level,'Could not auto generate image dump file from runtime.')
             plot_file = 'ptypy_%05d.png' % count
 
         log(self.log_level,'Dumping plot to %s' % plot_file)

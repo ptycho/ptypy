@@ -105,6 +105,8 @@ def basic_fourier_update(diff_view,pbound=None,alpha=1.,LL_error=True):
             df = pod.probe*pod.object-pod.exit
             pod.exit += df
             err_exit +=np.mean(u.cabs2(df).real)
+            
+    if pbound is not None: err_fmag /= pbound # rescale the fmagnitude error to some meaning
     
     return np.array([err_fmag,err_phot,err_exit])
     
