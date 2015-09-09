@@ -628,10 +628,10 @@ class PtyAxis(object):
             self.data= None
         self.set_channel(channel,False)
         self.set_cmap(kwargs.get('cmap',cmap), False)
-        self.remove_phase_ramp = True
+        self.remove_phase_ramp = kwargs.get('rmramp',False)
         self.cax = None
-        self.vmin = None
-        self.vmax = None
+        self.vmin = kwargs.get('vmin')
+        self.vmax = kwargs.get('vmax')
         self.mn = None
         self.mx = None
         self.mask = None
@@ -712,6 +712,8 @@ class PtyAxis(object):
                     imdata = rmphaseramp(self.data,weight = self.mask)
                 else:
                     imdata = rmphaseramp(self.data)
+            else:
+                imdata = self.data
         else:
             imdata = np.abs(self.data)
         
@@ -784,6 +786,7 @@ class PtyAxis(object):
         mx = 1 if mx is None else mx
         #mag = np.power(10,self.cax.dec)
         #self.cax.dec
+        print mn, mx
         if self.cax is None:
             return
         self.cax.dec = np.floor(np.log10(np.abs(mx-mn))) if mx!=mn else 0.
