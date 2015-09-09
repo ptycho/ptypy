@@ -786,7 +786,7 @@ class PtyAxis(object):
         mx = 1 if mx is None else mx
         #mag = np.power(10,self.cax.dec)
         #self.cax.dec
-        print mn, mx
+        #print mn, mx
         if self.cax is None:
             return
         self.cax.dec = np.floor(np.log10(np.abs(mx-mn))) if mx!=mn else 0.
