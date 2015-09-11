@@ -232,6 +232,11 @@ class ML_Gaussian(object):
         self.ob = self.engine.ob
         self.pr = self.engine.pr
 
+        if self.p.intensity_renormalization is None:
+            self.Irenorm = 1.
+        else:
+            self.Irenorm = self.p.intensity_renormalization
+
         # Create working variables
         self.ob_grad = self.engine.ob.copy(self.ob.ID+'_ngrad',fill=0.) # New object gradient
         self.pr_grad = self.engine.pr.copy(self.pr.ID+'_ngrad',fill=0.) # New probe gradient
@@ -239,13 +244,16 @@ class ML_Gaussian(object):
 
         # Gaussian model requires weights
         self.weights = self.engine.di.copy(self.engine.di.ID+'_weights')
-        for name,di_view in self.di.V.iteritems():
+        # FIXME: This part needs to be updated once statistical weights are properly
+        # supported in the data preparation.
+        for name, di_view in self.di.V.iteritems():
             if not di_view.active: continue
-            self.weights[di_view] = di_view.pod.ma_view.data / (1. + di_view.data)
+            self.weights[di_view] = self.Irenorm * di_view.pod.ma_view.data /\
+                                        (1./self.Irenorm + di_view.data)
 
         # Useful quantities
         self.tot_measpts = len(self.di.V)
-        self.tot_power = sum(s.tot_power for s in self.di.S.values())
+        self.tot_power = self.Irenorm * sum(s.tot_power for s in self.di.S.values())
 
         # Prepare regularizer
         if self.p.reg_del2:
