@@ -197,7 +197,8 @@ class I08_Scan(ptypy.core.data.PtyScan):
             raw[i] = (io.h5read(self.nxs_filename, key, slice=(ix[i], iy[i]))[key].astype(np.float32)-self.common.dark)/ (self.common.flat)  #-self.common.dark) # load in the data and convert type
             # TODO: update this line when the statistical weights are implemented in ptypy
             # For now, this is just a mask
-            weights[i] = (raw[i] >= 0.)
+            #weights[i] = (raw[i] >= 0.)
+            raw[i] *= (raw[i] >= 0.)
         return raw, pos, weights
 
 #io.h5read('somefile.h5', data[(slice1, slice2)]
