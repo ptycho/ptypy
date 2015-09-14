@@ -724,15 +724,19 @@ class Ptycho(Base):
         import save_load
         from .. import io
         
-        destfile = self.paths.recon_file(self.runtime)
-        if alt_file is not None and parallel.master: 
-            destfile = u.clean_path(alt_file)
-
-        header = {}
-        header['kind']=kind
-        header['description'] = 'Ptypy .h5 compatible storage format' 
+        destfile = None
         
         if parallel.master:
+
+            if alt_file is not None: 
+                destfile = u.clean_path(alt_file)
+            else:
+                destfile = self.paths.recon_file(self.runtime)
+    
+            header = {}
+            header['kind']=kind
+            header['description'] = 'Ptypy .h5 compatible storage format' 
+        
             import os
             if os.path.exists(destfile):
                 if force_overwrite:
