@@ -234,19 +234,27 @@ class Ptycho(Base):
             self.interactor.objects['Ptycho'] = self
 
             # Start the thread
-            logger.info('Starting interaction server here: %s:%d' % (self.interactor.address, self.interactor.port))
-            self.interactor.activate()
-        
-            # inform the audience
-            log(4,'Started interaction got the following parameters:'+report(self.interactor.p,noheader=True))
+            logger.info('Will start interaction server here: %s:%d' % (self.interactor.address, self.interactor.port))
+            port = self.interactor.activate()
             
-            # start automated plot client
-            self.plotter = None
-            if parallel.master and autoplot and autoplot.threaded and autoplot.interval>0:
-                from multiprocessing import Process
-                logger.info('Spawning plot client in new Process.')
-                self.plotter = Process(target=u.spawn_MPLClient, args=(iaction,autoplot,))
-                self.plotter.start()
+            if port is None:
+                logger.warn('Interaction server initialization failed. Continueing without server.')
+                self.interactor = None
+                self.plotter = None
+            else:
+                # modify port
+                iaction.port = port
+                
+                # inform the audience
+                log(4,'Started interaction got the following parameters:'+report(self.interactor.p,noheader=True))
+                
+                # start automated plot client
+                self.plotter = None
+                if parallel.master and autoplot and autoplot.threaded and autoplot.interval>0:
+                    from multiprocessing import Process
+                    logger.info('Spawning plot client in new Process.')
+                    self.plotter = Process(target=u.spawn_MPLClient, args=(iaction,autoplot,))
+                    self.plotter.start()
         else:
             # no interaction wanted
             self.interactor = None
@@ -434,7 +442,6 @@ class Ptycho(Base):
         """
         if engine is not None:
             # work with that engine
-            
             if self.runtime.get('start') is None:
                 self.runtime.start = time.asctime()
         
@@ -452,7 +459,7 @@ class Ptycho(Base):
             
             # Prepare the engine
             engine.initialize()
-    
+                
             # Start the iteration loop
             while not engine.finished:
                 # Check for client requests
@@ -669,9 +676,11 @@ class Ptycho(Base):
             for ID,s in content['probe'].items():
                 s['owner']=P.probe
                 S=Storage._from_dict(s)
+                P.probe._new_ptypy_object(S)
             for ID,s in content['obj'].items():
                 s['owner']=P.obj
                 S=Storage._from_dict(s)
+                P.obj._new_ptypy_object(S)
                 #S.owner=P.obj
                 
             logger.info('Attaching original runtime information')
@@ -728,15 +737,19 @@ class Ptycho(Base):
         import save_load
         from .. import io
         
-        destfile = self.paths.recon_file(self.runtime)
-        if alt_file is not None and parallel.master: 
-            destfile = u.clean_path(alt_file)
-
-        header = {}
-        header['kind']=kind
-        header['description'] = 'Ptypy .h5 compatible storage format' 
+        destfile = None
         
         if parallel.master:
+
+            if alt_file is not None: 
+                destfile = u.clean_path(alt_file)
+            else:
+                destfile = self.paths.recon_file(self.runtime)
+    
+            header = {}
+            header['kind']=kind
+            header['description'] = 'Ptypy .h5 compatible storage format' 
+        
             import os
             if os.path.exists(destfile):
                 if force_overwrite:

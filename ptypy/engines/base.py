@@ -16,7 +16,7 @@ from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline
 
-__all__ = ['BaseEngine']
+__all__ = ['BaseEngine','DEFAULT_iter_info']
 
 
 DEFAULT = u.Param(
@@ -31,6 +31,14 @@ DEFAULT = u.Param(
     obj_smooth_std = 20,               # (90) Gaussian smoothing (pixel) of kept object fraction
     probe_update_start =0,
 )
+
+DEFAULT_iter_info = u.Param(
+    iteration = 0,
+    iterations = 0,
+    engine = 'None',
+    duration = 0.,
+    error = np.zeros((3,))
+    )
 
 class BaseEngine(object):
     """

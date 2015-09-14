@@ -231,8 +231,6 @@ class Server(object):
         self.address = p.address
         self.port = p.port
         
-        port_range = range(self.port+1,self.port+p.connections+1) 
-
         self.poll_timeout = p.poll_timeout
         self.pinginterval = p.pinginterval
         self.pingtimeout = p.pingtimeout
@@ -258,6 +256,7 @@ class Server(object):
         
         self._thread = None
         self._stopping = False
+        self._activated = False
         
         # Bind command names to methods
         self.cmds = {'CONNECT':self._cmd_connect,         # Initial connection from client
@@ -270,6 +269,11 @@ class Server(object):
                      'AVAIL': self._cmd_avail,            # Send list of available objects
                      'SHUTDOWN': self._cmd_shutdown}      # Shut down the server
 
+        self.make_ID_pool()
+        
+    def make_ID_pool(self):
+        
+        port_range = range(self.port+1,self.port+self.p.connections+1) 
         # Initial ID pool
         IDlist = []
         # This loop ensures all IDs are unique
@@ -282,12 +286,23 @@ class Server(object):
     def activate(self):
         """
         This needs to be run for the thread to initialize.
+        Returns port where the server listens or None if Server failed
         """
         self._stopping = False
         self._thread = Thread(target=self._run)
         self._thread.daemon = True
         self._thread.start()
+        time.sleep(0.02)
+        port = None
+        for i in range(10):
+            if self._activated:
+                port = self.port
+                break
+            print("Waiting for Server to awake")
+            time.sleep(0.05)
 
+        return port
+        
     def send_warning(self, warning_message):
         """
         Queue a warning message for all connected clients.
@@ -317,10 +332,25 @@ class Server(object):
         # Initialize socket for entry point
         self.context = zmq.Context()
         self.in_socket = self.context.socket(zmq.REP)
-        fulladdress = self.address + ':' + str(self.port)
-        self.in_socket.bind(fulladdress)
-
-        print("listening on %s, port %s" % (str(self.address), str(self.port)))
+        success = False
+        for pp in range(0,200,20):
+            port = self.port+pp
+            fulladdress = self.address + ':' + str(port)
+            try:
+                self.in_socket.bind(fulladdress)
+                success = True
+            except zmq.ZMQError:
+                print("Port %d used, increase port by 20" % self.port)
+                continue
+            if success:
+                break
+        
+        if self.port != port:
+            # not thread safe
+            self.port = port
+            self.make_ID_pool()
+            
+        print("Server listens on %s, port %s" % (str(self.address), str(self.port)))
 
         # Initialize list of requests
         self.out_sockets = {}
@@ -328,7 +358,8 @@ class Server(object):
         # Initialize poller
         self.poller = zmq.Poller()
         self.poller.register(self.in_socket, zmq.POLLIN)
-                    
+             
+        self._activated = True
         # Start the main loop with a little bit naive protection for
         # rogue threads that block ports. Only works if thread raised
         # an exception.
