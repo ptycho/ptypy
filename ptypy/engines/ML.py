@@ -238,6 +238,7 @@ class ML_Gaussian(object):
         self.LL = 0.
 
         # Gaussian model requires weights
+        # TODO: update this part of the code once actual weights are passed in the PODs
         self.weights = self.engine.di.copy(self.engine.di.ID+'_weights')
         for name,di_view in self.di.V.iteritems():
             if not di_view.active: continue
@@ -360,7 +361,7 @@ class ML_Gaussian(object):
         in direction h
         """
         
-        B = np.zeros((3,))
+        B = np.zeros((3,), dtype=np.longdouble)
         Brenorm = 1./ self.LL[0]**2
         
         # Outer loop: through diffraction patterns
@@ -382,14 +383,14 @@ class ML_Gaussian(object):
                 b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
     
                 if A0 is None: 
-                    A0 = u.abs2(f)
-                    A1 = 2*np.real(f*a.conj())
-                    A2 = 2*np.real(f*b.conj()) + u.abs2(a)
+                    A0 = u.abs2(f).astype(np.longdouble)
+                    A1 = 2*np.real(f*a.conj()).astype(np.longdouble)
+                    A2 = 2*np.real(f*b.conj()).astype(np.longdouble) + u.abs2(a).astype(np.longdouble)
                 else:
                     A0 += u.abs2(f)
                     A1 += 2*np.real(f*a.conj())
                     A2 += 2*np.real(f*b.conj()) + u.abs2(a)
-                    
+
             if self.p.floating_intensities:
                 A0 *= diff_view.float_intens_coeff
                 A1 *= diff_view.float_intens_coeff
