@@ -615,8 +615,8 @@ class PtyScan(object):
                     w = u.rebin_2d(w, rebin)
                     mask = u.rebin_2d(mask, rebin)
                     # We keep only the pixels that do not include a masked pixel
-                    # w[mask < 1] = 0
-                    w[mask < mask.max()] = 0
+                    # w[mask < mask.max()] = 0 # TODO: apply this operation when weights actually are weights
+                    w = (mask == mask.max())
                 else:
                     raise RuntimeError('Binning (%d) is to large or incompatible with array shape (%s)' % (rebin,str(tuple(sh))))
                                     
