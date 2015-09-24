@@ -59,6 +59,7 @@ DEFAULT_io = u.Param(
 
 DEFAULT = u.Param(
     verbose_level = 3,      # Verbosity level
+    ipython_kernel = False, # Start an ipython kernel for debugging
     data_type = 'single',   # 'single' or 'double' precision for reconstruction
     dry_run = False,        # do actually nothing if True [not implemented]
     run = None,
@@ -135,6 +136,7 @@ class Ptycho(Base):
             - >=4 : also and starts reconstruction
                     see :py:meth:`run`
         """
+
         super(Ptycho,self).__init__(None,'Ptycho')
         
         # abort if we load complete structure
@@ -172,10 +174,21 @@ class Ptycho(Base):
             self.finalize()
             
     def _configure(self):
+        """
+        Early boot strapping.
+        """
+
+        p = self.p
+
+        #################################
+        # IPython kernel
+        #################################
+        if parallel.master and p.ipython_kernel:
+            u.ipython_kernel.start_ipython_kernel({'Ptycho':self})
+
         #################################
         # Global logging level
         #################################
-        p = self.p
         u.verbose.set_level(p.verbose_level)
 
         #################################
@@ -724,15 +737,19 @@ class Ptycho(Base):
         import save_load
         from .. import io
         
-        destfile = self.paths.recon_file(self.runtime)
-        if alt_file is not None and parallel.master: 
-            destfile = u.clean_path(alt_file)
-
-        header = {}
-        header['kind']=kind
-        header['description'] = 'Ptypy .h5 compatible storage format' 
+        destfile = None
         
         if parallel.master:
+
+            if alt_file is not None: 
+                destfile = u.clean_path(alt_file)
+            else:
+                destfile = self.paths.recon_file(self.runtime)
+    
+            header = {}
+            header['kind']=kind
+            header['description'] = 'Ptypy .h5 compatible storage format' 
+        
             import os
             if os.path.exists(destfile):
                 if force_overwrite:

@@ -232,20 +232,29 @@ class ML_Gaussian(object):
         self.ob = self.engine.ob
         self.pr = self.engine.pr
 
+        if self.p.intensity_renormalization is None:
+            self.Irenorm = 1.
+        else:
+            self.Irenorm = self.p.intensity_renormalization
+
         # Create working variables
         self.ob_grad = self.engine.ob.copy(self.ob.ID+'_ngrad',fill=0.) # New object gradient
         self.pr_grad = self.engine.pr.copy(self.pr.ID+'_ngrad',fill=0.) # New probe gradient
         self.LL = 0.
 
         # Gaussian model requires weights
+        # TODO: update this part of the code once actual weights are passed in the PODs
         self.weights = self.engine.di.copy(self.engine.di.ID+'_weights')
-        for name,di_view in self.di.V.iteritems():
+        # FIXME: This part needs to be updated once statistical weights are properly
+        # supported in the data preparation.
+        for name, di_view in self.di.V.iteritems():
             if not di_view.active: continue
-            self.weights[di_view] = di_view.pod.ma_view.data / (1. + di_view.data)
+            self.weights[di_view] = self.Irenorm * di_view.pod.ma_view.data /\
+                                        (1./self.Irenorm + di_view.data)
 
         # Useful quantities
         self.tot_measpts = len(self.di.V)
-        self.tot_power = sum(s.tot_power for s in self.di.S.values())
+        self.tot_power = self.Irenorm * sum(s.tot_power for s in self.di.S.values())
 
         # Prepare regularizer
         if self.p.reg_del2:
@@ -348,7 +357,7 @@ class ML_Gaussian(object):
         # Object regularizer
         if self.regularizer:
             for name,s in self.ob.S.iteritems():
-                ob_grad.S[name].data += self.regularizer.grad(s.data)
+                self.ob_grad.S[name].data += self.regularizer.grad(s.data)
 
         self.LL = LL / self.tot_measpts
         
@@ -360,7 +369,7 @@ class ML_Gaussian(object):
         in direction h
         """
         
-        B = np.zeros((3,))
+        B = np.zeros((3,), dtype=np.longdouble)
         Brenorm = 1./ self.LL[0]**2
         
         # Outer loop: through diffraction patterns
@@ -382,14 +391,14 @@ class ML_Gaussian(object):
                 b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
     
                 if A0 is None: 
-                    A0 = u.abs2(f)
-                    A1 = 2*np.real(f*a.conj())
-                    A2 = 2*np.real(f*b.conj()) + u.abs2(a)
+                    A0 = u.abs2(f).astype(np.longdouble)
+                    A1 = 2*np.real(f*a.conj()).astype(np.longdouble)
+                    A2 = 2*np.real(f*b.conj()).astype(np.longdouble) + u.abs2(a).astype(np.longdouble)
                 else:
                     A0 += u.abs2(f)
                     A1 += 2*np.real(f*a.conj())
                     A2 += 2*np.real(f*b.conj()) + u.abs2(a)
-                    
+
             if self.p.floating_intensities:
                 A0 *= diff_view.float_intens_coeff
                 A1 *= diff_view.float_intens_coeff
@@ -491,11 +500,11 @@ def prepare_smoothing_preconditioner(amplitude):
                 yf[i] = correlate2d(xf[i], np.array([[.0625, .125, .0625], [.125, .25, .125], [.0625, .125, .0625]]), mode='same')
             return y
 
-    if object_smooth_gradient > 0.:
+    if amplitude > 0.:
         logger.debug('Using a smooth gradient filter (Gaussian blur - only for ML)')
-        return GaussFilt(object_smooth_gradient)
+        return GaussFilt(amplitude)
 
-    elif object_smooth_gradient < 0.:
+    elif amplitude < 0.:
         logger.debug('Using a smooth gradient filter (Hann window - only for ML)')
         return HannFilt()
 

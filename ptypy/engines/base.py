@@ -158,7 +158,10 @@ class BaseEngine(object):
 
     def _fill_runtime(self):
         local_error = u.parallel.gather_dict(self.error)
-        error = np.array(local_error.values()).mean(0)
+        if local_error:
+            error = np.array(local_error.values()).mean(0)
+        else:
+            error = np.zeros((1,))
         info = dict(
             iteration = self.curiter,
             iterations = self.alliter,

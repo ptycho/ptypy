@@ -204,7 +204,7 @@ class PtyScan(object):
         * Sets :py:attr:`num_frames` if needed
         * Calls :py:meth:`post_initialize`
         """
-        logger.info(u.verbose.headerline('Enter PtyScan.initialixe()','l'))
+        logger.info(u.verbose.headerline('Enter PtyScan.initialize()','l'))
         # Prepare writing to file
         if self.info.save is not None:
             # We will create a .ptyd
@@ -288,7 +288,7 @@ class PtyScan(object):
 
         self.is_initialized = True
         self.post_initialize()
-        logger.info(u.verbose.headerline('Leaving PtyScan.initialixe()','l'))
+        logger.info(u.verbose.headerline('Leaving PtyScan.initialize()','l'))
         
     def _finalize(self):
         """
@@ -615,8 +615,8 @@ class PtyScan(object):
                     w = u.rebin_2d(w, rebin)
                     mask = u.rebin_2d(mask, rebin)
                     # We keep only the pixels that do not include a masked pixel
-                    # w[mask < 1] = 0
-                    w[mask < mask.max()] = 0
+                    # w[mask < mask.max()] = 0 # TODO: apply this operation when weights actually are weights
+                    w = (mask == mask.max())
                 else:
                     raise RuntimeError('Binning (%d) is to large or incompatible with array shape (%s)' % (rebin,str(tuple(sh))))
                                     
@@ -1102,7 +1102,10 @@ class PtydScan(PtyScan):
         return 'chunks/%d/%s' % (coord[0], key), slice(coord[1], coord[1] + 1)
 
     def load_weight(self):
-        return self.weight2d
+        if self.info.has_key('weight2d'):
+            return self.info.weight2d
+        else:
+            return None
     
     def load_positions(self):
         return None

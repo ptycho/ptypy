@@ -195,7 +195,10 @@ class I08_Scan(ptypy.core.data.PtyScan):
             ix[i] = int(np.mod(indices[i], self.common.scan_dimensions[1]))  # find the remainder - works out the column
             iy[i] = int(indices[i]//self.common.scan_dimensions[0])  # works out the row
             raw[i] = (io.h5read(self.nxs_filename, key, slice=(ix[i], iy[i]))[key].astype(np.float32)-self.common.dark)/ (self.common.flat)  #-self.common.dark) # load in the data and convert type
-            weights[i] = (raw[i] >= 0.).astype(float)
+            # TODO: update this line when the statistical weights are implemented in ptypy
+            # For now, this is just a mask
+            #weights[i] = (raw[i] >= 0.)
+            raw[i] *= (raw[i] >= 0.)
         return raw, pos, weights
 
 #io.h5read('somefile.h5', data[(slice1, slice2)]

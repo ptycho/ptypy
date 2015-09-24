@@ -14,6 +14,7 @@ from scripts import *
 from parameters import *
 #import propagation as prop
 from embedded_shell import ipshell
+import ipython_kernel
 
 from .. import __has_matplotlib__ as hmpl
 if hmpl:
