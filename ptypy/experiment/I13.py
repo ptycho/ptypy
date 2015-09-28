@@ -22,9 +22,9 @@ logger = u.verbose.logger
 
 # Parameters for the nexus file saved by GDA
 NEXUS_PATHS = u.Param()
-NEXUS_PATHS.frame_pattern = 'entry1/instrument/%(detector_name)s/data'
-NEXUS_PATHS.exposure = 'entry1/instrument/%(detector_name)s/count_time'
-NEXUS_PATHS.motors = 'entry1/instrument/lab_sxy'
+NEXUS_PATHS.frame_pattern = 'entry1/instrument/pco1_sw_hdf_nochunking/data' # 'entry1/instrument/%(detector_name)s/data'
+NEXUS_PATHS.exposure = 'entry1/instrument/%(detector_name)s/count_time' # 'entry1/instrument/%(detector_name)s/count_time'
+NEXUS_PATHS.motors = 'entry1/instrument/t1_sxy'
 NEXUS_PATHS.command = 'entry1/scan_command'
 NEXUS_PATHS.label = 'entry1/entry_identifier'
 NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
@@ -38,13 +38,13 @@ RECIPE.flat_number = None
 RECIPE.energy = None
 RECIPE.lam = None # 1.2398e-9 / RECIPE.energy
 RECIPE.z = None                                          # Distance from object to screen
-RECIPE.motors = ['lab_sy', 'lab_sx']     # 'Motor names to determine the sample translation'
+RECIPE.motors = ['t1_sy', 't1_sx']     # 'Motor names to determine the sample translation'
 RECIPE.motors_multiplier = 1e-6       # 'Motor conversion factor to meters'
 RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
 RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
-RECIPE.mask_file = '%(base_path)s' + 'processing/mask.h5'
+RECIPE.mask_file = None # '%(base_path)s' + 'processing/mask.h5'
 
 # Generic defaults
 I13DEFAULT = core.data.PtyScan.DEFAULT.copy()
@@ -58,7 +58,7 @@ class I13Scan(core.data.PtyScan):
 
     def __init__(self, pars=None, **kwargs):
         """
-        I13 (Diamond Light Source data preparation class.
+        I13 (Diamond Light Source) data preparation class.
         """
         # Initialise parent class
         RDEFAULT = RECIPE.copy()
@@ -92,22 +92,25 @@ class I13Scan(core.data.PtyScan):
         log(3, 'Will read data from file %s' % self.data_file)
         if self.info.recipe.dark_number is None:
             self.dark_file = None
-            log(3, 'No data ')
+            log(3, 'No data for dark')
         else:
             self.dark_file = self.info.recipe.dark_file_pattern % self.info.recipe
+            log(3, 'Will read dark from file %s' % self.dark_file)
         if self.info.recipe.flat_number is None:
             self.flat_file = None
+            log(3, 'No data for flat')
         else:
             self.flat_file = self.info.recipe.flat_file_pattern % self.info.recipe
+            log(3, 'Will read flat from file %s' % self.flat_file)
 
         # Attempt to extract experiment ID
         if self.info.recipe.experimentID is None:
             try:
-                experimentID = io.h5read(self.info.recipe.data_file, NEXUS_PATHS.experiment)[NEXUS_PATHS.experiment]
+                experimentID = io.h5read(self.data_file, NEXUS_PATHS.experiment)[NEXUS_PATHS.experiment][0]
             except:
                 experimentID = os.path.split(self.info.recipe.base_path[:-1])[1]
                 logger.debug('Could not find experiment ID from nexus file %s. Using %s instead.' %
-                             (self.info.recipe.data_file, experimentID))
+                             (self.data_file, experimentID))
             self.info.recipe.experimentID = experimentID
 
         # Create the ptyd file name if not specified
@@ -135,7 +138,7 @@ class I13Scan(core.data.PtyScan):
         """
         Load the positions and return as an (N,2) array
         """
-        motor_positions = io.h5read(self.info.recipe.data_file, NEXUS_PATHS.motors)[NEXUS_PATHS.motors]
+        motor_positions = io.h5read(self.data_file, NEXUS_PATHS.motors)[NEXUS_PATHS.motors]
         mmult = u.expect2(self.info.recipe.motors_multiplier)
         pos_list = [mmult[i] * np.array(motor_positions[motor_name]) for i, motor_name in enumerate(self.info.recipe.motors)]
         positions = 1. * np.array(pos_list).T
@@ -167,9 +170,11 @@ class I13Scan(core.data.PtyScan):
         raw = {}
         pos = {}
         weights = {}
+        key = NEXUS_PATHS.frame_pattern % self.info.recipe
+        print (key)
         for j in indices:
-            key = NEXUS_PATHS.frame_pattern % self.rinfo
-            raw[j] = io.h5read(self.info.recipe.data_file, NEXUS_PATHS.frame_pattern % self.rinfo, slice=j)[key].astype(np.float32)
+            key = NEXUS_PATHS.frame_pattern % self.info.recipe
+            raw[j] = io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32)
             
         return raw, pos, weights
         
