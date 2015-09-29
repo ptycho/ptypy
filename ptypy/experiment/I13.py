@@ -23,7 +23,7 @@ logger = u.verbose.logger
 # Parameters for the nexus file saved by GDA
 NEXUS_PATHS = u.Param()
 NEXUS_PATHS.frame_pattern = 'entry1/instrument/pco1_sw_hdf_nochunking/data' # 'entry1/instrument/%(detector_name)s/data'
-NEXUS_PATHS.exposure = 'entry1/instrument/%(detector_name)s/count_time' # 'entry1/instrument/%(detector_name)s/count_time'
+NEXUS_PATHS.exposure = 'entry1/instrument/pco1_sw_hdf_nochunking/count_time' # 'entry1/instrument/%(detector_name)s/count_time'
 NEXUS_PATHS.motors = 'entry1/instrument/t1_sxy'
 NEXUS_PATHS.command = 'entry1/scan_command'
 NEXUS_PATHS.label = 'entry1/entry_identifier'
@@ -38,7 +38,7 @@ RECIPE.flat_number = None
 RECIPE.energy = None
 RECIPE.lam = None # 1.2398e-9 / RECIPE.energy
 RECIPE.z = None                                          # Distance from object to screen
-RECIPE.motors = ['t1_sy', 't1_sx']     # 'Motor names to determine the sample translation'
+RECIPE.motors = ['t1_sx', 't1_sy']     # 'Motor names to determine the sample translation'
 RECIPE.motors_multiplier = 1e-6       # 'Motor conversion factor to meters'
 RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
@@ -170,8 +170,6 @@ class I13Scan(core.data.PtyScan):
         raw = {}
         pos = {}
         weights = {}
-        key = NEXUS_PATHS.frame_pattern % self.info.recipe
-        print (key)
         for j in indices:
             key = NEXUS_PATHS.frame_pattern % self.info.recipe
             raw[j] = io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32)
