@@ -22,8 +22,9 @@ logger = u.verbose.logger
 
 # Parameters for the nexus file saved by GDA
 NEXUS_PATHS = u.Param()
-NEXUS_PATHS.frame_pattern = 'entry1/instrument/pco1_sw_hdf_nochunking/data' # 'entry1/instrument/%(detector_name)s/data'
-NEXUS_PATHS.exposure = 'entry1/instrument/pco1_sw_hdf_nochunking/count_time' # 'entry1/instrument/%(detector_name)s/count_time'
+NEXUS_PATHS.instrument = 'entry1/instrument'
+NEXUS_PATHS.frame_pattern = 'entry1/instrument/%(detector_name)s/data'
+NEXUS_PATHS.exposure = 'entry1/instrument/%(detector_name)s/count_time'
 NEXUS_PATHS.motors = 'entry1/instrument/t1_sxy'
 NEXUS_PATHS.command = 'entry1/scan_command'
 NEXUS_PATHS.label = 'entry1/entry_identifier'
@@ -31,15 +32,16 @@ NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 
 # Recipe defaults
 RECIPE = u.Param()
-RECIPE.experimentID = None   # Experiment identifier
-RECIPE.scan_number = None      # scan number
+RECIPE.experimentID = None      # Experiment identifier
+RECIPE.scan_number = None       # scan number
 RECIPE.dark_number = None
 RECIPE.flat_number = None
 RECIPE.energy = None
-RECIPE.lam = None # 1.2398e-9 / RECIPE.energy
-RECIPE.z = None                                          # Distance from object to screen
-RECIPE.motors = ['t1_sx', 't1_sy']     # 'Motor names to determine the sample translation'
-RECIPE.motors_multiplier = 1e-6       # 'Motor conversion factor to meters'
+RECIPE.lam = None               # 1.2398e-9 / RECIPE.energy
+RECIPE.z = None                 # Distance from object to screen
+RECIPE.detector_name = None     # 'Name of the detector as specified in the nexus file'
+RECIPE.motors = ['t1_sx', 't1_sy']      # 'Motor names to determine the sample translation'
+RECIPE.motors_multiplier = 1e-6         # 'Motor conversion factor to meters'
 RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
@@ -102,6 +104,13 @@ class I13Scan(core.data.PtyScan):
         else:
             self.flat_file = self.info.recipe.flat_file_pattern % self.info.recipe
             log(3, 'Will read flat from file %s' % self.flat_file)
+
+        # Attempt to extract detector name
+        if self.info.recipe.detector_name is None:
+             try:
+                 self.info.recipe.detector_name = io.h5read(self.data_file, NEXUS_PATHS.instrument)[NEXUS_PATHS.instrument].keys()[4]
+             except:
+                raise RuntimeError('Not possible to extract detector name. Please specify in recipe instead.')
 
         # Attempt to extract experiment ID
         if self.info.recipe.experimentID is None:
