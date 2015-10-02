@@ -7,3 +7,5 @@ doc/_script2rst/*.png
 tutorial/*.png
 ghostdriver*
 ptypy/version.py
+.idea/
+
