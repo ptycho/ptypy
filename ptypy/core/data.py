@@ -21,6 +21,7 @@ if __name__ == "__main__":
     from ptypy import utils as u
     from ptypy import io
     from ptypy import resources
+    from ptypy.experiment import PtyScanTypes
     from ptypy.core import geometry
     from ptypy.utils.verbose import logger, log, headerline
     import numpy as np
@@ -30,6 +31,7 @@ else:
     from .. import utils as u
     from .. import io
     from .. import resources
+    from ..experiment import PtyScanTypes
     from ..utils.verbose import logger, log, headerline
     import geometry
     import numpy as np
@@ -79,7 +81,7 @@ EOS = 'msgEOS'
 CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
          EOS: 'End of scan reached'}
 
-__all__ = ['GENERIC','PtyScan','PTYD','PtydScan','MoonFlowerScan']
+__all__ = ['GENERIC', 'PtyScan', 'PTYD', 'PtydScan', 'MoonFlowerScan', 'makePtyScan']
 
 class PtyScan(object):
     """\
@@ -1221,125 +1223,40 @@ class MoonFlowerScan(PtyScan):
         return raw, {}, {}
 
         
-
-class DataSource(object):
+def makePtyScan(scan_pars, scanmodel=None):
     """
-    A source of data for ptychographic reconstructions. The important method is "feed_data", which returns
-    packets of diffraction patterns with their meta-data.
+    Factory for PtyScan object. Return a PtyScan instance (or subclass) according to the
+    input parameters (see ...).
     """
-    def __init__(self, scans, frames_per_call=10000000, feed_format='dp'):
-        """
-        DataSource initialization.
+    # Extract information on the type of object to build
+    pars = scan_pars.data
+    label = pars.label
+    source = pars.source
+    recipe = pars.get('recipe', {})
 
-        Parameters
-        ----------
-        scans : 
-            a dictionnary of scan structures.
-        
-        frames_per_call : (optional) 
-            number of frames to load in one call. By default, load as many as possible.
-        
-        feed_format : 
-            the format in with the data is packaged. For now only 'dp' is implemented.
-        """
+    if source is not None:
+        source = source.lower()
 
-        from ..experiment import PtyScanTypes
+    if source in PtyScanTypes:
+        ps_obj = PtyScanTypes[source]
+        logger.info('Scan %s will be prepared with the recipe "%s"' % (label, source))
+        ps_instance = ps_obj(pars, recipe=recipe)
+    elif source.endswith('.ptyd') or source.endswith('.pty') or str(source) == 'file':
+        ps_instance = PtydScan(pars, source=source)
+    elif source == 'test':
+        ps_instance = MoonFlowerScan(pars)
+    elif source == 'sim':
+        from ..simulations import SimScan
+        logger.info('Scan %s will simulated' % label)
+        ps_instance = SimScan(pars, scanmodel)
+    elif source == 'empty' or source is None:
+        pars.recipe = None
+        logger.warning('Generating dummy PtyScan for scan `%s` - This label will source only zeros as data' % label)
+        ps_instance = PtyScan(pars)
+    else:
+        raise RuntimeError('Could not manage source "%s" for scan `%s`' % (str(source), label))
 
-        self.frames_per_call = frames_per_call
-        self.feed_format = feed_format
-        self.scans = scans
-
-        # sort after keys given
-        self.labels = sorted(scans.keys())
-
-        # empty list for the scans
-        self.PS = []
-
-        for label in self.labels:
-            # we are making a copy of the root as we want to fill it
-            scan = scans[label]
-            s = scan['pars']
-
-            # Copy other relevant information
-            prep = s.data.copy()
-            
-            # Assign label
-            prep.label = label
-            
-            source = prep.source
-            recipe = prep.get('recipe',{})
-            if prep.get('positions_theory') is None:
-                prep.positions_theory = scan['pos_theory']
-            
-            #prep.dfile = s.data_file
-            #prep.geometry = s.geometry.copy()
-            #prep.xy = s.xy.copy()
-            
-            if source is not None:
-                source = source.lower()
-
-            if source in PtyScanTypes:
-                PS = PtyScanTypes[source]
-                logger.info('Scan %s will be prepared with the recipe "%s"' % (label, source))
-                self.PS.append(PS(prep, recipe= recipe))
-            elif source.endswith('.ptyd') or source.endswith('.pty') or str(source)=='file':
-                self.PS.append(PtydScan(prep, source=source))
-            elif source=='test':
-                self.PS.append(MoonFlowerScan(prep))
-            elif source=='sim':
-                from ..simulations import SimScan
-                logger.info('Scan %s will simulated' % (label))
-                self.PS.append(SimScan(prep,s.copy()))
-            elif source=='empty' or source is None:
-                prep.recipe = None
-                logger.warning('Generating dummy PtyScan for scan `%s` - This label will source only zeros as data' % label)
-                self.PS.append(PtyScan(prep))
-            else:
-                raise RuntimeError('Could not manage source "%s" for scan `%s`' % (str(source),label))
-
-        # Initialize flags
-        self.scan_current = -1
-        self.data_available = True
-        self.scan_total = len(self.PS)
-
-    @property
-    def scan_available(self):
-        return self.scan_current < (self.scan_total - 1)
-
-    def feed_data(self):
-        """
-        Yield data packages.
-        """
-        # get PtyScan instance to scan_number
-        PS = self.PS[self.scan_current]
-        label = self.labels[self.scan_current]
-        
-        # initialize if that has not been done yet
-        if not PS.is_initialized:
-            PS.initialize()
-
-        msg = PS.auto(self.frames_per_call, self.feed_format)
-        # if we catch a scan that has ended look for an unfinished scan
-        while msg == EOS and self.scan_available:
-            self.scan_current += 1
-            PS = self.PS[self.scan_current]
-            label = self.labels[self.scan_current]
-            if not PS.is_initialized:
-                PS.initialize()
-            msg = PS.auto(self.frames_per_call, self.feed_format)
-
-        self.data_available = (msg != EOS or self.scan_available)
-
-        logger.debug(u.verbose.report(msg))
-        if msg != WAIT and msg != EOS:
-            # ok that would be a data package
-            # attach inner label
-            msg['common']['ptylabel'] = label
-            #print u.verbose.report(msg)
-            logger.info('Feeding data chunk')
-            return msg
-        else:
-            return None
+    return ps_instance
 
 if __name__ == "__main__":
     u.verbose.set_level(3)
