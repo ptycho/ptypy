@@ -105,12 +105,23 @@ class ScanModel(object):
         self.label = label
         self.ptycho = ptycho
 
+        # Manage stand-alone cases
+        if self.ptycho is None:
+            self.Cdiff = Container(ptycho=self, ID='Cdiff', data_type='real')
+            self.Cmask = Container(ptycho=self, ID='Cmask', data_type='bool')
+            self.CType = CType
+            self.FType = FType
+        else:
+            self.Cdiff = ptycho.diff
+            self.Cmask = ptycho.mask
+
         # Create Associated PtyScan object
         self.ptyscan = data.makePtyScan(self.p)
 
         # Initialize instance attributes
         self.mask = None
         self.diff = None
+        self.positions = []
         self.mask_views = []
         self.diff_views = []
         self.new_positions = None
@@ -187,25 +198,25 @@ class ScanModel(object):
         # Storage generation if not already existing
         if self.diff is None:
             # This scan is brand new so we create storages for it
-            self.diff = self.ptycho.diff.new_storage(shape=(1, sh[-2], sh[-1]), psize=self.psize, padonly=True,
+            self.diff = self.Cdiff.new_storage(shape=(1, sh[-2], sh[-1]), psize=self.psize, padonly=True,
                                                      layermap=None)
             old_diff_views = []
             old_diff_layers = []
         else:
             # ok storage exists already. Views most likely also. Let's do some analysis and deactivate the old views
-            old_diff_views = self.ptycho.diff.views_in_storage(self.diff, active=False)
+            old_diff_views = self.Cdiff.views_in_storage(self.diff, active=False)
             old_diff_layers = []
             for v in old_diff_views:
                 old_diff_layers.append(v.layer)
 
         # Same for mask
         if self.mask is None:
-            self.mask = self.ptycho.mask.new_storage(shape=(1, sh[-2], sh[-1]), psize=self.psize, padonly=True,
+            self.mask = self.Cmask.new_storage(shape=(1, sh[-2], sh[-1]), psize=self.psize, padonly=True,
                                                      layermap=None)
             old_mask_views = []
             old_mask_layers = []
         else:
-            old_mask_views = self.ptycho.mask.views_in_storage(self.mask, active=False)
+            old_mask_views = self.Cmask.views_in_storage(self.mask, active=False)
             old_mask_layers = []
             for v in old_mask_views:
                 old_mask_layers.append(v.layer)
@@ -251,7 +262,7 @@ class ScanModel(object):
                     'Diff view with layer/index %s of scan %s exists. \nSetting view active state from %s to %s' % (
                         index, label, old_active, active))
             except ValueError:
-                v = View(self.ptycho.diff, accessrule=AR_diff)
+                v = View(self.Cdiff, accessrule=AR_diff)
                 diff_views.append(v)
                 logger.debug(
                     'Diff view with layer/index %s of scan %s does not exist. \nCreating view with ID %s and set active state to %s' % (
@@ -263,7 +274,7 @@ class ScanModel(object):
                 old_view = old_mask_views[old_mask_layers.index(index)]
                 old_view.active = active
             except ValueError:
-                v = View(self.ptycho.mask, accessrule=AR_mask)
+                v = View(self.Cmask, accessrule=AR_mask)
                 mask_views.append(v)
 
         # so now we should have the right views to this storages. Let them reformat()
@@ -274,7 +285,7 @@ class ScanModel(object):
         # Second pass: copy the data
         for dct in dp['iterable']:
             parallel.barrier()
-            if not dct['active']:
+            if dct['data'] is None:
                 continue
             diff_data = dct['data']
             idx = dct['index']
@@ -289,6 +300,7 @@ class ScanModel(object):
         self.new_positions = positions
         self.new_diff_views = diff_views
         self.new_mask_views = mask_views
+        self.positions += positions
         self.diff_views += diff_views
         self.mask_views += mask_views
 

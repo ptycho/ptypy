@@ -1230,7 +1230,7 @@ def makePtyScan(scan_pars, scanmodel=None):
     """
     # Extract information on the type of object to build
     pars = scan_pars.data
-    label = pars.label
+    # label = pars.label
     source = pars.source
     recipe = pars.get('recipe', {})
 
