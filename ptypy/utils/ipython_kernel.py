@@ -7,13 +7,14 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-import os, threading, mock
+import os, threading
 
 __all__ = ['IPythonKernelThread', 'start_ipython_kernel']
 
 try:
     from IPython import embed_kernel
-
+    import mock
+    
     class IPythonKernelThread(threading.Thread):
         def __init__(self, ns):
             threading.Thread.__init__(self)

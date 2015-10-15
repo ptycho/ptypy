@@ -372,8 +372,11 @@ class BasicFarfieldPropagator(object):
         lz /= (self.sh[0] + mis[0] - self.crop_pad[0])/self.sh[0]
         
         # calculate the grids
-        [X,Y] = u.grids(self.sh,resolution,p.origin)
-        [V,W] = u.grids(self.sh,p.psize,p.center)
+        c_sam = p.origin if str(p.origin)==p.origin else p.origin + self.crop_pad/2.
+        c_det = p.center if str(p.center)==p.center else p.center + self.crop_pad/2.
+
+        [X,Y] = u.grids(self.sh,resolution,c_sam)
+        [V,W] = u.grids(self.sh,p.psize,c_det)
         
         # maybe useful later. delete this references if space is short
         self.grids_sam = [X,Y]  
@@ -434,7 +437,8 @@ class BasicFarfieldPropagator(object):
             
     def _assign_fft(self,ffttype='std'):
         self.sc = 1./np.sqrt(np.prod(self.sh))
-        self.isc = np.sqrt(np.prod(self.sh))
+        #~ self.sc = 1./np.sqrt(np.prod(self.sh)/np.prod(self.sh)*np.prod(self.p.shape))
+        self.isc = 1./self.sc #np.sqrt(np.prod(self.sh))
         if str(ffttype)=='scipy':
             self.fft = lambda x: fftpack.fft2(x).astype(x.dtype)
             self.ifft = lambda x: fftpack.ifft2(x).astype(x.dtype)          

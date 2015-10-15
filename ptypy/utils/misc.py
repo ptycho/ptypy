@@ -13,7 +13,7 @@ from functools import wraps
 
 __all__ = ['str2int','str2range',\
            'complex_overload','expect2','expect3',\
-           'keV2m', 'clean_path','unique_path']
+           'keV2m','keV2nm','nm2keV', 'clean_path','unique_path']
 
 def str2index(s):
     """
@@ -87,6 +87,21 @@ def keV2m(keV):
     
     return wl
 
+def keV2nm(keV):
+    """\
+    Convert photon energy in keV to wavelength (in vacuum) in nanometers.
+    """
+    nm = 1./(keV*10)*4.1356*2.9998    
+    
+    return nm
+    
+def nm2keV(nm):
+    """\
+    Convert wavelength in nanometers to photon energy in keV.
+    """
+    keV = keV2nm(1.)/nm    
+    
+    return keV
 
 def expect2(a):
     """\ 

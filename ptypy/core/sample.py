@@ -81,6 +81,7 @@ def init_storage(storage,sample_pars = None, energy = None):
         :any:`Geo` instance:  ``storage.views[0].pod.geometry.energy``
     """
     s = storage
+    prefix = "[Object %s] " % s.ID
     
     sam = sample_pars
     p = DEFAULT.copy(depth=3)
@@ -108,13 +109,13 @@ def init_storage(storage,sample_pars = None, energy = None):
             p.model = sam
             init_storage(s,p)            
         else:
-            raise RuntimeError('Shortcut string `%s` for object creation is not understood' %sam)
+            raise RuntimeError(prefix+'Shortcut string `%s` for object creation is not understood' %sam)
     elif type(sam) is np.ndarray:
         p.model=sam
         p.process = None
         init_storage(s,p)
     else:
-        ValueError('Shortcut for object creation is not understood')
+        ValueError(prefix+'Shortcut for object creation is not understood')
         
     if p.model is None or str(p.model)=='sim':
         model = np.ones(s.shape,s.dtype)*p.fill
@@ -126,31 +127,37 @@ def init_storage(storage,sample_pars = None, energy = None):
         # loading from a reconstruction file
         layer = p.recon.get('layer')
         ID = p.recon.get('ID')
-        logger.info('Attempt to load object storage with ID %s from %s' %(str(p.ID),p.recon.rfile))
+        logger.info(prefix+'Attempt to load object storage with ID %s from %s' %(str(ID),p.recon.rfile))
         model = u.load_from_ptyr(p.recon.rfile,'obj',ID,layer)
         # this could be more sophisticated, i.e. matching the real spac grids etc.
         
     elif str(p.model) == 'stxm':
-        logger.info('STXM initialization using diffraction data')
+        logger.info(prefix+'STXM initialization using diffraction data')
         #print s.data.shape, s.shape
         trans, dpc_row, dpc_col = u.stxm_analysis(s)
         model = trans * np.exp(1j * u.phase_from_dpc(dpc_row, dpc_col))
     else:
-        raise ValueError('Value to `model` key not understood in object creation')
+        raise ValueError(prefix+'Value to `model` key not understood in object creation')
         
-    assert type(model) is np.ndarray, "Internal model should be numpy array now but it is %s" %str(type(model))
+    assert type(model) is np.ndarray, "".join([prefix,"Internal model should be numpy array now but it is %s" %str(type(model))])
     
     # expand model to the right length filling with copies
     sh = model.shape[-2:]
     model = np.resize(model,(s.shape[0],sh[0],sh[1]))
-    
+
+    # try to retrieve the energy
+    if energy is None:
+        try:
+            energy  =  s.views[0].pod.geometry.energy
+        except:
+            logger.info(prefix+'Could not retrieve energy from pod network... Maybe there are no pods yet created?')
+    s._energy = energy
+            
     # process the given model
     if str(p.model)=='sim' or p.process is not None:
-        # try to retrieve the energy
-        if energy is None:
-            energy  =  s.views[0].pod.geometry.energy
+
         # make this a single call in future
-        model = simulate(model,p.process,energy,p.fill )
+        model = simulate(model,p.process,energy,p.fill,prefix )
     
     # symmetrically cut to shape of data
     model = u.crop_pad_symmetric_2d(model,s.shape)[0]
@@ -161,7 +168,7 @@ def init_storage(storage,sample_pars = None, energy = None):
     # return back to storage
     s.fill(model)
     
-def simulate(A,pars, energy, fill =1.0, **kwargs):
+def simulate(A,pars, energy, fill =1.0,prefix="", **kwargs):
     """
     Simulates a sample object into model numpy array `A`
     
@@ -216,17 +223,17 @@ def simulate(A,pars, energy, fill =1.0, **kwargs):
     d = p.thickness
     # Check what we got for an array
     if np.iscomplexobj(obj) and d is None:
-        logger.info("Simulation resource is object transmission")
+        logger.info(prefix+"Simulation resource is object transmission")
     elif np.iscomplexobj(obj) and d is not None:
-        logger.info("Simulation resource is integrated refractive index")
+        logger.info(prefix+"Simulation resource is integrated refractive index")
         obj = np.exp(1.j*obj*k*d)
     else:
-        logger.info("Simulation resource is a thickness profile")
+        logger.info(prefix+"Simulation resource is a thickness profile")
         # enforce floats
         ob = obj.astype(np.float)
         ob -= ob.min()
         if d is not None:
-            logger.info("Rescaling to maximum thickness")
+            logger.info(prefix+"Rescaling to maximum thickness")
             ob /= ob.max()/d
             
         if p.formula is not None or ri is not None:
@@ -234,7 +241,7 @@ def simulate(A,pars, energy, fill =1.0, **kwargs):
             if ri is None:
                 en = u.keV2m(1e-3)/lam
                 if u.parallel.master:
-                    logger.info("Quering cxro database for refractive index \
+                    logger.info(prefix+"Quering cxro database for refractive index \
                      in object creation with paramters:\n Formula=%s Energy=%d Density=%.2f" % (p.formula,en,p.density))
                     result = np.array(u.cxro_iref(p.formula,en,density=p.density))
                 else:
@@ -244,7 +251,7 @@ def simulate(A,pars, energy, fill =1.0, **kwargs):
                 ri = - delta +1j*beta
                 
             else:
-                logger.info("Using given refractive index in object creation")
+                logger.info(prefix+"Using given refractive index in object creation")
 
         obj = np.exp(1.j*ob*k*ri)
     #if p.diffuser is not None:
