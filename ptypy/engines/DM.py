@@ -188,11 +188,11 @@ class DM(BaseEngine):
                 # in original code:
                 # DM_smooth_amplitude = (p.DM_smooth_amplitude * max_power * p.num_probes * Ndata) / np.prod(asize)
                 # using the number of views here, but don't know if that is good.
-                cfact = self.p.object_inertia * len(s.views)
-                #cfact = self.p.object_inertia * self.ob_viewcover.S[name].data +1e-10
+                #cfact = self.p.object_inertia * len(s.views)
+                cfact = self.p.object_inertia * (self.ob_viewcover.S[name].data +1.)
                 
                 if self.p.obj_smooth_std is not None:
-                    logger.info('Smoothing object, cfact is %.2f' % cfact)
+                    logger.info('Smoothing object, average cfact is %.2f' % np.mean(cfact))
                     smooth_mfs = [0,self.p.obj_smooth_std,self.p.obj_smooth_std]
                     s.data[:] = cfact * u.c_gf(s.data,smooth_mfs) 
                 else:

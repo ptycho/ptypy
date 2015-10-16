@@ -10,10 +10,10 @@ This file is part of the PTYPY package.
 import time
 import numpy as np
 from threading import Thread, Lock
-import matplotlib as mpl
-mpl.rcParams['backend'] = 'Qt4Agg'
-from matplotlib import gridspec
-from matplotlib import pyplot as plt
+#import matplotlib as mpl
+#mpl.rcParams['backend'] = 'Qt4Agg'
+#from matplotlib import gridspec
+#from matplotlib import pyplot as plt
 import os 
 
 __all__=['MPLClient','MPLplotter','PlotClient','spawn_MPLClient', 'TEMPLATES', 'DEFAULT']
@@ -22,11 +22,13 @@ if __name__ == "__main__":
     from ptypy.utils.verbose import logger, report, log
     from ptypy.utils.parameters import Param
     from ptypy.utils.array_utils import crop_pad, clean_path
+    from ptypy.utils.plot_utils import plt # pyplot import with all the specialized settings
     from ptypy.utils.plot_utils import PtyAxis, imsave, pause, rmphaseramp
 else:
     from .verbose import logger, report, log
     from .parameters import Param
     from .array_utils import crop_pad, clean_path
+    from .plot_utils import plt # pyplot import with all the specialized settings
     from .plot_utils import PtyAxis, imsave, pause, rmphaseramp
 
 Storage_DEFAULT = Param(
@@ -481,7 +483,8 @@ class MPLplotter(object):
         for ii,(N,sh) in enumerate(num_shape_list):
             coords_list.append(allcoords[M:M+N])
             M+=N
-
+        
+        from matplotlib import gridspec
         gs = gridspec.GridSpec(size[0], size[1])
         fig = plt.figure(fignum)
         fig.clf()
