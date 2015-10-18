@@ -155,11 +155,23 @@ class DM(BaseEngine):
             change = self.probe_update()
             logger.debug(prestr + 'change in probe is %.3f' % change)
             
+            # recenter the probe
+            self.center_probe()
+            
             # stop iteration if probe change is small
             if change < self.p.overlap_converge_factor: break
             
-
-
+    
+    def center_probe(self):
+        if self.p.probe_center_tol is not None:
+            for name,s in self.pr.S.iteritems():
+                c1 = u.mass_center(u.abs2(s.data).sum(0))
+                c2 = np.asarray(s.shape[-2:])//2 #fft convention should however use geometry instead
+                if u.norm(c1-c2) < self.p.probe_center_tol: break
+                
+                s.data[:] = u.shift_zoom(s.data,(1.,)*3,(0,c1[0],c1[1]),(0,c2[0],c2[1]))
+                logger.info('Probe recentered from %s to %s' %(str(tuple(c1)),str(tuple(c2))))
+                
     def object_update(self):
         """
         DM object update.
@@ -176,11 +188,11 @@ class DM(BaseEngine):
                 # in original code:
                 # DM_smooth_amplitude = (p.DM_smooth_amplitude * max_power * p.num_probes * Ndata) / np.prod(asize)
                 # using the number of views here, but don't know if that is good.
-                cfact = self.p.object_inertia * len(s.views)
-                #cfact = self.ob_viewcover.S[name].data +1e-10
+                #cfact = self.p.object_inertia * len(s.views)
+                cfact = self.p.object_inertia * (self.ob_viewcover.S[name].data +1.)
                 
                 if self.p.obj_smooth_std is not None:
-                    logger.info('Smoothing object, cfact is %.2f' % cfact)
+                    logger.info('Smoothing object, average cfact is %.2f' % np.mean(cfact))
                     smooth_mfs = [0,self.p.obj_smooth_std,self.p.obj_smooth_std]
                     s.data[:] = cfact * u.c_gf(s.data,smooth_mfs) 
                 else:

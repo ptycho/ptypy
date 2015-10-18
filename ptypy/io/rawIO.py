@@ -11,6 +11,7 @@ import glob
 #from pyE17 import verbose
 import numpy as np
 #import cbf_uncompress as c
+from ptypy.utils.verbose import log
 
 __all__ = ['rawread']
 
@@ -62,7 +63,7 @@ def rawread(filename, doglob=None, roi=None):
     ldat = []
     lmeta = []
     for f in fnames:
-        verbose(3, 'Reading "%s"' % f)
+        log(3, 'Reading "%s"' % f)
         dat,meta = _read(f,np.uint16)
         meta['filename'] = f       
         lmeta.append(meta)

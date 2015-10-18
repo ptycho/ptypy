@@ -192,6 +192,8 @@ def init_storage(storage, pars, energy =None,**kwargs):
     """
     
     s = storage
+    prefix = "[Object %s] " % str(s.ID)
+    
     p = DEFAULT.copy(depth=3)
     model = None
     if hasattr(pars, 'items') or hasattr(pars, 'iteritems'):
@@ -214,7 +216,7 @@ def init_storage(storage, pars, energy =None,**kwargs):
             try:
                 init_storage(s, p, energy=1.0)
             except KeyError:
-                logger.warning('Loading of probe storage `%s` failed. Trying any storage.' % s.ID)
+                logger.warning(prefix+'Loading of probe storage `%s` failed. Trying any storage.' % s.ID)
                 p.recon.ID = None
                 init_storage(s, p, energy=1.0)
             return
@@ -226,7 +228,7 @@ def init_storage(storage, pars, energy =None,**kwargs):
             init_storage(s, p)
             return
         else:
-            raise RuntimeError('Shortcut string `%s` for probe creation is not understood' %pars)
+            raise RuntimeError(prefix+'Shortcut string `%s` for probe creation is not understood' %pars)
     elif type(pars) is np.ndarray:
         p.model = pars
         p.aperture = None
@@ -235,7 +237,7 @@ def init_storage(storage, pars, energy =None,**kwargs):
         init_storage(s, p)
         return
     else:
-        ValueError('Shortcut for probe creation is not understood')
+        ValueError(prefix+'Shortcut for probe creation is not understood')
         
     if p.model is None:
         model = np.ones(s.shape, s.dtype)
@@ -249,12 +251,12 @@ def init_storage(storage, pars, energy =None,**kwargs):
         # loading from a reconstruction file
         layer = p.recon.get('layer')
         ID = p.recon.get('ID')
-        logger.info('Attempt to load layer `%s` of probe storage with ID `%s` from `%s`' % (str(layer), str(ID), p.recon.rfile))
+        logger.info(prefix+'Attempt to load layer `%s` of probe storage with ID `%s` from `%s`' % (str(layer), str(ID), p.recon.rfile))
         model = u.load_from_ptyr(p.recon.rfile, 'probe', ID, layer)
         # this could be more sophisticated, i.e. matching the real space grids etc.
         
     elif str(p.model) == 'stxm':
-        logger.info('Probe initialization using averaged diffraction data')
+        logger.info(prefix+'Probe initialization using averaged diffraction data')
         # pick a pod that no matter if active or not
         pod = s.views[0].pod
 
@@ -282,19 +284,23 @@ def init_storage(storage, pars, energy =None,**kwargs):
             
         model = pod.bw(curve * np.sqrt(alldiff))
     else:
-        raise ValueError('Value to `model` key not understood in probe creation')
+        raise ValueError(prefix+'Value to `model` key not understood in probe creation')
         
-    assert type(model) is np.ndarray, "Internal model should be numpy array now but it is %s" %str(type(model))
+    assert type(model) is np.ndarray, "".join([prefix,"Internal model should be numpy array now but it is %s" %str(type(model))])
     # expand model to the right length filling with copies
     sh = model.shape[-2:]
     model = np.resize(model,(s.shape[0],sh[0],sh[1]))
 
     # find out about energy if not set
     if energy is None:
-        energy  =  s.views[0].pod.geometry.energy
-
+        try:
+            energy  =  s.views[0].pod.geometry.energy
+        except:
+            logger.info(prefix+'Could not retrieve energy from pod network... Maybe there are no pods yet created?')
+    s._energy = energy
+        
     # perform aperture multiplication, propagation etc.
-    model = _process(model, p.aperture, p.propagation, p.photons, energy, s.psize)
+    model = _process(model, p.aperture, p.propagation, p.photons, energy, s.psize,prefix)
     
     # apply diversity
     if p.diversity is not None:
@@ -304,14 +310,14 @@ def init_storage(storage, pars, energy =None,**kwargs):
     s.fill(model)
 
 
-def _process(model, aperture_pars=None, prop_pars=None, photons=1e7, energy=6.,resolution=7e-8,**kwargs):
+def _process(model, aperture_pars=None, prop_pars=None, photons=1e7, energy=6.,resolution=7e-8,prefix="",**kwargs):
     """
     Processes 3d stack of incoming wavefronts `model`. Applies aperture
     accoridng to `aperture_pars` and propagates according to `prop_pars`
     and other keywords arguments. 
     """
     # create the propagator
-    ap_size, grids, prop = _propagation(prop_pars, model.shape[-2:], resolution, energy)
+    ap_size, grids, prop = _propagation(prop_pars, model.shape[-2:], resolution, energy,prefix)
         
     # form the aperture on top of the model
     if type(aperture_pars) is np.ndarray:
@@ -321,7 +327,7 @@ def _process(model, aperture_pars=None, prop_pars=None, photons=1e7, energy=6.,r
             aperture_pars.size = ap_size
         model *= aperture(model, grids, aperture_pars)
     else:
-        logger.warning('No aperture defined in probe creation. This may lead to artifacts if the probe model is not choosen carefully.')
+        logger.warning(prefix+'No aperture defined in probe creation. This may lead to artifacts if the probe model is not choosen carefully.')
     # propagate
     model = prop(model)
     
@@ -332,7 +338,7 @@ def _process(model, aperture_pars=None, prop_pars=None, photons=1e7, energy=6.,r
     return model
 
 
-def _propagation(prop_pars, shape=None, resolution=None, energy=None):
+def _propagation(prop_pars, shape=None, resolution=None, energy=None, prefix=""):
     """
     Helper function for the propagation of the model illumination (in _process).
     :param prop_pars: propagation parameters
@@ -366,7 +372,7 @@ def _propagation(prop_pars, shape=None, resolution=None, energy=None):
                 ap_size = None
             grids = ffGeo.propagator.grids_sam
             phase = np.exp(-1j*np.pi/ffGeo.lam/fdist*(grids[0]**2+grids[1]**2))
-            logger.info('Model illumination is focussed over a distance %3.3g m' % fdist)
+            logger.info(prefix+'Model illumination is focussed over a distance %3.3g m' % fdist)
             #from matplotlib import pyplot as plt
             #plt.figure(100);plt.imshow(u.imsave(ffGeo.propagator.post_fft))
         if p.parallel is not None:
@@ -381,7 +387,7 @@ def _propagation(prop_pars, shape=None, resolution=None, energy=None):
             nfGeo = geometry.Geo(pars=geodct)
             #nfGeo._initialize(geodct)
             grids = nfGeo.propagator.grids_sam if grids is None else grids
-            logger.info('Model illumination is propagated over a distance %3.3g m' % p.parallel)
+            logger.info(prefix+'Model illumination is propagated over a distance %3.3g m' % p.parallel)
             
         if ffGeo is not None and nfGeo is not None:
             prop = lambda x: nfGeo.propagator.fw(ffGeo.propagator.fw(x*phase))

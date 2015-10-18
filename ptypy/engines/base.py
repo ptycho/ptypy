@@ -30,6 +30,7 @@ DEFAULT = u.Param(
     clip_object = None,                # (91) Clip object amplitude into this intrervall
     obj_smooth_std = 20,               # (90) Gaussian smoothing (pixel) of kept object fraction
     probe_update_start =0,
+    probe_center_tol = None,          # None or float, Pixel radius around optical axes that the probe mass center must reside in
 )
 
 DEFAULT_iter_info = u.Param(

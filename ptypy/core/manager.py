@@ -362,7 +362,19 @@ class ModelManager(object):
                         if mk is not None:  # None existing key or None values in meta dict are treated alike
                             geo[key] = mk
 
-                for ii, fac in enumerate(self.p.coherence.energies):
+                # make a spectrum
+                energies = np.asarray(scan.pars.coherence.energies)
+                spec = scan.pars.coherence.spectrum
+                spec= [1.0] if spec is None else spec
+                if type(spec).__name__=='function':
+                    spectrum = spec(energies)
+                else:
+                    spectrum = np.resize(np.asarray(spec),(len(energies),1))
+                    
+                spectrum /= spectrum.sum()
+                scan.spectrum = spectrum
+                
+                for ii, fac in enumerate(energies):
                     geoID = geometry.Geo._PREFIX + '%02d' % ii + label
                     g = geometry.Geo(self.ptycho, geoID, pars=geo)
                     # now we fix the sample pixel size, This will make the frame size adapt
@@ -371,16 +383,18 @@ class ModelManager(object):
                     g.p.energy_orig = g.energy
                     # change energy
                     g.energy *= fac
+                    # attach spectral contribution
+                    g.p.spectral = spectrum[ii]
                     # append the geometry
                     scan.geometries.append(g)
-
+                    
                 # create a buffer
                 scan.iterable = []
 
                 scan.diff_views = []
                 scan.mask_views = []
 
-                # Remember the order in which these scans were fed the manager
+                # Remember the order in which these scans were fed to the manager
                 self.scan_labels.append(label)
 
                 # Remember also that these new scans are probably not initialized yet
@@ -545,8 +559,7 @@ class ModelManager(object):
             # pick scanmanagers from scan_label for illumination parameters
             # for now, the scanmanager of the first label is chosen
             scan = self.scans[labels[0]]
-            illu_pars = scan.pars.illumination
-
+            
             # pick storage from container
             s = self.ptycho.probe.S.get(pid)
             if s is None:
@@ -554,29 +567,27 @@ class ModelManager(object):
             else:
                 logger.info('Initializing probe storage %s using scan %s' % (pid, scan.label))
 
-            # if photon count is None, assign a number from the stats. 
-            phot =  illu_pars.get('photons')
-            phot_max = scan.diff.max_power
+            illu_pars = scan.pars.illumination
             
-            if phot is None:
-                logger.info('Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' %phot_max)
-                illu_pars['photons'] = phot_max
-            elif np.abs(np.log10(phot)-np.log10(phot_max)) > 1:
-                logger.warn('Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' %(phot,phot_max))
+            if type(illu_pars) is u.Param:
+                # if not a short cut but a Param, modify content from deep copy 
+                illu_pars = illu_pars.copy(depth=10) 
 
-            """
-            # find out energy or wavelength. Maybe store that information 
-            # in the storages in future too avoid this weird call.
-            geo = s.views[0].pod.geometry
-                        
-            # pass info how far off center energy /wavelength of spectrum you are.
-            off = (geo.energy - geo.p.energy_orig)/ geo.p.energy_orig
-                                        
-            # make this a single call in future
-            pr = illumination.from_pars(s.shape[-2:], s.psize, geo.lam, off, illu_pars)
-            pr = illumination.create_modes(s.shape[-3], pr)
-            s.fill(pr.probe)
-            """
+                # if photon count is None, assign a number from the stats. 
+                phot =  illu_pars.get('photons')
+                phot_max = scan.diff.max_power
+                
+                if phot is None:
+                    logger.info('Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' %phot_max)
+                    illu_pars['photons'] = phot_max
+                elif np.abs(np.log10(phot)-np.log10(phot_max)) > 1:
+                    logger.warn('Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' %(phot,phot_max))
+    
+                # quickfix spectral contribution.
+                if scan.pars.coherence.probe_dispersion not in [None,'achromatic']:
+                    logger.info('Applying spectral distribution input to probe')
+                    illu_pars['photons'] *= s.views[0].pod.geometry.p.spectral
+
             illumination.init_storage(s,illu_pars)
             
             s.reformat()  # maybe not needed
@@ -592,16 +603,27 @@ class ModelManager(object):
             # pick scanmanagers from scan_label for illumination parameters
             # for now, the scanmanager of the first label is chosen
             scan = self.scans[labels[0]]
-            sample_pars = scan.pars.sample
-
+            
             # pick storage from container
             s = self.ptycho.obj.S.get(oid)
             if s is None or s.model_initialized:
                 continue
             else:
                 logger.info('Initializing object storage %s using scan %s' % (oid, scan.label))
+        
+            sample_pars = scan.pars.sample   
+            
+            if type(sample_pars) is u.Param:
+                # deep copy
+                sample_pars = sample_pars.copy(depth=10)          
+                
+                # quickfix spectral contribution.
+                if scan.pars.coherence.object_dispersion not in [None,'achromatic'] and scan.pars.coherence.probe_dispersion in [None,'achromatic']:
+                    logger.info('Applying spectral distribution input to object fill')
+                    sample_pars['fill'] *= s.views[0].pod.geometry.p.spectral
             
             sample.init_storage(s,sample_pars)
+            
             """
             if sample_pars.get('source') == 'diffraction':
                 logger.info('STXM initialization using diffraction data')
@@ -735,7 +757,7 @@ class ModelManager(object):
                                       accessrule={'shape': geometry.shape,
                                                   'psize': geometry.resolution,
                                                   'coord': pos_pr,
-                                                  'storageID': probe_id+object_id_suf[1:],
+                                                  'storageID': probe_id+object_id[1:]+'G%02d' % ii,
                                                   'layer': exit_index,
                                                   'active': dv.active})
                             views = {'probe': pv, 'obj': ov, 'diff': dv, 'mask': mv, 'exit':ev}

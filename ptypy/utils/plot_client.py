@@ -10,10 +10,10 @@ This file is part of the PTYPY package.
 import time
 import numpy as np
 from threading import Thread, Lock
-import matplotlib as mpl
-mpl.rcParams['backend'] = 'Qt4Agg'
-from matplotlib import gridspec
-from matplotlib import pyplot as plt
+#import matplotlib as mpl
+#mpl.rcParams['backend'] = 'Qt4Agg'
+#from matplotlib import gridspec
+#from matplotlib import pyplot as plt
 import os 
 
 __all__=['MPLClient','MPLplotter','PlotClient','spawn_MPLClient', 'TEMPLATES', 'DEFAULT']
@@ -22,11 +22,13 @@ if __name__ == "__main__":
     from ptypy.utils.verbose import logger, report, log
     from ptypy.utils.parameters import Param
     from ptypy.utils.array_utils import crop_pad, clean_path
+    from ptypy.utils.plot_utils import plt # pyplot import with all the specialized settings
     from ptypy.utils.plot_utils import PtyAxis, imsave, pause, rmphaseramp
 else:
     from .verbose import logger, report, log
     from .parameters import Param
     from .array_utils import crop_pad, clean_path
+    from .plot_utils import plt # pyplot import with all the specialized settings
     from .plot_utils import PtyAxis, imsave, pause, rmphaseramp
 
 Storage_DEFAULT = Param(
@@ -44,7 +46,7 @@ Storage_DEFAULT = Param(
 )
 
 DEFAULT = Param()
-DEFAULT.figsize = (12, 10)
+DEFAULT.figsize = (16, 10)
 DEFAULT.ob = Storage_DEFAULT.copy()
 DEFAULT.pr = Storage_DEFAULT.copy()
 DEFAULT.pr.auto_display = ['c']
@@ -455,18 +457,34 @@ class MPLplotter(object):
                 
             return coords_tl, size
         
-        coords_list = []
+        
+        allcoords = []
         fig_aspect_ratio = figsize[0]/float(figsize[1])
         size = [0, 0]
         # determine frame thickness
         aa = np.array([sh[0]*sh[1] for N, sh in num_shape_list])
         N, bigsh = num_shape_list[np.argmax(aa)]
         frame = int(0.2*min(bigsh))
-        for N, sh in num_shape_list:
-            nsh = np.array(sh)+frame
-            coords, size = fill_with_tiles(size, nsh, N, fig_aspect_ratio)
-            coords_list.append(coords)
-
+        M,last_sh = num_shape_list[0]
+        M=0
+        for ii,(N, sh) in enumerate(num_shape_list):
+            if not np.allclose(np.asarray(sh),np.asarray(last_sh)) or ii==(len(num_shape_list)-1):
+                nsh = np.array(last_sh)+frame
+                coords, size = fill_with_tiles(size, nsh, M+N, fig_aspect_ratio)
+                M=0
+                last_sh = sh
+                allcoords+=coords
+            else:    
+                M+=N
+                continue
+        
+        coords_list =[]
+        M=0
+        for ii,(N,sh) in enumerate(num_shape_list):
+            coords_list.append(allcoords[M:M+N])
+            M+=N
+        
+        from matplotlib import gridspec
         gs = gridspec.GridSpec(size[0], size[1])
         fig = plt.figure(fignum)
         fig.clf()
@@ -655,7 +673,7 @@ class MPLClient(MPLplotter):
         if self.config.get('make_movie'):
             
             from ptypy import utils as u
-            u.png2mpg(self._framefile)
+            u.png2mpg(self._framefile, RemoveImages=True)
 
 
 def spawn_MPLClient(client_pars, autoplot_pars):

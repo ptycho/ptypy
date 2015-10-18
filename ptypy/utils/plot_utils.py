@@ -12,7 +12,6 @@ import sys
 from PIL import Image
 import matplotlib as mpl
 import matplotlib.cm
-import matplotlib.pyplot as plt
 from .verbose import logger
 from .array_utils import grids
 
@@ -24,9 +23,9 @@ import os
 if os.getenv("DISPLAY") is None:
     NODISPLAY = True
     matplotlib.use('agg')
-    import matplotlib.pyplot
+    import matplotlib.pyplot as plt
 else:
-    import matplotlib.pyplot
+    import matplotlib.pyplot as plt
     NODISPLAY = False
 
 # Improved interactive behavior or matplotlib 

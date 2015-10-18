@@ -515,7 +515,7 @@ class PtyScan(object):
             if has_data:
                 dsh = np.array(data.values()[0].shape[-2:])
             else:
-                dsh = np.zeros([0, 0])
+                dsh = np.array([0, 0])
 
             # communicate result
             parallel.MPImax(dsh)
@@ -1275,25 +1275,24 @@ class DataSource(object):
             #prep.geometry = s.geometry.copy()
             #prep.xy = s.xy.copy()
             
-            if source is not None:
-                source = source.lower()
-
-            if source in PtyScanTypes:
-                PS = PtyScanTypes[source]
+            #if source is not None:
+            #    source = source.lower()
+            if source is None or source.lower()=='empty':
+                prep.recipe = None
+                logger.warning('Generating dummy PtyScan for scan `%s` - This label will source only zeros as data' % label)
+                self.PS.append(PtyScan(prep))
+            elif source.lower() in PtyScanTypes:
+                PS = PtyScanTypes[source.lower()]
                 logger.info('Scan %s will be prepared with the recipe "%s"' % (label, source))
                 self.PS.append(PS(prep, recipe= recipe))
             elif source.endswith('.ptyd') or source.endswith('.pty') or str(source)=='file':
                 self.PS.append(PtydScan(prep, source=source))
-            elif source=='test':
+            elif source.lower()=='test':
                 self.PS.append(MoonFlowerScan(prep))
-            elif source=='sim':
+            elif source.lower()=='sim':
                 from ..simulations import SimScan
                 logger.info('Scan %s will simulated' % (label))
                 self.PS.append(SimScan(prep,s.copy()))
-            elif source=='empty' or source is None:
-                prep.recipe = None
-                logger.warning('Generating dummy PtyScan for scan `%s` - This label will source only zeros as data' % label)
-                self.PS.append(PtyScan(prep))
             else:
                 raise RuntimeError('Could not manage source "%s" for scan `%s`' % (str(source),label))
 
