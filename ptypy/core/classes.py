@@ -598,7 +598,7 @@ class Storage(Base):
             
             Mpixels = np.array(new_shape).astype(float).prod()/1e6
             if Mpixels > 20:
-                raise RuntimeError('Arrays larger than 20M not supported. You requested %.2fM pixels, Bitch' % (Mpixels))
+                raise RuntimeError('Arrays larger than 20M not supported. You requested %.2fM pixels.' % (Mpixels))
 
             # Apply 2d misfit
             if self.data is not None:

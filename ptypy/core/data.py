@@ -597,13 +597,13 @@ class PtyScan(object):
                     d = np.ones((1,)+tuple(dsh))
                     w = np.ones((1,)+tuple(dsh))    
 
-                # flip, rotate etc.
-                d, tmp = u.switch_orientation(d, self.orientation, cen)
-                w, cen = u.switch_orientation(w, self.orientation, cen)
-
                 # crop
                 d, tmp = u.crop_pad_symmetric_2d(d, sh, cen)
                 w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
+
+                # flip, rotate etc.
+                d, tmp = u.switch_orientation(d, slf.orientation, cen)
+                w, cen = u.switch_orientation(w, self.orientation, cen)
 
                 # rebin, check if rebinning is neither to strong nor impossible
                 rebin = self.rebin
