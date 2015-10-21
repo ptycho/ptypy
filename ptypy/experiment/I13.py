@@ -25,7 +25,7 @@ NEXUS_PATHS = u.Param()
 NEXUS_PATHS.instrument = 'entry1/instrument'
 NEXUS_PATHS.frame_pattern = 'entry1/instrument/%(detector_name)s/data'
 NEXUS_PATHS.exposure = 'entry1/instrument/%(detector_name)s/count_time'
-NEXUS_PATHS.motors = 'entry1/instrument/t1_sxy'
+NEXUS_PATHS.motors = ['t1_sxy', 't1_sxyz']
 NEXUS_PATHS.command = 'entry1/scan_command'
 NEXUS_PATHS.label = 'entry1/entry_identifier'
 NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
@@ -105,12 +105,22 @@ class I13Scan(core.data.PtyScan):
             self.flat_file = self.info.recipe.flat_file_pattern % self.info.recipe
             log(3, 'Will read flat from file %s' % self.flat_file)
 
-        # Attempt to extract detector name
-        if self.info.recipe.detector_name is None:
-             try:
-                 self.info.recipe.detector_name = io.h5read(self.data_file, NEXUS_PATHS.instrument)[NEXUS_PATHS.instrument].keys()[4]
-             except:
+        # FIXME: THIS PART SHOULD BE DONE ONLY BY THE MASTER NODE
+        instrument = io.h5read(self.data_file, NEXUS_PATHS.instrument)[NEXUS_PATHS.instrument]
+
+        # Extract detector name if not set or wrong
+        keys = instrument.keys()
+        if (self.info.recipe.detector_name is None) or (self.info.recipe.detector_name not in keys):
+            detector_name = None
+            for k in keys:
+                if 'data' in instrument[k]:
+                    detector_name = k
+                    break
+            if detector_name is None:
                 raise RuntimeError('Not possible to extract detector name. Please specify in recipe instead.')
+            elif self.info.recipe.detector_name is not None and detector_name.startswith(self.info.recipe.detector_name):
+                log(2, 'Detector name changed from %s to %s.' % (self.info.recipe.detector_name, detector_name))
+            self.info.recipe.detector_name = detector_name
 
         # Attempt to extract experiment ID
         if self.info.recipe.experimentID is None:
@@ -147,7 +157,14 @@ class I13Scan(core.data.PtyScan):
         """
         Load the positions and return as an (N,2) array
         """
-        motor_positions = io.h5read(self.data_file, NEXUS_PATHS.motors)[NEXUS_PATHS.motors]
+        instrument = io.h5read(self.data_file, NEXUS_PATHS.instrument)[NEXUS_PATHS.instrument]
+        motor_positions = None
+        for k in NEXUS_PATHS.motors:
+            if k in instrument:
+                motor_positions = instrument[k]
+                break
+        if motor_positions is None:
+            raise RuntimeError('Could not fine motors (tried %s)' % str(NEXUS_PATHS.motors))
         mmult = u.expect2(self.info.recipe.motors_multiplier)
         pos_list = [mmult[i] * np.array(motor_positions[motor_name]) for i, motor_name in enumerate(self.info.recipe.motors)]
         positions = 1. * np.array(pos_list).T
