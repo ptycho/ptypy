@@ -13,6 +13,7 @@ import os
 from .. import utils as u
 from .. import io
 from .. import core
+from ..utils import parallel
 from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..core.paths import Paths
@@ -39,9 +40,9 @@ RECIPE.flat_number = None
 RECIPE.energy = None
 RECIPE.lam = None               # 1.2398e-9 / RECIPE.energy
 RECIPE.z = None                 # Distance from object to screen
-RECIPE.detector_name = None     # 'Name of the detector as specified in the nexus file'
-RECIPE.motors = ['t1_sx', 't1_sy']      # 'Motor names to determine the sample translation'
-RECIPE.motors_multiplier = 1e-6         # 'Motor conversion factor to meters'
+RECIPE.detector_name = None     # Name of the detector as specified in the nexus file
+RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
+RECIPE.motors_multiplier = 1e-6         # Motor conversion factor to meters
 RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
@@ -105,22 +106,25 @@ class I13Scan(core.data.PtyScan):
             self.flat_file = self.info.recipe.flat_file_pattern % self.info.recipe
             log(3, 'Will read flat from file %s' % self.flat_file)
 
-        # FIXME: THIS PART SHOULD BE DONE ONLY BY THE MASTER NODE
-        instrument = io.h5read(self.data_file, NEXUS_PATHS.instrument)[NEXUS_PATHS.instrument]
+        if parallel.master:
+            instrument = io.h5read(self.data_file, NEXUS_PATHS.instrument)[NEXUS_PATHS.instrument]
 
-        # Extract detector name if not set or wrong
-        keys = instrument.keys()
-        if (self.info.recipe.detector_name is None) or (self.info.recipe.detector_name not in keys):
+        if parallel.master:        
+            # Extract detector name if not set or wrong
+            keys = instrument.keys()
+            if (self.info.recipe.detector_name is None) or (self.info.recipe.detector_name not in keys):
+                detector_name = None
+                for k in keys:
+                    if 'data' in instrument[k]:
+                        detector_name = k
+                        break
+                if detector_name is None:
+                    raise RuntimeError('Not possible to extract detector name. Please specify in recipe instead.')
+                elif self.info.recipe.detector_name is not None and detector_name.startswith(self.info.recipe.detector_name):
+                    log(2, 'Detector name changed from %s to %s.' % (self.info.recipe.detector_name, detector_name))
+        else:
             detector_name = None
-            for k in keys:
-                if 'data' in instrument[k]:
-                    detector_name = k
-                    break
-            if detector_name is None:
-                raise RuntimeError('Not possible to extract detector name. Please specify in recipe instead.')
-            elif self.info.recipe.detector_name is not None and detector_name.startswith(self.info.recipe.detector_name):
-                log(2, 'Detector name changed from %s to %s.' % (self.info.recipe.detector_name, detector_name))
-            self.info.recipe.detector_name = detector_name
+        self.info.recipe.detector_name = parallel.bcast(detector_name)
 
         # Attempt to extract experiment ID
         if self.info.recipe.experimentID is None:
