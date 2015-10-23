@@ -120,8 +120,10 @@ class I13Scan(core.data.PtyScan):
                         break
                 if detector_name is None:
                     raise RuntimeError('Not possible to extract detector name. Please specify in recipe instead.')
-                elif self.info.recipe.detector_name is not None and detector_name.startswith(self.info.recipe.detector_name):
+                elif (self.info.recipe.detector_name is not None) and (detector_name is not self.info.recipe.detector_name):
                     log(2, 'Detector name changed from %s to %s.' % (self.info.recipe.detector_name, detector_name))
+            else:
+                detector_name = self.info.recipe.detector_name
         else:
             detector_name = None
         self.info.recipe.detector_name = parallel.bcast(detector_name)
