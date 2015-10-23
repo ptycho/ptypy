@@ -597,9 +597,19 @@ class PtyScan(object):
                     d = np.ones((1,)+tuple(dsh))
                     w = np.ones((1,)+tuple(dsh))    
 
-                # crop
+                # crop data
                 d, tmp = u.crop_pad_symmetric_2d(d, sh, cen)
-                w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
+
+                # Check if provided mask has the same shape as data, if not, use the mask's center for cropping the mask.
+                # The latter is also needed if no mask is provided, as weights is then created using the requested cropping
+                # shape and thus might have a different center than the raw data.
+                # NOTE: Maybe distinguish between no mask provided and mask with wrong size in warning
+                if (dsh == np.array(w[0].shape)).all():
+                    w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
+                else:
+                    logger.warning('Mask does not have the same shape as data. Will use mask center for cropping mask.')
+                    cen = np.array(w[0].shape) // 2
+                    w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
 
                 # flip, rotate etc.
                 d, tmp = u.switch_orientation(d, self.orientation, cen)
