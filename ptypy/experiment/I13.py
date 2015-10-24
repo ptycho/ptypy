@@ -147,9 +147,31 @@ class I13Scan(core.data.PtyScan):
 
     def load_common(self):
         """
-        Load scanning positions and mask file.
+        Load dark, flat, and mask file.
         """
         common = u.Param()
+
+        # Load dark
+        if self.info.recipe.dark_number is not None:
+            dark = []
+            key = NEXUS_PATHS.frame_pattern % self.info.recipe
+            dark_indices = len(io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern % self.info.recipe)[key])
+            for j in range(dark_indices):
+                dark.append(io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32))
+            dark = np.array(dark).mean(0)
+            common.dark = dark
+            log(3, 'Dark loaded successfully.')
+
+        # Load flat
+        if self.info.recipe.flat_number is not None:
+            flat = []
+            key = NEXUS_PATHS.frame_pattern % self.info.recipe
+            flat_indices = len(io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern % self.info.recipe)[key])
+            for j in range(flat_indices):
+                flat.append(io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32))
+            flat = np.array(flat).mean(0)
+            common.flat = flat
+            log(3, 'Flat loaded successfully.')
 
         # FIXME: do something better here. (detector-dependent)
         # Load mask
@@ -205,7 +227,7 @@ class I13Scan(core.data.PtyScan):
         for j in indices:
             key = NEXUS_PATHS.frame_pattern % self.info.recipe
             raw[j] = io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32)
-            
+        log(3, 'Data loaded successfully.')
         return raw, pos, weights
         
     def correct(self, raw, weights, common):
@@ -216,7 +238,23 @@ class I13Scan(core.data.PtyScan):
         :param common:
         :return:
         """
+
+        # Apply flat and dark, only dark, or no correction
+        if self.info.recipe.flat_number is not None and self.info.recipe.dark_number is not None:
+            for j in raw:
+                raw[j] = (raw[j] - common.dark)/(common.flat - common.dark)
+                raw[j][raw[j]<0] = 0
+            data = raw
+        elif self.info.recipe.dark_number is not None:
+            for j in raw:
+                raw[j] = raw[j] - common.dark
+                raw[j][raw[j]<0] = 0
+            data = raw
+        else:
+            data = raw
+
         # FIXME: this will depend on the detector type used.
-        data = raw
+
         weights = weights
+
         return data, weights
