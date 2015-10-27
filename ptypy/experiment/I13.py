@@ -48,6 +48,7 @@ RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
 RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
 RECIPE.mask_file = None # '%(base_path)s' + 'processing/mask.h5'
+RECIPE.NFP_correct_positions = False # Position corrections for NFP beamtime Oct 2014
 
 # Generic defaults
 I13DEFAULT = core.data.PtyScan.DEFAULT.copy()
@@ -196,6 +197,14 @@ class I13Scan(core.data.PtyScan):
         mmult = u.expect2(self.info.recipe.motors_multiplier)
         pos_list = [mmult[i] * np.array(motor_positions[motor_name]) for i, motor_name in enumerate(self.info.recipe.motors)]
         positions = 1. * np.array(pos_list).T
+
+        # Position corrections for NFP beamtime Oct 2014
+        if self.info.recipe.NFP_correct_positions:
+            R = np.array([[0.99987485, 0.01582042],[-0.01582042, 0.99987485]])
+            p0 = positions.mean(axis=0)
+            positions = np.dot(R, (positions - p0).T).T + p0
+            log(3, 'Original positions corrected by array provided.')
+
         return positions
 
     def check(self, frames, start=0):
