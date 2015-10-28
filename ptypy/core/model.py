@@ -52,7 +52,7 @@ class BasicSharingModel(object):
         scan_per_probe: float < 1 or int
                         number of contiguous scans using the same probe. If a int,
                         the number of scans. If a float < 0, split the scans into
-                        1/scan_per_probe independant probes. For instance,
+                        1/scan_per_probe independent probes. For instance,
                         scan_per_probe = .5 will split all scans in two and assign
                         a different probe to each.
         scan_per_object: int
