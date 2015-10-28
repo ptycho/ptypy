@@ -28,12 +28,12 @@ TEMPLATES = dict()
 
 DEFAULT_process = u.Param(
     offset = 0,               # (float,tuple) Offset between center of object array and scan pattern (in pixel)
-    zoom = None,                #(float,tuple) Zoom value for object simulation.
-    formula = None,             #(str) Chemical formula
-    density = None,             #(None,float) Density in [g/ccm]
+    zoom = None,                # (float,tuple) Zoom value for object simulation.
+    formula = None,             # (str) Chemical formula
+    density = None,             # (None,float) Density in [g/ccm]
     thickness = None,            # (float) Maximum thickness of sample in meter
     ref_index = 0.5+0.j,         # (complex float) Assigned refractive index (maximum) relative to air
-    smoothing = 2,            # (float,tuple) Gaussian filter smoorthing with this FWHM (pixel)
+    smoothing = 2,            # (float,tuple) Gaussian filter smoothing with this FWHM (pixel)
 )
 
 DEFAULT_diversity = u.Param(
