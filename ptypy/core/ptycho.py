@@ -826,7 +826,7 @@ class Ptycho(Base):
         
     def print_stats(self,table_format = None, detail='summary'):
         """
-        Calculates the memrory usage and other info of ptycho instance 
+        Calculates the memory usage and other info of ptycho instance
         """
         offset = 8
         active_pods = sum(1 for pod in self.pods.values() if pod.active)
