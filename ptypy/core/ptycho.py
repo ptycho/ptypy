@@ -238,7 +238,7 @@ class Ptycho(Base):
             port = self.interactor.activate()
             
             if port is None:
-                logger.warn('Interaction server initialization failed. Continueing without server.')
+                logger.warn('Interaction server initialization failed. Continuing without server.')
                 self.interactor = None
                 self.plotter = None
             else:
@@ -348,8 +348,8 @@ class Ptycho(Base):
         """
         Called on __init__ if ``level>=4``.
         
-        Initializes engine with label `label` from paramaters and lists
-        it internally in ``self.engines`` which is an ordered dictinoary.
+        Initializes engine with label `label` from parameters and lists
+        it internally in ``self.engines`` which is an ordered dictionary.
         
         Parameters
         ----------
