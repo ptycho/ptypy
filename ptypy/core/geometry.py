@@ -53,7 +53,7 @@ _old2new = u.Param(
 
 class Geo(Base):
     """
-    Hold and keep consistant the information about experimental parameters.  
+    Hold and keep consistent the information about experimental parameters.
     
     Keeps also reference to the Propagator and updates this reference
     when resolution, pixel size, etc. is changed in `Geo`. Reference to
