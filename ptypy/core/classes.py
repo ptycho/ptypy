@@ -1853,7 +1853,7 @@ class POD(Base):
         if not self.is_empty:
             return self.ob_view.data
         else:
-            return np.ones(self.geometry.N, dtype = self.owner.CType)
+            return np.ones(self.geometry.shape, dtype = self.owner.CType)
             
     @object.setter
     def object(self,v):

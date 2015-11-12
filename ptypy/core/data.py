@@ -518,7 +518,8 @@ class PtyScan(object):
                 dsh = np.array([0, 0])
 
             # communicate result
-            parallel.MPImax(dsh)
+            dsh[0] = parallel.MPImax([dsh[0]])
+            dsh[1] = parallel.MPImax([dsh[1]])
 
             if not has_weights:
                 # peak at first item

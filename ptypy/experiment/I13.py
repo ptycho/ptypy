@@ -49,6 +49,7 @@ RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
 RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
 RECIPE.mask_file = None # '%(base_path)s' + 'processing/mask.h5'
 RECIPE.NFP_correct_positions = False # Position corrections for NFP beamtime Oct 2014
+RECIPE.use_EP = False # Use flat as Empty Probe (EP) for probe sharing; needs to be set to True in the recipe of the scan that will act as EP
 
 # Generic defaults
 I13DEFAULT = core.data.PtyScan.DEFAULT.copy()
@@ -152,7 +153,7 @@ class I13Scan(core.data.PtyScan):
         """
         common = u.Param()
 
-        # Load dark
+        # Load dark.
         if self.info.recipe.dark_number is not None:
             dark = []
             key = NEXUS_PATHS.frame_pattern % self.info.recipe
@@ -163,7 +164,7 @@ class I13Scan(core.data.PtyScan):
             common.dark = dark
             log(3, 'Dark loaded successfully.')
 
-        # Load flat
+        # Load flat.
         if self.info.recipe.flat_number is not None:
             flat = []
             key = NEXUS_PATHS.frame_pattern % self.info.recipe
@@ -186,19 +187,29 @@ class I13Scan(core.data.PtyScan):
         """
         Load the positions and return as an (N,2) array
         """
+
+        # Load positions from file if possible.
         instrument = io.h5read(self.data_file, NEXUS_PATHS.instrument)[NEXUS_PATHS.instrument]
         motor_positions = None
         for k in NEXUS_PATHS.motors:
             if k in instrument:
                 motor_positions = instrument[k]
                 break
-        if motor_positions is None:
-            raise RuntimeError('Could not fine motors (tried %s)' % str(NEXUS_PATHS.motors))
+
+        # If Empty Probe sharing is enabled, assign pseudo center position to scan and skip the rest of the function.
+        # If no positions are found at all, raise error.
+        if motor_positions is None and self.info.recipe.use_EP:
+            positions = 1. * np.array([[0.,0.]])
+            return positions
+        elif motor_positions is None:
+            raise RuntimeError('Could not find motors (tried %s)' % str(NEXUS_PATHS.motors))
+
+        # Apply motor conversion factor and create transposed array of positions.
         mmult = u.expect2(self.info.recipe.motors_multiplier)
         pos_list = [mmult[i] * np.array(motor_positions[motor_name]) for i, motor_name in enumerate(self.info.recipe.motors)]
         positions = 1. * np.array(pos_list).T
 
-        # Position corrections for NFP beamtime Oct 2014
+        # Position corrections for NFP beamtime Oct 2014.
         if self.info.recipe.NFP_correct_positions:
             R = np.array([[0.99987485, 0.01582042],[-0.01582042, 0.99987485]])
             p0 = positions.mean(axis=0)
@@ -233,10 +244,21 @@ class I13Scan(core.data.PtyScan):
         raw = {}
         pos = {}
         weights = {}
-        for j in indices:
+
+        # Check if Empty Probe sharing is enabled and load flat data, otherwise treat scan as a normal data set.
+        if self.info.recipe.use_EP:
+            flat = []
             key = NEXUS_PATHS.frame_pattern % self.info.recipe
-            raw[j] = io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32)
-        log(3, 'Data loaded successfully.')
+            flat_indices = len(io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe)[key])
+            for j in range(flat_indices):
+                flat.append(io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32))
+            raw[0] = np.array(flat).mean(0)
+            log(3, 'Data for EP loaded successfully.')
+        else:
+            for j in indices:
+                key = NEXUS_PATHS.frame_pattern % self.info.recipe
+                raw[j] = io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32)
+            log(3, 'Data loaded successfully.')
         return raw, pos, weights
         
     def correct(self, raw, weights, common):

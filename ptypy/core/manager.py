@@ -53,10 +53,11 @@ DEFAULT_coherence = u.Param(
 DEFAULT_sharing = u.Param(
     #scan_per_probe = 1,                # (69) number of scans per object
     #scan_per_object = 1,              # (70) number of scans per probe
-    object_share_with = None,         # (71) `scan_label` of scan for the shared obejct
+    object_share_with = None,         # (71) `scan_label` of scan for the shared object
     object_share_power = 1,            # (72) contribution to the shared object
     probe_share_with = None,          # (73) `scan_label` of scan for the shared probe
     probe_share_power = 1,             # (74) contribution to the shared probe
+    EP_sharing = False,                # Empty Probe sharing switch
 )
 
 DEFAULT = u.Param(
@@ -698,8 +699,6 @@ class ModelManager(object):
                 pos_pr = u.expect2(0.0)
                 pos_obj = positions[i] if 'empty' not in scan.pars.tags else 0.0
 
-
-
                 t, object_id = self.sharing_rules(obj_label, index)
                 probe_id, t = self.sharing_rules(pr_label, index)
 
@@ -766,7 +765,10 @@ class ModelManager(object):
                             new_pods.append(pod)
                             pod.probe_weight = share.probe_share_power if share is not None else 1.
                             pod.object_weight = share.object_share_power if share is not None else 1.
-                            pod.is_empty = True if 'empty' in scan.pars.tags else False
+
+                            # If Empty Probe sharing is enabled, adjust POD accordingly.
+                            pod.is_empty = True if share.EP_sharing else False
+                            #pod.is_empty = True if 'empty' in scan.pars.tags else False
                             #exit_index += 1
 
             # delete buffer & meta (meta may be filled with a lot of stuff)
