@@ -205,14 +205,28 @@ def _MPIop(a, op, axis=None):
 
     # Total op
     if axis is None:
-        # Apply op on locally owned data (and wrap the scalar result in a numpy array
-        s = np.array([npop([npop(ai) for ai in a if ai is not None])])
+        # Very special case: calling with an empty object might make sense in a few situations.
+        if len(a) == 0:
+            if op.upper() == 'MAX':
+                s = np.array([-np.inf])
+            if op.upper() == 'MIN':
+                s = np.array([np.inf])
+            elif op.upper() == 'SUM':
+                s = np.array([0.])
+            else:
+                s = np.array([1.])
+        else:
+            # Apply op on locally owned data (and wrap the scalar result in a numpy array
+            s = np.array([npop([npop(ai) for ai in a if ai is not None])])
 
         # Reduce and return scalar
         if MPIenabled:
-            comm.Allreduce(MPI.IN_PLACE, s, op=MPIop)
+            # Use lower-case reduce to allow for empty list.
+            #comm.Allreduce(MPI.IN_PLACE, s, op=MPIop)
+            s = comm.allreduce(s, op=MPIop)
         return s[0]
-
+    elif len(a) == 0:
+        raise RuntimeError('MPIop cannot be called with empty arrays.')
     # Axis across the processes
     elif axis == 0:
         # Apply op on locally owned arrays
