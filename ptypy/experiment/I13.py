@@ -47,9 +47,20 @@ RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
 RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
-RECIPE.mask_file = None # '%(base_path)s' + 'processing/mask.h5'
-RECIPE.NFP_correct_positions = False # Position corrections for NFP beamtime Oct 2014
-RECIPE.use_EP = False # Use flat as Empty Probe (EP) for probe sharing; needs to be set to True in the recipe of the scan that will act as EP
+RECIPE.mask_file = None                 # '%(base_path)s' + 'processing/mask.h5'
+RECIPE.NFP_correct_positions = False    # Position corrections for NFP beamtime Oct 2014
+RECIPE.use_EP = False                   # Use flat as Empty Probe (EP) for probe sharing; needs to be set to True in the recipe of the scan that will act as EP
+RECIPE.rl_deconvolution = None          # Apply Richardson Lucy deconvolution, initiated by providing dictionary with parameters
+""" Documentation for now, needs to be reorganized
+RECIPE.rl_deconvolution.numiter = 5              # Number of iterations
+RECIPE.rl_deconvolution.dfile = None             # Provide MTF from file
+RECIPE.rl_deconvolution.gaussians = None         # Create fake psf as a sum of gaussians, initiated by providing dictionary with parameters
+RECIPE.rl_deconvolution.gaussians.g1 = None      # Provide gaussians to be added as dictionary
+RECIPE.rl_deconvolution.gaussians.g1.std_x = 1.0 # Standard deviation in x direction
+RECIPE.rl_deconvolution.gaussians.g1.std_y = 1.0 # Standard deviation in y direction
+RECIPE.rl_deconvolution.gaussians.g1.off_x = 0.  # Offset / shift in x direction
+RECIPE.rl_deconvolution.gaussians.g1.off_y = 0.  # Offset / shift in y direction
+"""
 
 # Generic defaults
 I13DEFAULT = core.data.PtyScan.DEFAULT.copy()

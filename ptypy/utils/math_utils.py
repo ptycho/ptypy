@@ -15,7 +15,7 @@ from misc import *
 from scipy import ndimage as ndi
 
 __all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf',\
-            'ortho','gauss_fwhm','gaussian','gf','cabs2','gf_2d','c_gf']
+            'ortho','gauss_fwhm','gaussian','gf','cabs2','gf_2d','c_gf','gaussian2D','rl_deconvolution']
 
 def cabs2(A):
     """
@@ -95,6 +95,36 @@ def gauss_fwhm(x,fwhm=1.0,off=0.):
     
     """
     return gaussian(x,fwhm/2/np.sqrt(2*np.log(2)),off)
+
+def gaussian2D(size, std_x=1.0, std_y=1.0, off_x=0., off_y=0.):
+    """
+    Evaluates normalized 2D gaussian on array of dimension size. Origin of coordinate
+    system is in the center of the array.
+
+    Parameters
+    ----------
+    size : int
+           length of requested array
+
+    std_x : float,optional
+            Standard deviation in x direction
+
+    std_y : float,optional
+            Standard deviation in y direction
+
+    off_x : float, optional
+            Offset / shift in x direction
+
+    off_y : float, optional
+            Offset / shift in y direction
+
+    """
+    if not isinstance(size, int):
+        raise RuntimeError('Input size has to be integer.')
+    y, x = np.mgrid[0:size, 0:size]
+    x = x-size/2
+    y = y-size/2
+    return np.exp(-((x-off_x)**2/(2*std_x**2) + (y-off_y)**2/(2*std_y**2))) / (2*np.pi*std_x*std_y)
 
 def delxf(a, axis = -1, out = None):
     """\
@@ -256,3 +286,33 @@ def gf_2d(c,sigma,**kwargs):
         return gf(c,(0,)*(n-2)+tuple(expect2(sigma)),**kwargs)
     else:
         return gf(c,sigma,**kwargs)
+
+def rl_deconvolution(data, mtf, numiter):
+    """
+    Richardson Lucy deconvolution on measured intensity.
+
+    Parameters
+    ----------
+    data : diffraction data (measured intensity)
+
+    mtf : modulation transfer function (Fourier transform of detector PSF)
+
+    numiter : number of iterations
+
+    Returns
+    -------
+    u : approximated intensity after numiter iterations
+
+    Note:
+    Assumes that mtf is symmetric and that data is real and positive.
+    mtf is non fft shifted that means that the dc component is on mtf[0,0].
+    Todo:
+    non symmetric mtf: mtf.conj()[-q] somewhere
+    optimisation: FFTW? scipy fft? error metric cancel iter?
+    Original code provided by M. Stockmar
+    """
+    convolve = lambda x: np.abs(np.fft.ifft2(np.fft.fft2(x)*mtf))
+    u = data.copy()
+    for n in range(numiter):
+        u*=convolve(data/(convolve(u)+1e-6))
+    return u

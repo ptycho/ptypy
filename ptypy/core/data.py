@@ -612,6 +612,26 @@ class PtyScan(object):
                     cen = np.array(w[0].shape) // 2
                     w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
 
+                # Apply deconvolution
+                if self.info.recipe.rl_deconvolution is not None:
+                    logger.info('Applying deconvolution...')
+                    # Use mtf from a file if provided in recon script
+                    if self.info.recipe.rl_deconvolution.dfile is not None:
+                        mtf = self.info.recipe.rl_deconvolution.dfile
+                    # Create fake psf as a sum of gaussians from given parameters
+                    else:
+                        gau_sum = 0
+                        for i in self.info.recipe.rl_deconvolution.gaussians.iteritems():
+                            gau_sum += u.gaussian2D(sh[0], i[1].std_x, i[1].std_y, i[1].off_x, i[1].off_y)
+
+                        # Compute mtf
+                        mtf = np.abs(np.fft.fft2(gau_sum))
+
+                    for i in range(len(d)):
+                        d[i] = u.rl_deconvolution(d[i], mtf, self.info.recipe.rl_deconvolution.numiter)
+
+                    #d = u.rl_deconvolution(d, mtf, self.info.recipe.rl_deconvolution.numiter) -- Too memory consuming
+
                 # flip, rotate etc.
                 d, tmp = u.switch_orientation(d, self.orientation, cen)
                 w, cen = u.switch_orientation(w, self.orientation, cen)
