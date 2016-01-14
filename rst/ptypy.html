@@ -1,0 +1,246 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ptypy package &mdash; ptypy 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/header.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
+    <link rel="top" title="ptypy 0.2.0 documentation" href="../content.html" />
+    <link rel="next" title="ptypy.core package" href="ptypy.core.html" />
+    <link rel="prev" title="Parameter tree structure" href="parameters.html" />
+<link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
+
+  </head>
+  <body role="document">
+<div class="pageheader">
+  <ul>
+    <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
+    <li><a href="http://www.github.com/ptycho/ptypy">Github</a></li>
+    <li><a href="../content.html">Docs</a></li>
+    <!-- <li><a href="develop.html">Extend/Develop</a></li> -->
+  </ul>
+  <div>
+    <a href="../index.html"><img src="../_static/logo_60px.png" alt="SPHINX" /></a>
+
+    <h0 style="padding-bottom:40px">Ptychography for Python</h0>
+  </div>
+</div>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ptypy.core.html" title="ptypy.core package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="parameters.html" title="Parameter tree structure"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../content.html">
+              <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
+            </a></p>
+<h3><a href="../content.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_management.html">Data management</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">ptypy package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.core.html">ptypy.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.engines.html">ptypy.engines package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.experiment.html">ptypy.experiment package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.io.html">ptypy.io package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.resources.html">ptypy.resources package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.simulations.html">ptypy.simulations package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.utils.html">ptypy.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-ptypy">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="parameters.html"
+                        title="previous chapter">Parameter tree structure</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="ptypy.core.html"
+                        title="next chapter">ptypy.core package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/rst/ptypy.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ptypy-package">
+<h1>ptypy package<a class="headerlink" href="#ptypy-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ptypy.core.html">ptypy.core package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core.classes">ptypy.core.classes module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core.data">ptypy.core.data module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core.geometry">ptypy.core.geometry module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core.illumination">ptypy.core.illumination module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core.manager">ptypy.core.manager module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core.model">ptypy.core.model module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core.paths">ptypy.core.paths module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core.ptycho">ptypy.core.ptycho module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core.sample">ptypy.core.sample module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core.save_load">ptypy.core.save_load module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core.xy">ptypy.core.xy module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.core.html#module-ptypy.core">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ptypy.engines.html">ptypy.engines package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.engines.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.engines.html#module-ptypy.engines.DM">ptypy.engines.DM module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.engines.html#module-ptypy.engines.ML">ptypy.engines.ML module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.engines.html#module-ptypy.engines.base">ptypy.engines.base module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.engines.html#module-ptypy.engines.utils">ptypy.engines.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.engines.html#module-ptypy.engines">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ptypy.experiment.html">ptypy.experiment package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.experiment.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.experiment.html#module-ptypy.experiment.I13">ptypy.experiment.I13 module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.experiment.html#module-ptypy.experiment.ID16Anfp">ptypy.experiment.ID16Anfp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.experiment.html#module-ptypy.experiment.optiklabor">ptypy.experiment.optiklabor module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.experiment.html#module-ptypy.experiment.plugin">ptypy.experiment.plugin module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.experiment.html#module-ptypy.experiment.spec">ptypy.experiment.spec module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.experiment.html#module-ptypy.experiment">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ptypy.io.html">ptypy.io package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.io.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.io.html#module-ptypy.io.edfIO">ptypy.io.edfIO module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.io.html#module-ptypy.io.h5rw">ptypy.io.h5rw module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.io.html#module-ptypy.io.imageIO">ptypy.io.imageIO module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.io.html#module-ptypy.io.image_read">ptypy.io.image_read module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.io.html#module-ptypy.io.interaction">ptypy.io.interaction module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.io.html#module-ptypy.io.json_rw">ptypy.io.json_rw module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.io.html#module-ptypy.io.rawIO">ptypy.io.rawIO module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.io.html#module-ptypy.io">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ptypy.resources.html">ptypy.resources package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.resources.html#module-ptypy.resources">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ptypy.simulations.html">ptypy.simulations package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.simulations.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.simulations.html#module-ptypy.simulations.detector">ptypy.simulations.detector module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.simulations.html#module-ptypy.simulations.ptysim_utils">ptypy.simulations.ptysim_utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.simulations.html#module-ptypy.simulations.simscan">ptypy.simulations.simscan module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.simulations.html#module-ptypy.simulations">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ptypy.utils.html">ptypy.utils package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils.array_utils">ptypy.utils.array_utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils.embedded_shell">ptypy.utils.embedded_shell module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils.math_utils">ptypy.utils.math_utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils.misc">ptypy.utils.misc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils.parallel">ptypy.utils.parallel module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils.parameters">ptypy.utils.parameters module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils.plot_client">ptypy.utils.plot_client module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils.plot_utils">ptypy.utils.plot_utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils.scripts">ptypy.utils.scripts module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils.validator">ptypy.utils.validator module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils.verbose">ptypy.utils.verbose module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.utils.html#module-ptypy.utils">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="module-ptypy">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ptypy" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ptypy.core.html" title="ptypy.core package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="parameters.html" title="Parameter tree structure"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

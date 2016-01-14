@@ -1,0 +1,2765 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ptypy.utils package &mdash; ptypy 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/header.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
+    <link rel="top" title="ptypy 0.2.0 documentation" href="../content.html" />
+    <link rel="up" title="ptypy package" href="ptypy.html" />
+    <link rel="prev" title="ptypy.simulations package" href="ptypy.simulations.html" />
+<link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
+
+  </head>
+  <body role="document">
+<div class="pageheader">
+  <ul>
+    <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
+    <li><a href="http://www.github.com/ptycho/ptypy">Github</a></li>
+    <li><a href="../content.html">Docs</a></li>
+    <!-- <li><a href="develop.html">Extend/Develop</a></li> -->
+  </ul>
+  <div>
+    <a href="../index.html"><img src="../_static/logo_60px.png" alt="SPHINX" /></a>
+
+    <h0 style="padding-bottom:40px">Ptychography for Python</h0>
+  </div>
+</div>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ptypy.simulations.html" title="ptypy.simulations package"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../content.html">
+              <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
+            </a></p>
+<h3><a href="../content.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_management.html">Data management</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="ptypy.html">ptypy package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="ptypy.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ptypy.core.html">ptypy.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.engines.html">ptypy.engines package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.experiment.html">ptypy.experiment package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.io.html">ptypy.io package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.resources.html">ptypy.resources package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.simulations.html">ptypy.simulations package</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="">ptypy.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ptypy.html#module-ptypy">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="ptypy.simulations.html"
+                        title="previous chapter">ptypy.simulations package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/rst/ptypy.utils.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ptypy-utils-package">
+<h1>ptypy.utils package<a class="headerlink" href="#ptypy-utils-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-ptypy.utils.array_utils">
+<span id="ptypy-utils-array-utils-module"></span><h2>ptypy.utils.array_utils module<a class="headerlink" href="#module-ptypy.utils.array_utils" title="Permalink to this headline">¶</a></h2>
+<p>utility functions to manipulate/reshape numpy arrays.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="function">
+<dt id="ptypy.utils.array_utils.grids">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">grids</code><span class="sig-paren">(</span><em>sh</em>, <em>psize=None</em>, <em>center='geometric'</em>, <em>FFTlike=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.grids" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal"><span class="pre">q0,q1,...</span> <span class="pre">=</span> <span class="pre">grids(sh)</span></code>
+returns centered coordinates for a N-dimensional array of shape sh (pixel units)</p>
+<p><code class="docutils literal"><span class="pre">q0,q1,...</span> <span class="pre">=</span> <span class="pre">grids(sh,psize)</span></code>
+gives the coordinates scaled according to the given pixel size psize.</p>
+<p><code class="docutils literal"><span class="pre">q0,q1,...</span> <span class="pre">=</span> <span class="pre">grids(sh,center='fftshift')</span></code>
+gives the coordinates shifted according to fftshift convention for the origin</p>
+<p><code class="docutils literal"><span class="pre">q0,q1,...</span> <span class="pre">=</span> <span class="pre">grids(sh,psize,center=(c0,c1,c2,...))</span></code>
+gives the coordinates according scaled with psize having the origin at (c0,c1,..)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>sh</strong> (<em>tuple of int</em>) &#8211; The shape of the N-dimensional array</li>
+<li><strong>psize</strong> (<em>float or tuple of float</em>) &#8211; Pixel size in each dimensions</li>
+<li><strong>center</strong> (<em>tupel of int</em>) &#8211; Tuple of pixel, or use <code class="docutils literal"><span class="pre">center='fftshift'</span></code> for fftshift-like grid
+and <code class="docutils literal"><span class="pre">center='geometric'</span></code> for the matrix center as grid origin</li>
+<li><strong>FFTlike</strong> (<em>bool</em>) &#8211; If False, grids ar not bound by the interval [-sh//2:sh//2[</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The coordinate grids</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.switch_orientation">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">switch_orientation</code><span class="sig-paren">(</span><em>A</em>, <em>orientation</em>, <em>center=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.switch_orientation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Switches orientation of Array <cite>A</cite> along the last two axes <cite>(-2,-1)</cite></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>array-like</em>) &#8211; input array, must be at least twodimensional</li>
+<li><strong>orientation</strong> (<em>tuple</em>) &#8211; 3-tuple of booleans (transpose,flipud,fliplr)</li>
+<li><strong>center</strong> (<em>tuple, optional</em>) &#8211; move this coordinate alomg with the transformations</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>out</strong> (<em>ndarray</em>) &#8211;
+A view of <cite>A</cite> where either rows, columns and axis may be reversed</li>
+<li><strong>center</strong> (<em>tuple</em>) &#8211;
+new center</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.mirror">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">mirror</code><span class="sig-paren">(</span><em>A</em>, <em>axis=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.mirror" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mirrors array <cite>A</cite> along one axis <cite>axis</cite></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>array-like</em>) &#8211; Input array</li>
+<li><strong>axis</strong> (<em>int, optional</em>) &#8211; Axis along which the array will be mirrored</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A view to the mirrored array.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array-like</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.crop_pad_symmetric_2d">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">crop_pad_symmetric_2d</code><span class="sig-paren">(</span><em>A</em>, <em>newshape</em>, <em>center=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.crop_pad_symmetric_2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Crops or pads Array <cite>A</cite> symmetrically along the last two axes <cite>(-2,-1)</cite>
+around center <cite>center</cite> to a new shape <cite>newshape</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>array-like</em>) &#8211; Input array, must be at least two-dimensional.</li>
+<li><strong>newshape</strong> (<em>tuple, array_like</em>) &#8211; New shape (for the last two axes). Must have at least 2 entries.</li>
+<li><strong>center</strong> (<em>tuple, array_like, optional</em>) &#8211; This coordinate tuple marks the center for cropping / padding
+If None, <code class="docutils literal"><span class="pre">np.array(A.shape[-2:])</span> <span class="pre">//</span> <span class="pre">2</span></code> will be the center</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>out</strong> (<em>ndarray</em>) &#8211;
+Cropped or padded array with shape <code class="docutils literal"><span class="pre">A.shape[:-2]+newshape[-2:]</span></code></li>
+<li><strong>center</strong> (<em>tuple</em>) &#8211;
+Center in returned array, should be in the actual center of array.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.array_utils.crop_pad_axis" title="ptypy.utils.array_utils.crop_pad_axis"><code class="xref py py-func docutils literal"><span class="pre">crop_pad_axis()</span></code></a>, <a class="reference internal" href="#ptypy.utils.array_utils.crop_pad" title="ptypy.utils.array_utils.crop_pad"><code class="xref py py-func docutils literal"><span class="pre">crop_pad()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.crop_pad_axis">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">crop_pad_axis</code><span class="sig-paren">(</span><em>A</em>, <em>hplanes</em>, <em>axis=-1</em>, <em>roll=0</em>, <em>fillpar=0.0</em>, <em>filltype='scalar'</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.crop_pad_axis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Crops or pads a volume array <cite>A</cite> at beginning and end of axis <cite>axis</cite>
+with a number of hyperplanes specified by <cite>hplanes</cite></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>array-like</em>) &#8211; Input array, should be at least one-dimensional</li>
+<li><strong>hplanes</strong> (<em>int or tuple of int</em>) &#8211; Number of hyperplanes to add or remove in total.
+If tuple of 2 ints, this value is interpreted as <cite>(begin, end)</cite>.
+See the <code class="docutils literal"><span class="pre">Note</span></code> for more information.</li>
+<li><strong>axis</strong> (<em>int, optional</em>) &#8211; axis to be used for cropping / padding</li>
+<li><strong>roll</strong> (<em>int,</em>) &#8211; Roll array backwards by this number prior to padding / cropping.
+The roll is reversed afterwards</li>
+<li><strong>filltype</strong> (<em>fillpar,</em>) &#8211; See <a class="reference internal" href="#ptypy.utils.array_utils.pad_lr" title="ptypy.utils.array_utils.pad_lr"><code class="xref any py py-func docutils literal"><span class="pre">pad_lr</span></code></a> for explqanation</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Cropped / padded array</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array-like</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.array_utils.pad_lr" title="ptypy.utils.array_utils.pad_lr"><code class="xref py py-func docutils literal"><span class="pre">pad_lr()</span></code></a>, <a class="reference internal" href="#ptypy.utils.array_utils.crop_pad" title="ptypy.utils.array_utils.crop_pad"><code class="xref py py-func docutils literal"><span class="pre">crop_pad()</span></code></a></p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last">
+<li><dl class="first docutils">
+<dt>if <cite>hplanes</cite> is scalar and negativ :</dt>
+<dd><p class="first last">crops symmetrically, low-index end of axis is preferred if hplane is odd,</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>if <cite>hplanes</cite> is scalar and positiv :</dt>
+<dd><p class="first last">pads symmetrically with a fill specified with &#8216;fillpar&#8217; and &#8216;filltype&#8217;
+look at function pad_lr() for detail.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>if <cite>hplanes</cite> is tupel :</dt>
+<dd><p class="first last">function pads /crops at (begin, end) according to the tupel.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.utils</span> <span class="kn">import</span> <span class="n">crop_pad_axis</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">A</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">8</span><span class="p">,</span><span class="mi">9</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Add a total of 2 rows, one at top, one at bottom.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">B</span><span class="o">=</span><span class="n">crop_pad_axis</span><span class="p">(</span><span class="n">A</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>That is the same as</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">B</span> <span class="o">=</span> <span class="n">crop_pad_axis</span><span class="p">(</span><span class="n">A</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="mi">0</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Crop 3 columns on the left side and pad 2 columns on the right:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">B</span> <span class="o">=</span> <span class="n">crop_pad_axis</span><span class="p">(</span><span class="n">A</span><span class="p">,(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Crop one plane on low-side and high-side (total of 2) of Volume V:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">V</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">B</span><span class="o">=</span><span class="n">crop_pad_axis</span><span class="p">(</span><span class="n">V</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Mirror volume 3 planes on low side of row axis, crop 2 planes on high side:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">B</span><span class="o">=</span><span class="n">crop_pad_axis</span><span class="p">(</span><span class="n">V</span><span class="p">,(</span><span class="mi">3</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">),</span><span class="mi">1</span><span class="p">,</span><span class="n">filltype</span><span class="o">=</span><span class="s">&#39;mirror&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.crop_pad">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">crop_pad</code><span class="sig-paren">(</span><em>A</em>, <em>hplane_list</em>, <em>axes=None</em>, <em>cen=None</em>, <em>fillpar=0.0</em>, <em>filltype='scalar'</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.crop_pad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Crops or pads a volume array <cite>A</cite> with a number of hyperplanes according to parameters in <cite>hplanes</cite>
+Wrapper for crop_pad_axis.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>array-like</em>) &#8211; input array of any shape</li>
+<li><strong>hplane_list</strong> (<em>array-like, list</em>) &#8211; list of scalars or tupels counting the number of hyperplanes to crop / pad
+see crop_pad_axis() for detail. If N=len(hplane_list) has less entries than dimensions of A, the last N axes are used</li>
+<li><strong>axes</strong> (<em>tuple, list</em>) &#8211; tuple / list of axes to be used for cropping / padding, has to be same length as hplanes</li>
+<li><strong>cen</strong> &#8211; center of array, padding/cropping occurs at cen + A.shape / 2</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Cropped or padded array.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array-like</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.array_utils.crop_pad_axis" title="ptypy.utils.array_utils.crop_pad_axis"><code class="xref py py-func docutils literal"><span class="pre">crop_pad_axis()</span></code></a></p>
+</div>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.utils</span> <span class="kn">import</span> <span class="n">crop_pad</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">V</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Pads 4 planes of zeros on the last axis (2 on low side and 2 on high
+side) and pads 3 planes of zeros on the second last axis (2 on low
+side and 1 on high side):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">B</span><span class="o">=</span><span class="n">crop_pad</span><span class="p">(</span><span class="n">V</span><span class="p">,[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>Also equivalent:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">B</span><span class="o">=</span><span class="n">crop_pad</span><span class="p">(</span><span class="n">V</span><span class="p">,[(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">B</span><span class="o">=</span><span class="n">crop_pad</span><span class="p">(</span><span class="n">V</span><span class="p">,[(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">)],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">fillpar</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span><span class="n">filltype</span><span class="o">=</span><span class="s">&#39;scalar&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>None-peripheral cropping /padding:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.utils</span> <span class="kn">import</span> <span class="n">grids</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fftshift_grid</span> <span class="o">=</span> <span class="n">grids</span><span class="p">((</span><span class="mi">6</span><span class="p">,</span><span class="mi">4</span><span class="p">),</span><span class="n">center</span> <span class="o">=</span> <span class="s">&#39;fft&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cropped_grid</span><span class="o">=</span><span class="n">crop_pad</span><span class="p">(</span><span class="n">V</span><span class="p">,[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">],</span><span class="n">cen</span><span class="o">=</span><span class="s">&#39;fft&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that cropping/ padding now occurs at the start and end of fourier coordinates
+useful for cropping /padding high frequencies in fourier space.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.pad_lr">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">pad_lr</code><span class="sig-paren">(</span><em>A</em>, <em>axis</em>, <em>l</em>, <em>r</em>, <em>fillpar=0.0</em>, <em>filltype='scalar'</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.pad_lr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pads ndarray <cite>A</cite> orthogonal to <cite>axis</cite> with <cite>l</cite> layers
+(pixels,lines,planes,...) on low side an <cite>r</cite> layers on high side.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>array-like</em>) &#8211; Input array</li>
+<li><strong>axis,l,r</strong> (<em>int</em>) &#8211; Pads orthogonal to <cite>axis</cite> on with <cite>l</cite> layers (pixels,lines,
+planes,...) on low side an <cite>r</cite> layers on high side.</li>
+<li><strong>fillpar</strong> (<em>scalar</em>) &#8211; Scalar fill parameter for <code class="docutils literal"><span class="pre">filltype=scalar</span></code> fill.</li>
+<li><strong>filltype</strong> (<em>str</em>) &#8211; <ul>
+<li><cite>&#8216;scalar&#8217;</cite>, uniformly pad with fillpar</li>
+<li><cite>&#8216;mirror&#8217;</cite>, mirror <cite>A</cite></li>
+<li><cite>&#8216;periodic&#8217;</cite>, periodic fill</li>
+<li><cite>&#8216;custom&#8217;</cite>, pad according arrays found in <cite>fillpar</cite></li>
+</ul>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Padded array</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.array_utils.crop_pad_axis" title="ptypy.utils.array_utils.crop_pad_axis"><code class="xref py py-func docutils literal"><span class="pre">crop_pad_axis()</span></code></a>, <a class="reference internal" href="#ptypy.utils.array_utils.crop_pad" title="ptypy.utils.array_utils.crop_pad"><code class="xref py py-func docutils literal"><span class="pre">crop_pad()</span></code></a>, <a class="reference internal" href="#ptypy.utils.array_utils.crop_pad_symmetric_2d" title="ptypy.utils.array_utils.crop_pad_symmetric_2d"><code class="xref py py-func docutils literal"><span class="pre">crop_pad_symmetric_2d()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.zoom">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">zoom</code><span class="sig-paren">(</span><em>c</em>, <em>*arg</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.zoom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper to dynamically decide whether to use the complex overloaded
+zoom function or the original one. For parameters see <a class="reference internal" href="#ptypy.utils.array_utils.c_zoom" title="ptypy.utils.array_utils.c_zoom"><code class="xref any py py-func docutils literal"><span class="pre">c_zoom</span></code></a>.
+Use this function instead of the aforementioned to profit from a faster
+execution in case of float arrays.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.array_utils.c_zoom" title="ptypy.utils.array_utils.c_zoom"><code class="xref py py-func docutils literal"><span class="pre">c_zoom()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.shift_zoom">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">shift_zoom</code><span class="sig-paren">(</span><em>c</em>, <em>zoom</em>, <em>cen_old</em>, <em>cen_new</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.shift_zoom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move array from center <cite>cen_old</cite> to <cite>cen_new</cite> and perform a zoom <cite>zoom</cite>.</p>
+<p>This function wraps scipy.ndimage.affine_transfrom or the complex
+overloaded version <a class="reference internal" href="#ptypy.utils.array_utils.c_affine_transform" title="ptypy.utils.array_utils.c_affine_transform"><code class="xref any py py-func docutils literal"><span class="pre">c_affine_transform</span></code></a>, which the user is
+refered to for keyword args.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>c</strong> (<em>ndarray</em>) &#8211; Array to shiftzoom. Can be float or complex</li>
+<li><strong>zoom</strong> (<em>float</em>) &#8211; Zoom factor</li>
+<li><strong>cen_old</strong> (<em>array_like</em>) &#8211; Center in input array <cite>c</cite></li>
+<li><strong>cen_new</strong> (<em>array_like</em>) &#8211; Desired new center position in shiftzoomed array</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.array_utils.c_affine_transform" title="ptypy.utils.array_utils.c_affine_transform"><code class="xref py py-func docutils literal"><span class="pre">c_affine_transform()</span></code></a></p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">Shifted and zoomed array</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.c_zoom">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">c_zoom</code><span class="sig-paren">(</span><em>c</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.c_zoom" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>complex input</em></p>
+<p>Zoom an array.</p>
+<p>The array is zoomed using spline interpolation of the requested order.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>input</strong> (<em>ndarray</em>) &#8211; The input array.</li>
+<li><strong>zoom</strong> (<em>float or sequence, optional</em>) &#8211; The zoom factor along the axes. If a float, <cite>zoom</cite> is the same for each
+axis. If a sequence, <cite>zoom</cite> should contain one value for each axis.</li>
+<li><strong>output</strong> (<em>ndarray or dtype, optional</em>) &#8211; The array in which to place the output, or the dtype of the returned
+array.</li>
+<li><strong>order</strong> (<em>int, optional</em>) &#8211; The order of the spline interpolation, default is 3.
+The order has to be in the range 0-5.</li>
+<li><strong>mode</strong> (<em>str, optional</em>) &#8211; Points outside the boundaries of the input are filled according
+to the given mode (&#8216;constant&#8217;, &#8216;nearest&#8217;, &#8216;reflect&#8217; or &#8216;wrap&#8217;).
+Default is &#8216;constant&#8217;.</li>
+<li><strong>cval</strong> (<em>scalar, optional</em>) &#8211; Value used for points outside the boundaries of the input if
+<code class="docutils literal"><span class="pre">mode='constant'</span></code>. Default is 0.0</li>
+<li><strong>prefilter</strong> (<em>bool, optional</em>) &#8211; The parameter prefilter determines if the input is pre-filtered with
+<cite>spline_filter</cite> before interpolation (necessary for spline
+interpolation of order &gt; 1).  If False, it is assumed that the input is
+already filtered. Default is True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>zoom</strong> &#8211;
+The zoomed input. If <cite>output</cite> is given as a parameter, None is
+returned.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray or None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.c_affine_transform">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">c_affine_transform</code><span class="sig-paren">(</span><em>c</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.c_affine_transform" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>complex input</em></p>
+<p>Apply an affine transformation.</p>
+<p>The given matrix and offset are used to find for each point in the
+output the corresponding coordinates in the input by an affine
+transformation. The value of the input at those coordinates is
+determined by spline interpolation of the requested order. Points
+outside the boundaries of the input are filled according to the given
+mode.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>input</strong> (<em>ndarray</em>) &#8211; The input array.</li>
+<li><strong>matrix</strong> (<em>ndarray</em>) &#8211; The matrix must be two-dimensional or can also be given as a
+one-dimensional sequence or array. In the latter case, it is assumed
+that the matrix is diagonal. A more efficient algorithms is then
+applied that exploits the separability of the problem.</li>
+<li><strong>offset</strong> (<em>float or sequence, optional</em>) &#8211; The offset into the array where the transform is applied. If a float,
+<cite>offset</cite> is the same for each axis. If a sequence, <cite>offset</cite> should
+contain one value for each axis.</li>
+<li><strong>output_shape</strong> (<em>tuple of ints, optional</em>) &#8211; Shape tuple.</li>
+<li><strong>output</strong> (<em>ndarray or dtype, optional</em>) &#8211; The array in which to place the output, or the dtype of the returned
+array.</li>
+<li><strong>order</strong> (<em>int, optional</em>) &#8211; The order of the spline interpolation, default is 3.
+The order has to be in the range 0-5.</li>
+<li><strong>mode</strong> (<em>str, optional</em>) &#8211; Points outside the boundaries of the input are filled according
+to the given mode (&#8216;constant&#8217;, &#8216;nearest&#8217;, &#8216;reflect&#8217; or &#8216;wrap&#8217;).
+Default is &#8216;constant&#8217;.</li>
+<li><strong>cval</strong> (<em>scalar, optional</em>) &#8211; Value used for points outside the boundaries of the input if
+<code class="docutils literal"><span class="pre">mode='constant'</span></code>. Default is 0.0</li>
+<li><strong>prefilter</strong> (<em>bool, optional</em>) &#8211; The parameter prefilter determines if the input is pre-filtered with
+<cite>spline_filter</cite> before interpolation (necessary for spline
+interpolation of order &gt; 1).  If False, it is assumed that the input is
+already filtered. Default is True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>affine_transform</strong> &#8211;
+The transformed input. If <cite>output</cite> is given as a parameter, None is
+returned.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray or None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.rebin">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">rebin</code><span class="sig-paren">(</span><em>a</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.rebin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rebin ndarray data into a smaller ndarray of the same rank whose dimensions
+are factors of the original dimensions.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">eg. An array with 6 columns and 4 rows
+can be reduced to have 6,3,2 or 1 columns and 4,2 or 1 rows.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>a</strong> (<em>ndarray</em>) &#8211; Input array.</li>
+<li><strong>axis</strong> (<em>int, Default=-1, optional</em>) &#8211; The laplacian is computed along the provided axis or list of axes,
+or all axes if None</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out</strong> &#8211;
+Rebined array.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ptypy</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">=</span><span class="n">ptypy</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">rebin</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">a.reshape(args[0],factor[0],args[1],factor[1],).sum(1).sum(2)*( 1./factor[0]/factor[1])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a2</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b2</span><span class="o">=</span><span class="n">ptypy</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">rebin</span><span class="p">(</span><span class="n">a2</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">a.reshape(args[0],factor[0],).sum(1)*( 1./factor[0])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.array_utils.rebin_2d">
+<code class="descclassname">ptypy.utils.array_utils.</code><code class="descname">rebin_2d</code><span class="sig-paren">(</span><em>A</em>, <em>rebin=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.array_utils.rebin_2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rebins array <cite>A</cite> symmetrically along the last 2 axes
+with factor <cite>rebin</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>array-like</em>) &#8211; input array, must be at least two-dimensional.</li>
+<li><strong>rebin</strong> (<em>int</em>) &#8211; rebin factor, <code class="docutils literal"><span class="pre">rebin=2</span></code> means that a square of 4 pixels will be
+binned into one.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out</strong> &#8211;
+rebinned array</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.array_utils.rebin" title="ptypy.utils.array_utils.rebin"><code class="xref py py-func docutils literal"><span class="pre">rebin()</span></code></a></p>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.utils.embedded_shell">
+<span id="ptypy-utils-embedded-shell-module"></span><h2>ptypy.utils.embedded_shell module<a class="headerlink" href="#module-ptypy.utils.embedded_shell" title="Permalink to this headline">¶</a></h2>
+<p>Tool to embed an ipython shell for debugging.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="module-ptypy.utils.math_utils">
+<span id="ptypy-utils-math-utils-module"></span><h2>ptypy.utils.math_utils module<a class="headerlink" href="#module-ptypy.utils.math_utils" title="Permalink to this headline">¶</a></h2>
+<p>Numerical util functions.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="function">
+<dt id="ptypy.utils.math_utils.smooth_step">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">smooth_step</code><span class="sig-paren">(</span><em>x</em>, <em>mfs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.smooth_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Smoothed step function with fwhm <cite>mfs</cite>
+Evaluates the error function <cite>scipy.special.erf</cite>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.abs2">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">abs2</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.abs2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Squared absolute value (for real array <cite>A</cite>)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.norm2">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">norm2</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.norm2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Squared norm</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.norm">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">norm</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.norm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Norm.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.delxb">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">delxb</code><span class="sig-paren">(</span><em>a</em>, <em>axis=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.delxb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Backward first order derivative for finite difference calculation.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The first element along the derivative direction is set to 0.</p>
+<p class="last">Pixel units are used (<span class="math">\(\Delta x = \Delta h = 1\)</span>).</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>a</strong> (<em>ndarray</em>) &#8211; Input array.</li>
+<li><strong>axis</strong> (<em>int, Default=-1, optional</em>) &#8211; Which direction used for the derivative.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out</strong> &#8211;
+Derived array.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.delxc">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">delxc</code><span class="sig-paren">(</span><em>a</em>, <em>axis=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.delxc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Central first order derivative for finite difference calculation.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Forward and backward derivatives are used for first and last
+elements along the derivative direction.</p>
+<p class="last">Pixel units are used (<span class="math">\(\Delta x = \Delta h = 1\)</span>).</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>a</strong> (<em>nd-numpy-array</em>) &#8211; Input array.</li>
+<li><strong>axis</strong> (<em>int, Default=-1, optional</em>) &#8211; Which direction used for the derivative.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out</strong> &#8211;
+Derived array.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">nd-numpy-array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.delxf">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">delxf</code><span class="sig-paren">(</span><em>a</em>, <em>axis=-1</em>, <em>out=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.delxf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Forward first order derivative for finite difference calculation.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The last element along the derivative direction is set to 0.</p>
+<p class="last">Pixel units are used (<span class="math">\(\Delta x = \Delta h = 1\)</span>).</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>a</strong> (<em>ndarray</em>) &#8211; Input array.</li>
+<li><strong>axis</strong> (<em>int, Default=-1, optional</em>) &#8211; Which direction used for the derivative.</li>
+<li><strong>out</strong> (<em>ndarray, Default=None, optional</em>) &#8211; Array in wich the resault is written (same size as <code class="docutils literal"><span class="pre">a</span></code>).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out</strong> &#8211;
+Derived array.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.ortho">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">ortho</code><span class="sig-paren">(</span><em>modes</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.ortho" title="Permalink to this definition">¶</a></dt>
+<dd><p>Orthogonalize the given list of modes or ndarray along first axis.
+<strong>specify procedure</strong></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>modes</strong> (<em>array-like or list</em>) &#8211; List equally shaped arrays or array of higher dimension</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>amp</strong> (<em>vector</em>) &#8211;
+relative power of each mode</li>
+<li><strong>nplist</strong> (<em>list</em>) &#8211;
+List of modes, sorted in descending order</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.gauss_fwhm">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">gauss_fwhm</code><span class="sig-paren">(</span><em>x</em>, <em>fwhm=1.0</em>, <em>off=0.0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.gauss_fwhm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluates gaussian with full width half maximum</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>x</strong> (<em>ndarray</em>) &#8211; input array</li>
+<li><strong>fwhm</strong> (<em>float,optional</em>) &#8211; Full width at half maximum</li>
+<li><strong>off</strong> (<em>float, optional</em>) &#8211; Offset / shift</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.math_utils.gaussian" title="ptypy.utils.math_utils.gaussian"><code class="xref py py-func docutils literal"><span class="pre">gaussian()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.gaussian">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">gaussian</code><span class="sig-paren">(</span><em>x</em>, <em>std=1.0</em>, <em>off=0.0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.gaussian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluates gaussian standard normal</p>
+<div class="math">
+\[g(x)=\frac{1}{\mathrm{std}\sqrt{2\pi}}\,\exp \left(-\frac{(x-\mathrm{off})^2}{2 \mathrm{std}^2 }\right)\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>x</strong> (<em>ndarray</em>) &#8211; input array</li>
+<li><strong>std</strong> (<em>float,optional</em>) &#8211; Standard deviation</li>
+<li><strong>off</strong> (<em>float, optional</em>) &#8211; Offset / shift</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.math_utils.gauss_fwhm" title="ptypy.utils.math_utils.gauss_fwhm"><code class="xref py py-func docutils literal"><span class="pre">gauss_fwhm()</span></code></a>, <a class="reference internal" href="#ptypy.utils.math_utils.smooth_step" title="ptypy.utils.math_utils.smooth_step"><code class="xref py py-func docutils literal"><span class="pre">smooth_step()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.gf">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">gf</code><span class="sig-paren">(</span><em>c</em>, <em>*arg</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.gf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for scipy.ndimage.gaussian_filter, that determines whether
+original or the complex function shall be used.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.math_utils.c_gf" title="ptypy.utils.math_utils.c_gf"><code class="xref py py-func docutils literal"><span class="pre">c_gf()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.cabs2">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">cabs2</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.cabs2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Squared absolute value (for complex array <cite>A</cite>)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.gf_2d">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">gf_2d</code><span class="sig-paren">(</span><em>c</em>, <em>sigma</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.gf_2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gaussian filter along the last 2 axes</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.math_utils.gf" title="ptypy.utils.math_utils.gf"><code class="xref py py-func docutils literal"><span class="pre">gf()</span></code></a>, <a class="reference internal" href="#ptypy.utils.math_utils.c_gf" title="ptypy.utils.math_utils.c_gf"><code class="xref py py-func docutils literal"><span class="pre">c_gf()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.math_utils.c_gf">
+<code class="descclassname">ptypy.utils.math_utils.</code><code class="descname">c_gf</code><span class="sig-paren">(</span><em>c</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.math_utils.c_gf" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>complex input</em></p>
+<p>Multidimensional Gaussian filter.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>input</strong> (<em>array_like</em>) &#8211; Input array to filter.</li>
+<li><strong>sigma</strong> (<em>scalar or sequence of scalars</em>) &#8211; Standard deviation for Gaussian kernel. The standard
+deviations of the Gaussian filter are given for each axis as a
+sequence, or as a single number, in which case it is equal for
+all axes.</li>
+<li><strong>order</strong> (<em>{0, 1, 2, 3} or sequence from same set, optional</em>) &#8211; The order of the filter along each axis is given as a sequence
+of integers, or as a single number.  An order of 0 corresponds
+to convolution with a Gaussian kernel. An order of 1, 2, or 3
+corresponds to convolution with the first, second or third
+derivatives of a Gaussian. Higher order derivatives are not
+implemented</li>
+<li><strong>output</strong> (<em>array, optional</em>) &#8211; The <cite>output</cite> parameter passes an array in which to store the
+filter output.</li>
+<li><strong>mode</strong> (<em>{&#8216;reflect&#8217;, &#8216;constant&#8217;, &#8216;nearest&#8217;, &#8216;mirror&#8217;, &#8216;wrap&#8217;}, optional</em>) &#8211; The <cite>mode</cite> parameter determines how the array borders are
+handled, where <cite>cval</cite> is the value when mode is equal to
+&#8216;constant&#8217;. Default is &#8216;reflect&#8217;</li>
+<li><strong>cval</strong> (<em>scalar, optional</em>) &#8211; Value to fill past edges of input if <cite>mode</cite> is &#8216;constant&#8217;. Default
+is 0.0</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>gaussian_filter</strong> &#8211;
+Returned array of same shape as <cite>input</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The multidimensional filter is implemented as a sequence of
+one-dimensional convolution filters. The intermediate arrays are
+stored in the same data type as the output. Therefore, for output
+types with a limited precision, the results may be imprecise
+because intermediate results may be stored with insufficient
+precision.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.utils.misc">
+<span id="ptypy-utils-misc-module"></span><h2>ptypy.utils.misc module<a class="headerlink" href="#module-ptypy.utils.misc" title="Permalink to this headline">¶</a></h2>
+<p>Miscellaneous utility functions with little dependencies from other modules</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="function">
+<dt id="ptypy.utils.misc.str2int">
+<code class="descclassname">ptypy.utils.misc.</code><code class="descname">str2int</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.str2int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms numpy array <cite>A</cite> of strings to <code class="docutils literal"><span class="pre">np.uint8</span></code> and back</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.utils</span> <span class="kn">import</span> <span class="n">str2int</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">A</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="s">&#39;hallo&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">A</span>
+<span class="go">array(&#39;hallo&#39;, dtype=&#39;|S5&#39;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">str2int</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+<span class="go">array([104,  97, 108, 108, 111], dtype=uint8)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">str2int</span><span class="p">(</span><span class="n">str2int</span><span class="p">(</span><span class="n">A</span><span class="p">))</span>
+<span class="go">array(&#39;hallo&#39;, dtype=&#39;|S5&#39;)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.misc.str2range">
+<code class="descclassname">ptypy.utils.misc.</code><code class="descname">str2range</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.str2range" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates an index list from string input <cite>s</cite></p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="c"># Same as range(1,4,2)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">str2range</span><span class="p">(</span><span class="s">&#39;1:4:2&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># Same as range(1,2)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">str2range</span><span class="p">(</span><span class="s">&#39;1&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.misc.complex_overload">
+<code class="descclassname">ptypy.utils.misc.</code><code class="descname">complex_overload</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.complex_overload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overloads function specified only for floats in the following manner</p>
+<div class="math">
+\[\mathrm{complex\_overload}\{f\}(c) = f(\Re(c)) + \mathrm{i} f(\Im(c))\]</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.misc.expect2">
+<code class="descclassname">ptypy.utils.misc.</code><code class="descname">expect2</code><span class="sig-paren">(</span><em>a</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.expect2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates 1d numpy array with 2 entries generated from multiple inputs
+(tuples, arrays, scalars). Main puprose of this function is to circumvent
+debugging of input as very often a 2-vector is requred in scripts</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.utils</span> <span class="kn">import</span> <span class="n">expect2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expect2</span><span class="p">(</span> <span class="mf">3.0</span> <span class="p">)</span>
+<span class="go">array([ 3.,  3.])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expect2</span><span class="p">(</span> <span class="p">(</span><span class="mf">3.0</span><span class="p">,</span><span class="mf">4.0</span><span class="p">)</span> <span class="p">)</span>
+<span class="go">array([ 3.,  4.])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expect2</span><span class="p">(</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span><span class="mf">4.0</span><span class="p">)</span> <span class="p">)</span>
+<span class="go">array([ 1.,  3.])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.misc.expect3">
+<code class="descclassname">ptypy.utils.misc.</code><code class="descname">expect3</code><span class="sig-paren">(</span><em>a</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.expect3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates 1d numpy array with 3 entries generated from multiple inputs
+(tuples, arrays, scalars). Main puprose of this function is to circumvent
+debugging of input.</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.utils</span> <span class="kn">import</span> <span class="n">expect3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expect3</span><span class="p">(</span> <span class="mf">3.0</span> <span class="p">)</span>
+<span class="go">array([ 3.,  3.,  3.])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expect3</span><span class="p">(</span> <span class="p">(</span><span class="mf">3.0</span><span class="p">,</span><span class="mf">4.0</span><span class="p">)</span> <span class="p">)</span>
+<span class="go">array([ 3.,  4.,  4.])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expect3</span><span class="p">(</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span><span class="mf">4.0</span><span class="p">)</span> <span class="p">)</span>
+<span class="go">array([ 1.,  3.,  4.])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.misc.keV2m">
+<code class="descclassname">ptypy.utils.misc.</code><code class="descname">keV2m</code><span class="sig-paren">(</span><em>keV</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.keV2m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert photon energy in keV to wavelength (in vacuum) in meters.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.misc.clean_path">
+<code class="descclassname">ptypy.utils.misc.</code><code class="descname">clean_path</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.clean_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes path absolute and create all sub directories if needed.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>filename</strong> (<em>str</em>) &#8211; A filename.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.misc.unique_path">
+<code class="descclassname">ptypy.utils.misc.</code><code class="descname">unique_path</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.unique_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes path absolute and unique</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>filename</strong> (<em>str</em>) &#8211; A filename.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.utils.parallel">
+<span id="ptypy-utils-parallel-module"></span><h2>ptypy.utils.parallel module<a class="headerlink" href="#module-ptypy.utils.parallel" title="Permalink to this headline">¶</a></h2>
+<p>Utility functions and classes to support MPI computing.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="function">
+<dt id="ptypy.utils.parallel.barrier">
+<code class="descclassname">ptypy.utils.parallel.</code><code class="descname">barrier</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.barrier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for comm.Barrier.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="ptypy.utils.parallel.LoadManager">
+<em class="property">class </em><code class="descclassname">ptypy.utils.parallel.</code><code class="descname">LoadManager</code><a class="headerlink" href="#ptypy.utils.parallel.LoadManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Keeps track of the amount of data managed by each
+process and helps keeping it balanced.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">A LoadManager should always be given the full range of ids, as
+the <cite>all-knowing</cite> power stems from the fact that it always knows
+how many processes there are, what rank it has and the full range
+of ids to distribute. Hence, please <em>&#8220;assign&#8221;</em> always the same list
+across all nodes.</p>
+</div>
+<dl class="method">
+<dt id="ptypy.utils.parallel.LoadManager.assign">
+<code class="descname">assign</code><span class="sig-paren">(</span><em>idlist=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.LoadManager.assign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Subdivide the provided list of ids into contiguous blocks to balance
+the load among the processes.</p>
+<p>The elements of idlist are used as keys to subsequently identify
+the rank of a given id, through the dict self.rank_of. No check
+is done whether ids passed are unique or even hashable (they
+better are)</p>
+<p>If idlist is None, increase by one the load of the least busy
+process. <a class="reference internal" href="#ptypy.utils.parallel.LoadManager.rank_of" title="ptypy.utils.parallel.LoadManager.rank_of"><code class="xref any py py-attr docutils literal"><span class="pre">rank_of</span></code></a> is not updated in this case.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>idlist</strong> (<em>list</em>) &#8211; List of objects that can also be keys in a <cite>dict</cite>, i.e. hashable
+objects.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>R</strong> &#8211;
+A nested list, (a list of lists) such that <code class="docutils literal"><span class="pre">R[rank]=list</span></code>
+of elements of <cite>idlist</cite> managed by process of given <cite>rank</cite>.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.parallel.LoadManager.load">
+<code class="descname">load</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.parallel.LoadManager.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents the number of elements assigned to this process.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.parallel.LoadManager.rank_of">
+<code class="descname">rank_of</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.parallel.LoadManager.rank_of" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rank of specific <em>id</em>, i.e. element of <em>idlist</em>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.parallel.LoadManager.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.LoadManager.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets <a class="reference internal" href="#ptypy.utils.parallel.LoadManager" title="ptypy.utils.parallel.LoadManager"><code class="xref any py py-class docutils literal"><span class="pre">LoadManager</span></code></a> to initial state.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.parallel.allreduce">
+<code class="descclassname">ptypy.utils.parallel.</code><code class="descname">allreduce</code><span class="sig-paren">(</span><em>a</em>, <em>op=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.allreduce" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for comm.Allreduce, always in place.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>a</strong> (<em>numpy-ndarray</em>) &#8211; The array to operate on.</li>
+<li><strong>op</strong> (<em>operation</em>) &#8211; MPI operation to execute. None or one of MPI.BAND, MPI.BOR,
+MPI.BXOR, MPI.LAND, MPI.LOR, MPI.LXOR, MPI.MAX, MPI.MAXLOC,
+MPI.MIN, MPI.MINLOC, MPI.OP_NULL, MPI.PROD, MPI.REPLACE or MPI.SUM.
+If None, uses MPI.SUM.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last"><em>Explanation</em> : If process #1 has ndarray <code class="docutils literal"><span class="pre">a</span></code> and process #2 has
+ndarray <code class="docutils literal"><span class="pre">b</span></code>. After calling allreduce, the new arrays after allreduce
+are <code class="docutils literal"><span class="pre">a'=op(a,b)</span></code> and <code class="docutils literal"><span class="pre">b'=op(a,b)</span></code> on process #1 and #2 respectively</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.parallel.send">
+<code class="descclassname">ptypy.utils.parallel.</code><code class="descname">send</code><span class="sig-paren">(</span><em>data</em>, <em>dest=0</em>, <em>tag=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.send" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for <cite>comm.Send</cite> and <cite>comm.send</cite>.
+If data is a <cite>numpy.ndarray</cite>, a header will be sent first with
+<cite>comm.send</cite> that contains information on array shape and data type.
+Afterwards the array will be sent with <cite>comm.Send</cite>.
+If data is not a <cite>numpy.ndarray</cite>, the whole object will be pickled
+and sent with <cite>comm.send</cite> in one go.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>data</strong> (<em>ndarray or other</em>) &#8211; Object to send</li>
+<li><strong>dest</strong> (<em>int</em>) &#8211; The rank of the destination node / process. Defaults to 0 (master).</li>
+<li><strong>tag</strong> (<em>int</em>) &#8211; Defaults to 0.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.parallel.receive" title="ptypy.utils.parallel.receive"><code class="xref py py-func docutils literal"><span class="pre">receive()</span></code></a>, <a class="reference internal" href="#ptypy.utils.parallel.bcast" title="ptypy.utils.parallel.bcast"><code class="xref py py-func docutils literal"><span class="pre">bcast()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.parallel.receive">
+<code class="descclassname">ptypy.utils.parallel.</code><code class="descname">receive</code><span class="sig-paren">(</span><em>source=None</em>, <em>tag=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.receive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for <cite>comm.Recv</cite>. Probes first with <cite>comm.recv</cite>. If the
+unpickled is a 3-tuple with first entry==&#8217;npy&#8217;, prepares buffer and
+waits with <cite>comm.Recv</cite></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>source</strong> (<em>int or None</em>) &#8211; The rank of the node / process sending data. If None, this is set
+to MPI.ANY_SOURCE</li>
+<li><strong>tag</strong> (<em>int</em>) &#8211; Not really useful here - defaults to <cite>0</cite> all the time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out</strong></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray or other</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.parallel.bcast">
+<code class="descclassname">ptypy.utils.parallel.</code><code class="descname">bcast</code><span class="sig-paren">(</span><em>data</em>, <em>source=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.bcast" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for <cite>comm.bcast</cite> and <cite>comm.Bcast</cite>.
+If data is a <cite>numpy.ndarray</cite>, a header will be broadcasted first with
+<cite>comm.bcast</cite> that contains information on array shape and data type.
+Afterwards the array will be sent with <cite>comm.Bcast</cite>.
+If data is not a <cite>numpy.ndarray</cite>, the whole object will be pickled
+and broadcasted with <cite>comm.bcast</cite> in one go.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>data</strong> (<em>ndarray or other</em>) &#8211; Object to send</li>
+<li><strong>source</strong> (<em>int</em>) &#8211; The rank of the source node / process. Defaults to 0 (master).</li>
+<li><strong>tag</strong> (<em>int</em>) &#8211; Defaults to 0.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.parallel.receive" title="ptypy.utils.parallel.receive"><code class="xref py py-func docutils literal"><span class="pre">receive()</span></code></a>, <a class="reference internal" href="#ptypy.utils.parallel.send" title="ptypy.utils.parallel.send"><code class="xref py py-func docutils literal"><span class="pre">send()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.parallel.bcast_dict">
+<code class="descclassname">ptypy.utils.parallel.</code><code class="descname">bcast_dict</code><span class="sig-paren">(</span><em>dct</em>, <em>keys='all'</em>, <em>source=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.bcast_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Broadcasts or scatters a dict <cite>dct</cite> from <code class="docutils literal"><span class="pre">rank==source</span></code>.
+If value is a numpy ndarray, <cite>comm.Bcast</cite> is used instead <cite>comm.bcast</cite>,
+such that transfer is accelerated.</p>
+<p>Fills dict <cite>dct</cite> in place for receiving nodes, although this is a
+bit inconsistent compared to <a class="reference internal" href="#ptypy.utils.parallel.gather_dict" title="ptypy.utils.parallel.gather_dict"><code class="xref any py py-func docutils literal"><span class="pre">gather_dict</span></code></a></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>keys</strong> (<em>list or &#8216;all&#8217;</em>) &#8211; List of keys whose values are accepted at each node. In case
+of <code class="docutils literal"><span class="pre">keys=all</span></code>, every node accepts all items and <a class="reference internal" href="#ptypy.utils.parallel.bcast_dict" title="ptypy.utils.parallel.bcast_dict"><code class="xref any py py-func docutils literal"><span class="pre">bcast_dict</span></code></a>
+acts as broadcast.</li>
+<li><strong>source</strong> (<em>int</em>) &#8211; Rank of node / process which broadcasts / scatters.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>dct</strong> &#8211;
+A smaller dictionary with values to <cite>keys</cite> if that key
+was in source dictionary.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>There is no guarantee that each <em>key,value</em> pair is accepted at other
+nodes, except for <code class="docutils literal"><span class="pre">keys='all'</span></code>. Also in this implementation
+the input <cite>dct</cite> from source is <em>completely</em> transmitted to every node,
+potentially creating a large overhead for may nodes and huge dictionarys</p>
+<p class="last">Deleting reference in input dictionary may result in data loss at
+<code class="docutils literal"><span class="pre">rank==source</span></code></p>
+</div>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.parallel.gather_dict" title="ptypy.utils.parallel.gather_dict"><code class="xref py py-func docutils literal"><span class="pre">gather_dict()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.parallel.gather_dict">
+<code class="descclassname">ptypy.utils.parallel.</code><code class="descname">gather_dict</code><span class="sig-paren">(</span><em>dct</em>, <em>target=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.gather_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gathers broadcasted or scattered dict <cite>dct</cite> at rank <cite>target</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dct</strong> (<em>dict</em>) &#8211; Input dictionary. Remains unaltered</li>
+<li><strong>target</strong> (<em>int</em>) &#8211; Rank of process where the <cite>dct</cite>&#8216;s are gathered</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out</strong> &#8211;
+Gathered dict at <code class="docutils literal"><span class="pre">rank==target</span></code>, Empty dict at <code class="docutils literal"><span class="pre">rank!=target</span></code></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If the same <cite>key</cite> exists on different nodes, the corresponding values
+will be consecutively overidden in the order of the ranks at the
+gathering node without complain or notification.</p>
+</div>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><code class="xref py py-func docutils literal"><span class="pre">broadcast_dict()</span></code></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.parallel.MPIrand_normal">
+<code class="descclassname">ptypy.utils.parallel.</code><code class="descname">MPIrand_normal</code><span class="sig-paren">(</span><em>loc=0.0</em>, <em>scale=1.0</em>, <em>size=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.MPIrand_normal" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Wrapper</strong> for <code class="docutils literal"><span class="pre">np.random.normal</span></code> for same random sample across all nodes.
+<em>See numpy/scipy documentation below.</em></p>
+<p>normal(loc=0.0, scale=1.0, size=None)</p>
+<p>Draw random samples from a normal (Gaussian) distribution.</p>
+<p>The probability density function of the normal distribution, first
+derived by De Moivre and 200 years later by both Gauss and Laplace
+independently <a class="footnote-reference" href="#id5" id="id1">[2]</a>, is often called the bell curve because of
+its characteristic shape (see the example below).</p>
+<p>The normal distributions occurs often in nature.  For example, it
+describes the commonly occurring distribution of samples influenced
+by a large number of tiny, random disturbances, each with its own
+unique distribution <a class="footnote-reference" href="#id5" id="id2">[2]</a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>loc</strong> (<em>float</em>) &#8211; Mean (&#8220;centre&#8221;) of the distribution.</li>
+<li><strong>scale</strong> (<em>float</em>) &#8211; Standard deviation (spread or &#8220;width&#8221;) of the distribution.</li>
+<li><strong>size</strong> (<em>tuple of ints</em>) &#8211; Output shape.  If the given shape is, e.g., <code class="docutils literal"><span class="pre">(m,</span> <span class="pre">n,</span> <span class="pre">k)</span></code>, then
+<code class="docutils literal"><span class="pre">m</span> <span class="pre">*</span> <span class="pre">n</span> <span class="pre">*</span> <span class="pre">k</span></code> samples are drawn.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt><code class="xref py py-func docutils literal"><span class="pre">scipy.stats.distributions.norm()</span></code></dt>
+<dd>probability density function, distribution or cumulative density function, etc.</dd>
+</dl>
+</div>
+<p class="rubric">Notes</p>
+<p>The probability density for the Gaussian distribution is</p>
+<div class="math">
+\[p(x) = \frac{1}{\sqrt{ 2 \pi \sigma^2 }}
+e^{ - \frac{ (x - \mu)^2 } {2 \sigma^2} },\]</div>
+<p>where <span class="math">\(\mu\)</span> is the mean and <span class="math">\(\sigma\)</span> the standard deviation.
+The square of the standard deviation, <span class="math">\(\sigma^2\)</span>, is called the
+variance.</p>
+<p>The function has its peak at the mean, and its &#8220;spread&#8221; increases with
+the standard deviation (the function reaches 0.607 times its maximum at
+<span class="math">\(x + \sigma\)</span> and <span class="math">\(x - \sigma\)</span> <a class="footnote-reference" href="#id5" id="id3">[2]</a>).  This implies that
+<cite>numpy.random.normal</cite> is more likely to return samples lying close to the
+mean, rather than those far away.</p>
+<p class="rubric">References</p>
+<table class="docutils footnote" frame="void" id="id4" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[1]</td><td>Wikipedia, &#8220;Normal distribution&#8221;,
+<a class="reference external" href="http://en.wikipedia.org/wiki/Normal_distribution">http://en.wikipedia.org/wiki/Normal_distribution</a></td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id5" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[2]</td><td><em>(<a class="fn-backref" href="#id1">1</a>, <a class="fn-backref" href="#id2">2</a>, <a class="fn-backref" href="#id3">3</a>)</em> P. R. Peebles Jr., &#8220;Central Limit Theorem&#8221; in &#8220;Probability, Random
+Variables and Random Signal Principles&#8221;, 4th ed., 2001,
+pp. 51, 51, 125.</td></tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>Draw samples from the distribution:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span> <span class="c"># mean and standard deviation</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Verify the mean and the variance:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="nb">abs</span><span class="p">(</span><span class="n">mu</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">s</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mf">0.01</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="nb">abs</span><span class="p">(</span><span class="n">sigma</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mf">0.01</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>Display the histogram of the samples, along with
+the probability density function:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">count</span><span class="p">,</span> <span class="n">bins</span><span class="p">,</span> <span class="n">ignored</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="n">normed</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">bins</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">sigma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span> <span class="o">*</span>
+<span class="gp">... </span>               <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span> <span class="o">-</span> <span class="p">(</span><span class="n">bins</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="p">),</span>
+<span class="gp">... </span>         <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;r&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.parallel.MPIrand_uniform">
+<code class="descclassname">ptypy.utils.parallel.</code><code class="descname">MPIrand_uniform</code><span class="sig-paren">(</span><em>low=0.0</em>, <em>high=1.0</em>, <em>size=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.MPIrand_uniform" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Wrapper</strong> for <code class="docutils literal"><span class="pre">np.random.uniform</span></code> for same random sample across all nodes.
+<em>See numpy/scipy documentation below.</em></p>
+<p>uniform(low=0.0, high=1.0, size=1)</p>
+<p>Draw samples from a uniform distribution.</p>
+<p>Samples are uniformly distributed over the half-open interval
+<code class="docutils literal"><span class="pre">[low,</span> <span class="pre">high)</span></code> (includes low, but excludes high).  In other words,
+any value within the given interval is equally likely to be drawn
+by <cite>uniform</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>low</strong> (<em>float, optional</em>) &#8211; Lower boundary of the output interval.  All values generated will be
+greater than or equal to low.  The default value is 0.</li>
+<li><strong>high</strong> (<em>float</em>) &#8211; Upper boundary of the output interval.  All values generated will be
+less than high.  The default value is 1.0.</li>
+<li><strong>size</strong> (<em>int or tuple of ints, optional</em>) &#8211; Shape of output.  If the given size is, for example, (m,n,k),
+m*n*k samples are generated.  If no shape is specified, a single sample
+is returned.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out</strong> &#8211;
+Drawn samples, with shape <cite>size</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt><code class="xref py py-func docutils literal"><span class="pre">randint()</span></code></dt>
+<dd>Discrete uniform distribution, yielding integers.</dd>
+<dt><code class="xref py py-func docutils literal"><span class="pre">random_integers()</span></code></dt>
+<dd>Discrete uniform distribution over the closed interval <code class="docutils literal"><span class="pre">[low,</span> <span class="pre">high]</span></code>.</dd>
+<dt><code class="xref py py-func docutils literal"><span class="pre">random_sample()</span></code></dt>
+<dd>Floats uniformly distributed over <code class="docutils literal"><span class="pre">[0,</span> <span class="pre">1)</span></code>.</dd>
+<dt><code class="xref py py-func docutils literal"><span class="pre">random()</span></code></dt>
+<dd>Alias for <cite>random_sample</cite>.</dd>
+<dt><code class="xref py py-func docutils literal"><span class="pre">rand()</span></code></dt>
+<dd>Convenience function that accepts dimensions as input, e.g., <code class="docutils literal"><span class="pre">rand(2,2)</span></code> would generate a 2-by-2 array of floats, uniformly distributed over <code class="docutils literal"><span class="pre">[0,</span> <span class="pre">1)</span></code>.</dd>
+</dl>
+</div>
+<p class="rubric">Notes</p>
+<p>The probability density function of the uniform distribution is</p>
+<div class="math">
+\[p(x) = \frac{1}{b - a}\]</div>
+<p>anywhere within the interval <code class="docutils literal"><span class="pre">[a,</span> <span class="pre">b)</span></code>, and zero elsewhere.</p>
+<p class="rubric">Examples</p>
+<p>Draw samples from the distribution:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>All values are within the given interval:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">s</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">s</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>Display the histogram of the samples, along with the
+probability density function:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">count</span><span class="p">,</span> <span class="n">bins</span><span class="p">,</span> <span class="n">ignored</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">normed</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">bins</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">bins</span><span class="p">),</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;r&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.parallel.MPInoise2d">
+<code class="descclassname">ptypy.utils.parallel.</code><code class="descname">MPInoise2d</code><span class="sig-paren">(</span><em>sh</em>, <em>rms=1.0</em>, <em>mfs=2</em>, <em>rms_mod=None</em>, <em>mfs_mod=2</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parallel.MPInoise2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates complex-valued statistical noise in the shape of <cite>sh</cite>
+consistent across all nodes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>sh</strong> (<em>tuple</em>) &#8211; Output shape.</li>
+<li><strong>rms</strong> (<em>float or None</em>) &#8211; Root mean square of noise in phase. If None, only ones are
+returned.</li>
+<li><strong>mfs</strong> (<em>float</em>) &#8211; Minimum feature size [in pixel] of noise in phase.</li>
+<li><strong>rms_mod</strong> (<em>float or None</em>) &#8211; Root mean square of noise in amplitude / modulus.</li>
+<li><strong>mfs_mod</strong> &#8211; Minimum feature size [in pixel] of noise in amplitude / modulus.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>noise</strong> &#8211;
+Numpy array filled with noise</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.parallel.MPIrand_uniform" title="ptypy.utils.parallel.MPIrand_uniform"><code class="xref py py-func docutils literal"><span class="pre">MPIrand_uniform()</span></code></a>, <a class="reference internal" href="#ptypy.utils.parallel.MPIrand_normal" title="ptypy.utils.parallel.MPIrand_normal"><code class="xref py py-func docutils literal"><span class="pre">MPIrand_normal()</span></code></a></p>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.utils.parameters">
+<span id="ptypy-utils-parameters-module"></span><h2>ptypy.utils.parameters module<a class="headerlink" href="#module-ptypy.utils.parameters" title="Permalink to this headline">¶</a></h2>
+<p>Parameter definition.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="class">
+<dt id="ptypy.utils.parameters.Param">
+<em class="property">class </em><code class="descclassname">ptypy.utils.parameters.</code><code class="descname">Param</code><span class="sig-paren">(</span><em>__d__=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parameters.Param" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></p>
+<p>Convenience class: a dictionary that gives access to its keys
+through attributes.</p>
+<p>Note: dictionaries stored in this class are also automatically converted
+to Param objects:
+&gt;&gt;&gt; p = Param()
+&gt;&gt;&gt; p.x = {}
+&gt;&gt;&gt; p
+Param({})</p>
+<p>While dict(p) returns a dictionary, it is not recursive, so it is better in this case
+to use p.todict(). However, p.todict does not check for infinite recursion. So please
+don&#8217;t store a dictionary (or a Param) inside itself.</p>
+<p>BE: Please note also that the recursive behavior of the update function will create
+new references. This will lead inconsistency if other objects refer to dicts or Params
+in the updated Param instance.</p>
+<p>A Dictionary that enables access to its keys as attributes.
+Same constructor as dict.</p>
+<dl class="method">
+<dt id="ptypy.utils.parameters.Param.__dir__">
+<code class="descname">__dir__</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parameters.Param.__dir__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defined to include the keys when using dir(). Useful for
+tab completion in e.g. ipython.
+If you do not wish the dict key&#8217;s be displayed as attributes
+(although they are still accessible as such) set the class
+attribute <cite>_display_items_as_attributes</cite> to False. Default is
+True.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.parameters.Param.copy">
+<code class="descname">copy</code><span class="sig-paren">(</span><em>depth=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parameters.Param.copy" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns Param:</th><td class="field-body">A (recursive) copy of P with depth <cite>depth</cite></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.parameters.Param.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>__d__=None</em>, <em>in_place_depth=0</em>, <em>Convert=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parameters.Param.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update Param - almost same behavior as dict.update, except
+that all dictionaries are converted to Param if <cite>Convert</cite> is set
+to True, and update may occur in-place recursively for other Param
+instances that self refers to.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>Convert</strong> (<em>bool</em>) &#8211; If True, convert all dict-like values in self also to Param.
+<em>WARNING</em>
+This mey result in misdirected references in your environment</li>
+<li><strong>in_place_depth</strong> (<em>int</em>) &#8211; Counter for recursive in-place updates
+If the counter reaches zero, the Param to a key is
+replaced instead of updated</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.parameters.asParam">
+<code class="descclassname">ptypy.utils.parameters.</code><code class="descname">asParam</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parameters.asParam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the input to a Param.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>a</strong> (<em>dict_like</em>) &#8211; Input structure, in any format that can be converted to a Param.</li>
+<li><strong>Returns</strong> &#8211; </li>
+<li><strong>out</strong> (<a class="reference internal" href="#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; The Param structure built from a. No copy is done if the input
+is already a Param.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.utils.plot_client">
+<span id="ptypy-utils-plot-client-module"></span><h2>ptypy.utils.plot_client module<a class="headerlink" href="#module-ptypy.utils.plot_client" title="Permalink to this headline">¶</a></h2>
+<p>Client tools for plotting.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="class">
+<dt id="ptypy.utils.plot_client.MPLClient">
+<em class="property">class </em><code class="descclassname">ptypy.utils.plot_client.</code><code class="descname">MPLClient</code><span class="sig-paren">(</span><em>client_pars=None</em>, <em>autoplot_pars=None</em>, <em>layout_pars=None</em>, <em>in_thread=False</em>, <em>is_slave=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLClient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ptypy.utils.plot_client.MPLplotter" title="ptypy.utils.plot_client.MPLplotter"><code class="xref py py-class docutils literal"><span class="pre">ptypy.utils.plot_client.MPLplotter</span></code></a></p>
+<dl class="attribute">
+<dt id="ptypy.utils.plot_client.MPLClient.DEFAULT">
+<code class="descname">DEFAULT</code><em class="property"> = Param({'pr': Param({'layers': None, 'clims': [None, [-3.141592653589793, 3.141592653589793]], 'mask': 0.3, 'crop': [0.3, 0.3], 'use_colorbar': True, 'shape': None, 'cmaps': ['gray', 'hsv'], 'local_error': False, 'rm_pr': True, 'auto_display': ['c']}), 'plot_error': [True, True, True], 'gridspecpars': (0.1, 0.12, 0.07, 0.95, 0.05, 0.93), 'ob': Param({'layers': None, 'clims': [None, [-3.141592653589793, 3.141592653589793]], 'mask': 0.3, 'crop': [0.3, 0.3], 'use_colorbar': True, 'shape': None, 'cmaps': ['gray', 'hsv'], 'local_error': False, 'rm_pr': True, 'auto_display': ['a', 'p']}), 'movie': False, 'home': '/tmp/ptypy/', 'simplified_aspect_ratios': False, 'figsize': (12, 10), 'interactive': True})</em><a class="headerlink" href="#ptypy.utils.plot_client.MPLClient.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.plot_client.MPLClient.loop_plot">
+<code class="descname">loop_plot</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLClient.loop_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot forever.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ptypy.utils.plot_client.MPLplotter">
+<em class="property">class </em><code class="descclassname">ptypy.utils.plot_client.</code><code class="descname">MPLplotter</code><span class="sig-paren">(</span><em>pars=None</em>, <em>probes=None</em>, <em>objects=None</em>, <em>runtime=None</em>, <em>in_thread=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Plotting Client for Ptypy, using matplotlib.</p>
+<p>Create a client and attempt to connect to a running reconstruction server.</p>
+<dl class="attribute">
+<dt id="ptypy.utils.plot_client.MPLplotter.DEFAULT">
+<code class="descname">DEFAULT</code><em class="property"> = Param({'pr': Param({'layers': None, 'clims': [None, [-3.141592653589793, 3.141592653589793]], 'mask': 0.3, 'crop': [0.3, 0.3], 'use_colorbar': True, 'shape': None, 'cmaps': ['gray', 'hsv'], 'local_error': False, 'rm_pr': True, 'auto_display': ['c']}), 'plot_error': [True, True, True], 'gridspecpars': (0.1, 0.12, 0.07, 0.95, 0.05, 0.93), 'ob': Param({'layers': None, 'clims': [None, [-3.141592653589793, 3.141592653589793]], 'mask': 0.3, 'crop': [0.3, 0.3], 'use_colorbar': True, 'shape': None, 'cmaps': ['gray', 'hsv'], 'local_error': False, 'rm_pr': True, 'auto_display': ['a', 'p']}), 'movie': False, 'home': '/tmp/ptypy/', 'simplified_aspect_ratios': False, 'figsize': (12, 10), 'interactive': True})</em><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="ptypy.utils.plot_client.MPLplotter.create_plot_from_tile_list">
+<em class="property">static </em><code class="descname">create_plot_from_tile_list</code><span class="sig-paren">(</span><em>fignum=1, num_shape_list=[(4, (2, 2))], figsize=(8, 8)</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.create_plot_from_tile_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.plot_client.MPLplotter.draw">
+<code class="descname">draw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.plot_client.MPLplotter.plot_all">
+<code class="descname">plot_all</code><span class="sig-paren">(</span><em>blocking=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.plot_all" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.plot_client.MPLplotter.plot_error">
+<code class="descname">plot_error</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.plot_error" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.plot_client.MPLplotter.plot_storage">
+<code class="descname">plot_storage</code><span class="sig-paren">(</span><em>storage</em>, <em>plot_pars</em>, <em>title=''</em>, <em>typ='obj'</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.plot_storage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.plot_client.MPLplotter.save">
+<code class="descname">save</code><span class="sig-paren">(</span><em>pattern</em>, <em>count=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.plot_client.MPLplotter.update_plot_layout">
+<code class="descname">update_plot_layout</code><span class="sig-paren">(</span><em>plot_template=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.update_plot_layout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate the plot layout.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ptypy.utils.plot_client.PlotClient">
+<em class="property">class </em><code class="descclassname">ptypy.utils.plot_client.</code><code class="descname">PlotClient</code><span class="sig-paren">(</span><em>client_pars=None</em>, <em>in_thread=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.PlotClient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>A client that connects and continually gets the data required for plotting.
+Note: all data is transferred as soon as the server provides it. This might
+be a waste of bandwidth if all that is required is a client that plots &#8220;on demand&#8221;...</p>
+<p>This PlotClient doesn&#8217;t actually plot.</p>
+<p>Create a client and attempt to connect to a running reconstruction server.</p>
+<dl class="attribute">
+<dt id="ptypy.utils.plot_client.PlotClient.ACTIVE">
+<code class="descname">ACTIVE</code><em class="property"> = 1</em><a class="headerlink" href="#ptypy.utils.plot_client.PlotClient.ACTIVE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.plot_client.PlotClient.DATA">
+<code class="descname">DATA</code><em class="property"> = 2</em><a class="headerlink" href="#ptypy.utils.plot_client.PlotClient.DATA" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.plot_client.PlotClient.STOPPED">
+<code class="descname">STOPPED</code><em class="property"> = 0</em><a class="headerlink" href="#ptypy.utils.plot_client.PlotClient.STOPPED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.plot_client.PlotClient.disconnect">
+<code class="descname">disconnect</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.PlotClient.disconnect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Disconnect from reconstruction server.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.plot_client.PlotClient.get_data">
+<code class="descname">get_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.PlotClient.get_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Thread-safe way to copy data buffer.
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.plot_client.PlotClient.start">
+<code class="descname">start</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.PlotClient.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>This needs to be run for the thread to initialize.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.plot_client.PlotClient.status">
+<code class="descname">status</code><a class="headerlink" href="#ptypy.utils.plot_client.PlotClient.status" title="Permalink to this definition">¶</a></dt>
+<dd><p>True only if new data were acquired since last time checked.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.plot_client.PlotClient.stop">
+<code class="descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.PlotClient.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stop loop plot</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_client.spawn_MPLClient">
+<code class="descclassname">ptypy.utils.plot_client.</code><code class="descname">spawn_MPLClient</code><span class="sig-paren">(</span><em>client_pars</em>, <em>autoplot_pars</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.spawn_MPLClient" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function that creates and runs a silent instance of MPLClient.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.utils.plot_utils">
+<span id="ptypy-utils-plot-utils-module"></span><h2>ptypy.utils.plot_utils module<a class="headerlink" href="#module-ptypy.utils.plot_utils" title="Permalink to this headline">¶</a></h2>
+<p>Plotting utilities.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.pause">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">pause</code><span class="sig-paren">(</span><em>timeout=-1</em>, <em>message=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.pause" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pause the execution of a script while leaving matplotlib figures
+responsive.
+<em>Gui aware</em></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>timeout</strong> (<em>float, optional</em>) &#8211; By default, execution is resumed only after hitting return.
+If timeout &gt;= 0, the execution is resumed after timeout seconds.</li>
+<li><strong>message</strong> (<em>str, optional</em>) &#8211; Message to diplay on terminal while pausing</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.rmphaseramp">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">rmphaseramp</code><span class="sig-paren">(</span><em>a</em>, <em>weight=None</em>, <em>return_phaseramp=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.rmphaseramp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempts to remove the phase ramp in a two-dimensional complex array
+<code class="docutils literal"><span class="pre">a</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>a</strong> (<em>ndarray</em>) &#8211; Input image as complex 2D-array.</li>
+<li><strong>weight</strong> (<em>ndarray, str, optional</em>) &#8211; Pass weighting array or use <code class="docutils literal"><span class="pre">'abs'</span></code> for a modulus-weighted
+phaseramp and <code class="docutils literal"><span class="pre">Non</span></code> for no weights.</li>
+<li><strong>return_phaseramp</strong> (<em>bool, optional</em>) &#8211; Use True to get also the phaseramp array <code class="docutils literal"><span class="pre">p</span></code>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>out</strong> (<em>ndarray</em>) &#8211;
+Modified 2D-array, <code class="docutils literal"><span class="pre">out=a*p</span></code></li>
+<li><strong>p</strong> (<em>ndarray, optional</em>) &#8211;
+Phaseramp if <code class="docutils literal"><span class="pre">return_phaseramp</span> <span class="pre">=</span> <span class="pre">True</span></code>, otherwise omitted</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">rmphaseramp</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="p">,</span> <span class="n">p</span> <span class="o">=</span> <span class="n">rmphaseramp</span><span class="p">(</span><span class="n">image</span> <span class="p">,</span> <span class="n">return_phaseramp</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.plot_storage">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">plot_storage</code><span class="sig-paren">(</span><em>S</em>, <em>fignum=100</em>, <em>modulus='linear'</em>, <em>slices=(slice(None</em>, <em>1</em>, <em>None)</em>, <em>slice(None</em>, <em>None</em>, <em>None)</em>, <em>slice(None</em>, <em>None</em>, <em>None))</em>, <em>si_axes='x'</em>, <em>mask=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.plot_storage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Quickly display the data buffer of a <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a> instance.</p>
+<p>Keyword arguments are those of <code class="xref any docutils literal"><span class="pre">PtyAxis</span></code></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>S</strong> (<a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><em>Storage</em></a>) &#8211; Storage instance</li>
+<li><strong>fignum</strong> (<em>int, optional</em>) &#8211; Number of the figure.</li>
+<li><strong>slices</strong> (<em>tuple of slices or string of numpy index expression, optional</em>) &#8211; Determines what part of Storage buffer is displayed, i.e. which
+layers and which region-of-interest. Layers are subplotted
+horizontically next to each other. Figsize is (6,6*layers)</li>
+<li><strong>modulus</strong> (<em>str, optional</em>) &#8211; One of <cite>sqrt</cite>, <cite>log</cite> or <cite>linear</cite> to apply to modulus of array
+buffer. Useful to reduce dynamic range for diffraction images.</li>
+<li><strong>si_axes</strong> (<em>str, optional</em>) &#8211; One of &#8216;x&#8217;,&#8217;xy&#8217;,&#8217;y&#8217; or None, determins which axes display
+length units instead of pixel units</li>
+<li><strong>mask</strong> (<em>ndarray, scalar or None</em>) &#8211; Bool array of valid pixel data for rescaling.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fig</strong></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">maplotlib.pyplot.figure</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.plot_utils.imsave" title="ptypy.utils.plot_utils.imsave"><code class="xref py py-func docutils literal"><span class="pre">imsave()</span></code></a>, <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.imsave">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">imsave</code><span class="sig-paren">(</span><em>a</em>, <em>filename=None</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>cmap=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.imsave" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take array <cite>a</cite> and transform to <cite>PIL.Image</cite> object that may be used
+by <cite>pyplot.imshow</cite> for example. Also save image buffer directly
+without the sometimes unnecessary Gui-frame and overhead.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>a</strong> (<em>ndarray</em>) &#8211; Two dimensional array. Can be complex, in which case the amplitude
+will be optionally clipped by <cite>vmin</cite> and <cite>vmax</cite> if set.</li>
+<li><strong>filename</strong> (<em>str, optionsl</em>) &#8211; File path to save the image buffer to. Use &#8216;*.png&#8217; or &#8216;*.png&#8217;
+as image formats.</li>
+<li><strong>vmin,vmax</strong> (<em>float, optional</em>) &#8211; Value limits (&#8216;clipping&#8217;) to fit the color scale.
+If not set, color scale will span from minimum to maximum value
+in array</li>
+<li><strong>cmap</strong> (<em>str, optional</em>) &#8211; Name of the colormap for colorencoding.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>im</strong> &#8211;
+a <cite>PIL.Image</cite> object.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">PIL.Image</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.plot_utils.complex2rgb" title="ptypy.utils.plot_utils.complex2rgb"><code class="xref py py-func docutils literal"><span class="pre">complex2rgb()</span></code></a></p>
+</div>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.utils</span> <span class="kn">import</span> <span class="n">imsave</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.resources</span> <span class="kn">import</span> <span class="n">flower_obj</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">flower_obj</span><span class="p">(</span><span class="mi">512</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pil</span> <span class="o">=</span> <span class="n">imsave</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">pil</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>converts array a into, and returns a PIL image and displays it.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">pil</span> <span class="o">=</span> <span class="n">imsave</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">moon</span><span class="o">.</span><span class="n">png</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>returns the image and also saves it to filename</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">imsave</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>clips the array to values between 0 and 0.5.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">imsave</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="s">&#39;gray&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>uses a matplotlib colormap with name &#8216;gray&#8217;</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.imload">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">imload</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.imload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load an image and returns a numpy array. <em>May get deleted</em></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.complex2hsv">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">complex2hsv</code><span class="sig-paren">(</span><em>cin</em>, <em>vmin=None</em>, <em>vmax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.complex2hsv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms a complex array into an RGB image,
+mapping phase to hue, amplitude to value and
+keeping maximum saturation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>cin</strong> (<em>ndarray</em>) &#8211; Complex input. Must be two-dimensional.</li>
+<li><strong>vmin,vmax</strong> (<em>float</em>) &#8211; Clip amplitude of input into this interval.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>rgb</strong> &#8211;
+Three dimensional output.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.plot_utils.complex2rgb" title="ptypy.utils.plot_utils.complex2rgb"><code class="xref py py-func docutils literal"><span class="pre">complex2rgb()</span></code></a>, <a class="reference internal" href="#ptypy.utils.plot_utils.hsv2rgb" title="ptypy.utils.plot_utils.hsv2rgb"><code class="xref py py-func docutils literal"><span class="pre">hsv2rgb()</span></code></a>, <a class="reference internal" href="#ptypy.utils.plot_utils.hsv2complex" title="ptypy.utils.plot_utils.hsv2complex"><code class="xref py py-func docutils literal"><span class="pre">hsv2complex()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.complex2rgb">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">complex2rgb</code><span class="sig-paren">(</span><em>cin</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.complex2rgb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Executes <cite>complex2hsv</cite> and then <cite>hsv2rgb</cite></p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.plot_utils.complex2hsv" title="ptypy.utils.plot_utils.complex2hsv"><code class="xref py py-func docutils literal"><span class="pre">complex2hsv()</span></code></a>, <a class="reference internal" href="#ptypy.utils.plot_utils.hsv2rgb" title="ptypy.utils.plot_utils.hsv2rgb"><code class="xref py py-func docutils literal"><span class="pre">hsv2rgb()</span></code></a>, <a class="reference internal" href="#ptypy.utils.plot_utils.rgb2complex" title="ptypy.utils.plot_utils.rgb2complex"><code class="xref py py-func docutils literal"><span class="pre">rgb2complex()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.hsv2rgb">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">hsv2rgb</code><span class="sig-paren">(</span><em>hsv</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.hsv2rgb" title="Permalink to this definition">¶</a></dt>
+<dd><p>HSV (Hue,Saturation,Value) to RGB (Red,Green,Blue) transformation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>hsv</strong> (<em>array-like</em>) &#8211; Input must be two-dimensional. <strong>First</strong> axis is interpreted
+as hue,saturation,value channels.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>rgb</strong> &#8211;
+Three dimensional output. <strong>Last</strong> axis is interpreted as
+red, green, blue channels.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">ndarray</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.plot_utils.complex2rgb" title="ptypy.utils.plot_utils.complex2rgb"><code class="xref py py-func docutils literal"><span class="pre">complex2rgb()</span></code></a>, <a class="reference internal" href="#ptypy.utils.plot_utils.complex2hsv" title="ptypy.utils.plot_utils.complex2hsv"><code class="xref py py-func docutils literal"><span class="pre">complex2hsv()</span></code></a>, <a class="reference internal" href="#ptypy.utils.plot_utils.rgb2hsv" title="ptypy.utils.plot_utils.rgb2hsv"><code class="xref py py-func docutils literal"><span class="pre">rgb2hsv()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.rgb2complex">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">rgb2complex</code><span class="sig-paren">(</span><em>rgb</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.rgb2complex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reverse to <a class="reference internal" href="#ptypy.utils.plot_utils.complex2rgb" title="ptypy.utils.plot_utils.complex2rgb"><code class="xref any py py-func docutils literal"><span class="pre">complex2rgb</span></code></a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.rgb2hsv">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">rgb2hsv</code><span class="sig-paren">(</span><em>rgb</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.rgb2hsv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reverse to <a class="reference internal" href="#ptypy.utils.plot_utils.hsv2rgb" title="ptypy.utils.plot_utils.hsv2rgb"><code class="xref any py py-func docutils literal"><span class="pre">hsv2rgb</span></code></a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.hsv2complex">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">hsv2complex</code><span class="sig-paren">(</span><em>cin</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.hsv2complex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reverse to <a class="reference internal" href="#ptypy.utils.plot_utils.complex2hsv" title="ptypy.utils.plot_utils.complex2hsv"><code class="xref any py py-func docutils literal"><span class="pre">complex2hsv</span></code></a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.plot_utils.franzmap">
+<code class="descclassname">ptypy.utils.plot_utils.</code><code class="descname">franzmap</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.franzmap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the default colormap to Franz&#8217;s map and apply to current image if any.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.utils.scripts">
+<span id="ptypy-utils-scripts-module"></span><h2>ptypy.utils.scripts module<a class="headerlink" href="#module-ptypy.utils.scripts" title="Permalink to this headline">¶</a></h2>
+<p>longer script-like functions</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="function">
+<dt id="ptypy.utils.scripts.hdr_image">
+<code class="descclassname">ptypy.utils.scripts.</code><code class="descname">hdr_image</code><span class="sig-paren">(</span><em>img_list, exp_list, thresholds=[3000, 50000], dark_list=[], avg_type='highest', mask_list=[], ClipLongestExposure=False, ClipShortestExposure=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.scripts.hdr_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a  high dynamic range image from a list of images <cite>img_list</cite>
+and corresponding exposure information in <cite>exp_list</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>img_list</strong> (<em>list</em>) &#8211; Sequence of images (as 2d np.ndarray)</li>
+<li><strong>exp_list</strong> (<em>list of float</em>) &#8211; Associated exposures to each element of above sequence <cite>img_list</cite></li>
+<li><strong>thresholds</strong> (<em>list, 2-tuple</em>) &#8211; Tuple of lower limit (noise floor) and upper limit (overexposure)
+in the images.</li>
+<li><strong>dark_list</strong> (<em>list</em>) &#8211; Single frame or sequence of dark images (as 2d np.array) of the
+same length as <cite>img_list</cite>. These frames are used for dark-field
+correction</li>
+<li><strong>avg_type</strong> (<em>str</em>) &#8211; <p>Type of combining all valid pixels:</p>
+<ul>
+<li><cite>&#8216;highest&#8217;</cite>, the next longest exposure is used to replace
+overexposed pixels.</li>
+<li><cite>&lt;other_string&gt;</cite>, overexposed pixels are raplaced by the
+pixel average of all other images with valid pixel values
+for that pixel.</li>
+</ul>
+</li>
+<li><strong>mask_list</strong> (<em>list</em>) &#8211; Single frame or sequence of 2d np.array.
+Provide additional masking (dead pixels, hot pixels)</li>
+<li><strong>ClipLongestExposure</strong> (<em>bool</em>) &#8211; If True, also mask the noise floor in the longest exposure.</li>
+<li><strong>ClipShortestExposure</strong> (<em>bool</em>) &#8211; if True, also mask the overexposed pixels in the shortest exposure.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out</strong> &#8211;
+Combined hdr-image with shape of one of the frame in <cite>img_list</cite></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">io</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dark_list</span><span class="p">,</span><span class="n">meta</span><span class="o">=</span><span class="n">io</span><span class="o">.</span><span class="n">image_read</span><span class="p">(</span><span class="s">&#39;/path/to/dark/images/ccd*.raw&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">img_list</span><span class="p">,</span><span class="n">meta</span><span class="o">=</span><span class="n">io</span><span class="o">.</span><span class="n">image_read</span><span class="p">(</span><span class="s">&#39;/path/to/images/ccd*.raw&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">exp_list</span><span class="o">=</span><span class="p">[</span><span class="n">meta</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s">&#39;exposure_time__key&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">meta</span><span class="p">))]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hdr</span><span class="p">,</span><span class="n">masks</span> <span class="o">=</span> <span class="n">hdr_image</span><span class="p">(</span><span class="n">img_list</span><span class="p">,</span> <span class="n">exp_list</span><span class="p">,</span> <span class="n">dark_list</span><span class="o">=</span><span class="n">dark_list</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.scripts.diversify">
+<code class="descclassname">ptypy.utils.scripts.</code><code class="descname">diversify</code><span class="sig-paren">(</span><em>A</em>, <em>noise=None</em>, <em>shift=None</em>, <em>power=1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.scripts.diversify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add diversity to 3d numpy array <cite>A</cite>, <em>acts in-place</em>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>noise</strong> (<em>2-tuple or 4-tuple</em>) &#8211; For detailed descriptiom see <a class="reference internal" href="#ptypy.utils.parallel.MPInoise2d" title="ptypy.utils.parallel.MPInoise2d"><code class="xref any py py-func docutils literal"><span class="pre">ptypy.utils.parallel.MPInoise2d</span></code></a></li>
+<li><strong>power</strong> (<em>float, tuple</em>) &#8211; Relative power of layers with respect to the first (0) layer.
+Can be scalar or tuple / array</li>
+<li><strong>shift</strong> (<em>float, tuple</em>) &#8211; Relative shift of layers with respect to the first (0) layer.
+Can be scalar or tuple / array
+<strong>not implemented yet</strong></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.parallel.MPInoise2d" title="ptypy.utils.parallel.MPInoise2d"><code class="xref py py-func docutils literal"><span class="pre">ptypy.utils.parallel.MPInoise2d()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.scripts.cxro_iref">
+<code class="descclassname">ptypy.utils.scripts.</code><code class="descname">cxro_iref</code><span class="sig-paren">(</span><em>formula</em>, <em>energy</em>, <em>density=-1</em>, <em>npts=100</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.scripts.cxro_iref" title="Permalink to this definition">¶</a></dt>
+<dd><p>Query CXRO database for index of refraction values for a solid</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>formula</strong> (<em>str</em>) &#8211; String representation of the Formula to use.</li>
+<li><strong>energy</strong> (<em>float or (float,float)</em>) &#8211; Either a single energy (in eV) or the minimum/maximum bounds</li>
+<li><strong>density</strong> (<em>None or float, optional</em>) &#8211; Density of the material [g/ccm]. If <code class="docutils literal"><span class="pre">None</span></code> or <code class="docutils literal"><span class="pre">&lt;0</span></code> the
+regular density at ambiente temperatures is used.</li>
+<li><strong>npts</strong> (<em>int, optional</em>) &#8211; Number of points between the min and max energies.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>energy, delta, beta</strong> &#8211;
+Energy used and the respective <cite>delta</cite> and <cite>beta</cite> values.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scalar or vector</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.scripts.xradia_star">
+<code class="descclassname">ptypy.utils.scripts.</code><code class="descname">xradia_star</code><span class="sig-paren">(</span><em>sh</em>, <em>spokes=48</em>, <em>std=0.5</em>, <em>minfeature=5</em>, <em>ringfact=2</em>, <em>rings=4</em>, <em>contrast=1.0</em>, <em>Fast=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.scripts.xradia_star" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an Xradia-like star pattern on an array of shape <cite>sh</cite>
+Works superb as test pattern in ptychography</p>
+<p><em>requires scipy</em></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>std</strong> (<em>float</em>) &#8211; &#8220;Resolution&#8221; of xradia star, i.e. standard deviation of the
+errorfunction used for smoothing the edges (in pixel).</li>
+<li><strong>spokes</strong> (<em>int, optional</em>) &#8211; Number of spokes</li>
+<li><strong>minfeature</strong> (<em>float, optional</em>) &#8211; Spoke width at the smallest (inner) tip (in pixel).</li>
+<li><strong>ringfact</strong> (<em>float</em>) &#8211; Increase in featuresize from ring to ring (factor). Determines
+position of the rings.</li>
+<li><strong>rings</strong> (<em>int</em>) &#8211; Number of rings with spokes.</li>
+<li><strong>contrast</strong> (<em>float</em>) &#8211; Minimum contrast, set to zero for a gradual increase of the profile
+from zero to 1, set to 1 for no gradient in profile</li>
+<li><strong>Fast</strong> (<em>bool</em>) &#8211; If set to False, the error function is evaluated at the edges.
+Prefered choice when using fft, as edges are less prone to
+antiaaliasing in this case. If set to True, simple boolean
+comparison will be used instead to draw the edges and the
+result is later smoothed with a gaussian filter. Prefered choice
+for unpatient users, as this choice is roughly a factor 2 faster
+for larger arrays</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.utils</span> <span class="kn">import</span> <span class="n">xradia_star</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># Base configuration</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X1</span> <span class="o">=</span> <span class="n">xradia_star</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># Few spokes single ring</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X2</span> <span class="o">=</span> <span class="n">xradia_star</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">rings</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">minfeature</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">ringfact</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># Very fine plus gradient</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X3</span> <span class="o">=</span> <span class="n">xradia_star</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="n">std</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">rings</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">minfeature</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">contrast</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">131</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">X1</span><span class="p">,</span><span class="n">cmap</span><span class="o">=</span><span class="s">&#39;gray&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">132</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">X2</span><span class="p">,</span><span class="n">cmap</span><span class="o">=</span><span class="s">&#39;gray&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">133</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">X3</span><span class="p">,</span><span class="n">cmap</span><span class="o">=</span><span class="s">&#39;gray&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.scripts.png2mpg">
+<code class="descclassname">ptypy.utils.scripts.</code><code class="descname">png2mpg</code><span class="sig-paren">(</span><em>listoffiles</em>, <em>framefile='frames.txt'</em>, <em>fps=5</em>, <em>bitrate=2000</em>, <em>codec='wmv2'</em>, <em>Encode=True</em>, <em>RemoveImages=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.scripts.png2mpg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes a movie (*.mpg) from a collection of *.png or *.jpeg frames.
+<em>Requires</em> binary of <strong>mencoder</strong> installed on system</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>listoffiles</strong> (<em>list of str</em>) &#8211; A list of paths to files. Each file will be reinterpreted as a
+collection files in the same directory, e.g. only the first file
+in a series needs to be selected. All series for which a first
+file was given will be concatenated in the movie. May also be
+a textfile with a listing of frames in which case the creation
+of an intermediate file of frame paths will be skipped.</li>
+<li><strong>framefile</strong> (<em>str</em>) &#8211; Filepath, the respective file will be created to store a list
+of all frames. This file will be used by mencoder later.</li>
+<li><strong>fps</strong> (<em>scalar</em>) &#8211; Frames per second in final movie</li>
+<li><strong>bitrate</strong> (<em>int</em>) &#8211; Encoding detail, determines video quality</li>
+<li><strong>codec</strong> (<em>str</em>) &#8211; Defines the codec to Use</li>
+<li><strong>Encode</strong> (<em>bool</em>) &#8211; If True, video will be encoded calling mencocder
+If False, mencoder will not be called, but the necessary command
+expression will be returned instead. Very well suited for a dry-run</li>
+<li><strong>RemoveImages</strong> (<em>bool</em>) &#8211; If True, all images refered to by framefile are deleted except
+for the last frame.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>cmd</strong> &#8211;
+Command string for the shell to encode the video later manually.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">str</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.utils</span> <span class="kn">import</span> <span class="n">png2mpg</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">png2mpg</span><span class="p">([</span><span class="s">&#39;/path/to/image_000.png&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>The following happens:
+1) search for files similar to image_*.png in &#8216;/path/to/&#8217;
+2) found files get listed in a file &#8216;/path/to/frames.txt&#8217;
+3) calls mencoder to use that file to encode a movie with the default args.
+4) movie is in the same folder as &#8216;frames.txt&#8217; and is called &#8216;frames.mpg&#8217;</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">png2mpg</span><span class="p">([</span><span class="s">&#39;/path1/to/imageA_040.png&#39;</span><span class="p">,</span><span class="s">&#39;/path2/to/imageB_001.png&#39;</span><span class="p">],</span><span class="n">framefile</span><span class="o">=</span><span class="s">&#39;./banana.txt&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Generates list file &#8216;banana_text&#8217; in current folder. The list file
+contains in order every path compatible with the wildcards
+&#8216;/path1/to/imageA_*.png&#8217; and &#8216;/path2/to/imageB_*.png&#8217;</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="nb">str</span><span class="o">=</span><span class="n">png2mpg</span><span class="p">([</span><span class="s">&#39;/path/to/image_000.png&#39;</span><span class="p">],</span><span class="n">Encode</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Returns encoder argument string. Use os.system(encoderstring) for
+encoding manually later</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.scripts.mass_center">
+<code class="descclassname">ptypy.utils.scripts.</code><code class="descname">mass_center</code><span class="sig-paren">(</span><em>A</em>, <em>axes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.scripts.mass_center" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates mass center of n-dimensional array <cite>A</cite>
+along tuple of axis <cite>axes</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>ndarray</em>) &#8211; input array</li>
+<li><strong>axes</strong> (<em>list,tuple</em>) &#8211; Sequence of axes that contribute to distributed mass. If
+<code class="docutils literal"><span class="pre">axes==None</span></code>, all axes are considered.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mass</strong> &#8211;
+Center of mass in pixel for each <cite>axis</cite> selected.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">1darray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.scripts.phase_from_dpc">
+<code class="descclassname">ptypy.utils.scripts.</code><code class="descname">phase_from_dpc</code><span class="sig-paren">(</span><em>dpc_row</em>, <em>dpc_col</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.scripts.phase_from_dpc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements fourier integration method for two diffential quantities.</p>
+<p>Assumes 2 arrays of N-dimensions who contain differential quantities
+in X and Y, i.e. the LAST two dimensions (-2 &amp; -1) in this case.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dpc_col</strong> (<em>dpc_row,</em>) &#8211; Differential information along 2nd last dimension
+and last dimension respectively. Must be the same shape</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>out</strong> &#8211;
+Integrated array of same shape as <cite>dpc_row</cite> and <cite>dpc_col</cite>.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">ndarray</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.scripts.radial_distribution">
+<code class="descclassname">ptypy.utils.scripts.</code><code class="descname">radial_distribution</code><span class="sig-paren">(</span><em>A</em>, <em>radii=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.scripts.radial_distribution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns radial mass distribution up to radii in <cite>radii</cite></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>ndarray</em>) &#8211; input array</li>
+<li><strong>radii</strong> (<em>list,tuple</em>) &#8211; Sequence of radii to calculate enclosed mass. If <cite>None</cite>,
+the sequence defaults to <code class="docutils literal"><span class="pre">range(1,np.min(A.shape)/2)</span></code></li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>radii, masses</strong> &#8211;
+Sequence of used <cite>radii</cite> and corresponding intergrated mass
+<cite>masses</cite>. Sequences have the same length</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.scripts.stxm_analysis">
+<code class="descclassname">ptypy.utils.scripts.</code><code class="descname">stxm_analysis</code><span class="sig-paren">(</span><em>storage</em>, <em>probe=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.scripts.stxm_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs a stxm analysis on a storage using the pods.
+This function is MPI compatible.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>storage</strong> (<em>ptypy.core.Storage instance</em>) &#8211; A <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a> instance to be analysed</li>
+<li><strong>probe</strong> (<em>None, scalar or array</em>) &#8211; <ul>
+<li>If None, picks a probe from the first view&#8217;s pod</li>
+<li>If scalar, uses a Gaussian with probe as standard deviation</li>
+<li>Else: attempts to use passed value directly as 2d-probe</li>
+</ul>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>trans</strong> (<em>ndarray</em>) &#8211;
+Transmission  of shape <code class="docutils literal"><span class="pre">storage.shape</span></code>.</li>
+<li><strong>dpc_row</strong> (<em>ndarray</em>) &#8211;
+Differential phase contrast along row-coordinates, i.e. vertical
+direction (y-direction) of shape <code class="docutils literal"><span class="pre">storage.shape</span></code>.</li>
+<li><strong>dpc_col</strong> (<em>ndarray</em>) &#8211;
+Differential phase contrast along column-coordinates, i.e.
+horizontal direction (x-direction) of shape <code class="docutils literal"><span class="pre">storage.shape</span></code>.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.scripts.stxm_init">
+<code class="descclassname">ptypy.utils.scripts.</code><code class="descname">stxm_init</code><span class="sig-paren">(</span><em>storage</em>, <em>probe=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.scripts.stxm_init" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convnenience script that performs a STXM analyis for storage
+<cite>storage</cite> given a probe array <cite>probe</cite> and stores result back
+in storage</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#ptypy.utils.scripts.stxm_analysis" title="ptypy.utils.scripts.stxm_analysis"><code class="xref py py-func docutils literal"><span class="pre">stxm_analysis()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.scripts.load_from_ptyr">
+<code class="descclassname">ptypy.utils.scripts.</code><code class="descname">load_from_ptyr</code><span class="sig-paren">(</span><em>filename</em>, <em>what='probe'</em>, <em>ID=None</em>, <em>layer=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.scripts.load_from_ptyr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience script to extract data from <code class="docutils literal"><span class="pre">*.ptyr</span></code>-file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filename</strong> (<em>str</em>) &#8211; Full Path to a <code class="docutils literal"><span class="pre">*.ptyr</span></code> data file. No check on the file suffix
+is done. Any compatible hdf5 formatted file is allowed.</li>
+<li><strong>what</strong> (<em>str</em>) &#8211; Type of container to retrieve. Only <cite>&#8216;probe&#8217;</cite> and <cite>&#8216;obj&#8217;</cite> makes
+sense. Default is <cite>&#8216;probe&#8217;</cite></li>
+<li><strong>ID</strong> (<em>str</em>) &#8211; ID of storage in chosen container. If <code class="docutils literal"><span class="pre">None</span></code> the first stored
+storage is choosen</li>
+<li><strong>layer</strong> (<em>int, optional</em>) &#8211; If an interger, the data buffer of chosen storage gets sliced
+with <cite>layer</cite> for its first index</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>data</strong> &#8211;
+If <cite>layer</cite> is provided, that layer <code class="docutils literal"><span class="pre">storaga,data[layer]</span></code>
+will be sliced from the 3d data buffer, else the whole buffer
+<code class="docutils literal"><span class="pre">storage.data</span></code> will be returned.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.utils.validator">
+<span id="ptypy-utils-validator-module"></span><h2>ptypy.utils.validator module<a class="headerlink" href="#module-ptypy.utils.validator" title="Permalink to this headline">¶</a></h2>
+<p>Parameter validation. This module parses the file
+<code class="docutils literal"><span class="pre">resources/parameters_descriptions.csv</span></code> to extract the parameter
+defaults for PtyPy. It saves all parameters in the form of
+a <a class="reference internal" href="#ptypy.utils.validator.PDesc" title="ptypy.utils.validator.PDesc"><code class="xref py py-class docutils literal"><span class="pre">PDesc</span></code></a> object, which are flat listed in
+<cite>parameter_descriptions</cite> or in <cite>entry_points_dct</cite>, which only contains
+parameters with subparameters (children).</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="function">
+<dt id="ptypy.utils.validator.create_default_template">
+<code class="descclassname">ptypy.utils.validator.</code><code class="descname">create_default_template</code><span class="sig-paren">(</span><em>filename=None</em>, <em>user_level=0</em>, <em>doc_level=2</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.validator.create_default_template" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a (descriptive) template for ptypy.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>filename</strong> (<em>str</em>) &#8211; python file (.py) to generate, will be overriden if it exists</li>
+<li><strong>user_level</strong> (<em>int</em>) &#8211; Filter parameters to display on those with less/equal user level</li>
+<li><strong>doc_level</strong> (<em>int</em>) &#8211; <ul>
+<li>if <code class="docutils literal"><span class="pre">0</span></code>, no comments.</li>
+<li>if <code class="docutils literal"><span class="pre">1</span></code>, <em>short_doc</em> as comment in script</li>
+<li>if <code class="docutils literal"><span class="pre">&gt;2</span></code>, <em>long_doc</em> and <em>short_doc</em> as comment in script</li>
+</ul>
+</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.validator.make_sub_default">
+<code class="descclassname">ptypy.utils.validator.</code><code class="descname">make_sub_default</code><span class="sig-paren">(</span><em>entry_point</em>, <em>depth=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.validator.make_sub_default" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a default parameter structure, from the loaded parameter
+descriptions in this module</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>entry_point</strong> (<em>str</em>) &#8211; The node in the default parameter file</li>
+<li><strong>depth</strong> (<em>int</em>) &#8211; The depth in the structure to which all sub nodes are expanded
+All nodes beyond depth will be returned as empty <a class="reference internal" href="#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><code class="xref any py py-class docutils literal"><span class="pre">Param</span></code></a>
+structure.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>pars</strong> &#8211;
+A parameter branch.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param">Param</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.utils</span> <span class="kn">import</span> <span class="n">validator</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">validator</span><span class="o">.</span><span class="n">make_sub_default</span><span class="p">(</span><span class="s">&#39;.io&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.validator.validate">
+<code class="descclassname">ptypy.utils.validator.</code><code class="descname">validate</code><span class="sig-paren">(</span><em>pars, entry_point, walk=True, raisecodes=[0, 4]</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.validator.validate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check that the parameter structure <cite>pars</cite> matches the documented
+constraints at the given entry_point.</p>
+<p>The function raises a RuntimeError if one of the code in the list
+<cite>raisecodes</cite> has been found. If raisecode is empty, the function will
+always return successfully but problems will be logged using logger.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>pars</strong> (<a class="reference internal" href="#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; A parameter set to validate</li>
+<li><strong>entry_point</strong> (<em>str</em>) &#8211; The node in the parameter structure to match to.</li>
+<li><strong>walk</strong> (<em>bool</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code> (<em>default</em>), navigate sub-parameters.</li>
+<li><strong>raisecodes</strong> (<em>list</em>) &#8211; List of codes that will raise a RuntimeError.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="ptypy.utils.validator.PDesc">
+<em class="property">class </em><code class="descclassname">ptypy.utils.validator.</code><code class="descname">PDesc</code><span class="sig-paren">(</span><em>description</em>, <em>parent=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.validator.PDesc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Small class to store all attributes of a ptypy parameter</p>
+<p>Stores description list for validation and documentation.</p>
+<dl class="method">
+<dt id="ptypy.utils.validator.PDesc.check">
+<code class="descname">check</code><span class="sig-paren">(</span><em>pars</em>, <em>walk</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.validator.PDesc.check" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check that input parameter pars is consistent with parameter description.
+If walk is True and pars is a Param object, checks are also conducted for all
+sub-parameters.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.choices">
+<code class="descname">choices</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.validator.PDesc.choices" title="Permalink to this definition">¶</a></dt>
+<dd><p>If parameter is a list of choices, these are listed here.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.default">
+<code class="descname">default</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.validator.PDesc.default" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default value can be any type. None if unknown.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.entry_point">
+<code class="descname">entry_point</code><a class="headerlink" href="#ptypy.utils.validator.PDesc.entry_point" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.is_evaluable">
+<code class="descname">is_evaluable</code><a class="headerlink" href="#ptypy.utils.validator.PDesc.is_evaluable" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.longdoc">
+<code class="descname">longdoc</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.validator.PDesc.longdoc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Longer documentation, may contain <em>sphinx</em> inline markup.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.lowlim">
+<code class="descname">lowlim</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.validator.PDesc.lowlim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lower limit of parameter, None if unknown</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.validator.PDesc.make_doc">
+<code class="descname">make_doc</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.validator.PDesc.make_doc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create documentation.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.name">
+<code class="descname">name</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.validator.PDesc.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Name of parameter</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.parent">
+<code class="descname">parent</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.validator.PDesc.parent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parent parameter (<a class="reference internal" href="#ptypy.utils.validator.PDesc" title="ptypy.utils.validator.PDesc"><code class="xref py py-class docutils literal"><span class="pre">PDesc</span></code></a> type) if it has one.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.utils.validator.PDesc.set_default">
+<code class="descname">set_default</code><span class="sig-paren">(</span><em>default=''</em>, <em>check=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.validator.PDesc.set_default" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets default (str) and derives value (python type)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.shortdoc">
+<code class="descname">shortdoc</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.validator.PDesc.shortdoc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Short descriptive string of parameter</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.type">
+<code class="descname">type</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.validator.PDesc.type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Type can be a comma-separated list of types</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.uplim">
+<code class="descname">uplim</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.validator.PDesc.uplim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Upper limit of parameter, None if unknown</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.utils.validator.PDesc.userlevel">
+<code class="descname">userlevel</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.utils.validator.PDesc.userlevel" title="Permalink to this definition">¶</a></dt>
+<dd><p>User level, a higher level means a parameter that is less
+likely to vary or harder to understand.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.utils.verbose">
+<span id="ptypy-utils-verbose-module"></span><h2>ptypy.utils.verbose module<a class="headerlink" href="#module-ptypy.utils.verbose" title="Permalink to this headline">¶</a></h2>
+<p>Verbose package, based on the standard logging library.</p>
+<p>Use as:
+from verbose import logger
+logger.warn(&#8216;This is a warning&#8217;)
+logger.info(&#8216;This is an information&#8217;)
+...</p>
+<p>TODO:
+- Handlers for file and for interaction server
+- option for logging.disable to reduce call overhead</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="function">
+<dt id="ptypy.utils.verbose.set_level">
+<code class="descclassname">ptypy.utils.verbose.</code><code class="descname">set_level</code><span class="sig-paren">(</span><em>level</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.verbose.set_level" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set verbosity level. Kept here for backward compatibility</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ptypy.utils.verbose.report">
+<code class="descclassname">ptypy.utils.verbose.</code><code class="descname">report</code><span class="sig-paren">(</span><em>thing</em>, <em>depth=4</em>, <em>noheader=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.verbose.report" title="Permalink to this definition">¶</a></dt>
+<dd><p>no protection for circular references</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ptypy.utils">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ptypy.utils" title="Permalink to this headline">¶</a></h2>
+<p>Util sub-package</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ptypy.simulations.html" title="ptypy.simulations package"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

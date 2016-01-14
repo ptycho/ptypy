@@ -1,0 +1,121 @@
+@import url("sphinxdoc.css");
+
+body {
+    font-family: 'Ubuntu','PT Sans' ,'Cuprum', sans-serif;
+    max-width: 1140px;
+}
+
+div.disclaimer{
+    text-align: left;
+    //margin-top: -12px;
+    color: #f9eed0;//white;
+    background-color: #2c5d8a;//#CA7900;//#40fbce;//#11557C;
+    padding: 1em;
+    padding-left: 1em;
+    padding-right: 1em;
+    font-weight: bold;
+}
+
+div.disclaimer a{
+    color: #d8b340;//white;
+}
+             
+div.pageheader {
+    background-image: url(ptypy_header_bg_sphinx.jpg);
+    background-repeat: repeat-x;
+    text-align: left;
+    padding: 20px 20px;
+    margin-top: 0px;
+    background-color: #2c5d8a;
+}
+
+div.pageheader ul {
+    float: right;
+    color: white;
+    list-style-type: none;
+    padding-left: 0;
+    margin-top: 0px;//-40px;
+    margin-right: 0px;//-20px;
+}
+
+div.pageheader li {
+    float: left;
+    margin: 0 0 0 10px;
+}
+
+div.pageheader li a {
+    border-radius: 1px;
+    padding: 14px 14px;
+    color: #11557C; //#40fbce; //#f9f9f0;
+    text-shadow: 0px 0px 6px #ffffff;
+    //text-shadow: 0 0 7px rgba(0, 0, 0, 0.7);
+}
+
+div.pageheader li a:hover {
+    //background-color: #f9f9f0;
+    color: #2dd0ff;//#09afd3; //#2491CF;//#09afd3;//#40fbce;//#f9f9f0;//#0a507a;
+    text-shadow: none;
+    background-image: url("probe_bg_40px.png");
+    background-repeat: no-repeat;
+}
+
+h0 {
+    position: relative;
+    top: -18px;
+    margin: 0;
+    padding: 0.0em 0 .0em 0.9em;
+    font-size: 2em;
+    color: #2c5d8a;//rgb(0, 94, 184);//#070098;//#11557C;//#070098;
+    //background-image: url("probe_bg_40px.png");
+    //background-repeat: no-repeat;
+    text-shadow: 0px 0px 6px #ffffff;//rgba(1.0, 1.0, 1.0, 0.0);//#2dd0ff;
+}
+
+h1 {
+    margin: 0;
+    padding: 0.7em 0.0em 0.3em 0.0em;
+    font-size: 1.5em;
+    color: #2c5d8a;//rgb(0, 94, 184); #11557C;
+    //background-image: url("probe_bg_40px.png");
+    //background-repeat: no-repeat;
+    //text-shadow: 2px 2px 8px #ffffff;
+}
+
+a {
+    color: #CA7900;
+    text-decoration: none;
+}
+
+a:hover {
+
+    color: #09afd3;//#40fbce;//#2491CF;
+}
+
+div.related {
+    //background-image: url(navigation.png);
+    //height: 2em;
+    //border-top: 1px solid #ddd;
+    //border-bottom: 1px solid #ddd;
+    //background-color: #2c5d8a;
+    //height: 3em;
+}
+
+div.related ul {
+    background-image: none;//url(navigation.png);
+    background-color: #2c5d8a;
+    height: 2em;
+    border-top: 0.1em solid #2c5d8a;//#ddd;
+    border-bottom: 1px solid #2c5d8a;//#ddd;
+    //margin-top: 1em;
+    //padding-top: 1em;
+}
+
+div.related ul li a {
+    color: white;
+}
+
+div.sphinxsidebar {
+
+    width: 260px;
+}
+
