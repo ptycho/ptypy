@@ -588,7 +588,7 @@ class PtyScan(object):
 
             if do_flip or do_crop or do_rebin:
                 logger.info('Enter preprocessing (crop/pad %s, rebin %s, flip/rotate %s) ... \n' %
-                            (str(do_crop), str(do_flip), str(do_rebin)))
+                            (str(do_crop), str(do_rebin), str(do_flip)))
                 # we proceed with numpy arrays. That is probably now
                 # more memory intensive but shorter in writing
                 if has_data:                       

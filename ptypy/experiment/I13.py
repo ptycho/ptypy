@@ -63,13 +63,13 @@ RECIPE.rl_deconvolution.gaussians.g1.off_y = 0.  # Offset / shift in y direction
 """
 
 # Generic defaults
-I13DEFAULT = core.data.PtyScan.DEFAULT.copy()
+I13DEFAULT = PtyScan.DEFAULT.copy()
 I13DEFAULT.recipe = RECIPE
 I13DEFAULT.auto_center = False
 I13DEFAULT.orientation = (False, False, False)
 
 
-class I13Scan(core.data.PtyScan):
+class I13Scan(PtyScan):
     DEFAULT = I13DEFAULT
 
     def __init__(self, pars=None, **kwargs):
@@ -158,47 +158,19 @@ class I13Scan(core.data.PtyScan):
             log(3, 'Save file is %s' % self.info.dfile)
         log(4, u.verbose.report(self.info))
 
-    def load_common(self):
+    def load_weight(self):
         """
-        Load dark, flat, and mask file.
+        Function description see parent class. For now, this function will be used to load the mask.
         """
-        common = u.Param()
-
-        # Load dark.
-        if self.info.recipe.dark_number is not None:
-            dark = []
-            key = NEXUS_PATHS.frame_pattern % self.info.recipe
-            dark_indices = len(io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern % self.info.recipe)[key])
-            for j in range(dark_indices):
-                dark.append(io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32))
-            dark = np.array(dark).mean(0)
-            common.dark = dark
-            log(3, 'Dark loaded successfully.')
-
-        # Load flat.
-        if self.info.recipe.flat_number is not None:
-            flat = []
-            key = NEXUS_PATHS.frame_pattern % self.info.recipe
-            flat_indices = len(io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern % self.info.recipe)[key])
-            for j in range(flat_indices):
-                flat.append(io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32))
-            flat = np.array(flat).mean(0)
-            common.flat = flat
-            log(3, 'Flat loaded successfully.')
-
         # FIXME: do something better here. (detector-dependent)
-        # Load mask
-        # common.weight2d = None
+        # Load mask as weight
         if self.info.recipe.mask_file is not None:
-            common.weight2d = io.h5read(self.info.recipe.mask_file, 'mask')['mask'].astype(float)
-
-        return common
+            return io.h5read(self.info.recipe.mask_file, 'mask')['mask'].astype(float)
 
     def load_positions(self):
         """
         Load the positions and return as an (N,2) array
         """
-
         # Load positions from file if possible.
         instrument = io.h5read(self.data_file, NEXUS_PATHS.instrument)[NEXUS_PATHS.instrument]
         motor_positions = None
@@ -228,6 +200,36 @@ class I13Scan(core.data.PtyScan):
             log(3, 'Original positions corrected by array provided.')
 
         return positions
+
+    def load_common(self):
+        """
+        Load dark and flat.
+        """
+        common = u.Param()
+
+        # Load dark.
+        if self.info.recipe.dark_number is not None:
+            dark = []
+            key = NEXUS_PATHS.frame_pattern % self.info.recipe
+            dark_indices = len(io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern % self.info.recipe)[key])
+            for j in range(dark_indices):
+                dark.append(io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32))
+            dark = np.array(dark).mean(0)
+            common.dark = dark
+            log(3, 'Dark loaded successfully.')
+
+        # Load flat.
+        if self.info.recipe.flat_number is not None:
+            flat = []
+            key = NEXUS_PATHS.frame_pattern % self.info.recipe
+            flat_indices = len(io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern % self.info.recipe)[key])
+            for j in range(flat_indices):
+                flat.append(io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32))
+            flat = np.array(flat).mean(0)
+            common.flat = flat
+            log(3, 'Flat loaded successfully.')
+
+        return common
 
     def check(self, frames, start=0):
         """

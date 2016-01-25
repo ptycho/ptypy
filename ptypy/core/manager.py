@@ -24,7 +24,6 @@ from classes import DEFAULT_ACCESSRULE
 from classes import MODEL_PREFIX
 
 from ..utils import parallel
-import geometry
 #from ..utils import prop
 import illumination
 import sample
