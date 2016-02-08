@@ -17,7 +17,7 @@ from array_utils import *
 __all__ = ['hdr_image','diversify','cxro_iref',
             'xradia_star','png2mpg','mass_center','phase_from_dpc',
             'radial_distribution','stxm_analysis','stxm_init',
-             'load_from_ptyr']
+             'load_from_ptyr', 'remove_hot_pixels']
 
 def diversify(A,noise = None,shift = None,power = 1.0):
     """
@@ -776,3 +776,203 @@ def cxro_iref(formula, energy,density=-1, npts=100):
         
 cxro_iref.cxro_server = _cxro_server
 cxro_iref.cxro_query = _cxro_POST_query
+
+def remove_hot_pixels(data, size=3, tolerance=10, ignore_edges=False):
+    """
+    Removes outlier data points of a 2D numpy array and replaces them with the median of the surrounding data points.
+    Original code (see at the end of function) had been published by DanHickstein on stackoverflow.com under
+    CC BY-SA license.
+
+    Parameters
+    ----------
+    data : 2darray
+        2D numpy array to be corrected.
+
+    size : int
+        Size of the window on which the median filter will be applied around every data point.
+
+    tolerance: int
+        Tolerance multiplied with the standard deviation of the data array subtracted by the blurred array
+        (difference array) yields the threshold for cutoff.
+
+    ignore_edges : bool
+        If True, edges of the array are ignored, which speeds up the code.
+
+    Returns
+    -------
+
+    out : 2darray, list
+        Returns a numpy array where outlier data points have been replaced with the median of the surrounding data points
+        and a list containing the coordinates of the outlier data points.
+    """
+    blurred = ndi.median_filter(data, size=size)
+    difference = data - blurred
+    threshold = tolerance * np.std(difference)
+
+    # Find the hot pixels, but ignore the edges
+    hot_pixels = np.nonzero((np.abs(difference[1:-1,1:-1])>threshold))
+    hot_pixels = np.array(hot_pixels) + 1 # Because the first row and first column had been ignored
+
+    fixed_image = np.copy(data)
+    for y, x in zip(hot_pixels[0], hot_pixels[1]):
+        fixed_image[y,x] = blurred[y,x]
+
+    if not ignore_edges:
+        height, width = np.shape(data)
+
+        ### Now get the pixels on the edges (but not the corners) ###
+
+        # Left and right sides
+        for index in range(1, height - 1):
+            # Left side:
+            med = np.median(data[index - 1:index + 2,0:2])
+            diff = np.abs(data[index,0] - med)
+            if diff > threshold:
+                hot_pixels = np.hstack((hot_pixels, [[index],[0]]))
+                fixed_image[index,0] = med
+
+            # Right side:
+            med = np.median(data[index - 1:index + 2,-2:])
+            diff = np.abs(data[index,-1] - med)
+            if diff > threshold:
+                hot_pixels = np.hstack((hot_pixels, [[index],[width - 1]]))
+                fixed_image[index,-1] = med
+
+        # Then the top and bottom
+        for index in range(1, width - 1):
+            # Bottom:
+            med = np.median(data[0:2,index - 1:index + 2])
+            diff = np.abs(data[0,index] - med)
+            if diff > threshold:
+                hot_pixels = np.hstack((hot_pixels, [[0],[index]]))
+                fixed_image[0,index] = med
+
+            # Top:
+            med = np.median(data[-2:,index - 1:index + 2])
+            diff = np.abs(data[-1,index] - med)
+            if diff > threshold:
+                hot_pixels = np.hstack((hot_pixels,[[height - 1], [index]]))
+                fixed_image[-1,index] = med
+
+        ### Then the corners ###
+
+        # Bottom left
+        med = np.median(data[0:2,0:2])
+        diff = np.abs(data[0,0] - med)
+        if diff > threshold:
+            hot_pixels = np.hstack((hot_pixels, [[0],[0]]))
+            fixed_image[0,0] = med
+
+        # Bottom right
+        med = np.median(data[0:2,-2:])
+        diff = np.abs(data[0,-1] - med)
+        if diff > threshold:
+            hot_pixels = np.hstack((hot_pixels, [[0],[width - 1]]))
+            fixed_image[0,-1] = med
+
+        # Top left
+        med = np.median(data[-2:,0:2])
+        diff = np.abs(data[-1,0] - med)
+        if diff > threshold:
+            hot_pixels = np.hstack((hot_pixels, [[height - 1],[0]]))
+            fixed_image[-1,0] = med
+
+        # Top right
+        med = np.median(data[-2:,-2:])
+        diff = np.abs(data[-1,-1] - med)
+        if diff > threshold:
+            hot_pixels = np.hstack((hot_pixels, [[height - 1],[width - 1]]))
+            fixed_image[-1,-1] = med
+
+    return fixed_image, hot_pixels
+
+    ### Original code ###
+    #def find_outlier_pixels(data,tolerance=3,worry_about_edges=True):
+    #This function finds the hot or dead pixels in a 2D dataset.
+    #tolerance is the number of standard deviations used to cutoff the hot pixels
+    #If you want to ignore the edges and greatly speed up the code, then set
+    #worry_about_edges to False.
+    #
+    #The function returns a list of hot pixels and also an image with with hot pixels removed
+    #
+    #from scipy.ndimage import median_filter
+    #blurred = median_filter(Z, size=2)
+    #difference = data - blurred
+    #threshold = 10*np.std(difference)
+    #
+    #find the hot pixels, but ignore the edges
+    #hot_pixels = np.nonzero((np.abs(difference[1:-1,1:-1])>threshold) )
+    #hot_pixels = np.array(hot_pixels) + 1 #because we ignored the first row and first column
+    #
+    #fixed_image = np.copy(data) #This is the image with the hot pixels removed
+    #for y,x in zip(hot_pixels[0],hot_pixels[1]):
+    #    fixed_image[y,x]=blurred[y,x]
+    #
+    #if worry_about_edges == True:
+    #    height,width = np.shape(data)
+    #
+    #    ###Now get the pixels on the edges (but not the corners)###
+    #
+    #    #left and right sides
+    #    for index in range(1,height-1):
+    #        #left side:
+    #        med  = np.median(data[index-1:index+2,0:2])
+    #        diff = np.abs(data[index,0] - med)
+    #        if diff>threshold:
+    #            hot_pixels = np.hstack(( hot_pixels, [[index],[0]]  ))
+    #            fixed_image[index,0] = med
+    #
+    #        #right side:
+    #        med  = np.median(data[index-1:index+2,-2:])
+    #        diff = np.abs(data[index,-1] - med)
+    #        if diff>threshold:
+    #            hot_pixels = np.hstack(( hot_pixels, [[index],[width-1]]  ))
+    #            fixed_image[index,-1] = med
+    #
+    #    #Then the top and bottom
+    #    for index in range(1,width-1):
+    #        #bottom:
+    #        med  = np.median(data[0:2,index-1:index+2])
+    #        diff = np.abs(data[0,index] - med)
+    #        if diff>threshold:
+    #            hot_pixels = np.hstack(( hot_pixels, [[0],[index]]  ))
+    #            fixed_image[0,index] = med
+    #
+    #        #top:
+    #        med  = np.median(data[-2:,index-1:index+2])
+    #        diff = np.abs(data[-1,index] - med)
+    #        if diff>threshold:
+    #            hot_pixels = np.hstack(( hot_pixels, [[height-1],[index]]  ))
+    #            fixed_image[-1,index] = med
+    #
+    #    ###Then the corners###
+    #
+    #    #bottom left
+    #    med  = np.median(data[0:2,0:2])
+    #    diff = np.abs(data[0,0] - med)
+    #    if diff>threshold:
+    #        hot_pixels = np.hstack(( hot_pixels, [[0],[0]]  ))
+    #        fixed_image[0,0] = med
+    #
+    #    #bottom right
+    #    med  = np.median(data[0:2,-2:])
+    #    diff = np.abs(data[0,-1] - med)
+    #    if diff>threshold:
+    #        hot_pixels = np.hstack(( hot_pixels, [[0],[width-1]]  ))
+    #        fixed_image[0,-1] = med
+    #
+    #    #top left
+    #    med  = np.median(data[-2:,0:2])
+    #    diff = np.abs(data[-1,0] - med)
+    #    if diff>threshold:
+    #        hot_pixels = np.hstack(( hot_pixels, [[height-1],[0]]  ))
+    #        fixed_image[-1,0] = med
+    #
+    #    #top right
+    #    med  = np.median(data[-2:,-2:])
+    #    diff = np.abs(data[-1,-1] - med)
+    #    if diff>threshold:
+    #        hot_pixels = np.hstack(( hot_pixels, [[height-1],[width-1]]  ))
+    #        fixed_image[-1,-1] = med
+    #
+    #return hot_pixels,fixed_image

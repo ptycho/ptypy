@@ -613,7 +613,7 @@ class PtyScan(object):
                     w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
 
                 # Apply deconvolution
-                if self.info.recipe.rl_deconvolution is not None:
+                if self.info.recipe.rl_deconvolution.apply:
                     logger.info('Applying deconvolution...')
                     # Use mtf from a file if provided in recon script
                     if self.info.recipe.rl_deconvolution.dfile is not None:

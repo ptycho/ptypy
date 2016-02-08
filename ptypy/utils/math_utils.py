@@ -289,19 +289,23 @@ def gf_2d(c,sigma,**kwargs):
 
 def rl_deconvolution(data, mtf, numiter):
     """
-    Richardson Lucy deconvolution on measured intensity.
+    Richardson Lucy deconvolution on a 2D numpy array.
 
     Parameters
     ----------
-    data : diffraction data (measured intensity)
+    data : 2darray
+        Diffraction data (measured intensity).
 
-    mtf : modulation transfer function (Fourier transform of detector PSF)
+    mtf : 2darray
+        Modulation transfer function (Fourier transform of detector PSF).
 
-    numiter : number of iterations
+    numiter : int
+        Number of iterations.
 
     Returns
     -------
-    u : approximated intensity after numiter iterations
+    out : 2darray
+        Approximated intensity after numiter iterations.
 
     Note:
     Assumes that mtf is symmetric and that data is real and positive.

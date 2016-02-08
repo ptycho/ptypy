@@ -12,7 +12,6 @@ import numpy as np
 import os
 from .. import utils as u
 from .. import io
-from .. import core
 from ..utils import parallel
 from ..core.data import PtyScan
 from ..utils.verbose import log
@@ -50,17 +49,33 @@ RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
 RECIPE.mask_file = None                 # '%(base_path)s' + 'processing/mask.h5'
 RECIPE.NFP_correct_positions = False    # Position corrections for NFP beamtime Oct 2014
 RECIPE.use_EP = False                   # Use flat as Empty Probe (EP) for probe sharing; needs to be set to True in the recipe of the scan that will act as EP
-RECIPE.rl_deconvolution = None          # Apply Richardson Lucy deconvolution, initiated by providing dictionary with parameters
-""" Documentation for now, needs to be reorganized
-RECIPE.rl_deconvolution.numiter = 5              # Number of iterations
-RECIPE.rl_deconvolution.dfile = None             # Provide MTF from file
-RECIPE.rl_deconvolution.gaussians = None         # Create fake psf as a sum of gaussians, initiated by providing dictionary with parameters
-RECIPE.rl_deconvolution.gaussians.g1 = None      # Provide gaussians to be added as dictionary
-RECIPE.rl_deconvolution.gaussians.g1.std_x = 1.0 # Standard deviation in x direction
-RECIPE.rl_deconvolution.gaussians.g1.std_y = 1.0 # Standard deviation in y direction
-RECIPE.rl_deconvolution.gaussians.g1.off_x = 0.  # Offset / shift in x direction
-RECIPE.rl_deconvolution.gaussians.g1.off_y = 0.  # Offset / shift in y direction
-"""
+
+DEFAULT_g1 = u.Param(                       # DEFAULT gaussian for Richardson Lucy deconvolution
+    std_x = 1.0,                            # Standard deviation in x direction
+    std_y = 1.0,                            # Standard deviation in y direction
+    off_x = 0.,                             # Offset / shift in x direction
+    off_y = 0.,                             # Offset / shift in y direction
+)
+
+DEFAULT_gaussians = u.Param(                # DEFAULT list of gaussians for Richardson Lucy deconvolution
+    g1 = DEFAULT_g1,
+)
+
+RECIPE.rl_deconvolution = u.Param(          # Apply Richardson Lucy deconvolution
+    apply = False,                          # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
+    numiter = 5,                            # Number of iterations
+    dfile = None,                           # Provide MTF from file; no loading procedure in I13 for now, loading through recon script required
+    gaussians = DEFAULT_gaussians,          # Create fake psf as a sum of gaussians if no MTF provided;
+                                            # if no parameters are provided use defaults for gaussian
+)
+
+RECIPE.remove_hot_pixels = u.Param(         # Apply hot pixel correction
+    apply = False,                          # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
+    size = 3,                               # Size of the window on which the median filter will be applied around every data point
+    tolerance = 10,                         # Tolerance multiplied with the standard deviation of the data array subtracted by the blurred array
+                                            # (difference array) yields the threshold for cutoff.
+    ignore_edges = False,                   # If True, edges of the array are ignored, which speeds up the code
+)
 
 # Generic defaults
 I13DEFAULT = PtyScan.DEFAULT.copy()
@@ -78,7 +93,7 @@ class I13Scan(PtyScan):
         """
         # Initialise parent class
         RDEFAULT = RECIPE.copy()
-        RDEFAULT.update(pars.recipe)
+        RDEFAULT.update(pars.recipe, in_place_depth = 3)
         pars.recipe.update(RDEFAULT)
 
         super(I13Scan, self).__init__(pars, **kwargs)
@@ -213,7 +228,12 @@ class I13Scan(PtyScan):
             key = NEXUS_PATHS.frame_pattern % self.info.recipe
             dark_indices = len(io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern % self.info.recipe)[key])
             for j in range(dark_indices):
-                dark.append(io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32))
+                data = io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32)
+                if self.info.recipe.detector_name == 'pco1_sw_hdf_nochunking':
+                    data = data[10:-10,10:-10]
+                if self.info.recipe.remove_hot_pixels.apply:
+                    data = u.remove_hot_pixels(data, self.info.recipe.remove_hot_pixels.size, self.info.recipe.remove_hot_pixels.tolerance, self.info.recipe.remove_hot_pixels.ignore_edges)[0]
+                dark.append(data)
             dark = np.array(dark).mean(0)
             common.dark = dark
             log(3, 'Dark loaded successfully.')
@@ -224,7 +244,12 @@ class I13Scan(PtyScan):
             key = NEXUS_PATHS.frame_pattern % self.info.recipe
             flat_indices = len(io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern % self.info.recipe)[key])
             for j in range(flat_indices):
-                flat.append(io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32))
+                data = io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32)
+                if self.info.recipe.detector_name == 'pco1_sw_hdf_nochunking':
+                    data = data[10:-10,10:-10]
+                if self.info.recipe.remove_hot_pixels.apply:
+                    data = u.remove_hot_pixels(data, self.info.recipe.remove_hot_pixels.size, self.info.recipe.remove_hot_pixels.tolerance, self.info.recipe.remove_hot_pixels.ignore_edges)[0]
+                flat.append(data)
             flat = np.array(flat).mean(0)
             common.flat = flat
             log(3, 'Flat loaded successfully.')
@@ -264,13 +289,23 @@ class I13Scan(PtyScan):
             key = NEXUS_PATHS.frame_pattern % self.info.recipe
             flat_indices = len(io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe)[key])
             for j in range(flat_indices):
-                flat.append(io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32))
+                data = io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32)
+                if self.info.recipe.detector_name == 'pco1_sw_hdf_nochunking':
+                    data = data[10:-10,10:-10]
+                if self.info.recipe.remove_hot_pixels.apply:
+                    data = u.remove_hot_pixels(data, self.info.recipe.remove_hot_pixels.size, self.info.recipe.remove_hot_pixels.tolerance, self.info.recipe.remove_hot_pixels.ignore_edges)[0]
+                flat.append(data)
             raw[0] = np.array(flat).mean(0)
             log(3, 'Data for EP loaded successfully.')
         else:
             for j in indices:
                 key = NEXUS_PATHS.frame_pattern % self.info.recipe
-                raw[j] = io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32)
+                data = io.h5read(self.data_file, NEXUS_PATHS.frame_pattern % self.info.recipe, slice=j)[key].astype(np.float32)
+                if self.info.recipe.detector_name == 'pco1_sw_hdf_nochunking':
+                    data = data[10:-10,10:-10]
+                if self.info.recipe.remove_hot_pixels.apply:
+                    data = u.remove_hot_pixels(data, self.info.recipe.remove_hot_pixels.size, self.info.recipe.remove_hot_pixels.tolerance, self.info.recipe.remove_hot_pixels.ignore_edges)[0]
+                raw[j] = data
             log(3, 'Data loaded successfully.')
         return raw, pos, weights
         
