@@ -13,6 +13,8 @@ from array_utils import *
 from scripts import *
 from parameters import *
 #import propagation as prop
+
+## these need IPYTHON to work properly. we should not depend on another software package
 from embedded_shell import ipshell
 import ipython_kernel
 

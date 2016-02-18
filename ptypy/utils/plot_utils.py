@@ -325,7 +325,11 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
         # Image is complex
         #if cmap is not None:
             #logger.debug('imsave: Ignoring provided cmap - input array is complex')
-        i = complex2rgb(a, vmin=vmin, vmax=vmax)
+        try:
+            from husl import complex_to_rgb
+            i = complex_to_rgb(a,mode='special',amin=vmin,amax=vmax)
+        except:
+            i = complex2rgb(a, vmin=vmin, vmax=vmax)
         im = Image.fromarray(np.uint8(i), mode='RGB')
 
     else:
@@ -364,6 +368,11 @@ def imload(filename):
     #    raise RunTimeError('Unsupported image mode %s' % im.mode)
     return a
 
+# new mppl colormaps
+from new_mpl_colormaps import cmaps as newcmaps
+for name,cmap in newcmaps.items():
+    mpl.cm.register_cmap(name = name,cmap=cmap)
+    
 # Franz map
 mpl.cm.register_cmap(name='franzmap',data=
                    {'red': ((   0.,    0,    0),
