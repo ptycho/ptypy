@@ -82,7 +82,7 @@ def from_pars(xypars=None):
             roi = u.expect2(p.extent) /2.
             new = []
             for posi in pos:
-                if (posi[0]>-roi[0]) and (posi[0]<roi[0]) and (posi[1]>-roi[1]) and (posi[1]<roi[1]):
+                if (posi[0]>=-roi[0]) and (posi[0]<=roi[0]) and (posi[1]>=-roi[1]) and (posi[1]<=roi[1]):
                     new.append(posi)
                 
             pos = np.array(new)
