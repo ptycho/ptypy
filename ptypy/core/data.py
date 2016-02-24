@@ -41,14 +41,14 @@ parallel = u.parallel
 
 PTYD = dict(
     chunks={},  # frames, positions
-    meta={},  # important to understand data. loaded by every process
-    info={},  # this dictionary is not loaded from a ptyd. Mainly for documentation
+    meta={},    # important to understand data. loaded by every process
+    info={},    # this dictionary is not loaded from a ptyd. Mainly for documentation
 )
 """ Basic Structure of a .ptyd datafile """
 
 META = dict(
-    label=None,   # label will be set internally 
-    experimentID=None, # a unique label of user choice
+    label=None,         # label will be set internally
+    experimentID=None,  # a unique label of user choice
     version='0.1',
     shape=None,
     psize=None,
@@ -58,17 +58,30 @@ META = dict(
     distance = None,
 )
 GENERIC = u.Param(
-    dfile = None,  # filename (e.g. 'foo.ptyd')
+    dfile = None,               # filename (e.g. 'foo.ptyd')
     chunk_format='.chunk%02d',  # Format for chunk file appendix.
-    #roi = None,  # 2-tuple or int for the desired fina frame size
-    save = None,  # None, 'merge', 'append', 'extlink'
-    auto_center = None,  # False: no automatic center,None only  if center is None, True it will be enforced   
-    load_parallel = 'data',  # None, 'data', 'common', 'all'
-    rebin = None,  # rebin diffraction data
-    orientation = None,  # None,int or 3-tuple switch, actions are (transpose, invert rows, invert cols)
-    min_frames = 1,  # minimum number of frames of one chunk if not at end of scan
-    positions_theory = None,  # Theoretical position list (This input parameter may get deprecated)
-    num_frames = None, # Total number of frames to be prepared
+    #roi = None,                # 2-tuple or int for the desired fina frame size
+    save = None,                # None, 'merge', 'append', 'extlink'
+    auto_center = None,         # False: no automatic center,None only  if center is None, True it will be enforced
+    load_parallel = 'data',     # None, 'data', 'common', 'all'
+    rebin = None,               # rebin diffraction data
+    orientation = None,         # None,int or 3-tuple switch, actions are (transpose, invert rows, invert cols)
+    min_frames = 1,             # minimum number of frames of one chunk if not at end of scan
+    positions_theory = None,    # Theoretical position list (This input parameter may get deprecated)
+    num_frames = None,          # Total number of frames to be prepared
+    rl_deconvolution = u.Param( # Apply Richardson Lucy deconvolution
+        apply = False,          # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
+        numiter = 5,            # Number of iterations
+        dfile = None,           # Provide MTF from file; no loading procedure present for now, loading through recon script required
+        gaussians = u.Param(    # Create fake psf as a sum of gaussians if no MTF provided
+            g1 = u.Param(       # DEFAULT list of gaussians for Richardson Lucy deconvolution
+                std_x = 1.0,    # Standard deviation in x direction
+                std_y = 1.0,    # Standard deviation in y direction
+                off_x = 0.,     # Offset / shift in x direction
+                off_y = 0.,     # Offset / shift in y direction
+            )
+        ),
+    ),
     recipe = {},
 )
 """Default data parameters. See :py:data:`.scan.data` and a short listing below"""
@@ -113,7 +126,7 @@ class PtyScan(object):
         info = u.Param(self.DEFAULT.copy())
 
         # FIXME this overwrites the child's recipe defaults
-        info.update(pars)
+        info.update(pars, in_place_depth=1)
         info.update(kwargs)
 
         # validate(pars, '.scan.preparation')
@@ -132,7 +145,7 @@ class PtyScan(object):
             num = len(info.positions_theory )
             logger.info('Theoretical positions are available. There will be %d frames.' % num)
             logger.info('Any experimental position information will be ignored.')
-            logger.info('Former input value of frame number `num_frames` %s is overriden to %d' %(str(self.num_frames),num))
+            logger.info('Former input value of frame number `num_frames` %s is overridden to %d' %(str(self.num_frames),num))
             self.num_frames = num
         """
         # check if we got information on geometry from ptycho
@@ -591,7 +604,7 @@ class PtyScan(object):
                             (str(do_crop), str(do_rebin), str(do_flip)))
                 # we proceed with numpy arrays. That is probably now
                 # more memory intensive but shorter in writing
-                if has_data:                       
+                if has_data:
                     d = np.array([data[ind] for ind in indices.node])
                     w = np.array([weights[ind] for ind in indices.node])
                 else:
@@ -613,24 +626,25 @@ class PtyScan(object):
                     w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
 
                 # Apply deconvolution
-                if self.info.recipe.rl_deconvolution.apply:
+                if self.info.rl_deconvolution.apply:
                     logger.info('Applying deconvolution...')
                     # Use mtf from a file if provided in recon script
-                    if self.info.recipe.rl_deconvolution.dfile is not None:
-                        mtf = self.info.recipe.rl_deconvolution.dfile
+
+                    if self.info.rl_deconvolution.dfile is not None:
+                        mtf = self.info.rl_deconvolution.dfile
                     # Create fake psf as a sum of gaussians from given parameters
                     else:
                         gau_sum = 0
-                        for i in self.info.recipe.rl_deconvolution.gaussians.iteritems():
+                        for i in self.info.rl_deconvolution.gaussians.iteritems():
                             gau_sum += u.gaussian2D(sh[0], i[1].std_x, i[1].std_y, i[1].off_x, i[1].off_y)
 
                         # Compute mtf
                         mtf = np.abs(np.fft.fft2(gau_sum))
 
                     for i in range(len(d)):
-                        d[i] = u.rl_deconvolution(d[i], mtf, self.info.recipe.rl_deconvolution.numiter)
+                        d[i] = u.rl_deconvolution(d[i], mtf, self.info.rl_deconvolution.numiter)
 
-                    #d = u.rl_deconvolution(d, mtf, self.info.recipe.rl_deconvolution.numiter) -- Too memory consuming
+                    #d = u.rl_deconvolution(d, mtf, self.info.rl_deconvolution.numiter) -- Too memory consuming
 
                 # flip, rotate etc.
                 d, tmp = u.switch_orientation(d, self.orientation, cen)

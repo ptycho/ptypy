@@ -49,26 +49,6 @@ RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
 RECIPE.mask_file = None                 # '%(base_path)s' + 'processing/mask.h5'
 RECIPE.NFP_correct_positions = False    # Position corrections for NFP beamtime Oct 2014
 RECIPE.use_EP = False                   # Use flat as Empty Probe (EP) for probe sharing; needs to be set to True in the recipe of the scan that will act as EP
-
-DEFAULT_g1 = u.Param(                       # DEFAULT gaussian for Richardson Lucy deconvolution
-    std_x = 1.0,                            # Standard deviation in x direction
-    std_y = 1.0,                            # Standard deviation in y direction
-    off_x = 0.,                             # Offset / shift in x direction
-    off_y = 0.,                             # Offset / shift in y direction
-)
-
-DEFAULT_gaussians = u.Param(                # DEFAULT list of gaussians for Richardson Lucy deconvolution
-    g1 = DEFAULT_g1,
-)
-
-RECIPE.rl_deconvolution = u.Param(          # Apply Richardson Lucy deconvolution
-    apply = False,                          # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
-    numiter = 5,                            # Number of iterations
-    dfile = None,                           # Provide MTF from file; no loading procedure in I13 for now, loading through recon script required
-    gaussians = DEFAULT_gaussians,          # Create fake psf as a sum of gaussians if no MTF provided;
-                                            # if no parameters are provided use defaults for gaussian
-)
-
 RECIPE.remove_hot_pixels = u.Param(         # Apply hot pixel correction
     apply = False,                          # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
     size = 3,                               # Size of the window on which the median filter will be applied around every data point
@@ -92,9 +72,9 @@ class I13Scan(PtyScan):
         I13 (Diamond Light Source) data preparation class.
         """
         # Initialise parent class
-        RDEFAULT = RECIPE.copy()
-        RDEFAULT.update(pars.recipe, in_place_depth = 3)
-        pars.recipe.update(RDEFAULT)
+        recipe_default = RECIPE.copy()
+        recipe_default.update(pars.recipe, in_place_depth=1)
+        pars.recipe.update(recipe_default)
 
         super(I13Scan, self).__init__(pars, **kwargs)
 
@@ -137,7 +117,7 @@ class I13Scan(PtyScan):
         if parallel.master:
             instrument = io.h5read(self.data_file, NEXUS_PATHS.instrument)[NEXUS_PATHS.instrument]
 
-        if parallel.master:        
+        if parallel.master:
             # Extract detector name if not set or wrong
             keys = instrument.keys()
             if (self.info.recipe.detector_name is None) or (self.info.recipe.detector_name not in keys):
@@ -159,12 +139,12 @@ class I13Scan(PtyScan):
         # Attempt to extract experiment ID
         if self.info.recipe.experimentID is None:
             try:
-                experimentID = io.h5read(self.data_file, NEXUS_PATHS.experiment)[NEXUS_PATHS.experiment][0]
+                experiment_id = io.h5read(self.data_file, NEXUS_PATHS.experiment)[NEXUS_PATHS.experiment][0]
             except:
-                experimentID = os.path.split(self.info.recipe.base_path[:-1])[1]
+                experiment_id = os.path.split(self.info.recipe.base_path[:-1])[1]
                 logger.debug('Could not find experiment ID from nexus file %s. Using %s instead.' %
-                             (self.data_file, experimentID))
-            self.info.recipe.experimentID = experimentID
+                             (self.data_file, experiment_id))
+            self.info.recipe.experimentID = experiment_id
 
         # Create the ptyd file name if not specified
         if self.info.dfile is None:
@@ -209,9 +189,9 @@ class I13Scan(PtyScan):
 
         # Position corrections for NFP beamtime Oct 2014.
         if self.info.recipe.NFP_correct_positions:
-            R = np.array([[0.99987485, 0.01582042],[-0.01582042, 0.99987485]])
+            r = np.array([[0.99987485, 0.01582042],[-0.01582042, 0.99987485]])
             p0 = positions.mean(axis=0)
-            positions = np.dot(R, (positions - p0).T).T + p0
+            positions = np.dot(r, (positions - p0).T).T + p0
             log(3, 'Original positions corrected by array provided.')
 
         return positions
@@ -268,10 +248,10 @@ class I13Scan(PtyScan):
         - bool if the end of scan was reached (None if this routine doesn't know)
         """
         npos = self.num_frames
-        frames_accessible = min((frames, npos-start))
+        frames_accessible = min((frames, npos - start))
         stop = self.frames_accessible + start
         return frames_accessible, (stop >= npos)
-        
+
     def load(self, indices):
         """
         Load frames given by the indices.
@@ -308,7 +288,7 @@ class I13Scan(PtyScan):
                 raw[j] = data
             log(3, 'Data loaded successfully.')
         return raw, pos, weights
-        
+
     def correct(self, raw, weights, common):
         """
         Apply (eventual) corrections to the frames. Convert from "raw" frames to usable data.
@@ -321,7 +301,7 @@ class I13Scan(PtyScan):
         # Apply flat and dark, only dark, or no correction
         if self.info.recipe.flat_number is not None and self.info.recipe.dark_number is not None:
             for j in raw:
-                raw[j] = (raw[j] - common.dark)/(common.flat - common.dark)
+                raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
                 raw[j][raw[j]<0] = 0
             data = raw
         elif self.info.recipe.dark_number is not None:

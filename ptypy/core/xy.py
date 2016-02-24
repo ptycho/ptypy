@@ -35,7 +35,7 @@ def from_pars(xypars=None):
     Creates position array from parameter tree `pars`. See :py:data:`DEFAULT`
     
     :param Param pars: Input parameters
-    :returns ndarray pos: A numpy.ndarray of shape ``(N,2)`` for *N* positios
+    :returns ndarray pos: A numpy.ndarray of shape ``(N,2)`` for *N* positions
     """
     p = DEFAULT.copy(depth=3)
     model = None
