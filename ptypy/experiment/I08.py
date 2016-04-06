@@ -21,14 +21,14 @@ if True: #__name__ == "__main__":
     from ptypy.utils.verbose import log
     from ptypy.core.paths import Paths
     # FIXME: Accessing the real "io" from the parent Ptycho class would be much better
-    from ptypy.core import DEFAULT_io as io_par
+    from ptypy.core import DEFAULT_io as IO_par
 else:
     from .. import utils as u
     from .. import io
     from ..core.data import PtyScan
     from ..utils.verbose import log
     from ..core.paths import Paths
-    from ..core import DEFAULT_io as io_par
+    from ..core import DEFAULT_io as IO_par
 
 
 # Parameters for the nexus file saved by GDA
@@ -70,7 +70,7 @@ I08DEFAULT.recipe = RECIPE
 I08DEFAULT.auto_center = False
 
 
-class I08_Scan(ptypy.core.data.PtyScan):
+class I08Scan(ptypy.core.data.PtyScan):
     DEFAULT = I08DEFAULT
     
     def __init__(self, pars=None, **kwargs):
@@ -83,7 +83,7 @@ class I08_Scan(ptypy.core.data.PtyScan):
         RDEFAULT.update(pars.recipe)
         pars.recipe.update(RDEFAULT)
         
-        super(I08_Scan, self).__init__(pars, **kwargs)
+        super(I08Scan, self).__init__(pars, **kwargs)
 
         # Try to extract base_path to access data files
         if self.info.recipe.base_path is None:
@@ -119,7 +119,7 @@ class I08_Scan(ptypy.core.data.PtyScan):
 
         # Create the ptyd file name if not specified
         if self.info.dfile is None:
-            home = Paths(io_par).home
+            home = Paths(IO_par).home
             self.info.dfile = '%s/prepdata/data_%d.ptyd' % (home, self.info.recipe.scan_number)
             log(3, 'Save file is %s' % self.info.dfile)
 

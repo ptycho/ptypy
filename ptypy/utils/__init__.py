@@ -12,6 +12,7 @@ from math_utils import *
 from array_utils import *
 from scripts import *
 from parameters import *
+from verbose import *
 #import propagation as prop
 from embedded_shell import ipshell
 import ipython_kernel

@@ -18,12 +18,14 @@ from AMO_LCLS import AMOScan
 from I13 import I13Scan
 from optiklabor import FliSpecScanMultexp
 from plugin import makeScanPlugin
-from I08 import I08_Scan
+from I08 import I08Scan
+from UCL import UCLLaserScan
 
 PtyScanTypes = dict(
     amo_lcls=AMOScan,
     fli_spec_multexp=FliSpecScanMultexp,
     i13dls=I13Scan,
     plugin=makeScanPlugin,
-    i08dls=I08_Scan
+    i08dls=I08Scan,
+    laser_ucl=UCLLaserScan
 )

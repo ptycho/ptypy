@@ -16,7 +16,7 @@ from ..utils import parallel
 from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..core.paths import Paths
-from ..core import DEFAULT_io as io_par
+from ..core import DEFAULT_io as IO_par
 
 logger = u.verbose.logger
 
@@ -148,7 +148,7 @@ class I13Scan(PtyScan):
 
         # Create the ptyd file name if not specified
         if self.info.dfile is None:
-            home = Paths(io_par).home
+            home = Paths(IO_par).home
             self.info.dfile = '%s/prepdata/data_%d.ptyd' % (home, self.info.recipe.scan_number)
             log(3, 'Save file is %s' % self.info.dfile)
         log(4, u.verbose.report(self.info))
