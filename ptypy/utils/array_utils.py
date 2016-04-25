@@ -91,7 +91,7 @@ def rebin_2d(A, rebin=1):
     if not (sh % rebin == 0).all():
         raise ValueError('Last two axes %s of input array `A` cannot be binned by %s' % (str(tuple(sh)),str(rebin))) 
     else:
-        return A.reshape(-1, newdim[0], rebin, newdim[1], rebin).sum(-1).sum(-2)
+        return A.reshape(-1, newdim[0], rebin, newdim[1], rebin).mean(-1).mean(-2)
 
 
 def crop_pad_symmetric_2d(A, newshape, center=None):
