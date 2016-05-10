@@ -10,21 +10,20 @@ This file is part of the PTYPY package.
 
 from .. import utils as u
 from ..utils.verbose import logger
-import illumination
-import sample
 from classes import STORAGE_PREFIX
+
 __all__ = ['parse_model']
 
 DEFAULT = u.Param(
         model_type = 'basic',
         scan_per_probe = 1,
         scan_per_object = 1,
-        Npts = None
+        npts = None
 )
 
 MAX_SCAN_COUNT = 100
 
-def parse_model(pars,sharing_dct):
+def parse_model(pars, sharing_dct):
     """
     This factory function takes a model description in the input parameters
     and return an object that can be called with a scan_label (or index) and
@@ -33,7 +32,7 @@ def parse_model(pars,sharing_dct):
     p = u.Param(DEFAULT)
     p.update(pars)
     if p.model_type.lower() == 'basic':
-        return BasicSharingModel(sharing_dct,p.scan_per_probe, p.scan_per_object, p.Npts)
+        return BasicSharingModel(sharing_dct, p.scan_per_probe, p.scan_per_object, p.npts)
     else:
         raise RuntimeError('model type %s not supported.' % p.model_type)
 
@@ -43,7 +42,7 @@ class BasicSharingModel(object):
     BasicSharingModel: implements the most common scan-sharing patterns.
     """
 
-    def __init__(self,sharing_dct, scan_per_probe, scan_per_object, Npts=None):
+    def __init__(self, sharing_dct, scan_per_probe, scan_per_object, npts=None):
         """
         BasicSharingModel: implements the most common scan-sharing patterns.
         
@@ -57,7 +56,7 @@ class BasicSharingModel(object):
                         a different probe to each.
         scan_per_object: int
                          number of contiguous scans using the same object.
-        Npts: int
+        npts: int
               number of diffraction patterns in a given scan. Needed only if
               scan_per_probe < 1.
         """
@@ -75,9 +74,9 @@ class BasicSharingModel(object):
         else:
             self.shared_probe = False
             self.single_probe = False
-            # The following will fail if Npts wasn't provided.
-            self.diff_per_probe = int(Npts * scan_per_probe)
-            self.Npts = Npts
+            # The following will fail if npts wasn't provided.
+            self.diff_per_probe = int(npts * scan_per_probe)
+            self.npts = npts
             logger.info('Model: splitting scans (every %d diffraction patter)' % self.diff_per_probe)
             
         # Prepare object sharing
@@ -89,11 +88,10 @@ class BasicSharingModel(object):
             self.single_object = False
             self.shared_object = True
             self.scan_per_object = int(scan_per_object)
-            logger.info('Model: sharing probe between scans (one new probe every %d scan)' % self.scan_per_object)
+            logger.info('Model: sharing object between scans (one new object every %d scan)' % self.scan_per_object)
         else:
             raise RuntimeError('scan_per_object < 1. not supported. What does it mean anyway?')
 
-        
         self.scan_labels = []
         self.probe_ids = sharing_dct['probe_ids']
         self.object_ids = sharing_dct['object_ids']
@@ -121,15 +119,14 @@ class BasicSharingModel(object):
         else:
             # nothing to do if it is an index
             scan_index = scan_label
-        
-        
+
         # Apply the rules for probe sharing
         if self.single_probe:
             probe_id = 0
         elif self.shared_probe:
             probe_id = scan_index // self.scan_per_probe
         else:
-            probe_id = self.scan_index * (self.Npts // self.diff_per_probe) + diff_index // self.diff_per_probe
+            probe_id = scan_index * (self.npts // self.diff_per_probe) + diff_index // self.diff_per_probe
         
         # Follow the format specified in Viewmanager
         probe_id = STORAGE_PREFIX + '%02d' % probe_id
@@ -143,8 +140,8 @@ class BasicSharingModel(object):
         # Follow the format specified in Viewmanager
         object_id = STORAGE_PREFIX + '%02d' % object_id
         
-        logger.debug("Model assigned frame %d of scan %s to probe %s & object %s" %\
-                      (diff_index, str(scan_label), probe_id, object_id))
+        logger.debug("Model assigned frame %d of scan %s to probe %s & object %s" %
+                     (diff_index, str(scan_label), probe_id, object_id))
 
         # Store sharing info
         pl = self.probe_ids.get(probe_id, [])
