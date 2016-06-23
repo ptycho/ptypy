@@ -7,12 +7,11 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-
+import numpy as np
 #from .. import core
 from .. import utils as u
-from utils import basic_fourier_update
+from engine_utils import basic_fourier_update
 from dummy import BaseEngine
-import numpy as np
 
 parallel = u.parallel
 

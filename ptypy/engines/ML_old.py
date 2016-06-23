@@ -10,18 +10,15 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-
-#from .. import core
+import numpy as np
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
-from utils import Cnorm2, Cdot
+from engine_utils import Cnorm2, Cdot
 from . import BaseEngine
-import numpy as np
+#from .. import core
 
 __all__=['ML']
-
-parallel = u.parallel
 
 DEFAULT = u.Param(
     ML_type = 'gaussian',

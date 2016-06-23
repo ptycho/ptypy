@@ -10,27 +10,25 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
-
-import ptypy
 from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline
 
-__all__ = ['BaseEngine','DEFAULT_iter_info']
-
+__all__ = ['BaseEngine', 'DEFAULT_iter_info']
 
 DEFAULT = u.Param(
-    numiter = 10,             # Total number of iterations
-    numiter_contiguous = 1,    # number of iterations until next interactive release   
-    probe_support = 0.8,       # relative area of probe array to which the probe is constraint if probe support becomes of more complex nature, consider putting it in illumination.py
-    subpix_start = 0,         # Number of iterations before starting subpixel interpolation
-    subpix = 'linear',  # 'fourier','linear' subpixel interpolation or None for no interpolation
-    probe_inertia = 0.001,             # (88) Probe fraction kept from iteration to iteration
-    object_inertia = 0.1,              # (89) Object fraction kept from iteration to iteration
-    clip_object = None,                # (91) Clip object amplitude into this intrervall
-    obj_smooth_std = 20,               # (90) Gaussian smoothing (pixel) of kept object fraction
-    probe_update_start =0,
-    probe_center_tol = None,          # None or float, Pixel radius around optical axes that the probe mass center must reside in
+    numiter = 20,               # Total number of iterations
+    numiter_contiguous = 1,     # Number of iterations without interruption
+    probe_support = 0.7,        # Fraction of valid probe area (circular) in probe frame
+    # Note: if probe support becomes of more complex nature, consider putting it in illumination.py
+    clip_object = None,         # Clip object amplitude into this interval
+    subpix_start = 0,           # Number of iterations before starting subpixel interpolation
+    subpix = 'linear',          # 'fourier','linear' subpixel interpolation or None for no interpolation
+    probe_update_start = 2,     # Number of iterations before probe update starts
+    probe_inertia = 0.001,      # Weight of the current probe estimate in the update
+    object_inertia = 0.1,       # Weight of the current object in the update
+    obj_smooth_std = 20,        # Gaussian smoothing (pixel) of the current object prior to update
+    probe_center_tol = None,    # None or float, Pixel radius around optical axes that the probe mass center must reside in
 )
 
 DEFAULT_iter_info = u.Param(
@@ -39,7 +37,7 @@ DEFAULT_iter_info = u.Param(
     engine = 'None',
     duration = 0.,
     error = np.zeros((3,))
-    )
+)
 
 class BaseEngine(object):
     """
@@ -53,7 +51,7 @@ class BaseEngine(object):
     engine_finalize
     """
     
-    DEFAULT= DEFAULT.copy()
+    DEFAULT = DEFAULT.copy()
 
     def __init__(self, ptycho, pars=None):
         """
@@ -70,22 +68,38 @@ class BaseEngine(object):
         self.ptycho = ptycho
         p = u.Param(self.DEFAULT)
 
-        if pars is not None: p.update(pars)
+        if pars is not None:
+            p.update(pars)
         self.p = p
         #self.itermeta = []
         #self.meta = u.Param()
         self.finished = False
         self.numiter = self.p.numiter
         #self.initialize()
-               
+
+        # Instance attributes
+        self.curiter = None
+        self.alliter = None
+
+        self.di = None
+        self.ob = None
+        self.pr = None
+        self.ma = None
+        self.ex = None
+        self.pods = None
+
+        self.probe_support = None
+        self.t = None
+        self.error = None
+
     def initialize(self):
         """
         Prepare for reconstruction.
         """
-        logger.info('\n'+headerline('Starting %s-algoritm.' % str(self.__class__.__name__),'l','=')+'\n')
+        logger.info('\n' + headerline('Starting %s-algorithm.' % str(type(self).__name__), 'l', '=') + '\n')
         logger.info('Parameter set:')
-        logger.info(u.verbose.report(self.p,noheader=True).strip()) 
-        logger.info(headerline('','l','='))
+        logger.info(u.verbose.report(self.p, noheader=True).strip())
+        logger.info(headerline('', 'l', '='))
         
         self.curiter = 0
         if self.ptycho.runtime.iter_info:
@@ -93,7 +107,7 @@ class BaseEngine(object):
         else:
             self.alliter = 0
         
-        # common attributes for all reconstructions
+        # Common attributes for all reconstructions
         self.di = self.ptycho.diff
         self.ob = self.ptycho.obj
         self.pr = self.ptycho.probe
@@ -102,7 +116,7 @@ class BaseEngine(object):
         self.pods = self.ptycho.pods
 
         self.probe_support = {}
-        # call engine specific initialization
+        # Call engine specific initialization
         self.engine_initialize()
         
     def prepare(self):
@@ -110,47 +124,49 @@ class BaseEngine(object):
         Last-minute preparation before iterating.
         """
         self.finished = False
-        ### Calculate probe support 
+        # Calculate probe support
         # an individual support for each storage is calculated in saved
         # in the dict self.probe_support
         supp = self.p.probe_support
         if supp is not None:
             for name, s in self.pr.S.iteritems():
                 sh = s.data.shape
-                ll,xx,yy = u.grids(sh,FFTlike=False)
-                support = (np.pi*(xx**2 + yy**2) < supp * sh[1] * sh[2])
+                ll, xx, yy = u.grids(sh, FFTlike=False)
+                support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
                 self.probe_support[name] = support
                 
-        # call engine specific preparation
+        # Call engine specific preparation
         self.engine_prepare()
             
     def iterate(self, num=None):
         """
         Compute one or several iterations.
         
-        num : None,int number of iterations. If None or num<1, a single iteration is performed
+        num : None,int number of iterations. If None or num<1, a single iteration is performed.
         """
-        # several iterations 
-        N = self.p.numiter_contiguous
+        # Several iterations
+        numiter_contiguous = self.p.numiter_contiguous
         
-        # overwrite default parameter
+        # Overwrite default parameter
         if num is not None:
-            N = num
+            numiter_contiguous = num
         
-        if self.finished: return 
+        if self.finished:
+            return
 
-        # for benchmarking
+        # For benchmarking
         self.t = time.time()
         
-        # call engine specific iteration routine 
+        # Call engine specific iteration routine
         # and collect the per-view error.      
-        self.error = self.engine_iterate(N)
+        self.error = self.engine_iterate(numiter_contiguous)
         
         # Increment the iterate number
-        self.curiter += N
-        self.alliter += N
+        self.curiter += numiter_contiguous
+        self.alliter += numiter_contiguous
         
-        if self.curiter >= self.numiter: self.finished = True
+        if self.curiter >= self.numiter:
+            self.finished = True
         
         # Prepare runtime
         self._fill_runtime()
@@ -166,17 +182,17 @@ class BaseEngine(object):
         info = dict(
             iteration = self.curiter,
             iterations = self.alliter,
-            engine = self.__class__.__name__,
-            duration = time.time()-self.t,
+            engine = type(self).__name__,
+            duration = time.time() - self.t,
             error = error
-            )
+        )
         
         self.ptycho.runtime.iter_info.append(info)
         self.ptycho.runtime.error_local = local_error
         
     def finalize(self):
         """
-        Clean up after iterations are done
+        Clean up after iterations are done.
         """
         self.engine_finalize()
         pass
@@ -209,4 +225,3 @@ class BaseEngine(object):
         Called at the end of self.finalize()
         """
         raise NotImplementedError()
-
