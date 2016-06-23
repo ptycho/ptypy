@@ -7,11 +7,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-
-from .. import utils as u
-from utils import basic_fourier_update
 import numpy as np
 import time
+from .. import utils as u
+from engine_utils import basic_fourier_update
 
 DEFAULT = u.Param(
     numiter = 100,

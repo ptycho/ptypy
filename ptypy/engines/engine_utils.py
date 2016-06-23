@@ -8,14 +8,12 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-
 import numpy as np
 from .. import utils as u
-from ..utils import parallel
     
-def basic_fourier_update(diff_view,pbound=None,alpha=1.,LL_error=True):
+def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     """\
-    Fourier update one a single view using its associated pods.
+    Fourier update a single view using its associated pods.
     Updates on all pods' exit waves.
     
     Parameters
@@ -32,7 +30,7 @@ def basic_fourier_update(diff_view,pbound=None,alpha=1.,LL_error=True):
         If ``None``, fourier update always happens.
         
     LL_error : bool
-        If ``True``, calculates log-likehood and puts it in the last entry 
+        If ``True``, calculates log-likelihood and puts it in the last entry
         of the returned error vector, else puts in ``0.0``
     
     Returns
@@ -53,60 +51,64 @@ def basic_fourier_update(diff_view,pbound=None,alpha=1.,LL_error=True):
     #err_phot = -1
     #err_exit = -1
     
-    ## exit function with Nones if view is not used by this process
+    ## Exit function with Nones if view is not used by this process
     #if not diff_view.active: return np.array([err_fmag,err_phot,err_exit])
     
-    # prepare dict for storing propagated waves
+    # Prepare dict for storing propagated waves
     f = {}
     
-    # buffer for accumulated photons
+    # Buffer for accumulated photons
     af2= np.zeros_like(diff_view.data) 
 
-    # calculate deviations from measured data
+    # Calculate deviations from measured data
     I = diff_view.data
 
-    # get the mask
+    # Get the mask
     #fmask = mask_view.data if mask_view is not None else np.ones_like(af2)
     fmask = diff_view.pod.mask
         
-    # for log likelihood error
+    # For log likelihood error
     if LL_error is True:
-        LL= np.zeros_like(diff_view.data) 
-        for name,pod in diff_view.pods.iteritems():
-            LL +=  u.abs2(pod.fw( pod.probe*pod.object))
-        err_phot = np.sum(fmask*np.square(LL - I)/(I+1.)) /np.prod(LL.shape)           
+        LL = np.zeros_like(diff_view.data)
+        for name, pod in diff_view.pods.iteritems():
+            LL += u.abs2(pod.fw(pod.probe * pod.object))
+        err_phot = np.sum(fmask * np.square(LL - I) / (I + 1.)) / np.prod(LL.shape)
     else:
         err_phot=0.
     
-    # propagate the exit waves
-    for name,pod in diff_view.pods.iteritems():
-        if not pod.active: continue
-        f[name]= pod.fw( (1+alpha)*pod.probe*pod.object - alpha* pod.exit )
+    # Propagate the exit waves
+    for name, pod in diff_view.pods.iteritems():
+        if not pod.active:
+            continue
+        f[name]= pod.fw((1 + alpha) * pod.probe * pod.object - alpha * pod.exit)
         af2 += u.cabs2(f[name]).real
     
     fmag = np.sqrt(np.abs(I))
-    af=np.sqrt(af2)
+    af = np.sqrt(af2)
     fdev = af - fmag 
-    err_fmag = np.sum(fmask*fdev**2)/fmask.sum()
+    err_fmag = np.sum(fmask * fdev**2) / fmask.sum()
     err_exit = 0.
     
-    # apply changes and backpropagate
+    # Apply changes and backpropagate
     if pbound is None or err_fmag > pbound:
         renorm = np.sqrt(pbound / err_fmag) if pbound is not None else 0.0 # don't know if that is correct
-        fm = (1-fmask) + fmask*(fmag + fdev*renorm)/(af + 1e-10)
-        for name,pod in diff_view.pods.iteritems():
-            if not pod.active: continue
-            df = pod.bw(fm*f[name])-pod.probe*pod.object
+        fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
+        for name, pod in diff_view.pods.iteritems():
+            if not pod.active:
+                continue
+            df = pod.bw(fm * f[name]) - pod.probe * pod.object
             pod.exit += df
-            err_exit +=np.mean(u.cabs2(df).real)
+            err_exit += np.mean(u.cabs2(df).real)
     else:
-        for name,pod in diff_view.pods.iteritems():
-            if not pod.active: continue
-            df = pod.probe*pod.object-pod.exit
+        for name, pod in diff_view.pods.iteritems():
+            if not pod.active:
+                continue
+            df = pod.probe * pod.object - pod.exit
             pod.exit += df
-            err_exit +=np.mean(u.cabs2(df).real)
+            err_exit += np.mean(u.cabs2(df).real)
             
-    if pbound is not None: err_fmag /= pbound # rescale the fmagnitude error to some meaning
+    if pbound is not None:
+        err_fmag /= pbound # rescale the fmagnitude error to some meaning
     
     return np.array([err_fmag,err_phot,err_exit])
     
@@ -126,7 +128,7 @@ def Cnorm2(c):
         r += u.norm2(s.data)
     return r
 
-def Cdot(c1,c2):
+def Cdot(c1, c2):
     """\
     Compute the dot product on two containers `c1` and `c2`.
     No check is made to ensure they are of the same kind.
@@ -138,10 +140,3 @@ def Cdot(c1,c2):
     for name, s in c1.S.iteritems():
         r += np.vdot(c1.S[name].data.flat, c2.S[name].data.flat)
     return r
-    
- 
-    
-    
-    
-    
-    
