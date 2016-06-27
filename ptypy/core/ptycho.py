@@ -210,8 +210,10 @@ class Ptycho(Base):
 
         self.data_type = p.data_type
         assert p.data_type in ['single', 'double']
-        self.FType = np.dtype('f' + str(np.dtype(np.typeDict[p.data_type]).itemsize)).type
-        self.CType = np.dtype('c' + str(2 * np.dtype(np.typeDict[p.data_type]).itemsize)).type
+        self.FType = np.dtype(
+            'f' + str(np.dtype(np.typeDict[p.data_type]).itemsize)).type
+        self.CType = np.dtype(
+            'c' + str(2 * np.dtype(np.typeDict[p.data_type]).itemsize)).type
         logger.info(_('Data type', self.data_type))
 
         # Check if there is already a runtime container
@@ -247,11 +249,13 @@ class Ptycho(Base):
             self.interactor.objects['Ptycho'] = self
 
             # Start the thread
-            logger.info('Will start interaction server here: %s:%d' % (self.interactor.address, self.interactor.port))
+            logger.info('Will start interaction server here: %s:%d'
+                        % (self.interactor.address, self.interactor.port))
             port = self.interactor.activate()
             
             if port is None:
-                logger.warn('Interaction server initialization failed. Continuing without server.')
+                logger.warn('Interaction server initialization failed. '
+                            'Continuing without server.')
                 self.interactor = None
                 self.plotter = None
             else:
@@ -259,14 +263,17 @@ class Ptycho(Base):
                 iaction.port = port
                 
                 # Inform the audience
-                log(4, 'Started interaction got the following parameters:' + report(self.interactor.p, noheader=True))
+                log(4, 'Started interaction got the following parameters:' +
+                    report(self.interactor.p, noheader=True))
                 
                 # Start automated plot client
                 self.plotter = None
-                if parallel.master and autoplot and autoplot.threaded and autoplot.interval > 0:
+                if (parallel.master and autoplot and autoplot.threaded and
+                        autoplot.interval > 0):
                     from multiprocessing import Process
                     logger.info('Spawning plot client in new Process.')
-                    self.plotter = Process(target=u.spawn_MPLClient, args=(iaction, autoplot,))
+                    self.plotter = Process(target=u.spawn_MPLClient,
+                                           args=(iaction, autoplot,))
                     self.plotter.start()
         else:
             # No interaction wanted
@@ -390,7 +397,8 @@ class Ptycho(Base):
         elif label is not None:
             try:
                 pars = self.p.engines[label]
-            except KeyError('No parameter set available for engine label %s\nSkipping..' % label):
+            except KeyError('No parameter set available for engine label '
+                            '%s\nSkipping..' % label):
                 pass
             # Copy common parameters
             engine_pars = self.p.engine.common.copy()
@@ -482,7 +490,8 @@ class Ptycho(Base):
                 # Check for new data
                 self.modelm.new_data()
                 
-                # Last minute preparation before a contiguous block of iterations
+                # Last minute preparation before a contiguous block of
+                # iterations
                 engine.prepare()
                 
                 auto_save = self.p.io.autosave
@@ -503,8 +512,10 @@ class Ptycho(Base):
                     # Calculate error:
                     #err = np.array(info['error'].values()).mean(0)
                     err = info['error']
-                    logger.info('Iteration #%(iteration)d of %(engine)s :: Time %(duration).2f' % info) 
-                    logger.info('Errors :: Fourier %.2e, Photons %.2e, Exit %.2e' % tuple(err))
+                    logger.info('Iteration #%(iteration)d of %(engine)s :: '
+                                'Time %(duration).2f' % info)
+                    logger.info('Errors :: Fourier %.2e, Photons %.2e, Exit '
+                                '%.2e' % tuple(err))
                 
                 parallel.barrier()
 
@@ -602,7 +613,8 @@ class Ptycho(Base):
                 # Check for new data
                 self.modelm.new_data()
                 
-                # Last minute preparation before a contiguous block of iterations
+                # Last minute preparation before a contiguous block of
+                # iterations
                 engine.prepare()
                 
                 if self.p.autosave is not None and self.p.autosave.interval > 1:
@@ -621,8 +633,10 @@ class Ptycho(Base):
                     info = self.runtime.iter_info[-1]
                     # Calculate error:
                     err = np.array(info['error'].values()).mean(0)
-                    logger.info('Iteration #%(iteration)d of %(engine)s :: Time %(duration).2f' % info) 
-                    logger.info('Errors :: Fourier %.2e, Photons %.2e, Exit %.2e' % tuple(err))
+                    logger.info('Iteration #%(iteration)d of %(engine)s :: '
+                                'Time %(duration).2f' % info)
+                    logger.info('Errors :: Fourier %.2e, Photons %.2e, Exit '
+                                '%.2e' % tuple(err))
                 
                 parallel.barrier()
             # Done. Let the engine finish up    
@@ -668,7 +682,8 @@ class Ptycho(Base):
         # Determine if this is a .pty file
         # FIXME: do not rely on ".pty" extension.
         if not runfile.endswith('.pty') and not runfile.endswith('.ptyr'):
-            logger.warning('Only ptypy file type allowed for continuing a reconstruction')
+            logger.warning('Only ptypy file type allowed for continuing a '
+                           'reconstruction')
             logger.warning('Exiting..')
             return None
         
@@ -699,12 +714,14 @@ class Ptycho(Base):
         elif header['kind']=='fullflat':
             P = save_load.link(io.h5read(runfile, 'content')['content'])
             
-            logger.info('Configuring data types, verbosity and server-client communication')
+            logger.info('Configuring data types, verbosity and server-client '
+                        'communication')
             P._configure()
 
             logger.info('Reconfiguring sharing rules') # and loading data')
             print u.verbose.report(P.p)
-            P.modelm.sharing_rules = model.parse_model(P.modelm.p['sharing'], P.modelm.sharing)
+            P.modelm.sharing_rules = model.parse_model(P.modelm.p['sharing'],
+                                                       P.modelm.sharing)
             
             logger.info('Regenerating exit waves')
             P.exit.reformat()
@@ -714,7 +731,8 @@ class Ptycho(Base):
             P.datasource = P.modelm.make_datasource(P.p.data)
             
             logger.info('Reconfiguring sharing rules and loading data')
-            P.modelm.sharing_rules = model.parse_model(P.p.model['sharing'], P.modelm.sharing)
+            P.modelm.sharing_rules = model.parse_model(P.p.model['sharing'],
+                                                       P.modelm.sharing)
             P.modelm.new_data()
             
 
@@ -761,17 +779,21 @@ class Ptycho(Base):
             import os
             if os.path.exists(dest_file):
                 if force_overwrite:
-                    logger.warn('Save file exists but will be overwritten (force_overwrite is True)')
+                    logger.warn('Save file exists but will be overwritten '
+                                '(force_overwrite is True)')
                 elif not force_overwrite:
-                    raise RuntimeError('File %s exists! Operation cancelled.' % dest_file)
+                    raise RuntimeError('File %s exists! Operation cancelled.'
+                                       % dest_file)
                 elif force_overwrite is None:
-                    ans = raw_input('File %s exists! Overwrite? [Y]/N' % dest_file)
+                    ans = raw_input('File %s exists! Overwrite? [Y]/N'
+                                    % dest_file)
                     if ans and ans.upper() != 'Y':
                         raise RuntimeError('Operation cancelled by user.') 
             
             if kind == 'fullflat':
                 self.interactor.stop()
-                logger.info('Deleting references for interactor, datasource and engines.')
+                logger.info('Deleting references for interactor, datasource '
+                            'and engines.')
                 del self.interactor
                 del self.datasource
                 del self.paths
@@ -781,7 +803,8 @@ class Ptycho(Base):
                 except:
                     pass
 
-                logger.info('Clearing numpy arrays for exit, diff and mask containers.')
+                logger.info('Clearing numpy arrays for exit, diff and mask '
+                            'containers.')
                 #self.exit.clear()
                 try:
                     for pod in self.pods.values():
@@ -798,7 +821,8 @@ class Ptycho(Base):
             elif kind == 'dump':
                 #if self.interactor is not None:
                 #    self.interactor.stop()
-                logger.info('Generating copies of probe, object and parameters and runtime')
+                logger.info('Generating copies of probe, object and parameters '
+                            'and runtime')
                 dump = u.Param()
                 dump.probe = {ID: S._to_dict() for ID,S in self.probe.S.items()}
                 dump.obj = {ID: S._to_dict() for ID,S in self.obj.S.items()}
@@ -813,7 +837,8 @@ class Ptycho(Base):
             elif kind == 'minimal':
                 #if self.interactor is not None:
                 #    self.interactor.stop()
-                logger.info('Generating shallow copies of probe, object and parameters and runtime')
+                logger.info('Generating shallow copies of probe, object and '
+                            'parameters and runtime')
                 minimal = u.Param()
                 minimal.probe = {ID: S._to_dict() for ID,S in self.probe.S.items()}
                 minimal.obj = {ID: S._to_dict() for ID,S in self.obj.S.items()}
@@ -828,7 +853,8 @@ class Ptycho(Base):
             io.h5options['UNSUPPORTED'] = h5opt
         else:
             pass
-        # We have to wait for all processes, just in case the script isn't finished after saving
+        # We have to wait for all processes, just in case the script isn't
+        # finished after saving
         parallel.barrier()
         return dest_file
         
@@ -840,12 +866,14 @@ class Ptycho(Base):
         active_pods = sum(1 for pod in self.pods.values() if pod.active)
         all_pods = len(self.pods.values())
         info = ['\n',
-                "Process #%d ---- Total Pods %d (%d active) ----" % (parallel.rank, all_pods, active_pods) + '\n',
+                "Process #%d ---- Total Pods %d (%d active) ----"
+                % (parallel.rank, all_pods, active_pods) + '\n',
                 '-' * 80 +'\n']
            
         header = True
         for ID, C in self.containers.iteritems():
-            info.append(C.formatted_report(table_format, offset, include_header=header))
+            info.append(C.formatted_report(table_format, offset,
+                                           include_header=header))
             if header:
                 header = False
             
@@ -859,19 +887,24 @@ class Ptycho(Base):
 
     def plot_overview(self, fignum=100):
         """
-        plots whole the first four layers of every storage in probe, object % diff
+        plots whole the first four layers of every storage in probe, object
+        % diff
         """
         from matplotlib import pyplot as plt
         plt.ion()
         for s in self.obj.S.values():
-            u.plot_storage(s, fignum, 'linear', (slice(0, 4), slice(None), slice(None)))
+            u.plot_storage(s, fignum, 'linear', (slice(0, 4), slice(None),
+                                                 slice(None)))
             fignum += 1
         for s in self.probe.S.values():
-            u.plot_storage(s, fignum, 'linear', (slice(0, 4), slice(None), slice(None)))
+            u.plot_storage(s, fignum, 'linear', (slice(0, 4), slice(None),
+                                                 slice(None)))
             fignum += 1
         for s in self.diff.S.values():
-            u.plot_storage(s, fignum, 'log', (slice(0, 4), slice(None), slice(None)), cmap='CMRmap')
+            u.plot_storage(s, fignum, 'log', (slice(0, 4), slice(None),
+                                              slice(None)), cmap='CMRmap')
             fignum += 1
         for s in self.mask.S.values():
-            u.plot_storage(s, fignum, 'log', (slice(0,1), slice(None), slice(None)), cmap='gray')
+            u.plot_storage(s, fignum, 'log', (slice(0,1), slice(None),
+                                              slice(None)), cmap='gray')
             fignum += 1
