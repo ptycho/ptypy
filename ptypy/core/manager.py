@@ -190,10 +190,16 @@ class ModelManager(object):
             scan.label = label
             # make a copy of model dictionary
             scan.pars = self.p.copy(depth=5)
+            print "inside prepare_scan 193"
+            print scan.pars
+            
             # Look for a scan-specific entry in the input parameters
             scan_specific_parameters = self.scans_pars.get(label, None)
+            print "scan specific parameters"
+            print scan_specific_parameters
             scan.pars.update(scan_specific_parameters, in_place_depth=5)
-
+            print "inside prepare_scan 199"
+            print scan.pars
             # prepare the tags
             t = scan.pars.tags
             if str(t) == t:
@@ -345,6 +351,7 @@ class ModelManager(object):
             logger.info('Importing data from %s as scan %s.' % (meta['label'], label))
 
             # prepare scan dictionary or dig up the already prepared one
+
             scan = self.prepare_scan(label)
             scan.meta = meta
 
@@ -536,6 +543,7 @@ class ModelManager(object):
 
             self._update_stats(scan)
         # Create PODs
+
         new_pods, new_probe_ids, new_object_ids = self._create_pods(used_scans)
         logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
             parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
@@ -672,7 +680,6 @@ class ModelManager(object):
         # Loop through scans
         for label in new_scans:
             scan = self.scans[label]
-
             # Store probe and object weights in meta
             #meta = {'probe_weight':scan.pars.probe_weight, 'object_weight':scan.pars.object_weight}
 
@@ -682,6 +689,7 @@ class ModelManager(object):
             
             # Compute sharing rules
             share = scan.pars.sharing 
+            print "share is:"+str(share)
             alt_obj = share.object_share_with if share is not None else None
             alt_pr = share.probe_share_with if share is not None else None
                 
@@ -762,11 +770,15 @@ class ModelManager(object):
                             #views = {'probe': pv, 'obj': ov, 'diff': dv, 'mask': mv}
                             pod = POD(ptycho=self.ptycho, ID=None, views=views, geometry=geometry)   #, meta=meta)
                             new_pods.append(pod)
-                            pod.probe_weight = share.probe_share_power if share is not None else 1.
-                            pod.object_weight = share.object_share_power if share is not None else 1.
-
                             # If Empty Probe sharing is enabled, adjust POD accordingly.
-                            pod.is_empty = True if share.EP_sharing else False
+                            if share is not None:
+                                pod.probe_weight = share.probe_share_power 
+                                pod.object_weight = share.object_share_power
+                                pod.is_empty = True if share.EP_sharing else False
+                            else:
+                                pod.probe_weight = 1
+                                pod.object_weight = 1
+#                             
                             #pod.is_empty = True if 'empty' in scan.pars.tags else False
                             #exit_index += 1
 

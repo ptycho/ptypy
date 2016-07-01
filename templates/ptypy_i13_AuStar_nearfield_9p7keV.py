@@ -69,11 +69,12 @@ p.scan.coherence.Nprobe_modes = 1
 p.scan.coherence.Nobject_modes = 1     
 p.scan.coherence.energies = [1.0]     
 
-p.scan.sharing = u.Param()
-p.scan.sharing.object_shared_with = None    
-p.scan.sharing.object_share_power = 1      
-p.scan.sharing.probe_shared_with = None    
-p.scan.sharing.probe_share_power = 1    
+# p.scan.sharing = u.Param()
+# p.scan.sharing.EP_sharing = False
+# p.scan.sharing.object_shared_with = None    
+# p.scan.sharing.object_share_power = 1      
+# p.scan.sharing.probe_shared_with = None    
+# p.scan.sharing.probe_share_power = 1    
 
 p.scan.sample = u.Param()
 #p.scan.sample.model = 'stxm'
@@ -123,7 +124,6 @@ p.engines.engine00.fourier_relax_factor = 0.1
 #p.engines.engine01 = u.Param()
 #p.engines.engine01.name = 'ML'
 #p.engines.engine01.numiter = 50
-
 
 P = Ptycho(p,level=5)
 
