@@ -190,16 +190,12 @@ class ModelManager(object):
             scan.label = label
             # make a copy of model dictionary
             scan.pars = self.p.copy(depth=5)
-            print "inside prepare_scan 193"
-            print scan.pars
+
             
             # Look for a scan-specific entry in the input parameters
             scan_specific_parameters = self.scans_pars.get(label, None)
-            print "scan specific parameters"
-            print scan_specific_parameters
             scan.pars.update(scan_specific_parameters, in_place_depth=5)
-            print "inside prepare_scan 199"
-            print scan.pars
+
             # prepare the tags
             t = scan.pars.tags
             if str(t) == t:
