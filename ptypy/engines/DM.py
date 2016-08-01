@@ -91,18 +91,12 @@ class DM(BaseEngine):
         """
         to = 0.
         tf = 0.
-        error_dct={}
         for it in range(num):
             t1 = time.time() 
             
             # Fourier update  
-            for name, di_view in self.di.V.iteritems():
-                if not di_view.active:
-                    continue
-                # ma_view = di_view.pod.ma_view # SC: not used, can be removed?
-                pbound = self.pbound[di_view.storage.ID]
-                error_dct[name] = basic_fourier_update(di_view, pbound=pbound, alpha=self.p.alpha)
-            
+            error_dct = self.fourier_update()
+
             t2 = time.time()
             tf += t2 - t1
             
@@ -140,7 +134,19 @@ class DM(BaseEngine):
         del self.pr_nrm
 
         del containers
-        
+
+    def fourier_update(self):
+        """
+        DM Fourier constraint update (including DM step)
+        """
+        error_dct = {}
+        for name, di_view in self.di.V.iteritems():
+            if not di_view.active:
+                continue
+            pbound = self.pbound[di_view.storage.ID]
+            error_dct[name] = basic_fourier_update(di_view, pbound=pbound, alpha=self.p.alpha)
+        return error_dct
+
     def overlap_update(self):
         """
         DM overlap constraint update.
