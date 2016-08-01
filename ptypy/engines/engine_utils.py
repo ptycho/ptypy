@@ -82,9 +82,18 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     err_fmag = np.sum(fmask * fdev**2) / fmask.sum()
     err_exit = 0.
     
-    # Apply changes and backpropagate
-    if pbound is None or err_fmag > pbound:
-        renorm = np.sqrt(pbound / err_fmag) if pbound is not None else 0.0 # don't know if that is correct
+    if pbound is None:
+        # No power bound
+        fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
+        for name, pod in diff_view.pods.iteritems():
+            if not pod.active:
+                continue
+            df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            pod.exit += df
+            err_exit += np.mean(u.cabs2(df).real)
+    elif err_fmag > pbound:
+        # Power bound is applied
+        renorm = np.sqrt(pbound / err_fmag)
         fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
         for name, pod in diff_view.pods.iteritems():
             if not pod.active:
@@ -93,10 +102,11 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
             pod.exit += df
             err_exit += np.mean(u.cabs2(df).real)
     else:
+        # Within power bound so no constraint applied.
         for name, pod in diff_view.pods.iteritems():
             if not pod.active:
                 continue
-            df = pod.probe * pod.object - pod.exit
+            df = alpha * (pod.probe * pod.object - pod.exit)
             pod.exit += df
             err_exit += np.mean(u.cabs2(df).real)
 
