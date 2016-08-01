@@ -18,18 +18,18 @@ from . import BaseEngine
 __all__ = ['DM']
 
 DEFAULT = u.Param(
-    alpha = 1,                      # Difference map parameter
-    probe_update_start = 2,         # Number of iterations before probe update starts
-    update_object_first = True,     # If True update object before probe
-    overlap_converge_factor = 0.05, # Threshold for interruption of the inner overlap loop
-    overlap_max_iterations = 10,    # Maximum of iterations for the overlap constraint inner loop
-    probe_inertia = 1e-9,           # Weight of the current probe estimate in the update, formally cfact
-    object_inertia = 1e-4,          # Weight of the current object in the update, formally DM_smooth_amplitude
-    fourier_relax_factor = 0.05,    # If rms error of model vs diffraction data is smaller than this fraction,
-                                    # Fourier constraint is met
-    obj_smooth_std = None,          # Gaussian smoothing (pixel) of the current object prior to update
-    clip_object = None,             # None or tuple(min,max) of desired limits of the object modulus,
-                                    # currently in under common in documentation
+    alpha=1,                       # Difference map parameter
+    probe_update_start=2,          # Number of iterations before probe update starts
+    update_object_first=True,      # If True update object before probe
+    overlap_converge_factor=0.05,  # Threshold for interruption of the inner overlap loop
+    overlap_max_iterations=10,     # Maximum of iterations for the overlap constraint inner loop
+    probe_inertia=1e-9,            # Weight of the current probe estimate in the update, formally cfact
+    object_inertia=1e-4,           # Weight of the current object in the update, formally DM_smooth_amplitude
+    fourier_relax_factor=0.05,     # If rms error of model vs diffraction data is smaller than this fraction,
+                                   # Fourier constraint is met
+    obj_smooth_std=None,           # Gaussian smoothing (pixel) of the current object prior to update
+    clip_object=None,              # None or tuple(min,max) of desired limits of the object modulus,
+                                   # currently in under common in documentation
 )
 
     
@@ -74,8 +74,9 @@ class DM(BaseEngine):
 
     def engine_prepare(self):
         """
-        Last minute initialization, everything, that needs to be recalculated, when new data arrives.
+        Last minute initialization. Everything that needs to be recalculated when new data arrives.
         """
+
         self.pbound = {}
         for name, s in self.di.S.iteritems():
             self.pbound[name] = .25 * self.p.fourier_relax_factor**2 * s.pbound_stub
@@ -126,10 +127,9 @@ class DM(BaseEngine):
             self.ob_viewcover,
             self.pr_buf,
             self.pr_nrm]
-        #IDM = self.ptycho.IDM_container
 
         for c in containers:
-            logger.debug('Attempt to remove container %s' %c.ID)
+            logger.debug('Attempt to remove container %s' % c.ID)
             del self.ptycho.containers[c.ID]
         #    IDM.used.remove(c.ID)
         
@@ -177,7 +177,7 @@ class DM(BaseEngine):
         if self.p.probe_center_tol is not None:
             for name, s in self.pr.S.iteritems():
                 c1 = u.mass_center(u.abs2(s.data).sum(0))
-                c2 = np.asarray(s.shape[-2:]) // 2 # fft convention should however use geometry instead
+                c2 = np.asarray(s.shape[-2:]) // 2       # fft convention should however use geometry instead
                 if u.norm(c1 - c2) < self.p.probe_center_tol:
                     break
                 # SC: possible BUG here, wrong input parameter
@@ -254,7 +254,7 @@ class DM(BaseEngine):
                 # instead of Npts_scan, the number of views should be considered
                 # please note that a call to s.views maybe slow for many views in the probe.
                 cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
-                s.data[:]= cfact * s.data
+                s.data[:] = cfact * s.data
                 pr_nrm.S[name].fill(cfact)
         else:
             pr.fill(0.0)
