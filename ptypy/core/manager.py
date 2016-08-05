@@ -684,8 +684,7 @@ class ModelManager(object):
             ma_views = scan.new_mask_views
             
             # Compute sharing rules
-            share = scan.pars.sharing 
-            print "share is:"+str(share)
+            share = scan.pars.sharing
             alt_obj = share.object_share_with if share is not None else None
             alt_pr = share.probe_share_with if share is not None else None
                 

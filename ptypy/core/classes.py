@@ -45,7 +45,8 @@ from ..utils.verbose import logger
 from ..utils.parameters import PARAM_PREFIX
 #import ptypy
 
-__all__ = ['Container', 'Storage', 'View', 'POD', 'Base', 'DEFAULT_PSIZE', 'DEFAULT_SHAPE'] # IDManager']
+__all__ = ['Container', 'Storage', 'View', 'POD', 'Base', 'DEFAULT_PSIZE',
+           'DEFAULT_SHAPE'] # IDManager']
 
 # Default pixel size
 DEFAULT_PSIZE = 1.

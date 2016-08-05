@@ -10,7 +10,8 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 from .. import utils as u
-    
+
+
 def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     """\
     Fourier update a single view using its associated pods.
@@ -44,27 +45,17 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         - `err_exit`, quadratic deviation of exit waves before and after 
           Fourier iteration
     """
-    
-    #pods = self.pty.pods
-    ## Fourier modulus constraint
-    #err_fmag = -1
-    #err_phot = -1
-    #err_exit = -1
-    
-    ## Exit function with Nones if view is not used by this process
-    #if not diff_view.active: return np.array([err_fmag,err_phot,err_exit])
-    
+
     # Prepare dict for storing propagated waves
     f = {}
     
     # Buffer for accumulated photons
-    af2= np.zeros_like(diff_view.data) 
+    af2 = np.zeros_like(diff_view.data)
 
-    # Calculate deviations from measured data
+    # Get measured data
     I = diff_view.data
 
     # Get the mask
-    #fmask = mask_view.data if mask_view is not None else np.ones_like(af2)
     fmask = diff_view.pod.mask
         
     # For log likelihood error
@@ -74,24 +65,35 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
             LL += u.abs2(pod.fw(pod.probe * pod.object))
         err_phot = np.sum(fmask * np.square(LL - I) / (I + 1.)) / np.prod(LL.shape)
     else:
-        err_phot=0.
+        err_phot = 0.
     
     # Propagate the exit waves
     for name, pod in diff_view.pods.iteritems():
         if not pod.active:
             continue
-        f[name]= pod.fw((1 + alpha) * pod.probe * pod.object - alpha * pod.exit)
+        f[name] = pod.fw((1 + alpha) * pod.probe * pod.object - alpha * pod.exit)
         af2 += u.cabs2(f[name]).real
     
     fmag = np.sqrt(np.abs(I))
     af = np.sqrt(af2)
-    fdev = af - fmag 
+
+    # Fourier magnitudes deviations
+    fdev = af - fmag
     err_fmag = np.sum(fmask * fdev**2) / fmask.sum()
     err_exit = 0.
     
-    # Apply changes and backpropagate
-    if pbound is None or err_fmag > pbound:
-        renorm = np.sqrt(pbound / err_fmag) if pbound is not None else 0.0 # don't know if that is correct
+    if pbound is None:
+        # No power bound
+        fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
+        for name, pod in diff_view.pods.iteritems():
+            if not pod.active:
+                continue
+            df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            pod.exit += df
+            err_exit += np.mean(u.cabs2(df).real)
+    elif err_fmag > pbound:
+        # Power bound is applied
+        renorm = np.sqrt(pbound / err_fmag)
         fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
         for name, pod in diff_view.pods.iteritems():
             if not pod.active:
@@ -100,18 +102,20 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
             pod.exit += df
             err_exit += np.mean(u.cabs2(df).real)
     else:
+        # Within power bound so no constraint applied.
         for name, pod in diff_view.pods.iteritems():
             if not pod.active:
                 continue
-            df = pod.probe * pod.object - pod.exit
+            df = alpha * (pod.probe * pod.object - pod.exit)
             pod.exit += df
             err_exit += np.mean(u.cabs2(df).real)
-            
+
     if pbound is not None:
-        err_fmag /= pbound # rescale the fmagnitude error to some meaning
+        err_fmag /= pbound  # rescale the fmagnitude error to some meaning !!! PT: I am not sure I agree with this.
     
-    return np.array([err_fmag,err_phot,err_exit])
-    
+    return np.array([err_fmag, err_phot, err_exit])
+
+
 def Cnorm2(c):
     """\
     Computes a norm2 on whole container `c`.
@@ -127,6 +131,7 @@ def Cnorm2(c):
     for name, s in c.S.iteritems():
         r += u.norm2(s.data)
     return r
+
 
 def Cdot(c1, c2):
     """\

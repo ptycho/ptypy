@@ -315,7 +315,7 @@ def rl_deconvolution(data, mtf, numiter):
     optimisation: FFTW? scipy fft? error metric cancel iter?
     Original code provided by M. Stockmar
     """
-    convolve = lambda x: np.abs(np.fft.ifft2(np.fft.fft2(x)*mtf))
+    convolve = lambda x: np.abs(np.fft.ifft2(np.fft.fft2(x)*mtf)).astype(x.dtype)
     u = data.copy()
     for n in range(numiter):
         u*=convolve(data/(convolve(u)+1e-6))
