@@ -4,6 +4,7 @@ from ptypy import utils as u
 import ptypy.simulations as sim
 import numpy as np
 import tempfile
+from ptypy.resources import tree_obj
 
 import unittest
 
@@ -75,7 +76,7 @@ class PtypycSAXSPseudoBone6p2keVTest(unittest.TestCase):
         sim.illumination.propagation.spot_size = None
         
         sim.sample = u.Param()
-        sim.sample.model = 255-u.imload('../resources/tree.bmp').astype(float).mean(-1)
+        sim.sample.model = tree_obj()        
         sim.sample.process = u.Param()
         sim.sample.process.offset = (100,400)                    
         sim.sample.process.zoom = 1.0                         
@@ -134,7 +135,7 @@ class PtypycSAXSPseudoBone6p2keVTest(unittest.TestCase):
         p.engines.engine00.fourier_relax_factor = 0.05
         p.engines.engine01 = u.Param()
         p.engines.engine01.name = 'ML'
-        p.engines.engine01.numiter = 100
+        p.engines.engine01.numiter = 1
         
         
         

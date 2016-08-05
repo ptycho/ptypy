@@ -68,7 +68,9 @@ sim.illumination.propagation.parallel = 0.004
 sim.illumination.propagation.spot_size = None
 
 sim.sample = u.Param()
-sim.sample.model = 255-u.imload('../resources/tree.bmp').astype(float).mean(-1)
+#sim.sample.model = 255-u.imload('../resources/tree.bmp').astype(float).mean(-1)
+from ptypy.resources import tree_obj
+sim.sample.model = tree_obj()
 sim.sample.process = u.Param()
 sim.sample.process.offset = (100,400)                    
 sim.sample.process.zoom = 1.0                         
