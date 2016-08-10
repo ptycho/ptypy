@@ -122,6 +122,7 @@ class DiProIFERMIScan(PtyScan):
 
             positions = [(positions[0, i], positions[1, i])
                          for i in range(positions.shape[-1])]
+            positions = np.array(positions)
         else:
             # From raw data
             key_x = H5_PATHS.motor_x
