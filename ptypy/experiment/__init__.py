@@ -21,6 +21,7 @@ from plugin import makeScanPlugin
 from I08 import I08Scan
 from UCL import UCLLaserScan
 from ID16Anfp import ID16AScan
+from DiProI_FERMI import DiProIFERMIScan
 
 PtyScanTypes = dict(
     amo_lcls = AMOScan,
@@ -29,5 +30,6 @@ PtyScanTypes = dict(
     plugin = makeScanPlugin,
     i08dls = I08Scan,
     laser_ucl = UCLLaserScan,
-    id16a_nfp = ID16AScan
+    id16a_nfp = ID16AScan,
+    diproi_fermi = DiProIFERMIScan
 )

@@ -53,6 +53,8 @@ RECIPE.flat_label = None            # Flat label - equal to scan_label by defaul
 RECIPE.dark_label = None            # Dark label - equal to scan_label by default
 RECIPE.mask_file = None             # Mask file name
 RECIPE.use_h5 = False               # Load data from prepared h5 file
+RECIPE.flat_division = False        # Switch for flat division
+RECIPE.dark_subtraction = False     # Switch for dark subtraction
 
 # These are home-made wrapped data 
 RECIPE.data_file_pattern = '{[base_path]}/{[sample_name]}/{[scan_label]}_data.h5'
