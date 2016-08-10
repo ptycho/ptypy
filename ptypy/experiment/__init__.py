@@ -22,14 +22,18 @@ from plugin import makeScanPlugin
 from I08 import I08Scan
 from savu import Savu
 from UCL import UCLLaserScan
+from ID16Anfp import ID16AScan
+from DiProI_FERMI import DiProIFERMIScan
 
 PtyScanTypes = dict(
-    amo_lcls=AMOScan,
-    fli_spec_multexp=FliSpecScanMultexp,
-    i13dls=I13Scan,
-    i13ff=I13ff,
-    plugin=makeScanPlugin,
-    i08dls=I08Scan,
-    laser_ucl=UCLLaserScan,
+    amo_lcls = AMOScan,
+    fli_spec_multexp = FliSpecScanMultexp,
+    i13dls = I13Scan,
+    plugin = makeScanPlugin,
+    i08dls = I08Scan,
+    laser_ucl = UCLLaserScan,
+    id16a_nfp = ID16AScan,
+    diproi_fermi = DiProIFERMIScan,
     savu=Savu
+
 )
