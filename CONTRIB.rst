@@ -23,6 +23,11 @@ Coding standards
 
 Please ensure you satisfy most of PEP8_ recommendations. We are not dogmatic about this, but following the same standards as others makes reading code much easier. For scientific code we consider it OK to break a few of the rules, like line length if what is written maps to a well-defined mathematical operation, or the use of single character variables for a more direct mapping to equations.
 
+Testing
+^^^^^^^
+
+Not much testing exists at the time of writing this document, but we are aware that this is something that should change. If you want to contribute code, it would be very good practice to also submit related tests.
+
 Branches
 ^^^^^^^^
 
