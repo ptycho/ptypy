@@ -29,15 +29,19 @@ try:
         nested = 1
 
     # First import the embeddable shell class
-    from IPython.terminal.embed import InteractiveShellEmbed
+#     from IPython.terminal.embed import InteractiveShellEmbed
 
     # Now create an instance of the embeddable shell. The first argument is a
     # string with options exactly as you would type them if you were starting
     # IPython at the system command line. Any parameters you want to define for
     # configuration can thus be specified here.
-    ipshell = InteractiveShellEmbed(config=cfg,
-                                    banner1='Dropping into IPython. Hit ctrl-D to resume execution.',
-                                    exit_msg='Leaving Interpreter, back to program.')
+#     ipshell = InteractiveShellEmbed(config=cfg,
+#                                     banner1='Dropping into IPython. Hit ctrl-D to resume execution.',
+#                                     exit_msg='Leaving Interpreter, back to program.')
+    # the above made tab completion break. The below method makes it work.
+    import IPython.core.interactiveshell
+    ipshell = IPython.core.interactiveshell.InteractiveShell(config=cfg,banner1='Dropping into IPython. Hit ctrl-D to resume execution.',
+                                    exit_msg='Leaving Interpreter, back to program.').instance().init_completer()
 except:
     def ipshell():
         print('IPython shell embedding failed')
