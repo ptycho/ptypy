@@ -7,41 +7,73 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from ..utils import log
 
 __all__ = ['ipshell']
 
+# Check if IPython is available
 try:
-    from IPython.config.loader import Config
+    import IPython
+# Assign warning to ipshell if not
+except ImportError:
+    log(3, 'IPython is not installed. Interactive shell is not available.')
 
+    def ipshell():
+        print('IPython is not installed. Interactive shell is not available.')
+# Continue with setting up of embedded shell
+else:
+    # Get IPython version
+    try:
+        ip_version = IPython.version_info[0]
+    # Assign random version if attribute does not exist
+    except AttributeError:
+        ip_version = 3
+
+    # Load Config depending on IPython version
+    if ip_version >= 4:
+        from traitlets.config.loader import Config
+    else:
+        from IPython.config.loader import Config
+
+    # Check whether embedded shell is nested in IPython or not
     try:
         get_ipython
+    # Code embedded interpreter
     except NameError:
+        banner = 'Dropping into IPython. Hit ctrl-D to resume execution.'
+        exit_msg = 'Leaving Interpreter, back to program.'
         nested = 0
-        cfg = Config()
-        prompt_config = cfg.PromptManager
-        prompt_config.in_template = 'In <\\#>: '
-        prompt_config.in2_template = '   .\\D.: '
-        prompt_config.out_template = 'Out<\\#>: '
+        if ip_version < 4:
+            cfg = Config()
+            prompt_config = cfg.PromptManager
+            prompt_config.in_template = 'In <\\#>: '
+            prompt_config.in2_template = '   .\\D.: '
+            prompt_config.out_template = 'Out<\\#>: '
+        else:
+            cfg = Config()
+            # Modify this for custom behaviour
+            # cfg.TerminalInteractiveShell.prompts_class = CustomPrompt
+    # Nested interpreter
     else:
-        #print("Running nested copies of IPython.")
-        #print("The prompts for the nested copy have been modified")
-        cfg = Config()
+        banner = '*** Nested interpreter ***'
+        exit_msg = '*** Back in main IPython ***'
         nested = 1
+        cfg = Config()
 
-    # First import the embeddable shell class
-#     from IPython.terminal.embed import InteractiveShellEmbed
+    # Embedded shell breaks tab completion in IPython version 4,
+    # therefore deactivated
+    if ip_version == 4:
+        def ipshell():
+            print('Interactive shell deactivated in IPython version 4. Please'
+                  'upgrade to a higher one to restore functionality.')
+    else:
+        # Import embeddable shell class
+        from IPython.terminal.embed import InteractiveShellEmbed
 
-    # Now create an instance of the embeddable shell. The first argument is a
-    # string with options exactly as you would type them if you were starting
-    # IPython at the system command line. Any parameters you want to define for
-    # configuration can thus be specified here.
-#     ipshell = InteractiveShellEmbed(config=cfg,
-#                                     banner1='Dropping into IPython. Hit ctrl-D to resume execution.',
-#                                     exit_msg='Leaving Interpreter, back to program.')
-    # the above made tab completion break. The below method makes it work.
-    import IPython.core.interactiveshell
-    ipshell = IPython.core.interactiveshell.InteractiveShell(config=cfg,banner1='Dropping into IPython. Hit ctrl-D to resume execution.',
-                                    exit_msg='Leaving Interpreter, back to program.').instance().init_completer()
-except:
-    def ipshell():
-        print('IPython shell embedding failed')
+        # Now create an instance of the embeddable shell. The first argument is
+        # a string with options exactly as you would type them if you were
+        # starting IPython at the system command line. Any parameters you want
+        # to define for configuration can thus be specified here.
+        ipshell = InteractiveShellEmbed(config=cfg,
+                                        banner1=banner,
+                                        exit_msg=exit_msg)
