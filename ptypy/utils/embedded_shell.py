@@ -27,7 +27,7 @@ else:
         ip_version = IPython.version_info[0]
     # Assign random version if attribute does not exist
     except AttributeError:
-        ip_version = 3
+        ip_version = 0
 
     # Load Config depending on IPython version
     if ip_version >= 4:
@@ -60,12 +60,12 @@ else:
         nested = 1
         cfg = Config()
 
-    # Embedded shell breaks tab completion in IPython version 4,
+    # Embedded shell breaks tab completion in IPython version 4 and 0,
     # therefore deactivated
-    if ip_version == 4:
+    if ip_version == 4 or ip_version == 0:
         def ipshell():
-            print('Interactive shell deactivated in IPython version 4. Please'
-                  'upgrade to a higher one to restore functionality.')
+            print('Interactive shell deactivated in IPython version 4 and 0.\n'
+                  'Please upgrade to a higher one to restore functionality.')
     else:
         # Import embeddable shell class
         from IPython.terminal.embed import InteractiveShellEmbed
