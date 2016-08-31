@@ -47,13 +47,13 @@ class Savu(PtyScan):
         if self.info.mask is not None:
             return self.info.recipe.mask.astype(float)
         else:
-            print('The mask was a None')
+            log(2,'The mask was a None')
 
     def load_positions(self):
         if self.info.recipe.positions is not None:
             return self.info.recipe.positions
         else:
-            print('The positions were None')
+            log(2,'The positions were None')
 
     def load(self, indices):
         """
@@ -69,6 +69,6 @@ class Savu(PtyScan):
             for j in indices:
                 raw[j] = self.info.recipe.data[j]
         else:
-            print('The data had None')
+            log(2,'The data had None')
         return raw, pos, weights
 

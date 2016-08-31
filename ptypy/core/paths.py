@@ -70,8 +70,9 @@ class Paths(object):
         
         for key in ['autosave','autoplot','recon']:
             v =  self.__dict__[key]
-            if not v.startswith(os.path.sep):
-                self.__dict__[key] = self.home + v
+            if isinstance(v,str):   
+                if not v.startswith(os.path.sep):
+                    self.__dict__[key] = self.home + v
 
     def run(self,run):
         """

@@ -51,8 +51,7 @@ DEFAULT_io = u.Param(
     autoplot = DEFAULT_autoplot,    # Plotting parameters for a client
     interaction = interaction.Server_DEFAULT.copy(), # Client-server communication,
     home = './',
-    rfile = "recons/%(run)s/%(run)s_%(engine)s.ptyr",
-    no_save=False
+    rfile = "recons/%(run)s/%(run)s_%(engine)s.ptyr"
 )
 """Default io parameters. See :py:data:`.io` and a short listing below"""
 
@@ -524,10 +523,10 @@ class Ptycho(Base):
             engine.finalize()
     
             #Save
-            if self.p.io.no_save:
-                pass
-            else:
+            if self.p.io.rfile:
                 self.save_run()
+            else:
+                pass
             # Time the initialization
             self.runtime.stop = time.asctime()
         
