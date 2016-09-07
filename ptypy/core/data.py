@@ -72,19 +72,6 @@ GENERIC = u.Param(
     min_frames = 1,                 # minimum number of frames of one chunk if not at end of scan
     positions_theory = None,        # Theoretical position list (This input parameter may get deprecated)
     num_frames = None,              # Total number of frames to be prepared
-    rl_deconvolution = u.Param(     # Apply Richardson Lucy deconvolution
-        apply = False,              # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
-        numiter = 5,                # Number of iterations
-        dfile = None,               # Provide MTF from file; no loading procedure present for now, loading through recon script required
-        gaussians = u.Param(        # Create fake psf as a sum of gaussians if no MTF provided
-            g1 = u.Param(           # DEFAULT list of gaussians for Richardson Lucy deconvolution
-                std_x = 1.0,        # Standard deviation in x direction
-                std_y = 1.0,        # Standard deviation in y direction
-                off_x = 0.,         # Offset / shift in x direction
-                off_y = 0.,         # Offset / shift in y direction
-            )
-        ),
-    ),
     recipe = {},
 )
 """Default data parameters. See :py:data:`.scan.data` and a short listing below"""
@@ -681,33 +668,6 @@ class PtyScan(object):
                     cen = np.array(w[0].shape) // 2
                     w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
 
-                # Apply deconvolution
-                if self.info.rl_deconvolution.apply:
-                    logger.info('Applying deconvolution...')
-
-                    # Use mtf from a file if provided in recon script
-                    if self.info.rl_deconvolution.dfile is not None:
-                        mtf = self.info.rl_deconvolution.dfile
-                    # Create fake psf as a sum of gaussians from parameters
-                    else:
-                        gau_sum = 0
-                        for k in (self.info.rl_deconvolution.gaussians.
-                                  iteritems()):
-                            gau_sum += u.gaussian2D(sh[0], k[1].std_x,
-                                                    k[1].std_y, k[1].off_x,
-                                                    k[1].off_y)
-
-                        # Compute mtf
-                        mtf = np.abs(np.fft.fft2(gau_sum))
-
-                    for k in range(len(d)):
-                        d[k] = (u.rl_deconvolution(
-                                d[k], mtf, self.info.rl_deconvolution.numiter))
-
-                    #d = u.rl_deconvolution(d, mtf,
-                    #                       self.info.rl_deconvolution.numiter)
-                    # SC: Too memory consuming
-
                 # Flip, rotate etc.
                 d, tmp = u.switch_orientation(d, self.orientation, cen)
                 w, cen = u.switch_orientation(w, self.orientation, cen)
@@ -1047,7 +1007,7 @@ class PtyScan(object):
         """
         cen = {}
         for k, d in data.iteritems():
-            cen[k] = u.mass_center(d * (weights[k] > 0))
+            cen[k] = u.scripts.mass_center(d * (weights[k] > 0))
 
         # For some nodes, cen may still be empty.
         # Therefore we use gather_dict to be save

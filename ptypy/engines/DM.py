@@ -182,7 +182,7 @@ class DM(BaseEngine):
     def center_probe(self):
         if self.p.probe_center_tol is not None:
             for name, s in self.pr.S.iteritems():
-                c1 = u.mass_center(u.abs2(s.data).sum(0))
+                c1 = u.scripts.mass_center(u.abs2(s.data).sum(0))
                 c2 = np.asarray(s.shape[-2:]) // 2       # fft convention should however use geometry instead
                 if u.norm(c1 - c2) < self.p.probe_center_tol:
                     break

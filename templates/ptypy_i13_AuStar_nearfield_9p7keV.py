@@ -49,7 +49,7 @@ sim.illumination.propagation.parallel = 0.005
 sim.illumination.propagation.spot_size = None
 
 sim.sample = u.Param()
-sim.sample.model = u.xradia_star((1200,1200),minfeature=3,contrast=0.8)
+sim.sample.model = u.scripts.xradia_star((1200,1200),minfeature=3,contrast=0.8)
 sim.sample.process = u.Param()
 sim.sample.process.offset = (0,0)        
 sim.sample.process.zoom = 1.0            

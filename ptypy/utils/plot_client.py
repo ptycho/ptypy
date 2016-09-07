@@ -673,7 +673,7 @@ class MPLClient(MPLplotter):
         if self.config.get('make_movie'):
             
             from ptypy import utils as u
-            u.png2mpg(self._framefile, RemoveImages=True)
+            u.scripts.png2mpg(self._framefile, RemoveImages=True)
 
 
 def spawn_MPLClient(client_pars, autoplot_pars):

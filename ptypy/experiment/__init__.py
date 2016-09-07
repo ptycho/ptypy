@@ -3,7 +3,11 @@
 Beamline-specific data preparation modules.
 
 Currently available:
- * I13DLS
+ * I13DLS, FFP and NFP
+ * I08DLS, FFP and NFP
+ * ID16A ESRF, NFP
+ * AMO LCLS
+ * DiProI FERMI
 
 This file is part of the PTYPY package.
 
@@ -12,28 +16,28 @@ This file is part of the PTYPY package.
 """
 #from data_structure import *
 
-# Import nstrument-specific modules 
+# Import instrument-specific modules
 #import cSAXS
-from AMO_LCLS import AMOScan
 from I13 import I13Scan
-
-from optiklabor import FliSpecScanMultexp
-from plugin import makeScanPlugin
+from I13_nfp import I13ScanNFP
 from I08 import I08Scan
 from savu import Savu
-from UCL import UCLLaserScan
+from plugin import makeScanPlugin
 from ID16Anfp import ID16AScan
+from AMO_LCLS import AMOScan
 from DiProI_FERMI import DiProIFERMIScan
+from optiklabor import FliSpecScanMultexp
+from UCL import UCLLaserScan
 
 PtyScanTypes = dict(
-    amo_lcls = AMOScan,
-    fli_spec_multexp = FliSpecScanMultexp,
     i13dls = I13Scan,
-    plugin = makeScanPlugin,
+    i13dls_nfp = I13ScanNFP,
     i08dls = I08Scan,
-    laser_ucl = UCLLaserScan,
+    savu = Savu,
+    plugin = makeScanPlugin,
     id16a_nfp = ID16AScan,
+    amo_lcls = AMOScan,
     diproi_fermi = DiProIFERMIScan,
-    savu=Savu
-
+    fli_spec_multexp = FliSpecScanMultexp,
+    laser_ucl = UCLLaserScan,
 )

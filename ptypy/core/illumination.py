@@ -252,7 +252,7 @@ def init_storage(storage, pars, energy =None,**kwargs):
         layer = p.recon.get('layer')
         ID = p.recon.get('ID')
         logger.info(prefix+'Attempt to load layer `%s` of probe storage with ID `%s` from `%s`' % (str(layer), str(ID), p.recon.rfile))
-        model = u.load_from_ptyr(p.recon.rfile, 'probe', ID, layer)
+        model = u.scripts.load_from_ptyr(p.recon.rfile, 'probe', ID, layer)
         # this could be more sophisticated, i.e. matching the real space grids etc.
         
     elif str(p.model) == 'stxm':
@@ -304,7 +304,7 @@ def init_storage(storage, pars, energy =None,**kwargs):
     
     # apply diversity
     if p.diversity is not None:
-        u.diversify(model,**(p.diversity))
+        u.scripts.diversify(model,**(p.diversity))
     
     # fill storage array
     s.fill(model)

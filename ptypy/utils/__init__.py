@@ -10,8 +10,8 @@ This file is part of the PTYPY package.
 from misc import *
 from math_utils import *
 from array_utils import *
-from scripts import *
-from parameters import *
+import scripts
+from parameters import Param, asParam
 from verbose import *
 #import propagation as prop
 from embedded_shell import ipshell

@@ -22,7 +22,7 @@ import fnmatch
 import time
 import re   
 
-from ptypy.utils import expect2, mass_center
+from ptypy.utils.scripts import expect2, mass_center
 from ptypy.utils.verbose import logger
 from ptypy import io
 
