@@ -18,7 +18,7 @@ This file is part of the PTYPY package.
 
 # Import instrument-specific modules
 #import cSAXS
-from I13 import I13Scan
+from I13_ffp import I13ScanFFP
 from I13_nfp import I13ScanNFP
 from I08 import I08Scan
 from savu import Savu
@@ -30,7 +30,7 @@ from optiklabor import FliSpecScanMultexp
 from UCL import UCLLaserScan
 
 PtyScanTypes = dict(
-    i13dls = I13Scan,
+    i13dls_ffp = I13ScanFFP,
     i13dls_nfp = I13ScanNFP,
     i08dls = I08Scan,
     savu = Savu,
