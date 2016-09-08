@@ -633,8 +633,8 @@ class Storage(Base):
             #             % (self.owner.ID, self.ID, str(sh), str(new_shape)))
 
             megapixels = np.array(new_shape).astype(float).prod() / 1e6
-            if megapixels > 20:
-                raise RuntimeError('Arrays larger than 20M not supported. You '
+            if megapixels > 50:
+                raise RuntimeError('Arrays larger than 50M not supported. You '
                                    'requested %.2fM pixels.' % megapixels)
 
             # Apply 2d misfit

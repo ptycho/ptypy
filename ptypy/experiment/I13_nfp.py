@@ -44,6 +44,7 @@ RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
 RECIPE.mask_file = None                 # '%(base_path)s' + 'processing/mask.h5'
 RECIPE.correct_positions_Oct14 = False  # Position corrections for NFP beamtime Oct 2014
 RECIPE.use_EP = False                   # Use flat as Empty Probe (EP) for probe sharing; needs to be set to True in the recipe of the scan that will act as EP
+RECIPE.max_scan_points = 100000         # Maximum number of scan points to be loaded from origin
 RECIPE.remove_hot_pixels = u.Param(     # Apply hot pixel correction
     apply = False,                      # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
     size = 3,                           # Size of the window on which the median filter will be applied around every data point
@@ -248,7 +249,8 @@ class I13ScanNFP(PtyScan):
 
         # Apply motor conversion factor and create transposed position array
         mmult = u.expect2(self.info.recipe.motors_multiplier)
-        pos_list = [mmult[i] * np.array(motor_positions[motor_name])
+        pos_list = [mmult[i] * np.array(motor_positions[motor_name])[
+                               :self.info.recipe.max_scan_points]
                     for i, motor_name in enumerate(self.info.recipe.motors)]
         positions = 1. * np.array(pos_list).T
 
