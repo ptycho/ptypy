@@ -491,10 +491,10 @@ def bcast_dict(dct, keys='all', source=0):
 
 def allgather_dict(dct):
     """
-    Allgather dict in place. **Untested** convenience script
+    Allgather dict in place.
     """
     gdict = gather_dict(dct)
-    broadcast_dct(gdcit)
+    bcast_dict(gdict)
     dct.update(gdict)
     
 def gather_dict(dct, target=0):
@@ -521,7 +521,7 @@ def gather_dict(dct, target=0):
     
     See also
     --------
-    broadcast_dict
+    bcast_dict
     """
     out = {}
     if not MPIenabled:
