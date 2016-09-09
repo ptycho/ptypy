@@ -1007,7 +1007,7 @@ class PtyScan(object):
         """
         cen = {}
         for k, d in data.iteritems():
-            cen[k] = u.scripts.mass_center(d * (weights[k] > 0))
+            cen[k] = u.mass_center(d * (weights[k] > 0))
 
         # For some nodes, cen may still be empty.
         # Therefore we use gather_dict to be save

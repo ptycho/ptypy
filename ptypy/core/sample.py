@@ -128,14 +128,14 @@ def init_storage(storage,sample_pars = None, energy = None):
         layer = p.recon.get('layer')
         ID = p.recon.get('ID')
         logger.info(prefix+'Attempt to load object storage with ID %s from %s' %(str(ID),p.recon.rfile))
-        model = u.scripts.load_from_ptyr(p.recon.rfile,'obj',ID,layer)
+        model = u.load_from_ptyr(p.recon.rfile,'obj',ID,layer)
         # this could be more sophisticated, i.e. matching the real spac grids etc.
         
     elif str(p.model) == 'stxm':
         logger.info(prefix+'STXM initialization using diffraction data')
         #print s.data.shape, s.shape
-        trans, dpc_row, dpc_col = u.scripts.stxm_analysis(s)
-        model = trans * np.exp(1j * u.scripts.phase_from_dpc(dpc_row, dpc_col))
+        trans, dpc_row, dpc_col = u.stxm_analysis(s)
+        model = trans * np.exp(1j * u.phase_from_dpc(dpc_row, dpc_col))
     else:
         raise ValueError(prefix+'Value to `model` key not understood in object creation')
         
@@ -164,7 +164,7 @@ def init_storage(storage,sample_pars = None, energy = None):
     
     # add diversity
     if p.diversity is not None:
-        u.scripts.diversify(model,**(p.diversity))
+        u.diversify(model,**(p.diversity))
     # return back to storage
     s.fill(model)
     
@@ -243,7 +243,7 @@ def simulate(A,pars, energy, fill =1.0,prefix="", **kwargs):
                 if u.parallel.master:
                     logger.info(prefix+"Quering cxro database for refractive index \
                      in object creation with paramters:\n Formula=%s Energy=%d Density=%.2f" % (p.formula,en,p.density))
-                    result = np.array(u.scripts.cxro_iref(p.formula,en,density=p.density))
+                    result = np.array(u.cxro_iref(p.formula,en,density=p.density))
                 else:
                     result = None
                 result = u.parallel.bcast(result)

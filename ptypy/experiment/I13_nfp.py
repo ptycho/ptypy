@@ -45,6 +45,7 @@ RECIPE.mask_file = None                 # '%(base_path)s' + 'processing/mask.h5'
 RECIPE.correct_positions_Oct14 = False  # Position corrections for NFP beamtime Oct 2014
 RECIPE.use_EP = False                   # Use flat as Empty Probe (EP) for probe sharing; needs to be set to True in the recipe of the scan that will act as EP
 RECIPE.max_scan_points = 100000         # Maximum number of scan points to be loaded from origin
+RECIPE.theta = 0                        # Angle of rotation (as used in NFP beamtime Jul 2015)
 RECIPE.remove_hot_pixels = u.Param(     # Apply hot pixel correction
     apply = False,                      # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
     size = 3,                           # Size of the window on which the median filter will be applied around every data point
@@ -254,6 +255,9 @@ class I13ScanNFP(PtyScan):
                     for i, motor_name in enumerate(self.info.recipe.motors)]
         positions = 1. * np.array(pos_list).T
 
+        # Correct positions for angle of rotation if necessary
+        positions[:, 1] *= np.cos(np.pi * self.info.recipe.theta / 180.)
+
         # Position corrections for NFP beamtime Oct 2014.
         if self.info.recipe.correct_positions_Oct14:
             r = np.array([[0.99987485, 0.01582042], [-0.01582042, 0.99987485]])
@@ -380,21 +384,21 @@ class I13ScanNFP(PtyScan):
         if self.info.recipe.remove_hot_pixels.apply:
             u.log(3, 'Applying hot pixel removal...')
             for j in raw:
-                raw[j] = u.scripts.remove_hot_pixels(
+                raw[j] = u.remove_hot_pixels(
                     raw[j],
                     self.info.recipe.remove_hot_pixels.size,
                     self.info.recipe.remove_hot_pixels.tolerance,
                     self.info.recipe.remove_hot_pixels.ignore_edges)[0]
 
             if self.info.recipe.flat_number is not None:
-                    common.dark = u.scripts.remove_hot_pixels(
+                    common.dark = u.remove_hot_pixels(
                         common.dark,
                         self.info.recipe.remove_hot_pixels.size,
                         self.info.recipe.remove_hot_pixels.tolerance,
                         self.info.recipe.remove_hot_pixels.ignore_edges)[0]
 
             if self.info.recipe.flat_number is not None:
-                common.flat = u.scripts.remove_hot_pixels(
+                common.flat = u.remove_hot_pixels(
                     common.flat,
                     self.info.recipe.remove_hot_pixels.size,
                     self.info.recipe.remove_hot_pixels.tolerance,
