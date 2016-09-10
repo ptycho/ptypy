@@ -171,13 +171,19 @@ def allreduce(a, op=None):
     """
 
     if not MPIenabled:
-        return
+        return a
+    isscalar = np.isscalar(a)
+    if isscalar:
+        a = np.array(a)
     if op is None:
         # print a.shape
         comm.Allreduce(MPI.IN_PLACE, a)
     else:
         comm.Allreduce(MPI.IN_PLACE, a, op=op)
-    return
+    if isscalar:
+        return a.item()
+    else:
+        return a
 
 def allreduceC(c):
     """
