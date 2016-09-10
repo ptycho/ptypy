@@ -1537,6 +1537,9 @@ class Container(Base):
         """
         Fill all storages with scalar value `fill`
         """
+        if type(fill) is Container:
+            self.fill(0.)
+            self += fill
         for s in self.storages.itervalues():
             s.fill(fill)
             s._make_datalist()
