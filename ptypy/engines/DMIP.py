@@ -14,7 +14,7 @@ from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
 from engine_utils import basic_fourier_update
-from . import DM
+from . import BaseEngine
 
 __all__ = ['DMIP']
 
@@ -32,10 +32,11 @@ DEFAULT = u.Param(
     obj_smooth_std=None,           # Gaussian smoothing (pixel) of the current object prior to update
     clip_object=None,              # None or tuple(min,max) of desired limits of the object modulus,
                                    # currently in under common in documentation
+    IP_metric=1.,                  # The metric factor in the exit + probe augmented space.
 )
 
     
-class DMIP(DM):
+class DMIP(BaseEngine):
     
     DEFAULT = DEFAULT
 
@@ -48,9 +49,6 @@ class DMIP(DM):
             
         super(DMIP, self).__init__(ptycho_parent, pars)
 
-        # Instance attributes
-        self.idprobe = None
-
     def engine_initialize(self):
         """
         Prepare for reconstruction.
@@ -62,10 +60,26 @@ class DMIP(DM):
         self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
         self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
 
-        self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
-        self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
+        # Extract current probe info
+        self.mean_probe = self.pr.S.values()[0].data.copy()
 
-        self.idprobe = self.exit.copy(self.exit.ID + 'IP', fill=0.)
+        # Expand probe array and keep track of modes
+        prmodes = len(self.mean_probe) * [[]]
+        for v in self.pr.views.values():
+            di_view = v.pod.di_view
+            prmodes[v.layer].append(v)
+            v.layer = (di_view.layer, v.layer)
+            v.active = di_view.active
+        self.prmodes = prmodes
+        self.pr.reformat()
+
+        # Store probe data back
+        for v in self.pr.views.values():
+            if v.active:
+                self.pr[v] = self.mean_probe[v.layer[1]]
+
+        # Create a copy for iterations
+        self.pr_old = self.pr.copy(self.pr.ID + '_old')
 
     def engine_prepare(self):
         """
@@ -92,15 +106,21 @@ class DMIP(DM):
             # Fourier update  
             error_dct = self.fourier_update()
 
+            # Probe consistency update
+            self.probe_consistency_update()
+
             t2 = time.time()
             tf += t2 - t1
             
             # Overlap update
             self.overlap_update()
-            
+
             t3 = time.time()
             to += t3 - t2
-            
+
+            # Maintain scales
+            #self.rescale_obj()
+
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
         error = parallel.gather_dict(error_dct)
@@ -114,8 +134,7 @@ class DMIP(DM):
             self.ob_buf,
             self.ob_nrm,
             self.ob_viewcover,
-            self.pr_buf,
-            self.pr_nrm]
+            self.pr_old]
 
         for c in containers:
             logger.debug('Attempt to remove container %s' % c.ID)
@@ -125,10 +144,15 @@ class DMIP(DM):
         del self.ob_buf
         del self.ob_nrm 
         del self.ob_viewcover 
-        del self.pr_buf
-        del self.pr_nrm
+        del self.pr_old
 
         del containers
+
+    #def rescale_obj(self):
+    #    """
+    #    Rescale object and probes.
+    #    :return:
+    #    """
 
     def fourier_update(self):
         """
@@ -166,25 +190,11 @@ class DMIP(DM):
             logger.debug(pre_str + '----- probe update -----')
             change = self.probe_update()
             logger.debug(pre_str + 'change in probe is %.3f' % change)
-            
-            # Recenter the probe
-            self.center_probe()
-            
+
             # Stop iteration if probe change is small
             if change < self.p.overlap_converge_factor:
                 break
 
-    def center_probe(self):
-        if self.p.probe_center_tol is not None:
-            for name, s in self.pr.S.iteritems():
-                c1 = u.mass_center(u.abs2(s.data).sum(0))
-                c2 = np.asarray(s.shape[-2:]) // 2       # fft convention should however use geometry instead
-                if u.norm(c1 - c2) < self.p.probe_center_tol:
-                    break
-                # SC: possible BUG here, wrong input parameter
-                s.data[:] = u.shift_zoom(s.data, (1.,) * 3, (0, c1[0], c1[1]), (0, c2[0], c2[1]))
-                logger.info('Probe recentered from %s to %s' % (str(tuple(c1)), str(tuple(c2))))
-                
     def object_update(self):
         """
         DM object update.
@@ -202,7 +212,7 @@ class DMIP(DM):
                 # DM_smooth_amplitude = (p.DM_smooth_amplitude * max_power * p.num_probes * Ndata) / np.prod(asize)
                 # using the number of views here, but don't know if that is good.
                 # cfact = self.p.object_inertia * len(s.views)
-                cfact = self.p.object_inertia * (self.ob_viewcover.S[name].data + 1.)
+                cfact = self.p.object_inertia  # * (self.ob_viewcover.S[name].data + 1.)
                 
                 if self.p.obj_smooth_std is not None:
                     logger.info('Smoothing object, average cfact is %.2f + %.2fj' %
@@ -241,53 +251,49 @@ class DMIP(DM):
                 
     def probe_update(self):
         """
-        DM probe update.
+        DM probe update - independent probe version
         """
         pr = self.pr
-        pr_nrm = self.pr_nrm
-        pr_buf = self.pr_buf
-        
-        # Fill container
-        # "cfact" fill
-        # BE: was this asymmetric in original code only because of the number of MPI nodes ?
-        if parallel.master:
-            for name, s in pr.S.iteritems():
-                # instead of Npts_scan, the number of views should be considered
-                # please note that a call to s.views maybe slow for many views in the probe.
-                cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
-                s.data[:] = cfact * s.data
-                pr_nrm.S[name].fill(cfact)
-        else:
-            pr.fill(0.0)
-            pr_nrm.fill(0.0)
 
-        # DM update per node
+        # DM update
         for name, pod in self.pods.iteritems():
             if not pod.active:
                 continue
-            pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
-            pr_nrm[pod.pr_view] += u.cabs2(pod.object) * pod.probe_weight
+            pod.probe = self.p.IP_metric * self.pr_old[pod.pr_view] + pod.object.conj() * pod.exit
+            pod.probe /= u.cabs2(pod.object) + self.p.IP_metric
 
-        change = 0.
-        
-        # Distribute result with MPI
-        for name, s in pr.S.iteritems():
-            # MPI reduction of results
-            nrm = pr_nrm.S[name].data
-            parallel.allreduce(s.data)
-            parallel.allreduce(nrm)
-            s.data /= nrm
-            
             # Apply probe support if requested
             support = self.probe_support.get(name)
             if support is not None: 
-                s.data *= self.probe_support[name]
+                pod.probe *= self.probe_support[name]
 
-            # Compute relative change in probe
-            buf = pr_buf.S[name].data
-            change += u.norm2(s.data - buf) / u.norm2(s.data)
+        change = u.norm2(pr.S.values()[0].data - self.pr_old.S.values()[0].data)
+        change = parallel.allreduce(change)
 
-            # Fill buffer with new probe
-            buf[:] = s.data
+        return np.sqrt(change / pr.S.values()[0].nlayers)
 
-        return np.sqrt(change / len(pr.S))
+    def probe_consistency_update(self):
+        """
+        DM probe consistency update.
+        """
+        """
+        SVD on (1+alpha)*pr - pr_old
+        """
+        # Compute mean of (2*pr - pr_old) this will have to be replaced with svd
+        self.mean_probe.fill(0.)
+        n = 0.
+        for v in self.pr.views.values():
+            if not v.active:
+                continue
+            self.mean_probe[v.layer[1]] += 2*self.pr[v] - self.pr_old[v]
+            n += 1
+        parallel.allreduce(self.mean_probe)
+        n = parallel.allreduce(n)
+        self.mean_probe /= n
+
+        # Update probe
+        for v in self.pr.views.values():
+            if not v.active:
+                continue
+            self.pr_old[v] += self.mean_probe[v.layer[1]] - self.pr[v]
+

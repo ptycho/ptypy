@@ -18,11 +18,12 @@ import DM_minimal
 import DM_simple
 import ML
 import dummy
+import DMIP
 #from ePIE import ePIE
 
 __all__ = ['DM', 'ML', 'BaseEngine']
 
-engine_names = ['Dummy', 'DM_simple', 'DM', 'DM_minimal', 'ML', 'ML_new']
+engine_names = ['Dummy', 'DM_simple', 'DM', 'DM_minimal', 'ML', 'ML_new', 'DMIP']
 
 DEFAULTS = u.Param(
     common = COMMON,
@@ -31,6 +32,7 @@ DEFAULTS = u.Param(
     DM = DM.DEFAULT,
     ML = ML.DEFAULT,
     DM_minimal = DM_minimal.DEFAULT,
+    DMIP = DMIP.DEFAULT,
 )
 
 ENGINES = u.Param(
@@ -39,6 +41,7 @@ ENGINES = u.Param(
     DM = DM.DM,
     ML = ML.ML,
     DM_minimal = DM_minimal.DM_minimal,
+    DMIP = DMIP.DMIP,
 )
 def by_name(name):
     if name not in ENGINES.keys():
