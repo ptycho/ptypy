@@ -362,8 +362,9 @@ class Storage(Base):
         if layermap is None:
             layermap = range(len(self.data))
         self.layermap = layermap
-        # This is most often not accurate. set this quantity from the outside
-        self.nlayers = max(layermap) + 1
+
+        # This is most often not accurate. Set this quantity from the outside
+        self.nlayers = len(layermap)
         self._make_datalist()
 
         # Need to bootstrap the parameters.
