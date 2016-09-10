@@ -32,6 +32,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 
 """
+
 import numpy as np
 import weakref
 try:
@@ -56,12 +57,12 @@ DEFAULT_SHAPE = (1, 1, 1)
 
 # Expected structure for Views initialization.
 DEFAULT_ACCESSRULE = u.Param(
-        storageID = None, # (int) ID of storage, might not exist
-        shape = None, # (2-tuple) shape of the view in pixels
-        coord = None, # (2-tuple) physical coordinates of the center of the view
-        psize = DEFAULT_PSIZE, # (float or None) pixel size (required for storage initialization)
-        layer = 0, # (int) index of the third dimension if applicable.
-        active = True,
+        storageID=None,  # (int) ID of storage, might not exist
+        shape=None,   # (2-tuple) shape of the view in pixels
+        coord=None,   # (2-tuple) physical coordinates of the center of the view
+        psize=DEFAULT_PSIZE,   # (float or None) pixel size (required for storage initialization)
+        layer=0,   # (int) index of the third dimension if applicable.
+        active=True,
 )
 
 BASE_PREFIX = 'B'
@@ -160,7 +161,8 @@ class Base(object):
 
         return
 
-    def _num_to_id(self, num):
+    @staticmethod
+    def _num_to_id(num):
         """
         maybe more sophisticated in future
         """
@@ -172,13 +174,10 @@ class Base(object):
         create new instance from dictionary dct
         should be compatible with _to_dict()
         """
-        #ID = dct.pop('ID', None)
-        #owner = dct.pop('owner', None)
-        #print cls, ID, owner
-        #inst = cls(owner, ID)
         inst = cls.__new__(cls)
         inst.__dict__.update(dct)
-        #calling post dictionary import routine (empty in base)
+
+        # Calling post dictionary import routine (empty in base)
         inst._post_dict_import()
         return inst
 
@@ -198,7 +197,7 @@ class Base(object):
         return self.__dict__.copy()
 
     def calc_mem_usage(self):
-        space = 64 # that is for the class itself
+        space = 64   # that is for the class itself
         pool_space = 0
         npy_space = 0
         if hasattr(self, '_pool'):
@@ -212,7 +211,6 @@ class Base(object):
 
         for k, v in self.__dict__.iteritems():
             if issubclass(type(v), Base):
-                #print 'jump ' + str(v.__class__)
                 continue
             elif str(k) == '_pool' or str(k) == 'pods':
                 continue
@@ -222,14 +220,13 @@ class Base(object):
                     space += s
                 if type(v) is np.ndarray:
                     npy_space += v.nbytes
-            #print str(k)+":"+str(s)
         return space + pool_space + npy_space, pool_space, npy_space
+
 
 def get_class(ID):
     """
     Determine ptypy class from unique `ID`
     """
-    #typ,idx=ID[0]
     if ID.startswith(VIEW_PREFIX):
         return View
     elif ID.startswith(PTYCHO_PREFIX):
@@ -253,6 +250,7 @@ def get_class(ID):
         return Geo
     else:
         return None
+
 
 def valid_ID(obj):
     """
@@ -325,11 +323,6 @@ class Storage(Base):
             
         """
         super(Storage, self).__init__(container, ID)
-        #if len(kwargs)>0:
-            #self._initialize(**kwargs)
-
-    #def _initialize(self,data=None, shape=(1,1,1), fill=0., psize=None,
-    #                origin=None, layermap=None, padonly=False):
 
         #: Default fill value
         self.fill_value = fill if fill is not None else 0.
