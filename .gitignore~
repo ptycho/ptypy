@@ -1,8 +1,0 @@
-*.pyc
-build/
-doc/sphinx/_build
-*~
-doc/_img/*.png
-tutorial/*.png
-ghostdriver*
-ptypy/version.py
