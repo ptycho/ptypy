@@ -169,7 +169,6 @@ class DiProIFERMIScan(PtyScan):
         :param indices:
         :return:
         """
-        #pos not actually necessary at this stage: left empty
         raw = {}  # Container for the frames
         pos = {}  # Container for the positions
         weights = {}  # Container for the weights
