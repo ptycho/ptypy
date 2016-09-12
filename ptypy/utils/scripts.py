@@ -603,8 +603,8 @@ def stxm_analysis(storage, probe=None):
         pr = np.exp(-(x**2 + y**2) / probe**2)
     else:
         pr = np.asarray(probe)
-        assert (pr.shape == pp.shape[-2:],
-                'stxm probe has not the same shape as a view to this storage')
+        assert (pr.shape == pp.shape[-2:]),
+                'stxm probe has not the same shape as a view to this storage'
         
     for v in s.views:
         pod = v.pods.values()[0]
