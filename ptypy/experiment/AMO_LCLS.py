@@ -38,9 +38,9 @@ RECIPE.detector_name = None     # Name of the detector as specified in the nexus
 RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
 RECIPE.motors_multiplier = 1e-3 #for AMO #1e-6 #for CXI         # Motor conversion factor to meters
 RECIPE.base_path = './'
-RECIPE.data_file_pattern = '%(base_path)s' + 'raw/r%(scan_number)04d.h5'
-RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/r%(dark_number)04d.h5'
-RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/r%(flat_number)04d.h5'
+RECIPE.data_file_pattern = '%(base_path)s' + 'input/r%(scan_number)04d.h5'
+RECIPE.dark_file_pattern = '%(base_path)s' + 'input/r%(dark_number)04d.h5'
+RECIPE.flat_file_pattern = '%(base_path)s' + 'input/r%(flat_number)04d.h5'
 RECIPE.mask_file = None # '%(base_path)s' + 'processing/mask.h5'
 RECIPE.averaging_number = 1 # Number of frames to be averaged
 
