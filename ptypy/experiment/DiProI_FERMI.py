@@ -200,7 +200,6 @@ class DiProIFERMIScan(PtyScan):
                 raw[i] = io.h5read(self.data_path + self.h5_filename_list[i],
                                key)[key].astype(np.float32)
 
-        u.ipshell()
         return raw, pos, weights
 
     def correct(self, raw, weights, common):
