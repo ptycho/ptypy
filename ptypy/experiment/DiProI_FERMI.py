@@ -45,6 +45,7 @@ RECIPE.z = None
 RECIPE.motors_multiplier = 1e-3     # DiProI-specific
 RECIPE.mask_file = None             # Mask file name
 RECIPE.use_refined_positions = False
+RECIPE.use_refined_positions_good = False
 RECIPE.refined_positions_multiplier = 1.68396935*1e-7
 RECIPE.refined_positions_pattern = '%(base_path)s/processing/'
 RECIPE.flat_division = False        # Switch for flat division
@@ -118,6 +119,10 @@ class DiProIFERMIScan(PtyScan):
         if self.info.recipe.use_refined_positions:
             # From prepared .h5 file
             n_frames = len(self.h5_filename_list)
+            if self.info.recipe.use_refined_positions_good:
+                indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
+                                         self.info.recipe + '/recons_by_Michal.h5',
+                                        'data.reconstruct_ind')['reconstruct_ind'][0]
             positions = io.h5read(self.info.recipe.refined_positions_pattern %
                                   self.info.recipe + '/recons_by_Michal.h5',
                                   'data.probe_positions')['probe_positions']
@@ -127,6 +132,12 @@ class DiProIFERMIScan(PtyScan):
             positions = np.array(positions)
             if positions.shape[0] > n_frames:
                 positions = positions[:n_frames]
+                if self.info.recipe.use_refined_positions_good:
+                    for i in range(indices_good.shape[0]):
+                        if indices_good[i] > n_frames: break
+                    indices_good = indices_good[:i]
+            if self.info.recipe.use_refined_positions_good:
+                positions = positions[indices_good.astype(int)-1]
             positions *= self.info.recipe.refined_positions_multiplier
         else:
             # From raw data
@@ -140,7 +151,6 @@ class DiProIFERMIScan(PtyScan):
 
         # load the positions => check required structure vs currently dict with (x,y)
         ### is this less efficient than loading the whole file and calling individually raw and pos when needed?
-
         return positions
 
     def load_common(self):
@@ -180,9 +190,17 @@ class DiProIFERMIScan(PtyScan):
         key = H5_PATHS.frame_pattern
 
         for i in range(len(indices)):
-            raw[i] = io.h5read(self.data_path + self.h5_filename_list[i],
+            if self.info.recipe.use_refined_positions_good:
+                indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
+                                         self.info.recipe + '/recons_by_Michal.h5',
+                                         'data.reconstruct_ind')['reconstruct_ind'][0]
+                raw[i] = io.h5read(self.data_path + self.h5_filename_list[indices_good[i].astype(int)],
+                                   key)[key].astype(np.float32)
+            else:
+                raw[i] = io.h5read(self.data_path + self.h5_filename_list[i],
                                key)[key].astype(np.float32)
 
+        u.ipshell()
         return raw, pos, weights
 
     def correct(self, raw, weights, common):
