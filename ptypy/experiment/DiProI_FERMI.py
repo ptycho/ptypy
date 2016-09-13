@@ -45,7 +45,7 @@ RECIPE.z = None
 RECIPE.motors_multiplier = 1e-3     # DiProI-specific
 RECIPE.mask_file = None             # Mask file name
 RECIPE.use_refined_positions = False
-RECIPE.refined_positions_pattern = '%(base_path)s/imported/%(run_ID)s/%(scan_name)s/'
+RECIPE.refined_positions_pattern = '%(base_path)s/processing/'
 RECIPE.flat_division = False        # Switch for flat division
 RECIPE.dark_subtraction = False     # Switch for dark subtraction
 
@@ -117,7 +117,7 @@ class DiProIFERMIScan(PtyScan):
         if self.info.recipe.use_refined_positions:
             # From prepared .h5 file
             positions = io.h5read(self.info.recipe.refined_positions_pattern %
-                                  self.info.recipe + '/Fermi_reconstruction.h5',
+                                  self.info.recipe + '/recons_by_Michal.h5',
                                   'data.probe_positions')['probe_positions']
 
             positions = [(positions[0, i], positions[1, i])
