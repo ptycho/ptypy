@@ -45,6 +45,7 @@ RECIPE.z = None
 RECIPE.motors_multiplier = 1e-3     # DiProI-specific
 RECIPE.mask_file = None             # Mask file name
 RECIPE.use_refined_positions = False
+RECIPE.refined_positions_multiplier = 1e-6
 RECIPE.refined_positions_pattern = '%(base_path)s/processing/'
 RECIPE.flat_division = False        # Switch for flat division
 RECIPE.dark_subtraction = False     # Switch for dark subtraction
@@ -116,6 +117,7 @@ class DiProIFERMIScan(PtyScan):
         # Load positions
         if self.info.recipe.use_refined_positions:
             # From prepared .h5 file
+            n_frames = len(self.h5_filename_list)
             positions = io.h5read(self.info.recipe.refined_positions_pattern %
                                   self.info.recipe + '/recons_by_Michal.h5',
                                   'data.probe_positions')['probe_positions']
@@ -123,6 +125,9 @@ class DiProIFERMIScan(PtyScan):
             positions = [(positions[0, i], positions[1, i])
                          for i in range(positions.shape[-1])]
             positions = np.array(positions)
+            if positions.shape[0] > n_frames:
+                positions = positions[:n_frames]
+            positions *= self.info.recipe.refined_positions_multiplier
         else:
             # From raw data
             key_x = H5_PATHS.motor_x
