@@ -188,12 +188,9 @@ class AMOScan(core.data.PtyScan):
         :param common:
         :return:
         """
-
         # Apply corrections to frames
-        # FIXME: this will depend on the detector type used.
-
         data = raw
-
+        for k in data.keys():
+            data[k][data[k] < 0] = 0
         weights = weights
-
         return data, weights
