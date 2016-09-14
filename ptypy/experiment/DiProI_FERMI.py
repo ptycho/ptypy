@@ -218,11 +218,9 @@ class DiProIFERMIScan(PtyScan):
                 raw[j][raw[j] < 0] = 0
             data = raw
         elif self.info.recipe.dark_subtraction:
-            u.ipshell()
             for j in raw:
                 raw[j] = raw[j] - common.dark
                 raw[j][raw[j] < 0] = 0
-            u.ipshell()
             data = raw
         else:
             data = raw
