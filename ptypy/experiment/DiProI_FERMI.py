@@ -119,24 +119,23 @@ class DiProIFERMIScan(PtyScan):
         if self.info.recipe.use_refined_positions:
             # From prepared .h5 file
             n_frames = len(self.h5_filename_list)
-            if self.info.recipe.use_refined_positions_good:
-                indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
-                                         self.info.recipe + '/recons_by_Michal.h5',
-                                        'data.reconstruct_ind')['reconstruct_ind'][0]
             positions = io.h5read(self.info.recipe.refined_positions_pattern %
-                                  self.info.recipe + '/recons_by_Michal.h5',
-                                  'data.probe_positions')['probe_positions']
+                            self.info.recipe + '/recons_by_Michal.h5',
+                            'data.probe_positions')['probe_positions']
 
             positions = [(positions[0, i], positions[1, i])
                          for i in range(positions.shape[-1])]
             positions = np.array(positions)
             if positions.shape[0] > n_frames:
                 positions = positions[:n_frames]
-                if self.info.recipe.use_refined_positions_good:
-                    for i in range(indices_good.shape[0]):
-                        if indices_good[i] > n_frames: break
-                    indices_good = indices_good[:i]
             if self.info.recipe.use_refined_positions_good:
+                indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
+                                         self.info.recipe + '/recons_by_Michal.h5',
+                                        'data.reconstruct_ind')['reconstruct_ind'][0]
+                for i in range(indices_good.shape[0]):
+                    if indices_good[i] > n_frames:
+                        indices_good = indices_good[:i]
+                        break
                 positions = positions[indices_good.astype(int)-1]
             positions *= self.info.recipe.refined_positions_multiplier
         else:
@@ -161,6 +160,7 @@ class DiProIFERMIScan(PtyScan):
         key = H5_PATHS.frame_pattern
 
         if self.info.recipe.dark_name is not None:
+            u.log(3, 'Loading darks: one frame per file.')
             dark = [io.h5read(self.dark_path + i, key)[key].astype(np.float32)
                     for i in os.listdir(self.dark_path) if i.startswith('Dark')]
         else:
@@ -194,8 +194,8 @@ class DiProIFERMIScan(PtyScan):
                 indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
                                          self.info.recipe + '/recons_by_Michal.h5',
                                          'data.reconstruct_ind')['reconstruct_ind'][0]
-                raw[i] = io.h5read(self.data_path + self.h5_filename_list[indices_good[i].astype(int)],
-                                   key)[key].astype(np.float32)
+                raw[i] = io.h5read(self.data_path + self.h5_filename_list[
+                          indices_good[i].astype(int)-1],key)[key].astype(np.float32)
             else:
                 raw[i] = io.h5read(self.data_path + self.h5_filename_list[i],
                                key)[key].astype(np.float32)
