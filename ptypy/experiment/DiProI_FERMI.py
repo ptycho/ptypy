@@ -33,7 +33,7 @@ RECIPE.base_path = None
 RECIPE.scan_name = None             # this has to be a string (e.g. 'Cycle001')
 RECIPE.run_ID = None                # this has to be a string (e.g. 'Scan018')
 RECIPE.dark_name = None             # this has to be a string (e.g. 'Dark')
-RECIPE.dark_value = 200.            # Used if dark_number is None
+RECIPE.dark_value = 400.            # Used if dark_number is None
 RECIPE.detector_flat_file = None
 RECIPE.h5_file_pattern = '%(base_path)s/imported/%(run_ID)s/%(scan_name)s/rawdata/'
 RECIPE.dark_h5_file_pattern = '%(base_path)s/imported/%(run_ID)s/%(dark_name)s/rawdata/'
@@ -218,9 +218,11 @@ class DiProIFERMIScan(PtyScan):
                 raw[j][raw[j] < 0] = 0
             data = raw
         elif self.info.recipe.dark_subtraction:
+            u.ipshell()
             for j in raw:
                 raw[j] = raw[j] - common.dark
                 raw[j][raw[j] < 0] = 0
+            u.ipshell()
             data = raw
         else:
             data = raw
