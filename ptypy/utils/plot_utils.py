@@ -566,8 +566,6 @@ class PtyAxis(object):
         else:
             self.shape = None
             self.data = None
-        self.set_channel(channel, False)
-        self.set_cmap(kwargs.get('cmap', cmap), False)
         self.remove_phase_ramp = kwargs.get('rmramp', False)
         self.cax = None
         self.cax_aspect = None
@@ -582,6 +580,8 @@ class PtyAxis(object):
         self.cmap = None
         self.channel = None
         self.psize = None
+        self.set_channel(channel, False)
+        self.set_cmap(kwargs.get('cmap', cmap), False)
 
     def set_psize(self, psize, update=True):
         assert np.isscalar(psize), 'Pixel size must be scalar value'
