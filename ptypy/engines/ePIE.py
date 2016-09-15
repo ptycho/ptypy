@@ -104,17 +104,17 @@ class EPIE(BaseEngine):
         # communicate this over MPI
         parallel.allreduceC(self.ob_nodecover)
 
-        # DEBUGGING
-        if self.curiter == 0:
-            import matplotlib.pyplot as plt
-            plt.imshow(self.nodemask)
-            plt.colorbar()
-            plt.show()
-            if parallel.master:
-                import matplotlib.pyplot as plt
-                plt.imshow(self.ob_nodecover.S.values()[0].data[0].real)
-                plt.colorbar()
-                plt.show()
+        # DEBUGGING: show the actual domain decomposition
+        # if self.curiter == 0:
+        #     import matplotlib.pyplot as plt
+        #     plt.imshow(self.nodemask)
+        #     plt.colorbar()
+        #     plt.show()
+        #     if parallel.master:
+        #         import matplotlib.pyplot as plt
+        #         plt.imshow(self.ob_nodecover.S.values()[0].data[0].real)
+        #         plt.colorbar()
+        #         plt.show()
 
     def engine_iterate(self, num=1):
         """
@@ -204,7 +204,6 @@ class EPIE(BaseEngine):
 
     def _redestribute_data(self):
         """ 
-
         This function redistributes data among nodes, so that each
         node becomes in charge of a contiguous block of scanning
         positions.
@@ -251,17 +250,23 @@ class EPIE(BaseEngine):
 
         # data transfer happens
         for name, dest in destinations.iteritems():
-            # your turn to send
             if self.pods[name].active:
+                # your turn to send
+                # debugging: how much memory does the diff Container use now?
+                # before = self.ptycho.containers['Cdiff'].calc_mem_usage()[0]
                 parallel.send(self.pods[name].diff, dest=dest)
                 parallel.send(self.pods[name].mask, dest=dest)
                 self.pods[name].di_view.active = False
                 self.pods[name].ma_view.active = False
                 self.pods[name].ex_view.active = False
-                # somehow discard the data here, setting active to False
-                # and reformatting doesn't seem to do it.
-            # your turn to receive
+                self.pods[name].di_view.storage.reformat()
+                self.pods[name].ma_view.storage.reformat()
+                self.pods[name].ex_view.storage.reformat()
+                # confirm that a reasonable amount of memory has been freed:
+                # after = self.ptycho.containers['Cdiff'].calc_mem_usage()[0]
+                # print "change: %u to %u, %.1f%% or %.2f patterns"%(before, after, float(after-before)/before*100, float(after-before)/(before/(self.pods[name].di_view.storage.data.shape[0] + 1.0)))
             if dest == parallel.rank:
+                # your turn to receive
                 self.pods[name].di_view.active = True
                 self.pods[name].ma_view.active = True
                 self.pods[name].ex_view.active = True
