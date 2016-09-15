@@ -121,6 +121,9 @@ class EPIE(BaseEngine):
         Compute `num` iterations.
         """
         pod_order = self.pods.keys()
+        to = 0.0
+        tf = 0.0
+        tc = 0.0
         for it in range(num):
             error_dct = {}
             random.shuffle(pod_order)
@@ -131,6 +134,8 @@ class EPIE(BaseEngine):
                     continue
 
                 # Fourier update:
+                logger.debug(pre_str + '----- ePIE fourier update -----')
+                t0 = time.time()
                 exit_ = pod.object * pod.probe
                 image = pod.fw(exit_)
                 fmag = np.sqrt(np.abs(pod.diff))
@@ -140,8 +145,11 @@ class EPIE(BaseEngine):
                 error_exit = np.sum(np.abs(pod.exit - exit_)**2)
                 error_phot = 0.0  # this is done with log likelihood - do later
                 error_dct[name] = [error_fmag, error_phot, error_exit]
+                t1 = time.time()
+                tf += t1 - t0
 
                 # Object update:
+                logger.debug(pre_str + '----- ePIE object update -----')
                 pod.object += (self.p.alpha
                                * np.conj(pod.probe)
                                / np.max(np.abs(pod.probe) ** 2)
@@ -153,6 +161,7 @@ class EPIE(BaseEngine):
                 # np.abs(pod.object)**2, but that tends to explode the
                 # probe.
                 if do_update_probe:
+                    logger.debug(pre_str + '----- ePIE probe update -----')
                     object_max = np.max(
                         np.abs(self.ob.S.values()[0].data.max())**2)
                     pod.probe += (self.p.beta
@@ -160,9 +169,12 @@ class EPIE(BaseEngine):
                                   * (pod.exit - exit_))
                     # Apply the probe support
                     pod.probe *= self.probe_support[pod.pr_view.storageID][0]
+                t2 = time.time()
+                to += t2 - t1
 
             # Distribute result with MPI
             if (self.curiter + it) % self.p.synchronization == 0:
+                logger.debug(pre_str + '----- communication -----')
 
                 # only share the part of the object which whis node has
                 # contributed to, and zero the rest to avoid weird
@@ -181,6 +193,12 @@ class EPIE(BaseEngine):
                     for name, s in self.pr.S.iteritems():
                         parallel.allreduce(s.data)
                         s.data /= parallel.size
+                t3 = time.time()
+                tc += t3 - t2
+
+        logger.info('Time spent in Fourier update: %.2f' % tf)
+        logger.info('Time spent in Overlap update: %.2f' % to)
+        logger.info('Time spent in communication:  %.2f' % tc)
 
         # error_dct is in the format that basic_fourier_update returns
         # and that Ptycho expects. In DM, that dict is overwritten on
@@ -214,6 +232,7 @@ class EPIE(BaseEngine):
 
         """
         layout = self._best_decomposition(parallel.size)
+        t0 = time.time()
 
         # get the range of positions and define the size of each node's domain
         pod = self.pods.values()[0]
@@ -249,11 +268,10 @@ class EPIE(BaseEngine):
         destinations = parallel.bcast_dict(destinations)
 
         # data transfer happens
+        transferred = 0
         for name, dest in destinations.iteritems():
             if self.pods[name].active:
                 # your turn to send
-                # debugging: how much memory does the diff Container use now?
-                # before = self.ptycho.containers['Cdiff'].calc_mem_usage()[0]
                 parallel.send(self.pods[name].diff, dest=dest)
                 parallel.send(self.pods[name].mask, dest=dest)
                 self.pods[name].di_view.active = False
@@ -262,9 +280,7 @@ class EPIE(BaseEngine):
                 self.pods[name].di_view.storage.reformat()
                 self.pods[name].ma_view.storage.reformat()
                 self.pods[name].ex_view.storage.reformat()
-                # confirm that a reasonable amount of memory has been freed:
-                # after = self.ptycho.containers['Cdiff'].calc_mem_usage()[0]
-                # print "change: %u to %u, %.1f%% or %.2f patterns"%(before, after, float(after-before)/before*100, float(after-before)/(before/(self.pods[name].di_view.storage.data.shape[0] + 1.0)))
+                transferred += 1
             if dest == parallel.rank:
                 # your turn to receive
                 self.pods[name].di_view.active = True
@@ -276,6 +292,11 @@ class EPIE(BaseEngine):
                 self.pods[name].diff = parallel.receive()
                 self.pods[name].mask = parallel.receive()
             parallel.barrier()
+        transferred = parallel.comm.reduce(transferred)
+        t1 = time.time()
+        if parallel.master and transferred > 0:
+            logger.info('Redistributed data to match %ux%u grid, moved %u pods in %.2f s'
+                        % (tuple(layout) + (transferred, t1 - t0)))
 
     def _best_decomposition(self, N):
         """
