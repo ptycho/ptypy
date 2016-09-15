@@ -569,7 +569,7 @@ class Ptycho(Base):
         except BaseException:
             pass
         try:
-            self.interaction.stop()
+            self.interactor.stop()
         except BaseException:
             pass
                     

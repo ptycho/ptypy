@@ -38,9 +38,9 @@ RECIPE.detector_name = None     # Name of the detector as specified in the nexus
 RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
 RECIPE.motors_multiplier = 1e-3 #for AMO #1e-6 #for CXI         # Motor conversion factor to meters
 RECIPE.base_path = './'
-RECIPE.data_file_pattern = '%(base_path)s' + 'raw/r%(scan_number)04d.h5'
-RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/r%(dark_number)04d.h5'
-RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/r%(flat_number)04d.h5'
+RECIPE.data_file_pattern = '%(base_path)s' + 'input/r%(scan_number)04d.h5'
+RECIPE.dark_file_pattern = '%(base_path)s' + 'input/r%(dark_number)04d.h5'
+RECIPE.flat_file_pattern = '%(base_path)s' + 'input/r%(flat_number)04d.h5'
 RECIPE.mask_file = None # '%(base_path)s' + 'processing/mask.h5'
 RECIPE.averaging_number = 1 # Number of frames to be averaged
 
@@ -135,7 +135,7 @@ class AMOScan(core.data.PtyScan):
 
         pos_list = []
         for i in range(0,len(x),self.info.recipe.averaging_number):
-            pos_list.append([x[i],y[i]])
+            pos_list.append([-y[i],-x[i]])
         positions = np.array(pos_list)
 
         return positions
@@ -188,12 +188,9 @@ class AMOScan(core.data.PtyScan):
         :param common:
         :return:
         """
-
         # Apply corrections to frames
-        # FIXME: this will depend on the detector type used.
-
         data = raw
-
+        for k in data.keys():
+            data[k][data[k] < 0] = 0
         weights = weights
-
         return data, weights

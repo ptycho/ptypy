@@ -46,7 +46,8 @@ Server_DEFAULT = u.Param(network_DEFAULT,
 #: Default parameters for the client
 Client_DEFAULT = u.Param(network_DEFAULT,
                          poll_timeout=100,   # Network polling interval (in milliseconds!)
-                         pinginterval=1  # Interval to check pings (in seconds)
+                         pinginterval=1,  # Interval to check pings (in seconds)
+                         connection_timeout=3600000.,  # Timeout for dead server (in milliseconds!)
 )
 
 
@@ -705,6 +706,7 @@ class Client(object):
         self.req_port = p.port
         self.poll_timeout = p.poll_timeout
         self.pinginterval = p.pinginterval
+        self.connection_timeout = p.connection_timeout
 
         # Initially not connected
         self.connected = False
@@ -738,7 +740,7 @@ class Client(object):
         self.tickets_to_tags = {}
         self.tags_to_tickets = {}
 
-        self.lastping = 0        
+        self.lastping = 0
 
         self._thread = None
         self._stopping = False
@@ -782,6 +784,8 @@ class Client(object):
         # Initialize poller
         self.poller = zmq.Poller()
         self.poller.register(self.bind_socket, zmq.POLLIN)
+        self.req_poller = zmq.Poller()
+        self.req_poller.register(self.req_socket, zmq.POLLIN)
         self.connected = True
         
         # Create "Event" flags for calls that require synchronization.
@@ -809,10 +813,16 @@ class Client(object):
                 self._send(self.req_socket, cmd)
 
                 # Wait for the reply and store it
-                reply = self._recv(self.req_socket)
+                if self.req_poller.poll(self.connection_timeout):
+                    reply = self._recv(self.req_socket)
+                else:
+                    # Server has timed out on its reply!
+                    logger.warning('Server did not reply. Shutting down the connection.')
+                    self._stopping = True
 
                 # Ignore pongs
-                if reply['status'] == 'pong': continue
+                if reply['status'] == 'pong':
+                    continue
 
                 self.last_reply = reply
 
@@ -828,6 +838,8 @@ class Client(object):
             if self.poller.poll(self.poll_timeout):
                 self._read_message()
             self._ping()
+
+        self.connected = False
                 
     def _ping(self):
         """\
@@ -838,7 +850,7 @@ class Client(object):
             self.cmds.append({'ID': self.ID, 'cmd': 'PING', 'args': None})
             self.lastping = now
         return
-  
+
     def _send(self, out_socket, obj):
         """\
         Send the given object using JSON, taking care of numpy arrays.
