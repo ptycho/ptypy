@@ -135,7 +135,7 @@ class AMOScan(core.data.PtyScan):
 
         pos_list = []
         for i in range(0,len(x),self.info.recipe.averaging_number):
-            pos_list.append([-y[i],-x[i]])
+            pos_list.append([x[i],y[i]])
         positions = np.array(pos_list)
 
         return positions
@@ -175,7 +175,7 @@ class AMOScan(core.data.PtyScan):
             while h < (i+self.info.recipe.averaging_number):
                 mean.append(io.h5read(self.data_file, H5_PATHS.frame_pattern % self.info.recipe, slice=h)[key].astype(np.float32))
                 h+=1
-            raw[j] = np.array(mean).mean(0)
+            raw[j] = np.array(mean).mean(0).T
             i+=self.info.recipe.averaging_number
         log(3, 'Data loaded successfully.')
         return raw, pos, weights
