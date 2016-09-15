@@ -24,8 +24,6 @@ DEFAULT = u.Param(
     update_object_first=True,      # If True update object before probe
     overlap_converge_factor=0.05,  # Threshold for interruption of the inner overlap loop
     overlap_max_iterations=10,     # Maximum of iterations for the overlap constraint inner loop
-    probe_metric=1,                # Weight of the current probe estimate in the update, similar to probe_inertia but
-                                   # crucial here.
     object_inertia=1e-4,           # Weight of the current object in the update, formally DM_smooth_amplitude
     fourier_relax_factor=0.05,     # If rms error of model vs diffraction data is smaller than this fraction,
                                    # Fourier constraint is met
