@@ -142,10 +142,10 @@ class EPIE(BaseEngine):
                 error_dct[name] = [error_fmag, error_phot, error_exit]
 
                 # Object update:
-                pod.object += self.p.alpha
-                    * np.conj(pod.probe)
-                    / np.max(np.abs(pod.probe) ** 2)
-                    * (pod.exit - exit_)
+                pod.object += (self.p.alpha
+                               * np.conj(pod.probe)
+                               / np.max(np.abs(pod.probe) ** 2)
+                               * (pod.exit - exit_))
 
                 # Probe update: The ePIE paper (and the parallel ePIE
                 # paper) are unclear as to what maximum value should be
@@ -155,8 +155,9 @@ class EPIE(BaseEngine):
                 if do_update_probe:
                     object_max = np.max(
                         np.abs(self.ob.S.values()[0].data.max())**2)
-                    pod.probe += self.p.beta
-                        * np.conj(pod.object) / object_max * (pod.exit - exit_)
+                    pod.probe += (self.p.beta
+                                  * np.conj(pod.object) / object_max
+                                  * (pod.exit - exit_))
                     # Apply the probe support
                     pod.probe *= self.probe_support[pod.pr_view.storageID][0]
 
@@ -233,8 +234,8 @@ class EPIE(BaseEngine):
 
         # now, the node number corresponding to a coordinate (x, y) is
         def __node(x, y):
-            return int((x - xlims[0]) / dx)
-                + layout[1] * int((y - ylims[0]) / dy)
+            return (int((x - xlims[0]) / dx)
+                    + layout[1] * int((y - ylims[0]) / dy))
 
         # now, each node works out which of its own pods to send off,
         # and the result is communicated to all other nodes as a dict.
