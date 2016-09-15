@@ -223,7 +223,8 @@ class DiProIFERMIScan(PtyScan):
             for j in raw:
                 raw[j] = raw[j] - common.dark
                 raw[j][raw[j] < (2*common.dark_std)] = 0.
-                raw[j] = raw[j] * 1.e3 / raw[j,447:509,456:513].mean()
+                u.ipshell()
+                raw[j] = raw[j] * 1.e3 / raw[j][447:509,456:513].mean()
             #ADD step for normalization to median rather than 1e3
             raw = raw/6. #signal to photons conversion
             data = raw
