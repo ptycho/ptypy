@@ -172,7 +172,8 @@ class DiProIFERMIScan(PtyScan):
         else:
             flat = 1.
 
-        common.dark = np.array(dark).mean(0)
+        common.dark     = np.array(dark).mean(0)
+        common.dark_std = np.array(dark).std( 0)
         common.flat = flat
 
         return common
@@ -189,6 +190,7 @@ class DiProIFERMIScan(PtyScan):
         weights = {}  # Container for the weights
         key = H5_PATHS.frame_pattern
 
+        u.log(3, 'Loading frames: one frame per file.')
         for i in range(len(indices)):
             if self.info.recipe.use_refined_positions_good:
                 indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
@@ -220,7 +222,10 @@ class DiProIFERMIScan(PtyScan):
         elif self.info.recipe.dark_subtraction:
             for j in raw:
                 raw[j] = raw[j] - common.dark
-                raw[j][raw[j] < 0] = 0
+                raw[j][raw[j] < (2*common.dark_std)] = 0.
+                raw[j] = raw[j] * 1.e3 / raw[j,447:509,456:513].mean()
+            #ADD step for normalization to median rather than 1e3
+            raw = raw/6. #signal to photons conversion
             data = raw
         else:
             data = raw
