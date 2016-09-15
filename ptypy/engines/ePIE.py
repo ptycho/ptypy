@@ -2,21 +2,27 @@
 """
 Parallel ePIE reconstruction engine.
 
-This is an implementation of "Synchronous parallel ptychography" as described
-in Nashed et al. [Optics Express, 22 (2014) 32082]. Note that this algorithm
-is not a strict parallelization of the original ePIE algorithm. The number of
-nodes affects reconstruction as described in the publication.
+This is an implementation of "Synchronous parallel ptychography" as
+described in Nashed et al. [Optics Express, 22 (2014) 32082]. Note
+that this algorithm is not a strict parallelization of the original
+ePIE algorithm. The number of nodes affects reconstruction as
+described in the publication.
 
-This class does not carry out the slimmed object sharing described in Nashed
-et al., but instead shares the entire object array as done in for example the
-PTYPY implementation of the Differece Map algorithm.
+This class does not carry out the slimmed object sharing described in
+Nashed et al., but instead shares the entire object array as done in
+for example the PTYPY implementation of the Differece Map algorithm.
 
-Note that these PTYPY-specific reconstruction options are not implemented:
-* object clipping
-* subpixel stuff
-* probe and object inertias
-* object smoothing
+Note that these PTYPY-specific reconstruction options are not
+(yet implemented: 
+* object clipping 
+* subpixel stuff 
+* probe and object inertias 
+* object smoothing 
 * probe centering
+* log likelihood
+
+TODO:
+* free memory after sending diff data
 
 This file is part of the PTYPY package.
 
@@ -35,22 +41,26 @@ from . import BaseEngine
 __all__ = ['EPIE']
 
 DEFAULT = u.Param(
-    alpha=1.,                      # ePIE object update parameter
-    beta=1.,                       # ePIE probe update parameter
-    synchronization=1,             # Period with which to synchronize the object
-                                   #    (and optionally the probe) among nodes.
-    redistribute_data=True,        # Whether or not to redistribute data among
-                                   #    nodes to keep each node's views in a
-                                   #    contiguous geographic block, even if new 
-                                   #    data is added during reconstruction.
-    average_probe=False,           # Whether or not to average the probe among
-                                   #    nodes, otherwise each node has its own
-                                   #    probe as in the original publication.
-                                   #    Averaging seems to work the best.
+    alpha=1.,                   # ePIE object update parameter
+    beta=1.,                    # ePIE probe update parameter
+    synchronization=1,          # Period with which to synchronize the
+                                #   object (and optionally the probe)
+                                #   among nodes.
+    redistribute_data=True,     # Whether or not to redistribute data
+                                #   among nodes to keep each node's
+                                #   views in a contiguous geographic
+                                #   block, even if new data is added
+                                #   during reconstruction.
+    average_probe=False,        # Whether or not to average the probe
+                                #   among nodes, otherwise each node
+                                #   has its own probe as in the
+                                #   original publication. Averaging
+                                #   seems to work the best.
 )
 
+
 class EPIE(BaseEngine):
-    
+
     DEFAULT = DEFAULT
 
     def __init__(self, ptycho_parent, pars=None):
@@ -59,7 +69,7 @@ class EPIE(BaseEngine):
         """
         if pars is None:
             pars = DEFAULT.copy()
-            
+
         super(EPIE, self).__init__(ptycho_parent, pars)
 
         # Instance attributes
@@ -69,18 +79,17 @@ class EPIE(BaseEngine):
         """
         Prepare for reconstruction.
         """
-
-        # we need the "node coverage" - the number of processes which has
-        # views onto each pixel of the object. Could be a simple int array
-        # but guess it's best to use containers to allow for more than one
-        # object storage (as in DM).
+        # we need the "node coverage" - the number of processes which
+        # has views onto each pixel of the object. Could be a simple
+        # int array but guess it's best to use containers to allow for
+        # more than one object storage (as in DM).
         self.ob_nodecover = self.ob.copy(self.ob.ID + '_ncover', fill=0.0)
 
     def engine_prepare(self):
         """
-        Last minute initialization. Everything that needs to be recalculated when new data arrives.
+        Last minute initialization. Everything that needs to be 
+        recalculated when new data arrives.
         """
-
         if self.p.redistribute_data:
             self._redestribute_data()
 
@@ -88,13 +97,14 @@ class EPIE(BaseEngine):
         self.ob_nodecover.fill(0.0)
         for name, pod in self.pods.iteritems():
             if pod.active:
-                self.ob_nodecover[pod.ob_view] = 1 
-        self.nodemask = np.array(self.ob_nodecover.S.values()[0].data[0], dtype=np.bool)
+                self.ob_nodecover[pod.ob_view] = 1
+        self.nodemask = np.array(self.ob_nodecover.S.values()[0].data[0],
+                                 dtype=np.bool)
 
         # communicate this over MPI
         parallel.allreduceC(self.ob_nodecover)
 
-        ### DEBUGGING
+        # DEBUGGING
         if self.curiter == 0:
             import matplotlib.pyplot as plt
             plt.imshow(self.nodemask)
@@ -110,7 +120,6 @@ class EPIE(BaseEngine):
         """
         Compute `num` iterations.
         """
-
         pod_order = self.pods.keys()
         for it in range(num):
             error_dct = {}
@@ -129,19 +138,25 @@ class EPIE(BaseEngine):
                 image = fmag * np.exp(1j * np.angle(image))
                 pod.exit = pod.bw(image)
                 error_exit = np.sum(np.abs(pod.exit - exit_)**2)
-                error_phot = 0.0 # this is done with log likelihood - do later
+                error_phot = 0.0  # this is done with log likelihood - do later
                 error_dct[name] = [error_fmag, error_phot, error_exit]
 
                 # Object update:
-                pod.object += self.p.alpha * np.conj(pod.probe) / np.max(np.abs(pod.probe)**2) * (pod.exit - exit_)
+                pod.object += self.p.alpha
+                    * np.conj(pod.probe)
+                    / np.max(np.abs(pod.probe) ** 2)
+                    * (pod.exit - exit_)
 
-                # Probe update: The ePIE paper (and the parallel ePIE paper)
-                # are unclear as to what maximum value should be chosen here.
-                # An alternative would be the maximum of
-                # np.abs(pod.object)**2, but that tends to explode the probe.
+                # Probe update: The ePIE paper (and the parallel ePIE
+                # paper) are unclear as to what maximum value should be
+                # chosen here. An alternative would be the maximum of
+                # np.abs(pod.object)**2, but that tends to explode the
+                # probe.
                 if do_update_probe:
-                    object_max = np.max(np.abs(self.ob.S.values()[0].data.max())**2) 
-                    pod.probe += self.p.beta * np.conj(pod.object) / object_max * (pod.exit - exit_)     
+                    object_max = np.max(
+                        np.abs(self.ob.S.values()[0].data.max())**2)
+                    pod.probe += self.p.beta
+                        * np.conj(pod.object) / object_max * (pod.exit - exit_)
                     # Apply the probe support
                     pod.probe *= self.probe_support[pod.pr_view.storageID][0]
 
@@ -149,12 +164,14 @@ class EPIE(BaseEngine):
             if (self.curiter + it) % self.p.synchronization == 0:
 
                 # only share the part of the object which whis node has
-                # contributed to, and zero the rest to avoid weird feedback.
+                # contributed to, and zero the rest to avoid weird
+                # feedback.
                 self.ob.S.values()[0].data[0] *= self.nodemask
                 parallel.allreduceC(self.ob)
-                
-                # the reduced sum should be an average, and the denominator
-                # (the number of contributing nodes) varies across the object.
+
+                # the reduced sum should be an average, and the
+                # denominator (the number of contributing nodes) varies
+                # across the object.
                 for name, s in self.ob.S.iteritems():
                     s.data /= (np.abs(self.ob_nodecover.S[name].data) + 1e-5)
 
@@ -164,10 +181,10 @@ class EPIE(BaseEngine):
                         parallel.allreduce(s.data)
                         s.data /= parallel.size
 
-        # error_dct is in the format that basic_fourier_update returns and
-        # that Ptycho expects. In DM, that dict is overwritten on every
-        # iteration, so we only gather the dicts corresponding to the last
-        # iteration of each contiguous block.
+        # error_dct is in the format that basic_fourier_update returns
+        # and that Ptycho expects. In DM, that dict is overwritten on
+        # every iteration, so we only gather the dicts corresponding to
+        # the last iteration of each contiguous block.
         error = parallel.gather_dict(error_dct)
         return error
 
@@ -175,25 +192,38 @@ class EPIE(BaseEngine):
         """
         Try deleting every helper container.
         """
-        containers = [ self.ob_nodecover, ]
+        containers = [self.ob_nodecover, ]
 
         for c in containers:
             logger.debug('Attempt to remove container %s' % c.ID)
             del self.ptycho.containers[c.ID]
         #    IDM.used.remove(c.ID)
-        
+
         del containers
 
     def _redestribute_data(self):
+        """ 
+
+        This function redistributes data among nodes, so that each
+        node becomes in charge of a contiguous block of scanning
+        positions.
+
+        Each node is associated with a domain of the scanning pattern,
+        and communication happens node-to-node after each has worked
+        out which of its pods are not part of its domain. 
+
+        """
         layout = self._best_decomposition(parallel.size)
 
         # get the range of positions and define the size of each node's domain
         pod = self.pods.values()[0]
-        xlims = [ pod.ob_view.coord[1], ] * 2 # min, max
-        ylims = [ pod.ob_view.coord[0], ] * 2 # min, max
+        xlims = [pod.ob_view.coord[1], ] * 2  # min, max
+        ylims = [pod.ob_view.coord[0], ] * 2  # min, max
         for name, pod in self.pods.iteritems():
-            xlims = [min(xlims[0], pod.ob_view.coord[1]), max(xlims[1], pod.ob_view.coord[1])]
-            ylims = [min(ylims[0], pod.ob_view.coord[0]), max(ylims[1], pod.ob_view.coord[0])]
+            xlims = [min(xlims[0], pod.ob_view.coord[1]),
+                     max(xlims[1], pod.ob_view.coord[1])]
+            ylims = [min(ylims[0], pod.ob_view.coord[0]),
+                     max(ylims[1], pod.ob_view.coord[0])]
         # expand the outer borders slightly to avoid edge effects
         xlims = np.array(xlims) + np.array([-1, 1]) * np.diff(xlims) * .001
         ylims = np.array(ylims) + np.array([-1, 1]) * np.diff(ylims) * .001
@@ -202,10 +232,12 @@ class EPIE(BaseEngine):
         dy = np.diff(ylims) / layout[0]
 
         # now, the node number corresponding to a coordinate (x, y) is
-        def __node(x, y): return int((x - xlims[0]) / dx) + layout[1] * int((y - ylims[0]) / dy)
+        def __node(x, y):
+            return int((x - xlims[0]) / dx)
+                + layout[1] * int((y - ylims[0]) / dy)
 
-        # now, each node works out which of its own pods to send off, and the
-        # result is communicated to all other nodes as a dict.
+        # now, each node works out which of its own pods to send off,
+        # and the result is communicated to all other nodes as a dict.
         destinations = {}
         for name, pod in self.pods.iteritems():
             if not pod.active:
@@ -225,8 +257,8 @@ class EPIE(BaseEngine):
                 self.pods[name].di_view.active = False
                 self.pods[name].ma_view.active = False
                 self.pods[name].ex_view.active = False
-                #somehow discard the data here, setting active to False and
-                #reformatting doesn't seem to do it.
+                # somehow discard the data here, setting active to False
+                # and reformatting doesn't seem to do it.
             # your turn to receive
             if dest == parallel.rank:
                 self.pods[name].di_view.active = True
@@ -240,6 +272,10 @@ class EPIE(BaseEngine):
             parallel.barrier()
 
     def _best_decomposition(self, N):
+        """
+        Work out the best arrangement of domains for a given number of 
+        nodes. Assumes a roughly square scan.
+        """
         solutions = []
         for i in range(1, int(np.sqrt(N)) + 1):
             if N % i == 0:
