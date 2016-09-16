@@ -148,8 +148,14 @@ class EPIE(BaseEngine):
                 exit_ = pod.object * pod.probe
                 image = pod.fw(exit_)
                 fmag = np.sqrt(np.abs(pod.diff))
-                error_fmag = np.sum((np.abs(image) - fmag)**2)
-                image = fmag * np.exp(1j * np.angle(image))
+                error_fmag = (
+                    np.sum(pod.mask * (np.abs(image) - fmag)**2)
+                    / pod.mask.sum()
+                )
+                image = (
+                    pod.mask * fmag * np.exp(1j * np.angle(image))
+                    + (1 - pod.mask) * image
+                )
                 pod.exit = pod.bw(image)
                 error_exit = np.sum(np.abs(pod.exit - exit_)**2)
                 error_phot = 0.0  # this is done with log likelihood - do later
