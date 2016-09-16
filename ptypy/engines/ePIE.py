@@ -125,6 +125,7 @@ class EPIE(BaseEngine):
         tf = 0.0
         tc = 0.0
         for it in range(num):
+            pre_str = 'Iteration %u:  '%it
             error_dct = {}
             random.shuffle(pod_order)
             do_update_probe = (self.p.probe_update_start <= self.curiter + it)
