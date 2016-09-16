@@ -135,7 +135,7 @@ class AMOScan(core.data.PtyScan):
 
         pos_list = []
         for i in range(0,len(x),self.info.recipe.averaging_number):
-            pos_list.append([x[i],y[i]])
+            pos_list.append([y[i],x[i]])
         positions = np.array(pos_list)
 
         return positions
@@ -191,6 +191,6 @@ class AMOScan(core.data.PtyScan):
         # Apply corrections to frames
         data = raw
         for k in data.keys():
-            data[k][data[k] < 0] = 0
+            data[k][data[k] < 1] = 0
         weights = weights
         return data, weights
