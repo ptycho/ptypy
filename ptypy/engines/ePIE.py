@@ -62,6 +62,8 @@ DEFAULT = u.Param(
                                 #   in alphabetical order as per
                                 #   list.sort(). Disabling is useful for
                                 #   debugging.
+    object_inertia=None,        # Not used in ePIE
+    probe_inertia=None,         # Not used in ePIE
 )
 
 
@@ -77,6 +79,12 @@ class EPIE(BaseEngine):
             pars = DEFAULT.copy()
 
         super(EPIE, self).__init__(ptycho_parent, pars)
+
+        # Check that none of the base class parameters that aren't used
+        # for ePIE are specified.
+        if ((self.p.object_inertia is not None) or
+            (self.p.probe_inertia is not None)):
+            logger.warning('Probe and/or object inertias were specified, but will be ignored by the ePIE engine.')
 
         # Instance attributes
         self.ob_nodecover = None
@@ -165,6 +173,7 @@ class EPIE(BaseEngine):
 
                 # Object update:
                 logger.debug(pre_str + '----- ePIE object update -----')
+
                 pod.object += (self.p.alpha
                                * np.conj(pod.probe)
                                / np.max(np.abs(pod.probe) ** 2)
