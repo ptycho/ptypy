@@ -62,8 +62,9 @@ DEFAULT = u.Param(
                                 #   in alphabetical order as per
                                 #   list.sort(). Disabling is useful for
                                 #   debugging.
-    object_inertia=None,        # Not used in ePIE
-    probe_inertia=None,         # Not used in ePIE
+    object_inertia=None,        # Not used in ePIE.
+    probe_inertia=None,         # Not used in ePIE.
+    obj_smooth_std=None,        # Object smoothing prior to all updates.
 )
 
 
@@ -83,8 +84,15 @@ class EPIE(BaseEngine):
         # Check that none of the base class parameters that aren't used
         # for ePIE are specified.
         if ((self.p.object_inertia is not None) or
-            (self.p.probe_inertia is not None)):
-            logger.warning('Probe and/or object inertias were specified, but will be ignored by the ePIE engine.')
+                (self.p.probe_inertia is not None)):
+            logger.warning(
+                'Probe and/or object inertias were specified, but will be ignored by the ePIE engine.')
+
+        # Check that smoothing doesn't outrun object sharing
+        if ((self.p.obj_smooth_std is not None) and
+                (self.p.synchronization > 1)):
+            logger.warning(
+                'Object smoothing with intermittent synchronization (synchronization > 1) usually causes total blurring.')
 
         # Instance attributes
         self.ob_nodecover = None
@@ -145,6 +153,15 @@ class EPIE(BaseEngine):
             if self.p.random_order:
                 random.shuffle(pod_order)
             do_update_probe = (self.p.probe_update_start <= self.curiter + it)
+
+            # object smooting prior to update, if requested
+            if self.p.obj_smooth_std is not None:
+                for name, s in self.ob.S.iteritems():
+                    # u.c_gf is a complex wrapper around
+                    # scipy.ndimage.gaussian_filter()
+                    std = self.p.obj_smooth_std
+                    s.data[:] = u.c_gf(s.data, [0, std, std])
+
             for name in pod_order:
                 pod = self.pods[name]
                 if not pod.active:
@@ -173,7 +190,6 @@ class EPIE(BaseEngine):
 
                 # Object update:
                 logger.debug(pre_str + '----- ePIE object update -----')
-
                 pod.object += (self.p.alpha
                                * np.conj(pod.probe)
                                / np.max(np.abs(pod.probe) ** 2)
