@@ -125,7 +125,7 @@ class EPIE(BaseEngine):
         tf = 0.0
         tc = 0.0
         for it in range(num):
-            pre_str = 'Iteration %u:  '%it
+            pre_str = 'Iteration %u:  ' % it
             error_dct = {}
             random.shuffle(pod_order)
             do_update_probe = (self.p.probe_update_start <= self.curiter + it)
@@ -267,37 +267,49 @@ class EPIE(BaseEngine):
                 destinations[name] = __node(x, y)
         destinations = parallel.gather_dict(destinations)
         destinations = parallel.bcast_dict(destinations)
+        if len(destinations.keys()) == 0:
+            return 0
 
-        # data transfer happens
-        transferred = 0
+        # prepare (enlarge) the storages on the receiving nodes
+        sendpods = []
         for name, dest in destinations.iteritems():
             if self.pods[name].active:
+                # sending this pod, so add it to a temporary list
+                sendpods.append(name)
+            if dest == parallel.rank:
+                # receiving this pod, so mark it as active
+                self.pods[name].di_view.active = True
+                self.pods[name].ma_view.active = True
+                self.pods[name].ex_view.active = True
+        for name in ['Cdiff', 'Cmask']:
+            self.ptycho.containers[name].reformat()
+
+        # transfer data
+        transferred = 0
+        for name, dest in destinations.iteritems():
+            if name in sendpods:
                 # your turn to send
                 parallel.send(self.pods[name].diff, dest=dest)
                 parallel.send(self.pods[name].mask, dest=dest)
                 self.pods[name].di_view.active = False
                 self.pods[name].ma_view.active = False
                 self.pods[name].ex_view.active = False
-                self.pods[name].di_view.storage.reformat()
-                self.pods[name].ma_view.storage.reformat()
-                self.pods[name].ex_view.storage.reformat()
                 transferred += 1
             if dest == parallel.rank:
                 # your turn to receive
-                self.pods[name].di_view.active = True
-                self.pods[name].ma_view.active = True
-                self.pods[name].ex_view.active = True
-                self.pods[name].di_view.storage.reformat()
-                self.pods[name].ma_view.storage.reformat()
-                self.pods[name].ex_view.storage.reformat()
                 self.pods[name].diff = parallel.receive()
                 self.pods[name].mask = parallel.receive()
             parallel.barrier()
+        for name in ['Cdiff', 'Cmask', 'Cexit']:
+            self.ptycho.containers[name].reformat()
         transferred = parallel.comm.reduce(transferred)
         t1 = time.time()
-        if parallel.master and transferred > 0:
+
+        if parallel.master:
             logger.info('Redistributed data to match %ux%u grid, moved %u pods in %.2f s'
                         % (tuple(layout) + (transferred, t1 - t0)))
+
+        return (t1 - t0)
 
     def _best_decomposition(self, N):
         """
