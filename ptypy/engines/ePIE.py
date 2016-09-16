@@ -13,13 +13,10 @@ Nashed et al., but instead shares the entire object array as done in
 for example the PTYPY implementation of the Differece Map algorithm.
 
 Note that these PTYPY-specific reconstruction options are not
-(yet implemented: 
+(yet) implemented: 
 * object clipping 
 * subpixel stuff 
 * log likelihood
-
-TODO:
-* free memory after sending diff data
 
 This file is part of the PTYPY package.
 
@@ -213,6 +210,9 @@ class EPIE(BaseEngine):
                 t2 = time.time()
                 to += t2 - t1
 
+            # center the probe, if requested
+                self.center_probe()
+
             # Distribute result with MPI
             if (self.curiter + it) % self.p.synchronization == 0:
                 logger.debug(pre_str + '----- communication -----')
@@ -228,9 +228,6 @@ class EPIE(BaseEngine):
                 # across the object.
                 for name, s in self.ob.S.iteritems():
                     s.data /= (np.abs(self.ob_nodecover.S[name].data) + 1e-5)
-
-                # center the probe, if requested
-                self.center_probe()
 
                 # average the probe across nodes, if requested
                 if self.p.average_probe and do_update_probe:
