@@ -16,9 +16,6 @@ Note that these PTYPY-specific reconstruction options are not
 (yet implemented: 
 * object clipping 
 * subpixel stuff 
-* probe and object inertias 
-* object smoothing 
-* probe centering
 * log likelihood
 
 TODO:
@@ -41,6 +38,7 @@ from . import BaseEngine
 __all__ = ['EPIE']
 
 DEFAULT = u.Param(
+    # ePIE-specific defaults:
     alpha=1.,                   # ePIE object update parameter
     beta=1.,                    # ePIE probe update parameter
     synchronization=1,          # Period with which to synchronize the
@@ -62,9 +60,12 @@ DEFAULT = u.Param(
                                 #   in alphabetical order as per
                                 #   list.sort(). Disabling is useful for
                                 #   debugging.
+    # Overridden base class defaults:
     object_inertia=None,        # Not used in ePIE.
     probe_inertia=None,         # Not used in ePIE.
     obj_smooth_std=None,        # Object smoothing prior to all updates.
+    probe_center_tol=3,         # See base class
+
 )
 
 
@@ -228,6 +229,9 @@ class EPIE(BaseEngine):
                 for name, s in self.ob.S.iteritems():
                     s.data /= (np.abs(self.ob_nodecover.S[name].data) + 1e-5)
 
+                # center the probe, if requested
+                self.center_probe()
+
                 # average the probe across nodes, if requested
                 if self.p.average_probe and do_update_probe:
                     for name, s in self.pr.S.iteritems():
@@ -362,3 +366,17 @@ class EPIE(BaseEngine):
         i = max(solutions)
         assert (i * (N / i) == N)
         return [i, N / i]
+
+    def center_probe(self):
+        """
+        Stolen in its entirety from the DM engine.
+        """
+        if self.p.probe_center_tol is not None:
+            for name, s in self.pr.S.iteritems():
+                c1 = u.mass_center(u.abs2(s.data).sum(0))
+                c2 = np.asarray(s.shape[-2:]) // 2       # fft convention should however use geometry instead
+                if u.norm(c1 - c2) < self.p.probe_center_tol:
+                    break
+                # SC: possible BUG here, wrong input parameter
+                s.data[:] = u.shift_zoom(s.data, (1.,) * 3, (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+                logger.info('Probe recentered from %s to %s' % (str(tuple(c1)), str(tuple(c2))))
