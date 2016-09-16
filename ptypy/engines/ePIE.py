@@ -56,6 +56,12 @@ DEFAULT = u.Param(
                                 #   has its own probe as in the
                                 #   original publication. Averaging
                                 #   seems to work the best.
+    random_order=True,          # Whether to cycle through the positions
+                                #   in random order on each ePIE
+                                #   iteration. Otherwise does the pods
+                                #   in alphabetical order as per
+                                #   list.sort(). Disabling is useful for
+                                #   debugging.
 )
 
 
@@ -121,13 +127,15 @@ class EPIE(BaseEngine):
         Compute `num` iterations.
         """
         pod_order = self.pods.keys()
+        pod_order.sort()
         to = 0.0
         tf = 0.0
         tc = 0.0
         for it in range(num):
             pre_str = 'Iteration %u:  ' % it
             error_dct = {}
-            random.shuffle(pod_order)
+            if self.p.random_order:
+                random.shuffle(pod_order)
             do_update_probe = (self.p.probe_update_start <= self.curiter + it)
             for name in pod_order:
                 pod = self.pods[name]
