@@ -123,7 +123,9 @@ class DiProIFERMIScan(PtyScan):
                             self.info.recipe + '/recons_by_Michal.h5',
                             'data.probe_positions')['probe_positions']
 
-            positions = [(positions[0, i], positions[1, i])
+            #positions = [(positions[0, i], positions[1, i])
+            #             for i in range(positions.shape[-1])]
+            positions = [(positions[1, i], positions[0, i])
                          for i in range(positions.shape[-1])]
             positions = np.array(positions)
             if positions.shape[0] > n_frames:
