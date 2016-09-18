@@ -46,6 +46,7 @@ RECIPE.motors_multiplier = 1e-3     # DiProI-specific
 RECIPE.mask_file = None             # Mask file name
 RECIPE.use_refined_positions = False
 RECIPE.use_refined_positions_good = False
+RECIPE.use_new_hdf_files = False
 RECIPE.refined_positions_multiplier = 1.68396935*1e-7
 RECIPE.refined_positions_pattern = '%(base_path)s/processing/'
 RECIPE.flat_division = False        # Switch for flat division
@@ -138,6 +139,14 @@ class DiProIFERMIScan(PtyScan):
                         break
                 positions = positions[indices_good.astype(int)-1]
             positions *= self.info.recipe.refined_positions_multiplier
+        elif self.info.recipe.use_new_hdf_files:
+            key_x = H5_PATHS.motor_x
+            key_y = H5_PATHS.motor_y
+            positions = [(io.h5read(self.data_path + self.info.recipe.run_ID
+                                                + '.hdf', key_x)[key_x].tolist(),
+                         (io.h5read(self.data_path + self.info.recipe.run_ID
+                                                + '.hdf', key_y)[key_y].tolist() ))]
+            positions = np.array(positions) * mmult[0]
         else:
             # From raw data
             key_x = H5_PATHS.motor_x
@@ -160,20 +169,24 @@ class DiProIFERMIScan(PtyScan):
         key = H5_PATHS.frame_pattern
 
         if self.info.recipe.dark_name is not None:
-            u.log(3, 'Loading darks: one frame per file.')
-            dark = [io.h5read(self.dark_path + i, key)[key].astype(np.float32)
-                    for i in os.listdir(self.dark_path) if i.startswith('Dark')]
+            if self.info.recipe.use_new_hdf_files:
+                dark = io.h5read(self.data_path + self.info.recipe.run_ID
+                                            + '_dark.hdf')['data']
+            else:
+                u.log(3, 'Loading darks: one frame per file.')
+                dark = [io.h5read(self.dark_path + i, key)[key].astype(np.float32)
+                       for i in os.listdir(self.dark_path) if i.startswith('Dark')]
+            common.dark = np.array(dark).mean(0)
+            common.dark_std = np.array(dark).std(0)
         else:
             dark = self.info.recipe.dark_value
+            common.dark = dark
 
         if self.info.recipe.detector_flat_file is not None:
             flat = io.h5read(self.info.recipe.detector_flat_file,
                              FLAT_PATHS.key)[FLAT_PATHS.key]
         else:
             flat = 1.
-
-        common.dark     = np.array(dark).mean(0)
-        common.dark_std = np.array(dark).std( 0)
         common.flat = flat
 
         return common
@@ -190,17 +203,28 @@ class DiProIFERMIScan(PtyScan):
         weights = {}  # Container for the weights
         key = H5_PATHS.frame_pattern
 
-        u.log(3, 'Loading frames: one frame per file.')
         for i in range(len(indices)):
-            if self.info.recipe.use_refined_positions_good:
-                indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
-                                         self.info.recipe + '/recons_by_Michal.h5',
-                                         'data.reconstruct_ind')['reconstruct_ind'][0]
-                raw[i] = io.h5read(self.data_path + self.h5_filename_list[
-                          indices_good[i].astype(int)-1],key)[key].astype(np.float32)
+            if self.info.recipe.use_new_hdf_files:
+                if self.info.recipe.use_refined_positions_good:
+                    indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
+                                             self.info.recipe + '/recons_by_Michal.h5',
+                                             'data.reconstruct_ind')['reconstruct_ind'][0]
+                    raw[i] = io.h5read(self.data_path + self.info.recipe.run_ID + '.hdf',
+                                        key)[key][indices_good[i].astype(int)-1].astype(np.float32)
+                else:
+                    raw[i] = io.h5read(self.data_path + self.info.recipe.run_ID + '.hdf',
+                                        key)[key][             i               ].astype(np.float32)
             else:
-                raw[i] = io.h5read(self.data_path + self.h5_filename_list[i],
-                               key)[key].astype(np.float32)
+                u.log(3, 'Loading frames: one frame per file.')
+                if self.info.recipe.use_refined_positions_good:
+                    indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
+                                             self.info.recipe + '/recons_by_Michal.h5',
+                                             'data.reconstruct_ind')['reconstruct_ind'][0]
+                    raw[i] = io.h5read(self.data_path + self.h5_filename_list[
+                              indices_good[i].astype(int)-1],key)[key].astype(np.float32)
+                else:
+                    raw[i] = io.h5read(self.data_path + self.h5_filename_list[i],
+                                   key)[key].astype(np.float32)
 
         return raw, pos, weights
 
@@ -221,9 +245,10 @@ class DiProIFERMIScan(PtyScan):
             data = raw
         elif self.info.recipe.dark_subtraction:
             for j in raw:
-                raw[j] = raw[j] - common.dark
-                raw[j][raw[j] < (2*common.dark_std)] = 0.
-                raw[j] = raw[j] * 1.e3 / raw[j][447:509,456:513].mean()
+                raw[j] = raw[j] - common.dark                             # average dark subtraction
+                #raw[j] = raw[j] * 1.e3 / raw[j][447:509, 456:513].mean()  # normalizing to centre of frame
+                raw[j] = raw[j] * 1.e3 / np.median(raw[j][-160:,:160])  # normalizing to corner of frame
+                raw[j][raw[j] < (2*common.dark_std)] = 0.                 # thresholding
                 raw[j] = raw[j] /6. #signal to photons conversion
             #ADD step for normalization to median rather than 1e3
             data = raw
