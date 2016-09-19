@@ -228,8 +228,6 @@ class DiProIFERMIScan(PtyScan):
                 else:
                     raw[i] = io.h5read(self.data_path + self.h5_filename_list[i],
                                    key)[key].astype(np.float32)
-        u.log(3, 'you are in raw')
-        u.ipshell()
         return raw, pos, weights
 
     def correct(self, raw, weights, common):
@@ -250,10 +248,10 @@ class DiProIFERMIScan(PtyScan):
             for j in raw:
                 raw[j] = raw[j] - common.dark                             # average dark subtraction
                 #raw[j] = raw[j] * 1.e3 / raw[j][447:509, 456:513].mean()  # normalizing to centre of frame
-                raw[j] = raw[j] * 1.e3 / np.median(raw[j][-160:,:160])    # normalizing to corner of frame
+                raw[j] = raw[j] / np.median(raw[j][-160:,:160])    # normalizing to corner of frame
                 raw[j][raw[j] < (2*common.dark_std)] = 0.                 # thresholding
                 raw[j] = raw[j] /6. #signal to photons conversion
-            #ADD step for normalization to median rather than 1e3
+            #ADD step for normalization to median rather than 1
         data = raw
         u.log(3,'you are in data, i.e. after correction')
         u.ipshell()
