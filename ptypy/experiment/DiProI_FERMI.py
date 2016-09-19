@@ -47,7 +47,7 @@ RECIPE.mask_file = None             # Mask file name
 RECIPE.use_refined_positions = False
 RECIPE.use_refined_positions_good = False
 RECIPE.use_new_hdf_files = False
-RECIPE.refined_positions_multiplier = 1.68396935*1e-7
+RECIPE.refined_positions_multiplier = 1.68396935*1e-4
 RECIPE.refined_positions_pattern = '%(base_path)s/processing/'
 RECIPE.flat_division = False        # Switch for flat division
 RECIPE.dark_subtraction = False     # Switch for dark subtraction
@@ -145,8 +145,7 @@ class DiProIFERMIScan(PtyScan):
                 positions = positions[indices_good.astype(int)-1]
             positions *= self.info.recipe.refined_positions_multiplier
             u.log(3, 'you are in positions (after multiplier for refined2raw)')
-            u.ipshell()
-        elif self.info.recipe.use_new_hdf_files:
+            u.ipshell()        elif self.info.recipe.use_new_hdf_files:
             key_x = H5_PATHS.motor_x
             key_y = H5_PATHS.motor_y
             positions = [(io.h5read(self.data_path + self.info.recipe.run_ID
