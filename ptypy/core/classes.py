@@ -662,6 +662,8 @@ class Storage(Base):
             new_shape = new_data.shape
             self.layermap = new_layermap
 
+        self.nlayers = len(new_layermap)
+
         # BE: set a layer index in the view the datalist access has proven to
         # be too slow.
         for v in views:
