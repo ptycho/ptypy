@@ -254,7 +254,7 @@ class DiProIFERMIScan(PtyScan):
                 raw[j] = raw[j] - common.dark
 
                 # thresholding
-                #raw[j][raw[j] < (1.*common.dark_std)] = 0.
+                raw[j][raw[j] < (1.*common.dark_std)] = 0.
 
                 # normalizing to centre of frame
                 #raw[j] = raw[j] / raw[j][447:509, 456:513].mean()
@@ -273,7 +273,7 @@ class DiProIFERMIScan(PtyScan):
             for j in raw:
 
                 # thresholding
-                raw[j][raw[j] < (1.*common.dark_std)] = 0.
+                #raw[j][raw[j] < (1.*common.dark_std)] = 0.
 
                 # signal to photons conversion
                 raw[j] = raw[j] /6.
@@ -283,7 +283,6 @@ class DiProIFERMIScan(PtyScan):
         u.ipshell()
 
         # FIXME: this will depend on the detector type used.
-
         weights = weights
 
         return data, weights
