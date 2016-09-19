@@ -217,8 +217,8 @@ class DiProIFERMIScan(PtyScan):
             for i in range(len(indices)):
                 raw[i] = raw_temp[indices_good[i]]
         else:
+            u.log(3, 'Loading frames: one frame per file.')
             for i in range(len(indices)):
-                u.log(3, 'Loading frames: one frame per file.')
                 if self.info.recipe.use_refined_positions_good:
                     indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
                                              self.info.recipe + '/recons_by_Michal.h5',
