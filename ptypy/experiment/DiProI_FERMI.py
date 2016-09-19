@@ -279,8 +279,8 @@ class DiProIFERMIScan(PtyScan):
                 raw[j] = raw[j] /6.
 
         data = raw
-        u.log(3,'you are in data, i.e. after correction')
-        u.ipshell()
+        #u.log(3,'you are in data, i.e. after correction')
+        #u.ipshell()
 
         # FIXME: this will depend on the detector type used.
         weights = weights
