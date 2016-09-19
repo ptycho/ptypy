@@ -144,25 +144,25 @@ class DiProIFERMIScan(PtyScan):
                             break
                 positions = positions[indices_good.astype(int)-1]
             positions *= self.info.recipe.refined_positions_multiplier
-            u.log(3, 'you are in positions (1d2)')
+            u.log(3, 'you are in positions (after multiplier for refined2raw)')
             u.ipshell()
         elif self.info.recipe.use_new_hdf_files:
             key_x = H5_PATHS.motor_x
             key_y = H5_PATHS.motor_y
             positions = [(io.h5read(self.data_path + self.info.recipe.run_ID
-                                                + '.hdf', key_x)[key_x].tolist(),
+                                                + '.hdf', key_x)[key_x].tolist() ),
                          (io.h5read(self.data_path + self.info.recipe.run_ID
-                                                + '.hdf', key_y)[key_y].tolist() ))]
-            positions = np.array(positions) * mmult[0]
+                                                + '.hdf', key_y)[key_y].tolist() ) ]
         else:
             # From raw data
             key_x = H5_PATHS.motor_x
             key_y = H5_PATHS.motor_y
-            positions = [(io.h5read(self.data_path + i, key_x)[key_x].tolist(),
-                         (io.h5read(self.data_path + i, key_y)[key_y].tolist()))
-                         for i in self.h5_filename_list]
+            positions = [(io.h5read(self.data_path + i, key_x)[key_x].tolist() ),
+                         (io.h5read(self.data_path + i, key_y)[key_y].tolist() )
+                                                     for i in self.h5_filename_list]
 
-            positions = np.array(positions) * mmult[0]
+        positions = np.array(positions) * mmult[0]
+        u.log(3, 'you are in positions (after multiplier raw2m)')
         u.ipshell()
         return positions
 
