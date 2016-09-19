@@ -261,18 +261,19 @@ class DiProIFERMIScan(PtyScan):
 
                 # normalizing to full frame
                 raw_medians.append(np.median(raw[j]))
-                raw[j] = raw[j] / raw_medians[j]
+            min_value  = np.array( raw_medians).min()
+            norm_value = np.median(raw_medians) - (min_value-1.)
+            for j in raw:
+                raw[j] = raw[j] / ( raw_medians[j] - (min_value-1.) )
+                raw[j] *= norm_value
+
+            for j in raw:
 
                 # thresholding
                 raw[j][raw[j] < (2*common.dark_std)] = 0.
 
                 # signal to photons conversion
                 raw[j] = raw[j] /6.
-
-        # normalizing to median of medians rather than 1 ..
-        norm_value = np.median(raw_medians)
-        for j in raw:
-            raw[j] *= norm_value
 
         data = raw
         u.log(3,'you are in data, i.e. after correction')
