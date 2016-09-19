@@ -210,7 +210,7 @@ class EPIE(BaseEngine):
                 to += t2 - t1
 
             # center the probe, if requested
-                self.center_probe()
+            self.center_probe()
 
             # clip the object, if requested
             if self.p.clip_object is not None:
