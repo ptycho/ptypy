@@ -245,13 +245,35 @@ class DiProIFERMIScan(PtyScan):
                 raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
                 raw[j][raw[j] < 0] = 0
         elif self.info.recipe.dark_subtraction:
+
+            raw_medians = []
+
             for j in raw:
-                raw[j] = raw[j] - common.dark                             # average dark subtraction
-                #raw[j] = raw[j] * 1.e3 / raw[j][447:509, 456:513].mean()  # normalizing to centre of frame
-                raw[j] = raw[j] / np.median(raw[j][-160:,:160])    # normalizing to corner of frame
-                raw[j][raw[j] < (2*common.dark_std)] = 0.                 # thresholding
-                raw[j] = raw[j] /6. #signal to photons conversion
-            #ADD step for normalization to median rather than 1
+
+                # average dark subtraction
+                raw[j] = raw[j] - common.dark
+
+                # normalizing to centre of frame
+                #raw[j] = raw[j] / raw[j][447:509, 456:513].mean()
+
+                # normalizing to corner of frame
+                #raw[j] = raw[j] / np.median(raw[j][-160:,:160])
+
+                # normalizing to full frame
+                raw_medians.append(np.median(raw[j]))
+                raw[j] = raw[j] / raw_medians[j]
+
+                # thresholding
+                raw[j][raw[j] < (2*common.dark_std)] = 0.
+
+                # signal to photons conversion
+                raw[j] = raw[j] /6.
+
+        # normalizing to median of medians rather than 1 ..
+        norm_value = np.median(raw_medians)
+        for j in raw:
+            raw[j] *= norm_value
+
         data = raw
         u.log(3,'you are in data, i.e. after correction')
         u.ipshell()
