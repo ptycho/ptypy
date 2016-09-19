@@ -157,9 +157,10 @@ class DiProIFERMIScan(PtyScan):
             # From raw data
             key_x = H5_PATHS.motor_x
             key_y = H5_PATHS.motor_y
-            positions = [(io.h5read(self.data_path + i, key_x)[key_x].tolist() ),
-                         (io.h5read(self.data_path + i, key_y)[key_y].tolist() )
-                                                     for i in self.h5_filename_list]
+            positions = [(io.h5read(self.data_path + i, key_x)[key_x].tolist()
+                                                 for i in self.h5_filename_list),
+                         (io.h5read(self.data_path + i, key_y)[key_y].tolist()
+                                                 for i in self.h5_filename_list) ]
 
         positions = np.array(positions) * mmult[0]
         u.log(3, 'you are in positions (after multiplier raw2m)')
