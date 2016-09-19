@@ -145,7 +145,8 @@ class DiProIFERMIScan(PtyScan):
                 positions = positions[indices_good.astype(int)-1]
             positions *= self.info.recipe.refined_positions_multiplier
             u.log(3, 'you are in positions (after multiplier for refined2raw)')
-            u.ipshell()        elif self.info.recipe.use_new_hdf_files:
+            u.ipshell()
+        elif self.info.recipe.use_new_hdf_files:
             key_x = H5_PATHS.motor_x
             key_y = H5_PATHS.motor_y
             positions = [(io.h5read(self.data_path + self.info.recipe.run_ID
