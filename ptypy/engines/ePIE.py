@@ -13,10 +13,9 @@ Nashed et al., but instead shares the entire object array as done in
 for example the PTYPY implementation of the Differece Map algorithm.
 
 Note that these PTYPY-specific reconstruction options are not
-(yet) implemented: 
-* object clipping 
-* subpixel stuff 
-* log likelihood
+(yet) implemented:
+* subpixel stuff
+* log likelihood / photon errors
 
 This file is part of the PTYPY package.
 
@@ -212,6 +211,21 @@ class EPIE(BaseEngine):
 
             # center the probe, if requested
                 self.center_probe()
+
+            # clip the object, if requested
+            if self.p.clip_object is not None:
+                low, high = self.p.clip_object
+                for name, s in self.ob.S.iteritems():
+                    phase = np.angle(s.data)
+                    ampl = np.abs(s.data)
+                    under = (ampl < low)
+                    over = (ampl > high)
+                    clipped = under.sum() + over.sum()
+                    if clipped:
+                        logger.info(
+                            'Clipping the object in %u pixels' % clipped)
+                    s.data[under] = low * np.exp(1j * phase[under])
+                    s.data[over] = high * np.exp(1j * phase[over])
 
             # Distribute result with MPI
             if (self.curiter + it) % self.p.synchronization == 0:
