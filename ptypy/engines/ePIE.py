@@ -106,7 +106,7 @@ class EPIE(BaseEngine):
 
     def engine_prepare(self):
         """
-        Last minute initialization. Everything that needs to be 
+        Last minute initialization. Everything that needs to be
         recalculated when new data arrives.
         """
         if self.p.redistribute_data:
@@ -276,14 +276,14 @@ class EPIE(BaseEngine):
         del containers
 
     def _redestribute_data(self):
-        """ 
+        """
         This function redistributes data among nodes, so that each
         node becomes in charge of a contiguous block of scanning
         positions.
 
         Each node is associated with a domain of the scanning pattern,
         and communication happens node-to-node after each has worked
-        out which of its pods are not part of its domain. 
+        out which of its pods are not part of its domain.
 
         """
         layout = self._best_decomposition(parallel.size)
@@ -367,7 +367,7 @@ class EPIE(BaseEngine):
 
     def _best_decomposition(self, N):
         """
-        Work out the best arrangement of domains for a given number of 
+        Work out the best arrangement of domains for a given number of
         nodes. Assumes a roughly square scan.
         """
         solutions = []
@@ -385,9 +385,12 @@ class EPIE(BaseEngine):
         if self.p.probe_center_tol is not None:
             for name, s in self.pr.S.iteritems():
                 c1 = u.mass_center(u.abs2(s.data).sum(0))
-                c2 = np.asarray(s.shape[-2:]) // 2       # fft convention should however use geometry instead
+                # fft convention should however use geometry instead
+                c2 = np.asarray(s.shape[-2:]) // 2
                 if u.norm(c1 - c2) < self.p.probe_center_tol:
                     break
                 # SC: possible BUG here, wrong input parameter
-                s.data[:] = u.shift_zoom(s.data, (1.,) * 3, (0, c1[0], c1[1]), (0, c2[0], c2[1]))
-                logger.info('Probe recentered from %s to %s' % (str(tuple(c1)), str(tuple(c2))))
+                s.data[:] = u.shift_zoom(
+                    s.data, (1.,) * 3, (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+                logger.info('Probe recentered from %s to %s' %
+                            (str(tuple(c1)), str(tuple(c2))))
