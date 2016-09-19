@@ -146,6 +146,8 @@ class DiProIFERMIScan(PtyScan):
                                                 + '.hdf', key_x)[key_x].tolist(),
                          (io.h5read(self.data_path + self.info.recipe.run_ID
                                                 + '.hdf', key_y)[key_y].tolist() ))]
+            u.log(3, 'you are in positions (1d2)')
+            u.ipshell()
             positions = np.array(positions) * mmult[0]
         else:
             # From raw data
@@ -156,9 +158,7 @@ class DiProIFERMIScan(PtyScan):
                          for i in self.h5_filename_list]
 
             positions = np.array(positions) * mmult[0]
-
-        # load the positions => check required structure vs currently dict with (x,y)
-        ### is this less efficient than loading the whole file and calling individually raw and pos when needed?
+        u.ipshell()
         return positions
 
     def load_common(self):
@@ -172,6 +172,8 @@ class DiProIFERMIScan(PtyScan):
             if self.info.recipe.use_new_hdf_files:
                 dark = io.h5read(self.data_path + self.info.recipe.run_ID
                                             + '_dark.hdf')['data']
+                u.log(3, 'you are in darks')
+                u.ipshell()
             else:
                 u.log(3, 'Loading darks: one frame per file.')
                 dark = [io.h5read(self.dark_path + i, key)[key].astype(np.float32)
@@ -214,6 +216,8 @@ class DiProIFERMIScan(PtyScan):
                 else:
                     raw[i] = io.h5read(self.data_path + self.info.recipe.run_ID + '.hdf',
                                         key)[key][             i               ].astype(np.float32)
+                u.log(3, 'you are in raw')
+                u.ipshell()
             else:
                 u.log(3, 'Loading frames: one frame per file.')
                 if self.info.recipe.use_refined_positions_good:
@@ -242,18 +246,17 @@ class DiProIFERMIScan(PtyScan):
             for j in raw:
                 raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
                 raw[j][raw[j] < 0] = 0
-            data = raw
         elif self.info.recipe.dark_subtraction:
             for j in raw:
                 raw[j] = raw[j] - common.dark                             # average dark subtraction
                 #raw[j] = raw[j] * 1.e3 / raw[j][447:509, 456:513].mean()  # normalizing to centre of frame
-                raw[j] = raw[j] * 1.e3 / np.median(raw[j][-160:,:160])  # normalizing to corner of frame
+                raw[j] = raw[j] * 1.e3 / np.median(raw[j][-160:,:160])    # normalizing to corner of frame
                 raw[j][raw[j] < (2*common.dark_std)] = 0.                 # thresholding
                 raw[j] = raw[j] /6. #signal to photons conversion
             #ADD step for normalization to median rather than 1e3
-            data = raw
-        else:
-            data = raw
+        data = raw
+        u.log(3,'you are in data, i.e. after correction')
+        u.ipshell()
 
         # FIXME: this will depend on the detector type used.
 
