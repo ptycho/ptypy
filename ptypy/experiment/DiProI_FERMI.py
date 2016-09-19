@@ -86,14 +86,18 @@ class DiProIFERMIScan(PtyScan):
                           self.info.recipe)
 
         u.log(3, 'Will read data from h5 files in {data_path}'.format(
-            data_path=self.data_path))
+                                               data_path=self.data_path))
 
         # Path to data files
         self.dark_path = (self.info.recipe.dark_h5_file_pattern %
                           self.info.recipe)
 
-        u.log(3, 'Will read dark from h5 files in {dark_path}'.format(
-            dark_path=self.dark_path))
+        if self.info.recipe.use_new_hdf_files:
+            u.log(3, 'Will read dark from h5 files in {data_path}'.format(
+                                                   data_path=self.data_path))
+        else:
+            u.log(3, 'Will read dark from h5 files in {dark_path}'.format(
+                                                   dark_path=self.dark_path))
 
         # Check whether ptyd file name exists
         if self.info.dfile is None:
@@ -127,18 +131,21 @@ class DiProIFERMIScan(PtyScan):
             positions = [(positions[0, i], positions[1, i])
                          for i in range(positions.shape[-1])]
             positions = np.array(positions)
-            if positions.shape[0] > n_frames:
+            if positions.shape[0] > n_frames and not self.info.recipe.use_new_hdf_files:
                 positions = positions[:n_frames]
             if self.info.recipe.use_refined_positions_good:
                 indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
                                          self.info.recipe + '/recons_by_Michal.h5',
                                         'data.reconstruct_ind')['reconstruct_ind'][0]
-                for i in range(indices_good.shape[0]):
-                    if indices_good[i] > n_frames:
-                        indices_good = indices_good[:i]
-                        break
+                if not self.info.recipe.use_new_hdf_files:
+                    for i in range(indices_good.shape[0]):
+                        if indices_good[i] > n_frames:
+                            indices_good = indices_good[:i]
+                            break
                 positions = positions[indices_good.astype(int)-1]
             positions *= self.info.recipe.refined_positions_multiplier
+            u.log(3, 'you are in positions (1d2)')
+            u.ipshell()
         elif self.info.recipe.use_new_hdf_files:
             key_x = H5_PATHS.motor_x
             key_y = H5_PATHS.motor_y
@@ -146,8 +153,6 @@ class DiProIFERMIScan(PtyScan):
                                                 + '.hdf', key_x)[key_x].tolist(),
                          (io.h5read(self.data_path + self.info.recipe.run_ID
                                                 + '.hdf', key_y)[key_y].tolist() ))]
-            u.log(3, 'you are in positions (1d2)')
-            u.ipshell()
             positions = np.array(positions) * mmult[0]
         else:
             # From raw data
