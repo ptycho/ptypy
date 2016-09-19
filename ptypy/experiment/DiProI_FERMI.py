@@ -144,8 +144,6 @@ class DiProIFERMIScan(PtyScan):
                             break
                 positions = positions[indices_good.astype(int)-1]
             positions *= self.info.recipe.refined_positions_multiplier
-            u.log(3, 'you are in positions (after multiplier for refined2raw)')
-            u.ipshell()
         elif self.info.recipe.use_new_hdf_files:
             key_x = H5_PATHS.motor_x
             key_y = H5_PATHS.motor_y
@@ -163,8 +161,6 @@ class DiProIFERMIScan(PtyScan):
                                                  for i in self.h5_filename_list) ]
 
         positions = np.array(positions) * mmult[0]
-        u.log(3, 'you are in positions (after multiplier raw2m)')
-        u.ipshell()
         return positions
 
     def load_common(self):
@@ -178,8 +174,6 @@ class DiProIFERMIScan(PtyScan):
             if self.info.recipe.use_new_hdf_files:
                 dark = io.h5read(self.data_path + self.info.recipe.run_ID
                                             + '_dark.hdf')['data']
-                u.log(3, 'you are in darks')
-                u.ipshell()
             else:
                 u.log(3, 'Loading darks: one frame per file.')
                 dark = [io.h5read(self.dark_path + i, key)[key].astype(np.float32)
@@ -222,8 +216,6 @@ class DiProIFERMIScan(PtyScan):
                 else:
                     raw[i] = io.h5read(self.data_path + self.info.recipe.run_ID + '.hdf',
                                         key)[key][             i               ].astype(np.float32)
-                u.log(3, 'you are in raw')
-                u.ipshell()
             else:
                 u.log(3, 'Loading frames: one frame per file.')
                 if self.info.recipe.use_refined_positions_good:
@@ -235,7 +227,8 @@ class DiProIFERMIScan(PtyScan):
                 else:
                     raw[i] = io.h5read(self.data_path + self.h5_filename_list[i],
                                    key)[key].astype(np.float32)
-
+        u.log(3, 'you are in raw')
+        u.ipshell()
         return raw, pos, weights
 
     def correct(self, raw, weights, common):
