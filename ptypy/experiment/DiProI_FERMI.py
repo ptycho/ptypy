@@ -205,18 +205,19 @@ class DiProIFERMIScan(PtyScan):
         weights = {}  # Container for the weights
         key = H5_PATHS.frame_pattern
 
-        for i in range(len(indices)):
-            if self.info.recipe.use_new_hdf_files:
-                if self.info.recipe.use_refined_positions_good:
-                    indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
-                                             self.info.recipe + '/recons_by_Michal.h5',
-                                             'data.reconstruct_ind')['reconstruct_ind'][0]
-                    raw[i] = io.h5read(self.data_path + self.info.recipe.run_ID + '.hdf',
-                                        key)[key][indices_good[i].astype(int)-1].astype(np.float32)
-                else:
-                    raw[i] = io.h5read(self.data_path + self.info.recipe.run_ID + '.hdf',
-                                        key)[key][             i               ].astype(np.float32)
+        if self.info.recipe.use_new_hdf_files:
+            raw_temp = io.h5read(self.data_path + self.info.recipe.run_ID + '.hdf',
+                                                        key)[key].astype(np.float32)
+            if self.info.recipe.use_refined_positions_good:
+                indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
+                        self.info.recipe + '/recons_by_Michal.h5','data.reconstruct_ind'
+                                                    )['reconstruct_ind'][0].astype(int)-1
             else:
+                indices_good = range(indices)
+            for i in range(len(indices)):
+                raw[i] = raw_temp[indices_good[i]]
+        else:
+            for i in range(len(indices)):
                 u.log(3, 'Loading frames: one frame per file.')
                 if self.info.recipe.use_refined_positions_good:
                     indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
