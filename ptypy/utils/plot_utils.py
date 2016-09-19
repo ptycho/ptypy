@@ -561,11 +561,12 @@ class PtyAxis(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
         self.ax = ax
-        if data is not None:
-            self.set_data(data, False)
-        else:
-            self.shape = None
-            self.data = None
+        self.shape = None
+        self.data = None
+        
+        if data is not None: self.set_data(data, False)
+        # sets shape and data too
+        
         self.remove_phase_ramp = kwargs.get('rmramp', False)
         self.cax = None
         self.cax_aspect = None
@@ -632,12 +633,17 @@ class PtyAxis(object):
     
     def set_data(self, data, update=True):
         assert data.ndim == 2, 'Data must be two dimensional. It is %d-dimensional' % data.ndim
-        self.data = data 
+        self.data = data
+        sh = self.shape
         self.shape = self.data.shape
+
         if update:
-            self._update()
+            if sh is not None and self.shape != sh:
+                self._update(renew_image=True)
+            else:
+                self._update()
         
-    def _update(self):
+    def _update(self,renew_image=False):
         if str(self.channel) == 'a':
             imdata = np.abs(self.data)
         elif str(self.channel) == 'r':
@@ -679,7 +685,7 @@ class PtyAxis(object):
             mn, mx = self.vmin, self.vmax
         
         pilim = imsave(imdata, cmap=self.cmap, vmin=mn, vmax=mx)
-        if not self.ax.images:
+        if not self.ax.images or renew_image:
             self.ax.imshow(pilim, **self.kwargs)
             plt.setp(self.ax.get_xticklabels(), fontsize=self.fontsize)
             plt.setp(self.ax.get_yticklabels(), fontsize=self.fontsize)

@@ -16,6 +16,7 @@ import glob
 
 # ok now also Param class native support
 from ..utils import Param
+from ..utils.verbose import logger
 
 __all__ = ['h5write', 'h5append', 'h5read', 'h5info', 'h5options']
 
@@ -485,7 +486,7 @@ def h5read(filename, *args, **kwargs):
             #     print('Warning: this file does not seem to follow h5read format.')
             ctime = f.attrs.get('ctime', None)
             if ctime is not None:
-                print('File created : ' + ctime)
+                logger.debug('File created : ' + ctime)
             if len(args) == 0:
                 # no input arguments - load everything
                 if slice is not None:

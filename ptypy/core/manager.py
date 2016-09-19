@@ -538,20 +538,21 @@ class ModelManager(object):
             scan.mask_views += mask_views
 
             self._update_stats(scan)
-        # Create PODs
+        # Create PODs .. but only if data has arrived
 
-        new_pods, new_probe_ids, new_object_ids = self._create_pods(used_scans)
-        logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
-            parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
-
-        # Adjust storages      
-        self.ptycho.probe.reformat(True)
-        self.ptycho.obj.reformat(True)
-        self.ptycho.exit.reformat()
-
-        self._initialize_probe(new_probe_ids)
-        self._initialize_object(new_object_ids)
-        self._initialize_exit(new_pods)
+        if used_scans:
+            new_pods, new_probe_ids, new_object_ids = self._create_pods(used_scans)
+            logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
+                parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
+    
+            # Adjust storages      
+            self.ptycho.probe.reformat(True)
+            self.ptycho.obj.reformat(True)
+            self.ptycho.exit.reformat()
+    
+            self._initialize_probe(new_probe_ids)
+            self._initialize_object(new_object_ids)
+            self._initialize_exit(new_pods)
 
     def _initialize_probe(self, probe_ids):
         """

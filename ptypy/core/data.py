@@ -199,7 +199,10 @@ class PtyScan(object):
         # Initialize flags
         self._flags = np.array([0, 0, 0], dtype=int)
         self.is_initialized = False
-
+        
+        # post init method call
+        self.post_init()
+        
     def initialize(self):
         """
         Begins the Data preparation and intended as the first method 
@@ -244,6 +247,7 @@ class PtyScan(object):
             self.common = parallel.bcast(self.common)
 
         parallel.barrier()
+        self.common = u.Param(self.common)
 
         # Check for weight2d and positions
         self.has_weight2d = (self.weight2d is not None and
@@ -258,8 +262,6 @@ class PtyScan(object):
         logger.info('All experimental positions : ' + str(self.has_positions))
         if self.has_positions:
             logger.info('shape = '.rjust(29) + str(positions.shape))
-
-        self.common = u.Param(self.common)
 
         if self.info.positions_theory is not None:
             logger.info('Skipping experimental positions `positions_scan`')
@@ -298,10 +300,15 @@ class PtyScan(object):
             logger.info('No scanning position have been provided at this '
                         'stage.')
 
+        # Warn that the total number of frames is unknown here.
+        # The .check() method must now determine the end of the scan.
         if self.num_frames is None:
             logger.warning('Number of frames `num_frames` not specified at '
                            'this stage.')
-
+        
+        # A note about how much this scan class knows about the number 
+        # of frames expected. PtydScan uses this information.
+        self.info.num_frames_actual = self.num_frames
         parallel.barrier()
         """
         #logger.info('#######  MPI Report: ########\n')
@@ -309,6 +316,7 @@ class PtyScan(object):
         parallel.barrier()
         logger.info(headerline('Analysis done',' l') + '\n')
         """
+        
         if self.info.save is not None and parallel.master:
             logger.info('Appending info dict to file %s\n' % self.info.dfile)
             io.h5append(self.info.dfile, info=dict(self.info))
@@ -490,7 +498,7 @@ class PtyScan(object):
 
         # Abort here if the flag was set
         if self.abort:
-            raise RuntimeError('Load routine incapable to determine'
+            raise RuntimeError('Load routine incapable to determine the'
                                'end-of-scan.')
 
         frames_accessible = self.frames_accessible
@@ -1094,11 +1102,13 @@ class PtyScan(object):
             elif str(kind) == 'link':
                 h5address = 'chunks/%d' % num
                 hddaddress = self.dfile + '.part%03d' % num
+                io.h5write(hddaddress, todisk)
+                
                 with h5py.File(self.dfile) as f:
                     f[h5address] = h5py.ExternalLink(hddaddress, '/')
                     f.close()
 
-                io.h5write(hddaddress, todisk)
+                
             elif str(kind) == 'merge':
                 raise NotImplementedError('Merging all data into single chunk '
                                           'is not yet implemented.')
@@ -1139,7 +1149,7 @@ class PtydScan(PtyScan):
             manipulate = False
         else:
             logger.info('Explicit source file given. '
-                        'Modification is possible\n')
+                        'Modification is possible.\n')
             dfile = pars['dfile']
 
             # Check for conflict
@@ -1160,24 +1170,54 @@ class PtydScan(PtyScan):
 
         self.source = source
 
+        # At least ONE chunk must exist to ensure everything works
+        with h5py.File(source,'r') as f:
+            check = f.get('chunks/0')
+            # get number of frames supposedly in the file
+            source_frames = f.get('info/num_frames_actual')[...].item()
+            f.close()
+            
+        if check is None: 
+            raise IOError('Ptyd soruce %s contains ' 
+                          'no data. Load aborted' % source)
+        
+        if source_frames is None:
+            logger.warning('Ptyd source is not aware of the total'
+                           'number of diffraction frames expected')
+
         # Get meta information
         meta = u.Param(io.h5read(self.source, 'meta')['meta'])
-
+        
+        if len(meta)==0:
+            logger.warning('There should be meta information in '
+                           '%s. Something is odd here.' % source)
+        
         # Update given parameters when they are None
         if not manipulate:
             super(PtydScan, self).__init__(meta, **kwargs)
         else:
             # Overwrite only those set to None
             for k, v in meta.items():
-                if p.get(k) is None:
+                if p.get(k) is None: # should be replace by 'unset'
                     p[k] = v
             # Initialize parent class and fill self
             super(PtydScan, self).__init__(p, **kwargs)
 
-        # Enforce that orientations are correct
+        if source_frames is not None:
+            if self.num_frames is None:
+                self.num_frames = source_frames
+            elif self.num_frames > source_frames:
+                self.num_frames = source_frames
+        else:
+            # Ptyd source doesn't know its total number of frames
+            # but we cannot do anything about it. This should be dealt 
+            # with with a flag in the meta package probably.
+            pass
+            
         # Other instance attributes
         self._checked = {}
         self._ch_frame_ind = None
+
 
     def check(self, frames=None, start=None):
         """
@@ -1205,23 +1245,24 @@ class PtydScan(PtyScan):
             ch_items = sorted(ch_items, key = lambda t: t[0])
 
             for ch_key in ch_items[0][1].keys():
-                for k, v in ch_items:
-                    if v is not None:
-                        d[ch_key] = np.array([(int(k),) + v[ch_key].shape])
-
+                d[ch_key] = np.array([(int(k),) + v[ch_key].shape 
+                            for k, v in ch_items if v is not None])
+                    
             f.close()
 
         self._checked = d
         all_frames = int(sum([ch[1] for ch in d['data']]))
-
         ch_frame_ind = []
         for dd in d['data']:
             for frame in range(dd[1]):
                 ch_frame_ind.append((dd[0], frame))
 
         self._ch_frame_ind = np.array(ch_frame_ind)
-
-        return min((frames, all_frames - start)), all_frames < start + frames
+        
+        # accessible frames
+        frames_accessible = min((frames, all_frames - start))
+        #end_of_scan = source_frames <= start + frames_accessible
+        return frames_accessible, None
 
     def _coord_to_h5_calls(self, key, coord):
         return 'chunks/%d/%s' % (coord[0], key), slice(coord[1], coord[1] + 1)
