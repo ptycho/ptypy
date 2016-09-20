@@ -42,11 +42,11 @@ p.engines.engine00.overlap_max_iterations = 2
 p.engines.engine00.fourier_relax_factor = 0.01
 p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'DM_OPR'
-p.engines.engine01.numiter = 500
+p.engines.engine01.numiter = 100
 p.engines.engine01.numiter_contiguous = 5
 p.engines.engine01.overlap_max_iterations = 2
 p.engines.engine01.fourier_relax_factor = 0.01
-p.engines.engine01.IP_metric = 5.
+p.engines.engine01.IP_metric = 1.
 p.engines.engine01.subspace_dim = 10
 
 from ptypy.core import Ptycho
@@ -54,9 +54,11 @@ import numpy as np
 
 P = Ptycho(p, level=4)
 
-# Mess up the positions
+# Mess up the positions in a predictible way (for MPI)
+a = 0.
 for pname, pod in P.pods.iteritems():
-    pod.ob_view.coord += 1e-7 * np.random.normal(size=(2,))
+    pod.ob_view.coord += 3e-7 * np.array([np.sin(a), np.cos(a)])
+    a += 4.
 P.obj.reformat()
 
 # Run
