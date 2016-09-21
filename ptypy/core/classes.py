@@ -950,10 +950,8 @@ class Storage(Base):
         Returns
         -------
         ndarray
-            The view to internal data buffer corresponding to View `v`
+            The view to internal data buffer corresponding to View or layer `v`
         """
-        if not isinstance(v, View):
-            raise ValueError
 
         # Here things could get complicated.
         # Coordinate transforms, 3D - 2D projection, ...
@@ -962,8 +960,13 @@ class Storage(Base):
         #             v.roi[0, 1]:v.roi[1, 1]], v.sp)
         #return shift(self.data[v.slayer, v.roi[0, 0]:v.roi[1, 0],
         #             v.roi[0, 1]:v.roi[1, 1]], v.sp)
-        return shift(self.data[v.dlayer, v.dlow[0]:v.dhigh[0],
-                     v.dlow[1]:v.dhigh[1]], v.sp)
+        if isinstance(v, View):
+            return shift(self.data[v.dlayer, v.dlow[0]:v.dhigh[0],
+                         v.dlow[1]:v.dhigh[1]], v.sp)
+        elif v in self.layermap:
+            return self.data[self.layermap.index(v)]
+        else:
+            raise ValueError("View or layer '%s' is not present in storage %s" % (v, self.ID))
 
     def __setitem__(self, v, newdata):
         """
@@ -979,8 +982,6 @@ class Storage(Base):
         newdata : ndarray
             Two-dimensional array that fits the view's shape
         """
-        if not isinstance(v, View):
-            raise ValueError
 
         # Only ROI and shift for now.
         # This part must always be consistent with __getitem__!
@@ -988,8 +989,13 @@ class Storage(Base):
         #                       v.roi[0, 1]:v.roi[1, 1]] = shift(newdata, -v.sp)
         #self.data[v.slayer, v.roi[0, 0]:v.roi[1, 0],
         #          v.roi[0, 1]:v.roi[1, 1]] = shift(newdata, -v.sp)
-        self.data[v.dlayer, v.dlow[0]:v.dhigh[0],
-                  v.dlow[1]:v.dhigh[1]] = shift(newdata, -v.sp)
+        if isinstance(v, View):
+            self.data[v.dlayer, v.dlow[0]:v.dhigh[0],
+                      v.dlow[1]:v.dhigh[1]] = shift(newdata, -v.sp)
+        elif v in self.layermap:
+            self.data[self.layermap.index(v)] = newdata
+        else:
+            raise ValueError("View or layer '%s' is not present in storage %s" % (v, self.ID))
 
     def __str__(self):
         info = '%15s : %7.2f MB :: ' % (self.ID, self.data.nbytes / 1e6)
