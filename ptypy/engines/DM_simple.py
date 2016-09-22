@@ -170,7 +170,7 @@ class DM_simple(BaseEngine):
             nrm = self.pr_nrm.S[name].data
             parallel.allreduce(s.data)
             parallel.allreduce(nrm)
-            s.data /= nrm
+            s.data /= (nrm + 1e-10)
 
             # Compute relative change in probe
             buf = self.pr_buf.S[name].data
