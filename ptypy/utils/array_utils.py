@@ -25,8 +25,17 @@ def switch_orientation(A, orientation, center=None):
     A :  array-like
         input array, must be at least twodimensional
          
-    orientation : tuple
+    orientation : tuple or int
         3-tuple of booleans (transpose,flipud,fliplr)
+        if int: converted according to binary representation:
+            0: [False, False, False]
+            1: [False, False, True]
+            2: [False, True, False]
+            3: [False, True, True]
+            4: [True, False, False]
+            5: [True, False, True]
+            6: [True, True, False]
+            7: [True, True, True]
     
     center : tuple, optional
         move this coordinate alomg with the transformations
@@ -43,7 +52,7 @@ def switch_orientation(A, orientation, center=None):
     
     if np.isscalar(o):
         o = [i=='1' for i in '%03d' % int(np.base_repr(o))]
-    
+
     assert len(o)==3
     # switch orientation
     if o[0]:
