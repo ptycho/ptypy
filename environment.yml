@@ -10,6 +10,7 @@ dependencies:
   - pep8
   - pytest
   - mpi4py 
+  - pil
   - pip:
     - pytest-cov
     - coveralls
