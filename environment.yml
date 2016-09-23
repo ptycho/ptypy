@@ -6,7 +6,7 @@ dependencies:
   - matplotlib
   - pytest
   - h5py
-  - zeromq
+  - pyzmq
   - pep8
   - pytest
   - mpi4py 

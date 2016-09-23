@@ -18,7 +18,7 @@ install:
   - python setup.py install # install ptypy
 
 script:
-  - py.test ptypy/test -v --cov savu --cov-report term-missing # now run the tests
+  - py.test ptypy/test -v --cov ptypy --cov-report term-missing # now run the tests
 
 after_script:
   - coveralls
