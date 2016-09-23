@@ -1,0 +1,17 @@
+name: test-environment
+dependencies:
+  - python=2.7
+  - numpy
+  - scipy
+  - matplotlib
+  - pytest
+  - h5py
+  - zeromq
+  - pep8
+  - pytest
+  - mpi4py 
+  - pip:
+    - pytest-cov
+    - coveralls
+
+
