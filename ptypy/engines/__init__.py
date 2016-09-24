@@ -14,7 +14,6 @@ from .. import utils as u
 from base import BaseEngine, DEFAULT_iter_info
 from base import DEFAULT as COMMON
 import DM
-import DM_minimal
 import DM_simple
 import ML
 import dummy
@@ -22,7 +21,7 @@ import dummy
 
 __all__ = ['DM', 'ML', 'BaseEngine']
 
-engine_names = ['Dummy', 'DM_simple', 'DM', 'DM_minimal', 'ML', 'ML_new']
+engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new']
 
 DEFAULTS = u.Param(
     common = COMMON,
