@@ -29,7 +29,6 @@ DEFAULTS = u.Param(
     DM_simple = DM_simple.DEFAULT,
     DM = DM.DEFAULT,
     ML = ML.DEFAULT,
-    DM_minimal = DM_minimal.DEFAULT,
 )
 
 ENGINES = u.Param(
@@ -37,7 +36,6 @@ ENGINES = u.Param(
     DM_simple = DM_simple.DM_simple,
     DM = DM.DM,
     ML = ML.ML,
-    DM_minimal = DM_minimal.DM_minimal,
 )
 def by_name(name):
     if name not in ENGINES.keys():
