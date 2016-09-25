@@ -9,6 +9,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
+from scipy.sparse.linalg import eigsh
 import time
 from .. import utils as u
 from ..utils.verbose import logger
@@ -16,7 +17,7 @@ from ..utils import parallel
 from engine_utils import basic_fourier_update
 from . import BaseEngine
 
-__all__ = ['DMIP']
+__all__ = ['DM_OPR']
 
 DEFAULT = u.Param(
     alpha=1,                       # Difference map parameter
@@ -31,21 +32,22 @@ DEFAULT = u.Param(
     clip_object=None,              # None or tuple(min,max) of desired limits of the object modulus,
                                    # currently in under common in documentation
     IP_metric=1.,                  # The metric factor in the exit + probe augmented space.
+    subspace_dim=0.,               # The dimension of the subspace spanned by the probe ensemble
 )
 
     
-class DMIP(BaseEngine):
+class DM_OPR(BaseEngine):
     
     DEFAULT = DEFAULT
 
     def __init__(self, ptycho_parent, pars=None):
         """
-        Difference map reconstruction engine - independent probe flavour.
+        Difference map reconstruction engine with Orthogonal probe relaxation
         """
         if pars is None:
             pars = DEFAULT.copy()
             
-        super(DMIP, self).__init__(ptycho_parent, pars)
+        super(DM_OPR, self).__init__(ptycho_parent, pars)
 
     def engine_initialize(self):
         """
@@ -58,25 +60,38 @@ class DMIP(BaseEngine):
         self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
         self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
 
-        # Extract current probe info
-        self.mean_probe = self.pr.S.values()[0].data.copy()
-
-        # Expand probe array and keep track of modes
-        prmodes = len(self.mean_probe) * [[]]
-        for v in self.pr.views.values():
+        prviewdata = {}
+        for vID, v in self.pr.views.iteritems():
+            # Get the associated diffraction frame
             di_view = v.pod.di_view
-            prmodes[v.layer].append(v)
+            # Reformat the layer
             v.layer = (di_view.layer, v.layer)
+            # Deactivate if the associate di_view is inactive (to spread the probe across nodes consistently with diff)
             v.active = di_view.active
-        self.prmodes = prmodes
+            # Store the current view data so we can restore it after reformat
+            if v.active:
+                prviewdata[vID] = v.data.copy()
+
+        # Let all probe storages reshape themselves
         self.pr.reformat()
 
         # Store probe data back
-        for v in self.pr.views.values():
+        for vID, v in self.pr.views.iteritems():
             if v.active:
-                self.pr[v] = self.mean_probe[v.layer[1]]
+                self.pr[v] = prviewdata[vID]
+        del prviewdata
 
-        # Create a copy for iterations
+        # Create array to store OPR modes
+        # FIXME: MPI + multi-Storage
+        dim = self.p.subspace_dim if self.p.subspace_dim > 0 else 1
+        self.OPR_modes = {}
+        for sID, s in self.pr.S.iteritems():
+            shape = (dim,) + s.data.shape[1:]
+            dtype = s.data.dtype
+            self.OPR_modes[sID] = np.zeros(shape=shape, dtype=dtype)
+        #self.OPR_modes = np.array([self.pr.S.values()[0].data.copy() for _ in range(self.p.subspace_dim)])
+
+        # Create a copy of probe Container for DM iterations
         self.pr_old = self.pr.copy(self.pr.ID + '_old')
 
     def engine_prepare(self):
@@ -128,6 +143,11 @@ class DMIP(BaseEngine):
         """
         Try deleting ever helper container.
         """
+
+        if parallel.master:
+            from .. import io
+            io.h5write('Dump.h5', modes=self.OPR_modes.values()[0])
+
         containers = [
             self.ob_buf,
             self.ob_nrm,
@@ -272,26 +292,145 @@ class DMIP(BaseEngine):
 
     def probe_consistency_update(self):
         """
-        DM probe consistency update.
-        """
-        """
-        SVD on (1+alpha)*pr - pr_old
-        """
-        # Compute mean of (2*pr - pr_old) this will have to be replaced with svd
-        self.mean_probe.fill(0.)
-        n = 0.
-        for v in self.pr.views.values():
-            if not v.active:
-                continue
-            self.mean_probe[v.layer[1]] += 2*self.pr[v] - self.pr_old[v]
-            n += 1
-        parallel.allreduce(self.mean_probe)
-        n = parallel.allreduce(n)
-        self.mean_probe /= n
+        DM probe consistency update for orthogonal probe relaxation.
 
-        # Update probe
-        for v in self.pr.views.values():
-            if not v.active:
-                continue
-            self.pr_old[v] += self.mean_probe[v.layer[1]] - self.pr[v]
+        Here what we do is compute a singular value decomposition on the ensemble of probes.
+        Because this is difference map, SVD is actually on (1+alpha)*pr - pr_old, and not on pr.
+        """
 
+        if self.p.subspace_dim == 0:  # Special case: average probe
+            # Local reference. mean_probe is a dictionary whose keys are the same as the probe storage IDs and whose
+            # values are numpy arrays properly shaped for averaging.
+            mean_probe = self.OPR_modes
+
+            # First reset the arrays
+            for sID, s in mean_probe:
+                s.fill(0.)
+
+            # Define a normalisation variable to compute de mean
+            n = dict([(sID, 0) for sID in mean_probe.keys()])
+
+            # Add all terms
+            for v in self.pr.views.values():
+                if not v.active:
+                    continue
+                mean_probe[v.storageID][v.layer[1]] += 2*self.pr[v] - self.pr_old[v]
+                n[v.storageID] += 1
+
+            # MPI reduce and compute the mean.
+            for sID, a in mean_probe:
+                parallel.allreduce(a)
+                nn = parallel.allreduce(n[sID])
+                a /= nn
+
+            # Update probe
+            for v in self.pr.views.values():
+                if not v.active:
+                    continue
+                self.pr_old[v] += mean_probe[v.storageID][v.layer[1]] - self.pr[v]
+
+            return
+
+        # OPR Case
+        for sID, prS in self.pr.S.iteritems():
+
+            # Local reference to old probe storage
+            pr_oldS = self.pr_old.S[sID]
+
+            # First make a sorted list (with index) of all layers (which are locally available through views)
+            unique_layers = sorted(set([v.layer for v in prS.owner.views_in_storage(s=prS, active=False)]))
+            layers = list(enumerate(unique_layers))
+
+            # Then make a list of layers held locally by the node
+            local_layers = [x for x in layers if x[1] in prS.layermap]
+
+            # Then create the matrix to diagonalise
+            nlayers = len(layers)
+            M = np.zeros((nlayers, nlayers), dtype=complex)
+
+            size = parallel.size
+            rank = parallel.rank
+            size_is_even = (size == 2*(size//2))
+
+            # Communication takes a different form if size is even or odd
+            if size_is_even:
+                peer_nodes = np.roll(np.arange(size-1), rank)
+                peer_nodes[peer_nodes == rank] = size-1
+                if rank == size-1:
+                    peer_nodes = ((size//2)*np.arange(size-1)) % (size-1)
+            else:
+                peer_nodes = np.roll(np.arange(size), rank)
+
+            # Even size means that local scalar product have to be done in parallel
+            if size_is_even:
+                for i0, l0 in local_layers:
+                    for i1, l1 in local_layers:
+                        if i0 > i1:
+                            continue
+                        M[i0, i1] = np.vdot(2 * prS[l0] - pr_oldS[l0], 2 * prS[l1] - pr_oldS[l1])
+                        M[i1, i0] = np.conj(M[i0, i1])
+
+            # Loop through peers and communicate info for scalar products
+            for other_rank in peer_nodes:
+                if other_rank == rank:
+                    # local scalar product
+                    for i0, l0 in local_layers:
+                        for i1, l1 in local_layers:
+                            if i0 > i1:
+                                continue
+                            M[i0, i1] = np.vdot(2 * prS[l0] - pr_oldS[l0], 2 * prS[l1] - pr_oldS[l1])
+                            M[i1, i0] = np.conj(M[i0, i1])
+                elif other_rank > rank:
+                    # Send layer indices
+                    parallel.send([x[0] for x in local_layers], other_rank, tag=0)
+                    # Send data
+                    tag = 1
+                    for _, l0 in local_layers:
+                        parallel.send(prS[l0], other_rank, tag=tag)
+                        tag += 1
+                        parallel.send(pr_oldS[l0], other_rank, tag=tag)
+                        tag += 1
+                else:
+                    # Receive layer indices
+                    other_layers = parallel.receive(source=other_rank, tag=0)
+                    # Receive pr and pr_old
+                    other_pr = []
+                    other_pr_old = []
+                    tag = 1
+                    for _ in other_layers:
+                        other_pr.append(parallel.receive(source=other_rank, tag=tag))
+                        tag += 1
+                        other_pr_old.append(parallel.receive(source=other_rank, tag=tag))
+                        tag += 1
+                    # Compute matrix elements
+                    for i0, l0 in local_layers:
+                        for k1, i1 in enumerate(other_layers):
+                            M[i0, i1] = np.vdot(2 * prS[l0] - pr_oldS[l0], 2 * other_pr[k1] - other_pr_old[k1])
+                            M[i1, i0] = np.conj(M[i0, i1])
+
+            # Finally group all matrix info
+            parallel.allreduce(M)
+
+            # Diagonalise the matrix
+            eigval, eigvec = eigsh(M, k=self.p.subspace_dim+2, which='LM')
+
+            # Generate the modes
+            for k in range(self.p.subspace_dim):
+                mode = self.OPR_modes[sID][k]
+                mode.fill(0.)
+                for i, l in local_layers:
+                    mode += (2*prS[l]-pr_oldS[l])*eigvec[i, k]
+                # Normalised modes would be:
+                # np.sum((2*self.pr[v]-self.pr_old[v])*eigvec[i, -k]/np.sqrt(eigval[-k]) for i, v in enumerate(views))
+
+            parallel.allreduce(self.OPR_modes[sID])
+
+            # Update probes
+            eigvecc = eigvec.conj()
+            for i, l in local_layers:
+                new_pr = sum(self.OPR_modes[sID][k] * eigvecc[i, k] for k in range(self.p.subspace_dim))
+                # With normalised modes would be:
+                # sum(self.OPR_modes[k] * np.sqrt(eigval[-k]) * eigvecc[i, -k] for k in range(self.p.subspace_dim))
+                pr_oldS[l] += new_pr - prS[l]
+
+        return
