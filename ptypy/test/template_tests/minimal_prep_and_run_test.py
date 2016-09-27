@@ -11,8 +11,8 @@ import unittest
 
 
 class MinimalPrepAndRunTest(unittest.TestCase):
+    @unittest.skip('skipping this for now. adp 23/09')
     def test_minimal_prep_and_run(self):
-        
         p = u.Param()
         
         # for verbose output
