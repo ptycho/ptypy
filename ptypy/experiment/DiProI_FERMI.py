@@ -247,7 +247,7 @@ class DiProIFERMIScan(PtyScan):
         elif self.info.recipe.dark_subtraction:
 
             raw_medians = []
-            u.ipshell()
+
             for j in raw:
 
                 # average dark subtraction
@@ -263,12 +263,12 @@ class DiProIFERMIScan(PtyScan):
                 #raw[j] = raw[j] / np.median(raw[j][-160:,:160])
 
                 # normalizing to full frame
-                raw_medians.append(np.median(raw[j]))
-            min_value  = np.array( raw_medians).min()
-            norm_value = np.median(raw_medians) - (min_value-1.)
+                raw_medians.append(np.median(raw[j][raw[j]>0.]))
+            #min_value  = np.array( raw_medians).min()
+            #norm_value = np.median(raw_medians) - (min_value-1.)
             for j in raw:
-                raw[j] = raw[j] / ( raw_medians[j] - (min_value-1.) )
-                raw[j] *= norm_value
+                raw[j] = raw[j] / ( raw_medians[j] )# - (min_value-1.) )
+                raw[j] *= 10 #norm_value
 
             for j in raw:
 
