@@ -247,7 +247,7 @@ class DiProIFERMIScan(PtyScan):
         elif self.info.recipe.dark_subtraction:
 
             raw_medians = []
-
+            u.ipshell()
             for j in raw:
 
                 # average dark subtraction
