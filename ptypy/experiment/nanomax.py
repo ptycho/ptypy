@@ -38,8 +38,9 @@ def positions_from_hdf5(filename, stepsize, shape):
     for motor_y in range(shape[0]):
         # tried to adapt this to Bjoern's info here
         # https://github.com/ptycho/ptypy-dev/issues/39
+        # and also to my own notes 2016-09-30.
         for motor_x in range(shape[1]):
-            positions.append(np.array([-motor_y, -motor_x]) * stepsize)
+            positions.append(np.array([motor_y, -motor_x]) * stepsize)
     return np.array(positions)
 
 
@@ -139,7 +140,7 @@ class NanomaxTmpScanOnline(NanomaxTmpScan):
             frames = self.min_frames
 
         # dispense a given number of scan positions per second:
-        positions_per_second = 5
+        positions_per_second = 1
         frames_total = np.prod(self.info.recipe.scan_shape)
         t = int(time.time() - self.t0)
         frames_done = min(t * positions_per_second + 10, frames_total)
@@ -165,7 +166,7 @@ class NanomaxTmpScanOnline(NanomaxTmpScan):
                 raw[i] = np.asarray(data[i])
                 vertical = i // self.info.recipe.scan_shape[1]
                 horizontal = i % self.info.recipe.scan_shape[1]
-                positions[i] = -(np.array([vertical, horizontal])
+                positions[i] = (np.array([vertical, -horizontal])
                                 * self.info.recipe.stepsize)
                 #weights[i] = np.ones(raw[i].shape)
         return raw, positions, weights
