@@ -59,6 +59,9 @@ import core
 import simulations 
 import resources
 
+# Import libraries
+import lib
+
 if __name__ == "__main__":
     # TODO: parse command line arguments for extra options
     import sys
