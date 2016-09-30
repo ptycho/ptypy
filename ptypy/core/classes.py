@@ -74,6 +74,10 @@ MODEL_PREFIX = 'mod'
 PTYCHO_PREFIX = 'pty'
 GEO_PREFIX = 'G'
 
+# Hard-coded limit in array size
+# TODO: make this dynamic from available memory.
+MEGAPIXEL_LIMIT = 50
+
 
 class Base(object):
 
@@ -387,6 +391,9 @@ class Storage(Base):
         # A flag
         self.model_initialized = False
 
+        # MPI flag: is the storage distributed across nodes or are all nodes holding the same copy?
+        self.distributed = False
+
         # Instance attributes
         #self._psize = None
         # SC: defining _psize here leads to failure of the code,
@@ -627,7 +634,7 @@ class Storage(Base):
             #             % (self.owner.ID, self.ID, str(sh), str(new_shape)))
 
             megapixels = np.array(new_shape).astype(float).prod() / 1e6
-            if megapixels > 50:
+            if megapixels > MEGAPIXEL_LIMIT:
                 raise RuntimeError('Arrays larger than 50M not supported. You '
                                    'requested %.2fM pixels.' % megapixels)
 
@@ -675,6 +682,16 @@ class Storage(Base):
         self.data = new_data
         self.shape = new_shape
         self.center = new_center
+
+        # Check if storage is distributed
+        # A storage is "distributed" if and only if layer maps are different across nodes.
+        self.distributed = False
+        if u.parallel.MPIenabled:
+            all_layers = u.parallel.comm.gather(new_layermap, root=0)
+            if u.parallel.master:
+                for other_layers in all_layers[1:]:
+                    self.distributed |= (other_layers != new_layermap)
+            self.distributed = u.parallel.comm.bcast(self.distributed, root=0)
 
         # make datalist
         #self._make_datalist()
@@ -763,9 +780,10 @@ class Storage(Base):
     def allreduce(self, op=None):
         """
         Performs MPI parallel ``allreduce`` with a default sum as 
-        reduction operation for internal data buffer ``self.data``
+        reduction operation for internal data buffer ``self.data``.
+        This method does nothing if the storage is distributed across
+        nodes.
 
-        :param Container c: Input # SC: Parameter not used, to be added?
         :param op: Reduction operation. If ``None`` uses sum.
            
         See also
@@ -773,7 +791,8 @@ class Storage(Base):
         ptypy.utils.parallel.allreduce
         Container.allreduce
         """
-        u.parallel.allreduce(self.data, op=op)
+        if not self.distributed:
+            u.parallel.allreduce(self.data, op=op)
 
     def zoom_to_psize(self, new_psize, **kwargs):
         """
