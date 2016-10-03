@@ -369,7 +369,6 @@ class Storage(Base):
 
         # This is most often not accurate. Set this quantity from the outside
         self.nlayers = len(layermap)
-        self._make_datalist()
 
         # Need to bootstrap the parameters.
         # We set the initial center to the middle of the array
@@ -392,7 +391,7 @@ class Storage(Base):
         self.model_initialized = False
 
         # MPI flag: is the storage distributed across nodes or are all nodes holding the same copy?
-        self.distributed = False
+        self._update_distributed()
 
         # Instance attributes
         #self._psize = None
@@ -685,16 +684,19 @@ class Storage(Base):
 
         # Check if storage is distributed
         # A storage is "distributed" if and only if layer maps are different across nodes.
-        self.distributed = False
-        if u.parallel.MPIenabled:
-            all_layers = u.parallel.comm.gather(new_layermap, root=0)
-            if u.parallel.master:
-                for other_layers in all_layers[1:]:
-                    self.distributed |= (other_layers != new_layermap)
-            self.distributed = u.parallel.comm.bcast(self.distributed, root=0)
+        self._update_distributed()
 
         # make datalist
         #self._make_datalist()
+
+    def _update_distributed(self):
+        self.distributed = False
+        if u.parallel.MPIenabled:
+            all_layers = u.parallel.comm.gather(self.layermap, root=0)
+            if u.parallel.master:
+                for other_layers in all_layers[1:]:
+                    self.distributed |= (other_layers != self.layermap)
+            self.distributed = u.parallel.comm.bcast(self.distributed, root=0)
 
     def _to_pix(self, coord):
         """
