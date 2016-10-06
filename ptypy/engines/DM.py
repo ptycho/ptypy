@@ -10,6 +10,7 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 from .. import utils as u
+from treedict import TreeDict
 from ..utils.verbose import logger
 from ..utils import parallel
 from engine_utils import basic_fourier_update
@@ -17,19 +18,30 @@ from . import BaseEngine
 
 __all__ = ['DM']
 
-DEFAULT = u.Param(
-    alpha=1,                       # Difference map parameter
-    probe_update_start=2,          # Number of iterations before probe update starts
-    update_object_first=True,      # If True update object before probe
-    overlap_converge_factor=0.05,  # Threshold for interruption of the inner overlap loop
-    overlap_max_iterations=10,     # Maximum of iterations for the overlap constraint inner loop
-    probe_inertia=1e-9,            # Weight of the current probe estimate in the update, formally cfact
-    object_inertia=1e-4,           # Weight of the current object in the update, formally DM_smooth_amplitude
-    fourier_relax_factor=0.05,     # If rms error of model vs diffraction data is smaller than this fraction,
-                                   # Fourier constraint is met
-    obj_smooth_std=None,           # Gaussian smoothing (pixel) of the current object prior to update
-    clip_object=None,              # None or tuple(min,max) of desired limits of the object modulus,
-                                   # currently in under common in documentation
+DEFAULT = TreeDict(
+    'DEFAULT',
+    # Difference map parameter
+    alpha=1,
+    # Number of iterations before probe update starts
+    probe_update_start=2,
+    # If True update object before probe
+    update_object_first=True,
+    # Threshold for interruption of the inner overlap loop
+    overlap_converge_factor=0.05,
+    # Maximum of iterations for the overlap constraint inner loop
+    overlap_max_iterations=10,
+    # Weight of the current probe estimate in the update, formally cfact
+    probe_inertia=1e-9,
+    # Weight of the current object in the update, formally DM_smooth_amplitude
+    object_inertia=1e-4,
+    # If rms error of model vs diffraction data is smaller than this fraction,
+    # Fourier constraint is met
+    fourier_relax_factor=0.05,
+    # Gaussian smoothing (pixel) of the current object prior to update
+    obj_smooth_std=None,
+    # None or tuple(min,max) of desired limits of the object modulus,
+    # currently in under common in documentation
+    clip_object=None,
 )
 
     
@@ -74,15 +86,17 @@ class DM(BaseEngine):
 
     def engine_prepare(self):
         """
-        Last minute initialization. Everything that needs to be recalculated when new data arrives.
-        """
+        Last minute initialization.
 
+        Everything that needs to be recalculated when new data arrives.
+        """
         self.pbound = {}
-        for name, s in self.di.S.iteritems():
-            self.pbound[name] = .25 * self.p.fourier_relax_factor**2 * s.pbound_stub
+        for name, s in self.di.storages.iteritems():
+            self.pbound[name] = (.25 * self.p.fourier_relax_factor**2
+                                 * s.pbound_stub)
         
         # Fill object with coverage of views
-        for name, s in self.ob_viewcover.S.iteritems():
+        for name, s in self.ob_viewcover.storages.iteritems():
             s.fill(s.get_view_coverage())
 
     def engine_iterate(self, num=1):
@@ -137,14 +151,16 @@ class DM(BaseEngine):
 
     def fourier_update(self):
         """
-        DM Fourier constraint update (including DM step)
+        DM Fourier constraint update (including DM step).
         """
         error_dct = {}
-        for name, di_view in self.di.V.iteritems():
+        for name, di_view in self.di.views.iteritems():
             if not di_view.active:
                 continue
             pbound = self.pbound[di_view.storage.ID]
-            error_dct[name] = basic_fourier_update(di_view, pbound=pbound, alpha=self.p.alpha)
+            error_dct[name] = basic_fourier_update(di_view,
+                                                   pbound=pbound,
+                                                   alpha=self.p.alpha)
         return error_dct
 
     def overlap_update(self):
@@ -180,15 +196,20 @@ class DM(BaseEngine):
                 break
 
     def center_probe(self):
-        if self.p.probe_center_tol is not None:
-            for name, s in self.pr.S.iteritems():
+        if self.p.get('probe_center_tol', None) is not None:
+            for name, s in self.pr.storages.iteritems():
                 c1 = u.mass_center(u.abs2(s.data).sum(0))
-                c2 = np.asarray(s.shape[-2:]) // 2       # fft convention should however use geometry instead
+                c2 = np.asarray(s.shape[-2:]) // 2
+                # fft convention should however use geometry instead
                 if u.norm(c1 - c2) < self.p.probe_center_tol:
                     break
                 # SC: possible BUG here, wrong input parameter
-                s.data[:] = u.shift_zoom(s.data, (1.,) * 3, (0, c1[0], c1[1]), (0, c2[0], c2[1]))
-                logger.info('Probe recentered from %s to %s' % (str(tuple(c1)), str(tuple(c2))))
+                s.data[:] = u.shift_zoom(s.data,
+                                         (1.,) * 3,
+                                         (0, c1[0], c1[1]),
+                                         (0, c2[0], c2[1]))
+                logger.info('Probe recentered from %s to %s'
+                            % (str(tuple(c1)), str(tuple(c2))))
                 
     def object_update(self):
         """
@@ -202,22 +223,29 @@ class DM(BaseEngine):
             ob.fill(0.0)
             ob_nrm.fill(0.)
         else:
-            for name, s in self.ob.S.iteritems():
-                # in original code:
-                # DM_smooth_amplitude = (p.DM_smooth_amplitude * max_power * p.num_probes * Ndata) / np.prod(asize)
-                # using the number of views here, but don't know if that is good.
+            for name, s in self.ob.storages.iteritems():
+                # In original code:
+                # DM_smooth_amplitude = (
+                #     (p.DM_smooth_amplitude * max_power * p.num_probes * Ndata)
+                #     / np.prod(asize))
+                # Using the number of views here,
+                # but don't know if that is good.
                 # cfact = self.p.object_inertia * len(s.views)
-                cfact = self.p.object_inertia * (self.ob_viewcover.S[name].data + 1.)
+                cfact = self.p.object_inertia * (
+                    self.ob_viewcover.storages[name].data + 1.)
                 
                 if self.p.obj_smooth_std is not None:
-                    logger.info('Smoothing object, average cfact is %.2f + %.2fj' %
-                                (np.mean(cfact).real, np.mean(cfact).imag))
-                    smooth_mfs = [0, self.p.obj_smooth_std, self.p.obj_smooth_std]
+                    logger.info(
+                        'Smoothing object, average cfact is %.2f + %.2fj'
+                        % (np.mean(cfact).real, np.mean(cfact).imag))
+                    smooth_mfs = [0,
+                                  self.p.obj_smooth_std,
+                                  self.p.obj_smooth_std]
                     s.data[:] = cfact * u.c_gf(s.data, smooth_mfs)
                 else:
                     s.data[:] = s.data * cfact
                     
-                ob_nrm.S[name].fill(cfact)
+                ob_nrm.storages[name].fill(cfact)
         
         # DM update per node
         for name, pod in self.pods.iteritems():
@@ -227,9 +255,9 @@ class DM(BaseEngine):
             ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
         
         # Distribute result with MPI
-        for name, s in self.ob.S.iteritems():
+        for name, s in self.ob.storages.iteritems():
             # Get the np arrays
-            nrm = ob_nrm.S[name].data
+            nrm = ob_nrm.storages[name].data
             parallel.allreduce(s.data)
             parallel.allreduce(nrm)
             s.data /= nrm
@@ -254,14 +282,16 @@ class DM(BaseEngine):
         
         # Fill container
         # "cfact" fill
-        # BE: was this asymmetric in original code only because of the number of MPI nodes ?
+        # BE: was this asymmetric in original code only
+        # because of the number of MPI nodes ?
         if parallel.master:
-            for name, s in pr.S.iteritems():
-                # instead of Npts_scan, the number of views should be considered
-                # please note that a call to s.views maybe slow for many views in the probe.
+            for name, s in pr.storages.iteritems():
+                # Instead of Npts_scan, the number of views should be considered
+                # Please note that a call to s.views maybe slow
+                # for many views in the probe.
                 cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
                 s.data[:] = cfact * s.data
-                pr_nrm.S[name].fill(cfact)
+                pr_nrm.storages[name].fill(cfact)
         else:
             pr.fill(0.0)
             pr_nrm.fill(0.0)
@@ -276,9 +306,9 @@ class DM(BaseEngine):
         change = 0.
         
         # Distribute result with MPI
-        for name, s in pr.S.iteritems():
+        for name, s in pr.storages.iteritems():
             # MPI reduction of results
-            nrm = pr_nrm.S[name].data
+            nrm = pr_nrm.storages[name].data
             parallel.allreduce(s.data)
             parallel.allreduce(nrm)
             s.data /= nrm
@@ -289,10 +319,10 @@ class DM(BaseEngine):
                 s.data *= self.probe_support[name]
 
             # Compute relative change in probe
-            buf = pr_buf.S[name].data
+            buf = pr_buf.storages[name].data
             change += u.norm2(s.data - buf) / u.norm2(s.data)
 
             # Fill buffer with new probe
             buf[:] = s.data
 
-        return np.sqrt(change / len(pr.S))
+        return np.sqrt(change / len(pr.storages))

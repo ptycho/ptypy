@@ -17,7 +17,8 @@ from misc import expect2
 
 __all__ = ['hdr_image', 'diversify', 'cxro_iref', 'xradia_star', 'png2mpg',
            'mass_center', 'phase_from_dpc', 'radial_distribution',
-           'stxm_analysis','stxm_init', 'load_from_ptyr', 'remove_hot_pixels']
+           'stxm_analysis', 'stxm_init', 'load_from_ptyr', 'remove_hot_pixels']
+
 
 def diversify(A, noise=None, shift=None, power=1.0):
     """
@@ -66,6 +67,7 @@ def diversify(A, noise=None, shift=None, power=1.0):
         (A.shape[0],) + (1,) * (len(A.shape) - 1))
     power /= power.sum()
     A *= np.sqrt(power)
+
 
 def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],
               avg_type='highest', mask_list=[], ClipLongestExposure=False,
@@ -126,9 +128,9 @@ def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],
     
     """
     min_exp = min(exp_list)
-    #print min_exp
+    # print min_exp
     max_exp = max(exp_list)
-    #print max_exp
+    # print max_exp
     if len(mask_list) == 0:
         mask_list = [np.ones(img.shape) for img in img_list]
     elif len(mask_list) == 1:
@@ -603,7 +605,8 @@ def stxm_analysis(storage, probe=None):
         pr = np.exp(-(x**2 + y**2) / probe**2)
     else:
         pr = np.asarray(probe)
-        assert (pr.shape == pp.shape[-2:]), 'stxm probe has not the same shape as a view to this storage'
+        assert (pr.shape == pp.shape[-2:]), (
+            'stxm probe has not the same shape as a view to this storage')
         
     for v in s.views:
         pod = v.pods.values()[0]
@@ -611,7 +614,7 @@ def stxm_analysis(storage, probe=None):
             continue
         t = pod.diff.sum()
         if t > t2:
-            t2=t
+            t2 = t
         ss = v.slice
         # ss = (v.layer,
         #       slice(v.roi[0,0], v.roi[1,0]),
@@ -634,6 +637,7 @@ def stxm_analysis(storage, probe=None):
     
     return trans, dpc_row, dpc_col
 
+
 def stxm_init(storage, probe=None):
     """
     Convenience script that performs a STXM analysis for storage
@@ -646,7 +650,8 @@ def stxm_init(storage, probe=None):
     """
     trans, dpc_row, dpc_col = stxm_analysis(storage,probe)
     storage.data = trans * np.exp(-1j*phase_from_dpc(dpc_row, dpc_col))
-    
+
+
 def load_from_ptyr(filename, what='probe', ID=None, layer=None):
     """
     Convenience script to extract data from ``*.ptyr``-file.
@@ -690,7 +695,8 @@ def load_from_ptyr(filename, what='probe', ID=None, layer=None):
             return storage['data']
         else:
             return storage['data'][layer]
-        
+
+
 def phase_from_dpc(dpc_row, dpc_col):
     """
     Implements fourier integration method for two differential quantities.
@@ -739,6 +745,7 @@ _cxro_POST_query = ''.join([
     'Material=Enter+Formula',
     '&Formula=%(formula)s&Density=%(density)s&Scan=Energy',
     '&Min=%(emin)s&Max=%(emax)s&Npts=%(npts)s&Output=Text+File'])
+
 
 def cxro_iref(formula, energy, density=-1, npts=100):
     """\
@@ -804,6 +811,7 @@ def cxro_iref(formula, energy, density=-1, npts=100):
         
 cxro_iref.cxro_server = _cxro_server
 cxro_iref.cxro_query = _cxro_POST_query
+
 
 def remove_hot_pixels(data, size=3, tolerance=3, ignore_edges=False):
     """
@@ -888,7 +896,7 @@ def remove_hot_pixels(data, size=3, tolerance=3, ignore_edges=False):
                 hot_pixels = np.hstack((hot_pixels, [[height - 1], [index]]))
                 fixed_image[-1, index] = med
 
-        #Then the corners
+        # Then the corners
 
         # Bottom left
         med = np.median(data[0:2, 0:2])

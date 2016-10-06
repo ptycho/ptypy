@@ -11,6 +11,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .. import utils as u
+from treedict import TreeDict
 from base import BaseEngine, DEFAULT_iter_info
 from base import DEFAULT as COMMON
 import DM
@@ -35,7 +36,8 @@ DEFAULTS = u.Param(
 )
 
 # Engine objects
-ENGINES = u.Param(
+ENGINES = TreeDict(
+    'ENGINES',
     Dummy=dummy.Dummy,
     DM_simple=DM_simple.DM_simple,
     DM=DM.DM,

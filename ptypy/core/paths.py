@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Path manager
+Path manager.
 
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-
 import sys
 import os
+from treedict import TreeDict
 
 # for solo use ##########
 if __name__ == "__main__":
@@ -21,36 +21,48 @@ else:
     from .. import utils as u
     from ..utils.verbose import logger
     
-__all__=['DEFAULT','Paths']
+__all__ = ['DEFAULT', 'Paths']
 
-DEFAULT=u.Param(
-home = "./",    # (03) Relative base path for all other paths
-autoplot = "plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png",# (07) filename for dumping plots
-recon = "recons/%(run)s/%(run)s_%(engine)s.ptyr",                 # (10) directory to save final reconstruction
-autosave = "dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr",                  # (12) directory to save intermediate results
-# runtime parameters
+DEFAULT = TreeDict(
+    'DEFAULT',
+    # (03) Relative base path for all other paths
+    home="./",
+    # (07) filename for dumping plots
+    autoplot="plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png",
+    # (10) directory to save final reconstruction
+    recon="recons/%(run)s/%(run)s_%(engine)s.ptyr",
+    # (12) directory to save intermediate results
+    autosave="dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr",
+    # runtime parameters
 )
-"""Default path parameters. See :py:data:`.io.paths` and a short listing below"""
+
+""" Default path parameters. See :py:data:`.io.paths`
+    and a short listing below """
+
 
 class Paths(object):
     """
     Path managing class
     """
     DEFAULT = DEFAULT
-    def __init__(self,io=None):
+
+    def __init__(self, io=None):
         """
         Parameters
         ----------
         io : Param or dict
             Parameter set to pick path info from. See :py:data:`.io`
         """
-        self.runtime = u.Param(
-            run = os.path.split(sys.argv[0])[1].split('.')[0],
-            engine = "None",
-            iteration = 0,
-            iterations = 0,
+        self.runtime = TreeDict(
+            'self.runtime',
+            run=os.path.split(sys.argv[0])[1].split('.')[0],
+            engine="None",
+            iteration=0,
+            iterations=0,
         )
-        self.home = io.get('home',self.DEFAULT.home)
+
+        self.home = io.get('home', self.DEFAULT.home)
+
         try:
             self.autosave = io.autosave.rfile
         except:
@@ -66,37 +78,37 @@ class Paths(object):
         
         sep = os.path.sep
         if not self.home.endswith(sep):
-            self.home+=sep
+            self.home += sep
         
-        for key in ['autosave','autoplot','recon']:
-            v =  self.__dict__[key]
-            if isinstance(v,str):   
+        for key in ['autosave', 'autoplot', 'recon']:
+            v = self.__dict__[key]
+            if isinstance(v, str):
                 if not v.startswith(os.path.sep):
                     self.__dict__[key] = self.home + v
 
-    def run(self,run):
+    def run(self, run):
         """
         Determine run name
         """
         return self.runtime.run if run is None else run
     
-    def auto_file(self, runtime =None):
+    def auto_file(self, runtime=None):
         """ File path for autosave file """
-        return self.get_path(self.autosave,runtime)
+        return self.get_path(self.autosave, runtime)
     
-    def recon_file(self, runtime =None):
+    def recon_file(self, runtime=None):
         """ File path for reconstruction file """           
-        return self.get_path(self.recon,runtime)
+        return self.get_path(self.recon, runtime)
     
-    def plot_file(self, runtime =None):
+    def plot_file(self, runtime=None):
         """ 
         File path for plot file 
         """
-        p = self.get_path(self.autoplot,runtime)
+        p = self.get_path(self.autoplot, runtime)
         print p
-        return self.get_path(self.autoplot,runtime)
+        return self.get_path(self.autoplot, runtime)
     
-    def get_path(self,path ,runtime):
+    def get_path(self, path, runtime):
         if runtime is not None:
             try:
                 d = dict(runtime.iter_info[-1])

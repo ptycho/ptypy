@@ -10,13 +10,14 @@ This file is part of the PTYPY package.
 import numpy as np
 import os
 from .. import utils as u
+from treedict import TreeDict
 from .. import io
 from ..core.data import PtyScan
 from ..core.paths import Paths
 from ..core import DEFAULT_io as IO_par
 
 # Parameters for the nexus file saved by GDA
-NEXUS_PATHS = u.Param()
+NEXUS_PATHS = TreeDict('NEXUS_PATHS')
 NEXUS_PATHS.instrument = 'entry1/instrument'
 NEXUS_PATHS.frame_pattern = 'entry1/instrument/%(detector_name)s/data'
 NEXUS_PATHS.exposure = 'entry1/instrument/%(detector_name)s/count_time'
@@ -26,50 +27,80 @@ NEXUS_PATHS.label = 'entry1/entry_identifier'
 NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 
 # Recipe defaults
-RECIPE = u.Param()
-RECIPE.experimentID = None      # Experiment identifier
-RECIPE.scan_number = None       # scan number
+RECIPE = TreeDict('RECIPE')
+# Experiment identifier
+RECIPE.experimentID = None
+RECIPE.scan_number = None
 RECIPE.dark_number = None
 RECIPE.flat_number = None
 RECIPE.energy = None
-RECIPE.lam = None               # 1.2398e-9 / RECIPE.energy
-RECIPE.z = None                 # Distance from object to screen
-RECIPE.detector_name = None     # Name of the detector as specified in the nexus file
-RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
-RECIPE.motors_multiplier = 1e-6         # Motor conversion factor to meters
+RECIPE.lam = None
+# Distance from object to screen
+RECIPE.z = None
+# Name of the detector as specified in the nexus file
+RECIPE.detector_name = None
+# Motor names to determine the sample translation
+RECIPE.motors = ['t1_sx', 't1_sy']
+# Motor conversion factor to meters
+RECIPE.motors_multiplier = 1e-6
 RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
 RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
-RECIPE.mask_file = None                 # '%(base_path)s' + 'processing/mask.h5'
-RECIPE.correct_positions_Oct14 = False  # Position corrections for NFP beamtime Oct 2014
-RECIPE.use_EP = False                   # Use flat as Empty Probe (EP) for probe sharing; needs to be set to True in the recipe of the scan that will act as EP
-RECIPE.max_scan_points = 100000         # Maximum number of scan points to be loaded from origin
-RECIPE.theta = 0                        # Angle of rotation (as used in NFP beamtime Jul 2015)
-RECIPE.remove_hot_pixels = u.Param(     # Apply hot pixel correction
-    apply = False,                      # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
-    size = 3,                           # Size of the window on which the median filter will be applied around every data point
-    tolerance = 3,                      # Tolerance multiplied with the standard deviation of the data array subtracted by the blurred array
-                                        # (difference array) yields the threshold for cutoff.
-    ignore_edges = False,               # If True, edges of the array are ignored, which speeds up the code
-)
-RECIPE.rl_deconvolution = u.Param(      # Apply Richardson Lucy deconvolution
-        apply = False,                  # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
-        numiter = 5,                    # Number of iterations
-        dfile = None,                   # Provide MTF from file; no loading procedure present for now, loading through recon script required
-        gaussians = u.Param(            # Create fake psf as a sum of gaussians if no MTF provided
-            g1 = u.Param(               # DEFAULT list of gaussians for Richardson Lucy deconvolution
-                std_x = 1.0,            # Standard deviation in x direction
-                std_y = 1.0,            # Standard deviation in y direction
-                off_x = 0.,             # Offset / shift in x direction
-                off_y = 0.,             # Offset / shift in y direction
-            )
-        ),
+RECIPE.mask_file = None  # '%(base_path)s' + 'processing/mask.h5'
+# Position corrections for NFP beamtime Oct 2014
+RECIPE.correct_positions_Oct14 = False
+# Use flat as Empty Probe (EP) for probe sharing
+# Needs to be set to True in the recipe of the scan that will act as EP
+# SC: This will be revised once TreeDict transition is completed
+RECIPE.use_EP = False
+# Maximum number of scan points to be loaded from origin
+RECIPE.max_scan_points = 100000
+# Angle of rotation (as used in NFP beamtime Jul 2015)
+RECIPE.theta = 0
+
+# Hot pixel correction
+remove_hot_pixels = TreeDict(
+    'remove_hot_pixels',
+    # Initialisation; DEFAULT parameters will be used if not specified otherwise
+    apply=False,
+    # Size of median filter window around every data point
+    window=3,
+    # Tolerance multiplied with the standard deviation of the data array
+    # subtracted by the blurred array yields the threshold for cutoff.
+    tolerance=3,
+    # If True, edges of the array are ignored, which speeds up the code
+    ignore_edges=False,
 )
 
+RECIPE.attach('remove_hot_pixels', remove_hot_pixels)
+
+# Richardson Lucy deconvolution
+# SC: This will be revised once TreeDict transition is completed
+rl_deconvolution = TreeDict('rl_deconvolution')
+# Initialisation; DEFAULT parameters will be used if not specified otherwise
+rl_deconvolution.apply = False
+# Number of iterations
+rl_deconvolution.numiter = 5
+# Provide MTF from file; no loading procedure present for now,
+# loading through recon script required
+rl_deconvolution.dfile = None
+# DEFAULT list of gaussians for Richardson Lucy deconvolution
+# Standard deviation in x direction
+rl_deconvolution.gaussians.g1.std_x = 1.0
+# Standard deviation in y direction
+rl_deconvolution.gaussians.g1.std_y = 1.0
+# Offset / shift in x direction
+rl_deconvolution.gaussians.g1.off_x = 0.
+# Offset / shift in y direction
+rl_deconvolution.gaussians.g1.off_y = 0.
+
+RECIPE.attach('rl_deconvolution', rl_deconvolution)
+
 # Generic defaults
-I13DEFAULT = PtyScan.DEFAULT.copy()
-I13DEFAULT.recipe = RECIPE
+I13DEFAULT = TreeDict('I13DEFAULT')
+I13DEFAULT.update(PtyScan.DEFAULT)
+I13DEFAULT.attach('recipe', RECIPE)
 I13DEFAULT.auto_center = False
 I13DEFAULT.orientation = (False, False, False)
 
@@ -78,7 +109,8 @@ class I13ScanNFP(PtyScan):
     """
     I13 (Diamond Light Source) data preparation class for NFP.
     """
-    DEFAULT = I13DEFAULT
+    DEFAULT = TreeDict('DEFAULT')
+    DEFAULT.update(I13DEFAULT)
 
     def __init__(self, pars=None, **kwargs):
         """
@@ -89,8 +121,12 @@ class I13ScanNFP(PtyScan):
         :param kwargs: key-value pair
             - additional parameters.
         """
-        recipe_default = RECIPE.copy()
-        recipe_default.update(pars.recipe, in_place_depth=1)
+        recipe_default = TreeDict('recipe_default')
+        # Get default recipe parameters
+        recipe_default.update(RECIPE)
+        # Update with recipe parameters from script
+        recipe_default.update(pars.recipe)
+        # Update pars.recipe to include default parameters
         pars.recipe.update(recipe_default)
 
         super(I13ScanNFP, self).__init__(pars, **kwargs)
@@ -142,7 +178,7 @@ class I13ScanNFP(PtyScan):
                 detector_name = None
                 for k in self.instrument.keys():
                     if 'data' in self.instrument[k]:
-                        detector_name = k
+                        detector_name = str(k)
                         break
 
                 if detector_name is None:
@@ -161,11 +197,14 @@ class I13ScanNFP(PtyScan):
 
         # Set up dimensions for cropping
         try:
+            center = self.info.center
+        except (KeyError, NameError):
+            center = 'unset'
+        else:
             # Switch for attributes which are set to None
             # Will be removed once None attributes are removed
-            center = pars.center
-        except AttributeError:
-            center = 'unset'
+            if center is None:
+                center = 'unset'
 
         # Check if dimension tuple is provided
         if type(center) == tuple:
@@ -242,7 +281,7 @@ class I13ScanNFP(PtyScan):
         # scan and skip the rest of the function. If no positions are found at
         # all, raise error.
         if motor_positions is None and self.info.recipe.use_EP:
-            positions = 1. * np.array([[0.,0.]])
+            positions = 1. * np.array([[0., 0.]])
             return positions
         elif motor_positions is None:
             raise RuntimeError('Could not find motors (tried %s)'
@@ -274,7 +313,7 @@ class I13ScanNFP(PtyScan):
         :return: common
             - dict: contains averaged dark and flat (np.array).
         """
-        common = u.Param()
+        common = TreeDict('common')
 
         # Load dark.
         if self.info.recipe.dark_number is not None:
@@ -386,21 +425,21 @@ class I13ScanNFP(PtyScan):
             for j in raw:
                 raw[j] = u.remove_hot_pixels(
                     raw[j],
-                    self.info.recipe.remove_hot_pixels.size,
+                    self.info.recipe.remove_hot_pixels.window,
                     self.info.recipe.remove_hot_pixels.tolerance,
                     self.info.recipe.remove_hot_pixels.ignore_edges)[0]
 
             if self.info.recipe.flat_number is not None:
                     common.dark = u.remove_hot_pixels(
                         common.dark,
-                        self.info.recipe.remove_hot_pixels.size,
+                        self.info.recipe.remove_hot_pixels.window,
                         self.info.recipe.remove_hot_pixels.tolerance,
                         self.info.recipe.remove_hot_pixels.ignore_edges)[0]
 
             if self.info.recipe.flat_number is not None:
                 common.flat = u.remove_hot_pixels(
                     common.flat,
-                    self.info.recipe.remove_hot_pixels.size,
+                    self.info.recipe.remove_hot_pixels.window,
                     self.info.recipe.remove_hot_pixels.tolerance,
                     self.info.recipe.remove_hot_pixels.ignore_edges)[0]
 

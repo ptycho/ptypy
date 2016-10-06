@@ -19,6 +19,7 @@ This file is part of the PTYPY package.
 """
 if __name__ == "__main__":
     from ptypy import utils as u
+    from treedict import TreeDict
     from ptypy import io
     from ptypy import resources
     from ptypy.core import geometry
@@ -31,6 +32,7 @@ if __name__ == "__main__":
     import h5py
 else:
     from .. import utils as u
+    from treedict import TreeDict
     from .. import io
     from .. import resources
     from ..utils.verbose import logger, log, headerline
@@ -43,38 +45,60 @@ else:
     import h5py
 
 PTYD = dict(
-    chunks = {},    # frames, positions
-    meta = {},      # important to understand data. loaded by every process
-    info = {},      # this dictionary is not loaded from a ptyd. Mainly for documentation
+    # frames, positions
+    chunks={},
+    # important to understand data. loaded by every process
+    meta={},
+    # this dictionary is not loaded from a ptyd. Mainly for documentation
+    info={},
 )
 """ Basic Structure of a .ptyd datafile """
 
 META = dict(
-    label = None,           # label will be set internally
-    experimentID = None,    # a unique label of user choice
-    version = '0.1',
-    shape = None,
-    psize = None,
-    #lam = None,
-    energy = None,
-    center = None,
-    distance = None,
+    # label will be set internally
+    label=None,
+    # a unique label of user choice
+    experimentID=None,
+    version='0.1',
+    shape=None,
+    psize=None,
+    # lam=None,
+    energy=None,
+    center=None,
+    distance=None,
 )
-GENERIC = u.Param(
-    dfile = None,                   # filename (e.g. 'foo.ptyd')
-    chunk_format = '.chunk%02d',    # Format for chunk file appendix.
-    #roi = None,                    # 2-tuple or int for the desired fina frame size
-    save = None,                    # None, 'merge', 'append', 'extlink'
-    auto_center = None,             # False: no automatic center,None only  if center is None, True it will be enforced
-    load_parallel = 'data',         # None, 'data', 'common', 'all'
-    rebin = None,                   # rebin diffraction data
-    orientation = None,             # None,int or 3-tuple switch, actions are (transpose, invert rows, invert cols)
-    min_frames = 1,                 # minimum number of frames of one chunk if not at end of scan
-    positions_theory = None,        # Theoretical position list (This input parameter may get deprecated)
-    num_frames = None,              # Total number of frames to be prepared
-    recipe = {},
+
+GENERIC = TreeDict(
+    'GENERIC',
+    # Filename (e.g. 'foo.ptyd')
+    dfile=None,
+    # Format for chunk file appendix.
+    chunk_format='.chunk%02d',
+    # 2-tuple or int for the desired fina frame size
+    # roi = None,
+    # None, 'merge', 'append', 'extlink'
+    save=None,
+    # False: no automatic center, None only if center is None,
+    # True it will be enforced
+    auto_center=None,
+    # None, 'data', 'common', 'all'
+    load_parallel='data',
+    # Rebin diffraction data
+    rebin=None,
+    # None, int or 3-tuple switch, actions are
+    # (transpose, invert rows, invert cols)
+    orientation=None,
+    # Minimum number of frames of one chunk if not at end of scan
+    min_frames=1,
+    # Theoretical position list (This input parameter may get deprecated)
+    positions_theory=None,
+    # Total number of frames to be prepared
+    num_frames=None,
+    recipe={},
 )
-"""Default data parameters. See :py:data:`.scan.data` and a short listing below"""
+
+""" Default data parameters. See :py:data:`.scan.data`
+    and a short listing below """
 GENERIC.update(META)
 
 WAIT = 'msg1'
@@ -99,8 +123,8 @@ class PtyScan(object):
      - mpi capable, child classes should not worry about mpi
      
     """
-
-    DEFAULT = GENERIC.copy()
+    DEFAULT = TreeDict('DEFAULT')
+    DEFAULT.update(GENERIC)
     WAIT = WAIT
     EOS = EOS
     CODES = CODES
@@ -112,35 +136,44 @@ class PtyScan(object):
         
         Call :py:data:`initialize` to begin loading and data file creation.
         """
-
         # Load default parameter structure
-        info = u.Param(self.DEFAULT.copy())
+        info = TreeDict('info')
+        # Get instance default parameters
+        info.update(self.DEFAULT)
 
         # FIXME this overwrites the child's recipe defaults
-        info.update(pars, in_place_depth=1)
-        info.update(kwargs)
+        # SC: check if behaviour persists with TreeDict
+        info.update(pars)
+        # Override maybe because {'recipe': recipe was passed as kwargs?
+        # Update kwargs necessary?
+        # info.update(kwargs)
 
         # validate(pars, '.scan.preparation')
 
         # Prepare meta data
-        self.meta = u.Param(META.copy())
+        self.meta = TreeDict('self.meta')
+        self.meta.update(META)
 
         # Attempt to get number of frames.
         self.num_frames = info.num_frames
-        """Total number of frames to prepare / load. Set by :py:data:`~.scan.data.num_frames`"""
+        """ Total number of frames to prepare / load.
+            Set by :py:data:`~.scan.data.num_frames`"""
 
         self.min_frames = info.min_frames * parallel.size
-        """Minimum number of frames to prepare / load with call of :py:meth:`auto`"""
+        """ Minimum number of frames to prepare / load
+            with call of :py:meth:`auto`"""
 
         if info.positions_theory is not None:
             num = len(info.positions_theory)
-            logger.info('Theoretical positions are available. '
-                        'There will be %d frames.' % num)
-            logger.info('Any experimental position information will be '
-                        'ignored.')
-            logger.info('Former input value of frame number `num_frames` %s is '
-                        'overridden to %d.'
-                        % (str(self.num_frames), num))
+            logger.info(
+                'Theoretical positions are available. There will be %d frames.'
+                % num)
+            logger.info(
+                'Any experimental position information will be ignored.')
+            logger.info(
+                'Former input value of frame number `num_frames` %s is '
+                'overridden to %d.'
+                % (str(self.num_frames), num))
             self.num_frames = num
         """
         # check if we got information on geometry from ptycho
@@ -163,6 +196,8 @@ class PtyScan(object):
         # Print a report
         log(4, 'Ptypy Scan instance got the following parameters:')
         log(4, u.verbose.report(info))
+        # Above works, but can be replaced with the following
+        # log(4, info.makeReport())
 
         # Dump all input parameters as class attributes.
         # FIXME: This duplication of parameters can lead to much confusion...
@@ -181,6 +216,7 @@ class PtyScan(object):
 
         # Initialize other instance attributes
         self.common = {}
+        self.common_loaded = {}
         self.has_weight2d = None
         self.weight2d = None
         self.has_positions = None
@@ -190,16 +226,16 @@ class PtyScan(object):
         # Copy all values for meta
         for k in self.meta.keys():
             self.meta[k] = self.info[k]
-        #self.center = None  # Center will be set later
-        #self.roi = self.info.roi #None  # ROI will be set later
-        #self.shape = None
+        # self.center = None  # Center will be set later
+        # self.roi = self.info.roi #None  # ROI will be set later
+        # self.shape = None
         self.orientation = self.info.orientation
         self.rebin = self.info.rebin
 
         # Initialize flags
         self._flags = np.array([0, 0, 0], dtype=int)
         self.is_initialized = False
-        
+
         # post init method call
         self.post_init()
         
@@ -225,8 +261,9 @@ class PtyScan(object):
             if parallel.master:
                 if os.path.exists(self.dfile):
                     backup = self.dfile + '.old'
-                    logger.warning('File %s already exist. Renamed to %s.'
-                                   % (self.dfile, backup))
+                    logger.warning(
+                        'File %s already exist. Renamed to %s.'
+                        % (self.dfile, backup))
                     os.rename(self.dfile, backup)
                 # Prepare an empty file with the appropriate structure
                 io.h5write(self.dfile, PTYD.copy())
@@ -236,7 +273,7 @@ class PtyScan(object):
         if parallel.master or self.load_common_in_parallel:
             positions = self.load_positions()
             self.weight2d = self.load_weight()
-            self.common = self.load_common()
+            self.common_loaded = self.load_common()
         else:
             positions = None
 
@@ -244,10 +281,11 @@ class PtyScan(object):
         if not self.load_common_in_parallel:
             positions = parallel.bcast(positions)
             self.weight2d = parallel.bcast(self.weight2d)
-            self.common = parallel.bcast(self.common)
+            self.common_loaded = parallel.bcast(self.common_loaded)
 
         parallel.barrier()
-        self.common = u.Param(self.common)
+        self.common = TreeDict('self.common')
+        self.common.update(self.common_loaded)
 
         # Check for weight2d and positions
         self.has_weight2d = (self.weight2d is not None and
@@ -271,40 +309,45 @@ class PtyScan(object):
             num_pos = len(positions)
             if self.num_frames is None:
                 # Frame number was not known. We just set it now.
-                logger.info('Scanning positions found. There will be %d frames.'
-                            % num_pos)
+                logger.info(
+                    'Scanning positions found. There will be %d frames.'
+                    % num_pos)
                 self.num_frames = num_pos
             else:
                 # Frame number was already specified.
                 # Maybe we didn't want to use everything?
                 if num_pos > self.num_frames:
-                    #logger.info('Scanning positions have the same number of'
-                    #            'points as the theoretical ones (%d).'
-                    #            % num_pos)
-                    logger.info('Scanning positions (%d) exceed the desired '
-                                'number of scan points (%d).'
-                                % (num_pos, self.num_frames))
-                    logger.info('Set `num_frames` to None or to a larger value '
-                                'for more scan points.')
+                    logger.info(
+                        'Scanning positions have the same number of points as '
+                        'the theoretical ones (%d).'
+                        % num_pos)
+                    logger.info(
+                        'Scanning positions (%d) exceed the desired number of '
+                        'scan points (%d).'
+                        % (num_pos, self.num_frames))
+                    logger.info(
+                        'Set `num_frames` to None or to a larger value for '
+                        'more scan points.')
                 elif num_pos < self.num_frames:
-                    logger.info('Scanning positions (%d) are fewer than the '
-                                'desired number of scan points (%d).'
-                                % (num_pos, self.num_frames))
+                    logger.info(
+                        'Scanning positions (%d) are fewer than the desired '
+                        'number of scan points (%d).'
+                        % (num_pos, self.num_frames))
                     logger.info('Resetting `num_frames` to lower value.')
                     self.num_frames = num_pos
-                    #raise RuntimeError('Scanning positions have a number of'
-                    #                   'points (%d) inconsistent with what was'
-                    #                   'previously deduced (%d).'
-                    #                   % (num_pos, self.info.num_frames))
+                    # raise RuntimeError(
+                    #     'Scanning positions have a number of points (%d) '
+                    #     'inconsistent with what was previously deduced (%d).'
+                    #     % (num_pos, self.info.num_frames))
         else:
-            logger.info('No scanning position have been provided at this '
-                        'stage.')
+            logger.info(
+                'No scanning position have been provided at this stage.')
 
         # Warn that the total number of frames is unknown here.
         # The .check() method must now determine the end of the scan.
         if self.num_frames is None:
-            logger.warning('Number of frames `num_frames` not specified at '
-                           'this stage.')
+            logger.warning(
+                'Number of frames `num_frames` not specified at this stage.')
         
         # A note about how much this scan class knows about the number 
         # of frames expected. PtydScan uses this information.
@@ -316,10 +359,11 @@ class PtyScan(object):
         parallel.barrier()
         logger.info(headerline('Analysis done',' l') + '\n')
         """
-        
+
         if self.info.save is not None and parallel.master:
             logger.info('Appending info dict to file %s\n' % self.info.dfile)
-            io.h5append(self.info.dfile, info=dict(self.info))
+            io.h5append(self.info.dfile,
+                        info=self.info.convertTo('nested_dict'))
         # Wait for master
         parallel.barrier()
 
@@ -481,13 +525,14 @@ class PtyScan(object):
         if parallel.master:
             self.frames_accessible, eos = self.check(chunksize, start=s)
             if self.num_frames is None and eos is None:
-                logger.warning('Number of frames not specified and .check()'
-                               'cannot determine end-of-scan. Aborting..')
+                logger.warning(
+                    'Number of frames not specified and .check() cannot '
+                    'determine end-of-scan. Aborting..')
                 self.abort = True
 
             if eos is None:
-                self.end_of_scan = (s + self.frames_accessible >=
-                                    self.num_frames)
+                self.end_of_scan = (s + self.frames_accessible
+                                    >= self.num_frames)
             else:
                 self.end_of_scan = eos
 
@@ -498,8 +543,8 @@ class PtyScan(object):
 
         # Abort here if the flag was set
         if self.abort:
-            raise RuntimeError('Load routine incapable to determine the'
-                               'end-of-scan.')
+            raise RuntimeError(
+                'Load routine incapable to determine the end-of-scan.')
 
         frames_accessible = self.frames_accessible
         # Wait if too few frames are available and we are not at the end
@@ -517,7 +562,7 @@ class PtyScan(object):
         Function to generate the diffraction data index lists that
         determine which node contains which data.
         """
-        indices = u.Param()
+        indices = TreeDict('indices')
 
         # All indices in this chunk of data
         indices.chunk = range(start, start + step)
@@ -530,7 +575,8 @@ class PtyScan(object):
         indices.node = [indices.chunk[k] for k in indices.lm[parallel.rank]]
 
         # Store internally
-        self.indices = indices
+        self.indices = TreeDict('self.indices')
+        self.indices.update(indices)
 
         return indices
 
@@ -573,10 +619,7 @@ class PtyScan(object):
                 if self.has_weight2d:
                     altweight = self.weight2d
                 else:
-                    try:
-                        altweight = self.meta.weight2d
-                    except:
-                        altweight = np.ones(dsh)
+                    altweight = self.meta.get('weight2d', np.ones(dsh))
                 weights = dict.fromkeys(data.keys(), altweight)
 
             assert len(weights) == len(data), (
@@ -586,8 +629,9 @@ class PtyScan(object):
             sh = self.info.shape
             # Adapt roi if not set
             if sh is None:
-                logger.info('ROI not set. Using full frame shape of (%d,%d).'
-                            % tuple(dsh))
+                logger.info(
+                    'ROI not set. Using full frame shape of (%d, %d).'
+                    % tuple(dsh))
                 sh = dsh
             else:
                 sh = u.expect2(sh)
@@ -595,9 +639,10 @@ class PtyScan(object):
             # Only allow square slices in data
             if sh[0] != sh[1]:
                 roi = u.expect2(sh.min())
-                logger.warning('Asymmetric data ROI not allowed. Setting ROI '
-                               'from (%d,%d) to (%d,%d).'
-                               % (sh[0], sh[1], roi[0], roi[1]))
+                logger.warning(
+                    'Asymmetric data ROI not allowed. Setting ROI from '
+                    '(%d, %d) to (%d, %d).'
+                    % (sh[0], sh[1], roi[0], roi[1]))
                 sh = roi
 
             self.info.shape = sh
@@ -614,8 +659,9 @@ class PtyScan(object):
                 auto_cen = None
 
             if cen is None and auto_cen is not None:
-                logger.info('Setting center for ROI from %s to %s.'
-                            % (str(cen), str(auto_cen)))
+                logger.info(
+                    'Setting center for ROI from %s to %s.'
+                    % (str(cen), str(auto_cen)))
                 cen = auto_cen
             elif cen is None and auto is False:
                 cen = dsh // 2
@@ -623,8 +669,9 @@ class PtyScan(object):
                 # Center is number or tuple
                 cen = u.expect2(cen[-2:])
                 if auto_cen is not None:
-                    logger.info('ROI center is %s, automatic guess is %s.'
-                                % (str(cen), str(auto_cen)))
+                    logger.info(
+                        'ROI center is %s, automatic guess is %s.'
+                        % (str(cen), str(auto_cen)))
 
             # It is important to set center again in order to NOT have
             # different centers for each chunk, the downside is that the center
@@ -635,19 +682,21 @@ class PtyScan(object):
 
             # Make sure center is in the image frame
             assert (cen > 0).all() and (dsh - cen > 0).all(), (
-                'Optical axes (center = (%.1f,%.1f) outside diffraction image '
-                'frame (%d,%d).' % tuple(cen) + tuple(dsh))
+                'Optical axes (center = (%.1f, %.1f) outside diffraction image '
+                'frame (%d, %d).'
+                % tuple(cen) + tuple(dsh))
 
             # Determine if the arrays require further processing
-            do_flip = (self.orientation is not None and
-                       np.array(self.orientation).any())
+            do_flip = (self.orientation is not None
+                       and np.array(self.orientation).any())
             do_crop = (np.abs(sh - dsh) > 0.5).any()
             do_rebin = self.rebin is not None and (self.rebin != 1)
 
             if do_flip or do_crop or do_rebin:
-                logger.info('Enter preprocessing (crop/pad %s, rebin %s, '
-                            'flip/rotate %s) ... \n'
-                            % (str(do_crop), str(do_rebin), str(do_flip)))
+                logger.info(
+                    'Enter preprocessing '
+                    '(crop/pad %s, rebin %s, flip/rotate %s) ... \n'
+                    % (str(do_crop), str(do_rebin), str(do_flip)))
 
                 # We proceed with numpy arrays.That is probably now more memory
                 # intensive but shorter in writing
@@ -671,8 +720,9 @@ class PtyScan(object):
                 if (dsh == np.array(w[0].shape)).all():
                     w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
                 else:
-                    logger.warning('Mask does not have the same shape as data. '
-                                   'Will use mask center for cropping mask.')
+                    logger.warning(
+                        'Mask does not have the same shape as data. '
+                        'Will use mask center for cropping mask.')
                     cen = np.array(w[0].shape) // 2
                     w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
 
@@ -684,8 +734,8 @@ class PtyScan(object):
                 rebin = self.rebin
                 if rebin <= 1:
                     pass
-                elif (rebin in range(2, 6) and
-                      (((sh / float(rebin)) % 1) == 0.0).all()):
+                elif (rebin in range(2, 6)
+                      and (((sh / float(rebin)) % 1) == 0.0).all()):
                     mask = w > 0
                     d = u.rebin_2d(d, rebin)
                     w = u.rebin_2d(w, rebin)
@@ -695,9 +745,10 @@ class PtyScan(object):
                     # TODO: apply this operation when weights actually are weights
                     w = (mask == mask.max())
                 else:
-                    raise RuntimeError('Binning (%d) is to large or '
-                                       'incompatible with array shape (%s).'
-                                       % (rebin, str(tuple(sh))))
+                    raise RuntimeError(
+                        'Binning (%d) is to large or incompatible with array '
+                        'shape (%s).'
+                        % (rebin, str(tuple(sh))))
 
                 if has_data:
                     # Translate back to dictionaries
@@ -714,7 +765,7 @@ class PtyScan(object):
                 self.meta.psize = None
 
             # Prepare chunk of data
-            chunk = u.Param()
+            chunk = TreeDict('chunk')
             chunk.indices = indices.chunk
             chunk.indices_node = indices.node
             chunk.num = self.chunknum
@@ -737,9 +788,10 @@ class PtyScan(object):
                     try:
                         chunk.positions = (
                             self.info.positions_scan[indices.chunk])
-                    except:
-                        logger.info('Unable to slice position information from '
-                                    'experimental or theoretical resource.')
+                    except (KeyError, NameError):
+                        logger.info(
+                            'Unable to slice position information from '
+                            'experimental or theoretical resource.')
                         chunk.positions = [None] * len(indices.chunk)
             else:
                 # A dict : sort positions to indices.chunk
@@ -758,9 +810,9 @@ class PtyScan(object):
                     self.meta[k] = self.__dict__.get(k, self.info.get(k)) if v is None else v
                 self.meta['center'] = cen
                 """
-
                 if self.info.save is not None and parallel.master:
-                    io.h5append(self.dfile, meta=dict(self.meta))
+                    io.h5append(self.dfile,
+                                meta=self.meta.convertTo('nested_dict'))
 
                 parallel.barrier()
 
@@ -771,7 +823,7 @@ class PtyScan(object):
 
     def auto(self, frames, chunk_form='dp'):
         """
-        Repeated calls to this function will process the data
+        Repeated calls to this function will process the data.
         
         Parameters
         ----------
@@ -811,7 +863,8 @@ class PtyScan(object):
 
     def return_chunk_as(self, chunk, kind='dp'):
         """
-        Returns the loaded data chunk `chunk` in the format `kind`
+        Returns the loaded data chunk `chunk` in the format `kind`.
+
         For now only kind=='dp' (data package) is valid.
         """
         # This is a bit ugly now
@@ -832,12 +885,14 @@ class PtyScan(object):
                 frame['mask'] = None
             else:
                 # Ok, we now know that we need a mask since data is not None
-                # first look in chunk for a weight to this index, then
+                # First look in chunk for a weight to this index, then
                 # look for a 2d-weight in meta, then arbitrarily set
                 # weight to ones.
                 w = chunk.weights.get(
-                    index, self.meta.get('weight2d',
-                                         np.ones_like(frame['data'])))
+                    index,
+                    self.meta.get('weight2d', np.ones_like(frame['data']))
+                )
+
                 frame['mask'] = (w > 0)
 
             iterables.append(frame)
@@ -1014,7 +1069,7 @@ class PtyScan(object):
         node.
         """
         cen = {}
-        for k, d in data.iteritems():
+        for k, d in data.items():
             cen[k] = u.mass_center(d * (weights[k] > 0))
 
         # For some nodes, cen may still be empty.
@@ -1075,13 +1130,13 @@ class PtyScan(object):
         c = chunk if chunk is not None else self.chunk
 
         # Shallow copy
-        todisk = dict(c)
+        todisk = c.convertTo('nested_dict')
         num = todisk.pop('num')
         ind = todisk.pop('indices_node')
 
         for k in ['data', 'weights']:
             if k in c.keys():
-                if hasattr(c[k], 'iteritems'):
+                if hasattr(c[k], 'iteritems') or hasattr(c[k], 'items'):
                     v = c[k]
                 else:
                     v = dict(zip(ind, np.asarray(c[k])))
@@ -1108,10 +1163,11 @@ class PtyScan(object):
                     f[h5address] = h5py.ExternalLink(hddaddress, '/')
                     f.close()
 
-                
             elif str(kind) == 'merge':
-                raise NotImplementedError('Merging all data into single chunk '
-                                          'is not yet implemented.')
+                raise NotImplementedError(
+                    'Merging all data into single chunk is not yet '
+                    'implemented.')
+
         parallel.barrier()
 
 
@@ -1119,7 +1175,8 @@ class PtydScan(PtyScan):
     """
     PtyScan provided by native "ptyd" file format.
     """
-    DEFAULT = GENERIC.copy()
+    DEFAULT = TreeDict('DEFAULT')
+    DEFAULT.update(GENERIC)
 
     def __init__(self, pars=None, source=None, **kwargs):
         """
@@ -1131,10 +1188,11 @@ class PtydScan(PtyScan):
         :param pars: Input like PtyScan
         """
         # Create parameter set
-        p = u.Param(self.DEFAULT.copy())
+        p = TreeDict('p')
+        p.update(self.DEFAULT)
 
         # Copy the label
-        #if pars is not None:
+        # if pars is not None:
         #    p.label = pars.get('label')
 
         if source is None or str(source) == 'file':
@@ -1160,7 +1218,7 @@ class PtydScan(PtyScan):
                 logger.info('Will instead save to %s if necessary.'
                             % os.path.split(dfile)[1])
 
-            pars['dfile']= dfile
+            pars['dfile'] = dfile
             manipulate = True
             p.update(pars)
 
@@ -1171,26 +1229,29 @@ class PtydScan(PtyScan):
         self.source = source
 
         # At least ONE chunk must exist to ensure everything works
-        with h5py.File(source,'r') as f:
+        with h5py.File(source, 'r') as f:
             check = f.get('chunks/0')
-            # get number of frames supposedly in the file
+            # Get number of frames supposedly in the file
             source_frames = f.get('info/num_frames_actual')[...].item()
             f.close()
             
         if check is None: 
-            raise IOError('Ptyd soruce %s contains ' 
-                          'no data. Load aborted' % source)
+            raise IOError('Ptyd source %s contains no data. Load aborted'
+                          % source)
         
         if source_frames is None:
             logger.warning('Ptyd source is not aware of the total'
                            'number of diffraction frames expected')
 
         # Get meta information
-        meta = u.Param(io.h5read(self.source, 'meta')['meta'])
-        
-        if len(meta)==0:
-            logger.warning('There should be meta information in '
-                           '%s. Something is odd here.' % source)
+        meta = TreeDict('meta')
+        for k, v in io.h5read(self.source, 'meta')['meta'].items():
+            meta[str(k)] = v
+
+        if len(meta) == 0:
+            logger.warning(
+                'There should be meta information in %s. Something is odd here.'
+                % source)
         
         # Update given parameters when they are None
         if not manipulate:
@@ -1198,7 +1259,7 @@ class PtydScan(PtyScan):
         else:
             # Overwrite only those set to None
             for k, v in meta.items():
-                if p.get(k) is None: # should be replace by 'unset'
+                if p.get(k, None) is None:  # should be replace by 'unset'
                     p[k] = v
             # Initialize parent class and fill self
             super(PtydScan, self).__init__(p, **kwargs)
@@ -1217,7 +1278,6 @@ class PtydScan(PtyScan):
         # Other instance attributes
         self._checked = {}
         self._ch_frame_ind = None
-
 
     def check(self, frames=None, start=None):
         """
@@ -1238,20 +1298,21 @@ class PtydScan(PtyScan):
         with h5py.File(self.source, 'r') as f:
             d = {}
             ch_items = []
-            for k, v in f['chunks'].iteritems():
+            for k, v in f['chunks'].items():
                 if v is not None:
                     ch_items.append((int(k), v))
 
-            ch_items = sorted(ch_items, key = lambda t: t[0])
+            ch_items = sorted(ch_items, key=lambda t: t[0])
 
             for ch_key in ch_items[0][1].keys():
-                d[ch_key] = np.array([(int(k),) + v[ch_key].shape 
-                            for k, v in ch_items if v is not None])
+                d[ch_key] = np.array([(int(k),) + v[ch_key].shape
+                                      for k, v in ch_items if v is not None])
                     
             f.close()
 
         self._checked = d
         all_frames = int(sum([ch[1] for ch in d['data']]))
+
         ch_frame_ind = []
         for dd in d['data']:
             for frame in range(dd[1]):
@@ -1259,9 +1320,9 @@ class PtydScan(PtyScan):
 
         self._ch_frame_ind = np.array(ch_frame_ind)
         
-        # accessible frames
+        # Accessible frames
         frames_accessible = min((frames, all_frames - start))
-        #end_of_scan = source_frames <= start + frames_accessible
+        # end_of_scan = source_frames <= start + frames_accessible
         return frames_accessible, None
 
     def _coord_to_h5_calls(self, key, coord):
@@ -1298,7 +1359,7 @@ class PtydScan(PtyScan):
         # Get our data from the ptyd file
         out = {}
         with h5py.File(self.source, 'r') as f:
-            for array, call in calls.iteritems():
+            for array, call in calls.items():
                 out[array] = [np.squeeze(f[path][slce]) for path, slce in call]
 
             f.close()
@@ -1308,7 +1369,7 @@ class PtydScan(PtyScan):
         # indices = out.get('indices',indices)
 
         # Wrap in a dict
-        for k, v in out.iteritems():
+        for k, v in out.items():
             out[k] = dict(zip(indices, v))
 
         return (out.get(key, {}) for key in ['data', 'positions', 'weights'])
@@ -1418,13 +1479,14 @@ class DataSource(object):
             For now only 'dp' is implemented.
         """
         from ..experiment import PtyScanTypes
+        # FIXME: SC: when moved to top, import fails
 
         self.frames_per_call = frames_per_call
         self.feed_format = feed_format
         self.scans = scans
 
         # Sort after given keys
-        self.labels = sorted(scans.keys())
+        self.labels = sorted(scans.labels)
 
         # Empty list for the scans
         self.pty_scans = []
@@ -1443,25 +1505,27 @@ class DataSource(object):
             # Assign source, recipe, and positions_theory
             source = prep.source
             recipe = prep.get('recipe', {})
-            if prep.get('positions_theory') is None:
-                prep.positions_theory = scan['pos_theory']
+            prep.positions_theory = prep.get('positions_theory',
+                                             scan['pos_theory'])
 
-            #prep.dfile = s.data_file
-            #prep.geometry = s.geometry.copy()
-            #prep.xy = s.xy.copy()
+            # prep.dfile = s.data_file
+            # prep.geometry = s.geometry.copy()
+            # prep.xy = s.xy.copy()
 
-            #if source is not None:
+            # if source is not None:
             #    source = source.lower()
             if source is None or source.lower() == 'empty':
                 prep.recipe = None
-                logger.warning('Generating dummy PtyScan for scan `%s` - This '
-                               'label will source only zeros as data' % label)
+                u.logger.warning('Generating dummy PtyScan for scan `%s` - '
+                                 'This label will source only zeros as data'
+                                 % label)
                 self.pty_scans.append(PtyScan(prep))
             elif source.lower() in PtyScanTypes:
                 pst = PtyScanTypes[source.lower()]
-                logger.info('Scan %s will be prepared with the recipe "%s"'
-                            % (label, source))
+                u.logger.info('Scan %s will be prepared with the recipe "%s"'
+                              % (label, source))
                 self.pty_scans.append(pst(prep, recipe=recipe))
+                # SC: why do we separate recipe when it is part of prep?
             elif (source.endswith('.ptyd') or source.endswith('.pty') or
                   str(source) == 'file'):
                 self.pty_scans.append(PtydScan(prep, source=source))
@@ -1469,7 +1533,7 @@ class DataSource(object):
                 self.pty_scans.append(MoonFlowerScan(prep))
             elif source.lower() == 'sim':
                 from ..simulations import SimScan
-                logger.info('Scan %s will simulated' % label)
+                u.logger.info('Scan %s will simulated' % label)
                 self.pty_scans.append(SimScan(prep, s.copy()))
             else:
                 raise RuntimeError('Could not manage source "%s" for scan `%s`.'

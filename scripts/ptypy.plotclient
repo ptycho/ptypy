@@ -36,5 +36,5 @@ parser.add_argument('-a', dest='address', type=str,
 #args = parser.parse_args()
 from ptypy import io
 u.verbose.set_level(3)
-plotter=u.MPLClient(client_pars=client_pars, autoplot_pars=plot_pars)
+plotter = u.MPLClient(client_pars=client_pars, autoplot_pars=plot_pars)
 plotter.loop_plot()

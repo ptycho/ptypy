@@ -32,22 +32,22 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 
 """
-
 import numpy as np
 import weakref
+
 try:
     from pympler.asizeof import asizeof
-    use_asizeof=True
+    use_asizeof = True
 except ImportError:
-    use_asizeof=False
+    use_asizeof = False
 
 from .. import utils as u
+from treedict import TreeDict
 from ..utils.verbose import logger
 from ..utils.parameters import PARAM_PREFIX
-#import ptypy
 
 __all__ = ['Container', 'Storage', 'View', 'POD', 'Base', 'DEFAULT_PSIZE',
-           'DEFAULT_SHAPE'] # IDManager']
+           'DEFAULT_SHAPE']  # IDManager']
 
 # Default pixel size
 DEFAULT_PSIZE = 1.
@@ -56,13 +56,19 @@ DEFAULT_PSIZE = 1.
 DEFAULT_SHAPE = (1, 1, 1)
 
 # Expected structure for Views initialization.
-DEFAULT_ACCESSRULE = u.Param(
-        storageID=None,  # (int) ID of storage, might not exist
-        shape=None,   # (2-tuple) shape of the view in pixels
-        coord=None,   # (2-tuple) physical coordinates of the center of the view
-        psize=DEFAULT_PSIZE,   # (float or None) pixel size (required for storage initialization)
-        layer=0,   # (int) index of the third dimension if applicable.
-        active=True,
+DEFAULT_ACCESSRULE = TreeDict(
+    'DEFAULT_ACCESSRULE',
+    # (int) ID of storage, might not exist
+    storageID=None,
+    # (2-tuple) shape of the view in pixels
+    shape=None,
+    # (2-tuple) physical coordinates of the center of the view
+    coord=None,
+    # (float or None) pixel size (required for storage initialization)
+    psize=DEFAULT_PSIZE,
+    # (int) index of the third dimension if applicable.
+    layer=0,
+    active=True,
 )
 
 BASE_PREFIX = 'B'
@@ -107,8 +113,9 @@ class Base(object):
         try:
             owner._new_ptypy_object(obj=self)
         except:
-            logger.debug('Failed registering instance of %s with ID %s to '
-                         'object %s' % (type(self), self.ID, owner))
+            logger.debug(
+                'Failed registering instance of %s with ID %s to object %s'
+                % (type(self), self.ID, owner))
 
         # Make a pool for your own ptypy objects
         if BeOwner:
@@ -203,13 +210,13 @@ class Base(object):
         if hasattr(self, '_pool'):
             if use_asizeof:
                 space += asizeof(self._pool, limit=0)
-            for k, v in self._pool.iteritems():
+            for k, v in self._pool.items():
                 if use_asizeof:
                     space += asizeof(v, limit=0)
-                for kk, vv in v.iteritems():
+                for kk, vv in v.items():
                     pool_space += vv.calc_mem_usage()[0]
 
-        for k, v in self.__dict__.iteritems():
+        for k, v in self.__dict__.items():
             if issubclass(type(v), Base):
                 continue
             elif str(k) == '_pool' or str(k) == 'pods':
@@ -581,8 +588,8 @@ class Storage(Base):
 
             # Accumulate the regions of interest to compute the full field of
             # view
-            #rows += [v.roi[0, 0], v.roi[1, 0]]
-            #cols += [v.roi[0, 1], v.roi[1, 1]]
+            # rows += [v.roi[0, 0], v.roi[1, 0]]
+            # cols += [v.roi[0, 1], v.roi[1, 1]]
             rows += [v.dlow[0], v.dhigh[0]]
             cols += [v.dlow[1], v.dhigh[1]]
 
@@ -607,10 +614,10 @@ class Storage(Base):
                              (negmisfit.any() and not self.padonly))
 
         if posmisfit.any() or negmisfit.any():
-            logger.debug('Storage %s of container %s has a misfit of [%s, %s] '
-                         'between its data and its views'
-                         % (str(self.ID), str(self.owner.ID), misfit[0],
-                            misfit[1]))
+            logger.debug(
+                'Storage %s of container %s has a misfit of [%s, %s] between '
+                'its data and its views'
+                % (str(self.ID), str(self.owner.ID), misfit[0], misfit[1]))
 
         if needtocrop_or_pad:
             if self.padonly:
@@ -618,23 +625,28 @@ class Storage(Base):
 
             # Recompute center and shape
             new_center = self.center + misfit[:, 0]
-            new_shape = (sh[0], sh[1] + misfit[0].sum(), sh[2] +
-                         misfit[1].sum())
-            logger.debug('%s[%s] :: center: %s -> %s'
-                         % (self.owner.ID, self.ID, str(self.center),
-                            str(new_center)))
-            #logger.debug('%s[%s] :: shape: %s -> %s'
-            #             % (self.owner.ID, self.ID, str(sh), str(new_shape)))
+            new_shape = (sh[0],
+                         sh[1] + misfit[0].sum(),
+                         sh[2] + misfit[1].sum())
+            logger.debug(
+                '%s[%s] :: center: %s -> %s'
+                % (self.owner.ID, self.ID, str(self.center), str(new_center)))
+            # logger.debug(
+            #     '%s[%s] :: shape: %s -> %s'
+            #     % (self.owner.ID, self.ID, str(sh), str(new_shape)))
 
             megapixels = np.array(new_shape).astype(float).prod() / 1e6
             if megapixels > 50:
-                raise RuntimeError('Arrays larger than 50M not supported. You '
-                                   'requested %.2fM pixels.' % megapixels)
+                raise RuntimeError(
+                    'Arrays larger than 50M not supported. You requested %.2fM '
+                    'pixels.'
+                    % megapixels)
 
             # Apply 2d misfit
             if self.data is not None:
                 new_data = u.crop_pad(
-                    self.data, misfit,
+                    self.data,
+                    misfit,
                     fillpar=self.fill_value).astype(self.dtype)
             else:
                 new_data = np.empty(new_shape, self.dtype)
@@ -677,7 +689,7 @@ class Storage(Base):
         self.center = new_center
 
         # make datalist
-        #self._make_datalist()
+        # self._make_datalist()
 
     def _to_pix(self, coord):
         """
@@ -1079,7 +1091,7 @@ class View(Base):
         super(View, self).__init__(container, ID, False)
 
         # Prepare a dictionary for PODs (volatile!)
-        #if not hasattr(self,'pods'):
+        # if not hasattr(self, 'pods'):
         #    self.pods = weakref.WeakValueDictionary()
         self.pods = weakref.WeakValueDictionary()
         """ Volatile dictionary for all :any:`POD`\ s that connect to 
@@ -1113,7 +1125,8 @@ class View(Base):
         """
         Store internal info to get/set the 2D data in the container. 
         """
-        rule = u.Param(self.DEFAULT_ACCESSRULE)
+        rule = TreeDict('rule')
+        rule.update(self.DEFAULT_ACCESSRULE)
         if accessrule is not None:
             rule.update(accessrule)
         rule.update(kwargs)
@@ -1128,10 +1141,10 @@ class View(Base):
         # shape == None means "full frame"
         self.shape = rule.shape
 
-        #if rule.shape is not None:
-            #self.shape = u.expect2(rule.shape)
-        #else:
-            #self.shape = u.expect2(0)
+        # if rule.shape is not None:
+        #     self.shape = u.expect2(rule.shape)
+        # else:
+        #     self.shape = u.expect2(0)
 
         self.coord = rule.coord
         self.layer = rule.layer
@@ -1139,23 +1152,25 @@ class View(Base):
         # Look for storage, create one if necessary
         s = self.owner.storages.get(self.storageID, None)
         if s is None:
-            s = self.owner.new_storage(ID=self.storageID, psize=rule.psize,
+            s = self.owner.new_storage(ID=self.storageID,
+                                       psize=rule.psize,
                                        shape=self.shape)
         self.storage = s
 
-        if self.psize is not None and not np.allclose(self.storage.psize,
-                                                      self.psize):
-            logger.warn('Inconsistent pixel size when creating view.\n(%s vs '
-                        '%s)' % (str(self.storage.psize), str(self.psize)))
+        if (self.psize is not None
+                and not np.allclose(self.storage.psize, self.psize)):
+            logger.warn(
+                'Inconsistent pixel size when creating view.\n(%s vs %s)'
+                % (str(self.storage.psize), str(self.psize)))
 
         # This ensures self-consistency (sets pixel coordinate and ROI)
         if self.active:
             self.storage.update_views(self)
 
     def __str__(self):
-        first = '%s -> %s[%s] : shape = %s layer = %s coord = %s' \
-                % (self.owner.ID, self.storage.ID, self.ID,
-                   self.shape, self.layer, self.coord)
+        first = ('%s -> %s[%s] : shape = %s layer = %s coord = %s'
+                 % (self.owner.ID, self.storage.ID, self.ID,
+                    self.shape, self.layer, self.coord))
         if not self.active:
             return first + '\n INACTIVE : slice = ...  '
         else:
@@ -1429,7 +1444,7 @@ class Container(Base):
         A property that returns the internal dictionary of all 
         :any:`Storage` instances in this :any:`Container`
         """
-        return self._pool.get(STORAGE_PREFIX,{})
+        return self._pool.get(STORAGE_PREFIX, {})
 
     @property
     def storages(self):
@@ -1437,7 +1452,7 @@ class Container(Base):
         A property that returns the internal dictionary of all 
         :any:`Storage` instances in this :any:`Container`
         """
-        return self._pool.get(STORAGE_PREFIX,{})
+        return self._pool.get(STORAGE_PREFIX, {})
 
     @property
     def Sp(self):
@@ -1453,7 +1468,7 @@ class Container(Base):
         A property that returns the internal dictionary of all 
         :any:`View` instances in this :any:`Container`
         """
-        return self._pool.get(VIEW_PREFIX,{})
+        return self._pool.get(VIEW_PREFIX, {})
 
     @property
     def views(self):
@@ -1461,7 +1476,7 @@ class Container(Base):
         A property that returns the internal dictionary of all 
         :any:`View` instances in this :any:`Container`
         """
-        return self._pool.get(VIEW_PREFIX,{})
+        return self._pool.get(VIEW_PREFIX, {})
 
     @property
     def Vp(self):
@@ -1477,7 +1492,7 @@ class Container(Base):
         Return total number of pixels in this container.
         """
         sz = 0
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             if s.data is not None:
                 sz += s.data.size
         return sz
@@ -1491,7 +1506,7 @@ class Container(Base):
         overhead.
         """
         sz = 0
-        for ID,s in self.storages.iteritems():
+        for ID,s in self.storages.items():
             if s.data is not None:
                 sz += s.data.nbytes
         return sz
@@ -1535,7 +1550,7 @@ class Container(Base):
         new_cont.original = self
 
         # Copy storage objects
-        for storageID, s in self.storages.iteritems():
+        for storageID, s in self.storages.items():
             news = s.copy(new_cont, storageID, fill)
 
         # We are done! Return the new container
@@ -1610,7 +1625,7 @@ class Container(Base):
         also_in_copies : bool
             If True, also reformat associated copies of this container 
         """
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             s.reformat()
             if also_in_copies:
                 for c in self.copies:
@@ -1621,7 +1636,7 @@ class Container(Base):
         Returns a formatted report string on all storages in this container.
         """
         info = ["Containers ID: %s\n" % str(self.ID)]
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             info.extend(["Storage %s\n" % ID, s.report()])
         return ''.join(info)
 
@@ -1676,12 +1691,16 @@ class Container(Base):
         if separator is not None:
             fr.separator = separator
 
-        dct = {} # SC: method not returning any dict, feature still to be added?
+        dct = {}
+        # SC: method not returning any dict, feature still to be added?
         mem = 0
         info = []
-        for ID, s in self.storages.iteritems():
-            fstring, stats = s.formatted_report(fr.table, fr.offset, align,
-                                                fr.separator, False)
+        for ID, s in self.storages.items():
+            fstring, stats = s.formatted_report(fr.table,
+                                                fr.offset,
+                                                align,
+                                                fr.separator,
+                                                False)
             info.extend([fstring, '\n'])
             mem += stats.get('memory', 0)
 
@@ -1763,7 +1782,7 @@ class Container(Base):
         """
         self.space = 0
         info_str = []
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             if s.data is not None:
                 self.space += s.data.nbytes
             info_str.append(str(s) + '\n')
@@ -1772,54 +1791,54 @@ class Container(Base):
 
     def __iadd__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data += s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data += other
 
         return self
 
     def __isub__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data -= s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data -= other
 
         return self
 
     def __imul__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data *= s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data *= other
 
         return self
 
     def __idiv__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data /= s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data /= other
         return self
 
     def __lshift__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data[:] = s2.data

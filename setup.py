@@ -76,10 +76,8 @@ setup(
               'ptypy.engines',
               'ptypy.io',
               'ptypy.resources',
-              'ptypy.experiment',
-              'ptypy.lib'],
-    package_data={'ptypy': ['resources/*',
-                            'lib/treedict/treedict.so']},
+              'ptypy.experiment'],
+    package_data={'ptypy': ['resources/*', ]},
     # include_package_data=True
     scripts=[
         'scripts/ptypy.plot',
