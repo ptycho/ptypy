@@ -55,7 +55,8 @@ try:
     import re
     import imp
 
-    DEFAULT_ENGINE_PATHS = ['./', '~/.ptypy/']   # Default search paths for engines
+    # Default search paths for engines
+    DEFAULT_ENGINE_PATHS = ['./', '~/.ptypy/']
 
     def dynamic_load(path=None):
         """
@@ -73,7 +74,8 @@ try:
         else:
             path_list = DEFAULT_ENGINE_PATHS
 
-        baselist = ['BaseEngine'] + engine_names  # List of base classes an engine could derive from
+        # List of base classes an engine could derive from
+        baselist = ['BaseEngine'] + engine_names
 
         # Loop through paths
         engine_path = {}
@@ -84,7 +86,8 @@ try:
             if not os.path.exists(directory):
                 # Continue silently
                 continue
-                # raise IOError('Engine path %s does not exist.' % str(directory))
+                # raise IOError('Engine path %s does not exist.'
+                #               % str(directory))
 
             # Get list of python files
             py_files = glob.glob(directory + '/*.py')
@@ -96,12 +99,15 @@ try:
                 modname = os.path.splitext(os.path.split(filename)[-1])[0]
 
                 # Find classes
-                res = re.findall('^class (.*)\((.*)\)', file(filename, 'r').read(), re.M)
+                res = re.findall(
+                    '^class (.*)\((.*)\)', file(filename, 'r').read(), re.M)
+
                 for classname, basename in res:
                     if (basename in baselist) and classname not in baselist:
                         # Match!
                         engine_path[classname] = (modname, filename)
-                        u.logger.info("Found Engine '%s' in file '%s'" % (classname, filename))
+                        u.logger.info("Found Engine '%s' in file '%s'"
+                                      % (classname, filename))
 
         # Load engines that have been found
         for classname, mf in engine_path.iteritems():
