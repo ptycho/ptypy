@@ -25,25 +25,6 @@ RECIPE.stepsize = None  	# step size in m
 NEXUS_DATA_PATH = 'entry/detector/data'
 
 
-def positions_from_hdf5(filename, stepsize, shape):
-    # first get the total number of positions
-    with h5py.File(filename, 'r') as hf:
-        data = hf.get(NEXUS_DATA_PATH)
-        data = np.array(data)
-        nPositions = data.shape[0]
-    # Then generate positions to match. This is based on a very early
-    # scan format and assumes that the scan is sqrt(Nframes)-by-
-    # sqrt(Nframes).
-    positions = []
-    for motor_y in range(shape[0]):
-        # tried to adapt this to Bjoern's info here
-        # https://github.com/ptycho/ptypy-dev/issues/39
-        # and also to my own notes 2016-09-30.
-        for motor_x in range(shape[1]):
-            positions.append(np.array([motor_y, -motor_x]) * stepsize)
-    return np.array(positions)
-
-
 class NanomaxTmpScan(PtyScan):
     """
     Basic class to load Nanomax data after the completion of a scan.
@@ -89,7 +70,27 @@ class NanomaxTmpScan(PtyScan):
         # self.positions, but instead it's in self.info.positions_scan.
 
         filename = self.info.recipe.dataPath + self.info.recipe.datafile
-        return positions_from_hdf5(filename, self.info.recipe.stepsize, self.info.recipe.scan_shape)
+
+        # first get the total number of positions
+        with h5py.File(filename, 'r') as hf:
+            data = hf.get(NEXUS_DATA_PATH)
+            data = np.array(data)
+            nPositions = data.shape[0]
+        # Then generate positions to match. This is based on a very early
+        # scan format and assumes that the scan is sqrt(Nframes)-by-
+        # sqrt(Nframes).
+        positions = []
+        for motor_y in range(self.info.recipe.scan_shape[0]):
+            # tried to adapt this to Bjoern's info here
+            # https://github.com/ptycho/ptypy-dev/issues/39
+            # and also to my own notes 2016-09-30.
+            for motor_x in range(self.info.recipe.scan_shape[1]):
+                # in nanomax coordinates:
+                x = motor_x
+                y = -motor_y
+                # in ptypy coordinates:
+                positions.append(np.array([-y, -x]) * self.info.recipe.stepsize)
+        return np.array(positions)
 
     def load(self, indices):
         # returns three dicts: raw, positions, weights, whose keys are the
