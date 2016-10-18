@@ -23,6 +23,7 @@ RECIPE.stepsize = None  	# step size in m
 
 # These are the paths within hdf5 files
 NEXUS_DATA_PATH = 'entry/detector/data'
+NEXUS_MASK_PATH = 'mask'
 
 
 class NanomaxTmpScan(PtyScan):
@@ -96,9 +97,7 @@ class NanomaxTmpScan(PtyScan):
         # returns three dicts: raw, positions, weights, whose keys are the
         # scan pont indices. If one weight (mask) is to be used for the whole
         # scan, it should be loaded with load_weights(). The same goes for the
-        # positions. We don't really need a mask here, but it must be
-        # provided, otherwise it's given the shape of self.info.shape, and
-        # then there's a shape mismatch in some multiplication.
+        # positions.
 
         # Probably this should slice up the big array on reading, but won't
         # bother now.
@@ -110,9 +109,28 @@ class NanomaxTmpScan(PtyScan):
             data = hf.get(NEXUS_DATA_PATH)
             for i in indices:
                 raw[i] = np.asarray(data[i])
-                weights[i] = np.ones(data[i].shape)
+                #weights[i] = np.ones(data[i].shape)
 
         return raw, positions, weights
+
+    def load_weight(self):
+        """
+        Provides the mask for the whole scan, the shape of the first 
+        frame.
+        """
+        if self.info.recipe.maskfile:
+            filename = self.info.recipe.dataPath + self.info.recipe.maskfile
+            with h5py.File(filename) as hf:
+                data = hf.get(NEXUS_MASK_PATH)
+                mask = np.asarray(data)
+        else:
+            filename = self.info.recipe.dataPath + self.info.recipe.datafile
+            with h5py.File(filename) as hf:
+                data = hf.get(NEXUS_DATA_PATH)
+                shape = np.asarray(data[0]).shape
+                mask = np.ones(shape)
+        print "loaded mask, %u x %u, sum %u"%(mask.shape + (np.sum(mask),))
+        return mask
 
 
 class NanomaxTmpScanOnline(NanomaxTmpScan):
