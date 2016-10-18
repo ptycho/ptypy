@@ -8,4 +8,7 @@ tutorial/*.png
 ghostdriver*
 ptypy/version.py
 .idea/
+.DS_Store
+ptypy/.DS_Store
+ptypy/test/.DS_Store
 
