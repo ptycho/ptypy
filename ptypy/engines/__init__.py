@@ -20,11 +20,12 @@ import ML
 import dummy
 import DMIP
 import DM_OPR
+import ML_OPR
 
 __all__ = ['DM', 'ML', 'BaseEngine']
 
 # List of supported engines
-engine_names = ['Dummy', 'DM_simple', 'DM', 'DM_minimal', 'ML', 'ML_new', 'DMIP', 'DM_OPR']
+engine_names = ['Dummy', 'DM_simple', 'DM', 'DM_minimal', 'ML', 'ML_new', 'DMIP', 'DM_OPR', 'ML_OPR']
 
 # Supported engines defaults
 DEFAULTS = u.Param(
@@ -36,6 +37,7 @@ DEFAULTS = u.Param(
     DM_minimal=DM_minimal.DEFAULT,
     DMIP=DMIP.DEFAULT,
     DM_OPR=DM_OPR.DEFAULT,
+    ML_OPR=ML_OPR.DEFAULT,
 )
 
 # Engine objects
@@ -47,6 +49,7 @@ ENGINES = u.Param(
     DM_minimal=DM_minimal.DM_minimal,
     DMIP=DMIP.DMIP,
     DM_OPR=DM_OPR.DM_OPR,
+    ML_OPR=ML_OPR1.ML_OPR,
 )
 
 
