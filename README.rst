@@ -125,3 +125,6 @@ References
 .. [#dm] P.Thibault, M.Dierolf *et al.*, *Science* **321**, 7 (2009), `doi <http://dx.doi.org/10.1126/science.1158573>`_
 
 .. [#ml] P.Thibault and M.Guizar-Sicairos, *New J. of Phys.* **14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`_
+
+.. image:: https://travis-ci.com/ptycho/ptypy.svg?token=QhmpEjwu4kFNh6PkbHVR&branch=master
+    :target: https://travis-ci.com/ptycho/ptypy

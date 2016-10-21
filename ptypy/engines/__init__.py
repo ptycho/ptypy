@@ -21,35 +21,113 @@ import dummy
 import DMIP
 import DM_OPR
 import ML_OPR
-#from ePIE import ePIE
 
 __all__ = ['DM', 'ML', 'BaseEngine']
 
+# List of supported engines
 engine_names = ['Dummy', 'DM_simple', 'DM', 'DM_minimal', 'ML', 'ML_new', 'DMIP', 'DM_OPR', 'ML_OPR']
 
+# Supported engines defaults
 DEFAULTS = u.Param(
-    common = COMMON,
-    Dummy = dummy.DEFAULT,
-    DM_simple = DM_simple.DEFAULT,
-    DM = DM.DEFAULT,
-    ML = ML.DEFAULT,
-    DM_minimal = DM_minimal.DEFAULT,
-    DMIP = DMIP.DEFAULT,
-    DM_OPR = DM_OPR.DEFAULT,
-    ML_OPR = ML_OPR.DEFAULT,
+    common=COMMON,
+    Dummy=dummy.DEFAULT,
+    DM_simple=DM_simple.DEFAULT,
+    DM=DM.DEFAULT,
+    ML=ML.DEFAULT,
+    DM_minimal=DM_minimal.DEFAULT,
+    DMIP=DMIP.DEFAULT,
+    DM_OPR=DM_OPR.DEFAULT,
+    ML_OPR=ML_OPR.DEFAULT,
 )
 
+# Engine objects
 ENGINES = u.Param(
-    Dummy = dummy.Dummy,
-    DM_simple = DM_simple.DM_simple,
-    DM = DM.DM,
-    ML = ML.ML,
-    DM_minimal = DM_minimal.DM_minimal,
-    DMIP = DMIP.DMIP,
-    DM_OPR = DM_OPR.DM_OPR,
-    ML_OPR = ML_OPR.ML_OPR1,
+    Dummy=dummy.Dummy,
+    DM_simple=DM_simple.DM_simple,
+    DM=DM.DM,
+    ML=ML.ML,
+    DM_minimal=DM_minimal.DM_minimal,
+    DMIP=DMIP.DMIP,
+    DM_OPR=DM_OPR.DM_OPR,
+    ML_OPR=ML_OPR.ML_OPR1,
 )
+
+
 def by_name(name):
     if name not in ENGINES.keys():
         raise RuntimeError('Unknown engine: %s' % name)
     return ENGINES[name]
+
+try:
+    import os
+    import glob
+    import re
+    import imp
+
+    DEFAULT_ENGINE_PATHS = ['./', '~/.ptypy/']   # Default search paths for engines
+
+    def dynamic_load(path=None):
+        """
+        Load an engine dynamically from the given paths
+
+        :param path: Path or list of paths
+        """
+
+        # Update list of paths to search for
+        if path is not None:
+            if str(path) == path:
+                path_list = [path] + DEFAULT_ENGINE_PATHS
+            else:
+                path_list = path + DEFAULT_ENGINE_PATHS
+        else:
+            path_list = DEFAULT_ENGINE_PATHS
+
+        baselist = ['BaseEngine'] + engine_names  # List of base classes an engine could derive from
+
+        # Loop through paths
+        engine_path = {}
+        for path in path_list:
+            # Complete directory path
+            directory = os.path.abspath(os.path.expanduser(path))
+
+            if not os.path.exists(directory):
+                # Continue silently
+                continue
+                # raise IOError('Engine path %s does not exist.' % str(directory))
+
+            # Get list of python files
+            py_files = glob.glob(directory + '/*.py')
+            if not py_files:
+                continue
+
+            # Loop through files to find engines
+            for filename in py_files:
+                modname = os.path.splitext(os.path.split(filename)[-1])[0]
+
+                # Find classes
+                res = re.findall('^class (.*)\((.*)\)', file(filename, 'r').read(), re.M)
+                for classname, basename in res:
+                    if (basename in baselist) and classname not in baselist:
+                        # Match!
+                        engine_path[classname] = (modname, filename)
+                        u.logger.info("Found Engine '%s' in file '%s'" % (classname, filename))
+
+        # Load engines that have been found
+        for classname, mf in engine_path.iteritems():
+
+            # Import module
+            modname, filename = mf
+            engine_module = imp.load_source(modname, filename)
+
+            # Update list
+            DEFAULTS[classname] = getattr(engine_module, 'DEFAULT')
+            ENGINES[classname] = getattr(engine_module, classname)
+            engine_names.append(classname)
+
+    dynamic_load()
+except Exception as e:
+    u.logger.warning("Attempt at loading Engines dynamically failed")
+    import sys
+    import traceback
+    ex_type, ex, tb = sys.exc_info()
+    u.logger.warning(traceback.format_exc(tb))
