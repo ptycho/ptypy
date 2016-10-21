@@ -152,6 +152,7 @@ class DiProIFERMIScan(PtyScan):
                                                 + '.hdf', key_x)[key_x].tolist() ),
                          (io.h5read(self.data_path + self.info.recipe.run_ID
                                                 + '.hdf', key_y)[key_y].tolist() ) ]
+            positions = np.array(positions).T
             if self.info.recipe.use_refined_positions_good:
                 indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
                                          self.info.recipe + '/recons_by_Michal.h5',
@@ -166,8 +167,9 @@ class DiProIFERMIScan(PtyScan):
                                                  for i in self.h5_filename_list),
                          (io.h5read(self.data_path + i, key_y)[key_y].tolist()
                                                  for i in self.h5_filename_list) ]
+            positions = np.array(positions).T
 
-        positions = np.array(positions) * mmult[0]
+        positions *= mmult
         return positions
 
     def load_common(self):
