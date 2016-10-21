@@ -144,6 +144,7 @@ class DiProIFERMIScan(PtyScan):
                             break
                 positions = positions[indices_good.astype(int)-1]
             positions *= self.info.recipe.refined_positions_multiplier
+
         elif self.info.recipe.use_new_hdf_files:
             key_x = H5_PATHS.motor_x
             key_y = H5_PATHS.motor_y
@@ -151,6 +152,12 @@ class DiProIFERMIScan(PtyScan):
                                                 + '.hdf', key_x)[key_x].tolist() ),
                          (io.h5read(self.data_path + self.info.recipe.run_ID
                                                 + '.hdf', key_y)[key_y].tolist() ) ]
+            if self.info.recipe.use_refined_positions_good:
+                indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
+                                         self.info.recipe + '/recons_by_Michal.h5',
+                                        'data.reconstruct_ind')['reconstruct_ind'][0]
+                positions = positions[indices_good.astype(int) - 1]
+
         else:
             # From raw data
             key_x = H5_PATHS.motor_x
