@@ -36,6 +36,7 @@ RECIPE.lam = None               # 1.2398e-9 / RECIPE.energy
 RECIPE.z = None                 # Distance from object to screen
 RECIPE.detector_name = None     # Name of the detector as specified in the nexus file
 RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
+RECIPE.theta = 'entry1/before_scan/t1_theta/t1_theta'
 RECIPE.motors_multiplier = 1e-6         # Motor conversion factor to meters
 RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
@@ -171,10 +172,22 @@ class I13ScanFFP(PtyScan):
                 break
 
         # Apply motor conversion factor and create transposed position array
-        mmult = u.expect2(self.info.recipe.motors_multiplier)
-        pos_list = [mmult[i] * np.array(motor_positions[motor_name])
+        if len(self.info.recipe.motors) == 3:
+            self.theta = io.h5read(self.data_file, self.info.recipe.theta)[
+                self.info.recipe.theta]
+            #convert from degree to radians
+            self.theta *= np.pi / 180.
+            mmult = u.expect3(self.info.recipe.motors_multiplier)
+            pos_list = [mmult[i] * np.array(motor_positions[motor_name])
                     for i, motor_name in enumerate(self.info.recipe.motors)]
-        positions = 1. * np.array(pos_list).T
+            positions = 1. * np.array([np.cos(self.theta) * pos_list[0] -
+                                       np.sin(self.theta) * pos_list[2]  ,
+                                                            pos_list[1]   ]).T
+        else:
+            mmult = u.expect2(self.info.recipe.motors_multiplier)
+            pos_list = [mmult[i] * np.array(motor_positions[motor_name])
+                    for i, motor_name in enumerate(self.info.recipe.motors)]
+            positions = 1. * np.array(pos_list).T
 
         return positions
 
