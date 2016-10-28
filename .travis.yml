@@ -10,6 +10,7 @@ before_install:
   - export PATH="$HOME/miniconda/bin:$PATH" # add it to the path
   - conda config --set always_yes yes --set changeps1 no # we want it to always do yes, and start a new console
   - conda update -q conda # update this quietly
+  - conda install pyyaml
   - conda info -a # and print the info
 
 install:
