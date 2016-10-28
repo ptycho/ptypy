@@ -17,27 +17,41 @@ from ..utils.verbose import logger, headerline
 __all__ = ['BaseEngine', 'DEFAULT_iter_info']
 
 DEFAULT = u.Param(
-    numiter = 20,               # Total number of iterations
-    numiter_contiguous = 1,     # Number of iterations without interruption
-    probe_support = 0.7,        # Fraction of valid probe area (circular) in probe frame
-    # Note: if probe support becomes of more complex nature, consider putting it in illumination.py
-    clip_object = None,         # Clip object amplitude into this interval
-    subpix_start = 0,           # Number of iterations before starting subpixel interpolation
-    subpix = 'linear',          # 'fourier','linear' subpixel interpolation or None for no interpolation
-    probe_update_start = 2,     # Number of iterations before probe update starts
-    probe_inertia = 0.001,      # Weight of the current probe estimate in the update
-    object_inertia = 0.1,       # Weight of the current object in the update
-    obj_smooth_std = 20,        # Gaussian smoothing (pixel) of the current object prior to update
-    probe_center_tol = None,    # None or float, Pixel radius around optical axes that the probe mass center must reside in
+    # Total number of iterations
+    numiter=20,
+    # Number of iterations without interruption
+    numiter_contiguous=1,
+    # Fraction of valid probe area (circular) in probe frame
+    probe_support=0.7,
+    # Note: if probe support becomes of more complex nature,
+    # consider putting it in illumination.py
+    # Clip object amplitude into this interval
+    clip_object=None,
+    # Number of iterations before starting subpixel interpolation
+    subpix_start=0,
+    # Subpixel interpolation; 'fourier','linear' or None for no interpolation
+    subpix='linear',
+    # Number of iterations before probe update starts
+    probe_update_start=2,
+    # Weight of the current probe estimate in the update
+    probe_inertia=0.001,
+    # Weight of the current object in the update
+    object_inertia=0.1,
+    # Gaussian smoothing (pixel) of the current object prior to update
+    obj_smooth_std=20,
+    # Pixel radius around optical axes that the probe mass center must reside in
+    # None or float
+    probe_center_tol=None,
 )
 
 DEFAULT_iter_info = u.Param(
-    iteration = 0,
-    iterations = 0,
-    engine = 'None',
-    duration = 0.,
-    error = np.zeros((3,))
+    iteration=0,
+    iterations=0,
+    engine='None',
+    duration=0.,
+    error=np.zeros((3,))
 )
+
 
 class BaseEngine(object):
     """
@@ -71,11 +85,12 @@ class BaseEngine(object):
         if pars is not None:
             p.update(pars)
         self.p = p
-        #self.itermeta = []
-        #self.meta = u.Param()
+
+        # self.itermeta = []
+        # self.meta = u.Param()
         self.finished = False
         self.numiter = self.p.numiter
-        #self.initialize()
+        # self.initialize()
 
         # Instance attributes
         self.curiter = None
@@ -96,7 +111,9 @@ class BaseEngine(object):
         """
         Prepare for reconstruction.
         """
-        logger.info('\n' + headerline('Starting %s-algorithm.' % str(type(self).__name__), 'l', '=') + '\n')
+        logger.info('\n' +
+                    headerline('Starting %s-algorithm.'
+                               % str(type(self).__name__), 'l', '=') + '\n')
         logger.info('Parameter set:')
         logger.info(u.verbose.report(self.p, noheader=True).strip())
         logger.info(headerline('', 'l', '='))
@@ -129,7 +146,7 @@ class BaseEngine(object):
         # in the dict self.probe_support
         supp = self.p.probe_support
         if supp is not None:
-            for name, s in self.pr.S.iteritems():
+            for name, s in self.pr.storages.iteritems():
                 sh = s.data.shape
                 ll, xx, yy = u.grids(sh, FFTlike=False)
                 support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
@@ -142,7 +159,8 @@ class BaseEngine(object):
         """
         Compute one or several iterations.
         
-        num : None,int number of iterations. If None or num<1, a single iteration is performed.
+        num : None, int number of iterations.
+            If None or num<1, a single iteration is performed.
         """
         # Several iterations
         numiter_contiguous = self.p.numiter_contiguous
@@ -180,11 +198,11 @@ class BaseEngine(object):
         else:
             error = np.zeros((1,))
         info = dict(
-            iteration = self.curiter,
-            iterations = self.alliter,
-            engine = type(self).__name__,
-            duration = time.time() - self.t,
-            error = error
+            iteration=self.curiter,
+            iterations=self.alliter,
+            engine=type(self).__name__,
+            duration=time.time() - self.t,
+            error=error
         )
         
         self.ptycho.runtime.iter_info.append(info)
@@ -200,28 +218,34 @@ class BaseEngine(object):
     def engine_initialize(self):
         """
         Engine-specific initialization.
+
         Called at the end of self.initialize().
         """
         raise NotImplementedError()
         
     def engine_prepare(self):
         """
-        Engine-specific preparation. Last-minute initialization providing up-to-date
-        information for reconstruction.
-        Called at the end of self.prepare()
+        Engine-specific preparation.
+
+        Last-minute initialization providing up-to-date information for
+        reconstruction. Called at the end of self.prepare()
         """
         raise NotImplementedError()
     
     def engine_iterate(self, num):
         """
-        Engine single-step iteration. All book-keeping is done in self.iterate(),
-        so this routine only needs to implement the "core" actions.
+        Engine single-step iteration.
+
+        All book-keeping is done in self.iterate(), so this routine only needs
+        to implement the "core" actions.
         """
         raise NotImplementedError()
 
     def engine_finalize(self):
         """
-        Engine-specific finalization. Used to wrap-up engine-specific stuff.
-        Called at the end of self.finalize()
+        Engine-specific finalization.
+
+        Used to wrap-up engine-specific stuff. Called at the end of
+        self.finalize()
         """
         raise NotImplementedError()
