@@ -27,36 +27,23 @@ engine_names = ['Dummy', 'DM_simple', 'DM', 'DM_minimal', 'ML', 'ML_new', 'ePIE'
 
 # Supported engines defaults
 DEFAULTS = u.Param(
-    common = COMMON,
-    Dummy = dummy.DEFAULT,
-    DM_simple = DM_simple.DEFAULT,
-    DM = DM.DEFAULT,
-    ML = ML.DEFAULT,
-    DM_minimal = DM_minimal.DEFAULT,
-    ePIE = ePIE.DEFAULT
     common=COMMON,
     Dummy=dummy.DEFAULT,
     DM_simple=DM_simple.DEFAULT,
     DM=DM.DEFAULT,
     ML=ML.DEFAULT,
     DM_minimal=DM_minimal.DEFAULT,
-    ePIE = ePIE.DEFAULT
+    ePIE=ePIE.DEFAULT
 )
 
 # Engine objects
 ENGINES = u.Param(
-    Dummy = dummy.Dummy,
-    DM_simple = DM_simple.DM_simple,
-    DM = DM.DM,
-    ML = ML.ML,
-    DM_minimal = DM_minimal.DM_minimal,
-    ePIE = ePIE.EPIE
     Dummy=dummy.Dummy,
     DM_simple=DM_simple.DM_simple,
     DM=DM.DM,
     ML=ML.ML,
     DM_minimal=DM_minimal.DM_minimal,
-    ePIE = ePIE.EPIE
+    ePIE=ePIE.EPIE
 )
 
 
