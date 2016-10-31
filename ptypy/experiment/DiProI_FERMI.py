@@ -222,7 +222,7 @@ class DiProIFERMIScan(PtyScan):
                         self.info.recipe + '/recons_by_Michal.h5','data.reconstruct_ind'
                                                     )['reconstruct_ind'][0].astype(int)-1
             else:
-                indices_good = range(indices)
+                indices_good = indices
             for i in range(len(indices)):
                 raw[i] = raw_temp[indices_good[i]]
         else:
