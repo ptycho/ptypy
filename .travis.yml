@@ -12,6 +12,7 @@ before_install:
   - conda update -q conda # update this quietly
   - conda install pyyaml
   - conda info -a # and print the info
+  - conda install pyyaml
 
 install:
   - conda env create --file environment.yml #set up the environment thats in the file

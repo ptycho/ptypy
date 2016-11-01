@@ -12,6 +12,7 @@ import time
 import paths
 import os
 import sys
+
 from .. import utils as u
 from ..utils.verbose import logger, _, report, headerline, log
 from ..utils import parallel
@@ -24,49 +25,63 @@ from . import model
 __all__ = ['Ptycho', 'DEFAULT', 'DEFAULT_io']
 
 DEFAULT_runtime = u.Param(
-    run = os.path.split(sys.argv[0])[1].split('.')[0],
-    engine = "None",
-    iteration = 0,
-    iterations = 0,
+    run=os.path.split(sys.argv[0])[1].split('.')[0],
+    engine="None",
+    iteration=0,
+    iterations=0,
 )
 
 DEFAULT_autoplot = u.Param(
-    imfile = "plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png",
-    threaded = True,
-    interval = 1,
-    layout = 'default',
-    dump = True,
-    make_movie = False,
+    imfile="plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png",
+    threaded=True,
+    interval=1,
+    layout='default',
+    dump=True,
+    make_movie=False,
 )
 
 DEFAULT_autosave = u.Param(
-    interval = 10,  # if None or False : no saving else save with this given interval
-    probes = None,  # list of probe IDs for autosaving, if None save all [Not implemented]
-    objects = None, # list of object IDs for autosaving, if None, save all [Not implemented]
-    rfile = "dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr",
+    # If None or False : no saving else save with this given interval
+    interval=10,
+    # List of probe IDs for autosaving, if None save all [Not implemented]
+    probes=None,
+    # List of object IDs for autosaving, if None, save all [Not implemented]
+    objects=None,
+    rfile="dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr",
 )
 
 DEFAULT_io = u.Param(
-    autosave = DEFAULT_autosave,    # (None or False, int) If an integer, specifies autosave interval, if None or False: no autosave
-    autoplot = DEFAULT_autoplot,    # Plotting parameters for a client
-    interaction = interaction.Server_DEFAULT.copy(), # Client-server communication,
-    home = './',
-    rfile = "recons/%(run)s/%(run)s_%(engine)s.ptyr"
+    # Auto save options: (None or False, int). If an integer,
+    # specifies autosave interval, if None or False: no autosave
+    autosave=DEFAULT_autosave,
+    # Plotting parameters for a client
+    autoplot=DEFAULT_autoplot,
+    # Client-server communication
+    interaction=interaction.Server_DEFAULT.copy(),
+    home='./',
+    rfile="recons/%(run)s/%(run)s_%(engine)s.ptyr"
 )
 """Default io parameters. See :py:data:`.io` and a short listing below"""
 
 DEFAULT = u.Param(
-    verbose_level = 3,      # Verbosity level
-    ipython_kernel = False, # Start an ipython kernel for debugging
-    data_type = 'single',   # 'single' or 'double' precision for reconstruction
-    dry_run = False,        # do actually nothing if True [not implemented]
-    run = None,
-    scan = u.Param(),       # POD creation rules.
-    scans = u.Param(),
-    engines = {},           # Reconstruction algorithms
-    engine = engines.DEFAULTS.copy(),
-    io = DEFAULT_io.copy(depth=2)
+    # Verbosity level
+    verbose_level=3,
+    # Start an ipython kernel for debugging
+    ipython_kernel=False,
+    # Precision for reconstruction: 'single' or 'double'.
+    data_type='single',
+    # Do actually nothing if True [not implemented]
+    dry_run=False,
+    run=None,
+    # POD creation rules.
+    scan=u.Param(),
+    scans=u.Param(),
+    # Reconstruction algorithms
+    engines={},
+    engine=engines.DEFAULTS.copy(),
+    io=DEFAULT_io.copy(depth=2)
 )
+
 
 class Ptycho(Base):
     """
@@ -105,8 +120,8 @@ class Ptycho(Base):
         diffraction data and detector masks / weights
     """
     DEFAULT = DEFAULT
-    """Default ptycho parameters which is the trunk of the
-    default :ref:`ptypy parameter tree <parameters>`"""
+    """ Default ptycho parameters which is the trunk of the
+        default :ref:`ptypy parameter tree <parameters>`"""
     
     _PREFIX = PTYCHO_PREFIX
     
@@ -140,9 +155,8 @@ class Ptycho(Base):
             return
 
         self.p = self.DEFAULT.copy(depth=99)
-        """  Reference for parameter tree, with which 
-        this instance was constructed.
-        """
+        """ Reference for parameter tree, with which
+            this instance was constructed. """
         
         # Continue with initialization from parameters
         if pars is not None:
@@ -218,7 +232,7 @@ class Ptycho(Base):
 
         # Check if there is already a runtime container
         if not hasattr(self, 'runtime'):
-            self.runtime = u.Param() # DEFAULT_runtime.copy()
+            self.runtime = u.Param()  # DEFAULT_runtime.copy()
             
         if not hasattr(self, 'engines'):
             # Create an engines entry if it does not already exist
@@ -263,8 +277,8 @@ class Ptycho(Base):
                 iaction.port = port
                 
                 # Inform the audience
-                log(4, 'Started interaction got the following parameters:' +
-                    report(self.interactor.p, noheader=True))
+                log(4, 'Started interaction got the following parameters:'
+                    + report(self.interactor.p, noheader=True))
                 
                 # Start automated plot client
                 self.plotter = None
@@ -397,8 +411,8 @@ class Ptycho(Base):
         elif label is not None:
             try:
                 pars = self.p.engines[label]
-            except KeyError('No parameter set available for engine label '
-                            '%s\nSkipping..' % label):
+            except KeyError('No parameter set available for engine label %s\n'
+                            'Skipping..' % label):
                 pass
             # Copy common parameters
             engine_pars = self.p.engine.common.copy()
@@ -510,19 +524,19 @@ class Ptycho(Base):
                 if parallel.master: 
                     info = self.runtime.iter_info[-1]
                     # Calculate error:
-                    #err = np.array(info['error'].values()).mean(0)
+                    # err = np.array(info['error'].values()).mean(0)
                     err = info['error']
                     logger.info('Iteration #%(iteration)d of %(engine)s :: '
                                 'Time %(duration).2f' % info)
-                    logger.info('Errors :: Fourier %.2e, Photons %.2e, Exit '
-                                '%.2e' % tuple(err))
+                    logger.info('Errors :: Fourier %.2e, Photons %.2e, '
+                                'Exit %.2e' % tuple(err))
                 
                 parallel.barrier()
 
             # Done. Let the engine finish up    
             engine.finalize()
     
-            #Save
+            # Save
             if self.p.io.rfile:
                 self.save_run()
             else:
@@ -538,14 +552,14 @@ class Ptycho(Base):
         elif label is not None:
             # Looks if there already exists a prepared engine
             # If so, use it, else create one and use it
-            engine = self.engines.get(label,None)
+            engine = self.engines.get(label, None)
             if engine is not None:
                 self.run(engine=engine)
             else:
                 self.init_engine(label=label)
                 self.run(label=label)
         else:
-            # prepare and run ALL engines in self.p.engines
+            # Prepare and run ALL engines in self.p.engines
             self.init_engine()
             self.runtime.allstart = time.asctime()
             self.runtime.allstop = None
@@ -599,7 +613,7 @@ class Ptycho(Base):
             
             # Set a new engine
             engine = self.engines[run_label]
-            #self.current_engine = engine
+            # self.current_engine = engine
             
             # Prepare the engine
             engine.initialize()
@@ -637,8 +651,8 @@ class Ptycho(Base):
                     err = np.array(info['error'].values()).mean(0)
                     logger.info('Iteration #%(iteration)d of %(engine)s :: '
                                 'Time %(duration).2f' % info)
-                    logger.info('Errors :: Fourier %.2e, Photons %.2e, Exit '
-                                '%.2e' % tuple(err))
+                    logger.info('Errors :: Fourier %.2e, Photons %.2e, '
+                                'Exit %.2e' % tuple(err))
                 
                 parallel.barrier()
             # Done. Let the engine finish up    
@@ -654,7 +668,7 @@ class Ptycho(Base):
         self.runtime.stop = time.asctime()
         
     @classmethod
-    def _from_dict(cls,dct):
+    def _from_dict(cls, dct):
         # This method will be called from save_load on linking
         inst = cls(level=0)
         inst.__dict__.update(dct)
@@ -684,14 +698,14 @@ class Ptycho(Base):
         # Determine if this is a .pty file
         # FIXME: do not rely on ".pty" extension.
         if not runfile.endswith('.pty') and not runfile.endswith('.ptyr'):
-            logger.warning('Only ptypy file type allowed for continuing a '
-                           'reconstruction')
+            logger.warning(
+                'Only ptypy file type allowed for continuing a reconstruction')
             logger.warning('Exiting..')
             return None
         
         logger.info('Creating Ptycho instance from %s' % runfile)
         header = u.Param(io.h5read(runfile, 'header')['header'])
-        if header['kind']=='minimal':
+        if header['kind'] == 'minimal':
             logger.info('Found minimal ptypy dump')
             content = u.Param(io.h5read(runfile, 'content')['content'])
             
@@ -700,11 +714,11 @@ class Ptycho(Base):
             
             logger.info('Attaching probe and object storages')
             for ID, s in content['probe'].items():
-                s['owner']=P.probe
+                s['owner'] = P.probe
                 S = Storage._from_dict(s)
                 P.probe._new_ptypy_object(S)
             for ID, s in content['obj'].items():
-                s['owner']=P.obj
+                s['owner'] = P.obj
                 S = Storage._from_dict(s)
                 P.obj._new_ptypy_object(S)
                 # S.owner=P.obj
@@ -713,14 +727,15 @@ class Ptycho(Base):
             P.runtime = content['runtime']
             # P.paths.runtime = P.runtime
         
-        elif header['kind']=='fullflat':
+        elif header['kind'] == 'fullflat':
             P = save_load.link(io.h5read(runfile, 'content')['content'])
             
-            logger.info('Configuring data types, verbosity and server-client '
-                        'communication')
+            logger.info('Configuring data types, verbosity '
+                        'and server-client communication')
+
             P._configure()
 
-            logger.info('Reconfiguring sharing rules') # and loading data')
+            logger.info('Reconfiguring sharing rules')  # and loading data')
             print u.verbose.report(P.p)
             P.modelm.sharing_rules = model.parse_model(P.modelm.p['sharing'],
                                                        P.modelm.sharing)
@@ -794,8 +809,8 @@ class Ptycho(Base):
             
             if kind == 'fullflat':
                 self.interactor.stop()
-                logger.info('Deleting references for interactor, datasource '
-                            'and engines.')
+                logger.info('Deleting references for interactor, '
+                            'datasource and engines.')
                 del self.interactor
                 del self.datasource
                 del self.paths
@@ -805,9 +820,11 @@ class Ptycho(Base):
                 except:
                     pass
 
-                logger.info('Clearing numpy arrays for exit, diff and mask '
-                            'containers.')
-                #self.exit.clear()
+                logger.info(
+                    'Clearing numpy arrays for exit, diff and mask containers.')
+
+                # self.exit.clear()
+
                 try:
                     for pod in self.pods.values():
                         del pod.exit
@@ -818,17 +835,19 @@ class Ptycho(Base):
                 self.mask.clear()
                 logger.info('Unlinking and saving to %s' % dest_file)
                 content = save_load.unlink(self)
-                #io.h5write(dest_file, header=header, content=content)
+                # io.h5write(dest_file, header=header, content=content)
                 
             elif kind == 'dump':
-                #if self.interactor is not None:
+                # if self.interactor is not None:
                 #    self.interactor.stop()
                 logger.info('Generating copies of probe, object and parameters '
                             'and runtime')
                 dump = u.Param()
-                dump.probe = {ID: S._to_dict() for ID,S in self.probe.S.items()}
-                dump.obj = {ID: S._to_dict() for ID,S in self.obj.S.items()}
-                dump.pars = self.p.copy() # _to_dict(Recursive=True)
+                dump.probe = {ID: S._to_dict()
+                              for ID, S in self.probe.storages.items()}
+                dump.obj = {ID: S._to_dict()
+                            for ID, S in self.obj.storages.items()}
+                dump.pars = self.p.copy()  # _to_dict(Recursive=True)
                 dump.runtime = self.runtime.copy()
                 # Discard some bits of runtime to save space
                 if len(self.runtime.iter_info) > 0:
@@ -837,16 +856,18 @@ class Ptycho(Base):
                 content = dump
                 
             elif kind == 'minimal':
-                #if self.interactor is not None:
+                # if self.interactor is not None:
                 #    self.interactor.stop()
                 logger.info('Generating shallow copies of probe, object and '
                             'parameters and runtime')
                 minimal = u.Param()
-                minimal.probe = {ID: S._to_dict() for ID,S in self.probe.S.items()}
-                minimal.obj = {ID: S._to_dict() for ID,S in self.obj.S.items()}
-                minimal.pars = self.p.copy() # _to_dict(Recursive=True)
+                minimal.probe = {ID: S._to_dict()
+                                 for ID, S in self.probe.storages.items()}
+                minimal.obj = {ID: S._to_dict()
+                               for ID, S in self.obj.storages.items()}
+                minimal.pars = self.p.copy()  # _to_dict(Recursive=True)
                 minimal.runtime = self.runtime.copy()
-                content=minimal
+                content = minimal
                         
             h5opt = io.h5options['UNSUPPORTED']
             io.h5options['UNSUPPORTED'] = 'ignore'
@@ -870,22 +891,23 @@ class Ptycho(Base):
         info = ['\n',
                 "Process #%d ---- Total Pods %d (%d active) ----"
                 % (parallel.rank, all_pods, active_pods) + '\n',
-                '-' * 80 +'\n']
+                '-' * 80 + '\n']
            
         header = True
         for ID, C in self.containers.iteritems():
-            info.append(C.formatted_report(table_format, offset,
+            info.append(C.formatted_report(table_format,
+                                           offset,
                                            include_header=header))
             if header:
                 header = False
             
         info.append('\n')
-        if str(detail)!='summary':
+        if str(detail) != 'summary':
             for ID, C in self.containers.iteritems():
                 info.append(C.report())
 
         logger.info(''.join(info), extra={'allprocesses': True})
-        #logger.debug(info,extra={'allprocesses': True})
+        # logger.debug(info, extra={'allprocesses': True})
 
     def plot_overview(self, fignum=100):
         """
@@ -894,19 +916,29 @@ class Ptycho(Base):
         """
         from matplotlib import pyplot as plt
         plt.ion()
-        for s in self.obj.S.values():
-            u.plot_storage(s, fignum, 'linear', (slice(0, 4), slice(None),
-                                                 slice(None)))
+        for s in self.obj.storages.values():
+            u.plot_storage(s,
+                           fignum,
+                           'linear',
+                           (slice(0, 4), slice(None), slice(None)))
             fignum += 1
-        for s in self.probe.S.values():
-            u.plot_storage(s, fignum, 'linear', (slice(0, 4), slice(None),
-                                                 slice(None)))
+        for s in self.probe.storages.values():
+            u.plot_storage(s,
+                           fignum,
+                           'linear',
+                           (slice(0, 4), slice(None), slice(None)))
             fignum += 1
-        for s in self.diff.S.values():
-            u.plot_storage(s, fignum, 'log', (slice(0, 4), slice(None),
-                                              slice(None)), cmap='CMRmap')
+        for s in self.diff.storages.values():
+            u.plot_storage(s,
+                           fignum,
+                           'log',
+                           (slice(0, 4), slice(None), slice(None)),
+                           cmap='CMRmap')
             fignum += 1
-        for s in self.mask.S.values():
-            u.plot_storage(s, fignum, 'log', (slice(0,1), slice(None),
-                                              slice(None)), cmap='gray')
+        for s in self.mask.storages.values():
+            u.plot_storage(s,
+                           fignum,
+                           'log',
+                           (slice(0, 1), slice(None), slice(None)),
+                           cmap='gray')
             fignum += 1
