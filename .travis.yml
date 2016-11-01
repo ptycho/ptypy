@@ -11,6 +11,7 @@ before_install:
   - conda config --set always_yes yes --set changeps1 no # we want it to always do yes, and start a new console
   - conda update -q conda # update this quietly
   - conda info -a # and print the info
+  - conda install pyyaml
 
 install:
   - conda env create --file environment.yml #set up the environment thats in the file
