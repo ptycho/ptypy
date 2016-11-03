@@ -20,6 +20,7 @@ This file is part of the PTYPY package.
 #import cSAXS
 from I13_ffp import I13ScanFFP
 from I13_nfp import I13ScanNFP
+from DLS import DlsScan
 from I08 import I08Scan
 from savu import Savu
 from plugin import makeScanPlugin
@@ -32,6 +33,7 @@ from UCL import UCLLaserScan
 PtyScanTypes = dict(
     i13dls_ffp = I13ScanFFP,
     i13dls_nfp = I13ScanNFP,
+    dls = DlsScan,
     i08dls = I08Scan,
     savu = Savu,
     plugin = makeScanPlugin,
