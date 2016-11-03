@@ -17,27 +17,30 @@ import DM
 import DM_simple
 import ML
 import dummy
+import ePIE
 
-__all__ = ['DM', 'ML', 'BaseEngine']
+__all__ = ['DM', 'ML', 'ePIE', 'BaseEngine']
 
 # List of supported engines
-engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new']
+engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE']
 
 # Supported engines defaults
 DEFAULTS = u.Param(
-    common = COMMON,
-    Dummy = dummy.DEFAULT,
-    DM_simple = DM_simple.DEFAULT,
-    DM = DM.DEFAULT,
-    ML = ML.DEFAULT,
+    common=COMMON,
+    Dummy=dummy.DEFAULT,
+    DM_simple=DM_simple.DEFAULT,
+    DM=DM.DEFAULT,
+    ML=ML.DEFAULT,
+    ePIE=ePIE.DEFAULT
 )
 
 # Engine objects
 ENGINES = u.Param(
-    Dummy = dummy.Dummy,
-    DM_simple = DM_simple.DM_simple,
-    DM = DM.DM,
-    ML = ML.ML,
+    Dummy=dummy.Dummy,
+    DM_simple=DM_simple.DM_simple,
+    DM=DM.DM,
+    ML=ML.ML,
+    ePIE=ePIE.EPIE
 )
 
 
