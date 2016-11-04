@@ -29,6 +29,7 @@ from AMO_LCLS import AMOScan
 from DiProI_FERMI import DiProIFERMIScan
 from optiklabor import FliSpecScanMultexp
 from UCL import UCLLaserScan
+from ALS_5321 import ALS5321Scan
 
 PtyScanTypes = dict(
     i13dls_ffp = I13ScanFFP,
@@ -42,4 +43,5 @@ PtyScanTypes = dict(
     diproi_fermi = DiProIFERMIScan,
     fli_spec_multexp = FliSpecScanMultexp,
     laser_ucl = UCLLaserScan,
+    als5321 = ALS5321Scan,
 )
