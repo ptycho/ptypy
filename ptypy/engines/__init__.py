@@ -14,15 +14,15 @@ from .. import utils as u
 from base import BaseEngine, DEFAULT_iter_info
 from base import DEFAULT as COMMON
 import DM
-import DM_minimal
 import DM_simple
 import ML
 import dummy
+import ePIE
 
-__all__ = ['DM', 'ML', 'BaseEngine']
+__all__ = ['DM', 'ML', 'ePIE', 'BaseEngine']
 
 # List of supported engines
-engine_names = ['Dummy', 'DM_simple', 'DM', 'DM_minimal', 'ML', 'ML_new']
+engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE']
 
 # Supported engines defaults
 DEFAULTS = u.Param(
@@ -31,7 +31,7 @@ DEFAULTS = u.Param(
     DM_simple=DM_simple.DEFAULT,
     DM=DM.DEFAULT,
     ML=ML.DEFAULT,
-    DM_minimal=DM_minimal.DEFAULT,
+    ePIE=ePIE.DEFAULT
 )
 
 # Engine objects
@@ -40,7 +40,7 @@ ENGINES = u.Param(
     DM_simple=DM_simple.DM_simple,
     DM=DM.DM,
     ML=ML.ML,
-    DM_minimal=DM_minimal.DM_minimal,
+    ePIE=ePIE.EPIE
 )
 
 

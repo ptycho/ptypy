@@ -21,6 +21,7 @@ This file is part of the PTYPY package.
 #import cSAXS
 from I13_ffp import I13ScanFFP
 from I13_nfp import I13ScanNFP
+from DLS import DlsScan
 from I08 import I08Scan
 from savu import Savu
 from plugin import makeScanPlugin
@@ -31,10 +32,12 @@ from optiklabor import FliSpecScanMultexp
 from UCL import UCLLaserScan
 from nanomax import NanomaxTmpScan, NanomaxTmpScanOnline
 from I13_farfield import I13Scan
+from ALS_5321 import ALS5321Scan
 
 PtyScanTypes = dict(
     i13dls_ffp = I13ScanFFP,
     i13dls_nfp = I13ScanNFP,
+    dls = DlsScan,
     i08dls = I08Scan,
     savu = Savu,
     plugin = makeScanPlugin,
@@ -46,4 +49,6 @@ PtyScanTypes = dict(
     nanomaxtmp = NanomaxTmpScan,
     nanomaxtmponline = NanomaxTmpScanOnline,
     i13ff = I13Scan,
+    als5321 = ALS5321Scan,
 )
+
