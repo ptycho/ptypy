@@ -156,7 +156,7 @@ class DiProIFERMIScan(PtyScan):
 
         if (self.info.recipe.positions_indices == 'all' or
             self.info.recipe.positions_indices == None):
-            indices_used = positions.shape[0]
+            indices_used = range(positions.shape[0])
         elif self.info.recipe.positions_indices == 'good':
             indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
                 self.info.recipe + '/recons_by_Michal.h5', 'data.reconstruct_ind'
