@@ -168,7 +168,7 @@ class DiProIFERMIScan(PtyScan):
         else:
             raise RuntimeError('positions_indices can only be None/all, good or minimal.')
 
-        if self.h5_filename_list:
+        if not self.info.recipe.use_new_hdf_files:
             for i in range(indices_used.shape[0]):
                 if indices_used[i] > len(self.h5_filename_list):
                     indices_used = indices_used[:i]
