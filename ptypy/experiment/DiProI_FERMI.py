@@ -173,7 +173,7 @@ class DiProIFERMIScan(PtyScan):
                 if indices_used[i] > len(self.h5_filename_list):
                     indices_used = indices_used[:i]
                     break
-
+        u.ipshell()
         positions = positions[indices_used]
         return positions
 
