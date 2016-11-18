@@ -44,8 +44,8 @@ RECIPE.lam = None
 RECIPE.z = None
 RECIPE.motors_multiplier = 1e-3     # DiProI-specific
 RECIPE.mask_file = None             # Mask file name
-RECIPE.use_refined_positions = False
-RECIPE.use_refined_positions_good = False
+RECIPE.positions_version = None #can be 'original', 'refined'
+RECIPE.positions_indices = None #can be 'all', 'good', 'minimal'
 RECIPE.use_new_hdf_files = False
 RECIPE.refined_positions_multiplier = 1.68396935*1e-4
 RECIPE.refined_positions_pattern = '%(base_path)s/processing/'
@@ -77,8 +77,9 @@ class DiProIFERMIScan(PtyScan):
             raise RuntimeError('Base path missing.')
 
         # Construct the file names
-        self.h5_filename_list = sorted([i for i in os.listdir(
-            self.info.recipe.h5_file_pattern % self.info.recipe)
+        if not self.info.recipe.use_new_hdf_files:
+            self.h5_filename_list = sorted([i for i in os.listdir(
+                self.info.recipe.h5_file_pattern % self.info.recipe)
                                         if not i.startswith('.')])
 
         # Path to data files
@@ -114,62 +115,66 @@ class DiProIFERMIScan(PtyScan):
             return io.h5read(self.info.recipe.mask_file, 'mask')['mask'].astype(
                 np.float32)
 
+    def load_positions_all(self):
+        """
+        Load all positions (regardless of specific index selection)
+        """
+        mmult = u.expect2(self.info.recipe.motors_multiplier)
+        if (self.info.recipe.positions_version == 'original' or
+            self.info.recipe.positions_version == None):
+            key_x = H5_PATHS.motor_x
+            key_y = H5_PATHS.motor_y
+            if self.info.recipe.use_new_hdf_files:
+                positions = [(io.h5read(self.data_path + self.info.recipe.run_ID
+                                        + '.hdf', key_x)[key_x].tolist()),
+                             (io.h5read(self.data_path + self.info.recipe.run_ID
+                                        + '.hdf', key_y)[key_y].tolist())]
+            else:
+                positions = [(io.h5read(self.data_path + i, key_x)[key_x].tolist()
+                              for i in self.h5_filename_list),
+                             (io.h5read(self.data_path + i, key_y)[key_y].tolist()
+                              for i in self.h5_filename_list)]
+            positions = np.array(positions).T
+
+        elif self.info.recipe.positions_version == 'refined':
+            positions = io.h5read(self.info.recipe.refined_positions_pattern %
+                            self.info.recipe + '/recons_by_Michal.h5',
+                            'data.probe_positions')['probe_positions'].T
+            positions *= self.info.recipe.refined_positions_multiplier
+        else:
+            raise RuntimeError('positions_version can only be None/original or refined.')
+
+        positions *= mmult
+        u.ipshell()
+        return positions
+
     def load_positions(self):
         """
         Load the positions and return as an (N, 2) array.
         """
-        mmult = u.expect2(self.info.recipe.motors_multiplier)
+        positions = self.load_positions_all()
 
-        # Load positions
-        if self.info.recipe.use_refined_positions:
-            # From prepared .h5 file
-            n_frames = len(self.h5_filename_list)
-            positions = io.h5read(self.info.recipe.refined_positions_pattern %
-                            self.info.recipe + '/recons_by_Michal.h5',
-                            'data.probe_positions')['probe_positions']
-
-            positions = [(positions[0, i], positions[1, i])
-                         for i in range(positions.shape[-1])]
-            positions = np.array(positions)
-            if positions.shape[0] > n_frames and not self.info.recipe.use_new_hdf_files:
-                positions = positions[:n_frames]
-            if self.info.recipe.use_refined_positions_good:
-                indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
-                                         self.info.recipe + '/recons_by_Michal.h5',
-                                        'data.reconstruct_ind')['reconstruct_ind'][0]
-                if not self.info.recipe.use_new_hdf_files:
-                    for i in range(indices_good.shape[0]):
-                        if indices_good[i] > n_frames:
-                            indices_good = indices_good[:i]
-                            break
-                positions = positions[indices_good.astype(int)-1]
-            positions *= self.info.recipe.refined_positions_multiplier
-
-        elif self.info.recipe.use_new_hdf_files:
-            key_x = H5_PATHS.motor_x
-            key_y = H5_PATHS.motor_y
-            positions = [(io.h5read(self.data_path + self.info.recipe.run_ID
-                                                + '.hdf', key_x)[key_x].tolist() ),
-                         (io.h5read(self.data_path + self.info.recipe.run_ID
-                                                + '.hdf', key_y)[key_y].tolist() ) ]
-            positions = np.array(positions).T
-            if self.info.recipe.use_refined_positions_good:
-                indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
-                                         self.info.recipe + '/recons_by_Michal.h5',
-                                        'data.reconstruct_ind')['reconstruct_ind'][0]
-                positions = positions[indices_good.astype(int) - 1]
-
+        if (self.info.recipe.positions_indices == 'all' or
+            self.info.recipe.positions_indices == None):
+            indices_used = positions.shape[0]
+        elif self.info.recipe.positions_indices == 'good':
+            indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
+                self.info.recipe + '/recons_by_Michal.h5', 'data.reconstruct_ind'
+                                                    )['reconstruct_ind'][0].astype(int)-1
+        elif self.info.recipe.positions_indices == 'minimal'
+            indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
+                self.info.recipe + '/recons_by_Michal.h5', 'data.reconstruct_ind_minimal'
+                                            )['reconstruct_ind_minimal'][0].astype(int)-1
         else:
-            # From raw data
-            key_x = H5_PATHS.motor_x
-            key_y = H5_PATHS.motor_y
-            positions = [(io.h5read(self.data_path + i, key_x)[key_x].tolist()
-                                                 for i in self.h5_filename_list),
-                         (io.h5read(self.data_path + i, key_y)[key_y].tolist()
-                                                 for i in self.h5_filename_list) ]
-            positions = np.array(positions).T
+            raise RuntimeError('positions_indices can only be None/all, good or minimal.')
 
-        positions *= mmult
+        if self.h5_filename_list:
+            for i in range(indices_used.shape[0]):
+                if indices_used[i] > len(self.h5_filename_list):
+                    indices_used = indices_used[:i]
+                    break
+
+        positions = positions[indices_used]
         return positions
 
     def load_common(self):
@@ -214,29 +219,32 @@ class DiProIFERMIScan(PtyScan):
         weights = {}  # Container for the weights
         key = H5_PATHS.frame_pattern
 
+        if (self.info.recipe.positions_indices == 'all' or
+            self.info.recipe.positions_indices == None):
+            indices_used = indices
+        elif self.info.recipe.positions_indices == 'good':
+            indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
+                    self.info.recipe + '/recons_by_Michal.h5','data.reconstruct_ind'
+                                                )['reconstruct_ind'][0].astype(int)-1
+        elif self.info.recipe.positions_indices == 'minimal':
+            indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
+                self.info.recipe + '/recons_by_Michal.h5','data.reconstruct_ind_minimal'
+                                            )['reconstruct_ind_minimal'][0].astype(int)-1
+        else:
+            raise RuntimeError('positions_indices can only be None/all, good or minimal.')
+
         if self.info.recipe.use_new_hdf_files:
             raw_temp = io.h5read(self.data_path + self.info.recipe.run_ID + '.hdf',
-                                                        key)[key].astype(np.float32)
-            if self.info.recipe.use_refined_positions_good:
-                indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
-                        self.info.recipe + '/recons_by_Michal.h5','data.reconstruct_ind'
-                                                    )['reconstruct_ind'][0].astype(int)-1
-            else:
-                indices_good = indices
+                                     key)[key].astype(np.float32)
             for i in range(len(indices)):
-                raw[i] = raw_temp[indices_good[i]]
+            #for i in indices:
+                raw[i] = raw_temp[indices_used[i]]
         else:
             u.log(3, 'Loading frames: one frame per file.')
             for i in range(len(indices)):
-                if self.info.recipe.use_refined_positions_good:
-                    indices_good = io.h5read(self.info.recipe.refined_positions_pattern %
-                                             self.info.recipe + '/recons_by_Michal.h5',
-                                             'data.reconstruct_ind')['reconstruct_ind'][0]
-                    raw[i] = io.h5read(self.data_path + self.h5_filename_list[
-                              indices_good[i].astype(int)-1],key)[key].astype(np.float32)
-                else:
-                    raw[i] = io.h5read(self.data_path + self.h5_filename_list[i],
-                                   key)[key].astype(np.float32)
+            # for i in indices:
+                raw[i] = io.h5read(self.data_path + self.h5_filename_list[
+                              indices_used[i]],key)[key].astype(np.float32)
         return raw, pos, weights
 
     def correct(self, raw, weights, common):
