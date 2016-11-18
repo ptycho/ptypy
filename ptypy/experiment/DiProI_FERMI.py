@@ -171,7 +171,7 @@ class DiProIFERMIScan(PtyScan):
         if not self.info.recipe.use_new_hdf_files:
             for i in range(len(indices_used)):
                 if indices_used[i] > len(self.h5_filename_list):
-                    indices_used = indices_used[:i-1
+                    indices_used = indices_used[:i-1]
                     break
         u.ipshell()
         positions = positions[indices_used]
