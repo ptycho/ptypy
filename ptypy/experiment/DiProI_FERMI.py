@@ -130,12 +130,10 @@ class DiProIFERMIScan(PtyScan):
                              (io.h5read(self.data_path + self.info.recipe.run_ID
                                         + '.hdf', key_y)[key_y].tolist())]
             else:
-                u.ipshell()
-                positions = [[io.h5read(self.data_path + i, key_x)[key_x].tolist()
-                              for i in self.h5_filename_list],
-                             [io.h5read(self.data_path + i, key_y)[key_y].tolist()
-                              for i in self.h5_filename_list]]
-                u.ipshell()
+                positions = [ np.array([io.h5read(self.data_path + i, key_x)[key_x]
+                                         for i in self.h5_filename_list]),
+                              np.array([io.h5read(self.data_path + i, key_y)[key_y]
+                                         for i in self.h5_filename_list]) ]
             positions = np.array(positions).T
 
         elif self.info.recipe.positions_version == 'refined':
