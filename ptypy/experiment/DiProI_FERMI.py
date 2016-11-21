@@ -45,7 +45,7 @@ RECIPE.z = None
 RECIPE.motors_multiplier = 1e-3     # DiProI-specific
 RECIPE.mask_file = None             # Mask file name
 RECIPE.positions_version = None #can be 'original', 'refined'
-RECIPE.positions_indices = None #can be 'all', 'good', 'minimal'
+RECIPE.positions_indices = None #can be 'all', 'good', 'minimal', 'minimal_wide'
 RECIPE.use_new_hdf_files = False
 RECIPE.refined_positions_multiplier = 1.68396935*1e-4
 RECIPE.refined_positions_pattern = '%(base_path)s/processing/'
@@ -165,8 +165,12 @@ class DiProIFERMIScan(PtyScan):
             indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
                 self.info.recipe + '/recons_by_Michal.h5', 'data.reconstruct_ind_minimal'
                                             )['reconstruct_ind_minimal'][0].astype(int)-1
+        elif self.info.recipe.positions_indices == 'minimal_wide':
+            indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
+                self.info.recipe + '/recons_by_Michal.h5', 'data.reconstruct_ind_minimal_wide'
+                                            )['reconstruct_ind_minimal_wide'][0].astype(int)-1
         else:
-            raise RuntimeError('positions_indices can only be None/all, good or minimal.')
+            raise RuntimeError('positions_indices can only be None/all, good, minimal, minimal_wide.')
 
         if not self.info.recipe.use_new_hdf_files:
             for i in range(len(indices_used)):
@@ -230,8 +234,12 @@ class DiProIFERMIScan(PtyScan):
             indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
                 self.info.recipe + '/recons_by_Michal.h5','data.reconstruct_ind_minimal'
                                             )['reconstruct_ind_minimal'][0].astype(int)-1
+        elif self.info.recipe.positions_indices == 'minimal_wide':
+            indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
+                self.info.recipe + '/recons_by_Michal.h5','data.reconstruct_ind_minimal_wide'
+                                            )['reconstruct_ind_minimal_wide'][0].astype(int)-1
         else:
-            raise RuntimeError('positions_indices can only be None/all, good or minimal.')
+            raise RuntimeError('positions_indices can only be None/all, good, minimal or minimal_wide.')
 
         if self.info.recipe.use_new_hdf_files:
             raw_temp = io.h5read(self.data_path + self.info.recipe.run_ID + '.hdf',
