@@ -168,8 +168,13 @@ class DiProIFERMIScan(PtyScan):
             indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
                 self.info.recipe + '/recons_by_Michal.h5', 'data.reconstruct_ind_minimal_wide'
                                             )['reconstruct_ind_minimal_wide'][0].astype(int)-1
+        elif self.info.recipe.positions_indices == 'minimal_tight':
+            indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
+                self.info.recipe + '/recons_by_Michal.h5', 'data.reconstruct_ind_minimal_tight'
+                                            )['reconstruct_ind_minimal_tight'][0].astype(int)-1
         else:
-            raise RuntimeError('positions_indices can only be None/all, good, minimal, minimal_wide.')
+            raise RuntimeError('positions_indices can only be None/all, good, minimal,'
+                                                            + 'minimal_wide, minimal_tight.')
 
         if not self.info.recipe.use_new_hdf_files:
             for i in range(len(indices_used)):
@@ -236,8 +241,13 @@ class DiProIFERMIScan(PtyScan):
             indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
                 self.info.recipe + '/recons_by_Michal.h5','data.reconstruct_ind_minimal_wide'
                                             )['reconstruct_ind_minimal_wide'][0].astype(int)-1
+        elif self.info.recipe.positions_indices == 'minimal_tight':
+            indices_used = io.h5read(self.info.recipe.refined_positions_pattern %
+                self.info.recipe + '/recons_by_Michal.h5','data.reconstruct_ind_minimal_tight'
+                                            )['reconstruct_ind_minimal_tight'][0].astype(int)-1
         else:
-            raise RuntimeError('positions_indices can only be None/all, good, minimal or minimal_wide.')
+            raise RuntimeError('positions_indices can only be None/all, good, minimal,'
+                                                            + 'minimal_wide, minimal_tight.')
 
         if self.info.recipe.use_new_hdf_files:
             raw_temp = io.h5read(self.data_path + self.info.recipe.run_ID + '.hdf',
