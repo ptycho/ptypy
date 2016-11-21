@@ -145,7 +145,6 @@ class DiProIFERMIScan(PtyScan):
             raise RuntimeError('positions_version can only be None/original or refined.')
 
         positions *= mmult
-        u.ipshell()
         return positions
 
     def load_positions(self):
@@ -177,7 +176,6 @@ class DiProIFERMIScan(PtyScan):
                 if indices_used[i] > len(self.h5_filename_list):
                     indices_used = indices_used[:i-1]
                     break
-        u.ipshell()
         positions = positions[indices_used]
         return positions
 
