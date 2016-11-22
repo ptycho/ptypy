@@ -27,22 +27,28 @@ NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 
 # Recipe defaults
 RECIPE = u.Param()
-RECIPE.experimentID = None      # Experiment identifier
-RECIPE.scan_number = None       # scan number
+# Experiment identifier
+RECIPE.experimentID = None
+# Scan number
+RECIPE.scan_number = None
 RECIPE.dark_number = None
 RECIPE.flat_number = None
 RECIPE.energy = None
-RECIPE.lam = None               # 1.2398e-9 / RECIPE.energy
-RECIPE.z = None                 # Distance from object to screen
-RECIPE.detector_name = None     # Name of the detector as specified in the nexus file
-RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
+RECIPE.lam = None
+# Distance from object to screen
+RECIPE.z = None
+# Name of the detector as specified in the nexus file
+RECIPE.detector_name = None
+# Motor names to determine the sample translation
+RECIPE.motors = ['t1_sx', 't1_sy']
 RECIPE.theta = 'entry1/before_scan/t1_theta/t1_theta'
-RECIPE.motors_multiplier = 1e-6         # Motor conversion factor to meters
+# Motor conversion factor to meters
+RECIPE.motors_multiplier = 1e-6
 RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
 RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
-RECIPE.mask_file = None                 # '%(base_path)s' + 'processing/mask.h5'
+RECIPE.mask_file = None
 
 # Generic defaults
 I13DEFAULT = PtyScan.DEFAULT.copy()
@@ -107,9 +113,9 @@ class I13ScanFFP(PtyScan):
                         break
 
                 if detector_name is None:
-                    raise RuntimeError('Not possible to extract detector '
-                                       'name. Please specify in recipe '
-                                       'instead.')
+                    raise RuntimeError(
+                        'Not possible to extract detector name. '
+                        'Please specify in recipe instead.')
                 elif (self.info.recipe.detector_name is not None
                       and detector_name
                       is not self.info.recipe.detector_name):
@@ -129,9 +135,9 @@ class I13ScanFFP(PtyScan):
             except (AttributeError, KeyError):
                 experiment_id = os.path.split(
                     self.info.recipe.base_path[:-1])[1]
-                u.logger.debug('Could not find experiment ID from nexus file '
-                               '%s. Using %s instead.'
-                               % (self.data_file, experiment_id))
+                u.logger.debug(
+                    'Could not find experiment ID from nexus file %s. '
+                    'Using %s instead.' % (self.data_file, experiment_id))
             self.info.recipe.experimentID = experiment_id
 
         # Create the ptyd file name if not specified
@@ -142,6 +148,9 @@ class I13ScanFFP(PtyScan):
             u.log(3, 'Save file is %s' % self.info.dfile)
 
         u.log(4, u.verbose.report(self.info))
+
+        # Instance attributes
+        self.theta = None
 
     def load_weight(self):
         """
@@ -175,18 +184,18 @@ class I13ScanFFP(PtyScan):
         if len(self.info.recipe.motors) == 3:
             self.theta = io.h5read(self.data_file, self.info.recipe.theta)[
                 self.info.recipe.theta]
-            #convert from degree to radians
+            # Convert from degree to radians
             self.theta *= np.pi / 180.
             mmult = u.expect3(self.info.recipe.motors_multiplier)
             pos_list = [mmult[i] * np.array(motor_positions[motor_name])
-                    for i, motor_name in enumerate(self.info.recipe.motors)]
+                        for i, motor_name in enumerate(self.info.recipe.motors)]
             positions = 1. * np.array([np.cos(self.theta) * pos_list[0] -
-                                       np.sin(self.theta) * pos_list[2]  ,
-                                                            pos_list[1]   ]).T
+                                       np.sin(self.theta) * pos_list[2],
+                                       pos_list[1]]).T
         else:
             mmult = u.expect2(self.info.recipe.motors_multiplier)
             pos_list = [mmult[i] * np.array(motor_positions[motor_name])
-                    for i, motor_name in enumerate(self.info.recipe.motors)]
+                        for i, motor_name in enumerate(self.info.recipe.motors)]
             positions = 1. * np.array(pos_list).T
 
         return positions
