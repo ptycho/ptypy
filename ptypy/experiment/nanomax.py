@@ -12,8 +12,7 @@ import time
 logger = u.verbose.logger
 
 # All "additional" parameters must come from the recipe tree, and the recipe
-# is filled in from the script where data preparation is initiated. Here's the
-# default.
+# is filled in from the script where data preparation is initiated.
 RECIPE = u.Param()
 RECIPE.dataPath = None
 RECIPE.datafile = None
@@ -90,7 +89,9 @@ class NanomaxTmpScan(PtyScan):
                 x = motor_x
                 y = -motor_y
                 # in ptypy coordinates:
-                positions.append(np.array([-y, -x]) * self.info.recipe.stepsize)
+                positions.append(np.array([-y, -x])
+                                 * self.info.recipe.stepsize)
+
         return np.array(positions)
 
     def load(self, indices):
@@ -129,7 +130,7 @@ class NanomaxTmpScan(PtyScan):
                 data = hf.get(NEXUS_DATA_PATH)
                 shape = np.asarray(data[0]).shape
                 mask = np.ones(shape)
-        print "loaded mask, %u x %u, sum %u"%(mask.shape + (np.sum(mask),))
+        print "loaded mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
         return mask
 
 
@@ -208,3 +209,104 @@ class NanomaxTmpScanOnline(NanomaxTmpScan):
             data = hf.get(NEXUS_DATA_PATH)
             shape = np.asarray(data[0]).shape
         return np.ones(shape)
+
+
+# new recipe for this one
+RECIPE = u.Param()
+RECIPE.dataPath = None
+RECIPE.datafile = None
+RECIPE.maskfile = None
+RECIPE.pilatusPath = None
+RECIPE.pilatusPattern = None
+RECIPE.scannr = None
+
+
+class NanomaxFlyscanWeek48(PtyScan):
+    """
+    Loads Nanomax fly scan data in the format of week 48
+    """
+
+    def __init__(self, pars=None, **kwargs):
+
+        p = PtyScan.DEFAULT.copy(depth=10)
+        p.recipe = RECIPE.copy()
+        p.update(pars, in_place_depth=10)
+        super(NanomaxFlyscanWeek48, self).__init__(p)
+
+    def load_positions(self):
+        fileName = self.info.recipe.dataPath + self.info.recipe.datafile
+        entry = 'entry%d' % self.info.recipe.scannr
+
+        x, y = None, None
+        with h5py.File(fileName, 'r') as hf:
+            # get fast x positions
+            xdataset = hf.get(entry + '/measurement/AdLinkAI')
+            xall = np.array(xdataset)
+            # manually find shape by looking for zeros
+            Ny = xall.shape[0]
+            for i in range(xall.shape[1]):
+                if xall[0, i] == 0:
+                    Nx = i
+                    break
+            x = xall[:, :Nx].flatten()
+
+            # get slow y positions
+            ydataset = hf.get(entry + '/measurement/samy')
+            yall = np.array(ydataset)
+            if not (len(yall) == Ny):
+                raise Exception('Something''s wrong with the positions')
+            y = np.repeat(yall, Nx)
+
+        positions = - np.vstack((x, y)).T * 1e-6
+        return positions
+
+    def load(self, indices):
+
+        raw, weights, positions = {}, {}, {}
+        scannr = self.info.recipe.scannr
+        path = self.info.recipe.pilatusPath
+        pattern = self.info.recipe.pilatusPattern
+
+        # read the entire dataset
+        done = False
+        line = 0
+        data = []
+        while not done:
+            try:
+                with h5py.File(path + pattern % (scannr, line), 'r') as hf:
+                    print 'loading data: ' + pattern % (scannr, line)
+                    dataset = hf.get('entry_0000/measurement/Pilatus/data')
+                    data.append(np.array(dataset))
+                line += 1
+            except IOError:
+                done = True
+        print "loaded %d lines of Pilatus data" % len(data)
+        data = np.concatenate(data, axis=0)
+
+        # pick out the requested indices
+        for i in indices:
+            raw[i] = data[i]
+
+        return raw, positions, weights
+
+    def load_weight(self):
+        """
+        Provides the mask for the whole scan, the shape of the first 
+        frame.
+        """
+
+        scannr = self.info.recipe.scannr
+        path = self.info.recipe.pilatusPath
+        pattern = self.info.recipe.pilatusPattern
+
+        if self.info.recipe.maskfile:
+            raise NotImplementedError('No masks for this scan type yet!')
+            print "loaded mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+        else:
+            filename = self.info.recipe.dataPath + self.info.recipe.datafile
+            with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
+                data = hf.get('entry_0000/measurement/Pilatus/data')
+                shape = np.asarray(data[0]).shape
+                mask = np.ones(shape)
+            print "created dummy mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+        return mask

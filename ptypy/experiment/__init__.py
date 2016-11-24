@@ -30,7 +30,7 @@ from AMO_LCLS import AMOScan
 from DiProI_FERMI import DiProIFERMIScan
 from optiklabor import FliSpecScanMultexp
 from UCL import UCLLaserScan
-from nanomax import NanomaxTmpScan, NanomaxTmpScanOnline
+from nanomax import NanomaxTmpScan, NanomaxTmpScanOnline, NanomaxFlyscanWeek48
 from I13_farfield import I13Scan
 from ALS_5321 import ALS5321Scan
 
@@ -48,6 +48,7 @@ PtyScanTypes = dict(
     laser_ucl = UCLLaserScan,
     nanomaxtmp = NanomaxTmpScan,
     nanomaxtmponline = NanomaxTmpScanOnline,
+    nanomaxflyscanweek48 = NanomaxFlyscanWeek48,
     i13ff = I13Scan,
     als5321 = ALS5321Scan,
 )
