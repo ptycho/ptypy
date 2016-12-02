@@ -228,6 +228,7 @@ class NanomaxFlyscanWeek48(PtyScan):
 
     def __init__(self, pars=None, **kwargs):
 
+        raise NotImplementedError("this subclass needs updating")
         p = PtyScan.DEFAULT.copy(depth=10)
         p.recipe = RECIPE.copy()
         p.update(pars, in_place_depth=10)
@@ -301,6 +302,74 @@ class NanomaxFlyscanWeek48(PtyScan):
 
         if self.info.recipe.maskfile:
             raise NotImplementedError('No masks for this scan type yet!')
+            print "loaded mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+        else:
+            filename = self.info.recipe.dataPath + self.info.recipe.datafile
+            with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
+                data = hf.get('entry_0000/measurement/Pilatus/data')
+                shape = np.asarray(data[0]).shape
+                mask = np.ones(shape)
+            print "created dummy mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+        return mask
+
+
+class NanomaxStepscanWeek48(PtyScan):
+    """
+    Loads Nanomax step scan data in the format of week 48
+    """
+
+    def __init__(self, pars=None, **kwargs):
+
+        p = PtyScan.DEFAULT.copy(depth=10)
+        p.recipe = RECIPE.copy()
+        p.update(pars, in_place_depth=10)
+        super(NanomaxStepscanWeek48, self).__init__(p)
+
+    def load_positions(self):
+        fileName = self.info.recipe.dataPath + self.info.recipe.datafile
+        entry = 'entry%d' % self.info.recipe.scannr
+
+        with h5py.File(fileName, 'r') as hf:
+            x = np.array(hf.get(entry + '/measurement/samx'))
+            y = np.array(hf.get(entry + '/measurement/samy'))
+
+        positions = -np.vstack((y, x)).T * 1e-6
+        return positions
+
+    def load(self, indices):
+
+        raw, weights, positions = {}, {}, {}
+        scannr = self.info.recipe.scannr
+        path = self.info.recipe.pilatusPath
+        filepattern = self.info.recipe.pilatusPattern
+        if not (path[-1] == '/'): path += '/'
+
+        data = []
+        for im in range(self.info.positions_scan.shape[0]):
+            with h5py.File(path + filepattern%(scannr, im), 'r') as hf:
+                dataset = hf.get('entry_0000/measurement/Pilatus/data')
+                data.append(np.array(dataset)[0])
+
+        # pick out the requested indices
+        for i in indices:
+            raw[i] = data[i]
+
+        return raw, positions, weights
+
+    def load_weight(self):
+        """
+        Provides the mask for the whole scan, the shape of the first 
+        frame.
+        """
+
+        scannr = self.info.recipe.scannr
+        path = self.info.recipe.pilatusPath
+        pattern = self.info.recipe.pilatusPattern
+        if not (path[-1] == '/'): path += '/'
+
+        if self.info.recipe.maskfile:
+            with h5py.File(self.info.recipe.maskfile, 'r') as hf:
+                mask = np.array(hf.get('mask'))
             print "loaded mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
         else:
             filename = self.info.recipe.dataPath + self.info.recipe.datafile
