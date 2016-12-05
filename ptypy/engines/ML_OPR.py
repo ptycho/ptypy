@@ -250,6 +250,10 @@ class ML_OPR1(BaseEngine):
         """
         Delete temporary containers.
         """
+        # Add modes to runtime
+        self.ptycho.runtime['OPR_modes'] = self.OPR_modes
+        self.ptycho.runtime['OPR_coeffs'] = self.OPR_coeffs
+
         del self.ptycho.containers[self.ob_grad.ID]
         del self.ob_grad
         del self.ptycho.containers[self.ob_h.ID]
