@@ -15,10 +15,8 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-#from data_structure import *
-
 # Import instrument-specific modules
-#import cSAXS
+# import cSAXS
 from I13_ffp import I13ScanFFP
 from I13_nfp import I13ScanNFP
 from DLS import DlsScan
