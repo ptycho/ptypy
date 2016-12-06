@@ -725,6 +725,9 @@ class PtyScan(object):
                         'Binning (%d) is to large or incompatible with array '
                         'shape (%s).' % (rebin, str(tuple(sh))))
 
+                # restore contiguity of the cropped/padded/rotated/flipped array
+                d = np.ascontiguousarray(d)
+
                 if has_data:
                     # Translate back to dictionaries
                     data = dict(zip(indices.node, d))
