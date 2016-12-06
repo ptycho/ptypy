@@ -27,42 +27,74 @@ NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 
 # Recipe defaults
 RECIPE = u.Param()
-RECIPE.experimentID = None      # Experiment identifier
-RECIPE.scan_number = None       # scan number
+# Experiment identifier
+RECIPE.experimentID = None
+# Scan number
+RECIPE.scan_number = None
 RECIPE.dark_number = None
 RECIPE.flat_number = None
 RECIPE.energy = None
-RECIPE.lam = None               # 1.2398e-9 / RECIPE.energy
-RECIPE.z = None                 # Distance from object to screen
-RECIPE.detector_name = None     # Name of the detector as specified in the nexus file
-RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
-RECIPE.motors_multiplier = 1e-6         # Motor conversion factor to meters
+RECIPE.lam = None
+# Distance from object to screen
+RECIPE.z = None
+# Name of the detector as specified in the nexus file
+RECIPE.detector_name = None
+# Motor names to determine the sample translation
+RECIPE.motors = ['t1_sx', 't1_sy']
+# Motor conversion factor to meters
+RECIPE.motors_multiplier = 1e-6
 RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
 RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
-RECIPE.mask_file = None                 # '%(base_path)s' + 'processing/mask.h5'
-RECIPE.correct_positions_Oct14 = False  # Position corrections for NFP beamtime Oct 2014
-RECIPE.use_EP = False                   # Use flat as Empty Probe (EP) for probe sharing; needs to be set to True in the recipe of the scan that will act as EP
-RECIPE.max_scan_points = 100000         # Maximum number of scan points to be loaded from origin
-RECIPE.theta = 0                        # Angle of rotation (as used in NFP beamtime Jul 2015)
-RECIPE.remove_hot_pixels = u.Param(     # Apply hot pixel correction
-    apply = False,                      # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
-    size = 3,                           # Size of the window on which the median filter will be applied around every data point
-    tolerance = 3,                      # Tolerance multiplied with the standard deviation of the data array subtracted by the blurred array
-                                        # (difference array) yields the threshold for cutoff.
-    ignore_edges = False,               # If True, edges of the array are ignored, which speeds up the code
+RECIPE.mask_file = None
+# Position corrections for NFP beamtime Oct 2014
+RECIPE.correct_positions_Oct14 = False
+# Use flat as Empty Probe (EP) for probe sharing;
+# needs to be set to True in the recipe of the scan that will act as EP
+RECIPE.use_EP = False
+# Maximum number of scan points to be loaded from origin
+RECIPE.max_scan_points = 100000
+# Angle of rotation (as used in NFP beamtime Jul 2015)
+RECIPE.theta = 0
+# Apply hot pixel correction
+RECIPE.remove_hot_pixels = u.Param(
+    # Initiate by setting to True;
+    # DEFAULT parameters will be used if not specified otherwise
+    apply=False,
+    # Size of the window on which the median filter will be applied
+    # around every data point
+    size=3,
+    # Tolerance multiplied with the standard deviation of the data array
+    # subtracted by the blurred array (difference array)
+    # yields the threshold for cutoff.
+    tolerance=3,
+    # If True, edges of the array are ignored, which speeds up the code
+    ignore_edges=False,
 )
-RECIPE.rl_deconvolution = u.Param(      # Apply Richardson Lucy deconvolution
-        apply = False,                  # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
-        numiter = 5,                    # Number of iterations
-        dfile = None,                   # Provide MTF from file; no loading procedure present for now, loading through recon script required
-        gaussians = u.Param(            # Create fake psf as a sum of gaussians if no MTF provided
-            g1 = u.Param(               # DEFAULT list of gaussians for Richardson Lucy deconvolution
-                std_x = 1.0,            # Standard deviation in x direction
-                std_y = 1.0,            # Standard deviation in y direction
-                off_x = 0.,             # Offset / shift in x direction
-                off_y = 0.,             # Offset / shift in y direction
+
+# Apply Richardson Lucy deconvolution
+RECIPE.rl_deconvolution = u.Param(
+    # Initiate by setting to True;
+    # DEFAULT parameters will be used if not specified otherwise
+    apply=False,
+    # Number of iterations
+    numiter=5,
+    # Provide MTF from file; no loading procedure present for now,
+    # loading through recon script required
+    dfile=None,
+    # Create fake psf as a sum of gaussians if no MTF provided
+    gaussians=u.Param(
+        # DEFAULT list of gaussians for Richardson Lucy deconvolution
+        g1=u.Param(
+            # Standard deviation in x direction
+            std_x=1.0,
+            # Standard deviation in y direction
+            std_y=1.0,
+            # Offset / shift in x direction
+            off_x=0.,
+            # Offset / shift in y direction
+            off_y=0.,
             )
         ),
 )
@@ -146,9 +178,9 @@ class I13ScanNFP(PtyScan):
                         break
 
                 if detector_name is None:
-                    raise RuntimeError('Not possible to extract detector '
-                                       'name. Please specify in recipe '
-                                       'instead.')
+                    raise RuntimeError(
+                        'Not possible to extract detector name. '
+                        'Please specify in recipe instead.')
                 elif (self.info.recipe.detector_name is not None
                       and detector_name
                       is not self.info.recipe.detector_name):
@@ -178,9 +210,9 @@ class I13ScanNFP(PtyScan):
             offset_x = raw_shape[-1] // 2
             offset_y = raw_shape[-2] // 2
         else:
-            raise RuntimeError('Center provided is not of type tuple or '
-                               'set to string "unset". Please correct '
-                               'input parameters.')
+            raise RuntimeError(
+                'Center provided is not of type tuple or set to "unset". '
+                'Please correct input parameters.')
 
         xdim = (offset_x - pars.shape // 2, offset_x + pars.shape // 2)
         ydim = (offset_y - pars.shape // 2, offset_y + pars.shape // 2)
@@ -196,9 +228,9 @@ class I13ScanNFP(PtyScan):
             except (AttributeError, KeyError):
                 experiment_id = os.path.split(
                     self.info.recipe.base_path[:-1])[1]
-                u.logger.debug('Could not find experiment ID from nexus file '
-                               '%s. Using %s instead.'
-                               % (self.data_file, experiment_id))
+                u.logger.debug(
+                    'Could not find experiment ID from nexus file %s. '
+                    'Using %s instead.' % (self.data_file, experiment_id))
             self.info.recipe.experimentID = experiment_id
 
         # Create the ptyd file name if not specified
@@ -242,7 +274,7 @@ class I13ScanNFP(PtyScan):
         # scan and skip the rest of the function. If no positions are found at
         # all, raise error.
         if motor_positions is None and self.info.recipe.use_EP:
-            positions = 1. * np.array([[0.,0.]])
+            positions = 1. * np.array([[0., 0.]])
             return positions
         elif motor_positions is None:
             raise RuntimeError('Could not find motors (tried %s)'

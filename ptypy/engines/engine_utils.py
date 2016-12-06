@@ -47,7 +47,6 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         - `err_exit`, quadratic deviation of exit waves before and after 
           Fourier iteration
     """
-
     # Prepare dict for storing propagated waves
     f = {}
     
@@ -65,7 +64,8 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         LL = np.zeros_like(diff_view.data)
         for name, pod in diff_view.pods.iteritems():
             LL += u.abs2(pod.fw(pod.probe * pod.object))
-        err_phot = np.sum(fmask * np.square(LL - I) / (I + 1.)) / np.prod(LL.shape)
+        err_phot = (np.sum(fmask * np.square(LL - I) / (I + 1.))
+                    / np.prod(LL.shape))
     else:
         err_phot = 0.
     
@@ -73,7 +73,9 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     for name, pod in diff_view.pods.iteritems():
         if not pod.active:
             continue
-        f[name] = pod.fw((1 + alpha) * pod.probe * pod.object - alpha * pod.exit)
+        f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
+                         - alpha * pod.exit)
+
         af2 += u.cabs2(f[name]).real
     
     fmag = np.sqrt(np.abs(I))
@@ -113,7 +115,9 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
             err_exit += np.mean(u.cabs2(df).real)
 
     if pbound is not None:
-        err_fmag /= pbound  # rescale the fmagnitude error to some meaning !!! PT: I am not sure I agree with this.
+        # rescale the fmagnitude error to some meaning !!!
+        # PT: I am not sure I agree with this.
+        err_fmag /= pbound
     
     return np.array([err_fmag, err_phot, err_exit])
 
@@ -130,7 +134,7 @@ def Cnorm2(c):
     ptypy.utils.math_utils.norm2
     """
     r = 0.
-    for name, s in c.S.iteritems():
+    for name, s in c.storages.iteritems():
         r += u.norm2(s.data)
     return r
 
@@ -140,12 +144,12 @@ def Cdot(c1, c2):
     Compute the dot product on two containers `c1` and `c2`.
     No check is made to ensure they are of the same kind.
     
-    :param Container c1,c2: Input
+    :param Container c1, c2: Input
     :returns: The dot product (*scalar*)
     """
     r = 0.
-    for name, s in c1.S.iteritems():
-        r += np.vdot(c1.S[name].data.flat, c2.S[name].data.flat)
+    for name, s in c1.storages.iteritems():
+        r += np.vdot(c1.storages[name].data.flat, c2.storages[name].data.flat)
     return r
 
 
