@@ -241,7 +241,7 @@ def reduce_dimension(a, dim, local_indices=None):
     parallel.allreduce(modes)
 
     # Reconstruct the array
-    eigvecc = eigvec.conj()
+    eigvecc = eigvec.conj()[:,:-2]
     output = np.zeros_like(a)
     for l, i in enumerate(local_indices):
         output[l] = sum(modes[k] * eigvecc[i, k] for k in range(dim))
