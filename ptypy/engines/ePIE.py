@@ -149,7 +149,7 @@ class EPIE(BaseEngine):
             error_dct = {}
             if self.p.random_order:
                 random.shuffle(pod_order)
-            do_update_probe = (self.p.probe_update_start <= self.curiter + it)
+            do_update_probe = (self.p.probe_update_start <= self.curiter)
 
             # object smooting prior to update, if requested
             if self.p.obj_smooth_std is not None:
@@ -228,7 +228,7 @@ class EPIE(BaseEngine):
                     s.data[over] = high * np.exp(1j * phase[over])
 
             # Distribute result with MPI
-            if (self.curiter + it) % self.p.synchronization == 0:
+            if self.curiter % self.p.synchronization == 0:
                 logger.debug(pre_str + '----- communication -----')
 
                 # only share the part of the object which whis node has
@@ -250,7 +250,10 @@ class EPIE(BaseEngine):
                         s.data /= parallel.size
                 t3 = time.time()
                 tc += t3 - t2
-
+            
+            # Increase iteration counter
+            self.curiter +=1
+            
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
         logger.info('Time spent in communication:  %.2f' % tc)
