@@ -10,7 +10,7 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 from .. import utils as u
-from ..utils.verbose import logger
+from ..utils.verbose import logger, log
 from ..utils import parallel
 from engine_utils import basic_fourier_update
 from . import BaseEngine
@@ -93,7 +93,7 @@ class DM(BaseEngine):
         for name, s in self.di.storages.iteritems():
             self.pbound[name] = (
                 .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
-        
+
         # Fill object with coverage of views
         for name, s in self.ob_viewcover.storages.iteritems():
             s.fill(s.get_view_coverage())
@@ -106,7 +106,7 @@ class DM(BaseEngine):
         tf = 0.
         for it in range(num):
             t1 = time.time() 
-            
+                            
             # Fourier update  
             error_dct = self.fourier_update()
 
@@ -118,6 +118,9 @@ class DM(BaseEngine):
             
             t3 = time.time()
             to += t3 - t2
+            
+            # count up
+            self.curiter +=1
             
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
@@ -175,7 +178,7 @@ class DM(BaseEngine):
             # Update object first
             if self.p.update_object_first or (inner > 0):
                 # Update object
-                logger.debug(pre_str + '----- object update -----')
+                log(4,pre_str + '----- object update -----')
                 self.object_update()
                                
             # Exit if probe should not be updated yet
@@ -183,9 +186,9 @@ class DM(BaseEngine):
                 break
             
             # Update probe
-            logger.debug(pre_str + '----- probe update -----')
+            log(4,pre_str + '----- probe update -----')
             change = self.probe_update()
-            logger.debug(pre_str + 'change in probe is %.3f' % change)
+            log(4,pre_str + 'change in probe is %.3f' % change)
             
             # Recenter the probe
             self.center_probe()
@@ -208,7 +211,7 @@ class DM(BaseEngine):
                                          (0, c1[0], c1[1]),
                                          (0, c2[0], c2[1]))
 
-                logger.info('Probe recentered from %s to %s'
+                log(4,'Probe recentered from %s to %s'
                             % (str(tuple(c1)), str(tuple(c2))))
                 
     def object_update(self):

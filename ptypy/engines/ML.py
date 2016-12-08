@@ -223,6 +223,10 @@ class ML(BaseEngine):
                 s.data += tmin*self.pr_h.storages[name].data
             """
             # Newton-Raphson loop would end here
+            
+            # increase iteration counter
+            self.curiter +=1
+        
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
