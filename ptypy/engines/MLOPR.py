@@ -18,7 +18,7 @@ from ptypy.utils import parallel
 from ptypy.engines.engine_utils import Cnorm2, Cdot, reduce_dimension
 from ptypy.engines import BaseEngine
 
-__all__ = ['ML_OPR1']
+__all__ = ['MLOPR']
 
 DEFAULT = u.Param(
     ML_type='gaussian',
@@ -33,7 +33,7 @@ DEFAULT = u.Param(
 )
 
 
-class ML_OPR1(BaseEngine):
+class MLOPR(BaseEngine):
     
     DEFAULT = DEFAULT
 
@@ -43,7 +43,7 @@ class ML_OPR1(BaseEngine):
         """
         if pars is None:
             pars = DEFAULT.copy()
-        super(ML_OPR1, self).__init__(ptycho_parent, pars)
+        super(MLOPR, self).__init__(ptycho_parent, pars)
         
     def engine_initialize(self):
         """
