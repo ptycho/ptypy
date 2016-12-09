@@ -70,6 +70,7 @@ setup(
     package_dir = {'ptypy':'ptypy'},
     packages = ['ptypy',
                 'ptypy.core',\
+                'ptypy.debug',\
                 'ptypy.utils',\
                 'ptypy.simulations',\
                 'ptypy.engines',\
