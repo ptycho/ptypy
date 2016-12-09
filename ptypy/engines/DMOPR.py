@@ -17,7 +17,7 @@ from engine_utils import basic_fourier_update, reduce_dimension
 from . import BaseEngine
 from ..core import Storage
 
-__all__ = ['DM_OPR']
+__all__ = ['DMOPR']
 
 DEFAULT = u.Param(
     alpha=1,                       # Difference map parameter
@@ -36,7 +36,7 @@ DEFAULT = u.Param(
 )
 
     
-class DM_OPR(BaseEngine):
+class DMOPR(BaseEngine):
     
     DEFAULT = DEFAULT
 
@@ -47,7 +47,7 @@ class DM_OPR(BaseEngine):
         if pars is None:
             pars = DEFAULT.copy()
             
-        super(DM_OPR, self).__init__(ptycho_parent, pars)
+        super(DMOPR, self).__init__(ptycho_parent, pars)
 
     def engine_initialize(self):
         """
