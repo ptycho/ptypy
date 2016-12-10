@@ -62,6 +62,7 @@ class Dummy(BaseEngine):
         time.sleep(self.itertime)
         # virtual error reduces 10%
         self.error *= 0.9
+        self.curiter +=1
         return self.error
         
     def engine_finalize(self):

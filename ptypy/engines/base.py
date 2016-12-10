@@ -163,11 +163,14 @@ class BaseEngine(object):
             If None or num<1, a single iteration is performed.
         """
         # Several iterations
-        numiter_contiguous = self.p.numiter_contiguous
+        if self.p.numiter_contiguous is not None:
+            niter_contiguous = self.p.numiter_contiguous 
+        else:
+            niter_contiguous = 1
         
         # Overwrite default parameter
         if num is not None:
-            numiter_contiguous = num
+            niter_contiguous = num
         
         if self.finished:
             return
@@ -175,13 +178,32 @@ class BaseEngine(object):
         # For benchmarking
         self.t = time.time()
         
+        it = self.curiter
+        
         # Call engine specific iteration routine
         # and collect the per-view error.      
-        self.error = self.engine_iterate(numiter_contiguous)
+        self.error = self.engine_iterate(niter_contiguous)
         
-        # Increment the iterate number
-        self.curiter += numiter_contiguous
-        self.alliter += numiter_contiguous
+        # Check if engine did things right.
+        if it >= self.curiter:
+            
+            logger.warn("""Engine %s did not increase iteration counter 
+            `self.curiter` internally. Accessing this attribute in that
+            engine is inaccurate""" % self.__class__.__name__)
+            
+            self.curiter += niter_contiguous
+        
+        elif self.curiter != (niter_contiguous + it):
+            
+            logger.error("""Engine %s increased iteration counter 
+            `self.curiter` by %d instead of %d. This may lead to 
+            unexpected behaviour""" % (self.__class__.__name__,
+            self.curiter-it, niter_contiguous))
+        
+        else:
+            pass
+            
+        self.alliter += niter_contiguous
         
         if self.curiter >= self.numiter:
             self.finished = True
