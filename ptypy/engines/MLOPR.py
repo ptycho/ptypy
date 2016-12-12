@@ -244,7 +244,15 @@ class MLOPR(BaseEngine):
                     # Newton-Raphson loop would end here
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
-        return error_dct  #np.array([[self.ML_model.LL[0]] * 3]) 
+
+        ### Storing OPR modes and coeffs in dumps => will it work in MPI ??
+        if self.p.autosave is not None and self.p.autosave.interval > 1:
+            if engine.curiter % self.p.autosave.interval == 0:
+                if self.p.autosave.store_OPR_iter:
+                    self.ptycho.runtime['OPR_modes'] = self.OPR_modes
+                    self.ptycho.runtime['OPR_coeffs'] = self.OPR_coeffs
+
+        return error_dct  #np.array([[self.ML_model.LL[0]] * 3])
 
     def engine_finalize(self):
         """
