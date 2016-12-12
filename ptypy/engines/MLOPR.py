@@ -246,9 +246,9 @@ class MLOPR(BaseEngine):
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
 
         ### Storing OPR modes and coeffs in dumps => will it work in MPI ??
-        if self.p.autosave is not None and self.p.autosave.interval > 1:
-            if engine.curiter % self.p.autosave.interval == 0:
-                if self.p.autosave.store_OPR_iter:
+        if self.p.io.autosave is not None and self.p.io.autosave.interval > 1:
+            if engine.curiter % self.p.io.autosave.interval == 0:
+                if self.p.io.autosave.store_OPR_iter:
                     self.ptycho.runtime['OPR_modes'] = self.OPR_modes
                     self.ptycho.runtime['OPR_coeffs'] = self.OPR_coeffs
 
