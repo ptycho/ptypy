@@ -1246,8 +1246,7 @@ class View(Base):
         if s is None:
             s = self.owner.new_storage(ID=self.storageID,
                                        psize=rule.psize,
-                                       shape=self.shape,
-                                       data_dims=len(self.shape) - 1)
+                                       shape=self.shape)
         self.storage = s
 
         if (self.psize is not None
