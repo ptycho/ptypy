@@ -51,7 +51,7 @@ __all__ = ['Container', 'Storage', 'View', 'POD', 'Base', 'DEFAULT_PSIZE',
 DEFAULT_PSIZE = 1.
 
 # Default shape
-DEFAULT_SHAPE = (1, 1, 1)
+DEFAULT_SHAPE = {2: (1, 1, 1), 3: (1, 1, 1, 1)}
 
 # Expected structure for Views initialization.
 DEFAULT_ACCESSRULE = u.Param(
@@ -334,22 +334,28 @@ class Storage(Base):
         """
         super(Storage, self).__init__(container, ID)
 
+        #: Data dimensionality
+        self.ndim = container.ndim
+
         #: Default fill value
         self.fill_value = fill if fill is not None else 0.
 
         # For documentation
-        #: Three dimensional array as data buffer
+        #: Three/four dimensional array as data buffer
         self.data = None
 
         if shape is None:
-            shape = DEFAULT_SHAPE
+            shape = DEFAULT_SHAPE[self.ndim]
         elif np.isscalar(shape):
-            shape = (1, int(shape), int(shape))
-        elif len(shape) == 2:
+            shape = (1,) + (int(shape),) * self.ndim
+        elif len(shape) == self.ndim:
             shape = (1,) + tuple(shape)
-        elif len(shape) != 3:
-            raise ValueError(
-                '`shape` must be None or scalar or 2-tuple or 3-tuple of int')
+        elif len(shape) != self.ndim + 1:
+            if self.ndim == 2:
+                msg = 'For `data_dims`=2, `shape` must be None or scalar or 2-tuple or 3-tuple of int'
+            elif self.ndim == 3:
+                'For `data_dims`=3, `shape` must be None or scalar or 3-tuple or 4-tuple of int'
+            raise ValueError(msg)
 
         # Set data buffer
         if data is None:
@@ -360,11 +366,13 @@ class Storage(Base):
         else:
             # Set initial buffer. Casting the type makes a copy
             data = np.asarray(data).astype(self.dtype)
-            if data.ndim < 2 or data.ndim > 3:
-                raise ValueError(
-                    'Initial buffer must be 2D or 3D, this one is %dD.'
-                    % data.ndim)
-            elif data.ndim == 2:
+            if data.ndim < self.ndim or data.ndim > (self.ndim + 1):
+                if self.ndim == 2:
+                    msg = 'For `data_dims` = 2, initial buffer must be 2D or 3D, this one is %dD.'
+                elif self.ndim == 3:
+                    msg = 'For `data_dims` = 3, initial buffer must be 3D or 4D, this one is %dD.'
+                raise ValueError(msg % data.ndim)
+            elif data.ndim == self.ndim:
                 self.data = data.reshape((1,) + data.shape)
             else:
                 self.data = data
@@ -379,7 +387,7 @@ class Storage(Base):
 
         # Need to bootstrap the parameters.
         # We set the initial center to the middle of the array
-        self._center = u.expect2(self.shape[-2:]) // 2
+        self._center = u.expectN(self.shape[-self.ndim:], self.ndim) // 2
 
         # Set pixel size (in physical units)
         self.psize = psize if psize is not None else DEFAULT_PSIZE
@@ -501,12 +509,11 @@ class Storage(Base):
             self.data.fill(fill)
         elif type(fill) is np.ndarray:
             # Replace the buffer
-            if fill.ndim < 2 or fill.ndim > 3:
-                raise ValueError('Numpy ndarray fill must be 2D or 3D.')
-            elif fill.ndim == 2:
-                fill = np.resize(fill, (self.shape[0],
-                                        fill.shape[0],
-                                        fill.shape[1]))
+            if fill.ndim < self.ndim or fill.ndim > (self.ndim + 1):
+                raise ValueError(
+                    'For N-dimensional data, numpy ndarray fill must be ND or (N+1)D.')
+            elif fill.ndim == self.ndim:
+                fill = np.resize(fill, (self.shape[0],) + fill.shape)
             self.data = fill.astype(self.dtype)
             self.shape = self.data.shape
 
@@ -540,7 +547,7 @@ class Storage(Base):
 
         # v.shape can be None upon initialization - this means "full frame"
         if v.shape is None:
-            v.shape = u.expect2(self.shape[-2:])
+            v.shape = u.expectN(self.shape[-self.ndim:], self.ndim)
             v.pcoord = v.shape / 2.
             v.coord = self._to_phys(v.pcoord)
         else:
@@ -551,8 +558,8 @@ class Storage(Base):
         v.dcoord = np.round(v.pcoord).astype(int)
 
         # These are the important attributes used when accessing the data
-        v.dlow = v.dcoord - v.shape/2
-        v.dhigh = v.dcoord + (v.shape + 1)/2
+        v.dlow = v.dcoord - v.shape / 2
+        v.dhigh = v.dcoord + (v.shape + 1) / 2
 
         # v.roi = np.array([pix - v.shape/2, pix + (v.shape + 1)/2])
         v.sp = v.pcoord - v.dcoord
@@ -597,6 +604,7 @@ class Storage(Base):
         # Loop through all active views to get individual boundaries
         rows = []
         cols = []
+        aisles = []
         layers = []
         for v in views:
             if not v.active:
@@ -608,6 +616,8 @@ class Storage(Base):
             # cols += [v.roi[0, 1], v.roi[1, 1]]
             rows += [v.dlow[0], v.dhigh[0]]
             cols += [v.dlow[1], v.dhigh[1]]
+            if self.ndim == 3:
+                aisles += [v.dlow[2], v.dhigh[2]]
 
             # Gather a (unique) list of layers
             if v.layer not in layers:
@@ -615,13 +625,22 @@ class Storage(Base):
 
         sh = self.data.shape
 
-        # Compute 2d misfit (distance between the buffer boundaries and the
+        # Compute Nd misfit (distance between the buffer boundaries and the
         # region required to fit all the views)
-        misfit = np.array([[-np.min(rows), np.max(rows) - sh[-2]],
-                           [-np.min(cols), np.max(cols) - sh[-1]]])
+        if self.ndim == 2:
+            misfit = np.array([[-np.min(rows), np.max(rows) - sh[-2]],
+                               [-np.min(cols), np.max(cols) - sh[-1]]])
+        elif self.ndim == 3:
+            misfit = np.array([[-np.min(rows), np.max(rows) - sh[-3]],
+                               [-np.min(cols), np.max(cols) - sh[-2]],
+                               [-np.min(aisles), np.max(aisles) - sh[-1]]])
 
-        logger.debug('%s[%s] :: misfit = [%s, %s]'
-                     % (self.owner.ID, self.ID, misfit[0], misfit[1]))
+        if self.ndim == 2:
+            logger.debug('%s[%s] :: misfit = [%s, %s]'
+                         % (self.owner.ID, self.ID, misfit[0], misfit[1]))
+        elif self.ndim == 3:
+            logger.debug('%s[%s] :: misfit = [%s, %s, %s]'
+                         % (self.owner.ID, self.ID, misfit[0], misfit[1], misfit[2]))
 
         posmisfit = (misfit > 0)
         negmisfit = (misfit < 0)
@@ -630,10 +649,16 @@ class Storage(Base):
                              (negmisfit.any() and not self.padonly))
 
         if posmisfit.any() or negmisfit.any():
-            logger.debug(
-                'Storage %s of container %s has a misfit of [%s, %s] between '
-                'its data and its views'
-                % (str(self.ID), str(self.owner.ID), misfit[0], misfit[1]))
+            if self.ndim == 2:
+                logger.debug(
+                    'Storage %s of container %s has a misfit of [%s, %s] between '
+                    'its data and its views'
+                    % (str(self.ID), str(self.owner.ID), misfit[0], misfit[1]))
+            elif self.ndim == 3:
+                logger.debug(
+                    'Storage %s of container %s has a misfit of [%s, %s, %s] between '
+                    'its data and its views'
+                    % (str(self.ID), str(self.owner.ID), misfit[0], misfit[1], misfit[2]))
 
         if needtocrop_or_pad:
             if self.padonly:
@@ -644,6 +669,8 @@ class Storage(Base):
             new_shape = (sh[0],
                          sh[1] + misfit[0].sum(),
                          sh[2] + misfit[1].sum())
+            if self.ndim == 3:
+                new_shape += (sh[3] + misfit[2].sum(),)
             logger.debug('%s[%s] :: center: %s -> %s'
                          % (self.owner.ID, self.ID, str(self.center),
                             str(new_center)))
@@ -680,7 +707,7 @@ class Storage(Base):
                     d = new_data[self.layermap.index(i)]
                 else:
                     # A new layer
-                    d = np.empty(new_shape[-2:], self.dtype)
+                    d = np.empty(new_shape[-self.ndim:], self.dtype)
                     d.fill(self.fill_value)
                 relaid_data.append(d)
             new_data = np.array(relaid_data)
@@ -751,7 +778,7 @@ class Storage(Base):
         """
         Set the pixel size, and update all the internal variables.
         """
-        self._psize = u.expect2(v)
+        self._psize = u.expectN(v, self.ndim)
         self._origin = - self._center * self._psize
         self.update()
 
@@ -767,7 +794,7 @@ class Storage(Base):
         """
         Set the origin and update all the internal variables.
         """
-        self._origin = u.expect2(v)
+        self._origin = u.expectN(v, self.ndim)
         self._center = - self._origin / self._psize
         self.update()
 
@@ -784,7 +811,7 @@ class Storage(Base):
         """
         Set the center and update all the internal variables.
         """
-        self._center = u.expect2(v)
+        self._center = u.expectN(v, self.ndim)
         self._origin = - self._center * self._psize
         self.update()
 
@@ -826,7 +853,7 @@ class Storage(Base):
         new_psize : scalar or array_like
                     new pixel size 
         """
-        new_psize = u.expect2(new_psize)
+        new_psize = u.expectN(new_psize, self.ndim)
         sh = np.asarray(self.shape[-2:])
         # psize is quantized
         new_sh = np.round(self.psize / new_psize * sh)
@@ -859,11 +886,16 @@ class Storage(Base):
             grids in the shape of internal buffer
         """
         sh = self.data.shape
-        nm = np.indices(sh)[-2:]
-        flat = nm.reshape((2, self.data.size))
+        nm = np.indices(sh)[-self.ndim:]
+        flat = nm.reshape((self.ndim, self.data.size))
         c = self._to_phys(flat.T).T
-        c = c.reshape((2,) + sh)
-        return c[0], c[1]
+        c = c.reshape((self.ndim,) + sh)
+        if self.ndim == 2:
+            return c[0], c[1]
+        elif self.ndim == 3:
+            return c[0], c[1], c[2]
+        else:
+            raise ValueError('Dimensionality corrupted, not 2 or 3')
 
     def get_view_coverage(self):
         """
@@ -949,16 +981,26 @@ class Storage(Base):
         for key, column in fr.table:
             if str(key) == 'shape':
                 dct[key] = tuple(self.data.shape)
-                info = '%d * %d * %d' % dct[key]
+                info = ('%d' + ' * %d' * self.ndim) % dct[key]
             elif str(key) == 'psize':
                 dct[key] = tuple(self.psize)
-                info = '%.2e * %.2e' % tuple(dct[key])
-                info = info.split('e', 1)[0] + info.split('e', 1)[1][3:]
+                info = ('%.2e' + ' * %.2e'*(self.ndim - 1)) % tuple(dct[key])
+                if self.ndim == 2:
+                    info = info.split('e', 1)[0] + info.split('e', 1)[1][3:]
+                elif self.ndim == 3:
+                    info = info.split('e', 2)[0] + info.split('e', 2)[1][3:] + info.split('e', 2)[2][3:]
             elif str(key) == 'dimension':
-                dct[key] = (self.psize[0] * self.data.shape[-2],
-                            self.psize[1] * self.data.shape[-1])
-                info = '%.2e*%.2e' % tuple(dct[key])
-                info = info.split('e', 1)[0] + info.split('e', 1)[1][3:]
+                if self.ndim == 2:
+                    dct[key] = (self.psize[0] * self.data.shape[-2],
+                                self.psize[1] * self.data.shape[-1])
+                    info = '%.2e*%.2e' % tuple(dct[key])
+                    info = info.split('e', 1)[0] + info.split('e', 1)[1][3:]
+                elif self.ndim == 3:
+                    dct[key] = (self.psize[0] * self.data.shape[-3],
+                                self.psize[1] * self.data.shape[-2],
+                                self.psize[2] * self.data.shape[-1])
+                    info = '%.2e*%.2e*%.2e' % tuple(dct[key])
+                    info = info.split('e', 1)[0] + info.split('e', 2)[1][3:] + info.split('e', 2)[2][3:]
             elif str(key) == 'memory':
                 dct[key] = float(self.data.nbytes) / 1e6
                 info = '%.1f' % dct[key]
@@ -1001,9 +1043,17 @@ class Storage(Base):
         # return shift(self.data[v.slayer, v.roi[0, 0]:v.roi[1, 0],
         #             v.roi[0, 1]:v.roi[1, 1]], v.sp)
         if isinstance(v, View):
-            return shift(self.data[
-                         v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
-                         v.sp)
+            if not self.ndim == v.ndim:
+                raise ValueError(
+                    'Storage and View instances have confliction data dimensions')
+            if self.ndim == 2:
+                return shift(self.data[
+                             v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
+                             v.sp)
+            elif self.ndim == 3:
+                return shift(self.data[
+                             v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1], v.dlow[2]:v.dhigh[2]],
+                             v.sp)
         elif v in self.layermap:
             return self.data[self.layermap.index(v)]
         else:
@@ -1032,8 +1082,16 @@ class Storage(Base):
         # self.data[v.slayer, v.roi[0, 0]:v.roi[1, 0],
         #          v.roi[0, 1]:v.roi[1, 1]] = shift(newdata, -v.sp)
         if isinstance(v, View):
-            self.data[v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]] = (
-                shift(newdata, -v.sp))
+            if not self.ndim == v.ndim:
+                raise ValueError(
+                    'Storage and View instances have confliction data dimensions')
+            if self.ndim == 2:
+                self.data[v.dlayer, v.dlow[0]:v.dhigh[0],
+                          v.dlow[1]:v.dhigh[1]] = (shift(newdata, -v.sp))
+            elif self.ndim == 3:
+                self.data[v.dlayer, v.dlow[0]:v.dhigh[0],
+                          v.dlow[1]:v.dhigh[1], v.dlow[2]:v.dhigh[2]
+                          ] = (shift(newdata, -v.sp))
         elif v in self.layermap:
             self.data[self.layermap.index(v)] = newdata
         else:
@@ -1112,11 +1170,11 @@ class View(Base):
         psize : float or tuple of float
             Pixel size [meters]. Required for storage initialization, 
             See :py:data:`DEFAULT_PSIZE`
-            
+
         layer : int
             Index of the third dimension if applicable.
             (*default* is ``0``)
-            
+
         active : bool
             Whether this view is active (*default* is ``True``) 
         """
@@ -1128,6 +1186,9 @@ class View(Base):
         self.pods = weakref.WeakValueDictionary()
         """ Volatile dictionary for all :any:`POD`\ s that connect to 
             this view """
+
+        #: Data dimensionality
+        self.ndim = container.ndim
 
         # A single pod lookup (weak reference).
         self._pod = None
@@ -1144,8 +1205,8 @@ class View(Base):
             to a :any:`Container`."""
 
         # Numpy buffer arrays
-        self._arint = np.zeros((4, 2), dtype=np.int)
-        self._arfloat = np.zeros((4, 2), dtype=np.float)
+        self._arint = np.zeros((4, self.ndim), dtype=np.int)
+        self._arfloat = np.zeros((4, self.ndim), dtype=np.float)
 
         #: The "layer" i.e. first axis index in Storage data buffer
         self.dlayer = 0
@@ -1185,7 +1246,8 @@ class View(Base):
         if s is None:
             s = self.owner.new_storage(ID=self.storageID,
                                        psize=rule.psize,
-                                       shape=self.shape)
+                                       shape=self.shape,
+                                       data_dims=len(self.shape) - 1)
         self.storage = s
 
         if (self.psize is not None
@@ -1219,9 +1281,17 @@ class View(Base):
         # else:
         #    slayer = self.storage.layermap.index(self.layer)
 
-        return (self.dlayer,
-                slice(self.dlow[0], self.dhigh[0]),
-                slice(self.dlow[1], self.dhigh[1]))
+        if self.ndim == 2:
+            return (self.dlayer,
+                    slice(self.dlow[0], self.dhigh[0]),
+                    slice(self.dlow[1], self.dhigh[1]))
+        elif self.ndim == 3:
+            return (self.dlayer,
+                    slice(self.dlow[0], self.dhigh[0]),
+                    slice(self.dlow[1], self.dhigh[1]),
+                    slice(self.dlow[2], self.dhigh[2]))
+        else:
+            raise ValueError('Dimensionality corrupted, not 2 or 3')
 
     @property
     def pod(self):
@@ -1250,19 +1320,19 @@ class View(Base):
     @property
     def shape(self):
         """
-        Two dimensional shape of View.
+        Two/three dimensional shape of View.
         """
         return self._arint[0] if (self._arint[0] > 0).all() else None
 
     @shape.setter
     def shape(self, v):
         """
-        Set two dimensional shape of View.
+        Set two/three dimensional shape of View.
         """
         if v is None:
-            self._arint[0] = u.expect2(0)
+            self._arint[0] = u.expectN(0, self.ndim)
         else:
-            self._arint[0] = u.expect2(v)
+            self._arint[0] = u.expectN(v, self.ndim)
 
     @property
     def dlow(self):
@@ -1319,9 +1389,9 @@ class View(Base):
         Set pixel size
         """
         if v is None:
-            self._arfloat[0] = u.expect2(0.)
+            self._arfloat[0] = u.expectN(0., self.ndim)
         else:
-            self._arfloat[0] = u.expect2(v)
+            self._arfloat[0] = u.expectN(v, self.ndim)
 
     @property
     def coord(self):
@@ -1336,9 +1406,9 @@ class View(Base):
         Set the View's physical coordinate (meters)
         """
         if v is None:
-            self._arfloat[1] = u.expect2(0.)
+            self._arfloat[1] = u.expectN(0., self.ndim)
         elif type(v) is not np.ndarray:
-            self._arfloat[1] = u.expect2(v)
+            self._arfloat[1] = u.expectN(v, self.ndim)
         else:
             self._arfloat[1] = v
 
@@ -1357,9 +1427,9 @@ class View(Base):
         and data coordinate.
         """
         if v is None:
-            self._arfloat[2] = u.expect2(0.)
+            self._arfloat[2] = u.expectN(0., self.ndim)
         elif type(v) is not np.ndarray:
-            self._arfloat[2] = u.expect2(v)
+            self._arfloat[2] = u.expectN(v, self.ndim)
         else:
             self._arfloat[2] = v
 
@@ -1402,7 +1472,7 @@ class Container(Base):
     """
     _PREFIX = CONTAINER_PREFIX
 
-    def __init__(self, ptycho=None, ID=None, data_type='complex', **kwargs):
+    def __init__(self, ptycho=None, ID=None, data_type='complex', data_dims=2, **kwargs):
         """
         Parameters
         ----------
@@ -1415,7 +1485,10 @@ class Container(Base):
         data_type : str or numpy.dtype
             data type - either a numpy.dtype object or 'complex' or 
             'real' (precision is taken from ptycho.FType or ptycho.CType)
-        
+
+        data_dims : int
+            The dimensionality of the stored data, either 2 or 3.
+
         """
         # if ptycho is None:
         #    ptycho = ptypy.currentPtycho
@@ -1425,6 +1498,11 @@ class Container(Base):
         #     self._initialize(**kwargs)
 
     # def _initialize(self, original=None, data_type='complex'):
+
+        #: Data dimensionality
+        self.ndim = data_dims
+        if self.ndim not in (2, 3):
+            raise ValueError('`data_dim` must be 2 or 3')
 
         self.data_type = data_type
 
