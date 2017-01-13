@@ -83,7 +83,7 @@ class Geo(Base):
     _keV2m = 1.240597288e-09
     _PREFIX = GEO_PREFIX
     
-    def __init__(self, owner=None, ID=None, pars=None, **kwargs):
+    def __init__(self, owner=None, ID=None, pars=None, default_override=None, **kwargs):
         """
         Parameters
         ----------
@@ -102,6 +102,8 @@ class Geo(Base):
         super(Geo, self).__init__(owner, ID)
 
         # Starting parameters
+        if default_override is not None:
+            DEFAULT = default_override
         p = u.Param(DEFAULT)
         if pars is not None:
             p.update(pars)
