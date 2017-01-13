@@ -100,10 +100,6 @@ class Geo(Base):
             if the key exists in `Geo.DEFAULT`.
         """
         super(Geo, self).__init__(owner, ID)
-        # if len(kwargs)>0:
-        #     self._initialize(**kwargs)
-    
-    # def _initialize(self, pars=None, **kwargs):
 
         # Starting parameters
         p = u.Param(DEFAULT)
@@ -117,6 +113,13 @@ class Geo(Base):
                 p[k] = v
         
         self.p = p
+        self._initialize(p)
+
+    def _initialize(self, p):
+        """
+        Parse input parameters, fill missing parameters and set up a
+        propagator.
+        """
         self.interact = False
         
         # Set distance
