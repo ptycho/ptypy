@@ -103,8 +103,9 @@ class Geo(Base):
 
         # Starting parameters
         if default_override is not None:
-            DEFAULT = default_override
-        p = u.Param(DEFAULT)
+            p = u.Param(default_override)
+        else:
+            p = u.Param(DEFAULT)
         if pars is not None:
             p.update(pars)
             for k, v in p.items():
