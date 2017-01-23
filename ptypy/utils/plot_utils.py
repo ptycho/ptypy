@@ -163,7 +163,7 @@ def complex2hsv(cin, vmin=None, vmax=None):
         vmin = 0.
     if vmax is None:
         vmax = v.max()
-    assert vmin < vmax
+    assert vmin <= vmax
     v = (v.clip(vmin, vmax)-vmin)/(vmax-vmin)
     
     return np.asarray((h, s, v))
