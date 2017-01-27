@@ -21,6 +21,12 @@ import matplotlib.pyplot as plt
 # tightly contains the exit wave.
 g = ptypy.core.geometry_bragg.Geo_Bragg(psize=(13e-6, 13e-6, 0.01/4), shape=(128, 128, 9*4), energy=8.5, distance=2.0, theta_bragg=22.32)
 
+# The Geo_Bragg object contains mostly the same things as Geo, but in
+# three dimensions. The third element of the shape is the number of
+# rocking curve positions, the third element of the psize denotes theta
+# step in degrees. 
+print g
+
 # Set up scan positions along y, perpendicular to the incoming beam and
 # to the thin layer stripes.
 Npos = 11
