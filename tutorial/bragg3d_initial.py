@@ -47,8 +47,8 @@ C = ptypy.core.Container(data_type=np.complex128, data_dims=3)
 views = []
 for pos in positions:
     pos_ = g._r1r2r3(pos)
-    views.append(ptypy.core.View(C, storageID='S0000', psize=g.resolution, coord=pos_, shape=g.shape))
-S = C.storages['S0000']
+    views.append(ptypy.core.View(C, storageID='Sobj', psize=g.resolution, coord=pos_, shape=g.shape))
+S = C.storages['Sobj']
 C.reformat()
 
 # Define the test sample based on the orthogonal position of each voxel.
@@ -69,7 +69,10 @@ S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy >= -2e-6) & (yy < -1e-6)] = 1
 Cprobe = ptypy.core.Container(data_dims=2, data_type='float')
 Sprobe = Cprobe.new_storage(psize=10e-9, shape=500)
 z, y = Sprobe.grids()
+# square probe
 Sprobe.data[(z > -.75e-6) & (z < .75e-6) & (y > -1.5e-6) & (y < 1.5e-6)] = 1
+# gaussian probe
+Sprobe.data = np.exp(-z**2 / (2 * (.75e-6)**2) - y**2 / (2 * (1.0e-6)**2))
 
 # The Bragg geometry has a method to prepare a 3d Storage by extruding
 # the 2d probe and interpolating to the right grid. The returned storage
@@ -94,7 +97,7 @@ for v in views:
 # In order to visualize the field of view, we'll create a copy of the
 # object storage and set its value equal to 1 where covered by the first
 # view.
-S_display = S.copy(owner=C)
+S_display = S.copy(owner=C, ID='Sdisplay')
 S_display.fill(0.0)
 S_display[S.views[0]] = 1
 
@@ -139,45 +142,145 @@ plt.draw()
 # Reconstruct the numerical data
 # ------------------------------
 
-# Reconstruction should be done considering the algorithms developed
-# (for example using good regularization and considering noise models
-# etc), but here I've just used a naive PIE generalization which seems
-# to work OK for numerical noise-free data.
+# Here I compare different algorithms and scaling options.
+algorithm = 'DM'
 
 # Keep a copy of the object storage, and fill the actual one with an
 # initial guess (like zeros everywhere).
-S_true = S.copy(owner=C)
+S_true = S.copy(owner=C, ID='Strue')
+# zero everything
 S.fill(0.0)
+# unit magnitude, random phase:
+# S.data[:] = 1.0 * np.exp(1j * (2 * np.random.rand(*S.data.shape) - 1) * np.pi)
+# random magnitude, random phase
+# S.data[:] = np.random.rand(*S.data.shape) * np.exp(1j * (2 * np.random.rand(*S.data.shape) - 1) * np.pi)
 
-# Then run this very temporary and inefficient reconstruction loop.
-fig, ax = plt.subplots(ncols=3)
-errors = []
-ferrors = []
-r1, r2, r3 = S.grids()
-for i in range(100):
-    print i
-    ferrors_ = []
+# Here's an implementation of the OS (preconditioned PIE) algorithm from
+# Pateras' thesis.
+if algorithm == 'OS':
+    alpha, beta = .1, 1.0
+    fig, ax = plt.subplots(ncols=3)
+    errors = []
+    criterion = []
+    # first calculate the weighting factor Lambda, here called scaling = 1/Lambda
+    scaling = S.copy(owner=C, ID='Sscaling')
+    scaling.fill(alpha)
+    for v in views:
+        scaling[v] += np.abs(probeView.data)**2
+    scaling.data[:] = 1 / scaling.data
+    # then iterate with the appropriate update rule
+    for i in range(100):
+        print i
+        criterion_ = 0.0
+        obj_error_ = 0.0
+        for j in range(len(views)):
+            prop = g.propagator.fw(views[j].data * probeView.data)
+            criterion_ += np.sum(np.sqrt(diff[j]) - np.abs(prop))**2
+            prop_ = np.sqrt(diff[j]) * np.exp(1j * np.angle(prop))
+            gradient = 2 * probeView.data * g.propagator.bw(prop - prop_)
+            views[j].data -= beta * gradient * scaling[views[j]]
+        errors.append(np.abs(S.data - S_true.data).sum())
+        criterion.append(criterion_)
+
+        if not (i % 5):
+            ax[0].clear()
+            ax[0].plot(errors/errors[0])
+            #ax[0].plot(criterion/criterion[0])
+            ax[1].clear()
+            S_cart = g.coordinate_shift(S, input_space='real', input_system='natural', keep_dims=False)
+            z, y, x = S_cart.grids()
+            ax[1].imshow(np.mean(np.abs(S_cart.data[0]), axis=0), extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
+            plt.setp(ax[1], ylabel='y', xlabel='x', title='top view')
+            ax[2].clear()
+            ax[2].imshow(np.mean(np.abs(S_cart.data[0]), axis=1), extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
+            plt.setp(ax[2], ylabel='z', xlabel='x', title='side view')
+            plt.draw()
+            plt.pause(.01)
+
+
+# Here's a PIE/cPIE implementation
+if algorithm == 'PIE':
+    beta = 1.0
+    eps = 1e-3
+    fig, ax = plt.subplots(ncols=3)
+    errors = []
+    ferrors = []
+    for i in range(100):
+        print i
+        ferrors_ = []
+        for j in range(len(views)):
+            exit_ = views[j].data * probeView.data
+            prop = g.propagator.fw(exit_)
+            ferrors_.append(np.abs(prop)**2 - diff[j])
+            prop[:] = np.sqrt(diff[j]) * np.exp(1j * np.angle(prop))
+            exit = g.propagator.bw(prop)
+            # ePIE scaling (Maiden2009)
+            #views[j].data += beta * np.conj(probeView.data) / (np.abs(probeView.data).max())**2 * (exit - exit_)
+            # PIE and cPIE scaling (Rodenburg2004 and Godard2011b)
+            views[j].data += beta * np.abs(probeView.data) / np.abs(probeView.data).max() * np.conj(probeView.data) / (np.abs(probeView.data)**2 + eps) * (exit - exit_)
+        errors.append(np.abs(S.data - S_true.data).sum())
+        ferrors.append(np.mean(ferrors_))
+
+        if not (i % 5):
+            ax[0].clear()
+            ax[0].plot(errors/errors[0])
+            ax[0].plot(ferrors/ferrors[0])
+            ax[1].clear()
+            S_cart = g.coordinate_shift(S, input_space='real', input_system='natural', keep_dims=False)
+            z, y, x = S_cart.grids()
+            ax[1].imshow(np.mean(np.abs(S_cart.data[0]), axis=0), extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
+            plt.setp(ax[1], ylabel='y', xlabel='x', title='top view')
+            ax[2].clear()
+            ax[2].imshow(np.mean(np.abs(S_cart.data[0]), axis=1), extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
+            plt.setp(ax[2], ylabel='z', xlabel='x', title='side view')
+            plt.draw()
+            plt.pause(.01)
+
+if algorithm == 'DM':
+    alpha = 1.0
+    fig, ax = plt.subplots(ncols=3)
+    errors = []
+    ferrors = []
+    # create initial exit waves
+    exitwaves = []
     for j in range(len(views)):
-        exit_ = views[j].data * probeView.data
-        prop = g.propagator.fw(exit_)
-        ferrors_.append(np.abs(prop)**2 - diff[j])
-        prop[:] = np.sqrt(diff[j]) * np.exp(1j * np.angle(prop))
-        exit = g.propagator.bw(prop)
-        views[j].data += 1.0 * np.conj(probeView.data) / (np.abs(probeView.data).max())**2 * (exit - exit_)
-    errors.append(np.abs(S.data - S_true.data).sum())
-    ferrors.append(np.mean(ferrors_))
+        exitwaves.append(views[j].data * probeView.data)
+    # we also need a constant normalization storage, which contains the
+    # denominator of the DM object update equation.
+    Snorm = S.copy(owner=C)
+    Snorm.fill(0.0)
+    for j in range(len(views)):
+        Snorm[views[j]] += np.abs(probeView.data)**2
 
-    if not (i % 5):
-        ax[0].clear()
-        ax[0].plot(errors/errors[0])
-        ax[0].plot(ferrors/ferrors[0])
-        ax[1].clear()
-        S_cart = g.coordinate_shift(S, input_space='real', input_system='natural', keep_dims=False)
-        z, y, x = S_cart.grids()
-        ax[1].imshow(np.mean(np.abs(S_cart.data[0]), axis=0), extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
-        plt.setp(ax[1], ylabel='y', xlabel='x', title='top view')
-        ax[2].clear()
-        ax[2].imshow(np.mean(np.abs(S_cart.data[0]), axis=1), extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
-        plt.setp(ax[2], ylabel='z', xlabel='x', title='side view')
-        plt.draw()
-        plt.pause(.01)
+    # iterate
+    for i in range(100):
+        print i
+        ferrors_ = []
+        # fourier update, updates all the exit waves
+        for j in range(len(views)):
+            # in DM, you propagate the following linear combination
+            im = g.propagator.fw((1 + alpha) * probeView.data * views[j].data - alpha * exitwaves[j])
+            im = np.sqrt(diff[j]) * np.exp(1j * np.angle(im))
+            exitwaves[j][:] += g.propagator.bw(im) - views[j].data * probeView.data
+        # object update, now skipping the iteration because the probe is constant
+        S.fill(0.0)
+        for j in range(len(views)):
+            views[j].data += np.conj(probeView.data) * exitwaves[j]
+        S.data[:] /= Snorm.data + 1e-10
+        errors.append(np.abs(S.data - S_true.data).sum())
+        ferrors.append(np.mean(ferrors_))
+
+        if not (i % 5):
+            ax[0].clear()
+            ax[0].plot(errors/errors[0])
+            ax[0].plot(ferrors/ferrors[0])
+            ax[1].clear()
+            S_cart = g.coordinate_shift(S, input_space='real', input_system='natural', keep_dims=False)
+            z, y, x = S_cart.grids()
+            ax[1].imshow(np.mean(np.abs(S_cart.data[0]), axis=0), extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
+            plt.setp(ax[1], ylabel='y', xlabel='x', title='top view')
+            ax[2].clear()
+            ax[2].imshow(np.mean(np.abs(S_cart.data[0]), axis=1), extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
+            plt.setp(ax[2], ylabel='z', xlabel='x', title='side view')
+            plt.draw()
+            plt.pause(.01)
