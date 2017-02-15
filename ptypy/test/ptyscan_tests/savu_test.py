@@ -14,7 +14,7 @@ import h5py as h5
 import numpy as np
 
 class SavuTest(unittest.TestCase):
-    def test_save(self):
+    def test_savu(self):
         r = u.Param()
         r.base_path = tu.get_test_data_path('dls')
         r.mask = h5.File(r.base_path+'processing/mask2.hdf')['mask'][...]
