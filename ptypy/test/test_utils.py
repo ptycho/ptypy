@@ -20,13 +20,20 @@ def get_test_data_path(name):
                     ['test_data/', name,'/'])
 
 
-def TestRunner(ptyscan_instance,r):
+def TestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='append', auto_frames=20, ncalls=1):
+        u.verbose.set_level(3)
+        out_dict = {}
         outdir = tempfile.mkdtemp()
-        data = u.Param()
         data.recipe = r
         data.dfile = '%s/prep.ptyd' % outdir
-        data.save = 'append'
+        out_dict['output_file'] = data.dfile
+        data.save = save_type
         a = ptyscan_instance(data)
         a.initialize()
-        msg = a.auto(20)
+        out_dict['msgs'] = []
+        i=0
+        while i<ncalls:
+            out_dict['msgs'].append(a.auto(auto_frames))
+            i+=1
+        return out_dict
 
