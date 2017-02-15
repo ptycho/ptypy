@@ -26,19 +26,19 @@ class PtyscanTest(unittest.TestCase):
         '''
         just check it runs
         '''
-        tu.TestRunner(MoonFlowerScan,data=DATA)
+        tu.PtyscanTestRunner(MoonFlowerScan,data=DATA)
 
     def test_moonflower_with_three_calls(self):
         '''
         check it runs with multiple calls to auto
         '''
-        tu.TestRunner(MoonFlowerScan, data=DATA, auto_frames=30, ncalls=3)
+        tu.PtyscanTestRunner(MoonFlowerScan, data=DATA, auto_frames=30, ncalls=3)
     
     def test_moonflower_with_three_calls_REGRESSION(self):
         '''
         Same as above, but makes sure the output is sensible
         '''
-        out = tu.TestRunner(MoonFlowerScan, data=DATA, auto_frames=30, ncalls=3)
+        out = tu.PtyscanTestRunner(MoonFlowerScan, data=DATA, auto_frames=30, ncalls=3)
         
         self.assertEqual(30,len(out['msgs'][0]['iterable']), 
             "Scan did not prepare 30 frames as expected")
@@ -54,21 +54,29 @@ class PtyscanTest(unittest.TestCase):
         '''
         technically all of these tests do this, but this is explicit
         '''
-        tu.TestRunner(MoonFlowerScan,data=DATA, save_type='append')
+        tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='append')
         
     def test_appended_ptyd_REGRESSION(self):
         '''
         check that we can actually read the result!
         '''
-        out = tu.TestRunner(MoonFlowerScan,data=DATA, save_type='append')
+        out = tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='append')
         d = io.h5read(out['output_file'])
         
     def test_linked_ptyd(self):
-        tu.TestRunner(MoonFlowerScan,data=DATA, save_type='link')
+        '''
+        test the linking mechanism works
+        '''
+        tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='link')
     
     def test_linked_ptyd_REGRESSION(self):
-        out = tu.TestRunner(MoonFlowerScan,data=DATA, save_type='link')
+        '''
+        again, can we read it?
+        '''
+        out = tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='link')
         d = io.h5read(out['output_file'])
+    
+    
 
 if __name__ == '__main__':
     unittest.main()

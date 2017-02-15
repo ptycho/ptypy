@@ -23,7 +23,7 @@ class DlsTest(unittest.TestCase):
         r.base_path = tu.get_test_data_path('dls')
         r.mask_file = '%s/processing/mask2.hdf' % r.base_path
         r.is_swmr = False
-        tu.TestRunner(DlsScan,r)
+        tu.PtyscanTestRunner(DlsScan,r)
 
 if __name__ == "__main__":
     unittest.main()

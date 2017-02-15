@@ -21,7 +21,7 @@ class SavuTest(unittest.TestCase):
         r.data = h5.File(r.base_path+'raw/68862.nxs')['entry1/merlin_sw_hdf/data'][...]
         r.positions = np.array([h5.File(r.base_path+'raw/68862.nxs')['entry1/merlin_sw_hdf/lab_sy'][...],
                                 h5.File(r.base_path+'raw/68862.nxs')['entry1/merlin_sw_hdf/lab_sx'][...]]).T
-        tu.TestRunner(Savu,r)
+        tu.PtyscanTestRunner(Savu,r)
 
 if __name__ == "__main__":
     unittest.main()

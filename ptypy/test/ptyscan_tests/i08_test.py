@@ -22,7 +22,7 @@ class I08Test(unittest.TestCase):
         r.dark_number_stxm = '011'
         r.detector_flat_file = "%s/processing/flat2_xflipped.h5" % r.base_path
         r.date = '2016-03-04' 
-        tu.TestRunner(I08Scan,r)
+        tu.PtyscanTestRunner(I08Scan,r)
 
 if __name__ == "__main__":
     unittest.main()

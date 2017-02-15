@@ -20,7 +20,7 @@ def get_test_data_path(name):
                     ['test_data/', name,'/'])
 
 
-def TestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='append', auto_frames=20, ncalls=1):
+def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='append', auto_frames=20, ncalls=1):
         u.verbose.set_level(3)
         out_dict = {}
         outdir = tempfile.mkdtemp()
