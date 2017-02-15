@@ -8,7 +8,7 @@ import unittest
 
 
 class PtypyI13AuStarNearfield9p7keVTest(unittest.TestCase):
-#     @unittest.skip('skipping this for now. adp 23/09')
+    @unittest.skip('skipping this for now. adp 23/09')
     def test_i13(self):
         
         p = u.Param()
