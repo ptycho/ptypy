@@ -110,7 +110,10 @@ class DlsScan(PtyScan):
         Load the positions and return as an (N,2) array
         """
         # Load positions from file if possible.
-        instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[NEXUS_PATHS.instrument % self.info.recipe]
+        if self.info.recipe.is_swmr:
+            instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[NEXUS_PATHS.instrument % self.info.recipe]
+        else:
+            instrument = h5.File(self.data_file, 'r')[NEXUS_PATHS.instrument % self.info.recipe]
         if self.info.recipe.israster:
             self.position_shape = instrument[0].shape
         motor_positions = []
