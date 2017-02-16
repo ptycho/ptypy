@@ -19,7 +19,9 @@ from . import BaseEngine
 #from .. import core
 
 __all__=['ML']
-
+import warnings
+warnings.simplefilter('always', DeprecationWarning)
+warnings.warn('This module is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
 DEFAULT = u.Param(
     ML_type = 'gaussian',
     floating_intensities = False,

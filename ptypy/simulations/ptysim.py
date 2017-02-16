@@ -37,13 +37,15 @@ DEFAULT = u.Param(
 )
 
 __all__ = ['SimScan','simulate_basic_with_pods']
-
+import warnings
+warnings.simplefilter('always', DeprecationWarning)
 def simulate_basic_with_pods(ptypy_pars_tree=None,sim_pars=None,save=False):# pragma: no cover
     """
     Basic Simulation
     
     DEPRECATED - cannot produce the right .ptyd format
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     p = DEFAULT.copy()
     ppt = ptypy_pars_tree
     if ppt is not None:

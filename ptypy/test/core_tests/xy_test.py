@@ -25,17 +25,6 @@ class XyTest(unittest.TestCase):
     def test_round_scan(self):
         a = round_scan()
 
-    def test_raster_scan_legacy(self):
-        a = raster_scan_legacy()
-
-    def test_round_scan_legacy(self):
-        a = round_scan_legacy()
-
-    def test_round_roi_scan_legacy(self):
-        a = round_scan_roi_legacy()
-
-    def test_spiral_scan_legacy(self):
-        a = spiral_scan_legacy()
 
 if __name__ == '__main__':
     unittest.main()

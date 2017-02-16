@@ -29,6 +29,11 @@ DEFAULT=u.Param(
     #### other 
     positions = None,        # fill this list with your own script if you want other scan patterns, choose 'custom' as san type
 )
+
+import warnings
+warnings.simplefilter('always', DeprecationWarning)
+warnings.warn('This module is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
+
 DEFAULT = u.validator.make_sub_default('.scan.xy',depth=3)
 """Default pattern parameters. See :py:data:`.scan.xy` and a short listing below"""
 

@@ -10,6 +10,7 @@ This file is part of the PTYPY package.
     :synopsis: utilities for the test framework
 """
 import inspect
+import shutil
 import os
 import tempfile
 from .. import utils as u
@@ -22,7 +23,7 @@ def get_test_data_path(name):
                     ['test_data/', name,'/'])
 
 
-def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='append', auto_frames=20, ncalls=1):
+def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='append', auto_frames=20, ncalls=1, cleanup=True):
         u.verbose.set_level(3)
         out_dict = {}
         outdir = tempfile.mkdtemp()
@@ -37,6 +38,8 @@ def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='app
         while i<ncalls:
             out_dict['msgs'].append(a.auto(auto_frames))
             i+=1
+        if cleanup:
+            shutil.rmtree(outdir)
         return out_dict
 
 def EngineTestRunner(engine_params,propagator='farfield'):
@@ -44,7 +47,6 @@ def EngineTestRunner(engine_params,propagator='farfield'):
     RECIPE = u.Param({'photons': 100000000.0,
                       'psf': 0.0,
                       'density': 0.2})
-#     outdir = tempfile.mkdtemp()
     p = u.Param()
     p.verbose_level = 3                              
     p.io = u.Param()
@@ -70,7 +72,7 @@ def EngineTestRunner(engine_params,propagator='farfield'):
     p.scans.MF.data.experimentID =  None 
     p.scans.MF.data.label =  None 
     p.scans.MF.data.version = 0.1 
-    p.scans.MF.data.dfile =  None 
+    p.scans.MF.data.dfile = None 
     p.scans.MF.data.lam =  None 
     p.scans.MF.data.psize =  0.000172 
     p.scans.MF.data.load_parallel =  None
@@ -86,3 +88,4 @@ def EngineTestRunner(engine_params,propagator='farfield'):
     p.engines.engine00 = engine_params
     P = Ptycho(p,level=5)
     return P
+

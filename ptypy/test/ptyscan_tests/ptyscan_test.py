@@ -60,20 +60,20 @@ class PtyscanTest(unittest.TestCase):
         '''
         check that we can actually read the result!
         '''
-        out = tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='append')
+        out = tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='append', cleanup=False)
         d = io.h5read(out['output_file'])
         
     def test_linked_ptyd(self):
         '''
         test the linking mechanism works
         '''
-        tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='link')
+        tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='link', cleanup=False)
     
     def test_linked_ptyd_REGRESSION(self):
         '''
         again, can we read it?
         '''
-        out = tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='link')
+        out = tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='link', cleanup=False)
         d = io.h5read(out['output_file'])
     
     
