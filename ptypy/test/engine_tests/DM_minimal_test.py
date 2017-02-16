@@ -15,7 +15,7 @@ class DMMinimalTest(unittest.TestCase):
     def test_dm_minimal(self):
         engine_params = u.Param()
         engine_params.name = 'DM_minimal'
-        engine_params.numiter = 100
+        engine_params.numiter = 10
         engine_params.numiter_contiguous = 1
         engine_params.fourier_relax_factor = 0.01
         engine_params.alpha = 1.0    

@@ -38,7 +38,7 @@ DEFAULT = u.Param(
 
 __all__ = ['SimScan','simulate_basic_with_pods']
 
-def simulate_basic_with_pods(ptypy_pars_tree=None,sim_pars=None,save=False):
+def simulate_basic_with_pods(ptypy_pars_tree=None,sim_pars=None,save=False):# pragma: no cover
     """
     Basic Simulation
     

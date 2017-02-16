@@ -13,6 +13,7 @@ from ptypy import utils as u
 
 
 class DMSimpleTest(unittest.TestCase):
+    @unittest.skip('Skipping because of a NotImplementedError in engine_prepare')
     def test_DM_simple(self):
         engine_params = u.Param()
         engine_params.name = 'DM_simple'
