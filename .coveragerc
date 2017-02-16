@@ -1,0 +1,13 @@
+[run]
+omit = 
+    ptypy/core/data_old.py
+    ptypy/core/xy_old.py 
+    ptypy/engines/ML_old.py
+    ptypy/experiment/I13DLS_legacy.py
+    ptypy/core/pattern.py
+[report]
+exclude_lines =
+        pragma: no cover
+sort = Cover
+
+
