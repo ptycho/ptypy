@@ -14,6 +14,7 @@ import h5py as h5
 import numpy as np
 
 class SavuTest(unittest.TestCase):
+    @unittest.skip("this won't work unless we figure out how to treat the data")
     def test_savu(self):
         r = u.Param()
         r.base_path = tu.get_test_data_path('dls')

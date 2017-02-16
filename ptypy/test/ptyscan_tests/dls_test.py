@@ -13,6 +13,7 @@ from ptypy import utils as u
 
 
 class DlsTest(unittest.TestCase):
+    @unittest.skip("this won't work unless we figure out how to treat the data")
     def test_dls(self):
         r = u.Param()
         r.experimentID = None 

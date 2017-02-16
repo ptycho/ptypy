@@ -13,6 +13,7 @@ from ptypy import utils as u
 
 
 class I08Test(unittest.TestCase):
+    @unittest.skip("this won't work unless we figure out how to treat the data")
     def test_I08(self):
         r = u.Param()
         r.base_path = tu.get_test_data_path('i08')
