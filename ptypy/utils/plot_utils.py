@@ -24,6 +24,8 @@ __all__ = ['pause', 'rmphaseramp', 'plot_storage', 'imsave', 'imload',
 NODISPLAY = (os.getenv("DISPLAY") is None)
 if NODISPLAY:
     matplotlib.use('agg')
+    
+                
 import matplotlib.pyplot as plt
 
 # Improved interactive behavior for old versions of matplotlib
@@ -32,8 +34,14 @@ try:
 except ImportError:
     import threading
     if matplotlib.get_backend().lower().startswith('qt4'):
+        matplotlib.use('QT4Agg')
         mpl_backend = 'qt'
         from PyQt4 import QtGui
+        gui_yield_call = QtGui.qApp.processEvents
+    elif matplotlib.get_backend().lower().startswith('qt5'):
+        matplotlib.use('QT5Agg')
+        mpl_backend = 'qt'
+        from PyQt5 import QtGui
         gui_yield_call = QtGui.qApp.processEvents
     elif matplotlib.get_backend().lower().startswith('wx'):
         mpl_backend = 'wx'
