@@ -547,7 +547,9 @@ def radial_distribution(A, radii=None):
     if radii is None:
         radii = range(1, np.min(A.shape) / 2)
        
-    coords = np.indices(A.shape) - np.reshape(mass_center(A),
+    coords = np.indices(A.shape) - np.reshape(
+
+        (A),
                                               (A.ndim,) + A.ndim * (1,))
 
     masses = [np.sum(A * (np.sqrt(np.sum(coords**2, 0)) < r)) for r in radii]
