@@ -402,7 +402,7 @@ class Geo_Bragg(_Geo):
                     # roll the q3 axis in the positive direction for more
                     # negative q1
                     shift = int(round((shape[0] - i) * self.sintheta))
-                d[i, :, :] = np.roll(d[i, :, :], shift, axis=2)
+                d[i, :, :] = np.roll(d[i, :, :], shift, axis=-1)
             # optionally crop the new array
             if keep_dims:
                 d = d[:, :, pad / 2:shape[0] + pad / 2]
