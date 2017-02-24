@@ -143,6 +143,11 @@ class Geo_Bragg(_Geo):
             raise ValueError(
                 'Both pixel size and sample resolution specified.')
 
+        # These are useful to have on hand
+        self.dq1 = dq1
+        self.dq2 = dq2
+        self.dq3 = dq3
+
         # Establish transforms between coordinate systems
         # ...from {z y x} to {r1 r2 r3}
         self.A_r1r2r3 = [[1, 0, -self.sintheta / self.costheta],
