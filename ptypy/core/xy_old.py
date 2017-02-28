@@ -12,7 +12,9 @@ from .. import utils as u
 from ..utils.verbose import logger
 import numpy as np
 import os
-
+import warnings
+warnings.simplefilter('always', DeprecationWarning)
+warnings.warn('This module is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
 
 DEFAULT=u.Param(
     #### Paramaters for popular scan methods 
@@ -32,6 +34,7 @@ DEFAULT=u.Param(
 """Default pattern parameters. See :py:data:`.scan.xy` and a short listing below"""
 
 def from_pars(pars=None):
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
 
     p=u.Param(DEFAULT)
     if pars is not None: # and (isinstance(pars,dict) or isinstance(pars,u.Param)):
@@ -58,6 +61,8 @@ def from_pars(pars=None):
     return pos
     
 def scanpositions(scandict):
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
+
     sd=scandict
     if sd['scan_type']=='round':
         positions=round_scan_positions(0,sd['dr']*sd['nr'],sd['nr'],sd['nth'])
@@ -74,6 +79,7 @@ def scanpositions(scandict):
     return np.asarray(positions)
 
 def augment_to_coordlist(a,Npos):
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
  
     # force into a 2 column matrix
     # drop element if size is not a modulo of 2
@@ -94,6 +100,7 @@ def augment_to_coordlist(a,Npos):
     return b[:Npos,:2]
     
 def raster_scan_positions(nx,ny,sx,sy):
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     iix, iiy = np.indices((nx+1,ny+1))
     positions = [(sx*i, sy*j) for i,j in zip(iix.ravel(), iiy.ravel())]
     return positions
@@ -102,6 +109,8 @@ def round_scan_positions(r_in, r_out, nr, nth):
     """\
     Round scan positions, defined as in spec and matlab.
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
+
     dr = (r_out - r_in)/ nr
     positions = []
     for ir in range(1,nr+2):
@@ -114,6 +123,8 @@ def round_scan_ROI_positions(dr, lx, ly, nth):
     """\
     Round scan positions with ROI, defined as in spec and matlab.
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
+
     rmax = np.sqrt( (lx/2)**2 + (ly/2)**2 )
     nr = np.floor(rmax/dr) + 1
     positions = []
@@ -131,6 +142,7 @@ def spiral_scan_positions(dr,r_out=None,maxpts=None):
     """\
     Spiral scan positions.
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     alpha = np.sqrt(4*np.pi)
     beta = dr/(2*np.pi)
     
@@ -153,6 +165,8 @@ def spiral_scan_ROI_positions(dr,lx,ly):
     """\
     Spiral scan positions. ROI
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
+
     alpha = np.sqrt(4*np.pi)
     beta = dr/(2*np.pi)
     

@@ -37,7 +37,8 @@ class Dummy(BaseEngine):
         Dummy reconstruction engine.
         """
         super(Dummy,self).__init__(ptycho_parent,pars)
-        
+        self.ntimescalled  = 0
+
     def engine_initialize(self):
         """
         Prepare for reconstruction.
@@ -51,7 +52,7 @@ class Dummy(BaseEngine):
         """
         pass
             
-    def engine_iterate(self):
+    def engine_iterate(self,numiter):
         """
         Compute one iteration.
         Should return a per-view-error-array of size ($number_of_views,3)
@@ -61,10 +62,12 @@ class Dummy(BaseEngine):
         ############################
         time.sleep(self.itertime)
         # virtual error reduces 10%
-        self.error *= 0.9
-        self.curiter +=1
-        return self.error
-        
+        error_dct = error = {}
+        for dname, diff_view in self.di.views.iteritems():
+            error_dct[dname] = [0., 0.9**self.ntimescalled, 0.]
+        self.ntimescalled+=1
+        return error_dct
+     
     def engine_finalize(self):
         """
         Clean up after iterations are done

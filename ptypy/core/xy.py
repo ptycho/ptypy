@@ -10,7 +10,8 @@ This file is part of the PTYPY package.
 from .. import utils as u
 from ..utils.verbose import logger
 import numpy as np
-
+import warnings
+warnings.simplefilter('always', DeprecationWarning)
 __all__ = ['DEFAULT', 'from_pars', 'round_scan', 'raster_scan', 'spiral_scan']
          
 TEMPLATES = u.Param()
@@ -267,23 +268,26 @@ def spiral_scan(dr=1.5e-6, r=7.5e-6, maxpts=None):
     return np.asarray(positions)
 
 
-def raster_scan_legacy(nx, ny, dx, dy):
+def raster_scan_legacy(nx, ny, dx, dy):# pragma: no cover
     """
     Generates a raster scan.
     
     Legacy function. May get deprecated in future.
     """
+
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     iix, iiy = np.indices((nx+1, ny+1))
     positions = [(dx*i, dy*j) for i, j in zip(iix.ravel(), iiy.ravel())]
     return positions
 
 
-def round_scan_legacy(r_in, r_out, nr, nth):
+def round_scan_legacy(r_in, r_out, nr, nth):# pragma: no cover
     """
     Generates a round scan,
     
     Legacy function. May get deprecated in future.
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     dr = (r_out - r_in) / nr
     positions = []
     for ir in range(1, nr+2):
@@ -294,12 +298,13 @@ def round_scan_legacy(r_in, r_out, nr, nth):
     return positions
 
 
-def round_scan_roi_legacy(dr, lx, ly, nth):
+def round_scan_roi_legacy(dr, lx, ly, nth):# pragma: no cover
     """
     Round scan positions with ROI, defined as in spec and matlab.
     
     Legacy function. May get deprecated in future.
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     rmax = np.sqrt((lx/2)**2 + (ly/2)**2)
     nr = np.floor(rmax/dr) + 1
     positions = []
@@ -314,12 +319,14 @@ def round_scan_roi_legacy(dr, lx, ly, nth):
     return positions
 
 
-def spiral_scan_legacy(dr, r_out=None, maxpts=None):
+def spiral_scan_legacy(dr, r_out=None, maxpts=None):# pragma: no cover
     """
     Spiral scan positions.
 
     Legacy function. May get deprecated in future.
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
+
     alpha = np.sqrt(4 * np.pi)
     beta = dr / (2*np.pi)
     
@@ -340,15 +347,15 @@ def spiral_scan_legacy(dr, r_out=None, maxpts=None):
     return positions
 
 
-def spiral_scan_roi_legacy(dr, lx, ly):
+def spiral_scan_roi_legacy(dr, lx, ly):# pragma: no cover
     """\
     Spiral scan positions. ROI
     
     Legacy function. May get deprecated in future.
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     alpha = np.sqrt(4 * np.pi)
     beta = dr / (2*np.pi)
-    
     rmax = .5 * np.sqrt(lx**2 + ly**2)
     positions = []
     for k in xrange(1000000000):

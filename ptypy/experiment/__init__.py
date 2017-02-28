@@ -14,8 +14,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+#from data_structure import *
+
 # Import instrument-specific modules
-# import cSAXS
+#import cSAXS
 from I13_ffp import I13ScanFFP
 from I13_nfp import I13ScanNFP
 from DLS import DlsScan
@@ -30,16 +32,16 @@ from UCL import UCLLaserScan
 from ALS_5321 import ALS5321Scan
 
 PtyScanTypes = dict(
-    i13dls_ffp=I13ScanFFP,
-    i13dls_nfp=I13ScanNFP,
-    dls=DlsScan,
-    i08dls=I08Scan,
-    savu=Savu,
-    plugin=makeScanPlugin,
-    id16a_nfp=ID16AScan,
-    amo_lcls=AMOScan,
-    diproi_fermi=DiProIFERMIScan,
-    fli_spec_multexp=FliSpecScanMultexp,
-    laser_ucl=UCLLaserScan,
-    als5321=ALS5321Scan,
+    i13dls_ffp = I13ScanFFP,
+    i13dls_nfp = I13ScanNFP,
+    dls = DlsScan,
+    i08dls = I08Scan,
+    savu = Savu,
+    plugin = makeScanPlugin,
+    id16a_nfp = ID16AScan,
+    amo_lcls = AMOScan,
+    diproi_fermi = DiProIFERMIScan,
+    fli_spec_multexp = FliSpecScanMultexp,
+    laser_ucl = UCLLaserScan,
+    als5321 = ALS5321Scan,
 )

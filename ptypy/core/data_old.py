@@ -82,6 +82,10 @@ CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
 
 __all__ = ['GENERIC','PtyScan','PTYD','PtydScan','MoonFlowerScan']
 
+import warnings
+warnings.simplefilter('always', DeprecationWarning)
+warnings.warn('This module is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
+
 class PtyScan(object):
     """\
     PtyScan: A single ptychography scan, created on the fly or read from file.
