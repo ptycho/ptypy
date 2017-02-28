@@ -18,11 +18,14 @@ from verbose import *
 #import ipython_kernel
 
 from .. import __has_matplotlib__ as hmpl
-if hmpl:
+# from .. import __has_PyQt4__ as hpqt4
+
+
+if hmpl:# and hpqt4:
     from plot_utils import *
     from plot_client import PlotClient, MPLClient, spawn_MPLClient, MPLplotter
 del hmpl
-
+# del hpqt4
 import validator
     
 import parallel
