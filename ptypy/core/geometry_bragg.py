@@ -479,7 +479,11 @@ class Geo_Bragg(_Geo):
         yi[:] = yi / S_2d.psize[0] + S_2d.center[0]
 
         # interpolate
-        S_3d.data[0][:] = map_coordinates(S_2d.data[layer], (zi, yi))
+        if np.iscomplexobj(S_2d.data):
+            S_3d.data[0][:] = map_coordinates(np.abs(S_2d.data[layer]), (zi, yi))
+            S_3d.data[0][:] *= np.exp(1j * map_coordinates(np.angle(S_2d.data[layer]), (zi, yi)))
+        else:
+            S_3d.data[0][:] = map_coordinates(S_2d.data[layer], (zi, yi))
 
         #import ipdb; ipdb.set_trace()
 
