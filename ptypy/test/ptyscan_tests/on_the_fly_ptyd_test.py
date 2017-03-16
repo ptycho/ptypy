@@ -15,7 +15,7 @@ u.verbose.set_level(3)
 import unittest
 
 TEMPDIR = tempfile.gettempdir()+'/.'+sys.argv[0].replace('.py','')
-
+### I should refactor this at some point -adp
 class MakeSamplePtydTest(unittest.TestCase):
     DATA = u.Param(
         dfile = TEMPDIR+'/sample.ptyd',

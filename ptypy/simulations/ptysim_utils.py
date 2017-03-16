@@ -11,7 +11,7 @@ import numpy as np
 import os
 import time
 from scipy import ndimage
-from matplotlib import pyplot as plt
+
 
 from ptypy import utils as u
 #from ptypy.core import data
