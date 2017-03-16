@@ -1,4 +1,6 @@
-cache: apt
+cache:
+  directories:
+  - .
 sudo: true
 language: python
 python:
