@@ -3,7 +3,7 @@ sudo: true
 language: python
 python:
   - "2.7"
-before_script
+before_script:
   - echo "running before script"
   - composer config github-oauth.github.com ${GITHUB_TOKEN}
 
