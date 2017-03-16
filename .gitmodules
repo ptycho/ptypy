@@ -1,3 +1,0 @@
-[submodule "ptypy-data"]
-	path = ptypy-data
-	url = git@github.com:ptycho/ptypy-data.git
