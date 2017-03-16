@@ -3,6 +3,8 @@ sudo: true
 language: python
 python:
   - "2.7"
+before_script:
+  - composer config github-oauth.github.com ${GITHUB_TOKEN}
 
 before_install:
   - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh; # grab miniconda
