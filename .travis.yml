@@ -6,7 +6,6 @@ python:
 git:
   submodules: false
 before_script:
-  - echo "running before script"
   - composer self-update -q
   - composer config github-oauth.github.com ${GITHUB_TOKEN}
 
