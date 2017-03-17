@@ -1,5 +1,4 @@
-cache: apt
-sudo: true
+sudo: False
 language: python
 python:
   - "2.7"
