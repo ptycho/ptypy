@@ -19,6 +19,7 @@ _csvfile = pkg_resources.resource_filename('ptypy', 'resources/parameter_descrip
 _desc_list = list(csv.DictReader(file(_csvfile, 'r')))
 del csv
 del pkg_resources
+import ast
 
 if __name__=='__main__':
     from ptypy.utils.parameters import Param
@@ -78,6 +79,60 @@ _typemap = {'int': 'int',
 _evaltypes = ['int','float','tuple','list','complex']
 _copytypes = ['str','file']
 
+class Parameter(object):
+    """
+    """
+    def __init__(self,parent='',separator='.'):
+        self.children = None
+        self.num_ID = 0
+        self.name = ''
+        self.options ={}
+        
+    def get_root(self):
+        """
+        Return root of parameter tree.
+        """
+        if self.parent is None:
+            return self
+        else:
+            return self.parent.get_root()
+            
+            
+    def load_csv(self, fbuffer):
+        _desc_list = list(csv.DictReader(fbuffer))
+        
+    def save_csv(self, fbuffer):
+        
+        raise NotImplementedError
+        
+    def load_json(self,fbuffer):
+        
+        raise NotImplementedError
+    
+    def save_json(self,fbuffer):
+        
+        raise NotImplementedError
+        
+    def load_conf_parser(self,fbuffer, separator='.'):
+        """
+        Load Parameter defaults using Pythons ConfigParser
+        
+        Each parameter each parameter occupies its own section. 
+        Separator characters in sections names map to a tree-hierarchy
+        """
+        parser = ConfigParser.SafeConfigParser()
+        parser.read(fbuffer)
+        for sec in parser.sections:
+            
+            pdesc = Parameter(parent = self)
+            self.children[name] = Parameter(parent = self)
+        # grow the options dictionary
+        self.options.update(section.options)
+        pass
+        
+    def save_conf_parser(self,fbuffer):
+    
+        raise NotImplementedError
 
 
 class PDesc(object):
