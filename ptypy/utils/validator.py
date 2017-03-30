@@ -14,6 +14,7 @@ This file is part of the PTYPY package.
 """
 import pkg_resources
 import csv
+import weakref
 # Load all documentation on import
 _csvfile = pkg_resources.resource_filename('ptypy', 'resources/parameter_descriptions.csv')
 _desc_list = list(csv.DictReader(file(_csvfile, 'r')))
@@ -82,13 +83,100 @@ _copytypes = ['str','file']
 class Parameter(object):
     """
     """
-    def __init__(self,parent='',separator='.'):
-        self.children = None
-        self.num_ID = 0
-        self.name = ''
-        self.options ={}
+    def __init__(self, parent=None, 
+                       name = 'any',
+                       separator='.', 
+                       info=None):
+                
+        self.name = name
+        self.parent = parent
+        self.separator = separator
         
-    def get_root(self):
+        self.required = [] 
+        self.optional = []
+        self.info = {}
+        self._parse_info(info)
+        
+        if self._is_child:
+            import weakref
+            self.descendants = weakref.WeakValueDictionary()
+        else:
+            self.descendants = {}
+            
+        self.children = {}
+        self.num_id = 0
+        self.options = dict.fromkeys(self.required,'')
+        self._all_options = {}
+        
+    @property
+    def descendants_options(self):
+        return self._all_options.keys()
+        
+    @property
+    def _is_child(self):
+        """
+        Type check
+        """
+        return type(self.parent) is self.__class__
+        
+    def _parse_info(self,info=None):
+        if info is not None:
+            self.info.update(info)
+            
+            r = []
+            o = []
+        
+            for option,text in self.info.items():
+                if ('required' in text or 'mandatory' in text):
+                    r+=[option]
+                else:
+                    o+=[option]
+            self.required = r
+            self.optional = o
+
+            
+    def _new_child(self, name=None):
+        n = name if name is not None and str(name)==name else 'ch%02d' % len(self.descendants)
+        return self.__class__(parent = self, 
+                                 separator = self.separator,
+                                 info = self.info,
+                                 name =n
+                                 )
+        
+    def _name_descendants(self, separator =None):
+        """
+        This function transforms the flat list of descendants
+        into tree hierarchy. Creates roots if paramater has a 
+        dangling root.
+        """
+        sep = separator if separator is not None else self.separator
+               
+        for name, desc in self.descendants.items():
+            if sep not in name:
+                desc.name = name
+                self.children[name] = desc
+            else:
+                names = name.split(sep)
+                
+                nm = names[0]
+                
+                p = self.descendants.get(nm)
+                
+                if p is None:
+                    # Found dangling parameter. Create a root
+                    p = self._new_child(name = nm)
+                    self._new_desc(nm, p)
+                    self.children[nm] = p
+                    
+                # transfer ownership
+                p.descendants[sep.join(names[1:])] = desc
+                desc.parent = p
+        
+        # recursion
+        for desc in self.children.values():
+            desc._name_descendants()
+            
+    def _get_root(self):
         """
         Return root of parameter tree.
         """
@@ -97,13 +185,101 @@ class Parameter(object):
         else:
             return self.parent.get_root()
             
+    def _store_options(self,dct):
+        """
+        Read and store options and check that the the minimum selections
+        of options is present.
+        """
+        
+        if self.required is not None and type(self.required) is list:
+            missing = [r for r in self.required if r not in dct.keys()]
+            if missing:
+                raise ValueError('Missing required option(s) <%s> for parameter %s.' % (', '.join(missing),self.name))
+
+        self.options = dict.fromkeys(self.required)
+        self.options.update(dct)
+        
+    @property    
+    def root(self):
+        self._get_root()
             
-    def load_csv(self, fbuffer):
-        _desc_list = list(csv.DictReader(fbuffer))
+
+    def _new_desc(self, name, desc, update_in_parent = True):
+        """
+        Update the new entry to the root.
+        """
+        self.descendants[name] = desc
         
-    def save_csv(self, fbuffer):
+        # add all options to parent class
+        self._all_options.update(desc.options)
         
-        raise NotImplementedError
+        if update_in_parent:
+            if self._is_child:
+                # You are not the root
+                self.parent._new_desc(self.name+self.separator+name,desc)
+            else:
+                # You are the root. Do root things here.
+                pass
+                
+    def load_csv(self, fbuffer, **kwargs):
+        """
+        Load from csv as a fielded array. Keyword arguments are passed
+        on to csv.DictReader
+        """
+        from csv import DictReader
+        CD = DictReader(fbuffer, **kwargs)
+        
+        if 'level' in CD.fieldnames:
+            chain = []
+            
+            # old style CSV, name + level sets the path
+            for num, dct in enumerate(list(CD)):
+            
+                # Get parameter name and level in the hierarchy
+                level = int(dct.pop('level'))
+                name = dct.pop('name')
+            
+                # translations
+                dct['help']= dct.pop('shortdoc')
+                dct['doc']= dct.pop('longdoc')
+                if dct.pop('static').lower()!='yes': continue
+            
+                desc = self._new_child(name)
+                desc._store_options(dct)
+                desc.num_id = num
+                
+                if level == 0:  
+                    chain = [name]
+                else:
+                    chain = chain[:level]+[name]
+            
+                self._new_desc(self.separator.join(chain), desc)
+        else:
+            # new style csv, name and path are synonymous
+            for dct in list(CD):
+                name = dct['path']
+                desc = self._new_child(name)
+                desc._store_options(dct)
+                self._new_desc(name, desc)
+        
+        self._name_descendants()
+        
+    def save_csv(self, fbuffer, **kwargs):
+        """
+        Save to fbuffer. Keyword arguments are passed
+        on to csv.DictWriter
+        """
+        from csv import DictWriter
+        
+        fieldnames = self.required + self.optional
+        fieldnames += [k for k in self._all_options.keys() if k not in fieldnames]
+        
+        DW = DictWriter(fbuffer, ['path'] + fieldnames)
+        DW.writeheader()
+        for key in sorted(self.descendants.keys()):
+            dct = {'path':key}
+            dct.update(self.descendants[key].options)
+            DW.writerow(dct)
         
     def load_json(self,fbuffer):
         
@@ -112,27 +288,99 @@ class Parameter(object):
     def save_json(self,fbuffer):
         
         raise NotImplementedError
-        
-    def load_conf_parser(self,fbuffer, separator='.'):
+    
+    
+    def load_conf_parser(self,fbuffer, **kwargs):
         """
         Load Parameter defaults using Pythons ConfigParser
         
         Each parameter each parameter occupies its own section. 
+        Separator characters in sections names map to a tree-hierarchy.
+        
+        Keyword arguments are forwarded to `ConfigParser.RawConfigParser`
+        """
+        from ConfigParser import RawConfigParser as Parser
+        parser = Parser(**kwargs)
+        parser.readfp(fbuffer)
+        parser = parser
+        for num, sec in enumerate(parser.sections()):
+            desc = self._new_child(name=sec)
+            desc._store_options(dict(parser.items(sec)))
+            self._new_desc(sec, desc)
+        
+        self._name_descendants()
+        return parser
+            
+    def save_conf_parser(self,fbuffer, print_optional=True):
+        """
+        Save Parameter defaults using Pythons ConfigParser
+        
+        Each parameter each parameter occupies its own section. 
         Separator characters in sections names map to a tree-hierarchy
         """
-        parser = ConfigParser.SafeConfigParser()
-        parser.read(fbuffer)
-        for sec in parser.sections:
-            
-            pdesc = Parameter(parent = self)
-            self.children[name] = Parameter(parent = self)
-        # grow the options dictionary
-        self.options.update(section.options)
-        pass
+        from ConfigParser import RawConfigParser as Parser
+        parser = Parser()
+        dct = self.descendants
+        for name in sorted(dct.keys()):
+            if dct[name] is None:
+                continue
+            else:
+                parser.add_section(name)
+                for k,v in self.descendants[name].options.items():
+                    if (v or print_optional) or (k in self.required):
+                        parser.set(name, k, v)
         
-    def save_conf_parser(self,fbuffer):
-    
-        raise NotImplementedError
+        parser.write(fbuffer)
+        return parser
+        
+    def make_doc_rst(self,prst, use_root=True):
+        
+        Header=  '.. _parameters:\n\n'
+        Header+= '************************\n'
+        Header+= 'Parameter tree structure\n'
+        Header+= '************************\n\n'
+        prst.write(Header)
+        
+        root = self.get_root() # if use_root else self
+        shortdoc = 'shortdoc'
+        longdoc = 'longdoc'
+        default = 'default'
+        lowlim ='lowlim'
+        uplim='uplim'
+        
+        start = self.get_root()
+        
+        for name,desc in root.descendants.iteritems():
+            if name=='':
+                continue
+            if hasattr(desc,'children') and desc.parent is root:
+                prst.write('\n'+name+'\n')
+                prst.write('='*len(name)+'\n\n')
+            if hasattr(desc,'children') and desc.parent.parent is root:
+                prst.write('\n'+name+'\n')
+                prst.write('-'*len(name)+'\n\n')
+            
+            opt = desc.options
+
+            prst.write('.. py:data:: '+name)
+            #prst.write('('+', '.join([t for t in opt['type']])+')')
+            prst.write('('+opt['type']+')')
+            prst.write('\n\n')
+            num = str(opt.get('ID'))
+            prst.write('   *('+num+')* '+opt[shortdoc]+'\n\n')
+            prst.write('   '+opt[longdoc].replace('\n','\n   ')+'\n\n')
+            prst.write('   *default* = ``'+str(opt[default]))
+            if opt[lowlim] is not None and opt[uplim] is not None:
+                prst.write(' (>'+str(opt[lowlim])+', <'+str(opt[uplim])+')``\n')
+            elif opt[lowlim] is not None and opt[uplim] is None:
+                prst.write(' (>'+str(opt[lowlim])+')``\n')
+            elif opt[lowlim] is None and opt[uplim] is not None:
+                prst.write(' (<'+str(opt[uplim])+')``\n')
+            else:
+                prst.write('``\n')
+                
+            prst.write('\n')
+        prst.close()
 
 
 class PDesc(object):
@@ -266,26 +514,6 @@ class PDesc(object):
         
         self.value = out
         return out
-    """
-    @property
-    def value(self):
-
-        if self.default is None:
-            out = None
-        # should be only strings now
-        elif self.default.lower()=='none':
-            out = None
-        elif self.default.lower()=='true':
-            out = True
-        elif self.default.lower()=='false':
-            out = False
-        elif self.is_evaluable:
-            out = eval(self.default)
-        else:
-            out = self.default
-            
-        return out
-    """
     
     def check(self, pars, walk):
         """
