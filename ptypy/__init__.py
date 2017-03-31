@@ -48,7 +48,22 @@ from utils import parallel
 from utils import verbose
 #verbose.set_level(2)
 
+# Start a paramter tree
+from utils.validator import EvalParameter
+parameter = EvalParameter(name = 'root')
+
+# FIXME: replace with paramater additions on module load
+# Here we load the .csv base 
+import pkg_resources
+_csvfile = open(pkg_resources.resource_filename('ptypy', 
+                    'resources/parameter_descriptions.csv'),'r')
+parameter.load_csv(_csvfile)
+del pkg_resources
+
+
 import utils
+
+
 # Import core modules
 import io 
 import experiment

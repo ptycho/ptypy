@@ -12,15 +12,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-import pkg_resources
-import csv
-import weakref
-# Load all documentation on import
-_csvfile = pkg_resources.resource_filename('ptypy', 'resources/parameter_descriptions.csv')
-_desc_list = list(csv.DictReader(file(_csvfile, 'r')))
-del csv
-del pkg_resources
+
 import ast
+import weakref
+from collections import OrderedDict
 
 if __name__=='__main__':
     from ptypy.utils.parameters import Param
@@ -41,8 +36,8 @@ CODES = Param(
 #! Inverse message codes
 CODE_LABEL = dict((v, k) for k, v in CODES.items())
 
+"""
 # Populate the dictionary of all entry points.
-from collections import OrderedDict
 
 # All ptypy parameters in an ordered dictionary as (entry_point, PDesc) pairs.
 parameter_descriptions = OrderedDict()
@@ -51,6 +46,7 @@ del OrderedDict
 # All parameter containers in a dictionary as (entry_point, PDesc) pairs.
 # Subset of :py:data:`parameter_descriptions`
 entry_points_dct = {}
+"""
 
 # Logging levels
 import logging
@@ -88,8 +84,19 @@ class Parameter(object):
                        separator='.', 
                        info=None):
                 
+        #: Name of parameter
         self.name = name
+        
+        #: Parent parameter (:py:class:`Parameter` type) if it has one.
         self.parent = parent
+        
+        self.descendants = {}
+        """ Flat list of all sub-Parameters. These are weak references
+        if not root."""
+        
+        #: Hierarchical tree of sub-Parameters.
+        self.children = {}
+        
         self.separator = separator
         
         self.required = [] 
@@ -100,10 +107,8 @@ class Parameter(object):
         if self._is_child:
             import weakref
             self.descendants = weakref.WeakValueDictionary()
-        else:
-            self.descendants = {}
             
-        self.children = {}
+
         self.num_id = 0
         self.options = dict.fromkeys(self.required,'')
         self._all_options = {}
@@ -135,7 +140,7 @@ class Parameter(object):
             self.optional = o
 
             
-    def _new_child(self, name=None):
+    def _new(self, name=None):
         n = name if name is not None and str(name)==name else 'ch%02d' % len(self.descendants)
         return self.__class__(parent = self, 
                                  separator = self.separator,
@@ -164,7 +169,7 @@ class Parameter(object):
                 
                 if p is None:
                     # Found dangling parameter. Create a root
-                    p = self._new_child(name = nm)
+                    p = self._new(name = nm)
                     self._new_desc(nm, p)
                     self.children[nm] = p
                     
@@ -183,7 +188,16 @@ class Parameter(object):
         if self.parent is None:
             return self
         else:
-            return self.parent.get_root()
+            return self.parent._get_root()
+    
+    def _get_path(self):
+        """
+        Return root of parameter tree.
+        """
+        if self.parent is None:
+            return self
+        else:
+            return self.parent._get_root()
             
     def _store_options(self,dct):
         """
@@ -201,9 +215,15 @@ class Parameter(object):
         
     @property    
     def root(self):
-        self._get_root()
+        return self._get_root()
             
-
+    @property
+    def path(self):
+        if self.parent is None:
+            return self.name
+        else:
+            return self.parent.path + self.separator + self.name
+            
     def _new_desc(self, name, desc, update_in_parent = True):
         """
         Update the new entry to the root.
@@ -244,7 +264,7 @@ class Parameter(object):
                 dct['doc']= dct.pop('longdoc')
                 if dct.pop('static').lower()!='yes': continue
             
-                desc = self._new_child(name)
+                desc = self._new(name)
                 desc._store_options(dct)
                 desc.num_id = num
                 
@@ -258,7 +278,7 @@ class Parameter(object):
             # new style csv, name and path are synonymous
             for dct in list(CD):
                 name = dct['path']
-                desc = self._new_child(name)
+                desc = self._new(name)
                 desc._store_options(dct)
                 self._new_desc(name, desc)
         
@@ -304,7 +324,7 @@ class Parameter(object):
         parser.readfp(fbuffer)
         parser = parser
         for num, sec in enumerate(parser.sections()):
-            desc = self._new_child(name=sec)
+            desc = self._new(name=sec)
             desc._store_options(dict(parser.items(sec)))
             self._new_desc(sec, desc)
         
@@ -383,10 +403,275 @@ class Parameter(object):
         prst.close()
 
 
+class EvalParameter(Parameter):
+    """
+    Small class to store all attributes of a ptypy parameter
+    
+    """
+    _typemap = {'int': 'int',
+           'float': 'float',
+           'complex': 'complex',
+           'str': 'str',
+           'bool': 'bool',
+           'tuple': 'tuple',
+           'list': 'list',
+           'array': 'ndarray',
+           'Param': 'Param',
+           'None': 'NoneType',
+           'file': 'str',
+           '': 'NoneType'}
+
+    _evaltypes = ['int','float','tuple','list','complex']
+    _copytypes = ['str','file']
+    
+    DEFAULTS = OrderedDict(
+        default = 'Default value for parameter (required).',
+        help = 'A small docstring for command line parsing (required).',
+        type = 'Komma separated list of acceptable types.',
+        doc = 'A small docstring for command line parsing.',
+        uplim = 'Upper limit for scalar / integer values',
+        lowlim = 'Lower limit for scalar / integer values',
+        choices = 'If parameter is list of choices, these are listed here.',
+        userlevel = """User level, a higher level means a parameter that is 
+                    less likely to vary or harder to understand.""",
+    )
+     
+    def __init__(self, *args,**kwargs):
+
+        kwargs['info']=self.DEFAULTS.copy()
+        
+        super(EvalParameter, self).__init__(*args,**kwargs)
+        
+    @property
+    def type(self):
+            
+        types = self.options.get('type', None)
+        tm = self._typemap
+        if types is not None:
+            types = [tm[x.strip()] if x.strip() in tm else x.strip() for x in types.split(',')]
+        
+        return types
+        
+    @property
+    def default(self,default='', check=False):
+        """
+        Returns default as a Python type
+        """
+        default = str(self.options.get('default', ''))
+        
+        # this destroys empty strings
+        default = default if default else None
+        
+        if default is None:
+            out = None
+        # should be only strings now
+        elif default.lower()=='none':
+            out = None
+        elif default.lower()=='true':
+            out = True
+        elif default.lower()=='false':
+            out = False
+        elif self.is_evaluable:
+            out = ast.literal_eval(default)
+        else:
+            out = default
+        
+        return out        
+        
+       
+    @property
+    def limits(self):
+        if self.type is None:
+            return None, None
+            
+        ll = self.options.get('lowlim', None)
+        ul = self.options.get('uplim', None)
+        if 'int' in self.type:
+            lowlim = int(ll) if ll else None
+            uplim = int(ul) if ul else None
+        else:
+            lowlim = float(ll) if ll else None
+            uplim = float(ul) if ul else None
+            
+        return lowlim,uplim
+        
+    @property
+    def choices(self):
+        """
+        If parameter is a list of choices, these are listed here.
+        """
+        # choices is an evaluable list
+        c =  self.options.get('choices', '')
+        #print c, self.name
+        if str(c)=='':
+            c=None
+        else:
+            try:
+                c = ast.literal_eval(c.strip())
+            except SyntaxError('Evaluating `choices` %s for parameter %s failed' %(str(c),self.name)):
+                c = None
+        
+        return c
+
+    @property
+    def help(self):
+        """
+        Short descriptive explanation of parameter
+        """
+        return self.options.get('help', '')
+    
+    @property
+    def doc(self):
+        """
+        Longer documentation, may contain *sphinx* inline markup.
+        """
+        return self.options.get('doc', '')
+
+    @property
+    def userlevel(self):
+        """
+        User level, a higher level means a parameter that is less 
+        likely to vary or harder to understand.
+        """
+        # User level (for gui stuff) is an int
+        ul = self.options.get('userlevel', 1)
+        
+        return int(ul) if ul else None
+     
+    @property
+    def is_evaluable(self):
+        for t in self.type:
+            if t in self._evaltypes:
+                return True
+                break
+        return False
+        
+    
+    def check(self, pars, walk):
+        """
+        Check that input parameter pars is consistent with parameter description.
+        If walk is True and pars is a Param object, checks are also conducted for all
+        sub-parameters.
+        """
+        ep = self.path
+        out = {}
+        val = {}
+
+        # 1. Data type
+        if self.type is None:
+            # Unconclusive
+            val['type'] = CODES.UNKNOWN
+            val['lowlim'] = CODES.UNKNOWN
+            val['uplim'] = CODES.UNKNOWN
+            return {ep : val}
+        else:
+            val['type'] = CODES.PASS if (type(pars).__name__ in self.type) else CODES.FAIL
+
+        # 2. limits
+        lowlim, uplim = self.limits
+        
+        if lowlim is None:
+            val['lowlim'] = CODES.UNKNOWN
+        else:
+            val['lowlim'] = CODES.PASS if (pars >= self.lowlim) else CODES.FAIL
+        if uplim is None:
+            val['uplim'] = CODES.UNKNOWN
+        else:
+            val['uplim'] = CODES.PASS if (pars <= self.uplim) else CODES.FAIL
+
+        # 3. Extra work for parameter entries
+        if 'Param' in self.type:
+            # Check for missing entries
+            for k, v in self.children.items():
+                if k not in pars:
+                    val[k] = CODES.MISSING
+
+            # Check for excess entries
+            for k, v in pars.items():
+                if k not in self.children:
+                    val[k] = CODES.INVALID
+                elif walk:
+                    # Validate child
+                    out.update(self.children[k].check(v, walk))
+
+        out[ep] = val
+        return out
+
+    def make_default(self, depth=1):
+        """
+        Creates a default parameter structure, from the loaded parameter
+        descriptions in this module
+        
+        Parameters
+        ----------            
+        depth : int
+            The depth in the structure to which all sub nodes are expanded
+            All nodes beyond depth will be returned as empty dictionaries
+            
+        Returns
+        -------
+        pars : dict
+            A parameter branch as nested dicts.
+        
+        Examples
+        --------
+        >>> from ptypy import parameter
+        >>> print parameter.children['io'].make_default()
+        """
+        out = {}
+        if depth<=0:
+            return out
+        for name,child in self.children.iteritems():
+            if child.children and child.default is None:
+                out[name] = child.make_default(depth=depth-1)
+            else:
+                out[name] = child.default
+        return out
+        
+    def validate(self,pars, walk=True, raisecodes=[CODES.FAIL, CODES.INVALID]):
+        """
+        Check that the parameter structure `pars` matches the documented 
+        constraints for this node / parameter.
+    
+        The function raises a RuntimeError if one of the code in the list 
+        `raisecodes` has been found. If raisecode is empty, the function will 
+        always return successfully but problems will be logged using logger.
+    
+        Parameters
+        ----------
+        pars : Param
+            A parameter set to validate
+        
+        walk : bool
+            If ``True`` (*default*), navigate sub-parameters.
+        
+        raisecodes: list
+            List of codes that will raise a RuntimeError.
+        """
+        from ptypy.utils.verbose import logger
+        
+        d = self.check(pars, walk=walk)
+        do_raise = False
+        for ep, v in d.items():
+            for tocheck, outcome in v.items():
+                logger.log(_logging_levels[CODE_LABEL[outcome]], '%-50s %-20s %7s' % (ep, tocheck, CODE_LABEL[outcome]))
+                do_raise |= (outcome in raisecodes)
+        if do_raise:
+            raise RuntimeError('Parameter validation failed.')
+            
+    def sanity_check(self, depth=10):
+        """
+        Checks if default parameters from configuration are 
+        self-constistent with limits and choices.
+        """
+        self.validate(self.make_default(depth =depth))
+
+
 class PDesc(object):
     """
     Small class to store all attributes of a ptypy parameter
     
+    **Depracated**
     """
 
     def __init__(self, description, parent=None):
@@ -570,7 +855,7 @@ class PDesc(object):
         return '{self.entry_point}\n\n{self.shortdoc}\n{self.longdoc}'.format(self=self)
 
 
-
+"""
 ## maybe this should be a function in the end.
 # Create the root
 pdroot = PDesc(description={'name': '', 'type': 'Param', 'shortdoc': 'Parameter root'}, parent=None)
@@ -606,77 +891,8 @@ for num, desc in enumerate(_desc_list):
 
 #cleanup
 del level, name, entry_level, pd, entry_pt, entry_dcts
+"""
 
-def make_sub_default(entry_point, depth=1):
-    """
-    Creates a default parameter structure, from the loaded parameter
-    descriptions in this module
-    
-    Parameters
-    ----------
-    entry_point : str
-        The node in the default parameter file
-        
-    depth : int
-        The depth in the structure to which all sub nodes are expanded
-        All nodes beyond depth will be returned as empty :any:`Param` 
-        structure.
-        
-    Returns
-    -------
-    pars : Param
-        A parameter branch.
-    
-    Examples
-    --------
-    >>> from ptypy.utils import validator
-    >>> print validator.make_sub_default('.io')
-    """
-    pd = entry_points_dct[entry_point]
-    out = Param()
-    if depth<=0:
-        return out
-    for name,child in pd.children.iteritems():
-        if child.children is not None and child.value is None:
-            out[name] = make_sub_default(child.entry_point, depth=depth-1)
-        else:
-            out[name] = child.value
-    return out
-    
-def validate(pars, entry_point, walk=True, raisecodes=[CODES.FAIL, CODES.INVALID]):
-    """
-    Check that the parameter structure `pars` matches the documented 
-    constraints at the given entry_point.
-
-    The function raises a RuntimeError if one of the code in the list 
-    `raisecodes` has been found. If raisecode is empty, the function will 
-    always return successfully but problems will be logged using logger.
-
-    Parameters
-    ----------
-    pars : Param
-        A parameter set to validate
-        
-    entry_point : str
-        The node in the parameter structure to match to.
-    
-    walk : bool
-        If ``True`` (*default*), navigate sub-parameters.
-    
-    raisecodes: list
-        List of codes that will raise a RuntimeError.
-    """
-    from ptypy.utils.verbose import logger
-    
-    pdesc = parameter_descriptions[entry_point]
-    d = pdesc.check(pars, walk=walk)
-    do_raise = False
-    for ep, v in d.items():
-        for tocheck, outcome in v.items():
-            logger.log(_logging_levels[CODE_LABEL[outcome]], '%-50s %-20s %7s' % (ep, tocheck, CODE_LABEL[outcome]))
-            do_raise |= (outcome in raisecode)
-    if do_raise:
-        raise RuntimeError('Parameter validation failed.')
 
 def create_default_template(filename=None,user_level=0,doc_level=2):
     """
