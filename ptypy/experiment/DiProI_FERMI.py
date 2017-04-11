@@ -36,6 +36,7 @@ RECIPE.dark_name = None             # this has to be a string (e.g. 'Dark')
 RECIPE.dark_value = 400.            # Used if dark_number is None
 RECIPE.detector_flat_file = None
 RECIPE.h5_file_pattern = '%(base_path)s/imported/%(run_ID)s/%(scan_name)s/rawdata/'
+RECIPE.frame_key = None             # added to allow for Michal's raws to be loaded
 RECIPE.dark_h5_file_pattern = '%(base_path)s/imported/%(run_ID)s/%(dark_name)s/rawdata/'
 RECIPE.date = None
 RECIPE.motors = ['sample_x', 'sample_y']  # check orientation
@@ -45,7 +46,7 @@ RECIPE.z = None
 RECIPE.motors_multiplier = 1e-3     # DiProI-specific
 RECIPE.mask_file = None             # Mask file name
 RECIPE.positions_version = None #can be 'original', 'refined'
-RECIPE.positions_indices = None #can be 'all', 'good', 'minimal', 'minimal_wide'
+RECIPE.positions_indices = None #can be 'all', 'good', 'minimal', 'minimal_wide', 'minimal_tight', 'minimal_tight_nomiss'
 RECIPE.use_new_hdf_files = False
 RECIPE.refined_positions_multiplier = 1.68396935*1e-4
 RECIPE.refined_positions_pattern = '%(base_path)s/processing/'
@@ -193,7 +194,10 @@ class DiProIFERMIScan(PtyScan):
         loading dark and flat
         """
         common = u.Param()
-        key = H5_PATHS.frame_pattern
+        if self.info.recipe.frame_key is None:
+            key = H5_PATHS.frame_pattern
+        else:
+            key = self.info.recipe.frame_key
 
         if self.info.recipe.dark_name is not None:
             if self.info.recipe.use_new_hdf_files:
@@ -228,7 +232,10 @@ class DiProIFERMIScan(PtyScan):
         raw = {}  # Container for the frames
         pos = {}  # Container for the positions
         weights = {}  # Container for the weights
-        key = H5_PATHS.frame_pattern
+        if self.info.recipe.frame_key is None:
+            key = H5_PATHS.frame_pattern
+        else:
+            key = self.info.recipe.frame_key
 
         if (self.info.recipe.positions_indices == 'all' or
             self.info.recipe.positions_indices == None):
