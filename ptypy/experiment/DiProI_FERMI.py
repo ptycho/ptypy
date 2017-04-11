@@ -159,8 +159,8 @@ class DiProIFERMIScan(PtyScan):
         if self.info.recipe.position_key is None:
             indices_used = indices
         else:
-            indices_used = io.h5read(self.info.recipe.position_file,
-                                  key_pos)[key_pos][0].astype(int) - 1
+            indices_used = io.h5read(self.info.recipe.position_file
+                % self.info.recipe, key_pos)[key_pos][0].astype(int) - 1
 
         raw_temp = io.h5read(self.info.recipe.data_file, key)[key].astype(np.float32)
         for i in range(len(indices)):
