@@ -153,9 +153,11 @@ class DMOPR(BaseEngine):
         Try deleting ever helper container.
         """
 
-        if parallel.master:
-            from .. import io
-            io.h5write('Dump.h5', modes=self.OPR_modes.values()[0])
+        # already fixed elsewhere by storing OPR coeffs and modes in runtime
+        # commented out on 20170411
+        #if parallel.master:
+        #    from .. import io
+        #    io.h5write('Dump.h5', modes=self.OPR_modes.values()[0])
 
         containers = [
             self.ob_buf,
