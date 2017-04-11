@@ -115,8 +115,9 @@ class DiProIFERMIScan(PtyScan):
         positions *= mmult
 
         if self.info.recipe.position_key is not None:
-            indices_used = io.h5read(self.info.recipe.position_file)[
-                'data'][self.info.recipe.position_key][0].astype(int) - 1
+            indices_used = io.h5read(self.info.recipe.position_file %
+                      self.info.recipe, self.info.recipe.position_key)[
+                      self.info.recipe.position_key][0].astype(int) - 1
             positions = positions[indices_used]
 
         return positions
@@ -153,12 +154,13 @@ class DiProIFERMIScan(PtyScan):
         pos = {}  # Container for the positions
         weights = {}  # Container for the weights
         key = self.info.recipe.frame_key
+        key_pos = self.info.recipe.position_key
 
         if self.info.recipe.position_key is None:
             indices_used = indices
         else:
-            indices_used = io.h5read(self.info.recipe.position_file)[
-                'data'][self.info.recipe.position_key][0].astype(int) - 1
+            indices_used = io.h5read(self.info.recipe.position_file,
+                                  key_pos)[key_pos][0].astype(int) - 1
 
         raw_temp = io.h5read(self.info.recipe.data_file, key)[key].astype(np.float32)
         for i in range(len(indices)):
