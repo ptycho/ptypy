@@ -211,9 +211,10 @@ class MLOPR(BaseEngine):
             self.pr_grad *= scale_p_o
             self.pr_h -= self.pr_grad
 
-            # Minimize - for now always use quadratic approximation (i.e. single Newton-Raphson step)
-            # In principle, the way things are now programmed this part could be iterated over in
-            # a real NR style.
+            # Minimize - for now always use quadratic approximation
+            # (i.e. single Newton-Raphson step)
+            # In principle, the way things are now programmed this part
+            # could be iterated over in a real NR style.
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time()-t2

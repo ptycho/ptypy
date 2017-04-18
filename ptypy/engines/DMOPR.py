@@ -33,6 +33,7 @@ DEFAULT = u.Param(
                                    # currently in under common in documentation
     IP_metric=1.,                  # The metric factor in the exit + probe augmented space.
     subspace_dim=0.,               # The dimension of the subspace spanned by the probe ensemble
+    obj_positivity_constraint=None # Factor multiplying abs(obj) for weak positivity constraint
 )
 
     
@@ -92,8 +93,10 @@ class DMOPR(BaseEngine):
             dtype = s.data.dtype
             self.OPR_modes[sID] = np.zeros(shape=shape, dtype=dtype)
 
-            # Prepare a sorted list (with index) of all layers (which are locally available through views)
-            unique_layers = sorted(set([v.layer for v in s.owner.views_in_storage(s=s, active=False)]))
+            # Prepare a sorted list (with index) of all layers
+            # (which are locally available through views)
+            unique_layers = sorted(set([v.layer for v in
+                s.owner.views_in_storage(s=s, active=False)]))
             layers = list(enumerate(unique_layers))
 
             # Then make a list of layers held locally by the node
@@ -145,7 +148,9 @@ class DMOPR(BaseEngine):
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
+
         error = parallel.gather_dict(error_dct)
+
         return error
 
     def engine_finalize(self):
@@ -192,7 +197,8 @@ class DMOPR(BaseEngine):
             if not di_view.active:
                 continue
             pbound = self.pbound[di_view.storage.ID]
-            error_dct[name] = basic_fourier_update(di_view, pbound=pbound, alpha=self.p.alpha)
+            error_dct[name] = basic_fourier_update(di_view,
+                            pbound=pbound, alpha=self.p.alpha)
         return error_dct
 
     def overlap_update(self):
@@ -238,7 +244,8 @@ class DMOPR(BaseEngine):
         else:
             for name, s in self.ob.S.iteritems():
                 # in original code:
-                # DM_smooth_amplitude = (p.DM_smooth_amplitude * max_power * p.num_probes * Ndata) / np.prod(asize)
+                # DM_smooth_amplitude = (p.DM_smooth_amplitude * max_power
+                # * p.num_probes * Ndata) / np.prod(asize)
                 # using the number of views here, but don't know if that is good.
                 # cfact = self.p.object_inertia * len(s.views)
                 cfact = self.p.object_inertia  # * (self.ob_viewcover.S[name].data + 1.)
@@ -259,7 +266,15 @@ class DMOPR(BaseEngine):
                 continue
             pod.object += pod.probe.conj() * pod.exit * pod.object_weight
             ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
-        
+
+        # weak positivity constraint
+        if self.p.obj_positivity_constraint is not None:
+            for name, pod in self.pods.iteritems():
+                if not pod.active:
+                    continue
+                pod.object = ((1.-p.obj_positivity_constraint) * pod.object
+                          + p.obj_positivity_constraint * np.abs(pod.object))
+
         # Distribute result with MPI
         for name, s in self.ob.S.iteritems():
             # Get the np arrays
@@ -288,13 +303,17 @@ class DMOPR(BaseEngine):
         for name, pod in self.pods.iteritems():
             if not pod.active:
                 continue
-            pod.probe = self.p.IP_metric * self.pr_old[pod.pr_view] + pod.object.conj() * pod.exit
+            pod.probe = (self.p.IP_metric * self.pr_old[pod.pr_view]
+                                      + pod.object.conj() * pod.exit)
             pod.probe /= u.cabs2(pod.object) + self.p.IP_metric
 
             # Apply probe support if requested
             support = self.probe_support.get(name)
             if support is not None: 
                 pod.probe *= self.probe_support[name]
+
+        # ADD Fourier space probe support here,
+        # e.g. enforcing probe within aperture's FT
 
         change = u.norm2(pr.S.values()[0].data - self.pr_old.S.values()[0].data)
         change = parallel.allreduce(change)
@@ -305,8 +324,10 @@ class DMOPR(BaseEngine):
         """
         DM probe consistency update for orthogonal probe relaxation.
 
-        Here what we do is compute a singular value decomposition on the ensemble of probes.
-        Because this is difference map, SVD is actually on (1+alpha)*pr - pr_old, and not on pr.
+        Here what we do is compute a singular value decomposition on
+        the ensemble of probes.
+        Because this is difference map, SVD is actually on
+        (1+alpha)*pr - pr_old, and not on pr.
         """
 
         if self.p.subspace_dim == 0:
@@ -315,16 +336,20 @@ class DMOPR(BaseEngine):
 
         for sID, prS in self.pr.S.iteritems():
             pr_oldS = self.pr_old.S[sID]
-            # pr_input = np.array([2 * self.pr[v] - self.pr_old[v] for v in self.pr.views.values() if v.active])
-            pr_input = np.array([2 * prS[l] - pr_oldS[l] for i, l in self.local_layers[sID]])
+            # pr_input = np.array([2 * self.pr[v] - self.pr_old[v]
+            # for v in self.pr.views.values() if v.active])
+            pr_input = np.array([2 * prS[l] - pr_oldS[l] for i, l
+                                            in self.local_layers[sID]])
 
-            new_pr, modes, coeffs = reduce_dimension(a=pr_input, dim=self.p.subspace_dim, local_indices=self.local_indices[sID])
+            new_pr, modes, coeffs = reduce_dimension(a=pr_input,
+                dim=self.p.subspace_dim, local_indices=self.local_indices[sID])
 
             self.OPR_modes[sID] = modes
             self.OPR_coeffs[sID] = coeffs
 
             ### Storing OPR modes and coeffs in dumps
-            if self.ptycho.p.io.autosave is not None and self.ptycho.p.io.autosave.interval > 1:
+            if (self.ptycho.p.io.autosave is not None and
+                    self.ptycho.p.io.autosave.interval > 1):
                 if self.curiter % self.ptycho.p.io.autosave.interval == 0:
                     if self.ptycho.p.io.autosave.store_OPR_iter:
                         self.ptycho.runtime['OPR_modes'] = self.OPR_modes
