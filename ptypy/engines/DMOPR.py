@@ -269,11 +269,12 @@ class DMOPR(BaseEngine):
 
         # weak positivity constraint
         if self.p.obj_positivity_constraint is not None:
+            mfact = self.p.obj_positivity_constraint
             for name, pod in self.pods.iteritems():
                 if not pod.active:
                     continue
-                pod.object = ((1.-p.obj_positivity_constraint) * pod.object
-                          + p.obj_positivity_constraint * np.abs(pod.object))
+                pod.object = ( (1. - mfact) * pod.object
+                             + mfact * np.abs(pod.object) )
 
         # Distribute result with MPI
         for name, s in self.ob.S.iteritems():
