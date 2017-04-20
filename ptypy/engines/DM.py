@@ -262,6 +262,8 @@ class DM(BaseEngine):
         # weak positivity constraint
         if self.p.obj_positivity_constraint is not None:
             mfact = self.p.obj_positivity_constraint
+            from ptypy import debug
+            debug.ipshell()
             for name, pod in self.pods.iteritems():
                 if not pod.active:
                     continue
