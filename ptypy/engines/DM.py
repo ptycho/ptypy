@@ -40,6 +40,8 @@ DEFAULT = u.Param(
     # None or tuple(min, max) of desired limits of the object modulus,
     # currently in under common in documentation
     clip_object=None,
+    # Factor multiplying abs(obj) for weak positivity constraint
+    obj_positivity_constraint=None,
 )
 
     
@@ -256,7 +258,16 @@ class DM(BaseEngine):
                 continue
             pod.object += pod.probe.conj() * pod.exit * pod.object_weight
             ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
-        
+
+        # weak positivity constraint
+        if self.p.obj_positivity_constraint is not None:
+            mfact = self.p.obj_positivity_constraint
+            for name, pod in self.pods.iteritems():
+                if not pod.active:
+                    continue
+                pod.object = ( (1. - mfact) * pod.object
+                             + mfact * np.abs(pod.object) )
+
         # Distribute result with MPI
         for name, s in self.ob.storages.iteritems():
             # Get the np arrays
