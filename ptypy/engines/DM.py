@@ -294,9 +294,6 @@ class DM(BaseEngine):
         pr_nrm = self.pr_nrm
         pr_buf = self.pr_buf
 
-        from ptypy import debug
-        debug.ipshell()
-
         # Fill container
         # "cfact" fill
         # BE: was this asymmetric in original code
@@ -337,6 +334,10 @@ class DM(BaseEngine):
 
             # Apply weak Fourier-space probe support if requested
             support_ft = self.probe_support_ft.get(name)
+
+            from ptypy import debug
+            debug.ipshell()
+
             if support_ft is not None:
                 supp_w = self.p.probe_support_ft_weight
                 s.data = ( (1. - supp_w) * s.data
