@@ -332,6 +332,15 @@ class DM(BaseEngine):
             if support is not None: 
                 s.data *= self.probe_support[name]
 
+            # Apply weak Fourier-space probe support if requested
+            support_ft = self.probe_support_ft.get(name)
+            if support_ft is not None:
+                supp_w = self.p.probe_support_ft_weight
+                from ptypy import debug
+                debug.ipshell()
+                s.data = ( (1. - supp_w) * s.data
+                    + (supp_w * self.probe_support_ft[name] * s.data) )
+
             # Compute relative change in probe
             buf = pr_buf.storages[name].data
             change += u.norm2(s.data - buf) / u.norm2(s.data)
