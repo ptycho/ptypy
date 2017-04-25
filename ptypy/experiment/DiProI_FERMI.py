@@ -162,7 +162,8 @@ class DiProIFERMIScan(PtyScan):
             indices_used = io.h5read(self.info.recipe.position_file
                 % self.info.recipe, key_pos)[key_pos][0].astype(int) - 1
 
-        raw_temp = io.h5read(self.info.recipe.data_file, key)[key].astype(np.float32)
+        raw_temp = io.h5read(self.info.recipe.data_file % self.info.recipe,
+                                                key)[key].astype(np.float32)
         for i in range(len(indices)):
             raw[i] = raw_temp[indices_used[i]]
 
