@@ -189,13 +189,13 @@ class DiProIFERMIScan(PtyScan):
         elif common.dark is not None:
             for j in raw:
                 raw[j] = raw[j] - common.dark
-                from ptypy import debug
-                debug.ipshell()
                 if common.dark_std is not None:
                     raw[j] = raw[j] - (1.2*common.dark_std)
                 raw[j][raw[j]<0] = 0.
 
         data = raw
+        from ptypy import debug
+        debug.ipshell()
 
         weights = weights
 
