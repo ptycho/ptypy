@@ -191,7 +191,8 @@ class DiProIFERMIScan(PtyScan):
                 raw[j] = raw[j] - common.dark
                 if common.dark_std is not None:
                     raw[j] = raw[j] - (1.3*common.dark_std)
-                raw[j][raw[j]<0] = 0.
+                #raw[j][raw[j]<0] = 0. # This has been forced after the rebinning
+                # step within data.py
 
         data = raw
 
