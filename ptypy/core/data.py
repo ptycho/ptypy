@@ -578,8 +578,6 @@ class PtyScan(object):
             # What did we get?
             data, positions, weights = self._mpi_pipeline_with_dictionaries(
                 indices)
-            from ptypy import debug
-            debug.ipshell()
             # All these dictionaries could be empty
             # Fill weights dictionary with references to the weights in common
 
@@ -734,6 +732,8 @@ class PtyScan(object):
                     # Translate back to dictionaries
                     data = dict(zip(indices.node, d))
                     weights = dict(zip(indices.node, w))
+                    from ptypy import debug
+                    debug.ipshell()
 
             # Adapt meta info
             self.meta.center = cen / float(self.rebin)
