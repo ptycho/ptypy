@@ -684,8 +684,12 @@ class PtyScan(object):
                     d = np.ones((1,) + tuple(dsh))
                     w = np.ones((1,) + tuple(dsh))
 
+                from ptypy import debug
+                debug.ipshell()
                 # Crop data
                 d, tmp = u.crop_pad_symmetric_2d(d, sh, cen)
+                from ptypy import debug
+                debug.ipshell()
 
                 # Check if provided mask has the same shape as data, if not,
                 # use the mask's center for cropping the mask. The latter is
@@ -704,6 +708,8 @@ class PtyScan(object):
 
                 # Flip, rotate etc.
                 d, tmp = u.switch_orientation(d, self.orientation, cen)
+                from ptypy import debug
+                debug.ipshell()
                 w, cen = u.switch_orientation(w, self.orientation, cen)
 
                 # Rebin, check if rebinning is neither to strong nor impossible
@@ -714,6 +720,8 @@ class PtyScan(object):
                       and (((sh / float(rebin)) % 1) == 0.0).all()):
                     mask = w > 0
                     d = u.rebin_2d(d, rebin)
+                    from ptypy import debug
+                    debug.ipshell()
                     w = u.rebin_2d(w, rebin)
                     mask = u.rebin_2d(mask, rebin)
                     # We keep only the pixels that do not include a masked pixel
