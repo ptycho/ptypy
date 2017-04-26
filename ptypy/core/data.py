@@ -578,6 +578,8 @@ class PtyScan(object):
             # What did we get?
             data, positions, weights = self._mpi_pipeline_with_dictionaries(
                 indices)
+            from ptypy import debug
+            debug.ipshell()
             # All these dictionaries could be empty
             # Fill weights dictionary with references to the weights in common
 
