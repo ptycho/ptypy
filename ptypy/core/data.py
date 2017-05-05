@@ -1,13 +1,13 @@
 """
 data - Diffraction data access.
 
-This module defines a PtyScan, a container to hold the experimental 
+This module defines a PtyScan, a container to hold the experimental
 data of a ptychography scan. Instrument-specific reduction routines should
 inherit PtyScan to prepare data for the Ptycho Instance in a uniform format.
 
 The experiment specific child class only needs to overwrite 2 functions
 of the base class:
-        
+
 For the moment the module contains two main objects:
 PtyScan, which holds a single ptychography scan, and DataSource, which
 holds a collection of datascans and feeds the data as required.
@@ -109,16 +109,16 @@ __all__ = ['GENERIC', 'PtyScan', 'PTYD', 'PtydScan', 'MoonFlowerScan']
 class PtyScan(object):
     """
     PtyScan: A single ptychography scan, created on the fly or read from file.
-    
+
     *BASECLASS*
-    
+
     Objectives:
      - Stand alone functionality
      - Can produce .ptyd data formats
      - Child instances should be able to prepare from raw data
      - On-the-fly support in form of chunked data.
      - mpi capable, child classes should not worry about mpi
-     
+
     """
 
     DEFAULT = GENERIC.copy()
@@ -129,9 +129,9 @@ class PtyScan(object):
     def __init__(self, pars=None, **kwargs):
         # filename='./foo.ptyd', shape=None, save=True):
         """
-        Class creation with minimum set of parameters, see :py:data:`GENERIC` 
+        Class creation with minimum set of parameters, see :py:data:`GENERIC`
         Please note that class creation is not meant to load data.
-        
+
         Call :py:data:`initialize` to begin loading and data file creation.
         """
         # Load default parameter structure
@@ -224,19 +224,19 @@ class PtyScan(object):
         # Initialize flags
         self._flags = np.array([0, 0, 0], dtype=int)
         self.is_initialized = False
-        
+
         # post init method call
         self.post_init()
-        
+
     def initialize(self):
         """
-        Begins the Data preparation and intended as the first method 
+        Begins the Data preparation and intended as the first method
         that does read-write access on (large) data. Does the following:
-        
-        * Creates a \*.ptyd data file at location specified by 
+
+        * Creates a \*.ptyd data file at location specified by
           :py:data:`dfile` (master node only)
         * Calls :py:meth:`load_weight`, :py:meth:`load_positions`
-          :py:meth:`load_common` (master node only for 
+          :py:meth:`load_common` (master node only for
           ``load_parallel==None`` or ``load_parallel=='data'``)
         * Sets :py:attr:`num_frames` if needed
         * Calls :py:meth:`post_initialize`
@@ -330,8 +330,8 @@ class PtyScan(object):
         if self.num_frames is None:
             logger.warning(
                 'Number of frames `num_frames` not specified at this stage.')
-        
-        # A note about how much this scan class knows about the number 
+
+        # A note about how much this scan class knows about the number
         # of frames expected. PtydScan uses this information.
         self.info.num_frames_actual = self.num_frames
         parallel.barrier()
@@ -341,7 +341,7 @@ class PtyScan(object):
         parallel.barrier()
         logger.info(headerline('Analysis done',' l') + '\n')
         """
-        
+
         if self.info.save is not None and parallel.master:
             logger.info('Appending info dict to file %s\n' % self.info.dfile)
             io.h5append(self.info.dfile, info=dict(self.info))
@@ -363,31 +363,31 @@ class PtyScan(object):
     def load_weight(self):
         """
         **Override in subclass for custom implementation**
-        
+
         *Called in* :py:meth:`initialize`
-        
+
         Loads a common (2d)-weight for all diffraction patterns. The weight
         loaded here will be available by all processes through the
         attribute ``self.weight2d``. If a *per-frame-weight* is specified
-        in :py:meth:`load` , this function has no effect. 
-        
+        in :py:meth:`load` , this function has no effect.
+
         The purpose of this function is to avoid reloading and parallel
         reads. If that is not critical to the implementation,
         reimplementing this function in a subclass can be ignored.
-        
-        If `load_parallel` is set to `all` or common`, this function is 
+
+        If `load_parallel` is set to `all` or common`, this function is
         executed by all nodes, otherwise the master node executes this
         function and broadcasts the results to other nodes.
-        
+
         Returns
         -------
         weight2d : ndarray
             A two-dimensional array with a shape compatible to the raw
             diffraction data frames
-            
+
         Note
         ----
-        For now, weights will be converted to a mask, 
+        For now, weights will be converted to a mask,
         ``mask = weight2d > 0`` for use in reconstruction algorithms.
         It is planned to use a general weight instead of a mask in future
         releases.
@@ -400,45 +400,45 @@ class PtyScan(object):
     def load_positions(self):
         """
         **Override in subclass for custom implementation**
-        
+
         *Called in* :py:meth:`initialize`
-        
-        Loads all positions for all diffraction patterns in this scan. 
-        The positions loaded here will be available by all processes 
+
+        Loads all positions for all diffraction patterns in this scan.
+        The positions loaded here will be available by all processes
         through the attribute ``self.positions``. If you specify position
-        on a per frame basis in :py:meth:`load` , this function has no 
+        on a per frame basis in :py:meth:`load` , this function has no
         effect.
-        
-        If theoretical positions :py:data:`positions_theory` are 
-        provided in the initial parameter set :py:data:`DEFAULT`, 
+
+        If theoretical positions :py:data:`positions_theory` are
+        provided in the initial parameter set :py:data:`DEFAULT`,
         specifying positions here has NO effect and will be ignored.
-        
+
         The purpose of this function is to avoid reloading and parallel
         reads on files that may require intense parsing to retrieve the
-        information, e.g. long SPEC log files. If parallel reads or 
+        information, e.g. long SPEC log files. If parallel reads or
         log file parsing for each set of frames is not a time critical
         issue of the subclass, reimplementing this function can be ignored
         and it is recommended to only reimplement the :py:meth:`load`
         method.
-        
-        If `load_parallel` is set to `all` or common`, this function is 
+
+        If `load_parallel` is set to `all` or common`, this function is
         executed by all nodes, otherwise the master node executes this
         function and broadcasts the results to other nodes.
-        
+
         Returns
         -------
         positions : ndarray
             A (N,2)-array where *N* is the number of positions.
-            
+
         Note
         ----
         Be aware that this method sets attribute :py:attr:`num_frames`
         in the following manner.
-        
+
         * If ``num_frames == None`` : ``num_frames = N``.
         * If ``num_frames < N`` , no effect.
         * If ``num_frames > N`` : ``num_frames = N``.
-         
+
         """
         if self.num_frames is None:
             return None
@@ -448,26 +448,26 @@ class PtyScan(object):
     def load_common(self):
         """
         **Override in subclass for custom implementation**
-        
+
         *Called in* :py:meth:`initialize`
-        
+
         Loads anything and stores that in a dict. This dict will be
         available to all processes after :py:meth:`initialize` through
         the attribute :py:attr:`common`
-        
+
         The purpose of this method is the same as :py:meth:`load_weight`
         and :py:meth:`load_positions` except for that the contents
         of :py:attr:`common` have no built-in effect of the behavior in
         the processing other than the user specifies it in py:meth:`load`
-        
-        If `load_parallel` is set to `all` or common`, this function is 
+
+        If `load_parallel` is set to `all` or common`, this function is
         executed by all nodes, otherwise the master node executes this
         function and broadcasts the results to other nodes.
-        
+
         Returns
         -------
-        common : dict 
-                    
+        common : dict
+
         """
         return {}
 
@@ -475,8 +475,8 @@ class PtyScan(object):
         """
         Placeholder. Called at the end of :py:meth:`initialize` by all
         processes.
-        
-        Use this method to benefit from 'hard-to-retrieve but now available' 
+
+        Use this method to benefit from 'hard-to-retrieve but now available'
         information after initialize.
         """
         pass
@@ -494,10 +494,10 @@ class PtyScan(object):
         the result with the other nodes.
         This function determines if the end of the scan is reached
         or if there is more data after a pause.
-        
+
         returns:
             - codes WAIT or EOS
-            - or (start, frames) if data can be loaded 
+            - or (start, frames) if data can be loaded
         """
         # Take internal counter if not specified
         s = self.framestart if start is None else int(start)
@@ -805,7 +805,7 @@ class PtyScan(object):
     def auto(self, frames, chunk_form='dp'):
         """
         Repeated calls to this function will process the data.
-        
+
         Parameters
         ----------
         frames : int
@@ -883,13 +883,13 @@ class PtyScan(object):
     def _mpi_pipeline_with_dictionaries(self, indices):
         """
         Example processing pipeline using dictionaries.
-        
+
         return :
             positions, data, weights
              -- Dictionaries. Keys are the respective scan point indices
                 `positions` and `weights` may be empty. If so, the information
                 is taken from the self.common dictionary
-        
+
         """
         if self.load_in_parallel:
             # All nodes load raw_data and slice according to indices
@@ -908,7 +908,7 @@ class PtyScan(object):
             raw = parallel.bcast_dict(raw, indices.node)
             weights = parallel.bcast_dict(weights, indices.node)
 
-        # (re)distribute position information - every node should now be 
+        # (re)distribute position information - every node should now be
         # aware of all positions
         parallel.bcast_dict(pos)
 
@@ -920,40 +920,40 @@ class PtyScan(object):
     def check(self, frames=None, start=None):
         """
         **Override in subclass for custom implementation**
-        
+
         This method checks how many frames the preparation routine may
         process, starting from frame `start` at a request of `frames`.
-        
+
         This method is supposed to return the number of accessible frames
         for preparation and should determine if data acquisition for this
         scan is finished. Its main purpose is to allow for a data
-        acquisition scheme, where the number of frames is not known 
-        when :any:`PtyScan` is constructed, i.e. a data stream or an 
+        acquisition scheme, where the number of frames is not known
+        when :any:`PtyScan` is constructed, i.e. a data stream or an
         on-the-fly reconstructions.
-        
+
         Note
         ----
         If :py:data:`num_frames` is set on ``__init__()`` of the subclass,
         this method can be left as it is.
-        
+
         Parameters
         ----------
-        frames : int or None 
+        frames : int or None
             Number of frames requested.
         start : int or None
             Scanpoint index to start checking from.
-        
-        Returns 
+
+        Returns
         -------
         frames_accessible : int
             Number of frames readable.
-        
+
         end_of_scan : int or None
             is one of the following,
             - 0, end of the scan is not reached
             - 1, end of scan will be reached or is
             - None, can't say
-                    
+
         """
         if start is None:
             start = self.framestart
@@ -992,17 +992,17 @@ class PtyScan(object):
     def load(self, indices):
         """
         **Override in subclass for custom implementation**
-        
+
         Loads data according to node specific scanpoint indices that have
         been determined by :py:class:`LoadManager` or otherwise.
-        
+
         Returns
         -------
         raw, positions, weight : dict
-            Dictionaries whose keys are the given scan point `indices` 
-            and whose values are the respective frame / position according 
+            Dictionaries whose keys are the given scan point `indices`
+            and whose values are the respective frame / position according
             to the scan point index. `weight` and `positions` may be empty
-            
+
         Note
         ----
         This is the *most* important method to change when subclassing
@@ -1020,18 +1020,18 @@ class PtyScan(object):
     def correct(self, raw, weights, common):
         """
         **Override in subclass for custom implementation**
-        
-        Place holder for dark and flatfield correction. If :any:`load` 
+
+        Place holder for dark and flatfield correction. If :any:`load`
         already provides data in the form of photon counts, and no frame
         specific weight is needed, this method may be left as it is.
-        
+
         May get *merged* with :any:`load` in future.
-    
+
         Returns
         -------
         data, weights : dict
             Flat and dark-corrected data dictionaries. These dictionaries
-            must have the same keys as the input `raw` and contain 
+            must have the same keys as the input `raw` and contain
             corrected frames (`data`) and statistical weights (`weights`)
             which are zero for invalid or masked pixel other the number
             of detector counts that correspond to one photon count
@@ -1084,25 +1084,25 @@ class PtyScan(object):
 
         It works by gathering weights and data to the master node.
         Master node then writes to disk.
-        
-        In case you support parallel hdf5 writing, please modify this 
+
+        In case you support parallel hdf5 writing, please modify this
         function to suit your installation.
-        
+
         2 out of 3 modes currently supported
-        
+
         kind : 'merge','append','link'
-            
+
             'append' : appends chunks of data in same file
             'link' : saves chunks in separate files and adds ExternalLinks
-            
-        TODO: 
+
+        TODO:
             * For the 'link case, saving still requires access to
               main file `dfile` even so for just adding the link.
               This may result in conflict if main file is polled often
               by separate read process.
               Workaround would be to write the links on startup in
-              initialise() 
-            
+              initialise()
+
         """
         # Gather all distributed dictionary data.
         c = chunk if chunk is not None else self.chunk
@@ -1136,7 +1136,7 @@ class PtyScan(object):
                 h5address = 'chunks/%d' % num
                 hddaddress = self.dfile + '.part%03d' % num
                 io.h5write(hddaddress, todisk)
-                
+
                 with h5py.File(self.dfile) as f:
                     f[h5address] = h5py.ExternalLink(hddaddress, '/')
                     f.close()
@@ -1156,10 +1156,10 @@ class PtydScan(PtyScan):
     def __init__(self, pars=None, source=None, **kwargs):
         """
         PtyScan provided by native "ptyd" file format.
-        
-        :param source: Explicit source file. If not None or 'file', 
+
+        :param source: Explicit source file. If not None or 'file',
                        the data may get processed depending on user input
-                       
+
         :param pars: Input like PtyScan
         """
         # Create parameter set
@@ -1208,22 +1208,22 @@ class PtydScan(PtyScan):
             # Get number of frames supposedly in the file
             source_frames = f.get('info/num_frames_actual')[...].item()
             f.close()
-            
-        if check is None: 
+
+        if check is None:
             raise IOError('Ptyd source %s contains no data. Load aborted'
                           % source)
-        
+
         if source_frames is None:
             logger.warning('Ptyd source is not aware of the total'
                            'number of diffraction frames expected')
 
         # Get meta information
         meta = u.Param(io.h5read(self.source, 'meta')['meta'])
-        
+
         if len(meta) == 0:
             logger.warning('There should be meta information in '
                            '%s. Something is odd here.' % source)
-        
+
         # Update given parameters when they are None
         if not manipulate:
             super(PtydScan, self).__init__(meta, **kwargs)
@@ -1242,10 +1242,10 @@ class PtydScan(PtyScan):
                 self.num_frames = source_frames
         else:
             # Ptyd source doesn't know its total number of frames
-            # but we cannot do anything about it. This should be dealt 
+            # but we cannot do anything about it. This should be dealt
             # with with a flag in the meta package probably.
             pass
-            
+
         # Other instance attributes
         self._checked = {}
         self._ch_frame_ind = None
@@ -1253,7 +1253,7 @@ class PtydScan(PtyScan):
     def check(self, frames=None, start=None):
         """
         Implementation of the check routine for a .ptyd file format.
-        
+
         See also
         --------
         PtyScan.check
@@ -1278,7 +1278,7 @@ class PtydScan(PtyScan):
             for ch_key in ch_items[0][1].keys():
                 d[ch_key] = np.array([(int(k),) + v[ch_key].shape
                                       for k, v in ch_items if v is not None])
-                    
+
             f.close()
 
         self._checked = d
@@ -1289,7 +1289,7 @@ class PtydScan(PtyScan):
                 ch_frame_ind.append((dd[0], frame))
 
         self._ch_frame_ind = np.array(ch_frame_ind)
-        
+
         # Accessible frames
         frames_accessible = min((frames, all_frames - start))
         # end_of_scan = source_frames <= start + frames_accessible
@@ -1324,6 +1324,9 @@ class PtydScan(PtyScan):
         calls = {}
 
         for key in self._checked.keys():
+            ## HACK 2017-05-04
+            if key == 'weights':
+                continue #calls[key] = [('meta/weights2d', slice(0,1)) for c in coords]
             calls[key] = [self._coord_to_h5_calls(key, c) for c in coords]
 
         # Get our data from the ptyd file
@@ -1362,7 +1365,7 @@ class MoonFlowerScan(PtyScan):
 
     def __init__(self, pars=None, **kwargs):
         """
-        Parent pars are for the 
+        Parent pars are for the
         """
         p = geometry.DEFAULT.copy()
         if pars is not None:
@@ -1439,14 +1442,14 @@ class DataSource(object):
 
         Parameters
         ----------
-        scans : 
+        scans :
             a dictionary of scan structures.
-        
-        frames_per_call : (optional) 
+
+        frames_per_call : (optional)
             number of frames to load in one call.
             By default, load as many as possible.
-        
-        feed_format : 
+
+        feed_format :
             the format in with the data is packaged.
             For now only 'dp' is implemented.
         """

@@ -131,7 +131,7 @@ class I13ScanFFP(PtyScan):
             try:
                 experiment_id = io.h5read(
                     self.data_file, NEXUS_PATHS.experiment)[
-                    NEXUS_PATHS.experiment][0]
+                    NEXUS_PATHS.experiment][()] #[0]
             except (AttributeError, KeyError):
                 experiment_id = os.path.split(
                     self.info.recipe.base_path[:-1])[1]
