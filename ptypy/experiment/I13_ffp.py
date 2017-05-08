@@ -130,11 +130,11 @@ class I13ScanFFP(PtyScan):
         # Attempt to extract experiment ID
         if self.info.recipe.experimentID is None:
             try:
-                if self.info.recipe.nexus_version = '2016-':
+                if self.info.recipe.nexus_version == '2016-':
                     experiment_id = io.h5read(
                         self.data_file, NEXUS_PATHS.experiment)[
                         NEXUS_PATHS.experiment][0]
-                if self.info.recipe.nexus_version = '2017+':
+                if self.info.recipe.nexus_version == '2017+':
                     experiment_id = io.h5read(
                         self.data_file, NEXUS_PATHS.experiment)[
                         NEXUS_PATHS.experiment][()]
