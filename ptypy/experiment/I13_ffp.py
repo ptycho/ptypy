@@ -49,6 +49,7 @@ RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
 RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
 RECIPE.mask_file = None
+RECIPE.nexus_version = '2017+' # or '2016-' for experiments performed at I13-1 on/before 2016
 
 # Generic defaults
 I13DEFAULT = PtyScan.DEFAULT.copy()
@@ -129,9 +130,14 @@ class I13ScanFFP(PtyScan):
         # Attempt to extract experiment ID
         if self.info.recipe.experimentID is None:
             try:
-                experiment_id = io.h5read(
-                    self.data_file, NEXUS_PATHS.experiment)[
-                    NEXUS_PATHS.experiment][()] #[0]
+                if self.info.recipe.nexus_version = '2016-':
+                    experiment_id = io.h5read(
+                        self.data_file, NEXUS_PATHS.experiment)[
+                        NEXUS_PATHS.experiment][0]
+                if self.info.recipe.nexus_version = '2017+':
+                    experiment_id = io.h5read(
+                        self.data_file, NEXUS_PATHS.experiment)[
+                        NEXUS_PATHS.experiment][()]
             except (AttributeError, KeyError):
                 experiment_id = os.path.split(
                     self.info.recipe.base_path[:-1])[1]
