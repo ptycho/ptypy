@@ -380,6 +380,17 @@ class NanomaxStepscanWeek48(PtyScan):
             print "created dummy mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
         return mask
 
+# new recipe for this one too
+RECIPE = u.Param()
+RECIPE.dataPath = None
+RECIPE.datafile = None
+RECIPE.maskfile = None
+RECIPE.pilatusPath = None
+RECIPE.pilatusPattern = None
+RECIPE.scannr = None
+RECIPE.xMotorFlipped = None
+RECIPE.yMotorFlipped = None
+
 class NanomaxStepscanMay2017(PtyScan):
     """
     Loads Nanomax step scan data in the format of week 48
@@ -396,9 +407,17 @@ class NanomaxStepscanMay2017(PtyScan):
         fileName = self.info.recipe.dataPath + self.info.recipe.datafile
         entry = 'entry%d' % self.info.recipe.scannr
 
+        xFlipper, yFlipper = 1, 1
+        if self.info.recipe.xMotorFlipped:
+            xFlipper = -1
+            print "*** note: x motor is specified as flipped"
+        if self.info.recipe.yMotorFlipped:
+            yFlipper = -1
+            print "*** note: y motor is specified as flipped"
+
         with h5py.File(fileName, 'r') as hf:
-            x = -np.array(hf.get(entry + '/measurement/samx'))
-            y = np.array(hf.get(entry + '/measurement/samy'))
+            x = xFlipper * np.array(hf.get(entry + '/measurement/samx'))
+            y = yFlipper * np.array(hf.get(entry + '/measurement/samy'))
 
         positions = -np.vstack((y, x)).T * 1e-6
         return positions
