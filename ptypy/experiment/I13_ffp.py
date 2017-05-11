@@ -132,7 +132,7 @@ class I13ScanFFP(PtyScan):
                 experiment_id = io.h5read(
                     self.data_file, NEXUS_PATHS.experiment)[
                     NEXUS_PATHS.experiment][()]
-                if type(experiment_id) == numpy.ndarray:
+                if type(experiment_id) == np.ndarray:
                     experiment_id = experiment_id[0]
             except (AttributeError, KeyError):
                 experiment_id = os.path.split(
