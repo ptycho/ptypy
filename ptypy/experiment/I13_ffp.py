@@ -49,7 +49,6 @@ RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
 RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
 RECIPE.mask_file = None
-RECIPE.nexus_version = '2017+' # or '2016-' for experiments performed at I13-1 on/before 2016
 
 # Generic defaults
 I13DEFAULT = PtyScan.DEFAULT.copy()
@@ -130,20 +129,19 @@ class I13ScanFFP(PtyScan):
         # Attempt to extract experiment ID
         if self.info.recipe.experimentID is None:
             try:
-                if self.info.recipe.nexus_version == '2016-':
-                    experiment_id = io.h5read(
-                        self.data_file, NEXUS_PATHS.experiment)[
-                        NEXUS_PATHS.experiment][0]
-                if self.info.recipe.nexus_version == '2017+':
-                    experiment_id = io.h5read(
-                        self.data_file, NEXUS_PATHS.experiment)[
-                        NEXUS_PATHS.experiment][()]
+                experiment_id = io.h5read(
+                    self.data_file, NEXUS_PATHS.experiment)[
+                    NEXUS_PATHS.experiment][()]
+                if type(experiment_id) == numpy.ndarray:
+                    experiment_id = experiment_id[0]
             except (AttributeError, KeyError):
                 experiment_id = os.path.split(
                     self.info.recipe.base_path[:-1])[1]
                 u.logger.debug(
                     'Could not find experiment ID from nexus file %s. '
                     'Using %s instead.' % (self.data_file, experiment_id))
+            assert(type(experiment_id) == unicode), (
+                'NEXUS_PATHS.experiment pointed at wrong type; expected unicode')
             self.info.recipe.experimentID = experiment_id
 
         # Create the ptyd file name if not specified
