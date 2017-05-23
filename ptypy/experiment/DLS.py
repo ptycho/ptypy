@@ -23,18 +23,18 @@ logger = u.verbose.logger
 
 # Parameters for the nexus file saved by GDA
 NEXUS_PATHS = u.Param()
-NEXUS_PATHS.instrument = 'entry1/%(detector_name)s'
-NEXUS_PATHS.frame_pattern = 'entry1/%(detector_name)s/data'
-NEXUS_PATHS.live_key_pattern = 'entry1/%(detector_name)s/live_key'
-NEXUS_PATHS.finished_pattern = 'entry1/live/finished'
-NEXUS_PATHS.exposure = 'entry1/%(detector_name)s/count_time'
+NEXUS_PATHS.instrument = 'raw_entry/%(detector_name)s'
+NEXUS_PATHS.frame_pattern = 'entry/result/data'
+NEXUS_PATHS.live_key_pattern = 'raw_entry/%(detector_name)s_total/total'
+NEXUS_PATHS.finished_pattern = 'raw_entry/solstice_scan/scan_finished'
+#NEXUS_PATHS.exposure = 'entry1/%(detector_name)s/count_time'
 # NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
 #NEXUS_PATHS.motors = ['t1_sy', 't1_sx']
-NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
+NEXUS_PATHS.motors = ['SampleX_value', 'SampleY_value']
 #NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
-NEXUS_PATHS.command = 'entry1/scan_command'
-NEXUS_PATHS.label = 'entry1/entry_identifier'
-NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
+#NEXUS_PATHS.command = 'entry1/scan_command'
+#NEXUS_PATHS.label = 'entry1/entry_identifier'
+#NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 
 # Recipe defaults
 RECIPE = u.Param()
@@ -48,9 +48,11 @@ RECIPE.energy = None
 RECIPE.lam = None               # 1.2398e-9 / RECIPE.energy
 RECIPE.z = None                 # Distance from object to screen
 RECIPE.detector_name = 'merlin_sw_hdf'     # Name of the detector as specified in the nexus file
-RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
+# RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
+RECIPE.motors = ['SampleX_value_set', 'SampleY_value_set']      # Motor names to determine the sample translation
 # RECIPE.motors_multiplier = 1e-6         # Motor conversion factor to meters
-RECIPE.motors_multiplier = [1e-6,-1e-6]         # Motor conversion factor to meters
+# RECIPE.motors_multiplier = [1e-6,-1e-6]         # Motor conversion factor to meters
+RECIPE.motors_multiplier = [1e-3,1e-3]         # Motor conversion factor to meters
 RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
@@ -151,7 +153,6 @@ class DlsScan(PtyScan):
             frames_accessible = min((frames, num_avail))
             stop = f[NEXUS_PATHS.finished_pattern][0] and (self.num_frames == start)
             f.close()
-            print "HERE",frames_accessible, stop
             return frames_accessible,stop
 
     def load(self, indices):
