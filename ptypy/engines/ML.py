@@ -285,10 +285,10 @@ class ML_Gaussian(object):
                                      / (1./self.Irenorm + di_view.data))
 
         # Useful quantities
-        self.tot_measpts = len(self.di.views)
+        self.tot_measpts = sum(s.data.size
+                               for s in self.di.storages.values())
         self.tot_power = self.Irenorm * sum(s.tot_power
                                             for s in self.di.storages.values())
-
         # Prepare regularizer
         # has_regularizer = self.p.reg_del2 or self.p.reg_object_positivity or ...
 
