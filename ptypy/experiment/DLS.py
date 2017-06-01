@@ -48,8 +48,9 @@ RECIPE.energy = None
 RECIPE.lam = None               # 1.2398e-9 / RECIPE.energy
 RECIPE.z = None                 # Distance from object to screen
 RECIPE.detector_name = 'merlin_sw_hdf'     # Name of the detector as specified in the nexus file
+RECIPE.start_position=0
 # RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
-RECIPE.motors = ['SampleX_value_set', 'SampleY_value_set']      # Motor names to determine the sample translation
+RECIPE.motors = ['SampleX_value', 'SampleY_value']      # Motor names to determine the sample translation
 # RECIPE.motors_multiplier = 1e-6         # Motor conversion factor to meters
 # RECIPE.motors_multiplier = [1e-6,-1e-6]         # Motor conversion factor to meters
 RECIPE.motors_multiplier = [1e-3,1e-3]         # Motor conversion factor to meters
@@ -112,7 +113,9 @@ class DlsScan(PtyScan):
         Load the positions and return as an (N,2) array
         """
         # Load positions from file if possible.
-        instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[NEXUS_PATHS.instrument % self.info.recipe]
+        instrument_path = NEXUS_PATHS.instrument % self.info.recipe
+        print "instrument path:",instrument_path
+        instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[instrument_path]
         if self.info.recipe.israster:
             self.position_shape = instrument[0].shape
         motor_positions = []
@@ -126,7 +129,7 @@ class DlsScan(PtyScan):
                 motor_positions.append((instrument[k]*mmult[i]).ravel())
             i+=1
 
-        positions = np.array(motor_positions).T
+        positions = np.array(motor_positions).T[self.info.recipe.start_position:]
         return positions
 
     def check(self, frames, start):
