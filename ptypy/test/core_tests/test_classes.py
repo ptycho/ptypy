@@ -1668,8 +1668,7 @@ class TestPOD(unittest.TestCase):
              'obj': None,
              'exit': None,
              'diff': None,
-             'mask': None, }
-            ,
+             'mask': None, },
             'Default DEFAULT_ACCESSRULE changed.'
         )
 
