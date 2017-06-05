@@ -223,10 +223,15 @@ class ID16AScan(PtyScan):
         # Load positions
         if self.info.recipe.use_h5:
             # From prepared .h5 file
+            """
             data = io.h5read(self.info.recipe.base_path + '/raw/data.h5')
             for i in np.arange(1, len(data) + 1, 1):
                 positions.append((data['data_%04d' % i]['positions'][0, 0],
                                   data['data_%04d' % i]['positions'][0, 1]))
+            """
+            positions = io.h5read(self.info.recipe.base_path +
+                             self.info.recipe.scan_label + '/positions.h5')['positions']
+
         else:
             # From .edf files
             pos_files = []

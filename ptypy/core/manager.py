@@ -602,7 +602,7 @@ class ModelManager(object):
                                           len(new_object_ids)),
                         extra={'allprocesses': True})
     
-            # Adjust storages      
+            # Adjust storages
             self.ptycho.probe.reformat(True)
             self.ptycho.obj.reformat(True)
             self.ptycho.exit.reformat()
