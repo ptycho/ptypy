@@ -230,10 +230,7 @@ class ID16AScan(PtyScan):
                                   data['data_%04d' % i]['positions'][0, 1]))
 
         else:
-            from ptypy import debug
-            debug.ipshell()
             if self.info.recipe.use_corrected_positions:
-                debug.ipshell()
                 log(3, "Will be using corrected positions stored in 'positions.h5' file")
                 positions = io.h5read(self.info.recipe.base_path +
                                       self.info.recipe.scan_label + '/positions.h5')['positions']
