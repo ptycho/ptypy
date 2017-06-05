@@ -231,6 +231,7 @@ class ID16AScan(PtyScan):
 
         else:
             if self.info.recipe.use_corrected_positions:
+                log(3, "Will be using corrected positions stored in 'positions.h5' file")
                 positions = io.h5read(self.info.recipe.base_path +
                                       self.info.recipe.scan_label + '/positions.h5')['positions']
             else:
