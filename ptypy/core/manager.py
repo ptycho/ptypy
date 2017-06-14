@@ -22,6 +22,7 @@ import model
 import xy
 import data
 
+from collections import OrderedDict
 from .. import utils as u
 from ..utils.verbose import logger, headerline, log
 from classes import *
@@ -89,6 +90,8 @@ DEFAULT = u.Param(
 )
 
 
+
+
 class ModelManager(object):
     """
     Manages ptypy objects creation and update.
@@ -115,6 +118,14 @@ class ModelManager(object):
         and a short listing below """
 
     _PREFIX = MODEL_PREFIX
+    
+    _BASE_MODEL = OrderedDict(
+        index = 0,
+        energy = 0.0,
+        pmode = 0,
+        x = 0.0,
+        y = 0.0,
+    )
 
     def __init__(self, ptycho, pars=None, scans=None, **kwargs):
         """
@@ -316,6 +327,118 @@ class ModelManager(object):
             scan.pars['label'] = label
              
         return data.DataSource(self.scans)
+
+    def new_configure(self,dp):
+        """
+        Configures
+        """
+        parallel.barrier()
+    
+        meta = dp['common']
+        label = meta['ptylabel']
+        
+        # We expect a string for the label.
+        assert label == str(label)
+        
+        logger.info('Importing data from %s as scan %s.'
+                    % (meta['label'], label))
+
+        # Prepare scan dictionary or dig up the already prepared one
+        scan = self.prepare_scan(label)
+        scan.meta = meta
+
+        sh = scan.meta['shape']
+        psize = scan.meta['psize']
+
+        # Storage generation if not already existing
+        if scan.get('diff') is None:
+            # This scan is brand new so we create storages for it
+            scan.diff = self.ptycho.diff.new_storage(
+                shape=(1, sh[-2], sh[-1]),
+                psize=geo.psize,
+                padonly=True,
+                layermap=None)
+                
+        # Same for mask
+        if scan.get('mask') is None:
+            scan.mask = self.ptycho.mask.new_storage(
+                shape=(1, sh[-2], sh[-1]),
+                psize=geo.psize,
+                padonly=True,
+                layermap=None)
+                
+    def new_data_package(self,scan,dp):
+        """
+        Receives and stores data chunk, emits records.
+        """
+        parallel.barrier()
+            
+        # Buffer incoming data and evaluate if we got Nones in data
+        for dct in dp['iterable']:
+
+            active = dct['data'] is not None
+            index = dct['index']
+            sh = scan.meta['shape']
+            psize = scan.meta['psize']
+
+    
+            dv = View(container=self.ptycho.diff,
+                      accessrule={'shape': sh,
+                                  'psize': psize,
+                                  'coord': 0.0,
+                                  'storageID': scan.diff.ID,
+                                  'layer': index,
+                                  'active': active})
+            
+            diff_views.append(dv)
+            
+            mv = View(container=self.ptycho.mask,
+                      accessrule={'shape': sh,
+                                  'psize': psize,
+                                  'coord': 0.0,
+                                  'storageID': scan.mask.ID,
+                                  'layer': index,
+                                  'active': active})
+
+            mask_views.append(mv)
+
+            pos = dct.get('position')
+            if pos is None:
+                logger.warning('No position set to scan point %d of scan %s'
+                               % (index, label))
+                               
+            positions.append(pos)
+
+        # Now we should have the right views to these storages. Let them
+        # reformat(), which creates the right sizes and the datalist access
+        scan.diff.reformat()
+        scan.mask.reformat()
+        # parallel.barrier()
+
+        for dct in dp['iterable']:
+            parallel.barrier()
+            if not dct['data'] is None:
+                continue
+                
+            data = dct['data']
+            idx = dct['index']
+
+            scan.diff.data[scan.diff.layermap.index(idx)][:] = data
+            scan.mask.data[scan.mask.layermap.index(idx)][:] = dct.get(
+                'mask', np.ones_like(data))
+            # del dct['data']
+
+        scan.diff.nlayers = parallel.MPImax(scan.diff.layermap) + 1
+        scan.mask.nlayers = parallel.MPImax(scan.mask.layermap) + 1
+        # Empty iterable buffer
+        # scan.iterable = []
+        scan.new_positions = positions
+        scan.new_diff_views = diff_views
+        scan.new_mask_views = mask_views
+        scan.diff_views += diff_views
+        scan.mask_views += mask_views
+        
+        self._update_stats(scan)
 
     def new_data(self):
         """

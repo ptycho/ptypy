@@ -10,10 +10,111 @@ This file is part of the PTYPY package.
 import os
 import numpy as np
 from functools import wraps
+from collections import OrderedDict
+from collections import namedtuple
 
 __all__ = ['str2int','str2range',\
            'complex_overload','expect2','expect3',\
-           'keV2m','keV2nm','nm2keV', 'clean_path','unique_path']
+           'keV2m','keV2nm','nm2keV', 'clean_path','unique_path','Table']
+
+
+
+class Table(object):
+    """
+    Basic table implemented using numpy.recarray
+    Ideally subclassed to be used with faster or more
+    flexible databases.
+    """
+    def __init__(self,dct,name='pods'):
+        self._table_name = name
+        self._record_factory_from_dict(dct)
+        
+    def _record_factory_from_dict(self,dct,suffix='_record'):
+        self._record_factory = namedtuple(self._table_name+suffix,dct.keys())
+        self._record_default = self._record_factory._make(dct.values())
+        self._record_dtype = [np.array(v).dtype for v in self._record_default]
+    
+    def new_table(self, records = 0):
+        r = self._record_default
+        dtype = zip(r._fields,self._record_dtype)
+        self._table = np.array([tuple(self._record_default)] * records,dtype)
+        
+    def new_fields(self,**kwargs):
+        """ 
+        Add fields (columns) to the table. This is probably slow. 
+        """
+        # save old stuff
+        addition = OrderedDict(**kwargs)
+        t = self._table
+        records = self.pull_records()       
+        new =  self._record_factory._asdict(self._record_default)
+        new.update(addition)
+        self._record_factory_from_dict(new)
+        self.new_table()
+        a  = tuple(addition.values())
+        self.add_records( [r + a for r in records] )
+        
+        
+    def pull_records(self,record_ids=None):
+        if record_ids is None:
+            return map(self._record_factory._make, self._table)
+        else:
+            return map(self._record_factory._make, self._table[record_ids])
+            
+    def add_records(self,records):
+        """ Add records at the end of the table. """
+        start = len(T._table)
+        stop = len(records)+start
+        record_ids = range(start,stop)
+        self._table.resize((len(T._table)+len(records),))
+        self._table[start:stop]=records
+        
+    def insert_records(self,records, record_ids):
+        """ Insert records and overwrite existing content. """
+        self._table[record_ids]=records
+        
+    def select_func(self,func,fields=None):
+        """
+        Find all records where search function `func` evaluates True. 
+        Arguments to the function are selected by `fields`. 
+        The search function will always receive the record_id as first argument. 
+        """
+        a = range(len(self._table))
+        if fields is None:
+            res = [n for n in a if func(a)]
+        else:
+            t = self._table[fields].T # pretty inefficient. Is like a dual transpose
+            res =[n for n,rec in zip(a,t) if func(n, *rec)]
+            
+        return np.array(res)
+        
+    def select_range(self,field,low,high):
+        """
+        Find all records whose values are in the range [`low`,`high`] for
+        the field entry `field`. Should be a numerical value. 
+        """
+        t = self._table
+        record_ids =  np.argwhere(t[field] >=low and t[field] <=high).squeeze(-1)
+        return record_ids
+                    
+    def select_match(self,field,match):
+        """
+        Find all records whose values are in the range [`low`,`high`] for
+        the field entry `field` 
+        """
+        t = self._table
+        record_ids =  np.argwhere(t[field] == match).squeeze(-1)
+        return record_ids
+        
+    def modify_add(self,record_ids,**kwargs):
+        """
+        Take selected record ids and overwrite fields with values
+        **kwargs.
+        """
+        old_records = self.pull_records(record_ids)
+        recs = [r._replace(**kwargs) for r in old_records]
+        self.add_records(recs)
+        
 
 def str2index(s):
     """

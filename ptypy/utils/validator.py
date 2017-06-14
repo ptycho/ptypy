@@ -123,6 +123,7 @@ class Parameter(object):
         Type check
         """
         return type(self.parent) is self.__class__
+
         
     def _parse_info(self,info=None):
         if info is not None:
@@ -402,8 +403,189 @@ class Parameter(object):
             prst.write('\n')
         prst.close()
 
+class ArgParseParameter(Parameter):
+    DEFAULTS = OrderedDict(
+        default = 'Default value for parameter.',
+        help = 'A small docstring for command line parsing (required).',
+        choices = 'If parameter is list of choices, these are listed here.'
+    )
+    def __init__(self, *args,**kwargs):
+        
+        info = self.DEFAULTS.copy()
+        ninfo = kwargs.get('info')
+        if ninfo is not None:
+            info.update(ninfo)
+            
+        kwargs['info'] = info
+        
+        super(ArgParseParameter, self).__init__(*args,**kwargs)
 
-class EvalParameter(Parameter):
+    @property
+    def help(self):
+        """
+        Short descriptive explanation of parameter
+        """
+        return self.options.get('help', '')
+
+    @property
+    def default(self):
+        """
+        Returns default as a Python type
+        """
+        default = str(self.options.get('default', ''))
+        
+        if not default:
+            return None
+        else:
+            return self.eval(default)
+
+
+    def eval(self,val):
+        """
+        A more verbose wrapper around `ast.literal_eval`
+        """
+        try:
+            return ast.literal_eval(val)
+        except ValueError as e:
+            msg = e.message+". could not read %s for parameter %s" % (val,self.name)
+            raise ValueError(msg)
+            
+    @property
+    def choices(self):
+        """
+        If parameter is a list of choices, these are listed here.
+        """
+        # choices is an evaluable list
+        c =  self.options.get('choices', '')
+        #print c, self.name
+        if str(c)=='':
+            c=None
+        else:
+            try:
+                c = ast.literal_eval(c.strip())
+            except SyntaxError('Evaluating `choices` %s for parameter %s failed' %(str(c),self.name)):
+                c = None
+        
+        return c
+    
+
+    def make_default(self, depth=1):
+        """
+        Creates a default parameter structure, from the loaded parameter
+        descriptions in this module
+        
+        Parameters
+        ----------            
+        depth : int
+            The depth in the structure to which all sub nodes are expanded
+            All nodes beyond depth will be returned as empty dictionaries
+            
+        Returns
+        -------
+        pars : dict
+            A parameter branch as nested dicts.
+        
+        Examples
+        --------
+        >>> from ptypy import parameter
+        >>> print parameter.children['io'].make_default()
+        """
+        out = {}
+        if depth<=0:
+            return out
+        for name,child in self.children.iteritems():
+            if child.children and child.default is None:
+                out[name] = child.make_default(depth=depth-1)
+            else:
+                out[name] = child.default
+        return out
+        
+    def _get_type_argparse(self):
+        """
+        Returns type or callable that the argparser uses for 
+        reading in cmd line argements.
+        """
+        return type(self.default)
+        
+    def add2argparser(self,parser=None, prefix='',
+                        excludes=('scans','engines'), mode = 'add'):
+        
+        sep = self.separator
+        
+        pd = self
+               
+        argsep='-'
+
+        if parser is None:
+            from argparse import ArgumentParser
+            description = """
+            Parser for %s
+            Doc: %s
+            """ % (pd.name, pd.help)
+            parser = ArgumentParser(description=description)
+        
+        # overload the parser
+        if not hasattr(parser,'_aux_translator'): 
+            parser._aux_translator={}
+        
+        
+        # get list of descendants and remove separator
+        ndesc = dict((k.replace(sep,argsep),v) for k,v in self.descendants.items())
+        
+        
+        groups = {}
+        
+        for name, pd in ndesc.items():
+            if pd.name in excludes: continue
+            if pd.children:
+                groups[name] = parser.add_argument_group(title=prefix+name, description=pd.help)
+
+        for name, pd in ndesc.iteritems():
+            
+            if pd.name in excludes: continue
+            up = argsep.join(name.split(argsep)[:-1])
+            # recursive part
+            parse = groups.get(up,parser)
+
+            """
+            # this should be part of PDesc I guess.
+            typ = type(pd.default)
+            
+            for t in pd.type:
+                try:
+                    typ= eval(t)
+                except BaseException:
+                    continue
+                if typ is not None:
+                    break
+
+            if typ is None:
+                u.verbose.logger.debug('Failed evaluate type strings %s of parameter %s in python' % (str(pd.type),name))
+                return parser
+                
+            if type(typ) is not type:
+                u.verbose.logger.debug('Type %s of parameter %s is not python type' % (str(typ),name))
+                return parser
+            """
+            typ = pd._get_type_argparse()
+            
+            if typ is bool:
+                flag = '--no-'+name if pd.value else '--'+name
+                action='store_false' if pd.value else 'store_true'
+                parse.add_argument(flag, dest=name, action=action, 
+                                 help=pd.shortdoc )
+            else:
+                d = pd.default
+                defstr =  d.replace('%(','%%(') if str(d)==d else str(d)
+                parse.add_argument('--'+name, dest=name, type=typ, default = pd.default, choices=pd.choices, 
+                                 help=pd.help +' (default=%s)' % defstr)            
+        
+            parser._aux_translator[name] = pd
+            
+        return parser
+
+        
+class EvalParameter(ArgParseParameter):
     """
     Small class to store all attributes of a ptypy parameter
     
@@ -428,7 +610,7 @@ class EvalParameter(Parameter):
         default = 'Default value for parameter (required).',
         help = 'A small docstring for command line parsing (required).',
         type = 'Komma separated list of acceptable types.',
-        doc = 'A small docstring for command line parsing.',
+        doc = 'A longer explanation for the online docs.',
         uplim = 'Upper limit for scalar / integer values',
         lowlim = 'Lower limit for scalar / integer values',
         choices = 'If parameter is list of choices, these are listed here.',
@@ -443,17 +625,7 @@ class EvalParameter(Parameter):
         super(EvalParameter, self).__init__(*args,**kwargs)
         
     @property
-    def type(self):
-            
-        types = self.options.get('type', None)
-        tm = self._typemap
-        if types is not None:
-            types = [tm[x.strip()] if x.strip() in tm else x.strip() for x in types.split(',')]
-        
-        return types
-        
-    @property
-    def default(self,default='', check=False):
+    def default(self):
         """
         Returns default as a Python type
         """
@@ -476,8 +648,17 @@ class EvalParameter(Parameter):
         else:
             out = default
         
-        return out        
+        return out 
         
+    @property
+    def type(self):
+            
+        types = self.options.get('type', None)
+        tm = self._typemap
+        if types is not None:
+            types = [tm[x.strip()] if x.strip() in tm else x.strip() for x in types.split(',')]
+        
+        return types        
        
     @property
     def limits(self):
@@ -495,31 +676,6 @@ class EvalParameter(Parameter):
             
         return lowlim,uplim
         
-    @property
-    def choices(self):
-        """
-        If parameter is a list of choices, these are listed here.
-        """
-        # choices is an evaluable list
-        c =  self.options.get('choices', '')
-        #print c, self.name
-        if str(c)=='':
-            c=None
-        else:
-            try:
-                c = ast.literal_eval(c.strip())
-            except SyntaxError('Evaluating `choices` %s for parameter %s failed' %(str(c),self.name)):
-                c = None
-        
-        return c
-
-    @property
-    def help(self):
-        """
-        Short descriptive explanation of parameter
-        """
-        return self.options.get('help', '')
-    
     @property
     def doc(self):
         """
@@ -595,37 +751,6 @@ class EvalParameter(Parameter):
                     out.update(self.children[k].check(v, walk))
 
         out[ep] = val
-        return out
-
-    def make_default(self, depth=1):
-        """
-        Creates a default parameter structure, from the loaded parameter
-        descriptions in this module
-        
-        Parameters
-        ----------            
-        depth : int
-            The depth in the structure to which all sub nodes are expanded
-            All nodes beyond depth will be returned as empty dictionaries
-            
-        Returns
-        -------
-        pars : dict
-            A parameter branch as nested dicts.
-        
-        Examples
-        --------
-        >>> from ptypy import parameter
-        >>> print parameter.children['io'].make_default()
-        """
-        out = {}
-        if depth<=0:
-            return out
-        for name,child in self.children.iteritems():
-            if child.children and child.default is None:
-                out[name] = child.make_default(depth=depth-1)
-            else:
-                out[name] = child.default
         return out
         
     def validate(self,pars, walk=True, raisecodes=[CODES.FAIL, CODES.INVALID]):
@@ -892,7 +1017,91 @@ for num, desc in enumerate(_desc_list):
 #cleanup
 del level, name, entry_level, pd, entry_pt, entry_dcts
 """
+def add2argparser(parser=None, entry_point='',root=None,\
+                    excludes=('scans','engines'), mode = 'add',group=None):
+    sep = '.'
+    
+    pd = parameter_descriptions[entry_point]
+    
+    has_children = hasattr(pd,'children') and pd.children is not None
+    
+    if root is None:
+        root = pd.entry_point if has_children else pd.parent.entry_point 
+        
+    assert root in entry_points_dct.keys()
+    
+    if excludes is not None:
+        # remove leading '.'
+        lexcludes = [e.strip()[1:] for e in excludes if e.strip().startswith(sep) ]
+        loc_exclude = [e.split(sep)[0] for e in lexcludes if len(e.split())==1 ]
+    else:
+        excludes =['baguette'] #:)
+    
+    if pd.name in excludes: return
+    
+    if parser is None:
+        from argparse import ArgumentParser
+        description = """
+        Parser for % %s
+        Doc: %s
+        """ % (pd.name, pd.shortdoc)
+        parser = ArgumentParser(description=description)
+    
+    # overload the parser
+    if not hasattr(parser,'_ptypy_translator'): 
+        parser._ptypy_translator={}
+    
+    
+    # convert to parser variable
+    name = pd.entry_point.replace(root,'',1).partition(sep)[2].replace('.','-')
+    
+    if has_children:
+        entry = pd.entry_point
+        if name !='':
+            ngroup=parser.add_argument_group(title=name, description=None)
+        else:
+            ngroup=None
+        # recursive behavior here
+        new_excludes = [e[len(entry):] for e in excludes if e.startswith(entry)]
+        for key,child in pd.children.iteritems():
+            _add2argparser(parser, entry_point=child.entry_point,root=root,\
+             excludes=excludes,mode = 'add',group=ngroup)
+                 
+    if name=='': return parser
+    
+    parse = parser if group is None else group
+    
+    # this should be part of PDesc I guess.
+    typ = None
+    for t in pd.type:
+        try:
+            typ= eval(t)
+        except BaseException:
+            continue
+        if typ is not None:
+            break
+    if typ is None:
+        u.verbose.logger.debug('Failed evaluate type strings %s of parameter %s in python' % (str(pd.type),name))
+        return parser
+        
+    if type(typ) is not type:
+        u.verbose.logger.debug('Type %s of parameter %s is not python type' % (str(typ),name))
+        return parser
+    
+    elif typ is bool:
+        flag = '--no-'+name if pd.value else '--'+name
+        action='store_false' if pd.value else 'store_true'
+        parse.add_argument(flag, dest=name, action=action, 
+                         help=pd.shortdoc )
+    else:
+        d = pd.default
+        defstr =  d.replace('%(','%%(') if str(d)==d else str(d)
+        parse.add_argument('--'+name, dest=name, type=typ, default = pd.value, choices=pd.choices, 
+                         help=pd.shortdoc +' (default=%s)' % defstr)            
 
+    parser._ptypy_translator[name] = pd
+        
+    return parser
 
 def create_default_template(filename=None,user_level=0,doc_level=2):
     """
@@ -975,92 +1184,7 @@ def create_default_template(filename=None,user_level=0,doc_level=2):
     f.write('\n\nPtycho(p,level=5)\n')
     f.close()
 
-def _add2argparser(parser=None, entry_point='',root=None,\
-                        excludes=('scans','engines'), mode = 'add',group=None):
-    
-    sep = '.'
-    
-    pd = parameter_descriptions[entry_point]
-    
-    has_children = hasattr(pd,'children') and pd.children is not None
-    
-    if root is None:
-        root = pd.entry_point if has_children else pd.parent.entry_point 
-        
-    assert root in entry_points_dct.keys()
-    
-    if excludes is not None:
-        # remove leading '.'
-        lexcludes = [e.strip()[1:] for e in excludes if e.strip().startswith(sep) ]
-        loc_exclude = [e.split(sep)[0] for e in lexcludes if len(e.split())==1 ]
-    else:
-        excludes =['baguette'] #:)
-    
-    if pd.name in excludes: return
-    
-    if parser is None:
-        from argparse import ArgumentParser
-        description = """
-        Parser for PDesc %s
-        Doc: %s
-        """ % (pd.name, pd.shortdoc)
-        parser = ArgumentParser(description=description)
-    
-    # overload the parser
-    if not hasattr(parser,'_ptypy_translator'): 
-        parser._ptypy_translator={}
-    
-    
-    # convert to parser variable
-    name = pd.entry_point.replace(root,'',1).partition(sep)[2].replace('.','-')
-    
-    if has_children:
-        entry = pd.entry_point
-        if name !='':
-            ngroup=parser.add_argument_group(title=name, description=None)
-        else:
-            ngroup=None
-        # recursive behavior here
-        new_excludes = [e[len(entry):] for e in excludes if e.startswith(entry)]
-        for key,child in pd.children.iteritems():
-            _add2argparser(parser, entry_point=child.entry_point,root=root,\
-             excludes=excludes,mode = 'add',group=ngroup)
-                 
-    if name=='': return parser
-    
-    parse = parser if group is None else group
-    
-    # this should be part of PDesc I guess.
-    typ = None
-    for t in pd.type:
-        try:
-            typ= eval(t)
-        except BaseException:
-            continue
-        if typ is not None:
-            break
-    if typ is None:
-        u.verbose.logger.debug('Failed evaluate type strings %s of parameter %s in python' % (str(pd.type),name))
-        return parser
-        
-    if type(typ) is not type:
-        u.verbose.logger.debug('Type %s of parameter %s is not python type' % (str(typ),name))
-        return parser
-    
-    elif typ is bool:
-        flag = '--no-'+name if pd.value else '--'+name
-        action='store_false' if pd.value else 'store_true'
-        parse.add_argument(flag, dest=name, action=action, 
-                         help=pd.shortdoc )
-    else:
-        d = pd.default
-        defstr =  d.replace('%(','%%(') if str(d)==d else str(d)
-        parse.add_argument('--'+name, dest=name, type=typ, default = pd.value, choices=pd.choices, 
-                         help=pd.shortdoc +' (default=%s)' % defstr)            
 
-    parser._ptypy_translator[name] = pd
-        
-    return parser
     
 if __name__ =='__main__':
     from ptypy import utils as u
