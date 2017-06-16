@@ -1,17 +1,17 @@
 # This tutorial explains how |ptypy| accesses data / memory.
-# The data access is governed by three classes: 
+# The data access is governed by three classes:
 # :py:class:`~ptypy.core.classes.Container`,
 # :py:class:`~ptypy.core.classes.Storage`,
 # and :py:class:`~ptypy.core.classes.View`
 
-# First a short reminder from the :py:mod:`~ptypy.core.classes` Module 
+# First a short reminder from the :py:mod:`~ptypy.core.classes` Module
 # about the classes this tutorial covers.
 
 """
 **Container class**
     A high-level container that keeps track of sub-containers (Storage)
     and Views onto them. A container can copy itself to produce a buffer
-    needed for calculations. Some basic Mathematical operations are 
+    needed for calculations. Some basic Mathematical operations are
     implemented at this level as in-place operations.
     In general, operations on arrays should be done using the Views, which
     simply return numpy arrays.
@@ -42,16 +42,16 @@ plt = mpl.pyplot
 # A single Storage in one Container
 # ---------------------------------
 
-# The governing object is a :any:`Container` instance, which we need 
+# The governing object is a :any:`Container` instance, which we need
 # to construct as first object. It does not need much for an input but
 # the data type.
 C1 = Container(data_type='real')
 
-# This class itself holds nothing at first. In order to store data in 
+# This class itself holds nothing at first. In order to store data in
 # ``C1`` we have to add a :any:`Storage` to that container.
 S1 = C1.new_storage(shape=(1, 7, 7))
 
-# Similarly we can contruct the Storage from a data buffer. 
+# Similarly we can contruct the Storage from a data buffer.
 # ``S1=C1.new_storage(data=np.ones((1,7,7)))`` would have also worked.
 
 # All of |ptypy|'s special classes carry a uniue ID, which is needed
@@ -61,7 +61,7 @@ S1 = C1.new_storage(shape=(1, 7, 7))
 # In this case that will be ``S0000`` where the *S* refers to the class type.
 print S1.ID
 
-# Let's have a look at what kind of data Storage holds. 
+# Let's have a look at what kind of data Storage holds.
 print S1.formatted_report()[0]
 
 # Apart from the ID on the left we discover a few other entries, for
@@ -92,9 +92,9 @@ print g[1]
 
 # We observe that the center has in fact moved one pixel up and one left.
 # The :py:func:`~ptypy.core.classes.Storage.center` property uses pixel
-# units. 
-# If we want to use a physical quantity to shift the center, 
-# we may instead set the top left pixel to a new value, 
+# units.
+# If we want to use a physical quantity to shift the center,
+# we may instead set the top left pixel to a new value,
 # which shifts the center to a new position.
 S1.origin -= 0.12
 y, x = S1.grids()
@@ -102,14 +102,14 @@ print y
 print x
 print S1.center
 
-# Up until now our actual *data* numpy array located at ``S1.data`` is 
-# still filled with ones, i.e. flat. We can use 
+# Up until now our actual *data* numpy array located at ``S1.data`` is
+# still filled with ones, i.e. flat. We can use
 # :any:`Storage.fill` to fill that container with an array.
 S1.fill(x+y)
 print S1.data
 
-# We can have visual check on the data using 
-# :py:func:`~ptypy.utils.plot_utils.plot_storage` 
+# We can have visual check on the data using
+# :py:func:`~ptypy.utils.plot_utils.plot_storage`
 fig = u.plot_storage(S1, 0)
 fig.savefig('ptypyclasses_%d.png' % fig.number, dpi=300)
 # A plot of the data stored in ``S1``
@@ -145,24 +145,24 @@ print V1.storageID
 print V1.psize
 print V1.storage
 
-# The update also set new attributes of the View which all start with 
-# a lower ``d`` and are locally cached information about data access. 
+# The update also set new attributes of the View which all start with
+# a lower ``d`` and are locally cached information about data access.
 print V1.dlayer, V1.dlow, V1.dhigh
 
-# Finally, we can retrieve the data subset 
+# Finally, we can retrieve the data subset
 # by applying the View to the storage.
 data = S1[V1]
 print data
 
-# It does not matter if we apply the View to Storage ``S1`` or the 
-# container ``C1``, or use the View internal 
+# It does not matter if we apply the View to Storage ``S1`` or the
+# container ``C1``, or use the View internal
 # View.\ :py:meth:`~ptypy.core.classes.View.data` property.
 print np.allclose(data, C1[V1])
 print np.allclose(data, V1.data)
 
-# The first access yielded a similar result because the 
-# :py:attr:`~ptypy.core.classes.View.storageID` ``S0000`` is in ``C1`` 
-# and the second acces method worked because it uses the View's 
+# The first access yielded a similar result because the
+# :py:attr:`~ptypy.core.classes.View.storageID` ``S0000`` is in ``C1``
+# and the second acces method worked because it uses the View's
 # :py:attr:`~ptypy.core.classes.View.storage` attribute.
 print V1.storage is S1
 print V1.storageID in C1.S.keys()
@@ -172,27 +172,27 @@ print V1.storageID in C1.S.keys()
 # as possible. The coordinate in data space that the View would have as
 # center is the attribute :py:meth:`~ptypy.core.classes.View.pcoord` while
 # :py:meth:`~ptypy.core.classes.View.dcoord` is the closest data coordinate.
-# The difference is held by :py:meth:`~ptypy.core.classes.View.sp` such 
+# The difference is held by :py:meth:`~ptypy.core.classes.View.sp` such
 # that a subpixel correction may be applied if needed (future release)
 print V1.dcoord, V1.pcoord, V1.sp
 
 # .. note::
-#    Please note that we cannot guarantee any API stability for other 
+#    Please note that we cannot guarantee any API stability for other
 #    attributes / properties besides *.data*, *.shape* and *.coord*
 
 # If we set the coordinate to some other value in the grid, we can eliminate
 # the subpixel misfit. By changing the *.coord* property, we need to
 # update the View manually, as the View-Storage interaction is non-automatic
-# apart from the moment the View is constructed - a measure to prevent 
+# apart from the moment the View is constructed - a measure to prevent
 # unwanted feedback loops.
 V1.coord = (0.08, 0.08)
 S1.update_views(V1)
-print V1.dcoord, V1.pcoord, V1.sp 
+print V1.dcoord, V1.pcoord, V1.sp
 
 # We observe that the high range limit of the View is close to the border
 # of the data buffer.
 print V1.dhigh
- 
+
 # What happens if we push the coordinate further?
 V1.coord = (0.28, 0.28)
 S1.update_views(V1)
@@ -206,8 +206,8 @@ print S1[V1].shape, V1.shape
 
 # One important feature of the :any:`Storage` class is that it can detect
 # all out-of-bounds accesses and reformat the data buffer accordingly.
-# A simple call to 
-# *Storage*.\ :py:meth:`~ptypy.core.classes.Storage.reformat` should do. 
+# A simple call to
+# *Storage*.\ :py:meth:`~ptypy.core.classes.Storage.reformat` should do.
 print S1.shape
 mn = S1[V1].mean()
 S1.fill_value = mn
@@ -215,11 +215,11 @@ S1.reformat()
 print S1.shape
 
 # Oh no, the Storage data buffer has shrunk! But don't worry, that is
-# intended behavior. A call to *.reformat()* crops and pads the data 
-# buffer around all **active** Views. 
+# intended behavior. A call to *.reformat()* crops and pads the data
+# buffer around all **active** Views.
 # We would need to set ``S1.padonly = True``
 # if we wanted to avoid that the data buffer is cropped. We leave this
-# as an exercise for now. Instead, we add a new View at a different 
+# as an exercise for now. Instead, we add a new View at a different
 # location to verify that the buffer will adapt to reach both Views.
 ar2 = ar.copy()
 ar2.coord = (-0.82, -0.82)
@@ -256,7 +256,7 @@ fig.savefig('ptypyclasses_%d.png' % fig.number, dpi=300)
 # exist.
 ar = DEFAULT_ACCESSRULE.copy()
 ar.shape = 200
-ar.coord = 0.      
+ar.coord = 0.
 ar.storageID = 'S100'
 ar.psize = 1.0
 V3=View(C1, ID=None, accessrule=ar)

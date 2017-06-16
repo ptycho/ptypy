@@ -7,7 +7,7 @@ This file is part of the PTYPY package.
 """
 
 import unittest
-from ptypy.test import test_utils as tu 
+from ptypy.test import test_utils as tu
 from ptypy import utils as u
 
 class DMTest(unittest.TestCase):
@@ -24,7 +24,7 @@ class DMTest(unittest.TestCase):
         engine_params.fourier_relax_factor = 0.01
         engine_params.obj_smooth_std = 20
         tu.EngineTestRunner(engine_params)
-        
+
 
 if __name__ == "__main__":
     unittest.main()

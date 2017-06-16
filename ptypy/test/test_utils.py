@@ -43,12 +43,12 @@ def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='app
         return out_dict
 
 def EngineTestRunner(engine_params,propagator='farfield'):
-    
+
     RECIPE = u.Param({'photons': 100000000.0,
                       'psf': 0.0,
                       'density': 0.2})
     p = u.Param()
-    p.verbose_level = 3                              
+    p.verbose_level = 3
     p.io = u.Param()
     p.io.home = './'
     p.io.rfile = False
@@ -66,15 +66,15 @@ def EngineTestRunner(engine_params,propagator='farfield'):
     p.scans.MF.data.precedence =  None
     p.scans.MF.data.num_frames =  100
     p.scans.MF.data.energy =  6.2
-    p.scans.MF.data.shape =  256 
+    p.scans.MF.data.shape =  256
     p.scans.MF.data.chunk_format = '.chunk%02d'
-    p.scans.MF.data.rebin =  None 
-    p.scans.MF.data.experimentID =  None 
-    p.scans.MF.data.label =  None 
-    p.scans.MF.data.version = 0.1 
-    p.scans.MF.data.dfile = None 
-    p.scans.MF.data.lam =  None 
-    p.scans.MF.data.psize =  0.000172 
+    p.scans.MF.data.rebin =  None
+    p.scans.MF.data.experimentID =  None
+    p.scans.MF.data.label =  None
+    p.scans.MF.data.version = 0.1
+    p.scans.MF.data.dfile = None
+    p.scans.MF.data.lam =  None
+    p.scans.MF.data.psize =  0.000172
     p.scans.MF.data.load_parallel =  None
     p.scans.MF.data.misfit =  0
     p.scans.MF.data.origin = 'fftshift'
@@ -84,7 +84,7 @@ def EngineTestRunner(engine_params,propagator='farfield'):
     p.scans.MF.data.propagation = propagator
     p.scans.MF.data.resolution =  None
     p.scans.MF.data.recipe =  RECIPE
-    p.engines = u.Param()                              
+    p.engines = u.Param()
     p.engines.engine00 = engine_params
     P = Ptycho(p,level=5)
     return P

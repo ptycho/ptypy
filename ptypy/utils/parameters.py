@@ -17,25 +17,25 @@ class Param(dict):
     """
     Convenience class: a dictionary that gives access to its keys
     through attributes.
-    
+
     Note: dictionaries stored in this class are also automatically converted
     to Param objects:
     >>> p = Param()
     >>> p.x = {}
     >>> p
     Param({})
-    
+
     While dict(p) returns a dictionary, it is not recursive, so it is better in this case
     to use p.todict(). However, p.todict does not check for infinite recursion. So please
     don't store a dictionary (or a Param) inside itself.
-    
+
     BE: Please note also that the recursive behavior of the update function will create
     new references. This will lead inconsistency if other objects refer to dicts or Params
-    in the updated Param instance. 
+    in the updated Param instance.
     """
     _display_items_as_attributes=True
     _PREFIX = PARAM_PREFIX
-    
+
     def __init__(self,__d__=None,**kwargs):
         """
         A Dictionary that enables access to its keys as attributes.
@@ -58,12 +58,12 @@ class Param(dict):
     def __str__(self):
         from .verbose import report
         return report(self,depth=7,noheader=True)
-        
+
     def __setitem__(self, key, value):
         # BE: original behavior modified as implicit conversion may destroy references
         # Use update(value,Convert=True) instead
         #return super(Param, self).__setitem__(key, Param(value) if type(value) == dict else value)
-        return super(Param, self).__setitem__(key, value) 
+        return super(Param, self).__setitem__(key, value)
 
     def __getitem__(self, name):
         #item = super(Param, self).__getitem__(name)
@@ -75,33 +75,33 @@ class Param(dict):
 
     def __delattr__(self, name):
         return super(Param, self).__delitem__(name)
-        
+
     #__getattr__ = __getitem__
     def __getattr__(self, name):
-        try: 
+        try:
             return self.__getitem__(name)
         except KeyError as ke:
             raise AttributeError(ke)
-            
+
     __setattr__ = __setitem__
 
     def copy(self,depth=0):
         """
-        :returns Param: A (recursive) copy of P with depth `depth` 
+        :returns Param: A (recursive) copy of P with depth `depth`
         """
         d = Param(self)
         if depth>0:
             for k,v in d.iteritems():
                 if isinstance(v,self.__class__): d[k] = v.copy(depth-1)
-        return d     
-     
+        return d
+
 
     def __dir__(self):
         """
         Defined to include the keys when using dir(). Useful for
         tab completion in e.g. ipython.
         If you do not wish the dict key's be displayed as attributes
-        (although they are still accessible as such) set the class 
+        (although they are still accessible as such) set the class
         attribute `_display_items_as_attributes` to False. Default is
         True.
         """
@@ -114,18 +114,18 @@ class Param(dict):
     def update(self, __d__=None, in_place_depth=0, Convert=False, **kwargs):
         """
         Update Param - almost same behavior as dict.update, except
-        that all dictionaries are converted to Param if `Convert` is set 
+        that all dictionaries are converted to Param if `Convert` is set
         to True, and update may occur in-place recursively for other Param
         instances that self refers to.
-        
+
         Parameters
         ----------
-        Convert : bool 
+        Convert : bool
                   If True, convert all dict-like values in self also to Param.
-                  *WARNING* 
+                  *WARNING*
                   This mey result in misdirected references in your environment
-        in_place_depth : int 
-                  Counter for recursive in-place updates 
+        in_place_depth : int
+                  Counter for recursive in-place updates
                   If the counter reaches zero, the Param to a key is
                   replaced instead of updated
         """
@@ -134,7 +134,7 @@ class Param(dict):
             if Convert and hasattr(v, 'keys'):
                 #print 'converting'
                 v = Param(v)
-            # new key 
+            # new key
             if not self.has_key(k):
                 self[k] = v
             # If this key already exists and is already dict-like, update it
@@ -151,23 +151,23 @@ class Param(dict):
             # Otherwise just replace it
             else:
                 self[k] = v
-            
+
         if __d__ is not None:
             if hasattr(__d__, 'keys'):
                 # Iterate through dict-like argument
                 for k,v in __d__.iteritems():
                     _k_v_update(k,v)
-                    
+
             else:
                 # here we assume a (key,value) list.
                 for (k,v) in __d__:
                     _k_v_update(k,v)
-                    
+
         for k,v in kwargs.iteritems():
             _k_v_update(k,v)
-            
+
         return None
-            
+
     def _to_dict(self,Recursive=False):
         """
         Convert to dictionary (recursively if needed).
@@ -179,7 +179,7 @@ class Param(dict):
             for k,v in d.iteritems():
                 if isinstance(v,self.__class__): d[k] = v._to_dict(Recursive)
         return d
-        
+
     @classmethod
     def _from_dict(cls,dct):
         """
@@ -189,7 +189,7 @@ class Param(dict):
         #p=Param()
         #p.update(dct.copy())
         return Param(dct.copy())
-        
+
 def validate_standard_param(sp, p=None, prefix=None):
     """\
     validate_standard_param(sp) checks if sp follows the standard parameter convention.
@@ -210,7 +210,7 @@ def validate_standard_param(sp, p=None, prefix=None):
                     a,b,c = v
                     if prefix is not None:
                         print '    %s.%s = %s' % (prefix, k, str(v))
-                    else:   
+                    else:
                         print '    %s = %s' % (k, str(v))
                 except:
                     good = False
@@ -236,23 +236,23 @@ def format_standard_param(p):
             sublines = format_standard_param(v)
             lines += [k + '.' + s for s in sublines]
         else:
-            lines += ['%s = %s #[%s] %s' % (k, str(v[1]),v[0],v[2])] 
+            lines += ['%s = %s #[%s] %s' % (k, str(v[1]),v[0],v[2])]
     return lines
 
 
 def asParam(obj):
     """
     Convert the input to a Param.
-    
+
     Parameters
     ----------
     a : dict_like
         Input structure, in any format that can be converted to a Param.
-        
+
     Returns:
     out : Param
         The Param structure built from a. No copy is done if the input
-        is already a Param.  
+        is already a Param.
     """
     return obj if isinstance(obj, Param) else Param(obj)
 
@@ -263,7 +263,7 @@ def load(filename):
     # This avoid circular import
     from .. import io
 
-    filename = os.path.abspath(os.path.expanduser(filename)) 
+    filename = os.path.abspath(os.path.expanduser(filename))
     param_dict = io.h5read(filename)
     param = Param(param_dict)
     param.autoviv = False

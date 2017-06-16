@@ -98,7 +98,7 @@ DEFAULT = u.Param(
         # Label of the scan of whose diffraction data to initialize stxm.
         # If None, use own scan_label
         label=None,
-    ), 
+    ),
     # Diversity parameters, can be None = no diversity
     diversity=DEFAULT_diversity,
     # Aperture parameters, can be None = no aperture
@@ -132,22 +132,22 @@ def ellipsis(grids, dims=None, ew=2):
 
 def aperture(A, grids=None, pars=None, **kwargs):
     """
-    Creates an aperture in the shape and dtype of `A` according 
-    to x,y-grids `grids`. Keyword Arguments may be any of 
+    Creates an aperture in the shape and dtype of `A` according
+    to x,y-grids `grids`. Keyword Arguments may be any of
     :any:`DEFAULT`.aperture.
-    
+
     Parameters
     ----------
     A : ndarray
         Model array (at least 2-dimensional) to place aperture on top.
-        
+
     pars: dict or ptypy.utils.Param
         Parameters, see :any:`DEFAULT`.aperture
-        
+
     grids : ndarray
         Cartesian coordinate grids, if None, they will be created with
         ``grids = u.grids(sh[-2:], psize=(1.0, 1.0))``
-        
+
     Returns
     -------
     ap : ndarray
@@ -157,7 +157,7 @@ def aperture(A, grids=None, pars=None, **kwargs):
     if pars is not None:
         p.update(pars)
         p.update(**kwargs)
-    
+
     sh = A.shape
     if grids is not None:
         grids = np.array(grids).copy()
@@ -168,12 +168,12 @@ def aperture(A, grids=None, pars=None, **kwargs):
     else:
         psize = u.expect2(1.0)
         grids = u.grids(sh[-2:], psize=psize)
-        
+
     ap = np.ones(sh[-2:], dtype=A.dtype)
 
     if p.diffuser is not None:
         ap *= u.parallel.MPInoise2d(sh[-2:], *p.diffuser)
-        
+
     if p.form is not None:
         off = u.expect2(p.offset)
         cgrid = grids[0].astype(complex) + 1j*grids[1]
@@ -207,14 +207,14 @@ def aperture(A, grids=None, pars=None, **kwargs):
 def init_storage(storage, pars, energy=None, **kwargs):
     """
     Initializes :any:`Storage` `storage` with parameters from `pars`
-    
+
     Parameters
     ----------
     storage : ptypy.core.Storage
         A :any:`Storage` instance in the *probe* container of :any:`Ptycho`
-        
+
     pars : Param
-        Parameter structure for creating a probe / illumination. 
+        Parameter structure for creating a probe / illumination.
         See :any:`DEFAULT`
         Also accepted as argument:
          * string giving the filename of a previous reconstruction to
@@ -222,29 +222,29 @@ def init_storage(storage, pars, energy=None, **kwargs):
          * string giving the name of an available TEMPLATE
          * FIXME: document other string cases.
          * numpy array: interpreted as initial illumination.
-        
+
     energy : float, optional
         Energy associated with this storage. If None, tries to retrieve
-        the energy from the already initialized ptypy network. 
+        the energy from the already initialized ptypy network.
     """
     s = storage
     prefix = "[Object %s] " % str(s.ID)
-    
+
     p = DEFAULT.copy(depth=3)
     model = None
     if hasattr(pars, 'items') or hasattr(pars, 'iteritems'):
         # This is a dict
-        p.update(pars, in_place_depth=3)    
-    
+        p.update(pars, in_place_depth=3)
+
     # First we check for scripting shortcuts. This is only convenience.
     elif str(pars) == pars:
         # This maybe a template now or a file
-        
+
         # Deactivate further processing
         p.aperture = None
         p.propagation = None
         p.diversity = None
-        
+
         if pars.endswith('.ptyr'):
             recon = u.Param(rfile=pars, layer=None, ID=s.ID)
             p.recon = recon
@@ -261,7 +261,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
             return
         elif pars in TEMPLATES.keys():
             init_storage(s, TEMPLATES[pars])
-            return 
+            return
         elif pars in resources.probes or pars == 'stxm':
             p.model = pars
             init_storage(s, p)
@@ -280,7 +280,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
         return
     else:
         ValueError(prefix + 'Shortcut for probe creation is not understood.')
-        
+
     if p.model is None:
         model = np.ones(s.shape, s.dtype)
         if p.photons is not None:
@@ -327,13 +327,13 @@ def init_storage(storage, pars, energy=None, **kwargs):
             curve = pod.geometry.propagator.post_curve
         except:
             # Ok this is nearfield
-            curve = 1.0 
-            
+            curve = 1.0
+
         model = pod.bw(curve * np.sqrt(alldiff))
     else:
         raise ValueError(
             prefix + 'Value to `model` key not understood in probe creation')
-        
+
     assert type(model) is np.ndarray, "".join(
         [prefix, "Internal model should be numpy array now but it is %s."
          % str(type(model))])
@@ -351,15 +351,15 @@ def init_storage(storage, pars, energy=None, **kwargs):
                         'Could not retrieve energy from pod network... '
                         'Maybe there are no pods yet created?')
     s._energy = energy
-        
+
     # Perform aperture multiplication, propagation etc.
     model = _process(model, p.aperture, p.propagation,
                      p.photons, energy, s.psize, prefix)
-    
+
     # Apply diversity
     if p.diversity is not None:
         u.diversify(model, **p.diversity)
-    
+
     # Fill storage array
     s.fill(model)
 
@@ -369,7 +369,7 @@ def _process(model, aperture_pars=None, prop_pars=None, photons=1e7,
     """
     Processes 3d stack of incoming wavefronts `model`. Applies aperture
     according to `aperture_pars` and propagates according to `prop_pars`
-    and other keywords arguments. 
+    and other keywords arguments.
     """
     # Create the propagator
     ap_size, grids, prop = _propagation(prop_pars,
@@ -377,7 +377,7 @@ def _process(model, aperture_pars=None, prop_pars=None, photons=1e7,
                                         resolution,
                                         energy,
                                         prefix)
-        
+
     # Form the aperture on top of the model
     if type(aperture_pars) is np.ndarray:
         model *= np.resize(aperture_pars, model.shape)
@@ -393,11 +393,11 @@ def _process(model, aperture_pars=None, prop_pars=None, photons=1e7,
 
     # Propagate
     model = prop(model)
-    
+
     # apply photon count
     if photons is not None:
         model *= np.sqrt(photons / u.norm2(model))
-    
+
     return model
 
 
@@ -414,7 +414,7 @@ def _propagation(prop_pars, shape=None, resolution=None, energy=None,
     p = prop_pars
     grids = None
     if p is not None and len(p) > 0:
-        ap_size = p.spot_size if p.spot_size is not None else None 
+        ap_size = p.spot_size if p.spot_size is not None else None
         ffGeo = None
         nfGeo = None
         fdist = p.focussed
@@ -460,7 +460,7 @@ def _propagation(prop_pars, shape=None, resolution=None, energy=None,
                 prefix +
                 'Model illumination is propagated over a distance %3.3g m.'
                 % p.parallel)
-            
+
         if ffGeo is not None and nfGeo is not None:
             prop = lambda x: nfGeo.propagator.fw(ffGeo.propagator.fw(x * phase))
         elif ffGeo is not None and nfGeo is None:
@@ -474,7 +474,7 @@ def _propagation(prop_pars, shape=None, resolution=None, energy=None,
         grids = u.grids(u.expect2(shape), psize=u.expect2(resolution))
         prop = lambda x: x
         ap_size = None
-        
+
     return ap_size, grids, prop
 
 DEFAULT_old = u.Param(

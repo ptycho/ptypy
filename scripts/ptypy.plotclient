@@ -14,23 +14,23 @@ parser.add_argument('-d','--dir', dest='directory', type=str,default='./' ,
 args = parser.parse_args()
 for key,pd in parser._ptypy_translator.items():
     pd.set_default(getattr(args,key,pd.default))
-                   
+
 plot_pars = u.validator.make_sub_default('.io.autoplot')
 plot_pars['home'] = getattr(args,'directory',pd.value)
 client_pars = u.validator.make_sub_default('.io.interaction')
 """
 parser = argparse.ArgumentParser(description='Create a ZeroMQ plotting client.')
-parser.add_argument('-l', dest='layout', type=str, 
+parser.add_argument('-l', dest='layout', type=str,
                    help='layout of the plotter')
 parser.add_argument('--dump', dest='dump', action='store_true',
                    help='dump .png images')
 parser.add_argument('--movie', dest='dump', action='store_false',
                    help='create movie when reconstruction is finished')
-parser.add_argument('-i', dest='interval', type=int, 
+parser.add_argument('-i', dest='interval', type=int,
                    help='minimum plotting interval')
-parser.add_argument('-d', dest='directory', type=str, 
+parser.add_argument('-d', dest='directory', type=str,
                    help='image dump directory')
-parser.add_argument('-a', dest='address', type=str, 
+parser.add_argument('-a', dest='address', type=str,
                    help='address of reconstruction server')
 """
 #args = parser.parse_args()

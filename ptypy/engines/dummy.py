@@ -25,11 +25,11 @@ DEFAULT = u.Param(
 )
 
 class Dummy(BaseEngine):
-    
+
     """
     Minimum implementation of BaseEngine
     """
-    
+
     DEFAULT = DEFAULT
 
     def __init__(self, ptycho_parent, pars=None):
@@ -45,13 +45,13 @@ class Dummy(BaseEngine):
         """
         self.itertime = self.p.itertime / parallel.size
         self.error = np.ones((100,3))*1e6
-        
+
     def engine_prepare(self):
         """
         Last-minute preparation before iterating.
         """
         pass
-            
+
     def engine_iterate(self,numiter):
         """
         Compute one iteration.
@@ -67,14 +67,14 @@ class Dummy(BaseEngine):
             error_dct[dname] = [0., 0.9**self.ntimescalled, 0.]
         self.ntimescalled+=1
         return error_dct
-     
+
     def engine_finalize(self):
         """
         Clean up after iterations are done
         """
         pass
-        
-        
 
 
-        
+
+
+

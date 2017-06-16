@@ -24,6 +24,6 @@ script:
 
 after_script:
   - coveralls
-  
+
 allow_failures:
 - python: "3.3"

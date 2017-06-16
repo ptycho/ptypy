@@ -9,7 +9,7 @@ dependencies:
   - pyzmq
   - pep8
   - pytest
-  - mpi4py 
+  - mpi4py
   - pil
   - pip:
     - pytest-cov
