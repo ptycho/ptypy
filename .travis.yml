@@ -3,7 +3,7 @@ sudo: true
 language: python
 python:
   - "2.7"
-
+  - "3.3"
 before_install:
   - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh; # grab miniconda
   - bash miniconda.sh -b -p $HOME/miniconda # install miniconda
@@ -24,3 +24,6 @@ script:
 
 after_script:
   - coveralls
+  
+allow_failures:
+- python: "3.3"
