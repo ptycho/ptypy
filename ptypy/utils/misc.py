@@ -63,11 +63,13 @@ class Table(object):
             
     def add_records(self,records):
         """ Add records at the end of the table. """
-        start = len(T._table)
+        start = len(self._table)
         stop = len(records)+start
         record_ids = range(start,stop)
-        self._table.resize((len(T._table)+len(records),))
+        self._table.resize((len(self._table)+len(records),))
         self._table[start:stop]=records
+        
+        return record_ids
         
     def insert_records(self,records, record_ids):
         """ Insert records and overwrite existing content. """
