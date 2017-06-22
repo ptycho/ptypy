@@ -175,9 +175,6 @@ class Ptycho(Base):
         self.mask = None
         self.modelm = None
 
-        # Data
-        self.datasource = None
-
         # Communication
         self.interactor = None
         self.plotter = None
@@ -805,10 +802,9 @@ class Ptycho(Base):
             
             if kind == 'fullflat':
                 self.interactor.stop()
-                logger.info('Deleting references for interactor, '
-                            'datasource and engines.')
+                logger.info('Deleting references for interactor '
+                            ' and engines.')
                 del self.interactor
-                del self.datasource
                 del self.paths
                 try:
                     del self.engines
