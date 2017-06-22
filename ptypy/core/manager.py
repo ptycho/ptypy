@@ -158,7 +158,7 @@ class ScanModel(object):
     def new_data(self):
         """
         Feed data from ptyscan object.
-        :return:
+        :return: None if no data is available, True otherwise.
         """
 
         # Initialize if that has not been done yet
@@ -322,6 +322,8 @@ class ScanModel(object):
         self.mask_views += mask_views
 
         self._update_stats()
+
+        return True
 
     def _update_stats(self):
         """
@@ -688,16 +690,16 @@ class ModelManager(object):
                 logger.info('Initializing object storage %s using scan %s.'
                             % (oid, scan.label))
         
-            sample_pars = scan.pars.sample   
+            sample_pars = scan.p.sample
             
             if type(sample_pars) is u.Param:
                 # Deep copy
                 sample_pars = sample_pars.copy(depth=10)          
                 
                 # Quickfix spectral contribution.
-                if (scan.pars.coherence.object_dispersion
+                if (scan.p.coherence.object_dispersion
                         not in [None, 'achromatic']
-                        and scan.pars.coherence.probe_dispersion
+                        and scan.p.coherence.probe_dispersion
                         in [None, 'achromatic']):
                     logger.info(
                         'Applying spectral distribution input to object fill.')
@@ -765,7 +767,7 @@ class ModelManager(object):
 
                 # Object and probe position
                 pos_pr = u.expect2(0.0)
-                pos_obj = positions[i] if 'empty' not in scan.pars.tags else 0.0
+                pos_obj = positions[i] if 'empty' not in scan.p.tags else 0.0
 
                 t, object_id = self.sharing_rules(obj_label, index)
                 probe_id, t = self.sharing_rules(pr_label, index)
