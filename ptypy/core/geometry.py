@@ -20,6 +20,11 @@ else:
 
 import numpy as np
 from scipy import fftpack
+try:
+    import pyfftw
+    import pyfftw.interfaces.numpy_fft as fftw_np
+except ImportError:
+    print "Warning: unable to import pyFFTW! Will use a slower FFT method."
 
 __all__ = ['DEFAULT', 'Geo', 'BasicNearfieldPropagator',
            'BasicFarfieldPropagator']
@@ -349,6 +354,68 @@ def get_propagator(geo_dct, **kwargs):
         return BasicNearfieldPropagator(geo_dct, **kwargs)
 
 
+class FFTchooser(object):
+    """
+    Chooses the desired FFT algo, and assigns scaling.
+    If pyFFTW is not available, falls back to scipy.
+    """
+    def __init__(self, ffttype='std'):
+        """
+        Parameters
+        ----------
+        ffttype : str or tuple
+            Type of FFT implementation. One of:
+
+            - 'fftw' for pyFFTW
+            - 'numpy' for numpy.fft.fft2
+            - 'scipy' for scipy.fft.fft2
+            - 2 or 4-tuple of (forward_fft2(), inverse_fft2(),
+              [scaling, inverse_scaling])
+        """
+        self.ffttype = ffttype
+
+    def _FFTW_fft(self):
+        pyfftw.interfaces.cache.enable()
+        pyfftw.interfaces.cache.set_keepalive_time(15.0)
+        pe = 'FFTW_MEASURE'
+        self.fft = lambda x: fftw_np.fft2(x, planner_effort=pe)
+        self.ifft = lambda x: fftw_np.ifft2(x, planner_effort=pe)
+
+    def _scipy_fft(self):
+        self.fft = lambda x: fftpack.fft2(x).astype(x.dtype)
+        self.ifft = lambda x: fftpack.ifft2(x).astype(x.dtype)
+
+    def _numpy_fft(self):
+        self.fft = lambda x: np.fft.fft2(x).astype(x.dtype)
+        self.ifft = lambda x: np.fft.ifft2(x).astype(x.dtype)
+
+    def assign_scaling(self, shape):
+        if isinstance(self.ffttype, tuple) and len(self.ffttype) > 2:
+            self.sc = self.ffttype[2]
+            self.isc = self.ffttype[3]
+        else:
+            self.sc = 1.0 / np.sqrt(np.prod(shape))
+            self.isc = 1.0 / self.sc
+
+        return (self.sc, self.isc)
+
+    def assign_fft(self):
+        if str(self.ffttype) == 'fftw':
+            try:
+                self._FFTW_fft()
+            except NameError:
+                self._scipy_fft()
+        elif str(self.ffttype) == 'scipy':
+            self._scipy_fft()
+        elif str(self.ffttype) == 'numpy':
+            self._numpy_fft()
+        elif isinstance(self.ffttype, tuple):
+            self.fft = ffttype[0]
+            self.ifft = ffttype[1]
+
+        return (self.fft, self.ifft)
+
+
 class BasicFarfieldPropagator(object):
     """
     Basic single step Farfield Propagator.
@@ -360,16 +427,17 @@ class BasicFarfieldPropagator(object):
     """
     DEFAULT = DEFAULT
 
-    def __init__(self, geo_pars=None, ffttype='numpy', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='fftw', **kwargs):
         """
         Parameters
         ----------
         geo_pars : Param or dict
             Parameter dictionary as in :py:attr:`DEFAULT`.
 
-        ffttype : str or other
-            Type of CPU-based FFT implementation. One of
+        ffttype : str or tuple
+            Type of FFT implementation. One of:
 
+            - 'fftw' for pyFFTW
             - 'numpy' for numpy.fft.fft2
             - 'scipy' for scipy.fft.fft2
             - 2 or 4-tuple of (forward_fft2(), inverse_fft2(),
@@ -393,7 +461,8 @@ class BasicFarfieldPropagator(object):
             self.dtype = kwargs['dtype']
         else:
             self.dtype = np.complex128
-        self.ffttype = ffttype
+        self.FFTch = FFTchooser(ffttype)
+        self.fft, self.ifft = self.FFTch.assign_fft()
         self.update(geo_pars, **kwargs)
 
     def update(self, geo_pars=None, **kwargs):
@@ -473,7 +542,7 @@ class BasicFarfieldPropagator(object):
         self.pre_ifft = self.post_fft.conj()
         self.post_ifft = self.pre_fft.conj()
 
-        self._assign_fft(self.ffttype)
+        self.sc, self.isc = self.FFTch.assign_scaling(self.sh)
 
     def fw(self, W):
         """
@@ -512,24 +581,6 @@ class BasicFarfieldPropagator(object):
         else:
             return w
 
-    def _assign_fft(self, ffttype='std'):
-        self.sc = 1. / np.sqrt(np.prod(self.sh))
-        # self.sc = 1. / np.sqrt(
-        #     np.prod(self.sh) / np.prod(self.sh) * np.prod(self.p.shape))
-        self.isc = 1. / self.sc  # np.sqrt(np.prod(self.sh))
-        if str(ffttype) == 'scipy':
-            self.fft = lambda x: fftpack.fft2(x).astype(x.dtype)
-            self.ifft = lambda x: fftpack.ifft2(x).astype(x.dtype)
-        elif str(ffttype) == 'numpy':
-            self.fft = lambda x: np.fft.fft2(x).astype(x.dtype)
-            self.ifft = lambda x: np.fft.ifft2(x).astype(x.dtype)
-        else:
-            self.fft = ffttype[0]
-            self.ifft = ffttype[1]
-            if len(ffttype) > 2:
-                self.sc = ffttype[2]
-                self.isc = ffttype[3]
-
 
 def translate_to_pix(sh, center):
     """
@@ -555,16 +606,17 @@ class BasicNearfieldPropagator(object):
     """
     DEFAULT = DEFAULT
 
-    def __init__(self, geo_pars=None, ffttype='scipy', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='fftw', **kwargs):
         """
         Parameters
         ----------
         geo_pars : Param or dict
             Parameter dictionary as in :py:data:`DEFAULT`.
 
-        ffttype : str or other
-            Type of CPU-based FFT implementation. One of
+        ffttype : str or tuple
+            Type of FFT implementation. One of:
 
+            - 'fftw' for pyFFTW
             - 'numpy' for numpy.fft.fft2
             - 'scipy' for scipy.fft.fft2
             - 2 or 4-tuple of (forward_fft2(),inverse_fft2(),
@@ -581,7 +633,8 @@ class BasicNearfieldPropagator(object):
         self.p = u.Param(DEFAULT)
         self.dtype = kwargs['dtype'] if 'dtype' in kwargs else np.complex128
         self.update(geo_pars, **kwargs)
-        self._assign_fft(ffttype=ffttype)
+        self.FFTch = FFTchooser(ffttype)
+        self.fft, self.ifft = self.FFTch.assign_fft()
 
     def update(self, geo_pars=None, **kwargs):
         """
@@ -629,22 +682,6 @@ class BasicNearfieldPropagator(object):
         Computes backward propagated wavefront of input wavefront W.
         """
         return self.ifft(self.fft(W) * self.ikernel)
-
-    def _assign_fft(self, ffttype='std'):
-        self.sc = 1. / np.sqrt(np.prod(self.sh))
-        self.isc = np.sqrt(np.prod(self.sh))
-        if str(ffttype) == 'scipy':
-            self.fft = lambda x: fftpack.fft2(x).astype(x.dtype)
-            self.ifft = lambda x: fftpack.ifft2(x).astype(x.dtype)
-        elif str(ffttype) == 'numpy':
-            self.fft = lambda x: np.fft.fft2(x).astype(x.dtype)
-            self.ifft = lambda x: np.fft.ifft2(x).astype(x.dtype)
-        else:
-            self.fft = ffttype[0]
-            self.ifft = ffttype[1]
-            if len(ffttype) > 2:
-                self.sc = ffttype[2]
-                self.isc = ffttype[3]
 
 
 ############
