@@ -34,11 +34,8 @@ from ..utils import parallel
 FType = np.float64
 CType = np.complex128
 
-<<<<<<< HEAD
-__all__ = ['DEFAULT', 'ModelManager']
-=======
+
 __all__ = ['DEFAULT', 'ModelManager', 'ScanModel']
->>>>>>> origin/new_scan_structure
 
 DESCRIPTION = u.Param()
 
