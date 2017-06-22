@@ -326,13 +326,9 @@ class Ptycho(Base):
         """
         Called on __init__ if ``level >= 2``.
         
-        Creates a datasource and calls for :py:meth:`ModelManager.new_data()`
+        Call :py:meth:`ModelManager.new_data()`
         Prints statistics on the ptypy structure if ``print_stats=True``
         """
-        # Create the data source object, which give diffraction frames one
-        # at a time, supporting MPI sharing.
-        self.datasource = self.modelm.make_datasource() 
-       
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs.
         self.modelm.new_data()
@@ -343,7 +339,7 @@ class Ptycho(Base):
             self.print_stats()
         
         # Create plotting instance (maybe)
-        
+
     def _init_engines(self):
         """
         * deprecated*

@@ -34,7 +34,11 @@ from ..utils import parallel
 FType = np.float64
 CType = np.complex128
 
+<<<<<<< HEAD
 __all__ = ['DEFAULT', 'ModelManager']
+=======
+__all__ = ['DEFAULT', 'ModelManager', 'ScanModel']
+>>>>>>> origin/new_scan_structure
 
 DESCRIPTION = u.Param()
 
@@ -88,6 +92,288 @@ DEFAULT = u.Param(
     # For now only used to declare an empty scan
     tags="",
 )
+
+NO_DATA_FLAG = 'No data'
+
+class ScanModel(object):
+    """
+    Manage a single scan model (data, illumination, geometry, ...)
+    """
+
+    DEFAULT = DEFAULT
+
+    def __init__(self, ptycho=None, specific_pars=None, generic_pars=None, label=None):
+        """
+        Create ScanModel object.
+
+        Parameters
+        ----------
+        specific_pars : dict or Param
+            Input parameters specific to the given scan.
+
+        generic_pars : dict or Param
+            Input parameters (see :py:attr:`DEFAULT`)
+            If None uses defaults
+        """
+        # Update parameter structure
+        p = u.Param(self.DEFAULT.copy())
+        p.update(generic_pars, in_place_depth=4)
+        p.update(specific_pars, in_place_depth=4)
+        self.p = p
+        self.label = label
+        self.ptycho = ptycho
+
+        # Manage stand-alone cases
+        if self.ptycho is None:
+            self.Cdiff = Container(ptycho=self, ID='Cdiff', data_type='real')
+            self.Cmask = Container(ptycho=self, ID='Cmask', data_type='bool')
+            self.CType = CType
+            self.FType = FType
+        else:
+            self.Cdiff = ptycho.diff
+            self.Cmask = ptycho.mask
+
+        # Create Associated PtyScan object
+        self.ptyscan = data.makePtyScan(self.p)
+
+        # Initialize instance attributes
+        self.mask = None
+        self.diff = None
+        self.positions = []
+        self.mask_views = []
+        self.diff_views = []
+        self.new_positions = None
+        self.new_diff_views = None
+        self.new_mask_views = None
+
+        self.meta = None
+        self.geometries = []
+        self.shape = None
+        self.psize = None
+
+        self.data_available = True
+
+        self.frames_per_call = 100000
+        self.feed_format = 'dp'
+
+    def new_data(self):
+        """
+        Feed data from ptyscan object.
+        :return:
+        """
+
+        # Initialize if that has not been done yet
+        if not self.ptyscan.is_initialized:
+            self.ptyscan.initialize()
+
+        # Get data
+        dp = self.ptyscan.auto(self.frames_per_call, self.feed_format)
+
+        self.data_available = (dp != data.EOS)
+        logger.debug(u.verbose.report(dp))
+
+        if dp == data.WAIT or not self.data_available:
+            return None
+
+        # Store metadata
+        self.meta = dp['common']
+
+        label = self.label
+        logger.info('Importing data from scan %s.' % label)
+
+        # Prepare the scan geometry if not already done.
+        if not self.geometries:
+            # Check if meta and scan geometry agree
+            self.geometries = []
+            geo = self.p.geometry
+
+            # FIXME: User should be informed of the final geometry parameters.
+            for key in geometry.DEFAULT.keys():
+                if geo.get(key) is None or not (geo.precedence == 'meta'):
+                    mk = self.meta.get(key)
+                    if mk is not None:  # None existing key or None values in meta dict are treated alike
+                        geo[key] = mk
+
+            # The multispectral case will have multiple geometries
+            for ii, fac in enumerate(self.p.coherence.energies):
+                geoID = geometry.Geo._PREFIX + '%02d' % ii + label
+                g = geometry.Geo(self.ptycho, geoID, pars=geo)
+                # now we fix the sample pixel size, This will make the frame size adapt
+                g.p.resolution_is_fix = True
+                # save old energy value:
+                g.p.energy_orig = g.energy
+                # change energy
+                g.energy *= fac
+                # append the geometry
+                self.geometries.append(g)
+
+            # Store frame shape
+            self.shape = np.array(self.meta.get('shape', self.geometries[0].shape))
+            self.psize = self.geometries[0].psize
+
+        sh = self.shape
+
+        # Storage generation if not already existing
+        if self.diff is None:
+            # This scan is brand new so we create storages for it
+            self.diff = self.Cdiff.new_storage(shape=(1, sh[-2], sh[-1]), psize=self.psize, padonly=True,
+                                                     layermap=None)
+            old_diff_views = []
+            old_diff_layers = []
+        else:
+            # ok storage exists already. Views most likely also. Let's do some analysis and deactivate the old views
+            old_diff_views = self.Cdiff.views_in_storage(self.diff, active=False)
+            old_diff_layers = []
+            for v in old_diff_views:
+                old_diff_layers.append(v.layer)
+
+        # Same for mask
+        if self.mask is None:
+            self.mask = self.Cmask.new_storage(shape=(1, sh[-2], sh[-1]), psize=self.psize, padonly=True,
+                                                     layermap=None)
+            old_mask_views = []
+            old_mask_layers = []
+        else:
+            old_mask_views = self.Cmask.views_in_storage(self.mask, active=False)
+            old_mask_layers = []
+            for v in old_mask_views:
+                old_mask_layers.append(v.layer)
+
+        # Prepare for View generation
+        AR_diff_base = DEFAULT_ACCESSRULE.copy()
+        AR_diff_base.shape = self.shape
+        AR_diff_base.coord = 0.0
+        AR_diff_base.psize = self.psize
+        AR_mask_base = AR_diff_base.copy()
+        AR_diff_base.storageID = self.diff.ID
+        AR_mask_base.storageID = self.mask.ID
+
+        diff_views = []
+        mask_views = []
+        positions = []
+
+        # First pass: create or update views and reformat corresponding storage
+        for dct in dp['iterable']:
+
+            index = dct['index']
+            active = dct['data'] is not None
+
+            pos = dct.get('position')
+
+            if pos is None:
+                logger.warning('No position set to scan point %d of scan %s' % (index, label))
+
+            AR_diff = AR_diff_base
+            AR_mask = AR_mask_base
+            AR_diff.layer = index
+            AR_mask.layer = index
+            AR_diff.active = active
+            AR_mask.active = active
+
+            # check here: is there already a view to this layer? Is it active?
+            try:
+                old_view = old_diff_views[old_diff_layers.index(index)]
+                old_active = old_view.active
+                old_view.active = active
+
+                logger.debug(
+                    'Diff view with layer/index %s of scan %s exists. \nSetting view active state from %s to %s' % (
+                        index, label, old_active, active))
+            except ValueError:
+                v = View(self.Cdiff, accessrule=AR_diff)
+                diff_views.append(v)
+                logger.debug(
+                    'Diff view with layer/index %s of scan %s does not exist. \nCreating view with ID %s and set active state to %s' % (
+                        index, label, v.ID, active))
+                # append position also
+                positions.append(pos)
+
+            try:
+                old_view = old_mask_views[old_mask_layers.index(index)]
+                old_view.active = active
+            except ValueError:
+                v = View(self.Cmask, accessrule=AR_mask)
+                mask_views.append(v)
+
+        # so now we should have the right views to this storages. Let them reformat()
+        # that will create the right sizes and the datalist access
+        self.diff.reformat()
+        self.mask.reformat()
+
+        # Second pass: copy the data
+        for dct in dp['iterable']:
+            parallel.barrier()
+            if dct['data'] is None:
+                continue
+            diff_data = dct['data']
+            idx = dct['index']
+
+            # FIXME: Find a more transparent way than this.
+            self.diff.data[self.diff.layermap.index(idx)][:] = diff_data
+            self.mask.data[self.mask.layermap.index(idx)][:] = dct.get('mask', np.ones_like(diff_data))
+
+        self.diff.nlayers = parallel.MPImax(self.diff.layermap) + 1
+        self.mask.nlayers = parallel.MPImax(self.mask.layermap) + 1
+
+        self.new_positions = positions
+        self.new_diff_views = diff_views
+        self.new_mask_views = mask_views
+        self.positions += positions
+        self.diff_views += diff_views
+        self.mask_views += mask_views
+
+        self._update_stats()
+
+    def _update_stats(self):
+        """
+        (Re)compute the statistics for the data stored in the scan.
+        These statistics are:
+         * Itotal: The integrated power per frame
+         * max/min/mean_frame: pixel-by-pixel maximum, minimum and
+           average among all frames.
+        """
+        mask_views = self.mask_views
+        diff_views = self.diff_views
+
+        # Nothing to do if no view exist
+        if not self.diff: return
+
+        # Reinitialize containers
+        Itotal = []
+        max_frame = np.zeros(self.diff_views[0].shape)
+        min_frame = np.zeros_like(max_frame)
+        mean_frame = np.zeros_like(max_frame)
+        norm = np.zeros_like(max_frame)
+
+        for maview, diview in zip(mask_views, diff_views):
+            if not diview.active:
+                continue
+            dv = diview.data
+            m = maview.data
+            v = m * dv
+            Itotal.append(np.sum(v))
+            max_frame[max_frame < v] = v[max_frame < v]
+            min_frame[min_frame > v] = v[min_frame > v]
+            mean_frame += v
+            norm += m
+
+        parallel.allreduce(mean_frame)
+        parallel.allreduce(norm)
+        parallel.allreduce(max_frame, parallel.MPI.MAX)
+        parallel.allreduce(max_frame, parallel.MPI.MIN)
+        mean_frame /= (norm + (norm == 0))
+
+        self.diff.norm = norm
+        self.diff.max_power = parallel.MPImax(Itotal)
+        self.diff.tot_power = parallel.MPIsum(Itotal)
+        self.diff.pbound_stub = self.diff.max_power / mean_frame.shape[-1]**2
+        self.diff.mean = mean_frame
+        self.diff.max = max_frame
+        self.diff.min = min_frame
+
+        info = {'label': self.label, 'max': self.diff.max_power, 'tot': self.diff.tot_power, 'mean': mean_frame.sum()}
+        logger.info(
+            '\n--- Scan %(label)s photon report ---\nTotal photons   : %(tot).2e \nAverage photons : %(mean).2e\nMaximum photons : %(max).2e\n' % info + '-' * 29)
 
 
 
@@ -148,32 +434,22 @@ class ModelManager(object):
         p = u.Param(self.DEFAULT.copy())
         p.update(pars, in_place_depth=4)
         self.p = p
-        
+
         self.ptycho = ptycho
 
-        # Abort if ptycho is None:
+        # abort if ptycho is None:
+        # FIXME: PT Is this the expected behavior?
         if self.ptycho is None:
             return
 
-        # Prepare the list of scan_labels (important because they are sorted)
-        # FIXME: BE I don't think this is the way to go. This is only needed for sharing
-        # For the user it might be better to mark the sharing behavior directly
-        self.scan_labels = []
+        # store scan-specific parameters
+        self.scans_pars = scans if scans is not None else self.ptycho.p.get('scans', u.Param())
 
-        # Store scan specifics
-        if scans is not None:
-            self.scans_pars = scans
-        else:
-            self.scans_pars = self.ptycho.p.get('scans', u.Param())
+        self.scans = {}
 
-        # Scan dictionary
-        # This will store everything scan specific and will hold
-        # references to the storages of the respective scan.
-        self.scans = u.Param()
-
-        # Update self.scans from information already available
-        for label in self.scans_pars.keys():
-            self.prepare_scan(label)
+        # Create scan objects from information already available
+        for label, scan_pars in self.scans_pars.iteritems():
+            self.scans[label] = ScanModel(specific_pars=scan_pars, generic_pars=self.p, label=label)
 
         # Sharing dictionary that stores sharing behavior
         self.sharing = {'probe_ids': {}, 'object_ids': {}}
@@ -197,136 +473,11 @@ class ModelManager(object):
         inst.__dict__ = dct
         return inst
 
-    def prepare_scan(self, label=None):
-        """
-        Prepare scan specific parameters and create a label if necessary.
-        """
-        if label is None:
-            label = 'Scan%05d' % self.label_idx
-            self.label_idx += 1
 
-        try:
-            # Return the scan if already prepared
-            return self.scans[label]
-        except KeyError:
-            # Get standard parameters
-            # Create a dictionary specific for the scan.
-            scan = u.Param()
-            self.scans[label] = scan
-            scan.label = label
-            # Make a copy of model dictionary
-            scan.pars = self.p.copy(depth=5)
+    @property
+    def data_available(self):
+        return any(s.data_available for s in self.scans.values())
 
-            # Look for a scan-specific entry in the input parameters
-            scan_specific_parameters = self.scans_pars.get(label, None)
-            scan.pars.update(scan_specific_parameters, in_place_depth=5)
-
-            # Prepare the tags
-            t = scan.pars.tags
-            if str(t) == t:
-                scan.pars.tags = [tag.strip().lower() for tag in t.split(',')]
-
-            # Also create positions
-            scan.pos_theory = xy.from_pars(scan.pars.xy)
-
-            return scan
-
-    def _update_stats(self, scan, mask_views=None, diff_views=None):
-        """
-        (Re)compute the statistics for the data stored in a scan.
-
-        These statistics are:
-         * Itotal: The integrated power per frame
-         * max/min/mean_frame: pixel-by-pixel maximum, minimum and
-           average among all frames.
-        """
-        if mask_views is None:
-            mask_views = scan.mask_views
-        if diff_views is None:
-            diff_views = scan.diff_views
-
-        # Reinitialize containers
-        Itotal = []
-        # DPCX = []
-        # DPCY = []
-        max_frame = np.zeros(scan.diff_views[0].shape)
-        min_frame = np.zeros_like(max_frame)
-        mean_frame = np.zeros_like(max_frame)
-        norm = np.zeros_like(max_frame)
-
-        # Useful quantities
-        # sh0, sh1 = scan.geo.N
-        # x = np.arange(s1, dtype=float)
-        # y = np.arange(s0, dtype=float)
-
-        for maview, diview in zip(mask_views, diff_views):
-            if not diview.active:
-                continue
-            dv = diview.data
-            m = maview.data
-            v = m * dv
-            # pods may not yet exist, since mask & data are not linked yet
-            # mv = dv.pod.ma_view.data
-            # S0 = np.sum(mv*dv, axis=0)
-            # S1 = np.sum(mv*dv, axis=1)
-            # I0 = np.sum(S0)
-            Itotal.append(np.sum(v))
-            # DPCX.append(np.sum(S0*x)/I0 - sh1/2.)
-            # DPCY.append(np.sum(S1*y)/I0 - sh0/2.)
-            max_frame[max_frame < v] = v[max_frame < v]
-            min_frame[min_frame > v] = v[min_frame > v]
-            mean_frame += v
-            norm += m
-
-        parallel.allreduce(mean_frame)
-        parallel.allreduce(norm)
-        parallel.allreduce(max_frame, parallel.MPI.MAX)
-        parallel.allreduce(max_frame, parallel.MPI.MIN)
-        mean_frame /= (norm + (norm == 0))
-
-        scan.diff.norm = norm
-        scan.diff.max_power = parallel.MPImax(Itotal)
-        scan.diff.tot_power = parallel.MPIsum(Itotal)
-        scan.diff.pbound_stub = scan.diff.max_power / mean_frame.shape[-1]**2
-        scan.diff.mean = mean_frame
-        scan.diff.max = max_frame
-        scan.diff.min = min_frame
-
-        info = {'label': scan.label,
-                'max': scan.diff.max_power,
-                'tot': scan.diff.tot_power,
-                'mean': mean_frame.sum()}
-
-        logger.info(
-            '\n--- Scan %(label)s photon report ---\n'
-            'Total photons   : %(tot).2e \n'
-            'Average photons : %(mean).2e\n'
-            'Maximum photons : %(max).2e\n' % info + '-' * 29)
-
-    def make_datasource(self, data_pars=None):
-        """
-        Creates a static datasource from parameters in the self.scans dict.
-
-        For any additional file in data.filelist it will create a new entry in 
-        self.scans with generic parameters given by the current model.
-        """
-        """
-        if data_pars is not None:
-            filelist = data_pars.get('filelist')
-        if filelist is not None:
-            for f in filelist:
-                scan = self.prepare_scan()
-                scan.pars.data_file = f
-        """
-        # Now there should be little surprises.
-        # Every scan is listed in self.scans
-        for label, scan in self.scans.items():
-            # if scan.pars.get('data_file') is None:
-            #    scan.pars['data_file'] = self.ptycho.paths.get_data_file(
-            #        label=label)
-            scan.pars['label'] = label
-             
-        return data.DataSource(self.scans)
 
     def new_configure(self,dp):
         """
@@ -446,339 +597,69 @@ class ModelManager(object):
         accordingly.
         """
         parallel.barrier()
+
         # Nothing to do if there are no new data.
-        if not self.ptycho.datasource.data_available:
-            return 'No Data'
+        if not self.data_available:
+            return 'No data'
 
         logger.info('Processing new data.')
         used_scans = []
-        not_initialized = []
-        
-        # For some funny reason the Generator construct used to fail.
-        while True:
-            dp = self.ptycho.datasource.feed_data()
-            if dp is None:
-                break
-            """
-            A dp (data package) contains the following:
-            
-            common : dict or Param
-                    Meta information common to all datapoints in the 
-                    data package. Variable names need to be consistent with
-                    those in the rest of ptypy package.
-                    (TODO further description)
-                    
-                    Important info:
-                    ------------------------
-                    shape : (tuple or array) 
-                           expected frame shape
-                    label : (string)
-                            Script label. This label is matched to the parameter
-                            tree, a string signifying to which scan this package
-                            belongs to.
-                   
-            
-            iterable : An iterable structure that yields for each iteration
-                       a dict with the following fields:
-            
-                        data     : (np.2darray, float) 
-                                    diffraction data 
-                                    In MPI case, data can be None if distributed
-                                    to other nodes
-                        mask     : (np.2darray, bool) 
-                                    masked out areas in diffraction data array
-                        index    : (int)
-                                    diffraction datapoint index in scan
-                        position : (tuple or array)
-                                    scan position 
-            """
-            meta = dp['common']
-            label = meta['ptylabel']
 
-            # We expect a string for the label.
-            assert label == str(label)
+        # Attempt to get new data
+        for label, scan in self.scans.iteritems():
+            new_data = scan.new_data()
+            if new_data:
+                used_scans.append(label)
 
-            used_scans.append(label)
-            logger.info('Importing data from %s as scan %s.'
-                        % (meta['label'], label))
+        if not used_scans:
+            return None
 
-            # Prepare scan dictionary or dig up the already prepared one
-            scan = self.prepare_scan(label)
-            scan.meta = meta
+        # Create PODs
+        new_pods, new_probe_ids, new_object_ids = self._create_pods(used_scans)
+        logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
+            parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
 
-            # Empty buffer
-            scan.iterable = []
+        # Adjust storages      
+        self.ptycho.probe.reformat(True)
+        self.ptycho.obj.reformat(True)
+        self.ptycho.exit.reformat()
 
-            # Prepare the scan geometry if not already done.
-            if scan.get('geometries') is None:
-                # Ok now that we have meta we can check if the geometry fits
-                scan.geometries = []
-                geo = scan.pars.geometry
-                for key in geometry.DEFAULT.keys():
-                    # scan.pars.if_conflict_use_meta:
-                    if geo.get(key) is None or not (geo.precedence == 'meta'):
-                        mk = scan.meta.get(key)
-                        if mk is not None:
-                            # None existing key or None values in meta dict
-                            # are treated alike
-                            geo[key] = mk
-
-                # Make a spectrum
-                energies = np.asarray(scan.pars.coherence.energies)
-                spec = scan.pars.coherence.spectrum
-                spec = [1.0] if spec is None else spec
-                if type(spec).__name__ == 'function':
-                    spectrum = spec(energies)
-                else:
-                    spectrum = np.resize(np.asarray(spec), (len(energies), 1))
-                    
-                spectrum /= spectrum.sum()
-                scan.spectrum = spectrum
-                
-                for ii, fac in enumerate(energies):
-                    geoID = geometry.Geo._PREFIX + '%02d' % ii + label
-                    g = geometry.Geo(self.ptycho, geoID, pars=geo)
-                    # Fix the sample pixel size.
-                    # This will make the frame size adapt.
-                    g.p.resolution_is_fix = True
-                    # Save old energy value:
-                    g.p.energy_orig = g.energy
-                    # Change energy
-                    g.energy *= fac
-                    # Attach spectral contribution
-                    g.p.spectral = spectrum[ii]
-                    # Append the geometry
-                    scan.geometries.append(g)
-                    
-                # Create a buffer
-                scan.iterable = []
-
-                scan.diff_views = []
-                scan.mask_views = []
-
-                # Remember the order in which these scans were fed to manager
-                self.scan_labels.append(label)
-
-                # Remember that these new scans are probably not initialized yet
-                not_initialized.append(label)
-
-            # Buffer incoming data and evaluate if we got Nones in data
-            for dct in dp['iterable']:
-                dct['active'] = dct['data'] is not None
-                scan.iterable.append(dct)
-
-        # Ok data transmission is over for now.
-        # Let's see what data scans has received and create the views for those
-        for label in used_scans:
-
-            # Get scan Param
-            scan = self.scans[label]
-
-            # Pick one of the geometries for calculating the frame shape
-            geo = scan.geometries[0]
-            sh = np.array(scan.meta.get('shape', geo.shape))
-
-            # Storage generation if not already existing
-            if scan.get('diff') is None:
-                # This scan is brand new so we create storages for it
-                scan.diff = self.ptycho.diff.new_storage(
-                    shape=(1, sh[-2], sh[-1]),
-                    psize=geo.psize,
-                    padonly=True,
-                    layermap=None)
-
-                old_diff_views = []
-                old_diff_layers = []
-            else:
-                # Ok storage exists already. Views most likely also.
-                # Let's do some analysis and deactivate the old views.
-                old_diff_views = self.ptycho.diff.views_in_storage(scan.diff,
-                                                                   active=False)
-                old_diff_layers = []
-                for v in old_diff_views:
-                    old_diff_layers.append(v.layer)
-                    # v.active = False
-
-            # Same for mask
-            if scan.get('mask') is None:
-                scan.mask = self.ptycho.mask.new_storage(
-                    shape=(1, sh[-2], sh[-1]),
-                    psize=geo.psize,
-                    padonly=True,
-                    layermap=None)
-
-                old_mask_views = []
-                old_mask_layers = []
-            else:
-                old_mask_views = self.ptycho.mask.views_in_storage(scan.mask,
-                                                                   active=False)
-                old_mask_layers = []
-                for v in old_mask_views:
-                    old_mask_layers.append(v.layer)
-                    # v.active = False
-
-            # Prepare for View generation
-            AR_diff_base = DEFAULT_ACCESSRULE.copy()
-            AR_diff_base.shape = geo.shape
-            AR_diff_base.coord = 0.0
-            AR_diff_base.psize = geo.psize
-            AR_mask_base = AR_diff_base.copy()
-            AR_diff_base.storageID = scan.diff.ID
-            AR_mask_base.storageID = scan.mask.ID
-
-            diff_views = []
-            mask_views = []
-            positions = []
-            # positions_theory = xy.from_pars(scan.pars.xy)
-
-            for dct in scan.iterable:
-                index = dct['index']
-                active = dct['active']
-                # tpos = positions_theory[index]
-                if (scan.pars.geometry.precedence == 'meta'
-                        and scan.pos_theory is not None):
-                    pos = scan.pos_theory[index]
-                else:
-                    pos = dct.get('position')  # ,positions_theory[index])
-                
-                if pos is None:
-                    logger.warning('No position set to scan point %d of scan %s'
-                                   % (index, label))
-
-                AR_diff = AR_diff_base  # .copy()
-                AR_mask = AR_mask_base  # .copy()
-                AR_diff.layer = index
-                AR_mask.layer = index
-                AR_diff.active = active
-                AR_mask.active = active
-
-                # Check: is there already a view to this layer? Is it active?
-                try:
-                    old_view = old_diff_views[old_diff_layers.index(index)]
-                    old_active = old_view.active
-                    old_view.active = active
-                    # Also set this for the attached pods' exit views
-                    # for pod in old_view.pods.itervalues():
-                    #     pod.ex_view.active = active
-
-                    logger.debug(
-                        'Diff view with layer/index %s of scan %s exists.\n'
-                        'Setting view active state from %s to %s'
-                        % (index, label, old_active, active))
-                except ValueError:
-                    v = View(self.ptycho.diff, accessrule=AR_diff)
-                    diff_views.append(v)
-                    logger.debug(
-                        'Diff view with layer/index %s of scan %s does not '
-                        'exist.\n Creating view with ID %s and set active '
-                        'state to %s' % (index, label, v.ID, active))
-                    # Append position also
-                    positions.append(pos)
-
-                try:
-                    old_view = old_mask_views[old_mask_layers.index(index)]
-                    old_view.active = active
-                except ValueError:
-                    v = View(self.ptycho.mask, accessrule=AR_mask)
-                    mask_views.append(v)
-
-            # Now we should have the right views to these storages. Let them
-            # reformat(), which creates the right sizes and the datalist access
-            scan.diff.reformat()
-            scan.mask.reformat()
-            # parallel.barrier()
-
-            for dct in scan.iterable:
-                parallel.barrier()
-                if not dct['active']:
-                    continue
-                data = dct['data']
-                idx = dct['index']
-                # scan.diff.datalist[idx][:] = data  #.astype(scan.diff.dtype)
-                # scan.mask.datalist[idx][:] = dct.get(
-                #     'mask', np.ones_like(data))  # .astype(scan.mask.dtype)
-                scan.diff.data[scan.diff.layermap.index(idx)][:] = data
-                scan.mask.data[scan.mask.layermap.index(idx)][:] = dct.get(
-                    'mask', np.ones_like(data))
-                # del dct['data']
-
-            scan.diff.nlayers = parallel.MPImax(scan.diff.layermap) + 1
-            scan.mask.nlayers = parallel.MPImax(scan.mask.layermap) + 1
-            # Empty iterable buffer
-            # scan.iterable = []
-            scan.new_positions = positions
-            scan.new_diff_views = diff_views
-            scan.new_mask_views = mask_views
-            scan.diff_views += diff_views
-            scan.mask_views += mask_views
-
-            self._update_stats(scan)
-        # Create PODs .. but only if data has arrived
-
-        if used_scans:
-            new_pods, new_probe_ids, new_object_ids = (
-                self._create_pods(used_scans))
-            logger.info('Process %d created %d new PODs, %d new probes and %d '
-                        'new objects.' % (parallel.rank,
-                                          len(new_pods),
-                                          len(new_probe_ids),
-                                          len(new_object_ids)),
-                        extra={'allprocesses': True})
-    
-            # Adjust storages      
-            self.ptycho.probe.reformat(True)
-            self.ptycho.obj.reformat(True)
-            self.ptycho.exit.reformat()
-    
-            self._initialize_probe(new_probe_ids)
-            self._initialize_object(new_object_ids)
-            self._initialize_exit(new_pods)
+        self._initialize_probe(new_probe_ids)
+        self._initialize_object(new_object_ids)
+        self._initialize_exit(new_pods)
 
     def _initialize_probe(self, probe_ids):
         """
-        Initializes the probe storages referred to by the probe_ids.
+        Initialize the probe storages referred to by the probe_ids
         """
-        logger.info('\n' + headerline('Probe initialization', 'l'))
+        logger.info('\n'+headerline('Probe initialization', 'l'))
+
+        # Loop through probe ids
         for pid, labels in probe_ids.items():
-            # Pick scanmanagers from scan_label for illumination parameters
-            # For now, the scanmanager of the first label is chosen
+
+            # Pick first scan - this should not matter.
             scan = self.scans[labels[0]]
-            
-            # Pick storage from container
-            s = self.ptycho.probe.storages.get(pid)
+            illu_pars = scan.p.illumination
+
+            # pick storage from container
+            s = self.ptycho.probe.S.get(pid)
+
             if s is None:
                 continue
             else:
                 logger.info('Initializing probe storage %s using scan %s.'
                             % (pid, scan.label))
 
-            illu_pars = scan.pars.illumination
-            
-            if type(illu_pars) is u.Param:
-                # If not a short cut but a Param, modify content from deep copy
-                illu_pars = illu_pars.copy(depth=10) 
 
-                # If photon count is None, assign a number from the stats.
-                phot = illu_pars.get('photons')
-                phot_max = scan.diff.max_power
-                
-                if phot is None:
-                    logger.info(
-                        'Found no photon count for probe in parameters.\n'
-                        'Using photon count %.2e from photon report.'
-                        % phot_max)
-                    illu_pars['photons'] = phot_max
-                elif np.abs(np.log10(phot) - np.log10(phot_max)) > 1:
-                    logger.warn(
-                        'Photon count from input parameters (%.2e) differs '
-                        'from statistics (%.2e) by more than a magnitude.'
-                        % (phot, phot_max))
-    
-                # Quickfix spectral contribution.
-                if (scan.pars.coherence.probe_dispersion
-                        not in [None, 'achromatic']):
-                    logger.info('Applying spectral distribution input to probe')
-                    illu_pars['photons'] *= s.views[0].pod.geometry.p.spectral
+            # if photon count is None, assign a number from the stats. 
+            phot = illu_pars.get('photons')
+            phot_max = scan.diff.max_power
+            
+            if phot is None:
+                logger.info('Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' % phot_max)
+                illu_pars['photons'] = phot_max
+            elif np.abs(np.log10(phot)-np.log10(phot_max)) > 1:
+                logger.warn('Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' % (phot, phot_max))
 
             illumination.init_storage(s, illu_pars)
             
@@ -789,14 +670,19 @@ class ModelManager(object):
         """
         Initializes the probe storages referred to by the object_ids.
         """
-        logger.info('\n' + headerline('Object initialization', 'l'))
+
+        logger.info('\n'+headerline('Object initialization', 'l'))
+
+        # Loop through object IDs
         for oid, labels in object_ids.items():
-            # Pick scanmanagers from scan_label for illumination parameters
-            # For now, the scanmanager of the first label is chosen
+
+            # Pick first scan - this should not matter.
             scan = self.scans[labels[0]]
-            
-            # Pick storage from container
-            s = self.ptycho.obj.storages.get(oid)
+            sample_pars = scan.p.sample
+
+            # pick storage from container
+            s = self.ptycho.obj.S.get(oid)
+
             if s is None or s.model_initialized:
                 continue
             else:
@@ -818,32 +704,19 @@ class ModelManager(object):
                         'Applying spectral distribution input to object fill.')
                     sample_pars['fill'] *= s.views[0].pod.geometry.p.spectral
             
-            sample.init_storage(s,sample_pars)
-            
-            """"
-            if sample_pars.get('source') == 'diffraction':
-                logger.info('STXM initialization using diffraction data')
-                trans, dpc_row, dpc_col = u.stxm_analysis(s)
-                s.fill(trans * np.exp(1j * u.phase_from_dpc(dpc_row, dpc_col)))
-            else:
-                # Find out energy or wavelength.
-                # Maybe store that information in the storages too in future
-                lam = s.views[0].pod.geometry.lam
 
-                # Make this a single call in future
-                obj = sample.from_pars(s.shape[-2:], lam, sample_pars)
-                obj = sample.create_modes(s.shape[-3], obj)
-                s.fill(obj.obj)
-            """
+            sample.init_storage(s, sample_pars)
+            s.reformat()  # maybe not needed
 
-            s.reformat()  # Maybe not needed
             s.model_initialized = True
 
-    def _initialize_exit(self, pods):
+    @staticmethod
+    def _initialize_exit(pods):
         """
-        Initializes exit waves using the pods.
+
+        initializes exit waves using the pods
         """
-        logger.info('\n' + headerline('Creating exit waves', 'l'))
+        logger.info('\n'+headerline('Creating exit waves', 'l'))
         for pod in pods:
             if not pod.active:
                 continue
@@ -856,7 +729,7 @@ class ModelManager(object):
         Return the list of new pods, probe and object ids (to allow for
         initialization).
         """
-        logger.info('\n' + headerline('Creating PODS', 'l'))
+        logger.info('\n'+headerline('Creating PODS', 'l'))
         new_pods = []
         new_probe_ids = {}
         new_object_ids = {}
@@ -868,21 +741,17 @@ class ModelManager(object):
         # SC: delete? self.sharing_rules.object_ids.keys()
         logger.info('Found these probes : ' + ', '.join(existing_probes))
         logger.info('Found these objects: ' + ', '.join(existing_objects))
-        # exit_index = 0
 
         # Loop through scans
         for label in new_scans:
             scan = self.scans[label]
-            # Store probe and object weights in meta
-            # meta = {'probe_weight': scan.pars.probe_weight,
-            #         'object_weight': scan.pars.object_weight}
 
             positions = scan.new_positions
             di_views = scan.new_diff_views
             ma_views = scan.new_mask_views
             
             # Compute sharing rules
-            share = scan.pars.sharing
+            share = scan.p.sharing
             alt_obj = share.object_share_with if share is not None else None
             alt_pr = share.probe_share_with if share is not None else None
                 
@@ -892,6 +761,7 @@ class ModelManager(object):
             # Loop through diffraction patterns             
             for i in range(len(di_views)):
                 dv, mv = di_views.pop(0), ma_views.pop(0)
+                
                 index = dv.layer
 
                 # Object and probe position
@@ -907,7 +777,8 @@ class ModelManager(object):
                     # Make new IDs and keep them in record
                     # sharing_rules is not aware of IDs with suffix
                     
-                    pdis = scan.pars.coherence.probe_dispersion
+                    pdis = scan.p.coherence.probe_dispersion
+
                     if pdis is None or str(pdis) == 'achromatic':
                         gind = 0 
                     else:
@@ -919,7 +790,8 @@ class ModelManager(object):
                         new_probe_ids[probe_id_suf] = (
                             self.sharing_rules.probe_ids[probe_id])
 
-                    odis = scan.pars.coherence.object_dispersion
+                    odis = scan.p.coherence.object_dispersion
+
                     if odis is None or str(odis) == 'achromatic':
                         gind = 0 
                     else:
@@ -932,8 +804,8 @@ class ModelManager(object):
                             self.sharing_rules.object_ids[object_id])
 
                     # Loop through modes
-                    for pm in range(scan.pars.coherence.num_probe_modes):
-                        for om in range(scan.pars.coherence.num_object_modes):
+                    for pm in range(scan.p.coherence.num_probe_modes):
+                        for om in range(scan.p.coherence.num_object_modes):
                             # Make a unique layer index for exit view
                             # The actual number does not matter due to the
                             # layermap access
@@ -975,11 +847,6 @@ class ModelManager(object):
                                      'mask': mv,
                                      'exit': ev}
 
-                            # views = {'probe': pv,
-                            #          'obj': ov,
-                            #          'diff': dv,
-                            #          'mask': mv}
-
                             pod = POD(ptycho=self.ptycho,
                                       ID=None,
                                       views=views,
@@ -1000,133 +867,5 @@ class ModelManager(object):
                                 pod.probe_weight = 1
                                 pod.object_weight = 1
 
-                            # if 'empty' in scan.pars.tags:
-                            #     pod.is_empty = True
-                            # else:
-                            #     pod.is_empty = False
-                            # exit_index += 1
-
-            # Delete buffer & meta (meta may be filled with a lot of stuff)
-            scan.iterable = []
-            # scan.meta = {}
 
         return new_pods, new_probe_ids, new_object_ids
-
-    def collect_diff_mask_meta(self, label=None, filename=None, save=False,
-                               dtype=None, **kwargs):
-        """
-        *DEPRECATED*
-        attempt to save diffraction data
-        
-        Parameters
-        ----------
-        
-        label : str
-                ptypy label of the scan to save 
-                if None, tries to save ALL diffraction data 
-                
-        filename : str
-                override the file path to write to
-                will change `data_filename` in `scan_info` dict
-        
-        all other kwargs are added to 'scan_info' key in the '.h5' file
-        """
-
-        if label is None:
-            scans = {}
-            for l in self.scans.keys():
-                scans[l] = self.collect_diff_mask_meta(l,
-                                                       filename,
-                                                       save,
-                                                       dtype,
-                                                       **kwargs)
-            return scans
-        else:
-            dct = {}
-            # get the scan
-            scan = self.scans[label]
-            for kind in ['mask', 'diff']:
-                storage = scan[kind]
-                # fresh copy
-                new = [data.copy() if data is not None else None
-                       for data in storage.datalist]
-                Nframes = len(new)
-                if parallel.MPIenabled:
-                    logger.info('Using MPI to gather arrays for storing %s'
-                                % kind)
-                    for i in range(Nframes):
-                        if parallel.master:
-
-                            # Root receives the data if it doesn't have it yet
-                            if new[i] is None:
-                                new[i] = parallel.receive()
-                                logger.info(
-                                    '%s :: Frame %d/%d received at process %d'
-                                    % (kind.upper(), i, Nframes, parallel.rank),
-                                    extra={'allprocesses': True})
-
-                            parallel.barrier()
-
-                        else:
-                            if new[i] is not None:
-                                # Send data to root.
-                                parallel.send(new[i])
-                                # logger.info('Process %d - Send frame %d of %s'
-                                #             % (parallel.rank, i, kind),
-                                #             extra={'allprocesses':True})
-
-                                sender = parallel.rank
-                                logger.info(
-                                    '%s :: Frame %d/%d send from process %d'
-                                    % (kind.upper(), i, Nframes, parallel.rank),
-                                    extra={'allprocesses': True})
-
-                            parallel.barrier()
-
-                    parallel.barrier()
-
-                # storing as arrays
-                if parallel.master:
-                    key = 'data' if kind == 'diff' else kind
-                    dct[key] = np.asarray(new)
-
-            # save if you are master
-            if parallel.master:
-
-                # get meta data
-                meta = self.scans[label]['meta']
-                # update with geometric info
-                meta.update(scan.pars.geometry.copy())
-
-                # translate to scan_info and ditch variables
-                # not in data.DEFAULT_scan_info
-                from data import MT as LeTraducteur
-
-                dct['scan_info'] = LeTraducteur.as_scan_info(
-                    self.scans[label]['meta'])
-
-                # overwrite filename
-                if filename is not None:
-                    dct['scan_info']['data_filename'] = filename
-
-                filename = dct['scan_info'].get('data_filename')
-
-                # add other kwargs to scan_info
-                dct['scan_info'].update(kwargs)
-                dct['scan_info']['shape'] = dct['data'].shape
-
-                # switch data type for data if wanted (saves space)
-                if dtype is not None:
-                    dct['data'] = dct['data'].astype(dtype)
-
-                if save:
-                    # cropping
-                    from .. import io
-
-                    filename = u.clean_path(filename)
-                    logger.info('Saving to ' + filename)
-                    io.h5write(filename, dct)
-                    logger.info('Saved')
-                    return filename
-
-            return dct
