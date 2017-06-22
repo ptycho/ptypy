@@ -112,6 +112,8 @@ class ScanModel(object):
             Input parameters (see :py:attr:`DEFAULT`)
             If None uses defaults
         """
+        from .. import experiment
+
         # Update parameter structure
         p = u.Param(self.DEFAULT.copy())
         p.update(generic_pars, in_place_depth=4)
@@ -131,7 +133,7 @@ class ScanModel(object):
             self.Cmask = ptycho.mask
 
         # Create Associated PtyScan object
-        self.ptyscan = data.makePtyScan(self.p)
+        self.ptyscan = experiment.makePtyScan(self.p.data)
 
         # Initialize instance attributes
         self.mask = None

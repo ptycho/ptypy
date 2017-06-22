@@ -21,7 +21,6 @@ if __name__ == "__main__":
     from ptypy import utils as u
     from ptypy import io
     from ptypy import resources
-    from ptypy.experiment import PtyScanTypes
     from ptypy.core import geometry
     from ptypy.utils.verbose import logger, log, headerline
     from ..utils import parallel
@@ -34,7 +33,6 @@ else:
     from .. import utils as u
     from .. import io
     from .. import resources
-    from ..experiment import PtyScanTypes
     from ..utils.verbose import logger, log, headerline
     from ..utils import parallel
     from ptypy import resources
@@ -1427,50 +1425,6 @@ class MoonFlowerScan(PtyScan):
             raw[k] = np.random.poisson(intensity_j).astype(np.int32)
 
         return raw, {}, {}
-
-        
-def makePtyScan(scan_pars, scanmodel=None):
-    """
-    Factory for PtyScan object. Return an instance of the appropriate PtyScan subclass based on the
-    input parameters.
-
-    Parameters
-    ----------
-    scan_pars: dict or Param
-        Input parameters according to :py:data:`.scan.data`.
-
-    scanmodel: ScanModel object
-        FIXME: This seems to be needed for simulations but broken for now.
-    """
-
-    # Extract information on the type of object to build
-    pars = scan_pars.data
-    source = pars.source
-    recipe = pars.get('recipe', {})
-
-    if source is not None:
-        source = source.lower()
-
-    if source in PtyScanTypes:
-        ps_obj = PtyScanTypes[source]
-        logger.info('Scan will be prepared with the recipe "%s"' % source)
-        ps_instance = ps_obj(pars, recipe=recipe)
-    elif source.endswith('.ptyd') or source.endswith('.pty') or str(source) == 'file':
-        ps_instance = PtydScan(pars, source=source)
-    elif source == 'test':
-        ps_instance = MoonFlowerScan(pars)
-    elif source == 'sim':
-        from ..simulations import SimScan
-        logger.info('Scan will simulated')
-        ps_instance = SimScan(pars, scanmodel)
-    elif source == 'empty' or source is None:
-        pars.recipe = None
-        logger.warning('Generating dummy PtyScan - This label will source only zeros as data')
-        ps_instance = PtyScan(pars)
-    else:
-        raise RuntimeError('Could not manage source "%s"' % str(source))
-
-    return ps_instance
 
 if __name__ == "__main__":
     u.verbose.set_level(3)
