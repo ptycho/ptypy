@@ -21,16 +21,17 @@ __all__ = ['smooth_step', 'abs2', 'norm2', 'norm', 'delxb', 'delxc', 'delxf',
 
 def cabs2(A):
     """
-    Squared absolute value (for complex array `A`)
+    Squared absolute value for an array `A`.
+    If `A` is complex, the returned value is complex as well, with the
+    imaginary part of zero.
     """
     return A * A.conj()
 
 def abs2(A):
     """
-    Squared absolute value (for real array `A`)
+    Squared absolute value for an array `A`.
     """
-    return np.square(np.abs(A))
-
+    return cabs2(A).real
 
 def norm2(A):
     """
