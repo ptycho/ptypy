@@ -155,7 +155,7 @@ def delxf(a, axis=-1, out=None):
     out : ndarray
         Derived array.
     """
-    nd   = len(a.shape)
+    nd = a.ndim
     axis = range(nd)[axis]
 
     slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
@@ -196,7 +196,7 @@ def delxb(a, axis=-1):
         Derived array.
     """
 
-    nd = len(a.shape)
+    nd = a.ndim
     axis = range(nd)[axis]
     slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
     slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
@@ -226,7 +226,7 @@ def delxc(a,axis=-1):
     out : nd-numpy-array
         Derived array.
     """
-    nd = len(a.shape)
+    nd = a.ndim
     axis = range(nd)[axis]
     slice_middle = [slice(1,-1) if i==axis else slice(None) for i in range(nd)]
     b = delxf(a, axis) + delxb(a, axis)
