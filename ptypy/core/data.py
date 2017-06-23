@@ -17,30 +17,23 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from ..utils import parallel
+from ptypy import resources
+from ptypy.core import xy
+import numpy as np
+import os
+import h5py
 if __name__ == "__main__":
     from ptypy import utils as u
     from ptypy import io
-    from ptypy import resources
     from ptypy.core import geometry
     from ptypy.utils.verbose import logger, log, headerline
-    from ..utils import parallel
-    from ptypy import resources
-    from ptypy.core import xy
-    import numpy as np
-    import os
-    import h5py
 else:
     from .. import utils as u
     from .. import io
     from .. import resources
     from ..utils.verbose import logger, log, headerline
-    from ..utils import parallel
-    from ptypy import resources
-    from ptypy.core import xy
     import geometry
-    import numpy as np
-    import os
-    import h5py
 
 PTYD = dict(
     # frames, positions

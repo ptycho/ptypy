@@ -14,8 +14,9 @@ import numpy as np
 from misc import *
 from scipy import ndimage as ndi
 
-__all__ = ['smooth_step','abs2','norm2', 'norm', 'delxb', 'delxc', 'delxf',\
-            'ortho','gauss_fwhm','gaussian','gf','cabs2','gf_2d','c_gf','gaussian2D','rl_deconvolution']
+__all__ = ['smooth_step', 'abs2', 'norm2', 'norm', 'delxb', 'delxc', 'delxf',
+           'ortho', 'gauss_fwhm', 'gaussian', 'gf', 'cabs2', 'gf_2d', 'c_gf',
+           'gaussian2D', 'rl_deconvolution']
 
 def cabs2(A):
     """
@@ -42,19 +43,20 @@ def norm(A):
     """
     return np.sqrt(norm2(A))
 
-def smooth_step(x,mfs):
+def smooth_step(x, mfs):
     """
     Smoothed step function with fwhm `mfs`
     Evaluates the error function `scipy.special.erf`.
     """
-    return 0.5*erf(x*2.35/mfs) +0.5
+    return 0.5 * erf(x * 2.35 / mfs) + 0.5
 
-def gaussian(x,std=1.0,off=0.):
+def gaussian(x, std=1.0, off=0.0):
     """
     Evaluates gaussian standard normal
 
     .. math::
-        g(x)=\\frac{1}{\mathrm{std}\sqrt{2\pi}}\,\exp \\left(-\\frac{(x-\mathrm{off})^2}{2 \mathrm{std}^2 }\\right)
+        g(x)=\\frac{1}{\mathrm{std}\sqrt{2\pi}}\,\exp
+        \\left(-\\frac{(x-\mathrm{off})^2}{2 \mathrm{std}^2 }\\right)
 
     Parameters
     ----------
@@ -72,9 +74,9 @@ def gaussian(x,std=1.0,off=0.):
     gauss_fwhm
     smooth_step
     """
-    return np.exp(-(x-off)**2/(2*std**2)) / (std * np.sqrt(2*np.pi))
+    return np.exp(-(x - off)**2 / (2 * std**2)) / (std * np.sqrt(2 * np.pi))
 
-def gauss_fwhm(x,fwhm=1.0,off=0.):
+def gauss_fwhm(x, fwhm=1.0, off=0.0):
     """
     Evaluates gaussian with full width half maximum
 
@@ -94,12 +96,12 @@ def gauss_fwhm(x,fwhm=1.0,off=0.):
     gaussian
 
     """
-    return gaussian(x,fwhm/2/np.sqrt(2*np.log(2)),off)
+    return gaussian(x, fwhm / 2 / np.sqrt(2 * np.log(2)), off)
 
-def gaussian2D(size, std_x=1.0, std_y=1.0, off_x=0., off_y=0.):
+def gaussian2D(size, std_x=1.0, std_y=1.0, off_x=0.0, off_y=0.0):
     """
-    Evaluates normalized 2D gaussian on array of dimension size. Origin of coordinate
-    system is in the center of the array.
+    Evaluates normalized 2D gaussian on array of dimension size.
+    Origin of coordinate system is in the center of the array.
 
     Parameters
     ----------
@@ -121,12 +123,15 @@ def gaussian2D(size, std_x=1.0, std_y=1.0, off_x=0., off_y=0.):
     """
     if not isinstance(size, int):
         raise RuntimeError('Input size has to be integer.')
-    y, x = np.mgrid[0:size, 0:size]
-    x = x-size/2
-    y = y-size/2
-    return np.exp(-((x-off_x)**2/(2*std_x**2) + (y-off_y)**2/(2*std_y**2))) / (2*np.pi*std_x*std_y)
 
-def delxf(a, axis = -1, out = None):
+    y, x = np.mgrid[0:size, 0:size]
+    x = x - size / 2
+    y = y - size / 2
+    xpart = (x - off_x)**2 / (2 * std_x**2)
+    ypart = (y - off_y)**2 / (2 * std_y**2)
+    return np.exp(-(xpart + ypart)) / (2 * np.pi * std_x * std_y)
+
+def delxf(a, axis=-1, out=None):
     """\
     Forward first order derivative for finite difference calculation.
 
@@ -153,21 +158,23 @@ def delxf(a, axis = -1, out = None):
     nd   = len(a.shape)
     axis = range(nd)[axis]
 
-    slice1 = [ slice(1,  None) if i == axis else slice(None) for i in range(nd) ]
-    slice2 = [ slice(None, -1) if i == axis else slice(None) for i in range(nd) ]
+    slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
+    slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
 
-    if out == None:  out = np.zeros_like(a)
+    if out == None:
+        out = np.zeros_like(a)
 
     out[slice2] = a[slice1] - a[slice2]
 
     if out is a:
         # required for in-place operation
-        slice3 = [ slice(-2, None) if i == axis else slice(None) for i in range(nd) ]
-        out[slice3] = 0.
+        slice3 = [slice(-2, None) if i == axis else slice(None)
+                  for i in range(nd)]
+        out[slice3] = 0.0
 
     return out
 
-def delxb(a,axis=-1):
+def delxb(a, axis=-1):
     """\
     Backward first order derivative for finite difference calculation.
 
@@ -191,8 +198,8 @@ def delxb(a,axis=-1):
 
     nd = len(a.shape)
     axis = range(nd)[axis]
-    slice1 = [slice(1,None) if i==axis else slice(None) for i in range(nd)]
-    slice2 = [slice(None,-1) if i==axis else slice(None) for i in range(nd)]
+    slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
+    slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
     b = np.zeros_like(a)
     b[slice1] = a[slice1] - a[slice2]
     return b
@@ -222,8 +229,8 @@ def delxc(a,axis=-1):
     nd = len(a.shape)
     axis = range(nd)[axis]
     slice_middle = [slice(1,-1) if i==axis else slice(None) for i in range(nd)]
-    b = delxf(a,axis) + delxb(a,axis)
-    b[slice_middle] *= .5
+    b = delxf(a, axis) + delxb(a, axis)
+    b[slice_middle] *= 0.5
     return b
 
 
@@ -258,7 +265,7 @@ c_gf= complex_overload(ndi.gaussian_filter)
 # ndi.gaussian_filter is a little special in the docstring
 c_gf.__doc__='    *complex input*\n\n    '+c_gf.__doc__
 
-def gf(c,*arg,**kwargs):
+def gf(c, *arg, **kwargs):
     """
     Wrapper for scipy.ndimage.gaussian_filter, that determines whether
     original or the complex function shall be used.
@@ -268,11 +275,11 @@ def gf(c,*arg,**kwargs):
     c_gf
     """
     if np.iscomplexobj(c):
-        return c_gf(c,*arg,**kwargs)
+        return c_gf(c, *arg, **kwargs)
     else:
-        return ndi.gaussian_filter(c,*arg,**kwargs)
+        return ndi.gaussian_filter(c, *arg, **kwargs)
 
-def gf_2d(c,sigma,**kwargs):
+def gf_2d(c, sigma, **kwargs):
     """
     Gaussian filter along the last 2 axes
 
@@ -283,9 +290,9 @@ def gf_2d(c,sigma,**kwargs):
     """
     if c.ndim > 2:
         n=c.ndim
-        return gf(c,(0,)*(n-2)+tuple(expect2(sigma)),**kwargs)
+        return gf(c, (0,) * (n - 2) + tuple(expect2(sigma)), **kwargs)
     else:
-        return gf(c,sigma,**kwargs)
+        return gf(c, sigma, **kwargs)
 
 def rl_deconvolution(data, mtf, numiter):
     """
@@ -318,5 +325,5 @@ def rl_deconvolution(data, mtf, numiter):
     convolve = lambda x: np.abs(np.fft.ifft2(np.fft.fft2(x)*mtf)).astype(x.dtype)
     u = data.copy()
     for n in range(numiter):
-        u*=convolve(data/(convolve(u)+1e-6))
+        u *= convolve(data / (convolve(u) + 1e-6))
     return u

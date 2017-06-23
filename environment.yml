@@ -17,5 +17,3 @@ dependencies:
   - pip:
     - pytest-cov
     - coveralls
-
-
