@@ -10,6 +10,7 @@ This file is part of the PTYPY package.
 
 
 from scipy.special import erf
+from scipy.linalg import eig
 import numpy as np
 from misc import *
 from scipy import ndimage as ndi
@@ -253,7 +254,7 @@ def ortho(modes):
     """
     N = len(modes)
     A = np.array([[np.vdot(p2,p1) for p1 in modes] for p2 in modes])
-    e,v = np.linalg.eig(A)
+    e, v = eig(A)
     ei = (-e).argsort()
     nplist = [sum(modes[i] * v[i,j] for i in range(N)) for j in ei]
     amp = np.array([norm2(npi) for npi in nplist])
