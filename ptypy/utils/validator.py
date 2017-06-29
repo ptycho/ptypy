@@ -101,7 +101,7 @@ class Parameter(object):
         
         self.required = [] 
         self.optional = []
-        self.info = {}
+        self.info = OrderedDict()
         self._parse_info(info)
         
         if self._is_child:
@@ -336,8 +336,8 @@ class Parameter(object):
         """
         Save Parameter defaults using Pythons ConfigParser
         
-        Each parameter each parameter occupies its own section. 
-        Separator characters in sections names map to a tree-hierarchy
+        Each parameter occupies its own section. 
+        Separator characters in sections names map to a tree-hierarchy.
         """
         from ConfigParser import RawConfigParser as Parser
         parser = Parser()
@@ -404,11 +404,11 @@ class Parameter(object):
         prst.close()
 
 class ArgParseParameter(Parameter):
-    DEFAULTS = OrderedDict(
-        default = 'Default value for parameter.',
-        help = 'A small docstring for command line parsing (required).',
-        choices = 'If parameter is list of choices, these are listed here.'
-    )
+    DEFAULTS = OrderedDict([
+        ('default', 'Default value for parameter.'),
+        ('help', 'A small docstring for command line parsing (required).'),
+        ('choices', 'If parameter is list of choices, these are listed here.')
+    ])
     def __init__(self, *args,**kwargs):
         
         info = self.DEFAULTS.copy()
@@ -606,17 +606,17 @@ class EvalParameter(ArgParseParameter):
     _evaltypes = ['int','float','tuple','list','complex']
     _copytypes = ['str','file']
     
-    DEFAULTS = OrderedDict(
-        default = 'Default value for parameter (required).',
-        help = 'A small docstring for command line parsing (required).',
-        type = 'Komma separated list of acceptable types.',
-        doc = 'A longer explanation for the online docs.',
-        uplim = 'Upper limit for scalar / integer values',
-        lowlim = 'Lower limit for scalar / integer values',
-        choices = 'If parameter is list of choices, these are listed here.',
-        userlevel = """User level, a higher level means a parameter that is 
-                    less likely to vary or harder to understand.""",
-    )
+    DEFAULTS = OrderedDict([
+        ('default', 'Default value for parameter (required).'),
+        ('help', 'A small docstring for command line parsing (required).'),
+        ('doc', 'A longer explanation for the online docs.'),
+        ('type', 'Komma separated list of acceptable types.'),
+        ('userlevel', """User level, a higher level means a parameter that is 
+                     less likely to vary or harder to understand."""),
+        ('choices', 'If parameter is list of choices, these are listed here.'),
+        ('uplim','Upper limit for scalar / integer values'),
+        ('lowlim', 'Lower limit for scalar / integer values'),
+    ])
      
     def __init__(self, *args,**kwargs):
 

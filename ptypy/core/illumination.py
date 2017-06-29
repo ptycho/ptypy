@@ -18,6 +18,176 @@ from ..utils.verbose import logger
 from .. import resources
 
 TEMPLATES = dict()
+from io import StringIO
+
+StringIO(
+u"""
+[aperture]
+help = Beam aperture parameters
+
+[aperture.central_stop]
+help = size of central stop as a fraction of aperture.size
+default = None
+doc = If not None: places a central beam stop in aperture. The value given here is the fraction of the beam stop compared to `size` 
+lowlim = 0.
+uplim = 1.
+userlevel = 1
+type = float
+
+[aperture.diffuser]
+help = Noise in the transparen part of the aperture
+default = None
+doc = Can be either:
+	 - ``None`` : no noise
+	 - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+	 - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+userlevel = 2
+type = tuple
+
+[aperture.edge]
+help = Edge width of aperture (in pixels!)
+default = 2.0
+userlevel = 2
+
+[aperture.form]
+help = One of None, 'rect' or 'circ'
+default = circ
+doc = One of:
+	 - ``None`` : no aperture, this may be useful for nearfield
+	 - ``'rect'`` : rectangular aperture
+	 - ``'circ'`` : circular aperture
+choices = None,'rect','circ'
+userlevel = 2
+type = None
+
+[aperture.offset]
+help = Offset between center of aperture and optical axes
+default = 0.
+doc = May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset
+userlevel = 2
+type = float, tuple
+
+[aperture.size]
+lowlim = 0.
+help = Aperture width or diameter
+default = None
+doc = May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture 
+userlevel = 0
+type = float
+
+[diversity]
+help = Probe mode(s) diversity parameters
+doc = Can be ``None`` i.e. no diversity
+validity = 
+choices = 
+uplim = 
+userlevel = 
+type = Param
+
+[diversity.noise]
+lowlim = 
+help = Noise in the generated modes of the illumination 
+default = None
+doc = Can be either:
+	 - ``None`` : no noise
+	 - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+	 - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+validity = 
+choices = 
+uplim = 
+userlevel = 1
+type = tuple
+
+[diversity.power]
+lowlim = 0.0
+help = Power of modes relative to main mode (zero-layer)
+default = 0.1
+uplim = 1.0
+userlevel = 1
+type = tuple, float
+
+[diversity.shift]
+help = Lateral shift of modes relative to main mode
+default = None
+doc = **[not implemented]**
+userlevel = 2
+type = float
+
+[model] 
+help = Type of illumination model
+default = None
+doc = One of:
+	 - ``None`` : model initialitziation defaults to flat array filled with the specified number of photons
+	 - ``'recon'`` : load model from previous reconstruction, see `recon` Parameters
+	 - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
+	 - *<resource>* : one of ptypys internal image resource strings
+	 - *<template>* : one of the templates inillumination module
+	
+	In script, you may pass a numpy.ndarray here directly as the model. It is considered as incoming wavefront and will be propagated according to `propagation` with an optional `aperture` applied before.
+userlevel = 0
+type = str
+
+[photons]
+lowlim = 0
+help = Number of photons in the incident illumination
+default = None
+doc = A value specified here will take precedence over calculated statistics from the loaded data.
+userlevel = 2
+type = int
+
+[propagation]
+help = Parameters for propagation after aperture plane
+doc = Propagation to focus takes precedence to parallel propagation if `foccused` is not ``None``
+
+[propagation.antialiasing]
+help = Antialiasing factor
+default = 1
+doc = Antialiasing factor used when generating the probe. (numbers larger than 2 or 3 are memory hungry)
+	**[Untested]**
+userlevel = 2
+type = float
+
+[propagation.focussed]
+lowlim = 
+help = Propagation distance from aperture to focus
+default = None
+doc = If ``None`` or ``0`` : No focus propagation 
+userlevel = 0
+type = float
+
+[propagation.parallel]
+help = Parallel propagation distance
+default = None
+doc = If ``None`` or ``0`` : No parallel propagation 
+userlevel = 0
+type = float
+
+[propagation.spot_size]
+lowlim = 0
+help = Focal spot diameter
+default = None
+doc = If not ``None``, this parameter is used to generate the appropriate aperture size instead of :py:data:`size`
+validity = foccussed is not None and foccused!=0
+userlevel = 1
+type = float
+
+[recon]
+help = Parameters to load from previous reconstruction
+type = Param
+
+[recon.label]
+help = Scan label of diffraction that is to be used for probe estimate
+default = None
+doc = ``None``, own scan label is used
+userlevel = 1
+type = str
+
+[recon.rfile]
+help = Path to a ``.ptyr`` compatible file
+default = \*.ptyr
+userlevel = 0
+type = file
+""")
 
 DEFAULT_aperture = u.Param(
     #  Aperture form (str). One of:
