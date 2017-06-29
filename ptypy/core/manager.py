@@ -450,7 +450,7 @@ class ModelManager(object):
 
         # Create scan objects from information already available
         for label, scan_pars in self.scans_pars.iteritems():
-            self.scans[label] = ScanModel(specific_pars=scan_pars, generic_pars=self.p, label=label)
+            self.scans[label] = ScanModel(ptycho=self.ptycho, specific_pars=scan_pars, generic_pars=self.p, label=label)
 
         # Sharing dictionary that stores sharing behavior
         self.sharing = {'probe_ids': {}, 'object_ids': {}}
