@@ -92,6 +92,7 @@ DEFAULT = u.Param(
 
 NO_DATA_FLAG = 'No data'
 
+
 class ScanModel(object):
     """
     Manage a single scan model (data, illumination, geometry, ...)
@@ -121,6 +122,11 @@ class ScanModel(object):
         self.p = p
         self.label = label
         self.ptycho = ptycho
+
+        # In the current implementation, the only way a label is attached to a scan is through this
+        # constructor. We enforce this here.
+        if str(label) != label:
+            raise RuntimeError('ScanManager has to be initialized with a string label')
 
         # Manage stand-alone cases
         if self.ptycho is None:
@@ -165,50 +171,29 @@ class ScanModel(object):
         if not self.ptyscan.is_initialized:
             self.ptyscan.initialize()
 
-        # Get data
+        # Get data packet
         dp = self.ptyscan.auto(self.frames_per_call, self.feed_format)
 
         self.data_available = (dp != data.EOS)
         logger.debug(u.verbose.report(dp))
 
+        # Nothing to do if no data available
         if dp == data.WAIT or not self.data_available:
             return None
-
-        # Store metadata
-        self.meta = dp['common']
 
         label = self.label
         logger.info('Importing data from scan %s.' % label)
 
+        # Store metadata
+        self.meta = dp['common']
+
+        # Geometry information
+        self.shape = self.meta['shape']
+        self.psize = self.meta['psize']
+
         # Prepare the scan geometry if not already done.
         if not self.geometries:
-            # Check if meta and scan geometry agree
-            self.geometries = []
-            geo = self.p.geometry
-
-            # FIXME: User should be informed of the final geometry parameters.
-            for key in geometry.DEFAULT.keys():
-                if geo.get(key) is None or not (geo.precedence == 'meta'):
-                    mk = self.meta.get(key)
-                    if mk is not None:  # None existing key or None values in meta dict are treated alike
-                        geo[key] = mk
-
-            # The multispectral case will have multiple geometries
-            for ii, fac in enumerate(self.p.coherence.energies):
-                geoID = geometry.Geo._PREFIX + '%02d' % ii + label
-                g = geometry.Geo(self.ptycho, geoID, pars=geo)
-                # now we fix the sample pixel size, This will make the frame size adapt
-                g.p.resolution_is_fix = True
-                # save old energy value:
-                g.p.energy_orig = g.energy
-                # change energy
-                g.energy *= fac
-                # append the geometry
-                self.geometries.append(g)
-
-            # Store frame shape
-            self.shape = np.array(self.meta.get('shape', self.geometries[0].shape))
-            self.psize = self.geometries[0].psize
+            self._initialize_geometry()
 
         sh = self.shape
 
@@ -294,7 +279,7 @@ class ScanModel(object):
                 v = View(self.Cmask, accessrule=AR_mask)
                 mask_views.append(v)
 
-        # so now we should have the right views to this storages. Let them reformat()
+        # so now we should have the right views to these storages. Let them reformat()
         # that will create the right sizes and the datalist access
         self.diff.reformat()
         self.mask.reformat()
@@ -311,9 +296,11 @@ class ScanModel(object):
             self.diff.data[self.diff.layermap.index(idx)][:] = diff_data
             self.mask.data[self.mask.layermap.index(idx)][:] = dct.get('mask', np.ones_like(diff_data))
 
+        # Update the total number of layers
         self.diff.nlayers = parallel.MPImax(self.diff.layermap) + 1
         self.mask.nlayers = parallel.MPImax(self.mask.layermap) + 1
 
+        # Store newly acquired information
         self.new_positions = positions
         self.new_diff_views = diff_views
         self.new_mask_views = mask_views
@@ -376,8 +363,37 @@ class ScanModel(object):
         logger.info(
             '\n--- Scan %(label)s photon report ---\nTotal photons   : %(tot).2e \nAverage photons : %(mean).2e\nMaximum photons : %(max).2e\n' % info + '-' * 29)
 
+    def _initialize_geometry(self):
+        """
+        Store geometry information from input parameters and meta from input data.
+        This behavior might change in the future to avoid ambiguities in input parameters.
+        """
+        self.geometries = []
 
+        # Start from input parameters
+        geo = self.p.geometry
 
+        # Loop through attributes and fill in from meta if none or if precedence is over meta from ptyscan
+        for key in geometry.DEFAULT.keys():
+            if geo.get(key) is None or not (geo.precedence == 'meta'):
+                mk = self.meta.get(key)
+                if mk is not None:  # None existing key or None values in meta dict are treated alike
+                    geo[key] = mk
+
+        # The multispectral case will have multiple geometries
+        for ii, fac in enumerate(self.p.coherence.energies):
+            geoID = geometry.Geo._PREFIX + '%02d' % ii + self.label
+            g = geometry.Geo(self.ptycho, geoID, pars=geo)
+            # now we fix the sample pixel size, This will make the frame size adapt
+            g.p.resolution_is_fix = True
+            # save old energy value:
+            g.p.energy_orig = g.energy
+            # change energy
+            g.energy *= fac
+            # append the geometry
+            self.geometries.append(g)
+
+        return
 
 class ModelManager(object):
     """
