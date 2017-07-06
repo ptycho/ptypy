@@ -27,7 +27,7 @@ from .. import utils as u
 from ..utils.verbose import logger, headerline, log
 from classes import *
 from classes import DEFAULT_ACCESSRULE
-from classes import MODEL_PREFIX
+from classes import MODEL_PREFIX, STORAGE_PREFIX
 from ..utils import parallel
 
 # Please set these globally later
@@ -363,6 +363,153 @@ class ScanModel(object):
         logger.info(
             '\n--- Scan %(label)s photon report ---\nTotal photons   : %(tot).2e \nAverage photons : %(mean).2e\nMaximum photons : %(max).2e\n' % info + '-' * 29)
 
+    def _create_pods(self):
+        """
+        Create all pods.
+
+        Return the list of new pods, probe and object ids (to allow for
+        initialization).
+        """
+        logger.info('\n' + headerline('Creating PODS', 'l'))
+        new_pods = []
+        new_probe_ids = {}
+        new_object_ids = {}
+
+        # Get a list of probe and object that already exist
+        existing_probes = self.ptycho.probe.storages.keys()
+        # SC: delete? self.sharing_rules.probe_ids.keys()
+        existing_objects = self.ptycho.obj.storages.keys()
+        # SC: delete? self.sharing_rules.object_ids.keys()
+        logger.info('Found these probes : ' + ', '.join(existing_probes))
+        logger.info('Found these objects: ' + ', '.join(existing_objects))
+
+        positions = self.new_positions
+        di_views = self.new_diff_views
+        ma_views = self.new_mask_views
+
+        # # Compute sharing rules
+        # share = self.p.sharing
+        # alt_obj = share.object_share_with if share is not None else None
+        # alt_pr = share.probe_share_with if share is not None else None
+
+        # obj_label = label if alt_obj is None else alt_obj
+        # pr_label = label if alt_pr is None else alt_pr
+
+        # This step needed because sharing is deactivated
+        probe_id = STORAGE_PREFIX + '00'
+        object_id = STORAGE_PREFIX + '00'
+
+        # Loop through diffraction patterns
+        for i in range(len(di_views)):
+            dv, mv = di_views.pop(0), ma_views.pop(0)
+
+            index = dv.layer
+
+            # Object and probe position
+            pos_pr = u.expect2(0.0)
+            pos_obj = positions[i] if 'empty' not in self.p.tags else 0.0
+
+            # t, object_id = self.sharing_rules(obj_label, index)
+            # probe_id, t = self.sharing_rules(pr_label, index)
+
+            # For multiwavelength reconstructions: loop here over
+            # geometries, and modify probe_id and object_id.
+            for ii, geometry in enumerate(self.geometries):
+                # Make new IDs and keep them in record
+                # sharing_rules is not aware of IDs with suffix
+
+                pdis = self.p.coherence.probe_dispersion
+
+                if pdis is None or str(pdis) == 'achromatic':
+                    gind = 0
+                else:
+                    gind = ii
+
+                probe_id_suf = probe_id + 'G%02d' % gind
+                if (probe_id_suf not in new_probe_ids.keys()
+                    and probe_id_suf not in existing_probes):
+                    new_probe_ids[probe_id_suf] = [self.label]
+
+                odis = self.p.coherence.object_dispersion
+
+                if odis is None or str(odis) == 'achromatic':
+                    gind = 0
+                else:
+                    gind = ii
+
+                object_id_suf = object_id + 'G%02d' % gind
+                if (object_id_suf not in new_object_ids.keys()
+                    and object_id_suf not in existing_objects):
+                    new_object_ids[object_id_suf] = [self.label]
+
+                # Loop through modes
+                for pm in range(self.p.coherence.num_probe_modes):
+                    for om in range(self.p.coherence.num_object_modes):
+                        # Make a unique layer index for exit view
+                        # The actual number does not matter due to the
+                        # layermap access
+                        exit_index = index * 10000 + pm * 100 + om
+
+                        # Create views
+                        # Please note that mostly references are passed,
+                        # i.e. the views do mostly not own the accessrule
+                        # contents
+                        pv = View(container=self.ptycho.probe,
+                                  accessrule={'shape': geometry.shape,
+                                              'psize': geometry.resolution,
+                                              'coord': pos_pr,
+                                              'storageID': probe_id_suf,
+                                              'layer': pm,
+                                              'active': True})
+
+                        ov = View(container=self.ptycho.obj,
+                                  accessrule={'shape': geometry.shape,
+                                              'psize': geometry.resolution,
+                                              'coord': pos_obj,
+                                              'storageID': object_id_suf,
+                                              'layer': om,
+                                              'active': True})
+
+                        ev = View(container=self.ptycho.exit,
+                                  accessrule={'shape': geometry.shape,
+                                              'psize': geometry.resolution,
+                                              'coord': pos_pr,
+                                              'storageID': (probe_id +
+                                                            object_id[1:] +
+                                                            'G%02d' % ii),
+                                              'layer': exit_index,
+                                              'active': dv.active})
+
+                        views = {'probe': pv,
+                                 'obj': ov,
+                                 'diff': dv,
+                                 'mask': mv,
+                                 'exit': ev}
+
+                        pod = POD(ptycho=self.ptycho,
+                                  ID=None,
+                                  views=views,
+                                  geometry=geometry)  # , meta=meta)
+
+                        new_pods.append(pod)
+
+                        # If Empty Probe sharing is enabled,
+                        # adjust POD accordingly.
+                        # if share is not None:
+                        #     pod.probe_weight = share.probe_share_power
+                        #     pod.object_weight = share.object_share_power
+                        #     if share.EP_sharing:
+                        #         pod.is_empty = True
+                        #     else:
+                        #         pod.is_empty = False
+                        # else:
+                        #     pod.probe_weight = 1
+                        #     pod.object_weight = 1
+                        pod.probe_weight = 1
+                        pod.object_weight = 1
+
+        return new_pods, new_probe_ids, new_object_ids
+
     def _initialize_geometry(self):
         """
         Store geometry information from input parameters and meta from input data.
@@ -468,11 +615,11 @@ class ModelManager(object):
         for label, scan_pars in self.scans_pars.iteritems():
             self.scans[label] = ScanModel(ptycho=self.ptycho, specific_pars=scan_pars, generic_pars=self.p, label=label)
 
-        # Sharing dictionary that stores sharing behavior
-        self.sharing = {'probe_ids': {}, 'object_ids': {}}
-
-        # Initialize sharing rules for POD creations
-        self.sharing_rules = model.parse_model(p.sharing, self.sharing)
+        # # Sharing dictionary that stores sharing behavior
+        # self.sharing = {'probe_ids': {}, 'object_ids': {}}
+        #
+        # # Initialize sharing rules for POD creations
+        # self.sharing_rules = model.parse_model(p.sharing, self.sharing)
 
         # This start is a little arbitrary
         self.label_idx = len(self.scans)
@@ -490,7 +637,6 @@ class ModelManager(object):
         inst.__dict__ = dct
         return inst
 
-
     @property
     def data_available(self):
         return any(s.data_available for s in self.scans.values())
@@ -507,30 +653,23 @@ class ModelManager(object):
             return 'No data'
 
         logger.info('Processing new data.')
-        used_scans = []
 
-        # Attempt to get new data
         for label, scan in self.scans.iteritems():
             new_data = scan.new_data()
             if new_data:
-                used_scans.append(label)
+                # Create PODs
+                new_pods, new_probe_ids, new_object_ids = scan._create_pods()
+                logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
+                parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
 
-        if not used_scans:
-            return None
+                # Adjust storages
+                self.ptycho.probe.reformat(True)
+                self.ptycho.obj.reformat(True)
+                self.ptycho.exit.reformat()
 
-        # Create PODs
-        new_pods, new_probe_ids, new_object_ids = self._create_pods(used_scans)
-        logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
-            parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
-
-        # Adjust storages      
-        self.ptycho.probe.reformat(True)
-        self.ptycho.obj.reformat(True)
-        self.ptycho.exit.reformat()
-
-        self._initialize_probe(new_probe_ids)
-        self._initialize_object(new_object_ids)
-        self._initialize_exit(new_pods)
+                self._initialize_probe(new_probe_ids)
+                self._initialize_object(new_object_ids)
+                self._initialize_exit(new_pods)
 
     def _initialize_probe(self, probe_ids):
         """
