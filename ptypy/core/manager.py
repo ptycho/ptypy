@@ -508,7 +508,106 @@ class ScanModel(object):
                         pod.probe_weight = 1
                         pod.object_weight = 1
 
-        return new_pods, new_probe_ids, new_object_ids
+        logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
+        parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
+
+        # Adjust storages
+        self.ptycho.probe.reformat(True)
+        self.ptycho.obj.reformat(True)
+        self.ptycho.exit.reformat()
+
+        self._initialize_probe(new_probe_ids)
+        self._initialize_object(new_object_ids)
+        self._initialize_exit(new_pods)
+
+    def _initialize_probe(self, probe_ids):
+        """
+        Initialize the probe storages referred to by the probe_ids
+        """
+        logger.info('\n' + headerline('Probe initialization', 'l'))
+
+        # Loop through probe ids
+        for pid, labels in probe_ids.items():
+
+            illu_pars = self.p.illumination
+
+            # pick storage from container
+            s = self.ptycho.probe.S.get(pid)
+
+            if s is None:
+                continue
+            else:
+                logger.info('Initializing probe storage %s using scan %s.'
+                            % (pid, self.label))
+
+            # if photon count is None, assign a number from the stats.
+            phot = illu_pars.get('photons')
+            phot_max = self.diff.max_power
+
+            if phot is None:
+                logger.info(
+                    'Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' % phot_max)
+                illu_pars['photons'] = phot_max
+            elif np.abs(np.log10(phot) - np.log10(phot_max)) > 1:
+                logger.warn(
+                    'Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' % (
+                    phot, phot_max))
+
+            illumination.init_storage(s, illu_pars)
+
+            s.reformat()  # Maybe not needed
+            s.model_initialized = True
+
+    def _initialize_object(self, object_ids):
+        """
+        Initializes the probe storages referred to by the object_ids.
+        """
+
+        logger.info('\n' + headerline('Object initialization', 'l'))
+
+        # Loop through object IDs
+        for oid, labels in object_ids.items():
+
+            sample_pars = self.p.sample
+
+            # pick storage from container
+            s = self.ptycho.obj.S.get(oid)
+
+            if s is None or s.model_initialized:
+                continue
+            else:
+                logger.info('Initializing object storage %s using scan %s.'
+                            % (oid, self.label))
+
+            if type(sample_pars) is u.Param:
+                # Deep copy
+                sample_pars = sample_pars.copy(depth=10)
+
+                # Quickfix spectral contribution.
+                if (self.p.coherence.object_dispersion
+                    not in [None, 'achromatic']
+                    and self.p.coherence.probe_dispersion
+                    in [None, 'achromatic']):
+                    logger.info(
+                        'Applying spectral distribution input to object fill.')
+                    sample_pars['fill'] *= s.views[0].pod.geometry.p.spectral
+
+            sample.init_storage(s, sample_pars)
+            s.reformat()  # maybe not needed
+
+            s.model_initialized = True
+
+    @staticmethod
+    def _initialize_exit(pods):
+        """
+
+        initializes exit waves using the pods
+        """
+        logger.info('\n' + headerline('Creating exit waves', 'l'))
+        for pod in pods:
+            if not pod.active:
+                continue
+            pod.exit = pod.probe * pod.object
 
     def _initialize_geometry(self):
         """
@@ -658,113 +757,10 @@ class ModelManager(object):
             new_data = scan.new_data()
             if new_data:
                 # Create PODs
-                new_pods, new_probe_ids, new_object_ids = scan._create_pods()
-                logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
-                parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
-
-                # Adjust storages
-                self.ptycho.probe.reformat(True)
-                self.ptycho.obj.reformat(True)
-                self.ptycho.exit.reformat()
-
-                self._initialize_probe(new_probe_ids)
-                self._initialize_object(new_object_ids)
-                self._initialize_exit(new_pods)
-
-    def _initialize_probe(self, probe_ids):
-        """
-        Initialize the probe storages referred to by the probe_ids
-        """
-        logger.info('\n'+headerline('Probe initialization', 'l'))
-
-        # Loop through probe ids
-        for pid, labels in probe_ids.items():
-
-            # Pick first scan - this should not matter.
-            scan = self.scans[labels[0]]
-            illu_pars = scan.p.illumination
-
-            # pick storage from container
-            s = self.ptycho.probe.S.get(pid)
-
-            if s is None:
-                continue
-            else:
-                logger.info('Initializing probe storage %s using scan %s.'
-                            % (pid, scan.label))
+                scan._create_pods()
 
 
-            # if photon count is None, assign a number from the stats. 
-            phot = illu_pars.get('photons')
-            phot_max = scan.diff.max_power
-            
-            if phot is None:
-                logger.info('Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' % phot_max)
-                illu_pars['photons'] = phot_max
-            elif np.abs(np.log10(phot)-np.log10(phot_max)) > 1:
-                logger.warn('Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' % (phot, phot_max))
 
-            illumination.init_storage(s, illu_pars)
-            
-            s.reformat()  # Maybe not needed
-            s.model_initialized = True
-
-    def _initialize_object(self, object_ids):
-        """
-        Initializes the probe storages referred to by the object_ids.
-        """
-
-        logger.info('\n'+headerline('Object initialization', 'l'))
-
-        # Loop through object IDs
-        for oid, labels in object_ids.items():
-
-            # Pick first scan - this should not matter.
-            scan = self.scans[labels[0]]
-            sample_pars = scan.p.sample
-
-            # pick storage from container
-            s = self.ptycho.obj.S.get(oid)
-
-            if s is None or s.model_initialized:
-                continue
-            else:
-                logger.info('Initializing object storage %s using scan %s.'
-                            % (oid, scan.label))
-        
-            sample_pars = scan.p.sample
-            
-            if type(sample_pars) is u.Param:
-                # Deep copy
-                sample_pars = sample_pars.copy(depth=10)          
-                
-                # Quickfix spectral contribution.
-                if (scan.p.coherence.object_dispersion
-                        not in [None, 'achromatic']
-                        and scan.p.coherence.probe_dispersion
-                        in [None, 'achromatic']):
-                    logger.info(
-                        'Applying spectral distribution input to object fill.')
-                    sample_pars['fill'] *= s.views[0].pod.geometry.p.spectral
-            
-
-            sample.init_storage(s, sample_pars)
-            s.reformat()  # maybe not needed
-
-            s.model_initialized = True
-
-    @staticmethod
-    def _initialize_exit(pods):
-        """
-
-        initializes exit waves using the pods
-        """
-        logger.info('\n'+headerline('Creating exit waves', 'l'))
-        for pod in pods:
-            if not pod.active:
-                continue
-            pod.exit = pod.probe * pod.object
-        
     def _create_pods(self, new_scans):
         """
         Create all pods associated with the scan labels in 'scans'.
