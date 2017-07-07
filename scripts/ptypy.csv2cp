@@ -1,0 +1,48 @@
+#! /usr/bin/python
+
+from ptypy import utils as u
+import textwrap
+
+def write(x):
+    print(x)
+
+def wrapdoc(x):
+    return '\n  '.join(['\n  '.join(textwrap.wrap(line, 90, break_long_words=False, replace_whitespace=False)) for line in x.splitlines() if line.strip() != ''])
+
+def print_param(entry, parent=None, depth=50):
+    if parent is not None:
+        if parent == '':
+            entry_name = entry.name
+        else:
+            entry_name = '%s.%s' % (parent, entry.name)
+        write('[%s]' % entry_name)
+        write('help = ' + wrapdoc(entry.shortdoc))
+        write('default = %s' % entry.default)
+        write('doc = ' + wrapdoc(entry.longdoc))
+        if entry.lowlim: write('lowlim = %s' % entry.lowlim)
+        if entry.uplim: write('uplim = %s' % entry.uplim)
+        write('userlevel = %s' % entry.userlevel)
+        write('type = ' + ', '.join(entry.type))
+        write('')
+    else:
+        entry_name = ''
+    if entry.children and depth > 0:
+        for childname, child in entry.children.iteritems():
+            print_param(child, entry_name, depth=depth-1)
+    return
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='Dump default parameter in ConfigParser format.')
+    parser.add_argument('-p', '--path', dest='path', type=str, default=None,
+                   help='A valid path in the parameter structure')
+    parser.add_argument('-d', '--depth', dest='depth', type=int, default=1,
+                   help='Recursion depth')
+    pars = parser.parse_args()
+
+    root = u.validator.pdroot
+    if pars.path:
+        for node in pars.path.split('.'):
+            root = root.children[node]
+
+    print_param(root, depth=pars.depth)
