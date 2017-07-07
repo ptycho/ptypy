@@ -24,7 +24,7 @@ def print_param(entry, parent=None, depth=50):
         write('doc = ' + wrapdoc(entry.longdoc))
         write('type = ' + ', '.join(entry.type))
         write('userlevel = %s' % entry.userlevel)
-        if entry.choices: write('choices = ' + ', '.join(entry.choices))
+        if entry.choices: write('choices = ' + ', '.join([str(x) for x in entry.choices]))
         if entry.lowlim: write('lowlim = %s' % entry.lowlim)
         if entry.uplim: write('uplim = %s' % entry.uplim)
         write('')
