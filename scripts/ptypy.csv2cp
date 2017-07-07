@@ -3,11 +3,14 @@
 from ptypy import utils as u
 import textwrap
 
+
 def write(x):
     print(x)
 
+
 def wrapdoc(x):
     return '\n  '.join(['\n  '.join(textwrap.wrap(line, 90, break_long_words=False, replace_whitespace=False)) for line in x.splitlines() if line.strip() != ''])
+
 
 def print_param(entry, parent=None, depth=50):
     if parent is not None:
@@ -16,13 +19,14 @@ def print_param(entry, parent=None, depth=50):
         else:
             entry_name = '%s.%s' % (parent, entry.name)
         write('[%s]' % entry_name)
-        write('help = ' + wrapdoc(entry.shortdoc))
         write('default = %s' % entry.default)
+        write('help = ' + wrapdoc(entry.shortdoc))
         write('doc = ' + wrapdoc(entry.longdoc))
+        write('type = ' + ', '.join(entry.type))
+        write('userlevel = %s' % entry.userlevel)
+        if entry.choices: write('choices = ' + ', '.join(entry.choices))
         if entry.lowlim: write('lowlim = %s' % entry.lowlim)
         if entry.uplim: write('uplim = %s' % entry.uplim)
-        write('userlevel = %s' % entry.userlevel)
-        write('type = ' + ', '.join(entry.type))
         write('')
     else:
         entry_name = ''
