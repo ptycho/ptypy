@@ -328,57 +328,6 @@ class Parameter(object):
         
         parser.write(fbuffer)
         return parser
-        
-    def make_doc_rst(self, prst, use_root=True):
-        """
-        Pretty-print in RST format the whole structure.
-        """
-        Header = '.. _parameters:\n\n'
-        Header += '************************\n'
-        Header += 'Parameter tree structure\n'
-        Header += '************************\n\n'
-        prst.write(Header)
-        
-        root = self.get_root()  # if use_root else self
-        shortdoc = 'shortdoc'
-        longdoc = 'longdoc'
-        default = 'default'
-        lowlim = 'lowlim'
-        uplim = 'uplim'
-        
-        start = self.get_root()
-        
-        for name, desc in root.descendants.iteritems():
-            if name == '':
-                continue
-            if hasattr(desc, 'children') and desc.parent is root:
-                prst.write('\n'+name+'\n')
-                prst.write('='*len(name)+'\n\n')
-            if hasattr(desc, 'children') and desc.parent.parent is root:
-                prst.write('\n'+name+'\n')
-                prst.write('-'*len(name)+'\n\n')
-            
-            opt = desc.options
-
-            prst.write('.. py:data:: '+name)
-            # prst.write('('+', '.join([t for t in opt['type']])+')')
-            prst.write('('+opt['type']+')')
-            prst.write('\n\n')
-            num = str(opt.get('ID'))
-            prst.write('   *('+num+')* '+opt[shortdoc]+'\n\n')
-            prst.write('   '+opt[longdoc].replace('\n', '\n   ')+'\n\n')
-            prst.write('   *default* = ``'+str(opt[default]))
-            if opt[lowlim] is not None and opt[uplim] is not None:
-                prst.write(' (>'+str(opt[lowlim])+', <'+str(opt[uplim])+')``\n')
-            elif opt[lowlim] is not None and opt[uplim] is None:
-                prst.write(' (>'+str(opt[lowlim])+')``\n')
-            elif opt[lowlim] is None and opt[uplim] is not None:
-                prst.write(' (<'+str(opt[uplim])+')``\n')
-            else:
-                prst.write('``\n')
-                
-            prst.write('\n')
-        prst.close()
 
 
 class ArgParseParameter(Parameter):
@@ -772,6 +721,54 @@ class EvalParameter(ArgParseParameter):
         self-constistent with limits and choices.
         """
         self.validate(self.make_default(depth=depth))
+
+    def make_doc_rst(self, prst, use_root=True):
+        """
+        Pretty-print in RST format the whole structure.
+        """
+        Header = '.. _parameters:\n\n'
+        Header += '************************\n'
+        Header += 'Parameter tree structure\n'
+        Header += '************************\n\n'
+        prst.write(Header)
+
+        root = self.root
+        shortdoc = 'help'
+        longdoc = 'doc'
+        default = 'default'
+        lowlim = 'lowlim'
+        uplim = 'uplim'
+
+        for name, desc in root.descendants.iteritems():
+            if name == '':
+                continue
+            if hasattr(desc, 'children') and desc.parent is root:
+                prst.write('\n' + name + '\n')
+                prst.write('=' * len(name) + '\n\n')
+            if hasattr(desc, 'children') and desc.parent.parent is root:
+                prst.write('\n' + name + '\n')
+                prst.write('-' * len(name) + '\n\n')
+
+            prst.write('.. py:data:: ' + name)
+            # prst.write('('+', '.join([t for t in opt['type']])+')')
+            prst.write('(' + ', '.join(desc.type) + ')')
+            prst.write('\n\n')
+            # num = str(desc.num_id)
+            # prst.write('   *(' + num + ')* ' + desc.help + '\n\n')
+            prst.write('   ' + desc.doc.replace('\n', '\n   ') + '\n\n')
+            prst.write('   *default* = ``' + str(desc.default))
+            lowlim, uplim = desc.limits
+            if lowlim is not None and uplim is not None:
+                prst.write(' (>' + str(lowlim) + ', <' + str(uplim) + ')``\n')
+            elif lowlim is not None and uplim is None:
+                prst.write(' (>' + str(lowlim) + ')``\n')
+            elif lowlim is None and uplim is not None:
+                prst.write(' (<' + str(uplim) + ')``\n')
+            else:
+                prst.write('``\n')
+
+            prst.write('\n')
+        prst.close()
 
 
 def create_default_template(filename=None, user_level=0, doc_level=2):
