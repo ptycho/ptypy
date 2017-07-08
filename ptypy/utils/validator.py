@@ -74,17 +74,9 @@ class Parameter(object):
         
         #: Parent parameter (:py:class:`Parameter` type) if it has one.
         self.parent = parent
-        
-        self.descendants = {}
-        """ Flat list of all sub-Parameters. These are weak references
-        if not root."""
-        
-        if self._is_child:
-            import weakref
-            self.descendants = weakref.WeakValueDictionary()
 
         #: Hierarchical tree of sub-Parameters.
-        self.children = {}
+        self.children = OrderedDict()
         
         self.separator = separator
         
@@ -99,24 +91,24 @@ class Parameter(object):
         self._all_options = {}
         
     @property
-    def descendants_options(self):
+    def option_keys(self):
         return self._all_options.keys()
         
     @property
-    def _is_child(self):
+    def is_child(self):
         """
         Type check
         """
         return type(self.parent) is self.__class__
 
-    def _parse_info(self,info=None):
+    def _parse_info(self, info=None):
         if info is not None:
             self.info.update(info)
             
             r = []
             o = []
         
-            for option,text in self.info.items():
+            for option, text in self.info.items():
                 if 'required' in text or 'mandatory' in text:
                     r += [option]
                 else:
@@ -124,49 +116,72 @@ class Parameter(object):
             self.required = r
             self.optional = o
 
-    def _new(self, name=None):
+    def new_child(self, name, options=None):
         """
-        Create a new child of this object with same info dict. If name is None, a
-        default is used.
+        Create a new descendant and pass new options.
         """
-        n = name if name is not None and str(name) == name else 'ch%02d' % len(self.descendants)
-        return self.__class__(name=n, parent=self, separator=self.separator, info=self.info)
-        
-    def _name_descendants(self, separator=None):
-        """
-        Transform the flat list of descendants into tree hierarchy, stored in self.children.
-        Create roots if parameter has a dangling root.
-        """
-        sep = separator if separator is not None else self.separator
+        if options is None:
+            options = self.options
+        if self.separator in name:
+            # Creating a sub-level
+            name, next_name = name.split(self.separator, 1)
+            subparent = self.children.get(name, None)
+            if subparent is None:
+                subparent = self.__class__(name=name, parent=self, separator=self.separator, info=self.info)
+                self.children[name] = subparent
+            child = subparent.new_child(next_name, options)
+            self._all_options.update(subparent.options)
+        else:
+            child = self.__class__(name=name, parent=self, separator=self.separator, info=self.info)
+            self.children[name] = child
+            child._store_options(options)
+            self._all_options.update(child.options)
 
-        for name, desc in self.descendants.items():
-            if sep not in name:
-                # "leaf" object
-                desc.name = name
-                self.children[name] = desc
-            else:
-                # "node" object.
-                names = name.split(sep)
-                
-                # Extract parent name
-                nm = names[0]
-                
-                # Create parent if non-existent
-                p = self.descendants.get(nm)
-                if p is None:
-                    # Found dangling parameter. Create a root
-                    p = self._new(name=nm)
-                    self._new_desc(nm, p)
-                    self.children[nm] = p
-                    
-                # transfer ownership
-                p.descendants[sep.join(names[1:])] = desc
-                desc.parent = p
-        
-        # recursion
-        for desc in self.children.values():
-            desc._name_descendants()
-            
+        return child
+
+    def _store_options(self, dct):
+        """
+        Read and store options and check that the minimum selections
+        of options is present.
+        """
+
+        if self.required is not None and type(self.required) is list:
+            missing = [r for r in self.required if r not in dct.keys()]
+            if missing:
+                raise ValueError('Missing required option(s) <%s> for parameter %s.' % (', '.join(missing), self.name))
+
+        self.options = dict.fromkeys(self.required)
+        self.options.update(dct)
+
+    def __getitem__(self, name):
+        """
+        Get a descendant
+        """
+        if self.separator in name:
+            root, name = name.split(self.separator, 1)
+            return self.children[root][name]
+        else:
+            return self.children[name]
+
+    def __setitem__(self, name, desc):
+        """
+        Insert a descendant
+        """
+        if self.separator not in name:
+            if name != desc.name:
+                raise RuntimeError("Descendant '%s' being inserted in '%s' as '%s'." % (desc.name, self.path, name))
+            self.children[name] = desc
+            self._all_options.update(desc.options)
+        else:
+            root, name = name.split(self.separator, 1)
+            subparent = self.children.get(root, None)
+            if not subparent:
+                subparent = self.new_child(root)
+            subparent[name] = desc
+
+    def add_child(self, desc):
+        self[desc.name] = desc
+
     def _get_root(self):
         """
         Return root of parameter tree.
@@ -176,20 +191,6 @@ class Parameter(object):
         else:
             return self.parent.root
 
-    def _store_options(self, dct):
-        """
-        Read and store options and check that the minimum selections
-        of options is present.
-        """
-        
-        if self.required is not None and type(self.required) is list:
-            missing = [r for r in self.required if r not in dct.keys()]
-            if missing:
-                raise ValueError('Missing required option(s) <%s> for parameter %s.' % (', '.join(missing), self.name))
-
-        self.options = dict.fromkeys(self.required)
-        self.options.update(dct)
-        
     @property    
     def root(self):
         return self._get_root()
@@ -200,24 +201,14 @@ class Parameter(object):
             return self.name
         else:
             return self.parent.path + self.separator + self.name
-            
-    def _new_desc(self, name, desc, update_in_parent=True):
-        """
-        Update the new entry to the root.
-        """
-        self.descendants[name] = desc
-        
-        # add all options to parent class
-        self._all_options.update(desc.options)
-        
-        if update_in_parent:
-            if self._is_child:
-                # You are not the root
-                self.parent._new_desc(self.name+self.separator+name, desc)
-            else:
-                # You are the root. Do root things here.
-                pass
-                
+
+    @property
+    def descendants(self):
+        for k, v in self.children.items():
+            yield (k, v)
+            for d, v1 in v.descendants:
+                yield (k + self.separator + d, v1)
+
     def load_csv(self, fbuffer, **kwargs):
         """
         Load from csv as a fielded array. Keyword arguments are passed
@@ -241,27 +232,20 @@ class Parameter(object):
                 dct['doc'] = dct.pop('longdoc')
                 if dct.pop('static').lower() != 'yes':
                     continue
-            
-                desc = self._new(name)
-                desc._store_options(dct)
-                desc.num_id = num
-                
+
                 if level == 0:  
                     chain = [name]
                 else:
                     chain = chain[:level]+[name]
-            
-                self._new_desc(self.separator.join(chain), desc)
+
+                name = self.separator.join(chain)
+                desc = self.new_child(name, options=dct)
         else:
             # new style csv, name and path are synonymous
             for dct in list(CD):
                 name = dct['path']
-                desc = self._new(name)
-                desc._store_options(dct)
-                self._new_desc(name, desc)
-        
-        self._name_descendants()
-        
+                desc = self.new_child(name, options=dct)
+
     def save_csv(self, fbuffer, **kwargs):
         """
         Save to fbuffer. Keyword arguments are passed
@@ -274,9 +258,9 @@ class Parameter(object):
         
         DW = DictWriter(fbuffer, ['path'] + fieldnames)
         DW.writeheader()
-        for key in sorted(self.descendants.keys()):
-            dct = {'path':key}
-            dct.update(self.descendants[key].options)
+        for key, desc in self.descendants:
+            dct = {'path': key}
+            dct.update(desc.options)
             DW.writerow(dct)
         
     def load_json(self, fbuffer):
@@ -300,34 +284,41 @@ class Parameter(object):
         parser = Parser(**kwargs)
         parser.readfp(fbuffer)
         for num, sec in enumerate(parser.sections()):
-            desc = self._new(name=sec)
-            desc._store_options(dict(parser.items(sec)))
-            self._new_desc(sec, desc)
-        
-        self._name_descendants()
+            desc = self.new_child(name=sec, options=dict(parser.items(sec)))
+
         return parser
             
     def save_conf_parser(self, fbuffer, print_optional=True):
         """
         Save Parameter defaults using Pythons ConfigParser
         
-        Each parameter occupies its own section. 
+        Each parameter occupies its own section.
         Separator characters in sections names map to a tree-hierarchy.
         """
         from ConfigParser import RawConfigParser as Parser
         parser = Parser()
-        dct = self.descendants
-        for name in sorted(dct.keys()):
-            if dct[name] is None:
-                continue
-            else:
-                parser.add_section(name)
-                for k, v in self.descendants[name].options.items():
-                    if (v or print_optional) or (k in self.required):
-                        parser.set(name, k, v)
+        for name, desc in self.descendants:
+            parser.add_section(name)
+            for k, v in desc.options.items():
+                if (v or print_optional) or (k in self.required):
+                    parser.set(name, k, v)
         
         parser.write(fbuffer)
         return parser
+
+    def __str__(self):
+        """
+        Pretty-print the Parameter options in ConfigParser format.
+        """
+        from ConfigParser import RawConfigParser as Parser
+        import StringIO
+        parser = Parser()
+        parser.add_section(self.name)
+        for k, v in self.options.items():
+            parser.set(self.name, k, v)
+        s = StringIO.StringIO()
+        parser.write(s)
+        return s.getvalue().strip()
 
 
 class ArgParseParameter(Parameter):
@@ -346,7 +337,7 @@ class ArgParseParameter(Parameter):
             
         kwargs['info'] = info
         
-        super(ArgParseParameter, self).__init__(*args,**kwargs)
+        super(ArgParseParameter, self).__init__(*args, **kwargs)
 
     @property
     def help(self):
@@ -455,7 +446,7 @@ class ArgParseParameter(Parameter):
             parser._aux_translator = {}
 
         # get list of descendants and remove separator
-        ndesc = dict((k.replace(sep, argsep), v) for k, v in self.descendants.items())
+        ndesc = dict((k.replace(sep, argsep), self[k]) for k, _ in self.descendants)
 
         groups = {}
         
@@ -499,7 +490,7 @@ class ArgParseParameter(Parameter):
                 # Command line switches have no arguments, so treated differently
                 flag = '--no-'+name if pd.value else '--'+name
                 action = 'store_false' if pd.value else 'store_true'
-                parse.add_argument(flag, dest=name, action=action, help=pd.shortdoc)
+                parse.add_argument(flag, dest=name, action=action, help=pd.help)
             else:
                 d = pd.default
                 defstr = d.replace('%(', '%%(') if str(d) == d else str(d)
@@ -544,7 +535,6 @@ class EvalParameter(ArgParseParameter):
     ])
      
     def __init__(self, *args, **kwargs):
-
         # self.DEFAULT is the only valid "info" to provide to the superclass.
         kwargs['info'] = self.DEFAULTS.copy()
         super(EvalParameter, self).__init__(*args, **kwargs)
@@ -647,7 +637,7 @@ class EvalParameter(ArgParseParameter):
 
         # 1. Data type
         if self.type is None:
-            # Unconclusive
+            # Inconclusive
             val['type'] = CODES.UNKNOWN
             val['lowlim'] = CODES.UNKNOWN
             val['uplim'] = CODES.UNKNOWN
@@ -685,7 +675,7 @@ class EvalParameter(ArgParseParameter):
         out[ep] = val
         return out
         
-    def validate(self, pars, walk=True, raisecodes=[CODES.FAIL, CODES.INVALID]):
+    def validate(self, pars, walk=True, raisecodes=(CODES.FAIL, CODES.INVALID)):
         """
         Check that the parameter structure `pars` matches the documented 
         constraints for this node / parameter.
@@ -740,7 +730,7 @@ class EvalParameter(ArgParseParameter):
         lowlim = 'lowlim'
         uplim = 'uplim'
 
-        for name, desc in root.descendants.iteritems():
+        for name, desc in root.descendants:
             if name == '':
                 continue
             if hasattr(desc, 'children') and desc.parent is root:
@@ -821,7 +811,7 @@ def create_default_template(filename=None, user_level=0, doc_level=2):
     except ImportError:
         h += '### Ptypy Parameter Tree ###\n\n'
     f.write(h)
-    for entry, pd in parameter_descriptions.descendants.iteritems():
+    for entry, pd in parameter_descriptions.descendants:
         if user_level < pd.userlevel:
             continue
         if pd.children:
