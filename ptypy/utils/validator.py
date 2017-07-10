@@ -795,6 +795,33 @@ class EvalParameter(ArgParseParameter):
             prst.write('\n')
         prst.close()
 
+
+class parse_parameters(object):
+    """
+    Decorator that parses the doc string of a function or class and extracts metainformation
+    on input parameters.
+    """
+
+    entries = []
+
+    def __init__(self, path=None):
+        """
+        I path is none, look for attachment points somewhere else,
+        """
+        self.path = path
+
+    def __call__(self, cls):
+        # Extract and truncate doc string
+
+        # Parse parameter section
+
+        # Add to entries
+
+        # Populate cls.DEFAULT
+
+        return cls
+
+
 # Load all documentation on import
 import pkg_resources
 _file = pkg_resources.resource_filename('ptypy', 'resources/parameter_descriptions.configparser')
