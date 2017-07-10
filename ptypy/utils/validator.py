@@ -89,6 +89,8 @@ class Parameter(object):
         self.num_id = 0
         self.options = dict.fromkeys(self.required, '')
         self._all_options = {}
+
+        self.implicit = False
         
     @property
     def option_keys(self):
@@ -102,6 +104,11 @@ class Parameter(object):
         return type(self.parent) is self.__class__
 
     def _parse_info(self, info=None):
+        """
+        Update information about stored options.
+        :param info:
+        :return:
+        """
         if info is not None:
             self.info.update(info)
             
@@ -119,21 +126,48 @@ class Parameter(object):
     def new_child(self, name, options=None):
         """
         Create a new descendant and pass new options.
+
+        If name contains separators, intermediate children are created.
+
+        If name already exists, update options and return existing child.
+
+        If name already exists and had been created implicitly to create a child further down,
+        the order in self.children is corrected to honor the order of explicitly created children.
         """
         if options is None:
             options = self.options
+
         if self.separator in name:
             # Creating a sub-level
             name, next_name = name.split(self.separator, 1)
             subparent = self.children.get(name, None)
             if subparent is None:
+                # Create subparent
                 subparent = self.__class__(name=name, parent=self, separator=self.separator, info=self.info)
+
+                # Remember that creation was implicit
+                subparent.implicit = True
+
+                # Insert in children dict
                 self.children[name] = subparent
             child = subparent.new_child(next_name, options)
             self._all_options.update(subparent.options)
         else:
-            child = self.__class__(name=name, parent=self, separator=self.separator, info=self.info)
-            self.children[name] = child
+            if name in self.children.keys():
+                # The child already exists
+                child = self.children[name]
+                if child.implicit:
+                    # Tricky bit: this child had already been created implicitly, but now is being created
+                    # explicitly. We use this to enforce a proper order in self.children
+                    self.children.pop(name)
+                    child.implicit = False
+
+                    explicit = [(k, v) for k, v in self.children.items() if not v.implicit]
+                    implicit = [(k, v) for k, v in self.children.items() if v.implicit]
+                    self.children = OrderedDict(explicit + [(name, child)] + implicit)
+            else:
+                child = self.__class__(name=name, parent=self, separator=self.separator, info=self.info)
+                self.children[name] = child
             child._store_options(options)
             self._all_options.update(child.options)
 
