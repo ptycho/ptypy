@@ -67,7 +67,16 @@ class Parameter(object):
     and Param-type parameter descriptions.
     """
 
-    def __init__(self, name, parent=None, separator='.', info=None):
+    def __init__(self, name, parent=None, separator='.', options_def=None):
+        """
+
+        :param name: The name of the parameter represented by this instance
+        :param parent: Parent parameter or None
+        :param separator: defaults to '.'
+        :param options_def: a dictionary whose keys are attribute names and values are description
+                     of the attribute. It this description contains the text "required" or
+                     "mandatory", the attribute is registered as required.
+        """
                 
         #: Name of parameter
         self.name = name
@@ -83,11 +92,14 @@ class Parameter(object):
         # Required and optional attributes
         self.required = []
         self.optional = []
-        self.info = OrderedDict()
-        self._parse_info(info)
+        self.options_def = OrderedDict()
+        self._parse_options_def(options_def)
 
         self.num_id = 0
+
+        #: Attributes to the parameters.
         self.options = dict.fromkeys(self.required, '')
+
         self._all_options = {}
 
         self.implicit = False
@@ -103,19 +115,20 @@ class Parameter(object):
         """
         return type(self.parent) is self.__class__
 
-    def _parse_info(self, info=None):
+    def _parse_options_def(self, options_def=None):
         """
-        Update information about stored options.
-        :param info:
-        :return:
+        Parse and store options definitions.
+        :param options_def: a dictionary whose keys are the options names and values are a description of the options.
+                            If these descriptions contain "required" or "mandatory", the options is registered as
+                            such.
         """
-        if info is not None:
-            self.info.update(info)
+        if options_def is not None:
+            self.options_def.update(options_def)
             
             r = []
             o = []
         
-            for option, text in self.info.items():
+            for option, text in self.options_def.items():
                 if 'required' in text or 'mandatory' in text:
                     r += [option]
                 else:
@@ -143,7 +156,7 @@ class Parameter(object):
             subparent = self.children.get(name, None)
             if subparent is None:
                 # Create subparent
-                subparent = self.__class__(name=name, parent=self, separator=self.separator, info=self.info)
+                subparent = self.__class__(name=name, parent=self, separator=self.separator, options_def=self.options_def)
 
                 # Remember that creation was implicit
                 subparent.implicit = True
@@ -166,7 +179,7 @@ class Parameter(object):
                     implicit = [(k, v) for k, v in self.children.items() if v.implicit]
                     self.children = OrderedDict(explicit + [(name, child)] + implicit)
             else:
-                child = self.__class__(name=name, parent=self, separator=self.separator, info=self.info)
+                child = self.__class__(name=name, parent=self, separator=self.separator, options_def=self.options_def)
                 self.children[name] = child
             child._store_options(options)
             self._all_options.update(child.options)
@@ -364,12 +377,12 @@ class ArgParseParameter(Parameter):
 
     def __init__(self, *args, **kwargs):
         
-        info = self.DEFAULTS.copy()
-        ninfo = kwargs.get('info')
-        if ninfo is not None:
-            info.update(ninfo)
+        options_def = self.DEFAULTS.copy()
+        extra_def = kwargs.get('options_def')
+        if extra_def is not None:
+            options_def.update(extra_def)
             
-        kwargs['info'] = info
+        kwargs['options_def'] = options_def
         
         super(ArgParseParameter, self).__init__(*args, **kwargs)
 
@@ -421,7 +434,7 @@ class ArgParseParameter(Parameter):
 
     def make_default(self, depth=1):
         """
-        Creates a default parameter structure, from the loaded parameter
+        Creates a default parameter structure from the loaded parameter
         descriptions in this module
         
         Parameters
@@ -444,7 +457,7 @@ class ArgParseParameter(Parameter):
         if depth <= 0:
             return out
         for name, child in self.children.iteritems():
-            if child.children and child.default is None:
+            if child.children: # and child.default is None:
                 out[name] = child.make_default(depth=depth-1)
             else:
                 out[name] = child.default
@@ -569,8 +582,8 @@ class EvalParameter(ArgParseParameter):
     ])
      
     def __init__(self, *args, **kwargs):
-        # self.DEFAULT is the only valid "info" to provide to the superclass.
-        kwargs['info'] = self.DEFAULTS.copy()
+        # self.DEFAULT the only valid options definition to provide to the superclass.
+        kwargs['options_def'] = self.DEFAULTS.copy()
         super(EvalParameter, self).__init__(*args, **kwargs)
         
     @property
