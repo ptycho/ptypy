@@ -16,6 +16,7 @@ This file is part of the PTYPY package.
 import ast
 import weakref
 from collections import OrderedDict
+import textwrap
 
 if __name__ == '__main__':
     from ptypy.utils.parameters import Param
@@ -356,7 +357,19 @@ class Parameter(object):
             desc = self.new_child(name=sec, options=dict(parser.items(sec)))
 
         return parser
-            
+
+    def from_string(self, s, **kwargs):
+        """
+        Load Parameter from string using Python's ConfigParser
+
+        Each parameter occupies its own section.
+        Separator characters in sections names map to a tree-hierarchy.
+
+        Keyword arguments are forwarded to `ConfigParser.RawConfigParser`
+        """
+        from StringIO import StringIO
+        return self.load_conf_parser(StringIO(s), **kwargs)
+
     def save_conf_parser(self, fbuffer, print_optional=True):
         """
         Save Parameter defaults using Pythons ConfigParser
@@ -830,29 +843,50 @@ class EvalParameter(ArgParseParameter):
             prst.write('\n')
         prst.close()
 
-
-class parse_parameters(object):
-    """
-    Decorator that parses the doc string of a function or class and extracts metainformation
-    on input parameters.
-    """
-
-    entries = []
-
-    def __init__(self, path=None):
+    def parse_doc(self, name):
         """
-        I path is none, look for attachment points somewhere else,
+        Decorator to parse docstring and automatically attach new parameters.
+        :param name: the descendant name
+        :return: The decorator function
         """
-        self.path = path
+        return lambda cls: self._parse_doc_decorator(name=name, cls=cls)
 
-    def __call__(self, cls):
+    def _parse_doc_decorator(self, name, cls):
+        """
+        Actual decorator returned by parse_doc.
+        """
+        # Find or create insertion point
+        if name.startswith(self.separator):
+            desc = self[name]
+        else:
+            try:
+                desc = self[name]
+            except KeyError:
+                desc = self.new_child(name)
+
         # Extract and truncate doc string
+        docstring = cls.__doc__
+
+        # Because of indentation it is safer to work line by line
+        doclines = docstring.splitlines()
+        newdoc = ''
+        for n, line in enumerate(doclines):
+            if line.strip().startswith('Parameters'):
+                break
+            newdoc += line + '\n'
+
+        parameter_string = textwrap.dedent('\n'.join(doclines[n+1:]))
 
         # Parse parameter section
-
-        # Add to entries
+        desc.from_string(parameter_string)
 
         # Populate cls.DEFAULT
+        defaults = desc.make_default(depth=100)
+        cls.DEFAULTS = defaults
+
+        # Replace doc
+        # FIXME: this does not work
+        # cls.__doc__ = newdoc
 
         return cls
 
