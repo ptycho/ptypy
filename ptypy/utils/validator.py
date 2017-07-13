@@ -17,12 +17,12 @@ import ast
 import weakref
 from collections import OrderedDict
 
-if __name__=='__main__':
+if __name__ == '__main__':
     from ptypy.utils.parameters import Param
 else:
     from .parameters import Param
 
-__all__= ['create_default_template','make_sub_default','validate',\
+__all__ = ['create_default_template', 'make_sub_default', 'validate',
           'entry_points_dct', 'parameter_descriptions', 'PDesc']
 
 #! Validator message codes
@@ -200,13 +200,30 @@ class Parameter(object):
         self.options = dict.fromkeys(self.required)
         self.options.update(dct)
 
+    def _find(self, name):
+        """
+        Walk the tree and return the first encountered element called "name", None if none is found.
+        :param name:
+        :return:
+        """
+        root = None
+        for k, d in self.descendants:
+            if k.endswith(name):
+                root = d.parent
+                break
+        return root
+
     def __getitem__(self, name):
         """
         Get a descendant
         """
         if self.separator in name:
             root, name = name.split(self.separator, 1)
-            return self.children[root][name]
+            if not root:
+                parent = self._find(name.split(self.separator)[0])
+            else:
+                parent = self.children[root]
+            return parent[name]
         else:
             return self.children[name]
 
@@ -221,9 +238,14 @@ class Parameter(object):
             self._all_options.update(desc.options)
         else:
             root, name = name.split(self.separator, 1)
-            subparent = self.children.get(root, None)
-            if not subparent:
-                subparent = self.new_child(root)
+            if not root:
+                subparent = self._find(name.split(self.separator)[0])
+                if subparent is None:
+                    raise RuntimeError('No attachment point for .%s found.' % name)
+            else:
+                subparent = self.children.get(root, None)
+                if not subparent:
+                    subparent = self.new_child(root)
             subparent[name] = desc
 
     def add_child(self, desc):
