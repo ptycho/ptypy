@@ -220,11 +220,13 @@ class Parameter(object):
         """
         if self.separator in name:
             root, name = name.split(self.separator, 1)
-            if not root:
-                parent = self._find(name.split(self.separator)[0])
-            else:
-                parent = self.children[root]
-            return parent[name]
+            # dot-prefix as a way to search through the tree deactivated for now.
+            # if not root:
+            #    parent = self._find(name.split(self.separator)[0])
+            # else:
+            #    parent = self.children[root]
+            # return parent[name]
+            return self.children[root][name]
         else:
             return self.children[name]
 
@@ -240,14 +242,19 @@ class Parameter(object):
             self._all_options.update(desc.options)
         else:
             root, name = name.split(self.separator, 1)
-            if not root:
-                subparent = self._find(name.split(self.separator)[0])
-                if subparent is None:
-                    raise RuntimeError('No attachment point for .%s found.' % name)
-            else:
-                subparent = self.children.get(root, None)
-                if not subparent:
-                    subparent = self.new_child(root)
+            # dot-prefix as a way to search the tree is deactivated for now.
+            # if not root:
+            #    subparent = self._find(name.split(self.separator)[0])
+            #    if subparent is None:
+            #        raise RuntimeError('No attachment point for .%s found.' % name)
+            # else:
+            #    subparent = self.children.get(root, None)
+            #    if not subparent:
+            #        subparent = self.new_child(root)
+            # subparent[name] = desc
+            subparent = self.children.get(root, None)
+            if not subparent:
+                subparent = self.new_child(root)
             subparent[name] = desc
 
     def add_child(self, desc):
@@ -880,13 +887,10 @@ class EvalParameter(ArgParseParameter):
         Actual decorator returned by parse_doc.
         """
         # Find or create insertion point
-        if name.startswith(self.separator):
+        try:
             desc = self[name]
-        else:
-            try:
-                desc = self[name]
-            except KeyError:
-                desc = self.new_child(name)
+        except KeyError:
+            desc = self.new_child(name)
 
         # Maybe check here if a non-Param descendant is being overwritten?
         desc.options['type'] = 'Param'
