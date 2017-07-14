@@ -253,7 +253,25 @@ class Parameter(object):
     def add_child(self, desc):
         self[desc.name] = desc
 
-    def _get_root(self):
+    def prune_child(self, name):
+        """
+        Remove and return the parameter "name" and all its children.
+        :param name: The descendant name
+        :return: The Parameter object.
+        """
+        # Use __getitem__ to take care of all naming syntaxes
+        desc = self[name]
+
+        # Pop out from parent
+        desc.parent.children.pop(desc.name)
+
+        # Make standalone
+        desc.parent = None
+
+        return desc
+
+    @property
+    def root(self):
         """
         Return root of parameter tree.
         """
@@ -262,12 +280,12 @@ class Parameter(object):
         else:
             return self.parent.root
 
-    @property    
-    def root(self):
-        return self._get_root()
-            
     @property
     def path(self):
+        """
+        Return complete path from root of parameter tree.
+        (self.root[self.path] == self should always be True)
+        """
         if self.parent is None:
             return self.name
         else:
@@ -275,6 +293,9 @@ class Parameter(object):
 
     @property
     def descendants(self):
+        """
+        Iterator over all descendants as a pair (path name, object).
+        """
         for k, v in self.children.items():
             yield (k, v)
             for d, v1 in v.descendants:
@@ -847,7 +868,9 @@ class EvalParameter(ArgParseParameter):
     def parse_doc(self, name):
         """
         Decorator to parse docstring and automatically attach new parameters.
-        :param name: the descendant name
+        The parameter section is identified by a line starting with the word "Parameters"
+
+        :param name: The descendant name under which all parameters will be held.
         :return: The decorator function
         """
         return lambda cls: self._parse_doc_decorator(name=name, cls=cls)
@@ -864,6 +887,9 @@ class EvalParameter(ArgParseParameter):
                 desc = self[name]
             except KeyError:
                 desc = self.new_child(name)
+
+        # Maybe check here if a non-Param descendant is being overwritten?
+        desc.options['type'] = 'Param'
 
         # Extract and truncate doc string
         docstring = cls.__doc__
