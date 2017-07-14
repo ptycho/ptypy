@@ -137,7 +137,7 @@ class Parameter(object):
             self.required = r
             self.optional = o
 
-    def new_child(self, name, options=None):
+    def new_child(self, name, options=None, implicit=False):
         """
         Create a new descendant and pass new options.
 
@@ -147,6 +147,7 @@ class Parameter(object):
 
         If name already exists and had been created implicitly to create a child further down,
         the order in self.children is corrected to honor the order of explicitly created children.
+        This behaviour can be deactivated by setting implicit=True.
         """
         if options is None:
             options = self.options
@@ -164,13 +165,13 @@ class Parameter(object):
 
                 # Insert in children dict
                 self.children[name] = subparent
-            child = subparent.new_child(next_name, options)
+            child = subparent.new_child(next_name, options, implicit)
             self._all_options.update(subparent.options)
         else:
             if name in self.children.keys():
                 # The child already exists
                 child = self.children[name]
-                if child.implicit:
+                if child.implicit and not implicit:
                     # Tricky bit: this child had already been created implicitly, but now is being created
                     # explicitly. We use this to enforce a proper order in self.children
                     self.children.pop(name)
@@ -182,6 +183,7 @@ class Parameter(object):
             else:
                 child = self.__class__(name=name, parent=self, separator=self.separator, options_def=self.options_def)
                 self.children[name] = child
+                child.implicit = implicit
             child._store_options(options)
             self._all_options.update(child.options)
 
@@ -872,12 +874,12 @@ class EvalParameter(ArgParseParameter):
             prst.write('\n')
         prst.close()
 
-    def parse_doc(self, name):
+    def parse_doc(self, name=None):
         """
         Decorator to parse docstring and automatically attach new parameters.
         The parameter section is identified by a line starting with the word "Parameters"
 
-        :param name: The descendant name under which all parameters will be held.
+        :param name: The descendant name under which all parameters will be held. If None, use self
         :return: The decorator function
         """
         return lambda cls: self._parse_doc_decorator(name=name, cls=cls)
@@ -887,10 +889,13 @@ class EvalParameter(ArgParseParameter):
         Actual decorator returned by parse_doc.
         """
         # Find or create insertion point
-        try:
-            desc = self[name]
-        except KeyError:
-            desc = self.new_child(name)
+        if name is None:
+            desc = self
+        else:
+            try:
+                desc = self[name]
+            except KeyError:
+                desc = self.new_child(name, implicit=True)
 
         # Maybe check here if a non-Param descendant is being overwritten?
         desc.options['type'] = 'Param'
