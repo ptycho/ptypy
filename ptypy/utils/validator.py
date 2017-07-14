@@ -236,6 +236,7 @@ class Parameter(object):
             if name != desc.name:
                 raise RuntimeError("Descendant '%s' being inserted in '%s' as '%s'." % (desc.name, self.path, name))
             self.children[name] = desc
+            desc.parent = self
             self._all_options.update(desc.options)
         else:
             root, name = name.split(self.separator, 1)
