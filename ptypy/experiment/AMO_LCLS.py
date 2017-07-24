@@ -133,6 +133,14 @@ class AMOScan(core.data.PtyScan):
         x = mmult[0] * io.h5read(self.data_file, 'data.posx')['posx']
         y = mmult[1] * io.h5read(self.data_file, 'data.posy')['posy']
 
+        # Valid posiitons and frames
+        try:
+            v = io.h5read(self.data_file, 'data.valid')['valid']
+        except:
+            v = np.ones(len(x)).astype(np.bool)
+        self.validframes = np.arange(len(x))[v]
+        x,y = x[v], y[v]
+
         pos_list = []
         for i in range(0,len(x),self.info.recipe.averaging_number):
             pos_list.append([y[i],x[i]])
@@ -170,13 +178,22 @@ class AMOScan(core.data.PtyScan):
         i = 0
         h = 0
         key = H5_PATHS.frame_pattern % self.info.recipe
+
         for j in indices:
-            mean = []
-            while h < (i+self.info.recipe.averaging_number):
-                mean.append(io.h5read(self.data_file, H5_PATHS.frame_pattern % self.info.recipe, slice=h)[key].astype(np.float32))
-                h+=1
-            raw[j] = np.array(mean).mean(0).T
-            i+=self.info.recipe.averaging_number
+
+            # NEW
+            h = self.validframes[j]
+            mean = io.h5read(self.data_file, H5_PATHS.frame_pattern % self.info.recipe, slice=h)[key].astype(np.float32)
+            raw[j] = np.array(mean).T
+
+            # OLD
+            #mean = []
+            #while h < (i+self.info.recipe.averaging_number):
+            #    mean.append(io.h5read(self.data_file, H5_PATHS.frame_pattern % self.info.recipe, slice=h)[key].astype(np.float32))
+            #    h+=1
+            #raw[j] = np.array(mean).mean(0).T
+            #i+=self.info.recipe.averaging_number
+
         log(3, 'Data loaded successfully.')
         return raw, pos, weights
         
@@ -191,6 +208,6 @@ class AMOScan(core.data.PtyScan):
         # Apply corrections to frames
         data = raw
         for k in data.keys():
-            data[k][data[k] < 1] = 0
+            data[k][data[k] < 0] = 0
         weights = weights
         return data, weights
