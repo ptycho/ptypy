@@ -57,7 +57,8 @@ class AMOScan(core.data.PtyScan):
 
     def __init__(self, pars=None, **kwargs):
         """
-        AMO (Atomic Molecular and Optical Science, LCLS) data preparation class.
+        AMO (Atomic Molecular and Optical Science, LCLS)
+        data preparation class.
         """
         # Initialise parent class
         RDEFAULT = RECIPE.copy()
@@ -105,7 +106,8 @@ class AMOScan(core.data.PtyScan):
         # Create the ptyd file name if not specified
         if self.info.dfile is None:
             home = Paths(io_par).home
-            self.info.dfile = '%s/prepdata/data_%05d.ptyd' % (home, self.info.recipe.scan_number)
+            self.info.dfile = '%s/prepdata/data_%05d.ptyd' % (home,
+                self.info.recipe.scan_number)
             log(3, 'Save file is %s' % self.info.dfile)
         log(4, u.verbose.report(self.info))
 
@@ -119,7 +121,8 @@ class AMOScan(core.data.PtyScan):
         # Load mask
         # common.weight2d = None
         if self.info.recipe.mask_file is not None:
-            common.weight2d = io.h5read(self.info.recipe.mask_file, 'mask')['mask'].astype(float)
+            common.weight2d = io.h5read(self.info.recipe.mask_file,
+                'mask')['mask'].astype(float)
 
         return common
 
@@ -150,7 +153,8 @@ class AMOScan(core.data.PtyScan):
 
     def check(self, frames, start=0):
         """
-        Returns the number of frames available from starting index `start`, and whether the end of the scan
+        Returns the number of frames available from starting index `start`,
+        and whether the end of the scan
         was reached.
 
         :param frames: Number of frames to load
@@ -183,13 +187,16 @@ class AMOScan(core.data.PtyScan):
 
             # NEW
             h = self.validframes[j]
-            mean = io.h5read(self.data_file, H5_PATHS.frame_pattern % self.info.recipe, slice=h)[key].astype(np.float32)
+            mean = io.h5read(self.data_file, H5_PATHS.frame_pattern
+                % self.info.recipe, slice=h)[key].astype(np.float32)
             raw[j] = np.array(mean).T
 
             # OLD
             #mean = []
             #while h < (i+self.info.recipe.averaging_number):
-            #    mean.append(io.h5read(self.data_file, H5_PATHS.frame_pattern % self.info.recipe, slice=h)[key].astype(np.float32))
+            #    mean.append(io.h5read(self.data_file,
+            #        H5_PATHS.frame_pattern % self.info.recipe, slice=h)[
+            #        key].astype(np.float32))
             #    h+=1
             #raw[j] = np.array(mean).mean(0).T
             #i+=self.info.recipe.averaging_number
@@ -199,7 +206,8 @@ class AMOScan(core.data.PtyScan):
         
     def correct(self, raw, weights, common):
         """
-        Apply (eventual) corrections to the frames. Convert from "raw" frames to usable data.
+        Apply (eventual) corrections to the frames. Convert from "raw"
+        frames to usable data.
         :param raw:
         :param weights:
         :param common:
