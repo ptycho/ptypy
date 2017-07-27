@@ -68,7 +68,13 @@ class Parameter(object):
     and Param-type parameter descriptions.
     """
 
-    def __init__(self, name, parent=None, separator='.', options_def=None):
+    # Options definitions as a class variable:
+    # a dictionary whose keys are attribute names and values are description
+    # of the attribute. It this description contains the text "required" or
+    # "mandatory", the attribute is registered as required.
+    OPTIONS_DEF = None
+
+    def __init__(self, name, parent=None, separator='.'):
         """
 
         :param name: The name of the parameter represented by this instance
@@ -94,7 +100,7 @@ class Parameter(object):
         self.required = []
         self.optional = []
         self.options_def = OrderedDict()
-        self._parse_options_def(options_def)
+        self._parse_options_def()
 
         self.num_id = 0
 
@@ -116,20 +122,15 @@ class Parameter(object):
         """
         return type(self.parent) is self.__class__
 
-    def _parse_options_def(self, options_def=None):
+    def _parse_options_def(self):
         """
         Parse and store options definitions.
-        :param options_def: a dictionary whose keys are the options names and values are a description of the options.
-                            If these descriptions contain "required" or "mandatory", the options is registered as
-                            such.
         """
-        if options_def is not None:
-            self.options_def.update(options_def)
-            
+        if self.OPTIONS_DEF is not None:
             r = []
             o = []
         
-            for option, text in self.options_def.items():
+            for option, text in self.OPTIONS_DEF.items():
                 if 'required' in text or 'mandatory' in text:
                     r += [option]
                 else:
@@ -158,7 +159,7 @@ class Parameter(object):
             subparent = self.children.get(name, None)
             if subparent is None:
                 # Create subparent
-                subparent = self.__class__(name=name, parent=self, separator=self.separator, options_def=self.options_def)
+                subparent = self.__class__(name=name, parent=self, separator=self.separator)
 
                 # Remember that creation was implicit
                 subparent.implicit = True
@@ -181,7 +182,7 @@ class Parameter(object):
                     implicit = [(k, v) for k, v in self.children.items() if v.implicit]
                     self.children = OrderedDict(explicit + [(name, child)] + implicit)
             else:
-                child = self.__class__(name=name, parent=self, separator=self.separator, options_def=self.options_def)
+                child = self.__class__(name=name, parent=self, separator=self.separator)
                 self.children[name] = child
                 child.implicit = implicit
             child._store_options(options)
@@ -435,22 +436,12 @@ class Parameter(object):
 
 
 class ArgParseParameter(Parameter):
-    DEFAULTS = OrderedDict([
+
+    OPTIONS_DEF = OrderedDict([
         ('default', 'Default value for parameter.'),
         ('help', 'A small docstring for command line parsing (required).'),
         ('choices', 'If parameter is list of choices, these are listed here.')
     ])
-
-    def __init__(self, *args, **kwargs):
-        
-        options_def = self.DEFAULTS.copy()
-        extra_def = kwargs.get('options_def')
-        if extra_def is not None:
-            options_def.update(extra_def)
-            
-        kwargs['options_def'] = options_def
-        
-        super(ArgParseParameter, self).__init__(*args, **kwargs)
 
     @property
     def help(self):
@@ -635,7 +626,7 @@ class EvalParameter(ArgParseParameter):
     _evaltypes = ['int', 'float', 'tuple', 'list', 'complex']
     _copytypes = ['str', 'file']
     
-    DEFAULTS = OrderedDict([
+    OPTIONS_DEF = OrderedDict([
         ('default', 'Default value for parameter (required).'),
         ('help', 'A small docstring for command line parsing (required).'),
         ('doc', 'A longer explanation for the online docs.'),
@@ -646,12 +637,7 @@ class EvalParameter(ArgParseParameter):
         ('uplim', 'Upper limit for scalar / integer values'),
         ('lowlim', 'Lower limit for scalar / integer values'),
     ])
-     
-    def __init__(self, *args, **kwargs):
-        # self.DEFAULT the only valid options definition to provide to the superclass.
-        kwargs['options_def'] = self.DEFAULTS.copy()
-        super(EvalParameter, self).__init__(*args, **kwargs)
-        
+
     @property
     def default(self):
         """
@@ -999,13 +985,3 @@ def create_default_template(filename=None, user_level=0, doc_level=2):
         
     f.write('\n\nPtycho(p,level=5)\n')
     f.close()
-
-
-if __name__ =='__main__':
-    from ptypy import utils as u
-    
-    
-    
-    parser = _add2argparser(entry_point='.scan.illumination')
-    parser.parse_args()
-    
