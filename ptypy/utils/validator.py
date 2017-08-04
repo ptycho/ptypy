@@ -14,7 +14,7 @@ This file is part of the PTYPY package.
 """
 
 import ast
-import weakref
+import inspect
 from collections import OrderedDict
 import textwrap
 
@@ -886,31 +886,39 @@ class EvalParameter(ArgParseParameter):
         # Maybe check here if a non-Param descendant is being overwritten?
         desc.options['type'] = 'Param'
 
-        # Extract and truncate doc string
+        # Get the parameter section, including from base class(es).
+        parameter_string = self._extract_doc_from_class(cls)
+
+        # Parse parameter section and store in desc
+        desc.from_string(parameter_string)
+
+        # Populate cls.DEFAULT
+        cls.DEFAULTS = desc.make_default(depth=100)
+
+        return cls
+
+    def _extract_doc_from_class(self, cls):
+        """
+        Utility method used recursively by _parse_doc_decorator to extract doc strings
+        from all base classes and cobble the "Parameters" section.
+        """
+        if cls == object:
+            return ''
+
+        # Get doc from base
+        base_parameters = self._extract_doc_from_class(cls.__base__)
+
+        # Append doc from class
         docstring = cls.__doc__
 
         # Because of indentation it is safer to work line by line
         doclines = docstring.splitlines()
-        newdoc = ''
         for n, line in enumerate(doclines):
             if line.strip().startswith('Parameters'):
                 break
-            newdoc += line + '\n'
-
         parameter_string = textwrap.dedent('\n'.join(doclines[n+1:]))
 
-        # Parse parameter section
-        desc.from_string(parameter_string)
-
-        # Populate cls.DEFAULT
-        defaults = desc.make_default(depth=100)
-        cls.DEFAULTS = defaults
-
-        # Replace doc
-        # FIXME: this does not work
-        # cls.__doc__ = newdoc
-
-        return cls
+        return base_parameters + parameter_string
 
 
 # Load all documentation on import

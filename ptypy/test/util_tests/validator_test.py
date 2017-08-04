@@ -136,6 +136,74 @@ class EvalParameterTest(unittest.TestCase):
                                          'engine.name',
                                          'engine.numiter']
 
+    def test_parse_doc_inheritance(self):
+        """
+        Test inheritance of EvalParameter decorator.
+        """
+        root = validator.EvalParameter('')
+
+        class FakeEngineBaseClass(object):
+            """
+            Dummy documentation
+            blabla, any text is allowed except
+            a line that starts with "Parameters".
+
+            Parameters:
+
+            [name]
+            default=BaseEngineName
+            type=str
+            help=The name of the base engine
+            doc=The name of the engine can be DM or ML or ePIE or some others
+                that will be implemented in the future.
+
+            [numiter]
+            default=1
+            type=int
+            lowlim=0
+            help=Number of iterations
+            """
+            pass
+
+        @root.parse_doc('engine')
+        class FakeEngineClass(FakeEngineBaseClass):
+            """
+            Engine-specific documentation
+
+            Parameters:
+
+            # It is possible to overwrite a base parameter
+            [name]
+            default=SubclassedEngineName
+            type=str
+            help=The name of the subclassed engine
+            doc=The name of the engine can be DM or ML or ePIE or some others
+                that will be implemented in the future.
+
+            # New parameter
+            [alpha]
+            default=1.
+            type=float
+            lowlim=0
+            help=Important parameter
+
+            # New substructure
+            [subengine.some_parameter]
+            default=1.
+            type=float
+            lowlim=0.
+            uplim=2.
+            help=Another parameter
+            """
+            pass
+
+        # A few checks
+        assert root['engine.numiter'].limits == (0, None)
+        assert root['engine.numiter'].options == {'default': '1', 'help': 'Number of iterations', 'lowlim': '0', 'type': 'int'}
+        assert root['engine.name'].help == 'The name of the subclassed engine'
+        assert root['engine'].implicit == True
+        assert root['engine'].type == ['Param']
+        assert FakeEngineClass.DEFAULTS == {'alpha': 1.0, 'name': 'SubclassedEngineName', 'numiter': 1, 'subengine': {'some_parameter': 1.0}}
 
 if __name__ == "__main__":
     unittest.main()
