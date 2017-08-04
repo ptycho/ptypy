@@ -216,6 +216,7 @@ class AMOScan(core.data.PtyScan):
         # Apply corrections to frames
         data = raw
         for k in data.keys():
-            data[k][data[k] < 0] = 0
+            #data[k][data[k] < 0] = 0
+            data[k][data[k] < 1] = 0
         weights = weights
         return data, weights
