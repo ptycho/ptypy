@@ -387,9 +387,11 @@ RECIPE.datafile = None
 RECIPE.maskfile = None
 RECIPE.pilatusPath = None
 RECIPE.pilatusPattern = None
+RECIPE.hdfPath = 'entry_0000/measurement/Pilatus/data'
 RECIPE.scannr = None
 RECIPE.xMotorFlipped = None
 RECIPE.yMotorFlipped = None
+RECIPE.xMotorAngle = 0.0
 
 class NanomaxStepscanMay2017(PtyScan):
     """
@@ -415,8 +417,12 @@ class NanomaxStepscanMay2017(PtyScan):
             yFlipper = -1
             print "*** note: y motor is specified as flipped"
 
+        # if the x axis is tilted, take that into account.
+        xCosFactor = np.cos(self.info.recipe.xMotorAngle / 180.0 * np.pi)
+    	print "**** xCosFactor = %f" % xCosFactor
+
         with h5py.File(fileName, 'r') as hf:
-            x = xFlipper * np.array(hf.get(entry + '/measurement/samx'))
+            x = xFlipper * np.array(hf.get(entry + '/measurement/samx')) * xCosFactor
             y = yFlipper * np.array(hf.get(entry + '/measurement/samy'))
 
         positions = -np.vstack((y, x)).T * 1e-6
@@ -433,7 +439,7 @@ class NanomaxStepscanMay2017(PtyScan):
         data = []
         for im in range(self.info.positions_scan.shape[0]):
             with h5py.File(path + filepattern%(scannr, im), 'r') as hf:
-                dataset = hf.get('entry_0000/measurement/Pilatus/data')
+                dataset = hf.get(self.info.recipe.hdfPath)
                 data.append(np.array(dataset)[0])
 
         # pick out the requested indices
@@ -455,7 +461,7 @@ class NanomaxStepscanMay2017(PtyScan):
 
         filename = self.info.recipe.dataPath + self.info.recipe.datafile
         with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
-            data = hf.get('entry_0000/measurement/Pilatus/data')
+            data = hf.get(self.info.recipe.hdfPath)
             shape = np.asarray(data[0]).shape
             mask = np.ones(shape)
             mask[np.where(data[0] == -2)] = 0
