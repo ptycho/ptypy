@@ -475,3 +475,117 @@ class NanomaxStepscanMay2017(PtyScan):
             print "total mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
 
         return mask
+
+# new recipe for this one too
+RECIPE = u.Param()
+RECIPE.dataPath = None
+RECIPE.datafile = None
+RECIPE.maskfile = None
+RECIPE.pilatusPath = None
+RECIPE.pilatusPattern = None
+RECIPE.hdfPath = 'entry_0000/measurement/Pilatus/data'
+RECIPE.scannr = None
+RECIPE.xMotorFlipped = None
+RECIPE.yMotorFlipped = None
+RECIPE.xMotorAngle = 0.0
+
+class NanomaxFlyscanJune2017(PtyScan):
+    """
+    Loads Nanomax fly scan data in the format of june 2017.
+    """
+
+    def __init__(self, pars=None, **kwargs):
+        p = PtyScan.DEFAULT.copy(depth=10)
+        p.recipe = RECIPE.copy()
+        p.update(pars, in_place_depth=10)
+        super(NanomaxFlyscanJune2017, self).__init__(p)
+
+    def load_positions(self):
+        fileName = self.info.recipe.dataPath + self.info.recipe.datafile
+        entry = 'entry%d' % self.info.recipe.scannr
+
+        x, y = None, None
+        with h5py.File(fileName, 'r') as hf:
+            # get fast x positions
+            xdataset = hf.get(entry + '/measurement/AdLinkAI_buff')
+            xall = np.array(xdataset)
+            # manually find shape by looking for zeros
+            Ny = xall.shape[0]
+            for i in range(xall.shape[1]):
+                if xall[0, i] == 0:
+                    Nx = i
+                    break
+            x = xall[:, :Nx].flatten()
+
+            # get slow y positions
+            ydataset = hf.get(entry + '/measurement/samy')
+            yall = np.array(ydataset)
+            if not (len(yall) == Ny):
+                raise Exception('Something''s wrong with the positions')
+            y = np.repeat(yall, Nx)
+
+        if self.info.recipe.xMotorFlipped:
+            x *= -1
+            print "*** note: x motor is specified as flipped"
+        if self.info.recipe.yMotorFlipped:
+            y *= -1
+            print "*** note: y motor is specified as flipped"
+
+        # if the x axis is tilted, take that into account.
+        xCosFactor = np.cos(self.info.recipe.xMotorAngle / 180.0 * np.pi)
+        x *= xCosFactor
+    	print "**** xCosFactor = %f" % xCosFactor
+
+        positions = - np.vstack((x, y)).T * 1e-6
+        return positions
+
+    def load(self, indices):
+
+        raw, weights, positions = {}, {}, {}
+        scannr = self.info.recipe.scannr
+        path = self.info.recipe.pilatusPath
+        pattern = self.info.recipe.pilatusPattern
+
+        # read the entire dataset
+        done = False
+        line = 0
+        data = []
+        while not done:
+            try:
+                with h5py.File(path + pattern % (scannr, line), 'r') as hf:
+                    print 'loading data: ' + pattern % (scannr, line)
+                    dataset = hf.get(self.info.recipe.hdfPath)
+                    data.append(np.array(dataset))
+                line += 1
+            except IOError:
+                done = True
+        print "loaded %d lines of Pilatus data" % len(data)
+        data = np.concatenate(data, axis=0)
+
+        # pick out the requested indices
+        for i in indices:
+            raw[i] = data[i]
+
+        return raw, positions, weights
+
+    def load_weight(self):
+        """
+        Provides the mask for the whole scan, the shape of the first 
+        frame.
+        """
+
+        scannr = self.info.recipe.scannr
+        path = self.info.recipe.pilatusPath
+        pattern = self.info.recipe.pilatusPattern
+
+        if self.info.recipe.maskfile:
+            raise NotImplementedError('No masks for this scan type yet!')
+            print "loaded mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+        else:
+            filename = self.info.recipe.dataPath + self.info.recipe.datafile
+            with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
+                data = hf.get(self.info.recipe.hdfPath)
+                shape = np.asarray(data[0]).shape
+                mask = np.ones(shape)
+            print "created dummy mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+        return mask
