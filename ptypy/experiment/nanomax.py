@@ -536,7 +536,7 @@ class NanomaxFlyscanJune2017(PtyScan):
         x *= xCosFactor
     	print "**** xCosFactor = %f" % xCosFactor
 
-        positions = - np.vstack((x, y)).T * 1e-6
+        positions = - np.vstack((y, x)).T * 1e-6
         return positions
 
     def load(self, indices):
@@ -577,15 +577,21 @@ class NanomaxFlyscanJune2017(PtyScan):
         scannr = self.info.recipe.scannr
         path = self.info.recipe.pilatusPath
         pattern = self.info.recipe.pilatusPattern
+        if not (path[-1] == '/'): path += '/'
+
+        filename = self.info.recipe.dataPath + self.info.recipe.datafile
+        with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
+            data = hf.get(self.info.recipe.hdfPath)
+            shape = np.asarray(data[0]).shape
+            mask = np.ones(shape)
+            mask[np.where(data[0] == -2)] = 0
+        print "took account of the pilatus mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
 
         if self.info.recipe.maskfile:
-            raise NotImplementedError('No masks for this scan type yet!')
-            print "loaded mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
-        else:
-            filename = self.info.recipe.dataPath + self.info.recipe.datafile
-            with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
-                data = hf.get(self.info.recipe.hdfPath)
-                shape = np.asarray(data[0]).shape
-                mask = np.ones(shape)
-            print "created dummy mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+            with h5py.File(self.info.recipe.maskfile, 'r') as hf:
+                mask2 = np.array(hf.get('mask'))
+            print "loaded additional mask, %u x %u, sum %u" % (mask2.shape + (np.sum(mask2),))
+            mask = mask * mask2
+            print "total mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+
         return mask
