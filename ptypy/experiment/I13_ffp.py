@@ -133,7 +133,7 @@ class I13ScanFFP(PtyScan):
                     self.data_file, NEXUS_PATHS.experiment)[
                     NEXUS_PATHS.experiment][()]
                 if type(experiment_id) == np.ndarray:
-                    experiment_id = experiment_id[0]
+                    experiment_id = unicode(experiment_id[0])
             except (AttributeError, KeyError):
                 experiment_id = os.path.split(
                     self.info.recipe.base_path[:-1])[1]
@@ -244,11 +244,14 @@ class I13ScanFFP(PtyScan):
             - dict: new positions.
             - dict: new weights.
         """
+        raw = {}
         pos = {}
         weights = {}
-        raw = {j: self.instrument[
-            self.info.recipe.detector_name]['data'][j].astype(np.float32)
-               for j in indices}
+
+        for j in indices:
+            data = self.instrument[
+                self.info.recipe.detector_name]['data'][j]
+            raw[j] = data.astype(np.float32)
 
         u.log(3, 'Data loaded successfully.')
 
