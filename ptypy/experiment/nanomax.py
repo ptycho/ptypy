@@ -481,8 +481,10 @@ RECIPE = u.Param()
 RECIPE.dataPath = None
 RECIPE.datafile = None
 RECIPE.maskfile = None
-RECIPE.pilatusPath = None
-RECIPE.pilatusPattern = None
+RECIPE.detFilePath = None
+RECIPE.detFilePattern = None
+RECIPE.detNormalizationFilePattern = None
+RECIPE.detNormalizationIndices = None
 RECIPE.hdfPath = 'entry_0000/measurement/Pilatus/data'
 RECIPE.scannr = None
 RECIPE.xMotorFlipped = None
@@ -543,8 +545,10 @@ class NanomaxFlyscanJune2017(PtyScan):
 
         raw, weights, positions = {}, {}, {}
         scannr = self.info.recipe.scannr
-        path = self.info.recipe.pilatusPath
-        pattern = self.info.recipe.pilatusPattern
+        path = self.info.recipe.detFilePath
+        pattern = self.info.recipe.detFilePattern
+        normfile = self.info.recipe.detNormalizationFilePattern
+        normind = self.info.recipe.detNormalizationIndices
 
         # read the entire dataset
         done = False
@@ -555,7 +559,27 @@ class NanomaxFlyscanJune2017(PtyScan):
                 with h5py.File(path + pattern % (scannr, line), 'r') as hf:
                     print 'loading data: ' + pattern % (scannr, line)
                     dataset = hf.get(self.info.recipe.hdfPath)
-                    data.append(np.array(dataset))
+                    linedata = np.array(dataset)
+                if normfile:
+                    dtype = linedata.dtype
+                    linedata = np.array(linedata, dtype=float)
+                    with h5py.File(path + normfile % (scannr, line), 'r') as hf:
+                        print 'loading normalization data: ' + normfile % (scannr, line)
+                        dataset = hf.get(self.info.recipe.detNormalizationHdfPath)
+                        normdata = np.array(dataset)
+                        if not normind:
+                            shape = linedata[0].shape
+                            normind = [0, shape[0], 0, shape[1]]
+                        norm = np.mean(normdata[:, normind[0]:normind[1], normind[2]:normind[3]], axis=(1,2))
+                        if line == 0:
+                            norm0 = norm[0]
+                        norm /= norm0 # to avoid dividing integers by huge numbers
+                        print "normalizing line by: ", norm
+                        for i in range(len(norm)):
+                            linedata[i, :, :] = linedata[i] / norm[i]
+                    linedata = np.array(np.round(linedata), dtype=dtype)
+
+                data.append(linedata)
                 line += 1
             except IOError:
                 done = True
@@ -575,8 +599,8 @@ class NanomaxFlyscanJune2017(PtyScan):
         """
 
         scannr = self.info.recipe.scannr
-        path = self.info.recipe.pilatusPath
-        pattern = self.info.recipe.pilatusPattern
+        path = self.info.recipe.detFilePath
+        pattern = self.info.recipe.detFilePattern
         if not (path[-1] == '/'): path += '/'
 
         filename = self.info.recipe.dataPath + self.info.recipe.datafile
