@@ -52,7 +52,7 @@ RECIPE.dark_value = 200.   # Used if dark_number is None
 RECIPE.detector_flat_file = None
 RECIPE.nxs_file_pattern = '%(base_path)s/nexus/i08-%(scan_number)s.nxs'
 RECIPE.dark_nxs_file_pattern = '%(base_path)s/nexus/i08-%(dark_number)s.nxs'
-RECIPE.date = None 
+RECIPE.date = None
 RECIPE.stxm_file_pattern = '%(base_path)s/%(date)s/discard/Sample_Image_%(date)s_%(scan_number_stxm)s.hdf5'
 
 
@@ -72,7 +72,7 @@ I08DEFAULT.auto_center = False
 
 class I08Scan(ptypy.core.data.PtyScan):
     DEFAULT = I08DEFAULT
-    
+
     def __init__(self, pars=None, **kwargs):
         """
         I08 (Diamond Light Source) data preparation class.
@@ -82,7 +82,7 @@ class I08Scan(ptypy.core.data.PtyScan):
         RDEFAULT = RECIPE.copy()
         RDEFAULT.update(pars.recipe)
         pars.recipe.update(RDEFAULT)
-        
+
         super(I08Scan, self).__init__(pars, **kwargs)
 
         # Try to extract base_path to access data files
@@ -105,12 +105,12 @@ class I08Scan(ptypy.core.data.PtyScan):
         if self.info.recipe.date is None:
             raise RuntimeError('recipe.date has to be specified to find the STXM file name.')
         else:
-            try: 
-                time.strptime(self.info.recipe.date, '%Y-%m-%d') 
+            try:
+                time.strptime(self.info.recipe.date, '%Y-%m-%d')
             except ValueError:
                 print('The date should be in format "YYYY-MM-DD"')
                 raise
-        
+
         # Construct the file names
         self.nxs_filename = self.info.recipe.nxs_file_pattern % self.info.recipe
         self.stxm_filename = self.info.recipe.stxm_file_pattern % self.info.recipe
@@ -142,20 +142,20 @@ class I08Scan(ptypy.core.data.PtyScan):
                 dark = np.median(dark, axis=0)
         else:
             dark = self.info.recipe.dark_value
-        
+
         if self.info.recipe.detector_flat_file is not None:
             flat = io.h5read(self.info.recipe.detector_flat_file,FLAT_PATHS.key)[FLAT_PATHS.key]
 
         else:
             flat = 1.
-        
+
         scan_dimensions = io.h5read(self.nxs_filename,key)[key].shape[0],io.h5read(self.nxs_filename,key)[key].shape[1]
 
         common.dark = dark
         common.flat = flat
         common.scan_dimensions = scan_dimensions
         return common._to_dict()
-                
+
     def load_positions(self):
      	"""
         Load the positions and return as an (N,2) array
@@ -188,9 +188,9 @@ class I08Scan(ptypy.core.data.PtyScan):
         pos = {}  # Container for the positions. Left empty here because positions are provided by self.load_positions
         weights = {}  # Container for the weights
         key = NXS_PATHS.frame_pattern
-        ix = np.zeros(len(indices))        
+        ix = np.zeros(len(indices))
         iy = np.zeros(len(indices))
-        
+
         # data from I08 comes in as a [npts_x,npts_y,framesize_x,framesize_y]
         for i in range(len(indices)):
             ix[i] = int(np.mod(indices[i], self.common.scan_dimensions[1]))  # find the remainder - works out the column

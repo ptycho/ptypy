@@ -7,7 +7,7 @@ This file is part of the PTYPY package.
 """
 
 import unittest
-from ptypy.test import test_utils as tu 
+from ptypy.test import test_utils as tu
 from ptypy import utils as u
 
 class DMTest(unittest.TestCase):

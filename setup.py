@@ -59,7 +59,7 @@ setup(
     name = 'Python Ptychography toolbox',
     version = VERSION,
     author = 'Pierre Thibault, Bjoern Enders, Martin Dierolf and others',
-    description = 'Ptychographic reconstruction toolbox', 
+    description = 'Ptychographic reconstruction toolbox',
     long_description = file('README.rst','r').read(),
     #install_requires = ['numpy>=1.8',\
                         #'h5py>=2.2',\

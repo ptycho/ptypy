@@ -8,7 +8,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .. import utils as u
-#from ..utils import prop 
+#from ..utils import prop
 from ..utils.verbose import logger
 import numpy as np
 import os
@@ -17,18 +17,18 @@ warnings.simplefilter('always', DeprecationWarning)
 warnings.warn('This module is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
 
 DEFAULT=u.Param(
-    #### Paramaters for popular scan methods 
+    #### Paramaters for popular scan methods
     scan_type = None, # [None,'round', 'raster', 'round_roi','spiral','spiral_roi','custom']
-    dr = 1.5e-6,             # round,round_roi :width of shell 
-    nr = 5,                 # round : number of intervals (# of shells - 1) 
-    nth = 5,                 # round,round_roi: number of points in the first shell 
-    lx = 15e-6,               # round_roi: Width of ROI 
-    ly = 15e-6,               # round_roi: Height of ROI 
+    dr = 1.5e-6,             # round,round_roi :width of shell
+    nr = 5,                 # round : number of intervals (# of shells - 1)
+    nth = 5,                 # round,round_roi: number of points in the first shell
+    lx = 15e-6,               # round_roi: Width of ROI
+    ly = 15e-6,               # round_roi: Height of ROI
     nx = 10,                 # raster scan: number of steps in x
     ny = 10,                 # raster scan: number of steps in y
     dx = 1.5e-6,               # raster scan: step size (grid spacing)
     dy = 1.5e-6,               # raster scan: step size (grid spacing)
-    #### other 
+    #### other
     positions = None,        # fill this list with your own script if you want other scan patterns, choose 'custom' as san type
 )
 """Default pattern parameters. See :py:data:`.scan.xy` and a short listing below"""
@@ -39,11 +39,11 @@ def from_pars(pars=None):
     p=u.Param(DEFAULT)
     if pars is not None: # and (isinstance(pars,dict) or isinstance(pars,u.Param)):
         p.update(pars)
-    
+
     if p.scan_type is None:
         logger.debug('Scan_type `None` is chosen . Will use positions provided by meta information')
         return None
-        
+
     elif p.scan_type=='round':
         pos=round_scan_positions(0,p.dr*p.nr,p.nr,p.nth)
     elif p.scan_type=='round_roi':
@@ -54,12 +54,12 @@ def from_pars(pars=None):
         pos=spiral_scan_ROI_positions(p.dr,p.lx,p.ly)
     elif p.scan_type=='raster':
         pos=raster_scan_positions(p.nx, p.ny, p.dx,p.dy)
-    else: 
+    else:
         pos = p.positions
     pos=np.asarray(pos)
     logger.info('Prepared %d positions' % len(pos))
     return pos
-    
+
 def scanpositions(scandict):
     warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
 
@@ -71,34 +71,34 @@ def scanpositions(scandict):
     elif sd['scan_type']=='spiral':
         positions=spiral_scan_positions(sd['dr'],sd['dr']*sd['nr'])
     elif sd['scan_type']=='spiral_roi':
-        positions=spiral_scan_ROI_positions(sd['dr'],sd['lx'],sd['ly'])        
+        positions=spiral_scan_ROI_positions(sd['dr'],sd['lx'],sd['ly'])
     elif sd['scan_type']=='raster':
         positions=raster_scan_positions(sd['nx'], sd['ny'], sd['dx'],sd['dy'])
-    else: 
+    else:
         positions=sd['positions']
     return np.asarray(positions)
 
 def augment_to_coordlist(a,Npos):
     warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
- 
+
     # force into a 2 column matrix
     # drop element if size is not a modulo of 2
     a = np.asarray(a)
     if a.size == 1:
         a=np.atleast_2d([a,a])
-        
+
     if a.size % 2 != 0:
         a=a.flatten()[:-1]
-    
+
     a=a.reshape(a.size//2,2)
     # append multiples of a until length is greater equal than Npos
     if a.shape[0] < Npos:
         b=np.concatenate((1+Npos//a.shape[0])*[a],axis=0)
     else:
         b=a
-    
+
     return b[:Npos,:2]
-    
+
 def raster_scan_positions(nx,ny,sx,sy):
     warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     iix, iiy = np.indices((nx+1,ny+1))
@@ -145,7 +145,7 @@ def spiral_scan_positions(dr,r_out=None,maxpts=None):
     warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     alpha = np.sqrt(4*np.pi)
     beta = dr/(2*np.pi)
-    
+
     if maxpts is None:
         assert r_out is not None
         maxpts = 100000000
@@ -169,7 +169,7 @@ def spiral_scan_ROI_positions(dr,lx,ly):
 
     alpha = np.sqrt(4*np.pi)
     beta = dr/(2*np.pi)
-    
+
     rmax = .5*np.sqrt(lx**2 + ly**2)
     positions = []
     for k in xrange(1000000000):

@@ -42,7 +42,7 @@ p.io.interaction.active = True
 
 ## (16) Plotting client parameters
 # In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
-# 
+#
 p.io.autoplot = u.Param()
 
 ## (23) Scan parameters
@@ -86,8 +86,8 @@ p.scan.data.energy = None
 p.scan.data.num_frames = None
 
 ## (42) Determine if center in data is calculated automatically
-# - ``False``, no automatic centering 
-#  - ``None``, only if :py:data:`center` is ``None`` 
+# - ``False``, no automatic centering
+#  - ``None``, only if :py:data:`center` is ``None``
 #  - ``True``, it will be enforced
 p.scan.data.auto_center = None
 
@@ -100,7 +100,7 @@ p.scan.sharing = u.Param()
 
 ## (54) Physical parameters
 # All distances are in meters. Other units are specified in the documentation strings.
-# 
+#
 p.scan.geometry = u.Param()
 
 ## (55) Energy (in keV)
@@ -216,7 +216,7 @@ p.scan.illumination.diversity = u.Param()
 ## (94) Initial object modelization parameters
 # In script, you may pass a numpy.array here directly as the model. This array will be passed
 # to the storage instance with no checking whatsoever. Used in `~ptypy.core.sample`
-# 
+#
 p.scan.sample = u.Param()
 
 ## (95) Type of initial object model
@@ -228,7 +228,7 @@ p.scan.sample = u.Param()
 #  - *<template>* : one of the templates in sample module
 # In script, you may pass a numpy.array here directly as the model. This array will be processed
 # according to `process` in order to *simulate* a sample from e.g. a thickness profile.
-# 
+#
 p.scan.sample.model = None
 
 ## (96) Default fill value
@@ -259,7 +259,7 @@ p.scan.coherence.num_object_modes = 1
 
 ## (121) Param container for instances of `scan` parameters
 # If not specified otherwise, entries in *scans* will use parameter defaults from :py:data:`.scan`
-# 
+#
 p.scans = u.Param()
 
 ## (122) Default first scans entry

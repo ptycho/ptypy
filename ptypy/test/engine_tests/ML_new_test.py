@@ -7,7 +7,7 @@ This file is part of the PTYPY package.
 """
 
 import unittest
-from ptypy.test import test_utils as tu 
+from ptypy.test import test_utils as tu
 from ptypy import utils as u
 
 class MLNewTest(unittest.TestCase):
@@ -24,7 +24,7 @@ class MLNewTest(unittest.TestCase):
         engine_params.scale_precond = False
         engine_params.scale_probe_object = 1.
         tu.EngineTestRunner(engine_params)
-    
+
     @unittest.skip('skip this because it is not supported')
     def test_ML_nearfield(self):
         engine_params = u.Param()
@@ -37,7 +37,7 @@ class MLNewTest(unittest.TestCase):
         engine_params.smooth_gradient = 0
         engine_params.scale_precond = False
         engine_params.scale_probe_object = 1.
-        
+
         tu.EngineTestRunner(engine_params,propagator='nearfield')
 
 if __name__ == "__main__":

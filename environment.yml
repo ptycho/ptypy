@@ -1,4 +1,6 @@
 name: test-environment
+channels:
+  - conda-forge
 dependencies:
   - python=2.7
   - numpy
@@ -9,10 +11,9 @@ dependencies:
   - pyzmq
   - pep8
   - pytest
-  - mpi4py 
+  - mpi4py
   - pil
+  - pyfftw
   - pip:
     - pytest-cov
     - coveralls
-
-

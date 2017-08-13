@@ -28,7 +28,7 @@ logger = u.verbose.logger
 
 DEFAULT = u.Param(
     pos_noise = 1e-10,  # (float) unformly distributed noise in xy experimental positions
-    pos_scale = 0,      # (float, list) amplifier for noise. Will be extended to match number of positions. Maybe used to only put nois on individual points  
+    pos_scale = 0,      # (float, list) amplifier for noise. Will be extended to match number of positions. Maybe used to only put nois on individual points
     pos_drift = 0,      # (float, list) drift or offset paramter. Noise independent drift. Will be extended like pos_scale.
     detector = 'PILATUS_300K',
     frame_size = None ,   # (None, or float, 2-tuple) final frame size when saving if None, no cropping/padding happens
@@ -39,70 +39,70 @@ DEFAULT = u.Param(
 )
 
 __all__ = ['SimScan']
-  
+
 
 class SimScan(PtyScan):
     """
     Simulates a ptychographic scan and acts as Virtual data source.
     The simulation is carried out in the following way.
-    
+
     TO BE FILLED WITH CONTENT
     """
     RECIPE = DEFAULT.copy(depth=4)
-    
+
     def __init__(self, pars = None,scan_pars=None,recipe_pars=None,**kwargs):
         """
         Parameters
         ----------
         pars : Param
             PtyScan parameters including a *recipe*. See :any:`data.GENERIC`.
-            
+
         scan_pars : Param or dict
-            Parameters for a single scan. Use this especially to set 
+            Parameters for a single scan. Use this especially to set
             positions, illumination and sample.
-            
+
         recipe_pars : Param or dict
             Equivalent alternative to *pars['recipe']*.
         """
         # Initialize parent class
         super(SimScan, self).__init__(pars, **kwargs)
-        
-       
+
+
         # we will use ptypy to figure out everything
         pp = u.Param()
-        
+
         # we don't want a server
         pp.interaction = None
-       
+
         # get scan parameters
         if scan_pars is None:
             pp.scan = scan_DEFAULT.copy(depth =4)
         else:
             pp.scan = scan_pars.copy(depth =4)
-            
+
         # note that shape cannot be None
         if self.info.shape is None:
             self.info.shape = pp.scan.geometry.shape
-        
+
         rinfo = self.RECIPE.copy()
         rinfo.update(self.info.recipe, in_place_depth = 4)
         if recipe_pars is not None:
             rinfo.update(recipe_pars, in_place_depth = 4)
         rinfo.update(kwargs, in_place_depth = 4)
-        
+
         self.rinfo = rinfo
         self.info.recipe = rinfo
-        
+
         # be as silent as possible
         self.verbose_level = u.verbose.get_level()
         pp.verbose_level = rinfo.verbose_level
-        
+
         # update changes specified in recipe
         pp.scan.update(rinfo, in_place_depth = 4)
 
         # Create a Scan that will deliver empty diffraction patterns
         # FIXME: This may be obsolete if the dry_run switch works.
-        
+
         pp.scans=u.Param()
         pp.scans.sim = u.Param()
         pp.scans.sim.data=u.Param()
@@ -111,22 +111,22 @@ class SimScan(PtyScan):
         pp.scans.sim.data.auto_center = False
         # deactivate sharing since we create a seperate Ptycho instance fro each scan
         pp.scans.sim.sharing = None
-        
+
         # Now we let Ptycho sort out things
         logger.info('Generating simulating Ptycho instance for scan `%s`.' % str(self.info.get('label')))
         P=Ptycho(pp,level=2)
         P.modelm.new_data()
         u.parallel.barrier()
-        
+
         # Be now as verbose as before
         u.verbose.set_level(self.verbose_level )
-        
+
         #############################################################
         # Place here additional manipulation on position and sample #
         logger.info('Calling inline manipulation function.')
         P = self.manipulate_ptycho(P)
-        #############################################################        
-        
+        #############################################################
+
         # Simulate diffraction signal
         logger.info('Propagating exit waves.')
         for name,pod in P.pods.iteritems():
@@ -141,18 +141,18 @@ class SimScan(PtyScan):
         else:
             save_dtype = None
             acquire = lambda x: x
-    
+
         # create dictionaries for 'raw' data
         self.diff = {}
         self.mask = {}
         self.pos = {}
-        
-   
+
+
         ID,Sdiff = P.diff.S.items()[0]
         logger.info('Collectiong simulated `raw` data.')
         for view in Sdiff.views:
             ind = view.layer
-            dat, mask = acquire(view.data) 
+            dat, mask = acquire(view.data)
             view.data = dat
             view.mask = mask
             pos = view.pod.ob_view.coord
@@ -167,7 +167,7 @@ class SimScan(PtyScan):
             P.plot_overview(200)
             u.pause(5.)
         u.parallel.barrier()
-        
+
         #self.P=P
         # Fix the number of available frames
         num = np.array([len(self.diff)])
@@ -180,16 +180,16 @@ class SimScan(PtyScan):
         self.diff = u.parallel.gather_dict(self.diff)
         self.mask = u.parallel.gather_dict(self.mask)
         self.pos = u.parallel.gather_dict(self.pos)
-        
+
         # we have to avoid loading in parallel now
         self.load_in_parallel = False
-        
-        
+
+
         # RESET THE loadmanager
         logger.debug('Resetting loadmanager().')
         u.parallel.loadmanager.reset()
-        
-    
+
+
     def load(self,indices):
         """
         Load data, weights and positions from internal dictionarys
@@ -202,23 +202,23 @@ class SimScan(PtyScan):
             pos[ind] = self.pos[ind]
             weight[ind] = self.mask[ind]
         return raw, pos, weight
-      
+
     def manipulate_ptycho(self, ptycho):
         """
-        Overwrite in child class for inline manipulation 
+        Overwrite in child class for inline manipulation
         of the ptycho instance that is created by the Simulation
         """
         #ptycho.print_stats()
-        
+
         return ptycho
-    
+
 if __name__ == "__main__":
     from ptypy import resources
 
     s = scan_DEFAULT.copy()
     s.xy.scan_type = "round_roi"                # (25) None,'round', 'raster', 'round_roi','custom'
     s.xy.dr = 1e-6                             # (26) round,round_roi :width of shell
-    s.xy.nr = 10                                # (27) round : number of intervals (# of shells - 1) 
+    s.xy.nr = 10                                # (27) round : number of intervals (# of shells - 1)
     s.xy.lx = 5e-6                            # (29) round_roi: Width of ROI
     s.xy.ly = 5e-6                            # (30) round_roi: Height of ROI
     shape = 256

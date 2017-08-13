@@ -7,7 +7,7 @@ This file is part of the PTYPY package.
 """
 
 import unittest
-from ptypy.test import test_utils as tu 
+from ptypy.test import test_utils as tu
 from ptypy.experiment.I08 import I08Scan
 from ptypy import utils as u
 
@@ -22,7 +22,7 @@ class I08Test(unittest.TestCase):
         r.dark_number = '2536'
         r.dark_number_stxm = '011'
         r.detector_flat_file = "%s/processing/flat2_xflipped.h5" % r.base_path
-        r.date = '2016-03-04' 
+        r.date = '2016-03-04'
         tu.PtyscanTestRunner(I08Scan,r)
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ This file is part of the PTYPY package.
 """
 
 import unittest
-from ptypy.test import test_utils as tu 
+from ptypy.test import test_utils as tu
 from ptypy import utils as u
 
 class MLTest(unittest.TestCase):
@@ -25,7 +25,7 @@ class MLTest(unittest.TestCase):
         engine_params.probe_update_start = 0
         tu.EngineTestRunner(engine_params)
 
-        
+
     def test_ML_nearfield(self):
         engine_params = u.Param()
         engine_params.name = 'ML'
@@ -38,7 +38,7 @@ class MLTest(unittest.TestCase):
         engine_params.smooth_gradient = 0.0
         engine_params.scale_precond =False
         engine_params.probe_update_start = 0
-        
+
         tu.EngineTestRunner(engine_params,propagator='nearfield')
 
 if __name__ == "__main__":

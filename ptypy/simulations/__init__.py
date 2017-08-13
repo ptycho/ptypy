@@ -9,6 +9,6 @@ This file is part of the PTYPY package.
 """
 from ptysim_utils import *
 #from ptysim import *
-import detector 
-#import cxro 
+import detector
+#import cxro
 from simscan import SimScan
