@@ -1171,5 +1171,5 @@ default =
 help = Container for instances of "engine" parameters
 doc = All engines registered in this structure will be executed sequentially.
 type = Param
-userlevel = 
+dynamic = True
 

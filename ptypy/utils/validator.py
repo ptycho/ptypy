@@ -639,6 +639,7 @@ class EvalParameter(ArgParseParameter):
         ('choices', 'If parameter is list of choices, these are listed here.'),
         ('uplim', 'Upper limit for scalar / integer values'),
         ('lowlim', 'Lower limit for scalar / integer values'),
+        ('dynamic', 'Switch for dynamic content')
     ])
 
     @property
@@ -716,7 +717,14 @@ class EvalParameter(ArgParseParameter):
         if ul == 'None':
             ul = None
         return int(ul) if ul else None
-     
+
+    @property
+    def dynamic(self):
+        """
+        Return True if the entry is dynamic (can be populated with multiple entries)
+        """
+        return self.options.get('dynamic', False)
+
     @property
     def is_evaluable(self):
         for t in self.type:
@@ -732,6 +740,7 @@ class EvalParameter(ArgParseParameter):
         sub-parameters.
 
         Returns a dictionary report using CODES values.
+        FIXME: this needs a lot of testing and verbose.debug lines.
         """
         ep = self.path
         out = {}
@@ -761,18 +770,31 @@ class EvalParameter(ArgParseParameter):
 
         # 3. Extra work for parameter entries
         if 'Param' in self.type:
-            # Check for missing entries
-            for k, v in self.children.items():
-                if k not in pars:
-                    val[k] = CODES.MISSING
+            # Even more work for dynamic entries
+            if self.dynamic:
+                for k, v in pars.items():
+                    name = v.get('name', None)
+                    if not name:
+                        # The entry does not have a name, that's not good.
+                        val[k] = CODES.INVALID
+                    elif name not in self.children:
+                        # The entry name is not found, that's not good.
+                        val[k] = CODES.INVALID
+                    elif walk:
+                        self.children[name].check(v, walk)
+            else:
+                # Check for missing entries
+                for k, v in self.children.items():
+                    if k not in pars:
+                        val[k] = CODES.MISSING
 
-            # Check for excess entries
-            for k, v in pars.items():
-                if k not in self.children:
-                    val[k] = CODES.INVALID
-                elif walk:
-                    # Validate child
-                    out.update(self.children[k].check(v, walk))
+                # Check for excess entries
+                for k, v in pars.items():
+                    if k not in self.children:
+                        val[k] = CODES.INVALID
+                    elif walk:
+                        # Validate child
+                        out.update(self.children[k].check(v, walk))
 
         out[ep] = val
         return out
