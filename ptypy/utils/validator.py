@@ -294,9 +294,12 @@ class Parameter(object):
     def path(self):
         """
         Return complete path from root of parameter tree.
-        (self.root[self.path] == self should always be True)
+        (self.root[self.path] == self should always be True unless self.root is root)
         """
         if self.parent is None:
+            # The base node has no path
+            return None
+        elif self.parent.parent is None:
             return self.name
         else:
             return self.parent.path + self.separator + self.name
@@ -903,6 +906,7 @@ class EvalParameter(ArgParseParameter):
         from all base classes and cobble the "Parameters" section.
         """
         if cls == object:
+            # Reached "object" base class. No doc string here.
             return ''
 
         # Get doc from base
