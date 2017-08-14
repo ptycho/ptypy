@@ -15,28 +15,38 @@ import ptypy
 from .. import utils as u
 from ..utils import parallel
 from . import BaseEngine
-
-#import utils
+from ptypy.utils import validator
 
 __all__ = ['Dummy']
 
-DEFAULT = u.Param(
-    itertime = 2.,    # Sleep time for a single iteration (in seconds)
-)
-
+# change this if there should be a central EvalParameter object somewhere
+root = validator.EvalParameter('')
+@root.parse_doc('engine')
 class Dummy(BaseEngine):
-    
     """
-    Minimum implementation of BaseEngine
+    Dummy reconstruction engine.
+
+
+    Parameters:
+
+    [itertime]
+    default = .2
+    type = float
+    help = Sleep time for a single iteration (in seconds)
+
     """
-    
-    DEFAULT = DEFAULT
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Dummy reconstruction engine.
         """
         super(Dummy,self).__init__(ptycho_parent,pars)
+
+        p = self.DEFAULTS.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
+
         self.ntimescalled  = 0
 
     def engine_initialize(self):

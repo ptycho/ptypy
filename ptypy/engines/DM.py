@@ -14,47 +14,111 @@ from ..utils.verbose import logger, log
 from ..utils import parallel
 from engine_utils import basic_fourier_update
 from . import BaseEngine
+from ptypy.utils import validator
 
 __all__ = ['DM']
 
-DEFAULT = u.Param(
-    # Difference map parameter
-    alpha=1,
-    # Number of iterations before probe update starts
-    probe_update_start=2,
-    # If True update object before probe
-    update_object_first=True,
-    # Threshold for interruption of the inner overlap loop
-    overlap_converge_factor=0.05,
-    # Maximum of iterations for the overlap constraint inner loop
-    overlap_max_iterations=10,
-    # Weight of the current probe estimate in the update, formally cfact
-    probe_inertia=1e-9,
-    # Weight of the current object in the update, formally DM_smooth_amplitude
-    object_inertia=1e-4,
-    # If rms error of model vs diffraction data is smaller than this fraction,
-    # Fourier constraint is met
-    fourier_relax_factor=0.05,
-    # Gaussian smoothing (pixel) of the current object prior to update
-    obj_smooth_std=None,
-    # None or tuple(min, max) of desired limits of the object modulus,
-    # currently in under common in documentation
-    clip_object=None,
-)
-
-    
+# change this if there should be a central EvalParameter object somewhere
+root = validator.EvalParameter('')
+@root.parse_doc('engine')
 class DM(BaseEngine):
-    
-    DEFAULT = DEFAULT
+    """
+    A full-fledged Difference Map enine.
+
+
+    Parameters:
+
+    [alpha]
+    default = 1
+    type = float
+    lowlim = 0.0
+    help = Difference map parameter
+
+    [probe_update_start]
+    default = 2
+    type = int
+    lowlim = 0
+    help = Number of iterations before probe update starts
+
+    [subpix_start]
+    default = 0
+    type = int
+    lowlim = 0
+    help = Number of iterations before starting subpixel interpolation
+
+    [subpix]
+    default = 'linear'
+    type = str
+    help = Subpixel interpolation; 'fourier','linear' or None for no interpolation
+
+    [update_object_first]
+    default = True
+    type = bool
+    help = If True update object before probe
+
+    [overlap_converge_factor]
+    default = 0.05
+    type = float
+    lowlim = 0.0
+    help = Threshold for interruption of the inner overlap loop
+    doc = The inner overlap loop refines the probe and the object simultaneously. This loop is escaped as soon as the overall change in probe, relative to the first iteration, is less than this value.
+
+    [overlap_max_iterations]
+    default = 10
+    type = int
+    lowlim = 1
+    help = Maximum of iterations for the overlap constraint inner loop
+
+    [probe_inertia]
+    default = 1e-9
+    type = float
+    lowlim = 0.0
+    help = Weight of the current probe estimate in the update
+
+    [object_inertia]
+    default = 1e-4
+    type = float
+    lowlim = 0.0
+    help = Weight of the current object in the update
+
+    [fourier_relax_factor]
+    default = 0.05
+    type = float
+    lowlim = 0.0
+    help = If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
+    doc = Set this value higher for noisy data.
+
+    [obj_smooth_std]
+    default = None
+    type = int
+    lowlim = 0
+    help = Gaussian smoothing (pixel) of the current object prior to update
+    doc = If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
+
+    [clip_object]
+    default = None
+    type = tuple
+    help = Clip object amplitude into this interval
+
+    [probe_center_tol]
+    default = None
+    type = float
+    lowlim = 0.0
+    help = Pixel radius around optical axes that the probe mass center must reside in
+
+    """
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Difference map reconstruction engine.
         """
-        if pars is None:
-            pars = DEFAULT.copy()
             
         super(DM, self).__init__(ptycho_parent, pars)
+
+        p = self.DEFAULTS.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
 
         # Instance attributes
         self.error = None

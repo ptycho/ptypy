@@ -16,34 +16,6 @@ from ..utils.verbose import logger, headerline
 
 __all__ = ['BaseEngine', 'DEFAULT_iter_info']
 
-DEFAULT = u.Param(
-    # Total number of iterations
-    numiter=20,
-    # Number of iterations without interruption
-    numiter_contiguous=1,
-    # Fraction of valid probe area (circular) in probe frame
-    probe_support=0.7,
-    # Note: if probe support becomes of more complex nature,
-    # consider putting it in illumination.py
-    # Clip object amplitude into this interval
-    clip_object=None,
-    # Number of iterations before starting subpixel interpolation
-    subpix_start=0,
-    # Subpixel interpolation; 'fourier','linear' or None for no interpolation
-    subpix='linear',
-    # Number of iterations before probe update starts
-    probe_update_start=2,
-    # Weight of the current probe estimate in the update
-    probe_inertia=0.001,
-    # Weight of the current object in the update
-    object_inertia=0.1,
-    # Gaussian smoothing (pixel) of the current object prior to update
-    obj_smooth_std=20,
-    # Pixel radius around optical axes that the probe mass center must reside in
-    # None or float
-    probe_center_tol=None,
-)
-
 DEFAULT_iter_info = u.Param(
     iteration=0,
     iterations=0,
@@ -52,7 +24,9 @@ DEFAULT_iter_info = u.Param(
     error=np.zeros((3,))
 )
 
-
+from ptypy.utils import validator
+root = validator.EvalParameter('')
+@root.parse_doc('engine')
 class BaseEngine(object):
     """
     Base reconstruction engine.
@@ -63,9 +37,32 @@ class BaseEngine(object):
     engine_prepare
     engine_iterate
     engine_finalize
+
+
+    Parameters:
+
+    [numiter]
+    default = 20
+    type = int
+    lowlim = 1
+    help = Total number of iterations
+
+    [numiter_contiguous]
+    default = 1
+    type = int
+    lowlim = 1
+    help = Number of iterations without interruption
+    doc = The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...).
+
+    [probe_support]
+    default = 0.7
+    type = float
+    lowlim = 0.0
+    uplim = 1.0
+    help = Valid probe area as fraction of the probe frame
+    doc = Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.    
+
     """
-    
-    DEFAULT = DEFAULT.copy()
 
     def __init__(self, ptycho, pars=None):
         """
@@ -80,8 +77,8 @@ class BaseEngine(object):
             Initialization parameters
         """
         self.ptycho = ptycho
-        p = u.Param(self.DEFAULT)
 
+        p = self.DEFAULTS.copy()
         if pars is not None:
             p.update(pars)
         self.p = p

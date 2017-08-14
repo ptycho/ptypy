@@ -918,7 +918,7 @@ class EvalParameter(ArgParseParameter):
         desc.from_string(parameter_string)
 
         # Populate cls.DEFAULT
-        cls.DEFAULTS = desc.make_default(depth=100)
+        cls.DEFAULTS = Param(desc.make_default(depth=100))
 
         return cls
 

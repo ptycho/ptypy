@@ -12,7 +12,6 @@ This file is part of the PTYPY package.
 """
 from .. import utils as u
 from base import BaseEngine, DEFAULT_iter_info
-from base import DEFAULT as COMMON
 import DM
 import DM_simple
 import ML
@@ -26,12 +25,12 @@ engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE']
 
 # Supported engines defaults
 DEFAULTS = u.Param(
-    common=COMMON,
-    Dummy=dummy.DEFAULT,
-    DM_simple=DM_simple.DEFAULT,
-    DM=DM.DEFAULT,
-    ML=ML.DEFAULT,
-    ePIE=ePIE.DEFAULT
+    common=BaseEngine.DEFAULTS,
+    Dummy=dummy.Dummy.DEFAULTS,
+    DM_simple=DM_simple.DM_simple.DEFAULTS,
+    DM=DM.DM.DEFAULTS,
+    ML=ML.ML.DEFAULTS,
+    ePIE=ePIE.EPIE.DEFAULTS
 )
 
 # Engine objects

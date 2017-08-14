@@ -14,35 +14,55 @@ from ..utils.verbose import logger
 import time
 import numpy as np
 from ..utils import parallel
-
-DEFAULT = u.Param(
-    alpha=1.0,
-    overlap_max_iterations=10,
-    overlap_converge_factor=0.05,
-    # the following BaseEngine parameters are not used
-    probe_support=None,
-    clip_object=None,
-    subpix_start=None,
-    subpix=None,
-    probe_update_start=None,
-    probe_inertia=None,
-    object_inertia=None,
-    obj_smooth_std=None,
-    probe_center_tol=None,
-)
+from ptypy.utils import validator
 
 __all__ = ['DM_simple']
 
-
+# change this if there should be a central EvalParameter object somewhere
+root = validator.EvalParameter('')
+@root.parse_doc('engine')
 class DM_simple(BaseEngine):
+    """
+    Bare-bones DM reconstruction engine.
 
-    DEFAULT = DEFAULT
+
+    Parameters:
+
+    [numiter]
+    default = 123
+    type = int
+
+    [alpha]
+    default = 1
+    type = float
+    lowlim = 0.0
+    help = Difference map parameter
+
+    [overlap_converge_factor]
+    default = 0.05
+    type = float
+    lowlim = 0.0
+    help = Threshold for interruption of the inner overlap loop
+    doc = The inner overlap loop refines the probe and the object simultaneously. This loop is escaped as soon as the overall change in probe, relative to the first iteration, is less than this value.
+
+    [overlap_max_iterations]
+    default = 10
+    type = int
+    lowlim = 1
+    help = Maximum of iterations for the overlap constraint inner loop
+
+    """
 
     def __init__(self, ptycho, pars=None):
         """
         Simplest possible Difference map reconstruction engine.
         """
         super(DM_simple, self).__init__(ptycho, pars)
+
+        p = self.DEFAULTS.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
 
         self.ptycho = ptycho
         self.ob_nrm = None

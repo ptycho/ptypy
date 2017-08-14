@@ -17,33 +17,86 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from engine_utils import Cnorm2, Cdot
 from . import BaseEngine
+from ptypy.utils import validator
 
 __all__ = ['ML']
 
-DEFAULT = u.Param(
-    ML_type='gaussian',
-    floating_intensities=False,
-    intensity_renormalization=1.,
-    reg_del2=False,
-    reg_del2_amplitude=.01,
-    smooth_gradient=0,
-    scale_precond=False,
-    scale_probe_object=1.
-)
-
-
+# change this if there should be a central EvalParameter object somewhere
+root = validator.EvalParameter('')
+@root.parse_doc('engine')
 class ML(BaseEngine):
+    """ 
+    Maximum likelihood reconstruction engine.
+
+
+    Parameters:
+
+    [ML_type]
+    default = gaussian
+    type = str
+    help = Likelihood model
+    doc = One of ‘gaussian’, ‘poisson’ or ‘euclid’. Only 'gaussian' is implemented.
+
+    [floating_intensities]
+    default = False
+    type = bool
+    help = Adaptive diffraction pattern rescaling
+    doc = If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).
+
+    [intensity_renormalization]
+    default = 1.
+    type = float
+    lowlim = 0.0 
+    help = Rescales the intensities so they can be interpreted as Poisson counts.
+
+    [reg_del2]
+    default = False
+    type = bool
+    help = Whether to use a Gaussian prior (smoothing) regularizer
     
-    DEFAULT = DEFAULT
+    [reg_del2_amplitude]
+    default = .01
+    type = float
+    lowlim = 0.0
+    help = Amplitude of the Gaussian prior if used
+
+    [smooth_gradient]
+    default = 0.0
+    type = float
+    help = Smoothing preconditioner
+    doc = If 0, not used, if > 0 gaussian filter if < 0 Hann window.
+
+    [scale_precond]
+    default = False
+    type = bool
+    help = Whether to use the object/probe scaling preconditioner
+    doc = This parameter can give faster convergence for weakly scattering samples.
+
+    [scale_probe_object]
+    default = 1.
+    type = float
+    lowlim = 0.0
+    help = Relative scale of probe to object
+
+    [probe_update_start]
+    default = 2
+    type = int
+    lowlim = 0
+    help = Number of iterations before probe update starts
+
+    """
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Maximum likelihood reconstruction engine.
         """
-        if pars is None:
-            pars = DEFAULT.copy()
 
         super(ML, self).__init__(ptycho_parent, pars)
+
+        p = self.DEFAULTS.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
 
         # Instance attributes
 
