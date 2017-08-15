@@ -24,7 +24,8 @@ else:
     from .parameters import Param
 
 __all__ = ['create_default_template', 'make_sub_default', 'validate',
-          'entry_points_dct', 'parameter_descriptions', 'PDesc']
+          'entry_points_dct', 'parameter_descriptions', 'PDesc',
+          'defaults_tree']
 
 #! Validator message codes
 CODES = Param(
@@ -866,6 +867,7 @@ class EvalParameter(ArgParseParameter):
 
             prst.write('.. py:data:: ' + name)
             # prst.write('('+', '.join([t for t in opt['type']])+')')
+            print "tring to join a thing of type", type(desc.type), ':', desc.type, 'called', name
             prst.write('(' + ', '.join(desc.type) + ')')
             prst.write('\n\n')
             # num = str(desc.num_id)
@@ -946,6 +948,8 @@ class EvalParameter(ArgParseParameter):
 
         return base_parameters + parameter_string
 
+# Create a central EvalParameter instance on import
+defaults_tree = EvalParameter('')
 
 # Load all documentation on import
 import pkg_resources

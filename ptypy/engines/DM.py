@@ -18,9 +18,7 @@ from ptypy.utils import validator
 
 __all__ = ['DM']
 
-# change this if there should be a central EvalParameter object somewhere
-root = validator.EvalParameter('')
-@root.parse_doc('engine')
+@validator.defaults_tree.parse_doc('engines.DM')
 class DM(BaseEngine):
     """
     A full-fledged Difference Map enine.

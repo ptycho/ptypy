@@ -13,6 +13,7 @@ import time
 from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline
+from ptypy.utils import validator
 
 __all__ = ['BaseEngine', 'DEFAULT_iter_info']
 
@@ -24,9 +25,7 @@ DEFAULT_iter_info = u.Param(
     error=np.zeros((3,))
 )
 
-from ptypy.utils import validator
-root = validator.EvalParameter('')
-@root.parse_doc('engine')
+@validator.defaults_tree.parse_doc('engines.common')
 class BaseEngine(object):
     """
     Base reconstruction engine.

@@ -18,9 +18,7 @@ from ptypy.utils import validator
 
 __all__ = ['DM_simple']
 
-# change this if there should be a central EvalParameter object somewhere
-root = validator.EvalParameter('')
-@root.parse_doc('engine')
+@validator.defaults_tree.parse_doc('engines.DM_simple')
 class DM_simple(BaseEngine):
     """
     Bare-bones DM reconstruction engine.

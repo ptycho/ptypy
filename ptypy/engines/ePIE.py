@@ -34,9 +34,7 @@ from ptypy.utils import validator
 
 __all__ = ['EPIE']
 
-# change this if there should be a central EvalParameter object somewhere
-root = validator.EvalParameter('')
-@root.parse_doc('engine')
+@validator.defaults_tree.parse_doc('engines.ePIE')
 class EPIE(BaseEngine):
     """
     ePIE reconstruction engine.
