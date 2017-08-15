@@ -867,7 +867,6 @@ class EvalParameter(ArgParseParameter):
 
             prst.write('.. py:data:: ' + name)
             # prst.write('('+', '.join([t for t in opt['type']])+')')
-            print "tring to join a thing of type", type(desc.type), ':', desc.type, 'called', name
             prst.write('(' + ', '.join(desc.type) + ')')
             prst.write('\n\n')
             # num = str(desc.num_id)
