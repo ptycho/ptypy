@@ -90,8 +90,7 @@ class ML(BaseEngine):
         """
         Maximum likelihood reconstruction engine.
         """
-
-        super(ML, self).__init__(ptycho_parent, pars)
+        super(ML, self).__init__(ptycho_parent)
 
         p = self.DEFAULTS.copy()
         if pars is not None:

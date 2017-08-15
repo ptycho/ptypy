@@ -40,7 +40,7 @@ class Dummy(BaseEngine):
         """
         Dummy reconstruction engine.
         """
-        super(Dummy,self).__init__(ptycho_parent,pars)
+        super(Dummy,self).__init__(ptycho_parent)
 
         p = self.DEFAULTS.copy()
         if pars is not None:

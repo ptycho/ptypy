@@ -57,7 +57,7 @@ class DM_simple(BaseEngine):
         """
         Simplest possible Difference map reconstruction engine.
         """
-        super(DM_simple, self).__init__(ptycho, pars)
+        super(DM_simple, self).__init__(ptycho)
 
         p = self.DEFAULTS.copy()
         if pars is not None:
