@@ -124,7 +124,7 @@ class AMOScan(core.data.PtyScan):
         # Load mask as weight
         if self.info.recipe.mask_file is not None:
             return io.h5read(
-                self.info.recipe.mask_file, 'mask')['mask'].astype(float)
+                self.info.recipe.mask_file, 'mask')['mask'].astype(float).T
 
     def load_common(self):
         """
