@@ -111,26 +111,18 @@ class AMOScan(core.data.PtyScan):
             log(3, 'Save file is %s' % self.info.dfile)
         log(4, u.verbose.report(self.info))
 
-    def load_weight(self):
-        """
-        For now, this function will be used to load the mask.
-
-        Function description see parent class.
-
-        :return: weight2d
-            - np.array: Mask or weight if provided from file
-        """
-        # FIXME: do something better here. (detector-dependent)
-        # Load mask as weight
-        if self.info.recipe.mask_file is not None:
-            return io.h5read(
-                self.info.recipe.mask_file, 'mask')['mask'].astype(float)
-
     def load_common(self):
         """
         Load dark, flat, and mask file.
         """
         common = u.Param()
+
+        # FIXME: do something better here. (detector-dependent)
+        # Load mask
+        # common.weight2d = None
+        if self.info.recipe.mask_file is not None:
+            common.weight2d = io.h5read(self.info.recipe.mask_file,
+                'mask')['mask'].astype(float)
 
         return common
 
