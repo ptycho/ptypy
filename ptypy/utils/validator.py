@@ -935,7 +935,7 @@ class EvalParameter(ArgParseParameter):
         base_parameters = self._extract_doc_from_class(cls.__base__)
 
         # Append doc from class
-        docstring = cls.__doc__
+        docstring = cls.__doc__ if cls.__doc__ is not None else ' '
 
         # Because of indentation it is safer to work line by line
         doclines = docstring.splitlines()
