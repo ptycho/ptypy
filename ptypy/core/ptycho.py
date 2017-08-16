@@ -21,68 +21,12 @@ from ..io import interaction
 from classes import Base, Container, Storage, PTYCHO_PREFIX
 from manager import ModelManager
 from . import model
+from ..utils import validator
 
-__all__ = ['Ptycho', 'DEFAULT', 'DEFAULT_io']
-
-DEFAULT_runtime = u.Param(
-    run=os.path.split(sys.argv[0])[1].split('.')[0],
-    engine="None",
-    iteration=0,
-    iterations=0,
-)
-
-DEFAULT_autoplot = u.Param(
-    imfile="plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png",
-    threaded=True,
-    interval=1,
-    layout='default',
-    dump=True,
-    make_movie=False,
-)
-
-DEFAULT_autosave = u.Param(
-    # If None or False : no saving else save with this given interval
-    interval=10,
-    # List of probe IDs for autosaving, if None save all [Not implemented]
-    probes=None,
-    # List of object IDs for autosaving, if None, save all [Not implemented]
-    objects=None,
-    rfile="dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr",
-)
-
-DEFAULT_io = u.Param(
-    # Auto save options: (None or False, int). If an integer,
-    # specifies autosave interval, if None or False: no autosave
-    autosave=DEFAULT_autosave,
-    # Plotting parameters for a client
-    autoplot=DEFAULT_autoplot,
-    # Client-server communication
-    interaction=interaction.Server_DEFAULT.copy(),
-    home='./',
-    rfile="recons/%(run)s/%(run)s_%(engine)s.ptyr"
-)
-"""Default io parameters. See :py:data:`.io` and a short listing below"""
-
-DEFAULT = u.Param(
-    # Verbosity level
-    verbose_level=3,
-    # Start an ipython kernel for debugging
-    ipython_kernel=False,
-    # Precision for reconstruction: 'single' or 'double'.
-    data_type='single',
-    # Do actually nothing if True [not implemented]
-    dry_run=False,
-    run=None,
-    # POD creation rules.
-    scan=u.Param(),
-    scans=u.Param(),
-    # Reconstruction algorithms
-    engines={},
-    engine=engines.DEFAULTS.copy(),
-    io=DEFAULT_io.copy(depth=2)
-)
+__all__ = ['Ptycho']
 
 
+@validator.defaults_tree.parse_doc()
 class Ptycho(Base):
     """
     Ptycho : A ptychographic data holder and reconstruction manager.
@@ -118,10 +62,180 @@ class Ptycho(Base):
     probe,obj,exit,diff,mask : Container
         Container instances for illuminations, samples, exit waves,
         diffraction data and detector masks / weights
+
+
+    Parameters:
+
+    [verbose_level]
+    default = 1
+    help = Verbosity level
+    doc = Verbosity level for information logging.
+       - ``0``: Only errors
+       - ``1``: Warning
+       - ``2``: Process Information
+       - ``3``: Object Information
+       - ``4``: Debug
+    type = int
+    userlevel = 0
+    lowlim = 0
+    uplim = 4
+
+    [data_type]
+    default = single
+    help = Reconstruction floating number precision
+    doc = Reconstruction floating number precision (``'single'`` or 
+          ``'double'``)
+    type = str
+    userlevel = 1
+
+    [run]
+    default = None
+    help = Reconstruction identifier
+    doc = Reconstruction run identifier. If ``None``, the run name will 
+          be constructed at run time from other information.
+    type = str
+    userlevel = 0
+
+    [dry_run]
+    default = FALSE
+    help = Dry run switch
+    doc = Run everything skipping all memory and cpu-heavy steps (and 
+          file saving). **NOT IMPLEMENTED**
+    type = bool
+    userlevel = 2
+
+    [ipython_kernel]
+    default = False
+    type = bool
+    help = Start an ipython kernel for debugging
+    doc = Start an ipython kernel for debugging.
+
+    [scans]
+    default = None
+    type = Param
+    help = Container for instances of scan parameters
+    doc = Container for instances of scan parameters.
+
+    [scans.*]
+    default = None
+    type = Param
+    dynamic = True
+    help = Specific containers, one for each scan
+    doc = Specific containers, one for each scan. These can be called 
+          anything, for instance scan00, scan01, etc.
+
+    [engines]
+    default = None
+    type = Param
+    help = Container for instances of engine parameters
+    doc = Container for instances of engine parameters.
+
+    [engines.*]
+    default = None
+    type = Param
+    dynamic = True
+    help = Specific containers, one for each engine
+    doc = Specific containers, one for each engine. These can be called 
+          anything, for instance engine00, engine01, etc.
+
+    [io]
+    default = None
+    help = Global parameters for I/O
+    doc = Global parameter container for I/O settings.
+    type = Param
+
+    [io.home]
+    default = ./
+    help = Base directory for all I/O
+    doc = home is the root directory for all input/output operations. All other path parameters that
+      are relative paths will be relative to this directory.
+    type = dir
+
+    [io.rfile]
+    default = recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr
+    help = Reconstruction file name (or format string)
+    doc = Reconstruction file name or format string (constructed against runtime dictionary)
+    type = str
+
+    [io.autosave]
+    default = None
+    help = Auto-save options
+    doc = Options for automatic saving during reconstruction.
+    type = Param
+
+    [io.autosave.active]
+    default = TRUE
+    help = Activation switch
+    doc = If ``True`` the current reconstruction will be saved at regular intervals. **unused**
+    type = bool
+
+    [io.autosave.interval]
+    default = 10
+    help = Auto-save interval
+    doc = If ``>0`` the current reconstruction will be saved at regular intervals according to the
+      pattern in :py:data:`paths.autosave` . If ``<=0`` not automatic saving
+    type = int
+    lowlim = -1
+
+    [io.autosave.rfile]
+    default = dumps/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr
+    help = Auto-save file name (or format string)
+    doc = Auto-save file name or format string (constructed against runtime dictionary)
+    type = str
+
+    [io.autoplot]
+    default = None
+    help = Plotting client parameters
+    doc = In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
+    type = Param
+
+    [io.autoplot.imfile]
+    default = plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png
+    help = Plot images file name (or format string)
+    doc = Plot images file name (or format string).
+    type = str
+    userlevel = 1
+
+    [io.autoplot.interval]
+    default = 1
+    help = Number of iterations between plot updates
+    doc = Requests to the server will happen with this iteration intervals. Note that this will work
+      only if interaction.polling_interval is smaller or equal to this number. If ``interval
+      =0`` plotting is disabled which should be used, when ptypy is run on a cluster.
+    type = int
+    lowlim = -1
+
+    [io.autoplot.threaded]
+    default = TRUE
+    help = Live plotting switch
+    doc = If ``True``, a plotting client will be spawned in a new thread and connected at
+      initialization. If ``False``, the master node will carry out the plotting, pausing the
+      reconstruction. This option should be set to ``True`` when ptypy is run on an isolated
+      workstation.
+    type = bool
+
+    [io.autoplot.layout]
+    default = None
+    help = Options for default plotter or template name
+    doc = Flexible layout for default plotter is not implemented yet. Please choose one of the
+      templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``
+    type = str, Param
+    userlevel = 2
+
+    [io.autoplot.dump]
+    default = FALSE
+    help = Switch to dump plots as image files
+    doc = Switch to dump plots as image files during reconstruction.
+    type = bool
+
+    [io.autoplot.make_movie]
+    default = FALSE
+    help = Produce reconstruction movie after the reconstruction.
+    doc = Switch to request the production of a movie from the dumped plots at the end of the
+      reconstruction.
+    type = bool
+
     """
-    DEFAULT = DEFAULT
-    """ Default ptycho parameters which is the trunk of the
-        default :ref:`ptypy parameter tree <parameters>`"""
     
     _PREFIX = PTYCHO_PREFIX
     
@@ -154,9 +268,8 @@ class Ptycho(Base):
         if level <= 0: 
             return
 
-        self.p = self.DEFAULT.copy(depth=99)
-        """ Reference for parameter tree, with which
-            this instance was constructed. """
+        # Create a parameter structure from the the class-level defaults
+        self.p = self.DEFAULTS.copy(depth=99)
         
         # Continue with initialization from parameters
         if pars is not None:

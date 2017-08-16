@@ -23,33 +23,12 @@ import re
 import json
 from .. import utils as u
 from ..utils.verbose import logger
+from ..utils import validator
 
 __all__ = ['Server', 'Client']
 
 DEBUG = lambda x: None
 #DEBUG = print
-
-#: Default parameters for networking
-network_DEFAULT = u.Param(
-    address = "tcp://127.0.0.1",   # Default address for primary connection
-    port = 5560,            # Default port for primary connection
-    connections = 10   # Port range for secondary connections
-)
-
-#: Default parameters for the server
-Server_DEFAULT = u.Param(network_DEFAULT,
-                         poll_timeout=10,   # Network polling interval (in milliseconds!)
-                         pinginterval=2,  # Interval to check pings (in seconds)
-                         pingtimeout=10  # Ping time out: client disconnected after this period (in seconds)
-)
-
-#: Default parameters for the client
-Client_DEFAULT = u.Param(network_DEFAULT,
-                         poll_timeout=100,   # Network polling interval (in milliseconds!)
-                         pinginterval=1,  # Interval to check pings (in seconds)
-                         connection_timeout=3600000.,  # Timeout for dead server (in milliseconds!)
-)
-
 
 def ID_generator(size=6, chars=string.ascii_uppercase + string.digits):
     """\
@@ -177,13 +156,76 @@ def numpy_zmq_recv(in_socket):
         return message
 
 
-class Server(object):
-    """\
+@validator.defaults_tree.parse_doc('io')
+class Interactor(object):
+    """
+    Dummy class to provide common but overridable defaults for Client 
+    and Server.
+
+
+    Parameters:
+
+    [interaction]
+    default = None
+    help = Server / Client parameters
+    doc = If ``None`` or ``False`` is passed here in script instead of a Param, it translates to
+      ``active=False`` i.e. no ZeroMQ interaction server.
+    type = Param
+
+    [interaction.active]
+    default = TRUE
+    help = Activation switch
+    doc = Set to ``False`` for no  ZeroMQ interaction server
+    type = bool
+
+    [interaction.address]
+    default = tcp://127.0.0.1
+    help = The address the server is listening to.
+    doc = Wenn running ptypy on a remote server, it is the servers network address.
+    type = str
+    userlevel = 2
+
+    [interaction.port]
+    default = 5560
+    help = The port the server is listening to.
+    doc = Make sure to pick an unused port with a few unused ports close to it.
+    type = int
+    userlevel = 2
+
+    [interaction.connections]
+    default = 10
+    help = Number of concurrent connections on the server
+    doc = A range ``[port : port+connections]`` of ports adjacent :py:data:`~.io.interaction.port`
+      will be opened on demand for connecting clients.
+    type = int
+    userlevel = 2
+
+    [interaction.poll_timeout]
+    default = 10.0
+    type = float
+    help = Network polling interval
+    doc = Network polling interval, in milliseconds.
+
+    [interaction.pinginterval]
+    default = 2
+    type = float
+    help = Interval to check pings
+    doc = Interval with which to check pings, in seconds.
+
+    [interaction.pingtimeout]
+    default = 10
+    type = float
+    help = Ping time out
+    doc = Ping time out: client disconnected after this period, in seconds.
+
+    """
+
+
+@validator.defaults_tree.parse_doc('io')
+class Server(Interactor):
+    """
     Main server class.
     """
-    
-    #: Default parameters, see also :py:data:`.io.interaction`
-    DEFAULT = Server_DEFAULT
     
     def __init__(self, pars=None, **kwargs):
         """
@@ -218,7 +260,8 @@ class Server(object):
         #################################
         # Initialize all parameters
         #################################
-        p = u.Param(self.DEFAULT)
+
+        p = self.DEFAULTS
         p.update(pars)
         p.update(kwargs)
         self.p = p
@@ -659,13 +702,33 @@ class Server(object):
             self._thread.join(3)
 
 
-class Client(object):
+@validator.defaults_tree.parse_doc('io')
+class Client(Interactor):
     """
-    Basic but complete client to interact with the server. 
+    Basic but complete client to interact with the server.
+
+
+    Parameters:
+
+    [interaction.poll_timeout]
+    default = 100.0
+    type = float
+    help = Network polling interval
+    doc = Network polling interval, in milliseconds.
+
+    [interaction.pinginterval]
+    default = 1
+    type = float
+    help = Interval to check pings
+    doc = Interval with which to check pings, in seconds.
+
+    [interaction.connection_timeout]
+    default = 3600000.
+    type = float
+    help = Timeout for dead server
+    doc = Timeout for dead server, in milliseconds.
+
     """
-    
-    #: Default parameters, see also :py:data:`.io.interaction`
-    DEFAULT = Client_DEFAULT
     
     def __init__(self, pars=None, **kwargs):
         """
@@ -690,7 +753,7 @@ class Client(object):
                          
         """
         
-        p = u.Param(self.DEFAULT)
+        p = self.DEFAULTS.copy()
         p.update(pars)
         p.update(kwargs)
         self.p = p
