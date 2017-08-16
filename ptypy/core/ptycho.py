@@ -49,6 +49,7 @@ DEFAULT_autosave = u.Param(
     # List of object IDs for autosaving, if None, save all [Not implemented]
     objects=None,
     rfile="dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr",
+    store_OPR_iter=False,
 )
 
 DEFAULT_io = u.Param(
