@@ -917,8 +917,10 @@ class EvalParameter(ArgParseParameter):
         # Parse parameter section and store in desc
         desc.from_string(parameter_string)
 
-        # Populate cls.DEFAULT
-        cls.DEFAULTS = desc.make_default(depth=100)
+        # Populate cls.DEFAULT, making sure that all dicts becoms Params
+        cls.DEFAULTS = Param()
+        cls.DEFAULTS.update(desc.make_default(depth=100),
+            in_place_depth=100, Convert=True)
 
         return cls
 
