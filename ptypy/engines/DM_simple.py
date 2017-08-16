@@ -14,7 +14,7 @@ from ..utils.verbose import logger
 import time
 import numpy as np
 from ..utils import parallel
-from ptypy.utils import validator
+from ..utils import validator
 
 __all__ = ['DM_simple']
 

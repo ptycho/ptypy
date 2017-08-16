@@ -14,7 +14,7 @@ from ..utils.verbose import logger, log
 from ..utils import parallel
 from engine_utils import basic_fourier_update
 from . import BaseEngine
-from ptypy.utils import validator
+from ..utils import validator
 
 __all__ = ['DM']
 

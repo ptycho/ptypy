@@ -13,7 +13,7 @@ import time
 from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline
-from ptypy.utils import validator
+from ..utils import validator
 
 __all__ = ['BaseEngine', 'DEFAULT_iter_info']
 

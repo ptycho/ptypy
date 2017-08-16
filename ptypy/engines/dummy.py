@@ -15,7 +15,7 @@ import ptypy
 from .. import utils as u
 from ..utils import parallel
 from . import BaseEngine
-from ptypy.utils import validator
+from ..utils import validator
 
 __all__ = ['Dummy']
 

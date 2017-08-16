@@ -17,7 +17,7 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from engine_utils import Cnorm2, Cdot
 from . import BaseEngine
-from ptypy.utils import validator
+from ..utils import validator
 
 __all__ = ['ML']
 
