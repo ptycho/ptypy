@@ -251,9 +251,17 @@ class Ptycho(Base):
         # Create a parameter structure from the the class-level defaults
         self.p = self.DEFAULTS.copy()
 
-        # Workaround to be removed. FIXME
+        # Workaround to be removed when we lose p.scan and p.engine. FIXME
+        # These are empty dummies to stop the code from breaking.
+        # So remove references to them throughout.
         self.p.scan = u.Param()
         self.p.engine = u.Param()
+        self.p.engine.common = u.Param()
+        self.p.engine.DM = u.Param()
+        self.p.engine.ML = u.Param()
+        self.p.engine.DM_simple = u.Param()
+        self.p.engine.Dummy = u.Param()
+        self.p.engine.ePIE = u.Param()
         
         # Abort if we load complete structure
         if level <= 0: 
@@ -531,6 +539,11 @@ class Ptycho(Base):
         else:
             # No label = prepare all engines
             for label in sorted(self.p.engines.keys()):
+                # FIXME workaround to avoid parameter trees that are just meant as templates.
+                try:
+                    self.p.engines[label].name
+                except:
+                    continue
                 self.init_engine(label)
 
     @property
