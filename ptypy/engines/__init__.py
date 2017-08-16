@@ -17,12 +17,16 @@ import DM
 import DM_simple
 import ML
 import dummy
+import DMIP
+import DMOPR
+import MLOPR
 import ePIE
 
 __all__ = ['DM', 'ML', 'ePIE', 'BaseEngine']
 
 # List of supported engines
-engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE']
+engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new',
+                            'ePIE', 'DMIP', 'DMOPR', 'MLOPR']
 
 # Supported engines defaults
 DEFAULTS = u.Param(
@@ -31,6 +35,9 @@ DEFAULTS = u.Param(
     DM_simple=DM_simple.DEFAULT,
     DM=DM.DEFAULT,
     ML=ML.DEFAULT,
+    DMIP=DMIP.DEFAULT,
+    DMOPR=DMOPR.DEFAULT,
+    MLOPR=MLOPR.DEFAULT,
     ePIE=ePIE.DEFAULT
 )
 
@@ -40,6 +47,9 @@ ENGINES = u.Param(
     DM_simple=DM_simple.DM_simple,
     DM=DM.DM,
     ML=ML.ML,
+    DMIP=DMIP.DMIP,
+    DMOPR=DMOPR.DMOPR,
+    MLOPR=MLOPR.MLOPR,
     ePIE=ePIE.EPIE
 )
 

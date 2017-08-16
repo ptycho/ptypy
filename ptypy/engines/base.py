@@ -25,6 +25,11 @@ DEFAULT = u.Param(
     probe_support=0.7,
     # Note: if probe support becomes of more complex nature,
     # consider putting it in illumination.py
+    # File for Fourier-space probe support
+    # This should be moved elsewhere as it requires loading a file.
+    probe_support_ft = None,
+    # Weight of Fourier-space probe support
+    probe_support_ft_weight = 0.,
     # Clip object amplitude into this interval
     clip_object=None,
     # Number of iterations before starting subpixel interpolation
@@ -104,6 +109,7 @@ class BaseEngine(object):
         self.pods = None
 
         self.probe_support = None
+        self.probe_support_ft = None
         self.t = None
         self.error = None
 
@@ -133,6 +139,7 @@ class BaseEngine(object):
         self.pods = self.ptycho.pods
 
         self.probe_support = {}
+        self.probe_support_ft = {}
         # Call engine specific initialization
         self.engine_initialize()
         
@@ -151,7 +158,17 @@ class BaseEngine(object):
                 ll, xx, yy = u.grids(sh, FFTlike=False)
                 support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
                 self.probe_support[name] = support
-                
+
+        # Loading Fourier-space probe support from file: loading files
+        # would better be done elsewhere, but this is a temporary
+        # case-specific solution (FERMI_SS, 20170421)
+        supp_ft = self.p.probe_support_ft
+        if supp_ft is not None:
+            for name, s in self.pr.storages.iteritems():
+                import ptypy.io as io
+                support = io.h5read(supp_ft)['probe_support']
+                self.probe_support_ft[name] = support
+
         # Call engine specific preparation
         self.engine_prepare()
             

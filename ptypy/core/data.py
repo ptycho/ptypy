@@ -725,6 +725,14 @@ class PtyScan(object):
                         'Binning (%d) is to large or incompatible with array '
                         'shape (%s).' % (rebin, str(tuple(sh))))
 
+                # Correct for negative values (i.e. set to zero)
+                if d[d<0.].any():
+                    logger.warning('There are some negative values left in the'
+                    + 'raw frames.\n' + 'These will be swapped with zeros.')
+                    d[d<0.] = 0.
+                # This step would be better activated only on demand.
+                # TODO: find suited location (ok in data.py?) and implement switch
+
                 # restore contiguity of the cropped/padded/rotated/flipped array
                 d = np.ascontiguousarray(d)
 

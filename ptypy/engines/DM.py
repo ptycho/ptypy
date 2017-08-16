@@ -40,6 +40,8 @@ DEFAULT = u.Param(
     # None or tuple(min, max) of desired limits of the object modulus,
     # currently in under common in documentation
     clip_object=None,
+    # Factor multiplying abs(obj) for weak positivity constraint
+    obj_positivity_constraint=None,
 )
 
     
@@ -256,7 +258,16 @@ class DM(BaseEngine):
                 continue
             pod.object += pod.probe.conj() * pod.exit * pod.object_weight
             ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
-        
+
+        # weak positivity constraint
+        if self.p.obj_positivity_constraint is not None:
+            mfact = self.p.obj_positivity_constraint
+            for name, pod in self.pods.iteritems():
+                if not pod.active:
+                    continue
+                pod.object = ( (1. - mfact) * pod.object
+                             + mfact * np.abs(pod.object) )
+
         # Distribute result with MPI
         for name, s in self.ob.storages.iteritems():
             # Get the np arrays
@@ -282,7 +293,7 @@ class DM(BaseEngine):
         pr = self.pr
         pr_nrm = self.pr_nrm
         pr_buf = self.pr_buf
-        
+
         # Fill container
         # "cfact" fill
         # BE: was this asymmetric in original code
@@ -320,6 +331,13 @@ class DM(BaseEngine):
             support = self.probe_support.get(name)
             if support is not None: 
                 s.data *= self.probe_support[name]
+
+            # Apply weak Fourier-space probe support if requested
+            support_ft = self.probe_support_ft.get(name)
+            if support_ft is not None:
+                supp_w = self.p.probe_support_ft_weight
+                s.data = ( (1. - supp_w) * s.data
+                    + (supp_w * self.probe_support_ft[name] * s.data) )
 
             # Compute relative change in probe
             buf = pr_buf.storages[name].data

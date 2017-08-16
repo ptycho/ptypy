@@ -290,6 +290,8 @@ class ML_Gaussian(object):
         self.tot_power = self.Irenorm * sum(s.tot_power
                                             for s in self.di.storages.values())
         # Prepare regularizer
+        # has_regularizer = self.p.reg_del2 or self.p.reg_object_positivity or ...
+
         if self.p.reg_del2:
             obj_Npix = self.ob.size
             expected_obj_var = obj_Npix / self.tot_power  # Poisson
