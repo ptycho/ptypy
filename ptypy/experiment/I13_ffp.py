@@ -20,7 +20,7 @@ NEXUS_PATHS = u.Param()
 NEXUS_PATHS.instrument = 'entry1/instrument'
 NEXUS_PATHS.frame_pattern = 'entry1/instrument/%(detector_name)s/data'
 NEXUS_PATHS.exposure = 'entry1/instrument/%(detector_name)s/count_time'
-NEXUS_PATHS.motors = ['t1_sxy', 't1_sxyz']
+NEXUS_PATHS.motors = ['t1_sxy', 't1_sxyz', 'lab_sxy']
 NEXUS_PATHS.command = 'entry1/scan_command'
 NEXUS_PATHS.label = 'entry1/entry_identifier'
 NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
@@ -131,13 +131,17 @@ class I13ScanFFP(PtyScan):
             try:
                 experiment_id = io.h5read(
                     self.data_file, NEXUS_PATHS.experiment)[
-                    NEXUS_PATHS.experiment][0]
+                    NEXUS_PATHS.experiment][()]
+                if type(experiment_id) == np.ndarray:
+                    experiment_id = unicode(experiment_id[0])
             except (AttributeError, KeyError):
                 experiment_id = os.path.split(
                     self.info.recipe.base_path[:-1])[1]
                 u.logger.debug(
                     'Could not find experiment ID from nexus file %s. '
                     'Using %s instead.' % (self.data_file, experiment_id))
+            assert(type(experiment_id) == unicode), (
+                'NEXUS_PATHS.experiment pointed at wrong type; expected unicode')
             self.info.recipe.experimentID = experiment_id
 
         # Create the ptyd file name if not specified
@@ -240,11 +244,14 @@ class I13ScanFFP(PtyScan):
             - dict: new positions.
             - dict: new weights.
         """
+        raw = {}
         pos = {}
         weights = {}
-        raw = {j: self.instrument[
-            self.info.recipe.detector_name]['data'][j].astype(np.float32)
-               for j in indices}
+
+        for j in indices:
+            data = self.instrument[
+                self.info.recipe.detector_name]['data'][j]
+            raw[j] = data.astype(np.float32)
 
         u.log(3, 'Data loaded successfully.')
 

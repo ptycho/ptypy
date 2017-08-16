@@ -53,6 +53,7 @@ RECIPE.flat_label = None            # Flat label - equal to scan_label by defaul
 RECIPE.dark_label = None            # Dark label - equal to scan_label by default
 RECIPE.mask_file = None             # Mask file name
 RECIPE.use_h5 = False               # Load data from prepared h5 file
+RECIPE.use_corrected_positions = False # Load corrected positions from 'positions.h5' file
 RECIPE.flat_division = False        # Switch for flat division
 RECIPE.dark_subtraction = False     # Switch for dark subtraction
 
@@ -227,23 +228,29 @@ class ID16AScan(PtyScan):
             for i in np.arange(1, len(data) + 1, 1):
                 positions.append((data['data_%04d' % i]['positions'][0, 0],
                                   data['data_%04d' % i]['positions'][0, 1]))
+
         else:
-            # From .edf files
-            pos_files = []
-            # Count available images given through scan_label
-            for i in os.listdir(self.info.recipe.base_path +
-                                self.info.recipe.scan_label):
-                if i.startswith(self.info.recipe.scan_label):
-                    pos_files.append(i)
+            if self.info.recipe.use_corrected_positions:
+                log(3, "Will be using corrected positions stored in 'positions.h5' file")
+                positions = io.h5read(self.info.recipe.base_path +
+                                      self.info.recipe.scan_label + '/positions.h5')['positions']
+            else:
+                # From .edf files
+                pos_files = []
+                # Count available images given through scan_label
+                for i in os.listdir(self.info.recipe.base_path +
+                                    self.info.recipe.scan_label):
+                    if i.startswith(self.info.recipe.scan_label):
+                        pos_files.append(i)
 
-            for i in np.arange(1, len(pos_files) + 1, 1):
-                data, meta = io.edfread(self.info.recipe.base_path +
-                                        self.info.recipe.scan_label + '/' +
-                                        self.info.recipe.scan_label +
-                                        '_%04d.edf' % i)
+                for i in np.arange(1, len(pos_files) + 1, 1):
+                    data, meta = io.edfread(self.info.recipe.base_path +
+                                            self.info.recipe.scan_label + '/' +
+                                            self.info.recipe.scan_label +
+                                            '_%04d.edf' % i)
 
-                positions.append((meta['motor'][self.info.recipe.motors[0]],
-                                  meta['motor'][self.info.recipe.motors[1]]))
+                    positions.append((meta['motor'][self.info.recipe.motors[0]],
+                                      meta['motor'][self.info.recipe.motors[1]]))
 
         return np.array(positions) * mmult[0]
 
