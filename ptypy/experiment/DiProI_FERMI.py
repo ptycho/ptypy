@@ -16,7 +16,9 @@ from .. import utils as u
 from .. import io
 from ..core.data import PtyScan
 from ..core.paths import Paths
-from ..core import DEFAULT_io as IO_par
+#from ..core import DEFAULT_io as IO_par
+from ..core import Ptycho
+IO_par = Ptycho.DEFAULTS['io']
 # testing commits again
 # Parameters for the h5 file
 H5_PATHS = u.Param()

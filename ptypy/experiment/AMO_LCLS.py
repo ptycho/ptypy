@@ -17,7 +17,9 @@ from ..utils import parallel
 from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..core.paths import Paths
-from ..core import DEFAULT_io as io_par
+#from ..core import DEFAULT_io as IO_par
+from ..core import Ptycho
+IO_par = Ptycho.DEFAULTS['io']
 
 logger = u.verbose.logger
 
