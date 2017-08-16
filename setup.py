@@ -83,6 +83,7 @@ setup(
         'scripts/ptypy.plot',
         'scripts/ptypy.inspect',
         'scripts/ptypy.plotclient',
-        'scripts/ptypy.new'    
+        'scripts/ptypy.new',
+        'scripts/ptypy.csv2cp'
     ],
     )
