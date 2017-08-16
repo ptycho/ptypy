@@ -116,27 +116,11 @@ class Ptycho(Base):
     help = Container for instances of scan parameters
     doc = Container for instances of scan parameters.
 
-    [scans.*]
-    default = None
-    type = Param
-    dynamic = True
-    help = Specific containers, one for each scan
-    doc = Specific containers, one for each scan. These can be called 
-          anything, for instance scan00, scan01, etc.
-
     [engines]
     default = None
     type = Param
     help = Container for instances of engine parameters
     doc = Container for instances of engine parameters.
-
-    [engines.*]
-    default = None
-    type = Param
-    dynamic = True
-    help = Specific containers, one for each engine
-    doc = Specific containers, one for each engine. These can be called 
-          anything, for instance engine00, engine01, etc.
 
     [io]
     default = None
@@ -263,13 +247,17 @@ class Ptycho(Base):
                     see :py:meth:`run`
         """
         super(Ptycho, self).__init__(None, 'Ptycho')
+
+        # Create a parameter structure from the the class-level defaults
+        self.p = self.DEFAULTS.copy()
+
+        # Workaround to be removed. FIXME
+        self.p.scan = u.Param()
+        self.p.engine = u.Param()
         
         # Abort if we load complete structure
         if level <= 0: 
             return
-
-        # Create a parameter structure from the the class-level defaults
-        self.p = self.DEFAULTS.copy(depth=99)
         
         # Continue with initialization from parameters
         if pars is not None:
