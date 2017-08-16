@@ -625,8 +625,8 @@ class MPLClient(MPLplotter):
     def __init__(self, client_pars=None, autoplot_pars=None,\
                  layout_pars=None, in_thread=False, is_slave=False):
         
-        from ptypy.core.ptycho import DEFAULT_autoplot
-        self.config = DEFAULT_autoplot.copy(depth=3)
+        from ptypy.core.ptycho import Ptycho
+        self.config = Ptycho.DEFAULTS.io.autoplot.copy(depth=3)
         self.config.update(autoplot_pars)
         # set a home directory
         self.config.home = self.config.get('home',self.DEFAULT.get('home'))
