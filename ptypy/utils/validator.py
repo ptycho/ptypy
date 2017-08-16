@@ -919,9 +919,16 @@ class EvalParameter(ArgParseParameter):
         desc.from_string(parameter_string)
 
         # Populate cls.DEFAULT, making sure that all dicts becoms Params
-        cls.DEFAULTS = Param()
-        cls.DEFAULTS.update(desc.make_default(depth=100),
-            in_place_depth=100, Convert=True)
+        cls.DEFAULTS = Param(desc.make_default(depth=100))
+        # This is a workaround, because Param is not behaving. 
+        # See Issue #90 on github.
+        def convert(x):
+            for k in x.keys():
+                if isinstance(x[k], dict):
+                    x[k] = Param(x[k])
+                if isinstance(x[k], Param):
+                    convert(x[k])
+        convert(cls.DEFAULTS)
 
         return cls
 
