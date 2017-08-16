@@ -517,7 +517,9 @@ class ArgParseParameter(Parameter):
         if depth <= 0:
             return out
         for name, child in self.children.iteritems():
-            if child.children: # and child.default is None:
+            if name == '*':
+                pass
+            elif child.children:
                 out[name] = child.make_default(depth=depth-1)
             else:
                 out[name] = child.default
@@ -770,8 +772,10 @@ class EvalParameter(ArgParseParameter):
 
         # 3. Extra work for parameter entries
         if 'Param' in self.type:
-            # Even more work for dynamic entries
-            if self.dynamic:
+            # We have to separate the use cases here
+            wildcard_container = (self.children.keys() == ['*'])
+
+            if (not wildcard_container) and self.dynamic:
                 for k, v in pars.items():
                     name = v.get('name', None)
                     if not name:
@@ -782,6 +786,28 @@ class EvalParameter(ArgParseParameter):
                         val[k] = CODES.INVALID
                     elif walk:
                         self.children[name].check(v, walk)
+
+            elif wildcard_container and not self.dynamic:
+                # Make sure there is at least one Param entry
+                types = [type(i) for i in pars.values()]
+                if not Param in types:
+                    val[self.name + '.*'] = CODES.MISSING
+
+                # Make sure there are no non-Param entries
+                for k, v in pars.items():
+                    if not isinstance(v, Param):
+                        val[self.path + '.*'] = CODES.INVALID
+                        return{ep: val}
+                
+                # Walk through each param entry and validate against *
+                if walk:
+                    for k, v in pars.items():
+                        # check child
+                        out.update(self.children['*'].check(v, walk))
+
+            elif wildcard_container and self.dynamic:
+                raise NotImplementedError
+
             else:
                 # Check for missing entries
                 for k, v in self.children.items():
