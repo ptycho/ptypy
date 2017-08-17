@@ -43,6 +43,10 @@ RECIPE.dark_file_pattern = '%(base_path)s' + 'input/r%(dark_number)04d.h5'
 RECIPE.flat_file_pattern = '%(base_path)s' + 'input/r%(flat_number)04d.h5'
 RECIPE.mask_file = None # '%(base_path)s' + 'processing/mask.h5'
 RECIPE.averaging_number = 1 # Number of frames to be averaged
+RECIPE.threshold_correct = 1 #0 # threshold for raw frame correction (i.e. setting
+                             # to zero values smaller than this
+RECIPE.apply_gaussian_filter = False # to smooth (noisy) raw frames
+RECIPE.sigma_gaussian_filter = 1.
 
 
 # Generic defaults
@@ -110,6 +114,9 @@ class AMOScan(core.data.PtyScan):
                 self.info.recipe.scan_number)
             log(3, 'Save file is %s' % self.info.dfile)
         log(4, u.verbose.report(self.info))
+
+        if self.info.recipe.apply_gaussian_filter % self.info.recipe:
+            import scipy.ndimage as ndi
 
     def load_weight(self):
         """
@@ -224,7 +231,15 @@ class AMOScan(core.data.PtyScan):
         # Apply corrections to frames
         data = raw
         for k in data.keys():
-            #data[k][data[k] < 0] = 0
-            data[k][data[k] < 1] = 0
+            data[k][data[k] < self.info.recipe.threshold_correct
+                % self.info.recipe] = 0
+            if self.info.recipe.apply_gaussian_filter % self.info.recipe:
+                data[k] = ndi.gaussian_filter(data[k],
+                    self.info.recipe.sigma_gaussian_filter % self.info.recipe)
+                data[k][data[k] <
+                    self.info.recipe.threshold_correct
+                    % self.info.recipe] = 0
+            # could also consider setting undesired values to zero only once
+
         weights = weights
         return data, weights
