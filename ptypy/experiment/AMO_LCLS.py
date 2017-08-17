@@ -10,6 +10,7 @@ This file is part of the PTYPY package.
 
 import numpy as np
 import os
+import scipy.ndimage as ndi
 from .. import utils as u
 from .. import io
 from .. import core
@@ -114,9 +115,6 @@ class AMOScan(core.data.PtyScan):
                 self.info.recipe.scan_number)
             log(3, 'Save file is %s' % self.info.dfile)
         log(4, u.verbose.report(self.info))
-
-        if self.info.recipe.apply_gaussian_filter % self.info.recipe:
-            import scipy.ndimage as ndi
 
     def load_weight(self):
         """
@@ -231,14 +229,12 @@ class AMOScan(core.data.PtyScan):
         # Apply corrections to frames
         data = raw
         for k in data.keys():
-            data[k][data[k] < self.info.recipe.threshold_correct
-                % self.info.recipe] = 0
-            if self.info.recipe.apply_gaussian_filter % self.info.recipe:
+            data[k][data[k] < self.info.recipe.threshold_correct] = 0
+            if self.info.recipe.apply_gaussian_filter:
                 data[k] = ndi.gaussian_filter(data[k],
-                    self.info.recipe.sigma_gaussian_filter % self.info.recipe)
+                    self.info.recipe.sigma_gaussian_filter)
                 data[k][data[k] <
-                    self.info.recipe.threshold_correct
-                    % self.info.recipe] = 0
+                    self.info.recipe.threshold_correct] = 0
             # could also consider setting undesired values to zero only once
 
         weights = weights

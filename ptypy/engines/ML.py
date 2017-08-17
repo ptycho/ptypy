@@ -119,14 +119,20 @@ class ML(BaseEngine):
             tg += time.time() - t1
             
             if self.p.probe_update_start <= self.curiter:
+                # SS: this chunk should not go here: it should apply
+                # to self.pr rather than (or beside) new_pr_grad [20170817]
+                """
                 # Apply probe support if needed
                 for name, s in new_pr_grad.storages.iteritems():
                     support = self.probe_support.get(name)
                     if support is not None: 
                         s.data *= support
+                """
+                logger.info('Skipping probe support application to '
+                    + 'new_pr_grad: applied later to self.pr instead.')
             else:
                 new_pr_grad.fill(0.)
-    
+
             # Smoothing preconditioner
             # !!! Lets make this consistent with
             # the smoothing already done in DM
@@ -223,6 +229,14 @@ class ML(BaseEngine):
                 s.data += tmin*self.pr_h.storages[name].data
             """
             # Newton-Raphson loop would end here
+            
+            # SS: applying probe support could(/should) go here [20170817]
+            if self.p.probe_update_start <= self.curiter:
+                # Apply probe support if needed
+                for name, s in self.pr.storages.iteritems():
+                    support = self.probe_support.get(name)
+                    if support is not None: 
+                        s.data *= support
             
             # increase iteration counter
             self.curiter +=1
