@@ -630,6 +630,7 @@ class EvalParameter(ArgParseParameter):
 
     _evaltypes = ['int', 'float', 'tuple', 'list', 'complex']
     _copytypes = ['str', 'file']
+    _limtypes = ['int', 'float']
     
     OPTIONS_DEF = OrderedDict([
         ('default', 'Default value for parameter (required).'),
@@ -759,16 +760,16 @@ class EvalParameter(ArgParseParameter):
             val['type'] = CODES.PASS if (type(pars).__name__ in self.type) else CODES.FAIL
 
         # 2. limits
-        lowlim, uplim = self.limits
-        
-        if lowlim is None:
-            val['lowlim'] = CODES.UNKNOWN
-        else:
-            val['lowlim'] = CODES.PASS if (pars >= self.lowlim) else CODES.FAIL
-        if uplim is None:
-            val['uplim'] = CODES.UNKNOWN
-        else:
-            val['uplim'] = CODES.PASS if (pars <= self.uplim) else CODES.FAIL
+        if any([i in self._limtypes for i in self.type]):
+            lowlim, uplim = self.limits
+            if lowlim is None:
+                val['lowlim'] = CODES.UNKNOWN
+            else:
+                val['lowlim'] = CODES.PASS if (pars >= lowlim) else CODES.FAIL
+            if uplim is None:
+                val['uplim'] = CODES.UNKNOWN
+            else:
+                val['uplim'] = CODES.PASS if (pars <= uplim) else CODES.FAIL
 
         # 3. Extra work for parameter entries
         if 'Param' in self.type:
