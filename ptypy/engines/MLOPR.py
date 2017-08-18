@@ -60,7 +60,8 @@ class MLOPR(BaseEngine):
                 di_view = v.pod.di_view
                 # Reformat the layer
                 v.layer = (di_view.layer, v.layer)
-                # Deactivate if the associate di_view is inactive (to spread the probe across nodes consistently with diff)
+                # Deactivate if the associate di_view is inactive
+                # (to spread the probe across nodes consistently with diff)
                 v.active = di_view.active
                 # Store the current view data so we can restore it after reformat
                 if v.active:
@@ -86,21 +87,27 @@ class MLOPR(BaseEngine):
             dtype = s.data.dtype
             self.OPR_modes[sID] = np.zeros(shape=shape, dtype=dtype)
 
-            # Prepare a sorted list (with index) of all layers (which are locally available through views)
-            unique_layers = sorted(set([v.layer for v in s.owner.views_in_storage(s=s, active=False)]))
+            # Prepare a sorted list (with index) of all layers
+            # (which are locally available through views)
+            unique_layers = sorted(set([v.layer for v in
+                s.owner.views_in_storage(s=s, active=False)]))
             layers = list(enumerate(unique_layers))
 
             # Then make a list of layers held locally by the node
             self.local_layers[sID] = [x for x in layers if x[1] in s.layermap]
             self.local_indices[sID] = [i for i, l in self.local_layers[sID]]
 
-        # Object gradient and minimization direction
-        self.ob_grad = self.ob.copy(self.ob.ID+'_grad', fill=0.)  # Object gradient
-        self.ob_h = self.ob.copy(self.ob.ID+'_h', fill=0.)  # Object minimization direction
+        ### Object gradient and minimization direction
+        # Object gradient
+        self.ob_grad = self.ob.copy(self.ob.ID+'_grad', fill=0.)
+        # Object minimization direction
+        self.ob_h = self.ob.copy(self.ob.ID+'_h', fill=0.)
 
+        ### Probe gradient and minimization direction
         # Probe gradient
-        self.pr_grad = self.pr.copy(self.pr.ID+'_grad', fill=0.)  # Probe gradient
-        self.pr_h = self.pr.copy(self.pr.ID+'_h', fill=0.)  # Probe minimization direction
+        self.pr_grad = self.pr.copy(self.pr.ID+'_grad', fill=0.)
+        # Probe minimization direction
+        self.pr_h = self.pr.copy(self.pr.ID+'_h', fill=0.)
    
         self.tmin=1.
         
@@ -119,7 +126,8 @@ class MLOPR(BaseEngine):
 
     def engine_prepare(self):
         """
-        last minute initialization, everything, that needs to be recalculated, when new data arrives
+        last minute initialization, everything, that needs to be recalculated,
+        when new data arrives
         """     
         #- # fill object with coverage of views
         #- for name,s in self.ob_viewcover.S.iteritems():
@@ -155,7 +163,8 @@ class MLOPR(BaseEngine):
                     cf = self.OPR_coeffs[sID]
                     cfc = cf.conj()
                     dim = self.p.subspace_dim
-                    gmodes = np.array([sum(s[l] * cfc[i, k] for i, l in self.local_layers[sID]) for k in range(dim)])
+                    gmodes = np.array([sum(s[l] * cfc[i, k]
+                        for i, l in self.local_layers[sID]) for k in range(dim)])
                     u.parallel.allreduce(gmodes)
                     for i, l in self.local_layers[sID]:
                         s[l] = sum(gmodes[k] * cf[i, k] for k in range(dim))
@@ -182,7 +191,8 @@ class MLOPR(BaseEngine):
     
             # probe/object rescaling
             if self.p.scale_precond:
-                scale_p_o = self.p.scale_probe_object * Cnorm2(new_ob_grad) / Cnorm2(new_pr_grad)
+                scale_p_o = self.p.scale_probe_object * Cnorm2(
+                    new_ob_grad) / Cnorm2(new_pr_grad)
                 logger.debug('Scale P/O: %6.3g' % scale_p_o)
             else:
                 scale_p_o = self.p.scale_probe_object
@@ -193,8 +203,10 @@ class MLOPR(BaseEngine):
             if self.curiter == 0:
                 bt = 0.
             else:
-                bt_num = scale_p_o * (Cnorm2(new_pr_grad) - np.real(Cdot(new_pr_grad, self.pr_grad))) +\
-                                     (Cnorm2(new_ob_grad) - np.real(Cdot(new_ob_grad, self.ob_grad)))
+                bt_num = scale_p_o * (Cnorm2(new_pr_grad) - np.real(Cdot(
+                                      new_pr_grad, self.pr_grad))) +\
+                                     (Cnorm2(new_ob_grad) - np.real(Cdot(
+                                      new_ob_grad, self.ob_grad)))
                 bt_denom = scale_p_o * Cnorm2(self.pr_grad) + Cnorm2(self.ob_grad) 
     
                 bt = max(0,bt_num/bt_denom)
@@ -233,8 +245,8 @@ class MLOPR(BaseEngine):
             # Compute OPR modes
             for sID, prS in self.pr.S.iteritems():
                 pr_input = [prS[l] for i, l in self.local_layers[sID]]
-                new_pr, modes, coeffs = reduce_dimension(a=pr_input, dim=self.p.subspace_dim,
-                                                         local_indices=self.local_indices[sID])
+                new_pr, modes, coeffs = reduce_dimension(a=pr_input,
+                    dim=self.p.subspace_dim, local_indices=self.local_indices[sID])
                 self.OPR_modes[sID] = modes
                 self.OPR_coeffs[sID] = coeffs
 
@@ -247,7 +259,8 @@ class MLOPR(BaseEngine):
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
 
         ### Storing OPR modes and coeffs in dumps
-        if self.ptycho.p.io.autosave is not None and self.ptycho.p.io.autosave.interval > 1:
+        if self.ptycho.p.io.autosave is not None and\
+           self.ptycho.p.io.autosave.interval > 1:
             if self.curiter % self.ptycho.p.io.autosave.interval == 0:
                 if self.ptycho.p.io.autosave.store_OPR_iter:
                     self.ptycho.runtime['OPR_modes'] = self.OPR_modes
@@ -294,8 +307,10 @@ class ML_Gaussian(object):
             self.Irenorm = self.p.intensity_renormalization
 
         # Create working variables
-        self.ob_grad = self.engine.ob.copy(self.ob.ID+'_ngrad',fill=0.) # New object gradient
-        self.pr_grad = self.engine.pr.copy(self.pr.ID+'_ngrad',fill=0.) # New probe gradient
+        # New object gradient
+        self.ob_grad = self.engine.ob.copy(self.ob.ID+'_ngrad',fill=0.)
+        # New probe gradient
+        self.pr_grad = self.engine.pr.copy(self.pr.ID+'_ngrad',fill=0.)
         self.LL = 0.
 
         # Gaussian model requires weights
@@ -316,8 +331,9 @@ class ML_Gaussian(object):
         if self.p.reg_del2:
             obj_Npix = self.ob.size
             expected_obj_var = obj_Npix / self.tot_power  # Poisson
-            reg_rescale  = self.tot_measpts / (8. * obj_Npix * expected_obj_var) 
-            logger.debug('Rescaling regularization amplitude using the Poisson distribution assumption.')
+            reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
+            logger.debug('Rescaling regularization amplitude using the'
+                + 'Poisson distribution assumption.')
             logger.debug('Factor: %8.5g' % reg_rescale)
             reg_del2_amplitude = self.p.reg_del2_amplitude * reg_rescale
             self.regularizer = Regul_del2(amplitude=reg_del2_amplitude)
@@ -379,7 +395,8 @@ class ML_Gaussian(object):
         
             # Floating intensity option
             if self.p.floating_intensities:
-                diff_view.float_intens_coeff = (w * Imodel * I).sum() / (w * Imodel**2).sum()
+                diff_view.float_intens_coeff = (
+                    w * Imodel * I).sum() / (w * Imodel**2).sum()
                 Imodel *= diff_view.float_intens_coeff 
             
             DI = Imodel - I
@@ -434,14 +451,16 @@ class ML_Gaussian(object):
             
             for name,pod in diff_view.pods.iteritems():
                 if not pod.active: continue
-                f = pod.fw(pod.probe*pod.object)
-                a = pod.fw(pod.probe * ob_h[pod.ob_view] + pr_h[pod.pr_view] * pod.object)
+                f = pod.fw(pod.probe * pod.object)
+                a = pod.fw(pod.probe * ob_h[pod.ob_view] +\
+                           pr_h[pod.pr_view] * pod.object)
                 b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
     
                 if A0 is None: 
                     A0 = u.abs2(f).astype(np.longdouble)
                     A1 = 2*np.real(f*a.conj()).astype(np.longdouble)
-                    A2 = 2*np.real(f*b.conj()).astype(np.longdouble) + u.abs2(a).astype(np.longdouble)
+                    A2 = 2*np.real(f*b.conj()).astype(np.longdouble) +\
+                                     u.abs2(a).astype(np.longdouble)
                 else:
                     A0 += u.abs2(f)
                     A1 += 2*np.real(f*a.conj())
@@ -462,7 +481,8 @@ class ML_Gaussian(object):
         # Object regularizer
         if self.regularizer:
             for name, s in self.ob.S.iteritems():
-                B += Brenorm * self.regularizer.poly_line_coeffs(ob_h.S[name].data, s.data)
+                B += Brenorm * self.regularizer.poly_line_coeffs(
+                    ob_h.S[name].data, s.data)
 
         self.B = B
         
@@ -511,10 +531,14 @@ class Regul_del2(object):
         hdel_xb = u.delxb(h,axis=ax0)
         hdel_yb = u.delxb(h,axis=ax1)
         
-        c0 = self.amplitude * (u.norm2(del_xf) + u.norm2(del_yf) + u.norm2(del_xb) + u.norm2(del_yb))
-        c1 = 2 * self.amplitude * np.real(np.vdot(del_xf, hdel_xf) + np.vdot(del_yf, hdel_yf) +\
-                                          np.vdot(del_xb, hdel_xb) + np.vdot(del_yb, hdel_yb))
-        c2 = self.amplitude * (u.norm2(hdel_xf) + u.norm2(hdel_yf) + u.norm2(hdel_xb) + u.norm2(hdel_yb))
+        c0 = self.amplitude * ( u.norm2(del_xf) + u.norm2(del_yf)
+                              + u.norm2(del_xb) + u.norm2(del_yb) )
+        c1 = 2 * self.amplitude * np.real(np.vdot(del_xf, hdel_xf)
+                                        + np.vdot(del_yf, hdel_yf) +\
+                                          np.vdot(del_xb, hdel_xb)
+                                        + np.vdot(del_yb, hdel_yb))
+        c2 = self.amplitude * ( u.norm2(hdel_xf) + u.norm2(hdel_yf)
+                              + u.norm2(hdel_xb) + u.norm2(hdel_yb) )
         
         self.coeff = np.array([c0,c1,c2])
         return self.coeff
@@ -545,7 +569,9 @@ def prepare_smoothing_preconditioner(amplitude):
             xf = x.reshape((-1,)+sh[-2:])
             yf = y.reshape((-1,)+sh[-2:])
             for i in range(len(xf)):
-                yf[i] = correlate2d(xf[i], np.array([[.0625, .125, .0625], [.125, .25, .125], [.0625, .125, .0625]]), mode='same')
+                yf[i] = correlate2d(xf[i], np.array([[.0625, .125, .0625],
+                                                     [.125 , .25 , .125 ],
+                                                     [.0625, .125, .0625]]), mode='same')
             return y
 
     if amplitude > 0.:
