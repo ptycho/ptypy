@@ -245,6 +245,11 @@ class PtyScan(object):
                     backup = self.dfile + '.old'
                     logger.warning('File %s already exist. Renamed to %s.'
                                    % (self.dfile, backup))
+                    try:
+                        # on windows, os.rename doesn't work if target exists
+                        os.remove(backup)
+                    except:
+                        pass
                     os.rename(self.dfile, backup)
                 # Prepare an empty file with the appropriate structure
                 io.h5write(self.dfile, PTYD.copy())
