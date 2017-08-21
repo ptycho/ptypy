@@ -122,12 +122,13 @@ class MLOPR(BaseEngine):
             raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
             
         # Other options
-        self.smooth_gradient = prepare_smoothing_preconditioner(self.p.smooth_gradient)
+        self.smooth_gradient = prepare_smoothing_preconditioner(
+            self.p.smooth_gradient)
 
     def engine_prepare(self):
         """
-        last minute initialization, everything, that needs to be recalculated,
-        when new data arrives
+        last minute initialization, everything, that needs to be
+        recalculated, when new data arrives
         """     
         #- # fill object with coverage of views
         #- for name,s in self.ob_viewcover.S.iteritems():
@@ -152,11 +153,16 @@ class MLOPR(BaseEngine):
             
             if (self.p.probe_update_start <= self.curiter) and self.OPR_coeffs:
 
-                # Apply probe support if needed
                 for sID, s in new_pr_grad.S.iteritems():
+                    # SS: this chunk should not go here: it should apply
+                    # to self.pr rather than (or beside) new_pr_grad [20170817]
+                    """
+                    # Apply probe support if needed
                     support = self.probe_support.get(sID)
                     if support is not None: 
                         s.data *= support
+                    """
+
                     # Project gradient on OPR basis
 
                     # New version
@@ -241,6 +247,14 @@ class MLOPR(BaseEngine):
             self.pr_h *= self.tmin
             self.ob += self.ob_h
             self.pr += self.pr_h
+
+            # SS: applying probe support could(/should) go here [20170821]
+            if self.p.probe_update_start <= self.curiter:
+                # Apply probe support if needed
+                for name, s in self.pr.storages.iteritems():
+                    support = self.probe_support.get(name)
+                    if support is not None:
+                        s.data *= support
 
             # Compute OPR modes
             for sID, prS in self.pr.S.iteritems():
