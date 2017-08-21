@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """\
-Tools specific to the cSAXS beamline, Swiss Light Source. 
+Tools specific to the cSAXS beamline, Swiss Light Source.
 
-TODO: 
+TODO:
     * smarter way to guess parameters.
 
 This file is part of the PTYPY package.
@@ -18,7 +18,7 @@ import numpy as np
 import glob
 import fnmatch
 import time
-import re   
+import re
 
 from ..utils import verbose
 from .. import parameters
@@ -42,14 +42,14 @@ _PILATUS_SLICES = {(407,487):(slice(636,1043), slice(494,981)),
               (831, 1475):(slice(424,1255), slice(0,1475)),
               (1679, 1475):(slice(0,1679), slice(0,1475))}
 
-              
+
 def prepare_data(params):
     """\
     Prepare data according to cSAXS conventions.
-    
+
     Returns a complete DataScan object.
 
-    TODO: Fragment this code in smaller pieces to make it easier to combine 
+    TODO: Fragment this code in smaller pieces to make it easier to combine
     with a GUI.
     """
     p = parameters.asParam(params, autoviv=False, none_if_absent=True)
@@ -59,12 +59,12 @@ def prepare_data(params):
         verbose.set_level(verbose_level)
     except:
         pass
-    
+
     base_path = p.base_path
     user = p.user
     pilatus_dir = p.pilatus_dir
     pilatus_mask = p.pilatus_mask
-    if not p.spec_filename: 
+    if not p.spec_filename:
         spec_filename = p.spec_file
     else:
         spec_filename = p.spec_filename
@@ -73,7 +73,7 @@ def prepare_data(params):
     DR = DataReader(base_path=base_path, user=user, pilatus_dir=pilatus_dir, pilatus_mask=pilatus_mask, spec_filename=spec_filename)
     DC = DataConverter(base_path=base_path, spec_filename=DR.specinfo)
 
-    # Prepare data 
+    # Prepare data
 
     file_list, fpattern = DR.get_pilatus_files(scan_number)
     if file_list is None:
@@ -85,12 +85,12 @@ def prepare_data(params):
         #verbose(2, 'Will write to path "%s"' % write_path)
     else:
         data, mask, meta, scandict = DR.read(scan_number, dpsize=p.dpsize, ctr=p.ctr, multexp=False)
-            
+
     s = parameters.Param()
     s.scan_number = p.scan_number
     s.scan_label = 'S%05d' % p.scan_number
     s.data_filename = scandict['data_filename']
-    s.wavelength = 1.2398e-9 / p.energy       
+    s.wavelength = 1.2398e-9 / p.energy
     s.energy = p.energy
     s.detector_pixel_size = p.detector_pixel_size
     s.detector_distance = p.detector_distance
@@ -107,7 +107,7 @@ def prepare_data(params):
     s.preparation_spec_file = DR.spec_filename
     s.shape = data.shape
 
-    if p.scan_type is not None: 
+    if p.scan_type is not None:
         sp = p.scan_params
         if p.scan_type == 'raster':
             #raise RuntimeError('Raster needs to be implemented')
@@ -118,7 +118,7 @@ def prepare_data(params):
             scanpos = np.array(scan.round_scan_ROI_positions(sp.dr, sp.lx, sp.ly, sp.nth))
         elif p.scan_type == 'custom':
             scanpos = np.asarray(sp.positions)
-        s.positions_theory = scanpos            
+        s.positions_theory = scanpos
     else:
         s.positions_theory = None
 
@@ -127,7 +127,7 @@ def prepare_data(params):
         s.spec_command = scandict['spec_command']
 
         # Position counters
-        motors = [] if p.motors is None else p.motors 
+        motors = [] if p.motors is None else p.motors
         Nmotors = len(motors)
         if Nmotors > 0:
             verbose(3, 'Motors are : %s' % str(motors))
@@ -145,7 +145,7 @@ def prepare_data(params):
     else:
         s.positions = 0. + s.positions_theory
 
-     # Put everything together in a DataScan object 
+     # Put everything together in a DataScan object
     DS = DataScan()
 
     DS.data = data
@@ -162,15 +162,15 @@ class DataReaderBase(object):
 
     def __init__(self, base_path, spec_filename=None):
         """\
-        cSAXS data reading class. The only mendatory argument for this constructor are 'base_path' and 'user'. 
-        
+        cSAXS data reading class. The only mendatory argument for this constructor are 'base_path' and 'user'.
+
         Optional arguments:
             * file_extension [default: '*']
             * pilatus_dir [default: 'pilatus']
             * pilatus_mask (file name or actual mask)
             * spec_file
         """
-        
+
         # Semi-smart base path detection
         if base_path is None:
             d = os.getcwd()
@@ -183,10 +183,10 @@ class DataReaderBase(object):
                     break
             if base_path is None:
                 raise RuntimeError('Could not figure out base_path')
-            verbose(1, 'base_path automatically set to "%s".' % base_path)          
+            verbose(1, 'base_path automatically set to "%s".' % base_path)
         self.base_path = base_path
 
-               
+
         self.specinfo = None
         if spec_filename is None:
             spec_base_path = None
@@ -200,7 +200,7 @@ class DataReaderBase(object):
             spec_base_path = os.path.join(base_path, spec_base_path,'dat-files')
             for root, dirnames, filenames in os.walk(spec_base_path):
                 for filename in fnmatch.filter(filenames, '*.dat'):
-                    matches.append(os.path.join(root, filename))      
+                    matches.append(os.path.join(root, filename))
             if not matches:
                 raise RuntimeError('Could not find a spec dat-file (looked into %s)' % spec_base_path)
             if len(matches) > 1:
@@ -209,7 +209,7 @@ class DataReaderBase(object):
                 verbose(1, 'Found multiple spec files fitting the default location. Using the most recent.')
             else:
                 spec_filename = matches[0]
-        
+
         if isinstance(spec_filename, spec.SpecInfo):
             self.specinfo = spec_filename
             self.spec_filename = self.specinfo.spec_filename
@@ -229,13 +229,13 @@ class DataReaderBase(object):
     def read(self, scan_number, dpsize=None, ctr=None, multexp=False, **kwargs):
         """\
         Read in the data
-        TODO: (maybe?) MPI to avoid loading all data in a single process for large scans. 
-        """        
+        TODO: (maybe?) MPI to avoid loading all data in a single process for large scans.
+        """
         raise NotImplementedError()
 
     def test(self):
         """\
-        TODO: Add simple tests here to check the existance of files and paths. 
+        TODO: Add simple tests here to check the existance of files and paths.
         """
         pass
 
@@ -244,7 +244,7 @@ class DataReaderBase(object):
         TODO: Pretty-print content information.
         """
         return 'Not yet implemented'
-       
+
     def get_write_path(self, scan_number):
         return WRITE_PATH_PATTERN.format(base_path=self.base_path, scan_number=scan_number)
 
@@ -254,19 +254,19 @@ class DataReaderBase(object):
                                                  scan_number=scan_number,
                                                  dpsize=dpsize)
 
-       
+
 class DataConverter(DataReaderBase):
     """\
     cSAXS data conversion class.
     """
     def __init__(self, base_path, spec_filename=None):
        DataReaderBase.__init__(self, base_path, spec_filename)
-       
+
     def read(self, scan_number, dpsize):
         """\
         Convert old prepared data into new format.
         """
-        
+
         scaninfo = None
         if self.specinfo is not None:
             if not self.specinfo.scans.has_key(scan_number): self.specinfo.parse()
@@ -288,20 +288,20 @@ class DataConverter(DataReaderBase):
             fmask = a['fmask']
             if fmask.ndim==3:
                 fmask=fmask.transpose((2,0,1))
-        
-       
+
+
         # Store additional info from spec file
         write_path = self.get_write_path(scan_number)
         data_filename = self.get_save_filename(scan_number, dpsize)
         ctr = tuple(np.asarray(dpsize)/2)
-        
+
         scandict = {}
         scandict['write_path'] = write_path
         scandict['data_filename'] = data_filename
         scandict['read_path'] = read_path
         scandict['dpsize'] = dpsize
         scandict['ctr'] = ctr
-        
+
         scandict['exposure_time'] = None
 
         if scaninfo is not None:
@@ -327,8 +327,8 @@ class DataReader(DataReaderBase):
 
     def __init__(self, base_path, user=None, file_extension='*', pilatus_dir=None, pilatus_mask=None, spec_filename=None):
         """\
-        cSAXS data reading class. The only mendatory argument for this constructor are 'base_path' and 'user'. 
-        
+        cSAXS data reading class. The only mendatory argument for this constructor are 'base_path' and 'user'.
+
         Optional arguments:
             * file_extension [default: '*']
             * pilatus_dir [default: 'pilatus']
@@ -345,7 +345,7 @@ class DataReader(DataReaderBase):
             user = getpass.getuser()
             verbose(1, 'User name automatically set to "%s".' % user)
         self.user = user
-            
+
         self.file_extension = file_extension
 
         # Semi-smart pilatus directory determination
@@ -357,7 +357,7 @@ class DataReader(DataReaderBase):
                     break
             if pilatus_dir is None:
                 raise RuntimeError('Could not figure out pilatus_dir')
-            verbose(1, 'pilatus_dir automatically set to "%s".' % pilatus_dir)                          
+            verbose(1, 'pilatus_dir automatically set to "%s".' % pilatus_dir)
         self.pilatus_dir = pilatus_dir
 
         # Look for standard file location
@@ -371,8 +371,8 @@ class DataReader(DataReaderBase):
                 verbose(1, 'Using the most recent (%s)' % pilatus_mask)
             else:
                 pilatus_mask = candidates[0]
-    
-        self.pilatus_mask = pilatus_mask       
+
+        self.pilatus_mask = pilatus_mask
         if pilatus_mask is not None:
             if str(pilatus_mask) == pilatus_mask:
                 verbose(1, 'Using pilatus mask: %s' % str(pilatus_mask))
@@ -383,7 +383,7 @@ class DataReader(DataReaderBase):
         # [TODO] Find a more robust way of dealing with the prefix
         self.prefix = PREFIX_PATTERN.format(user=user)
         print PREFIX_PATTERN.format(user=user)
-     
+
     def get_pilatus_files(self, scan_number):
         """\
         Return the list of pilatus files for a given scan_number and the glob pattern.
@@ -402,12 +402,12 @@ class DataReader(DataReaderBase):
                 return file_list, fpattern_wildcard
             else:
                 return None, (nomatch, fpattern_wildcard)
-          
+
     def read(self, scan_number, dpsize=None, ctr=None, multexp=False, **kwargs):
         """\
         Read in the data
-        TODO: (maybe?) MPI to avoid loading all data in a single process for large scans. 
-        """        
+        TODO: (maybe?) MPI to avoid loading all data in a single process for large scans.
+        """
         verbose(2, 'Processing scan number %d' % scan_number)
 
         scaninfo = None
@@ -418,25 +418,25 @@ class DataReader(DataReaderBase):
                 raise RuntimeError('Scan #S %d could not be found in spec file!' % scan_number)
 
         write_path = self.get_write_path(scan_number)
-        
+
         read_path = self.get_read_path(scan_number)
         verbose(2, 'Will read from path: %s' % read_path)
 
         if multexp:
             raise RuntimeError('Multiple exposure scans are not yet supported')
 
-        verbose(3, 'Looking for a first file...')      
+        verbose(3, 'Looking for a first file...')
         file_list, fpattern_wildcard = self.get_pilatus_files(scan_number)
         if file_list is None:
             raise IOError('No file matching "%s" or "%s"' % fpattern_wildcard)
         verbose(3, 'Found %d files matching "%s"' % (len(file_list), fpattern_wildcard))
-    
+
         multexp_stuff = """\
             # multiple exposures
             fpattern = p.filename_multexp_pattern.format(p, exp='*', index='{index}')
             this_fp = fpattern.format(index='00000')
             file_list = glob.glob(this_fp)
-            p.multexp = True 
+            p.multexp = True
             verbose(3, 'Found a file matching "%s"' % this_fp)
             if not file_list:
                 raise IOError('No file match!')
@@ -450,12 +450,12 @@ class DataReader(DataReaderBase):
 
         amultexp_stuff = """\
         if num_exp > 1:
-        
+
             exp_times = np.array([float(m['time_of_frame']) for m in meta])
-    
+
             min_exp = exp_times.min()
             low_exp_index = exp_times.argmin()
-    
+
             all_same = False
             if min_exp == exp_times.mean():
                 # all exposure times are the same
@@ -488,7 +488,7 @@ class DataReader(DataReaderBase):
         elif np.isscalar(dpsize):
                 dpsize = (dpsize,dpsize)
         dpsize = np.array(dpsize)
- 
+
         data_filename = self.get_save_filename(scan_number, dpsize)
         verbose(2, 'Data will be saved to %s' % data_filename)
 
@@ -500,7 +500,7 @@ class DataReader(DataReaderBase):
             c1 = (np.arange(len(f1))*f1).sum()/f1.sum()
 
             ctr_auto = (c1, c0)
-    
+
             # Check for center position
             if ctr is None:
                 ctr = ctr_auto
@@ -518,7 +518,7 @@ class DataReader(DataReaderBase):
                 verbose(2, 'Using center: (%d, %d) - I would have guessed it is (%d, %d)' % (ctr[0], ctr[1], ctr_auto[0], ctr_auto[1]))
             else:
                 verbose(2, 'Using center: (%d, %d) - I would have guessed it is (%d, %d)' % (ctr[0], ctr[1], ctr_auto[0], ctr_auto[1]))
-    
+
             ctr = np.array(ctr)
             lim_inf = ctr - dpsize/2.
             lim_sup = ctr + dpsize/2.
@@ -531,31 +531,31 @@ class DataReader(DataReaderBase):
                 lim_sup = ctr + dpsize/2.
                 out_string += ' to ' + str(ctr)
                 verbose(1, out_string)
-    
+
             fmask = fmask[lim_inf[0]:lim_sup[0], lim_inf[1]:lim_sup[1]]
-    
+
         # Prepare the general meta-information dictionnary
         meta_list = dict([(k, []) for k in meta[0].keys()])
-       
+
         if fullframe:
             f,meta = io.image_read(fpattern_wildcard, doglob=True)
         else:
             f,meta = io.image_read(fpattern_wildcard, doglob=True, roi=(lim_inf[0],lim_sup[0],lim_inf[1],lim_sup[1]))
-    
+
         for mm in meta:
             for k,v in mm.items():
                 meta_list[k].append(v)
-    
+
         npts = len(f)
         verbose(2, 'Read %d files' % npts)
- 
+
         # Store in a 3D array
         data = np.zeros((npts, dpsize[0], dpsize[1]), dtype=np.single);
         for nn in range(npts):
             data[nn,:,:] = f[nn]
 
         del f
-        
+
         # Store additional info from spec file
         scandict = {}
         scandict['write_path'] = write_path
@@ -563,7 +563,7 @@ class DataReader(DataReaderBase):
         scandict['read_path'] = read_path
         scandict['dpsize'] = dpsize
         scandict['ctr'] = ctr
-        
+
         try:
             rawheader = meta_list['rawheader'][0].lower()
             scandict['exposure_time'] = float(rawheader[rawheader.find('exposure_time'):].split()[1])
@@ -580,7 +580,7 @@ class DataReader(DataReaderBase):
         else:
             # Try to extract date from first frame
             tm = re.findall("([0-9]{4}-[0-9]{2}-[0-9]{2}[^\n]*)", rawheader)
-            if tm: 
+            if tm:
                 t = tm[0].strip().split('.')[0]  # remove the fraction of second
                 scandict['date'] = time.strptime(t, "%Y-%m-%dt%H:%M:%S")
             scandict['counters'] = None
@@ -624,7 +624,7 @@ class DataReader(DataReaderBase):
                                                             exp=exposure,
                                                             file_extension=self.file_extension)
         return filename
-        
+
     def set_pilatus_mask(self,mask):
         """\
         Stores a pilatus mask (or loads it if the provided input is a filename).

@@ -11,7 +11,6 @@ from classes import *
 from ptycho import *
 from manager import *
 import xy
-# import pattern
 import illumination
 import sample
 import geometry

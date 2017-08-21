@@ -14,7 +14,7 @@ from threading import Thread, Lock
 #mpl.rcParams['backend'] = 'Qt4Agg'
 #from matplotlib import gridspec
 #from matplotlib import pyplot as plt
-import os 
+import os
 
 __all__=['MPLClient','MPLplotter','PlotClient','spawn_MPLClient', 'TEMPLATES', 'DEFAULT']
 
@@ -83,11 +83,11 @@ nearfield = DEFAULT.copy(depth=4)
 nearfield.pr.clims=[None, [-np.pi, np.pi]]
 nearfield.pr.cmaps=['gray', 'hsv']
 nearfield.pr.crop=[0.0, 0.0]  # fraction of array to crop for display
-nearfield.pr.rm_pr=False  # 
+nearfield.pr.rm_pr=False  #
 nearfield.ob.clims=[None, None]
 nearfield.ob.cmaps=['gray', 'jet']
 nearfield.ob.crop=[0.0, 0.0]  # fraction of array to crop for display
-nearfield.ob.rm_pr=False # 
+nearfield.ob.rm_pr=False #
 TEMPLATES['nearfield'] = nearfield
 del nearfield
 del bnw
@@ -102,8 +102,8 @@ class PlotClient(object):
 
     This PlotClient doesn't actually plot.
     """
-    
-    ACTIVE = 1 
+
+    ACTIVE = 1
     DATA = 2
     STOPPED = 0
 
@@ -135,13 +135,13 @@ class PlotClient(object):
         self._stopping = False
         self._lock = Lock()
         self._has_stopped = False
-        
+
         # Here you should initialize plotting capabilities.
         self.config = None
-        
+
         # A small flag
         self.is_initialized = False
-        
+
     @property
     def status(self):
         """
@@ -163,7 +163,7 @@ class PlotClient(object):
         self._thread = Thread(target=self._loop)
         self._thread.daemon = True
         self._thread.start()
-    
+
     def stop(self):
         """
         Stop loop plot
@@ -173,7 +173,7 @@ class PlotClient(object):
         pause(0.1)
         self.disconnect()
         self._thread.join(0.2)
-        
+
     def get_data(self):
         """
         Thread-safe way to copy data buffer.
@@ -216,21 +216,21 @@ class PlotClient(object):
         log(self.log_level,'Client requesting configuration parameters')
         autoplot = self.client.get_now("Ptycho.p.io.autoplot")
         if hasattr(autoplot,'items'):
-            self.config = Param(autoplot) 
+            self.config = Param(autoplot)
             self.config.home = self.client.get_now("Ptycho.p.io.home")
         else:
             self.config = autoplot
         log(self.log_level,'Client received the following configuration:')
         log(self.log_level,report(self.config))
-        
+
         # Wait until reconstruction starts.
         log(self.log_level,'Client waiting for reconstruction to start...')
         ready = self.client.get_now("'iter_info' in Ptycho.runtime")
-        
-        # requesting fulll runtime 
+
+        # requesting fulll runtime
         log(self.log_level,'Client requesting runtime container')
         self.runtime = Param(self.client.get_now("Ptycho.runtime"))
-        
+
         while not ready:
             time.sleep(.1)
             ready = self.client.get_now("'start' in Ptycho.runtime")
@@ -266,18 +266,18 @@ class PlotClient(object):
 
         # Get the dump file path
         self.cmd_dct["Ptycho.paths.plot_file(Ptycho.runtime)"] = [None, self.runtime, 'plot_file']
-        
+
         # Get info if it's all over
         self.cmd_dct["Ptycho.runtime.get('allstop') is not None"] = [None, self.__dict__, '_stopping']
-        
-        
+
+
     def _request_data(self):
         """
         Request all data to the server (asynchronous).
         """
         for cmd, item in self.cmd_dct.iteritems():
             item[0] = self.client.get(cmd)
-            
+
     def _store_data(self):
         """
         Transfer all data from the client to local attributes.
@@ -302,13 +302,13 @@ class PlotClient(object):
             # logger.info('New data arrived.')
         self.disconnect()
         self._has_stopped = True
-        
+
 class MPLplotter(object):
     """
     Plotting Client for Ptypy, using matplotlib.
     """
     DEFAULT = DEFAULT
-    
+
     def __init__(self, pars=None, probes = None, objects= None, runtime= None, in_thread=False):
         """
         Create a client and attempt to connect to a running reconstruction server.
@@ -318,14 +318,14 @@ class MPLplotter(object):
         self.pr = probes
         self.ob = objects
         if runtime is None:
-            self.runtime = Param() 
+            self.runtime = Param()
             self.runtime.iter_info = []
         else:
             self.runtime = runtime
         self._set_autolayout(pars)
         self.pr_plot=Param()
         self.ob_plot=Param()
-        
+
     def _set_autolayout(self,pars):
         self.p = self.DEFAULT.copy(depth=4)
         plt.interactive(self.p.interactive)
@@ -335,10 +335,10 @@ class MPLplotter(object):
                     pars = TEMPLATES[pars]
                 except KeyError:
                     log(self.log_level,'Plotting template "\%s" not found, using default settings' % str(pars))
-            
+
             if hasattr(pars,'items'):
                 self.p.update(pars,in_place_depth=4)
-            
+
     def update_plot_layout(self, plot_template=None):
         """
         Generate the plot layout.
@@ -366,7 +366,7 @@ class MPLplotter(object):
                 sh = simplify_aspect_ratios(sh)
             if plot.use_colorbar:
                 sh=(sh[0],int(sh[1]*1.15))
-                
+
             layers = plot.layers
             if layers is None:
                 layers = cont.data.shape[0]
@@ -377,13 +377,13 @@ class MPLplotter(object):
             num_shape = [len(layers)*len(plot.auto_display)+int(plot.local_error), sh]
             num_shape_list.append(num_shape)
             self.ob_plot[key]=plot
-            
+
         # per default we will use the a frame similar to the last object frame for plotting
         if np.array(self.p.plot_error).any():
             self.error_axes_index = len(num_shape_list)-1
             self.error_frame = num_shape_list[-1][0]
             num_shape_list[-1][0] += 1  # add a frame
-        
+
         for key in sorted(self.pr.keys()):
             cont = self.pr[key]
             # attach a plotting dict from above
@@ -395,7 +395,7 @@ class MPLplotter(object):
                 sh = simplify_aspect_ratios(sh)
             if plot.use_colorbar:
                 sh=(sh[0],int(sh[1]*1.2))
-                
+
             layers = plot.layers
             if layers is None:
                 layers = cont.data.shape[0]
@@ -406,7 +406,7 @@ class MPLplotter(object):
             num_shape = [len(layers)*len(plot.auto_display), sh]
             num_shape_list.append(num_shape)
             self.pr_plot[key]=plot
-            
+
         axes_list, plot_fig, gs = self.create_plot_from_tile_list(1, num_shape_list, self.p.figsize)
         sy, sx = gs.get_geometry()
         w, h, l, r, b, t = self.p.gridspecpars
@@ -414,7 +414,7 @@ class MPLplotter(object):
         self.draw()
         plot_fig.hold(False)
         for axes in axes_list:
-            for pl in axes: 
+            for pl in axes:
                 pl.hold(False)
                 plt.setp(pl.get_xticklabels(), fontsize=8)
                 plt.setp(pl.get_yticklabels(), fontsize=8)
@@ -439,7 +439,7 @@ class MPLplotter(object):
                     Horizontal = True
                 else:
                     Horizontal = False
-                     
+
                 if Horizontal:
                     N = N_h
                     a = size[1] % sh[1]
@@ -450,14 +450,14 @@ class MPLplotter(object):
                     a = size[0] % sh[0]
                     coords = [(int(ii*sh[0])+a, size[1]) for ii in range(N)]
                     size[1] += sh[1]
-                    
+
                 num -= N
                 coords_tl += coords
                 coords_tl.sort()
-                
+
             return coords_tl, size
-        
-        
+
+
         allcoords = []
         fig_aspect_ratio = figsize[0]/float(figsize[1])
         size = [0, 0]
@@ -474,21 +474,21 @@ class MPLplotter(object):
                 M=0
                 last_sh = sh
                 allcoords+=coords
-            else:    
+            else:
                 M+=N
                 continue
-        
+
         coords_list =[]
         M=0
         for ii,(N,sh) in enumerate(num_shape_list):
             coords_list.append(allcoords[M:M+N])
             M+=N
-        
+
         from matplotlib import gridspec
         gs = gridspec.GridSpec(size[0], size[1])
         fig = plt.figure(fignum)
         fig.clf()
-        
+
         mag = min(figsize[0]/float(size[1]), figsize[1]/float(size[0]))
         figsize = (size[1]*mag, size[0]*mag)
         fig.set_size_inches(figsize, forward=True)
@@ -497,7 +497,7 @@ class MPLplotter(object):
         axes_list=[]
         for (N, sh), coords in zip(num_shape_list, coords_list):
             axes_list.append([fig.add_subplot(gs[co[0]+frame//2:co[0]+frame//2+sh[0], co[1]+frame//2:co[1]+frame//2+sh[1]]) for co in coords])
-    
+
         return axes_list, fig, gs
 
     def draw(self):
@@ -506,7 +506,7 @@ class MPLplotter(object):
             time.sleep(0.1)
         else:
             plt.show()
-            
+
     def plot_error(self):
         if np.array(self.p.plot_error).any():
             try:
@@ -529,7 +529,7 @@ class MPLplotter(object):
                 plt.setp(axis.get_yticklabels(), fontsize=10)
             except:
                 pass
-            
+
     def plot_storage(self, storage, plot_pars, title="", typ='obj'):
         # get plotting paramters
         pp = plot_pars
@@ -541,14 +541,14 @@ class MPLplotter(object):
             x, y = np.indices(sh)-np.reshape(np.array(sh)//2, (len(sh),)+len(sh)*(1,))
             mask = (np.sqrt(x**2+y**2) < pp.mask*min(sh)/2.)
             pp.mask = mask
-        
+
         # cropping
         crop = np.array(sh)*np.array(pp.crop)//2
         data = storage.data
         #crop = -crop.astype(int)
         #data = crop_pad(storage.data, crop, axes=[-2, -1])
         #plot_mask = crop_pad(mask, crop, axes=[-2, -1])
-        
+
         pty_axes = pp.get('pty_axes',[])
         for layer in pp.layers:
             for ind,channel in enumerate(pp.auto_display):
@@ -568,10 +568,10 @@ class MPLplotter(object):
                     ptya._resize_cid = self.plot_fig.canvas.mpl_connect('resize_event', ptya._after_resize_event)
                     pty_axes.append(ptya)
                 # get the layer
-                ptya.set_data(data[layer])               
+                ptya.set_data(data[layer])
                 ptya.ax.set_ylim(crop[0],sh[0]-crop[0])
                 ptya.ax.set_xlim(crop[1],sh[1]-crop[1])
-                #ptya._update_colorbar() 
+                #ptya._update_colorbar()
                 if channel == 'c':
                     if typ == 'obj':
                         mm = np.mean(np.abs(data[layer]*plot_mask)**2)
@@ -581,13 +581,13 @@ class MPLplotter(object):
                         info = 'P=%1.1e' % mm
                     ttl = '%s#%d (C)\n%s' % (title, layer, info)
                 elif channel == 'a':
-                    ttl = '%s#%d (a)' % (title, layer) 
+                    ttl = '%s#%d (a)' % (title, layer)
                 else:
-                    ttl = '%s#%d (p)' % (title, layer) 
+                    ttl = '%s#%d (p)' % (title, layer)
                 ptya.ax.set_title(ttl, size=12)
-            
+
         pp.pty_axes = pty_axes
-    
+
     def save(self, pattern, count=0):
         try:
             r = self.runtime.copy(depth=1)
@@ -605,7 +605,7 @@ class MPLplotter(object):
         with open(self._framefile,mode) as f:
             f.write(plot_file+'\n')
             f.close()
-        
+
     def plot_all(self, blocking = False):
         for key, storage in self.pr.items():
             #print key
@@ -619,27 +619,27 @@ class MPLplotter(object):
         self.draw()
 
 class MPLClient(MPLplotter):
-    
+
     DEFAULT = DEFAULT
-    
+
     def __init__(self, client_pars=None, autoplot_pars=None,\
                  layout_pars=None, in_thread=False, is_slave=False):
-        
+
         from ptypy.core.ptycho import DEFAULT_autoplot
         self.config = DEFAULT_autoplot.copy(depth=3)
         self.config.update(autoplot_pars)
         # set a home directory
         self.config.home = self.config.get('home',self.DEFAULT.get('home'))
-        
-        layout = self.config.get('layout',layout_pars) 
-        
+
+        layout = self.config.get('layout',layout_pars)
+
         super(MPLClient,self).__init__(pars = layout, in_thread = in_thread)
-            
+
         self.pc = PlotClient(client_pars,in_thread=in_thread)
         self.pc.start()
         self._framefile= None
         self.is_slave = is_slave
-        
+
     def loop_plot(self):
         """
         Plot forever.
@@ -658,7 +658,7 @@ class MPLClient(MPLplotter):
                     self._set_autolayout(self.config.layout)
                     self.update_plot_layout(self.config.layout)
                     initialized=True
-                    
+
                 self.plot_all()
                 self.draw()
                 count+=1
@@ -669,9 +669,9 @@ class MPLClient(MPLplotter):
             elif status == self.pc.STOPPED:
                 break
             pause(.1)
-        
+
         if self.config.get('make_movie'):
-            
+
             from ptypy import utils as u
             u.png2mpg(self._framefile, RemoveImages=True)
 
@@ -688,7 +688,7 @@ def spawn_MPLClient(client_pars, autoplot_pars):
     finally:
         print 'Stopping plot client...'
         mplc.pc.stop()
-        
+
 if __name__ =='__main__':
     from ptypy.resources import moon_pr, flower_obj
     moon = moon_pr(256)

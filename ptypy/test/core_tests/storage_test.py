@@ -10,6 +10,6 @@ class StorageTest(unittest.TestCase):
     def test_storage(self):
         cont = Container()
         a = Storage(cont)
-        
+
 if __name__ == '__main__':
     unittest.main()
