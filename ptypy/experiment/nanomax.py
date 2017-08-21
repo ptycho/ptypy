@@ -5,6 +5,7 @@ to frequent change.  """
 import ptypy
 from ptypy.core.data import PtyScan
 import ptypy.utils as u
+
 import h5py
 import numpy as np
 import time
@@ -130,7 +131,8 @@ class NanomaxTmpScan(PtyScan):
                 data = hf.get(NEXUS_DATA_PATH)
                 shape = np.asarray(data[0]).shape
                 mask = np.ones(shape)
-        print "loaded mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+        logger.info("loaded mask, %u x %u, sum %u" %
+                    (mask.shape + (np.sum(mask),)))
         return mask
 
 
@@ -169,7 +171,9 @@ class NanomaxTmpScanOnline(NanomaxTmpScan):
         # the scan is done.
         frames_accessible = min(frames_done - start, frames)
         end_of_scan = int(start + frames_accessible >= frames_total)
-        print "****** %u/%u done, %u available, requesting %u frames starting at %u, eos=%s" % (frames_done, frames_total, frames_accessible, frames, start, str(end_of_scan))
+        self.debug("%u/%u done, %u available, requesting %u frames starting at %u, eos=%s" %
+                   (frames_done, frames_total, frames_accessible, frames,
+                    start, str(end_of_scan)))
 
         return frames_accessible, end_of_scan
 
@@ -275,13 +279,13 @@ class NanomaxFlyscanWeek48(PtyScan):
         while not done:
             try:
                 with h5py.File(path + pattern % (scannr, line), 'r') as hf:
-                    print 'loading data: ' + pattern % (scannr, line)
+                    logger.info('loading data: ' + pattern % (scannr, line))
                     dataset = hf.get('entry_0000/measurement/Pilatus/data')
                     data.append(np.array(dataset))
                 line += 1
             except IOError:
                 done = True
-        print "loaded %d lines of Pilatus data" % len(data)
+        logger.info("loaded %d lines of Pilatus data" % len(data))
         data = np.concatenate(data, axis=0)
 
         # pick out the requested indices
@@ -302,14 +306,16 @@ class NanomaxFlyscanWeek48(PtyScan):
 
         if self.info.recipe.maskfile:
             raise NotImplementedError('No masks for this scan type yet!')
-            print "loaded mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+            logger.info("loaded mask, %u x %u, sum %u" %
+                        (mask.shape + (np.sum(mask),)))
         else:
             filename = self.info.recipe.dataPath + self.info.recipe.datafile
             with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
                 data = hf.get('entry_0000/measurement/Pilatus/data')
                 shape = np.asarray(data[0]).shape
                 mask = np.ones(shape)
-            print "created dummy mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+            logger.info("created dummy mask, %u x %u, sum %u" %
+                        (mask.shape + (np.sum(mask),)))
         return mask
 
 
@@ -342,11 +348,12 @@ class NanomaxStepscanWeek48(PtyScan):
         scannr = self.info.recipe.scannr
         path = self.info.recipe.pilatusPath
         filepattern = self.info.recipe.pilatusPattern
-        if not (path[-1] == '/'): path += '/'
+        if not (path[-1] == '/'):
+            path += '/'
 
         data = []
         for im in range(self.info.positions_scan.shape[0]):
-            with h5py.File(path + filepattern%(scannr, im), 'r') as hf:
+            with h5py.File(path + filepattern % (scannr, im), 'r') as hf:
                 dataset = hf.get('entry_0000/measurement/Pilatus/data')
                 data.append(np.array(dataset)[0])
 
@@ -365,19 +372,22 @@ class NanomaxStepscanWeek48(PtyScan):
         scannr = self.info.recipe.scannr
         path = self.info.recipe.pilatusPath
         pattern = self.info.recipe.pilatusPattern
-        if not (path[-1] == '/'): path += '/'
+        if not (path[-1] == '/'):
+            path += '/'
 
         if self.info.recipe.maskfile:
             with h5py.File(self.info.recipe.maskfile, 'r') as hf:
                 mask = np.array(hf.get('mask'))
-            print "loaded mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+            logger.info("loaded mask, %u x %u, sum %u" %
+                        (mask.shape + (np.sum(mask),)))
         else:
             filename = self.info.recipe.dataPath + self.info.recipe.datafile
             with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
                 data = hf.get('entry_0000/measurement/Pilatus/data')
                 shape = np.asarray(data[0]).shape
                 mask = np.ones(shape)
-            print "created dummy mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+            logger.info("created dummy mask, %u x %u, sum %u" %
+                        (mask.shape + (np.sum(mask),)))
         return mask
 
 # new recipe for this one too
@@ -392,6 +402,7 @@ RECIPE.scannr = None
 RECIPE.xMotorFlipped = None
 RECIPE.yMotorFlipped = None
 RECIPE.xMotorAngle = 0.0
+
 
 class NanomaxStepscanMay2017(PtyScan):
     """
@@ -412,17 +423,19 @@ class NanomaxStepscanMay2017(PtyScan):
         xFlipper, yFlipper = 1, 1
         if self.info.recipe.xMotorFlipped:
             xFlipper = -1
-            print "*** note: x motor is specified as flipped"
+            logger.warning("note: x motor is specified as flipped")
         if self.info.recipe.yMotorFlipped:
             yFlipper = -1
-            print "*** note: y motor is specified as flipped"
+            logger.warning("note: y motor is specified as flipped")
 
         # if the x axis is tilted, take that into account.
         xCosFactor = np.cos(self.info.recipe.xMotorAngle / 180.0 * np.pi)
-    	print "**** xCosFactor = %f" % xCosFactor
+        logger.info(
+            "x motor angle results in multiplication by %.2f" % xCosFactor)
 
         with h5py.File(fileName, 'r') as hf:
-            x = xFlipper * np.array(hf.get(entry + '/measurement/samx')) * xCosFactor
+            x = xFlipper * \
+                np.array(hf.get(entry + '/measurement/samx')) * xCosFactor
             y = yFlipper * np.array(hf.get(entry + '/measurement/samy'))
 
         positions = -np.vstack((y, x)).T * 1e-6
@@ -434,11 +447,12 @@ class NanomaxStepscanMay2017(PtyScan):
         scannr = self.info.recipe.scannr
         path = self.info.recipe.pilatusPath
         filepattern = self.info.recipe.pilatusPattern
-        if not (path[-1] == '/'): path += '/'
+        if not (path[-1] == '/'):
+            path += '/'
 
         data = []
         for im in range(self.info.positions_scan.shape[0]):
-            with h5py.File(path + filepattern%(scannr, im), 'r') as hf:
+            with h5py.File(path + filepattern % (scannr, im), 'r') as hf:
                 dataset = hf.get(self.info.recipe.hdfPath)
                 data.append(np.array(dataset)[0])
 
@@ -457,7 +471,8 @@ class NanomaxStepscanMay2017(PtyScan):
         scannr = self.info.recipe.scannr
         path = self.info.recipe.pilatusPath
         pattern = self.info.recipe.pilatusPattern
-        if not (path[-1] == '/'): path += '/'
+        if not (path[-1] == '/'):
+            path += '/'
 
         filename = self.info.recipe.dataPath + self.info.recipe.datafile
         with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
@@ -465,14 +480,17 @@ class NanomaxStepscanMay2017(PtyScan):
             shape = np.asarray(data[0]).shape
             mask = np.ones(shape)
             mask[np.where(data[0] == -2)] = 0
-        print "took account of the pilatus mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+        logger.info("took account of the pilatus mask, %u x %u, sum %u" %
+                    (mask.shape + (np.sum(mask),)))
 
         if self.info.recipe.maskfile:
             with h5py.File(self.info.recipe.maskfile, 'r') as hf:
                 mask2 = np.array(hf.get('mask'))
-            print "loaded additional mask, %u x %u, sum %u" % (mask2.shape + (np.sum(mask2),))
+            logger.info("loaded additional mask, %u x %u, sum %u" %
+                        (mask2.shape + (np.sum(mask2),)))
             mask = mask * mask2
-            print "total mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+            logger.info("total mask, %u x %u, sum %u" %
+                        (mask.shape + (np.sum(mask),)))
 
         return mask
 
@@ -490,6 +508,7 @@ RECIPE.scannr = None
 RECIPE.xMotorFlipped = None
 RECIPE.yMotorFlipped = None
 RECIPE.xMotorAngle = 0.0
+
 
 class NanomaxFlyscanJune2017(PtyScan):
     """
@@ -528,15 +547,16 @@ class NanomaxFlyscanJune2017(PtyScan):
 
         if self.info.recipe.xMotorFlipped:
             x *= -1
-            print "*** note: x motor is specified as flipped"
+            logger.warning("note: x motor is specified as flipped")
         if self.info.recipe.yMotorFlipped:
             y *= -1
-            print "*** note: y motor is specified as flipped"
+            logger.warning("note: y motor is specified as flipped")
 
         # if the x axis is tilted, take that into account.
         xCosFactor = np.cos(self.info.recipe.xMotorAngle / 180.0 * np.pi)
         x *= xCosFactor
-    	print "**** xCosFactor = %f" % xCosFactor
+        logger.info(
+            "x motor angle results in multiplication by %.2f" % xCosFactor)
 
         positions = - np.vstack((y, x)).T * 1e-6
         return positions
@@ -557,24 +577,27 @@ class NanomaxFlyscanJune2017(PtyScan):
         while not done:
             try:
                 with h5py.File(path + pattern % (scannr, line), 'r') as hf:
-                    print 'loading data: ' + pattern % (scannr, line)
+                    logger.info('loading data: ' + pattern % (scannr, line))
                     dataset = hf.get(self.info.recipe.hdfPath)
                     linedata = np.array(dataset)
                 if normfile:
                     dtype = linedata.dtype
                     linedata = np.array(linedata, dtype=float)
                     with h5py.File(path + normfile % (scannr, line), 'r') as hf:
-                        print 'loading normalization data: ' + normfile % (scannr, line)
-                        dataset = hf.get(self.info.recipe.detNormalizationHdfPath)
+                        logger.info('loading normalization data: ' +
+                                    normfile % (scannr, line))
+                        dataset = hf.get(
+                            self.info.recipe.detNormalizationHdfPath)
                         normdata = np.array(dataset)
                         if not normind:
                             shape = linedata[0].shape
                             normind = [0, shape[0], 0, shape[1]]
-                        norm = np.mean(normdata[:, normind[0]:normind[1], normind[2]:normind[3]], axis=(1,2))
+                        norm = np.mean(normdata[:, normind[0]:normind[
+                                       1], normind[2]:normind[3]], axis=(1, 2))
                         if line == 0:
                             norm0 = norm[0]
-                        norm /= norm0 # to avoid dividing integers by huge numbers
-                        print "normalizing line by: ", norm
+                        norm /= norm0  # to avoid dividing integers by huge numbers
+                        logger.debug("normalizing line by: %s" % str(norm))
                         for i in range(len(norm)):
                             linedata[i, :, :] = linedata[i] / norm[i]
                     linedata = np.array(np.round(linedata), dtype=dtype)
@@ -583,7 +606,7 @@ class NanomaxFlyscanJune2017(PtyScan):
                 line += 1
             except IOError:
                 done = True
-        print "loaded %d lines of Pilatus data" % len(data)
+        logger.info("loaded %d lines of Pilatus data" % len(data))
         data = np.concatenate(data, axis=0)
 
         # pick out the requested indices
@@ -601,7 +624,8 @@ class NanomaxFlyscanJune2017(PtyScan):
         scannr = self.info.recipe.scannr
         path = self.info.recipe.detFilePath
         pattern = self.info.recipe.detFilePattern
-        if not (path[-1] == '/'): path += '/'
+        if not (path[-1] == '/'):
+            path += '/'
 
         filename = self.info.recipe.dataPath + self.info.recipe.datafile
         with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
@@ -609,13 +633,16 @@ class NanomaxFlyscanJune2017(PtyScan):
             shape = np.asarray(data[0]).shape
             mask = np.ones(shape)
             mask[np.where(data[0] == -2)] = 0
-        print "took account of the pilatus mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+        logger.info("took account of the pilatus mask, %u x %u, sum %u" %
+                    (mask.shape + (np.sum(mask),)))
 
         if self.info.recipe.maskfile:
             with h5py.File(self.info.recipe.maskfile, 'r') as hf:
                 mask2 = np.array(hf.get('mask'))
-            print "loaded additional mask, %u x %u, sum %u" % (mask2.shape + (np.sum(mask2),))
+            logger.info("loaded additional mask, %u x %u, sum %u" %
+                        (mask2.shape + (np.sum(mask2),)))
             mask = mask * mask2
-            print "total mask, %u x %u, sum %u" % (mask.shape + (np.sum(mask),))
+            logger.info("total mask, %u x %u, sum %u" %
+                        (mask.shape + (np.sum(mask),)))
 
         return mask
