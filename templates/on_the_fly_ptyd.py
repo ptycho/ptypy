@@ -2,8 +2,8 @@
 This script creates a sample *.ptyd data file using the built-in
 test Scan `ptypy.core.data.MoonFlowerScan`.
 
-Instead of a monolithic file, this process while create data chunks in 
-separate and link to the main .ptyd file. The delay of 3 seconds 
+Instead of a monolithic file, this process while create data chunks in
+separate and link to the main .ptyd file. The delay of 3 seconds
 corresponds to a 0.3 seconds dwell time.
 
 Tested only as single process.
@@ -23,14 +23,14 @@ data.shape = 256
 data.num_frames = 200
 data.min_frames = 10
 data.save = 'link'
-data.label=None 
+data.label=None
 data.psize=172e-6
 data.energy= 6.2
 data.center='fftshift'
 data.distance = 7
-data.auto_center = None 
-data.rebin = None  
-data.orientation = None  
+data.auto_center = None
+data.rebin = None
+data.orientation = None
 
 # create PtyScan instance
 MF = ptypy.core.data.MoonFlowerScan(data)

@@ -25,10 +25,10 @@ else:
     from ptysim_utils import *
     from ..core.data import PtyScan
     from ..core.ptycho import Ptycho
-    
+
 DEFAULT = u.Param(
     pos_noise = 1e-10,  # (float) unformly distributed noise in xy experimental positions
-    pos_scale = 0,      # (float, list) amplifier for noise. Will be extended to match number of positions. Maybe used to only put nois on individual points  
+    pos_scale = 0,      # (float, list) amplifier for noise. Will be extended to match number of positions. Maybe used to only put nois on individual points
     pos_drift = 0,      # (float, list) drift or offset paramter. Noise independent drift. Will be extended like pos_scale.
     detector = 'PILATUS_300K',
     frame_size = None ,   # (None, or float, 2-tuple) final frame size when saving if None, no cropping/padding happens
@@ -37,34 +37,36 @@ DEFAULT = u.Param(
 )
 
 __all__ = ['SimScan','simulate_basic_with_pods']
-
-def simulate_basic_with_pods(ptypy_pars_tree=None,sim_pars=None,save=False):
+import warnings
+warnings.simplefilter('always', DeprecationWarning)
+def simulate_basic_with_pods(ptypy_pars_tree=None,sim_pars=None,save=False):# pragma: no cover
     """
     Basic Simulation
-    
+
     DEPRECATED - cannot produce the right .ptyd format
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     p = DEFAULT.copy()
     ppt = ptypy_pars_tree
     if ppt is not None:
         p.update(ppt.get('simulation'))
     if sim_pars is not None:
         p.update(sim_pars)
-        
+
     P = Ptycho(ppt,level=1)
 
     # make a data source that has is basicaly empty
     P.datasource = make_sim_datasource(P.modelm,p.pos_drift,p.pos_scale,p.pos_noise)
-    
+
     P.modelm.new_data()
     u.parallel.barrier()
     P.print_stats()
-    
+
     # Propagate and apply psf for simulationg partial coherence (if not done so with modes)
     for name,pod in P.pods.iteritems():
         if not pod.active: continue
         pod.diff += conv(u.abs2(pod.fw(pod.exit)),p.psf)
-    
+
     # Filter storage data similar to a detector.
     if p.detector is not None:
         Det = Detector(p.detector)
@@ -78,16 +80,16 @@ def simulate_basic_with_pods(ptypy_pars_tree=None,sim_pars=None,save=False):
                 dat = u.crop_pad(dat,hplanes,axes=[-2,-1]).astype(dat.dtype)
                 mask = u.crop_pad(mask,hplanes,axes=[-2,-1]).astype(mask.dtype)
             Sdiff.fill(dat)
-            Smask.fill(mask) 
+            Smask.fill(mask)
     else:
-        save_dtype = None        
-    
+        save_dtype = None
+
     if save:
         P.modelm.collect_diff_mask_meta(save=save,dtype=save_dtype)
-           
+
     u.parallel.barrier()
     return P
-    
+
 
 
 class SimScan(data.PtyScan):
@@ -95,62 +97,62 @@ class SimScan(data.PtyScan):
     Test Ptyscan class producing a romantic ptychographic dataset of a moon
     illuminating flowers.
     """
-    
+
     def __init__(self, pars = None,scan_pars=None,**kwargs):
 
         # Initialize parent class
         super(SimScan, self).__init__(pars, **kwargs)
-        
-       
+
+
         # we will use ptypy to figure out everything
         pp = u.Param()
-        
+
         # we don't want a server
         pp.interaction = None
-        
+
         # be as silent as possible
         pp.verbose_level = 2
-       
+
         # get scan parameters
         if scan_pars is None:
             pp.model = scan_DEFAULT.copy()
         else:
             pp.model = scan_pars.copy()
-            
+
         # note that shape cannot be None
         if self.info.shape is None:
             self.info.shape = pp.model.geometry.shape
-        
+
         rinfo = DEFAULT.copy()
         rinfo.update(self.info.recipe)
         self.rinfo = rinfo
         self.info.recipe = rinfo
-        
+
         # update changes specified in recipe
         pp.model.update(rinfo)
 
         # Create a Scan that will deliver empty diffraction patterns
         # FIXME: This may be obsolete if the dry_run switch works.
-        
+
         pp.scans=u.Param()
         pp.scans.sim = u.Param()
         pp.scans.sim.data=u.Param()
         pp.scans.sim.data.source ='empty'
         pp.scans.sim.data.shape = pp.model.geometry.shape
         pp.scans.sim.data.auto_center = False
-        
+
         # Now we let Ptycho sort out things
         P=Ptycho(pp,level=2)
         P.modelm.new_data()
-        
+
         u.parallel.barrier()
-        
+
         #############################################################
         # Place here additional manipulation on position and sample #
-        
+
         P = self.manipulate_ptycho(P)
-        #############################################################        
-        
+        #############################################################
+
         # Simulate diffraction signal
         for name,pod in P.pods.iteritems():
             if not pod.active: continue
@@ -164,17 +166,17 @@ class SimScan(data.PtyScan):
         else:
             save_dtype = None
             acquire = lambda x: x
-                    
+
         # create dictionaries for 'raw' data
         self.diff = {}
         self.mask = {}
         self.pos = {}
-        
-        
+
+
         ID,Sdiff = P.diff.S.items()[0]
         for view in Sdiff.views:
             ind = view.layer
-            dat, mask = acquire(view.data) 
+            dat, mask = acquire(view.data)
             view.data = dat
             view.mask = mask
             pos = view.pod.ob_view.physcoord
@@ -184,23 +186,23 @@ class SimScan(data.PtyScan):
             self.pos[ind] = pos
 
         self.P=P
-        
+
         # Create 'raw' ressource buffers. We will let the master node keep them
         # as memary may be short (Not that this is the most efficient type)
         self.diff = u.parallel.gather_dict(self.diff)
         self.mask = u.parallel.gather_dict(self.mask)
         self.pos = u.parallel.gather_dict(self.pos)
-        
+
         # we have to avoid loading in parallel now
         self.load_in_parallel = False
-        
+
         # Fix the number of available frames
         self.num_frames = np.min(len(self.diff),self.num_frames)
-        
+
         # RESET THE loadmanager
         u.parallel.loadmanager.reset()
-        
-    
+
+
     def load(self,indices):
         """
         Load data, weights and positions from internal dictionarys
@@ -213,21 +215,21 @@ class SimScan(data.PtyScan):
             pos[ind] = self.pos[ind]
             weight[ind] = self.mask[ind]
         return raw, pos, weight
-      
+
     def manipulate_ptycho(self, ptycho):
         """
-        Overwrite in child class for inline manipulation 
+        Overwrite in child class for inline manipulation
         of the ptycho instance that is created by the Simulation
         """
         ptycho.print_stats()
-        
+
         return ptycho
-    
+
 if __name__ == "__main__":
     s = scan_DEFAULT.copy()
     s.xy.scan_type = "round_roi"                # (25) None,'round', 'raster', 'round_roi','custom'
     s.xy.dr = 1e-6                             # (26) round,round_roi :width of shell
-    s.xy.nr = 10                                # (27) round : number of intervals (# of shells - 1) 
+    s.xy.nr = 10                                # (27) round : number of intervals (# of shells - 1)
     s.xy.lx = 5e-6                            # (29) round_roi: Width of ROI
     s.xy.ly = 5e-6                            # (30) round_roi: Height of ROI
     shape = 256

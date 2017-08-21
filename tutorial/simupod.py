@@ -1,7 +1,7 @@
 # In the :ref:`ptypyclasses` we have learned to deal with the
 # basic storage-and-access classes on small toy arrays.
 
-# In this tutorial we will learn how to create :any:`POD` and 
+# In this tutorial we will learn how to create :any:`POD` and
 # :any:`Geo` instances to imitate a ptychography experiment
 # and to use larger arrays.
 
@@ -24,7 +24,7 @@ scriptname = sys.argv[0].split('.')[0]
 
 # We create a managing top-level class instance. We will not use the
 # the :any:`Ptycho` class for now, as its rich set of methods may be
-# a bit overwhelming to start with. Instead we take a plain 
+# a bit overwhelming to start with. Instead we take a plain
 # :py:class:`~ptypy.core.classes.Base` instance.
 P = Base()
 P.CType = np.complex128
@@ -47,9 +47,9 @@ G = geometry.Geo(owner=P, pars=g)
 
 # The Geo instance ``G`` has done a lot already at this moment. For
 # example, we find forward and backward propagators at ``G.propagator.fw``
-# and ``G.propagator.bw``. It has also calculated the appropriate 
+# and ``G.propagator.bw``. It has also calculated the appropriate
 # pixel size in the sample plane (aka resolution),
-print G.resolution 
+print G.resolution
 
 # which sets the shifting frame to be of the following size:
 fsize = G.shape * G.resolution
@@ -58,20 +58,20 @@ print "%.2fx%.2fmm" % tuple(fsize*1e3)
 # Create probing illumination
 # ---------------------------
 
-# Next, we need to create a probing illumination. 
+# Next, we need to create a probing illumination.
 # We start with a suited container that we call *probe*
 P.probe = Container(P, 'Cprobe', data_type='complex')
 
-# For convenience, there is a test probing illumination in |ptypy|'s 
+# For convenience, there is a test probing illumination in |ptypy|'s
 # resources.
 from ptypy.resources import moon_pr
 pr = -moon_pr(G.shape)
 pr = P.probe.new_storage(data=pr, psize=G.resolution)
 fig = u.plot_storage(pr, 0)
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
-# Ptypy's default testing illumination, an image of the moon. 
+# Ptypy's default testing illumination, an image of the moon.
 
-# Of course, we could have also used the coordinate grids 
+# Of course, we could have also used the coordinate grids
 # from the propagator to model a probe,
 y, x = G.propagator.grids_sam
 apert = u.smooth_step(fsize[0]/5-np.sqrt(x**2+y**2), 1e-6)
@@ -87,7 +87,7 @@ apert = u.smooth_step(fsize[0]/5-np.abs(x), 3e-5)*u.smooth_step(fsize[1]/5-np.ab
 pr3.fill(apert)
 fig = u.plot_storage(pr3, 2)
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
-# Square test illumination. 
+# Square test illumination.
 
 # In order to put some physics in the illumination we set the number of
 # photons to 1 billion
@@ -110,9 +110,9 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 
 # We use the :py:mod:`ptypy.core.xy` module to create a scan pattern.
 pos = u.Param()
-pos.model = "round"                
-pos.spacing = fsize[0]/8                
-pos.steps = None        
+pos.model = "round"
+pos.spacing = fsize[0]/8
+pos.steps = None
 pos.extent = fsize*1.5
 from ptypy.core import xy
 positions = xy.from_pars(pos)
@@ -122,7 +122,7 @@ ax.plot(positions[:, 1], positions[:, 0], 'o-')
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # Created scan pattern.
 
-# Next, we need to model a sample through an object transmisson function. 
+# Next, we need to model a sample through an object transmisson function.
 # We start of with a suited container which we call *obj*.
 P.obj = Container(P, 'Cobj', data_type='complex')
 
@@ -142,7 +142,7 @@ for pos in positions:
     r.coord = pos
     V = View(P.obj, None, r)
 
-# We let the Storages in ``P.obj`` reformat in order to 
+# We let the Storages in ``P.obj`` reformat in order to
 # include all Views. Conveniently, this can be initiated from the top
 # with Container.\ :py:meth:`~ptypy.core.classes.Container.reformat`
 P.obj.reformat()
@@ -159,15 +159,15 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # Creating additional Views and the PODs
 # --------------------------------------
 
-# A single coherent propagation in |ptypy| is represented by 
+# A single coherent propagation in |ptypy| is represented by
 # an instance of the :py:class:`~ptypy.core.classes.POD` class.
 print POD.__doc__
 print POD.__init__.__doc__
 
-# For creating a single POD we need a 
+# For creating a single POD we need a
 # :py:class:`~ptypy.core.classes.View` to *probe*, *object*,
-# *exit* wave and *diff*\ raction containers as well as the :any:`Geo` 
-# class instance which represents the experimental setup. 
+# *exit* wave and *diff*\ raction containers as well as the :any:`Geo`
+# class instance which represents the experimental setup.
 
 # First we create the missing :py:class:`~ptypy.core.classes.Container`'s.
 P.exit = Container(P, 'Cexit', data_type='complex')
@@ -186,15 +186,15 @@ probe_ar.active = True
 probe_ar.storageID = pr.ID
 prview = View(P.probe, None, probe_ar)
 
-# We construct the exit wave View. This construction is shorter as we only 
+# We construct the exit wave View. This construction is shorter as we only
 # change a few bits in the access rule.
 exit_ar = probe_ar.copy()
 exit_ar.layer = 0
 exit_ar.active = True
 exview = View(P.exit, None, exit_ar)
 
-# We construct diffraction and mask Views. Even shorter is the 
-# construction of the mask View as, for the mask, we are 
+# We construct diffraction and mask Views. Even shorter is the
+# construction of the mask View as, for the mask, we are
 # essentially using the same access as for the diffraction data.
 diff_ar = probe_ar.copy()
 diff_ar.layer = 0
@@ -210,13 +210,13 @@ views = {'probe': prview, 'obj': obview, 'exit': exview, 'diff': diview, 'mask':
 pod = POD(P, ID=None, views=views, geometry=G)
 pods.append(pod)
 
-# The :any:`POD` is the most important class in |ptypy|. Its instances 
+# The :any:`POD` is the most important class in |ptypy|. Its instances
 # are used to write the reconstruction algorithms using
 # its attributes as local references. For example we can create and store an exit
 # wave in the following convenient fashion:
 pod.exit = pod.probe * pod.object
 
-# The result of the calculation above is stored in the appropriate 
+# The result of the calculation above is stored in the appropriate
 # storage of ``P.exit``.
 # Therefore we can use this command to plot the result.
 exit_storage = P.exit.storages.values()[0]
@@ -232,8 +232,8 @@ diff_storage = P.diff.storages.values()[0]
 fig = u.plot_storage(diff_storage, 7, modulus='log')
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 
- 
-# Creating the rest of the pods is now straight-forward 
+
+# Creating the rest of the pods is now straight-forward
 # since the data accesses are similar.
 for obview in objviews[1:]:
     # we keep the same probe access
@@ -250,7 +250,7 @@ for obview in objviews[1:]:
     pod = POD(P, ID=None, views=views, geometry=G)
     pods.append(pod)
 
-# We let the storage arrays adapt to the new Views.    
+# We let the storage arrays adapt to the new Views.
 for C in [P.mask, P.exit, P.diff, P.probe]:
     C.reformat()
 
@@ -294,7 +294,7 @@ with open(save_path+'geometry.txt', 'w') as f:
     f.close()
 
 # Next, we save positions and the diffraction images. We don't burden
-# ourselves for now with converting to an image file format such as .tiff 
+# ourselves for now with converting to an image file format such as .tiff
 # or a data format like .hdf5 but instead we use numpy's binary storage
 # format.
 with open(save_path+'positions.txt', 'w') as f:

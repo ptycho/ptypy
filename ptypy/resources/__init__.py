@@ -15,7 +15,7 @@ def flower_obj(shape=None):
         ish = np.array(im.shape[:2])
         d = sh-ish
         im = u.crop_pad(im,d,axes=[0,1],cen=None,fillpar=0.0,filltype='mirror')
-        
+
     return im
 
 def tree_obj(shape=None):
@@ -23,13 +23,13 @@ def tree_obj(shape=None):
     import numpy as np
     from matplotlib.image import imread
 
-    im = 255-imread(treefile).astype(float).mean(-1)
+    im = 1.0-imread(treefile).astype(float).mean(-1)
     if shape is not None:
         sh = u.expect2(shape)
         ish = np.array(im.shape[:2])
         d = sh-ish
         im = u.crop_pad(im,d,axes=[0,1],cen=None,fillpar=0.0,filltype='mirror')
-        
+
     return im
 
 def moon_pr(shape=None):
@@ -42,7 +42,7 @@ def moon_pr(shape=None):
         sh = u.expect2(shape)
         ish = np.array(im.shape[:2]).astype(float)
         im = u.zoom(im,sh/ish)
-        
+
     return im
 
 

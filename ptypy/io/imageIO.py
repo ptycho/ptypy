@@ -9,7 +9,7 @@ import PIL.Image as PIL
 from .. import utils
 from .. import verbose
 
-# Tentative support for 12-bit tiff. Requires libtiff library 
+# Tentative support for 12-bit tiff. Requires libtiff library
 try:
     import libtiff12bit
 except:
@@ -30,7 +30,7 @@ def imread(filename, doglob=None, roi=None):
             ignores wildcards
 
         ... = imread(filename, doglob=None) [default]
-            behaves like doglob=True, except that it returns a list only if filename contains wildcards, 
+            behaves like doglob=True, except that it returns a list only if filename contains wildcards,
             while doglob=True always returns a list, even if there is only one match.
 
         ... = imread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))

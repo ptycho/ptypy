@@ -92,22 +92,22 @@ DEFAULT = u.Param(
 class ModelManager(object):
     """
     Manages ptypy objects creation and update.
-    
+
     The main task of ModelManager is to follow the rules for a given
     reconstruction model and create:
-    
+
      - the probe, object, exit, diff and mask containers
      - the views
-     - the PODs 
-     
+     - the PODs
+
     A ptychographic problem is defined by the combination of one or
     multiple scans. ModelManager uses encapsulate
     scan-specific elements in .scans und .scans_pars
-    
+
     Note
     ----
     This class is densely connected to :any:`Ptycho` the separation
-    in two classes is more history than reason and these classes may get 
+    in two classes is more history than reason and these classes may get
     merged in future releases
     """
     DEFAULT = DEFAULT
@@ -118,26 +118,26 @@ class ModelManager(object):
 
     def __init__(self, ptycho, pars=None, scans=None, **kwargs):
         """
-        
+
         Parameters
         ----------
         ptycho: Ptycho
             The parent Ptycho object
-            
+
         pars : dict or Param
             Input parameters (see :py:attr:`DEFAULT`)
             If None uses defaults
-            
+
         scans : dict or Param
             Scan-specific parameters, Values should be dict Param that
             follow the structure of `pars`.
-            If None, tries in ptycho.p.scans else becomes empty dict  
+            If None, tries in ptycho.p.scans else becomes empty dict
         """
         # Initialize the input parameters
         p = u.Param(self.DEFAULT.copy())
         p.update(pars, in_place_depth=4)
         self.p = p
-        
+
         self.ptycho = ptycho
 
         # Abort if ptycho is None:
@@ -296,7 +296,7 @@ class ModelManager(object):
         """
         Creates a static datasource from parameters in the self.scans dict.
 
-        For any additional file in data.filelist it will create a new entry in 
+        For any additional file in data.filelist it will create a new entry in
         self.scans with generic parameters given by the current model.
         """
         """
@@ -314,7 +314,7 @@ class ModelManager(object):
             #    scan.pars['data_file'] = self.ptycho.paths.get_data_file(
             #        label=label)
             scan.pars['label'] = label
-             
+
         return data.DataSource(self.scans)
 
     def new_data(self):
@@ -330,7 +330,7 @@ class ModelManager(object):
         logger.info('Processing new data.')
         used_scans = []
         not_initialized = []
-        
+
         # For some funny reason the Generator construct used to fail.
         while True:
             dp = self.ptycho.datasource.feed_data()
@@ -338,36 +338,36 @@ class ModelManager(object):
                 break
             """
             A dp (data package) contains the following:
-            
+
             common : dict or Param
-                    Meta information common to all datapoints in the 
+                    Meta information common to all datapoints in the
                     data package. Variable names need to be consistent with
                     those in the rest of ptypy package.
                     (TODO further description)
-                    
+
                     Important info:
                     ------------------------
-                    shape : (tuple or array) 
+                    shape : (tuple or array)
                            expected frame shape
                     label : (string)
                             Script label. This label is matched to the parameter
                             tree, a string signifying to which scan this package
                             belongs to.
-                   
-            
+
+
             iterable : An iterable structure that yields for each iteration
                        a dict with the following fields:
-            
-                        data     : (np.2darray, float) 
-                                    diffraction data 
+
+                        data     : (np.2darray, float)
+                                    diffraction data
                                     In MPI case, data can be None if distributed
                                     to other nodes
-                        mask     : (np.2darray, bool) 
+                        mask     : (np.2darray, bool)
                                     masked out areas in diffraction data array
                         index    : (int)
                                     diffraction datapoint index in scan
                         position : (tuple or array)
-                                    scan position 
+                                    scan position
             """
             meta = dp['common']
             label = meta['ptylabel']
@@ -408,10 +408,10 @@ class ModelManager(object):
                     spectrum = spec(energies)
                 else:
                     spectrum = np.resize(np.asarray(spec), (len(energies), 1))
-                    
+
                 spectrum /= spectrum.sum()
                 scan.spectrum = spectrum
-                
+
                 for ii, fac in enumerate(energies):
                     geoID = geometry.Geo._PREFIX + '%02d' % ii + label
                     g = geometry.Geo(self.ptycho, geoID, pars=geo)
@@ -426,7 +426,7 @@ class ModelManager(object):
                     g.p.spectral = spectrum[ii]
                     # Append the geometry
                     scan.geometries.append(g)
-                    
+
                 # Create a buffer
                 scan.iterable = []
 
@@ -517,7 +517,7 @@ class ModelManager(object):
                     pos = scan.pos_theory[index]
                 else:
                     pos = dct.get('position')  # ,positions_theory[index])
-                
+
                 if pos is None:
                     logger.warning('No position set to scan point %d of scan %s'
                                    % (index, label))
@@ -601,12 +601,12 @@ class ModelManager(object):
                                           len(new_probe_ids),
                                           len(new_object_ids)),
                         extra={'allprocesses': True})
-    
-            # Adjust storages      
+
+            # Adjust storages
             self.ptycho.probe.reformat(True)
             self.ptycho.obj.reformat(True)
             self.ptycho.exit.reformat()
-    
+
             self._initialize_probe(new_probe_ids)
             self._initialize_object(new_object_ids)
             self._initialize_exit(new_pods)
@@ -620,7 +620,7 @@ class ModelManager(object):
             # Pick scanmanagers from scan_label for illumination parameters
             # For now, the scanmanager of the first label is chosen
             scan = self.scans[labels[0]]
-            
+
             # Pick storage from container
             s = self.ptycho.probe.storages.get(pid)
             if s is None:
@@ -630,15 +630,15 @@ class ModelManager(object):
                             % (pid, scan.label))
 
             illu_pars = scan.pars.illumination
-            
+
             if type(illu_pars) is u.Param:
                 # If not a short cut but a Param, modify content from deep copy
-                illu_pars = illu_pars.copy(depth=10) 
+                illu_pars = illu_pars.copy(depth=10)
 
                 # If photon count is None, assign a number from the stats.
                 phot = illu_pars.get('photons')
                 phot_max = scan.diff.max_power
-                
+
                 if phot is None:
                     logger.info(
                         'Found no photon count for probe in parameters.\n'
@@ -650,7 +650,7 @@ class ModelManager(object):
                         'Photon count from input parameters (%.2e) differs '
                         'from statistics (%.2e) by more than a magnitude.'
                         % (phot, phot_max))
-    
+
                 # Quickfix spectral contribution.
                 if (scan.pars.coherence.probe_dispersion
                         not in [None, 'achromatic']):
@@ -658,7 +658,7 @@ class ModelManager(object):
                     illu_pars['photons'] *= s.views[0].pod.geometry.p.spectral
 
             illumination.init_storage(s, illu_pars)
-            
+
             s.reformat()  # Maybe not needed
             s.model_initialized = True
 
@@ -671,7 +671,7 @@ class ModelManager(object):
             # Pick scanmanagers from scan_label for illumination parameters
             # For now, the scanmanager of the first label is chosen
             scan = self.scans[labels[0]]
-            
+
             # Pick storage from container
             s = self.ptycho.obj.storages.get(oid)
             if s is None or s.model_initialized:
@@ -679,13 +679,13 @@ class ModelManager(object):
             else:
                 logger.info('Initializing object storage %s using scan %s.'
                             % (oid, scan.label))
-        
-            sample_pars = scan.pars.sample   
-            
+
+            sample_pars = scan.pars.sample
+
             if type(sample_pars) is u.Param:
                 # Deep copy
-                sample_pars = sample_pars.copy(depth=10)          
-                
+                sample_pars = sample_pars.copy(depth=10)
+
                 # Quickfix spectral contribution.
                 if (scan.pars.coherence.object_dispersion
                         not in [None, 'achromatic']
@@ -694,9 +694,9 @@ class ModelManager(object):
                     logger.info(
                         'Applying spectral distribution input to object fill.')
                     sample_pars['fill'] *= s.views[0].pod.geometry.p.spectral
-            
+
             sample.init_storage(s,sample_pars)
-            
+
             """"
             if sample_pars.get('source') == 'diffraction':
                 logger.info('STXM initialization using diffraction data')
@@ -725,11 +725,11 @@ class ModelManager(object):
             if not pod.active:
                 continue
             pod.exit = pod.probe * pod.object
-        
+
     def _create_pods(self, new_scans):
         """
         Create all pods associated with the scan labels in 'scans'.
-        
+
         Return the list of new pods, probe and object ids (to allow for
         initialization).
         """
@@ -757,16 +757,16 @@ class ModelManager(object):
             positions = scan.new_positions
             di_views = scan.new_diff_views
             ma_views = scan.new_mask_views
-            
+
             # Compute sharing rules
             share = scan.pars.sharing
             alt_obj = share.object_share_with if share is not None else None
             alt_pr = share.probe_share_with if share is not None else None
-                
+
             obj_label = label if alt_obj is None else alt_obj
             pr_label = label if alt_pr is None else alt_pr
-            
-            # Loop through diffraction patterns             
+
+            # Loop through diffraction patterns
             for i in range(len(di_views)):
                 dv, mv = di_views.pop(0), ma_views.pop(0)
                 index = dv.layer
@@ -783,13 +783,13 @@ class ModelManager(object):
                 for ii, geometry in enumerate(scan.geometries):
                     # Make new IDs and keep them in record
                     # sharing_rules is not aware of IDs with suffix
-                    
+
                     pdis = scan.pars.coherence.probe_dispersion
                     if pdis is None or str(pdis) == 'achromatic':
-                        gind = 0 
+                        gind = 0
                     else:
                         gind = ii
-                                         
+
                     probe_id_suf = probe_id + 'G%02d' % gind
                     if (probe_id_suf not in new_probe_ids.keys()
                             and probe_id_suf not in existing_probes):
@@ -798,10 +798,10 @@ class ModelManager(object):
 
                     odis = scan.pars.coherence.object_dispersion
                     if odis is None or str(odis) == 'achromatic':
-                        gind = 0 
+                        gind = 0
                     else:
                         gind = ii
-                    
+
                     object_id_suf = object_id + 'G%02d' % gind
                     if (object_id_suf not in new_object_ids.keys()
                             and object_id_suf not in existing_objects):
@@ -867,7 +867,7 @@ class ModelManager(object):
                             # If Empty Probe sharing is enabled,
                             # adjust POD accordingly.
                             if share is not None:
-                                pod.probe_weight = share.probe_share_power 
+                                pod.probe_weight = share.probe_share_power
                                 pod.object_weight = share.object_share_power
                                 if share.EP_sharing:
                                     pod.is_empty = True
@@ -894,18 +894,18 @@ class ModelManager(object):
         """
         *DEPRECATED*
         attempt to save diffraction data
-        
+
         Parameters
         ----------
-        
+
         label : str
-                ptypy label of the scan to save 
-                if None, tries to save ALL diffraction data 
-                
+                ptypy label of the scan to save
+                if None, tries to save ALL diffraction data
+
         filename : str
                 override the file path to write to
                 will change `data_filename` in `scan_info` dict
-        
+
         all other kwargs are added to 'scan_info' key in the '.h5' file
         """
 

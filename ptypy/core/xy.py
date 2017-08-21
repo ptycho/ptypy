@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module generates the scan patterns. 
+This module generates the scan patterns.
 
 This file is part of the PTYPY package.
 
@@ -10,9 +10,10 @@ This file is part of the PTYPY package.
 from .. import utils as u
 from ..utils.verbose import logger
 import numpy as np
-
+import warnings
+warnings.simplefilter('always', DeprecationWarning)
 __all__ = ['DEFAULT', 'from_pars', 'round_scan', 'raster_scan', 'spiral_scan']
-         
+
 TEMPLATES = u.Param()
 
 DEFAULT = u.Param(
@@ -37,7 +38,7 @@ DEFAULT = u.Param(
 def from_pars(xypars=None):
     """
     Creates position array from parameter tree `pars`. See :py:data:`DEFAULT`
-    
+
     :param xypars: TreeDict
         Input parameters
     :return: ndarray pos
@@ -52,7 +53,7 @@ def from_pars(xypars=None):
         return None
     elif str(xypars) == xypars:
         if xypars in TEMPLATES.keys():
-            return from_pars(TEMPLATES[sam])          
+            return from_pars(TEMPLATES[sam])
         else:
             raise RuntimeError(
                 'Template string `%s` for pattern creation is not understood'
@@ -62,10 +63,10 @@ def from_pars(xypars=None):
     else:
         ValueError('Input type `%s` for scan pattern creation is not understood'
                    % str(type(xypars)))
-    
+
     if p.override is not None:
         return np.asarray(p.override)
-        
+
     elif p.model is None:
         logger.debug('Scan pattern model `None` is chosen.\n'
                      'Will use positions provided by meta information.')
@@ -84,7 +85,7 @@ def from_pars(xypars=None):
             pos = raster_scan(s[0], s[1], l[0], l[1])
         else:
             raise NameError('Unknown pattern type %s' % str(p.model))
-        
+
         if p.offset is not None:
             pos += u.expect2(p.offset)
         # Filter roi
@@ -97,15 +98,15 @@ def from_pars(xypars=None):
                         and (posi[1] >= -roi[1])
                         and (posi[1] <= roi[1])):
                     new.append(posi)
-                
+
             pos = np.array(new)
-            
+
         if p.jitter is not None:
             pos = pos
-        
+
         if p.count is not None and p.count > 0:
             pos = pos[:int(p.count)]
-            
+
         logger.info('Prepared %d positions' % len(pos))
         return pos
 
@@ -118,7 +119,7 @@ def _complete(extent, steps, spacing):
     elif steps is None:
         e = u.expect2(extent)
         s = u.expect2(spacing)
-        l = (e / s).astype(np.int) 
+        l = (e / s).astype(np.int)
     elif spacing is None:
         e = u.expect2(extent)
         l = u.expect2(steps)
@@ -127,7 +128,7 @@ def _complete(extent, steps, spacing):
         l = u.expect2(steps)
         s = u.expect2(spacing)
         e = l * s
-        
+
     return e, l, s
 
 
@@ -137,33 +138,33 @@ def augment_to_coordlist(a, Npos):
     a = np.asarray(a)
     if a.size == 1:
         a = np.atleast_2d([a, a])
-        
+
     if a.size % 2 != 0:
         a = a.flatten()[:-1]
-    
+
     a = a.reshape(a.size//2, 2)
     # Append multiples of a until length is greater equal than Npos
     if a.shape[0] < Npos:
         b = np.concatenate((1 + Npos//a.shape[0]) * [a], axis=0)
     else:
         b = a
-    
+
     return b[:Npos, :2]
 
 
 def raster_scan(ny=10, nx=10, dy=1.5e-6, dx=1.5e-6):
     """
     Generates a raster scan.
-    
+
     Parameters
     ----------
     ny, nx : int
         Number of steps in *y* (vertical) and *x* (horizontal) direction
         *x* is the fast axis
-        
+
     dy, dx : float
         Step size (grid spacing) in *y* and *x*
-        
+
     Returns
     -------
     pos : ndarray
@@ -184,21 +185,21 @@ def raster_scan(ny=10, nx=10, dy=1.5e-6, dx=1.5e-6):
 def round_scan(dr=1.5e-6, nr=5, nth=5, bullseye=True):
     """
     Generates a round scan
-    
+
     Parameters
     ----------
     nr : int
         Number of radial steps from center, ``nr + 1`` shells will be made
-        
+
     dr : float
         Step size (shell spacing)
-        
+
     nth : int, optional
         Number of points in first shell
 
     bullseye : bool
         If set false, point of origin will be ignored
-        
+
     Returns
     -------
     pos : ndarray
@@ -215,7 +216,7 @@ def round_scan(dr=1.5e-6, nr=5, nth=5, bullseye=True):
         positions = [(0., 0.)]
     else:
         positions = []
-        
+
     for ir in range(1, nr+2):
         rr = ir * dr
         dth = 2 * np.pi / (nth * ir)
@@ -227,18 +228,18 @@ def round_scan(dr=1.5e-6, nr=5, nth=5, bullseye=True):
 def spiral_scan(dr=1.5e-6, r=7.5e-6, maxpts=None):
     """
     Generates a spiral scan.
-    
+
     Parameters
     ----------
     r : float
         Number of radial steps from center, ``nr + 1`` shells will be made
-        
+
     dr : float
         Step size (shell spacing)
-        
+
     nth : int, optional
         Number of points in first shell
-        
+
     Returns
     -------
     pos : ndarray
@@ -253,7 +254,7 @@ def spiral_scan(dr=1.5e-6, r=7.5e-6, maxpts=None):
     """
     alpha = np.sqrt(4 * np.pi)
     beta = dr / (2*np.pi)
-    
+
     if maxpts is None:
         maxpts = 100000
 
@@ -267,23 +268,26 @@ def spiral_scan(dr=1.5e-6, r=7.5e-6, maxpts=None):
     return np.asarray(positions)
 
 
-def raster_scan_legacy(nx, ny, dx, dy):
+def raster_scan_legacy(nx, ny, dx, dy):# pragma: no cover
     """
     Generates a raster scan.
-    
+
     Legacy function. May get deprecated in future.
     """
+
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     iix, iiy = np.indices((nx+1, ny+1))
     positions = [(dx*i, dy*j) for i, j in zip(iix.ravel(), iiy.ravel())]
     return positions
 
 
-def round_scan_legacy(r_in, r_out, nr, nth):
+def round_scan_legacy(r_in, r_out, nr, nth):# pragma: no cover
     """
     Generates a round scan,
-    
+
     Legacy function. May get deprecated in future.
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     dr = (r_out - r_in) / nr
     positions = []
     for ir in range(1, nr+2):
@@ -294,12 +298,13 @@ def round_scan_legacy(r_in, r_out, nr, nth):
     return positions
 
 
-def round_scan_roi_legacy(dr, lx, ly, nth):
+def round_scan_roi_legacy(dr, lx, ly, nth):# pragma: no cover
     """
     Round scan positions with ROI, defined as in spec and matlab.
-    
+
     Legacy function. May get deprecated in future.
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     rmax = np.sqrt((lx/2)**2 + (ly/2)**2)
     nr = np.floor(rmax/dr) + 1
     positions = []
@@ -314,15 +319,17 @@ def round_scan_roi_legacy(dr, lx, ly, nth):
     return positions
 
 
-def spiral_scan_legacy(dr, r_out=None, maxpts=None):
+def spiral_scan_legacy(dr, r_out=None, maxpts=None):# pragma: no cover
     """
     Spiral scan positions.
 
     Legacy function. May get deprecated in future.
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
+
     alpha = np.sqrt(4 * np.pi)
     beta = dr / (2*np.pi)
-    
+
     if maxpts is None:
         assert r_out is not None
         maxpts = 100000000
@@ -340,15 +347,15 @@ def spiral_scan_legacy(dr, r_out=None, maxpts=None):
     return positions
 
 
-def spiral_scan_roi_legacy(dr, lx, ly):
+def spiral_scan_roi_legacy(dr, lx, ly):# pragma: no cover
     """\
     Spiral scan positions. ROI
-    
+
     Legacy function. May get deprecated in future.
     """
+    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
     alpha = np.sqrt(4 * np.pi)
     beta = dr / (2*np.pi)
-    
     rmax = .5 * np.sqrt(lx**2 + ly**2)
     positions = []
     for k in xrange(1000000000):
