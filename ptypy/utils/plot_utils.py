@@ -137,7 +137,7 @@ Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
 Image._MODE_CONV['LA'] = (Image._ENDIAN + 'u1', 2)
 
 
-def complex2hsv(cin, vmin=None, vmax=None):
+def complex2hsv(cin, vmin=0., vmax=None):
     """\
     Transforms a complex array into an RGB image,
     mapping phase to hue, amplitude to value and
@@ -167,13 +167,14 @@ def complex2hsv(cin, vmin=None, vmax=None):
     s = np.ones(cin.shape)
 
     v = abs(cin)
-    if vmin is None:
-        vmin = 0.
     if vmax is None:
         vmax = v.max()
-    assert vmin < vmax
-    v = (v.clip(vmin, vmax)-vmin)/(vmax-vmin)
-
+    if vmin==vmax:
+        v = np.ones_like(v) * v.mean()
+    else:
+        assert vmin < vmax
+        v = (v.clip(vmin, vmax)-vmin)/(vmax-vmin)
+    
     return np.asarray((h, s, v))
 
 
