@@ -8,7 +8,7 @@ Currently available:
  * ID16A ESRF, NFP
  * AMO LCLS
  * DiProI FERMI
- * Nanomax in a temporary format
+ * NanoMAX
 
 This file is part of the PTYPY package.
 
@@ -31,7 +31,6 @@ from DiProI_FERMI import DiProIFERMIScan
 from optiklabor import FliSpecScanMultexp
 from UCL import UCLLaserScan
 from nanomax import NanomaxStepscanNov2016, NanomaxStepscanMay2017, NanomaxFlyscanJune2017
-from I13_farfield import I13Scan
 from ALS_5321 import ALS5321Scan
 
 PtyScanTypes = dict(
