@@ -10,6 +10,6 @@ class ViewTest(unittest.TestCase):
     def test_storage(self):
         cont = Container()
         a = View(cont)
-        
+
 if __name__ == '__main__':
     unittest.main()

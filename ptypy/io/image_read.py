@@ -24,7 +24,7 @@ def image_read(filename, *args, **kwargs):
             ext = subset.pop()
             use_imread = False
             filename = os.path.splitext(filename)[0] + ext
-    else:    
+    else:
         ext = os.path.splitext(filename)[1].lower()
         if ext in special_format:
             use_imread = False
@@ -38,7 +38,7 @@ def image_read(filename, *args, **kwargs):
         h5_image = h5read(filename, *args, **kwargs)
         def look_for_ndarray(d):
             for k,v in d.iteritems():
-                if type(v) is np.ndarray: 
+                if type(v) is np.ndarray:
                     return k,v
                 elif type(v) is type({}):
                     out = look_for_ndarray(v)
@@ -48,7 +48,7 @@ def image_read(filename, *args, **kwargs):
         if isinstance(h5_image, list):
             h5_arrays = []
             h5_metas = []
-            for h5s in h5_image: 
+            for h5s in h5_image:
                 h5a = look_for_ndarray(h5s)
                 h5_arrays.append(h5a[-1])
                 h5_metas.append({'filename':filename, 'path': '/'.join(h5a[0:-1])})

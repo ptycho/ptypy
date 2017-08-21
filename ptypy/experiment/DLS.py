@@ -28,9 +28,9 @@ NEXUS_PATHS.frame_pattern = 'entry1/%(detector_name)s/data'
 NEXUS_PATHS.live_key_pattern = 'entry1/%(detector_name)s/live_key'
 NEXUS_PATHS.finished_pattern = 'entry1/live/finished'
 NEXUS_PATHS.exposure = 'entry1/%(detector_name)s/count_time'
-# NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
-#NEXUS_PATHS.motors = ['t1_sy', 't1_sx']
 NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
+# NEXUS_PATHS.motors = ['t1_sy', 't1_sx']
+# NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
 #NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
 NEXUS_PATHS.command = 'entry1/scan_command'
 NEXUS_PATHS.label = 'entry1/entry_identifier'
@@ -110,13 +110,16 @@ class DlsScan(PtyScan):
         Load the positions and return as an (N,2) array
         """
         # Load positions from file if possible.
-        instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[NEXUS_PATHS.instrument % self.info.recipe]
+        if self.info.recipe.is_swmr:
+            instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[NEXUS_PATHS.instrument % self.info.recipe]
+        else:
+            instrument = h5.File(self.data_file, 'r')[NEXUS_PATHS.instrument % self.info.recipe]
         if self.info.recipe.israster:
             self.position_shape = instrument[0].shape
         motor_positions = []
         i=0
         mmult = u.expect2(self.info.recipe.motors_multiplier)
-        
+
         for k in NEXUS_PATHS.motors:
             if not self.info.recipe.israster:
                 motor_positions.append(instrument[k]*mmult[i])
@@ -131,7 +134,7 @@ class DlsScan(PtyScan):
         """
         Returns the number of frames available from starting index `start`, and whether the end of the scan
         was reached.
-  
+
         :param frames: Number of frames to load
         :param start: starting point
         :return: (frames_available, end_of_scan)
@@ -172,7 +175,7 @@ class DlsScan(PtyScan):
                     data = io.h5read(self.data_file, key, slice=j)[key].astype(np.float32)
                     raw[j] = data
                 else:
-                    
+
                     #print "frame number "+str(j)
                     dset= h5.File(self.data_file, 'r', libver='latest', swmr=True)[key]
                     dset.id.refresh()

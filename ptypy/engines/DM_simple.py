@@ -101,6 +101,9 @@ class DM_simple(BaseEngine):
                 if change < self.p.overlap_converge_factor:
                     break
 
+            # needed for BaseEngine
+            self.curiter += 1
+
             t2 = time.time()
             to = t2 - t1
 

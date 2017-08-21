@@ -19,13 +19,13 @@ except IndexError:
 p = u.Param()
 
 ### PTYCHO PARAMETERS
-p.verbose_level = 3                               
+p.verbose_level = 3
 
-p.data_type = "single"                            
+p.data_type = "single"
 
 p.io = u.Param()
 p.io.autoplot = u.Param()
-p.io.autoplot.interval = 1 
+p.io.autoplot.interval = 1
 p.io.autoplot.layout = 'weak'
 p.io.autoplot.threaded = False
 p.io.autoplot.make_movie = False
@@ -53,17 +53,17 @@ p.scans.sstar.illumination.aperture.form = 'rect'
 p.scans.sstar.illumination.aperture.size = 60e-6
 p.scans.sstar.illumination.propagation=u.Param()
 p.scans.sstar.illumination.propagation.focussed = 0.1
-p.scans.sstar.illumination.propagation.parallel = 2e-3 
+p.scans.sstar.illumination.propagation.parallel = 2e-3
 p.scans.sstar.illumination.diversity = u.Param()
 p.scans.sstar.illumination.diversity.power = 0.1
 p.scans.sstar.illumination.diversity.noise = (1,2)
 
-p.scans.sstar.sample= u.Param() 
+p.scans.sstar.sample= u.Param()
 
 p.scans.sstar.coherence = u.Param()
 p.scans.sstar.coherence.num_probe_modes = 3
 
-p.engines = u.Param()                                 
+p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
 p.engines.engine00.numiter =200
@@ -73,8 +73,8 @@ p.engines.engine00.overlap_max_iterations = 10
 p.engines.engine00.update_object_first = True
 p.engines.engine00.probe_update_start = 2
 p.engines.engine00.object_smooth_std = 5
-p.engines.engine00.probe_inertia = 0.01             
-p.engines.engine00.object_inertia = 0.1             
+p.engines.engine00.probe_inertia = 0.01
+p.engines.engine00.object_inertia = 0.1
 p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'ML'
 p.engines.engine01.numiter = 100

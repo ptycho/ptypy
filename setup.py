@@ -59,7 +59,7 @@ setup(
     name = 'Python Ptychography toolbox',
     version = VERSION,
     author = 'Pierre Thibault, Bjoern Enders, Martin Dierolf and others',
-    description = 'Ptychographic reconstruction toolbox', 
+    description = 'Ptychographic reconstruction toolbox',
     long_description = file('README.rst','r').read(),
     #install_requires = ['numpy>=1.8',\
                         #'h5py>=2.2',\
@@ -70,6 +70,7 @@ setup(
     package_dir = {'ptypy':'ptypy'},
     packages = ['ptypy',
                 'ptypy.core',\
+                'ptypy.debug',\
                 'ptypy.utils',\
                 'ptypy.simulations',\
                 'ptypy.engines',\
@@ -82,6 +83,7 @@ setup(
         'scripts/ptypy.plot',
         'scripts/ptypy.inspect',
         'scripts/ptypy.plotclient',
-        'scripts/ptypy.new'    
+        'scripts/ptypy.new',
+        'scripts/ptypy.csv2cp'
     ],
     )
