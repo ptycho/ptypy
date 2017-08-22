@@ -33,8 +33,8 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         If ``None``, fourier update always happens.
         
     LL_error : bool
-        If ``True``, calculates log-likelihood and puts it in the last entry
-        of the returned error vector, else puts in ``0.0``
+        If ``True``, calculates log-likelihood and puts it in the last
+        entry of the returned error vector, else puts in ``0.0``
     
     Returns
     -------
@@ -149,7 +149,8 @@ def Cdot(c1, c2):
     """
     r = 0.
     for name, s in c1.storages.iteritems():
-        r += np.vdot(c1.storages[name].data.flat, c2.storages[name].data.flat)
+        r += np.vdot(c1.storages[name].data.flat,
+                     c2.storages[name].data.flat)
     return r
 
 
@@ -161,23 +162,28 @@ def reduce_dimension(a, dim, local_indices=None):
      3D numpy array.
 
     :param dim:
-     The number of dimensions to retain. The case dim=0 (which would just reduce all layers to a mean)
-     is not implemented.
+     The number of dimensions to retain. The case dim=0 (which would
+     just reduce all layers to a mean) is not implemented.
 
     :param local_indices:
-     Used for Containers distributed across nodes. Local indices of the current node.
+     Used for Containers distributed across nodes. Local indices of
+     the current node.
 
     :return: [reduced array, modes, coefficients]
      Where:
-      - reduced array is the result of dimensionality reduction (same shape as a)
-      - modes: 3D array of length dim containing eigenmodes (aka singular vectors)
+      - reduced array is the result of dimensionality reduction
+         (same shape as a)
+      - modes: 3D array of length dim containing eigenmodes
+         (aka singular vectors)
       - coefficients: 2D matrix representing the decomposition of a.
     """
 
     if local_indices is None:  # No MPI - generate a list of indices
         Nl = len(a)
         local_indices = range(Nl)
-    else:  # Distributed array - share info between nodes to compute total size of matrix
+    # Distributed array - share info between nodes to compute
+    # totalsize of matrix
+    else:
         assert len(a) == len(local_indices)
         Nl = parallel.allreduce(len(local_indices))
 
@@ -199,7 +205,8 @@ def reduce_dimension(a, dim, local_indices=None):
     else:
         peer_nodes = np.roll(np.arange(size), rank)
 
-    # Even size means that local scalar product have all to be done in parallel
+    # Even size means that local scalar product have all
+    # to be done in parallel
     if size_is_even:
         for l0, i0 in enumerate(local_indices):
             for l1, i1 in enumerate(local_indices):
@@ -208,7 +215,8 @@ def reduce_dimension(a, dim, local_indices=None):
                 M[i0, i1] = np.vdot(a[l0], a[l1])
                 M[i1, i0] = np.conj(M[i0, i1])
 
-    # Fill matrix by looping through peers and communicate info for scalar products
+    # Fill matrix by looping through peers and communicate info
+    # for scalar products
     for other_rank in peer_nodes:
         if other_rank == rank:
             # local scalar product
@@ -240,7 +248,8 @@ def reduce_dimension(a, dim, local_indices=None):
     eigval, eigvec = eigsh(M, k=dim + 2, which='LM')
 
     # Generate the modes
-    modes = np.array([sum(a[l] * eigvec[i, k] for l, i in enumerate(local_indices)) for k in range(dim)])
+    modes = np.array([sum(a[l] * eigvec[i, k]
+        for l, i in enumerate(local_indices)) for k in range(dim)])
 
     parallel.allreduce(modes)
 

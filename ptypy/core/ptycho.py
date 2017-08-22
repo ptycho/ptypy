@@ -38,7 +38,6 @@ DEFAULT_autoplot = u.Param(
     layout='default',
     dump=True,
     make_movie=False,
-    store_OPR_iter=False,
 )
 
 DEFAULT_autosave = u.Param(
