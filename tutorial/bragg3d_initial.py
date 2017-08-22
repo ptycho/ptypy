@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 # The following geometry corresponds to an oversampling ratio of 1 along
 # the rocking curve, which means that the numerical field of view
 # tightly contains the exit wave.
-g = ptypy.core.geometry_bragg.Geo_Bragg(psize=(13e-6, 13e-6, 0.01/4), shape=(128, 128, 9*4), energy=8.5, distance=2.0, theta_bragg=22.32)
+g = ptypy.core.geometry_bragg.Geo_Bragg(psize=(0.01/4, 13e-6, 13e-6), shape=(9*4, 128, 128), energy=8.5, distance=2.0, theta_bragg=22.32)
 
 # The Geo_Bragg object contains mostly the same things as Geo, but in
 # three dimensions. The third element of the shape is the number of
@@ -31,7 +31,7 @@ print g
 # to the thin layer stripes.
 Npos = 11
 positions = np.zeros((Npos,3))
-positions[:, 1] = np.arange(Npos) - Npos/2.0
+positions[:, 2] = np.arange(Npos) - Npos/2.0
 positions *= .5e-6
 
 # Set up the object and its views
@@ -46,7 +46,7 @@ C = ptypy.core.Container(data_type=np.complex128, data_dims=3)
 # natural coordinates and create a View instance there.
 views = []
 for pos in positions:
-    pos_ = g._r1r2r3(pos)
+    pos_ = g._r3r1r2(pos)
     views.append(ptypy.core.View(C, storageID='Sobj', psize=g.resolution, coord=pos_, shape=g.shape))
 S = C.storages['Sobj']
 C.reformat()
@@ -54,7 +54,7 @@ C.reformat()
 # Define the test sample based on the orthogonal position of each voxel.
 # First, the cartesian grid is obtained from the geometry object, then
 # this grid is used as a condition for the sample's magnitude.
-zz, yy, xx = g.transformed_grid(S, input_space='real', input_system='natural')
+xx, zz, yy = g.transformed_grid(S, input_space='real', input_system='natural')
 S.fill(0.0)
 S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy >= 1e-6) & (yy < 2e-6) & (xx < 1e-6)] = 1
 S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy >= -2e-6) & (yy < -1e-6)] = 1
@@ -68,11 +68,11 @@ S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy >= -2e-6) & (yy < -1e-6)] = 1
 # transmission ptycho scan of an easy test object.
 Cprobe = ptypy.core.Container(data_dims=2, data_type='float')
 Sprobe = Cprobe.new_storage(psize=10e-9, shape=500)
-z, y = Sprobe.grids()
+zi, yi = Sprobe.grids()
 # square probe
-Sprobe.data[(z > -.75e-6) & (z < .75e-6) & (y > -1.5e-6) & (y < 1.5e-6)] = 1
+Sprobe.data[(zi > -.75e-6) & (zi < .75e-6) & (yi > -1.5e-6) & (yi < 1.5e-6)] = 1
 # gaussian probe
-Sprobe.data = np.exp(-z**2 / (2 * (.75e-6)**2) - y**2 / (2 * (1.0e-6)**2))
+Sprobe.data = np.exp(-zi**2 / (2 * (.75e-6)**2) - yi**2 / (2 * (1.0e-6)**2))
 
 # The Bragg geometry has a method to prepare a 3d Storage by extruding
 # the 2d probe and interpolating to the right grid. The returned storage
@@ -112,10 +112,10 @@ S_display_cart = g.coordinate_shift(S_display, input_system='natural', input_spa
 
 # Plot that
 fig, ax = plt.subplots(nrows=1, ncols=2)
-z, y, x = S_display_cart.grids()
-ax[0].imshow(np.mean(np.abs(S_display_cart.data[0]), axis=1), extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
+x, z, y = S_display_cart.grids()
+ax[0].imshow(np.mean(np.abs(S_display_cart.data[0]), axis=2).T, extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
 plt.setp(ax[0], ylabel='z', xlabel='x', title='side view')
-ax[1].imshow(np.mean(np.abs(S_display_cart.data[0]), axis=0), extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
+ax[1].imshow(np.mean(np.abs(S_display_cart.data[0]), axis=1).T, extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
 plt.setp(ax[1], ylabel='y', xlabel='x', title='top view')
 
 # Visualize the probe positions along the scan
@@ -126,15 +126,15 @@ import matplotlib.gridspec as gridspec
 plt.figure()
 gs = gridspec.GridSpec(Npos, 2, width_ratios=[3,1], wspace=.0)
 ax, ax2 = [], []
-r1, r2, r3 = Sprobe_3d.grids()
+r3, r1, r2 = Sprobe_3d.grids()
 for i in range(len(S.views)):
     # overlap
     ax.append(plt.subplot(gs[i, 0]))
-    ax[-1].imshow(np.mean(np.abs(views[i].data + probeView.data), axis=0).T, vmin=0, vmax=.07, extent=[r2.min(), r2.max(), r3.min(), r3.max()])
+    ax[-1].imshow(np.mean(np.abs(views[i].data + probeView.data), axis=1), vmin=0, vmax=.07, extent=[r2.min(), r2.max(), r3.min(), r3.max()])
     plt.setp(ax[-1], xlabel='r2', ylabel='r3', xlim=[r2.min(), r2.max()], ylim=[r3.min(), r3.max()], yticks=[])
     # diffraction
     ax2.append(plt.subplot(gs[i, 1]))
-    ax2[-1].imshow(diff[i][:,:,18])
+    ax2[-1].imshow(diff[i][18,:,:])
     plt.setp(ax2[-1], ylabel='q1', xlabel='q2', xticks=[], yticks=[])
 plt.suptitle('Probe, sample, and slices of 3d diffraction peaks along the scan')
 plt.draw()
@@ -143,7 +143,7 @@ plt.draw()
 # ------------------------------
 
 # Here I compare different algorithms and scaling options.
-algorithm = 'DM'
+algorithm = 'PIE'
 
 # Keep a copy of the object storage, and fill the actual one with an
 # initial guess (like zeros everywhere).
@@ -188,11 +188,11 @@ if algorithm == 'OS':
             #ax[0].plot(criterion/criterion[0])
             ax[1].clear()
             S_cart = g.coordinate_shift(S, input_space='real', input_system='natural', keep_dims=False)
-            z, y, x = S_cart.grids()
-            ax[1].imshow(np.mean(np.abs(S_cart.data[0]), axis=0), extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
+            x, z, y = S_cart.grids()
+            ax[1].imshow(np.mean(np.abs(S_cart.data[0]), axis=1).T, extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
             plt.setp(ax[1], ylabel='y', xlabel='x', title='top view')
             ax[2].clear()
-            ax[2].imshow(np.mean(np.abs(S_cart.data[0]), axis=1), extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
+            ax[2].imshow(np.mean(np.abs(S_cart.data[0]), axis=2).T, extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
             plt.setp(ax[2], ylabel='z', xlabel='x', title='side view')
             plt.draw()
             plt.pause(.01)
@@ -205,7 +205,7 @@ if algorithm == 'PIE':
     fig, ax = plt.subplots(ncols=3)
     errors = []
     ferrors = []
-    for i in range(100):
+    for i in range(10):
         print i
         ferrors_ = []
         for j in range(len(views)):
@@ -225,13 +225,14 @@ if algorithm == 'PIE':
             ax[0].clear()
             ax[0].plot(errors/errors[0])
             ax[0].plot(ferrors/ferrors[0])
+            #ax[0].plot(criterion/criterion[0])
             ax[1].clear()
             S_cart = g.coordinate_shift(S, input_space='real', input_system='natural', keep_dims=False)
-            z, y, x = S_cart.grids()
-            ax[1].imshow(np.mean(np.abs(S_cart.data[0]), axis=0), extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
+            x, z, y = S_cart.grids()
+            ax[1].imshow(np.mean(np.abs(S_cart.data[0]), axis=1).T, extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
             plt.setp(ax[1], ylabel='y', xlabel='x', title='top view')
             ax[2].clear()
-            ax[2].imshow(np.mean(np.abs(S_cart.data[0]), axis=1), extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
+            ax[2].imshow(np.mean(np.abs(S_cart.data[0]), axis=2).T, extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
             plt.setp(ax[2], ylabel='z', xlabel='x', title='side view')
             plt.draw()
             plt.pause(.01)
@@ -273,14 +274,16 @@ if algorithm == 'DM':
         if not (i % 5):
             ax[0].clear()
             ax[0].plot(errors/errors[0])
-            ax[0].plot(ferrors/ferrors[0])
+            #ax[0].plot(criterion/criterion[0])
             ax[1].clear()
             S_cart = g.coordinate_shift(S, input_space='real', input_system='natural', keep_dims=False)
-            z, y, x = S_cart.grids()
-            ax[1].imshow(np.mean(np.abs(S_cart.data[0]), axis=0), extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
+            x, z, y = S_cart.grids()
+            ax[1].imshow(np.mean(np.abs(S_cart.data[0]), axis=1).T, extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower')
             plt.setp(ax[1], ylabel='y', xlabel='x', title='top view')
             ax[2].clear()
-            ax[2].imshow(np.mean(np.abs(S_cart.data[0]), axis=1), extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
+            ax[2].imshow(np.mean(np.abs(S_cart.data[0]), axis=2).T, extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower')
             plt.setp(ax[2], ylabel='z', xlabel='x', title='side view')
             plt.draw()
             plt.pause(.01)
+
+plt.show()

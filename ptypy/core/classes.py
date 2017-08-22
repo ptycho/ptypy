@@ -614,10 +614,13 @@ class Storage(Base):
             # compute the full field of view
             # rows += [v.roi[0, 0], v.roi[1, 0]]
             # cols += [v.roi[0, 1], v.roi[1, 1]]
-            rows += [v.dlow[0], v.dhigh[0]]
-            cols += [v.dlow[1], v.dhigh[1]]
-            if self.ndim == 3:
-                aisles += [v.dlow[2], v.dhigh[2]]
+            if self.ndim == 2:
+                rows += [v.dlow[0], v.dhigh[0]]
+                cols += [v.dlow[1], v.dhigh[1]]
+            elif self.ndim == 3:
+                aisles += [v.dlow[0], v.dhigh[0]]
+                rows += [v.dlow[1], v.dhigh[1]]
+                cols += [v.dlow[2], v.dhigh[2]]
 
             # Gather a (unique) list of layers
             if v.layer not in layers:
@@ -631,9 +634,9 @@ class Storage(Base):
             misfit = np.array([[-np.min(rows), np.max(rows) - sh[-2]],
                                [-np.min(cols), np.max(cols) - sh[-1]]])
         elif self.ndim == 3:
-            misfit = np.array([[-np.min(rows), np.max(rows) - sh[-3]],
-                               [-np.min(cols), np.max(cols) - sh[-2]],
-                               [-np.min(aisles), np.max(aisles) - sh[-1]]])
+            misfit = np.array([[-np.min(aisles), np.max(aisles) - sh[-3]],
+                               [-np.min(rows), np.max(rows) - sh[-2]],
+                               [-np.min(cols), np.max(cols) - sh[-1]]])
 
         if self.ndim == 2:
             logger.debug('%s[%s] :: misfit = [%s, %s]'
