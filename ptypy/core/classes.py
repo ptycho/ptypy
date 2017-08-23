@@ -1561,7 +1561,7 @@ class Container(Base):
             return [v for v in self.original.V.values()
                     if (v.storage.ID == s.ID)]
 
-    def copy(self, ID=None, fill=None):
+    def copy(self, ID=None, fill=None, dtype=None):
         """
         Create a new :any:`Container` matching self.
 
@@ -1572,15 +1572,24 @@ class Container(Base):
         fill : scalar or None
             If None (default), copy content. If scalar, initializes
             to this value
+        dtype : valid data type or None
+            If None, the copy will have the same data type as the 
+            original, is specified the returned instance will contain
+            empty buffers.
         """
         # Create an ID for this copy
         ID = self.ID + '_copy%d' % (len(self.copies)) if ID is None else ID
 
         # Create new container
+        data_type = self.data_type if dtype is None else dtype
         new_cont = type(self)(ptycho=self.owner,
                               ID=ID,
-                              data_type=self.data_type)
+                              data_type=data_type)
         new_cont.original = self
+
+        # If changing data type, avoid casting by producing empty buffers
+        if (dtype is not None) and (fill is None):
+                fill = 0
 
         # Copy storage objects
         for storageID, s in self.storages.iteritems():
