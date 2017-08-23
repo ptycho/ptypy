@@ -549,7 +549,7 @@ class Storage(Base):
 
         # Integer part (note that np.round is not stable for odd arrays)
         v.dcoord = np.empty((2,), dtype=int)
-        for i in (0, 1):
+        for i in range(len(v.pcoord)):
             dec = (v.pcoord[i] - np.floor(v.pcoord[i]))
             if dec > .4999 and dec < .5001:
                 v.dcoord[i] = int(np.ceil(v.pcoord[i]))
