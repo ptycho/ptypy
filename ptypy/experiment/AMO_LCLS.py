@@ -184,7 +184,7 @@ class AMOScan(core.data.PtyScan):
         frames_accessible = min((frames, npos-start))
         stop = self.frames_accessible + start
         return frames_accessible, (stop >= npos)
-        
+
     def load(self, indices):
         """
         Load frames given by the indices.
@@ -220,7 +220,7 @@ class AMOScan(core.data.PtyScan):
 
         log(3, 'Data loaded successfully.')
         return raw, pos, weights
-        
+
     def correct(self, raw, weights, common):
         """
         Apply (eventual) corrections to the frames. Convert from "raw"

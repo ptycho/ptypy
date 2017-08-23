@@ -17,7 +17,7 @@ lastSpecInfo = None
 def verbose(n,s):
     """
     This function should be replaced by the real verbose class after import.
-    It is here for convenience since this module has no other external dependencies. 
+    It is here for convenience since this module has no other external dependencies.
     """
     print s
 
@@ -32,7 +32,7 @@ class SpecInfo(object):
         self.parse()
         global lastSpecInfo
         lastSpecInfo = self
-        
+
     def parse(self, rehash=False):
         """\
         Parse the spec dat-file and extract information.
@@ -42,10 +42,10 @@ class SpecInfo(object):
 
         # Initialize
         motordefs = []
-        motors = [] 
+        motors = []
         scans = {}
 
-        # A while loop offers more flexibility        
+        # A while loop offers more flexibility
         lnum = -1
         continue_reading = True
         while continue_reading:
@@ -72,7 +72,7 @@ class SpecInfo(object):
                     #print('Skipping known scan #S %d' % scannr)
                     continue
                 #print line.strip()
-                
+
                 # Create the structure
                 scan = SpecScan()
                 scan.command = scancmd
@@ -85,8 +85,8 @@ class SpecInfo(object):
 
                 # Keep reading file until empty line
                 while line.strip():
-                    # Get a new line, exit everything if we are 
-                    # at the end of a file 
+                    # Get a new line, exit everything if we are
+                    # at the end of a file
                     try:
                         line = f.next(); lnum += 1
                     except StopIteration:
@@ -105,7 +105,7 @@ class SpecInfo(object):
                         # This is data for the current section ("label")
                         # We will end up here if an error message is printed in
                         # the spec file. Trying to be smart about this here.
-                        # It looks like all lines that do not start with "#" in 
+                        # It looks like all lines that do not start with "#" in
                         # a spec file contain only numbers. So we simply check
                         # if the current line can be converted to numbers
                         try:
@@ -116,13 +116,13 @@ class SpecInfo(object):
                         except ValueError:
                             verbose(1,'Ignoring bad line (number %d) in spec file' % lnum)
                             verbose(1,line.strip())
-                                                    
+
                 # Aborted scan?
                 scan.aborted = False
                 comments = scanstr.get('C', [])
                 if any(c.lower().find('aborted')>0 for c in comments):
                     scan.aborted = True
-                
+
                 good_scan = True
                 # Get date
                 try:
@@ -151,7 +151,7 @@ class SpecInfo(object):
                     good_scan = False
                     verbose(1, 'Error extracting counter names for scan number %d.' % scannr)
                     verbose(1, e.message)
-                
+
                 # Data
                 try:
                     data = zip(*[[float(x) for x in Lline.split()] for Lline in scanstr['L'][1:]])
@@ -164,19 +164,19 @@ class SpecInfo(object):
 		scan.valid = good_scan
                 scans[scannr] = scan
         self.scans = scans
-        
+
 """
         assert scannr > 0
         assert burst > 0
         assert multexp > 0
         scanpos = self.scans.get(scannr, None)
         if scanpos is None:
-            print 'Scan not found. parsing the file again...' 
+            print 'Scan not found. parsing the file again...'
             self.parse()
             scanpos = self.scans.get(scannr, None)
             if scanpos is None:
                 raise RuntimeError('Scan %d not found.' % scannr)
-        
+
         cmd, lineno, fstart, fend = scanpos
 
         # Create the structure
@@ -185,11 +185,11 @@ class SpecInfo(object):
         scan.S = cmd
         scan.lineno = lineno
         scan.filepos = (fstart, fend)
-        
+
         # Read text block
         self.spec_file.seek(fstart)
         scanlines = self.spec_file.read(fend-fstart).split('/n')
-        
+
         # temporary structure
         scanstr = {}
         lastlabel = ''
@@ -202,18 +202,18 @@ class SpecInfo(object):
             else:
                 entry = scanstr.get(lastlabel,[])
                 entry.append(line)
-    
+
         # Get date
         scan.date = dateutil.parser.parse(scanstr['D'][0])
         scan.D = scan.date
-                
+
         # Get motor info
-        
-        
-        
-        
-  
-% here the default parameters  
+
+
+
+
+
+% here the default parameters
   scannr     = -1;
   output_arg = {'meta','motor','counter'};
   unhandled_par_error = 1;
@@ -221,7 +221,7 @@ class SpecInfo(object):
 % other parameters
   burstn0 = 1;
   mexpn0  = 1;
-  
+
       case 'OutPut'
         output_arg = set_TextFlag(output_arg,value);
       case 'PilatusMask'
@@ -239,19 +239,19 @@ class SpecInfo(object):
         vararg{end+1} = value;                                  %#ok<AGROW>
     end
   end
-    
+
   specDatFile = find_specDatFile(specDatFile);
-  
+
   % reading the spec file for the scans
   [scans,scanline] = spec_readscan(specDatFile, scannr);
-  
+
   % reading the spec file for configuration information
   [motorc,motorline] = spec_readconfig(specDatFile);
   motorn = cell(size(scannr));
   for jj=1:numel(scans)
     motorn{jj} = motorc{find(motorline<scanline(1),1,'last')};
   end
-  
+
   varargout{1} = cell(size(scans));
   % copying vararg in order to keep its content for each iteration
   vararg_1 = vararg;
@@ -261,7 +261,7 @@ class SpecInfo(object):
     scanstr = scans{jj}';
     arrout = regexp(scanstr{1},' +','split');
     scannr(jj) = str2double(arrout{2});
-    
+
     % get the motors
     line = ~cellfun(@isempty,regexp(scanstr,'^#P'));
     arrout = reshape(transpose(strvcat((scanstr(line)))),1,[]);
@@ -277,7 +277,7 @@ class SpecInfo(object):
     line  = ~cellfun(@isempty,regexp(scanstr,'^[0-9+-]'));
     data = cellfun(@str2num,scanstr(line),'UniformOutput',false);
     data = cell2mat(data(:));
-    
+
     % get Pilatus information if required
     if (exist('pilatusMask','var'))
       if (exist('pilatusDir0','var'))
@@ -288,14 +288,14 @@ class SpecInfo(object):
 
       [pilatusDir, pilatusName, vararg] = ...
         find_files(strcat(pilatusDir,pilatusMask), vararg_1);
-      
+
       pilatusInd = zeros(numel(pilatusName),2);
       for ii=1:numel(pilatusName)
         arrout = regexp(pilatusName(ii).name,'[_\.]','split');
         pilatusInd(ii,:) = str2double(arrout(end-2:end-1));
       end
     end
-    
+
     % make a structure
     scan_structure = struct;
     if (any(strcmp(output_arg,'meta')))
@@ -310,14 +310,14 @@ class SpecInfo(object):
         datestr{6}, ...
         datestr{5});
     end
-    
+
     if (any(strcmp(output_arg,'motor')) || ...
         any(strcmp(output_arg,'motors')))
       for ii=1:numel(motorn{jj})
         scan_structure.(motorn{jj}{ii}) = motorv(ii);
       end
     end
-    
+
     if (any(strcmp(output_arg,'counter')) || ...
         any(strcmp(output_arg,'counters')))
       if (numel(data)>0)
@@ -326,7 +326,7 @@ class SpecInfo(object):
         end
       end
     end
-    
+
     if (any(strcmp(output_arg,'pilatus')))
       if (burstn0>1)
         burstn = burstn0;
@@ -342,7 +342,7 @@ class SpecInfo(object):
       else
         mexpn = mexpn0;
       end
-      
+
       if (numel(burstn)==1 && numel(mexpn)==1)
         % these pseudo motors shouldn't be scanned and are
         %   therefore presumably constant
@@ -370,7 +370,7 @@ class SpecInfo(object):
       scan_structure.Pilatus = Pilatus;
       scan_structure.PilatusDir = pilatusDir;
     end
-    
+
     varargout{1}{jj} = scan_structure;
   end
   if ((unhandled_par_error) && (~isempty(vararg)))
@@ -387,18 +387,18 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [varargout] = spec_readscan(specDatFile, scannr)
 % check minimum number of input arguments
-  if (nargin<2) 
+  if (nargin<2)
     spec_read_help(mfilename);
     error('usage ''spec_readscan(specDatFile, scannr)''');
   end
-  
+
   cmd = sprintf('grep -n ''#S '' %s', specDatFile);
   [~,sysout] = system(cmd);
   arrout = regexp(sysout,'[:\n]','split');
   arrout = arrout(~cellfun(@isempty,arrout));
   arrout = transpose(reshape(arrout,2,[]));
   [s1,~] = size(arrout);
-  
+
   if (any(scannr>0))
     tmp = regexp(arrout(:,2),' +','split');
     scanID = zeros(size(tmp));
@@ -406,7 +406,7 @@ function [varargout] = spec_readscan(specDatFile, scannr)
       scanID(ii) = str2double(tmp{ii}{2});
     end
   end
-  
+
 % creating a look up table where the scans begin and end
   lineI = zeros(size(scannr));
   scans = cell(size(scannr));
@@ -467,7 +467,7 @@ function [motors,linenr] = spec_readconfig(specDatFile)
   arrout = arrout(~cellfun(@isempty,arrout));
   arrout = transpose(reshape(arrout,2,[]));
   [s1,~] = size(arrout);
-  
+
   % devide this collection of configuration information into single chuncks
   linenr = '';
   motors = cell(0);
@@ -503,7 +503,7 @@ function specDatFile = find_specDatFile(specDatFile)
       if (specDatFile(end) ~= '/')
         specDatFile = strcat(specDatFile,'/');
       end
-      
+
       for ii=1:numel(fname)
         if (regexp(fname(ii).name,'.dat$'))
           specDatFile = strcat(specDatFile,'*.dat');
@@ -556,7 +556,7 @@ function pilatusDir = find_pilatusDir(pilatusDir,scannr)
       if (pilatusDir(end) ~= '/')
         pilatusDir = strcat(pilatusDir,'/');
       end
-      
+
       for ii=1:numel(fname)
         if (strcmp(fname(ii).name,sprintf('S%02d000-%02d999',floor(scannr/1e3),floor(scannr/1e3))) || ...
             strcmp(fname(ii).name,sprintf('S%05d',scannr)))

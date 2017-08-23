@@ -33,7 +33,7 @@ DEFAULT = u.Param(
 
 
 class ML(BaseEngine):
-    
+
     DEFAULT = DEFAULT
 
     def __init__(self, ptycho_parent, pars=None):
@@ -63,7 +63,7 @@ class ML(BaseEngine):
         self.tmin = None
         self.ML_model = None
         self.smooth_gradient = None
-        
+
     def engine_initialize(self):
         """
         Prepare for ML reconstruction.
@@ -76,9 +76,9 @@ class ML(BaseEngine):
         # Probe gradient and minimization direction
         self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
         self.pr_h = self.pr.copy(self.pr.ID + '_h', fill=0.)
-   
+
         self.tmin = 1.
-        
+
         # Create noise model
         if self.p.ML_type.lower() == "gaussian":
             self.ML_model = ML_Gaussian(self)
@@ -88,7 +88,7 @@ class ML(BaseEngine):
             self.ML_model = ML_Gaussian(self)
         else:
             raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
-            
+
         # Other options
         self.smooth_gradient = prepare_smoothing_preconditioner(
             self.p.smooth_gradient)
@@ -97,7 +97,7 @@ class ML(BaseEngine):
         """
         Last minute initialization, everything, that needs to be recalculated,
         when new data arrives.
-        """     
+        """
         # - # fill object with coverage of views
         # - for name,s in self.ob_viewcover.S.iteritems():
         # -    s.fill(s.get_view_coverage())
@@ -115,9 +115,9 @@ class ML(BaseEngine):
         ta = time.time()
         for it in range(num):
             t1 = time.time()
-            new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad() 
+            new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad()
             tg += time.time() - t1
-            
+
             if self.p.probe_update_start <= self.curiter:
                 # SS: this chunk should not go here: it should apply
                 # to self.pr rather than (or beside) new_pr_grad [20170817]
@@ -125,7 +125,7 @@ class ML(BaseEngine):
                 # Apply probe support if needed
                 for name, s in new_pr_grad.storages.iteritems():
                     support = self.probe_support.get(name)
-                    if support is not None: 
+                    if support is not None:
                         s.data *= support
                 """
                 logger.info('Skipping probe support application to '
@@ -139,7 +139,7 @@ class ML(BaseEngine):
             # if self.smooth_gradient:
             #     for name, s in new_ob_grad.storages.iteritems():
             #         s.data[:] = self.smooth_gradient(s.data)
-    
+
             # probe/object rescaling
             if self.p.scale_precond:
                 scale_p_o = (self.p.scale_probe_object * Cnorm2(new_ob_grad)
@@ -147,7 +147,7 @@ class ML(BaseEngine):
                 logger.debug('Scale P/O: %6.3g' % scale_p_o)
             else:
                 scale_p_o = self.p.scale_probe_object
-    
+
             ############################
             # Compute next conjugate
             ############################
@@ -161,11 +161,11 @@ class ML(BaseEngine):
                              - np.real(Cdot(new_ob_grad, self.ob_grad))))
 
                 bt_denom = scale_p_o*Cnorm2(self.pr_grad) + Cnorm2(self.ob_grad)
-    
+
                 bt = max(0, bt_num/bt_denom)
-    
+
             # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
-    
+
             self.ob_grad << new_ob_grad
             self.pr_grad << new_pr_grad
             """
@@ -184,7 +184,7 @@ class ML(BaseEngine):
             for name,s in self.ob_h.storages.iteritems():
                 s.data *= bt
                 s.data -= self.ob_grad.storages[name].data
-                
+
             for name,s in self.pr_h.storages.iteritems():
                 s.data *= bt
                 s.data -= scale_p_o * self.pr_grad.storages[name].data
@@ -192,17 +192,17 @@ class ML(BaseEngine):
             # 3. Next conjugate
             # ob_h = self.ob_h
             # ob_h *= bt
-            
+
             # Smoothing preconditioner not implemented.
             # if self.smooth_gradient:
             #    ob_h -= object_smooth_filter(grad_obj)
             # else:
             #    ob_h -= ob_grad
-            
+
             # ob_h -= ob_grad
             # pr_h *= bt
             # pr_h -= scale_p_o * pr_grad
-            
+
             # Minimize - for now always use quadratic approximation
             # (i.e. single Newton-Raphson step)
             # In principle, the way things are now programmed this part
@@ -210,13 +210,13 @@ class ML(BaseEngine):
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
-            
+
             if np.isinf(B).any() or np.isnan(B).any():
                 logger.warning(
                     'Warning! inf or nan found! Trying to continue...')
                 B[np.isinf(B)] = 0.
                 B[np.isnan(B)] = 0.
-                
+
             self.tmin = -.5 * B[1] / B[2]
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
@@ -229,7 +229,7 @@ class ML(BaseEngine):
                 s.data += tmin*self.pr_h.storages[name].data
             """
             # Newton-Raphson loop would end here
-            
+
             # SS: applying probe support could(/should) go here [20170817]
             if self.p.probe_update_start <= self.curiter:
                 # Apply probe support if needed
@@ -240,7 +240,7 @@ class ML(BaseEngine):
             
             # increase iteration counter
             self.curiter +=1
-        
+
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
@@ -262,10 +262,10 @@ class ML(BaseEngine):
 class ML_Gaussian(object):
     """
     """
-        
+
     def __init__(self, MLengine):
         """
-        Core functions for ML computation using a Gaussian model. 
+        Core functions for ML computation using a Gaussian model.
         """
         self.engine = MLengine
 
@@ -330,7 +330,7 @@ class ML_Gaussian(object):
         del self.ob_grad
         del self.engine.ptycho.containers[self.pr_grad.ID]
         del self.pr_grad
-        
+
         # Remove working attributes
         for name, diff_view in self.di.views.iteritems():
             if not diff_view.active:
@@ -359,27 +359,27 @@ class ML_Gaussian(object):
         for dname, diff_view in self.di.views.iteritems():
             if not diff_view.active:
                 continue
-            
+
             # Weights and intensities for this view
             w = self.weights[diff_view]
             I = diff_view.data
-            
+
             Imodel = np.zeros_like(I)
             f = {}
-            
+
             # First pod loop: compute total intensity
             for name, pod in diff_view.pods.iteritems():
                 if not pod.active:
                     continue
                 f[name] = pod.fw(pod.probe * pod.object)
                 Imodel += u.abs2(f[name])
-        
+
             # Floating intensity option
             if self.p.floating_intensities:
                 diff_view.float_intens_coeff = ((w * Imodel * I).sum()
                                                 / (w * Imodel**2).sum())
-                Imodel *= diff_view.float_intens_coeff 
-            
+                Imodel *= diff_view.float_intens_coeff
+
             DI = Imodel - I
 
             # Second pod loop: gradients computation
@@ -409,7 +409,7 @@ class ML_Gaussian(object):
             parallel.allreduce(s.data)
         """
         parallel.allreduce(LL)
-        
+
         # Object regularizer
         if self.regularizer:
             for name, s in self.ob.storages.iteritems():
@@ -417,7 +417,7 @@ class ML_Gaussian(object):
                     s.data)
 
         self.LL = LL / self.tot_measpts
-        
+
         return self.ob_grad, self.pr_grad, error_dct
 
     def poly_line_coeffs(self, ob_h, pr_h):
@@ -425,15 +425,15 @@ class ML_Gaussian(object):
         Compute the coefficients of the polynomial for line minimization
         in direction h
         """
-        
+
         B = np.zeros((3,), dtype=np.longdouble)
         Brenorm = 1. / self.LL[0]**2
-        
+
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.iteritems():
             if not diff_view.active:
                 continue
-            
+
             # Weights and intensities for this view
             w = self.weights[diff_view]
             I = diff_view.data
@@ -441,7 +441,7 @@ class ML_Gaussian(object):
             A0 = None
             A1 = None
             A2 = None
-            
+
             for name, pod in diff_view.pods.iteritems():
                 if not pod.active:
                     continue
@@ -449,8 +449,8 @@ class ML_Gaussian(object):
                 a = pod.fw(pod.probe * ob_h[pod.ob_view]
                            + pr_h[pod.pr_view] * pod.object)
                 b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
-    
-                if A0 is None: 
+
+                if A0 is None:
                     A0 = u.abs2(f).astype(np.longdouble)
                     A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
                     A2 = (2 * np.real(f * b.conj()).astype(np.longdouble)
@@ -465,11 +465,11 @@ class ML_Gaussian(object):
                 A1 *= diff_view.float_intens_coeff
                 A2 *= diff_view.float_intens_coeff
             A0 -= I
-    
+
             B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
             B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
             B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
- 
+
         parallel.allreduce(B)
 
         # Object regularizer
@@ -479,7 +479,7 @@ class ML_Gaussian(object):
                     ob_h.storages[name].data, s.data)
 
         self.B = B
-        
+
         return B
 
 # Regul class does not exist, replace by objectclass
@@ -496,8 +496,8 @@ class Regul_del2(object):
         # Regul.__init__(self, axes)
         self.axes = axes
         self.amplitude = amplitude
-        self.delxy = None        
-        
+        self.delxy = None
+
     def grad(self, x):
         """
         Compute and return the regularizer gradient given the array x.
@@ -512,7 +512,7 @@ class Regul_del2(object):
         self.g = 2. * self.amplitude*(del_xb + del_yb - del_xf - del_yf)
 
         return self.g
-        
+
     def poly_line_coeffs(self, h, x=None):
         ax0, ax1 = self.axes
         if x is None:
@@ -522,12 +522,12 @@ class Regul_del2(object):
             del_yf = u.delxf(x, axis=ax1)
             del_xb = u.delxb(x, axis=ax0)
             del_yb = u.delxb(x, axis=ax1)
-            
+
         hdel_xf = u.delxf(h, axis=ax0)
         hdel_yf = u.delxf(h, axis=ax1)
         hdel_xb = u.delxb(h, axis=ax0)
         hdel_yb = u.delxb(h, axis=ax1)
-        
+
         c0 = self.amplitude * (u.norm2(del_xf)
                                + u.norm2(del_yf)
                                + u.norm2(del_xb)
@@ -542,7 +542,7 @@ class Regul_del2(object):
                                + u.norm2(hdel_yf)
                                + u.norm2(hdel_xb)
                                + u.norm2(hdel_yb))
-        
+
         self.coeff = np.array([c0, c1, c2])
         return self.coeff
 

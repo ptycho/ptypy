@@ -24,8 +24,8 @@ __all__ = ['pause', 'rmphaseramp', 'plot_storage', 'imsave', 'imload',
 NODISPLAY = (os.getenv("DISPLAY") is None)
 if NODISPLAY:
     matplotlib.use('agg')
-    
-                
+
+
 import matplotlib.pyplot as plt
 
 # Improved interactive behavior for old versions of matplotlib
@@ -137,25 +137,25 @@ Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
 Image._MODE_CONV['LA'] = (Image._ENDIAN + 'u1', 2)
 
 
-def complex2hsv(cin, vmin=None, vmax=None):
+def complex2hsv(cin, vmin=0., vmax=None):
     """\
     Transforms a complex array into an RGB image,
     mapping phase to hue, amplitude to value and
     keeping maximum saturation.
-    
+
     Parameters
     ----------
     cin : ndarray
         Complex input. Must be two-dimensional.
-    
+
     vmin,vmax : float
         Clip amplitude of input into this interval.
-        
+
     Returns
     -------
     rgb : ndarray
-        Three dimensional output.   
-        
+        Three dimensional output.
+
     See also
     --------
     complex2rgb
@@ -167,12 +167,13 @@ def complex2hsv(cin, vmin=None, vmax=None):
     s = np.ones(cin.shape)
 
     v = abs(cin)
-    if vmin is None:
-        vmin = 0.
     if vmax is None:
         vmax = v.max()
-    assert vmin < vmax
-    v = (v.clip(vmin, vmax)-vmin)/(vmax-vmin)
+    if vmin==vmax:
+        v = np.ones_like(v) * v.mean()
+    else:
+        assert vmin < vmax
+        v = (v.clip(vmin, vmax)-vmin)/(vmax-vmin)
     
     return np.asarray((h, s, v))
 
@@ -188,7 +189,7 @@ def complex2rgb(cin, **kwargs):
     rgb2complex
     """
     return hsv2rgb(complex2hsv(cin, **kwargs))
-    
+
 
 def hsv2rgb(hsv):
     """\
@@ -199,13 +200,13 @@ def hsv2rgb(hsv):
     hsv : array-like
         Input must be two-dimensional. **First** axis is interpreted
         as hue,saturation,value channels.
-    
+
     Returns
     -------
     rgb : ndarray
         Three dimensional output. **Last** axis is interpreted as
-        red, green, blue channels.  
-        
+        red, green, blue channels.
+
     See also
     --------
     complex2rgb
@@ -233,7 +234,7 @@ def hsv2rgb(hsv):
     rgb[:, :, 2] = 255*(i0*p + i1*p + i2*t + i3*v + i4*v + i5*q)
 
     return rgb
-    
+
 
 def rgb2hsv(rgb):
     """
@@ -249,7 +250,7 @@ def rgb2hsv(rgb):
     rc = (maxc-rgb[:, :, 0]) / (maxc-minc+eps)
     gc = (maxc-rgb[:, :, 1]) / (maxc-minc+eps)
     bc = (maxc-rgb[:, :, 2]) / (maxc-minc+eps)
-    
+
     h = 4.0+gc-rc
     maxgreen = (rgb[:, :, 1] == maxc)
     h[maxgreen] = 2.0+rc[maxgreen]-bc[maxgreen]
@@ -275,8 +276,8 @@ def rgb2complex(rgb):
     """
     return hsv2complex(rgb2hsv(rgb))
 
-HSV_to_RGB = hsv2rgb  
-RGB_to_HSV = rgb2hsv    
+HSV_to_RGB = hsv2rgb
+RGB_to_HSV = rgb2hsv
 P1A_to_HSV = complex2hsv
 HSV_to_P1A = hsv2complex
 
@@ -284,36 +285,36 @@ HSV_to_P1A = hsv2complex
 def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
     """
     Take array `a` and transform to `PIL.Image` object that may be used
-    by `pyplot.imshow` for example. Also save image buffer directly 
+    by `pyplot.imshow` for example. Also save image buffer directly
     without the sometimes unnecessary Gui-frame and overhead.
-    
+
     Parameters
     ----------
     a : ndarray
         Two dimensional array. Can be complex, in which case the amplitude
-        will be optionally clipped by `vmin` and `vmax` if set. 
-    
+        will be optionally clipped by `vmin` and `vmax` if set.
+
     filename : str, optionsl
         File path to save the image buffer to. Use '\*.png' or '\*.png'
         as image formats.
-    
+
     vmin,vmax : float, optional
         Value limits ('clipping') to fit the color scale.
         If not set, color scale will span from minimum to maximum value
         in array
-        
+
     cmap : str, optional
         Name of the colormap for colorencoding.
-        
+
     Returns
     -------
     im : PIL.Image
         a `PIL.Image` object.
-         
+
     See also
     --------
     complex2rgb
-    
+
     Examples
     --------
     >>> from ptypy.utils import imsave
@@ -323,24 +324,24 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
     >>> pil = imsave(a)
     >>> plt.imshow(pil)
     >>> plt.show()
-    
+
     converts array a into, and returns a PIL image and displays it.
-    
-    >>> pil = imsave(a, /tmp/moon.png) 
-    
+
+    >>> pil = imsave(a, /tmp/moon.png)
+
     returns the image and also saves it to filename
-    
-    >>> imsave(a, vmin=0, vmax=0.5) 
-    
+
+    >>> imsave(a, vmin=0, vmax=0.5)
+
     clips the array to values between 0 and 0.5.
-    
-    >>> imsave(abs(a), cmap='gray') 
-    
+
+    >>> imsave(abs(a), cmap='gray')
+
     uses a matplotlib colormap with name 'gray'
     """
     if str(cmap) == cmap:
         cmap = mpl.cm.get_cmap(cmap)
-        
+
     if a.dtype.kind == 'c':
         i = complex2rgb(a, vmin=vmin, vmax=vmax)
         im = Image.fromarray(np.uint8(i), mode='RGB')
@@ -398,32 +399,32 @@ def franzmap():
     if im is not None:
         im.set_cmap(matplotlib.cm.get_cmap('franzmap'))
     mpl.pyplot.draw_if_interactive()
-    
+
 
 def rmphaseramp(a, weight=None, return_phaseramp=False):
     """
-    Attempts to remove the phase ramp in a two-dimensional complex array 
+    Attempts to remove the phase ramp in a two-dimensional complex array
     ``a``.
 
     Parameters
     ----------
     a : ndarray
         Input image as complex 2D-array.
-    
+
     weight : ndarray, str, optional
-        Pass weighting array or use ``'abs'`` for a modulus-weighted 
+        Pass weighting array or use ``'abs'`` for a modulus-weighted
         phaseramp and ``Non`` for no weights.
-    
+
     return_phaseramp : bool, optional
         Use True to get also the phaseramp array ``p``.
-    
+
     Returns
     -------
     out : ndarray
         Modified 2D-array, ``out=a*p``
     p : ndarray, optional
-        Phaseramp if ``return_phaseramp = True``, otherwise omitted 
-    
+        Phaseramp if ``return_phaseramp = True``, otherwise omitted
+
     Examples
     --------
     >>> b = rmphaseramp(image)
@@ -435,7 +436,7 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
         useweight = False
     elif weight == 'abs':
         weight = np.abs(a)
-        
+
     ph = np.exp(1j*np.angle(a))
     [gx, gy] = np.gradient(ph)
     gx = -np.real(1j*gx/ph)
@@ -470,41 +471,41 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
     Quickly display the data buffer of a :any:`Storage` instance.
 
     Keyword arguments are those of :any:`PtyAxis`
-    
+
     Parameters
     ----------
     S : Storage
         Storage instance
-        
+
     fignum : int, optional
-        Number of the figure. 
-        
+        Number of the figure.
+
     slices : tuple of slices or string of numpy index expression, optional
         Determines what part of Storage buffer is displayed, i.e. which
-        layers and which region-of-interest. Layers are subplotted 
+        layers and which region-of-interest. Layers are subplotted
         horizontically next to each other. Figsize is (6,6*layers)
-    
+
     modulus : str, optional
-        One of `sqrt`, `log` or `linear` to apply to modulus of array 
+        One of `sqrt`, `log` or `linear` to apply to modulus of array
         buffer. Useful to reduce dynamic range for diffraction images.
-        
+
     si_axes : str, optional
         One of 'x','xy','y' or None, determins which axes display
         length units instead of pixel units
-        
+
     mask : ndarray, scalar or None
         Bool array of valid pixel data for rescaling.
-        
+
     Returns
     -------
     fig : maplotlib.pyplot.figure
-        
+
     See also
     --------
     imsave
     :any:`Storage`
     """
-    
+
     if str(slices) == slices:
         slc = eval('np.index_exp['+slices+']')
     else:
@@ -518,21 +519,21 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
     else:
         phase = np.real(np.exp(1j*np.pi*np.angle(im)))  # -1 or 1
         channel = 'r'
-    
+
     if modulus == 'sqrt':
         im = np.sqrt(np.abs(im)).astype(im.dtype)*phase
     elif modulus == 'log':
         im = np.log10(np.abs(im)+1).astype(im.dtype)*phase
     else:
         modulus = 'linear'
-    
+
     ttl = str(S.ID) + '#%d' + ', ' + modulus + ' scaled'
     y_unit, y_mag, y_num = length_units(S.psize[0]*imsh[0])
     x_unit, x_mag, x_num = length_units(S.psize[1]*imsh[1])
 
     if im.ndim == 2:
         im = im.reshape((1,)+im.shape)
-        
+
     layers = im.shape[0]
     fig = plt.figure(fignum, figsize=(6*layers, 5))
     for l in range(layers):
@@ -557,24 +558,24 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
         else:
             ax.set_ylabel('y [Pixel]')
         ax.title.set_text(ttl % l)
-        
+
     plt.draw()
     return fig
 
 
 class PtyAxis(object):
     def __init__(self, ax=None, data=None, channel='r', cmap=None, fontsize=8, **kwargs):
-        
+
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
         self.ax = ax
         self.shape = None
         self.data = None
-        
+
         if data is not None: self.set_data(data, False)
         # sets shape and data too
-        
+
         self.remove_phase_ramp = kwargs.get('rmramp', False)
         self.cax = None
         self.cax_aspect = None
@@ -597,7 +598,7 @@ class PtyAxis(object):
         self.psize = np.abs(psize)
         if update:
             self._update()
-    
+
     def set_channel(self, channel, update=True):
         assert channel in ['a', 'c', 'p', 'r', 'i'], \
             'Channel must be either (a)bs, (p)hase, (c)omplex, (r)eal or (i)maginary'
@@ -605,7 +606,7 @@ class PtyAxis(object):
         if update:
             self._update()
             self._update_colorscale()
-            
+
     def set_cmap(self, cmap, update=True):
         try:
             self.cmap = mpl.cm.get_cmap(cmap)
@@ -615,14 +616,14 @@ class PtyAxis(object):
         if update:
             self._update()
             self._update_colorscale()
-            
+
     def set_clims(self, vmin, vmax, update=True):
         self.vmin = vmin
         self.vmax = vmax
         assert vmin < vmax
         if update:
             self._update()
-            
+
     def set_mask(self, mask, update=True):
         if mask is not None:
             if np.isscalar(mask) and self.shape is not None:
@@ -638,7 +639,7 @@ class PtyAxis(object):
             self.mask = None
         if update:
             self._update()
-    
+
     def set_data(self, data, update=True):
         assert data.ndim == 2, 'Data must be two dimensional. It is %d-dimensional' % data.ndim
         self.data = data
@@ -650,7 +651,7 @@ class PtyAxis(object):
                 self._update(renew_image=True)
             else:
                 self._update()
-        
+
     def _update(self,renew_image=False):
         if str(self.channel) == 'a':
             imdata = np.abs(self.data)
@@ -676,12 +677,12 @@ class PtyAxis(object):
                 imdata = self.data
         else:
             imdata = np.abs(self.data)
-        
+
         if self.mask is not None:
             cdata = imdata if str(self.channel) != 'c' else np.abs(self.data)
             self.mx = np.max(cdata[self.mask])
             if self.vmax is None:  # or self.mx<self.vmax:
-                mx = self.mx 
+                mx = self.mx
             else:
                 mx = self.vmax
             self.mn = np.min(cdata[self.mask])
@@ -691,7 +692,7 @@ class PtyAxis(object):
                 mn = self.vmin
         else:
             mn, mx = self.vmin, self.vmax
-        
+
         pilim = imsave(imdata, cmap=self.cmap, vmin=mn, vmax=mx)
         if not self.ax.images or renew_image:
             self.ax.imshow(pilim, **self.kwargs)
@@ -731,10 +732,10 @@ class PtyAxis(object):
         self.cax.invert_yaxis()
         self._update_colorbar()
         plt.draw()
-        
+
     def _after_resize_event(self, evt):
         self._update_colorbar()
-        
+
     def _update_colorbar(self, mn=None, mx=None):
         mn = mn if mn is not None else self.mn
         mn = 0 if mn is None else mn
@@ -747,13 +748,13 @@ class PtyAxis(object):
         b = self.cax.get_position().bounds
 
         self.cax.set_position((b[0], a[1], self.cax_width, a[3]))
-        
+
         if self.channel == 'c':
             self.cax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(['0', '$\pi$', '2$\pi$']))
             self.cax.xaxis.set_major_locator(mpl.ticker.LinearLocator(3))
             self.cax.set_xlabel('phase [rad]', fontsize=self.fontsize+2)
             self.cax.xaxis.set_label_position("top")
-            
+
         locs = np.linspace(0.02, 1., max((int(a[3]*20), 5)))
         self.cax.yaxis.set_major_locator(mpl.ticker.FixedLocator(locs))
         formatter = lambda x, y: pretty_length(((1-x)*(mx-mn)+mn), 3)

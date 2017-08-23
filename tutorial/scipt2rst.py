@@ -26,6 +26,6 @@ for line in fpy:
     else:
         wline = '>>> '+line
     frst.write(wline)
-    
+
 
 

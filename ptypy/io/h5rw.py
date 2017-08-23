@@ -30,7 +30,7 @@ SLASH_ESCAPE = '_SLASH_')
 STR_CONVERT = [type]
 
 def sdebug(f):
-    """ 
+    """
     debugging decorator for _store functions
     """
     def newf(*args, **kwds):
@@ -52,7 +52,7 @@ def _h5write(filename, mode, *args, **kwargs):
     _h5write(filename, mode, {'var1'=..., 'var2'=..., ...})
     _h5write(filename, mode, var1=..., var2=..., ...)
     _h5write(filename, mode, dict, var1=..., var2=...)
-    
+
     Writes variables var1, var2, ... to file filename. The file mode
     can be chosen according to the h5py documentation. The key-value
     arguments have precedence on the provided dictionary.
@@ -66,8 +66,8 @@ def _h5write(filename, mode, *args, **kwargs):
 
     (if the option UNSUPPORTED is equal to 'pickle', any other type
     is pickled and saved. UNSUPPORTED = 'ignore' silently eliminates
-    unsupported types. Default is 'fail', which raises an error.) 
-    
+    unsupported types. Default is 'fail', which raises an error.)
+
     The file mode can be chosen according to the h5py documentation.
     It defaults to overwriting an existing file.
     """
@@ -86,7 +86,7 @@ def _h5write(filename, mode, *args, **kwargs):
 
     # List of object ids to make sure we are not saving something twice.
     ids = []
-    
+
     # This is needed to store strings
     dt = h5py.new_vlen(str)
 
@@ -121,7 +121,7 @@ def _h5write(filename, mode, *args, **kwargs):
         return dset
 
 
-    #@sdebug    
+    #@sdebug
     def _store_list(group, l, name):
         check_id(id(l))
         arrayOK = len(set([type(x) for x in l])) == 1
@@ -151,7 +151,7 @@ def _h5write(filename, mode, *args, **kwargs):
         dset_type = dset.attrs['type']
         dset.attrs['type'] = 'arraytuple' if dset_type == 'arraylist' else 'tuple'
         return dset
-    
+
     #@sdebug
     def _store_dict(group, d, name):
         check_id(id(d))
@@ -176,7 +176,7 @@ def _h5write(filename, mode, *args, **kwargs):
         dset = _store_dict(group,d._to_dict(),name)
         dset.attrs['type'] = 'param'
         return dset
-        
+
     def _store_dict_new(group, d, name):
         check_id(id(d))
         dset = group.create_group(name)
@@ -185,20 +185,20 @@ def _h5write(filename, mode, *args, **kwargs):
             _store(dset, kv, '%05d' % i)
         pop_id(id(d))
         return dset
-    
+
     #@sdebug
     def _store_None(group, a, name):
         dset = group.create_dataset(name, data = np.zeros((1,)))
-        dset.attrs['type'] = 'None' 
+        dset.attrs['type'] = 'None'
         return dset
-        
+
     #@sdebug
     def _store_pickle(group, a, name):
         apic = cPickle.dumps(a)
         dset = group.create_dataset(name, data=np.asarray(apic), dtype=dt)
         dset.attrs['type'] = 'pickle'
         return dset
-    
+
     #@sdebug
     def _store(group, a, name):
         if type(a) is str:
@@ -228,9 +228,9 @@ def _h5write(filename, mode, *args, **kwargs):
             elif h5options['UNSUPPORTED']=='pickle':
                 dset = _store_pickle(group,a,name)
             else:
-                dset = None 
+                dset = None
         return dset
- 
+
     # generate all parent directories
     base= os.path.split(filename)[0]
     if not os.path.exists(base):
@@ -250,13 +250,13 @@ def _h5write(filename, mode, *args, **kwargs):
                 del f[k]
             _store(f,v,k)
     return
-    
+
 def h5write(filename, *args, **kwargs):
     """\
     h5write(filename, {'var1'=..., 'var2'=..., ...})
     h5write(filename, var1=..., var2=..., ...)
     h5write(filename, dict, var1=..., var2=...)
-    
+
     Writes variables var1, var2, ... to file filename. The key-value
     arguments have precedence on the provided dictionnary.
 
@@ -269,8 +269,8 @@ def h5write(filename, *args, **kwargs):
 
     (if the option UNSUPPORTED is equal to 'pickle', any other type
     is pickled and saved. UNSUPPORTED = 'ignore' silently eliminates
-    unsupported types. Default is 'fail', which raises an error.) 
-    
+    unsupported types. Default is 'fail', which raises an error.)
+
     The file mode can be chosen according to the h5py documentation.
     It defaults to overwriting an existing file.
     """
@@ -283,8 +283,8 @@ def h5append(filename, *args, **kwargs):
     h5append(filename, {'var1'=..., 'var2'=..., ...})
     h5append(filename, var1=..., var2=..., ...)
     h5append(filename, dict, var1=..., var2=...)
-    
-    Appends variables var1, var2, ... to file filename. The 
+
+    Appends variables var1, var2, ... to file filename. The
     key-value arguments have precedence on the provided dictionnary.
 
     supported variable types are:
@@ -296,8 +296,8 @@ def h5append(filename, *args, **kwargs):
 
     (if the option UNSUPPORTED is equal to 'pickle', any other type
     is pickled and saved. UNSUPPORTED = 'ignore' silently eliminates
-    unsupported types. Default is 'fail', which raises an error.) 
-    
+    unsupported types. Default is 'fail', which raises an error.)
+
     The file mode can be chosen according to the h5py documentation.
     It defaults to overwriting an existing file.
     """
@@ -310,19 +310,19 @@ def h5read(filename, *args, **kwargs):
     h5read(filename)
     h5read(filename, s1, s2, ...)
     h5read(filename, (s1,s2, ...))
-    
-    Read variables from a hdf5 file created with h5write and returns them as 
+
+    Read variables from a hdf5 file created with h5write and returns them as
     a dictionary.
-    
+
     If specified, only variable named s1, s2, ... are loaded.
-    
-    Variable names support slicing and group access. For instance, provided 
-    that the file contains the appropriate objects, the following syntax is 
+
+    Variable names support slicing and group access. For instance, provided
+    that the file contains the appropriate objects, the following syntax is
     valid:
-        
+
     a = h5read('file.h5', 'myarray[2:4]')
     a = h5read('file.h5', 'adict.thekeyIwant')
-    
+
     Another way of slicing, is with the slice keyword argument, which will take
     the provided slice object and apply it on the last variable name:
 
@@ -330,13 +330,13 @@ def h5read(filename, *args, **kwargs):
     # Will read array2[1:2]
 
     h5read(filename_with_wildcard, ... , doglob=True)
-    Reads sequentially all globbed filenames. 
- 
+    Reads sequentially all globbed filenames.
+
     """
     doglob = kwargs.pop('doglob', None)
     depth = kwargs.pop('depth',None)
     depth = 99 if depth is None else depth+1
-    
+
     # Used if we read a list of files
     fnames = []
     if not isinstance(filename, str):
@@ -350,7 +350,7 @@ def h5read(filename, *args, **kwargs):
             fnames = sorted(glob.glob(filename))
             if not fnames:
                 raise IOError('%s : no match.' % filename)
-      
+
     if fnames:
         # We are here only if globbing was allowed.
         dl = []
@@ -358,9 +358,9 @@ def h5read(filename, *args, **kwargs):
         for f in fnames:
             # Call again, but this time without globbing.
             d = h5read(f, *args, doglob=False, **kwargs)
-            dl.append(d) 
+            dl.append(d)
         return dl
-    
+
     # We are here only if there was no globbing (fnames is empty)
     filename = os.path.abspath(os.path.expanduser(filename))
 
@@ -382,7 +382,7 @@ def h5read(filename, *args, **kwargs):
                     k = k.replace(h5options['SLASH_ESCAPE'], '/')
                 d[k] = _load(v,depth-1)
         return d
-        
+
     def _load_list(dset,depth):
         l = []
         if depth>0:
@@ -391,34 +391,34 @@ def h5read(filename, *args, **kwargs):
             for k in keys:
                 l.append(_load(dset[k],depth-1))
         return l
-    
+
     def _load_numpy(dset,sl=None):
         if sl is not None:
             return dset[sl]
         else:
             return dset[...]
-        
+
     def _load_scalar(dset):
         try:
             return dset[...].item()
         except:
             return dset[...]
-       
+
     def _load_str(dset):
         return dset.value
 
     def _load_unicode(dset):
         return dset.value.decode('utf8')
-        
+
     def _load_pickle(dset):
         return cPickle.loads(dset[...])
 
     def _load(dset, depth,sl=None):
         dset_type = dset.attrs.get('type',None)
-      
+
         # Treat groups as dicts
         if (dset_type is None) and (type(dset) is h5py.Group):
-            dset_type = 'dict'    
+            dset_type = 'dict'
 
         if dset_type == 'dict' or dset_type =='param':
             if sl is not None:
@@ -502,7 +502,7 @@ def h5read(filename, *args, **kwargs):
 
             last_k = key_list[-1]
             for k in key_list:
-                if k == last_k and slice is not None: 
+                if k == last_k and slice is not None:
                     sl = slice
                 else:
                     # detect slicing
@@ -512,7 +512,7 @@ def h5read(filename, *args, **kwargs):
                         sl = str_to_slice('[' + slice_string + ']')
                     else:
                         sl = None
-                
+
                 # detect group access
                 if '.' in k:
                     glist = k.split('.')
@@ -523,10 +523,10 @@ def h5read(filename, *args, **kwargs):
                     outdict[k] = _load(gr[k],depth,sl=sl)
                 else:
                     outdict[k] = _load(f[k],depth,sl=sl)
-      
-    return outdict      
 
-    
+    return outdict
+
+
 
 def h5info(filename, path='', output=None, depth=8):
     """\
@@ -539,18 +539,18 @@ def h5info(filename, path='', output=None, depth=8):
     filename = os.path.abspath(os.path.expanduser(filename))
 
     def _format_dict(d,key, dset, isParam=False):
-        ss='Param' if isParam else 'dict' 
+        ss='Param' if isParam else 'dict'
         stringout = ' '*key[0] + ' * %s [%s %d]:\n' % (key[1],ss,len(dset))
-        if d>0: 
+        if d>0:
             for k,v in dset.items():
                 if v is not None and v.attrs.get('escaped', None) is not None:
                     k = k.replace(h5options['SLASH_ESCAPE'], '/')
                 stringout += _format(d-1,(key[0]+indent, k), v)
         return stringout
-    
+
     def _format_list(d,key, dset):
         stringout = ' '*key[0] + ' * %s [list %d]:\n' % (key[1],len(dset))
-        if d>0: 
+        if d>0:
             keys = dset.keys()
             keys.sort()
             for k in keys:
@@ -559,7 +559,7 @@ def h5info(filename, path='', output=None, depth=8):
 
     def _format_tuple(key, dset):
         stringout = ' '*key[0] + ' * %s [tuple]:\n' % key[1]
-        if d>0: 
+        if d>0:
             keys = dset.keys()
             keys.sort()
             for k in keys:
@@ -589,7 +589,7 @@ def h5info(filename, path='', output=None, depth=8):
             except ValueError:
                 stringout = ' '*key[0] + ' * ' + key[1] + ' [list = [%d x %s objects]]\n' % (a.size, str(a.dtype))
         return stringout
-    
+
     def _format_numpy(key, dset):
         a = dset[...]
         if len(a) < 5 and a.ndim == 1:
@@ -597,11 +597,11 @@ def h5info(filename, path='', output=None, depth=8):
         else:
             stringout = ' '*key[0] + ' * ' + key[1] + ' [' + (('%dx'*(a.ndim-1) + '%d') % a.shape) + ' ' + str(a.dtype) + ' array]\n'
         return stringout
-        
+
     def _format_scalar(key, dset):
         stringout = ' '*key[0] + ' * ' + key[1] + ' [scalar = ' + str(dset[...]) + ']\n'
         return stringout
-       
+
     def _format_str(key, dset):
         s = str(dset[...])
         if len(s) > 40:
@@ -615,7 +615,7 @@ def h5info(filename, path='', output=None, depth=8):
             s = s[:40] + '...'
         stringout = ' '*key[0] + ' * ' + key[1] + ' [unicode = "' + s + '"]\n'
         return stringout
-       
+
     def _format_pickle(key, dset):
         stringout = ' '*key[0] + ' * ' + key[1] + ' [pickled object]\n'
         return stringout
@@ -630,7 +630,7 @@ def h5info(filename, path='', output=None, depth=8):
 
     def _format(d,key, dset):
         dset_type = 'None' if dset is None else dset.attrs.get('type',None)
-      
+
         # Treat groups as dicts
         if (dset_type is None) and (type(dset) is h5py.Group):
             dset_type = 'dict'
@@ -664,7 +664,7 @@ def h5info(filename, path='', output=None, depth=8):
         else:
             stringout = _format_unknown(key, dset)
         return stringout
-        
+
     with h5py.File(filename,'r') as f:
         # h5rw_version = f.attrs.get('h5rw_version',None)
         # if h5rw_version is None:
@@ -677,10 +677,10 @@ def h5info(filename, path='', output=None, depth=8):
         outstring = ''
         for k in key_list:
             outstring += _format(depth,(0,k),f[path+k])
-    
+
     print outstring
-    
+
     # return string if output variable passed as option
     if output != None:
         return outstring
-    
+

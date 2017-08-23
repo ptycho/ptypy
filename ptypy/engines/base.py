@@ -61,26 +61,26 @@ DEFAULT_iter_info = u.Param(
 class BaseEngine(object):
     """
     Base reconstruction engine.
-    
+
     In child classes, overwrite the following methods for custom behavior :
-    
+
     engine_initialize
     engine_prepare
     engine_iterate
     engine_finalize
     """
-    
+
     DEFAULT = DEFAULT.copy()
 
     def __init__(self, ptycho, pars=None):
         """
         Base reconstruction engine.
-        
+
         Parameters
         ----------
-        ptycho : Ptycho 
+        ptycho : Ptycho
             The parent :any:`Ptycho` object.
-            
+
         pars: Param or dict
             Initialization parameters
         """
@@ -123,13 +123,13 @@ class BaseEngine(object):
         logger.info('Parameter set:')
         logger.info(u.verbose.report(self.p, noheader=True).strip())
         logger.info(headerline('', 'l', '='))
-        
+
         self.curiter = 0
         if self.ptycho.runtime.iter_info:
             self.alliter = self.ptycho.runtime.iter_info[-1]['iterations']
         else:
             self.alliter = 0
-        
+
         # Common attributes for all reconstructions
         self.di = self.ptycho.diff
         self.ob = self.ptycho.obj
@@ -142,7 +142,7 @@ class BaseEngine(object):
         self.probe_support_ft = {}
         # Call engine specific initialization
         self.engine_initialize()
-        
+
     def prepare(self):
         """
         Last-minute preparation before iterating.
@@ -171,60 +171,60 @@ class BaseEngine(object):
 
         # Call engine specific preparation
         self.engine_prepare()
-            
+
     def iterate(self, num=None):
         """
         Compute one or several iterations.
-        
+
         num : None, int number of iterations.
             If None or num<1, a single iteration is performed.
         """
         # Several iterations
         if self.p.numiter_contiguous is not None:
-            niter_contiguous = self.p.numiter_contiguous 
+            niter_contiguous = self.p.numiter_contiguous
         else:
             niter_contiguous = 1
-        
+
         # Overwrite default parameter
         if num is not None:
             niter_contiguous = num
-        
+
         if self.finished:
             return
 
         # For benchmarking
         self.t = time.time()
-        
+
         it = self.curiter
-        
+
         # Call engine specific iteration routine
-        # and collect the per-view error.      
+        # and collect the per-view error.
         self.error = self.engine_iterate(niter_contiguous)
-        
+
         # Check if engine did things right.
         if it >= self.curiter:
-            
-            logger.warn("""Engine %s did not increase iteration counter 
+
+            logger.warn("""Engine %s did not increase iteration counter
             `self.curiter` internally. Accessing this attribute in that
             engine is inaccurate""" % self.__class__.__name__)
-            
+
             self.curiter += niter_contiguous
-        
+
         elif self.curiter != (niter_contiguous + it):
-            
-            logger.error("""Engine %s increased iteration counter 
-            `self.curiter` by %d instead of %d. This may lead to 
+
+            logger.error("""Engine %s increased iteration counter
+            `self.curiter` by %d instead of %d. This may lead to
             unexpected behaviour""" % (self.__class__.__name__,
             self.curiter-it, niter_contiguous))
-        
+
         else:
             pass
-            
+
         self.alliter += niter_contiguous
-        
+
         if self.curiter >= self.numiter:
             self.finished = True
-        
+
         # Prepare runtime
         self._fill_runtime()
 
@@ -243,17 +243,17 @@ class BaseEngine(object):
             duration=time.time() - self.t,
             error=error
         )
-        
+
         self.ptycho.runtime.iter_info.append(info)
         self.ptycho.runtime.error_local = local_error
-        
+
     def finalize(self):
         """
         Clean up after iterations are done.
         """
         self.engine_finalize()
         pass
-    
+
     def engine_initialize(self):
         """
         Engine-specific initialization.
@@ -261,7 +261,7 @@ class BaseEngine(object):
         Called at the end of self.initialize().
         """
         raise NotImplementedError()
-        
+
     def engine_prepare(self):
         """
         Engine-specific preparation.
@@ -270,7 +270,7 @@ class BaseEngine(object):
         reconstruction. Called at the end of self.prepare()
         """
         raise NotImplementedError()
-    
+
     def engine_iterate(self, num):
         """
         Engine single-step iteration.

@@ -49,11 +49,11 @@ class GeometryTest(unittest.TestCase):
 
     def test_geometry_near_field_init(self):
         G = self.set_up_nearfield()
-        
+
     def test_geometry_nearfield_resolution(self):
         G = self.set_up_nearfield()
         assert (np.round(G.resolution*1e7) == [1.00, 1.00]).all(), "geometry resolution incorrect for the nearfield"
-        
+
 
 if __name__ == '__main__':
     unittest.main()

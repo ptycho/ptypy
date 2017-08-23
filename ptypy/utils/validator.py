@@ -2,8 +2,8 @@
 """\
 Parameter validation. This module parses the file
 ``resources/parameters_descriptions.csv`` to extract the parameter
-defaults for |ptypy|. It saves all parameters in the form of 
-a :py:class:`PDesc` object, which are flat listed in 
+defaults for |ptypy|. It saves all parameters in the form of
+a :py:class:`PDesc` object, which are flat listed in
 `parameter_descriptions` or in `entry_points_dct`, which only contains
 parameters with subparameters (children).
 
@@ -83,7 +83,7 @@ _copytypes = ['str','file']
 class PDesc(object):
     """
     Small class to store all attributes of a ptypy parameter
-    
+
     """
 
     def __init__(self, description, parent=None):
@@ -92,39 +92,39 @@ class PDesc(object):
         """
         #: Name of parameter
         self.name = description.get('name', '')
-        
+
         #: Parent parameter (:py:class:`PDesc` type) if it has one.
         self.parent = parent
-            
+
         if parent is not None:
             parent.children[self.name] = self
-            
+
         #: Type can be a comma-separated list of types
         self.type = description.get('type', None)
-        
+
         if 'param' in self.type.lower() or 'dict' in self.type.lower():
             self.children = {}
             entry_points_dct[self.entry_point] = self
         else:
             self.children = None
-            
+
         if self.type is not None:
             self.type = [_typemap[x.strip()] if x.strip() in _typemap else x.strip() for x in self.type.split(',')]
-        
-        
+
+
         self.default = None
         """ Default value can be any type. None if unknown. """
-        
+
         self.set_default(description.get('default', ''))
-        
+
         # Static is 'TRUE' or 'FALSE'
         self.static = (description.get('static', 'TRUE') == 'TRUE')
-        
+
         #: Lower limit of parameter, None if unknown
         self.lowlim = None
         #: Upper limit of parameter, None if unknown
         self.uplim = None
-        
+
         ll = description.get('lowlim', None)
         ul = description.get('uplim', None)
         if 'int' in self.type:
@@ -133,7 +133,7 @@ class PDesc(object):
         else:
             self.lowlim = float(ll) if ll else None
             self.uplim = float(ul) if ul else None
-            
+
         # choices is an evaluable list
         c =  description.get('choices', '')
         #print c, self.name
@@ -144,27 +144,27 @@ class PDesc(object):
                 c = eval(c.strip())
             except SyntaxError('Evaluating `choices` %s for parameter %s failed' %(str(c),self.name)):
                 c = None
-        
+
         #: If parameter is a list of choices, these are listed here.
         self.choices = c
 
-        
+
         # Docs are strings
-        
+
         #: Short descriptive string of parameter
         self.shortdoc = description.get('shortdoc', '')
-        
+
         #: Longer documentation, may contain *sphinx* inline markup.
         self.longdoc = description.get('longdoc', '')
 
         # User level (for gui stuff) is an int
         ul = description.get('userlevel', 1)
-        
+
         self.userlevel = int(ul) if ul else None
-        """User level, a higher level means a parameter that is less 
+        """User level, a higher level means a parameter that is less
         likely to vary or harder to understand.
         """
-        
+
         # Validity is a string (the name of another parameter)
         # FIXME: this is not used currently
         self.validity = description.get('validity', '')
@@ -177,7 +177,7 @@ class PDesc(object):
             return ''
         else:
             return '.'.join([self.parent.entry_point, self.name])
-    
+
     @property
     def is_evaluable(self):
         for t in self.type:
@@ -185,16 +185,16 @@ class PDesc(object):
                 return True
                 break
         return False
-        
+
     def set_default(self,default='', check=False):
         """
         Sets default (str) and derives value (python type)
         """
         default = str(default)
-        
+
         # this destroys empty strings
         self.default = default if default else None
-        
+
         if self.default is None:
             out = None
         # should be only strings now
@@ -208,7 +208,7 @@ class PDesc(object):
             out = eval(self.default)
         else:
             out = self.default
-        
+
         self.value = out
         return out
     """
@@ -228,10 +228,10 @@ class PDesc(object):
             out = eval(self.default)
         else:
             out = self.default
-            
+
         return out
     """
-    
+
     def check(self, pars, walk):
         """
         Check that input parameter pars is consistent with parameter description.
@@ -328,22 +328,22 @@ def make_sub_default(entry_point, depth=1):
     """
     Creates a default parameter structure, from the loaded parameter
     descriptions in this module
-    
+
     Parameters
     ----------
     entry_point : str
         The node in the default parameter file
-        
+
     depth : int
         The depth in the structure to which all sub nodes are expanded
-        All nodes beyond depth will be returned as empty :any:`Param` 
+        All nodes beyond depth will be returned as empty :any:`Param`
         structure.
-        
+
     Returns
     -------
     pars : Param
         A parameter branch.
-    
+
     Examples
     --------
     >>> from ptypy.utils import validator
@@ -359,32 +359,32 @@ def make_sub_default(entry_point, depth=1):
         else:
             out[name] = child.value
     return out
-    
+
 def validate(pars, entry_point, walk=True, raisecodes=[CODES.FAIL, CODES.INVALID]):
     """
-    Check that the parameter structure `pars` matches the documented 
+    Check that the parameter structure `pars` matches the documented
     constraints at the given entry_point.
 
-    The function raises a RuntimeError if one of the code in the list 
-    `raisecodes` has been found. If raisecode is empty, the function will 
+    The function raises a RuntimeError if one of the code in the list
+    `raisecodes` has been found. If raisecode is empty, the function will
     always return successfully but problems will be logged using logger.
 
     Parameters
     ----------
     pars : Param
         A parameter set to validate
-        
+
     entry_point : str
         The node in the parameter structure to match to.
-    
+
     walk : bool
         If ``True`` (*default*), navigate sub-parameters.
-    
+
     raisecodes: list
         List of codes that will raise a RuntimeError.
     """
     from ptypy.utils.verbose import logger
-    
+
     pdesc = parameter_descriptions[entry_point]
     d = pdesc.check(pars, walk=walk)
     do_raise = False
@@ -398,17 +398,17 @@ def validate(pars, entry_point, walk=True, raisecodes=[CODES.FAIL, CODES.INVALID
 def create_default_template(filename=None,user_level=0,doc_level=2):
     """
     Creates a (descriptive) template for ptypy.
-    
+
     Parameters
     ----------
     filename : str
         python file (.py) to generate, will be overriden if it exists
-    
+
     user_level : int
         Filter parameters to display on those with less/equal user level
-    
+
     doc_level : int
-        - if ``0``, no comments. 
+        - if ``0``, no comments.
         - if ``1``, *short_doc* as comment in script
         - if ``>2``, *long_doc* and *short_doc* as comment in script
     """
@@ -433,10 +433,10 @@ def create_default_template(filename=None,user_level=0,doc_level=2):
             else:
                 out.append(line)
         if out:
-            return '# '+'\n# '.join(out)+'\n' 
+            return '# '+'\n# '.join(out)+'\n'
         else:
             return ''
-            
+
     if filename is None:
         f = open('ptypy_template.py','w')
     else:
@@ -472,33 +472,33 @@ def create_default_template(filename=None,user_level=0,doc_level=2):
         if doc_level > 1:
             f.write(_format_longdoc(pd.longdoc))
         f.write('p'+entry+ ' = ' + value+'\n')
-        
+
     f.write('\n\nPtycho(p,level=5)\n')
     f.close()
 
 def _add2argparser(parser=None, entry_point='',root=None,\
                         excludes=('scans','engines'), mode = 'add',group=None):
-    
+
     sep = '.'
-    
+
     pd = parameter_descriptions[entry_point]
-    
+
     has_children = hasattr(pd,'children') and pd.children is not None
-    
+
     if root is None:
-        root = pd.entry_point if has_children else pd.parent.entry_point 
-        
+        root = pd.entry_point if has_children else pd.parent.entry_point
+
     assert root in entry_points_dct.keys()
-    
+
     if excludes is not None:
         # remove leading '.'
         lexcludes = [e.strip()[1:] for e in excludes if e.strip().startswith(sep) ]
         loc_exclude = [e.split(sep)[0] for e in lexcludes if len(e.split())==1 ]
     else:
         excludes =['baguette'] #:)
-    
+
     if pd.name in excludes: return
-    
+
     if parser is None:
         from argparse import ArgumentParser
         description = """
@@ -506,15 +506,15 @@ def _add2argparser(parser=None, entry_point='',root=None,\
         Doc: %s
         """ % (pd.name, pd.shortdoc)
         parser = ArgumentParser(description=description)
-    
+
     # overload the parser
-    if not hasattr(parser,'_ptypy_translator'): 
+    if not hasattr(parser,'_ptypy_translator'):
         parser._ptypy_translator={}
-    
-    
+
+
     # convert to parser variable
     name = pd.entry_point.replace(root,'',1).partition(sep)[2].replace('.','-')
-    
+
     if has_children:
         entry = pd.entry_point
         if name !='':
@@ -526,11 +526,11 @@ def _add2argparser(parser=None, entry_point='',root=None,\
         for key,child in pd.children.iteritems():
             _add2argparser(parser, entry_point=child.entry_point,root=root,\
              excludes=excludes,mode = 'add',group=ngroup)
-                 
+
     if name=='': return parser
-    
+
     parse = parser if group is None else group
-    
+
     # this should be part of PDesc I guess.
     typ = None
     for t in pd.type:
@@ -543,31 +543,31 @@ def _add2argparser(parser=None, entry_point='',root=None,\
     if typ is None:
         u.verbose.logger.debug('Failed evaluate type strings %s of parameter %s in python' % (str(pd.type),name))
         return parser
-        
+
     if type(typ) is not type:
         u.verbose.logger.debug('Type %s of parameter %s is not python type' % (str(typ),name))
         return parser
-    
+
     elif typ is bool:
         flag = '--no-'+name if pd.value else '--'+name
         action='store_false' if pd.value else 'store_true'
-        parse.add_argument(flag, dest=name, action=action, 
+        parse.add_argument(flag, dest=name, action=action,
                          help=pd.shortdoc )
     else:
         d = pd.default
         defstr =  d.replace('%(','%%(') if str(d)==d else str(d)
-        parse.add_argument('--'+name, dest=name, type=typ, default = pd.value, choices=pd.choices, 
-                         help=pd.shortdoc +' (default=%s)' % defstr)            
+        parse.add_argument('--'+name, dest=name, type=typ, default = pd.value, choices=pd.choices,
+                         help=pd.shortdoc +' (default=%s)' % defstr)
 
     parser._ptypy_translator[name] = pd
-        
+
     return parser
-    
+
 if __name__ =='__main__':
     from ptypy import utils as u
-    
-    
-    
+
+
+
     parser = _add2argparser(entry_point='.scan.illumination')
     parser.parse_args()
-    
+
