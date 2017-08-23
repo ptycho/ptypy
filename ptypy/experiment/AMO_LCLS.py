@@ -28,24 +28,27 @@ H5_PATHS.frame_pattern = 'data/photons'
 
 # Recipe defaults
 RECIPE = u.Param()
-RECIPE.experimentID = None      # Experiment identifier
-RECIPE.scan_number = None       # scan number
+RECIPE.experimentID = None          # Experiment identifier
+RECIPE.scan_number = None           # scan number
 RECIPE.dark_number = None
 RECIPE.flat_number = None
 RECIPE.energy = None
-RECIPE.lam = None               # 1.2398e-9 / RECIPE.energy
-RECIPE.z = None                 # Distance from object to screen
-RECIPE.detector_name = None     # Name of the detector as specified in the nexus file
-RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
-RECIPE.motors_multiplier = 1e-3 #for AMO #1e-6 #for CXI         # Motor conversion factor to meters
+RECIPE.lam = None                   # 1.2398e-9 / RECIPE.energy
+RECIPE.z = None                     # Distance from object to screen
+RECIPE.detector_name = None         # Name of the detector as specified
+                                    # in the nexus file
+RECIPE.motors = ['t1_sx', 't1_sy']  # Motor names to determine the
+                                    # sample translation
+RECIPE.motors_multiplier = 1e-3     #for AMO #1e-6 #for CXI
+                                    # Motor conversion factor to meters
 RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'input/r%(scan_number)04d.h5'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'input/r%(dark_number)04d.h5'
 RECIPE.flat_file_pattern = '%(base_path)s' + 'input/r%(flat_number)04d.h5'
-RECIPE.mask_file = None # '%(base_path)s' + 'processing/mask.h5'
-RECIPE.averaging_number = 1 # Number of frames to be averaged
-RECIPE.threshold_correct = 1 #0 # threshold for raw frame correction (i.e. setting
-                             # to zero values smaller than this
+RECIPE.mask_file = None         # '%(base_path)s' + 'processing/mask.h5'
+RECIPE.averaging_number = 1     # Number of frames to be averaged
+RECIPE.threshold_correct = 1    #0 # threshold for raw frame correction
+                            # (i.e. setting to zero values smaller than this
 RECIPE.apply_gaussian_filter = False # to smooth (noisy) raw frames
 RECIPE.sigma_gaussian_filter = 1.
 
@@ -149,7 +152,7 @@ class AMOScan(core.data.PtyScan):
         x = mmult[0] * io.h5read(self.data_file, 'data.posx')['posx']
         y = mmult[1] * io.h5read(self.data_file, 'data.posy')['posy']
 
-        # Valid posiitons and frames
+        # Valid positions and frames
         try:
             v = io.h5read(self.data_file, 'data.valid')['valid']
         except:
@@ -174,7 +177,8 @@ class AMOScan(core.data.PtyScan):
         :param start: starting point
         :return: (frames_available, end_of_scan)
         - the number of frames available from a starting point `start`
-        - bool if the end of scan was reached (None if this routine doesn't know)
+        - bool if the end of scan was reached
+            (None if this routine doesn't know)
         """
         npos = self.num_frames
         frames_accessible = min((frames, npos-start))
