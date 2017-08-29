@@ -167,6 +167,8 @@ def complex2hsv(cin, vmin=0., vmax=None):
     s = np.ones(cin.shape)
 
     v = abs(cin)
+    if vmin is None:
+        vmin = v.min()
     if vmax is None:
         vmax = v.max()
     if vmin==vmax:
