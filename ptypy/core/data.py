@@ -1204,7 +1204,10 @@ class PtydScan(PtyScan):
         with h5py.File(source, 'r') as f:
             check = f.get('chunks/0')
             # Get number of frames supposedly in the file
-            source_frames = f.get('info/num_frames_actual')[...].item()
+            try:
+                source_frames = f.get('info/num_frames_actual')[...].item()
+            except TypeError:
+                source_frames = len(f.get('info/positions_scan')[...])
             f.close()
 
         if check is None:
