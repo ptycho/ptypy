@@ -1,6 +1,31 @@
 """
 Unittests for ptypy/core/classes.py
 
+This module contains basic unittests for default parameters, class
+initialization, and method and function calls for the classes.py module.
+
+The order of the performed tests is:
+
+- Default module parameters
+- Base class initialization (including default parameters) and methods calling
+- Module functions
+- Container class initialization (including default parameters) and
+  methods calling
+- Storage class initialization (including default parameters) and
+  methods calling
+- View class initialization (including default parameters) and
+  methods calling
+- POD class initialization (including default parameters) and
+  methods calling
+- Freport class initialization (including default parameters) and
+  methods calling
+
+Functions or methods which cannot be tested at the moment are skipped.
+Functional unittests (i.e. from the user's perspective) will be implemented in
+the future.
+Run python -m unittest discover in the ptypy root directory to perform the
+tests.
+
 This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
