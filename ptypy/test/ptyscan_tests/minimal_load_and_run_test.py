@@ -6,31 +6,31 @@ data file format in "/tmp/ptypy/sample.ptyd"
 import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
-
+from ptypy.test import test_utils as tu 
 import unittest
 import tempfile
 
 class MinimalLoadAndRunTest(unittest.TestCase):
-    @unittest.skip('skipping this for now. adp 23/09')
+    @unittest.skip("this won't work unless we figure out how to treat the data")    
     def test_load_and_run(self):
         p = u.Param()
         p.verbose_level = 3
         p.io = u.Param()
-        p.io.home = tempfile.gettempdir()+"/ptypy/"  
+        p.io.home = tempfile.mkdtemp()
         p.autosave = None
         
         p.scans = u.Param()
         p.scans.MF = u.Param()
         p.scans.MF.data= u.Param()
-        p.scans.MF.data.source = 'sample.ptyd'
-        p.scans.MF.data.dfile = tempfile.gettempdir()+'/sample.ptyd'
+        p.scans.MF.data.source = 'file'
+        p.scans.MF.data.dfile = tu.get_test_data_path('ptyd')+'test.ptyd'#'sample.ptyd'
         
         p.engine = u.Param()
         
         ## Common defaults for all engines
         p.engine.common = u.Param()
         # Total number of iterations
-        p.engine.common.numiter = 100
+        p.engine.common.numiter = 5
         # Number of iterations to be executed in one go
         p.engine.common.numiter_contiguous = 1           
         # Fraction of valid probe area (circular) in probe frame
@@ -64,12 +64,14 @@ class MinimalLoadAndRunTest(unittest.TestCase):
         p.engines = u.Param()              
         p.engines.engine00 = u.Param()
         p.engines.engine00.name = 'DM'
-        p.engines.engine00.numiter = 30
+        p.engines.engine00.numiter = 2
         p.engines.engine01 = u.Param()
         p.engines.engine01.name = 'ML'
-        p.engines.engine01.numiter = 20
+        p.engines.engine01.numiter = 3
         
         P = Ptycho(p,level=5)
 
+
 if __name__ == '__main__':
     unittest.main()
+

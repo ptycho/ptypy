@@ -21,31 +21,19 @@ import h5py as h5
 
 logger = u.verbose.logger
 
-# Parameters for the nexus file saved by GDA
+
 NEXUS_PATHS = u.Param()
+NEXUS_PATHS.instrument = 'entry/%(detector_name)s'
+NEXUS_PATHS.frame_pattern = 'entry/%(detector_name)s/data'
+NEXUS_PATHS.live_key_pattern = 'entry/solstice_scan/uniqueKeys'
+NEXUS_PATHS.finished_pattern = 'entry/live/finished'
+NEXUS_PATHS.exposure = 'entry/%(detector_name)s/count_time'
+NEXUS_PATHS.motors = ['lab_sy_value', 'lab_sx_value']
+NEXUS_PATHS.command = 'entry/scan_command'
+NEXUS_PATHS.label = 'entry/entry_identifier'
+NEXUS_PATHS.experiment = 'entry/experiment_identifier'
 
-NEXUS_PATHS.instrument = 'raw_entry/%(detector_name)s'
-NEXUS_PATHS.frame_pattern = 'entry/result/data'
-NEXUS_PATHS.live_key_pattern = 'raw_entry/%(detector_name)s_total/total'
-NEXUS_PATHS.finished_pattern = 'raw_entry/solstice_scan/scan_finished'
-#NEXUS_PATHS.exposure = 'entry1/%(detector_name)s/count_time'
-# NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
-#NEXUS_PATHS.motors = ['t1_sy', 't1_sx']
-NEXUS_PATHS.motors = ['SampleX_value', 'SampleY_value']
 
-#NEXUS_PATHS.instrument = 'entry1/%(detector_name)s'
-#NEXUS_PATHS.frame_pattern = 'entry1/%(detector_name)s/data'
-#NEXUS_PATHS.live_key_pattern = 'entry1/%(detector_name)s/live_key'
-#NEXUS_PATHS.finished_pattern = 'entry1/live/finished'
-#NEXUS_PATHS.exposure = 'entry1/%(detector_name)s/count_time'
-#NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
-# NEXUS_PATHS.motors = ['t1_sy', 't1_sx']
-# NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
-
-#NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
-#NEXUS_PATHS.command = 'entry1/scan_command'
-#NEXUS_PATHS.label = 'entry1/entry_identifier'
-#NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 
 # Recipe defaults
 RECIPE = u.Param()
@@ -59,12 +47,9 @@ RECIPE.energy = None
 RECIPE.lam = None               # 1.2398e-9 / RECIPE.energy
 RECIPE.z = None                 # Distance from object to screen
 RECIPE.detector_name = 'merlin_sw_hdf'     # Name of the detector as specified in the nexus file
-RECIPE.start_position=0
-# RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
-RECIPE.motors = ['SampleX_value', 'SampleY_value']      # Motor names to determine the sample translation
+RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
 # RECIPE.motors_multiplier = 1e-6         # Motor conversion factor to meters
-# RECIPE.motors_multiplier = [1e-6,-1e-6]         # Motor conversion factor to meters
-RECIPE.motors_multiplier = [1e-3,1e-3]         # Motor conversion factor to meters
+RECIPE.motors_multiplier = [1e-6,-1e-6]         # Motor conversion factor to meters
 RECIPE.base_path = './'
 RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
 RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
@@ -102,7 +87,7 @@ class DlsScan(PtyScan):
         super(DlsScan, self).__init__(pars, **kwargs)
         self.data_file = self.info.recipe.data_file_pattern  % self.info.recipe
 
-
+#         print self.info.recipe
         # Create the ptyd file name if not specified
         if self.info.dfile is None:
             home = Paths(IO_par).home
@@ -124,16 +109,10 @@ class DlsScan(PtyScan):
         Load the positions and return as an (N,2) array
         """
         # Load positions from file if possible.
-#<<<<<<< HEAD
-#        instrument_path = NEXUS_PATHS.instrument % self.info.recipe
-#        print "instrument path:",instrument_path
-#        instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[instrument_path]
-#=======
-        if self.info.recipe.is_swmr:
-            instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[NEXUS_PATHS.instrument % self.info.recipe]
-        else:
-            instrument = h5.File(self.data_file, 'r')[NEXUS_PATHS.instrument % self.info.recipe]
-#>>>>>>> origin/master
+#         print self.info.recipe
+        stage_path = NEXUS_PATHS.instrument % self.info.recipe
+        print stage_path
+        instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[stage_path]
         if self.info.recipe.israster:
             self.position_shape = instrument[0].shape
         motor_positions = []
@@ -147,7 +126,7 @@ class DlsScan(PtyScan):
                 motor_positions.append((instrument[k]*mmult[i]).ravel())
             i+=1
 
-        positions = np.array(motor_positions).T[self.info.recipe.start_position:]
+        positions = np.array(motor_positions).T
         return positions
 
     def check(self, frames, start):
@@ -168,13 +147,14 @@ class DlsScan(PtyScan):
             return frames_accessible, (stop >= npos)
         else:
             f = h5.File(self.data_file, 'r', libver='latest', swmr=True)
-            dset= f[NEXUS_PATHS.live_key_pattern % self.info.recipe]
+            dset= f[NEXUS_PATHS.live_key_pattern]
             dset.id.refresh()
             num_avail = len(dset)-start
             frames_accessible = min((frames, num_avail))
-            stop = f[NEXUS_PATHS.finished_pattern][0] and (self.num_frames == start)
+#             stop = f[NEXUS_PATHS.finished_pattern][0] and (self.num_frames == start)
             f.close()
-            return frames_accessible,stop
+#             print "HERE",frames_accessible, stop
+            return frames_accessible,1
 
     def load(self, indices):
         """
@@ -189,21 +169,34 @@ class DlsScan(PtyScan):
         key = NEXUS_PATHS.frame_pattern % self.info.recipe
         if not self.info.recipe.israster:
             for j in indices:
+                print j
                 if not self.info.recipe.is_swmr:
-#                     print "frame number "+str(j)
-                    data = io.h5read(self.data_file, key, slice=j)[key].astype(np.float32)
-                    raw[j] = data
+                    dataset = h5.File(self.data_file)[key]
+                    try:
+                        ic =  h5.File(self.data_file)['entry1/merlin_sw_hdf/ionc_photonflux']
+                    except KeyError:
+#                         log(2, 'No ion chamber found')
+                        ic= np.ones((dataset.shape[0]))
+                    data = dataset[j]
+                    raw[j] = data.astype(np.float32) * (float(ic[j])/float(ic[0]))
                 else:
                     
                     #print "frame number "+str(j)
                     dset= h5.File(self.data_file, 'r', libver='latest', swmr=True)[key]
                     dset.id.refresh()
+                    
+                    try:
+                        ic =  h5.File(self.data_file)['entry1/merlin_sw_hdf/ionc_photonflux']
+                    except KeyError:
+#                         log(2, 'No ion chamber found')
+                        ic= np.ones((dset.shape[0]))
                     #print dset.shape
-                    raw[j] = dset[j]
+                    raw[j] = dset[j] * ic[j]/ic[0]
                     dset.file.close()
         else:
             if not self.info.recipe.is_swmr:
                 data = h5.File(self.data_file)[key]
+                
                 sh = data.shape
                 for j in indices:
                     raw[j]=data[j % sh[0], j // sh[1]] # or the other way round???

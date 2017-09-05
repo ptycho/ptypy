@@ -1,24 +1,19 @@
-import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
-import ptypy.simulations as sim
-import numpy as np
 import tempfile
 from ptypy.resources import tree_obj
-
 import unittest
 
 
 class PtypycSAXSPseudoBone6p2keVTest(unittest.TestCase):
+#     @unittest.skip('There seems to be a leak of variables between this one and the i13 one')
     def test_csaxs(self):
         p = u.Param()
-        
-        ### PTYCHO PARAMETERS
         p.verbose_level = 3                  
         p.data_type = "single"                            
         p.run = None
         p.io = u.Param()
-        p.io.home = tempfile.gettempdir()+"/ptypy/"             
+        p.io.home = tempfile.mkdtemp()             
         p.io.run = None
         p.io.autosave = None
         p.io.autoplot = False
@@ -47,13 +42,6 @@ class PtypycSAXSPseudoBone6p2keVTest(unittest.TestCase):
         p.scan.coherence.Nprobe_modes = 1               
         p.scan.coherence.Nobject_modes = 1               
         p.scan.coherence.energies = [1.0]                
-        
-        p.scan.sharing = u.Param()
-        p.scan.sharing.object_shared_with = None 
-        p.scan.sharing.object_share_power = 1  
-        p.scan.sharing.probe_shared_with = None 
-        p.scan.sharing.probe_share_power = 1      
-        
         sim = u.Param()
         sim.xy = u.Param()
         sim.xy.model = "round"                
@@ -99,7 +87,8 @@ class PtypycSAXSPseudoBone6p2keVTest(unittest.TestCase):
         p.scans.CircSim.data.save = None
         
         p.scans.RectSim = u.Param()
-        p.scans.RectSim.sharing= u.Param(object_share_with = 'CircSim')
+        p.scans.RectSim.sharing = u.Param()
+        p.scans.RectSim.sharing.object_share_with = 'CircSim'
         p.scans.RectSim.data=u.Param()
         p.scans.RectSim.data.source = 'sim' 
         p.scans.RectSim.data.recipe = sim.copy(depth=4)
@@ -126,8 +115,6 @@ class PtypycSAXSPseudoBone6p2keVTest(unittest.TestCase):
         p.engine.DM.overlap_max_iterations = 100    
         p.engine.DM.fourier_relax_factor = 0.1   
         
-        p.engine.ML = u.Param()
-        
         p.engines = u.Param()                        
         p.engines.engine00 = u.Param()
         p.engines.engine00.name = 'DM'
@@ -136,11 +123,7 @@ class PtypycSAXSPseudoBone6p2keVTest(unittest.TestCase):
         p.engines.engine01 = u.Param()
         p.engines.engine01.name = 'ML'
         p.engines.engine01.numiter = 1
-        
-        
-        
-        u.verbose.set_level(3)
         P = Ptycho(p,level=5)
-
+        
 if __name__ == '__main__':
     unittest.main()
