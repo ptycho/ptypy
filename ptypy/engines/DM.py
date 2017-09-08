@@ -68,6 +68,11 @@ class DM(BaseEngine):
 
         self.pbound = None
 
+        # Required to get proper normalization of object inertia
+        # The actual value is computed in engine_prepare
+        # Another possibility would be to use the maximum value of all probe storages.
+        self.mean_power = None
+
     def engine_initialize(self):
         """
         Prepare for reconstruction.
@@ -90,9 +95,12 @@ class DM(BaseEngine):
         """
 
         self.pbound = {}
+        mean_power = 0.
         for name, s in self.di.storages.iteritems():
             self.pbound[name] = (
                 .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
+            mean_power += s.tot_power/np.prod(s.shape)
+        self.mean_power = mean_power / len(self.di.storages)
 
         # Fill object with coverage of views
         for name, s in self.ob_viewcover.storages.iteritems():
@@ -227,15 +235,12 @@ class DM(BaseEngine):
             ob_nrm.fill(0.)
         else:
             for name, s in self.ob.storages.iteritems():
-                # In original code:
-                # DM_smooth_amplitude = (
-                #     (p.DM_smooth_amplitude * max_power * p.num_probes * Ndata)
-                #     / np.prod(asize))
-                # Using the number of views here,
-                # but don't know if that is good.
-                # cfact = self.p.object_inertia * len(s.views)
-                cfact = (self.p.object_inertia
-                         * (self.ob_viewcover.storages[name].data + 1.))
+                # The amplitude of the regularization term has to be scaled with the
+                # power of the probe (which is estimated from the power in diffraction patterns).
+                # This estimate assumes that the probe power is uniformly distributed through the
+                # array and therefore underestimate the strength of the probe terms.
+                cfact = self.p.object_inertia * self.mean_power *\
+                    (self.ob_viewcover.storages[name].data + 1.)
 
                 if self.p.obj_smooth_std is not None:
                     logger.info(
@@ -264,6 +269,10 @@ class DM(BaseEngine):
             parallel.allreduce(s.data)
             parallel.allreduce(nrm)
             s.data /= nrm
+
+            # A possible (but costly) sanity check would be as follows:
+            # if all((np.abs(nrm)-np.abs(cfact))/np.abs(cfact) < 1.):
+            #    logger.warning('object_inertia seem too high!')
 
             # Clip object
             if self.p.clip_object is not None:
