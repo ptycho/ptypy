@@ -239,8 +239,8 @@ class DM(BaseEngine):
 
                 if self.p.obj_smooth_std is not None:
                     logger.info(
-                        'Smoothing object, average cfact is %.2f + %.2fj'
-                        % (np.mean(cfact).real, np.mean(cfact).imag))
+                        'Smoothing object, average cfact is %.2f'
+                        % np.mean(cfact).real)
                     smooth_mfs = [0,
                                   self.p.obj_smooth_std,
                                   self.p.obj_smooth_std]
