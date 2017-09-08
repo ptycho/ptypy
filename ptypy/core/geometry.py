@@ -80,7 +80,7 @@ class Geo(Base):
     """
 
     DEFAULT = DEFAULT
-    _keV2m = 1.240597288e-09
+    _keV2m = 1.23984193e-09
     _PREFIX = GEO_PREFIX
     
     def __init__(self, owner=None, ID=None, pars=None, **kwargs):

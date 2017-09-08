@@ -3,7 +3,7 @@ sudo: true
 language: python
 python:
   - "2.7"
-
+  - "3.3"
 before_install:
   - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh; # grab miniconda
   - bash miniconda.sh -b -p $HOME/miniconda # install miniconda
@@ -13,6 +13,7 @@ before_install:
   - conda install pyyaml
   - conda info -a # and print the info
   - conda install pyyaml
+  - echo $PYTHONPATH
 
 install:
   - conda env create --file environment.yml #set up the environment thats in the file
@@ -24,3 +25,6 @@ script:
 
 after_script:
   - coveralls
+  
+allow_failures:
+- python: "3.3"
