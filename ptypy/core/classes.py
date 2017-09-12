@@ -548,7 +548,7 @@ class Storage(Base):
             v.pcoord = self._to_pix(v.coord)
 
         # Integer part (note that np.round is not stable for odd arrays)
-        v.dcoord = np.round(v.pcoord).astype(int)
+        v.dcoord = np.round(v.pcoord + 0.00001).astype(int)
 
         # These are the important attributes used when accessing the data
         v.dlow = v.dcoord - v.shape/2
