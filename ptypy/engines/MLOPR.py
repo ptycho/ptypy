@@ -29,7 +29,11 @@ DEFAULT = u.Param(
     smooth_gradient=0,
     scale_precond=False,
     scale_probe_object=1.,
-    subspace_dim=5
+    subspace_dim=5,
+    # weight of previous object estimate: between 0 and 1
+    # if 0 all as without
+    # if 1 object not updated
+    object_inertia=0.,
 )
 
 
@@ -245,7 +249,7 @@ class MLOPR(BaseEngine):
             self.tmin = -.5*B[1]/B[2]
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
-            self.ob += self.ob_h
+            self.ob += self.ob_h * (1. - self.p.object_inertia)
             self.pr += self.pr_h
 
             # SS: applying probe support could(/should) go here [20170821]
