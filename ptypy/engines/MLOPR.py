@@ -29,7 +29,11 @@ DEFAULT = u.Param(
     smooth_gradient=0,
     scale_precond=False,
     scale_probe_object=1.,
-    subspace_dim=5
+    subspace_dim=5,
+    # weight of previous object estimate: between 0 and 1
+    # if 0 all as without
+    # if 1 object not updated
+    object_inertia=0.,
 )
 
 
@@ -245,6 +249,10 @@ class MLOPR(BaseEngine):
             self.tmin = -.5*B[1]/B[2]
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
+            for sID, ob_hS in self.ob_h.S.iteritems():
+                for i in range(ob_hS.shape[0]):
+                    ob_hS[i] *= 1. - self.p.object_inertia
+            # There must be an easier way to apply a factor to storages!
             self.ob += self.ob_h
             self.pr += self.pr_h
 
