@@ -315,22 +315,26 @@ class TestContainer(unittest.TestCase):
 
         # Container for View test
         self.basic_container_vt = c.Container()
-        self.basic_view_vt = c.View(self.basic_container_vt)
+        accessrule = u.Param()
+        accessrule.shape = 1
+        self.basic_view_vt = c.View(
+            self.basic_container_vt, accessrule=accessrule
+        )
 
         # Container for clear test
         self.basic_container_clt = c.Container()
-        self.basic_storage_clt = c.Storage(self.basic_container_clt,
-                                           shape=1,
-                                           fill=24)
+        self.basic_storage_clt = c.Storage(
+            self.basic_container_clt, shape=1, fill=24
+        )
 
         # Container for __ifunction__ tests, empty and filled
         self.basic_container_ifte = c.Container()
         self.basic_storage_ifte = c.Storage(self.basic_container_ifte)
 
         self.basic_container_iftf = c.Container()
-        self.basic_storage_iftf = c.Storage(self.basic_container_iftf,
-                                            shape=1,
-                                            fill=24)
+        self.basic_storage_iftf = c.Storage(
+            self.basic_container_iftf, shape=1, fill=24
+        )
 
         # Container for new storage test
         self.basic_container_nst = c.Container()
@@ -593,7 +597,7 @@ class TestContainer(unittest.TestCase):
         self.assertRaises(
             ValueError,
             self.basic_container_dpt.__getitem__,
-            'random_input'
+            view='random_input'
         )
 
     def test__setitem__(self):
@@ -609,11 +613,12 @@ class TestContainer(unittest.TestCase):
             'Setting content through view failed.'
         )
 
-        # Test accessing content through random input string
+        # Test setting content through random input string
         self.assertRaises(
             ValueError,
-            self.basic_container_dpt.__getitem__,
-            'random_input'
+            self.basic_storage_dpt.__setitem__,
+            v='random_input',
+            newdata='more_random_input'
         )
 
     def test_info(self):
@@ -953,7 +958,7 @@ class TestStorage(unittest.TestCase):
         self.assertRaises(
             ValueError,
             self.basic_storage_ft.fill,
-            np.ones(1)
+            fill=np.ones(1)
         )
 
     def test_fill_2darray_value(self):
@@ -992,7 +997,7 @@ class TestStorage(unittest.TestCase):
         self.assertRaises(
             ValueError,
             self.basic_storage_ft.fill,
-            np.ones((1, 1, 1, 1))
+            fill=np.ones((1, 1, 1, 1))
         )
 
     @unittest.skip('Function simply calls Storage.update_views')
@@ -1197,7 +1202,7 @@ class TestStorage(unittest.TestCase):
         self.assertRaises(
             ValueError,
             self.basic_storage_dpt.__getitem__,
-            'random_input'
+            v='random_input'
         )
 
     def test__setitem__(self):
@@ -1208,8 +1213,8 @@ class TestStorage(unittest.TestCase):
         self.assertRaises(
             ValueError,
             self.basic_storage_dpt.__setitem__,
-            'random_input',
-            'more_random_input'
+            v='random_input',
+            newdata='more_random_input'
         )
 
     def test__str__(self):
@@ -1234,7 +1239,11 @@ class TestView(unittest.TestCase):
         """Set up View instances"""
         # View for default parameters test
         self.basic_container_dpt = c.Container()
-        self.basic_view_dpt = c.View(self.basic_container_dpt)
+        accessrule = u.Param()
+        accessrule.shape = 1
+        self.basic_view_dpt = c.View(
+            self.basic_container_dpt, accessrule=accessrule
+        )
 
     def test_view_default_constants(self):
         """Default View constants unaltered"""
@@ -1301,7 +1310,7 @@ class TestView(unittest.TestCase):
             np.array_equal(
                 self.basic_view_dpt._arfloat,
                 np.array(
-                    [[1, 1], [0.5, 0.5], [0.5, 0.5], [0, 0]], dtype=np.float
+                    [[1, 1], [0., 0.], [0., 0.], [0, 0]], dtype=np.float
                 )
             ),
             'Assigning of instance attribute _arfloat failed.'
@@ -1334,7 +1343,7 @@ class TestView(unittest.TestCase):
         self.assertTrue(
             np.array_equal(
                 self.basic_view_dpt.coord,
-                np.array([0.5, 0.5], dtype=np.float)
+                np.zeros(2, dtype=int)
             ),
             'Assigning of instance attribute psize failed.'
         )
@@ -1344,7 +1353,7 @@ class TestView(unittest.TestCase):
         self.assertEqual(
             self.basic_view_dpt.__str__(),
             'None -> S0000[V0000] : '
-            'shape = [1 1] layer = 0 coord = [ 0.5  0.5]\n '
+            'shape = [1 1] layer = 0 coord = [ 0.  0.]\n '
             'ACTIVE : slice = (0, slice(0, 1, None), slice(0, 1, None))',
             msg='Returning __str__ of view failed'
         )
@@ -1521,7 +1530,7 @@ class TestView(unittest.TestCase):
         self.assertTrue(
             np.array_equal(
                 self.basic_view_dpt.coord,
-                np.array(([0.5, 0.5]))
+                np.zeros(2, dtype=float)
             ),
             "Returning the View's physical coordinate (meters) failed."
         )
@@ -1566,7 +1575,7 @@ class TestView(unittest.TestCase):
         self.assertTrue(
             np.array_equal(
                 self.basic_view_dpt.sp,
-                np.array(([0.5, 0.5]))
+                np.zeros(2, dtype=float)
             ),
             "Returning subpixel difference of physical and data coord. failed."
         )
@@ -1619,12 +1628,24 @@ class TestPOD(unittest.TestCase):
         # POD for default parameters test
 
         # Views for default parameter test
+        accessrule = u.Param()
+        accessrule.shape = 1
         self.basic_container_dpt = c.Container()
-        self.basic_probe_view_dpt = c.View(self.basic_container_dpt)
-        self.basic_obj_view_dpt = c.View(self.basic_container_dpt)
-        self.basic_exit_view_dpt = c.View(self.basic_container_dpt)
-        self.basic_diff_view_dpt = c.View(self.basic_container_dpt)
-        self.basic_mask_view_dpt = c.View(self.basic_container_dpt)
+        self.basic_probe_view_dpt = c.View(
+            self.basic_container_dpt, accessrule=accessrule
+        )
+        self.basic_obj_view_dpt = c.View(
+            self.basic_container_dpt, accessrule=accessrule
+        )
+        self.basic_exit_view_dpt = c.View(
+            self.basic_container_dpt, accessrule=accessrule
+        )
+        self.basic_diff_view_dpt = c.View(
+            self.basic_container_dpt, accessrule=accessrule
+        )
+        self.basic_mask_view_dpt = c.View(
+            self.basic_container_dpt, accessrule=accessrule
+        )
 
         self.test_views = {
             'probe': self.basic_probe_view_dpt,
