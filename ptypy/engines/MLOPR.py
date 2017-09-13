@@ -249,7 +249,11 @@ class MLOPR(BaseEngine):
             self.tmin = -.5*B[1]/B[2]
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
-            self.ob += self.ob_h * (1. - self.p.object_inertia)
+            for sID, ob_hS in self.ob_h.S.iteritems():
+                for i in range(ob_hS.shape[0]):
+                    ob_hS[i] *= 1. - self.p.object_inertia
+            # There must be an easier way to apply a factor to storages!
+            self.ob += self.ob_h
             self.pr += self.pr_h
 
             # SS: applying probe support could(/should) go here [20170821]
