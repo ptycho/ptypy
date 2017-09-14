@@ -214,28 +214,26 @@ class SimScan(PtyScan):
 
 if __name__ == "__main__":
     from ptypy import resources
-
+    
     s = scan_DEFAULT.copy()
-    s.xy.scan_type = "round_roi"                # (25) None,'round', 'raster', 'round_roi','custom'
-    s.xy.dr = 1e-6                             # (26) round,round_roi :width of shell
-    s.xy.nr = 10                                # (27) round : number of intervals (# of shells - 1)
-    s.xy.lx = 5e-6                            # (29) round_roi: Width of ROI
-    s.xy.ly = 5e-6                            # (30) round_roi: Height of ROI
+    s.xy.model = "round"
+    s.xy.spacing = 1e-6
+    s.xy.steps = 8
+    s.xy.extent = 5e-6 
     shape = 256
-    s.geometry.energy = 6.2                    # (17) Energy (in keV)
-    s.geometry.lam = None                       # (18) wavelength
-    s.geometry.distance = 7                        # (19) distance from object to screen
-    s.geometry.psize = 172e-6                # (20) Pixel size in Detector plane
-    s.geometry.shape = shape                          # (22) Number of detector pixels
-    s.geometry.propagation = "farfield"           # (23) propagation type
-    s.illumination.probe = resources.moon_pr((shape,shape))*1e2
-    s.sample = u.Param()
-    s.sample.obj = resources.flower_obj((shape*2,shape*2))
+    s.geometry.energy = 6.2
+    s.geometry.lam = None
+    s.geometry.distance = 7
+    s.geometry.psize = 172e-6
+    s.geometry.shape = shape
+    s.geometry.propagation = "farfield"
+    s.illumination = resources.moon_pr((shape,shape))*1e2
+    s.sample =  resources.flower_obj((shape*2,shape*2))
 
 
     u.verbose.set_level(3)
     MS = SimScan(None,s)
-    MS.P.plot_overview()
+    #MS.P.plot_overview()
     u.verbose.set_level(3)
     u.pause(10)
     MS.initialize()
