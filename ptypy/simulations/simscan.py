@@ -140,7 +140,7 @@ class SimScan(PtyScan):
             acquire = Det.filter
         else:
             save_dtype = None
-            acquire = lambda x: x
+            acquire = lambda x: (x, np.ones(x.shape).astype(bool))
 
         # create dictionaries for 'raw' data
         self.diff = {}
