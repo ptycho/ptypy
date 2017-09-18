@@ -168,13 +168,13 @@ class Server(object):
     Defaults:
 
     [active]
-    default = TRUE
+    default = True
     help = Activation switch
     doc = Set to ``False`` for no  ZeroMQ interaction server
     type = bool
 
     [address]
-    default = tcp://127.0.0.1
+    default = 'tcp://127.0.0.1'
     help = The address the server is listening to.
     doc = Wenn running ptypy on a remote server, it is the servers network address.
     type = str
@@ -697,7 +697,7 @@ class Client(object):
     Defaults:
 
     [address]
-    default = tcp://127.0.0.1
+    default = 'tcp://127.0.0.1'
     help = The address the server is listening to.
     doc = Wenn running ptypy on a remote server, it is the servers network address.
     type = str

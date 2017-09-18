@@ -133,16 +133,18 @@ class Param(dict):
 
         def _k_v_update(k, v):
             # If an element is itself a dict, convert it to Param
-            if Convert and hasattr(v, 'keys'):
-                print 'converting'
+            if Convert and hasattr(v, 'keys') and not isinstance(v, self.__class__):
                 v = Param(v)
                 v.update(v.items(), in_place_depth - 1, Convert)
+
             # new key 
-            if not self.has_key(k):
+            if k not in self:
                 self[k] = v
+
             # If this key already exists and is already dict-like, update it
             elif in_place_depth > 0 and hasattr(v, 'keys') and isinstance(self[k], self.__class__):
                 self[k].update(v, in_place_depth - 1, Convert)
+
                 """
                 if isinstance(self[k],self.__class__):
                     # Param gets recursive in_place updates
@@ -151,6 +153,7 @@ class Param(dict):
                     # dicts are only updated in-place once
                     self[k].update(v)
                 """
+
             # Otherwise just replace it
             else:
                 self[k] = v

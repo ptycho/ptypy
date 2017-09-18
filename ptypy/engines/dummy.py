@@ -14,20 +14,18 @@ import numpy as np
 import ptypy
 from .. import utils as u
 from ..utils import parallel
-from . import BaseEngine
-from ..utils import validator
+from base import BaseEngine
+from ..utils.descriptor import defaults_tree
 
 __all__ = ['Dummy']
 
-# change this if there should be a central EvalParameter object somewhere
-root = validator.EvalParameter('')
-@root.parse_doc('engine')
+@defaults_tree.parse_doc('engine.Dummy')
 class Dummy(BaseEngine):
     """
     Dummy reconstruction engine.
 
 
-    Parameters:
+    Defaults:
 
     [itertime]
     default = .2

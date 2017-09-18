@@ -17,16 +17,17 @@ import ast
 from collections import OrderedDict
 import textwrap
 
-# FIXME: descriptor module must be independent of other modules
-if __name__ == '__main__':
-    from ptypy.utils.parameters import Param
-else:
-    from .parameters import Param
 
 __all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
 
+
+class _Adict(object):
+
+    def __init__(self,**kwargs):
+        self.__dict__.update(kwargs)
+
 # ! Validator message codes
-CODES = Param(
+CODES = _Adict(
     PASS=1,
     FAIL=0,
     UNKNOWN=2,
@@ -34,7 +35,7 @@ CODES = Param(
     INVALID=4)
 
 # ! Inverse message codes
-CODE_LABEL = dict((v, k) for k, v in CODES.items())
+CODE_LABEL = dict((v, k) for k, v in CODES.__dict__.items())
 
 
 class Descriptor(object):
@@ -63,7 +64,7 @@ class Descriptor(object):
         #: Name of parameter
         self.name = name
 
-        #: Parent parameter (:py:class:`Parameter` type) if it has one.
+        #: Parent parameter (:py:class:`Descriptor` type) if it has one.
         self.parent = parent
 
         #: Hierarchical tree of sub-Parameters.
@@ -455,9 +456,12 @@ class ArgParseDescriptor(Descriptor):
         """
         try:
             return ast.literal_eval(val)
-        except ValueError as e:
-            msg = e.args[0] + ". could not read %s for parameter %s" % (val, self.name)
+        except ValueError or SyntaxError as e:
+            msg = e.args[0] + ". could not read %s for parameter %s" % (val, self.path)
             raise ValueError(msg)
+        except SyntaxError as e:
+            msg = e.args[0] + ". could not read %s for parameter %s" % (val, self.path)
+            raise SyntaxError(msg)
 
     @property
     def choices(self):
@@ -705,7 +709,7 @@ class EvalDescriptor(ArgParseDescriptor):
                 val['uplim'] = CODES.PASS if (pars <= uplim) else CODES.FAIL
 
         # 3. Extra work for parameter entries
-        if 'Param' in self.type:
+        if 'param' in self.type.lower() or 'dict' in self.type.lower():
 
             # Check for missing entries
             for k, v in self.children.items():
@@ -858,9 +862,15 @@ class EvalDescriptor(ArgParseDescriptor):
         from weakref import ref
         cls._descriptor = ref(desc)
 
+        # FIXME: This should be solved more elegantly
+        from ptypy.utils import Param
+        cls.DEFAULTS = Param()
+        cls.DEFAULTS.update(desc.make_default(depth=99), Convert=True)
+        """
         prop = property(lambda this: this._descriptor().make_default(depth=0))
 
         setattr(cls, "DEFAULTS", prop)
+        """
 
         return cls
 

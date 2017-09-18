@@ -13,18 +13,18 @@ from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
 from engine_utils import basic_fourier_update
-from . import BaseEngine
-from ..utils import validator
+from base import BaseEngine
+from ..utils.descriptor import defaults_tree
 
 __all__ = ['DM']
 
-@validator.defaults_tree.parse_doc('engines.DM')
+@defaults_tree.parse_doc('engine.DM')
 class DM(BaseEngine):
     """
     A full-fledged Difference Map enine.
 
 
-    Parameters:
+    Defaults:
 
     [alpha]
     default = 1

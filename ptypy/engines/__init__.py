@@ -11,21 +11,21 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .. import utils as u
-from base import BaseEngine, DEFAULT_iter_info
+from base import DEFAULT_iter_info
 import DM
 import DM_simple
 import ML
 import dummy
 import ePIE
 
-__all__ = ['DM', 'ML', 'ePIE', 'BaseEngine']
+
+__all__ = ['DM', 'ML', 'ePIE']
 
 # List of supported engines
 engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE']
 
 # Supported engines defaults
 DEFAULTS = u.Param(
-    common=BaseEngine.DEFAULTS,
     Dummy=dummy.Dummy.DEFAULTS,
     DM_simple=DM_simple.DM_simple.DEFAULTS,
     DM=DM.DM.DEFAULTS,

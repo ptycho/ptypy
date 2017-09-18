@@ -16,24 +16,25 @@ from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
 from engine_utils import Cnorm2, Cdot
-from . import BaseEngine
-from ..utils import validator
+from base import BaseEngine
+from ..utils.descriptor import defaults_tree
 
 __all__ = ['ML']
 
-@validator.defaults_tree.parse_doc('engines.ML')
+@defaults_tree.parse_doc('engine.ML')
 class ML(BaseEngine):
     """ 
     Maximum likelihood reconstruction engine.
 
 
-    Parameters:
+    Defaults:
 
     [ML_type]
-    default = gaussian
+    default = 'gaussian'
     type = str
     help = Likelihood model
-    doc = One of ‘gaussian’, ‘poisson’ or ‘euclid’. Only 'gaussian' is implemented.
+    choices = ['gaussian','poisson','euclid']
+    doc = One of ‘gaussian’, poisson’ or ‘euclid’. Only 'gaussian' is implemented.
 
     [floating_intensities]
     default = False

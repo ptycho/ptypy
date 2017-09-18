@@ -110,13 +110,13 @@ class Ptycho(Base):
     help = Start an ipython kernel for debugging
     doc = Start an ipython kernel for debugging.
 
-    [scans]
+    [scan]
     default = None
     type = Param
     help = Container for instances of scan parameters
     doc = Container for instances of scan parameters.
 
-    [engines]
+    [engine]
     default = None
     type = Param
     help = Container for instances of engine parameters
@@ -129,14 +129,14 @@ class Ptycho(Base):
     type = Param
 
     [io.home]
-    default = ./
+    default = "./"
     help = Base directory for all I/O
     doc = home is the root directory for all input/output operations. All other path parameters that
       are relative paths will be relative to this directory.
     type = dir
 
     [io.rfile]
-    default = recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr
+    default = "recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr"
     help = Reconstruction file name (or format string)
     doc = Reconstruction file name or format string (constructed against runtime dictionary)
     type = str
@@ -148,7 +148,7 @@ class Ptycho(Base):
     type = Param
 
     [io.autosave.active]
-    default = TRUE
+    default = True
     help = Activation switch
     doc = If ``True`` the current reconstruction will be saved at regular intervals. **unused**
     type = bool
@@ -162,7 +162,7 @@ class Ptycho(Base):
     lowlim = -1
 
     [io.autosave.rfile]
-    default = dumps/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr
+    default = "dumps/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr"
     help = Auto-save file name (or format string)
     doc = Auto-save file name or format string (constructed against runtime dictionary)
     type = str
@@ -174,7 +174,7 @@ class Ptycho(Base):
     type = Param
 
     [io.autoplot.imfile]
-    default = plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png
+    default = "plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png"
     help = Plot images file name (or format string)
     doc = Plot images file name (or format string).
     type = str
@@ -190,7 +190,7 @@ class Ptycho(Base):
     lowlim = -1
 
     [io.autoplot.threaded]
-    default = TRUE
+    default = True
     help = Live plotting switch
     doc = If ``True``, a plotting client will be spawned in a new thread and connected at
       initialization. If ``False``, the master node will carry out the plotting, pausing the
@@ -249,20 +249,10 @@ class Ptycho(Base):
         super(Ptycho, self).__init__(None, 'Ptycho')
 
         # Create a parameter structure from the the class-level defaults
-        self.p = self.DEFAULTS.copy()
+        self.p = u.Param()
+        self.p.update(self.DEFAULTS, 99, Convert=True)
 
-        # Workaround to be removed when we lose p.scan and p.engine. FIXME
-        # These are empty dummies to stop the code from breaking.
-        # So remove references to them throughout.
-        self.p.scan = u.Param()
-        self.p.engine = u.Param()
-        self.p.engine.common = u.Param()
-        self.p.engine.DM = u.Param()
-        self.p.engine.ML = u.Param()
-        self.p.engine.DM_simple = u.Param()
-        self.p.engine.Dummy = u.Param()
-        self.p.engine.ePIE = u.Param()
-        
+        print self.p
         # Abort if we load complete structure
         if level <= 0: 
             return
@@ -412,8 +402,6 @@ class Ptycho(Base):
         the exit waves, :py:attr:`diff` for diffraction data and 
         :py:attr:`mask` for detectors masks
         """
-        p = self.p
-               
         # Initialize the reconstruction containers
         self.probe = Container(ptycho=self, ID='Cprobe', data_type='complex')
         self.obj = Container(ptycho=self, ID='Cobj', data_type='complex')
@@ -426,7 +414,7 @@ class Ptycho(Base):
         ###################################
         
         # Initialize the model manager
-        self.modelm = ModelManager(self, p.scan)
+        self.modelm = ModelManager(self, self.p.scan)
     
     def init_data(self, print_stats=True):
         """

@@ -29,18 +29,18 @@ from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
 from engine_utils import basic_fourier_update
-from . import BaseEngine
-from ptypy import descriptor
+from base import BaseEngine
+from ..utils.descriptor import defaults_tree
 
 __all__ = ['EPIE']
 
-@descriptor.parse_doc('engines.ePIE')
+@defaults_tree.parse_doc('engine.ePIE')
 class EPIE(BaseEngine):
     """
     ePIE reconstruction engine.
 
 
-    Parameters:
+    Defaults:
 
     [alpha]
     default = 1.

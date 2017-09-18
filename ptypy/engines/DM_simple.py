@@ -9,22 +9,22 @@ This file is part of the PTYPY package.
 """
 from .. import utils as u
 from engine_utils import basic_fourier_update
-from . import BaseEngine
+from base import BaseEngine
 from ..utils.verbose import logger
 import time
 import numpy as np
 from ..utils import parallel
-from ..utils import validator
+from ..utils.descriptor import defaults_tree
 
 __all__ = ['DM_simple']
 
-@validator.defaults_tree.parse_doc('engines.DM_simple')
+@defaults_tree.parse_doc('engine.DM_simple')
 class DM_simple(BaseEngine):
     """
     Bare-bones DM reconstruction engine.
 
 
-    Parameters:
+    Defaults:
 
     [numiter]
     default = 123
