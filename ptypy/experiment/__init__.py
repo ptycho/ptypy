@@ -16,6 +16,7 @@ This file is part of the PTYPY package.
 """
 # Import instrument-specific modules
 #import cSAXS
+
 from I13_ffp import I13ScanFFP
 from I13_nfp import I13ScanNFP
 from DLS import DlsScan
@@ -28,6 +29,7 @@ from DiProI_FERMI import DiProIFERMIScan
 from optiklabor import FliSpecScanMultexp
 from UCL import UCLLaserScan
 from ALS_5321 import ALS5321Scan
+
 
 if __name__ == "__main__":
     from ptypy.utils.verbose import logger

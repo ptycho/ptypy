@@ -30,11 +30,11 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from engine_utils import basic_fourier_update
 from . import BaseEngine
-from ..utils import validator
+from ptypy import descriptor
 
 __all__ = ['EPIE']
 
-@validator.defaults_tree.parse_doc('engines.ePIE')
+@descriptor.parse_doc('engines.ePIE')
 class EPIE(BaseEngine):
     """
     ePIE reconstruction engine.

@@ -48,16 +48,24 @@ from utils import parallel
 from utils import verbose
 #verbose.set_level(2)
 
-# Start a paramter tree
-from utils.validator import EvalParameter
-parameter = EvalParameter(name = 'root')
+# Start a parameter tree
+from utils.descriptor import defaults_tree, EvalDescriptor
 
-# FIXME: replace with paramater additions on module load
-# Here we load the .csv base 
+
+descriptions_cfg = EvalDescriptor(name='root')
+descriptions_csv = EvalDescriptor(name='root')
+
+del EvalDescriptor
+
 import pkg_resources
-_csvfile = open(pkg_resources.resource_filename('ptypy', 
-                    'resources/parameter_descriptions.csv'),'r')
-parameter.load_csv(_csvfile)
+with open(pkg_resources.resource_filename('ptypy',
+                    'resources/parameter_descriptions.csv'),'r') as f:
+    descriptions_csv.load_csv(f)
+    f.close()
+with open(pkg_resources.resource_filename('ptypy',
+                    'resources/parameter_descriptions.configparser'),'r') as f:
+    descriptions_cfg.load_conf_parser(f)
+    f.close()
 del pkg_resources
 
 
@@ -66,7 +74,7 @@ import utils
 
 # Import core modules
 import io 
-import experiment
+#import experiment
 import core
 
 
@@ -74,15 +82,4 @@ import core
 import simulations 
 import resources
 
-if __name__ == "__main__":
-    # TODO: parse command line arguments for extra options
-    import sys
-    # Get parameters from command line argument
-    param_filename = sys.argv[1]
-    p = parameters.load(param_filename)
-    
-    # Initialize Ptycho object
-    pt = Ptycho(p)
-    
-    # Start reconstruction
-    pt.run()
+

@@ -13,7 +13,7 @@ import time
 from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline
-from ..utils import validator
+from ..utils.descriptor import defaults_tree
 
 __all__ = ['BaseEngine', 'DEFAULT_iter_info']
 
@@ -25,7 +25,7 @@ DEFAULT_iter_info = u.Param(
     error=np.zeros((3,))
 )
 
-@validator.defaults_tree.parse_doc('engines.common')
+@defaults_tree.parse_doc('engines.common')
 class BaseEngine(object):
     """
     Base reconstruction engine.
@@ -38,7 +38,7 @@ class BaseEngine(object):
     engine_finalize
 
 
-    Parameters:
+    Defaults:
 
     [numiter]
     default = 20

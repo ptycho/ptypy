@@ -9,9 +9,10 @@ This file is part of the PTYPY package.
 """
 import os
 
-__all__ = ['Param', 'asParam'] # 'load',]
+__all__ = ['Param', 'asParam']  # 'load',]
 
 PARAM_PREFIX = 'pars'
+
 
 class Param(dict):
     """
@@ -23,7 +24,7 @@ class Param(dict):
     >>> p = Param()
     >>> p.x = {}
     >>> p
-    Param({})
+    Param({'x': {}})
     
     While dict(p) returns a dictionary, it is not recursive, so it is better in this case
     to use p.todict(). However, p.todict does not check for infinite recursion. So please
@@ -33,16 +34,17 @@ class Param(dict):
     new references. This will lead inconsistency if other objects refer to dicts or Params
     in the updated Param instance. 
     """
-    _display_items_as_attributes=True
+    _display_items_as_attributes = True
     _PREFIX = PARAM_PREFIX
-    
-    def __init__(self,__d__=None,**kwargs):
+
+    def __init__(self, __d__=None, **kwargs):
         """
         A Dictionary that enables access to its keys as attributes.
         Same constructor as dict.
         """
         dict.__init__(self)
-        if __d__ is not None: self.update(__d__)
+        if __d__ is not None:
+            self.update(__d__)
         self.update(kwargs)
 
     def __getstate__(self):
@@ -57,17 +59,17 @@ class Param(dict):
 
     def __str__(self):
         from .verbose import report
-        return report(self,depth=7,noheader=True)
-        
+        return report(self, depth=7, noheader=True)
+
     def __setitem__(self, key, value):
         # BE: original behavior modified as implicit conversion may destroy references
         # Use update(value,Convert=True) instead
-        #return super(Param, self).__setitem__(key, Param(value) if type(value) == dict else value)
-        return super(Param, self).__setitem__(key, value) 
+        # return super(Param, self).__setitem__(key, Param(value) if type(value) == dict else value)
+        return super(Param, self).__setitem__(key, value)
 
     def __getitem__(self, name):
-        #item = super(Param, self).__getitem__(name)
-        #return Param(item) if type(item) == dict else item
+        # item = super(Param, self).__getitem__(name)
+        # return Param(item) if type(item) == dict else item
         return super(Param, self).__getitem__(name)
 
     def __delitem__(self, name):
@@ -75,26 +77,25 @@ class Param(dict):
 
     def __delattr__(self, name):
         return super(Param, self).__delitem__(name)
-        
-    #__getattr__ = __getitem__
+
+    # __getattr__ = __getitem__
     def __getattr__(self, name):
-        try: 
+        try:
             return self.__getitem__(name)
         except KeyError as ke:
             raise AttributeError(ke)
-            
+
     __setattr__ = __setitem__
 
-    def copy(self,depth=0):
+    def copy(self, depth=0):
         """
         :returns Param: A (recursive) copy of P with depth `depth` 
         """
         d = Param(self)
-        if depth>0:
-            for k,v in d.iteritems():
-                if isinstance(v,self.__class__): d[k] = v.copy(depth-1)
-        return d     
-     
+        if depth > 0:
+            for k, v in d.iteritems():
+                if isinstance(v, self.__class__): d[k] = v.copy(depth - 1)
+        return d
 
     def __dir__(self):
         """
@@ -107,7 +108,7 @@ class Param(dict):
         """
         if self._display_items_as_attributes:
             return self.keys()
-            #return [item.__dict__.get('name',str(key)) for key,item in self.iteritems()]
+            # return [item.__dict__.get('name',str(key)) for key,item in self.iteritems()]
         else:
             return []
 
@@ -129,17 +130,19 @@ class Param(dict):
                   If the counter reaches zero, the Param to a key is
                   replaced instead of updated
         """
-        def _k_v_update(k,v):
+
+        def _k_v_update(k, v):
             # If an element is itself a dict, convert it to Param
             if Convert and hasattr(v, 'keys'):
-                #print 'converting'
+                print 'converting'
                 v = Param(v)
+                v.update(v.items(), in_place_depth - 1, Convert)
             # new key 
             if not self.has_key(k):
                 self[k] = v
             # If this key already exists and is already dict-like, update it
-            elif in_place_depth > 0  and hasattr(v,'keys') and isinstance(self[k],self.__class__):
-                self[k].update(v, in_place_depth - 1)
+            elif in_place_depth > 0 and hasattr(v, 'keys') and isinstance(self[k], self.__class__):
+                self[k].update(v, in_place_depth - 1, Convert)
                 """
                 if isinstance(self[k],self.__class__):
                     # Param gets recursive in_place updates
@@ -151,24 +154,24 @@ class Param(dict):
             # Otherwise just replace it
             else:
                 self[k] = v
-            
+
         if __d__ is not None:
             if hasattr(__d__, 'keys'):
                 # Iterate through dict-like argument
-                for k,v in __d__.iteritems():
-                    _k_v_update(k,v)
-                    
+                for k, v in __d__.iteritems():
+                    _k_v_update(k, v)
+
             else:
                 # here we assume a (key,value) list.
-                for (k,v) in __d__:
-                    _k_v_update(k,v)
-                    
-        for k,v in kwargs.iteritems():
-            _k_v_update(k,v)
-            
+                for (k, v) in __d__:
+                    _k_v_update(k, v)
+
+        for k, v in kwargs.iteritems():
+            _k_v_update(k, v)
+
         return None
-            
-    def _to_dict(self,Recursive=False):
+
+    def _to_dict(self, Recursive=False):
         """
         Convert to dictionary (recursively if needed).
         """
@@ -176,20 +179,21 @@ class Param(dict):
             return dict(self)
         else:
             d = dict(self)
-            for k,v in d.iteritems():
-                if isinstance(v,self.__class__): d[k] = v._to_dict(Recursive)
+            for k, v in d.iteritems():
+                if isinstance(v, self.__class__): d[k] = v._to_dict(Recursive)
         return d
-        
+
     @classmethod
-    def _from_dict(cls,dct):
+    def _from_dict(cls, dct):
         """
         Make Param from dict. This is similar to the __init__ call
         but kept here for coherent usage among ptypy.core.Base children
         """
-        #p=Param()
-        #p.update(dct.copy())
+        # p=Param()
+        # p.update(dct.copy())
         return Param(dct.copy())
-        
+
+
 def validate_standard_param(sp, p=None, prefix=None):
     """\
     validate_standard_param(sp) checks if sp follows the standard parameter convention.
@@ -199,7 +203,7 @@ def validate_standard_param(sp, p=None, prefix=None):
     """
     if p is None:
         good = True
-        for k,v in sp.iteritems():
+        for k, v in sp.iteritems():
             if k.startswith('_'): continue
             if type(v) == type(sp):
                 pref = k if prefix is None else '.'.join([prefix, k])
@@ -207,10 +211,10 @@ def validate_standard_param(sp, p=None, prefix=None):
                 continue
             else:
                 try:
-                    a,b,c = v
+                    a, b, c = v
                     if prefix is not None:
                         print '    %s.%s = %s' % (prefix, k, str(v))
-                    else:   
+                    else:
                         print '    %s = %s' % (k, str(v))
                 except:
                     good = False
@@ -223,6 +227,7 @@ def validate_standard_param(sp, p=None, prefix=None):
     else:
         raise NotimplementedError('Checking if a param fits with a standard is not yet implemented')
 
+
 def format_standard_param(p):
     """\
     Pretty-print a Standard Param class.
@@ -230,13 +235,13 @@ def format_standard_param(p):
     lines = []
     if not validate_standard_param(p):
         print 'Standard parameter does not'
-    for k,v in p.iteritems():
+    for k, v in p.iteritems():
         if k.startswith('_'): continue
         if type(v) == type(p):
             sublines = format_standard_param(v)
             lines += [k + '.' + s for s in sublines]
         else:
-            lines += ['%s = %s #[%s] %s' % (k, str(v[1]),v[0],v[2])] 
+            lines += ['%s = %s #[%s] %s' % (k, str(v[1]), v[0], v[2])]
     return lines
 
 
@@ -256,6 +261,7 @@ def asParam(obj):
     """
     return obj if isinstance(obj, Param) else Param(obj)
 
+
 def load(filename):
     """\
     Helper function to load a parameter file
@@ -263,11 +269,12 @@ def load(filename):
     # This avoid circular import
     from .. import io
 
-    filename = os.path.abspath(os.path.expanduser(filename)) 
+    filename = os.path.abspath(os.path.expanduser(filename))
     param_dict = io.h5read(filename)
     param = Param(param_dict)
     param.autoviv = False
     return param
+
 
 def make_default(default_dict_or_file):
     """

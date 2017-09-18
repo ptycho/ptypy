@@ -21,12 +21,12 @@ from ..io import interaction
 from classes import Base, Container, Storage, PTYCHO_PREFIX
 from manager import ModelManager
 from . import model
-from ..utils import validator
+from ..utils.descriptor import defaults_tree
 
 __all__ = ['Ptycho']
 
 
-@validator.defaults_tree.parse_doc()
+@defaults_tree.parse_doc()
 class Ptycho(Base):
     """
     Ptycho : A ptychographic data holder and reconstruction manager.
@@ -64,7 +64,7 @@ class Ptycho(Base):
         diffraction data and detector masks / weights
 
 
-    Parameters:
+    Defaults:
 
     [verbose_level]
     default = 1
@@ -81,7 +81,7 @@ class Ptycho(Base):
     uplim = 4
 
     [data_type]
-    default = single
+    default = 'single'
     help = Reconstruction floating number precision
     doc = Reconstruction floating number precision (``'single'`` or 
           ``'double'``)
@@ -97,7 +97,7 @@ class Ptycho(Base):
     userlevel = 0
 
     [dry_run]
-    default = FALSE
+    default = False
     help = Dry run switch
     doc = Run everything skipping all memory and cpu-heavy steps (and 
           file saving). **NOT IMPLEMENTED**
@@ -207,13 +207,13 @@ class Ptycho(Base):
     userlevel = 2
 
     [io.autoplot.dump]
-    default = FALSE
+    default = False
     help = Switch to dump plots as image files
     doc = Switch to dump plots as image files during reconstruction.
     type = bool
 
     [io.autoplot.make_movie]
-    default = FALSE
+    default = False
     help = Produce reconstruction movie after the reconstruction.
     doc = Switch to request the production of a movie from the dumped plots at the end of the
       reconstruction.
