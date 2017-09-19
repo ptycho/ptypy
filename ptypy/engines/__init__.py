@@ -18,7 +18,6 @@ import DM_simple
 import ML
 import dummy
 import ePIE
-import engine_utils as utils
 
 __all__ = ['DM', 'ML', 'ePIE', 'BaseEngine']
 

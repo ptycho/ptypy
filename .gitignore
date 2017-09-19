@@ -13,4 +13,4 @@ tutorial/*.png
 ghostdriver*
 ptypy/version.py
 .idea/
-
+.cache/
