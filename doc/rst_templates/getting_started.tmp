@@ -348,7 +348,6 @@ Observe what changes in the reconstruction when scan parameters change.
 .. literalinclude:: ../../templates/minimal_prep_and_run.py
    :language: python
    :linenos:
-   :lines: 1-50
    :emphasize-lines: 31,33,35
    
 Creating a .ptyd data-file
@@ -364,7 +363,6 @@ descriptions.
 .. literalinclude:: ../../templates/make_sample_ptyd.py
    :language: python
    :linenos:
-   :lines: 1-50
    :emphasize-lines: 15-26
    
 Loading a data file to run a reconstruction

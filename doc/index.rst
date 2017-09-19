@@ -40,7 +40,7 @@ Highlights
   computer displays the reconstruction progress.
   
 
-* **Mixed-state** reconstructions of probe and object [#states]_ for 
+* **Mixed-state** reconstructions of probe and object [Thi2013]_ for 
   overcoming partial coherence or related phenomane.
   
 * **On-the-fly** reconstructions (while data is being acquired) using the
@@ -70,7 +70,7 @@ Quicklinks
 
 .. [#pronounciation] Pronounced *typy*, forget the *p*, as in psychology.
 
-.. [#states] P.Thibault and A.Menzel, **Nature** 494, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`_
+.. [Thi2013] P.Thibault and A.Menzel, **Nature** 494, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`_
 
 .. [#ml] P.Thibault and M.Guizar-Sicairos, **New J. of Phys.** 14, 6 (2012), `doi <http://dx.doi.org/10.1126/science.1158573>`_
 

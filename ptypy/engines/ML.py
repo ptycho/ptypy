@@ -2,8 +2,7 @@
 """
 Maximum Likelihood reconstruction engine.
 
-TODO:
- * Implement other regularizers
+* TODO: Implement other regularizers
 
 This file is part of the PTYPY package.
 
@@ -15,7 +14,7 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
-from engine_utils import Cnorm2, Cdot
+from utils import Cnorm2, Cdot
 from . import BaseEngine
 
 __all__ = ['ML']

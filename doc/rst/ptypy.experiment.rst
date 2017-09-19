@@ -4,14 +4,6 @@ ptypy.experiment package
 Submodules
 ----------
 
-ptypy.experiment.I13 module
----------------------------
-
-.. automodule:: ptypy.experiment.I13
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ptypy.experiment.ID16Anfp module
 --------------------------------
 
