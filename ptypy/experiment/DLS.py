@@ -146,7 +146,7 @@ class DlsScan(PtyScan):
         motor_positions = []
         i=0
         mmult = u.expect2(self.info.recipe.motors_multiplier)
-        
+
         for k in motors:
             if not self.info.recipe.israster:
                 motor_positions.append(instrument[k]*mmult[i])
@@ -160,7 +160,7 @@ class DlsScan(PtyScan):
         """
         Returns the number of frames available from starting index `start`, and whether the end of the scan
         was reached.
-  
+
         :param frames: Number of frames to load
         :param start: starting point
         :return: (frames_available, end_of_scan)
@@ -204,7 +204,7 @@ class DlsScan(PtyScan):
                         data = h5.File(self.data_file,'r')[I13_PATHS.frame_pattern % self.info.recipe][j].astype(np.float32)
                     raw[j] = data
                 else:
-                    
+
                     #print "frame number "+str(j)
                     dset= h5.File(self.data_file, 'r', libver='latest', swmr=True)[key]
                     dset.id.refresh()

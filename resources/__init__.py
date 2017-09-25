@@ -7,5 +7,5 @@ def flowers(shape=None):
         ish = np.array(im.shape[:2])
         d = ish-sh
         im = u.crop_pad(im,d,axes=[0,1],cen=None,fillpar=0.0,filltype='mirror')
-        
+
     return im

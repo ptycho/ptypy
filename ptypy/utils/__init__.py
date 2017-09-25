@@ -27,6 +27,6 @@ if hmpl:# and hpqt4:
 del hmpl
 # del hpqt4
 import validator
-    
+
 import parallel
 

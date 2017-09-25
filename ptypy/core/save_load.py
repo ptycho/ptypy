@@ -1,5 +1,5 @@
 
-from ptypy import utils as u  
+from ptypy import utils as u
 from ..io import h5write, h5read
 from classes import *
 from geometry import Geo
@@ -26,14 +26,14 @@ def unlink(obj):
     Reduces all objects and dicts to dictionaries.
     Reduces all tuples to list.
     All references are replaced by the labels in the pool.
-    
+
     Original references in 'obj' are preserved
     """
     pool = {}
-   
+
     calls = []
     t = time.time()
-    
+
     def _pool(obj):
         calls.append(None)
         # Recursively labels references and shifts objects to the pool
@@ -41,7 +41,7 @@ def unlink(obj):
             prefix = obj._PREFIX
         except:
             prefix = 'I'
-            
+
         # In case of an immutable type, just return that
         if str(obj) == obj or np.isscalar(obj) or type(obj) is np.ndarray:
             return obj
@@ -51,9 +51,9 @@ def unlink(obj):
             # This object has been labeled already. No further action required
             return ID
         else:
-            # If object contains references, make shallow copy and 
+            # If object contains references, make shallow copy and
             # recursively iterate over the copy
-            
+
             # if type(obj) in _dict_like:
             #    pool[ID] = dict(obj)
             #    nobj = pool[ID]
@@ -66,14 +66,14 @@ def unlink(obj):
                 for k, v in obj.iteritems():
                     # pool[ID][k] = _pool(v)
                     nobj[k] = _pool(v)
-                    
+
             elif type(obj) in _list_like:
                 # pool[ID] = list(obj)
                 nobj = list(obj)  # pool[ID]
                 pool[ID] = nobj
                 for k, v in enumerate(nobj):
                     nobj[k] = _pool(v)
-                    
+
             elif type(obj) in _ptypy:
                 try:
                     nobj = obj._to_dict().copy()
@@ -83,10 +83,10 @@ def unlink(obj):
                 # nobj = pool[ID]
                 for k, v in nobj.items():
                     nobj[k] = _pool(v)
-                    
+
             else:
                 pool[ID] = obj
-            
+
             return ID
 
     ID = _pool(obj)
@@ -96,7 +96,7 @@ def unlink(obj):
         "Converted cross-linked structure flat pool in %.3f sec.\n"
         "%d recursions were needed,\n"
         "%d objects were found. \n" % (t, len(calls), len(pool)-1))
-                
+
     return pool
 
 
@@ -107,7 +107,7 @@ def link(pool, replace_objects_only=False, preserve_input_pool=True):
     used = []
     t = time.time()
     # First a shallow copy
-    pool = pool.copy() 
+    pool = pool.copy()
     # First replace all occurrences of object dictionaries with their
     # respective objects. Since all objects appear only once, this is a safe.
     for k, v in pool.iteritems():
@@ -118,9 +118,9 @@ def link(pool, replace_objects_only=False, preserve_input_pool=True):
                 pool[k] = v.copy()
             elif type(v) is list:
                 pool[k] = list(v)
-            
+
         cls = get_class(k)
-        if cls is not None: 
+        if cls is not None:
             logger.debug('Found %s' % cls)
             # Check if the value is a dict.
             if type(v) is dict:
@@ -135,7 +135,7 @@ def link(pool, replace_objects_only=False, preserve_input_pool=True):
 
     if replace_objects_only:
         return pool
-        
+
     calls = []
     keys = pool.keys()
     def _unpool(obj):
@@ -157,7 +157,7 @@ def link(pool, replace_objects_only=False, preserve_input_pool=True):
                 used.append(id(obj))
                 for k, v in obj.__dict__.iteritems():
                     obj.__dict__[k]= _unpool(v)
-                
+
             return obj
         else:
             return obj
@@ -165,13 +165,13 @@ def link(pool, replace_objects_only=False, preserve_input_pool=True):
     # Reestablish references, start from root
     out = _unpool(pool['root'])
     t = time.time() - t
-    
+
     logger.info(
         'Converted flat pool to cross-linked structure in %.3f sec.\n '
         '%d recursions were needed,\n '
         '%d objects were used\n'
         '%d objects are mutable.' % (t, len(calls), len(pool)-1, len(used)))
-    
+
     return out
 
 

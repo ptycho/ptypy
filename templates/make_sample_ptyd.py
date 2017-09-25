@@ -16,14 +16,14 @@ data.dfile = 'sample.ptyd'
 data.shape = 128
 data.num_frames = 100
 data.save = 'append'
-data.label=None 
+data.label=None
 data.psize=None
 data.energy=None
 data.center=None
 data.distance = None
-data.auto_center = None 
-data.rebin = None  
-data.orientation = None  
+data.auto_center = None
+data.rebin = None
+data.orientation = None
 
 # create PtyScan instance
 MF = ptypy.core.data.MoonFlowerScan(data)

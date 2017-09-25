@@ -40,7 +40,7 @@ FILE_FORMAT = {logging.ERROR : '%(asctime)s ERROR %(name)s - %(message)s',
                   logging.INFO : '%(asctime)s %(message)s',
                   INSPECT : '%(asctime)s INSPECT %(message)s',
                   logging.DEBUG : '%(asctime)s DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
-            
+
 # How many characters per line in console
 LINEMAX = 80
 
@@ -52,7 +52,7 @@ LINEMAX = 80
 #    self._factory_log(*args, extra={'MPI':MPIswitch}, **kwargs)
 #
 #logging.Logger._factory_log = logging.Logger._log
-#logging.Logger._log = _MPIlog 
+#logging.Logger._log = _MPIlog
 
 # Logging filter
 class MPIFilter(object):
@@ -65,7 +65,7 @@ class MPIFilter(object):
         This behavior can be altered with allprocesses=True.
         """
         self.allprocesses = allprocesses
-        
+
     def filter(self, record):
         """
         Filter method, as expected by the logging API.
@@ -115,15 +115,15 @@ logger.addFilter(consolefilter)
 
 level_from_verbosity = {0:logging.CRITICAL, 1:logging.ERROR, 2:logging.WARN, 3:logging.INFO, 4: INSPECT, 5:logging.DEBUG}
 level_from_string = {'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 'INFO':logging.INFO, 'INSPECT': INSPECT, 'DEBUG':logging.DEBUG}
-vlevel_from_logging = dict([(v,k) for k,v in level_from_verbosity.items()]) 
-slevel_from_logging = dict([(v,k) for k,v in level_from_string.items()]) 
+vlevel_from_logging = dict([(v,k) for k,v in level_from_verbosity.items()])
+slevel_from_logging = dict([(v,k) for k,v in level_from_string.items()])
 
 def log(level,msg,parallel=False):
     if not parallel:
         logger.log(level_from_verbosity[level], msg)
     else:
         logger.log(level_from_verbosity[level], msg,extra={'allprocesses':True})
-        
+
 def set_level(level):
     """
     Set verbosity level. Kept here for backward compatibility
@@ -143,7 +143,7 @@ def get_level(num_or_string='num'):
         return vlevel_from_logging[logger.level]
     else:
         return slevel_from_logging[logger.level]
-        
+
 # Formatting helper
 def _(label, value):
     return '%-25s%s' % (label + ':', str(value))
@@ -167,43 +167,43 @@ def headerline(info='',align = 'c',fill='-'):
             right = 4
             left = empty-right
     return fill*left+info+fill*right
-    
+
 def report(thing,depth=4,noheader=False):
     """
     no protection for circular references
     """
     import time
     import numpy as np
-    
+
     indent = report.indent
     level = report.level
     maxchar = report.maxchar
     hn = report.headernewline
     star = report.asterisk
-    
+
     header = '\n---- Process #%d ---- ' % parallel.rank + time.asctime() + ' -----\n'
 
     def _(label,level,obj):
-        pre = " "*indent*level + star + ' ' 
+        pre = " "*indent*level + star + ' '
         extra = str(type(obj)).split("'")[1]
         pre+=str(label) if label is not None else "id"+np.base_repr(id(obj),base=32)
         if len(pre)>=25:
             pre = pre[:21] + '... '
         return "%-25s:" % pre, extra
-        
+
     def _format_dict(label, level, obj):
-        header,extra = _(label, level, obj) 
+        header,extra = _(label, level, obj)
         header+= ' %s(%d)' % (extra,len(obj)) + hn
         if level <= depth:
             #level +=1
             for k,v in obj.iteritems():
                 header += _format(k,level+1,v)
         return header
-    
+
     def _format_iterable(label, level, lst):
         l = len(lst)
         header,extra = _(label, level, lst)
-        header+= ' %s(%d)' % (extra,l) 
+        header+= ' %s(%d)' % (extra,l)
         string = str(lst)
         if len(string) <= maxchar-25 or level>=depth:
             return header +'= '+ string + hn
@@ -215,7 +215,7 @@ def report(thing,depth=4,noheader=False):
             return header
         else:
             pass
-    
+
     def _format_other(label, level, obj):
         header,extra = _(label, level, obj)
         if np.isscalar(obj):
@@ -223,7 +223,7 @@ def report(thing,depth=4,noheader=False):
         else:
             header += ' ' +extra+' = '+str(obj)
         return header[:maxchar]+'\n'
-         
+
     def _format_numpy(key, level,a):
         header,extra = _(key, level, a)
         if len(a) < 5 and a.ndim == 1:
@@ -231,7 +231,7 @@ def report(thing,depth=4,noheader=False):
         else:
             stringout = header + ' [' + (('%dx'*(a.ndim-1) + '%d') % a.shape) + ' ' + str(a.dtype) + ' array]\n'
         return stringout
-        
+
     def _format_None(key,level, obj):
         return _(key, level, obj)[0] + ' None\n'
 
@@ -249,7 +249,7 @@ def report(thing,depth=4,noheader=False):
         else:
             stringout = _format_other(key,level, obj)
         return stringout
-    
+
     if noheader:
         return _format(None,0,thing)
     else:

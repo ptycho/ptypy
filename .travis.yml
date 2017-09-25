@@ -15,6 +15,7 @@ before_install:
   - conda install pyyaml
   - echo $PYTHONPATH
 
+
 install:
   - conda env create --file environment.yml #set up the environment thats in the file
   - source activate test-environment # activate it
@@ -25,6 +26,6 @@ script:
 
 after_script:
   - coveralls
-  
+
 allow_failures:
 - python: "3.3"

@@ -1,13 +1,13 @@
 """
 data - Diffraction data access
 
-This module defines a PtyScan, a container to hold the experimental 
+This module defines a PtyScan, a container to hold the experimental
 data of a ptychography scan. Instrument-specific reduction routines should
 inherit PtyScan to prepare data for the Ptycho Instance in a uniform format.
 
 The experiment specific child class only needs to overwrite 2 functions
 of the base class:
-        
+
 For the moment the module contains two main objects:
 PtyScan, which holds a single ptychography scan, and DataSource, which
 holds a collection of datascans and feeds the data as required.
@@ -17,24 +17,21 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+import numpy as np
+import os
+import h5py
 if __name__ == "__main__":
     from ptypy import utils as u
     from ptypy import io
     from ptypy import resources
     from ptypy.core import geometry
     from ptypy.utils.verbose import logger, log, headerline
-    import numpy as np
-    import os
-    import h5py
 else:
     from .. import utils as u
     from .. import io
     from .. import resources
     from ..utils.verbose import logger, log, headerline
     import geometry
-    import numpy as np
-    import os
-    import h5py
 
 parallel = u.parallel
 
@@ -48,7 +45,7 @@ PTYD = dict(
 """ Basic Structure of a .ptyd datafile """
 
 META = dict(
-    label=None,   # label will be set internally 
+    label=None,   # label will be set internally
     experimentID=None, # a unique label of user choice
     version='0.1',
     shape=None,
@@ -63,7 +60,7 @@ GENERIC = dict(
     chunk_format='.chunk%02d',  # Format for chunk file appendix.
     #roi = None,  # 2-tuple or int for the desired fina frame size
     save = None,  # None, 'merge', 'append', 'extlink'
-    auto_center = None,  # False: no automatic center,None only  if center is None, True it will be enforced   
+    auto_center = None,  # False: no automatic center,None only  if center is None, True it will be enforced
     load_parallel = 'data',  # None, 'data', 'common', 'all'
     rebin = None,  # rebin diffraction data
     orientation = None,  # None,int or 3-tuple switch, actions are (transpose, invert rows, invert cols)
@@ -90,14 +87,14 @@ class PtyScan(object):
     """\
     PtyScan: A single ptychography scan, created on the fly or read from file.
     BASECLASS
-    
+
     Objectives:
      - Stand alone functionality
      - Can produce .ptyd data formats
      - Child instances should be able to prepare from raw data
      - On-the-fly support in form of chunked data.
      - mpi capable, child classes should not worry about mpi
-     
+
     """
 
     DEFAULTS = GENERIC
@@ -146,7 +143,7 @@ class PtyScan(object):
         # None for rebin should be allowed, as in "don't rebin".
         if info.rebin is None:
             info.rebin = 1
-        
+
         self.info = info
 
         # Print a report
@@ -174,7 +171,7 @@ class PtyScan(object):
         self.has_positions = None
         self.dfile = None
         self.save = self.info.save
-        
+
         # copy all values for meta
         for k in self.meta.keys():
             self.meta[k] = self.info[k]
@@ -212,8 +209,8 @@ class PtyScan(object):
             # FIXME
             # Replace Nones, because we cannot broadcast them later
             # I don't get it, why didn't we allow for a missing key?
-            # Also I disagree that we should enforce a 'weight2d' or 
-            # positions. The user can very well add them later. 
+            # Also I disagree that we should enforce a 'weight2d' or
+            # positions. The user can very well add them later.
             self.common = dict([(k,v) if v is not None else (k,np.array([])) for k,v in self.common.items() ])
 
         # broadcast
@@ -222,14 +219,14 @@ class PtyScan(object):
 
         self.common = u.Param(self.common)
         assert 'weight2d' in self.common and 'positions_scan' in self.common
-            
+
         logger.info('\n'+headerline('Analysis of the "common" arrays','l'))
         # Check if weights (or mask) have been loaded by load_common.
         weight2d = self.common.weight2d
         self.has_weight2d = weight2d is not None and len(weight2d)>0
         logger.info('Check for weight or mask,  "weight2d"  .... %s : shape = %s' % (str(self.has_weight2d),str(weight2d.shape)))
 
-            
+
         # Check if positions have been loaded by load_common
         positions = self.common.positions_scan
         self.has_positions = positions is not None and len(positions)>0
@@ -260,12 +257,12 @@ class PtyScan(object):
                     #                    % (num_pos, self.info.num_frames))
         else:
             logger.info('No scanning position have been provided at this stage.')
-        
+
         if self.num_frames is None:
             logger.warning('Number of frames `num_frames` not specified at this stage\n.')
-        
+
         parallel.barrier()
-        
+
         #logger.info('#######  MPI Report: ########\n')
         log(4,u.verbose.report(self.common),True)
         parallel.barrier()
@@ -290,39 +287,39 @@ class PtyScan(object):
     def load_common(self):
         """
         **Overwrite in child class**
-        
-        Loads arrays that are common and needed for preparation of all 
-        other data frames coming in. Any array loaded here and returned 
-        in a dict will be distributed afterwards through a broadcoast. 
+
+        Loads arrays that are common and needed for preparation of all
+        other data frames coming in. Any array loaded here and returned
+        in a dict will be distributed afterwards through a broadcoast.
         It is not intended to load diffraction data in this step.
-        
+
         The main purpose is that there may be common data to all processes, that
         is slow to retrieve or large files, such that if all processes
-        attempt to get the data, perfomance will decline or RAM usage 
+        attempt to get the data, perfomance will decline or RAM usage
         may be too large.
-                       
+
         It is a good idea to load dark field, flat field, etc
         Also positions may be handy to load here
-        
-        If `load_parallel` is set to `all` or common`, this function is 
+
+        If `load_parallel` is set to `all` or common`, this function is
         executed by all nodes, otherwise the master node executes this
-        function and braodcasts the results to other nodes. 
-        
+        function and braodcasts the results to other nodes.
+
         Returns
         -------
         common : dict of numpy arrays
-            At least two keys, `weight2d` and `positions_scan` must be 
+            At least two keys, `weight2d` and `positions_scan` must be
             given (they can be None). The return dictionary is available
             throught
-                    
+
         Note
         ----
-        The return signature of this function is not yet fixed and may 
+        The return signature of this function is not yet fixed and may
         get altered in near future. One Option would be to include
         `weight2d` and `positions_scan` as part of the return signature
         and thus fixing them in the Base class.
         """
-        weight2d = None if self.info.shape is None else np.ones(u.expect2(self.info.shape), dtype='bool') 
+        weight2d = None if self.info.shape is None else np.ones(u.expect2(self.info.shape), dtype='bool')
         positions_scan = None if self.num_frames is None else np.indices((self.num_frames, 2)).sum(0)
         return {'weight2d': weight2d,
                 'positions_scan': positions_scan}
@@ -333,10 +330,10 @@ class PtyScan(object):
         the result with the other nodes.
         This function determines if the end of the scan is reached
         or if there is more data after a pause.
-        
+
         returns:
             - codes WAIT or EOS
-            - or (start, frames) if data can be loaded 
+            - or (start, frames) if data can be loaded
         """
         # take internal counter if not specified
         s = self.framestart if start is None else int(start)
@@ -352,11 +349,11 @@ class PtyScan(object):
         parallel.barrier()
         # communicate result
         self._flags = parallel.bcast(self._flags)
-        
+
         # abort here if the flag was set
         if self.abort:
             raise RuntimeError('Load routine incapable to determine end-of-scan.')
-            
+
         N = self.frames_accessible
         # wait if too few frames are available and we are not at the end
         if N < self.min_frames and not self.end_of_scan:
@@ -408,8 +405,8 @@ class PtyScan(object):
             data, positions, weights = self._mpi_pipeline_with_dictionaries(indices)
             # all these dictionaries could be empty
             # fill weights dictionary with references to the weights in common
-            
-            has_data = (len(data) > 0) 
+
+            has_data = (len(data) > 0)
             has_weights = (len(weights) > 0) and len(weights.values()[0])>0
 
             if has_data:
@@ -432,7 +429,7 @@ class PtyScan(object):
                 weights = dict.fromkeys(data.keys(), altweight)
 
             assert len(weights) == len(data), 'Data and Weight frames unbalanced %d vs %d' % (len(data), len(weights))
-                       
+
             sh = self.info.shape
             # adapt roi if not set
             if sh is None:
@@ -440,26 +437,26 @@ class PtyScan(object):
                 sh = dsh
             else:
                 sh = u.expect2(sh)
-                
+
             # only allow square slices in data
             if sh[0] != sh[1]:
                 roi = u.expect2(sh.min())
                 logger.warning('Asymmetric data ROI not allowed. Setting ROI from (%d,%d) to (%d,%d)' % (sh[0],sh[1],roi[0],roi[1]))
                 sh = roi
-            
+
             self.info.shape = sh
 
             cen = self.info.center
             if str(cen)==cen:
                 cen=geometry.translate_to_pix(sh,cen)
-                
-            auto = self.info.auto_center 
+
+            auto = self.info.auto_center
             # get center in diffraction image
             if auto is None or auto is True:
                 auto_cen = self._mpi_autocenter(data, weights)
             else:
                 auto_cen = None
-                
+
             if cen is None and auto_cen is not None:
                 logger.info('Setting center for ROI from %s to %s.' %(str(cen),str(auto_cen)))
                 cen = auto_cen
@@ -470,11 +467,11 @@ class PtyScan(object):
                 cen = u.expect2(cen[-2:])
                 if auto_cen is not None:
                     logger.info('ROI center is %s, automatic guess is %s.' %(str(cen),str(auto_cen)))
-                    
+
             # It is important to set center again in order to NOT have different centers for each chunk
             # the downside is that the center may be off if only a few diffraction patterns were
             # used for the analysis. In such case it is beneficial to set the center in the parameters
-            self.info.center = cen  
+            self.info.center = cen
 
             # make sure center is in the image frame
             assert (cen > 0).all() and (
@@ -490,12 +487,12 @@ class PtyScan(object):
                             (str(do_crop), str(do_flip), str(do_rebin)))
                 # we proceed with numpy arrays. That is probably now
                 # more memory intensive but shorter in writing
-                if has_data:                       
+                if has_data:
                     d = np.array([data[ind] for ind in indices.node])
                     w = np.array([weights[ind] for ind in indices.node])
                 else:
                     d = np.ones((1,)+tuple(dsh))
-                    w = np.ones((1,)+tuple(dsh))    
+                    w = np.ones((1,)+tuple(dsh))
 
                 # flip, rotate etc.
                 d, tmp = u.switch_orientation(d, self.orientation, cen)
@@ -517,7 +514,7 @@ class PtyScan(object):
                     w[mask < 1] = 0
                 else:
                     raise RuntimeError('Binning (%d) is to large or incompatible with array shape (%s)' % (rebin,str(tuple(sh))))
-                                    
+
                 if has_data:
                     # translate back to dictionaries
                     data = dict(zip(indices.node, d))
@@ -527,7 +524,7 @@ class PtyScan(object):
             self.meta.center = cen / float(self.rebin)
             self.meta.shape = u.expect2(sh) / self.rebin
             self.meta.psize = u.expect2(self.info.psize) * self.rebin if self.info.psize is not None else None
-            
+
             # prepare chunk of data
             chunk = u.Param()
             chunk.indices = indices.chunk
@@ -535,7 +532,7 @@ class PtyScan(object):
             chunk.num = self.chunknum
             chunk.data = data
 
-            # if there were weights we add them to chunk, 
+            # if there were weights we add them to chunk,
             # otherwise we push it into meta
             if has_weights:
                 chunk.weights = weights
@@ -569,7 +566,7 @@ class PtyScan(object):
                     self.meta[k] = self.__dict__.get(k, self.info.get(k)) if v is None else v
                 self.meta['center'] = cen
                 """
-                
+
                 if self.info.save is not None and parallel.master:
                     io.h5append(self.dfile, meta=dict(self.meta))
                 parallel.barrier()
@@ -582,12 +579,12 @@ class PtyScan(object):
     def auto(self, frames, chunk_form='dp'):
         """
         Repeated calls to this function will process the data
-        
+
         Parameters
         ----------
         frames : int
             Number of frames to process.
-            
+
         Returns
         -------
         variable
@@ -651,13 +648,13 @@ class PtyScan(object):
     def _mpi_pipeline_with_dictionaries(self, indices):
         """
         example processing pipeline using dictionaries.
-        
+
         return :
             positions, data, weights
              -- Dictionaries. Keys are the respective scan point indices
                 `positions` and `weights` may be empty. If so, the information
                 is taken from the self.common dictionary
-        
+
         """
         if self.load_in_parallel:
             # all nodes load raw_data and slice according to indices
@@ -676,11 +673,11 @@ class PtyScan(object):
             raw = parallel.bcast_dict(raw, indices.node)
             weights = parallel.bcast_dict(weights, indices.node)
 
-        # (re)distribute position information - every node should now be 
+        # (re)distribute position information - every node should now be
         # aware of all positions
         parallel.bcast_dict(pos)
 
-        # prepare data across nodes    
+        # prepare data across nodes
         data, weights = self.correct(raw, weights, self.common)
 
         return data, pos, weights
@@ -688,31 +685,31 @@ class PtyScan(object):
     def check(self, frames=None, start=None):
         """
         **Overwrite in child class**
-        
+
         This method checks how many frames the preparation routine may
         process, starting from frame `start` at a request of `frames_requested`.
-        
+
         This method is supposed to return the number of accessible frames
         for preparation and should determine if data acquistion for this
         scan is finished.
-        
+
         Parameters
         ----------
-        frames : int or None 
+        frames : int or None
             Number of frames requested.
         start : int or None
             Scanpoint index to start checking from.
-        
-        Returns 
+
+        Returns
         -------
         frames_accessible : int
-            Number of frames readable.  
+            Number of frames readable.
         end_of_scan : int or None
             is one of the following:
              - 0, end of the scan is not reached
              - 1, end of scan will be reached or is
              - None, can't say
-                    
+
         """
         if start is None:
             start = self.framestart
@@ -738,7 +735,7 @@ class PtyScan(object):
     @frames_accessible.setter
     def frames_accessible(self, frames):
         self._flags[0] = frames
-    
+
     @property
     def abort(self):
         return not (self._flags[2] == 0)
@@ -750,15 +747,15 @@ class PtyScan(object):
     def load(self, indices):
         """
         **Overwrite in child class**
-        
-        Loads data according to node specific scanpoint indeces that have 
+
+        Loads data according to node specific scanpoint indeces that have
         been determined by the loadmanager from utils.parallel or otherwise
-    
+
         Returns
         -------
         raw, positions, weight : dict
-            Dictionaries whose keys are the given scan point `indices` 
-            and whose values are the respective frame / position according 
+            Dictionaries whose keys are the given scan point `indices`
+            and whose values are the respective frame / position according
             to the scan point index. `weight` and `positions` may be empty
         """
         # dummy fill
@@ -768,18 +765,18 @@ class PtyScan(object):
     def correct(self, raw, weights, common):
         """
         **Overwrite in child class**
-        
-        Place holder for dark and flatfield correction. If :any:`load` 
+
+        Place holder for dark and flatfield correction. If :any:`load`
         already provides data in the form of photon counts, and no frame
         specific weight is needed, this method may be left as is
-        
+
         May get *merged* with :any:`load` in future.
-    
+
         Returns
         -------
         data,weights : dict
             Flat and dark-corrected data dictionaries. These dictionaries
-            must have the same keys as the input `raw` and contain 
+            must have the same keys as the input `raw` and contain
             corrected frames (`data`) and statistical weights (`weights`)
             which are zero for invalid or masked pixel other the number
             of detector counts that correspond to one photon count
@@ -822,29 +819,29 @@ class PtyScan(object):
         Saves data chunk to hdf5 file specified with `dfile`
         It works by gathering weights and data to the master node.
         Master node then writes to disk.
-        
-        In case you support parallel hdf5 writing, please modify this 
+
+        In case you support parallel hdf5 writing, please modify this
         function to suit your installation.
-        
+
         2 out of 3 modes currently supported
-        
+
         kind : 'merge','append','link'
-            
+
             'append' : appends chunks of data in same file
             'link' : saves chunks in seperate files and adds ExternalLinks
-            
-        TODO: 
+
+        TODO:
             * For the 'link case, saving still requires access to
               main file `dfile` even so for just adding the link.
               This may result in conflict if main file is polled often
               by seperate read process.
               Workaraound would be to write the links on startup in
-              initialise() 
-            
+              initialise()
+
         """
         # gather all distributed dictionary data.
         c = chunk if chunk is not None else self.chunk
-        
+
         # shallow copy
         todisk = dict(c)
         num = todisk.pop('num')
@@ -880,20 +877,20 @@ class PtyScan(object):
             elif str(kind) == 'merge':
                 raise NotImplementedError('Merging all data into single chunk is not yet implemented')
         parallel.barrier()
-        
+
 class PtydScan(PtyScan):
     """
     PtyScan provided by native "ptyd" file format.
     """
     DEFAULT = GENERIC.copy()
-    
+
     def __init__(self, pars=None, source=None,**kwargs):
         """
         PtyScan provided by native "ptyd" file format.
-        
-        :param source: Explicit source file. If not None or 'file', 
+
+        :param source: Explicit source file. If not None or 'file',
                        the data may get processed depending on user input
-                       
+
         :param pars: Input like PtyScan
         """
         # create parameter set
@@ -902,7 +899,7 @@ class PtydScan(PtyScan):
         # copy the label
         #if pars is not None:
         #    p.label = pars.get('label')
-        
+
         if source is None or str(source)=='file':
             # this is the case of absolutely no additional work
             logger.info('No explicit source file was given. Will continue read only')
@@ -920,20 +917,20 @@ class PtydScan(PtyScan):
                 dfile = os.path.splitext(dfile)
                 dfile = dfile[0] +'_n.'+ dfile[1]
                 logger.info('Will instead save to %s if necessary.' % os.path.split(dfile)[1])
-            
+
             pars['dfile']= dfile
             manipulate = True
             p.update(pars)
-            
-        
+
+
         # make sure the source exists.
         assert os.path.exists(u.unique_path(source)), 'Source File (%s) not found' % source
-        
+
         self.source = source
-        
+
         # get meta information
         meta = u.Param(io.h5read(self.source, 'meta')['meta'])
-        
+
         # update given parameters when they are None
         if not manipulate:
             super(PtydScan, self).__init__(meta,  **kwargs)
@@ -944,7 +941,7 @@ class PtydScan(PtyScan):
                     p[k] = v
             # Initialize parent class and fill self
             super(PtydScan, self).__init__(p, **kwargs)
-        
+
         # enforce that orientations are correct
         # Other instance attributes
         self._checked = {}
@@ -954,7 +951,7 @@ class PtydScan(PtyScan):
     def check(self, frames=None, start=None):
         """
         Implementation of the check routine for a .ptyd file format
-        
+
         See also
         --------
         Ptyscan.check
@@ -992,7 +989,7 @@ class PtydScan(PtyScan):
 
     def load(self, indices):
         """
-        Load from ptyd. Due to possible chunked data, slicing frames is 
+        Load from ptyd. Due to possible chunked data, slicing frames is
         non-trivial
         """
         # ok we need to communicate the some internal info
@@ -1000,7 +997,7 @@ class PtydScan(PtyScan):
         self._ch_frame_ind=parallel.bcast(self._ch_frame_ind)
         parallel.barrier()
         parallel.bcast_dict(self._checked)
-        
+
         # get the coordinates in the chunks
         coords = self._ch_frame_ind[indices]
         calls = {}
@@ -1018,7 +1015,7 @@ class PtydScan(PtyScan):
         # Dangerous and not yet implemented
         # indices = out.get('indices',indices)
 
-        # wrap in a dict 
+        # wrap in a dict
         for k, v in out.iteritems():
             out[k] = dict(zip(indices, v))
 
@@ -1030,26 +1027,26 @@ class MoonFlowerScan(PtyScan):
     Test Ptyscan class producing a romantic ptychographic dataset of a moon
     illuminating flowers.
     """
-    
+
     DEFAULT = GENERIC.copy().update(geometry.DEFAULT.copy())
-    
+
     def __init__(self, pars = None, **kwargs):
         """
-        Parent pars are for the 
+        Parent pars are for the
         """
         p = geometry.DEFAULT.copy()
         if pars is not None:
             p.update(pars)
         # Initialize parent class
         super(MoonFlowerScan, self).__init__(p, **kwargs)
-        
+
         from ptypy import resources
         from ptypy.core import xy
-        
+
         # derive geometry from input
         G = geometry.Geo(pars = self.meta)
         #G._initialize(self.meta)
-        
+
         # derive scan pattern
         pos = u.Param()
         pos.spacing = G.resolution * G.shape / 5.
@@ -1069,14 +1066,14 @@ class MoonFlowerScan(PtyScan):
         #plt.figure(200);plt.imshow(u.imsave(G.propagator.pre_ifft))
         #plt.figure(101);plt.imshow(G.propagator.grids_det[0]**2+G.propagator.grids_det[1]**2)
         # get object
-        self.obj = resources.flower_obj(frame) 
-        
+        self.obj = resources.flower_obj(frame)
+
         # get probe
         moon = resources.moon_pr(self.G.shape)
         moon /= np.sqrt(u.abs2(moon).sum() / 1e8)
         self.pr = moon
         self.load_common_in_parallel = True
-        
+
     def load_common(self):
         """
         Transmit positions
@@ -1096,7 +1093,7 @@ class MoonFlowerScan(PtyScan):
             raw[i]=np.random.poisson(u.abs2(self.G.propagator.fw(self.pr * self.obj[p[i][0]:p[i][0]+s[0],p[i][1]:p[i][1]+s[1]]))).astype(np.int32)
         return raw, {}, {}
 
-        
+
 
 class DataSource(object):
     """
@@ -1131,19 +1128,19 @@ class DataSource(object):
 
             # Copy other relevant information
             prep = s.data.copy()
-            
+
             # Assign label
             prep.label = label
-            
+
             source = prep.source
             recipe = prep.get('recipe',{})
             if prep.get('positions_theory') is None:
                 prep.positions_theory = scan['pos_theory']
-            
+
             prep.dfile = s.data_file
             #prep.geometry = s.geometry.copy()
             #prep.xy = s.xy.copy()
-            
+
             if source is not None:
                 source = source.lower()
 
@@ -1182,7 +1179,7 @@ class DataSource(object):
         # get PtyScan instance to scan_number
         PS = self.PS[self.scan_current]
         label = self.labels[self.scan_current]
-        
+
         # initialize if that has not been done yet
         if not PS.is_initialized:
             PS.initialize()
