@@ -21,6 +21,7 @@ This file is part of the PTYPY package.
 #import cSAXS
 from I13_ffp import I13ScanFFP
 from I13_nfp import I13ScanNFP
+from cSAXS_new import cSAXSScan
 from DLS import DlsScan
 from I08 import I08Scan
 from savu import Savu
@@ -49,5 +50,6 @@ PtyScanTypes = dict(
     nanomaxstepscanmay2017 = NanomaxStepscanMay2017,
     nanomaxflyscanjune2017 = NanomaxFlyscanJune2017,
     als5321 = ALS5321Scan,
+    csaxs = cSAXSScan
 )
 
