@@ -21,17 +21,24 @@ import h5py as h5
 
 logger = u.verbose.logger
 
-# Parameters for the nexus file saved by GDA
+# Parameters for the nexus file for the mapping beamlines
 NEXUS_PATHS = u.Param()
-
 NEXUS_PATHS.instrument = 'raw_entry/%(detector_name)s'
 NEXUS_PATHS.frame_pattern = 'entry/result/data'
 NEXUS_PATHS.live_key_pattern = 'raw_entry/%(detector_name)s_total/total'
 NEXUS_PATHS.finished_pattern = 'raw_entry/solstice_scan/scan_finished'
+NEXUS_PATHS.motors = ['SampleX_value', 'SampleY_value']
+
+# Parameters for the nexus file for the i13
+I13_PATHS = u.Param()
+I13_PATHS.instrument = 'entry1/%(detector_name)s'
+I13_PATHS.frame_pattern = 'entry1/%(detector_name)s/data'
+I13_PATHS.motors = ['lab_sy', 'lab_sx']
+# I13_PATHS.live_key_pattern = 'raw_entry/%(detector_name)s_total/total'
+# I13_PATHS.finished_pattern = 'raw_entry/solstice_scan/scan_finished'
 #NEXUS_PATHS.exposure = 'entry1/%(detector_name)s/count_time'
 # NEXUS_PATHS.motors = ['lab_sy', 'lab_sx']
 #NEXUS_PATHS.motors = ['t1_sy', 't1_sx']
-NEXUS_PATHS.motors = ['SampleX_value', 'SampleY_value']
 
 #NEXUS_PATHS.instrument = 'entry1/%(detector_name)s'
 #NEXUS_PATHS.frame_pattern = 'entry1/%(detector_name)s/data'
@@ -61,7 +68,7 @@ RECIPE.z = None                 # Distance from object to screen
 RECIPE.detector_name = 'merlin_sw_hdf'     # Name of the detector as specified in the nexus file
 RECIPE.start_position=0
 # RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
-RECIPE.motors = ['SampleX_value', 'SampleY_value']      # Motor names to determine the sample translation
+#RECIPE.motors = ['SampleX_value', 'SampleY_value']      # Motor names to determine the sample translation
 # RECIPE.motors_multiplier = 1e-6         # Motor conversion factor to meters
 # RECIPE.motors_multiplier = [1e-6,-1e-6]         # Motor conversion factor to meters
 RECIPE.motors_multiplier = [1e-3,1e-3]         # Motor conversion factor to meters
@@ -124,31 +131,30 @@ class DlsScan(PtyScan):
         Load the positions and return as an (N,2) array
         """
         # Load positions from file if possible.
-#<<<<<<< HEAD
-#        instrument_path = NEXUS_PATHS.instrument % self.info.recipe
-#        print "instrument path:",instrument_path
-#        instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[instrument_path]
-#=======
-        if self.info.recipe.is_swmr:
-            instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[NEXUS_PATHS.instrument % self.info.recipe]
-        else:
-            instrument = h5.File(self.data_file, 'r')[NEXUS_PATHS.instrument % self.info.recipe]
-#>>>>>>> origin/master
+        try:
+            if self.info.recipe.is_swmr:
+                instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[NEXUS_PATHS.instrument % self.info.recipe]
+            else:
+                instrument = h5.File(self.data_file, 'r')[NEXUS_PATHS.instrument % self.info.recipe]
+            motors = NEXUS_PATHS.motors
+        except KeyError:
+            logger.debug("This must be an I13 file...")
+            instrument = h5.File(self.data_file, 'r')[I13_PATHS.instrument % self.info.recipe]
+            motors = I13_PATHS.motors
         if self.info.recipe.israster:
             self.position_shape = instrument[0].shape
         motor_positions = []
         i=0
         mmult = u.expect2(self.info.recipe.motors_multiplier)
         
-        for k in NEXUS_PATHS.motors:
+        for k in motors:
             if not self.info.recipe.israster:
                 motor_positions.append(instrument[k]*mmult[i])
             else:
                 motor_positions.append((instrument[k]*mmult[i]).ravel())
             i+=1
 
-        positions = np.array(motor_positions).T[self.info.recipe.start_position:]
-        return positions
+        return np.array(motor_positions).T[self.info.recipe.start_position:]
 
     def check(self, frames, start):
         """
@@ -191,7 +197,11 @@ class DlsScan(PtyScan):
             for j in indices:
                 if not self.info.recipe.is_swmr:
 #                     print "frame number "+str(j)
-                    data = io.h5read(self.data_file, key, slice=j)[key].astype(np.float32)
+                    try:
+                        data = io.h5read(self.data_file, key, slice=j)[key].astype(np.float32)
+                    except KeyError:
+                        logger.debug('Assuming an I13 data format...')
+                        data = h5.File(self.data_file,'r')[I13_PATHS.frame_pattern % self.info.recipe][j].astype(np.float32)
                     raw[j] = data
                 else:
                     
