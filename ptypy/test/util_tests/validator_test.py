@@ -1,19 +1,17 @@
 """
-Test validator submodule
+Test descriptor submodule
 """
-from ptypy.utils import validator
+from ptypy.utils import descriptor
 import unittest
 
-#class ParameterTest(unittest.TestCase):
 
-
-class EvalParameterTest(unittest.TestCase):
+class EvalDescriptorTest(unittest.TestCase):
 
     def test_parse_doc_basic(self):
         """
-        Test basic behaviour of the EvalParameter decorator.
+        Test basic behaviour of the EvalDescriptor decorator.
         """
-        root = validator.EvalParameter('')
+        root = descriptor.EvalDescriptor('')
 
         @root.parse_doc('engine')
         class FakeEngineClass(object):
@@ -51,7 +49,7 @@ class EvalParameterTest(unittest.TestCase):
         """
         Test that implicit/explicit order is honored
         """
-        root = validator.EvalParameter('')
+        root = descriptor.EvalDescriptor('')
 
         # Add the engine part
         @root.parse_doc('engine')
@@ -138,9 +136,9 @@ class EvalParameterTest(unittest.TestCase):
 
     def test_parse_doc_inheritance(self):
         """
-        Test inheritance of EvalParameter decorator.
+        Test inheritance of EvalDescriptor decorator.
         """
-        root = validator.EvalParameter('')
+        root = descriptor.EvalDescriptor('')
 
         class FakeEngineBaseClass(object):
             """
