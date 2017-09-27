@@ -521,11 +521,13 @@ class ArgParseDescriptor(Descriptor):
         except KeyError:
             pass
 
+        if not self.children:
+            return self.default
+
         for name, child in self.children.iteritems():
-            if child.children and depth >= 1:
+            if depth >= 0:
                 out[name] = child.make_default(depth=depth - 1)
-            else:
-                out[name] = child.default
+
         return out
 
     def _get_type_argparse(self):
