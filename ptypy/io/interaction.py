@@ -165,7 +165,7 @@ class Server(object):
     """
     Main ZMQ server class.
 
-    Defaults:
+    Parameters:
 
     [active]
     default = True
@@ -694,7 +694,7 @@ class Client(object):
     Basic but complete client to interact with the server.
 
 
-    Defaults:
+    Parameters:
 
     [address]
     default = 'tcp://127.0.0.1'

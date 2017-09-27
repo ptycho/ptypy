@@ -38,7 +38,7 @@ class BaseEngine(object):
     engine_finalize
 
 
-    Defaults:
+    Parameters:
 
     [numiter]
     default = 20
