@@ -691,17 +691,49 @@ class EvalDescriptor(ArgParseDescriptor):
         out = {}
         val = {}
 
-        # 1. Data type
+        symlinks = None
+
+        # Data type
         if self.type is None:
-            # Inconclusive
+            # No type: inconclusive
             val['type'] = CODES.UNKNOWN
             val['lowlim'] = CODES.UNKNOWN
             val['uplim'] = CODES.UNKNOWN
             return {ep: val}
+        elif type(pars).__name__ in self.type:
+            # Standard type: pass
+            val['type'] = CODES.PASS
         else:
-            val['type'] = CODES.PASS if (type(pars).__name__ in self.type) else CODES.FAIL
+            # Type could be a symlink to another part of the tree
+            try:
+                symlinks = dict((self.root[tp].name, self.root[tp]) for tp in self.type)
+            except KeyError:
+                val['type'] = CODES.INVALID
 
-        # 2. limits
+        # Manage symlinks
+        if symlinks:
+            # Look for name
+            name = pars.get('name', None)
+            if not name:
+                # The entry does not have a name, that's not good.
+                val['symlink'] = CODES.MISSING
+                return {ep: val}
+            if name not in symlinks:
+                # The entry name is not found, that's not good.
+                val['symlink'] = CODES.UNKNOWN
+                return {ep: val}
+            out = {ep: val}
+            if walk:
+                # Follow symlink
+                symlink = symlinks[name]
+                sym_out = symlink.check(pars, walk)
+                # Rehash names
+                for k, v in sym_out.iteritems():
+                    k1 = k.replace(symlink.path, ep)
+                    out[k1] = v
+            return out
+
+        # Check limits
         if any([i in self._limtypes for i in self.type]):
             lowlim, uplim = self.limits
             if lowlim is None:
@@ -713,21 +745,31 @@ class EvalDescriptor(ArgParseDescriptor):
             else:
                 val['uplim'] = CODES.PASS if (pars <= uplim) else CODES.FAIL
 
-        # 3. Extra work for parameter entries
-        if 'param' in self.type.lower() or 'dict' in self.type.lower():
+        # Nothing left to check except for Param or dict.
+        if not hasattr(pars, 'items'):
+            return {ep: val}
 
+        # Detect wildcard
+        wildcard = (self.children.keys() == ['*'])
+        if wildcard:
+            if not walk:
+                return {ep: val}
+        else:
             # Check for missing entries
             for k, v in self.children.items():
                 if k not in pars:
                     val[k] = CODES.MISSING
 
-            # Check for excess entries
-            for k, v in pars.items():
-                if k not in self.children:
-                    val[k] = CODES.INVALID
-                elif walk:
-                    # Validate child
-                    out.update(self.children[k].check(v, walk))
+        # Check for invalid entries
+        for k, v in pars.items():
+            if wildcard:
+                if walk:
+                    out.update(self.children['*'].check(v, walk))
+            elif k not in self.children:
+                val[k] = CODES.INVALID
+            elif walk:
+                # Validate child
+                out.update(self.children[k].check(v, walk))
 
         out[ep] = val
         return out
