@@ -27,7 +27,7 @@ class ML(BaseEngine):
     Maximum likelihood reconstruction engine.
 
 
-    Parameters:
+    Defaults:
 
     [ML_type]
     default = 'gaussian'

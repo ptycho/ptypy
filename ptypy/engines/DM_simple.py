@@ -24,7 +24,7 @@ class DM_simple(BaseEngine):
     Bare-bones DM reconstruction engine.
 
 
-    Parameters:
+    Defaults:
 
     [numiter]
     default = 123

@@ -24,7 +24,7 @@ class DM(BaseEngine):
     A full-fledged Difference Map enine.
 
 
-    Parameters:
+    Defaults:
 
     [alpha]
     default = 1

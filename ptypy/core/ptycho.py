@@ -64,7 +64,7 @@ class Ptycho(Base):
         diffraction data and detector masks / weights
 
 
-    Parameters:
+    Defaults:
 
     [verbose_level]
     default = 1

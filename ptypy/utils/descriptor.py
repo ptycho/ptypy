@@ -972,7 +972,7 @@ class EvalDescriptor(ArgParseDescriptor):
         # Because of indentation it is safer to work line by line
         doclines = docstring.splitlines()
         for n, line in enumerate(doclines):
-            if line.strip().startswith('Parameters:'):
+            if line.strip().startswith('Defaults:'):
                 break
         parameter_string = textwrap.dedent('\n'.join(doclines[n + 1:]))
 

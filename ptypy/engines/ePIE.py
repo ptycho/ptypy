@@ -40,7 +40,7 @@ class EPIE(BaseEngine):
     ePIE reconstruction engine.
 
 
-    Parameters:
+    Defaults:
 
     [alpha]
     default = 1.

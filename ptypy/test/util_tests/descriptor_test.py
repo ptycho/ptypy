@@ -20,7 +20,7 @@ class EvalDescriptorTest(unittest.TestCase):
             blabla, any text is allowed except
             a line that starts with "Parameters".
 
-            Parameters:
+            Defaults:
 
             [name]
             default=DM
@@ -57,7 +57,7 @@ class EvalDescriptorTest(unittest.TestCase):
             """
             Blabla
 
-            Parameters:
+            Defaults:
 
             [name]
             default=DM
@@ -80,7 +80,7 @@ class EvalDescriptorTest(unittest.TestCase):
             """
             Blabla
 
-            Parameters:
+            Defaults:
 
             [interaction.port]
             default=10005
@@ -100,7 +100,7 @@ class EvalDescriptorTest(unittest.TestCase):
             """
             Dummy doc
 
-            Parameters:
+            Defaults:
 
             [verbose_level]
             default=3
@@ -146,7 +146,7 @@ class EvalDescriptorTest(unittest.TestCase):
             blabla, any text is allowed except
             a line that starts with "Parameters".
 
-            Parameters:
+            Defaults:
 
             [name]
             default=BaseEngineName
@@ -168,7 +168,7 @@ class EvalDescriptorTest(unittest.TestCase):
             """
             Engine-specific documentation
 
-            Parameters:
+            Defaults:
 
             # It is possible to overwrite a base parameter
             [name]

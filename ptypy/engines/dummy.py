@@ -25,7 +25,7 @@ class Dummy(BaseEngine):
     Dummy reconstruction engine.
 
 
-    Parameters:
+    Defaults:
 
     [itertime]
     default = .2
