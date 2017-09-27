@@ -628,6 +628,40 @@ class EvalDescriptor(ArgParseDescriptor):
     ])
 
     @property
+    def default(self):
+        """
+        Default value as a Python type
+        """
+        default = str(self.options.get('default', ''))
+
+        # this destroys empty strings
+        default = default if default else None
+
+        if default is None:
+            out = None
+        # should be only strings now
+        elif default.lower() == 'none':
+            out = None
+        elif default.lower() == 'true':
+            out = True
+        elif default.lower() == 'false':
+            out = False
+        elif self.is_evaluable:
+            out = ast.literal_eval(default)
+        else:
+            out = default
+
+        return out
+
+    @property
+    def is_evaluable(self):
+        for t in self.type:
+            if t in self._evaltypes:
+                return True
+                break
+        return False
+
+    @property
     def type(self):
         """
         List of possible data types.
