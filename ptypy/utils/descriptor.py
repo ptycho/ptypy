@@ -443,6 +443,9 @@ class ArgParseDescriptor(Descriptor):
 
     @default.setter
     def default(self, val):
+        """
+        Set default, ensuring that is it stored as a string.
+        """
         if val is None:
             self.options['default'] = ''
         elif str(val) == val:
@@ -510,6 +513,8 @@ class ArgParseDescriptor(Descriptor):
 
         out = {}
         try:
+            # Interpret a string default as a link to another part
+            # of the structure.
             if str(self.default) == self.default:
                 link = self.root[self.default]
                 out = link.make_default(depth=0)
