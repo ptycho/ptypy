@@ -651,6 +651,10 @@ class EvalDescriptor(ArgParseDescriptor):
         else:
             out = default
 
+        # strip any extra quotation marks
+        if type(out) == str:
+            out = out.strip('"').strip("'")
+
         return out
 
     @property
