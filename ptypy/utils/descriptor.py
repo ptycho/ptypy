@@ -237,6 +237,16 @@ class Descriptor(object):
                 subparent = self.new_child(root)
             subparent[name] = desc
 
+    def get(self, path):
+        """
+        return self.root[path] if it exists, None otherwise.
+        """
+        try:
+            link = self.root[path]
+            return link
+        except (KeyError, TypeError) as e:
+            return None
+
     def add_child(self, desc):
         self[desc.name] = desc
 
@@ -512,14 +522,12 @@ class ArgParseDescriptor(Descriptor):
             return dict([(k, v.default) for k, v in self.descendants])
 
         out = {}
-        try:
-            # Interpret a string default as a link to another part
-            # of the structure.
-            if str(self.default) == self.default:
-                link = self.root[self.default]
+        # Interpret a string default as a link to another part
+        # of the structure.
+        if str(self.default) == self.default:
+            link = self.get(self.default)
+            if link:
                 return link.make_default(depth=depth-1)
-        except KeyError:
-            pass
 
         if not self.children:
             return self.default
@@ -745,10 +753,15 @@ class EvalDescriptor(ArgParseDescriptor):
             val['type'] = CODES.PASS
         else:
             # Type could be a symlink to another part of the tree
-            try:
-                symlinks = dict((self.root[tp].name, self.root[tp]) for tp in self.type)
-            except KeyError:
-                val['type'] = CODES.INVALID
+            symlinks = {}
+            for tp in self.type:
+                link = self.get(tp)
+                if not link:
+                    # Abort because one of the types was not recognised as a link.
+                    val['type'] = CODES.INVALID
+                    symlinks = None
+                    break
+                symlinks[link.name] = link
 
         # Manage symlinks
         if symlinks:
@@ -1055,7 +1068,10 @@ def create_default_template(filename=None, user_level=0, doc_level=2):
             value = "u.Param()"
         else:
             val = pd.default
-            if str(val) == val:
+            link = pd.get(val)
+            if link:
+                value = 'p.' + pd.default
+            elif str(val) == val:
                 value = '"%s"' % str(val)
             else:
                 value = str(val)
