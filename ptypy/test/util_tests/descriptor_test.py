@@ -1,8 +1,10 @@
 """
 Test descriptor submodule
 """
-from ptypy.utils.descriptor import EvalDescriptor
 import unittest
+
+from ptypy.utils.descriptor import EvalDescriptor, CODES
+from ptypy.utils import Param
 
 
 class EvalDescriptorTest(unittest.TestCase):
@@ -203,7 +205,104 @@ class EvalDescriptorTest(unittest.TestCase):
         assert root['engine'].type == ['Param']
         assert FakeEngineClass.DEFAULTS == {'alpha': 1.0, 'name': 'SubclassedEngineName', 'numiter': 1, 'subengine': {'some_parameter': 1.0}}
 
+    def test_parse_doc_wildcards(self):
+        """
+        Test that wildcards in the EvalDescriptor structure are handled
+        properly, i e that they drop out of the DEFAULTS constants.
+        """
+        root = EvalDescriptor('')
 
+        @root.parse_doc('scans.*')
+        class FakeScanClass(object):
+            """
+            General info.
+
+            Defaults:
+
+            [energy]
+            type = float
+            default = 11.4
+            help = Energy in keV
+            lowlim = 1
+            uplim = 20
+
+            [comment]
+            type = str
+            default =
+            help = Just some static parameter
+            """
+            pass
+
+        @root.parse_doc()
+        class FakePtychoClass(object):
+            """
+
+            General documentation.
+
+            Defaults:
+
+            [scans]
+            type = Param
+            default = None
+            help = Engine container
+
+            [run]
+            type = str
+            default = run
+            help = Some parameter
+
+            """
+            pass
+
+        assert dict(FakeScanClass.DEFAULTS._to_dict(True)) == {'comment': None, 'energy': 11.4}
+        assert dict(FakePtychoClass.DEFAULTS._to_dict(True)) == {'run': 'run', 'scans': {'*': {'comment': None, 'energy': 11.4}}}
+
+        # a correct param tree
+        p = Param()
+        p.run = 'my reconstruction run'
+        p.scans = Param()
+        p.scans.scan01 = Param()
+        p.scans.scan01.energy = 3.14
+        p.scans.scan01.comment = 'first scan'
+        p.scans.scan02 = Param()
+        p.scans.scan02.energy = 3.14 * 2
+        p.scans.scan02.comment = 'second scan'
+        root.validate(p, walk=True)
+
+        # no scans entries
+        p = Param()
+        p.run = 'my reconstruction run'
+        p.scans = Param()
+        out = root.check(p, walk=True)
+        assert out['scans.*']['*'] == CODES.MISSING
+
+        # a bad scans entry
+        p = Param()
+        p.run = 'my reconstruction run'
+        p.scans = Param()
+        p.scans.scan01 = Param()
+        p.scans.scan01.energy = 3.14
+        p.scans.scan01.comment = 'first scan'
+        p.scans.scan02 = 'not good'
+        p.scans.scan03 = Param()
+        p.scans.scan03.energy = 3.14 * 2
+        p.scans.scan03.comment = 'second scan'
+        out = root.check(p, walk=True)
+        assert out['scans.scan02']['type'] == CODES.INVALID
+
+        # a bad entry within a scan
+        p = Param()
+        p.run = 'my reconstruction run'
+        p.scans = Param()
+        p.scans.scan01 = Param()
+        p.scans.scan01.energy = 3.14
+        p.scans.scan01.comment = 'first scan'
+        p.scans.scan02 = Param()
+        p.scans.scan02.energy = 3.14 * 2
+        p.scans.scan02.comment = 'second scan'
+        p.scans.scan02.badparameter = 'not good'
+        out = root.check(p, walk=True)
+        assert out['scans.scan02']['badparameter'] == CODES.INVALID
 
 if __name__ == "__main__":
     unittest.main()
