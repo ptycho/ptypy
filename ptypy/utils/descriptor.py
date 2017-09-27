@@ -517,7 +517,7 @@ class ArgParseDescriptor(Descriptor):
             # of the structure.
             if str(self.default) == self.default:
                 link = self.root[self.default]
-                out = link.make_default(depth=0)
+                return link.make_default(depth=depth-1)
         except KeyError:
             pass
 
