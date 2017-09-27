@@ -304,5 +304,104 @@ class EvalDescriptorTest(unittest.TestCase):
         out = root.check(p, walk=True)
         assert out['scans.scan02']['badparameter'] == CODES.INVALID
 
+    def test_parse_doc_symlinks(self):
+        """
+        Test that symlinks in the EvalDescriptor structure are handled
+        properly.
+        """
+        root = EvalDescriptor('')
+
+        @root.parse_doc('engine.DM')
+        class FakeDMEngineClass(object):
+            """
+            Dummy documentation
+            blabla, any text is allowed except
+            a line that starts with "Defaults".
+
+            Defaults:
+
+            [name]
+            default=DM
+            type=str
+            help=DM engine
+
+            [numiter]
+            default=1
+            type=int
+            lowlim=0
+            help=Number of iterations
+            """
+            pass
+
+        @root.parse_doc('engine.ML')
+        class FakeMLEngineClass(object):
+            """
+            Dummy documentation
+
+            Defaults:
+
+            [name]
+            default=ML
+            type=str
+            help=ML engine
+
+            [numiter]
+            default=1
+            type=int
+            lowlim=0
+            help=Number of iterations
+            """
+            pass
+
+        @root.parse_doc()
+        class FakePtychoClass(object):
+            """
+
+            General documentation.
+
+            Defaults:
+
+            [engines]
+            type = Param
+            default =
+            help = Container for all engines
+
+            [engines.*]
+            type = engine.DM, engine.ML
+            default = engine.DM
+            help = Engine wildcard. Defaults to DM
+            """
+            pass
+
+        # a correct param tree
+        p = Param()
+        p.engines = Param()
+        p.engines.engine01 = Param()
+        p.engines.engine01.name = 'DM'
+        p.engines.engine01.numiter = 10
+        p.engines.engine02 = Param()
+        p.engines.engine02.name = 'ML'
+        p.engines.engine02.numiter = 10
+        root.validate(p, walk=True)
+
+        # no name
+        p = Param()
+        p.engines = Param()
+        p.engines.engine01 = Param()
+        p.engines.engine01.numiter = 10
+        out = root.check(p, walk=True)
+        assert out['engines.engine01']['symlink'] == CODES.INVALID
+
+        # wrong name
+        p = Param()
+        p.engines = Param()
+        p.engines.engine01 = Param()
+        p.engines.engine01.name = 'ePIE'
+        p.engines.engine01.numiter = 10
+        out = root.check(p, walk=True)
+        assert out['engines.engine01']['symlink'] == CODES.INVALID
+
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -750,11 +750,13 @@ class EvalDescriptor(ArgParseDescriptor):
             name = pars.get('name', None)
             if not name:
                 # The entry does not have a name, that's not good.
-                val['symlink'] = CODES.MISSING
+                val['symlink'] = CODES.INVALID
+                val['name'] = CODES.MISSING
                 return out
             if name not in symlinks:
                 # The entry name is not found, that's not good.
-                val['symlink'] = CODES.UNKNOWN
+                val['symlink'] = CODES.INVALID
+                val['name'] = CODES.UNKNOWN
                 return out
             if walk:
                 # Follow symlink
