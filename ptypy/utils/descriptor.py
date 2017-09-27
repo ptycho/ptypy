@@ -753,6 +753,7 @@ class EvalDescriptor(ArgParseDescriptor):
             List of codes that will raise a RuntimeError.
         """
         from ptypy.utils.verbose import logger
+        import logging
 
         _logging_levels = dict(
             PASS=logging.INFO,
@@ -853,7 +854,7 @@ class EvalDescriptor(ArgParseDescriptor):
         parameter_string = self._extract_doc_from_class(cls, recursive)
 
         # Maybe check here if a non-Param descendant is being overwritten?
-        desc.options['type'] = 'node'
+        desc.options['type'] = 'Param'
 
         if not recursive and cls.__base__ != object:
             desc_base = getattr(cls.__base__, '_descriptor')
