@@ -23,7 +23,7 @@ __all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
 
 class _Adict(object):
 
-    def __init__(self,**kwargs):
+    def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
 # ! Validator message codes
@@ -866,11 +866,6 @@ class EvalDescriptor(ArgParseDescriptor):
         from ptypy.utils import Param
         cls.DEFAULTS = Param()
         cls.DEFAULTS.update(desc.make_default(depth=99), Convert=True)
-        """
-        prop = property(lambda this: this._descriptor().make_default(depth=0))
-
-        setattr(cls, "DEFAULTS", prop)
-        """
 
         return cls
 
@@ -895,54 +890,11 @@ class EvalDescriptor(ArgParseDescriptor):
         # Because of indentation it is safer to work line by line
         doclines = docstring.splitlines()
         for n, line in enumerate(doclines):
-            if line.strip().startswith('Defaults'):
+            if line.strip().startswith('Parameters:'):
                 break
         parameter_string = textwrap.dedent('\n'.join(doclines[n + 1:]))
 
         return base_parameters + parameter_string
-
-
-class _Junk(object):
-    """
-    temporary junkyard for unused / old methods
-    """
-
-    def __init__(self):
-        pass
-
-    @property
-    def default(self):
-        """
-        Default value as a Python type
-        """
-        default = str(self.options.get('default', ''))
-
-        # this destroys empty strings
-        default = default if default else None
-
-        if default is None:
-            out = None
-        # should be only strings now
-        elif default.lower() == 'none':
-            out = None
-        elif default.lower() == 'true':
-            out = True
-        elif default.lower() == 'false':
-            out = False
-        elif self.is_evaluable:
-            out = ast.literal_eval(default)
-        else:
-            out = default
-
-        return out
-
-    @property
-    def is_evaluable(self):
-        for t in self.type:
-            if t in self._evaltypes:
-                return True
-                break
-        return False
 
 
 def create_default_template(filename=None, user_level=0, doc_level=2):
