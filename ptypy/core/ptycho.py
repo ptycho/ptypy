@@ -116,11 +116,16 @@ class Ptycho(Base):
     help = Container for instances of scan parameters
     doc = Container for instances of scan parameters.
 
-    [engine]
+    [engines]
     default = None
     type = Param
     help = Container for instances of engine parameters
     doc = Container for instances of engine parameters.
+
+    [engines.*]
+    default = engine.DM
+    type = [engine.DM, engine.ML, engine.ePIE]
+    help = Wildcard entry for list of engines to run
 
     [io]
     default = None
@@ -218,6 +223,12 @@ class Ptycho(Base):
     doc = Switch to request the production of a movie from the dumped plots at the end of the
       reconstruction.
     type = bool
+
+    [engine]
+    default = None
+    type = Param
+    help = Default engine parameters
+    doc = Default engine parameters.
 
     """
     
