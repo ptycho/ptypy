@@ -526,7 +526,7 @@ class ArgParseDescriptor(Descriptor):
         # of the structure.
         if str(self.default) == self.default:
             link = self.get(self.default)
-            if link:
+            if link and depth >= 0:
                 return link.make_default(depth=depth-1)
 
         if not self.children:
@@ -534,7 +534,7 @@ class ArgParseDescriptor(Descriptor):
 
         for name, child in self.children.iteritems():
             if depth >= 0:
-                out[name] = child.make_default(depth=depth - 1)
+                out[name] = child.make_default(depth=depth-1)
 
         return out
 
