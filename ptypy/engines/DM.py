@@ -110,7 +110,7 @@ class DM(BaseEngine):
         """
         Difference map reconstruction engine.
         """
-        super(DM, self).__init__(ptycho_parent)
+        super(DM, self).__init__(ptycho_parent, pars)
 
         p = self.DEFAULTS.copy()
         if pars is not None:

@@ -113,7 +113,7 @@ class EPIE(BaseEngine):
         """
         ePIE reconstruction engine.
         """
-        super(EPIE, self).__init__(ptycho_parent)
+        super(EPIE, self).__init__(ptycho_parent, pars)
 
         p = self.DEFAULTS.copy()
         if pars is not None:
