@@ -1033,9 +1033,22 @@ def create_default_template(filename=None, user_level=0, doc_level=2):
     except ImportError:
         h += '### Ptypy Parameter Tree ###\n\n'
     f.write(h)
+
+    # Write data structure
     for entry, pd in defaults_tree.descendants:
+
+        # Skip entries above user level
         if user_level < pd.userlevel:
             continue
+
+        # Manage wildcards
+        if pd.name == '*':
+            pname = pd.parent.name
+            if pname[-1] != 's':
+                raise RuntimeError('Wildcards are supposed to appear only in plural container.'
+                                   '%s does not end with an "s"' % pname)
+            entry = entry.replace(pd.name, pname[:-1] + '_00')
+
         if pd.children:
             value = "u.Param()"
         else:
