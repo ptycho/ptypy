@@ -722,8 +722,8 @@ class EvalDescriptor(ArgParseDescriptor):
         """
         # FIXME: this needs a lot of testing and verbose.debug lines.
         ep = self.path
-        out = {}
         val = {}
+        out = {ep: val}
 
         symlinks = None
 
@@ -733,7 +733,7 @@ class EvalDescriptor(ArgParseDescriptor):
             val['type'] = CODES.UNKNOWN
             val['lowlim'] = CODES.UNKNOWN
             val['uplim'] = CODES.UNKNOWN
-            return {ep: val}
+            return out
         elif type(pars).__name__ in self.type:
             # Standard type: pass
             val['type'] = CODES.PASS
@@ -751,12 +751,11 @@ class EvalDescriptor(ArgParseDescriptor):
             if not name:
                 # The entry does not have a name, that's not good.
                 val['symlink'] = CODES.MISSING
-                return {ep: val}
+                return out
             if name not in symlinks:
                 # The entry name is not found, that's not good.
                 val['symlink'] = CODES.UNKNOWN
-                return {ep: val}
-            out = {ep: val}
+                return out
             if walk:
                 # Follow symlink
                 symlink = symlinks[name]
@@ -781,13 +780,13 @@ class EvalDescriptor(ArgParseDescriptor):
 
         # Nothing left to check except for Param or dict.
         if not hasattr(pars, 'items'):
-            return {ep: val}
+            return out
 
         # Detect wildcard
         wildcard = (self.children.keys() == ['*'])
         if wildcard:
             if not walk:
-                return {ep: val}
+                return out
         else:
             # Check for missing entries
             for k, v in self.children.items():
@@ -795,10 +794,17 @@ class EvalDescriptor(ArgParseDescriptor):
                     val[k] = CODES.MISSING
 
         # Check for invalid entries
+        if wildcard and not pars:
+            # At least one child is required.
+            out[ep + '.*'] = {'*': CODES.MISSING}
+            return out
         for k, v in pars.items():
             if wildcard:
                 if walk:
-                    out.update(self.children['*'].check(v, walk))
+                    w_out = self.children['*'].check(v, walk)
+                    for kk, vv in w_out.iteritems():
+                        k1 = kk.replace('*', k, 1)
+                        out[k1] = vv
             elif k not in self.children:
                 val[k] = CODES.INVALID
             elif walk:
