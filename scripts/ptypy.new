@@ -43,5 +43,5 @@ elif pars.ldoc:
     doc_level = 2  
 else:
     doc_level = 0  
-u.validator.create_default_template(pars.pyfile, pars.ulevel,doc_level)
+u.descriptor.create_default_template(pars.pyfile, pars.ulevel,doc_level)
 

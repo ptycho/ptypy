@@ -1033,7 +1033,7 @@ def create_default_template(filename=None, user_level=0, doc_level=2):
     except ImportError:
         h += '### Ptypy Parameter Tree ###\n\n'
     f.write(h)
-    for entry, pd in parameter_descriptions.descendants:
+    for entry, pd in defaults_tree.descendants:
         if user_level < pd.userlevel:
             continue
         if pd.children:
