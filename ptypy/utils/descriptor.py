@@ -493,7 +493,7 @@ class ArgParseDescriptor(Descriptor):
 
         return c
 
-    def make_default(self, depth=0, flat=False):
+    def make_default(self, depth=0, flat=False, pars=None):
         """
         Creates a default parameter structure from the loaded parameter
         descriptions in this module
@@ -507,6 +507,11 @@ class ArgParseDescriptor(Descriptor):
         flat : bool
             If `True` returns flat dict with long keys, otherwise nested
             dicts with short keys. default=`False`
+
+        pars : Param
+            If provided prepares a defaults structure relevant for the
+            choices and entries actually supplied, e.g. the instances of
+            wildcards.
             
         Returns
         -------
@@ -519,22 +524,31 @@ class ArgParseDescriptor(Descriptor):
         >>> print descriptor.children['io'].make_default()
         """
         if flat:
+            raise NotImplementedError
             return dict([(k, v.default) for k, v in self.descendants])
 
         out = {}
         # Interpret a string default as a link to another part
-        # of the structure.
+        # of the structure if it matches one.
         if str(self.default) == self.default:
             link = self.get(self.default)
             if link and depth >= 0:
-                return link.make_default(depth=depth-1)
+                # here: check if the defaul link is overridden in pars
+                return link.make_default(depth=depth-1, pars=pars)
 
         if not self.children:
             return self.default
 
         for name, child in self.children.iteritems():
             if depth >= 0:
-                out[name] = child.make_default(depth=depth-1)
+                # wildcard entry
+                if name == '*':
+                    if pars and pars[self.path]:
+                        for key in pars[self.path].keys():
+                            out[key] = child.make_default(depth=depth-1, pars=pars)
+                # normal entry
+                else:
+                    out[name] = child.make_default(depth=depth-1, pars=pars)
 
         return out
 
