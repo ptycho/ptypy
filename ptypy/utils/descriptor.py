@@ -987,8 +987,8 @@ class EvalDescriptor(ArgParseDescriptor):
 
         # FIXME: This should be solved more elegantly
         from ptypy.utils import Param
-        cls.DEFAULTS = Param()
-        cls.DEFAULTS.update(desc.make_default(depth=99), Convert=True)
+        cls.DEFAULT = Param()
+        cls.DEFAULT.update(desc.make_default(depth=99), Convert=True)
 
         return cls
 

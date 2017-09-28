@@ -81,8 +81,3 @@ class Dummy(BaseEngine):
         Clean up after iterations are done
         """
         pass
-
-
-
-
-

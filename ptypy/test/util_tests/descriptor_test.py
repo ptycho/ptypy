@@ -45,7 +45,7 @@ class EvalDescriptorTest(unittest.TestCase):
         assert root['engine.name'].help == 'The name of the engine'
         assert root['engine'].implicit == True
         assert root['engine'].type == ['Param']
-        assert FakeEngineClass.DEFAULTS == {'name': 'DM', 'numiter': 1}
+        assert FakeEngineClass.DEFAULT == {'name': 'DM', 'numiter': 1}
 
     def test_parse_doc_order(self):
         """
@@ -203,12 +203,12 @@ class EvalDescriptorTest(unittest.TestCase):
         assert root['engine.name'].help == 'The name of the subclassed engine'
         assert root['engine'].implicit == True
         assert root['engine'].type == ['Param']
-        assert FakeEngineClass.DEFAULTS == {'alpha': 1.0, 'name': 'SubclassedEngineName', 'numiter': 1, 'subengine': {'some_parameter': 1.0}}
+        assert FakeEngineClass.DEFAULT == {'alpha': 1.0, 'name': 'SubclassedEngineName', 'numiter': 1, 'subengine': {'some_parameter': 1.0}}
 
     def test_parse_doc_wildcards(self):
         """
         Test that wildcards in the EvalDescriptor structure are handled
-        properly, i e that they drop out of the DEFAULTS constants.
+        properly, i e that they drop out of the DEFAULT constants.
         """
         root = EvalDescriptor('')
 
@@ -254,8 +254,8 @@ class EvalDescriptorTest(unittest.TestCase):
             """
             pass
 
-        assert dict(FakeScanClass.DEFAULTS._to_dict(True)) == {'comment': None, 'energy': 11.4}
-        assert dict(FakePtychoClass.DEFAULTS._to_dict(True)) == {'run': 'run', 'scans': {'*': {'comment': None, 'energy': 11.4}}}
+        assert dict(FakeScanClass.DEFAULT._to_dict(True)) == {'comment': None, 'energy': 11.4}
+        assert dict(FakePtychoClass.DEFAULT._to_dict(True)) == {'run': 'run', 'scans': {}}
 
         # a correct param tree
         p = Param()
@@ -495,8 +495,8 @@ class EvalDescriptorTest(unittest.TestCase):
             """
             pass
 
-        assert dict(FakeVanillaScan.DEFAULTS) == {'energy': 9.3, 'name': 'Vanilla'}
-        assert dict(FakeFullScan.DEFAULTS) == {'energy': 9.3, 'name': 'Full', 'probe_modes': 1}
+        assert dict(FakeVanillaScan.DEFAULT) == {'energy': 9.3, 'name': 'Vanilla'}
+        assert dict(FakeFullScan.DEFAULT) == {'energy': 9.3, 'name': 'Full', 'probe_modes': 1}
 
         # a minimal tree
         p = Param()
