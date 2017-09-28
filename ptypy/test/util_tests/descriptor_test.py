@@ -401,6 +401,116 @@ class EvalDescriptorTest(unittest.TestCase):
         out = root.check(p, walk=True)
         assert out['engines.engine01']['symlink'] == CODES.INVALID
 
+    def test_parse_doc_wildcards_and_symlinks(self):
+        """ 
+        Tests the combination of wildcards and dynamic entries.
+        """
+
+        root = EvalDescriptor('')
+
+        @root.parse_doc()
+        class FakePtycho(object):
+            """
+            Docs...
+
+            Defaults:
+
+            # A template tree under scan
+            [scan]
+            type = Param
+            default = 
+            help = 
+
+            [scan.data]
+            type = Param
+            default =
+            help = Data preparation parameters
+
+            [scan.data.load_parallel]
+            type = bool
+            default = True
+            help = Load 
+
+            [scan.data.source]
+            type = str
+            default = 'ptyd'
+            help = Data source
+
+            [scan.model]
+            type = scanmodel.Vanilla, scanmodel.Full
+            default = scanmodel.Vanilla
+            help = Physical imaging model
+
+
+            # The actual scans container
+            [scans]
+            type = Param
+            default = None
+            help = Container for scan instances
+
+            [scans.*]
+            type = scan
+            default = scan
+            help = Wildcard for scan instances
+
+            """
+            pass
+
+
+        @root.parse_doc('scanmodel.Vanilla')
+        class FakeVanillaScan(object):
+            """
+            Docs...
+
+            Defaults:
+
+            [name]
+            type = str
+            default = Vanilla
+            help = Vanilla scan model
+
+            [energy]
+            type = float
+            default = 9.3
+            help = Photon energy
+            """
+            pass
+
+        @root.parse_doc('scanmodel.Full')
+        class FakeFullScan(FakeVanillaScan):
+            """
+            Docs...
+
+            Defaults:
+
+            [name]
+            type = str
+            default = Full
+            help = Full scan model
+
+            [probe_modes]
+            type = int
+            default = 1
+            help = Number of mutually incoherent illumination modes
+            """
+            pass
+
+        assert dict(FakeVanillaScan.DEFAULTS) == {'energy': 9.3, 'name': 'Vanilla'}
+        assert dict(FakeFullScan.DEFAULTS) == {'energy': 9.3, 'name': 'Full', 'probe_modes': 1}
+
+        # a minimal tree
+        p = Param()
+        root.validate(p, walk=True)
+
+        # a hopefully correct tree with scans entry and model choice
+        p = Param()
+        p.scans = Param()
+        p.scans.scan01 = Param()
+        p.scans.scan01.model = Param()
+        p.scans.scan01.model.name = 'Full'
+        p.scans.scan01.model.probe_modes = 3
+        root.validate(p, walk=True)
+
 
 
 if __name__ == "__main__":
