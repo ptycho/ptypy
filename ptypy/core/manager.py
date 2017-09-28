@@ -34,7 +34,6 @@ from ..utils import parallel
 FType = np.float64
 CType = np.complex128
 
-
 __all__ = ['DEFAULT', 'ModelManager', 'ScanModel']
 
 DESCRIPTION = u.Param()
@@ -382,22 +381,22 @@ class ScanModel(object):
 class ModelManager(object):
     """
     Manages ptypy objects creation and update.
-    
+
     The main task of ModelManager is to follow the rules for a given
     reconstruction model and create:
-    
+
      - the probe, object, exit, diff and mask containers
      - the views
-     - the PODs 
-     
+     - the PODs
+
     A ptychographic problem is defined by the combination of one or
     multiple scans. ModelManager uses encapsulate
     scan-specific elements in .scans und .scans_pars
-    
+
     Note
     ----
     This class is densely connected to :any:`Ptycho` the separation
-    in two classes is more history than reason and these classes may get 
+    in two classes is more history than reason and these classes may get
     merged in future releases
     """
     DEFAULT = DEFAULT
@@ -405,7 +404,7 @@ class ModelManager(object):
         and a short listing below """
 
     _PREFIX = MODEL_PREFIX
-    
+
     _BASE_MODEL = OrderedDict(
         index = 0,
         energy = 0.0,
@@ -416,20 +415,20 @@ class ModelManager(object):
 
     def __init__(self, ptycho, pars=None, scans=None, **kwargs):
         """
-        
+
         Parameters
         ----------
         ptycho: Ptycho
             The parent Ptycho object
-            
+
         pars : dict or Param
             Input parameters (see :py:attr:`DEFAULT`)
             If None uses defaults
-            
+
         scans : dict or Param
             Scan-specific parameters, Values should be dict Param that
             follow the structure of `pars`.
-            If None, tries in ptycho.p.scans else becomes empty dict  
+            If None, tries in ptycho.p.scans else becomes empty dict
         """
         # Initialize the input parameters
         p = u.Param(self.DEFAULT.copy())
@@ -485,13 +484,13 @@ class ModelManager(object):
         Configures
         """
         parallel.barrier()
-    
+
         meta = dp['common']
         label = meta['ptylabel']
-        
+
         # We expect a string for the label.
         assert label == str(label)
-        
+
         logger.info('Importing data from %s as scan %s.'
                     % (meta['label'], label))
 
@@ -510,7 +509,7 @@ class ModelManager(object):
                 psize=geo.psize,
                 padonly=True,
                 layermap=None)
-                
+
         # Same for mask
         if scan.get('mask') is None:
             scan.mask = self.ptycho.mask.new_storage(
@@ -518,13 +517,13 @@ class ModelManager(object):
                 psize=geo.psize,
                 padonly=True,
                 layermap=None)
-                
+
     def new_data_package(self,scan,dp):
         """
         Receives and stores data chunk, emits records.
         """
         parallel.barrier()
-            
+
         # Buffer incoming data and evaluate if we got Nones in data
         for dct in dp['iterable']:
 
@@ -533,7 +532,7 @@ class ModelManager(object):
             sh = scan.meta['shape']
             psize = scan.meta['psize']
 
-    
+
             dv = View(container=self.ptycho.diff,
                       accessrule={'shape': sh,
                                   'psize': psize,
@@ -541,9 +540,9 @@ class ModelManager(object):
                                   'storageID': scan.diff.ID,
                                   'layer': index,
                                   'active': active})
-            
+
             diff_views.append(dv)
-            
+
             mv = View(container=self.ptycho.mask,
                       accessrule={'shape': sh,
                                   'psize': psize,
@@ -558,7 +557,7 @@ class ModelManager(object):
             if pos is None:
                 logger.warning('No position set to scan point %d of scan %s'
                                % (index, label))
-                               
+
             positions.append(pos)
 
         # Now we should have the right views to these storages. Let them
@@ -571,7 +570,7 @@ class ModelManager(object):
             parallel.barrier()
             if not dct['data'] is None:
                 continue
-                
+
             data = dct['data']
             idx = dct['index']
 
@@ -589,7 +588,7 @@ class ModelManager(object):
         scan.new_mask_views = mask_views
         scan.diff_views += diff_views
         scan.mask_views += mask_views
-        
+
         self._update_stats(scan)
 
     def new_data(self):
@@ -620,7 +619,7 @@ class ModelManager(object):
         logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
             parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
 
-        # Adjust storages      
+        # Adjust storages
         self.ptycho.probe.reformat(True)
         self.ptycho.obj.reformat(True)
         self.ptycho.exit.reformat()
@@ -652,10 +651,10 @@ class ModelManager(object):
                             % (pid, scan.label))
 
 
-            # if photon count is None, assign a number from the stats. 
+            # if photon count is None, assign a number from the stats.
             phot = illu_pars.get('photons')
             phot_max = scan.diff.max_power
-            
+
             if phot is None:
                 logger.info('Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' % phot_max)
                 illu_pars['photons'] = phot_max
@@ -663,7 +662,7 @@ class ModelManager(object):
                 logger.warn('Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' % (phot, phot_max))
 
             illumination.init_storage(s, illu_pars)
-            
+
             s.reformat()  # Maybe not needed
             s.model_initialized = True
 
@@ -689,13 +688,13 @@ class ModelManager(object):
             else:
                 logger.info('Initializing object storage %s using scan %s.'
                             % (oid, scan.label))
-        
+
             sample_pars = scan.p.sample
-            
+
             if type(sample_pars) is u.Param:
                 # Deep copy
-                sample_pars = sample_pars.copy(depth=10)          
-                
+                sample_pars = sample_pars.copy(depth=10)
+
                 # Quickfix spectral contribution.
                 if (scan.p.coherence.object_dispersion
                         not in [None, 'achromatic']
@@ -704,7 +703,7 @@ class ModelManager(object):
                     logger.info(
                         'Applying spectral distribution input to object fill.')
                     sample_pars['fill'] *= s.views[0].pod.geometry.p.spectral
-            
+
 
             sample.init_storage(s, sample_pars)
             s.reformat()  # maybe not needed
@@ -714,23 +713,22 @@ class ModelManager(object):
     @staticmethod
     def _initialize_exit(pods):
         """
-
-        initializes exit waves using the pods
+        Initializes exit waves using the pods.
         """
-        logger.info('\n'+headerline('Creating exit waves', 'l'))
+        logger.info('\n' + headerline('Creating exit waves', 'l'))
         for pod in pods:
             if not pod.active:
                 continue
             pod.exit = pod.probe * pod.object
-        
+
     def _create_pods(self, new_scans):
         """
         Create all pods associated with the scan labels in 'scans'.
-        
+
         Return the list of new pods, probe and object ids (to allow for
         initialization).
         """
-        logger.info('\n'+headerline('Creating PODS', 'l'))
+        logger.info('\n' + headerline('Creating PODS', 'l'))
         new_pods = []
         new_probe_ids = {}
         new_object_ids = {}
@@ -750,19 +748,19 @@ class ModelManager(object):
             positions = scan.new_positions
             di_views = scan.new_diff_views
             ma_views = scan.new_mask_views
-            
+
             # Compute sharing rules
             share = scan.p.sharing
             alt_obj = share.object_share_with if share is not None else None
             alt_pr = share.probe_share_with if share is not None else None
-                
+
             obj_label = label if alt_obj is None else alt_obj
             pr_label = label if alt_pr is None else alt_pr
-            
-            # Loop through diffraction patterns             
+
+            # Loop through diffraction patterns
             for i in range(len(di_views)):
                 dv, mv = di_views.pop(0), ma_views.pop(0)
-                
+
                 index = dv.layer
 
                 # Object and probe position
@@ -781,10 +779,10 @@ class ModelManager(object):
                     pdis = scan.p.coherence.probe_dispersion
 
                     if pdis is None or str(pdis) == 'achromatic':
-                        gind = 0 
+                        gind = 0
                     else:
                         gind = ii
-                                         
+
                     probe_id_suf = probe_id + 'G%02d' % gind
                     if (probe_id_suf not in new_probe_ids.keys()
                             and probe_id_suf not in existing_probes):
@@ -794,10 +792,10 @@ class ModelManager(object):
                     odis = scan.p.coherence.object_dispersion
 
                     if odis is None or str(odis) == 'achromatic':
-                        gind = 0 
+                        gind = 0
                     else:
                         gind = ii
-                    
+
                     object_id_suf = object_id + 'G%02d' % gind
                     if (object_id_suf not in new_object_ids.keys()
                             and object_id_suf not in existing_objects):
@@ -858,7 +856,7 @@ class ModelManager(object):
                             # If Empty Probe sharing is enabled,
                             # adjust POD accordingly.
                             if share is not None:
-                                pod.probe_weight = share.probe_share_power 
+                                pod.probe_weight = share.probe_share_power
                                 pod.object_weight = share.object_share_power
                                 if share.EP_sharing:
                                     pod.is_empty = True

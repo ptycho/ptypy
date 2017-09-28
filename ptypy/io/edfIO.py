@@ -7,7 +7,7 @@ translated to python: April 2010, Dieter Hahn
 
 Among other, contains the functions
     readData
-    writeData WHICH IS NOT YET IMPLEMENTED    
+    writeData WHICH IS NOT YET IMPLEMENTED
 """
 import numpy as np
 import os
@@ -45,7 +45,7 @@ def edfread(filename, doglob=None, roi=None):
             ignores wildcards
 
         ... = edfread(filename, doglob=None) [default]
-            behaves like doglob=True, except that it returns a list only if filename contains wildcards, 
+            behaves like doglob=True, except that it returns a list only if filename contains wildcards,
             while doglob=True always returns a list, even if there is only one match.
 
         ... = edfread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))
@@ -75,11 +75,11 @@ def edfread(filename, doglob=None, roi=None):
         lmeta.append(meta)
         if meta["DataType"]=="Float" or meta["DataType"]=="FloatValue":
             if meta["ByteOrder"]=="HighByteFirst":
-                logger.debug("EDF File ByteOrder = HighByteFirst. Converting array to Big Endian")                
+                logger.debug("EDF File ByteOrder = HighByteFirst. Converting array to Big Endian")
                 dat=dat.newbyteorder("B")
             else:
                 dat=dat.newbyteorder("L")
-                logger.debug("EDF File ByteOrder = Not HighByteFirst. Converting array to Little Endian")                
+                logger.debug("EDF File ByteOrder = Not HighByteFirst. Converting array to Little Endian")
 
         if roi is not None:
             ldat.append(dat[roi[0]:roi[1],roi[2]:roi[3]].copy())
@@ -94,29 +94,29 @@ def edfread(filename, doglob=None, roi=None):
 def readData(filenameprefix,imgstart=0,imgnumber = 1,xi = 0, xf = 0, bin_fact = 1,rowFrom = 0, rowTo = 0,multiple = 1):
     """\
         Reads image data from .edf file.
-        
+
         [dat, meta] = readData(path+filename, imgstart=0,imgnumber = 1,xi = 0, xf = 0, bin = 1,rowFrom = 0, rowTo = 0,multiple = 1)
-        
+
         with multiple = 1 (default, corresponds to ESRF id19 file format):
             Reads in 'imgnumber' image files beginning from 'imgstart' and stores the data in a
             list of numpy.array(ydim,xdim). Stores metadata in dictionaries which are themselves
             stored in a list.
-        
+
         with multiple = 0
             Reads filenameprefix.edf
 
         returns: [dat, meta]:
                                 datm = list of 2d arrays containing image data
                                 meta = list of dictionaries containing metadata for each image
-        
-        
+
+
         example:
         [dat, meta] = readData('some_prefix',imgstart=4,imgnumber = 3, multiple = 1) reads 3 images:
-        some_prefix_0004_0000.edf 
-        some_prefix_0004_0001.edf 
+        some_prefix_0004_0000.edf
+        some_prefix_0004_0001.edf
         some_prefix_0004_0002.edf
         and stores their respective data and headers in dat and meta
-        
+
         [dat, meta] = readData('other_prefix', multiple = 0) reads
         other_prefix.edf
     """
@@ -227,7 +227,7 @@ def readHeader(filename, headerlength=None):
     # add local filename in meta-data
     hdict["local_filename"] = filename
     return hdict
-    
+
 def convertStr(s):
     try:
         ret = int(s)

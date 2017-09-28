@@ -18,7 +18,7 @@ class Param(dict):
     """
     Convenience class: a dictionary that gives access to its keys
     through attributes.
-    
+
     Note: dictionaries stored in this class are also automatically converted
     to Param objects:
     >>> p = Param()
@@ -29,10 +29,10 @@ class Param(dict):
     While dict(p) returns a dictionary, it is not recursive, so it is better in this case
     to use p.todict(). However, p.todict does not check for infinite recursion. So please
     don't store a dictionary (or a Param) inside itself.
-    
+
     BE: Please note also that the recursive behavior of the update function will create
     new references. This will lead inconsistency if other objects refer to dicts or Params
-    in the updated Param instance. 
+    in the updated Param instance.
     """
     _display_items_as_attributes = True
     _PREFIX = PARAM_PREFIX
@@ -89,7 +89,7 @@ class Param(dict):
 
     def copy(self, depth=0):
         """
-        :returns Param: A (recursive) copy of P with depth `depth` 
+        :returns Param: A (recursive) copy of P with depth `depth`
         """
         d = Param(self)
         if depth > 0:
@@ -102,7 +102,7 @@ class Param(dict):
         Defined to include the keys when using dir(). Useful for
         tab completion in e.g. ipython.
         If you do not wish the dict key's be displayed as attributes
-        (although they are still accessible as such) set the class 
+        (although they are still accessible as such) set the class
         attribute `_display_items_as_attributes` to False. Default is
         True.
         """
@@ -115,18 +115,18 @@ class Param(dict):
     def update(self, __d__=None, in_place_depth=0, Convert=False, **kwargs):
         """
         Update Param - almost same behavior as dict.update, except
-        that all dictionaries are converted to Param if `Convert` is set 
+        that all dictionaries are converted to Param if `Convert` is set
         to True, and update may occur in-place recursively for other Param
         instances that self refers to.
-        
+
         Parameters
         ----------
-        Convert : bool 
+        Convert : bool
                   If True, convert all dict-like values in self also to Param.
-                  *WARNING* 
+                  *WARNING*
                   This mey result in misdirected references in your environment
-        in_place_depth : int 
-                  Counter for recursive in-place updates 
+        in_place_depth : int
+                  Counter for recursive in-place updates
                   If the counter reaches zero, the Param to a key is
                   replaced instead of updated
         """
@@ -137,7 +137,7 @@ class Param(dict):
                 v = Param(v)
                 v.update(v.items(), in_place_depth - 1, Convert)
 
-            # new key 
+            # new key
             if k not in self:
                 self[k] = v
 
@@ -251,16 +251,16 @@ def format_standard_param(p):
 def asParam(obj):
     """
     Convert the input to a Param.
-    
+
     Parameters
     ----------
     a : dict_like
         Input structure, in any format that can be converted to a Param.
-        
+
     Returns:
     out : Param
         The Param structure built from a. No copy is done if the input
-        is already a Param.  
+        is already a Param.
     """
     return obj if isinstance(obj, Param) else Param(obj)
 

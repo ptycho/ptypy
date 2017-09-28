@@ -36,7 +36,7 @@ H5_PATHS.command = '{entry}/scan_type'
 H5_PATHS.label = '{entry}/title'
 H5_PATHS.experiment = '{entry}/experiment_identifier'
 
-# These two entries are added to the structure post-measurement. 
+# These two entries are added to the structure post-measurement.
 H5_PATHS.frames = '{entry}/ptycho/data'
 H5_PATHS.motors = '{entry}/ptycho/motors'
 
@@ -58,7 +58,7 @@ RECIPE.use_h5 = False               # Load data from prepared h5 file
 RECIPE.flat_division = False        # Switch for flat division
 RECIPE.dark_subtraction = False     # Switch for dark subtraction
 
-# These are home-made wrapped data 
+# These are home-made wrapped data
 RECIPE.data_file_pattern = '{[base_path]}/{[sample_name]}/{[scan_label]}_data.h5'
 RECIPE.flat_file_pattern = '{[base_path]}/{[sample_name]}/{[flat_label]}_flat.h5'
 RECIPE.dark_file_pattern = '{[base_path]}/{[sample_name]}/{[dark_label]}_dark.h5'
@@ -100,11 +100,11 @@ class ID16AScan(PtyScan):
         # Apply beamline-specific generic defaults
         #pars = PREP_DEFAULT.copy().update(pars)
         #pars.update(**kwargs)
-        
+
         # Apply beamline parameters ("recipe")
         #rinfo = DEFAULT.copy()
         #rinfo.update(pars.recipe)
-        
+
         # Initialise parent class with input parameters
         #super(self.__class__, self).__init__(pars)
 
@@ -117,7 +117,7 @@ class ID16AScan(PtyScan):
         #        'Incompatible scan labels')
         #self.info.label = rinfo.scan_label
         #logger.info('Scan label: %s' % rinfo.scan_label)
-        
+
         # Default flat and dark labels.
         #if rinfo.flat_label is None:
         #    rinfo.flat_label = rinfo.scan_label
@@ -166,7 +166,7 @@ class ID16AScan(PtyScan):
         #h = io.h5read(rinfo.data_file)
         #entry = h.keys()[0]
         #rinfo.entry = entry
-        
+
         # Energy
         #k = H5_PATHS.energy.format(rinfo)
         #energy = float(io.h5read(rinfo.data_file, k)[k])
@@ -182,7 +182,7 @@ class ID16AScan(PtyScan):
         #        rinfo.base_path[:-1])[0])[1]
         #    logger.info('experiment ID: %s' % experimentID)
         #    rinfo.experimentID = experimentID
-        
+
         # Effective pixel size
 
         # Data file names
@@ -257,7 +257,7 @@ class ID16AScan(PtyScan):
 
         #h = io.h5read(self.rinfo.data_file)
         #entry = h.keys()[0]
-        
+
         # Get positions
         #motor_positions = io.h5read(self.rinfo.data_file,
         #                            H5_PATHS.motors)[H5_PATHS.motors]
@@ -274,10 +274,10 @@ class ID16AScan(PtyScan):
         #    common.dark = darks
         #else:
         #    common.dark = darks.median(axis=0)
-        
+
         # Load white field
         #common.white = io.edfread(self.rinfo.whitefield_file)[0]
-        
+
         # Load distortion files
         #dh = io.edfread(self.rinfo.distortion_h_file)[0]
         #dv = io.edfread(self.rinfo.distortion_v_file)[0]
@@ -348,13 +348,13 @@ class ID16AScan(PtyScan):
         :return: (frames_available, end_of_scan)
         - the number of frames available from a starting point `start`
         - bool if the end of scan was reached
-            (None if this routine doesn't know)
+          (None if this routine doesn't know)
         """
         npos = self.num_frames
         frames_accessible = min((frames, npos - start))
         stop = self.frames_accessible + start
         return frames_accessible, (stop >= npos)
-        
+
     def load(self, indices):
         """
         Load frames given by the indices.
@@ -388,7 +388,7 @@ class ID16AScan(PtyScan):
                 raw[j] = data.astype(np.float32)
 
         return raw, pos, weights
-        
+
     def correct(self, raw, weights, common):
         """
         Apply (eventual) corrections to the raw frames. Convert from "raw"
@@ -401,7 +401,7 @@ class ID16AScan(PtyScan):
         # Sanity check
         #assert (raw.shape == (2048,2048)), (
         #    'Wrong frame dimension! Is this a Frelon camera?')
-        
+
         # Whitefield correction
         #raw_wf = raw / common.white
 
@@ -410,10 +410,10 @@ class ID16AScan(PtyScan):
         #raw_wf_ml[1024:,:] = raw_wf[1023:-1,1]
         #raw_wf_ml[1023,:] += raw_wf[1024,:]
         #raw_wf_ml[1023,:] *= .5
-        
+
         # Undistort
         #raw_wl_ml_ud = undistort(raw_wf_ml, common.distortion)
-        
+
         #data = raw_wl_ml_ud
 
         # Apply flat and dark, only dark, or no correction
@@ -441,14 +441,14 @@ def undistort(frame, delta):
     Frame distortion correction (linear interpolation)
     Any value outside the frame is replaced with a constant value (mean of
     the complete frame)
-    
+
     Parameters
     ----------
     frame: ndarray
         the input frame data
-    delta: 2-tuple 
+    delta: 2-tuple
         containing the horizontal and vertical displacements respectively.
-    
+
     Returns
     -------
     ndarray
@@ -465,7 +465,7 @@ def undistort(frame, delta):
 
     ny = (y-deltav).flatten()
     nx = (x-deltah).flatten()
-    
+
     nyf = np.floor(ny).astype(int)
     nyc = nyf+1
     nxf = np.floor(nx).astype(int)
@@ -486,7 +486,7 @@ def undistort(frame, delta):
     #nxc = np.clip(nxc, 0, sh[1]-1)
     #nyf = np.clip(nyf, 0, sh[0]-1)
     #nyc = np.clip(nyc, 0, sh[0]-1)
-   
+
     fa = frame[ nyf, nxf ]
     fb = frame[ nyc, nxf ]
     fc = frame[ nyf, nxc ]

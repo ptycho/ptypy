@@ -51,46 +51,46 @@ class LoadManager(object):
         """
         Keeps track of the amount of data managed by each
         process and helps keeping it balanced.
-        
+
         Note
         ----
         A LoadManager should always be given the full range of ids, as
         the `all-knowing` power stems from the fact that it always knows
         how many processes there are, what rank it has and the full range
         of ids to distribute. Hence, please *"assign"* always the same list
-        across all nodes.   
+        across all nodes.
         """
-        
+
         self.load = np.zeros((size,), dtype=int)
         """ Represents the number of elements assigned to this process. """
-        
+
         self.rank_of = {}
         """ Rank of specific *id*, i.e. element of *idlist*. """
-        
+
     def assign(self, idlist=None):
         """
         Subdivide the provided list of ids into contiguous blocks to balance
-        the load among the processes. 
-        
+        the load among the processes.
+
         The elements of idlist are used as keys to subsequently identify
-        the rank of a given id, through the dict self.rank_of. No check 
+        the rank of a given id, through the dict self.rank_of. No check
         is done whether ids passed are unique or even hashable (they
         better are)
-        
-        If idlist is None, increase by one the load of the least busy 
+
+        If idlist is None, increase by one the load of the least busy
         process. :any:`rank_of` is not updated in this case.
-        
+
         Parameters
         ----------
         idlist : list
             List of objects that can also be keys in a `dict`, i.e. hashable
             objects.
-            
+
         Returns
         -------
         R : list
-            A nested list, (a list of lists) such that ``R[rank]=list`` 
-            of elements of `idlist` managed by process of given `rank`. 
+            A nested list, (a list of lists) such that ``R[rank]=list``
+            of elements of `idlist` managed by process of given `rank`.
         """
 
         # Simplest case
@@ -126,7 +126,7 @@ class LoadManager(object):
         part[li] = ipart
         self.load += part
 
-        # Cumulative sum give the index boundaries between the ranks 
+        # Cumulative sum give the index boundaries between the ranks
         cumpart = np.cumsum(part)
 
         # Now assign the rank
@@ -137,7 +137,7 @@ class LoadManager(object):
             out[r].append(i)
             self.rank_of[k] = r
         return out
-    
+
     def reset(self):
         """
         Resets :any:`LoadManager` to initial state.
@@ -151,18 +151,18 @@ loadmanager = LoadManager()
 def allreduce(a, op=None):
     """
     Wrapper for comm.Allreduce, always in place.
-    
+
     Parameters
     ----------
     a : numpy-ndarray
         The array to operate on.
-    
+
     op : operation
-        MPI operation to execute. None or one of MPI.BAND, MPI.BOR, 
-        MPI.BXOR, MPI.LAND, MPI.LOR, MPI.LXOR, MPI.MAX, MPI.MAXLOC, 
-        MPI.MIN, MPI.MINLOC, MPI.OP_NULL, MPI.PROD, MPI.REPLACE or MPI.SUM. 
+        MPI operation to execute. None or one of MPI.BAND, MPI.BOR,
+        MPI.BXOR, MPI.LAND, MPI.LOR, MPI.LXOR, MPI.MAX, MPI.MAXLOC,
+        MPI.MIN, MPI.MINLOC, MPI.OP_NULL, MPI.PROD, MPI.REPLACE or MPI.SUM.
         If None, uses MPI.SUM.
-        
+
     Note
     ----
     *Explanation* : If process #1 has ndarray ``a`` and process #2 has
@@ -189,20 +189,20 @@ def allreduceC(c):
     """
     Performs MPI parallel ``allreduce`` with a sum as reduction
     for all :any:`Storage` instances held by :any:`Container` *c*
-    
+
     :param Container c: Input
-    
+
     See also
     --------
     ptypy.utils.parallel.allreduce
     """
     for s in c.S.itervalues():
         allreduce(s.data)
-           
+
 def _MPIop(a, op, axis=None):
     """
     Apply operation op on accross a list of arrays distributed between
-    processes. Supported operations are SUM, MAX, MIN, and PROD. 
+    processes. Supported operations are SUM, MAX, MIN, and PROD.
     """
 
     MPIop, npop = \
@@ -286,13 +286,13 @@ def barrier():
 
 def send(data, dest=0, tag=0):
     """
-    Wrapper for `comm.Send` and `comm.send`. 
-    If data is a `numpy.ndarray`, a header will be sent first with 
-    `comm.send` that contains information on array shape and data type. 
+    Wrapper for `comm.Send` and `comm.send`.
+    If data is a `numpy.ndarray`, a header will be sent first with
+    `comm.send` that contains information on array shape and data type.
     Afterwards the array will be sent with `comm.Send`.
     If data is not a `numpy.ndarray`, the whole object will be pickled
     and sent with `comm.send` in one go.
-    
+
     Parameters
     ----------
     data : ndarray or other
@@ -301,16 +301,16 @@ def send(data, dest=0, tag=0):
         The rank of the destination node / process. Defaults to 0 (master).
     tag : int
         Defaults to 0.
-    
+
     See also
     --------
     receive
     bcast
     """
-    if type(data) is np.ndarray:        
+    if type(data) is np.ndarray:
         # Sends info that array is coming and array dimensions
         comm.send(('npy',data.shape,data.dtype.str), dest=dest, tag=1)
-        
+
         # Send array with faster numpy interface
         # mpi4py has in issue sending booleans. we convert to uint8 (same size)
         if data.dtype.str == '|b1':
@@ -326,19 +326,19 @@ def send(data, dest=0, tag=0):
 
 def receive(source=None, tag=0):
     """
-    Wrapper for `comm.Recv`. Probes first with `comm.recv`. If the 
-    unpickled is a 3-tuple with first entry=='npy', prepares buffer and 
-    waits with `comm.Recv` 
-    
+    Wrapper for `comm.Recv`. Probes first with `comm.recv`. If the
+    unpickled is a 3-tuple with first entry=='npy', prepares buffer and
+    waits with `comm.Recv`
+
     Parameters
     ----------
     source : int or None
         The rank of the node / process sending data. If None, this is set
         to MPI.ANY_SOURCE
-        
+
     tag : int
         Not really useful here - defaults to `0` all the time
-          
+
     Returns
     -------
     out : ndarray or other
@@ -353,13 +353,13 @@ def receive(source=None, tag=0):
     try:
         check,shape,dtypestr = thing
         if check=='npy':
-            
+
             # prepare uint8 in case of booleans as buffer
             newdtype = '|u1' if dtypestr == '|b1' else dtypestr
-            
-            # Create array 
+
+            # Create array
             out = np.empty(shape, dtype=newdtype)
-            
+
             # Receive raw data
             comm.Recv(out, source=source, tag=tag)
 
@@ -370,16 +370,16 @@ def receive(source=None, tag=0):
         return thing
     else:
         return thing
-        
+
 def bcast(data, source=0):
     """
     Wrapper for `comm.bcast` and `comm.Bcast`.
-    If data is a `numpy.ndarray`, a header will be broadcasted first with 
-    `comm.bcast` that contains information on array shape and data type. 
+    If data is a `numpy.ndarray`, a header will be broadcasted first with
+    `comm.bcast` that contains information on array shape and data type.
     Afterwards the array will be sent with `comm.Bcast`.
     If data is not a `numpy.ndarray`, the whole object will be pickled
     and broadcasted with `comm.bcast` in one go.
-    
+
     Parameters
     ----------
     data : ndarray or other
@@ -388,7 +388,7 @@ def bcast(data, source=0):
         The rank of the source node / process. Defaults to 0 (master).
     tag : int
         Defaults to 0.
-    
+
     See also
     --------
     receive
@@ -396,10 +396,10 @@ def bcast(data, source=0):
     """
     if not MPIenabled:
         return data
-            
+
     # Communicate size or send pickled thing directly.
     if rank == source:
-        if type(data) is np.ndarray: 
+        if type(data) is np.ndarray:
             thing = comm.bcast(('npy',data.shape, data.dtype.str), source)
         else:
             thing = comm.bcast(data, source)
@@ -409,7 +409,7 @@ def bcast(data, source=0):
     try:
         if str(thing[0])=='npy':
             shape = thing[1]
-            dtypestr = thing[2] 
+            dtypestr = thing[2]
 
             newdtype = '|u1' if dtypestr == '|b1' else dtypestr
 
@@ -417,13 +417,13 @@ def bcast(data, source=0):
                 buf = data.astype(newdtype)
             else:
                 buf = np.empty(shape, dtype=newdtype)
-            
+
             # Send
             comm.Bcast(buf, source)
 
             if dtypestr == '|b1':
                 buf = buf.astype('bool')
-            
+
             return buf
     except BaseException:
         return thing
@@ -433,40 +433,40 @@ def bcast_dict(dct, keys='all', source=0):
     Broadcasts or scatters a dict `dct` from ``rank==source``.
     If value is a numpy ndarray, `comm.Bcast` is used instead `comm.bcast`,
     such that transfer is accelerated.
-    
+
     Fills dict `dct` in place for receiving nodes, although this is a
     bit inconsistent compared to :any:`gather_dict`
-    
+
     Parameters
     ----------
     keys : list or 'all'
         List of keys whose values are accepted at each node. In case
         of ``keys=all``, every node accepts all items and :any:`bcast_dict`
         acts as broadcast.
-        
+
     source : int
         Rank of node / process which broadcasts / scatters.
-    
+
     Returns
     -------
     dct : dict
         A smaller dictionary with values to `keys` if that key
         was in source dictionary.
-        
+
     Note
     ----
-    There is no guarantee that each *key,value* pair is accepted at other 
+    There is no guarantee that each *key,value* pair is accepted at other
     nodes, except for ``keys='all'``. Also in this implementation
     the input `dct` from source is *completely* transmitted to every node,
     potentially creating a large overhead for may nodes and huge dictionarys
-     
+
     Deleting reference in input dictionary may result in data loss at
     ``rank==source``
-    
+
     See also
     --------
     gather_dict
-    
+
     """
     if not MPIenabled:
         out = dict(dct)
@@ -502,29 +502,29 @@ def allgather_dict(dct):
     gdict = gather_dict(dct)
     bcast_dict(gdict)
     dct.update(gdict)
-    
+
 def gather_dict(dct, target=0):
     """
     Gathers broadcasted or scattered dict `dct` at rank `target`.
-   
+
     Parameters
     ----------
     dct : dict
         Input dictionary. Remains unaltered
     target : int
         Rank of process where the `dct`'s are gathered
-    
-    Returns 
+
+    Returns
     -------
     out : dict
         Gathered dict at ``rank==target``, Empty dict at ``rank!=target``
-    
+
     Note
     ----
     If the same `key` exists on different nodes, the corresponding values
-    will be consecutively overidden in the order of the ranks at the 
+    will be consecutively overidden in the order of the ranks at the
     gathering node without complain or notification.
-    
+
     See also
     --------
     bcast_dict
@@ -565,7 +565,7 @@ def gather_dict(dct, target=0):
 def _send(data, dest=0, tag=0):
     """
     Wrapper for comm.Send
-    
+
     Parameters
     ----------
     data : numpy array or 2 tuple (key,numpy array)
@@ -592,7 +592,7 @@ def _send(data, dest=0, tag=0):
 def _receive(source=None, tag=0, out=None):
     """
     Wrapper for comm.Recv
-    
+
     Parameters
     ----------
     source : int or None
@@ -603,7 +603,7 @@ def _receive(source=None, tag=0, out=None):
     out : numpy array or None
           If a numpy array, the transfered data will be stored in out. If
           None, a new array is created.
-          
+
     Returns
     -------
     out : numpy array or 2tuple (key, numpy array)
@@ -702,7 +702,7 @@ MPIrand_normal.__doc__+=np.random.normal.__doc__
 
 def MPIrand_uniform(low=0.0, high=1.0, size=(1)):
     """
-        **Wrapper** for ``np.random.uniform`` for same random sample across all nodes. 
+        **Wrapper** for ``np.random.uniform`` for same random sample across all nodes.
         *See numpy/scipy documentation below.*
     """
     if master:
@@ -711,37 +711,37 @@ def MPIrand_uniform(low=0.0, high=1.0, size=(1)):
         sample = np.zeros(size)
     allreduce(sample)
     return sample
-    
+
 MPIrand_uniform.__doc__+=np.random.uniform.__doc__
 
 def MPInoise2d(sh,rms=1.0, mfs=2,rms_mod=None, mfs_mod=2):
     """
-    Creates complex-valued statistical noise in the shape of `sh` 
+    Creates complex-valued statistical noise in the shape of `sh`
     consistent across all nodes.
-    
+
     Parameters
     ----------
     sh : tuple
         Output shape.
-    
+
     rms: float or None
         Root mean square of noise in phase. If None, only ones are
         returned.
-    
+
     mfs: float
         Minimum feature size [in pixel] of noise in phase.
-            
+
     rms_mod: float or None
         Root mean square of noise in amplitude / modulus.
-    
-    mfs_mod: 
-        Minimum feature size [in pixel] of noise in amplitude / modulus.  
-    
+
+    mfs_mod:
+        Minimum feature size [in pixel] of noise in amplitude / modulus.
+
     Returns
     -------
     noise : ndarray
         Numpy array filled with noise
-        
+
     See also
     --------
     MPIrand_uniform
@@ -765,10 +765,10 @@ def MPInoise2d(sh,rms=1.0, mfs=2,rms_mod=None, mfs_mod=2):
 
 def _gather_list(lst, length, indices):
     """
-    gathers list `lst` of all processes to a list of length `length` 
+    gathers list `lst` of all processes to a list of length `length`
     according to order given by `indices`. definitely not foolproof
     The user has to make sure that no index appears twice in all processes
-    
+
     return list of length `length`. has only meaning in master process
     """
     new = [None] * length
@@ -796,11 +796,11 @@ def _scatter_list(lst, length, indices):
     """
     master process scatters a list `lst` of length `length`
     to non-masters that have the respective index in their `indeces` list
-    
+
     functional, but maybe not 100% foolproof
-    
-    return list of length len(indices) for all processes. 
-    indices that extend boyond length are filled with None 
+
+    return list of length len(indices) for all processes.
+    indices that extend boyond length are filled with None
     """
     new = [None] * len(indices)
     if MPIenabled:
@@ -848,9 +848,9 @@ def _gather_dict(dct, target=0):
     """
     Gathers broadcasted dict `dct` at rank `target`.
     Input dictionaries remain unaltered
-    Double key access will cause an overwrite 
+    Double key access will cause an overwrite
     without complains.
-    
+
     returns : gathered dict at rank==target
               empty dict at other ranks
     """
@@ -885,14 +885,14 @@ def _bcast_dict(dct, keys_accepted='all', source=0):
     """
     Broadcasts a dict where all values are numpy arrays
     Fills dict `dct` in place for receiving nodes
-    
-    There is no guarantee that each key,value pair is accepted at other 
+
+    There is no guarantee that each key,value pair is accepted at other
     nodes. Deleting reference to input dictionary may result in data loss.
-    
+
     Returns
     -------
     dct : dict
-        A smaller dictionary with only accepted keys 
+        A smaller dictionary with only accepted keys
     """
     if not MPIenabled:
         out = dict(dct)

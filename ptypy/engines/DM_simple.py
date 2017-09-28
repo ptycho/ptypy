@@ -8,8 +8,8 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .. import utils as u
-from engine_utils import basic_fourier_update
-from base import BaseEngine
+from utils import basic_fourier_update
+from . import BaseEngine
 from ..utils.verbose import logger
 import time
 import numpy as np
@@ -118,10 +118,10 @@ class DM_simple(BaseEngine):
                 # Stop iteration if probe change is small
                 if change < self.p.overlap_converge_factor:
                     break
-            
+
             # needed for BaseEngine
-            self.curiter += 1 
-            
+            self.curiter += 1
+
             t2 = time.time()
             to = t2 - t1
 

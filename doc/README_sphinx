@@ -1,0 +1,27 @@
+In this directory you will find the files to automatically generate the ptypy documentation.
+
+to generate the documentation, just enter
+
+make <sort>
+
+where <sort> can be html, epub, pdf.
+The resulting documentation is then put in the build directory.
+
+The source files are in the source directory. Please feel free to modify, improve the files.
+The main source file is source/index.rst   It calls other .rst files to generate the documentation.
+
+BEWARE that the documentation is generated from the .py files present in the python path directory, ie from the 
+installed files on the system, and not from the local files. So if by default python looks first at the system 
+installed ptypy library, you have to re-install first ptypy in order for the modification to appear in the 
+documentation. This does not hold of course for the local .rst files used to generate the structure of the
+documentation.
+
+the source/conf.py file contains the basic parameters of the documentation generator.
+
+Note that you can use reStructuredText commands inside the docstring as well, they will be further interepreted
+by sphinx (but not in the plain line python help of course).
+
+If you don't like the look of the documentation, you can change in conf.py the html_theme option. You can choose from
+basic, default, sphinxdoc, scrolls, agogo, nature, haiku, traditional and epub.
+
+For questions, please feel free to contact Bjoern.

@@ -28,8 +28,7 @@ import random
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
-from engine_utils import basic_fourier_update
-from base import BaseEngine
+from . import BaseEngine
 from ..utils.descriptor import defaults_tree
 
 __all__ = ['EPIE']

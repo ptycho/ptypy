@@ -120,7 +120,7 @@ class DlsScan(PtyScan):
         motor_positions = []
         i=0
         mmult = u.expect2(self.info.recipe.motors_multiplier)
-        
+
         for k in NEXUS_PATHS.motors:
             if not self.info.recipe.israster:
                 motor_positions.append(instrument[k]*mmult[i])
@@ -135,7 +135,7 @@ class DlsScan(PtyScan):
         """
         Returns the number of frames available from starting index `start`, and whether the end of the scan
         was reached.
-  
+
         :param frames: Number of frames to load
         :param start: starting point
         :return: (frames_available, end_of_scan)
@@ -182,11 +182,11 @@ class DlsScan(PtyScan):
                     data = dataset[j]
                     raw[j] = data.astype(np.float32) * (float(ic[j])/float(ic[0]))
                 else:
-                    
+
                     #print "frame number "+str(j)
                     dset= h5.File(self.data_file, 'r', libver='latest', swmr=True)[key]
                     dset.id.refresh()
-                    
+
                     try:
                         ic =  h5.File(self.data_file)['entry1/merlin_sw_hdf/ionc_photonflux']
                     except KeyError:
@@ -198,7 +198,7 @@ class DlsScan(PtyScan):
         else:
             if not self.info.recipe.is_swmr:
                 data = h5.File(self.data_file)[key]
-                
+
                 sh = data.shape
                 for j in indices:
                     raw[j]=data[j % sh[0], j // sh[1]] # or the other way round???
