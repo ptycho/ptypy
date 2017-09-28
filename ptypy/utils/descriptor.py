@@ -528,12 +528,19 @@ class ArgParseDescriptor(Descriptor):
             return dict([(k, v.default) for k, v in self.descendants])
 
         out = {}
-        # Interpret a string default as a link to another part
-        # of the structure if it matches one.
+        # Interpret a default as a link to another part of the structure
+        # if it matches one.
         if str(self.default) == self.default:
             link = self.get(self.default)
             if link and depth >= 0:
-                # here: check if the defaul link is overridden in pars
+                # check if the link is overridden in pars
+                try:
+                    name = pars[self.name].name
+                    link = [i for i in self.type if i.split('.')[-1] == name][0]
+                    link = self.root[link]
+                except:
+                    pass
+                #print "following link from", self.path, "to", link.path
                 return link.make_default(depth=depth-1, pars=pars)
 
         if not self.children:
@@ -543,9 +550,13 @@ class ArgParseDescriptor(Descriptor):
             if depth >= 0:
                 # wildcard entry
                 if name == '*':
-                    if pars and pars[self.path]:
-                        for key in pars[self.path].keys():
-                            out[key] = child.make_default(depth=depth-1, pars=pars)
+                    if pars is not None:
+                        try:
+                            for key in pars[self.path].keys():
+                                #print "doing wildcard", self.path + "." + key
+                                out[key] = child.make_default(depth=depth-1, pars=pars[self.path][key])
+                        except KeyError:
+                            pass
                 # normal entry
                 else:
                     out[name] = child.make_default(depth=depth-1, pars=pars)

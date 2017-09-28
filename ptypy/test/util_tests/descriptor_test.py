@@ -401,9 +401,11 @@ class EvalDescriptorTest(unittest.TestCase):
         out = root.check(p, walk=True)
         assert out['engines.engine01']['symlink'] == CODES.INVALID
 
-    def test_parse_doc_wildcards_and_symlinks(self):
+    def test_make_default(self):
         """ 
-        Tests the combination of wildcards and dynamic entries.
+        Tests a more elaborate mix of symlinks and wildcards, where
+        EvalDescriptor.make_default can take a parameter tree and make
+        defaults for each scan, with the chosen model.
         """
 
         root = EvalDescriptor('')
@@ -414,6 +416,7 @@ class EvalDescriptorTest(unittest.TestCase):
             Docs...
 
             Defaults:
+
 
             # A template tree under scan
             [scan]
@@ -498,20 +501,34 @@ class EvalDescriptorTest(unittest.TestCase):
         assert dict(FakeVanillaScan.DEFAULT) == {'energy': 9.3, 'name': 'Vanilla'}
         assert dict(FakeFullScan.DEFAULT) == {'energy': 9.3, 'name': 'Full', 'probe_modes': 1}
 
+        # no tree
+        defaults = root.make_default(depth=99)
+        assert defaults['scans'] == {}
+        assert defaults['scan']['model']['name'] == 'Vanilla'
+
         # a minimal tree
         p = Param()
+        defaults = root.make_default(depth=99, pars=p)
+        assert defaults['scans'] == {}
+        assert defaults['scan']['model']['name'] == 'Vanilla'
         root.validate(p, walk=True)
 
-        # a hopefully correct tree with scans entry and model choice
+        # two scans, one with explicitly chosen model and one with the default
         p = Param()
         p.scans = Param()
         p.scans.scan01 = Param()
         p.scans.scan01.model = Param()
         p.scans.scan01.model.name = 'Full'
         p.scans.scan01.model.probe_modes = 3
+        p.scans.scan01.model.energy = 9.3
+        p.scans.scan02 = Param()
+        defaults = root.make_default(depth=99, pars=p)
+        # This is really annoying: dicts don't convert to params, issue #90
+        assert defaults['scans']['scan01']['model']['name'] == 'Full'
+        assert defaults['scans']['scan02']['model']['name'] == 'Vanilla'
+        assert 'probe_modes' in defaults['scans']['scan01']['model'].keys()
+        assert 'probe_modes' not in defaults['scans']['scan02']['model'].keys()
         root.validate(p, walk=True)
-
-
 
 if __name__ == "__main__":
     unittest.main()
