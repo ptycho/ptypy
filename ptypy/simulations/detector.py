@@ -17,7 +17,7 @@ from scipy import ndimage as ndi
 
 __all__=['shot','Detector','conv','fill2D']
 
-DEFAULTS= dict(
+DEFAULT= dict(
     sci_psf = None,     # (None or float, 2-tuple, array) Parameters for gaussian convolution or convolution kernel after exposure of scintillator
     sci_qe = 1,         # (float) how many optical photons per x-ray photon
     psf = None,         # (None or float, 2-tuple, array) Parameters for gaussian convolution or convolution kernel after exposure
@@ -39,9 +39,9 @@ DEFAULTS= dict(
 )
 
 TEMPLATES = {}
-TEMPLATES['GenericCCD16bit'] = DEFAULTS.copy()
+TEMPLATES['GenericCCD16bit'] = DEFAULT.copy()
 
-TEMPLATES['GenericCCD32bit'] = DEFAULTS.copy()
+TEMPLATES['GenericCCD32bit'] = DEFAULT.copy()
 TEMPLATES['GenericCCD32bit']['full_well']= 2**32-1
 TEMPLATES['GenericCCD32bit']['dtype']=np.uint32
 
@@ -91,7 +91,7 @@ TEMPLATES['PILATUS_300K']['modules'] = (3,1)
 class Detector(object):
 
     def __init__(self,pars=None):
-        self._update(DEFAULTS)
+        self._update(DEFAULT)
         if str(pars)==pars:
             t = TEMPLATES.get(pars,{})
             self._update(t)

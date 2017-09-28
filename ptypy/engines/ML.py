@@ -91,7 +91,7 @@ class ML(BaseEngine):
         """
         super(ML, self).__init__(ptycho_parent, pars)
 
-        p = self.DEFAULTS.copy()
+        p = self.DEFAULT.copy()
         if pars is not None:
             p.update(pars)
         self.p = p

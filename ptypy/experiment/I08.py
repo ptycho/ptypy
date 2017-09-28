@@ -23,7 +23,7 @@ if True: #__name__ == "__main__":
     # FIXME: Accessing the real "io" from the parent Ptycho class would be much better
     #from ptypy.core import DEFAULT_io as IO_par
     from ptypy.core import Ptycho
-    IO_par = Ptycho.DEFAULTS['io']
+    IO_par = Ptycho.DEFAULT['io']
 else:
     from .. import utils as u
     from .. import io
@@ -32,7 +32,7 @@ else:
     from ..core.paths import Paths
     #from ..core import DEFAULT_io as IO_par
     from ..core import Ptycho
-    IO_par = Ptycho.DEFAULTS['io']
+    IO_par = Ptycho.DEFAULT['io']
 
 
 # Parameters for the nexus file saved by GDA

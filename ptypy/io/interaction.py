@@ -249,7 +249,7 @@ class Server(object):
         # Initialize all parameters
         #################################
 
-        p = self.DEFAULTS
+        p = self.DEFAULT
         p.update(pars)
         p.update(kwargs)
         self.p = p
@@ -754,7 +754,7 @@ class Client(object):
 
         """
 
-        p = self.DEFAULTS.copy()
+        p = self.DEFAULT.copy()
         p.update(pars)
         p.update(kwargs)
         self.p = p

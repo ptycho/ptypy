@@ -19,7 +19,7 @@ from ..utils.verbose import log
 from ..core.paths import Paths
 #from ..core import DEFAULT_io as IO_par
 from ..core import Ptycho
-IO_par = Ptycho.DEFAULTS['io']
+IO_par = Ptycho.DEFAULT['io']
 
 logger = u.verbose.logger
 

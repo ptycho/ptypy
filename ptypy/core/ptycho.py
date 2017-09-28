@@ -261,7 +261,7 @@ class Ptycho(Base):
 
         # Create a parameter structure from the the class-level defaults
         self.p = u.Param()
-        self.p.update(self.DEFAULTS, 99, Convert=True)
+        self.p.update(self.DEFAULT, 99, Convert=True)
 
         print self.p
         # Abort if we load complete structure

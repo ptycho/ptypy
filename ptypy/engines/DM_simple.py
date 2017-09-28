@@ -57,7 +57,7 @@ class DM_simple(BaseEngine):
         """
         super(DM_simple, self).__init__(ptycho, pars)
 
-        p = self.DEFAULTS.copy()
+        p = self.DEFAULT.copy()
         if pars is not None:
             p.update(pars)
         self.p = p

@@ -15,7 +15,7 @@ from ..core.data import PtyScan
 from ..core.paths import Paths
 #from ..core import DEFAULT_io as IO_par
 from ..core import Ptycho
-IO_par = Ptycho.DEFAULTS['io']
+IO_par = Ptycho.DEFAULT['io']
 
 # Parameters for the nexus file saved by GDA
 NEXUS_PATHS = u.Param()
