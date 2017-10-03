@@ -530,14 +530,13 @@ class ArgParseDescriptor(Descriptor):
         out = {}
         # Interpret a default as a link to another part of the structure
         # if it matches one.
-        if str(self.default) == self.default:
-            link = self.get(self.default)
+        if type(self.default) == type(self):
+            link = self.default
             if link and depth >= 0:
                 # check if the link is overridden in pars
                 try:
                     name = pars[self.name].name
-                    link = [i for i in self.type if i.split('.')[-1] == name][0]
-                    link = self.root[link]
+                    link = [x for x in self.type if x.name == name][0]
                 except:
                     pass
                 #print "following link from", self.path, "to", link.path
@@ -684,6 +683,8 @@ class EvalDescriptor(ArgParseDescriptor):
             out = True
         elif default.lower() == 'false':
             out = False
+        elif default.startswith('@'):
+            out = self.get(default[1:])
         elif self.is_evaluable:
             out = ast.literal_eval(default)
         else:
@@ -704,6 +705,11 @@ class EvalDescriptor(ArgParseDescriptor):
         return False
 
     @property
+    def is_symlink(self):
+        types = self.options.get('type', [''])
+        return types[0].startswith('@')
+
+    @property
     def type(self):
         """
         List of possible data types.
@@ -712,8 +718,9 @@ class EvalDescriptor(ArgParseDescriptor):
         tm = self._typemap
         if types is not None:
             types = [tm[x.strip()] if x.strip() in tm else x.strip() for x in types.split(',')]
-        elif self.default is not None:
-            types = [type(self.default).__name__, ]
+            # symlinks
+            if types[0].startswith('@'):
+                types = [self.get(t[1:]) for t in types]
         return types
 
     @property
@@ -779,20 +786,14 @@ class EvalDescriptor(ArgParseDescriptor):
         elif type(pars).__name__ in self.type:
             # Standard type: pass
             val['type'] = CODES.PASS
-        else:
-            # Type could be a symlink to another part of the tree
-            symlinks = {}
-            for tp in self.type:
-                link = self.get(tp)
-                if not link:
-                    # Abort because one of the types was not recognised as a link.
-                    val['type'] = CODES.INVALID
-                    symlinks = None
-                    break
-                symlinks[link.name] = link
+        elif self.is_symlink:
+            if None in self.type:
+                # Will happen if a symlink is not resolved
+                val['type'] = CODES.INVALID
+                return out
 
         # Manage symlinks
-        if symlinks:
+        if self.is_symlink:
             # Look for name
             name = pars.get('name', None)
             if not name:
@@ -800,14 +801,13 @@ class EvalDescriptor(ArgParseDescriptor):
                 val['symlink'] = CODES.INVALID
                 val['name'] = CODES.MISSING
                 return out
-            if name not in symlinks:
+            symlink = dict((link.name, link) for link in self.type).get(name, None)
+            if not symlink:
                 # The entry name is not found, that's not good.
                 val['symlink'] = CODES.INVALID
                 val['name'] = CODES.UNKNOWN
                 return out
             if walk:
-                # Follow symlink
-                symlink = symlinks[name]
                 sym_out = symlink.check(pars, walk)
                 # Rehash names
                 for k, v in sym_out.iteritems():
@@ -828,7 +828,11 @@ class EvalDescriptor(ArgParseDescriptor):
                 val['uplim'] = CODES.PASS if (pars <= uplim) else CODES.FAIL
 
         # Nothing left to check except for Param or dict.
+        if not self.children:
+            return out
+
         if not hasattr(pars, 'items'):
+            val['type'] = CODES.INVALID
             return out
 
         # Detect wildcard

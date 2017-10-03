@@ -45,6 +45,7 @@ class EvalDescriptorTest(unittest.TestCase):
         assert root['engine.name'].help == 'The name of the engine'
         assert root['engine'].implicit == True
         assert root['engine'].type == ['Param']
+        print root.make_default()
         assert FakeEngineClass.DEFAULT == {'name': 'DM', 'numiter': 1}
 
     def test_parse_doc_order(self):
@@ -243,7 +244,7 @@ class EvalDescriptorTest(unittest.TestCase):
 
             [scans]
             type = Param
-            default = None
+            default = {}
             help = Engine container
 
             [run]
@@ -288,6 +289,7 @@ class EvalDescriptorTest(unittest.TestCase):
         p.scans.scan03.energy = 3.14 * 2
         p.scans.scan03.comment = 'second scan'
         out = root.check(p, walk=True)
+        print out
         assert out['scans.scan02']['type'] == CODES.INVALID
 
         # a bad entry within a scan
@@ -367,8 +369,8 @@ class EvalDescriptorTest(unittest.TestCase):
             help = Container for all engines
 
             [engines.*]
-            type = engine.DM, engine.ML
-            default = engine.DM
+            type = @engine.DM, @engine.ML
+            default = @engine.DM
             help = Engine wildcard. Defaults to DM
             """
             pass
@@ -440,8 +442,8 @@ class EvalDescriptorTest(unittest.TestCase):
             help = Data source
 
             [scan.model]
-            type = scanmodel.Vanilla, scanmodel.Full
-            default = scanmodel.Vanilla
+            type = @scanmodel.Vanilla, @scanmodel.Full
+            default = @scanmodel.Vanilla
             help = Physical imaging model
 
 
@@ -452,8 +454,8 @@ class EvalDescriptorTest(unittest.TestCase):
             help = Container for scan instances
 
             [scans.*]
-            type = scan
-            default = scan
+            type = @scan
+            default = @scan
             help = Wildcard for scan instances
 
             """
@@ -528,7 +530,9 @@ class EvalDescriptorTest(unittest.TestCase):
         assert defaults['scans']['scan02']['model']['name'] == 'Vanilla'
         assert 'probe_modes' in defaults['scans']['scan01']['model'].keys()
         assert 'probe_modes' not in defaults['scans']['scan02']['model'].keys()
-        root.validate(p, walk=True)
+        print defaults
+        print root.check(p, walk=True)
+        #root.validate(p, walk=True)
 
 if __name__ == "__main__":
     unittest.main()

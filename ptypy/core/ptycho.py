@@ -123,8 +123,8 @@ class Ptycho(Base):
     doc = Container for instances of engine parameters.
 
     [engines.*]
-    default = engine.DM
-    type = [engine.DM, engine.ML, engine.ePIE]
+    default = @engine.DM
+    type = [@engine.DM, @engine.ML, @engine.ePIE]
     help = Wildcard entry for list of engines to run
 
     [io]
