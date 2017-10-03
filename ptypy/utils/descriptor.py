@@ -668,11 +668,14 @@ class EvalDescriptor(ArgParseDescriptor):
         Default value as a Python type
         """
         default = str(self.options.get('default', ''))
+        types = str(self.options.get('type', []))
 
         # this destroys empty strings
         default = default if default else None
 
-        if default is None:
+        if 'Param' in types or 'dict' in types:
+            out = {}
+        elif default is None:
             out = None
         # should be only strings now
         elif default.lower() == 'none':
