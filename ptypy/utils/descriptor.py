@@ -761,6 +761,83 @@ class EvalDescriptor(ArgParseDescriptor):
             ul = None
         return int(ul) if ul else None
 
+    def _walk(self, depth=0, follow_symlinks=True, pars=None):
+        """
+        Iterator through children
+
+        Parameters
+        ----------
+        depth: how far to go in the structure.
+
+        Returns
+        -------
+
+        """
+
+        # Resolve symlinks
+        if self.is_symlink and follow_symlinks:
+            if len(self.type) == 1:
+                # No name needed
+                s = self.type[0]
+            else:
+                if pars is not None:
+                    # Look for name in pars
+                    name = pars.get('name', None)
+                    if name is None:
+                        s = None
+                        yield (self, 'noname', '')
+                    else:
+                        s = dict((link.name, link) for link in self.type).get(name, None)
+                        if not s:
+                            yield (self, 'nolink', name)
+                else:
+                    # No pars, resolve default
+                    s = self.default
+            # Follow links
+            if s:
+                for x in s._walk(depth=depth, follow_symlinks=follow_symlinks, pars=pars):
+                    yield x
+            return
+
+        # Main yield
+        yield (self, 'ok', '')
+
+        if not self.children or depth == 0:
+            # Nothing else to do
+            return
+
+        # Detect wildcard
+        wildcard = (self.children.keys() == ['*'])
+
+        # Grab or check children
+        if wildcard:
+            if not pars:
+                # Generate default name for single entry
+                children = {self.name[:-1] + '_00': self.children['*']}
+            else:
+                # Grab all names from pars
+                children = {k: self.children['*'] for k in pars.keys()}
+        else:
+            children = self.children
+
+        # Look for unrecognised entries in pars
+        if pars:
+            for k, v in pars.items():
+                if k not in children:
+                    yield (self, 'nochild', k)
+
+        # Loop through children
+        for cname, c in children.items():
+            if pars:
+                if cname not in pars:
+                    yield (c, 'nopar', cname)
+                else:
+                    for x in c._walk(depth=depth-1, follow_symlinks=follow_symlinks, pars=pars[cname]):
+                        yield x
+            else:
+                for x in c._walk(depth=depth-1, follow_symlinks=follow_symlinks):
+                    yield x
+
     def check(self, pars, walk):
         """
         Check that input parameter pars is consistent with parameter description.
