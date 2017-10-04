@@ -826,7 +826,7 @@ class EvalDescriptor(ArgParseDescriptor):
         # Grab or check children
         if wildcard:
             if ignore_wildcards:
-                yield (self, 'wildcard', '')
+                yield {'d': self, 'path': self.path, 'status': 'wildcard', 'info':''}
                 return
             else:
                 if not pars:
