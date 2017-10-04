@@ -65,7 +65,20 @@ class Param(dict):
         # BE: original behavior modified as implicit conversion may destroy references
         # Use update(value,Convert=True) instead
         # return super(Param, self).__setitem__(key, Param(value) if type(value) == dict else value)
-        return super(Param, self).__setitem__(key, value)
+
+        s = self
+        # Parse dots in key
+        if type(key) == str and '.' in key:
+            keys = key.split('.')
+            # Extract or generate subtree
+            for k in keys[:-1]:
+                try:
+                    s = s.__getitem__(k)
+                except KeyError:
+                    super(Param, self).__setitem__(k, Param())
+                    s = super(Param, self).__getitem__(k)
+            key = keys[-1]
+        return super(Param, s).__setitem__(key, value)
 
     def __getitem__(self, name):
         # item = super(Param, self).__getitem__(name)
