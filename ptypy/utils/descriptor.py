@@ -761,21 +761,29 @@ class EvalDescriptor(ArgParseDescriptor):
             ul = None
         return int(ul) if ul else None
 
-    def _walk(self, depth=0, follow_symlinks=True, pars=None):
+    def _walk(self, depth=0, pars=None, ignore_symlinks=False, ignore_wildcards=False):
         """
-        Iterator through children
+        Generator that traverses the complete tree up to given depth, either on its own,
+        or following parameter structure in pars, following symlinks and honouring wildcards.
 
         Parameters
         ----------
-        depth: how far to go in the structure.
+        depth: How many levels to traverse in the tree.
+        pars: optional parameter tree to match with descriptor tree
+        ignore_symlinks: If True, do not follow symlinks. Default to False.
+        ignore_wildcards: If True, do not interpret wildcards. Default to False.
 
         Returns
         -------
-
+        A generator. Yields a dict with structure
+        {'d': <Descriptor instance>,
+         'path': <path in structure>,
+         'status': <status message>,
+         'info': <additional information depending on status>}
         """
 
         # Resolve symlinks
-        if self.is_symlink and follow_symlinks:
+        if self.is_symlink and not ignore_symlinks:
             if len(self.type) == 1:
                 # No name needed
                 s = self.type[0]
@@ -783,24 +791,30 @@ class EvalDescriptor(ArgParseDescriptor):
                 if pars is not None:
                     # Look for name in pars
                     name = pars.get('name', None)
+                    # Is this the intended behaviour? Instead maybe s = self.default
                     if name is None:
                         s = None
-                        yield (self, 'noname', '')
+                        yield {'d': self, 'path': self.path, 'status': 'noname', 'info': ''}
                     else:
                         s = dict((link.name, link) for link in self.type).get(name, None)
                         if not s:
-                            yield (self, 'nolink', name)
+                            yield {'d': self, 'path': self.path, 'status': 'nolink', 'info': name}
                 else:
                     # No pars, resolve default
                     s = self.default
             # Follow links
             if s:
-                for x in s._walk(depth=depth, follow_symlinks=follow_symlinks, pars=pars):
+                real_path = self.parent.path
+                link_path = s.parent.path
+                for x in s._walk(depth=depth, pars=pars, ignore_symlinks=ignore_symlinks,
+                                 ignore_wildcards=ignore_wildcards):
+                    # Replace path
+                    x['path'].replace(link_path, real_path)
                     yield x
             return
 
         # Main yield
-        yield (self, 'ok', '')
+        yield {'d': self, 'path': self.path, 'status': 'ok', 'info': ''}
 
         if not self.children or depth == 0:
             # Nothing else to do
@@ -811,12 +825,16 @@ class EvalDescriptor(ArgParseDescriptor):
 
         # Grab or check children
         if wildcard:
-            if not pars:
-                # Generate default name for single entry
-                children = {self.name[:-1] + '_00': self.children['*']}
+            if ignore_wildcards:
+                yield (self, 'wildcard', '')
+                return
             else:
-                # Grab all names from pars
-                children = {k: self.children['*'] for k in pars.keys()}
+                if not pars:
+                    # Generate default name for single entry
+                    children = {self.name[:-1] + '_00': self.children['*']}
+                else:
+                    # Grab all names from pars
+                    children = {k: self.children['*'] for k in pars.keys()}
         else:
             children = self.children
 
@@ -824,18 +842,20 @@ class EvalDescriptor(ArgParseDescriptor):
         if pars:
             for k, v in pars.items():
                 if k not in children:
-                    yield (self, 'nochild', k)
+                    yield {'d': self, 'path': self.path, 'status': 'nochild', 'info': k}
 
         # Loop through children
         for cname, c in children.items():
             if pars:
                 if cname not in pars:
-                    yield (c, 'nopar', cname)
+                    yield {'d': c, 'path': self.path, 'status': 'nopar', 'info': cname}
                 else:
-                    for x in c._walk(depth=depth-1, follow_symlinks=follow_symlinks, pars=pars[cname]):
+                    for x in c._walk(depth=depth-1, pars=pars[cname], ignore_symlinks=ignore_symlinks,
+                                     ignore_wildcards=ignore_wildcards):
                         yield x
             else:
-                for x in c._walk(depth=depth-1, follow_symlinks=follow_symlinks):
+                for x in c._walk(depth=depth-1, ignore_symlinks=ignore_symlinks,
+                                 ignore_wildcards=ignore_wildcards):
                     yield x
 
     def check(self, pars, walk):
