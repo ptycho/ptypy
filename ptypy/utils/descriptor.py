@@ -661,6 +661,13 @@ class EvalDescriptor(ArgParseDescriptor):
         ('lowlim', 'Lower limit for scalar / integer values'),
     ])
 
+    def __init__(self, name, parent=None, separator='.'):
+        """
+        Parameter class to store metadata for all ptypy parameters (default, limits, documentation, etc.)
+        """
+        super(EvalDescriptor, self).__init__(name, parent=parent, separator=separator)
+        self.options['type'] = 'Param'
+
     @property
     def default(self):
         """
@@ -706,8 +713,8 @@ class EvalDescriptor(ArgParseDescriptor):
 
     @property
     def is_symlink(self):
-        types = self.options.get('type', [''])
-        return types[0].startswith('@')
+        types = self.options.get('type', '')
+        return types.startswith('@')
 
     @property
     def type(self):
@@ -804,8 +811,8 @@ class EvalDescriptor(ArgParseDescriptor):
                     s = self.default
             # Follow links
             if s:
-                real_path = self.parent.path
-                link_path = s.parent.path
+                real_path = self.parent.path or ''
+                link_path = s.parent.path or ''
                 for x in s._walk(depth=depth, pars=pars, ignore_symlinks=ignore_symlinks,
                                  ignore_wildcards=ignore_wildcards):
                     # Replace path
@@ -813,8 +820,13 @@ class EvalDescriptor(ArgParseDescriptor):
                     yield x
             return
 
-        # Main yield
-        yield {'d': self, 'path': self.path, 'status': 'ok', 'info': ''}
+        # Main yield: check type here.
+        tp = type(pars).__name__
+        print '%s <-> %s' % (tp, str(self.type))
+        if tp in self.type:
+            yield {'d': self, 'path': self.path, 'status': 'ok', 'info': ''}
+        else:
+            yield {'d': self, 'path': self.path, 'status': 'wrongtype', 'info': tp}
 
         if not self.children or depth == 0:
             # Nothing else to do
@@ -857,6 +869,57 @@ class EvalDescriptor(ArgParseDescriptor):
                 for x in c._walk(depth=depth-1, ignore_symlinks=ignore_symlinks,
                                  ignore_wildcards=ignore_wildcards):
                     yield x
+        return
+
+    def new_check(self, pars, depth=99, walk='temporary here to fit with validate'):
+        """
+        Check that input parameter pars is consistent with parameter description, up to given depth.
+
+        Parameters
+        ----------
+        pars: The input parameter or parameter tree
+        depth: The level at wich verification is done.
+
+        Returns
+        -------
+        A dictionary report using CODES values.
+
+        """
+        out = {}
+        for res in self._walk(depth=depth, pars=pars):
+            # Switch through all possible statuses
+            if res['status'] == 'ok':
+                # Check limits
+                d = res['d']
+                val = {'type': CODES.PASS}
+                if any([i in d._limtypes for i in d.type]):
+                    lowlim, uplim = d.limits
+                    if lowlim is None:
+                        val['lowlim'] = CODES.UNKNOWN
+                    else:
+                        val['lowlim'] = CODES.PASS if (pars >= lowlim) else CODES.FAIL
+                    if uplim is None:
+                        val['uplim'] = CODES.UNKNOWN
+                    else:
+                        val['uplim'] = CODES.PASS if (pars <= uplim) else CODES.FAIL
+                out[res['path']] = val
+            elif res['status'] == 'wrongtype':
+                # Wrong type
+                out[res['path']] = {'type': CODES.INVALID}
+            elif res['status'] == 'noname':
+                # Symlink name could not be found
+                out[res['path']] = {'symlink': CODES.INVALID, 'name': CODES.MISSING}
+            elif res['status'] == 'nolink':
+                # Link was not resolved
+                out[res['path']] = {'symlink': CODES.INVALID, 'name': CODES.UNKNOWN}
+            elif res['status'] == 'nochild':
+                # Parameter entry without corresponding Descriptor
+                out[res['path']] = {res['info']: CODES.INVALID}
+            elif res['status'] == 'nopar':
+                # Missing parameter entry
+                out[res['path']] = {res['info']: CODES.MISSING}
+
+        return out
 
     def check(self, pars, walk):
         """
