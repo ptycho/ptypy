@@ -768,7 +768,7 @@ class EvalDescriptor(ArgParseDescriptor):
             ul = None
         return int(ul) if ul else None
 
-    def _walk(self, depth=0, pars=None, ignore_symlinks=False, ignore_wildcards=False):
+    def _walk(self, depth=0, pars=None, ignore_symlinks=False, ignore_wildcards=False, path=None):
         """
         Generator that traverses the complete tree up to given depth, either on its own,
         or following parameter structure in pars, following symlinks and honouring wildcards.
@@ -779,6 +779,7 @@ class EvalDescriptor(ArgParseDescriptor):
         pars: optional parameter tree to match with descriptor tree
         ignore_symlinks: If True, do not follow symlinks. Default to False.
         ignore_wildcards: If True, do not interpret wildcards. Default to False.
+        path: Used internally for recursion.
 
         Returns
         -------
@@ -788,6 +789,9 @@ class EvalDescriptor(ArgParseDescriptor):
          'status': <status message>,
          'info': <additional information depending on status>}
         """
+
+        if not path:
+            path = self.path
 
         # Resolve symlinks
         if self.is_symlink and not ignore_symlinks:
@@ -801,35 +805,34 @@ class EvalDescriptor(ArgParseDescriptor):
                     # Is this the intended behaviour? Instead maybe s = self.default
                     if name is None:
                         s = None
-                        yield {'d': self, 'path': self.path, 'status': 'noname', 'info': ''}
+                        yield {'d': self, 'path': path, 'status': 'noname', 'info': ''}
                     else:
                         s = dict((link.name, link) for link in self.type).get(name, None)
                         if not s:
-                            yield {'d': self, 'path': self.path, 'status': 'nolink', 'info': name}
+                            yield {'d': self, 'path': path, 'status': 'nolink', 'info': name}
                 else:
                     # No pars, resolve default
                     s = self.default
             # Follow links
             if s:
-                real_path = self.parent.path or ''
-                link_path = s.parent.path or ''
+                # We could also be dealing with a wildcard...
+                """
+                if self.children.keys() == ['*']:
+
+                    if ignore_wildcards:
+                        yield {'d': self, 'path': self.path, 'status': 'wildcard', 'info': ''}
+                        return
+                    else:
+                        if not pars:
+                            # Generate default name for single entry
+                            children = {self.name[:-1] + '_00': self.children['*']}
+                        else:
+                            # Grab all names from pars
+                            children = {k: self.children['*'] for k in pars.keys()}
+                """
                 for x in s._walk(depth=depth, pars=pars, ignore_symlinks=ignore_symlinks,
-                                 ignore_wildcards=ignore_wildcards):
-                    # Replace path
-                    x['path'].replace(link_path, real_path)
+                                 ignore_wildcards=ignore_wildcards, path=self.path):
                     yield x
-            return
-
-        # Main yield: check type here.
-        tp = type(pars).__name__
-        print '%s <-> %s' % (tp, str(self.type))
-        if tp in self.type:
-            yield {'d': self, 'path': self.path, 'status': 'ok', 'info': ''}
-        else:
-            yield {'d': self, 'path': self.path, 'status': 'wrongtype', 'info': tp}
-
-        if not self.children or depth == 0:
-            # Nothing else to do
             return
 
         # Detect wildcard
@@ -838,7 +841,7 @@ class EvalDescriptor(ArgParseDescriptor):
         # Grab or check children
         if wildcard:
             if ignore_wildcards:
-                yield {'d': self, 'path': self.path, 'status': 'wildcard', 'info':''}
+                yield {'d': self, 'path': self.path, 'status': 'wildcard', 'info': ''}
                 return
             else:
                 if not pars:
@@ -849,6 +852,16 @@ class EvalDescriptor(ArgParseDescriptor):
                     children = {k: self.children['*'] for k in pars.keys()}
         else:
             children = self.children
+
+        # Main yield: check type here.
+        if not pars or (type(pars).__name__ in self.type) or (hasattr(pars, 'items') and 'Param' in self.type):
+            yield {'d': self, 'path': self.path, 'status': 'ok', 'info': ''}
+        else:
+            yield {'d': self, 'path': self.path, 'status': 'wrongtype', 'info': type(pars).__name__}
+
+        if not children or depth == 0:
+            # Nothing else to do
+            return
 
         # Look for unrecognised entries in pars
         if pars:
@@ -864,14 +877,18 @@ class EvalDescriptor(ArgParseDescriptor):
                 else:
                     for x in c._walk(depth=depth-1, pars=pars[cname], ignore_symlinks=ignore_symlinks,
                                      ignore_wildcards=ignore_wildcards):
+                        x['path'] = '.'.join([cname, x['path'].split('.', 1)[1]]) if '.' in x['path'] else cname
                         yield x
             else:
                 for x in c._walk(depth=depth-1, ignore_symlinks=ignore_symlinks,
                                  ignore_wildcards=ignore_wildcards):
+                    print x['path']
+                    x['path'] = '.'.join([cname, x['path'].split('.', 1)[1]]) if '.' in x['path'] else cname
+                    print x['path']
                     yield x
         return
 
-    def new_check(self, pars, depth=99, walk='temporary here to fit with validate'):
+    def check(self, pars, depth=99, walk='temporary here to fit with validate'):
         """
         Check that input parameter pars is consistent with parameter description, up to given depth.
 
@@ -921,7 +938,7 @@ class EvalDescriptor(ArgParseDescriptor):
 
         return out
 
-    def check(self, pars, walk):
+    def old_check(self, pars, walk):
         """
         Check that input parameter pars is consistent with parameter description.
         If walk is True and pars is a Param object, checks are also conducted for all
