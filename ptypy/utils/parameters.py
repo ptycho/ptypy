@@ -81,8 +81,10 @@ class Param(dict):
         return super(Param, s).__setitem__(key, value)
 
     def __getitem__(self, name):
-        # item = super(Param, self).__getitem__(name)
-        # return Param(item) if type(item) == dict else item
+        # Parse dots in key
+        if type(name) == str and '.' in name:
+            name_, name__ = name.split('.', 1)
+            return self[name_][name__]
         return super(Param, self).__getitem__(name)
 
     def __delitem__(self, name):
