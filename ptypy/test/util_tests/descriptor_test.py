@@ -45,7 +45,7 @@ class EvalDescriptorTest(unittest.TestCase):
         assert root['engine.name'].help == 'The name of the engine'
         assert root['engine'].implicit == True
         assert root['engine'].type == ['Param']
-        assert FakeEngineClass.DEFAULT == {'name': 'DM', 'numiter': 1}
+        assert FakeEngineClass.DEFAULT == Param({'name': 'DM', 'numiter': 1})
 
     def test_parse_doc_order(self):
         """
@@ -203,7 +203,7 @@ class EvalDescriptorTest(unittest.TestCase):
         assert root['engine.name'].help == 'The name of the subclassed engine'
         assert root['engine'].implicit == True
         assert root['engine'].type == ['Param']
-        assert FakeEngineClass.DEFAULT == {'alpha': 1.0, 'name': 'SubclassedEngineName', 'numiter': 1, 'subengine': {'some_parameter': 1.0}}
+        assert FakeEngineClass.DEFAULT == Param({'alpha': 1.0, 'name': 'SubclassedEngineName', 'numiter': 1, 'subengine': {'some_parameter': 1.0}})
 
     def test_parse_doc_wildcards(self):
         """
@@ -254,8 +254,8 @@ class EvalDescriptorTest(unittest.TestCase):
             """
             pass
 
-        assert dict(FakeScanClass.DEFAULT._to_dict(True)) == {'comment': None, 'energy': 11.4}
-        assert dict(FakePtychoClass.DEFAULT._to_dict(True)) == {'run': 'run', 'scans': {}}
+        assert FakeScanClass.DEFAULT == Param({'comment': None, 'energy': 11.4})
+        assert FakePtychoClass.DEFAULT == Param({'run': 'run', 'scans': {}})
 
         # a correct param tree
         p = Param()
@@ -497,8 +497,8 @@ class EvalDescriptorTest(unittest.TestCase):
             """
             pass
 
-        assert dict(FakeVanillaScan.DEFAULT) == {'energy': 9.3, 'name': 'Vanilla'}
-        assert dict(FakeFullScan.DEFAULT) == {'energy': 9.3, 'name': 'Full', 'probe_modes': 1}
+        assert FakeVanillaScan.DEFAULT == Param({'energy': 9.3, 'name': 'Vanilla'})
+        assert FakeFullScan.DEFAULT == Param({'energy': 9.3, 'name': 'Full', 'probe_modes': 1})
 
         # no tree
         defaults = root.make_default(depth=99)

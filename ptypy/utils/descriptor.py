@@ -16,6 +16,7 @@ This file is part of the PTYPY package.
 import ast
 from collections import OrderedDict
 import textwrap
+from parameters import Param
 
 
 __all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
@@ -493,7 +494,36 @@ class ArgParseDescriptor(Descriptor):
 
         return c
 
-    def make_default(self, depth=0, flat=False, pars=None):
+    def make_default(self, depth=0):
+        """
+        Creates a default parameter structure.
+
+        Parameters
+        ----------
+        depth : int
+            The depth in the structure to which all sub nodes are expanded
+            All nodes beyond depth will be ignored.
+
+        Returns
+        -------
+        pars : dict
+            A parameter branch as Param.
+
+        Examples
+        --------
+        >>> from ptypy import descriptions_cfg
+        >>> print descriptions_cfg.children['io'].make_default(depth=5)
+        """
+        out = Param()
+        for ret in self._walk(depth=depth, ignore_symlinks=True, ignore_wildcards=True):
+            # exclude first level (self)
+            if '.' in ret['path']:
+                path = ret['path'].split('.', 1)[1]
+                out[path] = ret['d'].default
+        return out
+
+
+    def old_make_default(self, depth=0, flat=False, pars=None):
         """
         Creates a default parameter structure from the loaded parameter
         descriptions in this module
@@ -680,7 +710,7 @@ class EvalDescriptor(ArgParseDescriptor):
         default = default if default else None
 
         if 'Param' in types or 'dict' in types:
-            out = {}
+            out = Param()
         elif default is None:
             out = None
         # should be only strings now
@@ -1162,10 +1192,8 @@ class EvalDescriptor(ArgParseDescriptor):
         from weakref import ref
         cls._descriptor = ref(desc)
 
-        # FIXME: This should be solved more elegantly
-        from ptypy.utils import Param
-        cls.DEFAULT = Param()
-        cls.DEFAULT.update(desc.make_default(depth=99), Convert=True)
+        # Render the defaults
+        cls.DEFAULT = desc.make_default(depth=99)
 
         return cls
 
