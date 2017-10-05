@@ -842,6 +842,7 @@ class EvalDescriptor(ArgParseDescriptor):
             yield {'d': self, 'path': path, 'status': 'ok', 'info': ''}
         else:
             yield {'d': self, 'path': path, 'status': 'wrongtype', 'info': type(pars).__name__}
+            return
 
         if not children or depth == 0:
             # Nothing else to do
