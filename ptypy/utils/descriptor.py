@@ -828,7 +828,7 @@ class EvalDescriptor(ArgParseDescriptor):
                 yield {'d': self, 'path': path, 'status': 'wildcard', 'info': ''}
                 return
             else:
-                if not pars:
+                if pars is None:
                     # Generate default name for single entry
                     children = {self.name[:-1] + '_00': self.children['*']}
                 else:
