@@ -789,9 +789,8 @@ class EvalDescriptor(ArgParseDescriptor):
          'status': <status message>,
          'info': <additional information depending on status>}
         """
-
         if not path:
-            path = self.path
+            path = self.path or ''
 
         # Resolve symlinks
         if self.is_symlink and not ignore_symlinks:
@@ -815,23 +814,8 @@ class EvalDescriptor(ArgParseDescriptor):
                     s = self.default
             # Follow links
             if s:
-                # We could also be dealing with a wildcard...
-                """
-                if self.children.keys() == ['*']:
-
-                    if ignore_wildcards:
-                        yield {'d': self, 'path': self.path, 'status': 'wildcard', 'info': ''}
-                        return
-                    else:
-                        if not pars:
-                            # Generate default name for single entry
-                            children = {self.name[:-1] + '_00': self.children['*']}
-                        else:
-                            # Grab all names from pars
-                            children = {k: self.children['*'] for k in pars.keys()}
-                """
                 for x in s._walk(depth=depth, pars=pars, ignore_symlinks=ignore_symlinks,
-                                 ignore_wildcards=ignore_wildcards, path=self.path):
+                                 ignore_wildcards=ignore_wildcards, path=path):
                     yield x
             return
 
@@ -841,7 +825,7 @@ class EvalDescriptor(ArgParseDescriptor):
         # Grab or check children
         if wildcard:
             if ignore_wildcards:
-                yield {'d': self, 'path': self.path, 'status': 'wildcard', 'info': ''}
+                yield {'d': self, 'path': path, 'status': 'wildcard', 'info': ''}
                 return
             else:
                 if not pars:
@@ -855,9 +839,9 @@ class EvalDescriptor(ArgParseDescriptor):
 
         # Main yield: check type here.
         if not pars or (type(pars).__name__ in self.type) or (hasattr(pars, 'items') and 'Param' in self.type):
-            yield {'d': self, 'path': self.path, 'status': 'ok', 'info': ''}
+            yield {'d': self, 'path': path, 'status': 'ok', 'info': ''}
         else:
-            yield {'d': self, 'path': self.path, 'status': 'wrongtype', 'info': type(pars).__name__}
+            yield {'d': self, 'path': path, 'status': 'wrongtype', 'info': type(pars).__name__}
 
         if not children or depth == 0:
             # Nothing else to do
@@ -867,24 +851,21 @@ class EvalDescriptor(ArgParseDescriptor):
         if pars:
             for k, v in pars.items():
                 if k not in children:
-                    yield {'d': self, 'path': self.path, 'status': 'nochild', 'info': k}
+                    yield {'d': self, 'path': path, 'status': 'nochild', 'info': k}
 
         # Loop through children
         for cname, c in children.items():
+            new_path = '.'.join([path, cname]) if path else cname
             if pars:
                 if cname not in pars:
-                    yield {'d': c, 'path': self.path, 'status': 'nopar', 'info': cname}
+                    yield {'d': c, 'path': path, 'status': 'nopar', 'info': cname}
                 else:
                     for x in c._walk(depth=depth-1, pars=pars[cname], ignore_symlinks=ignore_symlinks,
-                                     ignore_wildcards=ignore_wildcards):
-                        x['path'] = '.'.join([cname, x['path'].split('.', 1)[1]]) if '.' in x['path'] else cname
+                                     ignore_wildcards=ignore_wildcards, path=new_path):
                         yield x
             else:
                 for x in c._walk(depth=depth-1, ignore_symlinks=ignore_symlinks,
-                                 ignore_wildcards=ignore_wildcards):
-                    print x['path']
-                    x['path'] = '.'.join([cname, x['path'].split('.', 1)[1]]) if '.' in x['path'] else cname
-                    print x['path']
+                                 ignore_wildcards=ignore_wildcards, path=new_path):
                     yield x
         return
 
