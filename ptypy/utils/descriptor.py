@@ -895,11 +895,11 @@ class EvalDescriptor(ArgParseDescriptor):
                     if lowlim is None:
                         val['lowlim'] = CODES.UNKNOWN
                     else:
-                        val['lowlim'] = CODES.PASS if (pars >= lowlim) else CODES.FAIL
+                        val['lowlim'] = CODES.PASS if (pars[res['path']] >= lowlim) else CODES.FAIL
                     if uplim is None:
                         val['uplim'] = CODES.UNKNOWN
                     else:
-                        val['uplim'] = CODES.PASS if (pars <= uplim) else CODES.FAIL
+                        val['uplim'] = CODES.PASS if (pars[res['path']] <= uplim) else CODES.FAIL
                 out[res['path']] = val
             elif res['status'] == 'wrongtype':
                 # Wrong type
