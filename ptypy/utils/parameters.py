@@ -75,8 +75,8 @@ class Param(dict):
                 try:
                     s = s.__getitem__(k)
                 except KeyError:
-                    super(Param, self).__setitem__(k, Param())
-                    s = super(Param, self).__getitem__(k)
+                    super(Param, s).__setitem__(k, Param())
+                    s = super(Param, s).__getitem__(k)
             key = keys[-1]
         return super(Param, s).__setitem__(key, value)
 
