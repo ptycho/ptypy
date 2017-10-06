@@ -494,7 +494,7 @@ class ArgParseDescriptor(Descriptor):
 
         return c
 
-    def make_default(self, depth=0):
+    def make_default(self, depth=0, remove_levels=0):
         """
         Creates a default parameter structure.
 
@@ -503,6 +503,12 @@ class ArgParseDescriptor(Descriptor):
         depth : int
             The depth in the structure to which all sub nodes are expanded
             All nodes beyond depth will be ignored.
+
+        remove_levels : int
+            The number of levels in the parameter path to ignore.
+            For example, for a class declaring its paramters under 
+            'engine.DM', specify remove_levels=2 to get defaults as
+            p.numiter instead of p.engine.DM.numiter.
 
         Returns
         -------
@@ -516,9 +522,10 @@ class ArgParseDescriptor(Descriptor):
         """
         out = Param()
         for ret in self._walk(depth=depth, ignore_symlinks=True, ignore_wildcards=True):
-            # exclude first level (self)
-            if '.' in ret['path']:
-                path = ret['path'].split('.', 1)[1]
+            path = ret['path']
+            # ignore the holding instance, and also check for '' since len(''.split('.'))==1, not 0
+            if path and len(path.split('.')) > remove_levels:
+                path = '.'.join(path.split('.')[remove_levels:])
                 out[path] = ret['d'].default
         return out
 
@@ -1193,7 +1200,8 @@ class EvalDescriptor(ArgParseDescriptor):
         cls._descriptor = ref(desc)
 
         # Render the defaults
-        cls.DEFAULT = desc.make_default(depth=99)
+        level = len(name.split('.')) if name else 0
+        cls.DEFAULT = desc.make_default(depth=99, remove_levels=level)
 
         return cls
 
