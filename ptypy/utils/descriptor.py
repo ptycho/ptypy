@@ -987,14 +987,35 @@ class EvalDescriptor(ArgParseDescriptor):
         Decorator to parse docstring and automatically attach new parameters.
         The parameter section is identified by a line starting with the word "Parameters"
 
-        :param name: The descendant name under which all parameters will be held. If None, use self
-        :return: The decorator function
+        Parameters
+        ----------
+        name: str
+              The descendant name under which all parameters will be held. If None, use self.
+        recursive: bool
+              Whether or not to traverse the docstring of base classes. *Is there are use case for this?*
+
+        Returns
+        -------
+        The decorator function.
         """
         return lambda cls: self._parse_doc_decorator(name, cls, recursive)
 
     def _parse_doc_decorator(self, name, cls, recursive):
         """
         Actual decorator returned by parse_doc.
+
+        Parameters
+        ----------
+        name: str
+             Descendant name.
+        cls:
+             Class to decorate.
+        recursive:
+             If false do not parse base class doc.
+
+        Returns
+        -------
+        Decorated class.
         """
         # Find or create insertion point
         if name is None:
@@ -1011,6 +1032,7 @@ class EvalDescriptor(ArgParseDescriptor):
         # Maybe check here if a non-Param descendant is being overwritten?
         desc.options['type'] = 'Param'
 
+        # PT: I don't understand this.
         if not recursive and cls.__base__ != object:
             desc_base = getattr(cls.__base__, '_descriptor')
             typ = desc_base().path if desc_base is not None else None
