@@ -1272,8 +1272,9 @@ class EvalDescriptor(ArgParseDescriptor):
                     fp.write('\n')
                     fp.write(hlp + '\n')
                     fp.write(doc + '\n')
-                # Container defaults can come as Params or EvalDescriptors
-                if isinstance(d.default, Param) or isinstance(d.default, EvalDescriptor):
+                # Container defaults come as Params. It would be more elegant 
+                # to check 'if d.children' here but not sure that is safe
+                if isinstance(d.default, Param):
                     if doc_level < 2:
                         fp.write('\n')
                     line = base + '.' + ret['path'] + ' = u.Param()'
