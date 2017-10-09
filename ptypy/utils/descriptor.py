@@ -517,8 +517,8 @@ class ArgParseDescriptor(Descriptor):
 
         Examples
         --------
-        >>> from ptypy import descriptions_cfg
-        >>> print descriptions_cfg.children['io'].make_default(depth=5)
+        >>> from ptypy import defaults_tree
+        >>> print defaults_tree.children['io'].make_default(depth=5)
         """
         out = Param()
         for ret in self._walk(depth=depth, ignore_symlinks=True, ignore_wildcards=True):
@@ -1253,22 +1253,46 @@ class EvalDescriptor(ArgParseDescriptor):
             h += "import ptypy\n"
             h += "from ptypy.core import Ptycho\n"
             h += "from ptypy import utils as u\n\n"
-            h += '### Ptypy Parameter Tree' + '\n'
+            h += '### Ptypy parameter tree ###' + '\n\n'
             fp.write(h)
 
             # write the parameter defaults
-            fp.write(base + ' = Param()\n')
-            for ret in self._walk(depth=99):
+            fp.write(base + ' = Param()\n\n')
+            for ret in self._walk(depth=99, ignore_wildcards=False):
                 d = ret['d']
-                if d.children:
-                    val = 'u.Param()'
+                # user level
+                if d.userlevel > user_level: continue
+                # skip the root, handled above
+                if d.root is d: continue
+                # handle line breaks already in the help/doc strings
+                hlp = '# ' + d.help.replace('\n', '\n# ')
+                doc = '# ' + d.doc.replace('\n', '\n# ')
+                # doclevel 2: help and doc before parameter
+                if doc_level == 2:
+                    fp.write('\n')
+                    fp.write(hlp + '\n')
+                    fp.write(doc + '\n')
+                # Container defaults can come as Params or EvalDescriptors
+                if isinstance(d.default, Param) or isinstance(d.default, EvalDescriptor):
+                    if doc_level < 2:
+                        fp.write('\n')
+                    line = base + '.' + ret['path'] + ' = u.Param()'
+                    fp.write(line)
+                # not Param: actual default value
                 else:
                     val = str(d.default)
-                fp.write(base + '.' + ret['path'] + ' = ' + val)
-                fp.write(' #' + d.help + '\n\n')
+                    if 'str' in d.type and not d.default is None:
+                        val = "'" + val + "'"
+                    line = base + '.' + ret['path'] + ' = ' + val
+                    fp.write(line)
+                # doclevel 1: inline help comments
+                if doc_level == 1:
+                    fp.write(' ' * max(1, 40 - len(line)) + hlp + '\n')
+                else:
+                    fp.write('\n')
 
             # write the Ptycho instantiation
-            fp.write('\n\n# Run a reconstruction\n')
+            fp.write('\n\n### Reconstruction ###\n\n')
             fp.write('Ptycho(%s,level=5)\n'%base)
 
 defaults_tree = EvalDescriptor('root')

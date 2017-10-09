@@ -22,6 +22,7 @@ elif pars.ldoc:
 else:
     doc_level = 0
 
-from ptypy import descriptions_cfg
+from ptypy import defaults_tree
 
-descriptions_cfg.create_template(pars.pyfile, pars.ulevel,doc_level)
+defaults_tree.create_template(filename=pars.pyfile,
+    user_level=pars.ulevel, doc_level=doc_level, start_at_root=True)
