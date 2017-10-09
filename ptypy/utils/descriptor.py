@@ -751,7 +751,7 @@ class EvalDescriptor(ArgParseDescriptor):
     @property
     def is_symlink(self):
         types = self.options.get('type', '')
-        return types.startswith('@')
+        return '@' in types
 
     @property
     def type(self):
