@@ -936,11 +936,6 @@ class EvalDescriptor(ArgParseDescriptor):
         prst.write(Header)
 
         root = self.root
-        shortdoc = 'help'
-        longdoc = 'doc'
-        default = 'default'
-        lowlim = 'lowlim'
-        uplim = 'uplim'
 
         for name, desc in root.descendants:
             if name == '':
@@ -1124,7 +1119,7 @@ class EvalDescriptor(ArgParseDescriptor):
                     fp.write(line)
                 # doclevel 1: inline help comments
                 if doc_level == 1:
-                    fp.write(' ' * max(1, 40 - len(line)) + hlp + '\n')
+                    fp.write(' ' * max(1, 50 - len(line)) + hlp + '\n')
                 else:
                     fp.write('\n')
 
