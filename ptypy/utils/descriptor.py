@@ -717,12 +717,14 @@ class EvalDescriptor(ArgParseDescriptor):
         -------
         A generator. Yields a dict with structure
         {'d': <Descriptor instance>,
-         'path': <path in structure>,
+         'path': <relative path in structure>,
          'status': <status message>,
          'info': <additional information depending on status>}
         """
-        if not path:
-            path = self.path or ''
+
+        if path is None:
+            # This happens only at top level: ensure proper construction of relative paths.
+            path = ''
 
         # Resolve symlinks
         if self.is_symlink and not ignore_symlinks:
@@ -899,7 +901,7 @@ class EvalDescriptor(ArgParseDescriptor):
         """
         self.validate(self.make_default(depth=depth))
 
-    def make_default(self, depth=0, remove_levels=0):
+    def make_default(self, depth=0):
         """
         Creates a default parameter structure.
 
@@ -909,29 +911,21 @@ class EvalDescriptor(ArgParseDescriptor):
             The depth in the structure to which all sub nodes are expanded
             All nodes beyond depth will be ignored.
 
-        remove_levels : int
-            The number of levels in the parameter path to ignore.
-            For example, for a class declaring its paramters under
-            'engine.DM', specify remove_levels=2 to get defaults as
-            p.numiter instead of p.engine.DM.numiter.
-
         Returns
         -------
-        pars : dict
+        pars : Param
             A parameter branch as Param.
 
         Examples
         --------
-        >>> from ptypy import defaults_tree
-        >>> print defaults_tree.children['io'].make_default(depth=5)
+        >>> from ptypy.utils.descriptor import defaults_tree
+        >>> print(defaults_tree['io'].make_default(depth=5))
         """
         out = Param()
         for ret in self._walk(depth=depth, ignore_symlinks=True, ignore_wildcards=True):
             path = ret['path']
-            # ignore the holding instance, and also check for '' since len(''.split('.'))==1, not 0
-            if path and len(path.split('.')) > remove_levels:
-                path = '.'.join(path.split('.')[remove_levels:])
-                out[path] = ret['d'].default
+            if path == '': continue
+            out[path] = ret['d'].default
         return out
 
     def make_doc_rst(self, prst, use_root=True):
@@ -1046,8 +1040,7 @@ class EvalDescriptor(ArgParseDescriptor):
         cls._descriptor = ref(desc)
 
         # Render the defaults
-        level = len(name.split('.')) if name else 0
-        cls.DEFAULT = desc.make_default(depth=99, remove_levels=level)
+        cls.DEFAULT = desc.make_default(depth=99)
 
         return cls
 
