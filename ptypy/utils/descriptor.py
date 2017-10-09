@@ -494,111 +494,6 @@ class ArgParseDescriptor(Descriptor):
 
         return c
 
-    def make_default(self, depth=0, remove_levels=0):
-        """
-        Creates a default parameter structure.
-
-        Parameters
-        ----------
-        depth : int
-            The depth in the structure to which all sub nodes are expanded
-            All nodes beyond depth will be ignored.
-
-        remove_levels : int
-            The number of levels in the parameter path to ignore.
-            For example, for a class declaring its paramters under 
-            'engine.DM', specify remove_levels=2 to get defaults as
-            p.numiter instead of p.engine.DM.numiter.
-
-        Returns
-        -------
-        pars : dict
-            A parameter branch as Param.
-
-        Examples
-        --------
-        >>> from ptypy import defaults_tree
-        >>> print defaults_tree.children['io'].make_default(depth=5)
-        """
-        out = Param()
-        for ret in self._walk(depth=depth, ignore_symlinks=True, ignore_wildcards=True):
-            path = ret['path']
-            # ignore the holding instance, and also check for '' since len(''.split('.'))==1, not 0
-            if path and len(path.split('.')) > remove_levels:
-                path = '.'.join(path.split('.')[remove_levels:])
-                out[path] = ret['d'].default
-        return out
-
-
-    def old_make_default(self, depth=0, flat=False, pars=None):
-        """
-        Creates a default parameter structure from the loaded parameter
-        descriptions in this module
-        
-        Parameters
-        ----------            
-        depth : int
-            The depth in the structure to which all sub nodes are expanded
-            All nodes beyond depth will be ignored.
-
-        flat : bool
-            If `True` returns flat dict with long keys, otherwise nested
-            dicts with short keys. default=`False`
-
-        pars : Param
-            If provided prepares a defaults structure relevant for the
-            choices and entries actually supplied, e.g. the instances of
-            wildcards.
-            
-        Returns
-        -------
-        pars : dict
-            A parameter branch as nested dicts.
-        
-        Examples
-        --------
-        >>> from ptypy import descriptor
-        >>> print descriptor.children['io'].make_default()
-        """
-        if flat:
-            raise NotImplementedError
-            return dict([(k, v.default) for k, v in self.descendants])
-
-        out = {}
-        # Interpret a default as a link to another part of the structure
-        # if it matches one.
-        if type(self.default) == type(self):
-            link = self.default
-            if link and depth >= 0:
-                # check if the link is overridden in pars
-                try:
-                    name = pars[self.name].name
-                    link = [x for x in self.type if x.name == name][0]
-                except:
-                    pass
-                #print "following link from", self.path, "to", link.path
-                return link.make_default(depth=depth-1, pars=pars)
-
-        if not self.children:
-            return self.default
-
-        for name, child in self.children.iteritems():
-            if depth >= 0:
-                # wildcard entry
-                if name == '*':
-                    if pars is not None:
-                        try:
-                            for key in pars[self.path].keys():
-                                #print "doing wildcard", self.path + "." + key
-                                out[key] = child.make_default(depth=depth-1, pars=pars[self.path][key])
-                        except KeyError:
-                            pass
-                # normal entry
-                else:
-                    out[name] = child.make_default(depth=depth-1, pars=pars)
-
-        return out
-
     def _get_type_argparse(self):
         """
         Returns type or callable that the argparser uses for 
@@ -957,112 +852,6 @@ class EvalDescriptor(ArgParseDescriptor):
 
         return out
 
-    def old_check(self, pars, walk):
-        """
-        Check that input parameter pars is consistent with parameter description.
-        If walk is True and pars is a Param object, checks are also conducted for all
-        sub-parameters.
-
-        Returns a dictionary report using CODES values.
-        """
-        # FIXME: this needs a lot of testing and verbose.debug lines.
-        ep = self.path
-        val = {}
-        out = {ep: val}
-
-        symlinks = None
-
-        # Data type
-        if self.type is None:
-            # No type: inconclusive
-            val['type'] = CODES.UNKNOWN
-            val['lowlim'] = CODES.UNKNOWN
-            val['uplim'] = CODES.UNKNOWN
-            return out
-        elif type(pars).__name__ in self.type:
-            # Standard type: pass
-            val['type'] = CODES.PASS
-        elif self.is_symlink:
-            if None in self.type:
-                # Will happen if a symlink is not resolved
-                val['type'] = CODES.INVALID
-                return out
-
-        # Manage symlinks
-        if self.is_symlink:
-            # Look for name
-            name = pars.get('name', None)
-            if not name:
-                # The entry does not have a name, that's not good.
-                val['symlink'] = CODES.INVALID
-                val['name'] = CODES.MISSING
-                return out
-            symlink = dict((link.name, link) for link in self.type).get(name, None)
-            if not symlink:
-                # The entry name is not found, that's not good.
-                val['symlink'] = CODES.INVALID
-                val['name'] = CODES.UNKNOWN
-                return out
-            if walk:
-                sym_out = symlink.check(pars, walk)
-                # Rehash names
-                for k, v in sym_out.iteritems():
-                    k1 = k.replace(symlink.path, ep)
-                    out[k1] = v
-            return out
-
-        # Check limits
-        if any([i in self._limtypes for i in self.type]):
-            lowlim, uplim = self.limits
-            if lowlim is None:
-                val['lowlim'] = CODES.UNKNOWN
-            else:
-                val['lowlim'] = CODES.PASS if (pars >= lowlim) else CODES.FAIL
-            if uplim is None:
-                val['uplim'] = CODES.UNKNOWN
-            else:
-                val['uplim'] = CODES.PASS if (pars <= uplim) else CODES.FAIL
-
-        # Nothing left to check except for Param or dict.
-        if not self.children:
-            return out
-
-        if not hasattr(pars, 'items'):
-            val['type'] = CODES.INVALID
-            return out
-
-        # Detect wildcard
-        wildcard = (self.children.keys() == ['*'])
-        if wildcard:
-            if not walk:
-                return out
-        else:
-            # Check for missing entries
-            for k, v in self.children.items():
-                if k not in pars:
-                    val[k] = CODES.MISSING
-
-        # Check for invalid entries
-        if wildcard and not pars:
-            # At least one child is required.
-            out[ep + '.*'] = {'*': CODES.MISSING}
-            return out
-        for k, v in pars.items():
-            if wildcard:
-                if walk:
-                    w_out = self.children['*'].check(v, walk)
-                    for kk, vv in w_out.iteritems():
-                        k1 = kk.replace('*', k, 1)
-                        out[k1] = vv
-            elif k not in self.children:
-                val[k] = CODES.INVALID
-            elif walk:
-                # Validate child
-                out.update(self.children[k].check(v, walk))
-
-        out[ep] = val
-        return out
-
     def validate(self, pars, walk=True, raisecodes=(CODES.FAIL, CODES.INVALID)):
         """
         Check that the parameter structure `pars` matches the documented 
@@ -1109,6 +898,41 @@ class EvalDescriptor(ArgParseDescriptor):
         self-constistent with limits and choices.
         """
         self.validate(self.make_default(depth=depth))
+
+    def make_default(self, depth=0, remove_levels=0):
+        """
+        Creates a default parameter structure.
+
+        Parameters
+        ----------
+        depth : int
+            The depth in the structure to which all sub nodes are expanded
+            All nodes beyond depth will be ignored.
+
+        remove_levels : int
+            The number of levels in the parameter path to ignore.
+            For example, for a class declaring its paramters under
+            'engine.DM', specify remove_levels=2 to get defaults as
+            p.numiter instead of p.engine.DM.numiter.
+
+        Returns
+        -------
+        pars : dict
+            A parameter branch as Param.
+
+        Examples
+        --------
+        >>> from ptypy import defaults_tree
+        >>> print defaults_tree.children['io'].make_default(depth=5)
+        """
+        out = Param()
+        for ret in self._walk(depth=depth, ignore_symlinks=True, ignore_wildcards=True):
+            path = ret['path']
+            # ignore the holding instance, and also check for '' since len(''.split('.'))==1, not 0
+            if path and len(path.split('.')) > remove_levels:
+                path = '.'.join(path.split('.')[remove_levels:])
+                out[path] = ret['d'].default
+        return out
 
     def make_doc_rst(self, prst, use_root=True):
         """
