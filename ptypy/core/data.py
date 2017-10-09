@@ -48,19 +48,15 @@ PTYD = dict(
 )
 """ Basic Structure of a .ptyd datafile """
 
-META = dict(
-    # Label will be set internally
-    label=None,
-    # A unique label of user choice
-    experimentID=None,
-    version='0.1',
-    shape=None,
-    psize=None,
-    # lam=None,
-    energy=None,
-    center=None,
-    distance=None,
-)
+METAKEYS = {'label': 'label',
+            'experimentID': 'experimentID',
+            'version': 'version',
+            'shape': 'geometry.shape',
+            'psize': 'geometry.psize',
+            'energy': 'geometry.energy',
+            'center': 'geometry.center',
+            'distance': 'geometry.distance'}
+""" Keys to store in meta param """
 
 WAIT = 'msg1'
 EOS = 'msgEOS'
@@ -270,28 +266,21 @@ class PtyScan(object):
         Call :py:data:`initialize` to begin loading and data file creation.
         """
         # Load default parameter structure
-        info = u.Param(self.DEFAULT.copy())
-
-        # FIXME this overwrites the child's recipe defaults
-        info.update(pars, in_place_depth=1)
-        info.update(kwargs)
-
-        # validate(pars, '.scan.preparation')
-
-        # Prepare meta data
-        self.meta = u.Param(META.copy())
+        p = self.DEFAULT.copy(99)
+        p.update(pars)
+        p.update(kwargs)
 
         # Attempt to get number of frames.
-        self.num_frames = info.num_frames
+        self.num_frames = p.num_frames
         """ Total number of frames to prepare / load.
             Set by :py:data:`~.scan.data.num_frames` """
 
-        self.min_frames = info.min_frames * parallel.size
+        self.min_frames = p.min_frames * parallel.size
         """ Minimum number of frames to prepare / load
             with call of :py:meth:`auto` """
 
-        if info.positions_theory is not None:
-            num = len(info.positions_theory)
+        if p.positions_theory is not None:
+            num = len(p.positions_theory)
             logger.info('Theoretical positions are available. '
                         'There will be %d frames.' % num)
             logger.info(
@@ -300,33 +289,17 @@ class PtyScan(object):
                 'Former input value of frame number `num_frames` %s is '
                 'overridden to %d.' % (str(self.num_frames), num))
             self.num_frames = num
-        """
-        # check if we got information on geometry from ptycho
-        if info.geometry is not None:
-            for k, v in info.geometry.items():
-                # FIXME: This is a bit ugly -
-                # some parameters are added to info without documentation.
-                info[k] = v if info.get(k) is None else None
-            # FIXME: This should probably be done more transparently:
-            # it is not clear for the user that info.roi
-            # has precedence over geometry.N
-            if info.roi is None:
-                info.roi = u.expect2(info.geometry.N)
-        """
-        # None for rebin should be allowed, as in "don't rebin".
-        if info.rebin is None:
-            info.rebin = 1
 
-        self.info = info
+        # None for rebin should be allowed, as in "don't rebin".
+        if p.rebin is None:
+            p.rebin = 1
+
+        self.info = p
         """:any:`Param` container that stores all input parameters."""
 
         # Print a report
         log(4, 'Ptypy Scan instance got the following parameters:')
-        log(4, u.verbose.report(info))
-
-        # Dump all input parameters as class attributes.
-        # FIXME: This duplication of parameters can lead to much confusion...
-        # self.__dict__.update(info)
+        log(4, u.verbose.report(p))
 
         # Check MPI settings
         lp = str(self.info.load_parallel)
@@ -347,12 +320,9 @@ class PtyScan(object):
         self.dfile = None
         self.save = self.info.save
 
-        # Copy all values for meta
-        for k in self.meta.keys():
-            self.meta[k] = self.info[k]
-        # self.center = None  # Center will be set later
-        # self.roi = self.info.roi #None  # ROI will be set later
-        # self.shape = None
+        # Construct meta
+        self.meta = u.Param({k: self.info[v] for k, v in METAKEYS.items()})
+
         self.orientation = self.info.orientation
         self.rebin = self.info.rebin
 

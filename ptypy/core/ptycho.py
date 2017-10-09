@@ -271,10 +271,8 @@ class Ptycho(Base):
         super(Ptycho, self).__init__(None, 'Ptycho')
 
         # Create a parameter structure from the the class-level defaults
-        self.p = u.Param()
-        self.p.update(self.DEFAULT, 99, Convert=True)
+        self.p = self.DEFAULT.copy(99)
 
-        print self.p
         # Abort if we load complete structure
         if level <= 0:
             return
