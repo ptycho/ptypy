@@ -804,7 +804,7 @@ class EvalDescriptor(ArgParseDescriptor):
                     yield x
         return
 
-    def check(self, pars, depth=99, walk='temporary here to fit with validate'):
+    def check(self, pars, depth=99):
         """
         Check that input parameter pars is consistent with parameter description, up to given depth.
 
@@ -854,7 +854,7 @@ class EvalDescriptor(ArgParseDescriptor):
 
         return out
 
-    def validate(self, pars, walk=True, raisecodes=(CODES.FAIL, CODES.INVALID)):
+    def validate(self, pars, raisecodes=(CODES.FAIL, CODES.INVALID)):
         """
         Check that the parameter structure `pars` matches the documented 
         constraints for this node / parameter.
@@ -867,9 +867,6 @@ class EvalDescriptor(ArgParseDescriptor):
         ----------
         pars : Param, dict
             A parameter set to validate
-        
-        walk : bool
-            If ``True`` (*default*), navigate sub-parameters.
         
         raisecodes: list
             List of codes that will raise a RuntimeError.
@@ -885,7 +882,7 @@ class EvalDescriptor(ArgParseDescriptor):
             INVALID=logging.ERROR
         )
 
-        d = self.check(pars, walk=walk)
+        d = self.check(pars)
         do_raise = False
         for ep, v in d.items():
             for tocheck, outcome in v.items():

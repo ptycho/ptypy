@@ -267,7 +267,7 @@ class EvalDescriptorTest(unittest.TestCase):
         p.scans.scan02 = Param()
         p.scans.scan02.energy = 3.14 * 2
         p.scans.scan02.comment = 'second scan'
-        root.validate(p, walk=True)
+        root.validate(p)
 
         # no scans entries
         p = Param()
@@ -286,7 +286,7 @@ class EvalDescriptorTest(unittest.TestCase):
         p.scans.scan03 = Param()
         p.scans.scan03.energy = 3.14 * 2
         p.scans.scan03.comment = 'second scan'
-        out = root.check(p, walk=True)
+        out = root.check(p)
         assert out['scans.scan02']['type'] == CODES.INVALID
 
         # a bad entry within a scan
@@ -300,7 +300,7 @@ class EvalDescriptorTest(unittest.TestCase):
         p.scans.scan02.energy = 3.14 * 2
         p.scans.scan02.comment = 'second scan'
         p.scans.scan02.badparameter = 'not good'
-        out = root.check(p, walk=True)
+        out = root.check(p)
         assert out['scans.scan02']['badparameter'] == CODES.INVALID
 
     def test_parse_doc_symlinks(self):
@@ -381,14 +381,14 @@ class EvalDescriptorTest(unittest.TestCase):
         p.engines.engine02 = Param()
         p.engines.engine02.name = 'ML'
         p.engines.engine02.numiter = 10
-        root.validate(p, walk=True)
+        root.validate(p)
 
         # no name
         p = Param()
         p.engines = Param()
         p.engines.engine01 = Param()
         p.engines.engine01.numiter = 10
-        out = root.check(p, walk=True)
+        out = root.check(p)
         assert out['engines.engine01']['symlink'] == CODES.INVALID
 
         # wrong name
@@ -397,7 +397,7 @@ class EvalDescriptorTest(unittest.TestCase):
         p.engines.engine01 = Param()
         p.engines.engine01.name = 'ePIE'
         p.engines.engine01.numiter = 10
-        out = root.check(p, walk=True)
+        out = root.check(p)
         assert out['engines.engine01']['symlink'] == CODES.INVALID
 
 
