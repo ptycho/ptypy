@@ -75,7 +75,7 @@ DEFAULT = u.Param(
     # All information about the object
     sample=u.Param(),
     # Geometry of experiment - most of it provided by data
-    geometry=geometry.DEFAULT.copy(),
+    geometry=geometry.Geo.DEFAULT.copy(),
     xy=u.Param(),
     # Information on scanning parameters to yield position arrays
     # If positions are provided by the DataScan object, set xy.scan_type to None
@@ -186,7 +186,7 @@ class ScanModel(object):
             geo = self.p.geometry
 
             # FIXME: User should be informed of the final geometry parameters.
-            for key in geometry.DEFAULT.keys():
+            for key in geometry.Geo.DEFAULT.keys():
                 if geo.get(key) is None or not (geo.precedence == 'meta'):
                     mk = self.meta.get(key)
                     if mk is not None:  # None existing key or None values in meta dict are treated alike

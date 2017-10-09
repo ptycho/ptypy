@@ -28,12 +28,15 @@ if __name__ == "__main__":
     from ptypy import io
     from ptypy.core import geometry
     from ptypy.utils.verbose import logger, log, headerline
+    from ptypy.utils.descriptor import defaults_tree
+
 else:
     from .. import utils as u
     from .. import io
     from .. import resources
     from ..utils.verbose import logger, log, headerline
     import geometry
+    from ..utils.descriptor import defaults_tree
 
 PTYD = dict(
     # frames, positions
@@ -59,47 +62,17 @@ META = dict(
     distance=None,
 )
 
-GENERIC = u.Param(
-    # Filename (e.g. 'foo.ptyd')
-    dfile=None,
-    # Format for chunk file appendix.
-    chunk_format='.chunk%02d',
-    # 2-tuple or int for the desired fina frame size
-    # roi=None,
-    # Saving option: None, 'merge', 'append', 'extlink'
-    save=None,
-    # Auto center: if False, no automatic center, None only
-    # if center is None, True it will be enforced
-    auto_center=None,
-    # Parallel loading: None, 'data', 'common', 'all'
-    load_parallel='data',
-    # Rebin diffraction data
-    rebin=None,
-    # Switching orientation : None, int or 3-tuple switch
-    # Actions are (transpose, invert rows, invert cols)
-    orientation=None,
-    # Minimum number of frames of one chunk if not at end of scan
-    min_frames=1,
-    # Theoretical position list (This input parameter may get deprecated)
-    positions_theory=None,
-    # Total number of frames to be prepared
-    num_frames=None,
-    recipe={},
-)
-""" Default data parameters. See :py:data:`.scan.data`
-    and a short listing below """
-
-GENERIC.update(META)
-
 WAIT = 'msg1'
 EOS = 'msgEOS'
 CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
          EOS: 'End of scan reached'}
 
 
-__all__ = ['GENERIC', 'PtyScan', 'PTYD', 'PtydScan',
+__all__ = ['PtyScan', 'PTYD', 'PtydScan',
            'MoonFlowerScan', 'makePtyScan']
 
+
+@defaults_tree.parse_doc('scan.data')
 class PtyScan(object):
     """
     PtyScan: A single ptychography scan, created on the fly or read from file.
@@ -113,9 +86,177 @@ class PtyScan(object):
      - On-the-fly support in form of chunked data.
      - mpi capable, child classes should not worry about mpi
 
+    Default data parameters. See :py:data:`.scan.data`
+    Defaults:
+
+    [dfile]
+    type = file
+    default = None
+    help = Prepared data file path
+    doc = If source was ``None`` or ``'file'``, data will be loaded from this file and processing as
+      well as saving is deactivated. If source is the name of an experiment recipe or path to a
+      file, data will be saved to this file
+    userlevel = 0
+
+    [chunk_format]
+    type = str
+    default = .chunk%02d
+    help = Appendix to saved files if save == 'link'
+    doc =
+    userlevel = 2
+
+    [save]
+    type = str
+    default = None
+    help = Saving mode
+    doc = Mode to use to save data to file.
+       - ``None``: No saving
+       - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
+       - ``'append'``: appends each chunk in master \*.ptyd file
+       - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
+      in the path given by the link. Links file paths are relative to master file.
+    userlevel = 1
+
+    [auto_center]
+    type = bool
+    default = None
+    help = Determine if center in data is calculated automatically
+    doc =  - ``False``, no automatic centering
+       - ``None``, only if :py:data:`center` is ``None``
+       - ``True``, it will be enforced
+    userlevel = 0
+
+    [load_parallel]
+    type = str
+    default = data
+    help = Determines what will be loaded in parallel
+    doc = Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
+
+    [rebin]
+    type = int
+    default = None
+    help = Rebinning factor
+    doc = Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
+    userlevel = 1
+    lowlim = 1
+    uplim = 8
+
+    [orientation]
+    type = int, tuple
+    default = None
+    help = Data frame orientation
+    doc =  - ``None`` or ``0``: correct orientation
+       - ``1``: invert columns (numpy.flip_lr)
+       - ``2``: invert columns, invert rows
+       - ``3``: invert rows  (numpy.flip_ud)
+       - ``4``: transpose (numpy.transpose)
+       - ``4+i``: tranpose + other operations from above
+      Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, do_flipud,
+      do_fliplr)``
+    userlevel = 1
+
+    [min_frames]
+    type = int
+    default = 1
+    help = Minimum number of frames loaded by each node
+    doc =
+    userlevel = 2
+
+    [positions_theory]
+    type = ndarray
+    default = None
+    help = Theoretical positions for this scan
+    doc = If provided, experimental positions from :any:`PtyScan` subclass will be ignored. If data
+      preparation is called from Ptycho instance, the calculated positions from the
+      :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
+    userlevel = 2
+
+    [num_frames]
+    type = int
+    default = None
+    help = Maximum number of frames to be prepared
+    doc = If `positions_theory` are provided, num_frames will be ovverriden with the number of
+      positions available
+    userlevel = 1
+
+    [recipe]
+    type = Param
+    default =
+    help = Data preparation recipe container
+    doc = Will be deprecated soon.
+
+    [source]
+    type = file
+    default = None
+    help = Describes where to get the data from.
+    doc = Accepted values are:
+       - ``'file'``: data will be read from a .ptyd file.
+       - any valid recipe name: data will be prepared using the recipe.
+       - ``'sim'`` : data will be simulated according to parameters in simulation
+    userlevel = 0
+
+    [label]
+    type = str
+    default = None
+    help = The scan label
+    doc = Unique string identifying the scan
+    userlevel = 1
+
+    [shape]
+    type = int, tuple
+    default = None
+    help = Shape of the region of interest cropped from the raw data.
+    doc = Cropping dimension of the diffraction frame
+      Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
+    userlevel = 1
+
+    [center]
+    type = tuple
+    default = None
+    help = Center (pixel) of the optical axes in raw data
+    doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
+    userlevel = 1
+
+    [psize]
+    type = float, tuple
+    default = None
+    help = Detector pixel size
+    doc = Dimensions of the detector pixels (in meters)
+    userlevel = 0
+    lowlim = 0
+
+    [distance]
+    type = float
+    default = None
+    help = Sample-to-detector distance
+    doc = In meters.
+    userlevel = 0
+    lowlim = 0
+
+    [energy]
+    type = float
+    default = None
+    help = Photon energy of the incident radiation
+    doc =
+    userlevel = 0
+    lowlim = 0
+
+    [experimentID]
+    type = str
+    default = None
+    help = Name of the experiment
+    doc = If None, a default value will be provided by the recipe. **unused**
+    userlevel = 2
+
+    [version]
+    type = float
+    default = 0.1
+    help = TODO: Explain this and decide if it is a user parameter.
+    doc =
+    userlevel = 2
+
     """
 
-    DEFAULT = GENERIC.copy()
     WAIT = WAIT
     EOS = EOS
     CODES = CODES
@@ -123,7 +264,7 @@ class PtyScan(object):
     def __init__(self, pars=None, **kwargs):
         # filename='./foo.ptyd', shape=None, save=True):
         """
-        Class creation with minimum set of parameters, see :py:data:`GENERIC`
+        Class creation with minimum set of parameters, see :py:data:`PtyScan.DEFAULT`
         Please note that class creation is not meant to load data.
 
         Call :py:data:`initialize` to begin loading and data file creation.
@@ -1150,7 +1291,6 @@ class PtydScan(PtyScan):
     """
     PtyScan provided by native "ptyd" file format.
     """
-    DEFAULT = GENERIC.copy()
 
     def __init__(self, pars=None, source=None, **kwargs):
         """
@@ -1355,8 +1495,8 @@ class MoonFlowerScan(PtyScan):
     illuminating flowers.
     """
 
-    DEFAULT = GENERIC.copy()
-    DEFAULT.update(geometry.DEFAULT.copy())
+    DEFAULT = PtyScan.DEFAULT.copy()
+    DEFAULT.update(geometry.Geo.DEFAULT.copy())
     RECIPE = u.Param(
         # Position distance in fraction of illumination frame
         density=0.2,
@@ -1368,7 +1508,7 @@ class MoonFlowerScan(PtyScan):
         """
         Parent pars are for the
         """
-        p = geometry.DEFAULT.copy()
+        p = geometry.Geo.DEFAULT.copy()
         if pars is not None:
             p.update(pars)
 

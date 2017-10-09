@@ -110,17 +110,22 @@ class Ptycho(Base):
     help = Start an ipython kernel for debugging
     doc = Start an ipython kernel for debugging.
 
-    [scan]
+    [scans]
     default = None
     type = Param
     help = Container for instances of scan parameters
-    doc = Container for instances of scan parameters.
+    doc =
+
+    [scans.*]
+    default = @scan
+    type = @scan
+    help = Wildcard entry for list of scans to load
 
     [engines]
     default = None
     type = Param
     help = Container for instances of engine parameters
-    doc = Container for instances of engine parameters.
+    doc =
 
     [engines.*]
     default = @engine.DM
@@ -224,11 +229,17 @@ class Ptycho(Base):
       reconstruction.
     type = bool
 
+    [scan]
+    default = None
+    type = Param
+    help = Container for instances of scan parameters
+    doc =
+
     [engine]
     default = None
     type = Param
     help = Default engine parameters
-    doc = Default engine parameters.
+    doc =
 
     """
 
