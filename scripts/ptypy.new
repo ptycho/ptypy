@@ -3,15 +3,21 @@
 import sys
 import argparse
 
-parser = argparse.ArgumentParser(description='Creates a new ptypy script from defaults.')
+class MoreGentleParser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write('error: %s\n\n' % message)
+        self.print_help()
+        sys.exit(2)
+
+parser = MoreGentleParser(description='Creates a new ptypy reconstruction script from defaults.')
 parser.add_argument('pyfile', type=str, 
-                   help='file path of target .py scriptfile, existing file will be overriden')
+                   help='target .py script file, existing files will be overrwritten')
 parser.add_argument('-u','--user-level', dest='ulevel', type=int, default=0,
                    help='use parameters up to this complexity level (0--2)')
 parser.add_argument('--short-doc', dest='sdoc', action='store_true',
-                   help='include short doc as comment')
+                   help='include help info as inline comments')
 parser.add_argument('--long-doc', dest='ldoc', action='store_true',
-                   help='include extended doc as comment')
+                   help='include both help and doc info')
 pars = parser.parse_args()
 
 from ptypy import utils as u
