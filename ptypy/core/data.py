@@ -327,9 +327,6 @@ class PtyScan(object):
         self._flags = np.array([0, 0, 0], dtype=int)
         self.is_initialized = False
 
-        # post init method call
-        self.post_init()
-
     def prepare_geo(self):
         """
         **Override in subclass for custom implementation**
@@ -600,13 +597,6 @@ class PtyScan(object):
 
         Use this method to benefit from 'hard-to-retrieve but now available'
         information after initialize.
-        """
-        pass
-
-    def post_init(self):
-        """
-        Placeholder. Called at the end of construction by all
-        processes.
         """
         pass
 
