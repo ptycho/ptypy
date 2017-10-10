@@ -46,7 +46,8 @@ _old2new = u.Param(
     origin_sam='origin',
 )
 
-@defaults_tree.parse_doc('scan.data.geometry')
+
+@defaults_tree.parse_doc('scan.model.geometry')
 class Geo(Base):
     """
     Hold and keep consistent the information about experimental parameters.
@@ -161,13 +162,9 @@ class Geo(Base):
             if the key exists in `Geo.DEFAULT`.
         """
         super(Geo, self).__init__(owner, ID)
-        # if len(kwargs)>0:
-        #     self._initialize(**kwargs)
-
-    # def _initialize(self, pars=None, **kwargs):
 
         # Starting parameters
-        p = u.Param(self.DEFAULT)
+        p = self.DEFAULT.copy(99)
         if pars is not None:
             p.update(pars)
             for k, v in p.items():

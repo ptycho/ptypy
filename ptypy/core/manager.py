@@ -181,16 +181,8 @@ class ScanModel(object):
 
         # Prepare the scan geometry if not already done.
         if not self.geometries:
-            # Check if meta and scan geometry agree
             self.geometries = []
-            geo = self.p.geometry
-
-            # FIXME: User should be informed of the final geometry parameters.
-            for key in geometry.Geo.DEFAULT.keys():
-                if geo.get(key) is None or not (geo.precedence == 'meta'):
-                    mk = self.meta.get(key)
-                    if mk is not None:  # None existing key or None values in meta dict are treated alike
-                        geo[key] = mk
+            geo = self.ptyscan.geometry
 
             # The multispectral case will have multiple geometries
             for ii, fac in enumerate(self.p.coherence.energies):

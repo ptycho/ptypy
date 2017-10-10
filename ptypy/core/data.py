@@ -49,15 +49,6 @@ PTYD = dict(
 )
 """ Basic Structure of a .ptyd datafile """
 
-METAKEYS = {'label': 'label',
-            'experimentID': 'experimentID',
-            'version': 'version',
-            'shape': 'geometry.shape',
-            'psize': 'geometry.psize',
-            'energy': 'geometry.energy',
-            'center': 'geometry.center',
-            'distance': 'geometry.distance'}
-""" Keys to store in meta param """
 
 WAIT = 'msg1'
 EOS = 'msgEOS'
@@ -199,45 +190,6 @@ class PtyScan(object):
     doc = Unique string identifying the scan
     userlevel = 1
 
-    [shape]
-    type = int, tuple
-    default = None
-    help = Shape of the region of interest cropped from the raw data.
-    doc = Cropping dimension of the diffraction frame
-      Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-    userlevel = 1
-
-    [center]
-    type = tuple
-    default = None
-    help = Center (pixel) of the optical axes in raw data
-    doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-    userlevel = 1
-
-    [psize]
-    type = float, tuple
-    default = None
-    help = Detector pixel size
-    doc = Dimensions of the detector pixels (in meters)
-    userlevel = 0
-    lowlim = 0
-
-    [distance]
-    type = float
-    default = None
-    help = Sample-to-detector distance
-    doc = In meters.
-    userlevel = 0
-    lowlim = 0
-
-    [energy]
-    type = float
-    default = None
-    help = Photon energy of the incident radiation
-    doc =
-    userlevel = 0
-    lowlim = 0
-
     [experimentID]
     type = str
     default = None
@@ -252,11 +204,52 @@ class PtyScan(object):
     doc =
     userlevel = 2
 
+    [shape]
+    type = int, tuple
+    default = 256
+    help = Shape of the region of interest cropped from the raw data.
+    doc = Cropping dimension of the diffraction frame
+      Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
+    userlevel = 1
+
+    [center]
+    type = tuple
+    default = 'fftshift'
+    help = Center (pixel) of the optical axes in raw data
+    doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
+    userlevel = 1
+
+    [psize]
+    type = float, tuple
+    default = 0.000172
+    help = Detector pixel size
+    doc = Dimensions of the detector pixels (in meters)
+    userlevel = 0
+    lowlim = 0
+
+    [distance]
+    type = float
+    default = 7.19
+    help = Sample-to-detector distance
+    doc = In meters.
+    userlevel = 0
+    lowlim = 0
+
+    [energy]
+    type = float
+    default = 7.2
+    help = Photon energy of the incident radiation in keV
+    doc =
+    userlevel = 0
+    lowlim = 0
     """
 
     WAIT = WAIT
     EOS = EOS
     CODES = CODES
+
+    METAKEYS = ['label', 'experimentID', 'version', 'shape', 'psize', 'energy', 'center', 'distance']
+    """ Keys to store in meta param """
 
     def __init__(self, pars=None, **kwargs):
         # filename='./foo.ptyd', shape=None, save=True):
@@ -322,7 +315,10 @@ class PtyScan(object):
         self.save = self.info.save
 
         # Construct meta
-        self.meta = u.Param({k: self.info[v] for k, v in METAKEYS.items()})
+        self.meta = u.Param({k: self.info[k] for k in self.METAKEYS})
+
+        # Construct geometry
+        self.prepare_geo()
 
         self.orientation = self.info.orientation
         self.rebin = self.info.rebin
@@ -333,6 +329,21 @@ class PtyScan(object):
 
         # post init method call
         self.post_init()
+
+    def prepare_geo(self):
+        """
+        **Override in subclass for custom implementation**
+
+        *Called in* :py:meth:`__init__`
+
+        Prepare geometry parameters (stores them in self.geometry. The base-class implementation should
+        work in most 2D cases but is likely to need to be reimplemented for 'exotic' flavors of ptychography.
+        """
+        self.geometry = geometry.Geo.DEFAULT.copy(99)
+        for k in self.geometry:
+            if k in self.meta:
+                self.geometry[k] = self.meta[k]
+        return
 
     def initialize(self):
         """
@@ -1273,11 +1284,7 @@ class PtydScan(PtyScan):
         :param pars: Input like PtyScan
         """
         # Create parameter set
-        p = u.Param(self.DEFAULT.copy())
-
-        # Copy the label
-        # if pars is not None:
-        #    p.label = pars.get('label')
+        p = self.DEFAULT.copy(99)
 
         if source is None or str(source) == 'file':
             # This is the case of absolutely no additional work
