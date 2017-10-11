@@ -131,6 +131,7 @@ class Ptycho(Base):
     default = @engine.DM
     type = [@engine.DM, @engine.ML, @engine.ePIE]
     help = Wildcard entry for list of engines to run
+    doc = The value of engines.*.name is used to choose among the available engines.
 
     [io]
     default = None
@@ -234,6 +235,12 @@ class Ptycho(Base):
     type = Param
     help = Container for instances of scan parameters
     doc =
+
+    [model]
+    default =
+    type = [@scanmodel.Vanilla, @scanmodel.Full]
+    help = Physical scan model
+    doc = The value of model.name is used to choose among the available models.
 
     [engine]
     default = None

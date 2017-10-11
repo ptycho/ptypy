@@ -29,74 +29,140 @@ from classes import *
 from classes import DEFAULT_ACCESSRULE
 from classes import MODEL_PREFIX
 from ..utils import parallel
+from ..utils.descriptor import defaults_tree
 
 # Please set these globally later
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['DEFAULT', 'ModelManager', 'ScanModel']
-
-DESCRIPTION = u.Param()
-
-DEFAULT_coherence = u.Param(
-    # Number of mutually spatially incoherent probes per diffraction pattern
-    num_probe_modes=1,
-    # Number of mutually spatially incoherent objects per diffraction pattern
-    num_object_modes=1,
-    energies=[1.0],
-    # List of energies / wavelength relative to mean energy / wavelength
-    spectrum=[1.0],
-    # If True, the same probe is used for all energies
-    probe_dispersion=None,
-    # If True, the same object is used for all energies
-    object_dispersion=None
-)
-
-DEFAULT_sharing = u.Param(
-    # (69) number of scans per object
-    # scan_per_probe = 1,
-    # (70) number of scans per probe
-    # scan_per_object = 1,
-    # (71) `scan_label` of scan for the shared object
-    object_share_with=None,
-    # (72) contribution to the shared object
-    object_share_power=1,
-    # (73) `scan_label` of scan for the shared probe
-    probe_share_with=None,
-    # (74) contribution to the shared probe
-    probe_share_power=1,
-    # Empty Probe sharing switch
-    EP_sharing=False,
-)
-
-DEFAULT = u.Param(
-    # All information about the probe
-    illumination=u.Param(),
-    # All information about the object
-    sample=u.Param(),
-    # Geometry of experiment - most of it provided by data
-    geometry=geometry.Geo.DEFAULT.copy(),
-    xy=u.Param(),
-    # Information on scanning parameters to yield position arrays
-    # If positions are provided by the DataScan object, set xy.scan_type to None
-    coherence=DEFAULT_coherence.copy(),
-    sharing=DEFAULT_sharing.copy(),
-    # if_conflict_use_meta=False,
-    # Take geometric and position information from incoming meta_data
-    # if possible parameters are specified both in script and in meta data
-    # source=None,
-    # For now only used to declare an empty scan
-    tags="",
-)
+__all__ = ['ModelManager', 'ScanModel']
 
 NO_DATA_FLAG = 'No data'
 
+@defaults_tree.parse_doc('scanmodel.Full')
 class ScanModel(object):
     """
     Manage a single scan model (data, illumination, geometry, ...)
-    """
 
-    DEFAULT = DEFAULT
+    Defaults:
+
+    [tags]
+    default = ['dummy']
+    help = Comma seperated string tags describing the data input
+    doc = [deprecated?]
+    type = list
+    userlevel = 2
+
+    [sharing]
+    default = 
+    help = Scan sharing options
+    doc = 
+    type = Param
+    userlevel = 
+
+    [sharing.object_share_with]
+    default = None
+    help = Label or index of scan to share object with.
+    doc = Possible values:
+       - ``None``: Do not share
+       - *(string)*: Label of the scan to share with
+       - *(int)*: Index of scan to share with
+    type = str
+    userlevel = 1
+
+    [sharing.object_share_power]
+    default = 1
+    help = Relative power for object sharing
+    doc = 
+    type = float
+    userlevel = 1
+    lowlim = 0
+
+    [sharing.probe_share_with]
+    default = None
+    help = Label or index of scan to share probe with.
+    doc = Possible values:
+       - ``None``: Do not share
+       - *(string)*: Label of the scan to share with
+       - *(int)*: Index of scan to share with
+    type = str
+    userlevel = 1
+
+    [sharing.probe_share_power]
+    default = 1
+    help = Relative power for probe sharing
+    doc = 
+    type = float
+    userlevel = 1
+    lowlim = 0
+
+    [sharing.EP_sharing]
+    type = bool
+    default = False
+    help = Empty probe sharing switch
+    doc =
+
+    [coherence]
+    default = 
+    help = Coherence parameters
+    doc = 
+    type = Param
+    userlevel = 
+    lowlim = 0
+
+    [coherence.num_probe_modes]
+    default = 1
+    help = Number of probe modes
+    doc = 
+    type = int
+    userlevel = 0
+    lowlim = 0
+
+    [coherence.num_object_modes]
+    default = 1
+    help = Number of object modes
+    doc = 
+    type = int
+    userlevel = 0
+    lowlim = 0
+
+    [coherence.energies]
+    default = [1.0]
+    type = list
+    help = ?
+    doc = ?
+
+    [coherence.spectrum]
+    default = [1.0]
+    help = Amplitude of relative energy bins if the probe modes have a different energy
+    doc = 
+    type = list
+    userlevel = 2
+    lowlim = 0
+
+    [coherence.object_dispersion]
+    default = None
+    help = Energy dispersive response of the object
+    doc = One of:
+       - ``None`` or ``'achromatic'``: no dispersion
+       - ``'linear'``: linear response model
+       - ``'irregular'``: no assumption
+      **[not implemented]**
+    type = str
+    userlevel = 2
+
+    [coherence.probe_dispersion]
+    default = None
+    help = Energy dispersive response of the probe
+    doc = One of:
+       - ``None`` or ``'achromatic'``: no dispersion
+       - ``'linear'``: linear response model
+       - ``'irregular'``: no assumption
+      **[not implemented]**
+    type = str
+    userlevel = 2
+
+    """
 
     def __init__(self, ptycho=None, specific_pars=None, generic_pars=None, label=None):
         """
@@ -114,7 +180,8 @@ class ScanModel(object):
         from .. import experiment
 
         # Update parameter structure
-        p = u.Param(self.DEFAULT.copy())
+        # Load default parameter structure
+        p = self.DEFAULT.copy(99)
         p.update(generic_pars, in_place_depth=4)
         p.update(specific_pars, in_place_depth=4)
         self.p = p
@@ -391,7 +458,7 @@ class ModelManager(object):
     in two classes is more history than reason and these classes may get
     merged in future releases
     """
-    DEFAULT = DEFAULT
+    DEFAULT = ScanModel.DEFAULT
     """ Default scan parameters. See :py:data:`.scan`
         and a short listing below """
 
