@@ -249,7 +249,10 @@ class ScanModel(object):
         # Prepare the scan geometry if not already done.
         if not self.geometries:
             self.geometries = []
-            geo = self.ptyscan.geometry
+            geo = geometry.Geo.DEFAULT.copy(99)
+            for k in geo:
+                if k in self.ptyscan.meta:
+                    geo[k] = self.ptyscan.meta[k]
 
             # The multispectral case will have multiple geometries
             for ii, fac in enumerate(self.p.coherence.energies):

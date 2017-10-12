@@ -317,30 +317,12 @@ class PtyScan(object):
         # Construct meta
         self.meta = u.Param({k: self.info[k] for k in self.METAKEYS})
 
-        # Construct geometry
-        self.prepare_geo()
-
         self.orientation = self.info.orientation
         self.rebin = self.info.rebin
 
         # Initialize flags
         self._flags = np.array([0, 0, 0], dtype=int)
         self.is_initialized = False
-
-    def prepare_geo(self):
-        """
-        **Override in subclass for custom implementation**
-
-        *Called in* :py:meth:`__init__`
-
-        Prepare geometry parameters (stores them in self.geometry. The base-class implementation should
-        work in most 2D cases but is likely to need to be reimplemented for 'exotic' flavors of ptychography.
-        """
-        self.geometry = geometry.Geo.DEFAULT.copy(99)
-        for k in self.geometry:
-            if k in self.meta:
-                self.geometry[k] = self.meta[k]
-        return
 
     def initialize(self):
         """
