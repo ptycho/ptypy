@@ -645,8 +645,21 @@ class EvalDescriptor(ArgParseDescriptor):
 
     @property
     def is_symlink(self):
+        """
+        True if type/default are symlinks.
+        """
         types = self.options.get('type', '')
         return '@' in types
+
+    @property
+    def is_target(self):
+        """
+        True if parent of symlink targets.
+        """
+        for n, d in self.root.descendants:
+            if d.is_symlink and d.type[0].path.split(self.separator, 1)[0] == self.name:
+                return True
+        return False
 
     @property
     def type(self):
