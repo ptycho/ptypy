@@ -129,7 +129,7 @@ class Ptycho(Base):
 
     [engines.*]
     default = @engine.DM
-    type = @engine.DM, @engine.ML, @engine.ePIE
+    type = @engine.*
     help = Wildcard entry for list of engines to run
     doc = The value of engines.*.name is used to choose among the available engines.
 

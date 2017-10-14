@@ -656,8 +656,10 @@ class EvalDescriptor(ArgParseDescriptor):
         """
         True if parent of symlink targets.
         """
+        if self.parent is not self.root:
+            return False
         for n, d in self.root.descendants:
-            if d.is_symlink and d.type[0].path.split(self.separator, 1)[0] == self.name:
+            if d.is_symlink and d.type[0].path.startswith(self.name):
                 return True
         return False
 
@@ -672,7 +674,12 @@ class EvalDescriptor(ArgParseDescriptor):
             types = [tm[x.strip()] if x.strip() in tm else x.strip() for x in types.split(',')]
             # symlinks
             if types[0].startswith('@'):
-                types = [self.get(t[1:]) for t in types]
+                # wildcard in symlink: needed to grab dynamically added entries
+                if types[0].endswith('.*'):
+                    parent = self.get(types[0][1:-2])
+                    types = [c for n, c in parent.children.items()]
+                else:
+                    types = [self.get(t[1:]) for t in types]
         return types
 
     @property
