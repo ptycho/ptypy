@@ -98,7 +98,7 @@ def remove_mod_docstring(app, what, name, obj, options, lines):
                 newstr = newstr.split('`')[1]
                 newstr = newstr.replace('~', '')
                 #print newstr, what, name, options
-                pd = u.validator.entry_points_dct.get(newstr,None)
+                pd = u.descriptor.defaults_tree.get(newstr)
                 break
                 
         if pd is not None:
