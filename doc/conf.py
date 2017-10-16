@@ -20,10 +20,13 @@ import os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 
-# generate paramters.rst from csv file and other rst
+# generate paramters.rst and other rst
 execfile('parameters2rst.py')
 execfile('tmp2rst.py')
 execfile('version.py')
+import subprocess
+subprocess.call(['python', 'script2rst.py'])  # We need this to have a clean sys.argv
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -68,7 +71,7 @@ def remove_mod_docstring(app, what, name, obj, options, lines):
                 #lines.append('\n\n')
 
     #if name.find('DEFAULT')>=0:
-    if isinstance(obj,u.Param) or isinstance(obj,dict):
+    if isinstance(obj, u.Param) or isinstance(obj, dict):
         keys = obj.keys()
         pd = None
         
@@ -91,16 +94,16 @@ def remove_mod_docstring(app, what, name, obj, options, lines):
         for l in lines:
             start = l.find(searchstr)
             if start > -1:
-                newstr= l[start:]
-                newstr=newstr.split('`')[1]
-                newstr=newstr.replace('~','')
+                newstr = l[start:]
+                newstr = newstr.split('`')[1]
+                newstr = newstr.replace('~', '')
                 #print newstr, what, name, options
                 pd = u.validator.entry_points_dct.get(newstr,None)
                 break
                 
         if pd is not None:
             #lines.append('Match with :py:data:`.%s` \n\n' %pd.entry_point)
-            get_refs(obj,pd,depth=2, indent = '')
+            get_refs(obj, pd, depth=2, indent='')
             #print lines
 
         
