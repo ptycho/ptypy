@@ -128,107 +128,107 @@ class Ptycho(Base):
     doc =
 
     [engines.*]
-    default = @engine.DM
     type = @engine.*
+    default = @engine.DM
     help = Wildcard entry for list of engines to run
     doc = The value of engines.*.name is used to choose among the available engines.
 
     [io]
     default = None
+    type = Param
     help = Global parameters for I/O
     doc = Global parameter container for I/O settings.
-    type = Param
 
     [io.home]
     default = "./"
+    type = str
     help = Base directory for all I/O
     doc = home is the root directory for all input/output operations. All other path parameters that
       are relative paths will be relative to this directory.
-    type = dir
 
     [io.rfile]
     default = "recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr"
+    type = str
     help = Reconstruction file name (or format string)
     doc = Reconstruction file name or format string (constructed against runtime dictionary)
-    type = str
 
     [io.autosave]
     default = None
+    type = Param
     help = Auto-save options
     doc = Options for automatic saving during reconstruction.
-    type = Param
 
     [io.autosave.active]
     default = True
+    type = bool
     help = Activation switch
     doc = If ``True`` the current reconstruction will be saved at regular intervals. **unused**
-    type = bool
 
     [io.autosave.interval]
     default = 10
+    type = int
     help = Auto-save interval
     doc = If ``>0`` the current reconstruction will be saved at regular intervals according to the
       pattern in :py:data:`paths.autosave` . If ``<=0`` not automatic saving
-    type = int
     lowlim = -1
 
     [io.autosave.rfile]
     default = "dumps/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr"
+    type = str
     help = Auto-save file name (or format string)
     doc = Auto-save file name or format string (constructed against runtime dictionary)
-    type = str
 
     [io.autoplot]
     default = None
+    type = Param
     help = Plotting client parameters
     doc = In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
-    type = Param
 
     [io.autoplot.imfile]
     default = "plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png"
+    type = str
     help = Plot images file name (or format string)
     doc = Plot images file name (or format string).
-    type = str
     userlevel = 1
 
     [io.autoplot.interval]
     default = 1
+    type = int
     help = Number of iterations between plot updates
     doc = Requests to the server will happen with this iteration intervals. Note that this will work
       only if interaction.polling_interval is smaller or equal to this number. If ``interval
       =0`` plotting is disabled which should be used, when ptypy is run on a cluster.
-    type = int
     lowlim = -1
 
     [io.autoplot.threaded]
     default = True
+    type = bool
     help = Live plotting switch
     doc = If ``True``, a plotting client will be spawned in a new thread and connected at
       initialization. If ``False``, the master node will carry out the plotting, pausing the
       reconstruction. This option should be set to ``True`` when ptypy is run on an isolated
       workstation.
-    type = bool
 
     [io.autoplot.layout]
     default = None
+    type = str, Param
     help = Options for default plotter or template name
     doc = Flexible layout for default plotter is not implemented yet. Please choose one of the
       templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``
-    type = str, Param
     userlevel = 2
 
     [io.autoplot.dump]
     default = False
+    type = bool
     help = Switch to dump plots as image files
     doc = Switch to dump plots as image files during reconstruction.
-    type = bool
 
     [io.autoplot.make_movie]
     default = False
+    type = bool
     help = Produce reconstruction movie after the reconstruction.
     doc = Switch to request the production of a movie from the dumped plots at the end of the
       reconstruction.
-    type = bool
 
     [scan]
     default = None

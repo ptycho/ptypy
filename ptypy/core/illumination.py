@@ -63,73 +63,67 @@ class DummyClass(object):
     userlevel = 2
 
     [aperture.form]
-    help = One of None, 'rect' or 'circ'
     default = circ
+    type = None, str
+    help = One of None, 'rect' or 'circ'
     doc = One of:
     	 - ``None`` : no aperture, this may be useful for nearfield
     	 - ``'rect'`` : rectangular aperture
     	 - ``'circ'`` : circular aperture
     choices = None,'rect','circ'
     userlevel = 2
-    type = None
 
     [aperture.offset]
-    help = Offset between center of aperture and optical axes
     default = 0.
+    type = float, tuple
+    help = Offset between center of aperture and optical axes
     doc = May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset
     userlevel = 2
-    type = float, tuple
 
     [aperture.size]
-    lowlim = 0.
-    help = Aperture width or diameter
     default = None
-    doc = May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture 
-    userlevel = 0
     type = float
+    help = Aperture width or diameter
+    doc = May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture
+    lowlim = 0.
+    userlevel = 0
 
     [diversity]
-    default =
+    default = None
+    type = Param, None
     help = Probe mode(s) diversity parameters
     doc = Can be ``None`` i.e. no diversity
-    validity = 
-    choices = 
-    uplim = 
-    userlevel = 
-    type = Param
+    userlevel = 1
 
     [diversity.noise]
-    lowlim = 
-    help = Noise in the generated modes of the illumination 
     default = None
+    type = tuple
+    help = Noise in the generated modes of the illumination
     doc = Can be either:
     	 - ``None`` : no noise
     	 - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
     	 - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
-    validity = 
-    choices = 
-    uplim = 
     userlevel = 1
-    type = tuple
 
     [diversity.power]
-    lowlim = 0.0
-    help = Power of modes relative to main mode (zero-layer)
     default = 0.1
-    uplim = 1.0
-    userlevel = 1
     type = tuple, float
+    help = Power of modes relative to main mode (zero-layer)
+    uplim = 1.0
+    lowlim = 0.0
+    userlevel = 1
 
     [diversity.shift]
-    help = Lateral shift of modes relative to main mode
     default = None
+    type = float
+    help = Lateral shift of modes relative to main mode
     doc = **[not implemented]**
     userlevel = 2
-    type = float
 
     [model] 
-    help = Type of illumination model
     default = None
+    type = str
+    help = Type of illumination model
     doc = One of:
     	 - ``None`` : model initialitziation defaults to flat array filled with the specified number of photons
     	 - ``'recon'`` : load model from previous reconstruction, see `recon` Parameters
@@ -139,15 +133,14 @@ class DummyClass(object):
     	
     	In script, you may pass a numpy.ndarray here directly as the model. It is considered as incoming wavefront and will be propagated according to `propagation` with an optional `aperture` applied before.
     userlevel = 0
-    type = str
 
     [photons]
-    lowlim = 0
-    help = Number of photons in the incident illumination
+    type = int, None
     default = None
+    help = Number of photons in the incident illumination
     doc = A value specified here will take precedence over calculated statistics from the loaded data.
+    lowlim = 0
     userlevel = 2
-    type = int
 
     [propagation]
     type = Param
@@ -156,54 +149,53 @@ class DummyClass(object):
     doc = Propagation to focus takes precedence to parallel propagation if `foccused` is not ``None``
 
     [propagation.antialiasing]
-    help = Antialiasing factor
     default = 1
+    type = float
+    help = Antialiasing factor
     doc = Antialiasing factor used when generating the probe. (numbers larger than 2 or 3 are memory hungry)
     	**[Untested]**
     userlevel = 2
-    type = float
 
     [propagation.focussed]
-    lowlim = 
-    help = Propagation distance from aperture to focus
     default = None
-    doc = If ``None`` or ``0`` : No focus propagation 
+    type = None, float
+    lowlim =
+    help = Propagation distance from aperture to focus
+    doc = If ``None`` or ``0`` : No focus propagation
     userlevel = 0
-    type = float
 
     [propagation.parallel]
-    help = Parallel propagation distance
     default = None
-    doc = If ``None`` or ``0`` : No parallel propagation 
+    type = None, float
+    help = Parallel propagation distance
+    doc = If ``None`` or ``0`` : No parallel propagation
     userlevel = 0
-    type = float
 
     [propagation.spot_size]
-    lowlim = 0
-    help = Focal spot diameter
     default = None
+    type = None, float
+    help = Focal spot diameter
     doc = If not ``None``, this parameter is used to generate the appropriate aperture size instead of :py:data:`size`
-    validity = foccussed is not None and foccused!=0
+    lowlim = 0
     userlevel = 1
-    type = float
 
     [recon]
-    help = Parameters to load from previous reconstruction
-    type = Param
     default =
+    type = Param
+    help = Parameters to load from previous reconstruction
 
     [recon.label]
-    help = Scan label of diffraction that is to be used for probe estimate
     default = None
-    doc = ``None``, own scan label is used
+    type = None, str
+    help = Scan label of diffraction that is to be used for probe estimate
+    doc = If ``None``, own scan label is used
     userlevel = 1
-    type = str
 
     [recon.rfile]
-    help = Path to a ``.ptyr`` compatible file
     default = \*.ptyr
+    type = str
+    help = Path to a ``.ptyr`` compatible file
     userlevel = 0
-    type = file
     """
     pass
 

@@ -841,7 +841,7 @@ class EvalDescriptor(ArgParseDescriptor):
         A dictionary report using CODES values.
 
         """
-        out = {}
+        out = OrderedDict()
         for res in self._walk(depth=depth, pars=pars):
             # Switch through all possible statuses
             if res['status'] == 'ok':
@@ -850,12 +850,20 @@ class EvalDescriptor(ArgParseDescriptor):
                 val = {'type': CODES.PASS}
                 if any([i in d._limtypes for i in d.type]):
                     lowlim, uplim = d.limits
-                    if lowlim is None:
-                        val['lowlim'] = CODES.UNKNOWN
+                    # if lowlim is None or pars[res['path']] is None:
+                    #    val['lowlim'] = CODES.UNKNOWN
+                    # else:
+                    #     val['lowlim'] = CODES.PASS if (pars[res['path']] >= lowlim) else CODES.FAIL
+                    # if uplim is None or pars[res['path']] is None:
+                    #     val['uplim'] = CODES.UNKNOWN
+                    # else:
+                    #     val['uplim'] = CODES.PASS if (pars[res['path']] <= uplim) else CODES.FAIL
+                    if lowlim is None or pars[res['path']] is None:
+                        val['lowlim'] = CODES.PASS
                     else:
                         val['lowlim'] = CODES.PASS if (pars[res['path']] >= lowlim) else CODES.FAIL
-                    if uplim is None:
-                        val['uplim'] = CODES.UNKNOWN
+                    if uplim is None or pars[res['path']] is None:
+                        val['uplim'] = CODES.PASS
                     else:
                         val['uplim'] = CODES.PASS if (pars[res['path']] <= uplim) else CODES.FAIL
                 out[res['path']] = val
