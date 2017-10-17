@@ -162,11 +162,12 @@ class ScanModel(object):
     type = str
     userlevel = 2
 
-    [geometry]
-    default = @geometry.Geo
-    type = @geometry.Geo
-    help = Geometric parameters
-    doc =
+    [propagation]
+    type = str
+    default = farfield
+    help = Propagation type
+    doc = Either "farfield" or "nearfield"
+    userlevel = 1
 
     """
 
@@ -217,7 +218,6 @@ class ScanModel(object):
         self.new_diff_views = None
         self.new_mask_views = None
 
-        self.meta = None
         self.geometries = []
         self.shape = None
         self.psize = None
@@ -225,7 +225,6 @@ class ScanModel(object):
         self.data_available = True
 
         self.frames_per_call = 100000
-        self.feed_format = 'dp'
 
     def new_data(self):
         """
@@ -238,7 +237,7 @@ class ScanModel(object):
             self.ptyscan.initialize()
 
         # Get data
-        dp = self.ptyscan.auto(self.frames_per_call, self.feed_format)
+        dp = self.ptyscan.auto(self.frames_per_call)
 
         self.data_available = (dp != data.EOS)
         logger.debug(u.verbose.report(dp))
@@ -246,24 +245,24 @@ class ScanModel(object):
         if dp == data.WAIT or not self.data_available:
             return None
 
-        # Store metadata
-        self.meta = dp['common']
-
         label = self.label
         logger.info('Importing data from scan %s.' % label)
 
         # Prepare the scan geometry if not already done.
         if not self.geometries:
             self.geometries = []
-            geo = geometry.Geo.DEFAULT.copy(99)
-            for k in geo:
-                if k in self.ptyscan.meta:
-                    geo[k] = self.ptyscan.meta[k]
+
+            # extract necessary info from the received data package
+            get_keys = ['distance', 'center', 'energy', 'psize', 'shape']
+            geo_pars = u.Param({key: dp['common'][key] for key in get_keys})
+
+            # add propagation info from this scan model
+            geo_pars.propagation = self.p.propagation
 
             # The multispectral case will have multiple geometries
             for ii, fac in enumerate(self.p.coherence.energies):
                 geoID = geometry.Geo._PREFIX + '%02d' % ii + label
-                g = geometry.Geo(self.ptycho, geoID, pars=geo)
+                g = geometry.Geo(self.ptycho, geoID, pars=geo_pars)
                 # now we fix the sample pixel size, This will make the frame size adapt
                 g.p.resolution_is_fix = True
                 # save old energy value:
@@ -274,7 +273,7 @@ class ScanModel(object):
                 self.geometries.append(g)
 
             # Store frame shape
-            self.shape = np.array(self.meta.get('shape', self.geometries[0].shape))
+            self.shape = np.array(dp['common'].get('shape', self.geometries[0].shape))
             self.psize = self.geometries[0].psize
 
         sh = self.shape
@@ -541,123 +540,9 @@ class ModelManager(object):
         inst.__dict__ = dct
         return inst
 
-
     @property
     def data_available(self):
         return any(s.data_available for s in self.scans.values())
-
-
-    def new_configure(self,dp):
-        """
-        Configures
-        """
-        parallel.barrier()
-
-        meta = dp['common']
-        label = meta['ptylabel']
-
-        # We expect a string for the label.
-        assert label == str(label)
-
-        logger.info('Importing data from %s as scan %s.'
-                    % (meta['label'], label))
-
-        # Prepare scan dictionary or dig up the already prepared one
-        scan = self.prepare_scan(label)
-        scan.meta = meta
-
-        sh = scan.meta['shape']
-        psize = scan.meta['psize']
-
-        # Storage generation if not already existing
-        if scan.get('diff') is None:
-            # This scan is brand new so we create storages for it
-            scan.diff = self.ptycho.diff.new_storage(
-                shape=(1, sh[-2], sh[-1]),
-                psize=geo.psize,
-                padonly=True,
-                layermap=None)
-
-        # Same for mask
-        if scan.get('mask') is None:
-            scan.mask = self.ptycho.mask.new_storage(
-                shape=(1, sh[-2], sh[-1]),
-                psize=geo.psize,
-                padonly=True,
-                layermap=None)
-
-    def new_data_package(self,scan,dp):
-        """
-        Receives and stores data chunk, emits records.
-        """
-        parallel.barrier()
-
-        # Buffer incoming data and evaluate if we got Nones in data
-        for dct in dp['iterable']:
-
-            active = dct['data'] is not None
-            index = dct['index']
-            sh = scan.meta['shape']
-            psize = scan.meta['psize']
-
-
-            dv = View(container=self.ptycho.diff,
-                      accessrule={'shape': sh,
-                                  'psize': psize,
-                                  'coord': 0.0,
-                                  'storageID': scan.diff.ID,
-                                  'layer': index,
-                                  'active': active})
-
-            diff_views.append(dv)
-
-            mv = View(container=self.ptycho.mask,
-                      accessrule={'shape': sh,
-                                  'psize': psize,
-                                  'coord': 0.0,
-                                  'storageID': scan.mask.ID,
-                                  'layer': index,
-                                  'active': active})
-
-            mask_views.append(mv)
-
-            pos = dct.get('position')
-            if pos is None:
-                logger.warning('No position set to scan point %d of scan %s'
-                               % (index, label))
-
-            positions.append(pos)
-
-        # Now we should have the right views to these storages. Let them
-        # reformat(), which creates the right sizes and the datalist access
-        scan.diff.reformat()
-        scan.mask.reformat()
-        # parallel.barrier()
-
-        for dct in dp['iterable']:
-            parallel.barrier()
-            if not dct['data'] is None:
-                continue
-
-            data = dct['data']
-            idx = dct['index']
-
-            scan.diff.data[scan.diff.layermap.index(idx)][:] = data
-            scan.mask.data[scan.mask.layermap.index(idx)][:] = dct.get(
-                'mask', np.ones_like(data))
-            # del dct['data']
-
-        scan.diff.nlayers = parallel.MPImax(scan.diff.layermap) + 1
-        scan.mask.nlayers = parallel.MPImax(scan.mask.layermap) + 1
-        # Empty iterable buffer
-        # scan.iterable = []
-        scan.new_positions = positions
-        scan.new_diff_views = diff_views
-        scan.new_mask_views = mask_views
-        scan.diff_views += diff_views
-        scan.mask_views += mask_views
-
-        self._update_stats(scan)
 
     def new_data(self):
         """

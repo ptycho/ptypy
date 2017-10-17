@@ -21,7 +21,7 @@ else:
     from .. import utils as u
     from ..utils.verbose import logger
     from classes import Base, GEO_PREFIX
-    from ..utils.descriptor import defaults_tree
+    from ..utils.descriptor import EvalDescriptor
 
 try:
     import pyfftw
@@ -47,7 +47,8 @@ _old2new = u.Param(
 )
 
 
-@defaults_tree.parse_doc('geometry.Geo')
+local_tree = EvalDescriptor('')
+@local_tree.parse_doc()
 class Geo(Base):
     """
     Hold and keep consistent the information about experimental parameters.

@@ -102,11 +102,11 @@ class MakeSamplePtydTest(unittest.TestCase):
         if u.parallel.master:
             msgs =[
                 # 30 frames
-                self.S1.auto(30, chunk_form='dp'),
+                self.S1.auto(30),
                 # should be 20 frames, but asked for hundred
-                self.S1.auto(100, chunk_form='dp'),
+                self.S1.auto(100),
                 # source depleted
-                self.S1.auto(100, chunk_form='dp')
+                self.S1.auto(100)
             ]
         u.parallel.barrier()
         S2 = self._create_PtydScan(save='append')

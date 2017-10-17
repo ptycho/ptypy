@@ -204,14 +204,49 @@ class PtyScan(object):
     doc =
     userlevel = 2
 
+    [shape]
+    type = int, tuple
+    default = 256
+    help = Shape of the region of interest cropped from the raw data.
+    doc = Cropping dimension of the diffraction frame
+      Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
+    userlevel = 1
+
+    [center]
+    type = tuple, str
+    default = 'fftshift'
+    help = Center (pixel) of the optical axes in raw data
+    doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
+    userlevel = 1
+
+    [psize]
+    type = float, tuple
+    default = 0.000172
+    help = Detector pixel size
+    doc = Dimensions of the detector pixels (in meters)
+    userlevel = 0
+    lowlim = 0
+
+    [distance]
+    type = float
+    default = 7.19
+    help = Sample to detector distance
+    doc = In meters.
+    userlevel = 0
+    lowlim = 0
+
+    [energy]
+    type = float
+    default = 7.2
+    help = Photon energy of the incident radiation in keV
+    doc =
+    userlevel = 0
+    lowlim = 0
     """
 
     WAIT = WAIT
     EOS = EOS
     CODES = CODES
-
-    METAKEYS = ['label', 'experimentID', 'version', 'shape', 'psize', 'energy', 'center', 'distance']
-    """ Keys to store in meta param """
 
     def __init__(self, pars=None, **kwargs):
         # filename='./foo.ptyd', shape=None, save=True):
@@ -275,9 +310,6 @@ class PtyScan(object):
         self.has_positions = None
         self.dfile = None
         self.save = self.info.save
-
-        # Construct meta
-        self.meta = u.Param({k: self.info[k] for k in self.METAKEYS})
 
         self.orientation = self.info.orientation
         self.rebin = self.info.rebin
@@ -655,7 +687,7 @@ class PtyScan(object):
                     altweight = self.weight2d
                 else:
                     try:
-                        altweight = self.meta.weight2d
+                        altweight = self.weight2d
                     except:
                         altweight = np.ones(dsh)
                 weights = dict.fromkeys(data.keys(), altweight)
@@ -789,14 +821,12 @@ class PtyScan(object):
                     data = dict(zip(indices.node, d))
                     weights = dict(zip(indices.node, w))
 
-            # Adapt meta info
-            self.meta.center = cen / float(self.rebin)
-            self.meta.shape = u.expect2(sh) / self.rebin
+            # Adapt geometric info
+            self.info.center = cen / float(self.rebin)
+            self.info.shape = u.expect2(sh) / self.rebin
 
             if self.info.psize is not None:
-                self.meta.psize = u.expect2(self.info.psize) * self.rebin
-            else:
-                self.meta.psize = None
+                self.info.psize = u.expect2(self.info.psize) * self.rebin
 
             # Prepare chunk of data
             chunk = u.Param()
@@ -811,7 +841,7 @@ class PtyScan(object):
                 chunk.weights = weights
             elif has_data:
                 chunk.weights = {}
-                self.meta.weight2d = weights.values()[0]
+                self.weight2d = weights.values()[0]
 
             # Slice positions from common if they are empty too
             if positions is None or len(positions) == 0:
@@ -834,22 +864,10 @@ class PtyScan(object):
                     [positions[k] for k in indices.chunk])
                 # Positions complete
 
-            # With first chunk we update meta
+            # With first chunk we update info
             if self.chunknum < 1:
-                """
-                for k, v in self.meta.items():
-                    # FIXME: I would like to avoid this "blind copying"
-                    # BE: This is not a blind copy as only keys
-                    # in META above are used
-                    if v is None:
-                        self.meta[k] = self.__dict__.get(k, self.info.get(k))
-                    else:
-                        self.meta[k] = v
-                self.meta['center'] = cen
-                """
-
                 if self.info.save is not None and parallel.master:
-                    io.h5append(self.dfile, meta=dict(self.meta))
+                    io.h5append(self.dfile, meta=dict(self.info))
 
                 parallel.barrier()
 
@@ -858,7 +876,7 @@ class PtyScan(object):
 
             return chunk
 
-    def auto(self, frames, chunk_form='dp'):
+    def auto(self, frames):
         """
         Repeated calls to this function will process the data.
 
@@ -866,9 +884,6 @@ class PtyScan(object):
         ----------
         frames : int
             Number of frames to process.
-
-        chunk_form : str
-            Currently only type data package 'dp' implemented
 
         Returns
         -------
@@ -890,7 +905,7 @@ class PtyScan(object):
             # del self.chunk
             return msg
         else:
-            out = self.return_chunk_as(msg, chunk_form)
+            out = self._make_data_package(msg)
             # save chunk
             if self.info.save is not None:
                 self._mpi_save_chunk(self.info.save, msg)
@@ -898,18 +913,15 @@ class PtyScan(object):
             del self.chunk
             return out
 
-    def return_chunk_as(self, chunk, kind='dp'):
+    def _make_data_package(self, chunk):
         """
-        Returns the loaded data chunk `chunk` in the format `kind`.
-
-        For now only kind=='dp' (data package) is valid.
+        Returns the loaded data chunk `chunk` as a data package.
         """
-        # This is a bit ugly now
-        if kind != 'dp':
-            raise RuntimeError('Unknown kind of chunck format: %s' % str(kind))
 
         # The "common" part
-        out = {'common': self.meta}
+        keys = ['label', 'experimentID', 'version', 'shape', 'psize', 'energy', 'center', 'distance']
+        common = u.Param({k: self.info[k] for k in keys})
+        out = {'common': common}
 
         # The "iterable" part
         iterables = []
@@ -925,9 +937,11 @@ class PtyScan(object):
                 # First look in chunk for a weight to this index, then
                 # look for a 2d-weight in meta, then arbitrarily set
                 # weight to ones.
-                w = chunk.weights.get(
-                    index, self.meta.get('weight2d',
-                                         np.ones_like(frame['data'])))
+                try:
+                    fallback = self.weight2d
+                except AttributeError:
+                    fallback = np.ones_like(frame['data'])
+                w = chunk.weights.get(index, fallback)
                 frame['mask'] = (w > 0)
 
             iterables.append(frame)
@@ -1428,7 +1442,9 @@ class MoonFlowerScan(PtyScan):
         super(MoonFlowerScan, self).__init__(p, **kwargs)
 
         # Derive geometry from input
-        geo = geometry.Geo(pars=self.meta)
+        keys = ['label', 'experimentID', 'version', 'shape', 'psize', 'energy', 'center', 'distance']
+        geo_pars = u.Param({k: self.info[k] for k in keys})
+        geo = geometry.Geo(pars=geo_pars)
 
         # Recipe specific things
         r = self.RECIPE.copy()
