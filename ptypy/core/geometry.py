@@ -47,7 +47,7 @@ _old2new = u.Param(
 )
 
 
-@defaults_tree.parse_doc('scanmodel.Full.geometry')
+@defaults_tree.parse_doc('geometry.two_dimensional')
 class Geo(Base):
     """
     Hold and keep consistent the information about experimental parameters.

@@ -248,6 +248,12 @@ class Ptycho(Base):
     help = Default engine parameters
     doc =
 
+    [geometry]
+    default = None
+    type = Param
+    help = Defaults for available geometry descriptions
+    doc =
+
     """
 
     _PREFIX = PTYCHO_PREFIX
