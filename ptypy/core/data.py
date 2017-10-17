@@ -139,6 +139,7 @@ class PtyScan(object):
        - ``3``: invert rows  (numpy.flip_ud)
        - ``4``: transpose (numpy.transpose)
        - ``4+i``: tranpose + other operations from above
+
       Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, do_flipud,
       do_fliplr)``
     userlevel = 1
