@@ -950,7 +950,7 @@ class EvalDescriptor(ArgParseDescriptor):
         >>> print(defaults_tree['io'].make_default(depth=5))
         """
         out = Param()
-        for ret in self._walk(depth=depth, ignore_symlinks=True, ignore_wildcards=True):
+        for ret in self._walk(depth=depth, ignore_symlinks=False, ignore_wildcards=True):
             path = ret['path']
             if path == '': continue
             out[path] = ret['d'].default
