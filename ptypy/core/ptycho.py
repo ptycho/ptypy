@@ -119,7 +119,7 @@ class Ptycho(Base):
     [scans.*]
     default = @scan
     type = @scan
-    help = Wildcard entry for list of scans to load
+    help = Wildcard entry for list of scans to load. See :py:data:`scan`
 
     [engines]
     default = None
@@ -130,7 +130,7 @@ class Ptycho(Base):
     [engines.*]
     type = @engine.*
     default = @engine.DM
-    help = Wildcard entry for list of engines to run
+    help = Wildcard entry for list of engines to run. See :py:data:`engine`
     doc = The value of engines.*.name is used to choose among the available engines.
 
     [io]
