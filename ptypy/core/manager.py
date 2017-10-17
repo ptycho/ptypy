@@ -162,6 +162,12 @@ class ScanModel(object):
     type = str
     userlevel = 2
 
+    [geometry]
+    default = @geometry.Geo
+    type = @geometry.Geo
+    help = Geometric parameters
+    doc =
+
     """
 
     def __init__(self, ptycho=None, specific_pars=None, generic_pars=None, label=None):

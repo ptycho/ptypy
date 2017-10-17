@@ -204,44 +204,6 @@ class PtyScan(object):
     doc =
     userlevel = 2
 
-    [shape]
-    type = int, tuple
-    default = 256
-    help = Shape of the region of interest cropped from the raw data.
-    doc = Cropping dimension of the diffraction frame
-      Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-    userlevel = 1
-
-    [center]
-    type = tuple, str
-    default = 'fftshift'
-    help = Center (pixel) of the optical axes in raw data
-    doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-    userlevel = 1
-
-    [psize]
-    type = float, tuple
-    default = 0.000172
-    help = Detector pixel size
-    doc = Dimensions of the detector pixels (in meters)
-    userlevel = 0
-    lowlim = 0
-
-    [distance]
-    type = float
-    default = 7.19
-    help = Sample-to-detector distance
-    doc = In meters.
-    userlevel = 0
-    lowlim = 0
-
-    [energy]
-    type = float
-    default = 7.2
-    help = Photon energy of the incident radiation in keV
-    doc =
-    userlevel = 0
-    lowlim = 0
     """
 
     WAIT = WAIT
