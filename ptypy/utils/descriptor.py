@@ -364,43 +364,34 @@ class Descriptor(object):
 
         raise NotImplementedError
 
-    def load_conf_parser(self, fbuffer, owner=None, **kwargs):
+    def load_conf_parser(self, fbuffer, **kwargs):
         """
         Load Parameter defaults using Python's ConfigParser
         
         Each parameter occupies its own section.
         Separator characters in sections names map to a tree-hierarchy.
-
-        The optional owner field adds this attribute to created children.
-
+        
         Keyword arguments are forwarded to `ConfigParser.RawConfigParser`
         """
         from ConfigParser import RawConfigParser as Parser
         parser = Parser(**kwargs)
         parser.readfp(fbuffer)
         for num, sec in enumerate(parser.sections()):
-            # only set ownership for new items
-            set_ownership = (owner is not None) and (sec not in self.children.keys())
-            # create new item
             desc = self.new_child(name=sec, options=dict(parser.items(sec)))
-            if set_ownership:
-                desc.owner = owner
 
         return parser
 
-    def from_string(self, s, owner=None, **kwargs):
+    def from_string(self, s, **kwargs):
         """
         Load Parameter from string using Python's ConfigParser
 
         Each parameter occupies its own section.
         Separator characters in sections names map to a tree-hierarchy.
 
-        The optional owner field adds this attribute to created children.
-
         Keyword arguments are forwarded to `ConfigParser.RawConfigParser`
         """
         from StringIO import StringIO
-        return self.load_conf_parser(StringIO(s), owner=owner, **kwargs)
+        return self.load_conf_parser(StringIO(s), **kwargs)
 
     def save_conf_parser(self, fbuffer, print_optional=True):
         """
@@ -607,8 +598,6 @@ class EvalDescriptor(ArgParseDescriptor):
         Parameter class to store metadata for all ptypy parameters (default, limits, documentation, etc.)
         """
         super(EvalDescriptor, self).__init__(name, parent=parent, separator=separator)
-        # optionally keep track of what class owns these parameters
-        self.owner = None
         self.options['type'] = 'Param'
 
     @property
@@ -731,7 +720,7 @@ class EvalDescriptor(ArgParseDescriptor):
             ul = None
         return int(ul) if ul else None
 
-    def _walk(self, depth=0, pars=None, ignore_symlinks=False, ignore_wildcards=False, cls=None, path=None):
+    def _walk(self, depth=0, pars=None, ignore_symlinks=False, ignore_wildcards=False, path=None):
         """
         Generator that traverses the complete tree up to given depth, either on its own,
         or following parameter structure in pars, following symlinks and honouring wildcards.
@@ -742,7 +731,6 @@ class EvalDescriptor(ArgParseDescriptor):
         pars: optional parameter tree to match with descriptor tree
         ignore_symlinks: If True, do not follow symlinks. Default to False.
         ignore_wildcards: If True, do not interpret wildcards. Default to False.
-        cls: If specified, ignore entries that are not owned by cls or its parents.
         path: Used internally for recursion.
 
         Returns
@@ -757,11 +745,6 @@ class EvalDescriptor(ArgParseDescriptor):
         if path is None:
             # This happens only at top level: ensure proper construction of relative paths.
             path = ''
-
-        # Check relevance
-        if (cls is not None) and (self.owner is not None):
-            if not issubclass(cls, self.owner):
-                return
 
         # Resolve symlinks
         if self.is_symlink and not ignore_symlinks:
@@ -786,7 +769,7 @@ class EvalDescriptor(ArgParseDescriptor):
             # Follow links
             if s:
                 for x in s._walk(depth=depth, pars=pars, ignore_symlinks=ignore_symlinks,
-                                 ignore_wildcards=ignore_wildcards, cls=cls, path=path):
+                                 ignore_wildcards=ignore_wildcards, path=path):
                     yield x
             return
 
@@ -836,11 +819,11 @@ class EvalDescriptor(ArgParseDescriptor):
                     yield {'d': c, 'path': path, 'status': 'nopar', 'info': cname}
                 else:
                     for x in c._walk(depth=depth-1, pars=pars[cname], ignore_symlinks=ignore_symlinks,
-                                     ignore_wildcards=ignore_wildcards, cls=cls, path=new_path):
+                                     ignore_wildcards=ignore_wildcards, path=new_path):
                         yield x
             else:
                 for x in c._walk(depth=depth-1, ignore_symlinks=ignore_symlinks,
-                                 ignore_wildcards=ignore_wildcards, cls=cls, path=new_path):
+                                 ignore_wildcards=ignore_wildcards, path=new_path):
                     yield x
         return
 
@@ -946,7 +929,7 @@ class EvalDescriptor(ArgParseDescriptor):
         """
         self.validate(self.make_default(depth=depth))
 
-    def make_default(self, depth=0, cls=None):
+    def make_default(self, depth=0):
         """
         Creates a default parameter structure.
 
@@ -967,7 +950,7 @@ class EvalDescriptor(ArgParseDescriptor):
         >>> print(defaults_tree['io'].make_default(depth=5))
         """
         out = Param()
-        for ret in self._walk(depth=depth, ignore_symlinks=False, ignore_wildcards=True, cls=cls):
+        for ret in self._walk(depth=depth, ignore_symlinks=False, ignore_wildcards=True):
             path = ret['path']
             if path == '': continue
             out[path] = ret['d'].default
@@ -1073,14 +1056,14 @@ class EvalDescriptor(ArgParseDescriptor):
             desc.default = typ
 
         # Parse parameter section and store in desc
-        desc.from_string(parameter_string, owner=cls)
+        desc.from_string(parameter_string)
 
         # Attach the Parameter group to cls
         from weakref import ref
         cls._descriptor = ref(desc)
 
         # Render the defaults
-        cls.DEFAULT = desc.make_default(depth=99, cls=cls)
+        cls.DEFAULT = desc.make_default(depth=99)
 
         return cls
 
