@@ -25,7 +25,6 @@ engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE']
 
 # Supported engines defaults
 DEFAULTS = u.Param(
-    common=BaseEngine.DEFAULT,
     Dummy=dummy.Dummy.DEFAULT,
     DM_simple=DM_simple.DM_simple.DEFAULT,
     DM=DM.DM.DEFAULT,

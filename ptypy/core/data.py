@@ -28,7 +28,7 @@ if __name__ == "__main__":
     from ptypy import resources
     from ptypy.utils import parallel
     from ptypy.utils.verbose import logger, log, headerline
-    from ptypy.utils.descriptor import defaults_tree
+    from ptypy.utils.descriptor import defaults_tree, EvalDescriptor
 else:
     import geometry
     import xy
@@ -37,7 +37,7 @@ else:
     from .. import resources
     from ..utils import parallel
     from ..utils.verbose import logger, log, headerline
-    from ..utils.descriptor import defaults_tree
+    from ..utils.descriptor import defaults_tree, EvalDescriptor
 
 PTYD = dict(
     # frames, positions
@@ -59,6 +59,7 @@ CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
 __all__ = ['PtyScan', 'PTYD', 'PtydScan',
            'MoonFlowerScan', 'makePtyScan']
 
+local_tree = EvalDescriptor('')
 
 @defaults_tree.parse_doc('scan.data')
 class PtyScan(object):
@@ -1251,7 +1252,7 @@ class PtydScan(PtyScan):
             dfile = pars['dfile']
 
             # Check for conflict
-            if str(u.unique_path(source)) == str(u.unique_path(dfile)):
+            if dfile and (str(u.unique_path(source)) == str(u.unique_path(dfile))):
                 logger.info('Source and Sink files are the same.')
                 dfile = os.path.splitext(dfile)
                 dfile = dfile[0] + '_n.' + dfile[1]
@@ -1297,14 +1298,14 @@ class PtydScan(PtyScan):
 
         # Update given parameters when they are None
         if not manipulate:
-            super(PtydScan, self).__init__(meta, **kwargs)
+            p.update(meta)
         else:
-            # Overwrite only those set to None
+            # Replace only None entries in p
             for k, v in meta.items():
-                if p.get(k) is None:  # should be replace by 'unset'
+                if p.get(k) is None:
                     p[k] = v
-            # Initialize parent class and fill self
-            super(PtydScan, self).__init__(p, **kwargs)
+
+        super(PtydScan, self).__init__(p, **kwargs)
 
         if source_frames is not None:
             if self.num_frames is None:
@@ -1415,15 +1416,57 @@ class PtydScan(PtyScan):
 
         return (out.get(key, {}) for key in ['data', 'positions', 'weights'])
 
-
+@local_tree.parse_doc('moonflowerscan')
 class MoonFlowerScan(PtyScan):
     """
     Test PtyScan class producing a romantic ptychographic data set of a moon
     illuminating flowers.
+
+    Override parent class default:
+
+    Defaults:
+
+    [shape]
+    type = int, tuple
+    default = 128
+    help = Shape of the region of interest cropped from the raw data.
+    doc = Cropping dimension of the diffraction frame
+      Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
+    userlevel = 1
+
+    [center]
+    type = tuple, str
+    default = 'fftshift'
+    help = Center (pixel) of the optical axes in raw data
+    doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
+    userlevel = 1
+
+    [psize]
+    type = float, tuple
+    default = 0.000172
+    help = Detector pixel size
+    doc = Dimensions of the detector pixels (in meters)
+    userlevel = 0
+    lowlim = 0
+
+    [distance]
+    type = float
+    default = 7.19
+    help = Sample to detector distance
+    doc = In meters.
+    userlevel = 0
+    lowlim = 0
+
+    [energy]
+    type = float
+    default = 7.2
+    help = Photon energy of the incident radiation in keV
+    doc =
+    userlevel = 0
+    lowlim = 0
+
     """
 
-    DEFAULT = PtyScan.DEFAULT.copy()
-    DEFAULT.update(geometry.Geo.DEFAULT.copy())
     RECIPE = u.Param(
         # Position distance in fraction of illumination frame
         density=0.2,
@@ -1435,9 +1478,9 @@ class MoonFlowerScan(PtyScan):
         """
         Parent pars are for the
         """
-        p = geometry.Geo.DEFAULT.copy()
-        if pars is not None:
-            p.update(pars)
+
+        p = self.DEFAULT.copy(depth=99)
+        p.update(pars)
 
         # Initialize parent class
         super(MoonFlowerScan, self).__init__(p, **kwargs)

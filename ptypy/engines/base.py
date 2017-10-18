@@ -25,7 +25,7 @@ DEFAULT_iter_info = u.Param(
     error=np.zeros((3,))
 )
 
-@defaults_tree.parse_doc('engine.common')
+
 class BaseEngine(object):
     """
     Base reconstruction engine.
