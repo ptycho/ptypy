@@ -47,7 +47,7 @@ class ScanModel(object):
     Defaults:
 
     [name]
-    default = DM
+    default = Full
     type = str
     help =
     doc =

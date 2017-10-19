@@ -225,7 +225,7 @@ class Ptycho(Base):
     doc =
 
     [engines.*]
-    default = @engine.DM
+    default =
     type = @engine.*
     help = Wildcard entry for list of engines to run. See :py:data:`engine`
     doc = The value of engines.*.name is used to choose among the available engines.
@@ -237,7 +237,7 @@ class Ptycho(Base):
     doc =
 
     [scan.data]
-    default = @scandata.MoonFlowerScan
+    default =
     type = @scandata.*
     help = Link to container for data preparation
     doc =
