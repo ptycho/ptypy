@@ -110,29 +110,6 @@ class Ptycho(Base):
     help = Start an ipython kernel for debugging
     doc = Start an ipython kernel for debugging.
 
-    [scans]
-    default = None
-    type = Param
-    help = Container for instances of scan parameters
-    doc =
-
-    [scans.*]
-    default = @scan
-    type = @scan
-    help = Wildcard entry for list of scans to load. See :py:data:`scan`
-
-    [engines]
-    default = None
-    type = Param
-    help = Container for instances of engine parameters
-    doc =
-
-    [engines.*]
-    type = @engine.*
-    default = @engine.DM
-    help = Wildcard entry for list of engines to run. See :py:data:`engine`
-    doc = The value of engines.*.name is used to choose among the available engines.
-
     [io]
     default = None
     type = Param
@@ -230,28 +207,45 @@ class Ptycho(Base):
     doc = Switch to request the production of a movie from the dumped plots at the end of the
       reconstruction.
 
-    [scan]
+    [scans]
     default = None
     type = Param
     help = Container for instances of scan parameters
     doc =
 
-    #[model]
-    #default =
-    #type = @scanmodel.Vanilla, @scanmodel.Full
-    #help = Physical scan model
-    #doc = The value of model.name is used to choose among the available models.
+    [scans.*]
+    default = @scan
+    type = @scan
+    help = Wildcard entry for list of scans to load. See :py:data:`scan`
 
-    [engine]
+    [engines]
     default = None
     type = Param
-    help = Default engine parameters
+    help = Container for instances of engine parameters
     doc =
 
-    [geometry]
+    [engines.*]
+    default = @engine.DM
+    type = @engine.*
+    help = Wildcard entry for list of engines to run. See :py:data:`engine`
+    doc = The value of engines.*.name is used to choose among the available engines.
+
+    [scan]
     default = None
     type = Param
-    help = Defaults for available geometry descriptions
+    help = Template for scan.* instances
+    doc =
+
+    [scan.data]
+    default = @scandata.MoonFlowerScan
+    type = @scandata.*
+    help = Link to container for data preparation
+    doc =
+
+    [scan.model]
+    default = @scanmodel.Full
+    type = @scanmodel.*
+    help = Link to container for data interpretation model
     doc =
 
     """

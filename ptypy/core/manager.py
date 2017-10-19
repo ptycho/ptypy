@@ -42,7 +42,7 @@ NO_DATA_FLAG = 'No data'
 @defaults_tree.parse_doc('scanmodel.Full')
 class ScanModel(object):
     """
-    Manage a single scan model (data, illumination, geometry, ...)
+    Manage a single scan model (sharing, coherence, propagation, ...)
 
     Defaults:
 

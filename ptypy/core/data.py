@@ -37,7 +37,7 @@ else:
     from .. import resources
     from ..utils import parallel
     from ..utils.verbose import logger, log, headerline
-    from ..utils.descriptor import defaults_tree, EvalDescriptor
+    from ..utils.descriptor import defaults_tree
 
 PTYD = dict(
     # frames, positions
@@ -59,9 +59,7 @@ CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
 __all__ = ['PtyScan', 'PTYD', 'PtydScan',
            'MoonFlowerScan', 'makePtyScan']
 
-local_tree = EvalDescriptor('')
 
-@defaults_tree.parse_doc('scan.data')
 class PtyScan(object):
     """
     PtyScan: A single ptychography scan, created on the fly or read from file.
@@ -1416,7 +1414,7 @@ class PtydScan(PtyScan):
 
         return (out.get(key, {}) for key in ['data', 'positions', 'weights'])
 
-@local_tree.parse_doc('moonflowerscan')
+@defaults_tree.parse_doc('scandata.MoonFlowerScan')
 class MoonFlowerScan(PtyScan):
     """
     Test PtyScan class producing a romantic ptychographic data set of a moon
@@ -1425,6 +1423,12 @@ class MoonFlowerScan(PtyScan):
     Override parent class default:
 
     Defaults:
+
+    [num_frames]
+    default = 100
+    type = int
+    help = Number of frames to simulate
+    doc =
 
     [shape]
     type = int, tuple
@@ -1540,6 +1544,7 @@ class MoonFlowerScan(PtyScan):
             raw[k] = np.random.poisson(intensity_j).astype(np.int32)
 
         return raw, {}, {}
+
 
 if __name__ == "__main__":
     u.verbose.set_level(3)
