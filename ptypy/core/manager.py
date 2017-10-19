@@ -443,6 +443,13 @@ class ScanModel(object):
             '\n--- Scan %(label)s photon report ---\nTotal photons   : %(tot).2e \nAverage photons : %(mean).2e\nMaximum photons : %(max).2e\n' % info + '-' * 29)
 
 
+@defaults_tree.parse_doc('scanmodel.Vanilla')
+class ScanModel2(object):
+    """
+    Dummy for testing, there must be more than one for validate to react
+    to invalid names.
+    """
+    pass
 
 
 class ModelManager(object):

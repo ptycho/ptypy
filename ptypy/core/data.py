@@ -57,7 +57,7 @@ CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
 
 
 __all__ = ['PtyScan', 'PTYD', 'PtydScan',
-           'MoonFlowerScan', 'makePtyScan']
+           'MoonFlowerScan']
 
 
 class PtyScan(object):
@@ -172,16 +172,6 @@ class PtyScan(object):
     default =
     help = Data preparation recipe container
     doc = Will be deprecated soon.
-
-    [source]
-    type = file
-    default = None
-    help = Describes where to get the data from.
-    doc = Accepted values are:
-       - ``'file'``: data will be read from a .ptyd file.
-       - any valid recipe name: data will be prepared using the recipe.
-       - ``'sim'`` : data will be simulated according to parameters in simulation
-    userlevel = 0
 
     [label]
     type = str
@@ -1217,22 +1207,30 @@ class PtyScan(object):
         parallel.barrier()
 
 
+@defaults_tree.parse_doc('scandata.PtydScan')
 class PtydScan(PtyScan):
     """
     PtyScan provided by native "ptyd" file format.
+
+    Defaults:
+
+    [source]
+    default = 'scan.ptyd'
+    type = str
+    help = Input ptyd file
+    doc =
+
     """
 
-    def __init__(self, pars=None, source=None, **kwargs):
+    def __init__(self, pars=None, **kwargs):
         """
         PtyScan provided by native "ptyd" file format.
-
-        :param source: Explicit source file. If not None or 'file',
-                       the data may get processed depending on user input
-
-        :param pars: Input like PtyScan
         """
         # Create parameter set
         p = self.DEFAULT.copy(99)
+        p.update(pars)
+
+        source = p.source
 
         if source is None or str(source) == 'file':
             # This is the case of absolutely no additional work
