@@ -41,6 +41,12 @@ class EPIE(BaseEngine):
 
     Defaults:
 
+    [name]
+    default = ePIE
+    type = str
+    help =
+    doc =
+
     [alpha]
     default = 1.
     type = float

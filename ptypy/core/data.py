@@ -1422,6 +1422,12 @@ class MoonFlowerScan(PtyScan):
 
     Defaults:
 
+    [name]
+    default = MoonFlowerScan
+    type = str
+    help =
+    doc =
+
     [num_frames]
     default = 100
     type = int

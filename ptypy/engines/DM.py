@@ -26,6 +26,12 @@ class DM(BaseEngine):
 
     Defaults:
 
+    [name]
+    default = DM
+    type = str
+    help =
+    doc =
+
     [alpha]
     default = 1
     type = float

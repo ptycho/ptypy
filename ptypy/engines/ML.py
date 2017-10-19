@@ -29,6 +29,12 @@ class ML(BaseEngine):
 
     Defaults:
 
+    [name]
+    default = ML
+    type = str
+    help =
+    doc =
+
     [ML_type]
     default = 'gaussian'
     type = str

@@ -212,7 +212,7 @@ class EvalDescriptorTest(unittest.TestCase):
         """
         root = EvalDescriptor('')
 
-        @root.parse_doc('scans.*')
+        @root.parse_doc('scan.FakeScan')
         class FakeScanClass(object):
             """
             General info.
@@ -246,6 +246,11 @@ class EvalDescriptorTest(unittest.TestCase):
             default = {}
             help = Engine container
 
+            [scans.*]
+            type = @scan.*
+            default = @scan.FakeScan
+            help =
+
             [run]
             type = str
             default = run
@@ -255,7 +260,6 @@ class EvalDescriptorTest(unittest.TestCase):
             pass
 
         assert FakeScanClass.DEFAULT == Param({'comment': None, 'energy': 11.4})
-        assert FakePtychoClass.DEFAULT == Param({'run': 'run', 'scans': {}})
 
         # a correct param tree
         p = Param()
@@ -366,7 +370,7 @@ class EvalDescriptorTest(unittest.TestCase):
             help = Container for all engines
 
             [engines.*]
-            type = @engine.DM, @engine.ML
+            type = @engine.*
             default = @engine.DM
             help = Engine wildcard. Defaults to DM
             """
@@ -389,7 +393,7 @@ class EvalDescriptorTest(unittest.TestCase):
         p.engines.engine01 = Param()
         p.engines.engine01.numiter = 10
         out = root.check(p)
-        assert out['engines.engine01']['symlink'] == CODES.INVALID
+        assert out['engines.*']['symlink'] == CODES.INVALID
 
         # wrong name
         p = Param()
@@ -398,7 +402,7 @@ class EvalDescriptorTest(unittest.TestCase):
         p.engines.engine01.name = 'ePIE'
         p.engines.engine01.numiter = 10
         out = root.check(p)
-        assert out['engines.engine01']['symlink'] == CODES.INVALID
+        assert out['engines.*']['symlink'] == CODES.INVALID
 
 
 if __name__ == "__main__":

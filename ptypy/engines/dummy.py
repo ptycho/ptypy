@@ -27,6 +27,12 @@ class Dummy(BaseEngine):
 
     Defaults:
 
+    [name]
+    default = Dummy
+    type = str
+    help =
+    doc =
+
     [itertime]
     default = .2
     type = float

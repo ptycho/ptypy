@@ -843,46 +843,40 @@ class EvalDescriptor(ArgParseDescriptor):
         """
         out = OrderedDict()
         for res in self._walk(depth=depth, pars=pars):
+            path = res['d'].path
+            out[path] = {}
             # Switch through all possible statuses
             if res['status'] == 'ok':
                 # Check limits
                 d = res['d']
-                val = {'type': CODES.PASS}
+                out[path]['type'] = CODES.PASS
                 if any([i in d._limtypes for i in d.type]):
                     lowlim, uplim = d.limits
-                    # if lowlim is None or pars[res['path']] is None:
-                    #    val['lowlim'] = CODES.UNKNOWN
-                    # else:
-                    #     val['lowlim'] = CODES.PASS if (pars[res['path']] >= lowlim) else CODES.FAIL
-                    # if uplim is None or pars[res['path']] is None:
-                    #     val['uplim'] = CODES.UNKNOWN
-                    # else:
-                    #     val['uplim'] = CODES.PASS if (pars[res['path']] <= uplim) else CODES.FAIL
                     if lowlim is None or pars[res['path']] is None:
-                        val['lowlim'] = CODES.PASS
+                        out[path]['lowlim'] = CODES.PASS
                     else:
-                        val['lowlim'] = CODES.PASS if (pars[res['path']] >= lowlim) else CODES.FAIL
+                        out[path]['lowlim'] = CODES.PASS if (pars[res['path']] >= lowlim) else CODES.FAIL
                     if uplim is None or pars[res['path']] is None:
-                        val['uplim'] = CODES.PASS
+                        out[path]['uplim'] = CODES.PASS
                     else:
-                        val['uplim'] = CODES.PASS if (pars[res['path']] <= uplim) else CODES.FAIL
-                out[res['path']] = val
+                        out[path]['uplim'] = CODES.PASS if (pars[res['path']] <= uplim) else CODES.FAIL
             elif res['status'] == 'wrongtype':
                 # Wrong type
-                out[res['path']] = {'type': CODES.INVALID}
+                out[path]['type'] = CODES.INVALID
             elif res['status'] == 'noname':
                 # Symlink name could not be found
-                out[res['path']] = {'symlink': CODES.INVALID, 'name': CODES.MISSING}
+                out[path]['symlink'] = CODES.INVALID
+                out[path]['name'] = CODES.MISSING
             elif res['status'] == 'nolink':
                 # Link was not resolved
-                out[res['path']] = {'symlink': CODES.INVALID, 'name': CODES.UNKNOWN}
+                out[path]['symlink'] = CODES.INVALID
+                out[path]['name'] = CODES.UNKNOWN
             elif res['status'] == 'nochild':
                 # Parameter entry without corresponding Descriptor
-                out[res['path']] = {res['info']: CODES.INVALID}
+                out[path][res['info']] = CODES.INVALID
             elif res['status'] == 'nopar':
                 # Missing parameter entry
-                out[res['path']] = {res['info']: CODES.MISSING}
-
+                out[path][res['info']] = CODES.MISSING
         return out
 
     def validate(self, pars, raisecodes=(CODES.FAIL, CODES.INVALID)):

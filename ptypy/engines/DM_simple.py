@@ -26,6 +26,12 @@ class DM_simple(BaseEngine):
 
     Defaults:
 
+    [name]
+    default = DM_simple
+    type = str
+    help =
+    doc =
+
     [numiter]
     default = 123
     type = int

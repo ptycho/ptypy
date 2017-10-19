@@ -46,6 +46,12 @@ class ScanModel(object):
 
     Defaults:
 
+    [name]
+    default = DM
+    type = str
+    help =
+    doc =
+
     [tags]
     default = ['dummy']
     help = Comma seperated string tags describing the data input
