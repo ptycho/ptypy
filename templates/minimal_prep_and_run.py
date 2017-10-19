@@ -25,14 +25,12 @@ p.scans.MF.data.shape = 128
 p.scans.MF.data.num_frames = 100
 p.scans.MF.data.save = None
 
-## special recipe paramters for this scan ##
-p.scans.MF.data.recipe = u.Param()
 # position distance in fraction of illumination frame
-p.scans.MF.data.recipe.density = 0.2
+p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
-p.scans.MF.data.recipe.photons = 1e8
+p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
-p.scans.MF.data.recipe.psf = 0.
+p.scans.MF.data.psf = 0.
 
 # attach a reconstrucion engine
 p.engines = u.Param()

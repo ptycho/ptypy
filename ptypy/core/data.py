@@ -167,12 +167,6 @@ class PtyScan(object):
       positions available
     userlevel = 1
 
-    [recipe]
-    type = Param
-    default =
-    help = Data preparation recipe container
-    doc = Will be deprecated soon.
-
     [label]
     type = str
     default = None
@@ -1442,45 +1436,22 @@ class MoonFlowerScan(PtyScan):
       Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
     userlevel = 1
 
-    [center]
-    type = tuple, str
-    default = 'fftshift'
-    help = Center (pixel) of the optical axes in raw data
-    doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-    userlevel = 1
-
-    [psize]
-    type = float, tuple
-    default = 0.000172
-    help = Detector pixel size
-    doc = Dimensions of the detector pixels (in meters)
-    userlevel = 0
-    lowlim = 0
-
-    [distance]
+    [density]
+    default = 0.2
     type = float
-    default = 7.19
-    help = Sample to detector distance
-    doc = In meters.
-    userlevel = 0
-    lowlim = 0
+    help = Position distance in fraction of illumination frame
 
-    [energy]
+    [photons]
+    default = 1e8
     type = float
-    default = 7.2
-    help = Photon energy of the incident radiation in keV
-    doc =
-    userlevel = 0
-    lowlim = 0
+    help = Total number of photons for Poisson noise
+
+    [psf]
+    default = 0.
+    type = float
+    help = Point spread function of the detector
 
     """
-
-    RECIPE = u.Param(
-        # Position distance in fraction of illumination frame
-        density=0.2,
-        photons=1e8,
-        psf=0.
-    )
 
     def __init__(self, pars=None, **kwargs):
         """
@@ -1498,13 +1469,9 @@ class MoonFlowerScan(PtyScan):
         geo_pars = u.Param({k: self.info[k] for k in keys})
         geo = geometry.Geo(pars=geo_pars)
 
-        # Recipe specific things
-        r = self.RECIPE.copy()
-        r.update(self.info.recipe)
-
         # Derive scan pattern
         pos = u.Param()
-        pos.spacing = geo.resolution * geo.shape * r.density
+        pos.spacing = geo.resolution * geo.shape * p.density
         pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
         pos.extent = pos.steps * pos.spacing
         pos.model = 'round'
@@ -1521,10 +1488,11 @@ class MoonFlowerScan(PtyScan):
 
         # Get probe
         moon = resources.moon_pr(self.geo.shape)
-        moon /= np.sqrt(u.abs2(moon).sum() / r.photons)
+        moon /= np.sqrt(u.abs2(moon).sum() / p.photons)
         self.pr = moon
         self.load_common_in_parallel = True
-        self.r = r
+
+        self.p = p
 
     def load_positions(self):
         return self.pos
@@ -1542,8 +1510,8 @@ class MoonFlowerScan(PtyScan):
                 self.pr * self.obj[p[k][0]:p[k][0] + s[0],
                                    p[k][1]:p[k][1] + s[1]]))
 
-            if self.r.psf > 0.:
-                intensity_j = u.gf(intensity_j, self.r.psf)
+            if self.p.psf > 0.:
+                intensity_j = u.gf(intensity_j, self.p.psf)
 
             raw[k] = np.random.poisson(intensity_j).astype(np.int32)
 
