@@ -29,7 +29,7 @@ This file is part of the PTYPY package.
 # from DiProI_FERMI import DiProIFERMIScan
 # from optiklabor import FliSpecScanMultexp
 # from UCL import UCLLaserScan
-# from nanomax import NanomaxStepscanNov2016, NanomaxStepscanMay2017, NanomaxFlyscanJune2017
+from nanomax import NanomaxStepscanMay2017, NanomaxStepscanNov2016, NanomaxFlyscanJune2017
 # from ALS_5321 import ALS5321Scan
 
 
