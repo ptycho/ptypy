@@ -28,7 +28,7 @@ This file is part of the PTYPY package.
 # from AMO_LCLS import AMOScan
 # from DiProI_FERMI import DiProIFERMIScan
 # from optiklabor import FliSpecScanMultexp
-# from UCL import UCLLaserScan
+from UCL import UCLLaserScan
 from nanomax import NanomaxStepscanMay2017, NanomaxStepscanNov2016, NanomaxFlyscanJune2017
 from ALS_5321 import ALS5321Scan
 
