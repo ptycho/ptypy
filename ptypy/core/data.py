@@ -1208,6 +1208,12 @@ class PtydScan(PtyScan):
 
     Defaults:
 
+    [name]
+    default = PtydScan
+    type = str
+    help =
+    doc =
+
     [source]
     default = 'scan.ptyd'
     type = str
