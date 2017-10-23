@@ -5,12 +5,9 @@
 # if section :ref:`store` was completed
 
 # Again, the imports first.
-import matplotlib as mpl
 import numpy as np
-import ptypy
+from ptypy.core.data import PtyScan
 from ptypy import utils as u
-plt = mpl.pyplot
-import sys
 
 # For this tutorial we assume that the data and meta information is
 # in this path:
@@ -19,64 +16,64 @@ save_path = '/tmp/ptypy/sim/'
 # Furthermore, we assume that a file about the experimental geometry is
 # located at
 geofilepath = save_path + 'geometry.txt'
-print geofilepath
+print(geofilepath)
 # and has contents of the following form
-print ''.join([line for line in open(geofilepath, 'r')])
+print(''.join([line for line in open(geofilepath, 'r')]))
 
 # The scanning positions are in
 positionpath = save_path + 'positions.txt'
-print positionpath
+print(positionpath)
 
 # with a list of positions for vertical and horizontanl movement and the
 # image frame from the "camera"
-print ''.join([line for line in open(positionpath, 'r')][:6])+'....'
+print(''.join([line for line in open(positionpath, 'r')][:6])+'....')
 
 # Writing a subclass
 # ------------------
 
-# A subclass of :any:`PtyScan` takes the same input parameter
-# tree as PtyScan itself, i.e :py:data:`.scan.data`. As the subclass
-# will most certainly require additional parameters, there has to be
-# a flexible additional container. For PtyScan, that is the
-# :py:data:`.scan.data.recipe` parameter. A subclass must extract all
-# additional parameters from this source and, in script, you fill
-# the recipe with the appropriate items.
-
-# In this case we can assume that the only parameter of the recipe
-# is the base path ``/tmp/ptypy/sim/``\ . Hence we write
-RECIPE = u.Param()
-RECIPE.base_path = '/tmp/ptypy/sim/'
-
-# Now we import the default generic parameter set from
-from ptypy.core.data import PtyScan
-DEFAULT = PtyScan.DEFAULT.copy()
-
-# This would be the perfect point to change any default value.
-# For sure we need to set the recipe parameter
-DEFAULT.recipe = RECIPE
-
-# A default data file location may be handy too and we allow saving of
-# data in a single file. And since we know it is simulated data we do not
-# have to find the optical axes in the diffraction pattern with
-# the help of auto_center
-DEFAULT.dfile = '/tmp/ptypy/sim/npy.ptyd'
-DEFAULT.auto_center = False
-
-# Our defaults are now
-print u.verbose.report(DEFAULT, noheader=True)
-
 # The simplest subclass of PtyScan would look like this
 class NumpyScan(PtyScan):
-    # We overwrite the DEFAULT with the new DEFAULT.
-    DEFAULT = DEFAULT
+    """
+    A PtyScan subclass to extract data from a numpy array.
+    """
 
     def __init__(self, pars=None, **kwargs):
         # In init we need to call the parent.
         super(NumpyScan, self).__init__(pars, **kwargs)
 
 # Of course this class does nothing special beyond PtyScan.
+# As it is, the class also cannot be used as a real PtyScan instance
+# because its defaults are not properly managed. For this, Ptypy provides a
+# powerful self-documenting tool call a "descriptor" which can be applied
+# to any new class using a decorator. The tree of all valid ptypy parameters
+# is located at :any:`ptypy.utils.descriptor.defaults_tree`. To manage the default
+# parameters of our subclass and document its existence, we would need to write
+from ptypy.utils.descriptor import defaults_tree
 
-# An additional step of initialisation would be to retrieve
+@defaults_tree.parse_doc('scandata.numpyscan')
+class NumpyScan(PtyScan):
+    """
+    A PtyScan subclass to extract data from a numpy array.
+    """
+
+    def __init__(self, pars=None, **kwargs):
+        # In init we need to call the parent.
+        super(NumpyScan, self).__init__(pars, **kwargs)
+
+# The decorator extracts information from the docstring of the subclass and
+# parent classes about the expected input parameters. Currently the docstring
+# of `NumpyScan` does not contain anything special, thus the only parameters
+# registered are those of the parent class, `PtyScan`:
+print(defaults_tree['scandata.numpyscan'].to_string())
+
+# As you can see, there are already many parameters documented in `PtyScan`'s
+# class. For each parameter, most important are the *type*, *default* value and
+# *help* string. The decorator does more than collect this information: it also
+# generates from it a class variable called `DEFAULT`, which stores all defaults:
+print(u.verbose.report(NumpyScan.DEFAULT, noheader=True))
+
+# Now we are ready to add functionality to our subclass.
+# A first step of initialisation would be to retrieve
 # the geometric information that we stored in ``geofilepath`` and update
 # the input parameters with it.
 
@@ -90,21 +87,35 @@ def extract_geo(base_path):
     return out
 
 # We test it.
-print extract_geo(save_path)
+print(extract_geo(save_path))
 
 # That seems to work. We can integrate this parser into
 # the initialisation as we assume that this small access can be
 # done by all MPI nodes without data access problems. Hence,
 # our subclass becomes
+@defaults_tree.parse_doc('scandata.numpyscan')
 class NumpyScan(PtyScan):
-    # We overwrite the DEFAULT with the new DEFAULT.
-    DEFAULT = DEFAULT
+    """
+    A PtyScan subclass to extract data from a numpy array.
+
+    Defaults:
+
+    [name]
+    type = str
+    default = numpyscan
+    help =
+
+    [base_path]
+    type = str
+    default = './'
+    help = Base path to extract data files from.
+    """
 
     def __init__(self, pars=None, **kwargs):
-        p = DEFAULT.copy(depth=2)
+        p = self.DEFAULT.copy(depth=2)
         p.update(pars)
 
-        with open(p.recipe.base_path+'geometry.txt') as f:
+        with open(p.base_path+'geometry.txt') as f:
             for line in f:
                 key, value = line.strip().split()
                 # we only replace Nones or missing keys
@@ -113,11 +124,20 @@ class NumpyScan(PtyScan):
 
         super(NumpyScan, self).__init__(p, **kwargs)
 
+# We now need a new input parameter called `base_path`, so we documented it
+# in the docstring after the section header "Defaults:".
+print(defaults_tree['scandata.numpyscan.base_path'])
+
+# As you can see, the first step in `__init__` is to build a default
+# parameter structure to ensure that all input parameters are available.
+# The next line updates this structure to overwrite the entries specified by
+# the user.
+
 # Good! Next, we need to implement how the class finds out about
 # the positions in the scan. The method
 # :py:meth:`~ptypy.core.data.PtyScan.load_positions` can be used
 # for this purpose.
-print PtyScan.load_positions.__doc__
+print(PtyScan.load_positions.__doc__)
 
 # The parser for the positions file would look like this.
 def extract_pos(base_path):
@@ -132,34 +152,48 @@ def extract_pos(base_path):
 
 # And the test:
 files, pos = extract_pos(save_path)
-print files[:2]
-print pos[:2]
+print(files[:2])
+print(pos[:2])
 
+@defaults_tree.parse_doc('scandata.numpyscan')
 class NumpyScan(PtyScan):
-    # We overwrite the DEFAULT with the new DEFAULT.
-    DEFAULT = DEFAULT
+    """
+    A PtyScan subclass to extract data from a numpy array.
 
-    def __init__(self,pars=None, **kwargs):
-        p = DEFAULT.copy(depth=2)
+    Defaults:
+
+    [name]
+    type = str
+    default = numpyscan
+    help =
+
+    [base_path]
+    type = str
+    default = /tmp/ptypy/sim/
+    help = Base path to extract data files from.
+    """
+
+    def __init__(self, pars=None, **kwargs):
+        p = self.DEFAULT.copy(depth=2)
         p.update(pars)
 
-        with open(p.recipe.base_path+'geometry.txt') as f:
+        with open(p.base_path+'geometry.txt') as f:
             for line in f:
                 key, value = line.strip().split()
                 # we only replace Nones or missing keys
                 if p.get(key) is None:
-                    p[key]=eval(value)
+                    p[key] = eval(value)
 
         super(NumpyScan, self).__init__(p, **kwargs)
-        # all input data is now in self.info
 
     def load_positions(self):
         # the base path is now stored in
-        base_path = self.info.recipe.base_path
+        base_path = self.info.base_path
+        pos = []
         with open(base_path+'positions.txt') as f:
             for line in f:
                 fname, y, x = line.strip().split()
-                pos.append((eval(y),eval(x)))
+                pos.append((eval(y), eval(x)))
                 files.append(fname)
         return np.asarray(pos)
 
@@ -177,39 +211,59 @@ print PtyScan.load.__doc__
 # and positions, as we have already adapted ``self.load_positions``
 # and there were no bad pixels in the (linear) detector
 
-# The final subclass looks like this.
+# The final subclass looks like this. We overwrite two defaults from
+# `PtyScan`:
+@defaults_tree.parse_doc('scandata.numpyscan')
 class NumpyScan(PtyScan):
-    # We overwrite the DEFAULT with the new DEFAULT.
-    DEFAULT = DEFAULT
+    """
+    A PtyScan subclass to extract data from a numpy array.
 
-    def __init__(self,pars=None, **kwargs):
-        p = DEFAULT.copy(depth=2)
+    Defaults:
+
+    [name]
+    type = str
+    default = numpyscan
+    help =
+
+    [base_path]
+    type = str
+    default = /tmp/ptypy/sim/
+    help = Base path to extract data files from.
+
+    [auto_center]
+    default = False
+
+    [dfile]
+    default = /tmp/ptypy/sim/npy.ptyd
+    """
+
+    def __init__(self, pars=None, **kwargs):
+        p = self.DEFAULT.copy(depth=2)
         p.update(pars)
 
-        with open(p.recipe.base_path+'geometry.txt') as f:
+        with open(p.base_path+'geometry.txt') as f:
             for line in f:
                 key, value = line.strip().split()
                 # we only replace Nones or missing keys
                 if p.get(key) is None:
-                    p[key]=eval(value)
+                    p[key] = eval(value)
 
         super(NumpyScan, self).__init__(p, **kwargs)
-        # all input data is now in self.info
 
     def load_positions(self):
         # the base path is now stored in
-        pos=[]
-        base_path = self.info.recipe.base_path
+        base_path = self.info.base_path
+        pos = []
         with open(base_path+'positions.txt') as f:
             for line in f:
                 fname, y, x = line.strip().split()
-                pos.append((eval(y),eval(x)))
+                pos.append((eval(y), eval(x)))
                 files.append(fname)
         return np.asarray(pos)
 
     def load(self, indices):
         raw = {}
-        bp = self.info.recipe.base_path
+        bp = self.info.base_path
         for ii in indices:
             raw[ii] = np.load(bp+'ccd/diffraction_%04d.npy' % ii)
         return raw, {}, {}

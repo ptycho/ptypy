@@ -44,7 +44,7 @@ for path, desc in defaults_tree.descendants:
     prst.write('   '+desc.doc.replace('\n', '\n   ')+'\n\n')
 
     if desc.is_symlink:
-        prst.write('   *default* = '+':py:data:`'+default.path+'`\n')
+        prst.write('   *default* = '+':py:data:`'+desc.path+'`\n')
     else:
         prst.write('   *default* = ``'+repr(default))
         if lowlim is not None and uplim is not None:

@@ -126,12 +126,17 @@ while True:
             frst.write('   ' + line2)
         continue
     
+    decorator = False
     indent = False
     for key in indent_keys:
         if line.startswith(key): 
             indent = True
             break
-            
+
+    if line.startswith('@'):
+        indent = True
+        decorator = True
+
     if indent:
         frst.write('\n::\n\n   >>> '+line)
         func = line
@@ -139,9 +144,12 @@ while True:
         while True:
             line2 = fpy.readline()
             if line2.strip() and not line2.startswith('    '):
-                frst.write('\n')
-                fpy.seek(pt)
-                break
+                if decorator:
+                    decorator = False
+                else:
+                    frst.write('\n')
+                    fpy.seek(pt)
+                    break
             func += line2
             frst.write('   >>> '+line2)
             pt = fpy.tell()
