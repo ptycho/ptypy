@@ -21,7 +21,7 @@ This file is part of the PTYPY package.
 # from I13_ffp import I13ScanFFP
 # from I13_nfp import I13ScanNFP
 # from DLS import DlsScan
-# from I08 import I08Scan
+from I08 import I08Scan
 from savu import Savu
 from plugin import makeScanPlugin
 from ID16Anfp import ID16AScan
