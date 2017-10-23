@@ -26,7 +26,7 @@ This file is part of the PTYPY package.
 # from plugin import makeScanPlugin
 # from ID16Anfp import ID16AScan
 # from AMO_LCLS import AMOScan
-# from DiProI_FERMI import DiProIFERMIScan
+from DiProI_FERMI import DiProIFERMIScan
 from optiklabor import FliSpecScanMultexp
 from UCL import UCLLaserScan
 from nanomax import NanomaxStepscanMay2017, NanomaxStepscanNov2016, NanomaxFlyscanJune2017
