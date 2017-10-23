@@ -15,45 +15,60 @@ from .. import io
 from ..utils import parallel
 from ..core.data import PtyScan
 from ..utils.verbose import log
+from ..utils.descriptor import defaults_tree
 from ..core.paths import Paths
-#from ..core import DEFAULT_io as IO_par
 from ..core import Ptycho
-IO_par = Ptycho.DEFAULT['io']
 import h5py as h5
 
 logger = u.verbose.logger
 
-# Recipe defaults
 
-SAVU = PtyScan.DEFAULT.copy()
-SAVU.mask = None
-SAVU.data = None
-SAVU.positions = None
-
-
+@defaults_tree.parse_doc('scandata.Savu')
 class Savu(PtyScan):
-    DEFAULT = SAVU
+    """
+    Defaults:
+
+    [name]
+    default = 'Savu'
+    type = str
+    help =
+
+    [mask]
+    default = None
+    type = array
+    help = 
+
+    [data]
+    default = None
+    type = array
+    help = 
+
+    [positions]
+    default = None
+    type = array
+    help = 
+
+    """
 
     def __init__(self, pars=None, **kwargs):
         """
         savu data preparation class.
         """
         # Initialise parent class
-        recipe_default = SAVU.copy()
-        recipe_default.update(pars.recipe, in_place_depth=99)
-        pars.recipe.update(recipe_default)
-        super(Savu, self).__init__(pars, **kwargs)
+        p = self.DEFAULT.copy(99)
+        p.update(pars)
+        super(Savu, self).__init__(p, **kwargs)
         log(4, u.verbose.report(self.info))
 
     def load_weight(self):
         if self.info.mask is not None:
-            return self.info.recipe.mask.astype(float)
+            return self.info.mask.astype(float)
         else:
             log(2,'The mask was a None')
 
     def load_positions(self):
-        if self.info.recipe.positions is not None:
-            return self.info.recipe.positions
+        if self.info.positions is not None:
+            return self.info.positions
         else:
             log(2,'The positions were None')
 
@@ -67,9 +82,9 @@ class Savu(PtyScan):
         raw = {}
         pos = {}
         weights = {}
-        if self.info.recipe.data is not None:
+        if self.info.data is not None:
             for j in indices:
-                raw[j] = self.info.recipe.data[j]
+                raw[j] = self.info.data[j]
         else:
             log(2,'The data had None')
         return raw, pos, weights
