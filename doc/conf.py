@@ -42,6 +42,16 @@ extensions = [
 ]
 
 
+def truncate_docstring(app, what, name, obj, options, lines):
+    """
+    Remove the Default parameter entries.
+    """
+
+    if any(l.strip().startswith('Defaults:') for l in lines):
+        while True:
+            if lines.pop(-1).strip().startswith('Defaults:'):
+                break
+
 def remove_mod_docstring(app, what, name, obj, options, lines):
     from ptypy import utils as u
     import numpy as np

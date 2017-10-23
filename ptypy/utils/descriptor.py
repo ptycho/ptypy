@@ -411,6 +411,15 @@ class Descriptor(object):
         parser.write(fbuffer)
         return parser
 
+    def to_string(self):
+        """
+        Return the full content of descriptor as a string in configparser format.
+        """
+        import StringIO
+        s = StringIO.StringIO()
+        self.save_conf_parser(s)
+        return s.getvalue().strip()
+
     def __str__(self):
         """
         Pretty-print the Parameter options in ConfigParser format.
