@@ -25,7 +25,7 @@ This file is part of the PTYPY package.
 # from savu import Savu
 # from plugin import makeScanPlugin
 # from ID16Anfp import ID16AScan
-# from AMO_LCLS import AMOScan
+from AMO_LCLS import AMOScan
 from DiProI_FERMI import DiProIFERMIScan
 from optiklabor import FliSpecScanMultexp
 from UCL import UCLLaserScan
