@@ -23,7 +23,7 @@ This file is part of the PTYPY package.
 # from DLS import DlsScan
 # from I08 import I08Scan
 # from savu import Savu
-# from plugin import makeScanPlugin
+from plugin import makeScanPlugin
 from ID16Anfp import ID16AScan
 from AMO_LCLS import AMOScan
 from DiProI_FERMI import DiProIFERMIScan
