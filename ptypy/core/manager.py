@@ -175,9 +175,19 @@ class ScanModel(object):
     doc = Either "farfield" or "nearfield"
     userlevel = 1
 
+    [illumination]
+    type = Param
+    default =
+    help = Container for probe initialization model
+
+    [sample]
+    type = Param
+    default =
+    help = Container for sample initialization model
+
     """
 
-    def __init__(self, ptycho=None, specific_pars=None, generic_pars=None, label=None):
+    def __init__(self, ptycho=None, pars=None, label=None):
         """
         Create ScanModel object.
 
@@ -195,11 +205,12 @@ class ScanModel(object):
         # Update parameter structure
         # Load default parameter structure
         p = self.DEFAULT.copy(99)
-        p.update(generic_pars, in_place_depth=4)
-        p.update(specific_pars, in_place_depth=4)
+        p.update(pars, in_place_depth=4)
         self.p = p
         self.label = label
         self.ptycho = ptycho
+
+        print(p)
 
         # Manage stand-alone cases
         if self.ptycho is None:
@@ -256,31 +267,7 @@ class ScanModel(object):
 
         # Prepare the scan geometry if not already done.
         if not self.geometries:
-            self.geometries = []
-
-            # extract necessary info from the received data package
-            get_keys = ['distance', 'center', 'energy', 'psize', 'shape']
-            geo_pars = u.Param({key: dp['common'][key] for key in get_keys})
-
-            # add propagation info from this scan model
-            geo_pars.propagation = self.p.propagation
-
-            # The multispectral case will have multiple geometries
-            for ii, fac in enumerate(self.p.coherence.energies):
-                geoID = geometry.Geo._PREFIX + '%02d' % ii + label
-                g = geometry.Geo(self.ptycho, geoID, pars=geo_pars)
-                # now we fix the sample pixel size, This will make the frame size adapt
-                g.p.resolution_is_fix = True
-                # save old energy value:
-                g.p.energy_orig = g.energy
-                # change energy
-                g.energy *= fac
-                # append the geometry
-                self.geometries.append(g)
-
-            # Store frame shape
-            self.shape = np.array(dp['common'].get('shape', self.geometries[0].shape))
-            self.psize = self.geometries[0].psize
+            self._initialize_geo(dp['common'])
 
         sh = self.shape
 
@@ -396,6 +383,41 @@ class ScanModel(object):
         self._update_stats()
 
         return True
+
+    def _initialize_geo(self, common):
+        """
+        Initialize the geometry/geometries based on input data package
+        Parameters
+        ----------
+        common: dict
+                metadata part of the data package passed into new_data.
+
+        """
+        # Extract necessary info from the received data package
+        get_keys = ['distance', 'center', 'energy', 'psize', 'shape']
+        geo_pars = u.Param({key: common[key] for key in get_keys})
+
+        # Add propagation info from this scan model
+        geo_pars.propagation = self.p.propagation
+
+        # The multispectral case will have multiple geometries
+        for ii, fac in enumerate(self.p.coherence.energies):
+            geoID = geometry.Geo._PREFIX + '%02d' % ii + self.label
+            g = geometry.Geo(self.ptycho, geoID, pars=geo_pars)
+            # now we fix the sample pixel size, This will make the frame size adapt
+            g.p.resolution_is_fix = True
+            # save old energy value:
+            g.p.energy_orig = g.energy
+            # change energy
+            g.energy *= fac
+            # append the geometry
+            self.geometries.append(g)
+
+        # Store frame shape
+        self.shape = np.array(common.get('shape', self.geometries[0].shape))
+        self.psize = self.geometries[0].psize
+
+        return
 
     def _update_stats(self):
         """

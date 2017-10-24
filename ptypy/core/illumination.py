@@ -21,7 +21,7 @@ from ..utils.descriptor import defaults_tree
 TEMPLATES = dict()
 from io import StringIO
 
-@defaults_tree.parse_doc('scan.illumination')
+@defaults_tree.parse_doc('scanmodel.Full.illumination')
 class DummyClass(object):
     """
     Defaults:

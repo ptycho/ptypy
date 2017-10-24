@@ -25,7 +25,7 @@ logger = u.verbose.logger
 
 TEMPLATES = dict()
 
-@defaults_tree.parse_doc('scan.sample')
+@defaults_tree.parse_doc('scanmodel.Full.sample')
 class DummyClass(object):
     """
     Defaults:
