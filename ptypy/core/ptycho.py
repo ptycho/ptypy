@@ -10,6 +10,7 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 import paths
+from collections import OrderedDict
 import os
 import sys
 
@@ -36,7 +37,7 @@ class Ptycho(Base):
 
     If MPI is enabled, this class acts both as a manager (rank = 0) and
     a worker (any rank), and most information exists on all processes.
-    In principle the only part that is divided between processes is the
+    In its original design, the only part that is divided between processes is the
     diffraction data.
 
     By default Ptycho is instantiated once per process, but it can also
@@ -357,9 +358,12 @@ class Ptycho(Base):
         if not hasattr(self, 'runtime'):
             self.runtime = u.Param()  # DEFAULT_runtime.copy()
 
+        if not hasattr(self, 'scans'):
+            # Create a scans entry if it does not already exist
+            self.scans = OrderedDict()
+
         if not hasattr(self, 'engines'):
             # Create an engines entry if it does not already exist
-            from collections import OrderedDict
             self.engines = OrderedDict()
 
         # Generate all the paths
@@ -441,7 +445,7 @@ class Ptycho(Base):
         ###################################
 
         # Initialize the model manager
-        self.modelm = ModelManager(self, self.p.scan)
+        self.modelm = ModelManager(self, self.p.scans)
     
     def init_data(self, print_stats=True):
         """

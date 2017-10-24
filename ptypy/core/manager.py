@@ -493,7 +493,7 @@ class ModelManager(object):
         y = 0.0,
     )
 
-    def __init__(self, ptycho, pars=None, scans=None, **kwargs):
+    def __init__(self, ptycho, pars):
         """
 
         Parameters
@@ -503,16 +503,11 @@ class ModelManager(object):
 
         pars : dict or Param
             Input parameters (see :py:attr:`DEFAULT`)
-            If None uses defaults
-
-        scans : dict or Param
-            Scan-specific parameters, Values should be dict Param that
-            follow the structure of `pars`.
-            If None, tries in ptycho.p.scans else becomes empty dict
         """
         # Initialize the input parameters
-        p = u.Param(self.DEFAULT.copy())
-        p.update(pars, in_place_depth=4)
+        # REDESIGN: ModelManager will soon disappear. Here we fix things temporarily.
+        # this means: no DEFAULT for this class.
+        p = pars.copy(depth=99)
         self.p = p
 
         self.ptycho = ptycho
@@ -522,23 +517,22 @@ class ModelManager(object):
         if self.ptycho is None:
             return
 
-        # store scan-specific parameters
-        self.scans_pars = scans if scans is not None else self.ptycho.p.get('scans', u.Param())
-
-        self.scans = {}
+        self.scans = OrderedDict()
 
         # Create scan objects from information already available
-        for label, scan_pars in self.scans_pars.iteritems():
-            self.scans[label] = ScanModel(ptycho=self.ptycho, specific_pars=scan_pars, generic_pars=self.p, label=label)
+        for label, scan_pars in self.p.iteritems():
+            self.scans[label] = ScanModel(ptycho=self.ptycho, pars=scan_pars, label=label)
 
         # Sharing dictionary that stores sharing behavior
         self.sharing = {'probe_ids': {}, 'object_ids': {}}
 
+        # REDESIGN: this will be replaced
         # Initialize sharing rules for POD creations
-        self.sharing_rules = model.parse_model(p.sharing, self.sharing)
-
-        # This start is a little arbitrary
-        self.label_idx = len(self.scans)
+        sharing_pars = u.Param({'model_type': 'basic',
+                                'scan_per_probe': 1,
+                                'scan_per_object': 1,
+                                'npts': None})
+        self.sharing_rules = model.parse_model(sharing_pars, self.sharing)
 
     def _to_dict(self):
         # Delete the model class. We do not really need to store it.
