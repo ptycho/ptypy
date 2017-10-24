@@ -3,11 +3,75 @@ Test descriptor submodule
 """
 import unittest
 
-from ptypy.utils.descriptor import EvalDescriptor, CODES
+from ptypy.utils.descriptor import EvalDescriptor, CODES, defaults_tree
 from ptypy.utils import Param
 
 
+class SanityCheck(unittest.TestCase):
+
+    def test_sanity(self):
+        defaults_tree.sanity_check()
+
+
 class EvalDescriptorTest(unittest.TestCase):
+
+    def test_basic_functions(self):
+        """
+        Test EvalDescriptor behaviour
+        """
+
+        # Parameter declaration through formatted string
+        x = EvalDescriptor('')
+        x.from_string("""
+        [param1]
+        default = 0
+        type = int
+        help = A parameter
+        uplim = 5
+        lowlim = 0""")
+
+        assert x['param1'].default == 0
+        assert x['param1'].limits == (0, 5)
+        assert x['param1'].type == ['int']
+
+        # ConfigParser allows overwriting some properties
+        x = EvalDescriptor('')
+        x.from_string("""
+        [param1]
+        default = 0
+        type = int
+        help = A parameter
+
+        [param2]
+        default = a
+        type = str
+        help = Another parameter
+
+        [param1]
+        uplim = 5
+        lowlim = 0""")
+
+        assert x['param1'].limits == (0, 5)
+
+        # Implicit branch creation
+        x = EvalDescriptor('')
+        x.from_string("""
+        [category1.subcategory1.param1]
+        default = 0
+        type = int
+        help = A parameter""")
+
+        assert [k for k,v in x.descendants] == ['category1', 'category1.subcategory1', 'category1.subcategory1.param1']
+
+        assert x['category1'].implicit == True
+
+        x.from_string("""
+        [category1]
+        default =
+        type = Param
+        help = The first category""")
+
+        assert x['category1'].implicit == False
 
     def test_parse_doc_basic(self):
         """
@@ -393,7 +457,7 @@ class EvalDescriptorTest(unittest.TestCase):
         p.engines.engine01 = Param()
         p.engines.engine01.numiter = 10
         out = root.check(p)
-        assert out['engines.*']['symlink'] == CODES.INVALID
+        assert out['engines.engine01']['symlink'] == CODES.INVALID
 
         # wrong name
         p = Param()
@@ -402,7 +466,7 @@ class EvalDescriptorTest(unittest.TestCase):
         p.engines.engine01.name = 'ePIE'
         p.engines.engine01.numiter = 10
         out = root.check(p)
-        assert out['engines.*']['symlink'] == CODES.INVALID
+        assert out['engines.engine01']['symlink'] == CODES.INVALID
 
 
 if __name__ == "__main__":

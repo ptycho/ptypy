@@ -179,7 +179,6 @@ class Descriptor(object):
             if missing:
                 raise ValueError('Missing required option(s) <%s> for parameter %s.' % (', '.join(missing), self.name))
 
-        self.options = dict.fromkeys(self.required)
         self.options.update(dct)
 
     def _find(self, name):
@@ -391,6 +390,7 @@ class Descriptor(object):
         Keyword arguments are forwarded to `ConfigParser.RawConfigParser`
         """
         from StringIO import StringIO
+        s = textwrap.dedent(s)
         return self.load_conf_parser(StringIO(s), **kwargs)
 
     def save_conf_parser(self, fbuffer, print_optional=True):
@@ -852,7 +852,7 @@ class EvalDescriptor(ArgParseDescriptor):
         """
         out = OrderedDict()
         for res in self._walk(depth=depth, pars=pars):
-            path = res['d'].path
+            path = res['path']
             out[path] = {}
             # Switch through all possible statuses
             if res['status'] == 'ok':

@@ -112,7 +112,7 @@ class FliSpecScanMultexp(PtyScan):
 
     [dark_dir_pattern]
     default = '%(base_path)s%(scan_dir)sS%(dark_number)05d/'
-    type = 
+    type = str
     help =
 
     """
