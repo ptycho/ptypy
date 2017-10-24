@@ -125,8 +125,6 @@ class DiProIFERMIScan(PtyScan):
 
     [auto_center]
     default = False
-    type = bool
-    help = Overrides PtyScan default
 
     """
 

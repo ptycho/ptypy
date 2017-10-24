@@ -67,8 +67,6 @@ class FliSpecScanMultexp(PtyScan):
 
     [energy]
     default = None
-    type = float
-    help =
 
     [z]
     default = 0.158
@@ -82,13 +80,9 @@ class FliSpecScanMultexp(PtyScan):
 
     [center]
     default = 'auto'
-    type = str
-    help =
 
     [orientation]
     default = (True,True,False)
-    type = tuple
-    help =
 
     [base_path]
     default = '/data/CDI/opticslab_sxdm_2013/'

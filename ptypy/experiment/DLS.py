@@ -64,8 +64,6 @@ class DlsScan(PtyScan):
 
     [experimentID]
     default = None
-    type = str
-    help = Experiment identifier
 
     [scan_number]
     default = None
@@ -164,13 +162,9 @@ class DlsScan(PtyScan):
 
     [auto_center]
     default = False
-    type = bool
-    help = Overrides PtyScan default
 
     [orientation]
     default = (False, False, False)
-    type = tuple
-    help = Overrides PtyScan default
 
     """
 

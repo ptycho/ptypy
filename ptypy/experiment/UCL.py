@@ -36,13 +36,9 @@ class UCLLaserScan(PtyScan):
 
     [auto_center]
     default = False
-    type = bool
-    help = 
 
     [orientation]
     default = (False, False, False)
-    type = tuple
-    help = 
 
     [scan_number]
     default = None
@@ -61,13 +57,11 @@ class UCLLaserScan(PtyScan):
 
     [energy]
     default = None
-    type = float
-    help = 
 
     [lam]
     default = None
     type = float
-    help = 
+    help =
 
     [z]
     default = None

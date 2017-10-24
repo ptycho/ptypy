@@ -44,8 +44,6 @@ class ALS5321Scan(PtyScan):
 
     [energy]
     default = 0.820
-    type = float
-    help = Beam energy
 
     [CXI_PATHS]
     default = None

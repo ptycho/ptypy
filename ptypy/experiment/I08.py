@@ -128,9 +128,6 @@ class I08Scan(ptypy.core.data.PtyScan):
 
     [auto_center]
     default = False
-    type = bool
-    help = Overrides PtyScan default
-
     """
 
     def __init__(self, pars=None, **kwargs):

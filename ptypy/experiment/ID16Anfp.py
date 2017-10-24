@@ -57,8 +57,6 @@ class ID16AScan(PtyScan):
 
     [experimentID]
     default = None
-    type = str
-    help = Experiment identifier - will be read from h5
 
     [motors]
     default = ['spy', 'spz']
@@ -147,14 +145,9 @@ class ID16AScan(PtyScan):
 
     [auto_center]
     default = False
-    type = bool
-    help = Overrides the PtyScan default
 
     [orientation]
     default = (False, True, False)
-    type = tuple
-    help = Frelon frame - only LR flip
-
     """
 
     def __init__(self, pars=None, **kwargs):
