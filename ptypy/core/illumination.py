@@ -16,12 +16,12 @@ from .. import utils as u
 from ..core import geometry
 from ..utils.verbose import logger
 from .. import resources
-from ..utils.descriptor import defaults_tree
+from ..utils.descriptor import EvalDescriptor
 
 TEMPLATES = dict()
-from io import StringIO
 
-@defaults_tree.parse_doc('scanmodel.Full.illumination')
+local_tree = EvalDescriptor('')
+@local_tree.parse_doc('illumination')
 class DummyClass(object):
     """
     Defaults:

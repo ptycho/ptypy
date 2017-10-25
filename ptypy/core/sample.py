@@ -10,22 +10,22 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-# import os
-# from matplotlib import pyplot as plt
 
 if __name__ == '__main__':
     from ptypy import utils as u
     from ptypy import resources
+    from ptypy.utils.descriptor import EvalDescriptor
 else:
     from .. import utils as u
     from .. import resources
-    from ..utils.descriptor import defaults_tree
+    from ..utils.descriptor import EvalDescriptor
 
 logger = u.verbose.logger
 
 TEMPLATES = dict()
 
-@defaults_tree.parse_doc('scanmodel.Full.sample')
+local_tree = EvalDescriptor('')
+@local_tree.parse_doc('sample')
 class DummyClass(object):
     """
     Defaults:
