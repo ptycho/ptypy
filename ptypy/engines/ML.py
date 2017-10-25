@@ -69,7 +69,13 @@ class ML(BaseEngine):
     default = 0.0
     type = float
     help = Smoothing preconditioner
-    doc = If 0, not used, if > 0 gaussian filter if < 0 Hann window.
+    doc = Sigma for gaussian filter (turned off if 0.)
+
+    [smooth_gradient_decay]
+    default = 0.
+    type = float
+    help = Decay rate for smoothing preconditioner
+    doc = Sigma for gaussian filter will reduce exponentially at this rate
 
     [scale_precond]
     default = False
@@ -187,17 +193,19 @@ class ML(BaseEngine):
                 new_pr_grad.fill(0.)
 
             # Smoothing preconditioner
-            # !!! Lets make this consistent with
-            # the smoothing already done in DM
-            # if self.smooth_gradient:
-            #     for name, s in new_ob_grad.storages.iteritems():
-            #         s.data[:] = self.smooth_gradient(s.data)
+            if self.smooth_gradient:
+                self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
+                for name, s in new_ob_grad.storages.iteritems():
+                    s.data[:] = self.smooth_gradient(s.data)
 
             # probe/object rescaling
             if self.p.scale_precond:
-                scale_p_o = (self.p.scale_probe_object * Cnorm2(new_ob_grad)
-                             / Cnorm2(new_pr_grad))
-                             #/ (Cnorm2(new_pr_grad)) * len(self.ob.views))
+                cn2_new_pr_grad = Cnorm2(new_pr_grad)
+                if cn2_new_pr_grad > 1e-5:
+                    scale_p_o = (self.p.scale_probe_object * Cnorm2(new_ob_grad)
+                                 / Cnorm2(new_pr_grad))
+                else:
+                    scale_p_o = self.p.scale_probe_object
                 if self.scale_p_o is None:
                     self.scale_p_o = scale_p_o
                 else:
@@ -235,7 +243,13 @@ class ML(BaseEngine):
             """
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
-            self.ob_h -= self.ob_grad
+
+            # Smoothing preconditioner
+            if self.smooth_gradient:
+                for name, s in self.ob_h.storages.iteritems():
+                    s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
+            else:
+                self.ob_h -= self.ob_grad
             self.pr_h *= bt / self.tmin
             self.pr_grad *= self.scale_p_o
             self.pr_h -= self.pr_grad
@@ -616,29 +630,22 @@ def prepare_smoothing_preconditioner(amplitude):
             self.sigma = sigma
 
         def __call__(self, x):
-            y = np.empty_like(x)
-            sh = x.shape
-            xf = x.reshape((-1,) + sh[-2:])
-            yf = y.reshape((-1,) + sh[-2:])
-            for i in range(len(xf)):
-                yf[i] = gaussian_filter(xf[i], self.sigma)
-            return y
+            return u.c_gf(x, [0, self.sigma, self.sigma])
 
-    from scipy.signal import correlate2d
-
-    class HannFilt:
-        def __call__(self, x):
-            y = np.empty_like(x)
-            sh = x.shape
-            xf = x.reshape((-1,) + sh[-2:])
-            yf = y.reshape((-1,) + sh[-2:])
-            for i in range(len(xf)):
-                yf[i] = correlate2d(xf[i],
-                                    np.array([[.0625, .125, .0625],
-                                              [.125, .25, .125],
-                                              [.0625, .125, .0625]]),
-                                    mode='same')
-            return y
+    # from scipy.signal import correlate2d
+    # class HannFilt:
+    #    def __call__(self, x):
+    #        y = np.empty_like(x)
+    #        sh = x.shape
+    #        xf = x.reshape((-1,) + sh[-2:])
+    #        yf = y.reshape((-1,) + sh[-2:])
+    #        for i in range(len(xf)):
+    #            yf[i] = correlate2d(xf[i],
+    #                                np.array([[.0625, .125, .0625],
+    #                                          [.125, .25, .125],
+    #                                          [.0625, .125, .0625]]),
+    #                                mode='same')
+    #        return y
 
     if amplitude > 0.:
         logger.debug(
@@ -646,6 +653,7 @@ def prepare_smoothing_preconditioner(amplitude):
         return GaussFilt(amplitude)
 
     elif amplitude < 0.:
-        logger.debug(
-            'Using a smooth gradient filter (Hann window - only for ML)')
-        return HannFilt()
+        raise RuntimeError('Hann filter not implemented (negative smoothing amplitude not supported)')
+        # logger.debug(
+        #    'Using a smooth gradient filter (Hann window - only for ML)')
+        # return HannFilt()
