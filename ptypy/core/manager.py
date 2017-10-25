@@ -279,8 +279,8 @@ class ScanModel(object):
             old_diff_views = []
             old_diff_layers = []
         else:
-            # ok storage exists already. Views most likely also. Let's do some analysis and deactivate the old views
-            old_diff_views = self.Cdiff.views_in_storage(self.diff, active=False)
+            # ok storage exists already. Views most likely also. We store them so we can update their status later.
+            old_diff_views = self.Cdiff.views_in_storage(self.diff, active_only=False)
             old_diff_layers = []
             for v in old_diff_views:
                 old_diff_layers.append(v.layer)
@@ -292,7 +292,7 @@ class ScanModel(object):
             old_mask_views = []
             old_mask_layers = []
         else:
-            old_mask_views = self.Cmask.views_in_storage(self.mask, active=False)
+            old_mask_views = self.Cmask.views_in_storage(self.mask, active_only=False)
             old_mask_layers = []
             for v in old_mask_views:
                 old_mask_layers.append(v.layer)

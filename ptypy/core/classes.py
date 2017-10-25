@@ -1543,7 +1543,7 @@ class Container(Base):
                 sz += s.data.nbytes
         return sz
 
-    def views_in_storage(self, s, active=True):
+    def views_in_storage(self, s, active_only=True):
         """
         Return a list of views on :any:`Storage` `s`.
 
@@ -1551,10 +1551,10 @@ class Container(Base):
         ----------
         s : Storage
             The storage to look for.
-        active : True or False
+        active_only : True or False
                  If True (default), return only active views.
         """
-        if active:
+        if active_only:
             return [v for v in self.original.V.values()
                     if v.active and (v.storageID == s.ID)]
         else:
