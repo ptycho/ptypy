@@ -49,8 +49,9 @@ class Fourier_update_kernel(object):
         self.kernels = [
             'fourier_error',
             'error_reduce',
-            'calc_fm',
-            'fmag_update'        
+            #'calc_fm',
+            #'fmag_update'
+            'fmag_all_update'        
         ]
         
     def sync_ocl(self):
@@ -82,18 +83,19 @@ class Fourier_update_kernel(object):
             size_t z_z = z_merged*nmodes;
 
             __private float loc_f [3];
-            __private float loc_af2 [2];
+            __private float loc_af2a = 0.;
+            __private float loc_af2b = 0.;
             
             // saves model intensity 
-            loc_af2[1] = 0;
+            //loc_af2[1] = 0;
             
             for(int i=0; i<nmodes; i++){
                 //exit[(z_z+i)*dx*dx + y*dx + x] = cfloat_mul(exit[(z_z+i)*dx*dx + y*dx + x], post_fft_g[y*dx + x]);
-                loc_af2[0] = cfloat_abs(exit[(z_z+i)*dx*dx + y*dx + x]);
-                loc_af2[1] += loc_af2[0]*loc_af2[0];
+                loc_af2a = cfloat_abs(exit[(z_z+i)*dx*dx + y*dx + x]);
+                loc_af2b += loc_af2a * loc_af2a;
             }
             
-            loc_f[2] = sqrt(loc_af2[1]) - fmag[z_merged*dx*dx + y*dx + x];
+            loc_f[2] = sqrt(loc_af2b) - fmag[z_merged*dx*dx + y*dx + x];
             fdev[z_merged*dx*dx + y*dx + x] = loc_f[2];
 
             ferr[z_merged*dx*dx + y*dx + x] = fmask[z_merged*dx*dx + y*dx + x] * loc_f[2] * loc_f[2] / mask_sum[z_merged];
@@ -145,6 +147,36 @@ class Fourier_update_kernel(object):
             //cfloat_t ft = cfloat_mul(f[z*dx*dx + y*dx + x], pre_ifft_g[y*dx + x]);
             f[z*dx*dx + y*dx + x] = cfloat_mulr(f[z*dx*dx + y*dx + x] , fac);
             
+        }
+        __kernel void fmag_all_update(int nmodes,
+                                      float pbound,
+                                    __global cfloat_t *f,
+                                    __global float *fmask,
+                                    __global float *fmag,
+                                    __global float *fdev,
+                                    __global float *err)
+        {
+            size_t x = get_global_id(2);
+            size_t dx = get_global_size(2);
+            size_t y = get_global_id(1);
+            size_t z = get_global_id(0);
+            size_t z_merged = z/nmodes;
+            size_t midx = z_merged*dx*dx + y*dx + x;
+            size_t idx = z*dx*dx + y*dx + x;
+            
+            __private float renorm = sqrt(pbound/err[z_merged]);
+            __private float eps = 1e-10;//pow(10.,-10);
+            __private float fm=1.;
+            
+            __private float m=fmask[midx];
+            __private float g=fmag[midx];
+            __private float d=fdev[midx];
+            
+            if (renorm < 1.){            
+                fm =  m * native_divide(d*renorm +g, d+g+eps) + (1-m);
+            }
+            //cfloat_t ft = cfloat_mul(f[idx], pre_ifft_g[y*dx + x]);
+            f[idx] = cfloat_mulr(f[idx] , fm );
         }
         __kernel void reduce_one_step(int framesize,
                     __global const float* buffer,
@@ -290,6 +322,16 @@ class Fourier_update_kernel(object):
     def _ocl_fmag_update(self,f,fm):
         self.prg.fmag_update(self.queue, self.shape, (1,1,32), 
                     self.nmodes,f,fm)
+        self.queue.finish()
+        
+    def _npy_fmag_all_update(self,f,fmask, fmag, fdev, err_fmag):
+        fm = np.ones_like(fmask)
+        self._npy_calc_fm(fm, fmask, fmag, fdev, err_fmag)
+        self._npy_fmag_update(f,fm)
+    
+    def _ocl_fmag_all_update(self,f,fmask, fmag, fdev, err_fmag):
+        self.prg.fmag_all_update(self.queue, self.shape, (1,1,32), 
+            self.nmodes, self.pbound, f, fmask, fmag, fdev, err_fmag)
         self.queue.finish()
         
     def verify_ocl(self, precision=2**(-23)):

@@ -19,10 +19,10 @@ from . import BaseEngine
 import numpy as np
 import time
 import pyopencl as cl
-import gpyfft
+
 from pyopencl import array as cla
 from pyopencl import clmath as clm
-GFFT = gpyfft.GpyFFT(debug=False)
+
 
 ## for debugging
 from matplotlib import pyplot as plt
@@ -47,6 +47,10 @@ DEFAULT = u.Param(
 
 class FFT_GPU(object):
     def __init__(self, context, queue, input_arrays, output_arrays=None, dir_forward=True, axes = None, sc_fw = 1., sc_bw = 1., fast_math = False):
+        
+        import gpyfft
+        GFFT = gpyfft.GpyFFT(debug=False)
+
         self.context = context
         self.queue = queue
         self.dir_forward = dir_forward
@@ -834,7 +838,8 @@ class DM(BaseEngine):
             for name,s in c.S.iteritems():
                 s.gpu = cla.to_device(self.queue,s.data)
         
-           
+        # memory check
+        self.ptycho.print_stats()
         
         # get obj shape
         obj_shape = {}
@@ -1180,7 +1185,7 @@ class DM(BaseEngine):
                 self.benchmark.calls_fourier +=1
                 
             self.overlap_update(MPI=True)
-            
+            self.curiter += 1
             self.queue.finish()
             self.queue_get.finish()
 

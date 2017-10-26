@@ -19,10 +19,10 @@ from . import BaseEngine
 import numpy as np
 import time
 import pyopencl as cl
-import gpyfft
+#import gpyfft
 from pyopencl import array as cla
 from pyopencl import clmath as clm
-GFFT = gpyfft.GpyFFT(debug=False)
+#GFFT = gpyfft.GpyFFT(debug=False)
 
 ## for debugging
 from matplotlib import pyplot as plt
@@ -47,6 +47,10 @@ DEFAULT = u.Param(
 
 class FFT_GPU(object):
     def __init__(self, context, queue, input_arrays, output_arrays=None, dir_forward=True, axes = None, sc_fw = 1., sc_bw = 1., fast_math = False):
+        
+        import gpyfft
+        GFFT = gpyfft.GpyFFT(debug=False)
+        
         self.context = context
         self.queue = queue
         self.dir_forward = dir_forward
