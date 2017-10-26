@@ -14,6 +14,7 @@ dependencies:
   - mpi4py
   - pil
   - pyfftw
+  - pyopencl
   - pip:
     - pytest-cov
     - coveralls
