@@ -12,7 +12,7 @@ This file is part of the PTYPY package.
 from __future__ import division
 import os.path
 from .. import utils as u
-from ..utils.verbose import logger
+from ..utils.verbose import logger, log
 from ..utils import parallel
 #from utils import basic_fourier_update
 from . import BaseEngine
@@ -178,7 +178,7 @@ def gaussian_kernel(sigma, size=None, sigma_y=None, size_y=None):
     return g / g.sum()
     
                 
-class DM(BaseEngine):
+class DM_ocl(BaseEngine):
     
     DEFAULT = DEFAULT
 
@@ -189,8 +189,7 @@ class DM(BaseEngine):
         if pars is None:
             pars = DEFAULT.copy()
             
-        super(DM,self).__init__(ptycho_parent,pars)
-        print "Calling init"
+        super(DM_ocl,self).__init__(ptycho_parent,pars)
         ## basic GPU settings
         self.plat = cl.get_platforms()
         self.devices = self.plat[0].get_devices(cl.device_type.GPU)
@@ -840,21 +839,7 @@ class DM(BaseEngine):
         
         # memory check
         self.ptycho.print_stats()
-        
-        # get obj shape
-        obj_shape = {}
-        obj_nlayers = {}
-        for oID in self.ob.S.keys():
-            obj_shape[oID] = self.ob.S[oID].data.shape[-2:]
-            obj_nlayers[oID] = self.ob.S[oID].nlayers
-        
-        # get probe shape
-        pr_shape = {}
-        pr_nlayers = {}
-        for pID in self.pr.S.keys():
-            pr_shape[pID] = self.pr.S[pID].data.shape[-2:]
-            pr_nlayers[pID] = self.pr.S[pID].nlayers
-        
+               
         self.di_views = {}
         self.DM_info = {}
         self.DM_info_gpu = {}
@@ -864,16 +849,34 @@ class DM(BaseEngine):
         self.info = {} 
         self.mask_sum = {}
         self.mask_sum_gpu = {}
-        for sname, diffs in self.di.S.iteritems():
-            self.DM_info[sname] = []
-            self.addr[sname] = []
-            self.mask_sum[sname] = []
+        self.probe_object_exit_ID = {}
+        self.shape ={}
+        self.info = {}
+        self.geometries = {}
+        
+        for dID, diffs in self.di.S.iteritems():
+            self.DM_info[dID] = []
+            self.addr[dID] = []
+            self.mask_sum[dID] = []
+            
+            # Sort views according to layer in diffraction stack 
             views = diffs.views
             dlayers = [view.dlayer for view in views]
             views = [views[i] for i in np.argsort(dlayers)]
+            
+            # Master pod
+            mpod = views[0].pod
+            
+            # Determine linked storages for probe, object and exit waves
+            pID = mpod.pr_view.storage.ID
+            oID = mpod.ob_view.storage.ID
+            eID = mpod.ex_view.storage.ID
+            
+            self.probe_object_exit_ID[dID] = (pID,oID,eID)
+            
             for view in views:
                 address = []
-                
+                                
                 for pname,pod in view.pods.iteritems():
                     ## store them for each pod
                     # create addresses
@@ -884,50 +887,74 @@ class DM(BaseEngine):
                     a += (pod.ma_view.dlayer,pod.ma_view.dlow[0],pod.ma_view.dlow[1])
                     address.append(a)
                     
+                    if pod.pr_view.storage.ID != pID:
+                        log(1, "Splitting probes for one diffraction stack is not supported in " + self.__class__.__name__)
+                    if pod.ob_view.storage.ID != oID:
+                        log(1, "Splitting objects for one diffraction stack is not supported in " + self.__class__.__name__)
+                    if pod.ex_view.storage.ID != eID:
+                        log(1, "Splitting exit stacks for one diffraction stack is not supported in " + self.__class__.__name__)
+                                            
                 ## store data for each view
                 # adresses
-                self.addr[sname].append(address)
+                self.addr[dID].append(address)
                 # mask sum
-                self.mask_sum[sname].append(pod.mask.sum())
+                self.mask_sum[dID].append(pod.mask.sum())
             
-            self.di_views[sname] = views    
+            self.di_views[dID] = views    
             # store them for each storage
-            arr = np.asarray(self.addr[sname]).astype(np.int32)
-            msum = np.asarray(self.mask_sum[sname])
+            arr = np.asarray(self.addr[dID]).astype(np.int32)
+            msum = np.asarray(self.mask_sum[dID])
             
-            self.mask_sum[sname] = msum
-            self.mask_sum_gpu[sname] = cla.to_device(self.queue, msum, allocator= constbuffer)
-            self.addr[sname] = arr
-            self.addr_gpu[sname] = cla.to_device(self.queue, arr)
+            self.mask_sum[dID] = msum
+            self.mask_sum_gpu[dID] = cla.to_device(self.queue, msum, allocator= constbuffer)
+            self.addr[dID] = arr
+            self.addr_gpu[dID] = cla.to_device(self.queue, arr)
             
             diffs.pbound = .25 *  self.p.fourier_relax_factor**2 * diffs.pbound_stub
             
-            self.DM_info[sname].append(self.p.alpha)
-            self.DM_info[sname].append(diffs.pbound)
-            self.DM_info[sname] = np.asarray(self.DM_info[sname]).astype(np.float32)
-            self.DM_info_gpu[sname] = cla.to_device(self.queue, self.DM_info[sname], allocator = constbuffer)
+            # get obj shape
+            obj_shape = {}
+            obj_nlayers = {}
+            for oID in self.ob.S.keys():
+                obj_shape[oID] = self.ob.S[oID].data.shape[-2:]
+                obj_nlayers[oID] = self.ob.S[oID].nlayers
+            
+            # get probe shape
+            pr_shape = {}
+            pr_nlayers = {}
+            for pID in self.pr.S.keys():
+                pr_shape[pID] = self.pr.S[pID].data.shape[-2:]
+                pr_nlayers[pID] = self.pr.S[pID].nlayers
+            
+            self.DM_info[dID].append(self.p.alpha)
+            self.DM_info[dID].append(diffs.pbound)
+            self.DM_info[dID] = np.asarray(self.DM_info[dID]).astype(np.float32)
+            self.DM_info_gpu[dID] = cla.to_device(self.queue, self.DM_info[dID], allocator = constbuffer)
+            
+            # get shapes for each exit storage
+            self.shape[dID] = self.r.f.S[eID].data.shape
+            
+
+            # TODO: nlayers for pr_modes & obj_modes
+            self.info[dID] = []
+            self.info[dID] += [arr.shape[0]]
+            self.info[dID] += [arr.shape[1]]
+            self.info[dID] += [obj_nlayers[oID]]
+            self.info[dID] += [obj_shape[oID][0]]
+            self.info[dID] += [obj_shape[oID][1]]
+            self.info[dID] += [pr_shape[pID][0]]
+            
+            info = np.asarray(self.info[dID]).astype(np.int32)
+            self.info_gpu[dID] = cla.to_device(self.queue, info, allocator = constbuffer)
             self.queue.finish()
 
-        self.queue.finish()
-        
-        
-        ## FFT setup
-        # we restrict to single geometry per diffraction storage => incompatible with multiple propagators
-        self.geometries = {}
-        self.probe_object_exit_ID = {}
-        self.shape ={}
-        self.info = {}
-        for dID in self.di.S.keys():
-            # pod cheatin'
-            pID = pod.pr_view.storage.ID
-            oID = pod.ob_view.storage.ID
-            eID = pod.ex_view.storage.ID
-            self.probe_object_exit_ID[dID] = (pID,oID,eID)
+            ## FFT setup
+            # we restrict to single geometry per diffraction storage => incompatible with multiple propagators
+
                         
             f = self.ex.S[eID].gpu
-            # find Geometry
-            pod = self.di.S[dID].views[0].pod
-            geo = pod.geometry
+            geo = mpod.geometry
+
             self.geometries[dID] = geo
             geo.propagator.pre_fft_gpu = cla.to_device(self.queue, geo.propagator.pre_fft)
             geo.propagator.pre_ifft_gpu = cla.to_device(self.queue, geo.propagator.pre_ifft)
@@ -937,21 +964,7 @@ class DM(BaseEngine):
             geo.transform  = FFT_GPU(self.ctx, self.queue, (f,), dir_forward=True, axes = (1,2), sc_fw = geo.propagator.sc, sc_bw = geo.propagator.isc)
             geo.itransform  = FFT_GPU(self.ctx, self.queue, (f,), dir_forward=False, axes = (1,2), sc_fw = geo.propagator.sc, sc_bw = geo.propagator.isc)
                         
-            # get shapes for each exit storage
-            self.shape[dID] = self.r.f.S[eID].data.shape
-            
-
-            # TODO: nlayers for pr_modes & obj_modes
-            self.info[sname] = []
-            self.info[sname] += [arr.shape[0]]
-            self.info[sname] += [arr.shape[1]]
-            self.info[sname] += [obj_nlayers[oID]]
-            self.info[sname] += [obj_shape[oID][0]]
-            self.info[sname] += [obj_shape[oID][1]]
-            self.info[sname] += [pr_shape[pID][0]]
-            
-            info = np.asarray(self.info[sname]).astype(np.int32)
-            self.info_gpu[sname] = cla.to_device(self.queue, info, allocator = constbuffer)
+            self.queue.finish()
                 
         # finish init queue
         self.queue.finish()

@@ -42,7 +42,7 @@ ENGINES = u.Param(
     DM_simple=DM_simple.DM_simple,
     DM=DM.DM,
     ML=ML.ML,
-    DM_ocl = DM_ocl.DM,
+    DM_ocl = DM_ocl.DM_ocl,
     ePIE=ePIE.EPIE
 )
 
