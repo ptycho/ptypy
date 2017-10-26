@@ -14,16 +14,18 @@ __all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
 import numpy as np
 size = 1
 rank = 0
+hosts_ranks = {}
 MPI = None
 comm = None
 
-from .. import __has_mpi4py__ as hmpi
-if hmpi:
+from .. import __has_mpi4py__
+
+if __has_mpi4py__:
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
     rank = comm.Get_rank()
-del hmpi
+
 
 MPIenabled = not (size == 1)
 master = (rank == 0)
@@ -721,6 +723,20 @@ def MPIrand_uniform(low=0.0, high=1.0, size=(1)):
     return sample
 
 MPIrand_uniform.__doc__+=np.random.uniform.__doc__
+
+if __has_mpi4py__:
+    # local rank
+    host = MPI.Get_processor_name()   
+    rank_host = gather_dict({rank : host})
+    for k,v in rank_host.items():
+        if v not in hosts_ranks:
+            hosts_ranks[v]=[k]
+        else:
+            hosts_ranks[v].append(k)
+            
+    bcast_dict(hosts_ranks)
+    rank_local = hosts_ranks[host].index(rank)
+    del rank_host
 
 def MPInoise2d(sh,rms=1.0, mfs=2,rms_mod=None, mfs_mod=2):
     """

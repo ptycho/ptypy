@@ -560,7 +560,7 @@ class Ptycho(Base):
                 self.run(label=label)
         else:
             # Prepare and run ALL engines in self.p.engines
-            self.init_engine()
+            # self.init_engine()
             self.runtime.allstart = time.asctime()
             self.runtime.allstop = None
             for engine in self.engines.values():
