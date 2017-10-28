@@ -854,25 +854,31 @@ class DM_ocl(BaseEngine):
         self.info = {}
         self.geometries = {}
         
+        self.diff_info = {}
         for dID, diffs in self.di.S.iteritems():
-            self.DM_info[dID] = []
-            self.addr[dID] = []
-            self.mask_sum[dID] = []
+            
+            prep = u.Param()
+            self.diff_info[dID] = prep
+            
+            prep.DM_info = []
+            prep.addr = []
+            prep.mask_sum = []
             
             # Sort views according to layer in diffraction stack 
             views = diffs.views
             dlayers = [view.dlayer for view in views]
             views = [views[i] for i in np.argsort(dlayers)]
+            prep.views_sorted = views
             
             # Master pod
             mpod = views[0].pod
             
             # Determine linked storages for probe, object and exit waves
-            pID = mpod.pr_view.storage.ID
-            oID = mpod.ob_view.storage.ID
-            eID = mpod.ex_view.storage.ID
+            pr = mpod.pr_view.storage
+            ob = mpod.ob_view.storage
+            ex = mpod.ex_view.storage
             
-            self.probe_object_exit_ID[dID] = (pID,oID,eID)
+            prep.probe_object_exit_ID = (pr.ID,ob.ID,ex.ID)
             
             for view in views:
                 address = []
@@ -887,72 +893,58 @@ class DM_ocl(BaseEngine):
                     a += (pod.ma_view.dlayer,pod.ma_view.dlow[0],pod.ma_view.dlow[1])
                     address.append(a)
                     
-                    if pod.pr_view.storage.ID != pID:
+                    if pod.pr_view.storage.ID != pr.ID:
                         log(1, "Splitting probes for one diffraction stack is not supported in " + self.__class__.__name__)
-                    if pod.ob_view.storage.ID != oID:
+                    if pod.ob_view.storage.ID != ob.ID:
                         log(1, "Splitting objects for one diffraction stack is not supported in " + self.__class__.__name__)
-                    if pod.ex_view.storage.ID != eID:
+                    if pod.ex_view.storage.ID != ex.ID:
                         log(1, "Splitting exit stacks for one diffraction stack is not supported in " + self.__class__.__name__)
                                             
                 ## store data for each view
                 # adresses
-                self.addr[dID].append(address)
+                prep.addr.append(address)
                 # mask sum
-                self.mask_sum[dID].append(pod.mask.sum())
+                prep.mask_sum.append(pod.mask.sum())
             
-            self.di_views[dID] = views    
+                
             # store them for each storage
-            arr = np.asarray(self.addr[dID]).astype(np.int32)
-            msum = np.asarray(self.mask_sum[dID])
+            arr = np.asarray(prep.addr).astype(np.int32)
+            msum = np.asarray(prep.mask_sum)
             
-            self.mask_sum[dID] = msum
+            prep.mask_sum = msum
             self.mask_sum_gpu[dID] = cla.to_device(self.queue, msum, allocator= constbuffer)
-            self.addr[dID] = arr
+            prep.addr = arr
             self.addr_gpu[dID] = cla.to_device(self.queue, arr)
             
             diffs.pbound = .25 *  self.p.fourier_relax_factor**2 * diffs.pbound_stub
             
-            # get obj shape
-            obj_shape = {}
-            obj_nlayers = {}
-            for oID in self.ob.S.keys():
-                obj_shape[oID] = self.ob.S[oID].data.shape[-2:]
-                obj_nlayers[oID] = self.ob.S[oID].nlayers
-            
-            # get probe shape
-            pr_shape = {}
-            pr_nlayers = {}
-            for pID in self.pr.S.keys():
-                pr_shape[pID] = self.pr.S[pID].data.shape[-2:]
-                pr_nlayers[pID] = self.pr.S[pID].nlayers
-            
-            self.DM_info[dID].append(self.p.alpha)
-            self.DM_info[dID].append(diffs.pbound)
-            self.DM_info[dID] = np.asarray(self.DM_info[dID]).astype(np.float32)
-            self.DM_info_gpu[dID] = cla.to_device(self.queue, self.DM_info[dID], allocator = constbuffer)
+            prep.DM_info.append(self.p.alpha)
+            prep.DM_info.append(diffs.pbound)
+            prep.DM_info = np.asarray(prep.DM_info).astype(np.float32)
+            prep.DM_info_gpu = cla.to_device(self.queue, prep.DM_info, allocator = constbuffer)
             
             # get shapes for each exit storage
-            self.shape[dID] = self.r.f.S[eID].data.shape
+            prep.shape = self.r.f.S[ex.ID].data.shape
             
 
             # TODO: nlayers for pr_modes & obj_modes
-            self.info[dID] = []
-            self.info[dID] += [arr.shape[0]]
-            self.info[dID] += [arr.shape[1]]
-            self.info[dID] += [obj_nlayers[oID]]
-            self.info[dID] += [obj_shape[oID][0]]
-            self.info[dID] += [obj_shape[oID][1]]
-            self.info[dID] += [pr_shape[pID][0]]
+            prep.sh_info = []
+            prep.sh_info += [arr.shape[0]]
+            prep.sh_info += [arr.shape[1]]
+            prep.sh_info += [ob.nlayers]
+            prep.sh_info += [ob.data.shape[-2]]
+            prep.sh_info += [ob.data.shape[-1]]
+            prep.sh_info += [pr.data.shape[-2]]
             
-            info = np.asarray(self.info[dID]).astype(np.int32)
-            self.info_gpu[dID] = cla.to_device(self.queue, info, allocator = constbuffer)
+            info = np.asarray(prep.sh_info).astype(np.int32)
+            prep.sh_info_gpu = cla.to_device(self.queue, info, allocator = constbuffer)
             self.queue.finish()
 
             ## FFT setup
             # we restrict to single geometry per diffraction storage => incompatible with multiple propagators
 
                         
-            f = self.ex.S[eID].gpu
+            f = self.ex.S[ex.ID].gpu
             geo = mpod.geometry
 
             self.geometries[dID] = geo
@@ -1004,19 +996,21 @@ class DM_ocl(BaseEngine):
             
             for dID in self.di.S.keys():
                 t1 = time.time()
+                
+                prep = self.diff_info[dID]
                 # find probe, object in exit ID in dependence of dID
-                pID,oID,eID = self.probe_object_exit_ID[dID]
+                pID,oID,eID = prep.probe_object_exit_ID
                 
                 # get addresses 
                 addr_gpu = self.addr_gpu[dID]
                 
                 # get info arrays
-                info = self.info[dID]
-                info_gpu = self.info_gpu[dID]
-                DM_info_gpu = self.DM_info_gpu[dID]
+                info = prep.sh_info
+                info_gpu = prep.sh_info_gpu
+                DM_info_gpu = prep.DM_info_gpu
 
                 # get exit wave shape
-                shape = self.shape[dID]
+                shape = prep.shape
                 
                 # local references
                 mask_gpu = self.ma.S[dID].gpu
@@ -1188,7 +1182,7 @@ class DM_ocl(BaseEngine):
                 self.benchmark.I_post_ifft += time.time() - t1 
                 #print 'Apply changes #2: ' + str(time.time()-t1)
                 
-                viewIDs = [v.ID for v in self.di_views[dID]]
+                viewIDs = [v.ID for v in prep.views_sorted]
                 #err_exit = np.zeros(info[0],)
                 err_phot = np.zeros(info[0],)
                 errs = np.array(zip(err_fmag.get(),err_phot , err_exit.get()))
@@ -1197,7 +1191,11 @@ class DM_ocl(BaseEngine):
                 
                 self.benchmark.calls_fourier +=1
                 
-            self.overlap_update(MPI=True)
+            sync = (self.curiter % 1==0)
+            #parallel.barrier()
+            #log(3,str(self.curiter)+str(sync),True)
+            parallel.barrier()
+            self.overlap_update(MPI=sync)
             self.curiter += 1
             self.queue.finish()
             self.queue_get.finish()
@@ -1262,22 +1260,22 @@ class DM_ocl(BaseEngine):
         do_update_probe = (self.p.probe_update_start <= self.curiter)
          
         for inner in range(self.p.overlap_max_iterations):
-            prestr = 'Iteration (Overlap) #%02d:  ' % inner
+            prestr = '%d Iteration (Overlap) #%02d:  ' % (parallel.rank, inner)
             
             # Update object first
             if self.p.update_object_first or (inner > 0):
                 # Update object
-                logger.debug(prestr + '----- object update -----')
+                log(4,prestr + '----- object update -----',True)
                 self.object_update(MPI=(parallel.size>1 and MPI))
                                
             # Exit if probe should not yet be updated
             if not do_update_probe: break
             
             # Update probe
-            logger.debug(prestr + '----- probe update -----')
-            change = self.probe_update(MPI=parallel.size>1)
+            log(4,prestr + '----- probe update -----',True)
+            change = self.probe_update(MPI=(parallel.size>1 and MPI))
 
-            logger.debug(prestr + 'change in probe is %.3f' % change)
+            log(4,prestr + 'change in probe is %.3f' % change,True)
             
             # stop iteration if probe change is small
             if change < self.p.overlap_converge_factor: break
@@ -1292,11 +1290,13 @@ class DM_ocl(BaseEngine):
             
             queue = self.queue
             
-            info = self.info[dID]
-            info_gpu = self.info_gpu[dID]
+            prep = self.diff_info[dID]
+            
+            info = prep.sh_info
+            info_gpu = prep.sh_info_gpu
             
             # find probe, object in exit ID in dependence of dID
-            pID,oID,eID = self.probe_object_exit_ID[dID]
+            pID,oID,eID = prep.probe_object_exit_ID
                                    
             # get addresses 
             addr_gpu = self.addr_gpu[dID]
@@ -1321,7 +1321,7 @@ class DM_ocl(BaseEngine):
             cfact = self.r.ob_cfact.S[oID].gpu
             ob.gpu *= cfact
             #obn.gpu.fill(cfact)
-            obn.gpu[:] = cfact
+            obn.gpu[:] = 1.0 #cfact
             queue.finish()
 
             # scan for loop
@@ -1375,13 +1375,15 @@ class DM_ocl(BaseEngine):
             
             queue = self.queue
             
-            info = self.info[dID]
-            info_gpu = self.info_gpu[dID]
+            prep = self.diff_info[dID]
+            
+            info = prep.sh_info
+            info_gpu = prep.sh_info_gpu
             
             cfact = self.p.probe_inertia * info[0]
             
             # find probe, object in exit ID in dependence of dID
-            pID,oID,eID = self.probe_object_exit_ID[dID]
+            pID,oID,eID = prep.probe_object_exit_ID
             
             # get addresses 
             addr_gpu = self.addr_gpu[dID]
@@ -1441,7 +1443,9 @@ class DM_ocl(BaseEngine):
             #change += u.norm2(pr[i]-buf_pr[i]) / u.norm2(pr[i])
             change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
             buf.data[:] = pr.data
-            
+            if MPI:
+                change = parallel.allreduce(change) / parallel.size
+                
         #print 'probe update: ' + str(time.time()-t1)
         self.benchmark.probe_update += time.time()-t1
         self.benchmark.calls_probe +=1

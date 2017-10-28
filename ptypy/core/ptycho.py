@@ -909,6 +909,143 @@ class Ptycho(Base):
         logger.info(''.join(info), extra={'allprocesses': True})
         # logger.debug(info, extra={'allprocesses': True})
 
+    
+    def redistribute_data(self, div = 'rect', obj_storage=None):
+        """
+        This function redistributes data among nodes, so that each
+        node becomes in charge of a contiguous block of scanning
+        positions.
+
+        Each node is associated with a domain of the scanning pattern,
+        and communication happens node-to-node after each has worked
+        out which of its pods are not part of its domain.
+
+        """
+        t0 = time.time()
+        
+        if obj_storage is None:
+            for s in self.obj.storages.values():
+                out = self.redistribute_data(div=div, obj_storage=s)
+            return out
+        else:
+            # Not effective for object modes, but these are rare anyway
+            views = obj_storage.views
+            # get the range of positions 
+            pos = np.array([v.coord for v in views])
+            mn = pos.min(0)
+            mx = pos.max(0)
+            diff = mx - mn
+            # expand the outer borders slightly to avoid edge effects
+            mn -= 0.01 * diff
+            mx += 0.01 * diff
+            # in [0,1]
+            normed = lambda x : (x-mn) / (mx-mn)
+                
+            N = parallel.size
+            if div == 'rect':
+                roots = np.arange(int(np.sqrt(N)),0,-1)
+                i = roots[N % roots == 0][0]
+                assert (i * (N / i) == N)
+                
+                def __node(pos):
+                    x,y = normed(pos)
+                    rank = int( i * x) + i * int(N/i * y )
+                    return rank
+                
+            elif div == 'angle':
+                def __node(pos):
+                    x,y = normed(pos) -.5
+                    return  int(min(N * (np.angle(x+ 1.j * y) / np.pi+1.)/2.,N-1))
+                    
+            elif div == 'row':
+                __node = lambda pos : int(normed(pos)[0] * N)
+                
+            elif div == 'column':
+                __node = lambda pos : int(normed(pos)[1] * N)
+    
+            # Now get the the views to the diffraction data
+            views =  dict([(v.ID,v.pod.di_view) for v in views])
+       
+            # Determine which views need to be moved.            
+            # This relies heavily on the per-node tagging of active/passive
+            destinations = {}
+            sources = {}
+            positions = []
+            label = []
+            for name,view in views.iteritems():
+                pos = view.pod.ob_view.coord
+                _dest = __node(pos) % N
+                label.append(_dest)
+                positions.append(normed(pos))
+                if _dest == parallel.rank:
+                    # Nothing to do
+                    continue
+                else:
+                    destinations[name] = _dest
+                if view.active:
+                    sources[name] = parallel.rank
+
+            destinations = parallel.gather_dict(destinations)
+            destinations = parallel.bcast_dict(destinations)
+            sources = parallel.gather_dict(sources)
+            sources = parallel.bcast_dict(sources)
+            if not destinations:
+                logger.info('No data redistribution necessary.')
+                return 0
+            
+            ## Pairing
+            pairs = {}
+            # prepare (enlarge) the storages on the receiving nodes
+            for name, source in sources.iteritems():
+                dest = destinations[name] # This must work
+                pairs[name] = (source,dest)
+                view = views[name]
+                if dest == parallel.rank:
+                    # receiving this pod, so mark it as active
+                    view.active = True
+                    view.pod.ma_view.active = True
+                    view.pod.ex_view.active = True
+
+            for name in ['Cdiff', 'Cmask']:
+                self.containers[name].reformat()
+    
+            # transfer data
+            transferred = 0
+            for name, (source,dest) in pairs.iteritems():
+                view = views[name]
+                if parallel.rank == source:
+                    parallel.send(view.data, dest=dest)
+                    parallel.send(view.pod.mask, dest=dest)
+                    view.active = False
+                    view.pod.ma_view.active = False
+                    view.pod.ex_view.active = False
+                    transferred += 1
+                if dest == parallel.rank:
+                    # your turn to receive
+                    view.data = parallel.receive()
+                    view.pod.mask = parallel.receive()
+                parallel.barrier()
+                
+            for name in ['Cdiff', 'Cmask', 'Cexit']:
+                self.containers[name].reformat()
+                
+            transferred = parallel.comm.reduce(transferred)
+            t1 = time.time()
+    
+            if parallel.master:
+                logger.info('Redistributed data, moved %u pods in %.2f s'
+                            %  (transferred, t1 - t0))
+    
+        return positions, label
+
+    def _best_decomposition(self, N):
+        """
+        Work out the best arrangement of domains for a given number of
+        nodes. Assumes a roughly square scan.
+        """
+
+
+
     def plot_overview(self, fignum=100):
         """
         plots whole the first four layers of every storage in probe, object
