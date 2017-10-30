@@ -463,40 +463,6 @@ class Ptycho(Base):
         if print_stats:
             self.print_stats()
 
-        # Create plotting instance (maybe)
-
-    def _init_engines(self):
-        """
-        * deprecated*
-        Initialize engines from parameters. Sets :py:attr:`engines`
-        """
-        # Store the engines in a dict
-        self.engines = {}
-
-        # Store the run labels in a list to ensure precedence is preserved.
-        self.run_labels = []
-
-        # Loop through p.engines sub-dictionaries
-        for run_label, pars in self.p.engines.iteritems():
-            # Copy common parameters
-            engine_pars = self.p.engine.common.copy()
-
-            # Identify engine by name
-            engine_class = engines.by_name(pars.name)
-
-            # Update engine type specific parameters
-            engine_pars.update(self.p.engine[pars.name])
-
-            # Update engine instance specific parameters
-            engine_pars.update(pars)
-
-            # Create instance
-            engine = engine_class(self, engine_pars)
-
-            # Store info
-            self.engines[run_label] = engine
-            self.run_labels.append(run_label)
-
     def init_engine(self, label=None, epars=None):
         """
         Called on __init__ if ``level >= 4``.
