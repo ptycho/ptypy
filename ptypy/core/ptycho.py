@@ -991,7 +991,7 @@ class Ptycho(Base):
             sources = parallel.bcast_dict(sources)
             if not destinations:
                 logger.info('No data redistribution necessary.')
-                return 0
+                return positions, label
             
             ## Pairing
             pairs = {}

@@ -22,7 +22,17 @@ import pyopencl as cl
 
 from pyopencl import array as cla
 from pyopencl import clmath as clm
+from .. import gpu
 
+# queue = gpu.get_ocl_queue()
+
+### TODOS 
+# 
+# - Make DM_ocl a subclass of DM
+# - Transfer remaining kernel code in a ocl_kernels.py
+# - The Propagator needs to be made somewhere else
+# - Get it running faster with MPI
+# - implement "batching" when processing frames to lower the pressure on memory
 
 ## for debugging
 from matplotlib import pyplot as plt
@@ -33,7 +43,7 @@ parallel = u.parallel
 
 
 DEFAULT = u.Param(
-    fourier_relax_factor = 0.01,
+    fourier_relax_factor = 0.05,
     alpha = 1,
     update_object_first = True,
     overlap_converge_factor = .1,
@@ -44,125 +54,6 @@ DEFAULT = u.Param(
     clip_object = None,                 # None or tuple(min,max) of desired limits of the object modulus
 )
 
-
-class FFT_GPU(object):
-    def __init__(self, context, queue, input_arrays, output_arrays=None, dir_forward=True, axes = None, sc_fw = 1., sc_bw = 1., fast_math = False):
-        
-        import gpyfft
-        GFFT = gpyfft.GpyFFT(debug=False)
-
-        self.context = context
-        self.queue = queue
-        self.dir_forward = dir_forward
-        in_array = input_arrays[0]
-        t_strides_in, t_distance_in, t_batchsize_in, t_shape = self.calculate_transform_strides(
-            axes, in_array.shape, in_array.strides, in_array.dtype)
-
-        if output_arrays is not None:
-            t_inplace = False
-            out_array = output_arrays[0]
-            t_strides_out, t_distance_out, foo, bar = self.calculate_transform_strides(
-                axes, out_array.shape, out_array.strides, out_array.dtype)
-        else:
-            t_inplace = True
-            out_array = None
-            t_strides_out, t_distance_out = t_strides_in, t_distance_in
-
-        self.t_shape = t_shape
-        self.batchsize = t_batchsize_in
-
-        plan = GFFT.create_plan(context, t_shape)
-        plan.inplace = t_inplace
-        plan.strides_in = t_strides_in
-        plan.strides_out = t_strides_out
-        plan.distances = (t_distance_in, t_distance_out)
-        plan.batch_size = t_batchsize_in #assert t_batchsize_in == t_batchsize_out
-        plan.scale_forward *= sc_fw
-        plan.scale_backward *= sc_bw
-        
-
-        if False:
-            print 'axes', axes        
-            print 'in_array.shape:          ', in_array.shape
-            print 'in_array.strides/itemsize', tuple(s/in_array.dtype.itemsize for s in in_array.strides)
-            print 'shape transform          ', t_shape
-            print 't_strides                ', t_strides_in
-            print 'distance_in              ', t_distance_in
-            print 'batchsize                ', t_batchsize_in
-            print 't_stride_out             ', t_strides_out
-            print 'inplace                  ', t_inplace
-
-        plan.bake(self.queue)
-        temp_size = plan.temp_array_size
-        if temp_size:
-            #print 'temp_size:', plan.temp_array_size
-            self.temp_buffer = cl.Buffer(self.context, cl.mem_flags.READ_WRITE, size = temp_size)
-        else:
-            self.temp_buffer = None
-
-        self.plan = plan
-        self.data = in_array #TODO: planar arrays
-        self.result = out_array #TODO: planar arrays
-
-
-    def calculate_transform_strides(self,
-                                    axes,
-                                    shape, 
-                                    strides,
-                                    dtype,
-                                   ):
-        ddim = len(shape) #dimensionality data
-        if axes is None:
-            axes = range(ddim)
-
-        tdim = len(axes) #dimensionality transform
-        assert tdim <= ddim
-        
-        axes_transform = tuple(a + ddim if a<0 else a for a in axes)
-
-        axes_notransform = set(range(ddim)).difference(axes_transform)
-        assert len(axes_notransform) < 2, 'more than one non-transformed axis'
-        #TODO: collapse non-transformed axes if possible
-
-        t_shape = [shape[i] for i in axes_transform]
-        dsize = dtype.itemsize
-        t_strides = [strides[i]//dsize for i in axes_transform]
-        
-        t_distance = [strides[i]//dsize for i in axes_notransform]
-        if not t_distance:
-            t_distance = 0
-        else:
-            t_distance = t_distance[0] #TODO
-    
-        batchsize = 1
-        for a in axes_notransform:
-            batchsize *= shape[a]
-
-        return (tuple(t_strides), t_distance, batchsize, tuple(t_shape))
-
-    def enqueue(self):
-        """enqueue transform"""
-        if self.result is not None:
-            events = self.plan.enqueue_transform((self.queue,), (self.data.data,), (self.result.data),
-                                        direction_forward = self.dir_forward, temp_buffer = self.temp_buffer)
-        else:
-            events = self.plan.enqueue_transform((self.queue,), (self.data.data,),
-                                        direction_forward = self.dir_forward, temp_buffer = self.temp_buffer)
-        
-        return events
-    
-    def ft(self, inarray, outarray=None):
-        if outarray is not None:
-            events = self.plan.enqueue_transform((self.queue,), (inarray.data,), (outarray.data,),
-                                        direction_forward = self.dir_forward, temp_buffer = self.temp_buffer)
-        else:
-            events = self.plan.enqueue_transform((self.queue,), (inarray.data,),
-                                        direction_forward = self.dir_forward, temp_buffer = self.temp_buffer)
-        
-        return events
-        
-    def update_arrays(input_array, output_array):
-        pass
         
 def gaussian_kernel(sigma, size=None, sigma_y=None, size_y=None):
     size = int(size)
@@ -190,19 +81,8 @@ class DM_ocl(BaseEngine):
             pars = DEFAULT.copy()
             
         super(DM_ocl,self).__init__(ptycho_parent,pars)
-        ## basic GPU settings
-        self.plat = cl.get_platforms()
-        self.devices = self.plat[0].get_devices(cl.device_type.GPU)
-        #print self.devices[0]
-        #print self.devices
-        #import platform; print platform.node()
-        
-        
-        self.ctx = cl.Context([self.devices[u.parallel.rank_local]])
-        # causes in error if there are more nodes / processes than devices
-        
-        self.queue = cl.CommandQueue(self.ctx)
-        self.queue_get = cl.CommandQueue(self.ctx)
+          
+        self.queue = gpu.get_ocl_queue()
         
         # allocator for READ only buffers
         #self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
@@ -217,7 +97,7 @@ class DM_ocl(BaseEngine):
         self.gauss_kernel_gpu = cla.to_device(self.queue,gauss_kernel)
         
         ## GPU Kernel
-        self.prg = cl.Program(self.ctx, """
+        self.prg = cl.Program(self.queue.context, """
         #include <pyopencl-complex.h>
         
         // filter shape
@@ -241,36 +121,7 @@ class DM_ocl(BaseEngine):
         #define N_pods info[0]*info[1]
         
         #define nmodes info[1]
-        
-        __kernel void create_exit(__global int *info,
-                            __global int *slices,
-                            __global cfloat_t *ob_g,
-                            __global cfloat_t *pr_g,
-                            __global cfloat_t *ex_g,
-                            __global int *probe_ID_g,
-                            __global int *obj_ID_g)
-        {
-            size_t x = get_global_id(2);
-            size_t dx = get_global_size(2);
-            size_t y = get_global_id(1);
-            size_t z = get_global_id(0);
-
-            ex_g[z*dx*dx + y*dx + x] = cfloat_mul(ob_g[obj_ID_g[z]*info[1]*info[2] + (y+slices[z*4])*info[2] + slices[z*4+1]+x],pr_g[probe_ID_g[z]*dx*dx + y*dx+x]);
-        }
-        
-        __kernel void calc_fmag(__global float *I,
-                            __global float *fmag,
-                            __global int *addr)     // calculate: I = np.abs(diff_view.data) 
-        {
-            size_t x = get_global_id(2);
-            size_t dx = get_global_size(2);
-            size_t y = get_global_id(1);
-            size_t z = get_global_id(0);
-            
-            I[z*dx*dx + y*dx + x] = fabs(I[z*dx*dx + y*dx + x]);
-            fmag[z*dx*dx + y*dx + x] = sqrt(I[z*dx*dx + y*dx + x]);
-        }
-        
+                       
         __kernel void build_aux(__global int *info,
                             __global float *DM_info,
                             __global cfloat_t *ob_g,
@@ -761,7 +612,7 @@ class DM_ocl(BaseEngine):
         self.dattype=np.complex64
         
         def constbuffer(nbytes):
-            return cl.Buffer(self.ctx,cl.mem_flags.READ_ONLY,size=nbytes)
+            return cl.Buffer(self.queue.context,cl.mem_flags.READ_ONLY,size=nbytes)
             
         self.error = []
         # object padding on high side
@@ -802,16 +653,10 @@ class DM_ocl(BaseEngine):
         self.r.f = self.ex.copy(self.ex.ID+'_fourier',fill=0.)
         
         # diff-like
-        #self.r.af = self.di.copy(self.di.ID+'_af',fill=0.)
-        #self.r.af2 = self.di.copy(self.di.ID+'_af2',fill=0.)
         self.r.fm = self.di.copy(self.di.ID+'_fm',fill=0.)
-        #self.r.I = self.di.copy(self.di.ID+'_I')
         self.r.fmag = self.di.copy(self.di.ID+'_fmag',fill=0.)
         self.r.fdev = self.di.copy(self.di.ID+'_fdev',fill=0.)
-        #self.r.err_ph_temp = self.di.copy(self.di.ID+'_err_ph_temp',fill=0.)
-        #self.r.err_ph_temp1 = self.di.copy(self.di.ID+'_err_ph_temp1',fill=0.)
         self.r.err_temp = self.di.copy(self.di.ID+'_err_temp',fill=0.)
-        #self.r.err_fmag_temp1 = self.di.copy(self.di.ID+'_err_fmag_temp1',fill=0.)
 
         # copy Fourier magnitudes
         for name,s in self.r.fmag.S.iteritems():
@@ -822,7 +667,6 @@ class DM_ocl(BaseEngine):
             #s.gpu = cla.to_device(self.queue,s.data, allocator= constbuffer)
             
         ## access to gpu arrays via
-        #gpu_array = self.[buf].S['ID'].gpu.data
         self.err_exit = {}
         self.err_fmag = {}
         for dID in self.di.S.keys():
@@ -838,7 +682,7 @@ class DM_ocl(BaseEngine):
                 s.gpu = cla.to_device(self.queue,s.data)
         
         # memory check
-        self.ptycho.print_stats()
+        #self.ptycho.print_stats()
                
         self.di_views = {}
         self.DM_info = {}
@@ -939,23 +783,36 @@ class DM_ocl(BaseEngine):
             info = np.asarray(prep.sh_info).astype(np.int32)
             prep.sh_info_gpu = cla.to_device(self.queue, info, allocator = constbuffer)
             self.queue.finish()
-
+            
+            ## setup Fourier kernels
+            from ptypy.gpu.ocl_kernels import Fourier_update_kernel as FUK
+            prep.fourier_update = FUK(self.queue, nmodes = arr.shape[1], pbound = diffs.pbound)
+            mask = self.ma.S[dID].data.astype(np.float32)
+            prep.fourier_update.configure(diffs.data, mask, ex.data)
+            # put the right reference here
+              
+            
             ## FFT setup
             # we restrict to single geometry per diffraction storage => incompatible with multiple propagators
-
-                        
-            f = self.ex.S[ex.ID].gpu
             geo = mpod.geometry
-
-            self.geometries[dID] = geo
-            geo.propagator.pre_fft_gpu = cla.to_device(self.queue, geo.propagator.pre_fft)
-            geo.propagator.pre_ifft_gpu = cla.to_device(self.queue, geo.propagator.pre_ifft)
-            geo.propagator.post_fft_gpu = cla.to_device(self.queue, geo.propagator.post_fft)
-            geo.propagator.post_ifft_gpu = cla.to_device(self.queue, geo.propagator.post_ifft)
-            
-            geo.transform  = FFT_GPU(self.ctx, self.queue, (f,), dir_forward=True, axes = (1,2), sc_fw = geo.propagator.sc, sc_bw = geo.propagator.isc)
-            geo.itransform  = FFT_GPU(self.ctx, self.queue, (f,), dir_forward=False, axes = (1,2), sc_fw = geo.propagator.sc, sc_bw = geo.propagator.isc)
                         
+            geo.propagator.pre_fft_gpu = cla.to_device(self.queue,np.ones_like(geo.propagator.pre_fft))
+            geo.propagator.pre_ifft_gpu = cla.to_device(self.queue,np.ones_like(geo.propagator.pre_fft))
+            geo.propagator.post_fft_gpu = cla.to_device(self.queue,np.ones_like(geo.propagator.pre_fft))
+            geo.propagator.post_ifft_gpu = cla.to_device(self.queue,np.ones_like(geo.propagator.pre_fft))
+            
+            prep.geo = mpod.geometry
+            from ptypy.gpu.ocl_fft import FFT_2D_ocl_gpyfft as FFT
+            prep.geo.transform = FFT(self.queue, ex.data,  
+                    pre_fft = geo.propagator.pre_fft, 
+                    post_fft = geo.propagator.post_fft, 
+                    inplace = True,
+                    symmetric = True)
+            prep.geo.itransform = FFT(self.queue, ex.data,  
+                    pre_fft = geo.propagator.pre_ifft, 
+                    post_fft =  geo.propagator.post_ifft, 
+                    inplace = True,
+                    symmetric = True)
             self.queue.finish()
                 
         # finish init queue
@@ -1019,8 +876,9 @@ class DM_ocl(BaseEngine):
                 
                 ex_gpu = self.ex.S[eID].gpu
                 f = self.r.f.S[eID].gpu
+                prep.fourier_update.ocl.f = f
                 
-                geo = self.geometries[dID]
+                geo = prep.geo
                 queue = self.queue
                 shape_merged = self.di.S[dID].shape
                 mask_sum = self.mask_sum_gpu[dID]
@@ -1049,46 +907,28 @@ class DM_ocl(BaseEngine):
                                             ex_gpu.data, \
                                             f.data, \
                                             geo.propagator.pre_fft_gpu.data, \
+                                            #geo.ocl_fft.pre_fft.data, \
                                             addr_gpu.data)
                 queue.finish()
                 
                 self.benchmark.B_build_aux += time.time() - t1
-                #print 'prop_exit: ' + str(time.time()-t1)
     
                 ## FFT
                 t1 = time.time()
                 geo.transform.ft(f)
                 queue.finish()
-                
                 self.benchmark.C_fft += time.time() - t1
-                #print 'Propagate exit waves: ' + str(time.time()-t1)
-        
                 
-                ## calculate deviations from measured data
+                ## Deviation from measured data
                 t1 = time.time()
-                """
-                self.prg.post_fft(queue, shape_merged, (1,1,32), info_gpu.data, f.data, af2.data, geo.propagator.post_fft_gpu.data)
+                fourier_error = prep.fourier_update.execute_ocl()
                 queue.finish()
-                
-                self.benchmark.D_post_fft += time.time() - t1 
-                #print 'prop2: ' + str(time.time()-t1)
-                
-                t1 = time.time()
-                self.prg.dev(queue, shape_merged, (1,1,32),  f.data,\
-                                                            af.data, \
-                                                            af2.data, \
-                                                            fmag.data, \
-                                                            fdev.data, \
-                                                            I.data, \
-                                                            err_fmag_temp.data, \
-                                                            mask_gpu.data, \
-                                                            mask_sum.data, \
-                                                            err_ph_temp.data)
-                self.queue.finish()
+                self.benchmark.G_fmag_update += time.time() - t1
                 """
                 self.prg.dev_post_fft(queue, shape_merged, (1,1,32),
                                             info_gpu.data, 
                                             f.data,
+                                            #geo.ocl_fft.post_fft.data,
                                             geo.propagator.post_fft_gpu.data,
                                             fmag.data, 
                                             fdev.data, 
@@ -1103,67 +943,28 @@ class DM_ocl(BaseEngine):
                 
                 self.prg.reduce_one_step(queue, (shape_merged[0],64), (1,64), info_gpu.data, err_temp.data, err_fmag.data)
                 queue.finish()
-                """
-                self.prg.reduce(queue, shape[-2:], (16,16), info_gpu.data, err_fmag_temp.data, err_fmag_temp1.data)
-                #self.queue.finish()
-                self.prg.reduce(queue, shape[-2:], (16,16), info_gpu.data, err_fmag_temp1.data, err_fmag_temp.data)
-                queue.finish()
-                
-                self.prg.sum2(queue, (info[0],), None, info_gpu.data, err_fmag_temp.data, err_fmag.data)
-                queue.finish()
-                
-                
-                
-                self.prg.reduce(queue, shape[-2:], (16,16), info_gpu.data, err_ph_temp.data, err_ph_temp1.data)
-                self.queue.finish()
-                self.prg.reduce(queue, shape[-2:], (16,16), info_gpu.data, err_ph_temp1.data, err_ph_temp.data)
-                self.queue.finish()
-                self.prg.sum2(queue, (info[0],), None, info_gpu.data, err_ph_temp.data, err_phot.data)
-                self.queue.finish()
-                """
                 
                 self.benchmark.F_error_reduce += time.time() - t1
                 
                 t1 = time.time()
-                """
-                self.prg.calc_fm(queue, shape_merged, (1,1,32), 
-                                            DM_info_gpu.data, 
-                                            fm.data, 
-                                            mask_gpu.data, 
-                                            fmag.data, 
-                                            fdev.data, 
-                                            err_fmag.data)
-                self.queue.finish()
 
-                self.prg.fmag_update(queue, shape, (1,1,32), info_gpu.data, 
-                                            f.data, 
-                                            fm.data, 
-                                            geo.propagator.pre_ifft_gpu.data)
-                self.queue.finish()
-
-                """
                 self.prg.fmag_all_update(queue, shape, (1,1,32), 
                                             info_gpu.data,
                                             DM_info_gpu.data,
                                             f.data,
                                             geo.propagator.pre_ifft_gpu.data,
+                                            #geo.ocl_ifft.pre_ifft.data,
                                             mask_gpu.data, 
                                             fmag.data, 
                                             fdev.data, 
                                             err_fmag.data)
-                queue.finish()
                 
-                self.benchmark.G_fmag_update += time.time() - t1
-
-                
-                #print 'Apply changes #1: ' + str(time.time()-t1)
-                
+                """
                 ## iFFT
                 t1 = time.time()
-                geo.itransform.ft(f)
+                geo.itransform.ift(f)
                 self.queue.finish()
-                
-                
+                                
                 self.benchmark.H_ifft += time.time() - t1
                                 
                 ## apply changes #2
@@ -1174,18 +975,19 @@ class DM_ocl(BaseEngine):
                                         ex_gpu.data, 
                                         f.data, 
                                         geo.propagator.post_ifft_gpu.data, 
+                                        #geo.ocl_ifft.post_ifft.data.data, 
                                         addr_gpu.data)
                 self.queue.finish()
     
                 self.prg.reduce_one_step(queue, (shape_merged[0],64), (1,64), info_gpu.data, err_temp.data, err_exit.data)
                 queue.finish()
                 self.benchmark.I_post_ifft += time.time() - t1 
-                #print 'Apply changes #2: ' + str(time.time()-t1)
                 
                 viewIDs = [v.ID for v in prep.views_sorted]
                 #err_exit = np.zeros(info[0],)
                 err_phot = np.zeros(info[0],)
-                errs = np.array(zip(err_fmag.get(),err_phot , err_exit.get()))
+                #errs = np.array(zip(err_fmag.get(),err_phot , err_exit.get()))
+                errs = np.array(zip(fourier_error,err_phot , err_exit.get()))
                 error = dict(zip(viewIDs, errs))
                 #print np.array(error.values()).mean(0)
                 
@@ -1195,10 +997,10 @@ class DM_ocl(BaseEngine):
             #parallel.barrier()
             #log(3,str(self.curiter)+str(sync),True)
             parallel.barrier()
-            self.overlap_update(MPI=sync)
+            self.overlap_update(MPI=True)
+            parallel.barrier()
             self.curiter += 1
             self.queue.finish()
-            self.queue_get.finish()
 
         for name, s in self.ob.S.iteritems():  
             s.data[:] = s.gpu.get(queue=self.queue)
@@ -1215,18 +1017,21 @@ class DM_ocl(BaseEngine):
         try deleting ever helper contianer
         """
         self.queue.finish()
-        self.queue_get.finish()
         if parallel.master:
             print "----- BENCHMARKS ----"
+            acc = 0.
             for name in sorted(self.benchmark.keys()):
                 t = self.benchmark[name]
                 if name[0] in 'ABCDEFGHI':
                     print '%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier *1000)
+                    acc +=t
                 elif str(name) == 'probe_update':
                     #pass
-                    print '%20s : %1.3f ms per call' % (name, t / self.benchmark.calls_probe * 1000)
+                    print '%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_probe * 1000, self.benchmark.calls_probe)
                 elif str(name) == 'object_update':
-                    print '%20s : %1.3f ms per call' % (name, t / self.benchmark.calls_object *1000)
+                    print '%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_object *1000, self.benchmark.calls_object)
+            
+            print '%20s : %1.3f ms per iteration. %d calls' % ('Fourier_total', acc / self.benchmark.calls_fourier *1000, self.benchmark.calls_fourier)
             
             """
             for name, s in self.ob.S.iteritems():
@@ -1247,7 +1052,7 @@ class DM_ocl(BaseEngine):
         for original in [self.pr,self.ob,self.ex,self.di, self.ma]:
             original.delete_copy()
             
-        # delte local references to container buffer copies
+        # delete local references to container buffer copies
         del self.r
 
         
@@ -1261,7 +1066,6 @@ class DM_ocl(BaseEngine):
          
         for inner in range(self.p.overlap_max_iterations):
             prestr = '%d Iteration (Overlap) #%02d:  ' % (parallel.rank, inner)
-            
             # Update object first
             if self.p.update_object_first or (inner > 0):
                 # Update object
@@ -1274,6 +1078,7 @@ class DM_ocl(BaseEngine):
             # Update probe
             log(4,prestr + '----- probe update -----',True)
             change = self.probe_update(MPI=(parallel.size>1 and MPI))
+            #change = self.probe_update(MPI=(parallel.size>1 and MPI))
 
             log(4,prestr + 'change in probe is %.3f' % change,True)
             
@@ -1321,7 +1126,7 @@ class DM_ocl(BaseEngine):
             cfact = self.r.ob_cfact.S[oID].gpu
             ob.gpu *= cfact
             #obn.gpu.fill(cfact)
-            obn.gpu[:] = 1.0 #cfact
+            obn.gpu[:] = cfact
             queue.finish()
 
             # scan for loop
@@ -1343,7 +1148,7 @@ class DM_ocl(BaseEngine):
                 parallel.allreduce(obn.data)
                 ob.data /= obn.data
                 
-                # Clip object
+                # Clip object (This call takes like one ms. Not time critical)
                 if self.p.clip_object is not None:
                     clip_min, clip_max = self.p.clip_object
                     ampl_obj = np.abs(ob.data)
@@ -1352,9 +1157,7 @@ class DM_ocl(BaseEngine):
                     too_low = (ampl_obj < clip_min)
                     ob.data[too_high] = clip_max * phase_obj[too_high]
                     ob.data[too_low] = clip_min * phase_obj[too_low]
-
                 ob.gpu.set(ob.data)
-
             else:
                 ob.gpu /= obn.gpu
             
@@ -1403,7 +1206,7 @@ class DM_ocl(BaseEngine):
             prn.gpu.fill(cfact)
             
             # scan for-loop
-            self.prg.new_pr_update(queue, (info[5], info[5]), (16,16), 
+            self.prg.new_pr_update(queue, (info[5], info[5]), (16,16),#(16,16), 
                                             info_gpu.data, 
                                             ob.gpu.data, 
                                             pr.gpu.data, 
@@ -1414,6 +1217,7 @@ class DM_ocl(BaseEngine):
             
             # MPI test
             if MPI:
+            #if False:
                 pr.data[:]=pr.gpu.get(queue=queue)
                 prn.data[:]=prn.gpu.get(queue=queue)
                 queue.finish()
@@ -1434,12 +1238,13 @@ class DM_ocl(BaseEngine):
                 pr.gpu.set(pr.data)
             else:
                 pr.gpu /= prn.gpu
-            
+
+            # ca. 0.3 ms
             #self.pr.S[pID].gpu = probe_gpu
             pr.data[:]=pr.gpu.get(queue=queue)
             ## this should be done on GPU
             queue.finish()
-        
+            
             #change += u.norm2(pr[i]-buf_pr[i]) / u.norm2(pr[i])
             change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
             buf.data[:] = pr.data

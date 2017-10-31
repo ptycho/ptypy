@@ -5,6 +5,8 @@ import time
 from inspect import getargspec
 from collections import OrderedDict
 
+from ..utils.verbose import logger, log
+
 class Adict(object):
     
     def __init__(self):
@@ -21,7 +23,8 @@ class Fourier_update_kernel(object):
         self.verbose = False
     
     def log(self, x):
-            print(x)
+            log(4,x)
+            #print(x)
             
     def configure(self,I, mask, f):
         
@@ -53,6 +56,8 @@ class Fourier_update_kernel(object):
             #'fmag_update'
             'fmag_all_update'        
         ]
+        
+        self.configure_ocl()
         
     def sync_ocl(self):
         for key,array in self.npy.__dict__.iteritems():
@@ -378,6 +383,220 @@ class Fourier_update_kernel(object):
         print('Error : %.2e' % np.std(f-g))
         for key, val in inst.benchmark.items():
             print('Kernel %s : %.2f ms' % (key,val*1000))
+
+class Auxiliary_wave_kernel(object):
+    
+    def __init__(self, queue_thread=None, alpha = 1.0):
+            
+        self.queue = queue_thread
+        self.verbose = False
+        self.alpha = 1.0
+        
+    def log(self, x):
+            log(4,x)
+            #print(x)
+            
+    def configure(self,pr,ob,ex,addr,aux):
+        
+        self.shape = aux.shape
+
+        self.ob_shape = (np.int32(ob.shape[-2]),np.int32(ob.shape[-1]))
+        
+        self.benchmark = OrderedDict()
+        
+        self.nviews, self.nmodes, self.ncoords, self.naxes = addr.shape
+        self.npy = Adict()
+        self.npy.pr = pr
+        self.npy.ob = ob
+        self.npy.ex = ex
+        self.npy.addr = addr
+        sefl.npy.aux = aux
+
+        
+        self.kernels = [
+            'build_aux',
+            'build_exit',    
+        ]
+        
+        self.configure_ocl()
+        
+    def sync_ocl(self):
+        for key,array in self.npy.__dict__.iteritems():
+            self.ocl.__dict__[key].set(array)
+            
+    def configure_ocl(self):
+        self.ocl = Adict()
+        for key,array in self.npy.__dict__.iteritems():
+            self.ocl.__dict__[key] = cla.to_device(self.queue, array)
+             
+        assert self.queue is not None
+        self.prg = cl.Program(self.queue.context,"""
+        #include <pyopencl-complex.h>
+        
+        // Define usable names for buffer access
+        
+        
+        #define pr_dlayer(k) addr[k*15]
+        #define ex_dlayer(k) addr[k*15 + 6]
+        
+        #define obj_dlayer(k) addr[k*15 + 3]
+        #define obj_roi_row(k) addr[k*15 + 4]
+        #define obj_roi_column(k) addr[k*15 + 5]
+        
+        // calculates: 
+        // aux =  (1+alpha)*pod.probe*pod.object - alpha* pod.exit
+        __kernel void build_aux(float alpha,
+                            int ob_sh_row,
+                            int ob_sh_col,
+                            __global cfloat_t *ob,
+                            __global cfloat_t *pr,
+                            __global cfloat_t *ex,
+                            __global cfloat_t *aux,     
+                            __global int *addr)
+        {
+            size_t x = get_global_id(2);
+            size_t dx = get_global_size(2);
+            size_t y = get_global_id(1);
+            size_t z = get_global_id(0);
+            
+            size_t obj_idx = obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x;
+
+            cfloat_t ex0 = cfloat_rmul(alpha,ex[ex_dlayer(z)*dx*dx + y*dx + x]);
+            cfloat_t ex1 = cfloat_mul(ob[obj_idx],pr[pr_dlayer(z)*dx*dx + y*dx+x]);
+            //loc_sub[3] = cfloat_fromreal(1. + loc_sub[0].real);
+            
+            //cfloat_t ex2 = cfloat_sub(cfloat_rmul(1.+alpha,ex1),ex0);
+            aux[z*dx*dx + y*dx + x] = cfloat_sub(cfloat_rmul(1.+alpha,ex1),ex0);            
+        }
+        
+        __kernel void build_exit(float alpha,
+                            int ob_sh_row,
+                            int ob_sh_col,
+                            __global cfloat_t *ob,
+                            __global cfloat_t *pr,
+                            __global cfloat_t *ex,
+                            __global cfloat_t *f,
+                            __global int *addr)
+        {
+            size_t x = get_global_id(2);
+            size_t dx = get_global_size(2);
+            size_t y = get_global_id(1);
+            size_t z = get_global_id(0); 
+            
+            size_t obj_idx = obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x;
+            
+            cfloat_t ex1 = cfloat_mul(ob[obj_idx],pr[pr_dlayer(z)*dx*dx + y*dx+x]);
+            cfloat_t df = cfloat_sub(f[z*dx*dx + y*dx + x] , ex1); 
+            // f[z*dx*dx + y*dx + x] = df ; // t.b. removed later
+            ex[ex_dlayer(z)*dx*dx + y*dx + x] = cfloat_add(ex[ex_dlayer(z)*dx*dx + y*dx + x] , df);
+        }
+
+        """).build()
+    
+    def execute_ocl(self, kernel_name=None, compare = False, sync=False):
+                
+        if kernel_name is None:
+            for kernel in self.kernels:
+                self.execute_ocl(kernel, compare, sync)
+        else:
+            self.log("KERNEL " + kernel_name)
+            m_ocl = getattr(self,'_ocl_' + kernel_name )
+            m_npy = getattr(self,'_npy_' + kernel_name )
+            ocl_kernel_args = getargspec(m_ocl).args[1:]
+            npy_kernel_args = getargspec(m_npy).args[1:]
+            assert ocl_kernel_args == npy_kernel_args
+            # OCL
+            if sync:
+                self.sync_ocl()
+            args = [getattr(self.ocl,a).data for a in ocl_kernel_args]
+            
+            self.benchmark[kernel_name] = -time.time()
+            m_ocl(*args)
+            self.benchmark[kernel_name]+= time.time()
+            
+            if compare:
+                args = [getattr(self.npy,a) for a in npy_kernel_args]
+                m_npy(*args)
+                self.verify_ocl()
+        
+        return self.ocl.err_fmag.get()
+        
+    def execute_npy(self, kernel_name=None):
+        
+        if kernel_name is None:
+            for kernel in self.kernels:
+                self.execute_npy(kernel)
+        else:
+            self.log("KERNEL " + kernel_name)
+            m_npy = getattr(self,'_npy_' + kernel_name )
+            npy_kernel_args = getargspec(m_npy).args[1:]
+            args = [getattr(self.npy,a) for a in npy_kernel_args]
+            m_npy(*args)
+               
+        return self.npy.err_fmag
+    
+    
+    def _npy_fourier_error(self,f, fmag, fdev, ferr, fmask, mask_sum):
+        sh = f.shape
+        tf = f.reshape(sh[0]/self.nmodes,self.nmodes,sh[1],sh[2])
+    
+        af = np.sqrt((np.abs(tf)**2).sum(1))
+        
+        fdev[:] = af - fmag
+        ferr[:] = fmask * np.abs(fdev)**2 / mask_sum.reshape((mask_sum.shape[0],1,1))
+        
+    def _ocl_fourier_error(self,f, fmag, fdev, ferr, fmask, mask_sum):
+        self.prg.fourier_error(self.queue, self.fshape, (1,1,32), self.nmodes, 
+                                f, fmag, fdev, ferr, fmask, mask_sum)
+        self.queue.finish()       
+        
+        
+    def verify_ocl(self, precision=2**(-23)):
+        
+        for name, val in self.npy.__dict__.iteritems():
+            val2 = self.ocl.__dict__[name].get()
+            val = val
+            if np.allclose(val,val2,atol=precision):
+                continue 
+            else:
+                dev = np.std(val - val2)
+                print("Key %s : %.2e std, %.2e mean" % (name, dev, np.mean(val)))        
+        
+    @classmethod
+    def test(cls, shape =  (739,256,256), nmodes = 1, pbound = 0.0):
+
+        L,M,N = shape
+        fshape = shape
+        shape = (nmodes*L,M,N)
+        
+        f = np.random.rand(*shape).astype(np.complex64) * 200 
+        I = np.random.rand(*fshape).astype(np.float32) * 200**2 * nmodes
+        mask = (I > 10).astype(np.float32) 
+        
+        
+        devices = cl.get_platforms()[0].get_devices(cl.device_type.GPU)
+        queue = cl.CommandQueue(cl.Context([devices[0]]))
+        
+        inst = cls(queue_thread=queue, nmodes = nmodes, pbound = pbound)
+        inst.configure(I, mask, f.copy())
+        inst.configure_ocl()
+               
+        #inst.execute_ocl(compare=True,sync=False)
+        inst.execute_ocl()
+        g = inst.ocl.f.get()
+        inst.execute_npy()
+        f = inst.npy.f
+        """
+        g = f.copy()
+        inst.configure(I, mask, g)
+        err = inst.execute_npy(g)
+        inst.verify_ocl()
+        """
+        print('Error : %.2e' % np.std(f-g))
+        for key, val in inst.benchmark.items():
+            print('Kernel %s : %.2f ms' % (key,val*1000))
+
+
 
 if __name__=='__main__':
     Fourier_update_kernel.test()

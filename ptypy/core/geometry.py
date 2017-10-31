@@ -66,6 +66,7 @@ _old2new = u.Param(
     origin_sam='origin',
 )
 
+_ifstring = lambda x : isinstance(x,str) or isinstance(x,basestr)
 
 class Geo(Base):
     """
@@ -493,14 +494,14 @@ class BasicFarfieldPropagator(object):
 
         # Undo rounding error
         lz /= (self.sh[0] + mis[0] - self.crop_pad[0]) / self.sh[0]
-
+        
         # Calculate the grids
-        if str(p.origin) == p.origin:
+        if _ifstring(p.origin):
             c_sam = p.origin
         else:
             c_sam = p.origin + self.crop_pad / 2.
 
-        if str(p.center) == p.center:
+        if _ifstring(p.origin):
             c_det = p.center
         else:
             c_det = p.center + self.crop_pad / 2.

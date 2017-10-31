@@ -69,6 +69,7 @@ setup(
                         #'mpi4py>=1.3'],
     package_dir = {'ptypy':'ptypy'},
     packages = ['ptypy',
+                'ptypy.gpu',\
                 'ptypy.core',\
                 'ptypy.debug',\
                 'ptypy.utils',\

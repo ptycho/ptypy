@@ -205,11 +205,11 @@ def _translate_to_pix(sh,center):
     Take arbitrary input and translate it to a pixel position with respect to sh.
     """
     sh=np.array(sh)
-    if center=='fftshift':
+    if str(center)=='fftshift':
         cen=sh//2.0
-    elif center=='geometric':
+    elif str(center)=='geometric':
         cen=sh/2.0-0.5
-    elif center=='fft':
+    elif str(center)=='fft':
         cen=sh*0.0
     elif center is not None:
         #cen=sh*np.asarray(center) % sh - 0.5
