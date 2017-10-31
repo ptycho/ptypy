@@ -919,12 +919,20 @@ class EvalDescriptor(ArgParseDescriptor):
 
         d = self.check(pars)
         do_raise = False
+        raise_reasons = []
         for ep, v in d.items():
             for tocheck, outcome in v.items():
                 logger.log(_logging_levels[CODE_LABEL[outcome]], '%-50s %-20s %7s' % (ep, tocheck, CODE_LABEL[outcome]))
-                do_raise |= (outcome in raisecodes)
+                if outcome in raisecodes:
+                    do_raise = True
+                    reason = str(ep)
+                    if tocheck == 'symlink':
+                        reason += ' - make sure to specify the .name field'
+                    else:
+                        reason += ' - %s' % tocheck
+                    raise_reasons.append(reason)
         if do_raise:
-            raise RuntimeError('Parameter validation failed.')
+            raise RuntimeError('Parameter validation failed:\n  ' + '\n  '.join(raise_reasons))
 
     def sanity_check(self, depth=10):
         """
