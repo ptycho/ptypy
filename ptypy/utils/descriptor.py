@@ -14,55 +14,32 @@ This file is part of the PTYPY package.
 """
 
 import ast
-import inspect
 from collections import OrderedDict
 import textwrap
+from parameters import Param
 
-if __name__ == '__main__':
-    from ptypy.utils.parameters import Param
-else:
-    from .parameters import Param
 
-__all__ = ['create_default_template', 'make_sub_default', 'validate',
-          'entry_points_dct', 'parameter_descriptions', 'PDesc']
+__all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
 
-#! Validator message codes
-CODES = Param(
+
+class _Adict(object):
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+# ! Validator message codes
+CODES = _Adict(
     PASS=1,
     FAIL=0,
     UNKNOWN=2,
     MISSING=3,
     INVALID=4)
 
-#! Inverse message codes
-CODE_LABEL = dict((v, k) for k, v in CODES.items())
-
-"""
-# Populate the dictionary of all entry points.
-
-# All ptypy parameters in an ordered dictionary as (entry_point, PDesc) pairs.
-parameter_descriptions = OrderedDict()
-del OrderedDict
-
-# All parameter containers in a dictionary as (entry_point, PDesc) pairs.
-# Subset of :py:data:`parameter_descriptions`
-entry_points_dct = {}
-"""
-
-# Logging levels
-import logging
-
-_logging_levels = Param(
-    PASS=logging.INFO,
-    FAIL=logging.CRITICAL,
-    UNKNOWN=logging.WARN,
-    MISSING=logging.WARN,
-    INVALID=logging.ERROR)
-
-del logging
+# ! Inverse message codes
+CODE_LABEL = dict((v, k) for k, v in CODES.__dict__.items())
 
 
-class Parameter(object):
+class Descriptor(object):
     """
     Base class for parameter descriptions and validation. This class is used to hold both command line arguments
     and Param-type parameter descriptions.
@@ -84,18 +61,18 @@ class Parameter(object):
                      of the attribute. It this description contains the text "required" or
                      "mandatory", the attribute is registered as required.
         """
-                
+
         #: Name of parameter
         self.name = name
-        
-        #: Parent parameter (:py:class:`Parameter` type) if it has one.
+
+        #: Parent parameter (:py:class:`Descriptor` type) if it has one.
         self.parent = parent
 
         #: Hierarchical tree of sub-Parameters.
         self.children = OrderedDict()
-        
+
         self.separator = separator
-        
+
         # Required and optional attributes
         self.required = []
         self.optional = []
@@ -110,11 +87,11 @@ class Parameter(object):
         self._all_options = {}
 
         self.implicit = False
-        
+
     @property
     def option_keys(self):
         return self._all_options.keys()
-        
+
     @property
     def is_child(self):
         """
@@ -129,7 +106,7 @@ class Parameter(object):
         if self.OPTIONS_DEF is not None:
             r = []
             o = []
-        
+
             for option, text in self.OPTIONS_DEF.items():
                 if 'required' in text or 'mandatory' in text:
                     r += [option]
@@ -146,8 +123,9 @@ class Parameter(object):
 
         If name already exists, update options and return existing child.
 
-        If name already exists and had been created implicitly to create a child further down,
-        the order in self.children is corrected to honor the order of explicitly created children.
+        If name already exists and had been created implicitly to create
+        a child further down, the order in self.children is corrected to
+        honor the order of explicitly created children.
         This behaviour can be deactivated by setting implicit=True.
         """
         if options is None:
@@ -201,7 +179,6 @@ class Parameter(object):
             if missing:
                 raise ValueError('Missing required option(s) <%s> for parameter %s.' % (', '.join(missing), self.name))
 
-        self.options = dict.fromkeys(self.required)
         self.options.update(dct)
 
     def _find(self, name):
@@ -259,6 +236,16 @@ class Parameter(object):
             if not subparent:
                 subparent = self.new_child(root)
             subparent[name] = desc
+
+    def get(self, path):
+        """
+        return self.root[path] if it exists, None otherwise.
+        """
+        try:
+            link = self.root[path]
+            return link
+        except (KeyError, TypeError) as e:
+            return None
 
     def add_child(self, desc):
         self[desc.name] = desc
@@ -321,27 +308,27 @@ class Parameter(object):
         """
         from csv import DictReader
         CD = DictReader(fbuffer, **kwargs)
-        
+
         if 'level' in CD.fieldnames:
             chain = []
-            
+
             # old style CSV, name + level sets the path
             for num, dct in enumerate(list(CD)):
-            
+
                 # Get parameter name and level in the hierarchy
                 level = int(dct.pop('level'))
                 name = dct.pop('name')
-            
+
                 # translations
                 dct['help'] = dct.pop('shortdoc')
                 dct['doc'] = dct.pop('longdoc')
                 if dct.pop('static').lower() != 'yes':
                     continue
 
-                if level == 0:  
+                if level == 0:
                     chain = [name]
                 else:
-                    chain = chain[:level]+[name]
+                    chain = chain[:level] + [name]
 
                 name = self.separator.join(chain)
                 desc = self.new_child(name, options=dct)
@@ -357,23 +344,23 @@ class Parameter(object):
         on to csv.DictWriter
         """
         from csv import DictWriter
-        
+
         fieldnames = self.required + self.optional
         fieldnames += [k for k in self._all_options.keys() if k not in fieldnames]
-        
+
         DW = DictWriter(fbuffer, ['path'] + fieldnames)
         DW.writeheader()
         for key, desc in self.descendants:
             dct = {'path': key}
             dct.update(desc.options)
             DW.writerow(dct)
-        
+
     def load_json(self, fbuffer):
-        
+
         raise NotImplementedError
-    
+
     def save_json(self, fbuffer):
-        
+
         raise NotImplementedError
 
     def load_conf_parser(self, fbuffer, **kwargs):
@@ -403,6 +390,7 @@ class Parameter(object):
         Keyword arguments are forwarded to `ConfigParser.RawConfigParser`
         """
         from StringIO import StringIO
+        s = textwrap.dedent(s)
         return self.load_conf_parser(StringIO(s), **kwargs)
 
     def save_conf_parser(self, fbuffer, print_optional=True):
@@ -419,9 +407,18 @@ class Parameter(object):
             for k, v in desc.options.items():
                 if (v or print_optional) or (k in self.required):
                     parser.set(name, k, v)
-        
+
         parser.write(fbuffer)
         return parser
+
+    def to_string(self):
+        """
+        Return the full content of descriptor as a string in configparser format.
+        """
+        import StringIO
+        s = StringIO.StringIO()
+        self.save_conf_parser(s)
+        return s.getvalue().strip()
 
     def __str__(self):
         """
@@ -438,8 +435,7 @@ class Parameter(object):
         return s.getvalue().strip()
 
 
-class ArgParseParameter(Parameter):
-
+class ArgParseDescriptor(Descriptor):
     OPTIONS_DEF = OrderedDict([
         ('default', 'Default value for parameter.'),
         ('help', 'A small docstring for command line parsing (required).'),
@@ -459,11 +455,23 @@ class ArgParseParameter(Parameter):
         Returns default as a Python type
         """
         default = str(self.options.get('default', ''))
-        
+
         if not default:
             return None
         else:
             return self.eval(default)
+
+    @default.setter
+    def default(self, val):
+        """
+        Set default, ensuring that is it stored as a string.
+        """
+        if val is None:
+            self.options['default'] = ''
+        elif str(val) == val:
+            self.options['default'] = "'%s'" % val
+        else:
+            self.options['default'] = str(val)
 
     def eval(self, val):
         """
@@ -471,10 +479,13 @@ class ArgParseParameter(Parameter):
         """
         try:
             return ast.literal_eval(val)
-        except ValueError as e:
-            msg = e.message+". could not read %s for parameter %s" % (val, self.name)
+        except ValueError or SyntaxError as e:
+            msg = e.args[0] + ". could not read %s for parameter %s" % (val, self.path)
             raise ValueError(msg)
-            
+        except SyntaxError as e:
+            msg = e.args[0] + ". could not read %s for parameter %s" % (val, self.path)
+            raise SyntaxError(msg)
+
     @property
     def choices(self):
         """
@@ -489,49 +500,16 @@ class ArgParseParameter(Parameter):
                 c = ast.literal_eval(c.strip())
             except SyntaxError('Evaluating `choices` %s for parameter %s failed' % (str(c), self.name)):
                 c = None
-        
+
         return c
 
-    def make_default(self, depth=1):
-        """
-        Creates a default parameter structure from the loaded parameter
-        descriptions in this module
-        
-        Parameters
-        ----------            
-        depth : int
-            The depth in the structure to which all sub nodes are expanded
-            All nodes beyond depth will be returned as empty dictionaries
-            
-        Returns
-        -------
-        pars : dict
-            A parameter branch as nested dicts.
-        
-        Examples
-        --------
-        >>> from ptypy import parameter
-        >>> print parameter.children['io'].make_default()
-        """
-        out = {}
-        if depth <= 0:
-            return out
-        for name, child in self.children.iteritems():
-            if name == '*':
-                pass
-            elif child.children:
-                out[name] = child.make_default(depth=depth-1)
-            else:
-                out[name] = child.default
-        return out
-        
     def _get_type_argparse(self):
         """
         Returns type or callable that the argparser uses for 
         reading in cmd line argements.
         """
         return type(self.default)
-        
+
     def add2argparser(self, parser=None, prefix='', excludes=('scans', 'engines'), mode='add'):
         """
         Add parameter to an argparse.ArgumentParser instance (or create and return one if parser is None)
@@ -549,7 +527,7 @@ class ArgParseParameter(Parameter):
             Doc: %s
             """ % (pd.name, pd.help)
             parser = ArgumentParser(description=description)
-        
+
         # overload the parser
         if not hasattr(parser, '_aux_translator'):
             parser._aux_translator = {}
@@ -558,60 +536,40 @@ class ArgParseParameter(Parameter):
         ndesc = dict((k.replace(sep, argsep), self[k]) for k, _ in self.descendants)
 
         groups = {}
-        
+
         for name, pd in ndesc.items():
             if pd.name in excludes:
                 continue
             if pd.children:
-                groups[name] = parser.add_argument_group(title=prefix+name, description=pd.help)
+                groups[name] = parser.add_argument_group(title=prefix + name, description=pd.help)
 
         for name, pd in ndesc.iteritems():
-            
+
             if pd.name in excludes:
                 continue
             up = argsep.join(name.split(argsep)[:-1])
             # recursive part
             parse = groups.get(up, parser)
 
-            """
-            # this should be part of PDesc I guess.
-            typ = type(pd.default)
-            
-            for t in pd.type:
-                try:
-                    typ= eval(t)
-                except BaseException:
-                    continue
-                if typ is not None:
-                    break
-
-            if typ is None:
-                u.verbose.logger.debug('Failed evaluate type strings %s of parameter %s in python' % (str(pd.type),name))
-                return parser
-                
-            if type(typ) is not type:
-                u.verbose.logger.debug('Type %s of parameter %s is not python type' % (str(typ),name))
-                return parser
-            """
             typ = pd._get_type_argparse()
-            
+
             if typ is bool:
                 # Command line switches have no arguments, so treated differently
-                flag = '--no-'+name if pd.value else '--'+name
+                flag = '--no-' + name if pd.value else '--' + name
                 action = 'store_false' if pd.value else 'store_true'
                 parse.add_argument(flag, dest=name, action=action, help=pd.help)
             else:
                 d = pd.default
                 defstr = d.replace('%(', '%%(') if str(d) == d else str(d)
-                parse.add_argument('--'+name, dest=name, type=typ, default=pd.default, choices=pd.choices,
+                parse.add_argument('--' + name, dest=name, type=typ, default=pd.default, choices=pd.choices,
                                    help=pd.help + ' (default=%s)' % defstr)
-        
+
             parser._aux_translator[name] = pd
-            
+
         return parser
 
-        
-class EvalParameter(ArgParseParameter):
+
+class EvalDescriptor(ArgParseDescriptor):
     """
     Parameter class to store metadata for all ptypy parameters (default, limits, documentation, etc.)
     """
@@ -631,7 +589,7 @@ class EvalParameter(ArgParseParameter):
     _evaltypes = ['int', 'float', 'tuple', 'list', 'complex']
     _copytypes = ['str', 'file']
     _limtypes = ['int', 'float']
-    
+
     OPTIONS_DEF = OrderedDict([
         ('default', 'Default value for parameter (required).'),
         ('help', 'A small docstring for command line parsing (required).'),
@@ -642,8 +600,14 @@ class EvalParameter(ArgParseParameter):
         ('choices', 'If parameter is list of choices, these are listed here.'),
         ('uplim', 'Upper limit for scalar / integer values'),
         ('lowlim', 'Lower limit for scalar / integer values'),
-        ('dynamic', 'Switch for dynamic content')
     ])
+
+    def __init__(self, name, parent=None, separator='.'):
+        """
+        Parameter class to store metadata for all ptypy parameters (default, limits, documentation, etc.)
+        """
+        super(EvalDescriptor, self).__init__(name, parent=parent, separator=separator)
+        self.options['type'] = 'Param'
 
     @property
     def default(self):
@@ -651,11 +615,14 @@ class EvalParameter(ArgParseParameter):
         Default value as a Python type
         """
         default = str(self.options.get('default', ''))
-        
+        types = str(self.options.get('type', []))
+
         # this destroys empty strings
         default = default if default else None
-        
-        if default is None:
+
+        if 'Param' in types or 'dict' in types:
+            out = Param()
+        elif default is None:
             out = None
         # should be only strings now
         elif default.lower() == 'none':
@@ -664,13 +631,47 @@ class EvalParameter(ArgParseParameter):
             out = True
         elif default.lower() == 'false':
             out = False
+        elif default.startswith('@'):
+            out = self.get(default[1:])
         elif self.is_evaluable:
             out = ast.literal_eval(default)
         else:
             out = default
-        
-        return out 
-        
+
+        # strip any extra quotation marks
+        if type(out) == str:
+            out = out.strip('"').strip("'")
+
+        return out
+
+    @property
+    def is_evaluable(self):
+        for t in self.type:
+            if t in self._evaltypes:
+                return True
+                break
+        return False
+
+    @property
+    def is_symlink(self):
+        """
+        True if type/default are symlinks.
+        """
+        types = self.options.get('type', '')
+        return '@' in types
+
+    @property
+    def is_target(self):
+        """
+        True if parent of symlink targets.
+        """
+        if self.parent is not self.root:
+            return False
+        for n, d in self.root.descendants:
+            if d.is_symlink and d.type[0].path.startswith(self.name):
+                return True
+        return False
+
     @property
     def type(self):
         """
@@ -680,9 +681,16 @@ class EvalParameter(ArgParseParameter):
         tm = self._typemap
         if types is not None:
             types = [tm[x.strip()] if x.strip() in tm else x.strip() for x in types.split(',')]
-        
-        return types        
-       
+            # symlinks
+            if types[0].startswith('@'):
+                # wildcard in symlink: needed to grab dynamically added entries
+                if types[0].endswith('.*'):
+                    parent = self.get(types[0][1:-2])
+                    types = [c for n, c in parent.children.items()]
+                else:
+                    types = [self.get(t[1:]) for t in types]
+        return types
+
     @property
     def limits(self):
         """
@@ -690,7 +698,7 @@ class EvalParameter(ArgParseParameter):
         """
         if self.type is None:
             return None, None
-            
+
         ll = self.options.get('lowlim', None)
         ul = self.options.get('uplim', None)
         if 'int' in self.type:
@@ -699,9 +707,9 @@ class EvalParameter(ArgParseParameter):
         else:
             lowlim = float(ll) if ll else None
             uplim = float(ul) if ul else None
-            
+
         return lowlim, uplim
-        
+
     @property
     def doc(self):
         """
@@ -721,112 +729,167 @@ class EvalParameter(ArgParseParameter):
             ul = None
         return int(ul) if ul else None
 
-    @property
-    def dynamic(self):
+    def _walk(self, depth=0, pars=None, ignore_symlinks=False, ignore_wildcards=False, path=None):
         """
-        Return True if the entry is dynamic (can be populated with multiple entries)
+        Generator that traverses the complete tree up to given depth, either on its own,
+        or following parameter structure in pars, following symlinks and honouring wildcards.
+
+        Parameters
+        ----------
+        depth: How many levels to traverse in the tree.
+        pars: optional parameter tree to match with descriptor tree
+        ignore_symlinks: If True, do not follow symlinks. Default to False.
+        ignore_wildcards: If True, do not interpret wildcards. Default to False.
+        path: Used internally for recursion.
+
+        Returns
+        -------
+        A generator. Yields a dict with structure
+        {'d': <Descriptor instance>,
+         'path': <relative path in structure>,
+         'status': <status message>,
+         'info': <additional information depending on status>}
         """
-        return self.options.get('dynamic', False)
 
-    @property
-    def is_evaluable(self):
-        for t in self.type:
-            if t in self._evaltypes:
-                return True
-                break
-        return False
+        if path is None:
+            # This happens only at top level: ensure proper construction of relative paths.
+            path = ''
 
-    def check(self, pars, walk):
-        """
-        Check that input parameter pars is consistent with parameter description.
-        If walk is True and pars is a Param object, checks are also conducted for all
-        sub-parameters.
+        # Resolve symlinks
+        if self.is_symlink and not ignore_symlinks:
+            if len(self.type) == 1:
+                # No name needed
+                s = self.type[0]
+            else:
+                if pars is not None:
+                    # Look for name in pars
+                    name = pars.get('name', None)
+                    # Is this the intended behaviour? Instead maybe s = self.default
+                    if name is None:
+                        s = None
+                        yield {'d': self, 'path': path, 'status': 'noname', 'info': ''}
+                    else:
+                        s = dict((link.name, link) for link in self.type).get(name, None)
+                        if not s:
+                            yield {'d': self, 'path': path, 'status': 'nolink', 'info': name}
+                else:
+                    # No pars, resolve default
+                    s = self.default
+            # Follow links
+            if s:
+                for x in s._walk(depth=depth, pars=pars, ignore_symlinks=ignore_symlinks,
+                                 ignore_wildcards=ignore_wildcards, path=path):
+                    yield x
+            return
 
-        Returns a dictionary report using CODES values.
-        FIXME: this needs a lot of testing and verbose.debug lines.
-        """
-        ep = self.path
-        out = {}
-        val = {}
+        # Detect wildcard
+        wildcard = (self.children.keys() == ['*'])
 
-        # 1. Data type
-        if self.type is None:
-            # Inconclusive
-            val['type'] = CODES.UNKNOWN
-            val['lowlim'] = CODES.UNKNOWN
-            val['uplim'] = CODES.UNKNOWN
-            return {ep: val}
+        # Grab or check children
+        if wildcard:
+            if ignore_wildcards:
+                yield {'d': self, 'path': path, 'status': 'wildcard', 'info': ''}
+                return
+            else:
+                if pars is None:
+                    # Generate default name for single entry
+                    children = {self.name[:-1] + '_00': self.children['*']}
+                else:
+                    # Grab all names from pars
+                    children = {k: self.children['*'] for k in pars.keys()}
         else:
-            val['type'] = CODES.PASS if (type(pars).__name__ in self.type) else CODES.FAIL
+            children = self.children
 
-        # 2. limits
-        if any([i in self._limtypes for i in self.type]):
-            lowlim, uplim = self.limits
-            if lowlim is None:
-                val['lowlim'] = CODES.UNKNOWN
+        # Main yield: check type here.
+        if not pars or \
+                (type(pars).__name__ in self.type) or \
+                (hasattr(pars, 'items') and 'Param' in self.type) or \
+                (type(pars).__name__ == 'int' and 'float' in self.type):
+            yield {'d': self, 'path': path, 'status': 'ok', 'info': ''}
+        else:
+            yield {'d': self, 'path': path, 'status': 'wrongtype', 'info': type(pars).__name__}
+            return
+
+        if not children or depth == 0:
+            # Nothing else to do
+            return
+
+        # Look for unrecognised entries in pars
+        if pars:
+            for k, v in pars.items():
+                if k not in children:
+                    yield {'d': self, 'path': path, 'status': 'nochild', 'info': k}
+
+        # Loop through children
+        for cname, c in children.items():
+            new_path = '.'.join([path, cname]) if path else cname
+            if pars:
+                if cname not in pars or pars[cname] is None:
+                    yield {'d': c, 'path': path, 'status': 'nopar', 'info': cname}
+                else:
+                    for x in c._walk(depth=depth-1, pars=pars[cname], ignore_symlinks=ignore_symlinks,
+                                     ignore_wildcards=ignore_wildcards, path=new_path):
+                        yield x
             else:
-                val['lowlim'] = CODES.PASS if (pars >= lowlim) else CODES.FAIL
-            if uplim is None:
-                val['uplim'] = CODES.UNKNOWN
-            else:
-                val['uplim'] = CODES.PASS if (pars <= uplim) else CODES.FAIL
+                for x in c._walk(depth=depth-1, ignore_symlinks=ignore_symlinks,
+                                 ignore_wildcards=ignore_wildcards, path=new_path):
+                    yield x
+        return
 
-        # 3. Extra work for parameter entries
-        if 'Param' in self.type:
-            # We have to separate the use cases here
-            wildcard_container = (self.children.keys() == ['*'])
+    def check(self, pars, depth=99):
+        """
+        Check that input parameter pars is consistent with parameter description, up to given depth.
 
-            if (not wildcard_container) and self.dynamic:
-                for k, v in pars.items():
-                    name = v.get('name', None)
-                    if not name:
-                        # The entry does not have a name, that's not good.
-                        val[k] = CODES.INVALID
-                    elif name not in self.children:
-                        # The entry name is not found, that's not good.
-                        val[k] = CODES.INVALID
-                    elif walk:
-                        self.children[name].check(v, walk)
+        Parameters
+        ----------
+        pars: The input parameter or parameter tree
+        depth: The level at wich verification is done.
 
-            elif wildcard_container and not self.dynamic:
-                # Make sure there is at least one Param entry
-                types = [type(i) for i in pars.values()]
-                if not Param in types:
-                    val[self.name + '.*'] = CODES.MISSING
+        Returns
+        -------
+        A dictionary report using CODES values.
 
-                # Make sure there are no non-Param entries
-                for k, v in pars.items():
-                    if not isinstance(v, Param):
-                        val[self.path + '.*'] = CODES.INVALID
-                        return{ep: val}
-                
-                # Walk through each param entry and validate against *
-                if walk:
-                    for k, v in pars.items():
-                        # check child
-                        out.update(self.children['*'].check(v, walk))
-
-            elif wildcard_container and self.dynamic:
-                raise NotImplementedError
-
-            else:
-                # Check for missing entries
-                for k, v in self.children.items():
-                    if k not in pars:
-                        val[k] = CODES.MISSING
-
-                # Check for excess entries
-                for k, v in pars.items():
-                    if k not in self.children:
-                        val[k] = CODES.INVALID
-                    elif walk:
-                        # Validate child
-                        out.update(self.children[k].check(v, walk))
-
-        out[ep] = val
+        """
+        out = OrderedDict()
+        for res in self._walk(depth=depth, pars=pars):
+            path = res['path']
+            if not path in out.keys():
+                out[path] = {}
+            # Switch through all possible statuses
+            if res['status'] == 'ok':
+                # Check limits
+                d = res['d']
+                out[path]['type'] = CODES.PASS
+                if any([i in d._limtypes for i in d.type]):
+                    lowlim, uplim = d.limits
+                    if lowlim is None or pars[path] is None:
+                        out[path]['lowlim'] = CODES.PASS
+                    else:
+                        out[path]['lowlim'] = CODES.PASS if (pars[path] >= lowlim) else CODES.FAIL
+                    if uplim is None or pars[path] is None:
+                        out[path]['uplim'] = CODES.PASS
+                    else:
+                        out[path]['uplim'] = CODES.PASS if (pars[path] <= uplim) else CODES.FAIL
+            elif res['status'] == 'wrongtype':
+                # Wrong type
+                out[path]['type'] = CODES.INVALID
+            elif res['status'] == 'noname':
+                # Symlink name could not be found
+                out[path]['symlink'] = CODES.INVALID
+                out[path]['name'] = CODES.MISSING
+            elif res['status'] == 'nolink':
+                # Link was not resolved
+                out[path]['symlink'] = CODES.INVALID
+                out[path]['name'] = CODES.UNKNOWN
+            elif res['status'] == 'nochild':
+                # Parameter entry without corresponding Descriptor
+                out[path][res['info']] = CODES.INVALID
+            elif res['status'] == 'nopar':
+                # Missing parameter entry
+                out[path][res['info']] = CODES.MISSING
         return out
-        
-    def validate(self, pars, walk=True, raisecodes=(CODES.FAIL, CODES.INVALID)):
+
+    def validate(self, pars, raisecodes=(CODES.FAIL, CODES.INVALID)):
         """
         Check that the parameter structure `pars` matches the documented 
         constraints for this node / parameter.
@@ -837,32 +900,73 @@ class EvalParameter(ArgParseParameter):
     
         Parameters
         ----------
-        pars : Param
+        pars : Param, dict
             A parameter set to validate
-        
-        walk : bool
-            If ``True`` (*default*), navigate sub-parameters.
         
         raisecodes: list
             List of codes that will raise a RuntimeError.
         """
         from ptypy.utils.verbose import logger
-        
-        d = self.check(pars, walk=walk)
+        import logging
+
+        _logging_levels = dict(
+            PASS=logging.INFO,
+            FAIL=logging.CRITICAL,
+            UNKNOWN=logging.WARN,
+            MISSING=logging.WARN,
+            INVALID=logging.ERROR
+        )
+
+        d = self.check(pars)
         do_raise = False
+        raise_reasons = []
         for ep, v in d.items():
             for tocheck, outcome in v.items():
                 logger.log(_logging_levels[CODE_LABEL[outcome]], '%-50s %-20s %7s' % (ep, tocheck, CODE_LABEL[outcome]))
-                do_raise |= (outcome in raisecodes)
+                if outcome in raisecodes:
+                    do_raise = True
+                    reason = str(ep)
+                    if tocheck == 'symlink':
+                        reason += ' - make sure to specify the .name field'
+                    else:
+                        reason += ' - %s' % tocheck
+                    raise_reasons.append(reason)
         if do_raise:
-            raise RuntimeError('Parameter validation failed.')
-            
+            raise RuntimeError('Parameter validation failed:\n  ' + '\n  '.join(raise_reasons))
+
     def sanity_check(self, depth=10):
         """
         Checks if default parameters from configuration are 
         self-constistent with limits and choices.
         """
         self.validate(self.make_default(depth=depth))
+
+    def make_default(self, depth=0):
+        """
+        Creates a default parameter structure.
+
+        Parameters
+        ----------
+        depth : int
+            The depth in the structure to which all sub nodes are expanded
+            All nodes beyond depth will be ignored.
+
+        Returns
+        -------
+        pars : Param
+            A parameter branch as Param.
+
+        Examples
+        --------
+        >>> from ptypy.utils.descriptor import defaults_tree
+        >>> print(defaults_tree['io'].make_default(depth=5))
+        """
+        out = Param()
+        for ret in self._walk(depth=depth, ignore_symlinks=False, ignore_wildcards=True):
+            path = ret['path']
+            if path == '': continue
+            out[path] = ret['d'].default
+        return out
 
     def make_doc_rst(self, prst, use_root=True):
         """
@@ -875,11 +979,6 @@ class EvalParameter(ArgParseParameter):
         prst.write(Header)
 
         root = self.root
-        shortdoc = 'help'
-        longdoc = 'doc'
-        default = 'default'
-        lowlim = 'lowlim'
-        uplim = 'uplim'
 
         for name, desc in root.descendants:
             if name == '':
@@ -912,19 +1011,40 @@ class EvalParameter(ArgParseParameter):
             prst.write('\n')
         prst.close()
 
-    def parse_doc(self, name=None):
+    def parse_doc(self, name=None, recursive=True):
         """
         Decorator to parse docstring and automatically attach new parameters.
         The parameter section is identified by a line starting with the word "Parameters"
 
-        :param name: The descendant name under which all parameters will be held. If None, use self
-        :return: The decorator function
-        """
-        return lambda cls: self._parse_doc_decorator(name=name, cls=cls)
+        Parameters
+        ----------
+        name: str
+              The descendant name under which all parameters will be held. If None, use self.
+        recursive: bool
+              Whether or not to traverse the docstring of base classes. *Is there are use case for this?*
 
-    def _parse_doc_decorator(self, name, cls):
+        Returns
+        -------
+        The decorator function.
+        """
+        return lambda cls: self._parse_doc_decorator(name, cls, recursive)
+
+    def _parse_doc_decorator(self, name, cls, recursive):
         """
         Actual decorator returned by parse_doc.
+
+        Parameters
+        ----------
+        name: str
+             Descendant name.
+        cls:
+             Class to decorate.
+        recursive:
+             If false do not parse base class doc.
+
+        Returns
+        -------
+        Decorated class.
         """
         # Find or create insertion point
         if name is None:
@@ -935,30 +1055,31 @@ class EvalParameter(ArgParseParameter):
             except KeyError:
                 desc = self.new_child(name, implicit=True)
 
+        # Get the parameter section, including from base class(es) if recursive.
+        parameter_string = self._extract_doc_from_class(cls, recursive)
+
         # Maybe check here if a non-Param descendant is being overwritten?
         desc.options['type'] = 'Param'
 
-        # Get the parameter section, including from base class(es).
-        parameter_string = self._extract_doc_from_class(cls)
+        # PT: I don't understand this.
+        if not recursive and cls.__base__ != object:
+            desc_base = getattr(cls.__base__, '_descriptor')
+            typ = desc_base().path if desc_base is not None else None
+            desc.default = typ
 
         # Parse parameter section and store in desc
         desc.from_string(parameter_string)
 
-        # Populate cls.DEFAULT, making sure that all dicts becoms Params
-        cls.DEFAULTS = Param(desc.make_default(depth=100))
-        # This is a workaround, because Param is not behaving. 
-        # See Issue #90 on github.
-        def convert(x):
-            for k in x.keys():
-                if isinstance(x[k], dict):
-                    x[k] = Param(x[k])
-                if isinstance(x[k], Param):
-                    convert(x[k])
-        convert(cls.DEFAULTS)
+        # Attach the Parameter group to cls
+        from weakref import ref
+        cls._descriptor = ref(desc)
+
+        # Render the defaults
+        cls.DEFAULT = desc.make_default(depth=99)
 
         return cls
 
-    def _extract_doc_from_class(self, cls):
+    def _extract_doc_from_class(self, cls, recursive=True):
         """
         Utility method used recursively by _parse_doc_decorator to extract doc strings
         from all base classes and cobble the "Parameters" section.
@@ -968,7 +1089,10 @@ class EvalParameter(ArgParseParameter):
             return ''
 
         # Get doc from base
-        base_parameters = self._extract_doc_from_class(cls.__base__)
+        if recursive:
+            base_parameters = self._extract_doc_from_class(cls.__base__)
+        else:
+            base_parameters = ''
 
         # Append doc from class
         docstring = cls.__doc__ if cls.__doc__ is not None else ' '
@@ -976,82 +1100,74 @@ class EvalParameter(ArgParseParameter):
         # Because of indentation it is safer to work line by line
         doclines = docstring.splitlines()
         for n, line in enumerate(doclines):
-            if line.strip().startswith('Parameters'):
+            if line.strip().startswith('Defaults:'):
                 break
-        parameter_string = textwrap.dedent('\n'.join(doclines[n+1:]))
+        parameter_string = textwrap.dedent('\n'.join(doclines[n + 1:]))
 
         return base_parameters + parameter_string
 
+    def create_template(self, filename=None, start_at_root=True, user_level=0, doc_level=2):
+        """ 
+        Creates templates for ptypy scripts from an EvalDescriptor instance.
+        """
+        desc = self
+        if start_at_root:
+            desc = self.root
 
-# Load all documentation on import
-import pkg_resources
-_file = pkg_resources.resource_filename('ptypy', 'resources/parameter_descriptions.configparser')
-parameter_descriptions = EvalParameter(name='')
-parameter_descriptions.load_conf_parser(open(_file, 'r'))
-del pkg_resources
+        base = 'p'
 
+        # open file
+        filename = 'ptypy_template.py' if filename is None else filename
+        with open(filename, 'w') as fp:
 
-def create_default_template(filename=None, user_level=0, doc_level=2):
-    """
-    Creates a (descriptive) template for ptypy.
-    
-    Parameters
-    ----------
-    filename : str
-        python file (.py) to generate, will be overriden if it exists
-    
-    user_level : int
-        Filter parameters to display on those with less/equal user level
-    
-    doc_level : int
-        - if ``0``, no comments. 
-        - if ``1``, *short_doc* as comment in script
-        - if ``>2``, *long_doc* and *short_doc* as comment in script
-    """
-    import textwrap
+            # write header
+            h = '"""\nThis template was autogenerated using an EvalDescriptor instance.\n'
+            h += 'It is only a template and not a working reconstruction script.\n"""\n\n'
+            h += "import numpy as np\n"
+            h += "import ptypy\n"
+            h += "from ptypy.core import Ptycho\n"
+            h += "from ptypy import utils as u\n\n"
+            h += '### Ptypy parameter tree ###' + '\n\n'
+            fp.write(h)
 
-    def wrapdoc(x):
-        if not x.strip():
-            return ''
-        x = ' '.join(x.strip().split('\n'))
-        return '# ' + '\n# '.join(textwrap.wrap(x, 75, break_long_words=False, replace_whitespace=False)).strip() + '\n'
+            # write the parameter defaults
+            fp.write(base + ' = Param()\n\n')
+            for ret in self._walk(depth=99, ignore_wildcards=False):
+                d = ret['d']
+                # user level
+                if d.userlevel > user_level: continue
+                # skip the root, handled above
+                if d.root is d: continue
+                # handle line breaks already in the help/doc strings
+                hlp = '# ' + d.help.replace('\n', '\n# ')
+                doc = '# ' + d.doc.replace('\n', '\n# ')
+                # doclevel 2: help and doc before parameter
+                if doc_level == 2:
+                    fp.write('\n')
+                    fp.write(hlp + '\n')
+                    fp.write(doc + '\n')
+                # Container defaults come as Params. It would be more elegant 
+                # to check 'if d.children' here but not sure that is safe
+                if isinstance(d.default, Param):
+                    if doc_level < 2:
+                        fp.write('\n')
+                    line = base + '.' + ret['path'] + ' = u.Param()'
+                    fp.write(line)
+                # not Param: actual default value
+                else:
+                    val = str(d.default)
+                    if 'str' in d.type and not d.default is None:
+                        val = "'" + val + "'"
+                    line = base + '.' + ret['path'] + ' = ' + val
+                    fp.write(line)
+                # doclevel 1: inline help comments
+                if doc_level == 1:
+                    fp.write(' ' * max(1, 50 - len(line)) + hlp + '\n')
+                else:
+                    fp.write('\n')
 
-    if filename is None:
-        f = open('ptypy_template.py', 'w')
-    else:
-        f = open(filename, 'w')
-    h = '"""\nThis Script was autogenerated using\n'
-    h += '``u.create_default_template("%s",%d,%d)``\n' % (str(filename), user_level, doc_level)
-    h += 'It is only a TEMPLATE and not a working reconstruction script.\n"""\n\n'
-    h += "import numpy as np\n"
-    h += "import ptypy\n"
-    h += "from ptypy.core import Ptycho\n"
-    h += "from ptypy import utils as u\n\n"
-    try:
-        from ptypy.utils.verbose import headerline
-        h += headerline('Ptypy Parameter Tree', 'l', '#')+'\n'
-    except ImportError:
-        h += '### Ptypy Parameter Tree ###\n\n'
-    f.write(h)
-    for entry, pd in parameter_descriptions.descendants:
-        if user_level < pd.userlevel:
-            continue
-        if pd.children:
-            value = "u.Param()"
-        else:
-            val = pd.default
-            if str(val) == val:
-                value = '"%s"' % str(val)
-            else:
-                value = str(val)
-        #ID ="%02d" % pd.ID if hasattr(pd,'ID') else 'NA'
-        if doc_level > 0:
-            # f.write('\n'+"## (%s) " % ID +pd.shortdoc.strip()+'\n')
-            f.write('\n## ' + pd.help.strip() + '\n')
-        if doc_level > 1:
-            #f.write(_format_longdoc(pd.doc))
-            f.write(wrapdoc(pd.doc))
-        f.write('p.'+entry + ' = ' + value+'\n')
-        
-    f.write('\n\nPtycho(p,level=5)\n')
-    f.close()
+            # write the Ptycho instantiation
+            fp.write('\n\n### Reconstruction ###\n\n')
+            fp.write('Ptycho(%s,level=5)\n'%base)
+
+defaults_tree = EvalDescriptor('root')

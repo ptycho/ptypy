@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 """
-read .raw images from FLI camera 
+read .raw images from FLI camera
 Created in Nov 2013
 TODO: add masking function to mask out hot/dead pixels of detector
 @author: Bjoern Enders
@@ -40,7 +40,7 @@ def rawread(filename, doglob=None, roi=None):
             ignores wildcards
 
         ... = rawread(filename, doglob=None) [default]
-            behaves like doglob=True, except that it returns a list only if filename contains wildcards, 
+            behaves like doglob=True, except that it returns a list only if filename contains wildcards,
             while doglob=True always returns a list, even if there is only one match.
 
         ... = rawread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))
@@ -65,7 +65,7 @@ def rawread(filename, doglob=None, roi=None):
     for f in fnames:
         log(3, 'Reading "%s"' % f)
         dat,meta = _read(f,np.uint16)
-        meta['filename'] = f       
+        meta['filename'] = f
         lmeta.append(meta)
         if roi is not None:
             ldat.append(dat[roi[0]:roi[1],roi[2]:roi[3]].copy())
@@ -80,21 +80,21 @@ def _read(filename,dtype):
     f=file(filename)
     header = []
     header.append(f.readline())
-    
+
     while 'EOH' not in header[-1]:
         header.append(f.readline())
-        
+
     meta = _interpret_header(header)
     rows = meta['rows']
     cols = meta['cols']
     f.seek(-rows*cols*2,2)
     data = np.fromfile(f,dtype)
     data = data.reshape((rows,cols))
-    
+
     return data,meta
 
 def _interpret_header(header):
-    """ 
+    """
     This is special for FLI server I guess.
     """
     #print header
@@ -116,4 +116,4 @@ def _interpret_header(header):
     raw_header = header
     )
     return meta
-    
+

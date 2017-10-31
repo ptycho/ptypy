@@ -10,19 +10,19 @@ import numpy as np
 # Preparing a managing Ptycho instance
 # ------------------------------------
 
-# We need to prepare a managing :any:`Ptycho` instance. 
+# We need to prepare a managing :any:`Ptycho` instance.
 # It requires a parameter tree, as specified in :ref:`parameters`
 
-# First, we create a most basic input paramater tree. There 
+# First, we create a most basic input paramater tree. There
 # are many default values, but we specify manually only a more verbose
 # output and single precision for the data type.
 p = u.Param()
-p.verbose_level = 3                              
-p.data_type = "single"                           
+p.verbose_level = 3
+p.data_type = "single"
 
-# Now, we need to create a set of scans that we wish to reconstruct 
+# Now, we need to create a set of scans that we wish to reconstruct
 # in the reconstruction run. We will use a single scan that we call 'MF' and
-# mark the data source as 'test' to use the |ptypy| internal 
+# mark the data source as 'test' to use the |ptypy| internal
 # :any:`MoonFlowerScan`
 p.scans = u.Param()
 p.scans.MF = u.Param()
@@ -33,8 +33,8 @@ p.scans.MF.data.num_frames = 400
 
 # This bare parameter tree will be the input for the :any:`Ptycho`
 # class which is constructed at ``level=2``. It means that it creates
-# all necessary basic :any:`Container` instances like *probe*, *object* 
-# *diff* , etc. It also loads the first chunk of data and creates all 
+# all necessary basic :any:`Container` instances like *probe*, *object*
+# *diff* , etc. It also loads the first chunk of data and creates all
 # :any:`View` and :any:`POD` instances, as the verbose output will tell.
 P = ptypy.core.Ptycho(p, level=2)
 
@@ -45,8 +45,8 @@ fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of simulated diffraction data for the first two positions.
 
 # We don't need to use |ptypy|'s :any:`Ptycho` class to arrive at this
-# point. The structure ``P`` that we arrive with at the end of 
-# :ref:`simupod` suffices completely. 
+# point. The structure ``P`` that we arrive with at the end of
+# :ref:`simupod` suffices completely.
 
 # Probe and object are not so exciting to look at for now. As default,
 # probes are initialized with an aperture like support.
@@ -63,7 +63,7 @@ fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Now we can start implementing a simple DM algorithm. We need three basic
 # functions, one is the ``fourier_update`` that implements the Fourier
 # modulus constraint.
- 
+
 # .. math::
 #    \psi_{d,\lambda,k} = \mathcal{D}_{\lambda,z}^{-1}\left\{\sqrt{I_{d}}\frac{\mathcal{D}_{\lambda,z} \{\psi_{d,\lambda,k}\}}{\sum_{\lambda,k} |\mathcal{D}_{\lambda,z} \{\psi_{d,\lambda,k}\} |^2}\right\}
 
@@ -75,8 +75,8 @@ def fourier_update(pods):
     modulus = np.sqrt(np.abs(pod.diff))
     # Create temporary buffers
     Imodel = np.zeros_like(pod.diff)
-    err = 0.                             
-    Dphi = {}                                
+    err = 0.
+    Dphi = {}
     # Propagate the exit waves
     for gamma, pod in pods.iteritems():
         Dphi[gamma] = pod.fw(2*pod.probe*pod.object - pod.exit)
@@ -93,7 +93,7 @@ def fourier_update(pods):
 
 def probe_update(probe, norm, pods, fill=0.):
     """
-    Updates `probe`. A portion `fill` of the probe is kept from 
+    Updates `probe`. A portion `fill` of the probe is kept from
     iteration to iteration. Requires `norm` buffer and pod dictionary
     """
     probe *= fill
@@ -109,7 +109,7 @@ def probe_update(probe, norm, pods, fill=0.):
 
 def object_update(obj, norm, pods, fill=0.):
     """
-    Updates `object`. A portion `fill` of the object is kept from 
+    Updates `object`. A portion `fill` of the object is kept from
     iteration to iteration. Requires `norm` buffer and pod dictionary
     """
     obj *= fill
@@ -149,13 +149,13 @@ def iterate(Ptycho, num):
 # We start off with a small number of iterations.
 iterate(P, 9)
 
-# We note that the error (here only displayed for 3 iterations) is 
-# already declining. That is a good sign. 
+# We note that the error (here only displayed for 3 iterations) is
+# already declining. That is a good sign.
 # Let us have a look how the probe has developed.
 fig = u.plot_storage(P.probe.S['S00G00'], 2)
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the reconstructed probe after 9 iterations. We observe that
-# the actaul illumination of the sample must be larger than the initial 
+# the actaul illumination of the sample must be larger than the initial
 # guess.
 
 # Looks like the probe is on a good way. How about the object?
@@ -167,7 +167,7 @@ fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Ok, let us do some more iterations. 36 will do.
 iterate(P, 36)
 
-# Error is still on a steady descent. Let us look at the final 
+# Error is still on a steady descent. Let us look at the final
 # reconstructed probe and object.
 fig = u.plot_storage(P.probe.S['S00G00'], 4)
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
@@ -177,7 +177,7 @@ fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 
 fig = u.plot_storage(P.obj.S['S00G00'], 5, slices='0,120:-120,120:-120')
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
-# Plot of the reconstructed object after a total of 45 iterations. 
+# Plot of the reconstructed object after a total of 45 iterations.
 # It's a bunch of flowers !
 
 

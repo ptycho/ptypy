@@ -8,41 +8,65 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .. import utils as u
-from engine_utils import basic_fourier_update
+from utils import basic_fourier_update
 from . import BaseEngine
 from ..utils.verbose import logger
 import time
 import numpy as np
 from ..utils import parallel
-
-DEFAULT = u.Param(
-    alpha=1.0,
-    overlap_max_iterations=10,
-    overlap_converge_factor=0.05,
-    # the following BaseEngine parameters are not used
-    probe_support=None,
-    clip_object=None,
-    subpix_start=None,
-    subpix=None,
-    probe_update_start=None,
-    probe_inertia=None,
-    object_inertia=None,
-    obj_smooth_std=None,
-    probe_center_tol=None,
-)
+from ..utils.descriptor import defaults_tree
 
 __all__ = ['DM_simple']
 
-
+@defaults_tree.parse_doc('engine.DM_simple')
 class DM_simple(BaseEngine):
+    """
+    Bare-bones DM reconstruction engine.
 
-    DEFAULT = DEFAULT
+
+    Defaults:
+
+    [name]
+    default = DM_simple
+    type = str
+    help =
+    doc =
+
+    [numiter]
+    default = 123
+    type = int
+
+    [alpha]
+    default = 1
+    type = float
+    lowlim = 0.0
+    help = Difference map parameter
+
+    [overlap_converge_factor]
+    default = 0.05
+    type = float
+    lowlim = 0.0
+    help = Threshold for interruption of the inner overlap loop
+    doc = The inner overlap loop refines the probe and the object simultaneously. This loop is escaped as soon as the overall change in probe, relative to the first iteration, is less than this value.
+
+    [overlap_max_iterations]
+    default = 10
+    type = int
+    lowlim = 1
+    help = Maximum of iterations for the overlap constraint inner loop
+
+    """
 
     def __init__(self, ptycho, pars=None):
         """
         Simplest possible Difference map reconstruction engine.
         """
         super(DM_simple, self).__init__(ptycho, pars)
+
+        p = self.DEFAULT.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
 
         self.ptycho = ptycho
         self.ob_nrm = None
@@ -100,10 +124,10 @@ class DM_simple(BaseEngine):
                 # Stop iteration if probe change is small
                 if change < self.p.overlap_converge_factor:
                     break
-            
+
             # needed for BaseEngine
-            self.curiter += 1 
-            
+            self.curiter += 1
+
             t2 = time.time()
             to = t2 - t1
 

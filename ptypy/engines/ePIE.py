@@ -28,62 +28,102 @@ import random
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
-from engine_utils import basic_fourier_update
 from . import BaseEngine
+from ..utils.descriptor import defaults_tree
 
 __all__ = ['EPIE']
 
-DEFAULT = u.Param(
-    # ePIE-specific defaults:
-    alpha=1.,                   # ePIE object update parameter
-    beta=1.,                    # ePIE probe update parameter
-    synchronization=1,          # Period with which to synchronize the
-                                #   object (and optionally the probe)
-                                #   among nodes.
-    redistribute_data=True,     # Whether or not to redistribute data
-                                #   among nodes to keep each node's
-                                #   views in a contiguous geographic
-                                #   block, even if new data is added
-                                #   during reconstruction.
-    average_probe=False,        # Whether or not to average the probe
-                                #   among nodes, otherwise each node
-                                #   has its own probe as in the
-                                #   original publication. Averaging
-                                #   seems to work the best.
-    random_order=True,          # Whether to cycle through the positions
-                                #   in random order on each ePIE
-                                #   iteration. Otherwise does the pods
-                                #   in alphabetical order as per
-                                #   list.sort(). Disabling is useful for
-                                #   debugging.
-    # Overridden base class defaults:
-    object_inertia=None,        # Not used in ePIE.
-    probe_inertia=None,         # Not used in ePIE.
-    obj_smooth_std=None,        # Object smoothing prior to all updates.
-    probe_center_tol=3,         # See base class
-
-)
-
-
+@defaults_tree.parse_doc('engine.ePIE')
 class EPIE(BaseEngine):
+    """
+    ePIE reconstruction engine.
 
-    DEFAULT = DEFAULT
+
+    Defaults:
+
+    [name]
+    default = ePIE
+    type = str
+    help =
+    doc =
+
+    [alpha]
+    default = 1.
+    type = float
+    lowlim = 0.0
+    uplim = 1.0
+    help = ePIE object update parameter
+    doc = Step size for the object update, a higher value will give faster change.
+
+    [beta]
+    default = 1.
+    type = float
+    lowlim = 0.0
+    uplim = 1.0
+    help = ePIE probe update parameter
+    doc = Step size for the probe update, a higher value will give faster change.
+
+    [probe_update_start]
+    default = 2
+    type = int
+    lowlim = 0
+    help = Number of iterations before probe update starts
+
+    [synchronization]
+    default = 1
+    type = int
+    lowlim = 1
+    help = Probe/object synchronization period
+    doc = Period with which to synchronize the object (and optionally the probe) among parallel nodes.
+
+    [redistribute_data]
+    default = True
+    type = bool
+    help = Redistribute views to form blocks
+    doc = Whether or not to redistribute data among nodes to keep each node's views in a contiguous geographic block, even if new data is added during reconstruction.
+
+    [average_probe]
+    default = False
+    type = bool
+    help = Average probe among nodes
+    doc = Whether or not to average the probe among nodes, otherwise each node has its own probe as in the original publication. Averaging seems to work the best.
+
+    [random_order]
+    default = True
+    type = bool
+    help = Visit positions in random order
+    doc = Whether to cycle through the positions in random order on each ePIE iteration. Otherwise does the pods in alphabetical order as per list.sort(). Disabling is useful for debugging.
+
+    [clip_object]
+    default = None
+    type = tuple
+    help = Clip object amplitude into this interval
+
+    [obj_smooth_std]
+    default = None
+    type = int
+    lowlim = 0
+    help = Gaussian smoothing (pixel) of the current object prior to update
+    doc = If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
+
+    [probe_center_tol]
+    default = 3
+    type = float
+    lowlim = 0.0
+    help = Pixel radius around optical axes that the probe mass center must reside in
+
+    """
 
     def __init__(self, ptycho_parent, pars=None):
         """
         ePIE reconstruction engine.
         """
-        if pars is None:
-            pars = DEFAULT.copy()
-
         super(EPIE, self).__init__(ptycho_parent, pars)
 
-        # Check that none of the base class parameters that aren't used
-        # for ePIE are specified.
-        if ((self.p.object_inertia is not None) or
-                (self.p.probe_inertia is not None)):
-            logger.warning(
-                'Probe and/or object inertias were specified, but will be ignored by the ePIE engine.')
+        p = self.DEFAULT.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
 
         # Check that smoothing doesn't outrun object sharing
         if ((self.p.obj_smooth_std is not None) and

@@ -1,20 +1,83 @@
 """
-Test validator submodule
+Test descriptor submodule
 """
-from ptypy.utils import validator
-from ptypy.utils import Param
 import unittest
 
-#class ParameterTest(unittest.TestCase):
+from ptypy.utils.descriptor import EvalDescriptor, CODES, defaults_tree
+from ptypy.utils import Param
 
 
-class EvalParameterTest(unittest.TestCase):
+class SanityCheck(unittest.TestCase):
+
+    def test_sanity(self):
+        defaults_tree.sanity_check()
+
+
+class EvalDescriptorTest(unittest.TestCase):
+
+    def test_basic_functions(self):
+        """
+        Test EvalDescriptor behaviour
+        """
+
+        # Parameter declaration through formatted string
+        x = EvalDescriptor('')
+        x.from_string("""
+        [param1]
+        default = 0
+        type = int
+        help = A parameter
+        uplim = 5
+        lowlim = 0""")
+
+        assert x['param1'].default == 0
+        assert x['param1'].limits == (0, 5)
+        assert x['param1'].type == ['int']
+
+        # ConfigParser allows overwriting some properties
+        x = EvalDescriptor('')
+        x.from_string("""
+        [param1]
+        default = 0
+        type = int
+        help = A parameter
+
+        [param2]
+        default = a
+        type = str
+        help = Another parameter
+
+        [param1]
+        uplim = 5
+        lowlim = 0""")
+
+        assert x['param1'].limits == (0, 5)
+
+        # Implicit branch creation
+        x = EvalDescriptor('')
+        x.from_string("""
+        [category1.subcategory1.param1]
+        default = 0
+        type = int
+        help = A parameter""")
+
+        assert [k for k,v in x.descendants] == ['category1', 'category1.subcategory1', 'category1.subcategory1.param1']
+
+        assert x['category1'].implicit == True
+
+        x.from_string("""
+        [category1]
+        default =
+        type = Param
+        help = The first category""")
+
+        assert x['category1'].implicit == False
 
     def test_parse_doc_basic(self):
         """
-        Test basic behaviour of the EvalParameter decorator.
+        Test basic behaviour of the EvalDescriptor decorator.
         """
-        root = validator.EvalParameter('')
+        root = EvalDescriptor('')
 
         @root.parse_doc('engine')
         class FakeEngineClass(object):
@@ -23,7 +86,7 @@ class EvalParameterTest(unittest.TestCase):
             blabla, any text is allowed except
             a line that starts with "Parameters".
 
-            Parameters:
+            Defaults:
 
             [name]
             default=DM
@@ -46,13 +109,13 @@ class EvalParameterTest(unittest.TestCase):
         assert root['engine.name'].help == 'The name of the engine'
         assert root['engine'].implicit == True
         assert root['engine'].type == ['Param']
-        assert FakeEngineClass.DEFAULTS == {'name': 'DM', 'numiter': 1}
+        assert FakeEngineClass.DEFAULT == Param({'name': 'DM', 'numiter': 1})
 
     def test_parse_doc_order(self):
         """
         Test that implicit/explicit order is honored
         """
-        root = validator.EvalParameter('')
+        root = EvalDescriptor('')
 
         # Add the engine part
         @root.parse_doc('engine')
@@ -60,7 +123,7 @@ class EvalParameterTest(unittest.TestCase):
             """
             Blabla
 
-            Parameters:
+            Defaults:
 
             [name]
             default=DM
@@ -83,7 +146,7 @@ class EvalParameterTest(unittest.TestCase):
             """
             Blabla
 
-            Parameters:
+            Defaults:
 
             [interaction.port]
             default=10005
@@ -103,7 +166,7 @@ class EvalParameterTest(unittest.TestCase):
             """
             Dummy doc
 
-            Parameters:
+            Defaults:
 
             [verbose_level]
             default=3
@@ -139,9 +202,9 @@ class EvalParameterTest(unittest.TestCase):
 
     def test_parse_doc_inheritance(self):
         """
-        Test inheritance of EvalParameter decorator.
+        Test inheritance of EvalDescriptor decorator.
         """
-        root = validator.EvalParameter('')
+        root = EvalDescriptor('')
 
         class FakeEngineBaseClass(object):
             """
@@ -149,7 +212,7 @@ class EvalParameterTest(unittest.TestCase):
             blabla, any text is allowed except
             a line that starts with "Parameters".
 
-            Parameters:
+            Defaults:
 
             [name]
             default=BaseEngineName
@@ -171,7 +234,7 @@ class EvalParameterTest(unittest.TestCase):
             """
             Engine-specific documentation
 
-            Parameters:
+            Defaults:
 
             # It is possible to overwrite a base parameter
             [name]
@@ -204,21 +267,21 @@ class EvalParameterTest(unittest.TestCase):
         assert root['engine.name'].help == 'The name of the subclassed engine'
         assert root['engine'].implicit == True
         assert root['engine'].type == ['Param']
-        assert FakeEngineClass.DEFAULTS == {'alpha': 1.0, 'name': 'SubclassedEngineName', 'numiter': 1, 'subengine': {'some_parameter': 1.0}}
+        assert FakeEngineClass.DEFAULT == Param({'alpha': 1.0, 'name': 'SubclassedEngineName', 'numiter': 1, 'subengine': {'some_parameter': 1.0}})
 
     def test_parse_doc_wildcards(self):
         """
-        Test that wildcards in the EvalParameter structure are handled 
-        properly, i e that they drop out of the DEFAULTS constants.
+        Test that wildcards in the EvalDescriptor structure are handled
+        properly.
         """
-        root = validator.EvalParameter('')
+        root = EvalDescriptor('')
 
-        @root.parse_doc('scans.*')
+        @root.parse_doc('scan.FakeScan')
         class FakeScanClass(object):
             """
             General info.
 
-            Parameters:
+            Defaults:
 
             [energy]
             type = float
@@ -229,7 +292,7 @@ class EvalParameterTest(unittest.TestCase):
 
             [comment]
             type = str
-            default = 
+            default =
             help = Just some static parameter
             """
             pass
@@ -240,12 +303,17 @@ class EvalParameterTest(unittest.TestCase):
 
             General documentation.
 
-            Parameters:
+            Defaults:
 
             [scans]
             type = Param
-            default = None
+            default = {}
             help = Engine container
+
+            [scans.*]
+            type = @scan.*
+            default = @scan.FakeScan
+            help =
 
             [run]
             type = str
@@ -255,8 +323,7 @@ class EvalParameterTest(unittest.TestCase):
             """
             pass
 
-        assert FakeScanClass.DEFAULTS == {'comment': None, 'energy': 11.4}
-        assert FakePtychoClass.DEFAULTS == {'run': 'run', 'scans': {}}
+        assert FakeScanClass.DEFAULT == Param({'comment': None, 'energy': 11.4})
 
         # a correct param tree
         p = Param()
@@ -268,14 +335,13 @@ class EvalParameterTest(unittest.TestCase):
         p.scans.scan02 = Param()
         p.scans.scan02.energy = 3.14 * 2
         p.scans.scan02.comment = 'second scan'
-        root.validate(p, walk=True)
+        root.validate(p)
 
         # no scans entries
         p = Param()
         p.run = 'my reconstruction run'
         p.scans = Param()
-        out = root.check(p, walk=True)
-        assert out['scans']['scans.*'] == validator.CODES.MISSING
+        root.validate(p)
 
         # a bad scans entry
         p = Param()
@@ -288,8 +354,8 @@ class EvalParameterTest(unittest.TestCase):
         p.scans.scan03 = Param()
         p.scans.scan03.energy = 3.14 * 2
         p.scans.scan03.comment = 'second scan'
-        out = root.check(p, walk=True)
-        assert out['scans']['scans.*'] == validator.CODES.INVALID
+        out = root.check(p)
+        assert out['scans.scan02']['type'] == CODES.INVALID
 
         # a bad entry within a scan
         p = Param()
@@ -302,9 +368,106 @@ class EvalParameterTest(unittest.TestCase):
         p.scans.scan02.energy = 3.14 * 2
         p.scans.scan02.comment = 'second scan'
         p.scans.scan02.badparameter = 'not good'
-        out = root.check(p, walk=True)
-        # the tree structure of this dict is a bit strange
-        assert out['scans.*']['badparameter'] == validator.CODES.INVALID
+        out = root.check(p)
+        assert out['scans.scan02']['badparameter'] == CODES.INVALID
+
+    def test_parse_doc_symlinks(self):
+        """
+        Test that symlinks in the EvalDescriptor structure are handled
+        properly.
+        """
+        root = EvalDescriptor('')
+
+        @root.parse_doc('engine.DM')
+        class FakeDMEngineClass(object):
+            """
+            Dummy documentation
+            blabla, any text is allowed except
+            a line that starts with "Defaults".
+
+            Defaults:
+
+            [name]
+            default=DM
+            type=str
+            help=DM engine
+
+            [numiter]
+            default=1
+            type=int
+            lowlim=0
+            help=Number of iterations
+            """
+            pass
+
+        @root.parse_doc('engine.ML')
+        class FakeMLEngineClass(object):
+            """
+            Dummy documentation
+
+            Defaults:
+
+            [name]
+            default=ML
+            type=str
+            help=ML engine
+
+            [numiter]
+            default=1
+            type=int
+            lowlim=0
+            help=Number of iterations
+            """
+            pass
+
+        @root.parse_doc()
+        class FakePtychoClass(object):
+            """
+
+            General documentation.
+
+            Defaults:
+
+            [engines]
+            type = Param
+            default =
+            help = Container for all engines
+
+            [engines.*]
+            type = @engine.*
+            default = @engine.DM
+            help = Engine wildcard. Defaults to DM
+            """
+            pass
+
+        # a correct param tree
+        p = Param()
+        p.engines = Param()
+        p.engines.engine01 = Param()
+        p.engines.engine01.name = 'DM'
+        p.engines.engine01.numiter = 10
+        p.engines.engine02 = Param()
+        p.engines.engine02.name = 'ML'
+        p.engines.engine02.numiter = 10
+        root.validate(p)
+
+        # no name
+        p = Param()
+        p.engines = Param()
+        p.engines.engine01 = Param()
+        p.engines.engine01.numiter = 10
+        out = root.check(p)
+        assert out['engines.engine01']['symlink'] == CODES.INVALID
+
+        # wrong name
+        p = Param()
+        p.engines = Param()
+        p.engines.engine01 = Param()
+        p.engines.engine01.name = 'ePIE'
+        p.engines.engine01.numiter = 10
+        out = root.check(p)
+        assert out['engines.engine01']['symlink'] == CODES.INVALID
+
 
 if __name__ == "__main__":
     unittest.main()

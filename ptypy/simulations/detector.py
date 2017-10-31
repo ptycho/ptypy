@@ -10,15 +10,15 @@ in your acquisition.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.    
+    :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
 from scipy import ndimage as ndi
 
 __all__=['shot','Detector','conv','fill2D']
 
-DEFAULTS= dict(
-    sci_psf = None,     # (None or float, 2-tuple, array) Parameters for gaussian convolution or convolution kernel after exposure of scintillator 
+DEFAULT= dict(
+    sci_psf = None,     # (None or float, 2-tuple, array) Parameters for gaussian convolution or convolution kernel after exposure of scintillator
     sci_qe = 1,         # (float) how many optical photons per x-ray photon
     psf = None,         # (None or float, 2-tuple, array) Parameters for gaussian convolution or convolution kernel after exposure
     qe = 1.,            # (float) detector quantum efficiency for converting a photon to a well count
@@ -30,18 +30,18 @@ DEFAULTS= dict(
     modules = (1,1),    # (tuple) number of modules for each dimension
     center = 1024,      # (int,tuple) frame center of the exposure within the first module
     dtype = np.uint16,  # (numpy integer dtype) data type for storing (can also be the type char)
-    on_limit = 'clip',  # 
+    on_limit = 'clip',  #
     psize = 10e-6,      # pixel size (for documentation only)
     #beamstop = None,    # (None,'rect','circ') beamstop
-    #bs_size = 0.0,      # (float, tuple) beamstop size in  
+    #bs_size = 0.0,      # (float, tuple) beamstop size in
     #bs_trans = 0.0,     #
-    #bs_edgewith = 0.5,   
+    #bs_edgewith = 0.5,
 )
 
 TEMPLATES = {}
-TEMPLATES['GenericCCD16bit'] = DEFAULTS.copy()
+TEMPLATES['GenericCCD16bit'] = DEFAULT.copy()
 
-TEMPLATES['GenericCCD32bit'] = DEFAULTS.copy()
+TEMPLATES['GenericCCD32bit'] = DEFAULT.copy()
 TEMPLATES['GenericCCD32bit']['full_well']= 2**32-1
 TEMPLATES['GenericCCD32bit']['dtype']=np.uint32
 
@@ -51,7 +51,7 @@ TEMPLATES['FLI_PL1001'] = dict(
     shot_noise = 9,
     adu = 10,
     center = 512,
-    psize = 24e-6 
+    psize = 24e-6
 )
 
 TEMPLATES['FRELON_TAPER'] = dict(
@@ -89,9 +89,9 @@ TEMPLATES['PILATUS_300K']['modules'] = (3,1)
 
 
 class Detector(object):
-    
+
     def __init__(self,pars=None):
-        self._update(DEFAULTS)
+        self._update(DEFAULT)
         if str(pars)==pars:
             t = TEMPLATES.get(pars,{})
             self._update(t)
@@ -102,11 +102,11 @@ class Detector(object):
         self._make_mask()
         if self.center is None:
             self.center = expect2(self._mask.shape)/2
-            
+
     def _update(self,pars=None):
         if pars is not None:
             self.__dict__.update(pars)
-            
+
     def _make_mask(self):
         gaps = expect2(self.gaps)
         module = np.ones(self.shape).astype(np.bool)
@@ -119,28 +119,28 @@ class Detector(object):
             gap = np.zeros((module.shape[0],gaps[1])).astype(np.bool)
             start = np.concatenate([start,np.concatenate([gap,module],axis=1)],axis=1)
         self._mask = start
-        
+
     def _get_mask(self,sh):
         msh =  expect2(sh[-2:])
         mask = np.zeros(msh).astype(np.bool)
         offset = msh//2 - expect2(self.center)
         mask = fill2D(mask,self._mask,-offset)
         return np.resize(mask,sh)
-        
+
     def filter(self,intensity_stack,convert_dtype=False):
         I= intensity_stack
-        I_dtype = I.dtype if not convert_dtype else self.dtype 
+        I_dtype = I.dtype if not convert_dtype else self.dtype
 
         mask = self._get_mask(I.shape)
-        
+
         I = np.abs(np.array(I).astype(float))
         if self.sci_psf is not None:
             I = self.sci_qe*conv(np.random.poisson(I).astype(float),self.sci_psf)
         if self.psf is not None:
             I = conv(I,self.psf)
-        
+
         # convert to well counts
-        Iel = np.random.poisson(I* self.qe).astype(float) 
+        Iel = np.random.poisson(I* self.qe).astype(float)
         # add shot noise
         Iel += np.abs(np.random.standard_normal(I.shape)*self.shot_noise)
         overexposed = Iel>=self.full_well
@@ -151,12 +151,12 @@ class Detector(object):
         if self.on_limit=='clip':
             mx = np.iinfo(dt).max
             DU[DU>mx]=mx
-        
+
         DU[np.invert(mask)]=0.0
         mask &= np.invert(overexposed)
-        
+
         return DU.astype(I_dtype), mask
-        
+
 def conv(A,inp,**kwargs):
     dims = A.ndim
     assert dims in [2,3], "Filtered array has to be 2D or 3D."
@@ -164,7 +164,7 @@ def conv(A,inp,**kwargs):
         return A
     elif np.size(inp)<=2:
         inp = expect2(inp)
-        if dims==3: 
+        if dims==3:
             inp=[0,inp[0],inp[1]]
         return ndi.gaussian_filter(A,inp,**kwargs)
     else:
@@ -173,10 +173,10 @@ def conv(A,inp,**kwargs):
         if dims ==3:
             inp = inp.reshape((1,inp.shape[0],inp.shape[1]))
         return ndi.convolve(A,inp,**kwargs)
-        
+
 def shot(I,exp=0.1,flux=1e5,sensitivity=1.0,dark_c=None,io_noise=0.,full_well=2**10-1,el_per_ADU=1.0,offset=50.):
     """\
-    I : intensity distribution  
+    I : intensity distribution
     flux : overall photon photons per seconds coming in
     exp : exposition time in sec
     io_noise : readout noise rms
@@ -184,18 +184,18 @@ def shot(I,exp=0.1,flux=1e5,sensitivity=1.0,dark_c=None,io_noise=0.,full_well=2*
     el_per_ADU : conversion effficiency of electrons to digitally counted units
     dark_curr : electrons per second per pixel on average
     """
-    
+
     I=np.asarray(I).astype(float)
-    
+
     if I.sum() != 0. :
         I=I/I.sum()
-    
+
     photo_el = np.floor(sensitivity*np.random.poisson(exp*flux*I))
     if dark_c is not None:
         therm_el = np.floor(np.random.poisson(dark_c*exp*np.ones_like(I)))
     else:
         therm_el = np.zeros_like(I)
-    
+
     el = photo_el + therm_el
     el[el > full_well] = full_well
     out = offset + io_noise*np.random.standard_normal(I.shape)+ el / el_per_ADU
@@ -218,26 +218,26 @@ def fill2D(imA,imB,offset):
     maxA=vmin([shA,vmax([shB-offset,expect2(0)])])
     minB=vmax([expect2(0),vmin([+offset,shB])])
     maxB=vmin([shB,vmax([shA+offset,expect2(0)])])
-    #print minA,maxA,minB,maxB 
+    #print minA,maxA,minB,maxB
     imA[...,minA[0]:maxA[0],minA[1]:maxA[1]] = imB[...,minB[0]:maxB[0],minB[1]:maxB[1]]
     return imA
-    
+
 def expect2(a):
     """\
-    generates 1d numpy array with 2 entries generated from multiple inputs 
+    generates 1d numpy array with 2 entries generated from multiple inputs
     (tuples, arrays, scalars). main puprose of this function is to circumvent
     debugging of input.
-    
+
     expect2( 3.0 ) -> np.array([3.0,3.0])
     expect2( (3.0,4.0) ) -> np.array([3.0,4.0])
-    
+
     even higher order inputs possible, though not tested much
-    """ 
+    """
     a=np.atleast_1d(a)
     if len(a)==1:
         b=np.array([a.flat[0],a.flat[0]])
     else: #len(psize)!=2:
-        b=np.array([a.flat[0],a.flat[1]])        
+        b=np.array([a.flat[0],a.flat[1]])
     return b
 
 def smooth_step(x,mfs):
@@ -249,7 +249,7 @@ if __name__ == "__main__":
     from scipy.misc import lena
     from scipy.ndimage import gaussian_filter as gf
     from matplotlib import pyplot as plt
-    from scipy.special import erf 
+    from scipy.special import erf
     if len(sys.argv) > 1:
         det = sys.argv[1]
     else:

@@ -10,10 +10,13 @@ This file is part of the PTYPY package.
 import numpy as np
 import os
 from .. import utils as u
+from ..utils.descriptor import defaults_tree
 from .. import io
 from ..core.data import PtyScan
 from ..core.paths import Paths
-from ..core import DEFAULT_io as IO_par
+#from ..core import DEFAULT_io as IO_par
+from ..core import Ptycho
+IO_par = Ptycho.DEFAULT['io']
 
 # Parameters for the nexus file saved by GDA
 NEXUS_PATHS = u.Param()
@@ -25,43 +28,90 @@ NEXUS_PATHS.command = 'entry1/scan_command'
 NEXUS_PATHS.label = 'entry1/entry_identifier'
 NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 
-# Recipe defaults
-RECIPE = u.Param()
-# Experiment identifier
-RECIPE.experimentID = None
-# Scan number
-RECIPE.scan_number = None
-RECIPE.dark_number = None
-RECIPE.flat_number = None
-RECIPE.energy = None
-RECIPE.lam = None
-# Distance from object to screen
-RECIPE.z = None
-# Name of the detector as specified in the nexus file
-RECIPE.detector_name = None
-# Motor names to determine the sample translation
-RECIPE.motors = ['t1_sx', 't1_sy']
-RECIPE.theta = 'entry1/before_scan/t1_theta/t1_theta'
-# Motor conversion factor to meters
-RECIPE.motors_multiplier = 1e-6
-RECIPE.base_path = './'
-RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
-RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
-RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
-RECIPE.mask_file = None
 
-# Generic defaults
-I13DEFAULT = PtyScan.DEFAULT.copy()
-I13DEFAULT.recipe = RECIPE
-I13DEFAULT.auto_center = False
-I13DEFAULT.orientation = (False, False, False)
-
-
+@defaults_tree.parse_doc('scandata.I13ScanFFP')
 class I13ScanFFP(PtyScan):
     """
     I13 (Diamond Light Source) data preparation class for FFP.
+
+    Defaults:
+
+    [name]
+    default = 'I13ScanFFP'
+    type = str
+    help =
+
+    [experimentID]
+    default = None
+
+    [scan_number]
+    default = None
+    type = int
+    help = Scan number
+
+    [dark_number]
+    default = None
+    type = int
+    help = 
+
+    [flat_number]
+    default = None
+    type = int
+    help = 
+
+    [detector_name]
+    default = None
+    type = str
+    help = Name of the detector 
+    doc = As specified in the nexus file.
+
+    [motors]
+    default = ['t1_sx', 't1_sy']
+    type = list
+    help = Motor names to determine the sample translation
+
+    [motors_multiplier]
+    default = 1e-6
+    type = float
+    help = Motor conversion factor to meters
+
+    [base_path]
+    default = './'
+    type = str
+    help = 
+
+    [data_file_pattern]
+    default = '%(base_path)sraw/%(scan_number)05d.nxs'
+    type = str
+    help = 
+
+    [dark_file_pattern]
+    default = '%(base_path)sraw/%(dark_number)05d.nxs'
+    type = str
+    help = 
+
+    [flat_file_pattern]
+    default = '%(base_path)sraw/%(flat_number)05d.nxs'
+    type = str
+    help = 
+
+    [mask_file]
+    default = None
+    type = str
+    help = 
+
+    [theta]
+    default = 0.0
+    type = float
+    help = Angle of rotation
+
+    [auto_center]
+    default = False
+
+    [orientation]
+    default = (False, False, False)
+
     """
-    DEFAULT = I13DEFAULT
 
     def __init__(self, pars=None, **kwargs):
         """
@@ -72,14 +122,12 @@ class I13ScanFFP(PtyScan):
         :param kwargs: key-value pair
             - additional parameters.
         """
-        recipe_default = RECIPE.copy()
-        recipe_default.update(pars.recipe, in_place_depth=1)
-        pars.recipe.update(recipe_default)
-
-        super(I13ScanFFP, self).__init__(pars, **kwargs)
+        p = self.DEFAULT.copy(99)
+        p.update(pars)
+        super(I13ScanFFP, self).__init__(p, **kwargs)
 
         # Try to extract base_path to access data files
-        if self.info.recipe.base_path is None:
+        if self.info.base_path is None:
             d = os.getcwd()
             base_path = None
             while True:
@@ -92,10 +140,10 @@ class I13ScanFFP(PtyScan):
             if base_path is None:
                 raise RuntimeError('Could not guess base_path.')
             else:
-                self.info.recipe.base_path = base_path
+                self.info.base_path = base_path
 
         # Construct file names
-        self.data_file = self.info.recipe.data_file_pattern % self.info.recipe
+        self.data_file = self.info.data_file_pattern % self.info
         u.log(3, 'Will read data from file %s' % self.data_file)
 
         # Load data information
@@ -103,8 +151,8 @@ class I13ScanFFP(PtyScan):
             NEXUS_PATHS.instrument]
 
         # Extract detector name if not set or wrong
-        if (self.info.recipe.detector_name is None
-                or self.info.recipe.detector_name
+        if (self.info.detector_name is None
+                or self.info.detector_name
                 not in self.instrument.keys()):
                 detector_name = None
                 for k in self.instrument.keys():
@@ -116,35 +164,35 @@ class I13ScanFFP(PtyScan):
                     raise RuntimeError(
                         'Not possible to extract detector name. '
                         'Please specify in recipe instead.')
-                elif (self.info.recipe.detector_name is not None
+                elif (self.info.detector_name is not None
                       and detector_name
-                      is not self.info.recipe.detector_name):
+                      is not self.info.detector_name):
                     u.log(2, 'Detector name changed from %s to %s.'
-                          % (self.info.recipe.detector_name, detector_name))
+                          % (self.info.detector_name, detector_name))
         else:
-            detector_name = self.info.recipe.detector_name
+            detector_name = self.info.detector_name
 
-        self.info.recipe.detector_name = detector_name
+        self.info.detector_name = detector_name
 
         # Attempt to extract experiment ID
-        if self.info.recipe.experimentID is None:
+        if self.info.experimentID is None:
             try:
                 experiment_id = io.h5read(
                     self.data_file, NEXUS_PATHS.experiment)[
                     NEXUS_PATHS.experiment][0]
             except (AttributeError, KeyError):
                 experiment_id = os.path.split(
-                    self.info.recipe.base_path[:-1])[1]
+                    self.info.base_path[:-1])[1]
                 u.logger.debug(
                     'Could not find experiment ID from nexus file %s. '
                     'Using %s instead.' % (self.data_file, experiment_id))
-            self.info.recipe.experimentID = experiment_id
+            self.info.experimentID = experiment_id
 
         # Create the ptyd file name if not specified
         if self.info.dfile is None:
             home = Paths(IO_par).home
             self.info.dfile = ('%s/prepdata/data_%d.ptyd'
-                               % (home, self.info.recipe.scan_number))
+                               % (home, self.info.scan_number))
             u.log(3, 'Save file is %s' % self.info.dfile)
 
         u.log(4, u.verbose.report(self.info))
@@ -163,9 +211,9 @@ class I13ScanFFP(PtyScan):
         """
         # FIXME: do something better here. (detector-dependent)
         # Load mask as weight
-        if self.info.recipe.mask_file is not None:
+        if self.info.mask_file is not None:
             return io.h5read(
-                self.info.recipe.mask_file, 'mask')['mask'].astype(float)
+                self.info.mask_file, 'mask')['mask'].astype(float)
 
     def load_positions(self):
         """
@@ -181,21 +229,21 @@ class I13ScanFFP(PtyScan):
                 break
 
         # Apply motor conversion factor and create transposed position array
-        if len(self.info.recipe.motors) == 3:
-            self.theta = io.h5read(self.data_file, self.info.recipe.theta)[
-                self.info.recipe.theta]
+        if len(self.info.motors) == 3:
+            self.theta = io.h5read(self.data_file, self.info.theta)[
+                self.info.theta]
             # Convert from degree to radians
             self.theta *= np.pi / 180.
-            mmult = u.expect3(self.info.recipe.motors_multiplier)
+            mmult = u.expect3(self.info.motors_multiplier)
             pos_list = [mmult[i] * np.array(motor_positions[motor_name])
-                        for i, motor_name in enumerate(self.info.recipe.motors)]
+                        for i, motor_name in enumerate(self.info.motors)]
             positions = 1. * np.array([np.cos(self.theta) * pos_list[0] -
                                        np.sin(self.theta) * pos_list[2],
                                        pos_list[1]]).T
         else:
-            mmult = u.expect2(self.info.recipe.motors_multiplier)
+            mmult = u.expect2(self.info.motors_multiplier)
             pos_list = [mmult[i] * np.array(motor_positions[motor_name])
-                        for i, motor_name in enumerate(self.info.recipe.motors)]
+                        for i, motor_name in enumerate(self.info.motors)]
             positions = 1. * np.array(pos_list).T
 
         return positions
@@ -243,7 +291,7 @@ class I13ScanFFP(PtyScan):
         pos = {}
         weights = {}
         raw = {j: self.instrument[
-            self.info.recipe.detector_name]['data'][j].astype(np.float32)
+            self.info.detector_name]['data'][j].astype(np.float32)
                for j in indices}
 
         u.log(3, 'Data loaded successfully.')

@@ -15,28 +15,42 @@ import ptypy
 from .. import utils as u
 from ..utils import parallel
 from . import BaseEngine
-
-#import utils
+from ..utils.descriptor import defaults_tree
 
 __all__ = ['Dummy']
 
-DEFAULT = u.Param(
-    itertime = 2.,    # Sleep time for a single iteration (in seconds)
-)
-
+@defaults_tree.parse_doc('engine.Dummy')
 class Dummy(BaseEngine):
-    
     """
-    Minimum implementation of BaseEngine
+    Dummy reconstruction engine.
+
+
+    Defaults:
+
+    [name]
+    default = Dummy
+    type = str
+    help =
+    doc =
+
+    [itertime]
+    default = .2
+    type = float
+    help = Sleep time for a single iteration (in seconds)
+
     """
-    
-    DEFAULT = DEFAULT
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Dummy reconstruction engine.
         """
-        super(Dummy,self).__init__(ptycho_parent,pars)
+        super(Dummy,self).__init__(ptycho_parent, pars)
+
+        p = self.DEFAULT.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
+
         self.ntimescalled  = 0
 
     def engine_initialize(self):
@@ -45,13 +59,13 @@ class Dummy(BaseEngine):
         """
         self.itertime = self.p.itertime / parallel.size
         self.error = np.ones((100,3))*1e6
-        
+
     def engine_prepare(self):
         """
         Last-minute preparation before iterating.
         """
         pass
-            
+
     def engine_iterate(self,numiter):
         """
         Compute one iteration.
@@ -67,14 +81,9 @@ class Dummy(BaseEngine):
             error_dct[dname] = [0., 0.9**self.ntimescalled, 0.]
         self.ntimescalled+=1
         return error_dct
-     
+
     def engine_finalize(self):
         """
         Clean up after iterations are done
         """
         pass
-        
-        
-
-
-        

@@ -1,47 +1,34 @@
-#! /usr/bin/python
+#!/usr/bin/env python2
 
 import sys
 import argparse
 
-parser = argparse.ArgumentParser(description='Creates a new ptypy script from defaults.')
+class MoreGentleParser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write('error: %s\n\n' % message)
+        self.print_help()
+        sys.exit(2)
+
+parser = MoreGentleParser(description='Creates a new ptypy reconstruction script from defaults.')
 parser.add_argument('pyfile', type=str, 
-                   help='file path of target .py scriptfile, existing file will be overriden')
+                   help='target .py script file, existing files will be overrwritten')
 parser.add_argument('-u','--user-level', dest='ulevel', type=int, default=0,
                    help='use parameters up to this complexity level (0--2)')
-parser.add_argument('-d','--doc-level', dest='dlevel', type=int, default=2,
-                   help='unused')
 parser.add_argument('--short-doc', dest='sdoc', action='store_true',
-                   help='include short doc as comment')
+                   help='include help info as inline comments')
 parser.add_argument('--long-doc', dest='ldoc', action='store_true',
-                   help='include extended doc as comment')
+                   help='include both help and doc info')
 pars = parser.parse_args()
-usage = """\
-Usage:
-%s [script_name.py]  [doc_level=2] [user_level=0] 
 
-Creates a new ptypy script from defaults of name 'ptypy_script.py'
-doc_level = 0 : no docs
-doc_level = 1 : short docstrings
-doc_level = 2 : long docstrings & short doc_strings
-user_level = 0 : basic parameters
-user_level = 1 : advanced parameters
-user_level = 2 : all parameters
-""" % sys.argv[0]
-"""
-if len(sys.argv) not in [2,3,4]:
-    print usage
-    sys.exit(0)
-
-filename = sys.argv[1] if len(sys.argv)>1 else 'ptypy_template.py'
-doc_level = int(sys.argv[2]) if len(sys.argv)>2 else 2
-user_level = int(sys.argv[3]) if len(sys.argv)>3 else 0
-"""
 from ptypy import utils as u
 if pars.sdoc:
     doc_level = 1  
 elif pars.ldoc:
     doc_level = 2  
 else:
-    doc_level = 0  
-u.validator.create_default_template(pars.pyfile, pars.ulevel,doc_level)
+    doc_level = 0
 
+from ptypy import defaults_tree
+
+defaults_tree.create_template(filename=pars.pyfile,
+    user_level=pars.ulevel, doc_level=doc_level, start_at_root=True)

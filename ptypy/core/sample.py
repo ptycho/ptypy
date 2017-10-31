@@ -10,84 +10,190 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-# import os
-# from matplotlib import pyplot as plt
 
 if __name__ == '__main__':
     from ptypy import utils as u
     from ptypy import resources
+    from ptypy.utils.descriptor import EvalDescriptor
 else:
     from .. import utils as u
     from .. import resources
-    
+    from ..utils.descriptor import EvalDescriptor
+
 logger = u.verbose.logger
 
 TEMPLATES = dict()
 
-DEFAULT_process = u.Param(
-    # Offset between center of object array and scan pattern (in pixel);
-    #  (float, tuple).
-    offset=0,
-    # Zoom value for object simulation; (float, tuple).
-    zoom=None,
-    # Chemical formula; (str).
-    formula=None,
-    # Density in [g/ccm]; (None, float).
-    density=None,
-    # Maximum thickness of sample in meter; (float).
-    thickness=None,
-    # Assigned refractive index (maximum) relative to air; (complex float)
-    ref_index=0.5 + 0.j,
-    # Gaussian filter smoothing with this FWHM (pixel); (float, tuple)
-    smoothing=2,
-)
+local_tree = EvalDescriptor('')
+@local_tree.parse_doc('sample')
+class DummyClass(object):
+    """
+    Defaults:
 
-DEFAULT_diversity = u.Param(
-    noise=None,
-    shift=None,
-    power=1.0,
-)
+    [model]
+    default = None
+    help = Type of initial object model
+    doc = One of:
+       - ``None`` : model initialitziation defaults to flat array filled `fill`
+       - ``'recon'`` : load model from STXM analysis of diffraction data
+       - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
+       - *<resource>* : one of ptypys internal model resource strings
+       - *<template>* : one of the templates in sample module
+      In script, you may pass a numpy.array here directly as the model. This array will be
+      processed according to `process` in order to *simulate* a sample from e.g. a thickness
+      profile.
+    type = str
+    userlevel = 0
 
-DEFAULT = u.Param(
-    # 'scripting option to override'
-    override=None,
-    # Type of object model; (None, 'sim', 'stxm', 'recon')
-    model=None,
-    fill=1.0,
-    recon=u.Param(
-        ID=None,
-        layer=None,
-        rfile='*.ptyr',
-    ),
-    # STXM analysis parameters
-    stxm=u.Param(
-        # Label of the scan of whose diffraction data to initialize stxm.
-        # If None, use own scan_label
-        label=None,
-    ),
-    process=DEFAULT_process,
-    # See other for noise
-    diversity=DEFAULT_diversity,
-)
-""" Default sample parameters. See :py:data:`.scan.sample`
-    and a short listing below """
+    [fill]
+    default = 1
+    help = Default fill value
+    doc = 
+    type = float, complex
+    userlevel = 
 
-__all__ = ['DEFAULT', 'init_storage', 'simulate']
+    [recon]
+    default = 
+    help = Parameters to load from previous reconstruction
+    doc = 
+    type = Param
+    userlevel = 
+
+    [recon.rfile]
+    default = \*.ptyr
+    help = Path to a ``.ptyr`` compatible file
+    doc = 
+    type = file
+    userlevel = 0
+
+    [stxm]
+    default = 
+    help = STXM analysis parameters
+    doc = 
+    type = Param
+    userlevel = 1
+
+    [stxm.label]
+    default = None
+    help = Scan label of diffraction that is to be used for probe estimate
+    doc = ``None``, own scan label is used
+    type = str
+    userlevel = 1
+
+    [process]
+    default = None
+    help = Model processing parameters
+    doc = Can be ``None``, i.e. no processing
+    type = Param
+    userlevel = 
+
+    [process.offset]
+    default = (0,0)
+    help = Offset between center of object array and scan pattern
+    doc = 
+    type = tuple
+    userlevel = 2
+    lowlim = 0
+
+    [process.zoom]
+    default = None
+    help = Zoom value for object simulation.
+    doc = If ``None``, leave the array untouched. Otherwise the modeled or loaded image will be
+      resized using :py:func:`zoom`.
+    type = tuple
+    userlevel = 2
+    lowlim = 0
+
+    [process.formula]
+    default = None
+    help = Chemical formula
+    doc = A Formula compatible with a cxro database query,e.g. ``'Au'`` or ``'NaCl'`` or ``'H2O'``
+    type = str
+    userlevel = 2
+
+    [process.density]
+    default = 1
+    help = Density in [g/ccm]
+    doc = Only used if `formula` is not None
+    type = float
+    userlevel = 2
+
+    [process.thickness]
+    default = 1.00E-06
+    help = Maximum thickness of sample
+    doc = If ``None``, the absolute values of loaded source array will be used
+    type = float
+    userlevel = 2
+
+    [process.ref_index]
+    default = 0.5+0.j
+    help = Assigned refractive index
+    doc = If ``None``, treat source array as projection of refractive index. If a refractive index
+      is provided the array's absolute value will be used to scale the refractive index.
+    type = complex
+    userlevel = 2
+    lowlim = 0
+
+    [process.smoothing]
+    default = 2
+    help = Smoothing scale
+    doc = Smooth the projection with gaussian kernel of width given by `smoothing_mfs`
+    type = int
+    userlevel = 2
+    lowlim = 0
+
+    [diversity]
+    default = 
+    help = Probe mode(s) diversity parameters
+    doc = Can be ``None`` i.e. no diversity
+    type = Param
+    userlevel = 
+
+    [diversity.noise]
+    default = None
+    help = Noise in the generated modes of the illumination
+    doc = Can be either:
+       - ``None`` : no noise
+       - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+       - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+    type = tuple
+    userlevel = 1
+
+    [diversity.power]
+    default = 0.1
+    help = Power of modes relative to main mode (zero-layer)
+    doc = 
+    type = tuple, float
+    userlevel = 1
+
+    [diversity.shift]
+    default = None
+    help = Lateral shift of modes relative to main mode
+    doc = **[not implemented]**
+    type = float
+    userlevel = 2
+    """
+    pass
+
+DEFAULT = DummyClass.DEFAULT
+DEFAULT_process = DEFAULT.process
+
+__all__ = ['init_storage', 'simulate']
 
 
 def init_storage(storage, sample_pars=None, energy=None):
     """
     Initializes a storage as sample transmission.
-    
+
     Parameters
     ----------
     storage : Storage
         The object :any:`Storage` to initialize
-        
+
     sample_pars : Param
         Parameter structure that defines how the sample is created.
         See :any:`DEFAULT` for the parameters.
-    
+
     energy : float, optional
         Energy associated in the experiment for this sample object.
         If None, the ptypy structure is searched for the appropriate
@@ -95,21 +201,21 @@ def init_storage(storage, sample_pars=None, energy=None):
     """
     s = storage
     prefix = "[Object %s] " % s.ID
-    
+
     sam = sample_pars
     p = DEFAULT.copy(depth=3)
     model = None
     if hasattr(sam, 'items') or hasattr(sam, 'iteritems'):
         # This is a dict
         p.update(sam, in_place_depth=3)
-    
+
     # First we check for scripting shortcuts. This is only convenience.
     elif str(sam) == sam:
         # This maybe a template now or a file
-        
+
         # Deactivate further processing
         p.process = None
-        
+
         if sam.endswith('.ptyr'):
             recon = u.Param(rfile=sam, layer=None, ID=s.ID)
             p.recon = recon
@@ -132,7 +238,7 @@ def init_storage(storage, sample_pars=None, energy=None):
         init_storage(s, p)
     else:
         ValueError(prefix + 'Shortcut for object creation is not understood.')
-        
+
     if p.model is None or str(p.model) == 'sim':
         model = np.ones(s.shape, s.dtype) * p.fill
     elif type(p.model) is np.ndarray:
@@ -149,7 +255,7 @@ def init_storage(storage, sample_pars=None, energy=None):
         model = u.load_from_ptyr(p.recon.rfile, 'obj', ID, layer)
         # This could be more sophisticated,
         # i.e. matching the real space grids etc.
-        
+
     elif str(p.model) == 'stxm':
         logger.info(prefix + 'STXM initialization using diffraction data.')
         trans, dpc_row, dpc_col = u.stxm_analysis(s)
@@ -157,11 +263,11 @@ def init_storage(storage, sample_pars=None, energy=None):
     else:
         raise ValueError(
             prefix + 'Value to `model` key not understood in object creation.')
-        
+
     assert type(model) is np.ndarray, "".join(
         [prefix, "Internal model should be numpy array now but it is %s."
          % str(type(model))])
-    
+
     # Expand model to the right length filling with copies
     sh = model.shape[-2:]
     model = np.resize(model, (s.shape[0], sh[0], sh[1]))
@@ -175,16 +281,16 @@ def init_storage(storage, sample_pars=None, energy=None):
                         'Could not retrieve energy from pod network... '
                         'Maybe there are no pods yet created?')
     s._energy = energy
-            
+
     # Process the given model
     if str(p.model) == 'sim' or p.process is not None:
 
         # Make this a single call in future
         model = simulate(model, p.process, energy, p.fill, prefix)
-    
+
     # Symmetrically cut to shape of data
     model = u.crop_pad_symmetric_2d(model, s.shape)[0]
-    
+
     # Add diversity
     if p.diversity is not None:
         u.diversify(model, **p.diversity)
@@ -195,12 +301,12 @@ def init_storage(storage, sample_pars=None, energy=None):
 def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
     """
     Simulates a sample object into model numpy array `A`
-    
+
     Parameters
     ----------
     A : ndarray
         Numpy array as buffer. Must be at least two-dimensional
-        
+
     pars : Param
         Simulation parameters. See :any:`DEFAULT` .simulate
     """
@@ -208,9 +314,9 @@ def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
     p = DEFAULT_process.copy()
     p.update(pars)
     p.update(kwargs)
-        
+
     """
-    res = p.resource 
+    res = p.resource
     if res is None:
         raise RuntimeError(
             "Resource for simulation cannot be None. Please specify one of "
@@ -226,23 +332,23 @@ def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
                     res = res.mean(-1)
             except:
                 raise RuntimeError("Loading resource %s as image has failed")
-        
+
     assert type(res) is np.ndarray, "Resource should be a numpy array now"
     """
-    
+
     # Resize along first index
     # newsh = (A.shape[0], res.shape[-2], res.shape[-1])
     # obj = np.resize(res, newsh)
     obj = A.copy()
-    
+
     if p.zoom is not None:
         zoom = u.expect3(p.zoom)
         zoom[0] = 1
         obj = u.zoom(obj, zoom)
-        
+
     if p.smoothing is not None:
         obj = u.gf_2d(obj, p.smoothing / 2.35)
-       
+
     off = u.expect2(p.offset)
     k = 2 * np.pi / lam
     ri = p.ref_index
@@ -264,7 +370,7 @@ def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
         if d is not None:
             logger.info(prefix + "Rescaling to maximum thickness")
             ob /= ob.max() / d
-            
+
         if p.formula is not None or ri is not None:
             # Use only magnitude of obj and scale to [0 1]
             if ri is None:
@@ -284,7 +390,7 @@ def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
                 result = u.parallel.bcast(result)
                 energy, delta, beta = result
                 ri = - delta + 1j*beta
-                
+
             else:
                 logger.info(prefix +
                             "Using given refractive index in object creation")
@@ -292,13 +398,13 @@ def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
         obj = np.exp(1.j * ob * k * ri)
     # if p.diffuser is not None:
     #    obj *= u.parallel.MPInoise2d(obj.shape, *p.diffuser)
-    
+
     # Get obj back in original shape and apply a possible offset
     shape = u.expect2(A.shape[-2:])
     crops = list(-np.array(obj.shape[-2:]) + shape + 2*np.abs(off))
     obj = u.crop_pad(obj, crops, fillpar=fill)
     off += np.abs(off)
-    
+
     return np.array(obj[..., off[0]:off[0]+shape[0], off[1]:off[1]+shape[1]])
 
 
@@ -356,17 +462,17 @@ def from_pars_old(shape, lam, pars=None, dtype=np.complex):
         else:
             logger.info('Fill with ones!')
             obj = np.ones(shape)
-                
+
         obj = obj.astype(dtype)
-        
+
         off = u.expect2(p.offset)
-        
+
         if p.zoom is not None:
             obj = u.zoom(obj, p.zoom)
-            
+
         if p.smoothing_mfs is not None:
             obj = u.gf(obj, p.smoothing_mfs / 2.35)
-        
+
         k = 2 * np.pi / lam
         ri = p.ref_index
         if p.formula is not None or ri is not None:
@@ -387,7 +493,7 @@ def from_pars_old(shape, lam, pars=None, dtype=np.complex):
                 ri = - delta + 1j*beta
             else:
                 logger.info("using given refractive index in object creation")
-            
+
             ob = np.abs(obj).astype(np.float)
             ob -= ob.min()
             if p.thickness is not None:
@@ -398,7 +504,7 @@ def from_pars_old(shape, lam, pars=None, dtype=np.complex):
         shape = u.expect2(shape)
         crops = list(-np.array(obj.shape) + shape + 2*np.abs(off))
         obj = u.crop_pad(obj, crops, fillpar=p.fill)
-        
+
         if p.noise_rms is not None:
             n = u.expect2(p.noise_rms)
             noise = np.random.normal(1.0, n[0] + 1e-10, obj.shape) * np.exp(
@@ -409,7 +515,7 @@ def from_pars_old(shape, lam, pars=None, dtype=np.complex):
 
         off += np.abs(off)
         p.obj = obj[off[0]:off[0]+shape[0], off[1]:off[1]+shape[1]]
-        
+
         return p
 
 
@@ -426,7 +532,7 @@ def _create_modes(layers, pars):
         pr = ppr
     elif pr.ndim == 4:
         pr = pr[0]
-    w = p.mode_weights 
+    w = p.mode_weights
     # press w into 1d flattened array:
     w = np.atleast_1d(w).flatten()
     w = u.crop_pad(w, [[0, layers-w.shape[0]]], filltype='project')

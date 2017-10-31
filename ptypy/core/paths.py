@@ -16,7 +16,7 @@ if __name__ == "__main__":
 # for in package use #####
 else:
     from .. import utils as u
-    
+
 __all__ = ['DEFAULT', 'Paths']
 
 DEFAULT = u.Param(
@@ -67,11 +67,11 @@ class Paths(object):
             self.recon = io.rfile
         except:
             self.recon = self.DEFAULT.recon
-        
+
         sep = os.path.sep
         if not self.home.endswith(sep):
             self.home += sep
-        
+
         for key in ['autosave', 'autoplot', 'recon']:
             v = self.__dict__[key]
             if isinstance(v, str):
@@ -83,23 +83,23 @@ class Paths(object):
         Determine run name
         """
         return self.runtime.run if run is None else run
-    
+
     def auto_file(self, runtime=None):
         """ File path for autosave file """
         return self.get_path(self.autosave, runtime)
-    
+
     def recon_file(self, runtime=None):
-        """ File path for reconstruction file """           
+        """ File path for reconstruction file """
         return self.get_path(self.recon, runtime)
-    
+
     def plot_file(self, runtime=None):
-        """ 
-        File path for plot file 
+        """
+        File path for plot file
         """
         p = self.get_path(self.autoplot, runtime)
         print p
         return self.get_path(self.autoplot, runtime)
-    
+
     def get_path(self, path, runtime):
         if runtime is not None:
             try:
@@ -112,7 +112,7 @@ class Paths(object):
             out = os.path.abspath(os.path.expanduser(path % self.runtime))
 
         return out
-    
+
 ############
 # TESTING ##
 ############
