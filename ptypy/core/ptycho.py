@@ -274,6 +274,9 @@ class Ptycho(Base):
         # That may be a little dangerous
         self.p.update(kwargs)
 
+        # Validate the incoming parameters
+        defaults_tree.validate(self.p)
+
         # Instance attributes
 
         # Structures

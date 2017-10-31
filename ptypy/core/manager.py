@@ -1007,8 +1007,6 @@ class Full(ScanModel):
         """
         super(Full, self).__init__(ptycho, pars, label)
 
-        defaults_tree['scan.Full'].validate(self.p)
-
         # Sharing dictionary that stores sharing behavior
         self.sharing = {'probe_ids': {}, 'object_ids': {}}
 
@@ -1301,16 +1299,11 @@ class ModelManager(object):
         # Create scan model objects
         self.scans = OrderedDict()
         for label, scan_pars in pars.iteritems():
-            # this is not so pretty...
-            if not 'name' in scan_pars:
-                scan_pars.name = Full.DEFAULT.name
-
             # find out which scan model class to instantiate
             if scan_pars.name in u.all_subclasses(ScanModel, names=True):
                 cls = eval(scan_pars.name)
             else:
                 raise RuntimeError('Could not manage model %s' % scan_pars.name)
-
             # instantiate!
             self.scans[label] = cls(ptycho=self.ptycho, pars=scan_pars, label=label)
 
