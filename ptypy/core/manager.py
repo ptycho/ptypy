@@ -707,6 +707,8 @@ class ScanModel(object):
 
         self._update_stats()
 
+        # Create new views on object, probe, and exit wave, and connect
+        # these through new pods.
         new_pods, new_probe_ids, new_object_ids = self._create_pods()
         logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
             parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
@@ -743,7 +745,9 @@ class ScanModel(object):
 
     def _create_pods(self):
         """
-        Create all pods associated with the scan labels in 'scans'.
+        Create all new pods as specified in the new_positions,
+        new_diff_views and new_mask_views object attributes. Also create
+        all necessary views on object, probe, and exit wave.
 
         Return the list of new pods, probe and object ids (to allow for
         initialization).
