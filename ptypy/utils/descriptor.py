@@ -824,7 +824,7 @@ class EvalDescriptor(ArgParseDescriptor):
         for cname, c in children.items():
             new_path = '.'.join([path, cname]) if path else cname
             if pars:
-                if cname not in pars:
+                if cname not in pars or pars[cname] is None:
                     yield {'d': c, 'path': path, 'status': 'nopar', 'info': cname}
                 else:
                     for x in c._walk(depth=depth-1, pars=pars[cname], ignore_symlinks=ignore_symlinks,
@@ -861,14 +861,14 @@ class EvalDescriptor(ArgParseDescriptor):
                 out[path]['type'] = CODES.PASS
                 if any([i in d._limtypes for i in d.type]):
                     lowlim, uplim = d.limits
-                    if lowlim is None or pars[res['path']] is None:
+                    if lowlim is None or pars[path] is None:
                         out[path]['lowlim'] = CODES.PASS
                     else:
-                        out[path]['lowlim'] = CODES.PASS if (pars[res['path']] >= lowlim) else CODES.FAIL
-                    if uplim is None or pars[res['path']] is None:
+                        out[path]['lowlim'] = CODES.PASS if (pars[path] >= lowlim) else CODES.FAIL
+                    if uplim is None or pars[path] is None:
                         out[path]['uplim'] = CODES.PASS
                     else:
-                        out[path]['uplim'] = CODES.PASS if (pars[res['path']] <= uplim) else CODES.FAIL
+                        out[path]['uplim'] = CODES.PASS if (pars[path] <= uplim) else CODES.FAIL
             elif res['status'] == 'wrongtype':
                 # Wrong type
                 out[path]['type'] = CODES.INVALID
