@@ -38,7 +38,7 @@ CType = np.complex128
 __all__ = ['ModelManager', 'BaseModel', 'Full', 'Vanilla']
 
 
-@defaults_tree.parse_doc('scanmodel.BaseModel')
+@defaults_tree.parse_doc('scan.BaseModel')
 class BaseModel(object):
     """
     Abstract base class for models. Override at least these methods:
@@ -62,6 +62,17 @@ class BaseModel(object):
     help = Propagation type
     doc = Either "farfield" or "nearfield"
     userlevel = 1
+
+    [data]
+    default =
+    type = @scandata.*
+    help = Link to container for data preparation
+    doc =
+
+    [data.name]
+    default =
+    type = str
+    help = Name of the PtyScan subclass to use
 
     [illumination]
     type = Param
@@ -379,7 +390,7 @@ class BaseModel(object):
         raise NotImplementedError
 
 
-@defaults_tree.parse_doc('scanmodel.Vanilla')
+@defaults_tree.parse_doc('scan.Vanilla')
 class Vanilla(BaseModel):
     """
     Dummy for testing, there must be more than one for validate to react
@@ -388,7 +399,7 @@ class Vanilla(BaseModel):
     pass
 
 
-@defaults_tree.parse_doc('scanmodel.Full')
+@defaults_tree.parse_doc('scan.Full')
 class Full(Vanilla):
     """
     Manage a single scan model (sharing, coherence, propagation, ...)
@@ -833,6 +844,8 @@ class Full(Vanilla):
         Override constructor to add sharing functionality.
         """
         super(Full, self).__init__(ptycho, pars, label)
+
+        defaults_tree['scan.Full'].validate(self.p)
 
         # Sharing dictionary that stores sharing behavior
         self.sharing = {'probe_ids': {}, 'object_ids': {}}
