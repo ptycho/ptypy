@@ -509,12 +509,14 @@ class ScanModel(object):
 
         Parameters
         ----------
-        specific_pars : dict or Param
-            Input parameters specific to the given scan.
+        pars : dict or Param
+            Input parameter tree.
 
-        generic_pars : dict or Param
-            Input parameters (see :py:attr:`DEFAULT`)
-            If None uses defaults
+        ptycho : Ptycho instance
+            Ptycho instance to which this scan belongs
+
+        label : str
+            Unique label
         """
         from .. import experiment
 
@@ -525,18 +527,6 @@ class ScanModel(object):
         self.p = p
         self.label = label
         self.ptycho = ptycho
-
-        print(p)
-
-        # Manage stand-alone cases
-        if self.ptycho is None:
-            self.Cdiff = Container(ptycho=self, ID='Cdiff', data_type='real')
-            self.Cmask = Container(ptycho=self, ID='Cmask', data_type='bool')
-            self.CType = CType
-            self.FType = FType
-        else:
-            self.Cdiff = ptycho.diff
-            self.Cmask = ptycho.mask
 
         # Create Associated PtyScan object
         self.ptyscan = experiment.makePtyScan(self.p.data)
@@ -555,8 +545,11 @@ class ScanModel(object):
         self.shape = None
         self.psize = None
 
+        # Object flags and constants
+        self.containers_initialized = False
         self.data_available = True
-
+        self.CType = CType
+        self.FType = FType
         self.frames_per_call = 100000
 
         # Sharing dictionary that stores sharing behavior
@@ -596,12 +589,17 @@ class ScanModel(object):
         if not self.geometries:
             self._initialize_geo(dp['common'])
 
-        sh = self.shape
+        # Create containers if not already done
+        if not self.containers_initialized:
+            self._initialize_containers()
+
+        # Generalized shape which works for 2d and 3d cases
+        sh = (1,) + tuple(self.shape)
 
         # Storage generation if not already existing
         if self.diff is None:
             # This scan is brand new so we create storages for it
-            self.diff = self.Cdiff.new_storage(shape=(1, sh[-2], sh[-1]), psize=self.psize, padonly=True,
+            self.diff = self.Cdiff.new_storage(shape=sh, psize=self.psize, padonly=True,
                                                      layermap=None)
             old_diff_views = []
             old_diff_layers = []
@@ -614,7 +612,7 @@ class ScanModel(object):
 
         # Same for mask
         if self.mask is None:
-            self.mask = self.Cmask.new_storage(shape=(1, sh[-2], sh[-1]), psize=self.psize, padonly=True,
+            self.mask = self.Cmask.new_storage(shape=sh, psize=self.psize, padonly=True,
                                                      layermap=None)
             old_mask_views = []
             old_mask_layers = []
@@ -723,6 +721,25 @@ class ScanModel(object):
         self._initialize_exit(new_pods)
 
         return True
+
+    def _initialize_containers(self):
+        """
+        Initialize containers appropriate for this model.
+        """
+        if self.ptycho is None:
+            # Stand-alone use
+            self.Cdiff = Container(ptycho=self, ID='Cdiff', data_type='real')
+            self.Cmask = Container(ptycho=self, ID='Cmask', data_type='bool')
+        else:
+            # Use with a Ptycho instance
+            self.ptycho.probe = Container(ptycho=self.ptycho, ID='Cprobe', data_type='complex')
+            self.ptycho.obj = Container(ptycho=self.ptycho, ID='Cobj', data_type='complex')
+            self.ptycho.exit = Container(ptycho=self.ptycho, ID='Cexit', data_type='complex')
+            self.ptycho.diff = Container(ptycho=self.ptycho, ID='Cdiff', data_type='real')
+            self.ptycho.mask = Container(ptycho=self.ptycho, ID='Cmask', data_type='bool')
+            self.Cdiff = self.ptycho.diff
+            self.Cmask = self.ptycho.mask
+        self.containers_initialized = True
 
     def _create_pods(self):
         """
