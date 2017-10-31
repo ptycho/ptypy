@@ -853,7 +853,8 @@ class EvalDescriptor(ArgParseDescriptor):
         out = OrderedDict()
         for res in self._walk(depth=depth, pars=pars):
             path = res['path']
-            out[path] = {}
+            if not path in out.keys():
+                out[path] = {}
             # Switch through all possible statuses
             if res['status'] == 'ok':
                 # Check limits
