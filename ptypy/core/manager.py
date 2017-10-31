@@ -5,9 +5,8 @@ Scan management.
 The main task of this module is to prepare the data structure for
 reconstruction, taking a data feed and connecting individual diffraction
 measurements to the other containers. The way this connection is done
-is defined by the user through a model definition. The connections are
-described by the POD objects. This module also takes care of initializing
-containers according to user-defined rules.
+is defined by ScanModel and its subclasses. The connections are
+described by the POD objects.
 
 This file is part of the PTYPY package.
 
@@ -35,11 +34,11 @@ from ..utils.descriptor import defaults_tree
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager', 'BaseModel', 'Full', 'Vanilla']
+__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla']
 
 
-@defaults_tree.parse_doc('scan.BaseModel')
-class BaseModel(object):
+@defaults_tree.parse_doc('scan.ScanModel')
+class ScanModel(object):
     """
     Abstract base class for models. Override at least these methods:
     _create_pods(self)
@@ -87,7 +86,7 @@ class BaseModel(object):
     """
     def __init__(self, ptycho=None, pars=None, label=None):
         """
-        Create ScanModel object.
+        Create scan model object.
 
         Parameters
         ----------
@@ -378,9 +377,25 @@ class BaseModel(object):
             '\n--- Scan %(label)s photon report ---\nTotal photons   : %(tot).2e \nAverage photons : %(mean).2e\nMaximum photons : %(max).2e\n' % info + '-' * 29)
 
     def _create_pods(self):
+        """
+        Create all new pods as specified in the new_positions,
+        new_diff_views and new_mask_views object attributes. Also create
+        all necessary views on object, probe, and exit wave.
+
+        Return the list of new pods, and dicts of new probe and object
+        ids (to allow for initialization).
+        """
         raise NotImplementedError
 
     def _initialize_geo(self, common):
+        """
+        Initialize the geometry/geometries based on input data package
+        Parameters
+        ----------
+        common: dict
+                metadata part of the data package passed into new_data.
+
+        """
         raise NotImplementedError
 
     def _initialize_probe(self, probe_ids):
@@ -391,16 +406,163 @@ class BaseModel(object):
 
 
 @defaults_tree.parse_doc('scan.Vanilla')
-class Vanilla(BaseModel):
+class Vanilla(ScanModel):
     """
     Dummy for testing, there must be more than one for validate to react
     to invalid names.
+
+    Defaults:
+
+    [name]
+    default = Vanilla
+    type = str
+    help =
+
+    [illumination.size]
+    default = None
+    type = float
+    help = Initial probe size
+    doc = The probe is initialized as a flat circle.
+
+    [sample.fill]
+    default = 1
+    type = float, complex
+    help = Initial sample value
+    doc = The sample is initialized with this value everywhere.
+
     """
-    pass
+
+    def _create_pods(self):
+        """
+        Create all new pods as specified in the new_positions,
+        new_diff_views and new_mask_views object attributes.
+        """
+        logger.info('\n' + headerline('Creating PODS', 'l'))
+        new_pods = []
+        new_probe_ids = {}
+        new_object_ids = {}
+
+        # We can just decide what the storage ID:s will be
+        ID ='S00G00'
+
+        # We need to return info on what storages are created
+        if not ID in self.ptycho.probe.storages.keys():
+            new_probe_ids[ID] = True
+        if not ID in self.ptycho.obj.storages.keys():
+            new_object_ids[ID] = True
+
+        geometry = self.geometries[0]
+
+        # Loop through diffraction patterns
+        for i in range(len(self.new_diff_views)):
+            dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
+
+
+
+            # Create views
+            pv = View(container=self.ptycho.probe,
+                      accessrule={'shape': geometry.shape,
+                                  'psize': geometry.resolution,
+                                  'coord': u.expect2(0.0),
+                                  'storageID': ID,
+                                  'layer': 0,
+                                  'active': True})
+
+            ov = View(container=self.ptycho.obj,
+                      accessrule={'shape': geometry.shape,
+                                  'psize': geometry.resolution,
+                                  'coord': self.new_positions[i],
+                                  'storageID': ID,
+                                  'layer': 0,
+                                  'active': True})
+
+            ev = View(container=self.ptycho.exit,
+                      accessrule={'shape': geometry.shape,
+                                  'psize': geometry.resolution,
+                                  'coord': u.expect2(0.0),
+                                  'storageID': ID,
+                                  'layer': dv.layer,
+                                  'active': dv.active})
+
+            views = {'probe': pv,
+                     'obj': ov,
+                     'diff': dv,
+                     'mask': mv,
+                     'exit': ev}
+
+            pod = POD(ptycho=self.ptycho,
+                      ID=None,
+                      views=views,
+                      geometry=geometry)
+            pod.probe_weight = 1
+            pod.object_weight = 1
+
+            new_pods.append(pod)
+
+        return new_pods, new_probe_ids, new_object_ids
+
+    def _initialize_geo(self, common):
+        """
+        Initialize the geometry based on input data package
+        Parameters.
+        """
+
+        # Collect geometry parameters
+        get_keys = ['distance', 'center', 'energy', 'psize', 'shape']
+        geo_pars = u.Param({key: common[key] for key in get_keys})
+        geo_pars.propagation = self.p.propagation
+
+        # make a Geo instance and fix resolution
+        g = geometry.Geo(owner=self.ptycho, pars=geo_pars)
+        g.p.resolution_is_fix = True
+
+        # save the geometry
+        self.geometries = [g]
+
+        # Store frame shape
+        self.shape = np.array(common.get('shape', g.shape))
+        self.psize = g.psize
+
+        return
+
+    def _initialize_probe(self, probe_ids):
+        """
+        Initialize the probe storage referred to by probe_ids.keys()[0]
+        """
+        logger.info('\n'+headerline('Probe initialization', 'l'))
+
+        # pick storage from container, there's only one probe
+        pid = probe_ids.keys()[0]
+        s = self.ptycho.probe.S.get(pid)
+        logger.info('Initializing probe storage %s' % pid)
+
+        # use the illumination module as a utility
+        logger.info('Initializing as circle of size ' + str(self.p.illumination.size))
+        illu_pars = u.Param({'aperture':
+            {'form': 'circ', 'size': self.p.illumination.size}})
+        illumination.init_storage(s, illu_pars)
+
+        s.model_initialized = True
+
+    def _initialize_object(self, object_ids):
+        """
+        Initializes the probe storage referred to by object_ids.keys()[0]
+        """
+        logger.info('\n'+headerline('Object initialization', 'l'))
+
+        # pick storage from container, there's only one object
+        oid = object_ids.keys()[0]
+        s = self.ptycho.obj.S.get(oid)
+        logger.info('Initializing probe storage %s' % oid)
+
+        # simple fill, no need to use the sample module for this
+        s.fill(self.p.sample.fill)
+
+        s.model_initialized = True
 
 
 @defaults_tree.parse_doc('scan.Full')
-class Full(Vanilla):
+class Full(ScanModel):
     """
     Manage a single scan model (sharing, coherence, propagation, ...)
 
@@ -861,11 +1023,7 @@ class Full(Vanilla):
     def _create_pods(self):
         """
         Create all new pods as specified in the new_positions,
-        new_diff_views and new_mask_views object attributes. Also create
-        all necessary views on object, probe, and exit wave.
-
-        Return the list of new pods, probe and object ids (to allow for
-        initialization).
+        new_diff_views and new_mask_views object attributes.
         """
         logger.info('\n' + headerline('Creating PODS', 'l'))
         new_pods = []
@@ -1009,12 +1167,7 @@ class Full(Vanilla):
 
     def _initialize_geo(self, common):
         """
-        Initialize the geometry/geometries based on input data package
-        Parameters
-        ----------
-        common: dict
-                metadata part of the data package passed into new_data.
-
+        Initialize the geometry/geometries.
         """
         # Extract necessary info from the received data package
         get_keys = ['distance', 'center', 'energy', 'psize', 'shape']
@@ -1044,7 +1197,11 @@ class Full(Vanilla):
 
     def _initialize_probe(self, probe_ids):
         """
-        Initialize the probe storages referred to by the probe_ids
+        Initialize the probe storages referred to by the probe_ids.
+
+        For this case the parameter interface of the illumination module
+        matches the illumination parameters of this class, so they are
+        just fed in directly.
         """
         logger.info('\n'+headerline('Probe initialization', 'l'))
 
@@ -1124,8 +1281,7 @@ class Full(Vanilla):
 class ModelManager(object):
     """
     Thin wrapper class which now just interfaces Ptycho with ScanModel. 
-    This should probably all be done directly in Ptycho and would take 
-    like 8 lines of code.
+    This should probably all be done directly in Ptycho.
     """
 
     def __init__(self, ptycho, pars):
@@ -1145,7 +1301,18 @@ class ModelManager(object):
         # Create scan model objects
         self.scans = OrderedDict()
         for label, scan_pars in pars.iteritems():
-            self.scans[label] = Full(ptycho=self.ptycho, pars=scan_pars, label=label)
+            # this is not so pretty...
+            if not 'name' in scan_pars:
+                scan_pars.name = Full.DEFAULT.name
+
+            # find out which scan model class to instantiate
+            if scan_pars.name in u.all_subclasses(ScanModel, names=True):
+                cls = eval(scan_pars.name)
+            else:
+                raise RuntimeError('Could not manage model %s' % scan_pars.name)
+
+            # instantiate!
+            self.scans[label] = cls(ptycho=self.ptycho, pars=scan_pars, label=label)
 
     def _to_dict(self):
         # Delete the model class. We do not really need to store it.

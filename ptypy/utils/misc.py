@@ -15,9 +15,21 @@ from collections import namedtuple
 
 __all__ = ['str2int','str2range',\
            'complex_overload','expect2','expect3',\
-           'keV2m','keV2nm','nm2keV', 'clean_path','unique_path','Table']
+           'keV2m','keV2nm','nm2keV', 'clean_path','unique_path','Table',\
+           'all_subclasses']
 
-
+def all_subclasses(cls, names=False):
+    """
+    Helper function for finding all subclasses of a base class.
+    If names is True, returns the names of the classes rather than
+    their object handles.
+    """
+    subs = cls.__subclasses__() + [g for s in cls.__subclasses__()
+                                    for g in all_subclasses(s)]
+    if names:
+        return [c.__name__ for c in subs]
+    else:
+        return subs
 
 class Table(object):
     """

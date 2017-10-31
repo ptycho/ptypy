@@ -37,18 +37,8 @@ if __name__ == "__main__":
     from ptypy.core.data import PtydScan, MoonFlowerScan, PtyScan
 else:
     from ..utils.verbose import logger
+    from .. import utils as u
     from ..core.data import PtydScan, MoonFlowerScan, PtyScan
-
-def all_subclasses(cls, names=False):
-    """
-    Helper function for finding all subclasses of a base class.
-    """
-    subs = cls.__subclasses__() + [g for s in cls.__subclasses__()
-                                    for g in all_subclasses(s)]
-    if names:
-        return [c.__name__ for c in subs]
-    else:
-        return subs
 
 def makePtyScan(pars, scanmodel=None):
     """
@@ -67,7 +57,7 @@ def makePtyScan(pars, scanmodel=None):
     # Extract information on the type of object to build
     name = pars.name
 
-    if name in all_subclasses(PtyScan, names=True):
+    if name in u.all_subclasses(PtyScan, names=True):
         ps_class = eval(name)
         logger.info('Scan will be prepared with the PtyScan subclass "%s"' % name)
         ps_instance = ps_class(pars)

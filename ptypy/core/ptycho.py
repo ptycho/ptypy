@@ -215,7 +215,7 @@ class Ptycho(Base):
     doc =
 
     [scans.*]
-    default = @scan.Vanilla
+    default =
     type = @scan.*
     help = Wildcard entry for list of scans to load. See :py:data:`scan`
 
