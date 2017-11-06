@@ -87,8 +87,8 @@ class Geo(Base):
     DEFAULT = DEFAULT
     _keV2m = 1.23984193e-09
     _PREFIX = GEO_PREFIX
-
-    def __init__(self, owner=None, ID=None, pars=None, **kwargs):
+    
+    def __init__(self, owner=None, ID=None, pars=None, default_override=None, **kwargs):
         """
         Parameters
         ----------
@@ -105,13 +105,12 @@ class Geo(Base):
             if the key exists in `Geo.DEFAULT`.
         """
         super(Geo, self).__init__(owner, ID)
-        # if len(kwargs)>0:
-        #     self._initialize(**kwargs)
-
-    # def _initialize(self, pars=None, **kwargs):
 
         # Starting parameters
-        p = u.Param(DEFAULT)
+        if default_override is not None:
+            p = u.Param(default_override)
+        else:
+            p = u.Param(DEFAULT)
         if pars is not None:
             p.update(pars)
             for k, v in p.items():
@@ -120,8 +119,15 @@ class Geo(Base):
         for k, v in kwargs.iteritems():
             if k in p:
                 p[k] = v
-
+        
         self.p = p
+        self._initialize(p)
+
+    def _initialize(self, p):
+        """
+        Parse input parameters, fill missing parameters and set up a
+        propagator.
+        """
         self.interact = False
 
         # Set distance
