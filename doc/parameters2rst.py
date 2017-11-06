@@ -1,5 +1,5 @@
 
-from ptypy import utils as u
+from ptypy.utils.descriptor import defaults_tree
 
 prst = open('rst/parameters.rst','w')
 
@@ -9,32 +9,52 @@ Header+= 'Parameter tree structure\n'
 Header+= '************************\n\n'
 prst.write(Header)
 
-names = u.validator.parameter_descriptions
-for name,desc in u.validator.parameter_descriptions.iteritems():
-    if name=='':
+for path, desc in defaults_tree.descendants:
+
+    types = desc.type
+    default = desc.default
+    lowlim, uplim = desc.limits
+    is_wildcard = (desc.name == '*')
+
+    if is_wildcard:
+        path = path.replace('*', desc.parent.name[:-1] + '_00')
+
+    if path == '':
         continue
-    if hasattr(desc,'children') and desc.parent is u.validator.pdroot:
-        prst.write('\n'+name+'\n')
-        prst.write('='*len(name)+'\n\n')
-    if hasattr(desc,'children') and desc.parent.parent is u.validator.pdroot:
-        prst.write('\n'+name+'\n')
-        prst.write('-'*len(name)+'\n\n')
-    
-    prst.write('.. py:data:: '+name)
-    prst.write('('+', '.join([t for t in desc.type])+')')
-    prst.write('\n\n')
-    num = str(desc.ID) if hasattr(desc,'ID') else "None"
-    prst.write('   *('+num+')* '+desc.shortdoc+'\n\n')
-    prst.write('   '+desc.longdoc.replace('\n','\n   ')+'\n\n')
-    prst.write('   *default* = ``'+str(desc.default))
-    if desc.lowlim is not None and desc.uplim is not None:
-        prst.write(' (>'+str(desc.lowlim)+', <'+str(desc.uplim)+')``\n')
-    elif desc.lowlim is not None and desc.uplim is None:
-        prst.write(' (>'+str(desc.lowlim)+')``\n')
-    elif desc.lowlim is None and desc.uplim is not None:
-        prst.write(' (<'+str(desc.uplim)+')``\n')
+    if desc.children and desc.parent is desc.root:
+        prst.write('\n'+path+'\n')
+        prst.write('='*len(path)+'\n\n')
+    if desc.children and desc.parent.parent is desc.root:
+        prst.write('\n'+path+'\n')
+        prst.write('-'*len(path)+'\n\n')
+
+    prst.write('.. py:data:: '+path)
+
+    if desc.is_symlink:
+        tp = 'Param'
     else:
-        prst.write('``\n')
+        tp = ', '.join([str(t) for t in types])
+    prst.write(' ('+tp+')')
+    prst.write('\n\n')
+
+    if is_wildcard:
+        prst.write('   *Wildcard*: multiple entries with arbitrary names are accepted.\n\n')
+
+    prst.write('   '+desc.help+'\n\n')
+    prst.write('   '+desc.doc.replace('\n', '\n   ')+'\n\n')
+
+    if desc.is_symlink:
+        prst.write('   *default* = '+':py:data:`'+desc.path+'`\n')
+    else:
+        prst.write('   *default* = ``'+repr(default))
+        if lowlim is not None and uplim is not None:
+            prst.write(' (>'+str(lowlim)+', <'+str(uplim)+')``\n')
+        elif lowlim is not None and uplim is None:
+            prst.write(' (>'+str(lowlim)+')``\n')
+        elif lowlim is None and uplim is not None:
+            prst.write(' (<'+str(uplim)+')``\n')
+        else:
+            prst.write('``\n')
         
     prst.write('\n')
 prst.close()

@@ -15,8 +15,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-#from data_structure import *
-
 # Import instrument-specific modules
 #import cSAXS
 from I13_ffp import I13ScanFFP
@@ -30,24 +28,40 @@ from AMO_LCLS import AMOScan
 from DiProI_FERMI import DiProIFERMIScan
 from optiklabor import FliSpecScanMultexp
 from UCL import UCLLaserScan
-from nanomax import NanomaxStepscanNov2016, NanomaxStepscanMay2017, NanomaxFlyscanJune2017
+from nanomax import NanomaxStepscanMay2017, NanomaxStepscanNov2016, NanomaxFlyscanJune2017
 from ALS_5321 import ALS5321Scan
 
-PtyScanTypes = dict(
-    i13dls_ffp = I13ScanFFP,
-    i13dls_nfp = I13ScanNFP,
-    dls = DlsScan,
-    i08dls = I08Scan,
-    savu = Savu,
-    plugin = makeScanPlugin,
-    id16a_nfp = ID16AScan,
-    amo_lcls = AMOScan,
-    diproi_fermi = DiProIFERMIScan,
-    fli_spec_multexp = FliSpecScanMultexp,
-    laser_ucl = UCLLaserScan,
-    nanomaxstepscannov2016 = NanomaxStepscanNov2016,
-    nanomaxstepscanmay2017 = NanomaxStepscanMay2017,
-    nanomaxflyscanjune2017 = NanomaxFlyscanJune2017,
-    als5321 = ALS5321Scan,
-)
 
+if __name__ == "__main__":
+    from ptypy.utils.verbose import logger
+    from ptypy.core.data import PtydScan, MoonFlowerScan, PtyScan
+else:
+    from ..utils.verbose import logger
+    from .. import utils as u
+    from ..core.data import PtydScan, MoonFlowerScan, PtyScan
+
+def makePtyScan(pars, scanmodel=None):
+    """
+    Factory for PtyScan object. Return an instance of the appropriate PtyScan subclass based on the
+    input parameters.
+
+    Parameters
+    ----------
+    pars: dict or Param
+        Input parameters according to :py:data:`.scan.data`.
+
+    scanmodel: ScanModel object
+        FIXME: This seems to be needed for simulations but broken for now.
+    """
+
+    # Extract information on the type of object to build
+    name = pars.name
+
+    if name in u.all_subclasses(PtyScan, names=True):
+        ps_class = eval(name)
+        logger.info('Scan will be prepared with the PtyScan subclass "%s"' % name)
+        ps_instance = ps_class(pars)
+    else:
+        raise RuntimeError('Could not manage source "%s"' % str(name))
+
+    return ps_instance

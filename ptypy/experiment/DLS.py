@@ -13,10 +13,13 @@ import os
 from .. import utils as u
 from .. import io
 from ..utils import parallel
+from ..utils.descriptor import defaults_tree
 from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..core.paths import Paths
-from ..core import DEFAULT_io as IO_par
+#from ..core import DEFAULT_io as IO_par
+from ..core import Ptycho
+IO_par = Ptycho.DEFAULT['io']
 import h5py as h5
 
 logger = u.verbose.logger
@@ -36,63 +39,151 @@ NEXUS_PATHS.command = 'entry1/scan_command'
 NEXUS_PATHS.label = 'entry1/entry_identifier'
 NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 
-# Recipe defaults
-RECIPE = u.Param()
-RECIPE.is_swmr = False
-RECIPE.israster = 0
-RECIPE.experimentID = None      # Experiment identifier
-RECIPE.scan_number = None       # scan number
-RECIPE.dark_number = None
-RECIPE.flat_number = None
-RECIPE.energy = None
-RECIPE.lam = None               # 1.2398e-9 / RECIPE.energy
-RECIPE.z = None                 # Distance from object to screen
-RECIPE.detector_name = 'merlin_sw_hdf'     # Name of the detector as specified in the nexus file
-RECIPE.motors = ['t1_sx', 't1_sy']      # Motor names to determine the sample translation
-# RECIPE.motors_multiplier = 1e-6         # Motor conversion factor to meters
-RECIPE.motors_multiplier = [1e-6,-1e-6]         # Motor conversion factor to meters
-RECIPE.base_path = './'
-RECIPE.data_file_pattern = '%(base_path)s' + 'raw/%(scan_number)05d.nxs'
-RECIPE.dark_file_pattern = '%(base_path)s' + 'raw/%(dark_number)05d.nxs'
-RECIPE.flat_file_pattern = '%(base_path)s' + 'raw/%(flat_number)05d.nxs'
-RECIPE.mask_file = None                 # '%(base_path)s' + 'processing/mask.h5'
-RECIPE.NFP_correct_positions = False    # Position corrections for NFP beamtime Oct 2014
-RECIPE.use_EP = False                   # Use flat as Empty Probe (EP) for probe sharing; needs to be set to True in the recipe of the scan that will act as EP'
-RECIPE.remove_hot_pixels = u.Param(         # Apply hot pixel correction
-    apply = False,                          # Initiate by setting to True; DEFAULT parameters will be used if not specified otherwise
-    size = 3,                               # Size of the window on which the median filter will be applied around every data point
-    tolerance = 10,                         # Tolerance multiplied with the standard deviation of the data array subtracted by the blurred array
-                                            # (difference array) yields the threshold for cutoff.
-    ignore_edges = False,                   # If True, edges of the array are ignored, which speeds up the code
-)
 
-# Generic defaults
-I13DEFAULT = PtyScan.DEFAULT.copy()
-I13DEFAULT.recipe = RECIPE
-I13DEFAULT.auto_center = False
-I13DEFAULT.orientation = (False, False, False)
-
-
+@defaults_tree.parse_doc('scandata.DlsScan')
 class DlsScan(PtyScan):
-    DEFAULT = I13DEFAULT
+    """
+    I13 (Diamond Light Source) data preparation class.
+
+    Defaults:
+
+    [name]
+    default = 'DlsScan'
+    type = str
+    help =
+
+    [is_swmr]
+    default = False
+    type = bool
+    help = 
+
+    [israster]
+    default = 0
+    type = int
+    help = 
+
+    [experimentID]
+    default = None
+
+    [scan_number]
+    default = None
+    type = int
+    help = Scan number
+
+    [dark_number]
+    default = None
+    type = int
+    help = 
+
+    [flat_number]
+    default = None
+    type = int
+    help = 
+
+    [detector_name]
+    default = 'merlin_sw_hdf'
+    type = str
+    help = Name of the detector 
+    doc = As specified in the nexus file.
+
+    [motors]
+    default = ['t1_sx', 't1_sy']
+    type = list
+    help = Motor names to determine the sample translation
+
+    [motors_multiplier]
+    default = [1e-6,-1e-6]
+    type = list
+    help = Motor conversion factor to meters
+
+    [base_path]
+    default = './'
+    type = str
+    help = 
+
+    [data_file_pattern]
+    default = '%(base_path)sraw/%(scan_number)05d.nxs'
+    type = str
+    help = 
+
+    [dark_file_pattern]
+    default = '%(base_path)sraw/%(dark_number)05d.nxs'
+    type = str
+    help = 
+
+    [flat_file_pattern]
+    default = '%(base_path)sraw/%(flat_number)05d.nxs'
+    type = str
+    help = 
+
+    [mask_file]
+    default = None
+    type = str
+    help = 
+
+    [NFP_correct_positions]
+    default = False
+    type = bool
+    help = Position corrections for NFP beamtime Oct 2014
+
+    [use_EP]
+    default = False
+    type = bool
+    help = Use flat as Empty Probe (EP) for probe sharing
+    doc = Needs to be set to True in the recipe of the scan that will act as EP.
+
+    [remove_hot_pixels]
+    default = 
+    type = Param
+    help = Apply hot pixel correction
+
+    [remove_hot_pixels.apply]
+    default = False
+    type = bool
+    help = 
+
+    [remove_hot_pixels.size]
+    default = 3
+    type = int
+    help = Size of the window
+    doc = The median filter will be applied around every data point.
+
+    [remove_hot_pixels.tolerance]
+    default = 10
+    type = int
+    help =
+    doc = Tolerance multiplied with the standard deviation of the data array subtracted by the blurred array (difference array) yields the threshold for cutoff.
+
+    [remove_hot_pixels.ignore_edges]
+    default = False
+    type = bool
+    help = Ignore edges of the array
+    doc = Enabling speeds up the code.
+
+    [auto_center]
+    default = False
+
+    [orientation]
+    default = (False, False, False)
+
+    """
 
     def __init__(self, pars=None, **kwargs):
         """
         I13 (Diamond Light Source) data preparation class.
         """
         # Initialise parent class
-        recipe_default = RECIPE.copy()
-        recipe_default.update(pars.recipe, in_place_depth=5)
-        pars.recipe.update(recipe_default)
+        p = self.DEFAULT.copy(99)
+        p.update(pars)
 
-        super(DlsScan, self).__init__(pars, **kwargs)
-        self.data_file = self.info.recipe.data_file_pattern  % self.info.recipe
+        super(DlsScan, self).__init__(p, **kwargs)
+        self.data_file = self.info.data_file_pattern  % self.info
 
 
         # Create the ptyd file name if not specified
         if self.info.dfile is None:
             home = Paths(IO_par).home
-            self.info.dfile = '%s/prepdata/data_%d.ptyd' % (home, self.info.recipe.scan_number)
+            self.info.dfile = '%s/prepdata/data_%d.ptyd' % (home, self.info.scan_number)
             log(3, 'Save file is %s' % self.info.dfile)
         log(4, u.verbose.report(self.info))
 
@@ -102,26 +193,26 @@ class DlsScan(PtyScan):
         """
         # FIXME: do something better here. (detector-dependent)
         # Load mask as weight
-        if self.info.recipe.mask_file is not None:
-            return io.h5read(self.info.recipe.mask_file % self.info.recipe, 'mask')['mask'].astype(float)
+        if self.info.mask_file is not None:
+            return io.h5read(self.info.mask_file % self.info, 'mask')['mask'].astype(float)
 
     def load_positions(self):
         """
         Load the positions and return as an (N,2) array
         """
         # Load positions from file if possible.
-        if self.info.recipe.is_swmr:
-            instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[NEXUS_PATHS.instrument % self.info.recipe]
+        if self.info.is_swmr:
+            instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[NEXUS_PATHS.instrument % self.info]
         else:
-            instrument = h5.File(self.data_file, 'r')[NEXUS_PATHS.instrument % self.info.recipe]
-        if self.info.recipe.israster:
+            instrument = h5.File(self.data_file, 'r')[NEXUS_PATHS.instrument % self.info]
+        if self.info.israster:
             self.position_shape = instrument[0].shape
         motor_positions = []
         i=0
-        mmult = u.expect2(self.info.recipe.motors_multiplier)
+        mmult = u.expect2(self.info.motors_multiplier)
 
         for k in NEXUS_PATHS.motors:
-            if not self.info.recipe.israster:
+            if not self.info.israster:
                 motor_positions.append(instrument[k]*mmult[i])
             else:
                 motor_positions.append((instrument[k]*mmult[i]).ravel())
@@ -141,14 +232,14 @@ class DlsScan(PtyScan):
         - the number of frames available from a starting point `start`
         - bool if the end of scan was reached (None if this routine doesn't know)
         """
-        if not self.info.recipe.is_swmr:
+        if not self.info.is_swmr:
             npos = self.num_frames
             frames_accessible = min((frames, npos - start))
             stop = self.frames_accessible + start
             return frames_accessible, (stop >= npos)
         else:
             f = h5.File(self.data_file, 'r', libver='latest', swmr=True)
-            dset= f[NEXUS_PATHS.live_key_pattern % self.info.recipe]
+            dset= f[NEXUS_PATHS.live_key_pattern % self.info]
             dset.id.refresh()
             num_avail = len(dset)-start
             frames_accessible = min((frames, num_avail))
@@ -167,10 +258,10 @@ class DlsScan(PtyScan):
         raw = {}
         pos = {}
         weights = {}
-        key = NEXUS_PATHS.frame_pattern % self.info.recipe
-        if not self.info.recipe.israster:
+        key = NEXUS_PATHS.frame_pattern % self.info
+        if not self.info.israster:
             for j in indices:
-                if not self.info.recipe.is_swmr:
+                if not self.info.is_swmr:
 #                     print "frame number "+str(j)
                     data = io.h5read(self.data_file, key, slice=j)[key].astype(np.float32)
                     raw[j] = data
@@ -183,7 +274,7 @@ class DlsScan(PtyScan):
                     raw[j] = dset[j]
                     dset.file.close()
         else:
-            if not self.info.recipe.is_swmr:
+            if not self.info.is_swmr:
                 data = h5.File(self.data_file)[key]
                 sh = data.shape
                 for j in indices:

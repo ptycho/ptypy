@@ -6,27 +6,27 @@ import sys
 import time
 import ptypy
 from ptypy import utils as u
-
+from ptypy import experiment
 # for verbose output
 u.verbose.set_level(3)
 
 # create data parameter branch
 data = u.Param()
+data.source = 'test'
 data.dfile = 'sample.ptyd'
-data.shape = 128
 data.num_frames = 100
 data.save = 'append'
-data.label=None
-data.psize=None
-data.energy=None
-data.center=None
-data.distance = None
+data.label = None
 data.auto_center = None
 data.rebin = None
 data.orientation = None
 
 # create PtyScan instance
-MF = ptypy.core.data.MoonFlowerScan(data)
+# The following call is equivalent to
+# MF = ptypy.core.data.MoonFlowerScan(data)
+# It uses data.source to find the proper PtyScan subclass
+MF = experiment.makePtyScan(data)
+
 MF.initialize()
 for i in range(2):
     # autoprocess data

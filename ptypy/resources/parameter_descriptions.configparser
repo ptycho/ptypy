@@ -1,0 +1,1175 @@
+[verbose_level]
+default = 1
+help = Verbosity level
+doc = Verbosity level for information logging.
+   - ``0``: Only errors
+   - ``1``: Warning
+   - ``2``: Process Information
+   - ``3``: Object Information
+   - ``4``: Debug
+type = int
+userlevel = 0
+lowlim = 0
+uplim = 4
+
+[data_type]
+default = single
+help = Reconstruction floating number precision
+doc = Reconstruction floating number precision (``'single'`` or ``'double'``)
+type = str
+userlevel = 1
+
+[run]
+default = None
+help = Reconstruction identifier
+doc = Reconstruction run identifier. If ``None``, the run name will be constructed at run time
+  from other information.
+type = str
+userlevel = 0
+
+[dry_run]
+default = FALSE
+help = Dry run switch
+doc = Run everything skipping all memory and cpu-heavy steps (and file saving).
+  **NOT IMPLEMENTED**
+type = bool
+userlevel = 2
+
+[io]
+default = 
+help = Global parameters for I/O
+doc = 
+type = Param
+userlevel = 
+
+[io.home]
+default = ./
+help = Base directory for all I/O
+doc = home is the root directory for all input/output operations. All other path parameters that
+  are relative paths will be relative to this directory.
+type = dir
+userlevel = 1
+
+[io.rfile]
+default = recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr
+help = Reconstruction file name (or format string)
+doc = Reconstruction file name or format string (constructed against runtime dictionary)
+type = str
+userlevel = 1
+
+[io.autosave]
+default = 
+help = Auto-save options
+doc = 
+type = Param
+userlevel = 
+
+[io.autosave.active]
+default = TRUE
+help = Activation switch
+doc = If ``True`` the current reconstruction will be saved at regular intervals. **unused**
+type = bool
+userlevel = 1
+
+[io.autosave.interval]
+default = 10
+help = Auto-save interval
+doc = If ``>0`` the current reconstruction will be saved at regular intervals according to the
+  pattern in :py:data:`paths.autosave` . If ``<=0`` not automatic saving
+type = int
+userlevel = 1
+lowlim = -1
+
+[io.autosave.rfile]
+default = dumps/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr
+help = Auto-save file name (or format string)
+doc = Auto-save file name or format string (constructed against runtime dictionary)
+type = str
+userlevel = 1
+
+[io.interaction]
+default = 
+help = Server / Client parameters
+doc = If ``None`` or ``False`` is passed here in script instead of a Param, it translates to
+  ``active=False`` i.e. no ZeroMQ interaction server.
+type = Param
+userlevel = 
+
+[io.interaction.active]
+default = TRUE
+help = Activation switch
+doc = Set to ``False`` for no  ZeroMQ interaction server
+type = bool
+userlevel = 
+
+[io.interaction.address]
+default = tcp://127.0.0.1
+help = The address the server is listening to.
+doc = Wenn running ptypy on a remote server, it is the servers network address.
+type = str
+userlevel = 2
+
+[io.interaction.port]
+default = 5560
+help = The port the server is listening to.
+doc = Make sure to pick an unused port with a few unused ports close to it.
+type = int
+userlevel = 2
+
+[io.interaction.connections]
+default = 10
+help = Number of concurrent connections on the server
+doc = A range ``[port : port+connections]`` of ports adjacent :py:data:`~.io.interaction.port`
+  will be opened on demand for connecting clients.
+type = int
+userlevel = 2
+
+[io.autoplot]
+default = 
+help = Plotting client parameters
+doc = In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
+type = Param
+userlevel = 
+
+[io.autoplot.imfile]
+default = plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png
+help = Plot images file name (or format string)
+doc = 
+type = str
+userlevel = 1
+
+[io.autoplot.interval]
+default = 1
+help = Number of iterations between plot updates
+doc = Requests to the server will happen with this iteration intervals. Note that this will work
+  only if interaction.polling_interval is smaller or equal to this number. If ``interval
+  =0`` plotting is disabled which should be used, when ptypy is run on a cluster.
+type = int
+userlevel = 1
+lowlim = -1
+
+[io.autoplot.threaded]
+default = TRUE
+help = Live plotting switch
+doc = If ``True``, a plotting client will be spawned in a new thread and connected at
+  initialization. If ``False``, the master node will carry out the plotting, pausing the
+  reconstruction. This option should be set to ``True`` when ptypy is run on an isolated
+  workstation.
+type = bool
+userlevel = 1
+
+[io.autoplot.layout]
+default = None
+help = Options for default plotter or template name
+doc = Flexible layout for default plotter is not implemented yet. Please choose one of the
+  templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``
+type = str, Param
+userlevel = 2
+
+[io.autoplot.dump]
+default = FALSE
+help = Switch to dump plots as image files
+doc = 
+type = bool
+userlevel = 1
+
+[io.autoplot.make_movie]
+default = FALSE
+help = Produce reconstruction movie after the reconstruction.
+doc = Switch to request the production of a movie from the dumped plots at the end of the
+  reconstruction.
+type = bool
+userlevel = 1
+
+[scan]
+default = 
+help = Scan parameters
+doc = This categrogy specifies defaults for all scans. Scan-specific parameters are stored in
+  scans.scan_%%
+type = Param
+userlevel = 
+
+[scan.tags]
+default = None
+help = Comma seperated string tags describing the data input
+doc = [deprecated?]
+type = str
+userlevel = 2
+
+[scan.if_conflict_use_meta]
+default = TRUE
+help = Give priority to metadata relative to input parameters
+doc = [deprecated, use :py:data:`.scan.geometry.precedence` insteead]
+type = bool
+userlevel = 2
+
+[scan.data]
+default = 
+help = Data preparation parameters
+doc = 
+type = Param
+userlevel = 
+
+[scan.data.recipe]
+default = 
+help = Data preparation recipe container
+doc = 
+type = ext
+userlevel = 
+
+[scan.data.source]
+default = None
+help = Describes where to get the data from.
+doc = Accepted values are:
+   - ``'file'``: data will be read from a .ptyd file.
+   - any valid recipe name: data will be prepared using the recipe.
+   - ``'sim'`` : data will be simulated according to parameters in simulation
+type = file
+userlevel = 0
+
+[scan.data.dfile]
+default = None
+help = Prepared data file path
+doc = If source was ``None`` or ``'file'``, data will be loaded from this file and processing as
+  well as saving is deactivated. If source is the name of an experiment recipe or path to a
+  file, data will be saved to this file
+type = file
+userlevel = 0
+
+[scan.data.label]
+default = None
+help = The scan label
+doc = Unique string identifying the scan
+type = str
+userlevel = 1
+
+[scan.data.shape]
+default = None
+help = Shape of the region of interest cropped from the raw data.
+doc = Cropping dimension of the diffraction frame
+  Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
+type = int, tuple
+userlevel = 1
+
+[scan.data.save]
+default = None
+help = Saving mode
+doc = Mode to use to save data to file.
+   - ``None``: No saving
+   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
+   - ``'append'``: appends each chunk in master \*.ptyd file
+   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
+  in the path given by the link. Links file paths are relative to master file.
+type = str
+userlevel = 1
+
+[scan.data.center]
+default = None
+help = Center (pixel) of the optical axes in raw data
+doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
+type = tuple
+userlevel = 1
+
+[scan.data.psize]
+default = None
+help = Detector pixel size
+doc = Dimensions of the detector pixels (in meters)
+type = float, tuple
+userlevel = 0
+lowlim = 0
+
+[scan.data.distance]
+default = None
+help = Sample-to-detector distance
+doc = In meters.
+type = float
+userlevel = 0
+lowlim = 0
+
+[scan.data.rebin]
+default = None
+help = Rebinning factor
+doc = Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
+type = int
+userlevel = 1
+lowlim = 1
+uplim = 8
+
+[scan.data.orientation]
+default = None
+help = Data frame orientation
+doc =  - ``None`` or ``0``: correct orientation
+   - ``1``: invert columns (numpy.flip_lr)
+   - ``2``: invert columns, invert rows
+   - ``3``: invert rows  (numpy.flip_ud)
+   - ``4``: transpose (numpy.transpose)
+   - ``4+i``: tranpose + other operations from above
+  Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, do_flipud,
+  do_fliplr)``
+type = int, tuple
+userlevel = 1
+
+[scan.data.energy]
+default = None
+help = Photon energy of the incident radiation
+doc = 
+type = float
+userlevel = 0
+lowlim = 0
+
+[scan.data.min_frames]
+default = 1
+help = Minimum number of frames loaded by each node
+doc = 
+type = int
+userlevel = 2
+
+[scan.data.num_frames]
+default = None
+help = Maximum number of frames to be prepared
+doc = If `positions_theory` are provided, num_frames will be ovverriden with the number of
+  positions available
+type = int
+userlevel = 1
+
+[scan.data.chunk_format]
+default = .chunk%02d
+help = Appendix to saved files if save == 'link'
+doc = 
+type = str
+userlevel = 2
+
+[scan.data.auto_center]
+default = None
+help = Determine if center in data is calculated automatically
+doc =  - ``False``, no automatic centering
+   - ``None``, only if :py:data:`center` is ``None``
+   - ``True``, it will be enforced
+type = bool
+userlevel = 0
+
+[scan.data.load_parallel]
+default = data
+help = Determines what will be loaded in parallel
+doc = Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
+type = str
+userlevel = 
+
+[scan.data.positions_theory]
+default = None
+help = Theoretical positions for this scan
+doc = If provided, experimental positions from :any:`PtyScan` subclass will be ignored. If data
+  preparation is called from Ptycho instance, the calculated positions from the
+  :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
+type = ndarray
+userlevel = 2
+
+[scan.data.experimentID]
+default = None
+help = Name of the experiment
+doc = If None, a default value will be provided by the recipe. **unused**
+type = str
+userlevel = 2
+
+[scan.sharing]
+default = 
+help = Scan sharing options
+doc = 
+type = Param
+userlevel = 
+
+[scan.sharing.object_share_with]
+default = None
+help = Label or index of scan to share object with.
+doc = Possible values:
+   - ``None``: Do not share
+   - *(string)*: Label of the scan to share with
+   - *(int)*: Index of scan to share with
+type = str
+userlevel = 1
+
+[scan.sharing.object_share_power]
+default = 1
+help = Relative power for object sharing
+doc = 
+type = float
+userlevel = 1
+lowlim = 0
+
+[scan.sharing.probe_share_with]
+default = None
+help = Label or index of scan to share probe with.
+doc = Possible values:
+   - ``None``: Do not share
+   - *(string)*: Label of the scan to share with
+   - *(int)*: Index of scan to share with
+type = str
+userlevel = 1
+
+[scan.sharing.probe_share_power]
+default = 1
+help = Relative power for probe sharing
+doc = 
+type = float
+userlevel = 1
+lowlim = 0
+
+[scan.geometry]
+default = 
+help = Physical parameters
+doc = All distances are in meters. Other units are specified in the documentation strings.
+  These paramters have very low priority in the :any:`Ptycho` construction process and can
+  usually left out in script if either :py:data:`.scan.data` ot the invoked preparation
+  subclass provide enough geometric information. You can change this behavior with the
+  `precedence` parameter.
+type = Param
+userlevel = 
+
+[scan.geometry.precedence]
+default = None
+help = Where geometry parameters take precence over others
+doc = Possible options if parameters are not None:
+   - ``None``: Fill only missing parameters (default) at the very last moment making meta
+  data from :any:`PtyScan` the default source of geometric information.
+   - ``'meta'``: Overwrite meta after data was loaded, does not affect data preparation.
+   - ``'data'``: Overwrite entries in :py:data:`.scan.data`. This affects data preparation
+  too.
+type = str
+userlevel = 2
+
+[scan.geometry.energy]
+default = 6.2
+help = Energy (in keV)
+doc = If ``None``, uses `lam` instead.
+type = float
+userlevel = 0
+lowlim = 0
+
+[scan.geometry.lam]
+default = None
+help = Wavelength
+doc = Used only if `energy` is ``None``
+type = float
+userlevel = 0
+lowlim = 0
+
+[scan.geometry.distance]
+default = 7.19
+help = Distance from object to detector
+doc = 
+type = float
+userlevel = 0
+lowlim = 0
+
+[scan.geometry.psize]
+default = 0.000172
+help = Pixel size in Detector plane
+doc = 
+type = float
+userlevel = 1
+lowlim = 0
+
+[scan.geometry.resolution]
+default = None
+help = Pixel size in Sample plane
+doc = This parameter is used only for simulations
+type = float
+userlevel = 2
+lowlim = 0
+
+[scan.geometry.propagation]
+default = farfield
+help = Propagation type
+doc = Either "farfield" or "nearfield"
+type = str
+userlevel = 1
+
+[scan.xy]
+default = 
+help = Parameters for scan patterns
+doc = These parameters are useful in two cases:
+   - When the experimental positions are not known (no encoders)
+   - When using the package to simulate data.
+  In script an array of shape *(N,2)* may be passed here instead of a Param or dictionary as
+  an **override**
+type = Param
+userlevel = 
+
+[scan.xy.spacing]
+default = 1.50E-06
+help = Pattern spacing
+doc = Spacing between scan positions. If the model supports asymmetric scans, a tuple passed
+  here will be interpreted as *(dy,dx)* with *dx* as horizontal spacing and *dy* as vertical
+  spacing. If ``None`` the value is calculated from `extent` and `steps`
+type = float, tuple
+userlevel = 0
+lowlim = 0
+
+[scan.xy.steps]
+default = 10
+help = Pattern step count
+doc = Number of steps with length *spacing* in the grid. A tuple *(ny,nx)* provided here can be
+  used for a different step in vertical ( *ny* ) and horizontal direction ( *nx* ). If
+  ``None`` the, step count is calculated from `extent` and `spacing`
+type = int, tuple
+userlevel = 0
+lowlim = 0
+
+[scan.xy.extent]
+default = 1.50E-05
+help = Rectangular extent of pattern
+doc = Defines the absolut maximum extent. If a tuple *(ly,lx)* is provided the extent may be
+  rectangular rather than square. All positions outside of `extent` will be discarded. If
+  ``None`` the extent will is `spacing` times `steps`
+type = float, tuple
+userlevel = 0
+lowlim = 0
+
+[scan.xy.offset]
+default = 0
+help = Offset of scan pattern relative to origin
+doc = If tuple, the offset may differ in *x* and *y*. Please not that the offset will be
+  included when removing scan points outside of `extend`.
+type = float, tuple
+userlevel = 2
+
+[scan.xy.jitter]
+default = 0
+help = RMS of jitter on sample position
+doc = **Only use in simulation**. Adds a random jitter to positions.
+type = float, tuple
+userlevel = 2
+
+[scan.xy.count]
+default = None
+help = Number of scan points
+doc = Only return return positions up to number of `count`.
+type = int
+userlevel = 1
+
+[scan.illumination]
+default = 
+help = Illumination model (probe)
+doc = In script, you may pass directly a three dimensional  numpy.ndarray here instead of a
+  `Param`. This array will be copied to the storage instance with no checking whatsoever.
+  Used in `~ptypy.core.illumination`
+type = Param
+userlevel = 
+lowlim = 0
+
+[scan.illumination.model]
+default = None
+help = Type of illumination model
+doc = One of:
+   - ``None`` : model initialitziation defaults to flat array filled with the specified
+  number of photons
+   - ``'recon'`` : load model from previous reconstruction, see `recon` Parameters
+   - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
+   - *<resource>* : one of ptypys internal image resource strings
+   - *<template>* : one of the templates inillumination module
+  In script, you may pass a numpy.ndarray here directly as the model. It is considered as
+  incoming wavefront and will be propagated according to `propagation` with an optional
+  `aperture` applied before
+type = str
+userlevel = 0
+
+[scan.illumination.photons]
+default = None
+help = Number of photons in the incident illumination
+doc = A value specified here will take precedence over calculated statistics from the loaded
+  data.
+type = int
+userlevel = 2
+lowlim = 0
+
+[scan.illumination.recon]
+default = 
+help = Parameters to load from previous reconstruction
+doc = 
+type = Param
+userlevel = 
+
+[scan.illumination.recon.rfile]
+default = \*.ptyr
+help = Path to a ``.ptyr`` compatible file
+doc = 
+type = file
+userlevel = 0
+
+[scan.illumination.recon.label]
+default = None
+help = Scan label of diffraction that is to be used for probe estimate
+doc = ``None``, own scan label is used
+type = str
+userlevel = 1
+
+[scan.illumination.aperture]
+default = 
+help = Beam aperture parameters
+doc = 
+type = Param
+userlevel = 
+
+[scan.illumination.aperture.form]
+default = circ
+help = One of None, 'rect' or 'circ'
+doc = One of:
+   - ``None`` : no aperture, this may be useful for nearfield
+   - ``'rect'`` : rectangular aperture
+   - ``'circ'`` : circular aperture
+type = str
+userlevel = 0
+lowlim = 0
+
+[scan.illumination.aperture.diffuser]
+default = None
+help = Noise in the transparen part of the aperture
+doc = Can be either:
+   - ``None`` : no noise
+   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+type = float
+userlevel = 2
+lowlim = 0
+
+[scan.illumination.aperture.size]
+default = None
+help = Aperture width or diameter
+doc = May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture
+type = float
+userlevel = 0
+lowlim = 0
+
+[scan.illumination.aperture.edge]
+default = 2
+help = Edge width of aperture (in pixels!)
+doc = 
+type = int
+userlevel = 2
+lowlim = 0
+
+[scan.illumination.aperture.central_stop]
+default = None
+help = size of central stop as a fraction of aperture.size
+doc = If not None: places a central beam stop in aperture. The value given here is the fraction
+  of the beam stop compared to `size`
+type = float
+userlevel = 1
+lowlim = 0
+uplim = 1
+
+[scan.illumination.aperture.offset]
+default = 0
+help = Offset between center of aperture and optical axes
+doc = May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset
+type = float, tuple
+userlevel = 2
+
+[scan.illumination.propagation]
+default = 
+help = Parameters for propagation after aperture plane
+doc = Propagation to focus takes precedence to parallel propagation if `foccused` is not
+  ``None``
+type = Param
+userlevel = 
+
+[scan.illumination.propagation.parallel]
+default = None
+help = Parallel propagation distance
+doc = If ``None`` or ``0`` : No parallel propagation
+type = float
+userlevel = 0
+
+[scan.illumination.propagation.focussed]
+default = None
+help = Propagation distance from aperture to focus
+doc = If ``None`` or ``0`` : No focus propagation
+type = float
+userlevel = 0
+
+[scan.illumination.propagation.antialiasing]
+default = 1
+help = Antialiasing factor
+doc = Antialiasing factor used when generating the probe. (numbers larger than 2 or 3 are memory
+  hungry)
+  **[Untested]**
+type = float
+userlevel = 2
+
+[scan.illumination.propagation.spot_size]
+default = None
+help = Focal spot diameter
+doc = If not ``None``, this parameter is used to generate the appropriate aperture size instead
+  of :py:data:`size`
+type = float
+userlevel = 1
+lowlim = 0
+
+[scan.illumination.diversity]
+default = 
+help = Probe mode(s) diversity parameters
+doc = Can be ``None`` i.e. no diversity
+type = Param
+userlevel = 
+
+[scan.illumination.diversity.noise]
+default = None
+help = Noise in the generated modes of the illumination
+doc = Can be either:
+   - ``None`` : no noise
+   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+type = tuple
+userlevel = 1
+
+[scan.illumination.diversity.power]
+default = 0.1
+help = Power of modes relative to main mode (zero-layer)
+doc = 
+type = tuple, float
+userlevel = 1
+
+[scan.illumination.diversity.shift]
+default = None
+help = Lateral shift of modes relative to main mode
+doc = **[not implemented]**
+type = float
+userlevel = 2
+
+[scan.sample]
+default = 
+help = Initial object modelization parameters
+doc = In script, you may pass a numpy.array here directly as the model. This array will be
+  passed to the storage instance with no checking whatsoever. Used in `~ptypy.core.sample`
+type = Param
+userlevel = 
+lowlim = 0
+
+[scan.sample.model]
+default = None
+help = Type of initial object model
+doc = One of:
+   - ``None`` : model initialitziation defaults to flat array filled `fill`
+   - ``'recon'`` : load model from STXM analysis of diffraction data
+   - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
+   - *<resource>* : one of ptypys internal model resource strings
+   - *<template>* : one of the templates in sample module
+  In script, you may pass a numpy.array here directly as the model. This array will be
+  processed according to `process` in order to *simulate* a sample from e.g. a thickness
+  profile.
+type = str
+userlevel = 0
+
+[scan.sample.fill]
+default = 1
+help = Default fill value
+doc = 
+type = float, complex
+userlevel = 
+
+[scan.sample.recon]
+default = 
+help = Parameters to load from previous reconstruction
+doc = 
+type = Param
+userlevel = 
+
+[scan.sample.recon.rfile]
+default = \*.ptyr
+help = Path to a ``.ptyr`` compatible file
+doc = 
+type = file
+userlevel = 0
+
+[scan.sample.stxm]
+default = 
+help = STXM analysis parameters
+doc = 
+type = Param
+userlevel = 1
+
+[scan.sample.stxm.label]
+default = None
+help = Scan label of diffraction that is to be used for probe estimate
+doc = ``None``, own scan label is used
+type = str
+userlevel = 1
+
+[scan.sample.process]
+default = None
+help = Model processing parameters
+doc = Can be ``None``, i.e. no processing
+type = Param
+userlevel = 
+
+[scan.sample.process.offset]
+default = (0,0)
+help = Offset between center of object array and scan pattern
+doc = 
+type = tuple
+userlevel = 2
+lowlim = 0
+
+[scan.sample.process.zoom]
+default = None
+help = Zoom value for object simulation.
+doc = If ``None``, leave the array untouched. Otherwise the modeled or loaded image will be
+  resized using :py:func:`zoom`.
+type = tuple
+userlevel = 2
+lowlim = 0
+
+[scan.sample.process.formula]
+default = None
+help = Chemical formula
+doc = A Formula compatible with a cxro database query,e.g. ``'Au'`` or ``'NaCl'`` or ``'H2O'``
+type = str
+userlevel = 2
+
+[scan.sample.process.density]
+default = 1
+help = Density in [g/ccm]
+doc = Only used if `formula` is not None
+type = float
+userlevel = 2
+
+[scan.sample.process.thickness]
+default = 1.00E-06
+help = Maximum thickness of sample
+doc = If ``None``, the absolute values of loaded source array will be used
+type = float
+userlevel = 2
+
+[scan.sample.process.ref_index]
+default = 0.5+0.j
+help = Assigned refractive index
+doc = If ``None``, treat source array as projection of refractive index. If a refractive index
+  is provided the array's absolute value will be used to scale the refractive index.
+type = complex
+userlevel = 2
+lowlim = 0
+
+[scan.sample.process.smoothing]
+default = 2
+help = Smoothing scale
+doc = Smooth the projection with gaussian kernel of width given by `smoothing_mfs`
+type = int
+userlevel = 2
+lowlim = 0
+
+[scan.sample.diversity]
+default = 
+help = Probe mode(s) diversity parameters
+doc = Can be ``None`` i.e. no diversity
+type = Param
+userlevel = 
+
+[scan.sample.diversity.noise]
+default = None
+help = Noise in the generated modes of the illumination
+doc = Can be either:
+   - ``None`` : no noise
+   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+type = tuple
+userlevel = 1
+
+[scan.sample.diversity.power]
+default = 0.1
+help = Power of modes relative to main mode (zero-layer)
+doc = 
+type = tuple, float
+userlevel = 1
+
+[scan.sample.diversity.shift]
+default = None
+help = Lateral shift of modes relative to main mode
+doc = **[not implemented]**
+type = float
+userlevel = 2
+
+[scan.coherence]
+default = 
+help = Coherence parameters
+doc = 
+type = Param
+userlevel = 
+lowlim = 0
+
+[scan.coherence.num_probe_modes]
+default = 1
+help = Number of probe modes
+doc = 
+type = int
+userlevel = 0
+lowlim = 0
+
+[scan.coherence.num_object_modes]
+default = 1
+help = Number of object modes
+doc = 
+type = int
+userlevel = 0
+lowlim = 0
+
+[scan.coherence.spectrum]
+default = None
+help = Amplitude of relative energy bins if the probe modes have a different energy
+doc = 
+type = list
+userlevel = 2
+lowlim = 0
+
+[scan.coherence.object_dispersion]
+default = None
+help = Energy dispersive response of the object
+doc = One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+  **[not implemented]**
+type = str
+userlevel = 2
+
+[scan.coherence.probe_dispersion]
+default = None
+help = Energy dispersive response of the probe
+doc = One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+  **[not implemented]**
+type = str
+userlevel = 2
+
+[scans]
+default = 
+help = Param container for instances of `scan` parameters
+doc = If not specified otherwise, entries in *scans* will use parameter defaults from
+  :py:data:`.scan`
+type = Param
+userlevel = 0
+
+[engine]
+default = 
+help = Reconstruction engine parameters
+doc = 
+type = Param
+userlevel = 
+
+[engine.common]
+default = 
+help = Parameters common to all engines
+doc = 
+type = Param
+userlevel = 
+
+[engine.common.name]
+default = DM
+help = Name of engine.
+doc = Dependent on the name given here, the default parameter set will be a superset of `common`
+  and parameters to the entry of the same name.
+type = str
+userlevel = 
+
+[engine.common.numiter]
+default = 20
+help = Total number of iterations
+doc = 
+type = int
+userlevel = 0
+lowlim = 0
+
+[engine.common.numiter_contiguous]
+default = 1
+help = Number of iterations without interruption
+doc = The engine will not return control to the caller until this number of iterations is
+  completed (not processing server requests, I/O operations, ...)
+type = int
+userlevel = 2
+lowlim = 0
+
+[engine.common.probe_support]
+default = 0.7
+help = Fraction of valid probe area (circular) in probe frame
+doc = 
+type = float
+userlevel = 0
+lowlim = 0
+
+[engine.common.clip_object]
+default = None
+help = Clip object amplitude into this intrervall
+doc = 
+type = tuple
+userlevel = 1
+lowlim = 0
+
+[engine.DM]
+default = 
+help = Parameters for Difference map engine
+doc = 
+type = Param
+userlevel = 
+
+[engine.DM.alpha]
+default = 1
+help = Difference map parameter
+doc = 
+type = int
+userlevel = 1
+lowlim = 0
+
+[engine.DM.probe_update_start]
+default = 2
+help = Number of iterations before probe update starts
+doc = 
+type = int
+userlevel = 1
+lowlim = 0
+
+[engine.DM.update_object_first]
+default = TRUE
+help = If False update object before probe
+doc = 
+type = bool
+userlevel = 2
+lowlim = 0
+
+[engine.DM.overlap_converge_factor]
+default = 0.05
+help = Threshold for interruption of the inner overlap loop
+doc = The inner overlap loop refines the probe and the object simultaneously. This loop is
+  escaped as soon as the overall change in probe, relative to the first iteration, is less
+  than this value.
+type = float
+userlevel = 2
+lowlim = 0
+
+[engine.DM.overlap_max_iterations]
+default = 10
+help = Maximum of iterations for the overlap constraint inner loop
+doc = 
+type = int
+userlevel = 2
+lowlim = 0
+
+[engine.DM.probe_inertia]
+default = 0.001
+help = Weight of the current probe estimate in the update
+doc = 
+type = float
+userlevel = 2
+lowlim = 0
+
+[engine.DM.object_inertia]
+default = 0.1
+help = Weight of the current object in the update
+doc = 
+type = float
+userlevel = 2
+lowlim = 0
+
+[engine.DM.fourier_relax_factor]
+default = 0.01
+help = If rms error of model vs diffraction data is smaller than this fraction, Fourier
+  constraint is met
+doc = Set this value higher for noisy data
+type = float
+userlevel = 1
+lowlim = 0
+
+[engine.DM.obj_smooth_std]
+default = 20
+help = Gaussian smoothing (pixel) of the current object prior to update
+doc = If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of
+  spurious pixels in the outer, least constrained areas of the object.
+type = int
+userlevel = 2
+lowlim = 0
+
+[engine.ML]
+default = 
+help = Maximum Likelihood parameters
+doc = 
+type = Param
+userlevel = 
+
+[engine.ML.type]
+default = gaussian
+help = Likelihood model. One of 'gaussian', 'poisson' or 'euclid'
+doc = [only 'gaussian' is implemented for now]
+type = str
+userlevel = 2
+lowlim = 0
+
+[engine.ML.floating_intensities]
+default = FALSE
+help = If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct
+  for incident beam intensity fluctuations).
+doc = 
+type = bool
+userlevel = 2
+
+[engine.ML.intensity_renormalization]
+default = 1
+help = A rescaling of the intensity so they can be interpreted as Poisson counts.
+doc = 
+type = float
+userlevel = 0
+lowlim = 0
+
+[engine.ML.reg_del2]
+default = TRUE
+help = Whether to use a Gaussian prior (smoothing) regularizer.
+doc = 
+type = bool
+userlevel = 0
+lowlim = 0
+
+[engine.ML.reg_del2_amplitude]
+default = 0.01
+help = Amplitude of the Gaussian prior if used.
+doc = 
+type = float
+userlevel = 0
+lowlim = 0
+
+[engine.ML.smooth_gradient]
+default = 0
+help = Smoothing preconditioner. If 0, not used, if > 0 gaussian filter if < 0 Hann window.
+doc = 
+type = float
+userlevel = 1
+lowlim = 0
+
+[engine.ML.scale_precond]
+default = FALSE
+help = Whether to use the object/probe scaling preconditioner.
+doc = This parameter can give faster convergence for weakly scattering samples.
+type = bool
+userlevel = 2
+lowlim = 0
+
+[engine.ML.scale_probe_object]
+default = 1
+help = Relative scale of probe to object.
+doc = 
+type = float
+userlevel = 2
+lowlim = 0
+
+[engine.ML.probe_update_start]
+default = 0
+help = Number of iterations before probe update starts
+doc = 
+type = int
+userlevel = 1
+
+[engines]
+default = 
+help = Container for instances of "engine" parameters
+doc = All engines registered in this structure will be executed sequentially.
+type = Param
+dynamic = True
+

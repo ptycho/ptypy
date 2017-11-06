@@ -1623,7 +1623,7 @@ class Container(Base):
                 sz += s.data.nbytes
         return sz
 
-    def views_in_storage(self, s, active=True):
+    def views_in_storage(self, s, active_only=True):
         """
         Return a list of views on :any:`Storage` `s`.
 
@@ -1631,10 +1631,10 @@ class Container(Base):
         ----------
         s : Storage
             The storage to look for.
-        active : True or False
+        active_only : True or False
                  If True (default), return only active views.
         """
-        if active:
+        if active_only:
             return [v for v in self.original.V.values()
                     if v.active and (v.storageID == s.ID)]
         else:
@@ -1987,13 +1987,17 @@ class POD(Base):
 
     _PREFIX = POD_PREFIX
 
-    def __init__(self, ptycho=None, ID=None, views=None, geometry=None,
-                 **kwargs):
+    def __init__(self, ptycho=None, model=None, ID=None, views=None,
+                 geometry=None, **kwargs):
         """
         Parameters
         ----------
         ptycho : Ptycho
             The instance of Ptycho associated with this pod.
+
+        model : ScanModel
+            The instance of ScanModel (or it subclasses) which describes
+            this pod.
 
         ID : str or int
             The pod ID, If None it is managed by the ptycho.
@@ -2006,10 +2010,7 @@ class POD(Base):
 
         """
         super(POD, self).__init__(ptycho, ID, False)
-        # if len(kwargs) > 0:
-        #     self._initialize(**kwargs)
-
-    # def _initialize(self, views=None, geometry=None): #,meta=None):
+        self.model = model
 
         # other defaults:
         self.is_empty = False

@@ -26,7 +26,7 @@ if hmpl:# and hpqt4:
     from plot_client import PlotClient, MPLClient, spawn_MPLClient, MPLplotter
 del hmpl
 # del hpqt4
-import validator
-
+import descriptor
+    
 import parallel
 

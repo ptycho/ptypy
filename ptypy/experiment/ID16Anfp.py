@@ -13,10 +13,13 @@ import os
 from .. import utils as u
 from .. import io
 from ..utils import parallel
+from ..utils.descriptor import defaults_tree
 from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..core.paths import Paths
-from ..core import DEFAULT_io as IO_par
+#from ..core import DEFAULT_io as IO_par
+from ..core import Ptycho
+IO_par = Ptycho.DEFAULT['io']
 from .. import core
 
 logger = u.verbose.logger
@@ -38,48 +41,114 @@ H5_PATHS.experiment = '{entry}/experiment_identifier'
 H5_PATHS.frames = '{entry}/ptycho/data'
 H5_PATHS.motors = '{entry}/ptycho/motors'
 
-# Recipe defaults
-RECIPE = u.Param()
-RECIPE.experimentID = None          # Experiment identifier - will be read from h5
-RECIPE.energy = None                # Energy in keV - will be read from h5
-RECIPE.lam = None                   # 1.2398e-9 / RECIPE.energy
-RECIPE.z = None                     # Distance from object to screen
-RECIPE.motors = ['spy', 'spz']      # 'Motor names to determine the sample translation'
-RECIPE.motors_multiplier = 1e-6     # 'Motor conversion factor to meters'
-RECIPE.base_path = None             # Base path to read and write data - can be guessed.
-RECIPE.sample_name = None           # Sample name - will be read from h5
-RECIPE.scan_label = None            # Scan label - will be read from h5
-RECIPE.flat_label = None            # Flat label - equal to scan_label by default
-RECIPE.dark_label = None            # Dark label - equal to scan_label by default
-RECIPE.mask_file = None             # Mask file name
-RECIPE.use_h5 = False               # Load data from prepared h5 file
-RECIPE.flat_division = False        # Switch for flat division
-RECIPE.dark_subtraction = False     # Switch for dark subtraction
 
-# These are home-made wrapped data
-RECIPE.data_file_pattern = '{[base_path]}/{[sample_name]}/{[scan_label]}_data.h5'
-RECIPE.flat_file_pattern = '{[base_path]}/{[sample_name]}/{[flat_label]}_flat.h5'
-RECIPE.dark_file_pattern = '{[base_path]}/{[sample_name]}/{[dark_label]}_dark.h5'
-
-# The h and v are inverted here - that's on purpose!
-RECIPE.distortion_h_file = '/data/id16a/inhouse1/instrument/img1/optique_peter_distortion/detector_distortion2d_v.edf'
-RECIPE.distortion_v_file = '/data/id16a/inhouse1/instrument/img1/optique_peter_distortion/detector_distortion2d_h.edf'
-RECIPE.whitefield_file = '/data/id16a/inhouse1/instrument/whitefield/white.edf'
-
-# Generic defaults
-ID16A_DEFAULT = PtyScan.DEFAULT.copy()
-ID16A_DEFAULT.recipe = RECIPE
-ID16A_DEFAULT.auto_center = False
-# Orientation of Frelon frame - only LR flip
-ID16A_DEFAULT.orientation = (False, True, False)
-
-
+@defaults_tree.parse_doc('scandata.ID16AScan')
 class ID16AScan(PtyScan):
     """
     Subclass of PtyScan for ID16A beamline (specifically for near-field
     ptychography).
+
+    Defaults:
+
+    [name]
+    default = 'ID16AScan'
+    type = str
+    help = 
+
+    [experimentID]
+    default = None
+
+    [motors]
+    default = ['spy', 'spz']
+    type = list
+    help = Motor names to determine the sample translation
+
+    [motors_multiplier]
+    default = 1e-6
+    type = float
+    help = Motor conversion factor to meters
+
+    [base_path]
+    default = None
+    type = str
+    help = Base path to read and write data - can be guessed
+
+    [sample_name]
+    default = None
+    type = str
+    help = Sample name - will be read from h5
+
+    [scan_label]
+    default = None
+    type = int
+    help = Scan label - will be read from h5
+
+    [flat_label]
+    default = None
+    type = int
+    help = Flat label - equal to scan_label by default
+
+    [dark_label]
+    default = None
+    type = int
+    help = Dark label - equal to scan_label by default
+
+    [mask_file]
+    default = None
+    type = str
+    help = Mask file name
+
+    [use_h5]
+    default = False
+    type = bool
+    help = Load data from prepared h5 file
+
+    [flat_division]
+    default = False
+    type = bool
+    help = Switch for flat division
+
+    [dark_subtraction]
+    default = False
+    type = bool
+    help = Switch for dark subtraction
+
+    [data_file_pattern]
+    default = '{[base_path]}/{[sample_name]}/{[scan_label]}_data.h5'
+    type = str
+    help = 
+
+    [flat_file_pattern]
+    default = '{[base_path]}/{[sample_name]}/{[flat_label]}_flat.h5'
+    type = str
+    help = 
+
+    [dark_file_pattern]
+    default = '{[base_path]}/{[sample_name]}/{[dark_label]}_dark.h5'
+    type = str
+    help = 
+
+    [distortion_h_file]
+    default = '/data/id16a/inhouse1/instrument/img1/optique_peter_distortion/detector_distortion2d_v.edf'
+    type = str
+    help = The h and v are inverted here - that's on purpose!
+
+    [distortion_v_file]
+    default = '/data/id16a/inhouse1/instrument/img1/optique_peter_distortion/detector_distortion2d_h.edf'
+    type = str
+    help = The h and v are inverted here - that's on purpose!
+
+    [whitefield_file]
+    default = '/data/id16a/inhouse1/instrument/whitefield/white.edf'
+    type = str
+    help = 
+
+    [auto_center]
+    default = False
+
+    [orientation]
+    default = (False, True, False)
     """
-    DEFAULT = ID16A_DEFAULT
 
     def __init__(self, pars=None, **kwargs):
         """
@@ -88,59 +157,15 @@ class ID16AScan(PtyScan):
         :param pars: preparation parameters
         :param kwargs: Additive parameters
         """
+
+        p = self.DEFAULT.copy(99)
+        p.update(pars)
+
         # Initialise parent class
-        recipe_default = RECIPE.copy()
-        recipe_default.update(pars.recipe, in_place_depth=1)
-        pars.recipe.update(recipe_default)
-
-        super(ID16AScan, self).__init__(pars, **kwargs)
-
-        # Apply beamline-specific generic defaults
-        #pars = PREP_DEFAULT.copy().update(pars)
-        #pars.update(**kwargs)
-
-        # Apply beamline parameters ("recipe")
-        #rinfo = DEFAULT.copy()
-        #rinfo.update(pars.recipe)
-
-        # Initialise parent class with input parameters
-        #super(self.__class__, self).__init__(pars)
-
-        # Store recipe parameters in self.info
-        #self.info.recipe = rinfo
-
-        # Default scan label
-        #if self.info.label is not None:
-        #    assert (self.info.label == rinfo.scan_label), (
-        #        'Incompatible scan labels')
-        #self.info.label = rinfo.scan_label
-        #logger.info('Scan label: %s' % rinfo.scan_label)
-
-        # Default flat and dark labels.
-        #if rinfo.flat_label is None:
-        #    rinfo.flat_label = rinfo.scan_label
-        #if rinfo.dark_label is None:
-        #    rinfo.dark_label = rinfo.scan_label
-
-        # Attempt to extract base_path if missing
-        #if rinfo.base_path is None:
-        #    d = os.getcwd()
-        #    base_path = None
-        #    while True:
-        #        if 'id16a' in os.listdir(d):
-        #            base_path = os.path.join(d, 'id16a')
-        #            break
-        #        d, rest = os.path.split(d)
-        #        if not rest:
-        #            break
-        #    if base_path is None:
-        #        raise RuntimeError('Could not guess base_path.')
-        #    else:
-        #        rinfo.base_path = base_path
-        #        logger.info('Base path: %s' % base_path)
+        super(ID16AScan, self).__init__(p, **kwargs)
 
         # Try to extract base_path to access data files
-        if self.info.recipe.base_path is None:
+        if self.info.base_path is None:
             d = os.getcwd()
             base_path = None
             while True:
@@ -153,51 +178,13 @@ class ID16AScan(PtyScan):
             if base_path is None:
                 raise RuntimeError('Could not guess base_path.')
             else:
-                self.info.recipe.base_path = base_path
-
-        # Data file names
-        #rinfo.data_file = rinfo.data_file_pattern.format(rinfo)
-        #rinfo.dark_file = rinfo.dark_file_pattern.format(rinfo)
-        #rinfo.flat_file = rinfo.flat_file_pattern.format(rinfo)
-
-        # Read metadata
-        #h = io.h5read(rinfo.data_file)
-        #entry = h.keys()[0]
-        #rinfo.entry = entry
-
-        # Energy
-        #k = H5_PATHS.energy.format(rinfo)
-        #energy = float(io.h5read(rinfo.data_file, k)[k])
-        #if self.info.energy is not None:
-        #    assert (self.info.energy == energy), (
-        #        "Energy (%f keV) is read from file - please don't attempt to "
-        #        "overwrite it" % energy)
-
-        # Attempt to extract experiment ID
-        #if rinfo.experimentID is None:
-        #    # We use the path structure for this
-        #    experimentID = os.path.split(os.path.split(
-        #        rinfo.base_path[:-1])[0])[1]
-        #    logger.info('experiment ID: %s' % experimentID)
-        #    rinfo.experimentID = experimentID
-
-        # Effective pixel size
-
-        # Data file names
-        #rinfo.data_file = rinfo.data_file_pattern.format(rinfo)
-        #rinfo.dark_file = rinfo.dark_file_pattern.format(rinfo)
-        #rinfo.flat_file = rinfo.flat_file_pattern.format(rinfo)
-
-        #self.rinfo = rinfo
-        #self.info.recipe = rinfo
-
-        #logger.info(u.verbose.report(self.info))
+                self.info.base_path = base_path
 
         # Create the ptyd file name if not specified
         if self.info.dfile is None:
             home = Paths(IO_par).home
             self.info.dfile = '%s/prepdata/data_%d.ptyd' % (
-                home, self.info.recipe.scan_label)
+                home, self.info.scan_label)
             log(3, 'Save file is %s' % self.info.dfile)
 
         log(4, u.verbose.report(self.info))
@@ -209,8 +196,8 @@ class ID16AScan(PtyScan):
         """
         # FIXME: do something better here. (detector-dependent)
         # Load mask as weight
-        if self.info.recipe.mask_file is not None:
-            return io.h5read(self.info.recipe.mask_file, 'mask')['mask'].astype(
+        if self.info.mask_file is not None:
+            return io.h5read(self.info.mask_file, 'mask')['mask'].astype(
                 np.float32)
 
     def load_positions(self):
@@ -218,12 +205,12 @@ class ID16AScan(PtyScan):
         Load the positions and return as an (N, 2) array.
         """
         positions = []
-        mmult = u.expect2(self.info.recipe.motors_multiplier)
+        mmult = u.expect2(self.info.motors_multiplier)
 
         # Load positions
-        if self.info.recipe.use_h5:
+        if self.info.use_h5:
             # From prepared .h5 file
-            data = io.h5read(self.info.recipe.base_path + '/raw/data.h5')
+            data = io.h5read(self.info.base_path + '/raw/data.h5')
             for i in np.arange(1, len(data) + 1, 1):
                 positions.append((data['data_%04d' % i]['positions'][0, 0],
                                   data['data_%04d' % i]['positions'][0, 1]))
@@ -231,19 +218,19 @@ class ID16AScan(PtyScan):
             # From .edf files
             pos_files = []
             # Count available images given through scan_label
-            for i in os.listdir(self.info.recipe.base_path +
-                                self.info.recipe.scan_label):
-                if i.startswith(self.info.recipe.scan_label):
+            for i in os.listdir(self.info.base_path +
+                                self.info.scan_label):
+                if i.startswith(self.info.scan_label):
                     pos_files.append(i)
 
             for i in np.arange(1, len(pos_files) + 1, 1):
-                data, meta = io.edfread(self.info.recipe.base_path +
-                                        self.info.recipe.scan_label + '/' +
-                                        self.info.recipe.scan_label +
+                data, meta = io.edfread(self.info.base_path +
+                                        self.info.scan_label + '/' +
+                                        self.info.scan_label +
                                         '_%04d.edf' % i)
 
-                positions.append((meta['motor'][self.info.recipe.motors[0]],
-                                  meta['motor'][self.info.recipe.motors[1]]))
+                positions.append((meta['motor'][self.info.motors[0]],
+                                  meta['motor'][self.info.motors[1]]))
 
         return np.array(positions) * mmult[0]
 
@@ -285,23 +272,23 @@ class ID16AScan(PtyScan):
         #return common._to_dict()
 
         # Load dark
-        if self.info.recipe.use_h5:
+        if self.info.use_h5:
             # From prepared .h5 file
-            dark = io.h5read(self.info.recipe.base_path + '/raw/dark.h5')
+            dark = io.h5read(self.info.base_path + '/raw/dark.h5')
             common.dark = dark['dark_avg']['avgdata'].astype(np.float32)
         else:
             # From .edf files
             dark_files = []
             # Count available dark given through scan_label
-            for i in os.listdir(self.info.recipe.base_path +
-                                self.info.recipe.scan_label):
+            for i in os.listdir(self.info.base_path +
+                                self.info.scan_label):
                 if i.startswith('dark'):
                     dark_files.append(i)
 
             dark = []
             for i in np.arange(1, len(dark_files) + 1, 1):
-                data, meta = io.edfread(self.info.recipe.base_path +
-                                        self.info.recipe.scan_label + '/' +
+                data, meta = io.edfread(self.info.base_path +
+                                        self.info.scan_label + '/' +
                                         'dark_%04d.edf' % i)
                 dark.append(data.astype(np.float32))
 
@@ -310,23 +297,23 @@ class ID16AScan(PtyScan):
         log(3, 'Dark loaded successfully.')
 
         # Load flat
-        if self.info.recipe.use_h5:
+        if self.info.use_h5:
             # From prepared .h5 file
-            flat = io.h5read(self.info.recipe.base_path + '/raw/ref.h5')
+            flat = io.h5read(self.info.base_path + '/raw/ref.h5')
             common.flat = flat['ref_avg']['avgdata'].astype(np.float32)
         else:
             # From .edf files
             flat_files = []
             # Count available dark given through scan_label
-            for i in os.listdir(self.info.recipe.base_path +
-                                self.info.recipe.scan_label):
+            for i in os.listdir(self.info.base_path +
+                                self.info.scan_label):
                 if i.startswith('flat'):
                     flat_files.append(i)
 
             flat = []
             for i in np.arange(1, len(flat_files) + 1, 1):
-                data, meta = io.edfread(self.info.recipe.base_path +
-                                        self.info.recipe.scan_label + '/' +
+                data, meta = io.edfread(self.info.base_path +
+                                        self.info.scan_label + '/' +
                                         'ref_%04d.edf' % i)
                 flat.append(data.astype(np.float32))
 
@@ -369,9 +356,9 @@ class ID16AScan(PtyScan):
         #                       self.rinfo, slice=j)[key].astype(np.float32)
 
         # Load data
-        if self.info.recipe.use_h5:
+        if self.info.use_h5:
             # From prepared .h5 file
-            data = io.h5read(self.info.recipe.base_path + '/raw/data.h5')
+            data = io.h5read(self.info.base_path + '/raw/data.h5')
             for j in indices:
                 i = j + 1
                 raw[j] = data['data_%04d' % i]['data'].astype(np.float32)
@@ -379,9 +366,9 @@ class ID16AScan(PtyScan):
             # From .edf files
             for j in indices:
                 i = j + 1
-                data, meta = io.edfread(self.info.recipe.base_path +
-                                        self.info.recipe.scan_label + '/' +
-                                        self.info.recipe.scan_label +
+                data, meta = io.edfread(self.info.base_path +
+                                        self.info.scan_label + '/' +
+                                        self.info.scan_label +
                                         '_%04d.edf' % i)
                 raw[j] = data.astype(np.float32)
 
@@ -415,12 +402,12 @@ class ID16AScan(PtyScan):
         #data = raw_wl_ml_ud
 
         # Apply flat and dark, only dark, or no correction
-        if self.info.recipe.flat_division and self.info.recipe.dark_subtraction:
+        if self.info.flat_division and self.info.dark_subtraction:
             for j in raw:
                 raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
                 raw[j][raw[j] < 0] = 0
             data = raw
-        elif self.info.recipe.dark_subtraction:
+        elif self.info.dark_subtraction:
             for j in raw:
                 raw[j] = raw[j] - common.dark
                 raw[j][raw[j] < 0] = 0
@@ -541,7 +528,7 @@ def undistort(frame, delta):
 #
 #     def __init__(self, pars=None):
 #         super(ID16Scan, self).__init__(pars)
-#         r = self.info.recipe
+#         r = self.info
 #         # filename analysis
 #         body, ext = os.path.splitext(
 #             os.path.expanduser(r.base_path + r.first_frame))
@@ -562,7 +549,7 @@ def undistort(frame, delta):
 #         return self.frame_format % (index + 1)
 #
 #     def _load_dark(self):
-#         r = self.info.recipe
+#         r = self.info
 #         print('Loading the dark files...')
 #         darklist = []
 #         for ff in sorted(glob.glob(r.base_path + 'dark*.edf')):

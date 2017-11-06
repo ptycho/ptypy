@@ -10,6 +10,7 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 import paths
+from collections import OrderedDict
 import os
 import sys
 
@@ -21,68 +22,12 @@ from ..io import interaction
 from classes import Base, Container, Storage, PTYCHO_PREFIX
 from manager import ModelManager
 from . import model
+from ..utils.descriptor import defaults_tree
 
-__all__ = ['Ptycho', 'DEFAULT', 'DEFAULT_io']
-
-DEFAULT_runtime = u.Param(
-    run=os.path.split(sys.argv[0])[1].split('.')[0],
-    engine="None",
-    iteration=0,
-    iterations=0,
-)
-
-DEFAULT_autoplot = u.Param(
-    imfile="plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png",
-    threaded=True,
-    interval=1,
-    layout='default',
-    dump=True,
-    make_movie=False,
-)
-
-DEFAULT_autosave = u.Param(
-    # If None or False : no saving else save with this given interval
-    interval=10,
-    # List of probe IDs for autosaving, if None save all [Not implemented]
-    probes=None,
-    # List of object IDs for autosaving, if None, save all [Not implemented]
-    objects=None,
-    rfile="dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr",
-)
-
-DEFAULT_io = u.Param(
-    # Auto save options: (None or False, int). If an integer,
-    # specifies autosave interval, if None or False: no autosave
-    autosave=DEFAULT_autosave,
-    # Plotting parameters for a client
-    autoplot=DEFAULT_autoplot,
-    # Client-server communication
-    interaction=interaction.Server_DEFAULT.copy(),
-    home='./',
-    rfile="recons/%(run)s/%(run)s_%(engine)s.ptyr"
-)
-"""Default io parameters. See :py:data:`.io` and a short listing below"""
-
-DEFAULT = u.Param(
-    # Verbosity level
-    verbose_level=3,
-    # Start an ipython kernel for debugging
-    ipython_kernel=False,
-    # Precision for reconstruction: 'single' or 'double'.
-    data_type='single',
-    # Do actually nothing if True [not implemented]
-    dry_run=False,
-    run=None,
-    # POD creation rules.
-    scan=u.Param(),
-    scans=u.Param(),
-    # Reconstruction algorithms
-    engines={},
-    engine=engines.DEFAULTS.copy(),
-    io=DEFAULT_io.copy(depth=2)
-)
+__all__ = ['Ptycho']
 
 
+@defaults_tree.parse_doc()
 class Ptycho(Base):
     """
     Ptycho : A ptychographic data holder and reconstruction manager.
@@ -92,7 +37,7 @@ class Ptycho(Base):
 
     If MPI is enabled, this class acts both as a manager (rank = 0) and
     a worker (any rank), and most information exists on all processes.
-    In principle the only part that is divided between processes is the
+    In its original design, the only part that is divided between processes is the
     diffraction data.
 
     By default Ptycho is instantiated once per process, but it can also
@@ -118,10 +63,175 @@ class Ptycho(Base):
     probe,obj,exit,diff,mask : Container
         Container instances for illuminations, samples, exit waves,
         diffraction data and detector masks / weights
+
+
+    Defaults:
+
+    [verbose_level]
+    default = 1
+    help = Verbosity level
+    doc = Verbosity level for information logging.
+       - ``0``: Only errors
+       - ``1``: Warning
+       - ``2``: Process Information
+       - ``3``: Object Information
+       - ``4``: Debug
+    type = int
+    userlevel = 0
+    lowlim = 0
+    uplim = 4
+
+    [data_type]
+    default = 'single'
+    help = Reconstruction floating number precision
+    doc = Reconstruction floating number precision (``'single'`` or
+          ``'double'``)
+    type = str
+    userlevel = 1
+
+    [run]
+    default = None
+    help = Reconstruction identifier
+    doc = Reconstruction run identifier. If ``None``, the run name will
+          be constructed at run time from other information.
+    type = str
+    userlevel = 0
+
+    [dry_run]
+    default = False
+    help = Dry run switch
+    doc = Run everything skipping all memory and cpu-heavy steps (and
+          file saving). **NOT IMPLEMENTED**
+    type = bool
+    userlevel = 2
+
+    [ipython_kernel]
+    default = False
+    type = bool
+    help = Start an ipython kernel for debugging
+    doc = Start an ipython kernel for debugging.
+
+    [io]
+    default = None
+    type = Param
+    help = Global parameters for I/O
+    doc = Global parameter container for I/O settings.
+
+    [io.home]
+    default = "./"
+    type = str
+    help = Base directory for all I/O
+    doc = home is the root directory for all input/output operations. All other path parameters that
+      are relative paths will be relative to this directory.
+
+    [io.rfile]
+    default = "recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr"
+    type = str
+    help = Reconstruction file name (or format string)
+    doc = Reconstruction file name or format string (constructed against runtime dictionary)
+
+    [io.autosave]
+    default = None
+    type = Param
+    help = Auto-save options
+    doc = Options for automatic saving during reconstruction.
+
+    [io.autosave.active]
+    default = True
+    type = bool
+    help = Activation switch
+    doc = If ``True`` the current reconstruction will be saved at regular intervals. **unused**
+
+    [io.autosave.interval]
+    default = 10
+    type = int
+    help = Auto-save interval
+    doc = If ``>0`` the current reconstruction will be saved at regular intervals according to the
+      pattern in :py:data:`paths.autosave` . If ``<=0`` not automatic saving
+    lowlim = -1
+
+    [io.autosave.rfile]
+    default = "dumps/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr"
+    type = str
+    help = Auto-save file name (or format string)
+    doc = Auto-save file name or format string (constructed against runtime dictionary)
+
+    [io.autoplot]
+    default = None
+    type = Param
+    help = Plotting client parameters
+    doc = In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
+
+    [io.autoplot.imfile]
+    default = "plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png"
+    type = str
+    help = Plot images file name (or format string)
+    doc = Plot images file name (or format string).
+    userlevel = 1
+
+    [io.autoplot.interval]
+    default = 1
+    type = int
+    help = Number of iterations between plot updates
+    doc = Requests to the server will happen with this iteration intervals. Note that this will work
+      only if interaction.polling_interval is smaller or equal to this number. If ``interval
+      =0`` plotting is disabled which should be used, when ptypy is run on a cluster.
+    lowlim = -1
+
+    [io.autoplot.threaded]
+    default = True
+    type = bool
+    help = Live plotting switch
+    doc = If ``True``, a plotting client will be spawned in a new thread and connected at
+      initialization. If ``False``, the master node will carry out the plotting, pausing the
+      reconstruction. This option should be set to ``True`` when ptypy is run on an isolated
+      workstation.
+
+    [io.autoplot.layout]
+    default = None
+    type = str, Param
+    help = Options for default plotter or template name
+    doc = Flexible layout for default plotter is not implemented yet. Please choose one of the
+      templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``
+    userlevel = 2
+
+    [io.autoplot.dump]
+    default = False
+    type = bool
+    help = Switch to dump plots as image files
+    doc = Switch to dump plots as image files during reconstruction.
+
+    [io.autoplot.make_movie]
+    default = False
+    type = bool
+    help = Produce reconstruction movie after the reconstruction.
+    doc = Switch to request the production of a movie from the dumped plots at the end of the
+      reconstruction.
+
+    [scans]
+    default = None
+    type = Param
+    help = Container for instances of scan parameters
+    doc =
+
+    [scans.*]
+    default =
+    type = @scan.*
+    help = Wildcard entry for list of scans to load. See :py:data:`scan`
+
+    [engines]
+    default = None
+    type = Param
+    help = Container for instances of engine parameters
+    doc =
+
+    [engines.*]
+    default =
+    type = @engine.*
+    help = Wildcard entry for list of engines to run. See :py:data:`engine`
+    doc = The value of engines.*.name is used to choose among the available engines.
+
     """
-    DEFAULT = DEFAULT
-    """ Default ptycho parameters which is the trunk of the
-        default :ref:`ptypy parameter tree <parameters>`"""
 
     _PREFIX = PTYCHO_PREFIX
 
@@ -150,13 +260,12 @@ class Ptycho(Base):
         """
         super(Ptycho, self).__init__(None, 'Ptycho')
 
+        # Create a parameter structure from the the class-level defaults
+        self.p = self.DEFAULT.copy(99)
+
         # Abort if we load complete structure
         if level <= 0:
             return
-
-        self.p = self.DEFAULT.copy(depth=99)
-        """ Reference for parameter tree, with which
-            this instance was constructed. """
 
         # Continue with initialization from parameters
         if pars is not None:
@@ -164,6 +273,9 @@ class Ptycho(Base):
 
         # That may be a little dangerous
         self.p.update(kwargs)
+
+        # Validate the incoming parameters
+        defaults_tree.validate(self.p)
 
         # Instance attributes
 
@@ -174,9 +286,6 @@ class Ptycho(Base):
         self.diff = None
         self.mask = None
         self.modelm = None
-
-        # Data
-        self.datasource = None
 
         # Communication
         self.interactor = None
@@ -234,9 +343,12 @@ class Ptycho(Base):
         if not hasattr(self, 'runtime'):
             self.runtime = u.Param()  # DEFAULT_runtime.copy()
 
+        if not hasattr(self, 'scans'):
+            # Create a scans entry if it does not already exist
+            self.scans = OrderedDict()
+
         if not hasattr(self, 'engines'):
             # Create an engines entry if it does not already exist
-            from collections import OrderedDict
             self.engines = OrderedDict()
 
         # Generate all the paths
@@ -306,33 +418,18 @@ class Ptycho(Base):
         the exit waves, :py:attr:`diff` for diffraction data and
         :py:attr:`mask` for detectors masks
         """
-        p = self.p
 
-        # Initialize the reconstruction containers
-        self.probe = Container(ptycho=self, ID='Cprobe', data_type='complex')
-        self.obj = Container(ptycho=self, ID='Cobj', data_type='complex')
-        self.exit = Container(ptycho=self, ID='Cexit', data_type='complex')
-        self.diff = Container(ptycho=self, ID='Cdiff', data_type='real')
-        self.mask = Container(ptycho=self, ID='Cmask', data_type='bool')
-
-        ###################################
-        # Initialize data sources load data
-        ###################################
-
-        # Initialize the model manager
-        self.modelm = ModelManager(self, p.scan)
-
+        # Initialize the model manager. This also initializes the
+        # containers.
+        self.modelm = ModelManager(self, self.p.scans)
+    
     def init_data(self, print_stats=True):
         """
         Called on __init__ if ``level >= 2``.
-
-        Creates a datasource and calls for :py:meth:`ModelManager.new_data()`
+        
+        Call :py:meth:`ModelManager.new_data()`
         Prints statistics on the ptypy structure if ``print_stats=True``
         """
-        # Create the data source object, which give diffraction frames one
-        # at a time, supporting MPI sharing.
-        self.datasource = self.modelm.make_datasource()
-
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs.
         self.modelm.new_data()
@@ -341,40 +438,6 @@ class Ptycho(Base):
         parallel.barrier()
         if print_stats:
             self.print_stats()
-
-        # Create plotting instance (maybe)
-
-    def _init_engines(self):
-        """
-        * deprecated*
-        Initialize engines from parameters. Sets :py:attr:`engines`
-        """
-        # Store the engines in a dict
-        self.engines = {}
-
-        # Store the run labels in a list to ensure precedence is preserved.
-        self.run_labels = []
-
-        # Loop through p.engines sub-dictionaries
-        for run_label, pars in self.p.engines.iteritems():
-            # Copy common parameters
-            engine_pars = self.p.engine.common.copy()
-
-            # Identify engine by name
-            engine_class = engines.by_name(pars.name)
-
-            # Update engine type specific parameters
-            engine_pars.update(self.p.engine[pars.name])
-
-            # Update engine instance specific parameters
-            engine_pars.update(pars)
-
-            # Create instance
-            engine = engine_class(self, engine_pars)
-
-            # Store info
-            self.engines[run_label] = engine
-            self.run_labels.append(run_label)
 
     def init_engine(self, label=None, epars=None):
         """
@@ -437,6 +500,11 @@ class Ptycho(Base):
         else:
             # No label = prepare all engines
             for label in sorted(self.p.engines.keys()):
+                # FIXME workaround to avoid parameter trees that are just meant as templates.
+                try:
+                    self.p.engines[label].name
+                except:
+                    continue
                 self.init_engine(label)
 
     @property
@@ -587,86 +655,6 @@ class Ptycho(Base):
         except BaseException:
             pass
 
-    def _run(self, run_label=None):
-        """
-        *deprecated*
-        Start the reconstruction. Former method
-        """
-        # Time the initialization
-        if self.runtime.get('start') is None:
-            self.runtime.start = time.asctime()
-
-        # Check if there is already a runtime info collector
-        if self.runtime.get('iter_info') is None:
-            self.runtime.iter_info = []
-
-        # Note when the last autosave was carried out
-        if self.runtime.get('last_save') is None:
-            self.runtime.last_save = 0
-
-        # Maybe not needed
-        if self.runtime.get('last_plot') is None:
-            self.runtime.last_plot = 0
-
-        # Run all engines sequentially
-        for run_label in self.run_labels:
-
-            # Set a new engine
-            engine = self.engines[run_label]
-            # self.current_engine = engine
-
-            # Prepare the engine
-            engine.initialize()
-
-            # Start the iteration loop
-            while not engine.finished:
-                # Check for client requests
-                if parallel.master and self.interactor is not None:
-                    self.interactor.process_requests()
-
-                parallel.barrier()
-
-                # Check for new data
-                self.modelm.new_data()
-
-                # Last minute preparation before a contiguous block of
-                # iterations
-                engine.prepare()
-
-                if self.p.autosave is not None and self.p.autosave.interval > 1:
-                    if engine.curiter % self.p.autosave.interval == 0:
-                        auto = self.paths.auto_file(self.runtime)
-                        logger.info(headerline('Autosaving'), 'l')
-                        self.save_run(auto, 'dump')
-                        self.runtime.last_save = engine.curiter
-                        logger.info(headerline())
-
-                # One iteration
-                engine.iterate()
-
-                # Display runtime information and do saving
-                if parallel.master:
-                    info = self.runtime.iter_info[-1]
-                    # Calculate error:
-                    err = np.array(info['error'].values()).mean(0)
-                    logger.info('Iteration #%(iteration)d of %(engine)s :: '
-                                'Time %(duration).2f' % info)
-                    logger.info('Errors :: Fourier %.2e, Photons %.2e, '
-                                'Exit %.2e' % tuple(err))
-
-                parallel.barrier()
-            # Done. Let the engine finish up
-            engine.finalize()
-
-            # Save
-            # Deactivated for now as something fishy happens through MPI
-            self.save_run()
-
-        # Clean up - if needed.
-
-        # Time the initialization
-        self.runtime.stop = time.asctime()
-
     @classmethod
     def _from_dict(cls, dct):
         # This method will be called from save_load on linking
@@ -809,10 +797,9 @@ class Ptycho(Base):
 
             if kind == 'fullflat':
                 self.interactor.stop()
-                logger.info('Deleting references for interactor, '
-                            'datasource and engines.')
+                logger.info('Deleting references for interactor '
+                            ' and engines.')
                 del self.interactor
-                del self.datasource
                 del self.paths
                 try:
                     del self.engines

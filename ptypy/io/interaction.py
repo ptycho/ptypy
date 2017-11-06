@@ -21,35 +21,16 @@ import Queue
 import numpy as np
 import re
 import json
-from .. import utils as u
+
 from ..utils.verbose import logger
+from ptypy import defaults_tree
 
 __all__ = ['Server', 'Client']
 
 DEBUG = lambda x: None
-#DEBUG = print
 
-#: Default parameters for networking
-network_DEFAULT = u.Param(
-    address = "tcp://127.0.0.1",   # Default address for primary connection
-    port = 5560,            # Default port for primary connection
-    connections = 10   # Port range for secondary connections
-)
 
-#: Default parameters for the server
-Server_DEFAULT = u.Param(network_DEFAULT,
-                         poll_timeout=10,   # Network polling interval (in milliseconds!)
-                         pinginterval=2,  # Interval to check pings (in seconds)
-                         pingtimeout=10  # Ping time out: client disconnected after this period (in seconds)
-)
-
-#: Default parameters for the client
-Client_DEFAULT = u.Param(network_DEFAULT,
-                         poll_timeout=100,   # Network polling interval (in milliseconds!)
-                         pinginterval=1,  # Interval to check pings (in seconds)
-                         connection_timeout=3600000.,  # Timeout for dead server (in milliseconds!)
-)
-
+# DEBUG = print
 
 def ID_generator(size=6, chars=string.ascii_uppercase + string.digits):
     """\
@@ -76,6 +57,7 @@ class NumpyEncoder(json.JSONEncoder):
     Custom JSON Encoder class that take out numpy arrays from a structure
     and replace them with a code string.
     """
+
     def encode(self, obj):
         # Prepare the array list
         self.npy_arrays = []
@@ -98,6 +80,7 @@ class NumpyEncoder(json.JSONEncoder):
 
         return json.JSONEncoder.default(self, obj)
 
+
 NE = NumpyEncoder()
 
 # This is the string to match against when decoding
@@ -116,7 +99,7 @@ def numpy_replace(obj, arraylist):
         return obj
     elif isinstance(obj, dict):
         newobj = {}
-        for k,v in obj.iteritems():
+        for k, v in obj.iteritems():
             newobj[k] = numpy_replace(v, arraylist)
         return newobj
     elif isinstance(obj, list):
@@ -177,13 +160,60 @@ def numpy_zmq_recv(in_socket):
         return message
 
 
+@defaults_tree.parse_doc('io.interaction.server')
 class Server(object):
-    """\
-    Main server class.
     """
+    Main ZMQ server class.
 
-    #: Default parameters, see also :py:data:`.io.interaction`
-    DEFAULT = Server_DEFAULT
+    Defaults:
+
+    [active]
+    default = True
+    help = Activation switch
+    doc = Set to ``False`` for no  ZeroMQ interaction server
+    type = bool
+
+    [address]
+    default = 'tcp://127.0.0.1'
+    help = The address the server is listening to.
+    doc = Wenn running ptypy on a remote server, it is the servers network address.
+    type = str
+    userlevel = 2
+
+    [port]
+    default = 5560
+    help = The port the server is listening to.
+    doc = Make sure to pick an unused port with a few unused ports close to it.
+    type = int
+    userlevel = 2
+
+    [connections]
+    default = 10
+    help = Number of concurrent connections on the server
+    doc = A range ``[port : port+connections]`` of ports adjacent :py:data:`~.io.interaction.port`
+      will be opened on demand for connecting clients.
+    type = int
+    userlevel = 2
+
+    [poll_timeout]
+    default = 10.0
+    type = float
+    help = Network polling interval
+    doc = Network polling interval, in milliseconds.
+
+    [pinginterval]
+    default = 2
+    type = float
+    help = Interval to check pings
+    doc = Interval with which to check pings, in seconds.
+
+    [pingtimeout]
+    default = 10
+    type = float
+    help = Ping time out
+    doc = Ping time out: client disconnected after this period, in seconds.
+
+    """
 
     def __init__(self, pars=None, **kwargs):
         """
@@ -218,14 +248,14 @@ class Server(object):
         #################################
         # Initialize all parameters
         #################################
-        p = u.Param(self.DEFAULT)
+
+        p = self.DEFAULT
         p.update(pars)
         p.update(kwargs)
         self.p = p
 
-
         # sanity check for port range:
-        #if str(p.port_range)==p.port_range:
+        # if str(p.port_range)==p.port_range:
         #    from ptypy.utils import str2range
         #    p.port_range = str2range(p.port_range)
 
@@ -260,7 +290,7 @@ class Server(object):
         self._activated = False
 
         # Bind command names to methods
-        self.cmds = {'CONNECT':self._cmd_connect,         # Initial connection from client
+        self.cmds = {'CONNECT': self._cmd_connect,        # Initial connection from client
                      'DISCONNECT': self._cmd_disconnect,  # Disconnect from client
                      'DO': self._cmd_queue_do,            # Execute a command (synchronous)
                      'GET': self._cmd_queue_get,          # Send an object to the client (synchronous)
@@ -312,7 +342,7 @@ class Server(object):
         for ID in self.names.keys():
             self.queue.put({'ID': ID, 'cmd': 'WARN', 'ticket': 'WARN', 'str': warning_message})
         self._need_process = True
-        return {'status':'ok'}
+        return {'status': 'ok'}
 
     def send_error(self, error_message):
         """
@@ -334,8 +364,8 @@ class Server(object):
         self.context = zmq.Context()
         self.in_socket = self.context.socket(zmq.REP)
         success = False
-        for pp in range(0,200,20):
-            port = self.port+pp
+        for pp in range(0, 200, 20):
+            port = self.port + pp
             fulladdress = self.address + ':' + str(port)
             try:
                 self.in_socket.bind(fulladdress)
@@ -472,7 +502,7 @@ class Server(object):
         # Place this back in the pool
         self.ID_pool.append(IDtuple)
 
-        return{'status': 'ok'}
+        return {'status': 'ok'}
 
     def _cmd_shutdown(self, ID, args):
         """
@@ -604,7 +634,7 @@ class Server(object):
                     out = None
             elif q['cmd'] == 'DO':
                 try:
-                    exec(q['str'], {}, self.objects)
+                    exec (q['str'], {}, self.objects)
                     out = None
                 except:
                     status = sys.exc_info()[0]
@@ -659,13 +689,47 @@ class Server(object):
             self._thread.join(3)
 
 
+@defaults_tree.parse_doc('io.interaction.client')
 class Client(object):
     """
     Basic but complete client to interact with the server.
-    """
 
-    #: Default parameters, see also :py:data:`.io.interaction`
-    DEFAULT = Client_DEFAULT
+
+    Defaults:
+
+    [address]
+    default = 'tcp://127.0.0.1'
+    help = The address the server is listening to.
+    doc = Wenn running ptypy on a remote server, it is the servers network address.
+    type = str
+    userlevel = 2
+
+    [port]
+    default = 5560
+    help = The port the server is listening to.
+    doc = Make sure to pick an unused port with a few unused ports close to it.
+    type = int
+    userlevel = 2
+
+    [poll_timeout]
+    default = 100.0
+    type = float
+    help = Network polling interval
+    doc = Network polling interval, in milliseconds.
+
+    [pinginterval]
+    default = 1
+    type = float
+    help = Interval to check pings
+    doc = Interval with which to check pings, in seconds.
+
+    [connection_timeout]
+    default = 3600000.
+    type = float
+    help = Timeout for dead server
+    doc = Timeout for dead server, in milliseconds.
+
+    """
 
     def __init__(self, pars=None, **kwargs):
         """
@@ -690,7 +754,7 @@ class Client(object):
 
         """
 
-        p = u.Param(self.DEFAULT)
+        p = self.DEFAULT.copy()
         p.update(pars)
         p.update(kwargs)
         self.p = p
@@ -766,7 +830,7 @@ class Client(object):
         self.req_socket.connect(fulladdress)
 
         # Establish connection with the interactor by sending a "CONNECT" command
-        self._send(self.req_socket, {'ID': None, 'cmd': 'CONNECT', 'args': {'name':self.name}})
+        self._send(self.req_socket, {'ID': None, 'cmd': 'CONNECT', 'args': {'name': self.name}})
         reply = self._recv(self.req_socket)
         if reply['status'] != 'ok':
             raise RuntimeError('Connection failed! (answer: %s)' % reply['status'])
@@ -1040,6 +1104,3 @@ class Client(object):
         self.getnow_flag.wait()
 
         return self.last_reply['out']
-
-
-

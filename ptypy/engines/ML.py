@@ -2,7 +2,8 @@
 """
 Maximum Likelihood reconstruction engine.
 
-* TODO: Implement other regularizers
+TODO:
+ * Implement other regularizers
 
 This file is part of the PTYPY package.
 
@@ -16,33 +17,99 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from utils import Cnorm2, Cdot
 from . import BaseEngine
+from ..utils.descriptor import defaults_tree
+from ..core.manager import Full, Vanilla
 
 __all__ = ['ML']
 
-DEFAULT = u.Param(
-    ML_type='gaussian',
-    floating_intensities=False,
-    intensity_renormalization=1.,
-    reg_del2=False,
-    reg_del2_amplitude=.01,
-    smooth_gradient=0,
-    scale_precond=False,
-    scale_probe_object=1.
-)
-
-
+@defaults_tree.parse_doc('engine.ML')
 class ML(BaseEngine):
+    """
+    Maximum likelihood reconstruction engine.
 
-    DEFAULT = DEFAULT
+
+    Defaults:
+
+    [name]
+    default = ML
+    type = str
+    help =
+    doc =
+
+    [ML_type]
+    default = 'gaussian'
+    type = str
+    help = Likelihood model
+    choices = ['gaussian','poisson','euclid']
+    doc = One of ‘gaussian’, poisson’ or ‘euclid’. Only 'gaussian' is implemented.
+
+    [floating_intensities]
+    default = False
+    type = bool
+    help = Adaptive diffraction pattern rescaling
+    doc = If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).
+
+    [intensity_renormalization]
+    default = 1.
+    type = float
+    lowlim = 0.0
+    help = Rescales the intensities so they can be interpreted as Poisson counts.
+
+    [reg_del2]
+    default = False
+    type = bool
+    help = Whether to use a Gaussian prior (smoothing) regularizer
+
+    [reg_del2_amplitude]
+    default = .01
+    type = float
+    lowlim = 0.0
+    help = Amplitude of the Gaussian prior if used
+
+    [smooth_gradient]
+    default = 0.0
+    type = float
+    help = Smoothing preconditioner
+    doc = Sigma for gaussian filter (turned off if 0.)
+
+    [smooth_gradient_decay]
+    default = 0.
+    type = float
+    help = Decay rate for smoothing preconditioner
+    doc = Sigma for gaussian filter will reduce exponentially at this rate
+
+    [scale_precond]
+    default = False
+    type = bool
+    help = Whether to use the object/probe scaling preconditioner
+    doc = This parameter can give faster convergence for weakly scattering samples.
+
+    [scale_probe_object]
+    default = 1.
+    type = float
+    lowlim = 0.0
+    help = Relative scale of probe to object
+
+    [probe_update_start]
+    default = 2
+    type = int
+    lowlim = 0
+    help = Number of iterations before probe update starts
+
+    """
+
+    SUPPORTED_MODELS = [Full, Vanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Maximum likelihood reconstruction engine.
         """
-        if pars is None:
-            pars = DEFAULT.copy()
-
         super(ML, self).__init__(ptycho_parent, pars)
+
+        p = self.DEFAULT.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
 
         # Instance attributes
 
@@ -129,17 +196,19 @@ class ML(BaseEngine):
                 new_pr_grad.fill(0.)
 
             # Smoothing preconditioner
-            # !!! Lets make this consistent with
-            # the smoothing already done in DM
-            # if self.smooth_gradient:
-            #     for name, s in new_ob_grad.storages.iteritems():
-            #         s.data[:] = self.smooth_gradient(s.data)
+            if self.smooth_gradient:
+                self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
+                for name, s in new_ob_grad.storages.iteritems():
+                    s.data[:] = self.smooth_gradient(s.data)
 
             # probe/object rescaling
             if self.p.scale_precond:
-                scale_p_o = (self.p.scale_probe_object * Cnorm2(new_ob_grad)
-                             / Cnorm2(new_pr_grad))
-                             #/ (Cnorm2(new_pr_grad)) * len(self.ob.views))
+                cn2_new_pr_grad = Cnorm2(new_pr_grad)
+                if cn2_new_pr_grad > 1e-5:
+                    scale_p_o = (self.p.scale_probe_object * Cnorm2(new_ob_grad)
+                                 / Cnorm2(new_pr_grad))
+                else:
+                    scale_p_o = self.p.scale_probe_object
                 if self.scale_p_o is None:
                     self.scale_p_o = scale_p_o
                 else:
@@ -177,7 +246,13 @@ class ML(BaseEngine):
             """
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
-            self.ob_h -= self.ob_grad
+
+            # Smoothing preconditioner
+            if self.smooth_gradient:
+                for name, s in self.ob_h.storages.iteritems():
+                    s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
+            else:
+                self.ob_h -= self.ob_grad
             self.pr_h *= bt / self.tmin
             self.pr_grad *= self.scale_p_o
             self.pr_h -= self.pr_grad
@@ -558,29 +633,22 @@ def prepare_smoothing_preconditioner(amplitude):
             self.sigma = sigma
 
         def __call__(self, x):
-            y = np.empty_like(x)
-            sh = x.shape
-            xf = x.reshape((-1,) + sh[-2:])
-            yf = y.reshape((-1,) + sh[-2:])
-            for i in range(len(xf)):
-                yf[i] = gaussian_filter(xf[i], self.sigma)
-            return y
+            return u.c_gf(x, [0, self.sigma, self.sigma])
 
-    from scipy.signal import correlate2d
-
-    class HannFilt:
-        def __call__(self, x):
-            y = np.empty_like(x)
-            sh = x.shape
-            xf = x.reshape((-1,) + sh[-2:])
-            yf = y.reshape((-1,) + sh[-2:])
-            for i in range(len(xf)):
-                yf[i] = correlate2d(xf[i],
-                                    np.array([[.0625, .125, .0625],
-                                              [.125, .25, .125],
-                                              [.0625, .125, .0625]]),
-                                    mode='same')
-            return y
+    # from scipy.signal import correlate2d
+    # class HannFilt:
+    #    def __call__(self, x):
+    #        y = np.empty_like(x)
+    #        sh = x.shape
+    #        xf = x.reshape((-1,) + sh[-2:])
+    #        yf = y.reshape((-1,) + sh[-2:])
+    #        for i in range(len(xf)):
+    #            yf[i] = correlate2d(xf[i],
+    #                                np.array([[.0625, .125, .0625],
+    #                                          [.125, .25, .125],
+    #                                          [.0625, .125, .0625]]),
+    #                                mode='same')
+    #        return y
 
     if amplitude > 0.:
         logger.debug(
@@ -588,6 +656,7 @@ def prepare_smoothing_preconditioner(amplitude):
         return GaussFilt(amplitude)
 
     elif amplitude < 0.:
-        logger.debug(
-            'Using a smooth gradient filter (Hann window - only for ML)')
-        return HannFilt()
+        raise RuntimeError('Hann filter not implemented (negative smoothing amplitude not supported)')
+        # logger.debug(
+        #    'Using a smooth gradient filter (Hann window - only for ML)')
+        # return HannFilt()

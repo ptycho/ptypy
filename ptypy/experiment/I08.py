@@ -21,14 +21,20 @@ if True: #__name__ == "__main__":
     from ptypy.utils.verbose import log
     from ptypy.core.paths import Paths
     # FIXME: Accessing the real "io" from the parent Ptycho class would be much better
-    from ptypy.core import DEFAULT_io as IO_par
+    #from ptypy.core import DEFAULT_io as IO_par
+    from ptypy.core import Ptycho
+    IO_par = Ptycho.DEFAULT['io']
+    from ptypy.utils.descriptor import defaults_tree
 else:
     from .. import utils as u
     from .. import io
     from ..core.data import PtyScan
     from ..utils.verbose import log
     from ..core.paths import Paths
-    from ..core import DEFAULT_io as IO_par
+    #from ..core import DEFAULT_io as IO_par
+    from ..core import Ptycho
+    IO_par = Ptycho.DEFAULT['io']
+    from ..utils.descriptor import defaults_tree
 
 
 # Parameters for the nexus file saved by GDA
@@ -41,37 +47,88 @@ STXM_PATHS = u.Param()
 STXM_PATHS.motors = 'entry1/Counter1/'
 STXM_PATHS.energy = 'entry1/Counter1/'
 
-# I08 recipe default parameters
-RECIPE = u.Param()
-RECIPE.base_path = None
-RECIPE.scan_number = None
-RECIPE.scan_number_stxm = None
-RECIPE.dark_number = None
-RECIPE.dark_number_stxm = None
-RECIPE.dark_value = 200.   # Used if dark_number is None
-RECIPE.detector_flat_file = None
-RECIPE.nxs_file_pattern = '%(base_path)s/nexus/i08-%(scan_number)s.nxs'
-RECIPE.dark_nxs_file_pattern = '%(base_path)s/nexus/i08-%(dark_number)s.nxs'
-RECIPE.date = None
-RECIPE.stxm_file_pattern = '%(base_path)s/%(date)s/discard/Sample_Image_%(date)s_%(scan_number_stxm)s.hdf5'
 
-
-RECIPE.motors = ['sample_y','sample_x'] # same orientation as I13 for now
-RECIPE.energy = None
-RECIPE.lam=None
-RECIPE.z = None
-RECIPE.motors_multiplier = 1e-6
-
-# Default generic parameter set from
-I08DEFAULT = ptypy.core.data.PtyScan.DEFAULT.copy()
-
-I08DEFAULT.recipe = RECIPE
-
-I08DEFAULT.auto_center = False
-
-
+@defaults_tree.parse_doc('scandata.I08Scan')
 class I08Scan(ptypy.core.data.PtyScan):
-    DEFAULT = I08DEFAULT
+    """
+
+    I08 (Diamond Light Source) data preparation class.
+
+    Defaults:
+
+    [name]
+    default = 'I08Scan'
+    type = str
+    help =
+
+    [base_path]
+    default = None
+    type = str
+    help = 
+
+    [scan_number]
+    default = None
+    type = int
+    help = 
+
+    [scan_number_stxm]
+    default = None
+    type = int
+    help = 
+
+    [dark_number]
+    default = None
+    type = int
+    help = 
+
+    [dark_number_stxm]
+    default = None
+    type = int
+    help = 
+
+    [dark_value]
+    default = 200.0
+    type = float
+    help = Used if dark_number is None
+
+    [detector_flat_file]
+    default = None
+    type = str
+    help = 
+
+    [nxs_file_pattern]
+    default = '%(base_path)s/nexus/i08-%(scan_number)s.nxs'
+    type = str
+    help = 
+
+    [dark_nxs_file_pattern]
+    default = '%(base_path)s/nexus/i08-%(dark_number)s.nxs'
+    type = str
+    help = 
+
+    [data]
+    default = None
+    type = str
+    help = 
+
+    [stxm_file_pattern]
+    default = '%(base_path)s/%(date)s/discard/Sample_Image_%(date)s_%(scan_number_stxm)s.hdf5'
+    type = str
+    help = 
+
+    [motors]
+    default = ['sample_y','sample_x']
+    type = list
+    help = same orientation as I13 for now
+
+    [motors_multiplier]
+    default = 1e-6
+    type = float
+    help = Conversion factor to meters
+
+    [auto_center]
+    default = False
+    """
 
     def __init__(self, pars=None, **kwargs):
         """
@@ -79,14 +136,12 @@ class I08Scan(ptypy.core.data.PtyScan):
         """
         # Initialize parent class. All updated parameters are now in
         # self.info
-        RDEFAULT = RECIPE.copy()
-        RDEFAULT.update(pars.recipe)
-        pars.recipe.update(RDEFAULT)
-
-        super(I08Scan, self).__init__(pars, **kwargs)
+        p = self.DEFAULT.copy(99)
+        p.update(pars)
+        super(I08Scan, self).__init__(p, **kwargs)
 
         # Try to extract base_path to access data files
-        if self.info.recipe.base_path is None:
+        if self.info.base_path is None:
             d = os.getcwd()
             base_path = None
             while True:
@@ -99,28 +154,28 @@ class I08Scan(ptypy.core.data.PtyScan):
             if base_path is None:
                 raise RuntimeError('Could not guess base_path.')
             else:
-                self.info.recipe.base_path = base_path
+                self.info.base_path = base_path
 
         # Sanity check: for now we need a date to identify the SXTM file
-        if self.info.recipe.date is None:
-            raise RuntimeError('recipe.date has to be specified to find the STXM file name.')
+        if self.info.date is None:
+            raise RuntimeError('date has to be specified to find the STXM file name.')
         else:
             try:
-                time.strptime(self.info.recipe.date, '%Y-%m-%d')
+                time.strptime(self.info.date, '%Y-%m-%d')
             except ValueError:
                 print('The date should be in format "YYYY-MM-DD"')
                 raise
 
         # Construct the file names
-        self.nxs_filename = self.info.recipe.nxs_file_pattern % self.info.recipe
-        self.stxm_filename = self.info.recipe.stxm_file_pattern % self.info.recipe
+        self.nxs_filename = self.info.nxs_file_pattern % self.info
+        self.stxm_filename = self.info.stxm_file_pattern % self.info
         log(3, 'Will read from nxs file %s' % self.nxs_filename)
         log(3, 'Will read from STXM file %s' % self.stxm_filename)
 
         # Create the ptyd file name if not specified
         if self.info.dfile is None:
             home = Paths(IO_par).home
-            self.info.dfile = '%s/prepdata/data_%d.ptyd' % (home, self.info.recipe.scan_number)
+            self.info.dfile = '%s/prepdata/data_%d.ptyd' % (home, self.info.scan_number)
             log(3, 'Save file is %s' % self.info.dfile)
 
     def load_common(self):
@@ -132,8 +187,8 @@ class I08Scan(ptypy.core.data.PtyScan):
         """
         common = u.Param()
         key = NXS_PATHS.frame_pattern
-        if self.info.recipe.dark_number is not None:
-            self.dark_nxs_filename = self.info.recipe.dark_nxs_file_pattern % self.info.recipe
+        if self.info.dark_number is not None:
+            self.dark_nxs_filename = self.info.dark_nxs_file_pattern % self.info
             #dark = io.h5read(self.dark_nxs_filename,key)[key][0,0,:,:]# this was a problem with the dark collection. a 2x2 grid was collected.
             dark = io.h5read(self.dark_nxs_filename, key)[key]
             if dark.ndim == 4:
@@ -141,10 +196,10 @@ class I08Scan(ptypy.core.data.PtyScan):
             if dark.ndim == 3:
                 dark = np.median(dark, axis=0)
         else:
-            dark = self.info.recipe.dark_value
+            dark = self.info.dark_value
 
-        if self.info.recipe.detector_flat_file is not None:
-            flat = io.h5read(self.info.recipe.detector_flat_file,FLAT_PATHS.key)[FLAT_PATHS.key]
+        if self.info.detector_flat_file is not None:
+            flat = io.h5read(self.info.detector_flat_file,FLAT_PATHS.key)[FLAT_PATHS.key]
 
         else:
             flat = 1.
@@ -160,10 +215,10 @@ class I08Scan(ptypy.core.data.PtyScan):
      	"""
         Load the positions and return as an (N,2) array
         """
-        base_path = self.info.recipe.base_path
-        mmult = u.expect2(self.info.recipe.motors_multiplier)
-        keyx = STXM_PATHS.motors+str(self.info.recipe.motors[0])
-        keyy=STXM_PATHS.motors+str(self.info.recipe.motors[1])
+        base_path = self.info.base_path
+        mmult = u.expect2(self.info.motors_multiplier)
+        keyx = STXM_PATHS.motors+str(self.info.motors[0])
+        keyy=STXM_PATHS.motors+str(self.info.motors[1])
         print "file name is:%s" % self.stxm_filename
         x1 = io.h5read(self.stxm_filename,keyx)
         y1 = io.h5read(self.stxm_filename,keyy)
