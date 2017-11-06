@@ -1,51 +1,60 @@
 """
 Geometry management and propagation for Bragg geometry.
-
-This class follows the naming convention of:
-Berenguer et al., Phys. Rev. B 88 (2013) 144101.
-
-Indexing into all q-space arrays and storages follows (q3, q1, q2),
-which corresponds to (r3, r1, r2) in the so-called natural real space
-coordinate system. These coordinates are transformed to (x, z, y) as
-described below.
-
 """
 
 from .. import utils as u
 from ..utils.verbose import logger
 from geometry import Geo as _Geo
+from ..utils.descriptor import EvalDescriptor
 from classes import Container, Storage, View
 import numpy as np
 from scipy.ndimage.interpolation import map_coordinates
 
 __all__ = ['DEFAULT', 'Geo_Bragg']
 
-DEFAULT = u.Param(
-    # Incident photon energy (in keV)
-    energy=15.25,
-    # Wavelength (in meters)
-    lam=None,
-    # Distance from object to screen
-    distance=2.3,
-    # Rocking curve step (in degrees) and pixel sizes (in meters).
-    psize=(.065, 172e-6, 172e-6),
-    # Bragg angle in degrees
-    theta_bragg=6.89,
-    # 3D sample pixel size (in meters) in the conjugate (natural) coordinate
-    # system
-    resolution=None,
-    # Number of rocking curve positions and detector pixels
-    shape=(31, 128, 128),
-)
 
-
+local_tree = EvalDescriptor('')
+@local_tree.parse_doc()
 class Geo_Bragg(_Geo):
+    """
+    Class which presents a Geo analog valid for the 3d Bragg case.
 
-    DEFAULT = DEFAULT
+    This class follows the naming convention of:
+    Berenguer et al., Phys. Rev. B 88 (2013) 144101.
 
-    def __init__(self, owner=None, ID=None, pars=None, **kwargs):
-        super(Geo_Bragg, self).__init__(
-            owner, ID, pars, default_override=DEFAULT, **kwargs)
+    Indexing into all q-space arrays and storages follows (q3, q1, q2),
+    which corresponds to (r3, r1, r2) in the so-called natural real
+    space coordinate system. These coordinates are transformed to 
+    (x, z, y) as described below.
+
+    Defaults:
+
+    [psize]
+    type = tuple
+    default = (.065, 172e-6, 172e-6)
+    help = Rocking curve step (in degrees) and pixel sizes (in meters)
+    doc = First element is the rocking curve step.
+
+    [propagation]
+    doc = Only "farfield" is valid for Bragg
+
+    [shape]
+    type = tuple
+    default = (31, 128, 128)
+    help = Number of rocking curve positions and detector pixels
+    doc = First element is the number of rocking curve positions.
+
+    [theta_bragg]
+    type = float
+    default = 6.89
+    help = Diffraction angle (theta, not two theta) in degrees
+
+    [resolution]
+    type = tuple
+    default = None
+    help = 3D sample pixel size (in meters)
+    doc = Refers to the conjugate (natural) coordinate system as (r3, r1, r2).
+    """
 
     def _initialize(self, p):
         """
@@ -493,8 +502,6 @@ class BasicBragg3dPropagator(object):
     Just a wrapper for the n-dimensional FFT, no other Bragg-specific 
     magic applied here (at the moment).
     """
-
-    DEFAULT = DEFAULT
 
     def __init__(self, geo=None, ffttype='numpy'):
         self.geo = geo

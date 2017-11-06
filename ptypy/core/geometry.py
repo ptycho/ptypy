@@ -23,8 +23,6 @@ else:
     from classes import Base, GEO_PREFIX
     from ..utils.descriptor import EvalDescriptor
 
-import numpy as np
-from scipy import fftpack
 try:
     import pyfftw
     import pyfftw.interfaces.numpy_fft as fftw_np
@@ -147,8 +145,8 @@ class Geo(Base):
 
     _keV2m = 1.23984193e-09
     _PREFIX = GEO_PREFIX
-    
-    def __init__(self, owner=None, ID=None, pars=None, default_override=None, **kwargs):
+
+    def __init__(self, owner=None, ID=None, pars=None, **kwargs):
         """
         Parameters
         ----------
@@ -167,10 +165,7 @@ class Geo(Base):
         super(Geo, self).__init__(owner, ID)
 
         # Starting parameters
-        if default_override is not None:
-            p = u.Param(default_override)
-        else:
-            p = self.DEFAULT.copy(99)
+        p = self.DEFAULT.copy(99)
         if pars is not None:
             p.update(pars)
             for k, v in p.items():
@@ -179,7 +174,7 @@ class Geo(Base):
         for k, v in kwargs.iteritems():
             if k in p:
                 p[k] = v
-        
+
         self.p = p
         self._initialize(p)
 
