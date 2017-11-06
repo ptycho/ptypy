@@ -13,7 +13,7 @@
 # We begin with opening an empty python file of arbitrary name
 # in an editor of your choice, e.g.::
 #
-#   $ gedit minimal_script.py
+#    $ gedit minimal_script.py
 
 # Next we create an empty parameter tree. In |ptypy|, parameters
 # are managed by the :any:`Param` class which is a convenience class subclassing Python's

@@ -2,8 +2,7 @@
 """
 Maximum Likelihood reconstruction engine.
 
-TODO:
- * Implement other regularizers
+* TODO: Implement other regularizers
 
 This file is part of the PTYPY package.
 
@@ -15,7 +14,7 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
-from engine_utils import Cnorm2, Cdot
+from utils import Cnorm2, Cdot
 from . import BaseEngine
 
 __all__ = ['ML']
@@ -63,6 +62,8 @@ class ML(BaseEngine):
         self.tmin = None
         self.ML_model = None
         self.smooth_gradient = None
+        self.scale_p_o = None
+        self.scale_p_o_memory = .9
 
     def engine_initialize(self):
         """
@@ -138,9 +139,15 @@ class ML(BaseEngine):
             if self.p.scale_precond:
                 scale_p_o = (self.p.scale_probe_object * Cnorm2(new_ob_grad)
                              / Cnorm2(new_pr_grad))
+                             #/ (Cnorm2(new_pr_grad)) * len(self.ob.views))
+                if self.scale_p_o is None:
+                    self.scale_p_o = scale_p_o
+                else:
+                    self.scale_p_o = self.scale_p_o ** self.scale_p_o_memory
+                    self.scale_p_o *= scale_p_o ** (1-self.scale_p_o_memory)
                 logger.debug('Scale P/O: %6.3g' % scale_p_o)
             else:
-                scale_p_o = self.p.scale_probe_object
+                self.scale_p_o = self.p.scale_probe_object
 
             ############################
             # Compute next conjugate
@@ -148,13 +155,13 @@ class ML(BaseEngine):
             if self.curiter == 0:
                 bt = 0.
             else:
-                bt_num = (scale_p_o
+                bt_num = (self.scale_p_o
                           * (Cnorm2(new_pr_grad)
                              - np.real(Cdot(new_pr_grad, self.pr_grad)))
                           + (Cnorm2(new_ob_grad)
                              - np.real(Cdot(new_ob_grad, self.ob_grad))))
 
-                bt_denom = scale_p_o*Cnorm2(self.pr_grad) + Cnorm2(self.ob_grad)
+                bt_denom = self.scale_p_o*Cnorm2(self.pr_grad) + Cnorm2(self.ob_grad)
 
                 bt = max(0, bt_num/bt_denom)
 
@@ -172,7 +179,7 @@ class ML(BaseEngine):
             self.ob_h *= bt / self.tmin
             self.ob_h -= self.ob_grad
             self.pr_h *= bt / self.tmin
-            self.pr_grad *= scale_p_o
+            self.pr_grad *= self.scale_p_o
             self.pr_h -= self.pr_grad
             """
             for name,s in self.ob_h.storages.iteritems():
@@ -399,6 +406,7 @@ class ML_Gaussian(object):
             for name, s in self.ob.storages.iteritems():
                 self.ob_grad.storages[name].data += self.regularizer.grad(
                     s.data)
+                LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
 
@@ -481,6 +489,8 @@ class Regul_del2(object):
         self.axes = axes
         self.amplitude = amplitude
         self.delxy = None
+        self.g = None
+        self.LL = None
 
     def grad(self, x):
         """
@@ -494,6 +504,11 @@ class Regul_del2(object):
 
         self.delxy = [del_xf, del_yf, del_xb, del_yb]
         self.g = 2. * self.amplitude*(del_xb + del_yb - del_xf - del_yf)
+
+        self.LL = self.amplitude * (u.norm2(del_xf)
+                               + u.norm2(del_yf)
+                               + u.norm2(del_xb)
+                               + u.norm2(del_yb))
 
         return self.g
 

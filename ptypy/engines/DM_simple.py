@@ -8,7 +8,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .. import utils as u
-from engine_utils import basic_fourier_update
+from utils import basic_fourier_update
 from . import BaseEngine
 from ..utils.verbose import logger
 import time

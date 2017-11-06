@@ -245,6 +245,11 @@ class PtyScan(object):
                     backup = self.dfile + '.old'
                     logger.warning('File %s already exist. Renamed to %s.'
                                    % (self.dfile, backup))
+                    try:
+                        # on windows, os.rename doesn't work if target exists
+                        os.remove(backup)
+                    except:
+                        pass
                     os.rename(self.dfile, backup)
                 # Prepare an empty file with the appropriate structure
                 io.h5write(self.dfile, PTYD.copy())
@@ -1199,7 +1204,12 @@ class PtydScan(PtyScan):
         with h5py.File(source, 'r') as f:
             check = f.get('chunks/0')
             # Get number of frames supposedly in the file
-            source_frames = f.get('info/num_frames_actual')[...].item()
+            # FIXME: try/except clause only for backward compatibilty 
+            # for .ptyd files created priot to commit 2e626ff
+            try:
+                source_frames = f.get('info/num_frames_actual')[...].item()
+            except TypeError:
+                source_frames = len(f.get('info/positions_scan')[...])
             f.close()
 
         if check is None:

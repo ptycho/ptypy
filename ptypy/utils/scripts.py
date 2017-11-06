@@ -522,7 +522,7 @@ def mass_center(A, axes=None):
     else:
         axes = tuple(np.array(axes) + 1)
 
-    return np.sum(A * np.indices(A.shape), axis=axes) / np.sum(A)
+    return np.sum(A * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A, dtype=np.float)
 
 def radial_distribution(A, radii=None):
     """

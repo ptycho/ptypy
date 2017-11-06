@@ -509,7 +509,7 @@ class Ptycho(Base):
                 engine.prepare()
 
                 auto_save = self.p.io.autosave
-                if auto_save is not None and auto_save.interval > 1:
+                if auto_save is not None and auto_save.interval > 0:
                     if engine.curiter % auto_save.interval == 0:
                         auto = self.paths.auto_file(self.runtime)
                         logger.info(headerline('Autosaving'))

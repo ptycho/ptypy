@@ -172,6 +172,10 @@ class BaseEngine(object):
         if num is not None:
             niter_contiguous = num
 
+        # Support numiter == 0 for debugging purposes
+        if self.numiter == 0:
+            self.finished = True
+
         if self.finished:
             return
 
