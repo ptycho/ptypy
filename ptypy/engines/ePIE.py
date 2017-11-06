@@ -30,6 +30,7 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from . import BaseEngine
 from ..utils.descriptor import defaults_tree
+from ..core.manager import Full, Vanilla
 
 __all__ = ['EPIE']
 
@@ -113,6 +114,8 @@ class EPIE(BaseEngine):
     help = Pixel radius around optical axes that the probe mass center must reside in
 
     """
+
+    SUPPORTED_MODELS = [Full, Vanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """

@@ -18,6 +18,7 @@ from ..utils import parallel
 from utils import Cnorm2, Cdot
 from . import BaseEngine
 from ..utils.descriptor import defaults_tree
+from ..core.manager import Full, Vanilla
 
 __all__ = ['ML']
 
@@ -96,6 +97,8 @@ class ML(BaseEngine):
     help = Number of iterations before probe update starts
 
     """
+
+    SUPPORTED_MODELS = [Full, Vanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """

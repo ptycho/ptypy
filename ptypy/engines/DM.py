@@ -15,6 +15,7 @@ from ..utils import parallel
 from utils import basic_fourier_update
 from . import BaseEngine
 from ..utils.descriptor import defaults_tree
+from ..core.manager import Full, Vanilla
 
 __all__ = ['DM']
 
@@ -111,6 +112,8 @@ class DM(BaseEngine):
     help = Pixel radius around optical axes that the probe mass center must reside in
 
     """
+
+    SUPPORTED_MODELS = [Full, Vanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """

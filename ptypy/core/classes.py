@@ -1907,13 +1907,17 @@ class POD(Base):
 
     _PREFIX = POD_PREFIX
 
-    def __init__(self, ptycho=None, ID=None, views=None, geometry=None,
-                 **kwargs):
+    def __init__(self, ptycho=None, model=None, ID=None, views=None,
+                 geometry=None, **kwargs):
         """
         Parameters
         ----------
         ptycho : Ptycho
             The instance of Ptycho associated with this pod.
+
+        model : ScanModel
+            The instance of ScanModel (or it subclasses) which describes
+            this pod.
 
         ID : str or int
             The pod ID, If None it is managed by the ptycho.
@@ -1926,10 +1930,7 @@ class POD(Base):
 
         """
         super(POD, self).__init__(ptycho, ID, False)
-        # if len(kwargs) > 0:
-        #     self._initialize(**kwargs)
-
-    # def _initialize(self, views=None, geometry=None): #,meta=None):
+        self.model = model
 
         # other defaults:
         self.is_empty = False

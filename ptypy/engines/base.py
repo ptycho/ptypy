@@ -64,6 +64,9 @@ class BaseEngine(object):
 
     """
 
+    # Define with which models this engine can work.
+    COMPATIBLE_MODELS = []
+
     def __init__(self, ptycho, pars=None):
         """
         Base reconstruction engine.
@@ -148,6 +151,11 @@ class BaseEngine(object):
                 ll, xx, yy = u.grids(sh, FFTlike=False)
                 support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
                 self.probe_support[name] = support
+
+        # Make sure all the pods are supported
+        for label_, pod_ in self.pods.iteritems():
+            if not pod_.model.__class__ in self.SUPPORTED_MODELS:
+                raise Exception('Model %s not supported by engine' % pod_.model.__class__)
 
         # Call engine specific preparation
         self.engine_prepare()

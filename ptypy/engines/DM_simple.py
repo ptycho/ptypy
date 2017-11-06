@@ -15,6 +15,7 @@ import time
 import numpy as np
 from ..utils import parallel
 from ..utils.descriptor import defaults_tree
+from ..core.manager import Full, Vanilla
 
 __all__ = ['DM_simple']
 
@@ -56,6 +57,8 @@ class DM_simple(BaseEngine):
     help = Maximum of iterations for the overlap constraint inner loop
 
     """
+
+    SUPPORTED_MODELS = [Full, Vanilla]
 
     def __init__(self, ptycho, pars=None):
         """

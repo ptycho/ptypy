@@ -280,6 +280,10 @@ class ScanModel(object):
         # Create new views on object, probe, and exit wave, and connect
         # these through new pods.
         new_pods, new_probe_ids, new_object_ids = self._create_pods()
+        for pod_ in new_pods:
+            if pod_.model is not None:
+                continue
+            pod_.model = self
         logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
             parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
 

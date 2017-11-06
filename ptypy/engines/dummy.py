@@ -16,6 +16,7 @@ from .. import utils as u
 from ..utils import parallel
 from . import BaseEngine
 from ..utils.descriptor import defaults_tree
+from ..core.manager import Full, Vanilla
 
 __all__ = ['Dummy']
 
@@ -39,6 +40,8 @@ class Dummy(BaseEngine):
     help = Sleep time for a single iteration (in seconds)
 
     """
+
+    SUPPORTED_MODELS = [Full, Vanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """
