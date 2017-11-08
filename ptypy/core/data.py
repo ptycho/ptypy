@@ -56,6 +56,7 @@ CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
          EOS: 'End of scan reached'}
 
 
+
 __all__ = ['PtyScan', 'PTYD', 'PtydScan',
            'MoonFlowerScan']
 
@@ -198,7 +199,7 @@ class PtyScan(object):
 
     [center]
     type = tuple, str
-    default = 'fftshift'
+    default = None
     help = Center (pixel) of the optical axes in raw data
     doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
     userlevel = 1
@@ -231,6 +232,9 @@ class PtyScan(object):
     WAIT = WAIT
     EOS = EOS
     CODES = CODES
+
+    METAKEYS = ['version', 'num_frames', 'label', 'shape', 'psize', 'energy', 'center', 'distance']
+    """ Keys to store in meta param """
 
     def __init__(self, pars=None, **kwargs):
         # filename='./foo.ptyd', shape=None, save=True):
@@ -295,6 +299,9 @@ class PtyScan(object):
         self.dfile = None
         self.save = self.info.save
 
+        # Construct meta
+        self.meta = u.Param({k: self.info[k] for k in self.METAKEYS})
+
         self.orientation = self.info.orientation
         self.rebin = self.info.rebin
 
@@ -315,7 +322,8 @@ class PtyScan(object):
         * Sets :py:attr:`num_frames` if needed
         * Calls :py:meth:`post_initialize`
         """
-        logger.info(headerline('Enter PtyScan.initialize()', 'l'))
+        logger.info(headerline('Enter %s.initialize()'
+                               % self.__class__.__name__, 'l'))
 
         # Prepare writing to file
         if self.info.save is not None:
@@ -362,6 +370,9 @@ class PtyScan(object):
         logger.info('Common weight : '.rjust(29) + str(self.has_weight2d))
         if self.has_weight2d:
             logger.info('shape = '.rjust(29) + str(self.weight2d.shape))
+
+            # FIXME: Saving weight to info. This is not ideal, info is optional
+            self.info.weight2d = self.has_weight2d
 
         logger.info('All experimental positions : ' + str(self.has_positions))
         if self.has_positions:
@@ -412,7 +423,7 @@ class PtyScan(object):
 
         # A note about how much this scan class knows about the number
         # of frames expected. PtydScan uses this information.
-        self.info.num_frames_actual = self.num_frames
+        self.meta.num_frames = self.num_frames
         parallel.barrier()
         """
         #logger.info('#######  MPI Report: ########\n')
@@ -671,7 +682,7 @@ class PtyScan(object):
                     altweight = self.weight2d
                 else:
                     try:
-                        altweight = self.weight2d
+                        altweight = self.info.weight2d
                     except:
                         altweight = np.ones(dsh)
                 weights = dict.fromkeys(data.keys(), altweight)
@@ -701,7 +712,7 @@ class PtyScan(object):
 
             cen = self.info.center
             if str(cen) == cen:
-                cen = geometry.translate_to_pix(sh, cen)
+                cen = geometry.translate_to_pix(dsh, cen)
 
             auto = self.info.auto_center
             # Get center in diffraction image
@@ -733,7 +744,7 @@ class PtyScan(object):
             # Make sure center is in the image frame
             assert (cen > 0).all() and (dsh - cen > 0).all(), (
                 'Optical axes (center = (%.1f, %.1f) outside diffraction image '
-                'frame (%d, %d).' % tuple(cen) + tuple(dsh))
+                'frame (%d, %d).' % (tuple(cen) + tuple(dsh)))
 
             # Determine if the arrays require further processing
             do_flip = (self.orientation is not None
@@ -806,11 +817,11 @@ class PtyScan(object):
                     weights = dict(zip(indices.node, w))
 
             # Adapt geometric info
-            self.info.center = cen / float(self.rebin)
-            self.info.shape = u.expect2(sh) / self.rebin
+            self.meta.center = cen / float(self.rebin)
+            self.meta.shape = u.expect2(sh) / self.rebin
 
             if self.info.psize is not None:
-                self.info.psize = u.expect2(self.info.psize) * self.rebin
+                self.meta.psize = u.expect2(self.info.psize) * self.rebin
 
             # Prepare chunk of data
             chunk = u.Param()
@@ -851,7 +862,7 @@ class PtyScan(object):
             # With first chunk we update info
             if self.chunknum < 1:
                 if self.info.save is not None and parallel.master:
-                    io.h5append(self.dfile, meta=dict(self.info))
+                    io.h5append(self.dfile, meta=dict(self.meta))
 
                 parallel.barrier()
 
@@ -903,9 +914,7 @@ class PtyScan(object):
         """
 
         # The "common" part
-        keys = ['label', 'experimentID', 'version', 'shape', 'psize', 'energy', 'center', 'distance']
-        common = u.Param({k: self.info[k] for k in keys})
-        out = {'common': common}
+        out = {'common': self.meta}
 
         # The "iterable" part
         iterables = []
@@ -1215,10 +1224,10 @@ class PtydScan(PtyScan):
     doc =
 
     [source]
-    default = 'scan.ptyd'
-    type = str
-    help = Input ptyd file
-    doc =
+    default = 'file'
+    type = str, None
+    help = Alternate source file path if data is meant to be reprocessed.
+    doc = `None` for input shall be deprecated in future
 
     """
 
@@ -1229,7 +1238,7 @@ class PtydScan(PtyScan):
         # Create parameter set
         p = self.DEFAULT.copy(99)
         p.update(pars)
-
+        p.update(kwargs)
         source = p.source
 
         if source is None or str(source) == 'file':
@@ -1268,25 +1277,32 @@ class PtydScan(PtyScan):
         # At least ONE chunk must exist to ensure everything works
         with h5py.File(source, 'r') as f:
             check = f.get('chunks/0')
+            f.close()
             # Get number of frames supposedly in the file
             # FIXME: try/except clause only for backward compatibilty
             # for .ptyd files created priot to commit 2e626ff
-            try:
-                source_frames = f.get('info/num_frames_actual')[...].item()
-            except TypeError:
-                source_frames = len(f.get('info/positions_scan')[...])
-            f.close()
+            #try:
+            #    source_frames = f.get('info/num_frames_actual')[...].item()
+            #except TypeError:
+            #    source_frames = len(f.get('info/positions_scan')[...])
+            #f.close()
 
         if check is None:
             raise IOError('Ptyd source %s contains no data. Load aborted'
                           % source)
 
+        """
         if source_frames is None:
             logger.warning('Ptyd source is not aware of the total'
                            'number of diffraction frames expected')
+        """
 
         # Get meta information
         meta = u.Param(io.h5read(self.source, 'meta')['meta'])
+
+        if meta.get('num_frames') is None:
+            logger.warning('Ptyd source is not aware of the total'
+                           'number of diffraction frames expected')
 
         if len(meta) == 0:
             logger.warning('There should be meta information in '
@@ -1297,12 +1313,19 @@ class PtydScan(PtyScan):
             p.update(meta)
         else:
             # Replace only None entries in p
+            # FIXME:
+            # BE: This was the former right way when the defaults
+            # were mostly None, now this no longer applies, unless
+            # defaults are overwritten to None. I guess t would be
+            # canonical now to overwrite the defaults in the
+            # docstring. But since reprocessing is rare
             for k, v in meta.items():
                 if p.get(k) is None:
                     p[k] = v
 
-        super(PtydScan, self).__init__(p, **kwargs)
+        super(PtydScan, self).__init__(p)
 
+        """
         if source_frames is not None:
             if self.num_frames is None:
                 self.num_frames = source_frames
@@ -1313,6 +1336,7 @@ class PtydScan(PtyScan):
             # but we cannot do anything about it. This should be dealt
             # with with a flag in the meta package probably.
             pass
+        """
 
         # Other instance attributes
         self._checked = {}
@@ -1471,9 +1495,7 @@ class MoonFlowerScan(PtyScan):
         super(MoonFlowerScan, self).__init__(p, **kwargs)
 
         # Derive geometry from input
-        keys = ['label', 'experimentID', 'version', 'shape', 'psize', 'energy', 'center', 'distance']
-        geo_pars = u.Param({k: self.info[k] for k in keys})
-        geo = geometry.Geo(pars=geo_pars)
+        geo = geometry.Geo(pars=self.meta)
 
         # Derive scan pattern
         pos = u.Param()

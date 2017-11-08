@@ -99,8 +99,6 @@ class ScanModel(object):
         label : str
             Unique label
         """
-        from .. import experiment
-
         # Update parameter structure
         # Load default parameter structure
         p = self.DEFAULT.copy(99)
@@ -110,7 +108,7 @@ class ScanModel(object):
         self.ptycho = ptycho
 
         # Create Associated PtyScan object
-        self.ptyscan = experiment.makePtyScan(self.p.data)
+        self.ptyscan = self.makePtyScan(self.p.data)
 
         # Initialize instance attributes
         self.mask = None
@@ -132,6 +130,34 @@ class ScanModel(object):
         self.CType = CType
         self.FType = FType
         self.frames_per_call = 100000
+
+    @classmethod
+    def makePtyScan(cls, pars, scanmodel=None):
+        """
+        Factory for PtyScan object. Return an instance of the appropriate PtyScan subclass based on the
+        input parameters.
+
+        Parameters
+        ----------
+        pars: dict or Param
+            Input parameters according to :py:data:`.scan.data`.
+        scanmodel: ScanModel object
+            FIXME: This seems to be needed for simulations but broken for now.
+        """
+
+        # Extract information on the type of object to build
+        name = pars.name
+
+        from .. import experiment
+
+        if name in u.all_subclasses(PtyScan, names=True):
+            ps_class = eval(name)
+            logger.info('Scan will be prepared with the PtyScan subclass "%s"' % name)
+            ps_instance = ps_class(pars)
+        else:
+            raise RuntimeError('Could not manage source "%s"' % str(name))
+
+        return ps_instance
 
     def new_data(self):
         """
