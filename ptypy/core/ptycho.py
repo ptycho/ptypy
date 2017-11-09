@@ -722,13 +722,6 @@ class Ptycho(Base):
 
             P._configure()
 
-            ### FIXME: removed sharing, to be reimplemented before 0.3
-            ### release, perhaps as a feature of the Full scan model.
-            # logger.info('Reconfiguring sharing rules')  # and loading data')
-            # print u.verbose.report(P.p)
-            # P.modelm.sharing_rules = model.parse_model(P.modelm.p['sharing'],
-            #                                            P.modelm.sharing)
-
             logger.info('Regenerating exit waves')
             P.exit.reformat()
             P.modelm._initialize_exit(P.pods.values())
