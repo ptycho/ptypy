@@ -199,7 +199,7 @@ class PtyScan(object):
 
     [center]
     type = tuple, str
-    default = None
+    default = 'fftshift'
     help = Center (pixel) of the optical axes in raw data
     doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
     userlevel = 1
