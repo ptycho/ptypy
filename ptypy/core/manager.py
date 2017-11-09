@@ -17,7 +17,6 @@ import numpy as np
 import illumination
 import sample
 import geometry
-import model
 import xy
 import data
 
@@ -99,8 +98,6 @@ class ScanModel(object):
         label : str
             Unique label
         """
-        from .. import experiment
-
         # Update parameter structure
         # Load default parameter structure
         p = self.DEFAULT.copy(99)
@@ -110,7 +107,7 @@ class ScanModel(object):
         self.ptycho = ptycho
 
         # Create Associated PtyScan object
-        self.ptyscan = experiment.makePtyScan(self.p.data)
+        self.ptyscan = self.makePtyScan(self.p.data)
 
         # Initialize instance attributes
         self.mask = None
@@ -132,6 +129,32 @@ class ScanModel(object):
         self.CType = CType
         self.FType = FType
         self.frames_per_call = 100000
+
+    @classmethod
+    def makePtyScan(cls, pars):
+        """
+        Factory for PtyScan object. Return an instance of the appropriate PtyScan subclass based on the
+        input parameters.
+
+        Parameters
+        ----------
+        pars: dict or Param
+            Input parameters according to :py:data:`.scan.data`.
+        """
+
+        # Extract information on the type of object to build
+        name = pars.name
+
+        from .. import experiment
+
+        if name in u.all_subclasses(data.PtyScan, names=True):
+            ps_class = eval('experiment.' + name)
+            logger.info('Scan will be prepared with the PtyScan subclass "%s"' % name)
+            ps_instance = ps_class(pars)
+        else:
+            raise RuntimeError('Could not manage source "%s"' % str(name))
+
+        return ps_instance
 
     def new_data(self):
         """
@@ -578,55 +601,6 @@ class Full(ScanModel):
     help =
     doc =
 
-    [sharing]
-    default = 
-    help = Scan sharing options
-    doc = 
-    type = Param
-    userlevel = 
-
-    [sharing.object_share_with]
-    default = None
-    help = Label or index of scan to share object with.
-    doc = Possible values:
-       - ``None``: Do not share
-       - *(string)*: Label of the scan to share with
-       - *(int)*: Index of scan to share with
-    type = str
-    userlevel = 1
-
-    [sharing.object_share_power]
-    default = 1
-    help = Relative power for object sharing
-    doc = 
-    type = float
-    userlevel = 1
-    lowlim = 0
-
-    [sharing.probe_share_with]
-    default = None
-    help = Label or index of scan to share probe with.
-    doc = Possible values:
-       - ``None``: Do not share
-       - *(string)*: Label of the scan to share with
-       - *(int)*: Index of scan to share with
-    type = str
-    userlevel = 1
-
-    [sharing.probe_share_power]
-    default = 1
-    help = Relative power for probe sharing
-    doc = 
-    type = float
-    userlevel = 1
-    lowlim = 0
-
-    [sharing.EP_sharing]
-    type = bool
-    default = False
-    help = Empty probe sharing switch
-    doc =
-
     [coherence]
     default = 
     help = Coherence parameters
@@ -1005,23 +979,6 @@ class Full(ScanModel):
 
     _PREFIX = MODEL_PREFIX
 
-    def __init__(self, ptycho=None, pars=None, label=None):
-        """
-        Override constructor to add sharing functionality.
-        """
-        super(Full, self).__init__(ptycho, pars, label)
-
-        # Sharing dictionary that stores sharing behavior
-        self.sharing = {'probe_ids': {}, 'object_ids': {}}
-
-        # REDESIGN: this will be replaced
-        # Initialize sharing rules for POD creations
-        sharing_pars = u.Param({'model_type': 'basic',
-                                'scan_per_probe': 1,
-                                'scan_per_object': 1,
-                                'npts': None})
-        self.sharing_rules = model.parse_model(sharing_pars, self.sharing)
-
     def _create_pods(self):
         """
         Create all new pods as specified in the new_positions,
@@ -1036,25 +993,16 @@ class Full(ScanModel):
 
         # Get a list of probe and object that already exist
         existing_probes = self.ptycho.probe.storages.keys()
-        # SC: delete? self.sharing_rules.probe_ids.keys()
         existing_objects = self.ptycho.obj.storages.keys()
-        # SC: delete? self.sharing_rules.object_ids.keys()
         logger.info('Found these probes : ' + ', '.join(existing_probes))
         logger.info('Found these objects: ' + ', '.join(existing_objects))
 
-        scan = self
+        object_id = 'S00'
+        probe_id = 'S00'
 
-        positions = scan.new_positions
-        di_views = scan.new_diff_views
-        ma_views = scan.new_mask_views
-
-        # Compute sharing rules
-        share = scan.p.sharing
-        alt_obj = share.object_share_with if share is not None else None
-        alt_pr = share.probe_share_with if share is not None else None
-
-        obj_label = label if alt_obj is None else alt_obj
-        pr_label = label if alt_pr is None else alt_pr
+        positions = self.new_positions
+        di_views = self.new_diff_views
+        ma_views = self.new_mask_views
 
         # Loop through diffraction patterns
         for i in range(len(di_views)):
@@ -1064,18 +1012,15 @@ class Full(ScanModel):
 
             # Object and probe position
             pos_pr = u.expect2(0.0)
-            pos_obj = positions[i] if 'empty' not in scan.p.tags else 0.0
-
-            t, object_id = self.sharing_rules(obj_label, index)
-            probe_id, t = self.sharing_rules(pr_label, index)
+            pos_obj = positions[i] if 'empty' not in self.p.tags else 0.0
 
             # For multiwavelength reconstructions: loop here over
             # geometries, and modify probe_id and object_id.
-            for ii, geometry in enumerate(scan.geometries):
+            for ii, geometry in enumerate(self.geometries):
                 # Make new IDs and keep them in record
                 # sharing_rules is not aware of IDs with suffix
                 
-                pdis = scan.p.coherence.probe_dispersion
+                pdis = self.p.coherence.probe_dispersion
 
                 if pdis is None or str(pdis) == 'achromatic':
                     gind = 0
@@ -1085,10 +1030,9 @@ class Full(ScanModel):
                 probe_id_suf = probe_id + 'G%02d' % gind
                 if (probe_id_suf not in new_probe_ids.keys()
                         and probe_id_suf not in existing_probes):
-                    new_probe_ids[probe_id_suf] = (
-                        self.sharing_rules.probe_ids[probe_id])
+                    new_probe_ids[probe_id_suf] = True
 
-                odis = scan.p.coherence.object_dispersion
+                odis = self.p.coherence.object_dispersion
 
                 if odis is None or str(odis) == 'achromatic':
                     gind = 0
@@ -1098,12 +1042,11 @@ class Full(ScanModel):
                 object_id_suf = object_id + 'G%02d' % gind
                 if (object_id_suf not in new_object_ids.keys()
                         and object_id_suf not in existing_objects):
-                    new_object_ids[object_id_suf] = (
-                        self.sharing_rules.object_ids[object_id])
+                    new_object_ids[object_id_suf] = True
 
                 # Loop through modes
-                for pm in range(scan.p.coherence.num_probe_modes):
-                    for om in range(scan.p.coherence.num_object_modes):
+                for pm in range(self.p.coherence.num_probe_modes):
+                    for om in range(self.p.coherence.num_object_modes):
                         # Make a unique layer index for exit view
                         # The actual number does not matter due to the
                         # layermap access
@@ -1152,18 +1095,8 @@ class Full(ScanModel):
 
                         new_pods.append(pod)
 
-                        # If Empty Probe sharing is enabled,
-                        # adjust POD accordingly.
-                        if share is not None:
-                            pod.probe_weight = share.probe_share_power
-                            pod.object_weight = share.object_share_power
-                            if share.EP_sharing:
-                                pod.is_empty = True
-                            else:
-                                pod.is_empty = False
-                        else:
-                            pod.probe_weight = 1
-                            pod.object_weight = 1
+                        pod.probe_weight = 1
+                        pod.object_weight = 1
 
         return new_pods, new_probe_ids, new_object_ids
 
@@ -1312,8 +1245,6 @@ class ModelManager(object):
             self.scans[label] = cls(ptycho=self.ptycho, pars=scan_pars, label=label)
 
     def _to_dict(self):
-        # Delete the model class. We do not really need to store it.
-        del self.sharing_rules
         return self.__dict__.copy()
 
     @classmethod

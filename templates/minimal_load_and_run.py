@@ -15,6 +15,7 @@ p.io.home = "/tmp/ptypy/"
 p.scans = u.Param()
 p.scans.MF = u.Param()
 p.scans.MF.data= u.Param()
+p.scans.MF.name = 'Vanilla'
 p.scans.MF.data.name = 'PtydScan'
 p.scans.MF.data.source = '/tmp/ptypy/sample.ptyd'#'file'
 p.scans.MF.data.dfile = 'out.ptyd'

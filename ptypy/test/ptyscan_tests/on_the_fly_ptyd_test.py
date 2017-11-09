@@ -62,8 +62,8 @@ class MakeSamplePtydTest(unittest.TestCase):
         dfile = str(data.dfile)
 
         # Base parameters
-        from ptypy.core.data import PtyScan
-        data = PtyScan.DEFAULT.copy()
+        from ptypy.core.data import PtydScan
+        data = PtydScan.DEFAULT.copy()
         data.dfile = dfile.replace('.ptyd', '_aggregated.ptyd')
         data.save = save # maybe replace with merge in future
         data.update(**kwargs)
