@@ -17,7 +17,8 @@ import numpy as np
 import illumination
 import sample
 import geometry
-import model
+### FIXME: reimplement sharing before 0.3 release
+# import model
 import xy
 import data
 
@@ -132,7 +133,7 @@ class ScanModel(object):
         self.frames_per_call = 100000
 
     @classmethod
-    def makePtyScan(cls, pars, scanmodel=None):
+    def makePtyScan(cls, pars):
         """
         Factory for PtyScan object. Return an instance of the appropriate PtyScan subclass based on the
         input parameters.
@@ -141,8 +142,6 @@ class ScanModel(object):
         ----------
         pars: dict or Param
             Input parameters according to :py:data:`.scan.data`.
-        scanmodel: ScanModel object
-            FIXME: This seems to be needed for simulations but broken for now.
         """
 
         # Extract information on the type of object to build
@@ -604,54 +603,55 @@ class Full(ScanModel):
     help =
     doc =
 
-    [sharing]
-    default = 
-    help = Scan sharing options
-    doc = 
-    type = Param
-    userlevel = 
+    ### FIXME: reimplement sharing before 0.3 release
+    # [sharing]
+    # default = 
+    # help = Scan sharing options
+    # doc = 
+    # type = Param
+    # userlevel = 
 
-    [sharing.object_share_with]
-    default = None
-    help = Label or index of scan to share object with.
-    doc = Possible values:
-       - ``None``: Do not share
-       - *(string)*: Label of the scan to share with
-       - *(int)*: Index of scan to share with
-    type = str
-    userlevel = 1
+    # [sharing.object_share_with]
+    # default = None
+    # help = Label or index of scan to share object with.
+    # doc = Possible values:
+    #    - ``None``: Do not share
+    #    - *(string)*: Label of the scan to share with
+    #    - *(int)*: Index of scan to share with
+    # type = str
+    # userlevel = 1
 
-    [sharing.object_share_power]
-    default = 1
-    help = Relative power for object sharing
-    doc = 
-    type = float
-    userlevel = 1
-    lowlim = 0
+    # [sharing.object_share_power]
+    # default = 1
+    # help = Relative power for object sharing
+    # doc = 
+    # type = float
+    # userlevel = 1
+    # lowlim = 0
 
-    [sharing.probe_share_with]
-    default = None
-    help = Label or index of scan to share probe with.
-    doc = Possible values:
-       - ``None``: Do not share
-       - *(string)*: Label of the scan to share with
-       - *(int)*: Index of scan to share with
-    type = str
-    userlevel = 1
+    # [sharing.probe_share_with]
+    # default = None
+    # help = Label or index of scan to share probe with.
+    # doc = Possible values:
+    #    - ``None``: Do not share
+    #    - *(string)*: Label of the scan to share with
+    #    - *(int)*: Index of scan to share with
+    # type = str
+    # userlevel = 1
 
-    [sharing.probe_share_power]
-    default = 1
-    help = Relative power for probe sharing
-    doc = 
-    type = float
-    userlevel = 1
-    lowlim = 0
+    # [sharing.probe_share_power]
+    # default = 1
+    # help = Relative power for probe sharing
+    # doc = 
+    # type = float
+    # userlevel = 1
+    # lowlim = 0
 
-    [sharing.EP_sharing]
-    type = bool
-    default = False
-    help = Empty probe sharing switch
-    doc =
+    # [sharing.EP_sharing]
+    # type = bool
+    # default = False
+    # help = Empty probe sharing switch
+    # doc =
 
     [coherence]
     default = 
@@ -1031,22 +1031,23 @@ class Full(ScanModel):
 
     _PREFIX = MODEL_PREFIX
 
-    def __init__(self, ptycho=None, pars=None, label=None):
-        """
-        Override constructor to add sharing functionality.
-        """
-        super(Full, self).__init__(ptycho, pars, label)
+    ## FIXME: reimplement sharing before 0.3 release
+    # def __init__(self, ptycho=None, pars=None, label=None):
+    #     """
+    #     Override constructor to add sharing functionality.
+    #     """
+    #     super(Full, self).__init__(ptycho, pars, label)
 
-        # Sharing dictionary that stores sharing behavior
-        self.sharing = {'probe_ids': {}, 'object_ids': {}}
+    #     # Sharing dictionary that stores sharing behavior
+    #     self.sharing = {'probe_ids': {}, 'object_ids': {}}
 
-        # REDESIGN: this will be replaced
-        # Initialize sharing rules for POD creations
-        sharing_pars = u.Param({'model_type': 'basic',
-                                'scan_per_probe': 1,
-                                'scan_per_object': 1,
-                                'npts': None})
-        self.sharing_rules = model.parse_model(sharing_pars, self.sharing)
+    #     # REDESIGN: this will be replaced
+    #     # Initialize sharing rules for POD creations
+    #     sharing_pars = u.Param({'model_type': 'basic',
+    #                             'scan_per_probe': 1,
+    #                             'scan_per_object': 1,
+    #                             'npts': None})
+    #     self.sharing_rules = model.parse_model(sharing_pars, self.sharing)
 
     def _create_pods(self):
         """
@@ -1062,9 +1063,7 @@ class Full(ScanModel):
 
         # Get a list of probe and object that already exist
         existing_probes = self.ptycho.probe.storages.keys()
-        # SC: delete? self.sharing_rules.probe_ids.keys()
         existing_objects = self.ptycho.obj.storages.keys()
-        # SC: delete? self.sharing_rules.object_ids.keys()
         logger.info('Found these probes : ' + ', '.join(existing_probes))
         logger.info('Found these objects: ' + ', '.join(existing_objects))
 
@@ -1074,10 +1073,13 @@ class Full(ScanModel):
         di_views = scan.new_diff_views
         ma_views = scan.new_mask_views
 
-        # Compute sharing rules
-        share = scan.p.sharing
-        alt_obj = share.object_share_with if share is not None else None
-        alt_pr = share.probe_share_with if share is not None else None
+        ### FIXME: reimplement sharing before 0.3 release
+        alt_obj = None
+        alt_pr = None
+        # # Compute sharing rules
+        # share = scan.p.sharing
+        # alt_obj = share.object_share_with if share is not None else None
+        # alt_pr = share.probe_share_with if share is not None else None
 
         obj_label = label if alt_obj is None else alt_obj
         pr_label = label if alt_pr is None else alt_pr
@@ -1092,8 +1094,11 @@ class Full(ScanModel):
             pos_pr = u.expect2(0.0)
             pos_obj = positions[i] if 'empty' not in scan.p.tags else 0.0
 
-            t, object_id = self.sharing_rules(obj_label, index)
-            probe_id, t = self.sharing_rules(pr_label, index)
+            ### FIXME: reimplement sharing before 0.3 release
+            object_id = 'S00'
+            probe_id = 'S00'
+            # t, object_id = self.sharing_rules(obj_label, index)
+            # probe_id, t = self.sharing_rules(pr_label, index)
 
             # For multiwavelength reconstructions: loop here over
             # geometries, and modify probe_id and object_id.
@@ -1112,7 +1117,9 @@ class Full(ScanModel):
                 if (probe_id_suf not in new_probe_ids.keys()
                         and probe_id_suf not in existing_probes):
                     new_probe_ids[probe_id_suf] = (
-                        self.sharing_rules.probe_ids[probe_id])
+                        ### FIXME: reimplement sharing before 0.3 release
+                        [self.label,])
+                        #self.sharing_rules.probe_ids[probe_id])
 
                 odis = scan.p.coherence.object_dispersion
 
@@ -1125,7 +1132,9 @@ class Full(ScanModel):
                 if (object_id_suf not in new_object_ids.keys()
                         and object_id_suf not in existing_objects):
                     new_object_ids[object_id_suf] = (
-                        self.sharing_rules.object_ids[object_id])
+                        ### FIXME: reimplement sharing before 0.3 release
+                        [self.label,])
+                        #self.sharing_rules.object_ids[object_id])
 
                 # Loop through modes
                 for pm in range(scan.p.coherence.num_probe_modes):
@@ -1178,18 +1187,21 @@ class Full(ScanModel):
 
                         new_pods.append(pod)
 
-                        # If Empty Probe sharing is enabled,
-                        # adjust POD accordingly.
-                        if share is not None:
-                            pod.probe_weight = share.probe_share_power
-                            pod.object_weight = share.object_share_power
-                            if share.EP_sharing:
-                                pod.is_empty = True
-                            else:
-                                pod.is_empty = False
-                        else:
-                            pod.probe_weight = 1
-                            pod.object_weight = 1
+                        ### FIXME: reimplement sharing before 0.3 release
+                        pod.probe_weight = 1
+                        pod.object_weight = 1
+                        # # If Empty Probe sharing is enabled,
+                        # # adjust POD accordingly.
+                        # if share is not None:
+                        #     pod.probe_weight = share.probe_share_power
+                        #     pod.object_weight = share.object_share_power
+                        #     if share.EP_sharing:
+                        #         pod.is_empty = True
+                        #     else:
+                        #         pod.is_empty = False
+                        # else:
+                        #     pod.probe_weight = 1
+                        #     pod.object_weight = 1
 
         return new_pods, new_probe_ids, new_object_ids
 
@@ -1338,8 +1350,9 @@ class ModelManager(object):
             self.scans[label] = cls(ptycho=self.ptycho, pars=scan_pars, label=label)
 
     def _to_dict(self):
-        # Delete the model class. We do not really need to store it.
-        del self.sharing_rules
+        ### FIXME: reimplement sharing before 0.3 release
+        # # Delete the model class. We do not really need to store it.
+        # del self.sharing_rules
         return self.__dict__.copy()
 
     @classmethod

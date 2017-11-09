@@ -21,7 +21,6 @@ from .. import engines
 from ..io import interaction
 from classes import Base, Container, Storage, PTYCHO_PREFIX
 from manager import ModelManager
-from . import model
 from ..utils.descriptor import defaults_tree
 
 __all__ = ['Ptycho']
@@ -723,25 +722,17 @@ class Ptycho(Base):
 
             P._configure()
 
-            logger.info('Reconfiguring sharing rules')  # and loading data')
-            print u.verbose.report(P.p)
-            P.modelm.sharing_rules = model.parse_model(P.modelm.p['sharing'],
-                                                       P.modelm.sharing)
+            ### FIXME: removed sharing, to be reimplemented before 0.3
+            ### release, perhaps as a feature of the Full scan model.
+            # logger.info('Reconfiguring sharing rules')  # and loading data')
+            # print u.verbose.report(P.p)
+            # P.modelm.sharing_rules = model.parse_model(P.modelm.p['sharing'],
+            #                                            P.modelm.sharing)
 
             logger.info('Regenerating exit waves')
             P.exit.reformat()
             P.modelm._initialize_exit(P.pods.values())
-            """
-            logger.info('Attaching datasource')
-            P.datasource = P.modelm.make_datasource(P.p.data)
 
-            logger.info('Reconfiguring sharing rules and loading data')
-            P.modelm.sharing_rules = model.parse_model(P.p.model['sharing'],
-                                                       P.modelm.sharing)
-            P.modelm.new_data()
-
-
-            """
         if load_data:
             logger.info('Loading data')
             P.init_data()
