@@ -22,8 +22,8 @@ import matplotlib.pyplot as plt
 g = ptypy.core.geometry_bragg.Geo_Bragg(psize=(0.01/4, 13e-6, 13e-6), shape=(9*4, 128, 128), energy=8.5, distance=2.0, theta_bragg=22.32)
 
 # The Geo_Bragg object contains mostly the same things as Geo, but in
-# three dimensions. The third element of the shape is the number of
-# rocking curve positions, the third element of the psize denotes theta
+# three dimensions. The first element of the shape is the number of
+# rocking curve positions, the first element of the psize denotes theta
 # step in degrees. 
 print g
 
