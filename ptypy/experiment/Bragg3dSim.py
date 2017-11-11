@@ -14,13 +14,18 @@ import time
 logger = u.verbose.logger
 
 
-@defaults_tree.parse_doc('scandata.Bragg3dSim')
+@defaults_tree.parse_doc('scandata.Bragg3dSimScan')
 class Bragg3dSimScan(PtyScan):
     """
     Provides simulated 3D Bragg data based on the numerical 
     experiment in Berenguer et al., PRB 88 (2013) 144101.
 
     Defaults:
+
+    [name]
+    default = Bragg3dSimScan
+    type = str
+    help = PtyScan subclass identifier
 
     [shape]
     # Godard: default = 1024
@@ -47,7 +52,7 @@ class Bragg3dSimScan(PtyScan):
     type = float
     help = Step size in the rocking curve in degrees
 
-    [rocking_steps]
+    [n_rocking_positions]
     # Godard: default = 9
     default = 40
     type = int
@@ -63,12 +68,13 @@ class Bragg3dSimScan(PtyScan):
     def __init__(self, pars=None, **kwargs):
         self.p = self.DEFAULT.copy(99)
         self.p.update(pars)
+        self.p.update(kwargs)
         super(Bragg3dSimScan, self).__init__(self.p)
-        
-        # do the simulation
-        self.calculate()
 
-    def calculate(self):
+        # do the simulation
+        self.simulate()
+
+    def simulate(self):
         # Set up a 3D geometry and a scan
         # -------------------------------
 
@@ -76,7 +82,7 @@ class Bragg3dSimScan(PtyScan):
         psize = tuple(u.expect2(self.p.psize))
         g = ptypy.core.geometry_bragg.Geo_Bragg(
             psize=(self.p.rocking_step,) + psize, 
-            shape=(self.p.rocking_steps,) + shape, 
+            shape=(self.p.n_rocking_positions,) + shape,
             energy=self.p.energy, 
             distance=self.p.distance, 
             theta_bragg=self.p.theta_bragg)
@@ -85,7 +91,8 @@ class Bragg3dSimScan(PtyScan):
         # three dimensions. The third element of the shape is the number of
         # rocking curve positions, the third element of the psize denotes theta
         # step in degrees. 
-        print g
+        logger.info('Data will be simulated with these geometric parameters:')
+        logger.info(g)
 
         # Set up scan positions along y, perpendicular to the incoming beam and
         # to the thin layer stripes.
@@ -131,6 +138,7 @@ class Bragg3dSimScan(PtyScan):
         # transmission ptycho scan of an easy test object.
         Cprobe = ptypy.core.Container(data_dims=2, data_type='float')
         Sprobe = Cprobe.new_storage(psize=10e-9, shape=500)
+        print 'WARNING! fix simulation probe extent'
         zi, yi = Sprobe.grids()
 
         # gaussian probe
@@ -159,11 +167,23 @@ class Bragg3dSimScan(PtyScan):
         # plane the scan was done (although here it is in xy).
         # these xyz axis still follow Berenguer et al PRB 2013.
         self.positions = np.empty((g.shape[0] * Npos, 4), dtype=float)
-        angles = (np.arange(g.shape[0]) - g.shape[0] / 2) * g.psize[0]
+        angles = (np.arange(g.shape[0]) - g.shape[0] / 2.0 + 1.0/2) * g.psize[0]
         for i in range(Npos):
             for j in range(g.shape[0]):
                 self.positions[i * g.shape[0] + j, 1:] = positions[i, :]
                 self.positions[i * g.shape[0] + j, 0] = angles[j]
+
+    def load_common(self):
+        """
+        We have to communicate the number of rocking positions that the
+        model should expect, otherwise it never knows when there is data
+        for a complete POD.
+        """
+        return {
+            'rocking_step': self.p.rocking_step,
+            'n_rocking_positions': self.p.n_rocking_positions,
+            'theta_bragg': self.p.theta_bragg,
+            }
 
     def load_positions(self):
         return self.positions
@@ -187,6 +207,6 @@ if __name__ == '__main__':
     ps.initialize()
     while True:
         msg = ps.auto(23)
-        logger.info('Got %d images' % len(msg['iterable']))
         if msg == ps.EOS:
             break
+        logger.info('Got %d images' % len(msg['iterable']))

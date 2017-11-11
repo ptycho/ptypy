@@ -33,7 +33,7 @@ from ..utils.descriptor import defaults_tree
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla']
+__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel']
 
 
 @defaults_tree.parse_doc('scan.ScanModel')
@@ -156,6 +156,9 @@ class ScanModel(object):
 
         return ps_instance
 
+    def _extra_analysis(self):
+        return True
+
     def new_data(self):
         """
         Feed data from ptyscan object.
@@ -214,6 +217,11 @@ class ScanModel(object):
             old_mask_layers = []
             for v in old_mask_views:
                 old_mask_layers.append(v.layer)
+
+        # this is a hack for now
+        dp = self._new_data_extra_analysis(dp)
+        if dp is None:
+            return None
 
         # Prepare for View generation
         AR_diff_base = DEFAULT_ACCESSRULE.copy()
@@ -484,13 +492,12 @@ class Vanilla(ScanModel):
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
 
-
-
             # Create views
+            ndim = self.Cdiff.ndim
             pv = View(container=self.ptycho.probe,
                       accessrule={'shape': geometry.shape,
                                   'psize': geometry.resolution,
-                                  'coord': u.expect2(0.0),
+                                  'coord': u.expectN(0.0, ndim),
                                   'storageID': ID,
                                   'layer': 0,
                                   'active': True})
@@ -506,7 +513,7 @@ class Vanilla(ScanModel):
             ev = View(container=self.ptycho.exit,
                       accessrule={'shape': geometry.shape,
                                   'psize': geometry.resolution,
-                                  'coord': u.expect2(0.0),
+                                  'coord': u.expectN(0.0, ndim),
                                   'storageID': ID,
                                   'layer': dv.layer,
                                   'active': dv.active})
@@ -1211,6 +1218,160 @@ class Full(ScanModel):
             s.reformat()  # maybe not needed
 
             s.model_initialized = True
+
+
+import geometry_bragg
+@defaults_tree.parse_doc('scan.Bragg3dModel')
+class Bragg3dModel(Vanilla):
+    """
+    Model for 3D Bragg ptycho data, where a set of rocking angles are
+    measured for each scanning position. The result is pods carrying
+    3D diffraction patterns and 3D Views into a 3D object.
+
+    Inherits from Vanilla because _create_pods and the probe/object
+    initializations are identical.
+
+    Defaults:
+
+    [name]
+    default = Bragg3dModel
+    type = str
+    help =
+
+    [illumination.size]
+    default = None
+    type = float
+    help = Initial probe size
+    doc = The probe is initialized as a flat circle.
+
+    [sample.fill]
+    default = 1
+    type = float, complex
+    help = Initial sample value
+    doc = The sample is initialized with this value everywhere.
+    """
+
+    def __init__(self, ptycho=None, pars=None, label=None):
+        super(Bragg3dModel, self).__init__(ptycho, pars, label)
+        # This model holds on to incoming frames until a complete 3d
+        # diffraction pattern can be built for that position.
+        self.buffered_frames = {}
+        self.buffered_positions = []
+        #self.frames_per_call = 100 # just for testing
+
+    def _new_data_extra_analysis(self, dp):
+        """
+        The heavy override is new_data. I've inserted an extra method
+        for now, to not have to duplicate all the new_data code.
+
+        The PtyScans give 2d diff images at 4d (angle, x, z, y)
+        positions in the sample frame. These need to be assembled into
+        3d (q3, q1, q2) at 3d positions. This means receiving images,
+        holding on to them, and only calling _create_pods once a
+        complete 3d diff View has been created.
+        """
+
+        print '*** not managing positions properly, two measurements at the same positions would break this. Make self.buffered_positions a dict or something.'
+        # go through and buffer the new 2d frames
+        for dct in dp['iterable']:
+            pos = dct['position'][1:]
+            try:
+                # index into the frame buffer where this frame belongs
+                pos
+                idx = np.where(np.prod(np.isclose(pos, self.buffered_positions), axis=1))[0][0]
+            except:
+                # this position hasn't been encountered before, so create a buffer entry
+                idx = len(self.buffered_positions)
+                print 'Creating frame buffer entry %d for frame %d' % (idx, dct['index'])
+                self.buffered_positions.append(pos)
+                self.buffered_frames[idx] = {
+                    'position': pos,
+                    'frames': [],
+                    'masks': [],
+                    'angles': [],
+                }
+
+            # buffer the frame, mask, and angle
+            self.buffered_frames[idx]['frames'].append(dct['data'])
+            self.buffered_frames[idx]['masks'].append(dct['mask'])
+            self.buffered_frames[idx]['angles'].append(dct['position'][0])
+
+        # go through the buffer to see if any positions have all their
+        # 2d frames, and create a new dp-compatible structure with
+        # complete positions.
+        dp_new = {'iterable': []}
+        for idx, dct in self.buffered_frames.iteritems():
+            if len(dct['angles']) == self.geometries[0].shape[0]:
+                # this one is ready to go
+                print idx, 'ready'
+
+                # first sort the frames, in increasing order for now
+                order = [i[0] for i in sorted(enumerate(dct['angles']), key=lambda x:x[1])]
+                dct['frames'] = [dct['frames'][i] for i in order]
+                dct['masks'] = [dct['masks'][i] for i in order]
+
+                # then assemble the data and masks
+                dp_new['iterable'].append({
+                    'index': idx,
+                    'position': dct['position'],
+                    'data': np.array(dct['frames'], dtype=self.ptycho.FType),
+                    'mask': np.array(dct['masks'], dtype=bool),
+                    })
+            else:
+                print idx, 'not ready, have', len(dct['angles']), 'frames'
+
+        # delete complete entries from the buffer
+        for dct in dp_new['iterable']:
+            del self.buffered_frames[dct['index']]
+
+        # continue to pod creation if there is data for it
+        if len(dp_new['iterable']):
+            return dp_new
+        else:
+            return None
+
+    def _initialize_containers(self):
+        """
+        Override to get 3D containers.
+        """
+        self.ptycho.probe = Container(ptycho=self.ptycho, ID='Cprobe', data_type='complex', data_dims=3)
+        self.ptycho.obj = Container(ptycho=self.ptycho, ID='Cobj', data_type='complex', data_dims=3)
+        self.ptycho.exit = Container(ptycho=self.ptycho, ID='Cexit', data_type='complex', data_dims=3)
+        self.ptycho.diff = Container(ptycho=self.ptycho, ID='Cdiff', data_type='real', data_dims=3)
+        self.ptycho.mask = Container(ptycho=self.ptycho, ID='Cmask', data_type='bool', data_dims=3)
+        self.Cdiff = self.ptycho.diff
+        self.Cmask = self.ptycho.mask
+        self.containers_initialized = True
+
+    def _initialize_geo(self, common):
+        """
+        Initialize the geometry based on parameters from a PtyScan.auto
+        data package. Now psize and shape change meanings: from referring
+        to raw data frames, they now refer to 3-dimensional diffraction
+        patterns as specified by Geo_Bragg.
+        """
+
+        # Collect and assemble geometric parameters
+        get_keys = ['distance', 'center', 'energy']
+        geo_pars = u.Param({key: common[key] for key in get_keys})
+        geo_pars.propagation = self.p.propagation
+        # take extra Bragg information into account
+        psize = tuple(common['psize'])
+        geo_pars.psize = (self.ptyscan.common.rocking_step,) + psize
+        sh = tuple(common['shape'])
+        geo_pars.shape = (self.ptyscan.common.n_rocking_positions,) + sh
+        geo_pars.theta_bragg = self.ptyscan.common.theta_bragg
+
+        # make a Geo instance and fix resolution
+        g = geometry_bragg.Geo_Bragg(owner=self.ptycho, pars=geo_pars)
+        g.p.resolution_is_fix = True
+
+        # save the geometry
+        self.geometries = [g]
+
+        # Store frame shape
+        self.shape = g.shape
+        self.psize = g.psize
 
 
 class ModelManager(object):
