@@ -73,6 +73,15 @@ class DM(BaseEngine):
         # Another possibility would be to use the maximum value of all probe storages.
         self.mean_power = None
 
+        self.ptycho.citations.add_article(
+            comment = 'The difference map reconstruction algorithm',
+            author = 'Thibault et al.',
+            journal = 'Ultramicroscopy',
+            volume = 109,
+            year = 2009,
+            page = 338,
+        )
+
     def engine_initialize(self):
         """
         Prepare for reconstruction.

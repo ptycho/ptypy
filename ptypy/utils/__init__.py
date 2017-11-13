@@ -13,6 +13,7 @@ from array_utils import *
 from scripts import *
 from parameters import Param, asParam
 from verbose import *
+from citations import *
 #import propagation as prop
 #from embedded_shell import ipshell
 #import ipython_kernel

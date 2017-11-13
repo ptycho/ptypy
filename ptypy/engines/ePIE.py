@@ -93,6 +93,15 @@ class EPIE(BaseEngine):
         # Instance attributes
         self.ob_nodecover = None
 
+        self.ptycho.citations.add_article(
+            comment = 'The ePIE reconstruction algorithm',
+            author = 'Maiden and Rodenburg',
+            journal = 'Ultramicroscopy',
+            volume = 10,
+            year = 2009,
+            page = 1256,
+        )
+
     def engine_initialize(self):
         """
         Prepare for reconstruction.

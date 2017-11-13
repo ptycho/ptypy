@@ -67,6 +67,15 @@ class ML(BaseEngine):
         self.scale_p_o = None
         self.scale_p_o_memory = .9
 
+        self.ptycho.citations.add_article(
+            comment = 'The maximum likelihood reconstruction algorithm',
+            author = 'Thibault et al.',
+            journal = 'New Journal of Physics',
+            volume = 14,
+            year = 2012,
+            page = 63004,
+        )
+
     def engine_initialize(self):
         """
         Prepare for ML reconstruction.

@@ -185,6 +185,9 @@ class Ptycho(Base):
         # Early boot strapping
         self._configure()
 
+        # Keep a bibliography
+        self.citations = u.Bibliography()
+
         if level >= 1:
             logger.info('\n' + headerline('Ptycho init level 1', 'l'))
             self.init_structures()
@@ -586,6 +589,11 @@ class Ptycho(Base):
             self.interactor.stop()
         except BaseException:
             pass
+
+        # Hint at citations (for all log levels)
+        print '\n' + headerline('This reconstruction relied on the following work', 'l', '=')
+        print self.citations
+        print headerline('', 'l', '=')
 
     def _run(self, run_label=None):
         """
