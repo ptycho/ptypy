@@ -70,15 +70,16 @@ class Ptycho(Base):
     default = 1
     help = Verbosity level
     doc = Verbosity level for information logging.
-       - ``0``: Only errors
-       - ``1``: Warning
-       - ``2``: Process Information
-       - ``3``: Object Information
-       - ``4``: Debug
+       - ``0``: Only critical errors
+       - ``1``: All errors
+       - ``2``: Warning
+       - ``3``: Process Information
+       - ``4``: Object Information
+       - ``5``: Debug
     type = int
     userlevel = 0
     lowlim = 0
-    uplim = 4
+    uplim = 5
 
     [data_type]
     default = 'single'
