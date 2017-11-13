@@ -187,6 +187,13 @@ class Ptycho(Base):
 
         # Keep a bibliography
         self.citations = u.Bibliography()
+        self.citations.add_article(
+            comment = 'The Ptypy framework',
+            author = 'Enders and Thibault',
+            journal = 'Proc. Royal Soc. A',
+            volume = 472,
+            year = 2196,
+        )
 
         if level >= 1:
             logger.info('\n' + headerline('Ptycho init level 1', 'l'))

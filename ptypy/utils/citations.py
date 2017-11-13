@@ -3,17 +3,19 @@ This module provides basic bibliography management.
 """
 
 class JournalArticle(object):
-    def __init__(self, author, journal, volume, year, page, doi=None):
+    def __init__(self, author, journal, volume, year, page=None, doi=None):
         self.author = author
         self.journal = journal
         self.volume = volume
-        self.year = str(year)
-        self.page = str(page)
+        self.year = year
+        self.page = page
         self.doi = doi
 
     def __str__(self):
-        out = ('%s, %s %s (%s) %s'
-                % (self.author, self.journal, self.volume, self.year, self.page))
+        out = ('%s, %s %s (%s)'
+                % (self.author, self.journal, self.volume, str(self.year)))
+        if self.page is not None:
+            out += ' %s' % str(self.page)
         if self.doi is not None:
             out += ', doi: %s.' % self.doi
         else:
