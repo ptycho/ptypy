@@ -15,7 +15,7 @@ from ..utils import parallel
 from ..utils.verbose import logger, headerline
 from ..utils.descriptor import defaults_tree
 
-__all__ = ['BaseEngine', 'DEFAULT_iter_info']
+__all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info']
 
 DEFAULT_iter_info = u.Param(
     iteration=0,
@@ -280,3 +280,33 @@ class BaseEngine(object):
         self.finalize()
         """
         raise NotImplementedError()
+
+
+class Base3dBraggEngine(BaseEngine):
+    """
+    3d Bragg engines need a slightly different prepare() method, because
+    a 2d probe support makes no sense (at least not yet...)
+
+    Defaults:
+
+    [probe_support]
+    default = None
+    """
+
+    def prepare(self):
+        """
+        Last-minute preparation before iterating.
+        """
+        self.finished = False
+        # Simple 2d probe support isn't applicable to the 3d case.
+        supp = self.p.probe_support
+        if supp is not None:
+            raise NotImplementedError
+
+        # Make sure all the pods are supported
+        for label_, pod_ in self.pods.iteritems():
+            if not pod_.model.__class__ in self.SUPPORTED_MODELS:
+                raise Exception('Model %s not supported by engine' % pod_.model.__class__)
+
+        # Call engine specific preparation
+        self.engine_prepare()
