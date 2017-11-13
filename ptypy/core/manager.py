@@ -1228,8 +1228,8 @@ class Bragg3dModel(Vanilla):
     measured for each scanning position. The result is pods carrying
     3D diffraction patterns and 3D Views into a 3D object.
 
-    Inherits from Vanilla because _create_pods and the probe/object
-    initializations are identical.
+    Inherits from Vanilla because _create_pods and the object init
+    is identical.
 
     Frames for each position are assembled according to the actual
     xyz data, so it will not work if two acquisitions are done at the
@@ -1243,7 +1243,7 @@ class Bragg3dModel(Vanilla):
     help =
 
     [illumination.size]
-    default = None
+    default = 1e-6
     type = float
     help = Initial probe size
     doc = The probe is initialized as a flat circle.
@@ -1384,6 +1384,34 @@ class Bragg3dModel(Vanilla):
         # Store frame shape
         self.shape = g.shape
         self.psize = g.psize
+
+    def _initialize_probe(self, probe_ids):
+        """
+        Initialize the probe storage referred to by probe_ids.keys()[0]
+        """
+        logger.info('\n'+headerline('Probe initialization', 'l'))
+
+        # pick storage from container, there's only one probe
+        pid = probe_ids.keys()[0]
+        s = self.ptycho.probe.S.get(pid)
+        logger.info('Initializing probe storage %s' % pid)
+
+        # create an oversampled probe perpendicular to its incoming
+        # direction, using the illumination module as a utility.
+        logger.info('Initializing as circle of size ' + str(self.p.illumination.size))
+        Cprobe = Container(data_dims=2, data_type='float')
+        geo = self.geometries[0]
+        psize = min(geo.resolution) * .1
+        extent = int(np.ceil(self.p.illumination.size / psize))
+        Sprobe = Cprobe.new_storage(psize=10e-9, shape=extent)
+        illu_pars = u.Param({'aperture':
+            {'form': 'circ', 'size': self.p.illumination.size}})
+        illumination.init_storage(Sprobe, illu_pars)
+
+        # Extrude the incoming probe in the right direction and frame
+        s.data[:] = geo.prepare_3d_probe(Sprobe, system='natural').data
+
+        s.model_initialized = True
 
 
 class ModelManager(object):
