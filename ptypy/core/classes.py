@@ -1664,7 +1664,8 @@ class Container(Base):
         data_type = self.data_type if dtype is None else dtype
         new_cont = type(self)(ptycho=self.owner,
                               ID=ID,
-                              data_type=data_type)
+                              data_type=data_type,
+                              data_dims=self.ndim)
         new_cont.original = self
 
         # If changing data type, avoid casting by producing empty buffers
