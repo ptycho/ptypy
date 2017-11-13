@@ -55,7 +55,10 @@ class TestDefaultParameters(unittest.TestCase):
         self.assertEqual(c.DEFAULT_PSIZE, 1.,
                          'Default value changed.')
 
-        self.assertEqual(c.DEFAULT_SHAPE, (1, 1, 1),
+        self.assertEqual(c.DEFAULT_SHAPE[2], (1, 1, 1),
+                         'Default value changed.')
+
+        self.assertEqual(c.DEFAULT_SHAPE[3], (1, 1, 1, 1),
                          'Default value changed.')
 
         self.assertEqual(c.DEFAULT_ACCESSRULE.storageID, None,
@@ -806,13 +809,13 @@ class TestStorage(unittest.TestCase):
 
         self.assertEqual(
             self.basic_storage_dpt.shape,
-            c.DEFAULT_SHAPE,
+            c.DEFAULT_SHAPE[self.basic_container_dpt.ndim],
             'Assigning of instance attribute shape failed.'
         )
 
         self.assertEqual(
             self.basic_storage_dpt.data,
-            np.empty(c.DEFAULT_SHAPE, np.complex128),
+            np.empty(c.DEFAULT_SHAPE[self.basic_container_dpt.ndim], np.complex128),
             'Assigning and filling of instance attribute data failed.'
         )
 
