@@ -63,6 +63,17 @@ class Bragg3dSimScan(PtyScan):
     type = float
     help = Bragg angle in degrees
 
+    [shuffle]
+    default = False
+    type = bool
+    help = Shuffles all diffraction patterns
+    doc = Mainly to test that they are still assembled correctly.
+
+    [dump]
+    default = None
+    type = str
+    help = Dump raw simulated 3d diffraction data to npz file
+
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -156,6 +167,10 @@ class Bragg3dSimScan(PtyScan):
         for v in views:
             diff.append(np.abs(g.propagator.fw(v.data * probeView.data))**2)
 
+        # dump the 3d arrays for testing
+        if self.p.dump is not None:
+            np.savez(self.p.dump, **{'diff%02d'%i : diff[i] for i in range(len(diff))})
+
         # stack the 2d diffraction patterns and save
         self.diff = []
         for i in range(len(diff)):
@@ -173,6 +188,17 @@ class Bragg3dSimScan(PtyScan):
                 self.positions[i * g.shape[0] + j, 1:] = positions[i, :]
                 self.positions[i * g.shape[0] + j, 0] = angles[j]
 
+        # shuffle everything as a test
+        if self.p.shuffle:
+            order = range(len(self.diff))
+            from random import shuffle
+            shuffle(order)
+            self.diff = [self.diff[i] for i in order]
+            new_pos = np.empty_like(self.positions)
+            for i in range(len(new_pos)):
+                new_pos[i] = self.positions[order[i]]
+            self.positions = new_pos
+
     def load_common(self):
         """
         We have to communicate the number of rocking positions that the
@@ -186,6 +212,12 @@ class Bragg3dSimScan(PtyScan):
             }
 
     def load_positions(self):
+        """
+        For the 3d Bragg model, load_positions returns N-by-4 positions,
+        (angle, x, z, y). The angle can be relative or absolute, the
+        model doesn't care, but it does have to be uniformly spaced for
+        the analysis to make any sense.
+        """
         return self.positions
 
     def load(self, indices):

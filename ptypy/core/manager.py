@@ -1231,6 +1231,10 @@ class Bragg3dModel(Vanilla):
     Inherits from Vanilla because _create_pods and the probe/object
     initializations are identical.
 
+    Frames for each position are assembled according to the actual
+    xyz data, so it will not work if two acquisitions are done at the
+    same position.
+
     Defaults:
 
     [name]
@@ -1257,32 +1261,37 @@ class Bragg3dModel(Vanilla):
         # diffraction pattern can be built for that position.
         self.buffered_frames = {}
         self.buffered_positions = []
-        #self.frames_per_call = 100 # just for testing
+        #self.frames_per_call = 216 # just for testing
 
     def _new_data_extra_analysis(self, dp):
         """
         The heavy override is new_data. I've inserted an extra method
-        for now, to not have to duplicate all the new_data code.
+        for now, so as not to duplicate all the new_data code.
 
         The PtyScans give 2d diff images at 4d (angle, x, z, y)
         positions in the sample frame. These need to be assembled into
         3d (q3, q1, q2) at 3d positions. This means receiving images,
         holding on to them, and only calling _create_pods once a
         complete 3d diff View has been created.
+
+        The xyz axes are those specified in Geo_Bragg, and the angle
+        parameter defined such that a more positive angle corresponds to
+        a more positive q3. That is, it is the angle between the xy
+        plane of the sample with respect to the incident beam.
         """
 
-        print '*** not managing positions properly, two measurements at the same positions would break this. Make self.buffered_positions a dict or something.'
         # go through and buffer the new 2d frames
         for dct in dp['iterable']:
             pos = dct['position'][1:]
             try:
                 # index into the frame buffer where this frame belongs
-                pos
                 idx = np.where(np.prod(np.isclose(pos, self.buffered_positions), axis=1))[0][0]
+                logger.debug('Frame %d belongs in frame buffer %d'
+                    % (dct['index'], idx))
             except:
                 # this position hasn't been encountered before, so create a buffer entry
                 idx = len(self.buffered_positions)
-                print 'Creating frame buffer entry %d for frame %d' % (idx, dct['index'])
+                logger.debug('Frame %d doesn\'t belong in an existing frame buffer, creating buffer %d' % (dct['index'], idx))
                 self.buffered_positions.append(pos)
                 self.buffered_frames[idx] = {
                     'position': pos,
@@ -1303,9 +1312,9 @@ class Bragg3dModel(Vanilla):
         for idx, dct in self.buffered_frames.iteritems():
             if len(dct['angles']) == self.geometries[0].shape[0]:
                 # this one is ready to go
-                print idx, 'ready'
+                logger.debug('3d diffraction data for position %d ready, will create POD' % idx)
 
-                # first sort the frames, in increasing order for now
+                # first sort the frames in increasing angle (increasing q3) order
                 order = [i[0] for i in sorted(enumerate(dct['angles']), key=lambda x:x[1])]
                 dct['frames'] = [dct['frames'][i] for i in order]
                 dct['masks'] = [dct['masks'][i] for i in order]
@@ -1318,7 +1327,8 @@ class Bragg3dModel(Vanilla):
                     'mask': np.array(dct['masks'], dtype=bool),
                     })
             else:
-                print idx, 'not ready, have', len(dct['angles']), 'frames'
+                logger.debug('3d diffraction data for position %d isn\'t ready, have %d out of %d frames'
+                    % (idx, len(dct['angles']), self.geometries[0].shape[0]))
 
         # delete complete entries from the buffer
         for dct in dp_new['iterable']:
@@ -1326,6 +1336,8 @@ class Bragg3dModel(Vanilla):
 
         # continue to pod creation if there is data for it
         if len(dp_new['iterable']):
+            logger.debug('Will continue with POD creation for %d complete positions'
+                % len(dp_new['iterable']))
             return dp_new
         else:
             return None
