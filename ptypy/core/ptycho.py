@@ -11,16 +11,14 @@ import numpy as np
 import time
 import paths
 from collections import OrderedDict
-import os
-import sys
 
 from .. import utils as u
 from ..utils.verbose import logger, _, report, headerline, log
 from ..utils import parallel
 from .. import engines
 from ..io import interaction
-from classes import Base, Container, Storage, PTYCHO_PREFIX
-from manager import ModelManager
+from .classes import Base, Container, Storage, PTYCHO_PREFIX
+from .manager import ModelManager
 from ..utils.descriptor import defaults_tree
 
 __all__ = ['Ptycho']

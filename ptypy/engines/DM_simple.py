@@ -7,12 +7,13 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from .. import utils as u
-from utils import basic_fourier_update
-from . import BaseEngine
-from ..utils.verbose import logger
 import time
 import numpy as np
+
+from .. import utils as u
+from .utils import basic_fourier_update
+from . import BaseEngine
+from ..utils.verbose import logger
 from ..utils import parallel
 from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla

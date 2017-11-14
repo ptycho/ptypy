@@ -3,10 +3,8 @@
 Wrapper over Python Imaging Library to read images (+ metadata) and write images.
 """
 import numpy as np
-import os
 import glob
 import PIL.Image as PIL
-from .. import utils
 from .. import verbose
 
 # Tentative support for 12-bit tiff. Requires libtiff library
@@ -16,6 +14,7 @@ except:
     libtiff12bit = None
 
 __all__ = ['imread']
+
 
 def imread(filename, doglob=None, roi=None):
     """\

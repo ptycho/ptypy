@@ -14,18 +14,17 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-import illumination
-import sample
-import geometry
-import xy
-import data
-
 from collections import OrderedDict
+from . import illumination
+from . import sample
+from . import geometry
+from . import data
+
 from .. import utils as u
 from ..utils.verbose import logger, headerline, log
-from classes import *
-from classes import DEFAULT_ACCESSRULE
-from classes import MODEL_PREFIX
+from .classes import *
+from .classes import DEFAULT_ACCESSRULE
+from .classes import MODEL_PREFIX
 from ..utils import parallel
 from ..utils.descriptor import defaults_tree
 

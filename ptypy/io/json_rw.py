@@ -13,12 +13,12 @@ import numpy as np
 import time
 import os
 import glob
-import re
 import base64
 
 __all__ = ['jwrite', 'jread']
 
 VERSION = 0.1
+
 
 class NumpyEncoder(json.JSONEncoder):
     """

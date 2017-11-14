@@ -7,17 +7,17 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-
-
+import numpy as np
 from scipy.special import erf
 from scipy.linalg import eig
-import numpy as np
-from misc import *
 from scipy import ndimage as ndi
+
+from .misc import *
 
 __all__ = ['smooth_step', 'abs2', 'norm2', 'norm', 'delxb', 'delxc', 'delxf',
            'ortho', 'gauss_fwhm', 'gaussian', 'gf', 'cabs2', 'gf_2d', 'c_gf',
            'gaussian2D', 'rl_deconvolution']
+
 
 def cabs2(A):
     """

@@ -14,28 +14,17 @@ import numpy as np
 import time
 import os
 
-if True: #__name__ == "__main__":
-    import ptypy
-    from ptypy import utils as u
-    from ptypy import io
-    from ptypy.utils.verbose import log
-    from ptypy.core.paths import Paths
-    # FIXME: Accessing the real "io" from the parent Ptycho class would be much better
-    #from ptypy.core import DEFAULT_io as IO_par
-    from ptypy.core import Ptycho
-    IO_par = Ptycho.DEFAULT['io']
-    from ptypy.utils.descriptor import defaults_tree
-else:
-    from .. import utils as u
-    from .. import io
-    from ..core.data import PtyScan
-    from ..utils.verbose import log
-    from ..core.paths import Paths
-    #from ..core import DEFAULT_io as IO_par
-    from ..core import Ptycho
-    IO_par = Ptycho.DEFAULT['io']
-    from ..utils.descriptor import defaults_tree
+from .. import utils as u
+from .. import io
+from ..utils.verbose import log
+from ..core.paths import Paths
+# FIXME: Accessing the real "io" from the parent Ptycho class would be much better
+#from ptypy.core import DEFAULT_io as IO_par
+from ..core import Ptycho
+from ..core.data import PtyScan
+from ..utils.descriptor import defaults_tree
 
+IO_par = Ptycho.DEFAULT['io']
 
 # Parameters for the nexus file saved by GDA
 NXS_PATHS = u.Param()
@@ -49,7 +38,7 @@ STXM_PATHS.energy = 'entry1/Counter1/'
 
 
 @defaults_tree.parse_doc('scandata.I08Scan')
-class I08Scan(ptypy.core.data.PtyScan):
+class I08Scan(PtyScan):
     """
 
     I08 (Diamond Light Source) data preparation class.

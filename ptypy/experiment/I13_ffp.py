@@ -9,13 +9,14 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import os
+
 from .. import utils as u
 from ..utils.descriptor import defaults_tree
 from .. import io
 from ..core.data import PtyScan
 from ..core.paths import Paths
-#from ..core import DEFAULT_io as IO_par
 from ..core import Ptycho
+
 IO_par = Ptycho.DEFAULT['io']
 
 # Parameters for the nexus file saved by GDA

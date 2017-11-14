@@ -11,14 +11,13 @@ This file is part of the PTYPY package.
 import time
 import numpy as np
 
-import ptypy
-from .. import utils as u
 from ..utils import parallel
 from . import BaseEngine
 from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla
 
 __all__ = ['Dummy']
+
 
 @defaults_tree.parse_doc('engine.Dummy')
 class Dummy(BaseEngine):

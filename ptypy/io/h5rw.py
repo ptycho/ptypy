@@ -14,7 +14,6 @@ import time
 import os
 import glob
 
-# ok now also Param class native support
 from ..utils import Param
 from ..utils.verbose import logger
 

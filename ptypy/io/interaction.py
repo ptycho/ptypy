@@ -23,7 +23,7 @@ import re
 import json
 
 from ..utils.verbose import logger
-from ptypy import defaults_tree
+from ..utils.descriptor import defaults_tree
 
 __all__ = ['Server', 'Client']
 

@@ -12,11 +12,11 @@ This file is part of the PTYPY package.
 """
 from .. import utils as u
 from base import BaseEngine, DEFAULT_iter_info
-import DM
-import DM_simple
-import ML
-import dummy
-import ePIE
+from . import DM
+from . import DM_simple
+from . import ML
+from . import dummy
+from . import ePIE
 
 __all__ = ['DM', 'ML', 'ePIE', 'BaseEngine']
 

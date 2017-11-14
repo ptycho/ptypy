@@ -11,7 +11,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-from embedded_shell import ipshell
-import ipython_kernel
+from .embedded_shell import ipshell
+from . import ipython_kernel
 
 
