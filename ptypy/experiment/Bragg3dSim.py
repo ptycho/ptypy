@@ -74,6 +74,12 @@ class Bragg3dSimScan(PtyScan):
     type = str
     help = Dump raw simulated 3d diffraction data to npz file
 
+    [dry_run]
+    default = False
+    type = bool
+    help = Don't calculate diffraction patterns
+    doc = Skips the heavy FFT and just returns empty diff patterns.
+
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -136,6 +142,7 @@ class Bragg3dSimScan(PtyScan):
         S.fill(0.0)
         S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= 1e-6) & (yy - .3*zz< 2e-6) & (xx < 1e-6)] = 1
         S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= -2e-6) & (yy - .3*zz < -1e-6)] = 1
+        self.simulated_object = S
         #import matplotlib.pyplot as plt
         #plt.imshow(np.abs(S.data[0, S.data.shape[0]/2, :, :]), interpolation='none')
         #plt.show()
@@ -164,8 +171,12 @@ class Bragg3dSimScan(PtyScan):
 
         # Calculate diffraction patterns by using the geometry's propagator.
         diff = []
-        for v in views:
-            diff.append(np.abs(g.propagator.fw(v.data * probeView.data))**2)
+        if self.p.dry_run:
+            for v in views:
+                diff.append(np.zeros(probeView.shape))
+        else:
+            for v in views:
+                diff.append(np.abs(g.propagator.fw(v.data * probeView.data))**2)
 
         # dump the 3d arrays for testing
         if self.p.dump is not None:
