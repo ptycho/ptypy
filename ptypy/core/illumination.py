@@ -20,12 +20,10 @@ from ..utils.descriptor import EvalDescriptor
 
 TEMPLATES = dict()
 
-local_tree = EvalDescriptor('')
-@local_tree.parse_doc('illumination')
-class DummyClass(object):
-    """
-    Defaults:
-
+# Local, module-level defaults. These can be appended to the defaults of
+# other classes.
+illumination_desc = EvalDescriptor('illumination')
+illumination_desc.from_string(r"""
     [aperture]
     type = Param
     default =
@@ -196,10 +194,9 @@ class DummyClass(object):
     type = str
     help = Path to a ``.ptyr`` compatible file
     userlevel = 0
-    """
-    pass
+    """)
 
-DEFAULT = DummyClass.DEFAULT
+DEFAULT = illumination_desc.make_default(99)
 DEFAULT_aperture = DEFAULT.aperture
 
 __all__ = ['init_storage', 'aperture']

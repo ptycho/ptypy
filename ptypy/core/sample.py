@@ -24,12 +24,10 @@ logger = u.verbose.logger
 
 TEMPLATES = dict()
 
-local_tree = EvalDescriptor('')
-@local_tree.parse_doc('sample')
-class DummyClass(object):
-    """
-    Defaults:
-
+# Local, module-level defaults. These can be appended to the defaults of
+# other classes.
+sample_desc = EvalDescriptor('sample')
+sample_desc.from_string(r"""
     [model]
     default = None
     help = Type of initial object model
@@ -172,10 +170,9 @@ class DummyClass(object):
     doc = **[not implemented]**
     type = float
     userlevel = 2
-    """
-    pass
+    """)
 
-DEFAULT = DummyClass.DEFAULT
+DEFAULT = sample_desc.make_default(99)
 DEFAULT_process = DEFAULT.process
 
 __all__ = ['init_storage', 'simulate']
