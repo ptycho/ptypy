@@ -865,7 +865,7 @@ class EvalDescriptor(ArgParseDescriptor):
                 out[path]['type'] = CODES.PASS
                 if any([i in d._limtypes for i in d.type]):
                     lowlim, uplim = d.limits
-                    if lowlim is None or pars[path] is None:
+                    if (lowlim is None) or (path not in pars) or (pars[path] is None):
                         out[path]['lowlim'] = CODES.PASS
                     else:
                         out[path]['lowlim'] = CODES.PASS if (pars[path] >= lowlim) else CODES.FAIL
