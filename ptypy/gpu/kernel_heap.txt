@@ -1,0 +1,48 @@
+__kernel void calc_fm(float pbound,
+                    __global float *fm,
+                    __global float *fmask,
+                    __global float *fmag,
+                    __global float *fdev,
+                    __global float *ferr)
+{
+    size_t x = get_global_id(2);
+    size_t dx = get_global_size(2);
+    size_t y = get_global_id(1);
+    size_t z_merged = get_global_id(0);
+    size_t lx = get_local_id(2);
+    size_t idx = z_merged*dx*dx + y*dx + x;
+
+    __private float a[3];
+    
+    float error = ferr[z_merged];
+    float renorm = sqrt(pbound/error);
+    const float eps = 1e-10;
+    
+    if (renorm < 1.){
+        a[0] = fmask[idx]; 
+        a[1] = 1. - a[0];
+        a[2] = fdev[idx] * renorm + fmag[idx];
+        a[2] /= fdev[idx] + fmag[idx] + eps;
+        fm[idx] = a[0] * a[2] + a[1];
+    }
+    else {
+        fm[idx] = 1.0;
+    }            
+}
+__kernel void fmag_update(int nmodes,
+                    __global cfloat_t *f,
+                    __global float *fm
+                    //__global cfloat_t *pre_ifft_g,
+                    )
+{
+    size_t x = get_global_id(2);
+    size_t dx = get_global_size(2);
+    size_t y = get_global_id(1);
+    size_t z = get_global_id(0);
+    size_t z_merged = z/nmodes;
+    
+    float fac = fm[z_merged*dx*dx + y*dx + x];
+    //cfloat_t ft = cfloat_mul(f[z*dx*dx + y*dx + x], pre_ifft_g[y*dx + x]);
+    f[z*dx*dx + y*dx + x] = cfloat_mulr(f[z*dx*dx + y*dx + x] , fac);
+    
+}

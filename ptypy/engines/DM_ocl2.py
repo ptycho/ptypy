@@ -615,7 +615,7 @@ class DM_ocl(BaseEngine):
             return cl.Buffer(self.queue.context,cl.mem_flags.READ_ONLY,size=nbytes)
             
         self.error = []
-        # object padding on high side
+        # object padding on high side (due to 16x16 wg size)
         for s in self.ob.S.values():
             pad = (32-np.asarray(s.shape[-2:]) % 32)
             s.data = u.crop_pad(s.data,[[0,pad[0]],[0,pad[1]]],axes=[-2,-1],filltype='project')
@@ -786,6 +786,7 @@ class DM_ocl(BaseEngine):
             
             ## setup Fourier kernels
             from ptypy.gpu.ocl_kernels import Fourier_update_kernel as FUK
+            from ptypy.gpu.ocl_kernels import Auxiliary_wave_kernel as AWK
             prep.fourier_update = FUK(self.queue, nmodes = arr.shape[1], pbound = diffs.pbound)
             mask = self.ma.S[dID].data.astype(np.float32)
             prep.fourier_update.configure(diffs.data, mask, ex.data)
