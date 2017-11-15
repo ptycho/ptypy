@@ -17,6 +17,7 @@ import ast
 from collections import OrderedDict
 import textwrap
 from parameters import Param
+from copy import deepcopy
 
 
 __all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
@@ -247,7 +248,9 @@ class Descriptor(object):
         except (KeyError, TypeError) as e:
             return None
 
-    def add_child(self, desc):
+    def add_child(self, desc, copy=False):
+        if copy:
+            desc = deepcopy(desc)
         self[desc.name] = desc
 
     def prune_child(self, name):
