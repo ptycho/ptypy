@@ -27,7 +27,7 @@ from classes import *
 from classes import DEFAULT_ACCESSRULE
 from classes import MODEL_PREFIX
 from ..utils import parallel
-from ..utils.descriptor import defaults_tree
+from ..utils.descriptor import defaults_tree, EvalDescriptor
 
 # Please set these globally later
 FType = np.float64
@@ -328,6 +328,10 @@ class ScanModel(object):
         self._initialize_exit(new_pods)
 
         return True
+
+    def _new_data_extra_analysis(self, dp):
+        """ This is a hack for 3d Bragg """
+        pass
 
     def _initialize_containers(self):
         """
@@ -917,6 +921,9 @@ Full.DEFAULT = defaults_tree['scan.Full'].make_default(99)
 
 
 import geometry_bragg
+defaults_tree['scan'].add_child(EvalDescriptor('Bragg3dModel'))
+defaults_tree['scan.Bragg3dModel'].add_child(illumination.illumination_desc, copy=True)
+defaults_tree['scan.Bragg3dModel.illumination'].prune_child('diversity')
 @defaults_tree.parse_doc('scan.Bragg3dModel')
 class Bragg3dModel(Vanilla):
     """
@@ -938,182 +945,6 @@ class Bragg3dModel(Vanilla):
     type = str
     help =
 
-    [illumination.aperture]
-    type = Param
-    default =
-    help = Beam aperture parameters
-
-    [illumination.aperture.rotate]
-    type = float
-    default = 0.
-    help = Rotate aperture by this value
-    doc =
-
-    [illumination.aperture.central_stop]
-    help = size of central stop as a fraction of aperture.size
-    default = None
-    doc = If not None: places a central beam stop in aperture. The value given here is the fraction of the beam stop compared to `size`
-    lowlim = 0.
-    uplim = 1.
-    userlevel = 1
-    type = float
-
-    [illumination.aperture.diffuser]
-    help = Noise in the transparen part of the aperture
-    default = None
-    doc = Can be either:
-         - ``None`` : no noise
-         - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
-         - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
-    userlevel = 2
-    type = tuple
-
-    [illumination.aperture.edge]
-    help = Edge width of aperture (in pixels!)
-    type = float
-    default = 2.0
-    userlevel = 2
-
-    [illumination.aperture.form]
-    default = circ
-    type = None, str
-    help = One of None, 'rect' or 'circ'
-    doc = One of:
-         - ``None`` : no aperture, this may be useful for nearfield
-         - ``'rect'`` : rectangular aperture
-         - ``'circ'`` : circular aperture
-    choices = None,'rect','circ'
-    userlevel = 2
-
-    [illumination.aperture.offset]
-    default = 0.
-    type = float, tuple
-    help = Offset between center of aperture and optical axes
-    doc = May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset
-    userlevel = 2
-
-    [illumination.aperture.size]
-    default = 1e-6
-    type = float
-    help = Aperture width or diameter
-    doc = May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture
-    lowlim = 0.
-    userlevel = 0
-
-    [illumination.diversity]
-    default = None
-    type = Param, None
-    help = Probe mode(s) diversity parameters
-    doc = Can be ``None`` i.e. no diversity
-    userlevel = 1
-
-    [illumination.diversity.noise]
-    default = None
-    type = tuple
-    help = Noise in the generated modes of the illumination
-    doc = Can be either:
-         - ``None`` : no noise
-         - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
-         - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
-    userlevel = 1
-
-    [illumination.diversity.power]
-    default = 0.1
-    type = tuple, float
-    help = Power of modes relative to main mode (zero-layer)
-    uplim = 1.0
-    lowlim = 0.0
-    userlevel = 1
-
-    [illumination.diversity.shift]
-    default = None
-    type = float
-    help = Lateral shift of modes relative to main mode
-    doc = **[not implemented]**
-    userlevel = 2
-
-    [illumination.model]
-    default = None
-    type = str
-    help = Type of illumination model
-    doc = One of:
-         - ``None`` : model initialitziation defaults to flat array filled with the specified number of photons
-         - ``'recon'`` : load model from previous reconstruction, see `recon` Parameters
-         - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
-         - *<resource>* : one of ptypys internal image resource strings
-         - *<template>* : one of the templates inillumination module
-
-        In script, you may pass a numpy.ndarray here directly as the model. It is considered as incoming wavefront and will be propagated according to `propagation` with an optional `aperture` applied before.
-    userlevel = 0
-
-    [illumination.photons]
-    type = int, None
-    default = None
-    help = Number of photons in the incident illumination
-    doc = A value specified here will take precedence over calculated statistics from the loaded data.
-    lowlim = 0
-    userlevel = 2
-
-    [illumination.propagation]
-    type = Param
-    default =
-    help = Parameters for propagation after aperture plane
-    doc = Propagation to focus takes precedence to parallel propagation if `foccused` is not ``None``
-
-    [illumination.propagation.antialiasing]
-    default = 1
-    type = float
-    help = Antialiasing factor
-    doc = Antialiasing factor used when generating the probe. (numbers larger than 2 or 3 are memory hungry)
-        **[Untested]**
-    userlevel = 2
-
-    [illumination.propagation.focussed]
-    default = None
-    type = None, float
-    lowlim =
-    help = Propagation distance from aperture to focus
-    doc = If ``None`` or ``0`` : No focus propagation
-    userlevel = 0
-
-    [illumination.propagation.parallel]
-    default = None
-    type = None, float
-    help = Parallel propagation distance
-    doc = If ``None`` or ``0`` : No parallel propagation
-    userlevel = 0
-
-    [illumination.propagation.spot_size]
-    default = None
-    type = None, float
-    help = Focal spot diameter
-    doc = If not ``None``, this parameter is used to generate the appropriate aperture size instead of :py:data:`size`
-    lowlim = 0
-    userlevel = 1
-
-    [illumination.recon]
-    default =
-    type = Param
-    help = Parameters to load from previous reconstruction
-
-    [illumination.recon.label]
-    default = None
-    type = None, str
-    help = Scan label of diffraction that is to be used for probe estimate
-    doc = If ``None``, own scan label is used
-    userlevel = 1
-
-    [illumination.recon.rfile]
-    default = \*.ptyr
-    type = str
-    help = Path to a ``.ptyr`` compatible file
-    userlevel = 0
-
-    [sample.fill]
-    default = 1
-    type = float, complex
-    help = Initial sample value
-    doc = The sample is initialized with this value everywhere.
     """
 
     def __init__(self, ptycho=None, pars=None, label=None):
