@@ -16,8 +16,9 @@ This file is part of the PTYPY package.
 import ast
 from collections import OrderedDict
 import textwrap
-from parameters import Param
 from copy import deepcopy
+
+from .parameters import Param
 
 
 __all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
