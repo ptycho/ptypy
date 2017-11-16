@@ -155,9 +155,6 @@ class ScanModel(object):
 
         return ps_instance
 
-    def _extra_analysis(self):
-        return True
-
     def new_data(self):
         """
         Feed data from ptyscan object.
@@ -329,8 +326,12 @@ class ScanModel(object):
         return True
 
     def _new_data_extra_analysis(self, dp):
-        """ This is a hack for 3d Bragg """
-        pass
+        """
+        This is a hack for 3d Bragg. Extra analysis on the incoming
+        data package. Returns modified dp, or None if no completa data
+        is available for pod creation.
+        """
+        return dp
 
     def _initialize_containers(self):
         """
@@ -943,6 +944,11 @@ class Bragg3dModel(Vanilla):
     default = Bragg3dModel
     type = str
     help =
+
+    [illumination.aperture.size]
+    default = 1e-6
+    type = float
+    help = override
 
     """
 

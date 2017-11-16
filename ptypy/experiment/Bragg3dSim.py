@@ -77,6 +77,11 @@ class Bragg3dSimScan(PtyScan):
     help = Don't calculate diffraction patterns
     doc = Skips the heavy FFT and just returns empty diff patterns.
 
+    [illumination.aperture.size]
+    default = 1e-6
+    type = float
+    help = override
+
     """
 
     def __init__(self, pars=None, **kwargs):
