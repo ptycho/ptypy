@@ -465,8 +465,8 @@ class Auxiliary_wave_kernel(BaseKernel):
                 self.execute_ocl(kernel, compare, sync)
         else:
             self.log("KERNEL " + kernel_name)
-            m_ocl = getattr(self,'_ocl_' + kernel_name )
-            m_npy = getattr(self,'_npy_' + kernel_name )
+            m_ocl = getattr(self,'ocl_' + kernel_name )
+            m_npy = getattr(self,'npy_' + kernel_name )
             ocl_kernel_args = getargspec(m_ocl).args[1:]
             npy_kernel_args = getargspec(m_npy).args[1:]
             assert ocl_kernel_args == npy_kernel_args
@@ -501,14 +501,14 @@ class Auxiliary_wave_kernel(BaseKernel):
         return 
     
     
-    def _ocl_build_aux(self, aux, ob, pr, ex, addr):
+    def ocl_build_aux(self, aux, ob, pr, ex, addr):
         obsh = self.ob_shape
         ev = self.prg.build_aux(self.queue, aux.shape, self.ocl_wg_size,
                            self.alpha, obsh[0], obsh[1], self._offset,
                            aux.data, ob.data, pr.data, ex.data, addr.data)
         return ev
         
-    def _npy_build_aux(self, aux, ob, pr, ex, addr):
+    def npy_build_aux(self, aux, ob, pr, ex, addr):
         
         sh = addr.shape
         flat_addr = addr.reshape(sh[0]*sh[1],sh[2],sh[3])
@@ -524,7 +524,7 @@ class Auxiliary_wave_kernel(BaseKernel):
                   self.alpha
             aux[ind,:,:] = tmp
             
-    def _ocl_build_exit(self, aux, ob, pr, ex, addr):
+    def ocl_build_exit(self, aux, ob, pr, ex, addr):
         obsh = self.ob_shape        
         ev = self.prg.build_exit(self.queue, aux.shape, self.ocl_wg_size,
                             self.alpha, obsh[0], obsh[1], self._offset, 
@@ -532,7 +532,7 @@ class Auxiliary_wave_kernel(BaseKernel):
         
         return ev
         
-    def _npy_build_exit(self, aux, ob, pr, ex, addr):
+    def npy_build_exit(self, aux, ob, pr, ex, addr):
         
         sh = addr.shape
         flat_addr = addr.reshape(sh[0]*sh[1],sh[2],sh[3])
@@ -565,14 +565,14 @@ class Auxiliary_wave_kernel(BaseKernel):
 
         nviews,rows,cols = ob_shape
         ex_shape = (nviews,)+pr_shape[-2:]
-        addr = np.zeros((1,nviews,5,3),dtype=np.int32)
+        addr = np.zeros((nviews,1,5,3),dtype=np.int32)
         for i in range(nviews):
             obc = (0,2*i,i)
             prc = (0,0,0)
             exc = (i,0,0)
             mac = (i,0,0)# unimportant
             dic = (i,0,0)# same here
-            addr[0,i,:,:] = np.array([prc,obc,exc,mac,dic],dtype=np.int32)
+            addr[i,0,:,:] = np.array([prc,obc,exc,mac,dic],dtype=np.int32)
              
         ob = np.random.rand(*ob_shape).astype(np.complex64) 
         pr = np.random.rand(*pr_shape).astype(np.complex64) 
@@ -640,9 +640,10 @@ class PO_update_kernel(BaseKernel):
                                 __global cfloat_t *ex_g,
                                 __global int *addr)
         {
-            size_t z = get_global_id(0);
+            size_t z = get_global_id(1);
             size_t dz = get_global_size(1);
-            size_t y = get_global_id(1);
+            size_t y = get_global_id(0);
+            size_t dy = get_global_size(0);
             __private cfloat_t ob[8];
             __private cfloat_t obn[8];
 
@@ -652,8 +653,8 @@ class PO_update_kernel(BaseKernel):
             cfloat_t pr = pr_g[0];
             
             for (int i=0;i<ob_modes;i++){
-                ob[i] = ob_g[i*dz*dz + y*dz + z];
-                obn[i] = obn_g[i*dz*dz + y*dz + z];
+                ob[i] = ob_g[i*dy*dz + y*dz + z];
+                obn[i] = obn_g[i*dy*dz + y*dz + z];
             }
             
             for (int i=0;i<num_pods;i++){
@@ -667,8 +668,8 @@ class PO_update_kernel(BaseKernel):
             
             }
             for (int i=0;i<ob_modes;i++){
-                ob_g[i*dz*dz + y*dz + z] = ob[i];
-                obn_g[i*dz*dz + y*dz + z] = obn[i];
+                ob_g[i*dy*dz + y*dz + z] = ob[i];
+                obn_g[i*dy*dz + y*dz + z] = obn[i];
             }
         }
         __kernel void pr_update(int pr_sh,
@@ -682,12 +683,10 @@ class PO_update_kernel(BaseKernel):
                                 __global cfloat_t *ex_g,
                                 __global int *addr)
         {
-            size_t z = get_global_id(0);
+            size_t z = get_global_id(1);
             size_t dz = get_global_size(1);
-            size_t y = get_global_id(1);
-            //size_t dy = get_global_size(1);
-            //int off1 = 0;
-            //int off2 = 0;
+            size_t y = get_global_id(0);
+            size_t dy = get_global_size(0);
             __private cfloat_t pr[8];
             __private cfloat_t prn[8];
             
@@ -696,8 +695,8 @@ class PO_update_kernel(BaseKernel):
             cfloat_t ob; 
             
             for (int i=0;i<pr_modes;i++){
-                pr[i] = pr_g[i*dz*dz + y*dz + z];
-                prn[i] = prn_g[i*dz*dz + y*dz + z];
+                pr[i] = pr_g[i*dy*dz + y*dz + z];
+                prn[i] = prn_g[i*dy*dz + y*dz + z];
             }
 
             for (int i=0;i<num_pods;i++){
@@ -712,8 +711,8 @@ class PO_update_kernel(BaseKernel):
             }
 
             for (int i=0;i<pr_modes;i++){
-                pr_g[i*dz*dz + y*dz + z] = pr[i];
-                prn_g[i*dz*dz + y*dz + z] = prn[i];
+                pr_g[i*dy*dz + y*dz + z] = pr[i];
+                prn_g[i*dy*dz + y*dz + z] = prn[i];
             }
 
         }
@@ -873,9 +872,10 @@ class PO_update_kernel(BaseKernel):
                 self.log("Key %s : %.2e std, %.2e mean" % (name, dev, mn))        
         
     @classmethod
-    def test(cls, ob_shape =  (1,320,320), pr_shape = (4,256,256)):
+    def test(cls, ob_shape =  (1,320,352), pr_shape = (4,256,256)):
 
         nviews,rows,cols = ob_shape
+        nviews = 10
         ex_shape = (nviews,)+pr_shape[-2:]
         addr = np.zeros((1,nviews,5,3),dtype=np.int32)
         for i in range(nviews):
