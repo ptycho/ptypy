@@ -9,10 +9,19 @@ This file is part of the PTYPY package.
 import numpy as np
 from scipy import fftpack
 
-from .. import utils as u
-from ..utils.verbose import logger
-from .classes import Base, GEO_PREFIX
-from ..utils.descriptor import EvalDescriptor
+# for solo use ##########
+if __name__ == "__main__":
+    from ptypy import utils as u
+    from ptypy.utils.verbose import logger
+    from ptypy.core import Base
+    from ptypy.utils.descriptor import defaults_tree
+    GEO_PREFIX = 'G'
+# for in package use #####
+else:
+    from .. import utils as u
+    from ..utils.verbose import logger
+    from classes import Base, GEO_PREFIX
+    from ..utils.descriptor import EvalDescriptor
 
 try:
     import pyfftw
@@ -38,8 +47,6 @@ _old2new = u.Param(
 )
 
 
-local_tree = EvalDescriptor('')
-@local_tree.parse_doc()
 class Geo(Base):
     """
     Hold and keep consistent the information about experimental parameters.
@@ -55,176 +62,76 @@ class Geo(Base):
         :py:meth:`lam`, :py:meth:`shape` or :py:meth:`psize` will cause
         a call to :py:meth:`update`
 
-    Default geometry parameters. See also :py:data:`.scan.geometry`
-    Defaults:
-
-    [energy]
-    type = float
-    default = 6.2
-    help = Energy (in keV)
-    doc = If ``None``, uses `lam` instead.
-    userlevel = 0
-    lowlim = 0
-
-    [lam]
-    type = float
-    default = None
-    help = Wavelength (in meters)
-    doc = Used only if `energy` is ``None``
-    userlevel = 0
-    lowlim = 0
-
-    [distance]
-    type = float
-    default = 7.19
-    help = Distance from object to detector (in meters)
-    doc =
-    userlevel = 0
-    lowlim = 0
-
-    [psize]
-    type = float
-    default = 0.000172
-    help = Pixel size in the detector plane (in meters)
-    doc =
-    userlevel = 1
-    lowlim = 0
-
-    [resolution]
-    type = float
-    default = None
-    help = Pixel size in the sample plane
-    doc = This parameter is used only for simulations
-    userlevel = 2
-    lowlim = 0
-
-    [propagation]
-    type = str
-    default = farfield
-    help = Propagation type
-    doc = Either "farfield" or "nearfield"
-    userlevel = 1
-
-    [shape]
-    type = int, tuple
-    default = 256
-    help = Number of pixels in detector frame
-    doc = Can be a 2-tuple of int (Nx, Ny) or an int N, in which case it is interpreted as (N, N).
-    userlevel = 1
-
-    [misfit]
-    type = float, tuple
-    default = 0.
-    help = TODO: WHAT IS MISFIT?
-    doc =
-    userlevel = 2
-
-    [center]
-    type = int, tuple, str
-    default = 'fftshift'
-    help = TODO: document this parameter.
-    doc =
-    userlevel = 2
-
-    [origin]
-    type = int, tuple, str
-    default = 'fftshift'
-    help = TODO: document this parameter.
-    doc =
-    userlevel = 2
     """
 
     _keV2m = 1.23984193e-09
     _PREFIX = GEO_PREFIX
 
-    def __init__(self, owner=None, ID=None, pars=None, **kwargs):
+    def __init__(self, lam, distance, shape, psize=None, resolution=None, propagation='farfield'):
         """
         Parameters
         ----------
-        owner : Base or subclass
-            Instance of a subclass of :any:`Base` or None. That is usually
-            :any:`Ptycho` for a Geo instance.
+        lam : float
+             Wavelength (in meters)
 
-        ID : str or int
-            Identifier. Use ``ID=None`` for automatic ID assignment.
+        distance : float
+             Distance from object to detector (in meters)
 
-        pars : dict or Param
-            The configuration parameters. See `Geo.DEFAULT`.
-            Any other kwarg will update internal p dictionary
-            if the key exists in `Geo.DEFAULT`.
-        """
-        super(Geo, self).__init__(owner, ID)
+        psize : float
+             Pixel size in the detector plane (in meters)
 
-        # Starting parameters
-        p = self.DEFAULT.copy(99)
-        if pars is not None:
-            p.update(pars)
-            for k, v in p.items():
-                if k in _old2new.keys():
-                    p[_old2new[k]] = v
-        for k, v in kwargs.iteritems():
-            if k in p:
-                p[k] = v
+        resolution : float
+             Pixel size in the sample plane (used only if psize is None)
 
-        self.p = p
-        self._initialize(p)
+        propagation : str ('farfield')
+             Propagation type ("farfield" or "nearfield")
 
-    def _initialize(self, p):
-        """
-        Parse input parameters, fill missing parameters and set up a
-        propagator.
+        shape : int, tuple
+             Number of pixels in detector frame. Can be a 2-tuple
+             of int (Nx, Ny) or an int N, in which case it is
+             interpreted as (N, N).
+        dtype : str
+             datatype for propagator.
         """
         self.interact = False
 
         # Set distance
-        if self.p.distance is None or self.p.distance == 0:
-            raise ValueError(
-                'Distance (geometry.distance) must not be None or 0')
+        if distance is None or distance == 0:
+            raise ValueError('distance must not be None or 0')
+        self._distance = distance
 
         # Set frame shape
-        if self.p.shape is None or (np.array(self.p.shape) == 0).any():
-            raise ValueError(
-                'Frame size (geometry.shape) must not be None or 0')
-        else:
-            self.p.shape = u.expect2(p.shape)
+        if shape is None or (np.array(shape) == 0).any():
+            raise ValueError('shape must not be None or 0')
+        self._shape = u.expect2(shape)
 
-        # Set energy and wavelength
-        if p.energy is None:
-            if p.lam is None:
-                raise ValueError(
-                    'Wavelength (geometry.lam) and energy (geometry.energy)\n'
-                    'must not both be None')
-            else:
-                self.lam = p.lam  # also sets energy
-        else:
-            if p.lam is not None:
-                logger.debug('Energy and wavelength both specified. '
-                             'Energy takes precedence over wavelength')
-
-            self.energy = p.energy
+        # Wavelength
+        self.lam = lam  # also sets energy
 
         # Set initial geometrical misfit to 0
-        self.p.misfit = u.expect2(0.)
+        self.misfit = u.expect2(0.)
 
         # Pixel size
-        self.p.psize_is_fix = p.psize is not None
-        self.p.resolution_is_fix = p.resolution is not None
+        self.psize_is_fix = psize is not None
+        self.resolution_is_fix = resolution is not None
 
-        if not self.p.psize_is_fix and not self.p.resolution_is_fix:
+        if not self.psize_is_fix and not self.resolution_is_fix:
             raise ValueError(
-                'Pixel size in sample plane (geometry.resolution) and '
-                'detector plane \n(geometry.psize) must not both be None')
+                'Pixel size in sample plane (resolution) and '
+                'detector plane \n(psize) must not both be None')
 
         # Fill pixel sizes
-        if self.p.resolution_is_fix:
-            self.p.resolution = u.expect2(p.resolution)
+        self._psize = u.expect2(1.)
+        self._resolution = u.expect2(1.)
+        if self.resolution_is_fix:
+            self.resolution = u.expect2(resolution)
         else:
-            self.p.resolution = u.expect2(1.0)
+            self.resolution = u.expect2(1.0)
 
-        if self.p.psize_is_fix:
-            self.p.psize = u.expect2(p.psize)
+        if self.psize_is_fix:
+            self.psize = u.expect2(psize)
         else:
-            self.p.psize = u.expect2(1.0)
+            self.psize = u.expect2(1.0)
 
         # Update other values
         self.update(False)
@@ -239,31 +146,31 @@ class Geo(Base):
         pixel size (resolution) if self.psize_is_fixed is True.
         """
         # 4 cases
-        if not self.p.resolution_is_fix and not self.p.psize_is_fix:
+        if not self.resolution_is_fix and not self.psize_is_fix:
             # This is a rare case
             logger.debug('No pixel size is marked as constant. '
                          'Setting detector pixel size as fix.')
             self.psize_is_fix = True
             self.update()
             return
-        elif not self.p.resolution_is_fix and self.p.psize_is_fix:
-            if self.p.propagation == 'farfield':
-                self.p.resolution[:] = self.lz / self.p.psize / self.p.shape
+        elif not self.resolution_is_fix and self.psize_is_fix:
+            if self.propagation == 'farfield':
+                self.resolution[:] = self.lz / self.psize / self.shape
             else:
-                self.p.resolution[:] = self.p.psize
-        elif self.p.resolution_is_fix and not self.p.psize_is_fix:
-            if self.p.propagation == 'farfield':
-                self.p.psize[:] = self.lz / self.p.resolution / self.p.shape
+                self.resolution[:] = self.psize
+        elif self.resolution_is_fix and not self.psize_is_fix:
+            if self.propagation == 'farfield':
+                self.psize[:] = self.lz / self.resolution / self.shape
             else:
-                self.p.psize[:] = self.p.resolution
+                self.psize[:] = self.resolution
         else:
             # Both psizes are fix
-            if self.p.propagation == 'farfield':
+            if self.propagation == 'farfield':
                 # Frame misfit that would make it work
-                self.p.misfit[:] = (self.lz / self.p.resolution / self.p.psize
-                                    - self.p.shape)
+                self.misfit[:] = (self.lz / self.resolution / self.psize
+                                    - self.shape)
             else:
-                self.p.misfit[:] = self.p.resolution - self.p.psize
+                self.misfit[:] = self.resolution - self.psize
 
         # Update the propagator too (optionally pass the dictionary,
         # but Geometry & Propagator should share a dict
@@ -276,13 +183,13 @@ class Geo(Base):
         """
         Property to get and set the energy
         """
-        return self.p.energy
+        return self._energy
 
     @energy.setter
     def energy(self, v):
-        self.p.energy = v
+        self._energy = v
         # actively change inner variables
-        self.p.lam = self._keV2m / v
+        self._lam = self._keV2m / v
         if self.interact:
             self.update()
 
@@ -291,14 +198,14 @@ class Geo(Base):
         """
         Property to get and set the wavelength
         """
-        return self.p.lam
+        return self._lam
 
     @lam.setter
     def lam(self, v):
         # changing wavelengths never changes N, only psize
         # for changing N, please do so manually
-        self.p.lam = v
-        self.p.energy = self._keV2m / v
+        self._lam = v
+        self._energy = self._keV2m / v
         if self.interact:
             self.update()
 
@@ -307,14 +214,14 @@ class Geo(Base):
         """
         Property to get and set the pixel size in source plane
         """
-        return self.p.resolution
+        return self._resolution
 
     @resolution.setter
     def resolution(self, v):
         """
         changing source space pixel size
         """
-        self.p.resolution[:] = u.expect2(v)
+        self._resolution[:] = u.expect2(v)
         if self.interact:
             self.update()
 
@@ -323,11 +230,11 @@ class Geo(Base):
         """
         Property to get and set the pixel size in the propagated plane
         """
-        return self.p.psize
+        return self._psize
 
     @psize.setter
     def psize(self, v):
-        self.p.psize[:] = u.expect2(v)
+        self._psize[:] = u.expect2(v)
         if self.interact:
             self.update()
 
@@ -336,18 +243,18 @@ class Geo(Base):
         """
         Retrieves product of wavelength and propagation distance
         """
-        return self.p.lam * self.p.distance
+        return self._lam * self._distance
 
     @property
     def shape(self):
         """
         Property to get and set the *shape* i.e. the frame dimensions
         """
-        return self.p.shape
+        return self._shape
 
     @shape.setter
     def shape(self, v):
-        self.p.shape[:] = u.expect2(v).astype(int)
+        self._shape[:] = u.expect2(v).astype(int)
         if self.interact:
             self.update()
 
@@ -356,7 +263,7 @@ class Geo(Base):
         """
         Propagation distance in meters
         """
-        return self.p.distance
+        return self._distance
 
     @property
     def propagator(self):
@@ -381,10 +288,6 @@ class Geo(Base):
         del self._propagator
         # Return internal dicts
         return self.__dict__.copy()
-
-    # def _post_dict_import(self):
-    #    self.propagator = get_propagator(self.p)
-    #    self.interact = True
 
     def _get_propagator(self):
         # attach desired datatype for propagator

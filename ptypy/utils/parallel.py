@@ -7,17 +7,14 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-__all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
-           'LoadManager', 'loadmanager','allreduce','send','receive','bcast',
-           'bcast_dict', 'gather_dict','MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
-
 import numpy as np
+
+from .. import __has_mpi4py__ as hmpi
+
 size = 1
 rank = 0
 MPI = None
 comm = None
-
-from .. import __has_mpi4py__ as hmpi
 if hmpi:
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
@@ -27,6 +24,10 @@ del hmpi
 
 MPIenabled = not (size == 1)
 master = (rank == 0)
+
+__all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
+           'LoadManager', 'loadmanager','allreduce','send','receive','bcast',
+           'bcast_dict', 'gather_dict','MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
 
 
 def useMPI(do=None):

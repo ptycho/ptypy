@@ -14,7 +14,7 @@ import shutil
 import os
 import tempfile
 from .. import utils as u
-from ptypy.core import Ptycho
+from ..core import Ptycho
 
 
 def get_test_data_path(name):
@@ -44,9 +44,6 @@ def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='app
 
 def EngineTestRunner(engine_params,propagator='farfield'):
 
-    RECIPE = u.Param({'photons': 100000000.0,
-                      'psf': 0.0,
-                      'density': 0.2})
     p = u.Param()
     p.verbose_level = 3
     p.io = u.Param()
@@ -57,35 +54,33 @@ def EngineTestRunner(engine_params,propagator='farfield'):
     p.ipython_kernel = False
     p.scans = u.Param()
     p.scans.MF = u.Param()
-    p.scans.MF.data= u.Param()
-    p.scans.MF.data.source = 'test'
-    p.scans.MF.data.positions_theory =  None
-    p.scans.MF.data.auto_center =  None
-    p.scans.MF.data.min_frames =  1
-    p.scans.MF.data.orientation =  None
-    p.scans.MF.data.precedence =  None
-    p.scans.MF.data.num_frames =  100
-    p.scans.MF.data.energy =  6.2
-    p.scans.MF.data.shape =  256
+    p.scans.MF.name = 'Full'
+    p.scans.MF.propagation = propagator
+    p.scans.MF.data = u.Param()
+    p.scans.MF.data.name = 'MoonFlowerScan'
+    p.scans.MF.data.positions_theory = None
+    p.scans.MF.data.auto_center = None
+    p.scans.MF.data.min_frames = 1
+    p.scans.MF.data.orientation = None
+    p.scans.MF.data.num_frames = 100
+    p.scans.MF.data.energy = 6.2
+    p.scans.MF.data.shape = 256
     p.scans.MF.data.chunk_format = '.chunk%02d'
-    p.scans.MF.data.rebin =  None
-    p.scans.MF.data.experimentID =  None
-    p.scans.MF.data.label =  None
+    p.scans.MF.data.rebin = None
+    p.scans.MF.data.experimentID = None
+    p.scans.MF.data.label = None
     p.scans.MF.data.version = 0.1
     p.scans.MF.data.dfile = None
-    p.scans.MF.data.lam =  None
-    p.scans.MF.data.psize =  0.000172
-    p.scans.MF.data.load_parallel =  None
-    p.scans.MF.data.misfit =  0
-    p.scans.MF.data.origin = 'fftshift'
-    p.scans.MF.data.distance =  7.0
-    p.scans.MF.data.save =  None
+    p.scans.MF.data.psize = 0.000172
+    p.scans.MF.data.load_parallel = None
+    p.scans.MF.data.distance = 7.0
+    p.scans.MF.data.save = None
     p.scans.MF.data.center = 'fftshift'
-    p.scans.MF.data.propagation = propagator
-    p.scans.MF.data.resolution =  None
-    p.scans.MF.data.recipe =  RECIPE
+    p.scans.MF.data.photons = 100000000.0
+    p.scans.MF.data.psf = 0.0
+    p.scans.MF.data.density = 0.2
     p.engines = u.Param()
     p.engines.engine00 = engine_params
-    P = Ptycho(p,level=5)
+    P = Ptycho(p, level=5)
     return P
 

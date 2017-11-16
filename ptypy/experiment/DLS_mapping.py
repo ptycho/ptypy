@@ -9,17 +9,16 @@ This file is part of the PTYPY package.
 """
 
 import numpy as np
-import os
+import h5py as h5
+
 from .. import utils as u
 from .. import io
-from ..utils import parallel
 from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..core.paths import Paths
-#from ..core import DEFAULT_io as IO_par
 from ..core import Ptycho
+
 IO_par = Ptycho.DEFAULT['io']
-import h5py as h5
 
 logger = u.verbose.logger
 
@@ -34,8 +33,6 @@ NEXUS_PATHS.motors = ['lab_sy_value', 'lab_sx_value']
 NEXUS_PATHS.command = 'entry/scan_command'
 NEXUS_PATHS.label = 'entry/entry_identifier'
 NEXUS_PATHS.experiment = 'entry/experiment_identifier'
-
-
 
 # Recipe defaults
 RECIPE = u.Param()

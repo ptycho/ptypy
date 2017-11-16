@@ -20,14 +20,24 @@ This file is part of the PTYPY package.
 import numpy as np
 import os
 import h5py
-from . import geometry
-from . import xy
-from .. import utils as u
-from .. import io
-from .. import resources
-from ..utils import parallel
-from ..utils.verbose import logger, log, headerline
-from ..utils.descriptor import defaults_tree
+if __name__ == "__main__":
+    from ptypy.core import geometry
+    from ptypy.core import xy
+    from ptypy import utils as u
+    from ptypy import io
+    from ptypy import resources
+    from ptypy.utils import parallel
+    from ptypy.utils.verbose import logger, log, headerline
+    from ptypy.utils.descriptor import defaults_tree, EvalDescriptor
+else:
+    import geometry
+    import xy
+    from .. import utils as u
+    from .. import io
+    from .. import resources
+    from ..utils import parallel
+    from ..utils.verbose import logger, log, headerline
+    from ..utils.descriptor import defaults_tree
 
 PTYD = dict(
     # frames, positions
@@ -44,6 +54,7 @@ WAIT = 'msg1'
 EOS = 'msgEOS'
 CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
          EOS: 'End of scan reached'}
+
 
 __all__ = ['PtyScan', 'PTYD', 'PtydScan',
            'MoonFlowerScan']
@@ -287,9 +298,6 @@ class PtyScan(object):
         self.dfile = None
         self.save = self.info.save
 
-        # Construct meta
-        self.meta = u.Param({k: self.info[k] for k in self.METAKEYS})
-
         self.orientation = self.info.orientation
         self.rebin = self.info.rebin
 
@@ -359,9 +367,6 @@ class PtyScan(object):
         if self.has_weight2d:
             logger.info('shape = '.rjust(29) + str(self.weight2d.shape))
 
-            # FIXME: Saving weight to info. This is not ideal, info is optional
-            self.info.weight2d = self.has_weight2d
-
         logger.info('All experimental positions : ' + str(self.has_positions))
         if self.has_positions:
             logger.info('shape = '.rjust(29) + str(positions.shape))
@@ -411,7 +416,7 @@ class PtyScan(object):
 
         # A note about how much this scan class knows about the number
         # of frames expected. PtydScan uses this information.
-        self.meta.num_frames = self.num_frames
+        self.info.num_frames_actual = self.num_frames
         parallel.barrier()
         """
         #logger.info('#######  MPI Report: ########\n')
@@ -640,224 +645,224 @@ class PtyScan(object):
         if msg in [EOS, WAIT]:
             logger.info(CODES[msg])
             return msg
-
-        start, step = msg
-
-        # Get scan point index distribution
-        indices = self._mpi_indices(start, step)
-
-        # What did we get?
-        data, positions, weights = self._mpi_pipeline_with_dictionaries(
-            indices)
-        # All these dictionaries could be empty
-        # Fill weights dictionary with references to the weights in common
-
-        has_data = (len(data) > 0)
-        has_weights = (len(weights) > 0) and len(weights.values()[0]) > 0
-
-        if has_data:
-            dsh = np.array(data.values()[0].shape[-2:])
         else:
-            dsh = np.array([0, 0])
+            start, step = msg
 
-        # Communicate result
-        dsh[0] = parallel.MPImax([dsh[0]])
-        dsh[1] = parallel.MPImax([dsh[1]])
+            # Get scan point index distribution
+            indices = self._mpi_indices(start, step)
 
-        if not has_weights:
-            # Peak at first item
-            if self.has_weight2d:
-                altweight = self.weight2d
+            # What did we get?
+            data, positions, weights = self._mpi_pipeline_with_dictionaries(
+                indices)
+            # All these dictionaries could be empty
+            # Fill weights dictionary with references to the weights in common
+
+            has_data = (len(data) > 0)
+            has_weights = (len(weights) > 0) and len(weights.values()[0]) > 0
+
+            if has_data:
+                dsh = np.array(data.values()[0].shape[-2:])
             else:
-                try:
-                    altweight = self.info.weight2d
-                except:
-                    altweight = np.ones(dsh)
-            weights = dict.fromkeys(data.keys(), altweight)
+                dsh = np.array([0, 0])
 
-        assert len(weights) == len(data), (
-            'Data and Weight frames unbalanced %d vs %d'
-            % (len(data), len(weights)))
+            # Communicate result
+            dsh[0] = parallel.MPImax([dsh[0]])
+            dsh[1] = parallel.MPImax([dsh[1]])
 
-        sh = self.info.shape
-        # Adapt roi if not set
-        if sh is None:
-            logger.info('ROI not set. Using full frame shape of (%d, %d).'
-                        % tuple(dsh))
-            sh = dsh
-        else:
-            sh = u.expect2(sh)
+            if not has_weights:
+                # Peak at first item
+                if self.has_weight2d:
+                    altweight = self.weight2d
+                else:
+                    try:
+                        altweight = self.weight2d
+                    except:
+                        altweight = np.ones(dsh)
+                weights = dict.fromkeys(data.keys(), altweight)
 
-        # Only allow square slices in data
-        if sh[0] != sh[1]:
-            roi = u.expect2(sh.min())
-            logger.warning('Asymmetric data ROI not allowed. Setting ROI '
-                           'from (%d, %d) to (%d, %d).'
-                           % (sh[0], sh[1], roi[0], roi[1]))
-            sh = roi
+            assert len(weights) == len(data), (
+                'Data and Weight frames unbalanced %d vs %d'
+                % (len(data), len(weights)))
 
-        self.info.shape = sh
+            sh = self.info.shape
+            # Adapt roi if not set
+            if sh is None:
+                logger.info('ROI not set. Using full frame shape of (%d, %d).'
+                            % tuple(dsh))
+                sh = dsh
+            else:
+                sh = u.expect2(sh)
 
-        cen = self.info.center
-        if str(cen) == cen:
-            cen = geometry.translate_to_pix(dsh, cen)
+            # Only allow square slices in data
+            if sh[0] != sh[1]:
+                roi = u.expect2(sh.min())
+                logger.warning('Asymmetric data ROI not allowed. Setting ROI '
+                               'from (%d, %d) to (%d, %d).'
+                               % (sh[0], sh[1], roi[0], roi[1]))
+                sh = roi
 
-        auto = self.info.auto_center
-        # Get center in diffraction image
-        if auto is None or auto is True:
-            auto_cen = self._mpi_autocenter(data, weights)
-        else:
-            auto_cen = None
+            self.info.shape = sh
 
-        if cen is None and auto_cen is not None:
-            logger.info('Setting center for ROI from %s to %s.'
-                        % (str(cen), str(auto_cen)))
-            cen = auto_cen
-        elif cen is None and auto is False:
-            cen = dsh // 2
-        else:
-            # Center is number or tuple
-            cen = u.expect2(cen[-2:])
-            if auto_cen is not None:
-                logger.info('ROI center is %s, automatic guess is %s.'
+            cen = self.info.center
+            if str(cen) == cen:
+                cen = geometry.translate_to_pix(dsh, cen)
+
+            auto = self.info.auto_center
+            # Get center in diffraction image
+            if auto is None or auto is True:
+                auto_cen = self._mpi_autocenter(data, weights)
+            else:
+                auto_cen = None
+
+            if cen is None and auto_cen is not None:
+                logger.info('Setting center for ROI from %s to %s.'
                             % (str(cen), str(auto_cen)))
-
-        # It is important to set center again in order to NOT have
-        # different centers for each chunk, the downside is that the center
-        # may be off if only a few diffraction patterns are used for the
-        # analysis. In such case it is beneficial to set the center in the
-        # parameters
-        self.info.center = cen
-
-        # Make sure center is in the image frame
-        assert (cen > 0).all() and (dsh - cen > 0).all(), (
-            'Optical axes (center = (%.1f, %.1f) outside diffraction image '
-            'frame (%d, %d).' % (tuple(cen) + tuple(dsh)))
-
-        # Determine if the arrays require further processing
-        do_flip = (self.orientation is not None
-                   and np.array(self.orientation).any())
-        do_crop = (np.abs(sh - dsh) > 0.5).any()
-        do_rebin = self.rebin is not None and (self.rebin != 1)
-
-        if do_flip or do_crop or do_rebin:
-            logger.info(
-                'Enter preprocessing '
-                '(crop/pad %s, rebin %s, flip/rotate %s) ... \n'
-                % (str(do_crop), str(do_rebin), str(do_flip)))
-
-            # We proceed with numpy arrays.That is probably now more memory
-            # intensive but shorter in writing
-            if has_data:
-                d = np.array([data[ind] for ind in indices.node])
-                w = np.array([weights[ind] for ind in indices.node])
+                cen = auto_cen
+            elif cen is None and auto is False:
+                cen = dsh // 2
             else:
-                d = np.ones((1,) + tuple(dsh))
-                w = np.ones((1,) + tuple(dsh))
+                # Center is number or tuple
+                cen = u.expect2(cen[-2:])
+                if auto_cen is not None:
+                    logger.info('ROI center is %s, automatic guess is %s.'
+                                % (str(cen), str(auto_cen)))
 
-            # Crop data
-            d, tmp = u.crop_pad_symmetric_2d(d, sh, cen)
+            # It is important to set center again in order to NOT have
+            # different centers for each chunk, the downside is that the center
+            # may be off if only a few diffraction patterns are used for the
+            # analysis. In such case it is beneficial to set the center in the
+            # parameters
+            self.info.center = cen
 
-            # Check if provided mask has the same shape as data, if not,
-            # use the mask's center for cropping the mask. The latter is
-            # also needed if no mask is provided, as weights is then
-            # created using the requested cropping shape and thus might
-            # have a different center than the raw data.
-            # NOTE: Maybe distinguish between no mask provided and mask
-            # with wrong size in warning
-            if (dsh == np.array(w[0].shape)).all():
-                w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
+            # Make sure center is in the image frame
+            assert (cen > 0).all() and (dsh - cen > 0).all(), (
+                'Optical axes (center = (%.1f, %.1f) outside diffraction image '
+                'frame (%d, %d).' % (tuple(cen) + tuple(dsh)))
+
+            # Determine if the arrays require further processing
+            do_flip = (self.orientation is not None
+                       and np.array(self.orientation).any())
+            do_crop = (np.abs(sh - dsh) > 0.5).any()
+            do_rebin = self.rebin is not None and (self.rebin != 1)
+
+            if do_flip or do_crop or do_rebin:
+                logger.info(
+                    'Enter preprocessing '
+                    '(crop/pad %s, rebin %s, flip/rotate %s) ... \n'
+                    % (str(do_crop), str(do_rebin), str(do_flip)))
+
+                # We proceed with numpy arrays.That is probably now more memory
+                # intensive but shorter in writing
+                if has_data:
+                    d = np.array([data[ind] for ind in indices.node])
+                    w = np.array([weights[ind] for ind in indices.node])
+                else:
+                    d = np.ones((1,) + tuple(dsh))
+                    w = np.ones((1,) + tuple(dsh))
+
+                # Crop data
+                d, tmp = u.crop_pad_symmetric_2d(d, sh, cen)
+
+                # Check if provided mask has the same shape as data, if not,
+                # use the mask's center for cropping the mask. The latter is
+                # also needed if no mask is provided, as weights is then
+                # created using the requested cropping shape and thus might
+                # have a different center than the raw data.
+                # NOTE: Maybe distinguish between no mask provided and mask
+                # with wrong size in warning
+                if (dsh == np.array(w[0].shape)).all():
+                    w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
+                else:
+                    logger.warning('Mask does not have the same shape as data. '
+                                   'Will use mask center for cropping mask.')
+                    cen = np.array(w[0].shape) // 2
+                    w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
+
+                # Flip, rotate etc.
+                d, tmp = u.switch_orientation(d, self.orientation, cen)
+                w, cen = u.switch_orientation(w, self.orientation, cen)
+
+                # Rebin, check if rebinning is neither to strong nor impossible
+                rebin = self.rebin
+                if rebin <= 1:
+                    pass
+                elif (rebin in range(2, 6)
+                      and (((sh / float(rebin)) % 1) == 0.0).all()):
+                    mask = w > 0
+                    d = u.rebin_2d(d, rebin)
+                    w = u.rebin_2d(w, rebin)
+                    mask = u.rebin_2d(mask, rebin)
+                    # We keep only the pixels that do not include a masked pixel
+                    # w[mask < mask.max()] = 0
+                    # TODO: apply this operation when weights actually are weights
+                    w = (mask == mask.max())
+                else:
+                    raise RuntimeError(
+                        'Binning (%d) is to large or incompatible with array '
+                        'shape (%s).' % (rebin, str(tuple(sh))))
+
+                # restore contiguity of the cropped/padded/rotated/flipped array
+                d = np.ascontiguousarray(d)
+
+                if has_data:
+                    # Translate back to dictionaries
+                    data = dict(zip(indices.node, d))
+                    weights = dict(zip(indices.node, w))
+
+            # Adapt geometric info
+            self.info.center = cen / float(self.rebin)
+            self.info.shape = u.expect2(sh) / self.rebin
+
+            if self.info.psize is not None:
+                self.info.psize = u.expect2(self.info.psize) * self.rebin
+
+            # Prepare chunk of data
+            chunk = u.Param()
+            chunk.indices = indices.chunk
+            chunk.indices_node = indices.node
+            chunk.num = self.chunknum
+            chunk.data = data
+
+            # If there are weights we add them to chunk,
+            # otherwise we push it into meta
+            if has_weights:
+                chunk.weights = weights
+            elif has_data:
+                chunk.weights = {}
+                self.weight2d = weights.values()[0]
+
+            # Slice positions from common if they are empty too
+            if positions is None or len(positions) == 0:
+                pt = self.info.positions_theory
+                if pt is not None:
+                    chunk.positions = pt[indices.chunk]
+                else:
+                    try:
+                        chunk.positions = (
+                            self.info.positions_scan[indices.chunk])
+                    except:
+                        logger.info('Unable to slice position information from '
+                                    'experimental or theoretical resource.')
+                        chunk.positions = [None] * len(indices.chunk)
             else:
-                logger.warning('Mask does not have the same shape as data. '
-                               'Will use mask center for cropping mask.')
-                cen = np.array(w[0].shape) // 2
-                w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
+                # A dict : sort positions to indices.chunk
+                # This may fail if there are less positions than scan points
+                # (unlikely)
+                chunk.positions = np.asarray(
+                    [positions[k] for k in indices.chunk])
+                # Positions complete
 
-            # Flip, rotate etc.
-            d, tmp = u.switch_orientation(d, self.orientation, cen)
-            w, cen = u.switch_orientation(w, self.orientation, cen)
+            # With first chunk we update info
+            if self.chunknum < 1:
+                if self.info.save is not None and parallel.master:
+                    io.h5append(self.dfile, meta=dict(self.info))
 
-            # Rebin, check if rebinning is neither to strong nor impossible
-            rebin = self.rebin
-            if rebin <= 1:
-                pass
-            elif (rebin in range(2, 6)
-                  and (((sh / float(rebin)) % 1) == 0.0).all()):
-                mask = w > 0
-                d = u.rebin_2d(d, rebin)
-                w = u.rebin_2d(w, rebin)
-                mask = u.rebin_2d(mask, rebin)
-                # We keep only the pixels that do not include a masked pixel
-                # w[mask < mask.max()] = 0
-                # TODO: apply this operation when weights actually are weights
-                w = (mask == mask.max())
-            else:
-                raise RuntimeError(
-                    'Binning (%d) is to large or incompatible with array '
-                    'shape (%s).' % (rebin, str(tuple(sh))))
+                parallel.barrier()
 
-            # restore contiguity of the cropped/padded/rotated/flipped array
-            d = np.ascontiguousarray(d)
+            self.chunk = chunk
+            self.chunknum += 1
 
-            if has_data:
-                # Translate back to dictionaries
-                data = dict(zip(indices.node, d))
-                weights = dict(zip(indices.node, w))
-
-        # Adapt geometric info
-        self.meta.center = cen / float(self.rebin)
-        self.meta.shape = u.expect2(sh) / self.rebin
-
-        if self.info.psize is not None:
-            self.meta.psize = u.expect2(self.info.psize) * self.rebin
-
-        # Prepare chunk of data
-        chunk = u.Param()
-        chunk.indices = indices.chunk
-        chunk.indices_node = indices.node
-        chunk.num = self.chunknum
-        chunk.data = data
-
-        # If there are weights we add them to chunk,
-        # otherwise we push it into meta
-        if has_weights:
-            chunk.weights = weights
-        elif has_data:
-            chunk.weights = {}
-            self.weight2d = weights.values()[0]
-
-        # Slice positions from common if they are empty too
-        if positions is None or len(positions) == 0:
-            pt = self.info.positions_theory
-            if pt is not None:
-                chunk.positions = pt[indices.chunk]
-            else:
-                try:
-                    chunk.positions = (
-                        self.info.positions_scan[indices.chunk])
-                except:
-                    logger.info('Unable to slice position information from '
-                                'experimental or theoretical resource.')
-                    chunk.positions = [None] * len(indices.chunk)
-        else:
-            # A dict : sort positions to indices.chunk
-            # This may fail if there are less positions than scan points
-            # (unlikely)
-            chunk.positions = np.asarray(
-                [positions[k] for k in indices.chunk])
-            # Positions complete
-
-        # With first chunk we update info
-        if self.chunknum < 1:
-            if self.info.save is not None and parallel.master:
-                io.h5append(self.dfile, meta=dict(self.meta))
-
-            parallel.barrier()
-
-        self.chunk = chunk
-        self.chunknum += 1
-
-        return chunk
+            return chunk
 
     def auto(self, frames):
         """
@@ -872,9 +877,9 @@ class PtyScan(object):
         -------
         variable
             one of the following
-              - WAIT, if scan's end is not reached,
+              - None, if scan's end is not reached,
                 but no data could be prepared yet
-              - EOS, if scan's end is reached
+              - False, if scan's end is reached
               - a data package otherwise
         """
         # attempt to get data:
@@ -902,7 +907,9 @@ class PtyScan(object):
         """
 
         # The "common" part
-        out = {'common': self.meta}
+        keys = ['label', 'experimentID', 'version', 'shape', 'psize', 'energy', 'center', 'distance']
+        common = u.Param({k: self.info[k] for k in keys})
+        out = {'common': common}
 
         # The "iterable" part
         iterables = []
@@ -1265,32 +1272,25 @@ class PtydScan(PtyScan):
         # At least ONE chunk must exist to ensure everything works
         with h5py.File(source, 'r') as f:
             check = f.get('chunks/0')
-            f.close()
             # Get number of frames supposedly in the file
             # FIXME: try/except clause only for backward compatibilty
             # for .ptyd files created priot to commit 2e626ff
-            #try:
-            #    source_frames = f.get('info/num_frames_actual')[...].item()
-            #except TypeError:
-            #    source_frames = len(f.get('info/positions_scan')[...])
-            #f.close()
+            try:
+                source_frames = f.get('info/num_frames_actual')[...].item()
+            except TypeError:
+                source_frames = len(f.get('info/positions_scan')[...])
+            f.close()
 
         if check is None:
             raise IOError('Ptyd source %s contains no data. Load aborted'
                           % source)
 
-        """
         if source_frames is None:
             logger.warning('Ptyd source is not aware of the total'
                            'number of diffraction frames expected')
-        """
 
         # Get meta information
         meta = u.Param(io.h5read(self.source, 'meta')['meta'])
-
-        if meta.get('num_frames') is None:
-            logger.warning('Ptyd source is not aware of the total'
-                           'number of diffraction frames expected')
 
         if len(meta) == 0:
             logger.warning('There should be meta information in '
@@ -1301,19 +1301,12 @@ class PtydScan(PtyScan):
             p.update(meta)
         else:
             # Replace only None entries in p
-            # FIXME:
-            # BE: This was the former right way when the defaults
-            # were mostly None, now this no longer applies, unless
-            # defaults are overwritten to None. I guess t would be
-            # canonical now to overwrite the defaults in the
-            # docstring. But since reprocessing is rare
             for k, v in meta.items():
                 if p.get(k) is None:
                     p[k] = v
 
-        super(PtydScan, self).__init__(p)
+        super(PtydScan, self).__init__(p, **kwargs)
 
-        """
         if source_frames is not None:
             if self.num_frames is None:
                 self.num_frames = source_frames
@@ -1324,7 +1317,6 @@ class PtydScan(PtyScan):
             # but we cannot do anything about it. This should be dealt
             # with with a flag in the meta package probably.
             pass
-        """
 
         # Other instance attributes
         self._checked = {}
@@ -1483,7 +1475,9 @@ class MoonFlowerScan(PtyScan):
         super(MoonFlowerScan, self).__init__(p, **kwargs)
 
         # Derive geometry from input
-        geo = geometry.Geo(pars=self.meta)
+        keys = ['label', 'experimentID', 'version', 'shape', 'psize', 'energy', 'center', 'distance']
+        geo_pars = u.Param({k: self.info[k] for k in keys})
+        geo = geometry.Geo(pars=geo_pars)
 
         # Derive scan pattern
         pos = u.Param()

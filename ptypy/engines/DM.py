@@ -12,7 +12,7 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
-from utils import basic_fourier_update
+from .utils import basic_fourier_update
 from . import BaseEngine
 from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla

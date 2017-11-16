@@ -10,12 +10,7 @@ This file is part of the PTYPY package.
 import sys
 import os
 
-# for solo use ##########
-if __name__ == "__main__":
-    from ptypy import utils as u
-# for in package use #####
-else:
-    from .. import utils as u
+from .. import utils as u
 
 __all__ = ['DEFAULT', 'Paths']
 

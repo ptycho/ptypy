@@ -39,7 +39,7 @@ class MLTest(unittest.TestCase):
         engine_params.scale_precond =False
         engine_params.probe_update_start = 0
 
-        tu.EngineTestRunner(engine_params,propagator='nearfield')
+        tu.EngineTestRunner(engine_params, propagator='nearfield')
 
 if __name__ == "__main__":
     unittest.main()

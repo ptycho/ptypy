@@ -13,10 +13,9 @@ from functools import wraps
 from collections import OrderedDict
 from collections import namedtuple
 
-__all__ = ['str2int','str2range',\
-           'complex_overload','expect2','expect3','expectN',\
-           'keV2m','keV2nm','nm2keV', 'clean_path','unique_path','Table',\
-           'all_subclasses']
+__all__ = ['str2int', 'str2range', 'complex_overload', 'expect2',
+           'expect3', 'expectN', 'keV2m', 'keV2nm', 'nm2keV', 
+           'clean_path', 'unique_path', 'Table', 'all_subclasses']
 
 def all_subclasses(cls, names=False):
     """

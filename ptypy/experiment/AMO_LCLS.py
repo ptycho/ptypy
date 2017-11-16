@@ -10,16 +10,15 @@ This file is part of the PTYPY package.
 
 import numpy as np
 import os
+
 from .. import utils as u
 from .. import io
 from .. import core
-from ..utils import parallel
-from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..core.paths import Paths
-#from ..core import DEFAULT_io as IO_par
 from ..core import Ptycho
 from ..utils.descriptor import defaults_tree
+
 IO_par = Ptycho.DEFAULT['io']
 
 logger = u.verbose.logger

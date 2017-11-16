@@ -11,14 +11,9 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 
-if __name__ == '__main__':
-    from ptypy import utils as u
-    from ptypy import resources
-    from ptypy.utils.descriptor import EvalDescriptor
-else:
-    from .. import utils as u
-    from .. import resources
-    from ..utils.descriptor import EvalDescriptor
+from .. import utils as u
+from .. import resources
+from ..utils.descriptor import EvalDescriptor
 
 logger = u.verbose.logger
 

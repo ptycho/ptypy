@@ -3,17 +3,15 @@
      and user experiments rely on different classes depending on
      measurement campaign. """
 
-
-import ptypy
-from ptypy.core.data import PtyScan
-import ptypy.utils as u
-from ptypy.utils.descriptor import defaults_tree
-
-import h5py
 import numpy as np
-import time
+import h5py
+
+from ..core.data import PtyScan
+from .. import utils as u
+from ..utils.descriptor import defaults_tree
 
 logger = u.verbose.logger
+
 
 class NanomaxBase(PtyScan):
     """

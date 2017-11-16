@@ -8,17 +8,10 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-import numpy as np
-import os
 from .. import utils as u
-from .. import io
-from ..utils import parallel
 from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..utils.descriptor import defaults_tree
-from ..core.paths import Paths
-from ..core import Ptycho
-import h5py as h5
 
 logger = u.verbose.logger
 

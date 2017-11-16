@@ -84,7 +84,10 @@ class Param(dict):
         # Parse dots in key
         if type(name) == str and '.' in name:
             name_, name__ = name.split('.', 1)
-            return self[name_][name__]
+            s = self[name_]
+            if type(s) is not type(self):
+                raise KeyError(name)
+            return s[name__]
         return super(Param, self).__getitem__(name)
 
     def __delitem__(self, name):
@@ -126,6 +129,22 @@ class Param(dict):
             # return [item.__dict__.get('name',str(key)) for key,item in self.iteritems()]
         else:
             return []
+
+    def __contains__(self, key):
+        """
+        Redefined to support dot keys.
+        """
+        if '.' in key:
+            name_, name__ = key.split('.', 1)
+            if name_ in self:
+                s = self[name_]
+                if type(s) is type(self):
+                    return name__ in self[name_]
+                else:
+                    return False
+            else:
+                return False
+        return super(Param, self).__contains__(key)
 
     def update(self, __d__=None, in_place_depth=0, Convert=False, **kwargs):
         """

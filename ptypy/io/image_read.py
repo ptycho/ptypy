@@ -1,7 +1,7 @@
 import numpy as np
-from imageIO import imread
-from edfIO import edfread
-from rawIO import rawread
+from .imageIO import imread
+from .edfIO import edfread
+from .rawIO import rawread
 
 __all__ = ['image_read']
 

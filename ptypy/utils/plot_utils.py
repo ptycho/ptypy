@@ -13,20 +13,19 @@ import os
 from PIL import Image
 import matplotlib as mpl
 import matplotlib.cm
+
+# importing pyplot may fail when no display is available.
+NODISPLAY = (os.getenv("DISPLAY") is None)
+if NODISPLAY:
+    matplotlib.use('agg')
+import matplotlib.pyplot as plt
+
 from .verbose import logger
 from .array_utils import grids
 
 __all__ = ['pause', 'rmphaseramp', 'plot_storage', 'imsave', 'imload',
            'complex2hsv', 'complex2rgb', 'hsv2rgb', 'rgb2complex', 'rgb2hsv',
            'hsv2complex', 'franzmap']
-
-# importing pyplot may fail when no display is available.
-NODISPLAY = (os.getenv("DISPLAY") is None)
-if NODISPLAY:
-    matplotlib.use('agg')
-
-
-import matplotlib.pyplot as plt
 
 # Improved interactive behavior for old versions of matplotlib
 try:

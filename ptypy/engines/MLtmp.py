@@ -12,17 +12,14 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
-
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
-from .utils import Cnorm2, Cdot
+from utils import Cnorm2, Cdot
 from . import BaseEngine
 from ..utils.descriptor import defaults_tree
-from ..core.manager import Full, Vanilla
 
 __all__ = ['ML']
-
 
 @defaults_tree.parse_doc('engine.ML')
 class ML(BaseEngine):
@@ -99,8 +96,6 @@ class ML(BaseEngine):
     help = Number of iterations before probe update starts
 
     """
-
-    SUPPORTED_MODELS = [Full, Vanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """

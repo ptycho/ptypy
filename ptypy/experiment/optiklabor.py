@@ -4,15 +4,11 @@ Created on Nov 22 2013
 
 @author: Bjeorn Enders
 """
-from scipy import ndimage as ndi
 import numpy as np
-import os, time
+import time
 import glob
-from .. import io
-import spec
-import sys
+from . import spec
 from .. import utils as u
-#from pyE17 import io as io17
 from ..core.data import PtyScan
 from ..utils.descriptor import defaults_tree
 

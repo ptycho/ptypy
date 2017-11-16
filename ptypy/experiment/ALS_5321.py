@@ -4,15 +4,15 @@ Based on one particular data set, and possibly not generally valid for
 future experiments at that beamline.
 """
 
-import ptypy
-from ptypy.core.data import PtyScan
-import ptypy.utils as u
-from ptypy.utils.descriptor import defaults_tree
 import h5py
 import numpy as np
-import time
+
+from ..core.data import PtyScan
+from .. import utils as u
+from ..utils.descriptor import defaults_tree
 
 logger = u.verbose.logger
+
 
 @defaults_tree.parse_doc('scandata.ALS5321Scan')
 class ALS5321Scan(PtyScan):

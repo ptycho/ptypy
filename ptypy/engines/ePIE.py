@@ -25,6 +25,7 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 import random
+
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
@@ -33,6 +34,7 @@ from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla
 
 __all__ = ['EPIE']
+
 
 @defaults_tree.parse_doc('engine.ePIE')
 class EPIE(BaseEngine):

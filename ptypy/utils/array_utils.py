@@ -10,11 +10,13 @@ This file is part of the PTYPY package.
 
 import scipy.ndimage as ndi
 import numpy as np
-from misc import *
+from .misc import *
 
-__all__ = ['grids','switch_orientation','mirror',\
-           'crop_pad_symmetric_2d','crop_pad_axis','crop_pad','pad_lr',\
-           'zoom','shift_zoom','c_zoom','c_affine_transform','rebin','rebin_2d']
+__all__ = ['grids', 'switch_orientation', 'mirror',
+           'crop_pad_symmetric_2d', 'crop_pad_axis', 'crop_pad',
+           'pad_lr', 'zoom', 'shift_zoom', 'c_zoom',
+           'c_affine_transform', 'rebin', 'rebin_2d']
+
 
 def switch_orientation(A, orientation, center=None):
     """

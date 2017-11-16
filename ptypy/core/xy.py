@@ -7,11 +7,14 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from .. import utils as u
-from ..utils.verbose import logger
 import numpy as np
 import warnings
+
+from .. import utils as u
+from ..utils.verbose import logger
+
 warnings.simplefilter('always', DeprecationWarning)
+
 __all__ = ['DEFAULT', 'from_pars', 'round_scan', 'raster_scan', 'spiral_scan']
 
 TEMPLATES = u.Param()
