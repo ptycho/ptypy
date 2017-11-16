@@ -142,9 +142,9 @@ class Base(object):
         d = self._pool[prefix]
         # Check if ID is already taken and assign a new one
         ID = obj.ID
-        used = d.keys()
+        #used = d.keys()
         if valid_ID(obj):
-            if ID in used:
+            if ID in d:
                 logger.warning('Overwriting ID %s in pool of %s'
                                % (ID, self.ID))
             d[ID] = obj
@@ -154,13 +154,13 @@ class Base(object):
                     nID = prefix + ID
                 else:
                     nID = prefix + self._num_to_id(ID)
-                if nID in used:
+                if nID in d:
                     logger.warning('Overwriting ID %s in pool of %s'
                                    % (ID, self.ID))
             except:
                 idx = len(d)
                 nID = prefix + self._num_to_id(idx)
-                while nID in used:
+                while nID in d:
                     idx += 1
                     nID = prefix + self._num_to_id(idx)
 
