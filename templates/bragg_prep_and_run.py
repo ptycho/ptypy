@@ -8,7 +8,8 @@ p.verbose_level = 3
 
 # no 2d plotting of 3d data
 p.io = u.Param()
-p.io.autoplot = None
+p.io.autoplot = u.Param()
+p.io.autoplot.layout = 'bragg3d'
 
 p.scans = u.Param()
 p.scans.scan01 = u.Param()

@@ -666,11 +666,129 @@ class MPLClient(MPLplotter):
             u.png2mpg(self._framefile, RemoveImages=True)
 
 
+class Bragg3dClient(object):
+    """
+    MPLClient analog for 3d Bragg data, which needs to be reduced to 2d
+    before plotting.
+    """
+
+    def __init__(self, client_pars=None, autoplot_pars=None,
+                 in_thread=False, is_slave=False):
+
+        from ptypy.core.ptycho import Ptycho
+        self.p = Ptycho.DEFAULT.io.autoplot.copy(depth=3)
+        self.p.update(autoplot_pars)
+
+        self.runtime = Param()
+        self.ob = Param()
+        self.pr = Param()
+
+        self.pc = PlotClient(client_pars, in_thread=in_thread)
+        self.pc.start()
+
+        # set up axes
+        self.plotted = False
+        import matplotlib.pyplot as plt
+        self.plt = plt
+        plt.ion()
+        fig, self.ax = plt.subplots(nrows=2, ncols=2)
+        self.ax_err = self.ax[1,1]
+        self.ax_obj = (self.ax[0,0], self.ax[0,1], self.ax[1,0])
+
+    def loop_plot(self):
+        """
+        Plot forever.
+        """
+        count = 0
+        initialized = False
+        while True:
+            status = self.pc.status
+            if status == self.pc.DATA:
+                self.pr, self.ob, runtime = self.pc.get_data()
+                self.runtime.update(runtime)
+                self.plot_all()
+                count+=1
+                if self.p.dump:
+                    self.save(self.p.home + self.p.imfile, count)
+                    #plot_file = clean_path(runtime['plot_file'])
+
+            elif status == self.pc.STOPPED:
+                break
+            self.plt.pause(.1)
+
+        if self.p.get('make_movie'):
+            from ptypy import utils as u
+            u.png2mpg(self._framefile, RemoveImages=True)
+
+    def plot_all(self):
+        self.plot_error()
+        self.plot_object()
+        self.plot_probe()
+
+    def plot_object(self):
+        data = self.ob.values()[0]['data'][0]
+        center = self.ob.values()[0]['center']
+        psize = self.ob.values()[0]['psize']
+
+        if self.plotted:
+            for ax_ in self.ax_obj:
+                ax_.old_xlim = ax_.get_xlim()
+                ax_.old_ylim = ax_.get_ylim()
+                ax_.clear()
+
+        self.ax_obj[0].imshow(np.mean(np.abs(data), axis=2).T, interpolation='none')
+        self.plt.setp(self.ax_obj[0], ylabel='r1', xlabel='r3', title='side view')
+
+        self.ax_obj[1].imshow(np.mean(np.abs(data), axis=1).T, interpolation='none')
+        self.plt.setp(self.ax_obj[1], ylabel='r2', xlabel='r3', title='top view')
+
+        self.ax_obj[2].imshow(np.mean(np.abs(data), axis=0), interpolation='none')
+        self.plt.setp(self.ax_obj[2], ylabel='r1', xlabel='r2', title='front view')
+
+        if self.plotted:
+            for ax_ in self.ax_obj:
+                ax_.set_xlim(ax_.old_xlim)
+                ax_.set_ylim(ax_.old_ylim)
+
+        self.plotted = True
+
+    def plot_probe(self):
+        pass
+
+    def plot_error(self):
+        # error
+        error = np.array([info['error'] for info in self.runtime.iter_info])
+        err_fmag = error[:, 0] / np.max(error[:, 0])
+        err_phot = error[:, 1] / np.max(error[:, 1])
+        err_exit = error[:, 2] / np.max(error[:, 2])
+
+        self.ax_err.clear()
+        self.ax_err.plot(err_fmag, label='err_fmag')
+        self.ax_err.plot(err_phot, label='err_phot')
+        self.ax_err.plot(err_exit, label='err_exit')
+        self.ax_err.legend(loc='upper right')
+
+    def save(self, pattern, count=0):
+        try:
+            print 'would save to:', (pattern % count)
+        except TypeError:
+            print 'would fail to save:', pattern, count
+        pass
+
+
 def spawn_MPLClient(client_pars, autoplot_pars):
     """
     A function that creates and runs a silent instance of MPLClient.
     """
-    mplc = MPLClient(client_pars,autoplot_pars, in_thread=True, is_slave=True)
+    cls = MPLClient
+    # 3d Bragg is handled by a MPLClient subclass and is identified by the layout
+    try:
+        if autoplot_pars.layout == 'bragg3d':
+            cls = Bragg3dClient
+    except:
+        pass
+
+    mplc = cls(client_pars,autoplot_pars, in_thread=True, is_slave=True)
     try:
         mplc.loop_plot()
     except KeyboardInterrupt:
