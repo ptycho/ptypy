@@ -1011,10 +1011,13 @@ class Bragg3dModel(Vanilla):
                 # this one is ready to go
                 logger.debug('3d diffraction data for position %d ready, will create POD' % idx)
 
-                # first sort the frames in increasing angle (increasing q3) order
+                # First sort the frames in increasing angle (increasing
+                # q3) order. Also assume the images came in as (-q1, q2)
+                # from PtyScan. We want (q3, q1, q2) as required by
+                # Geo_Bragg, so flip the q1 dimension.
                 order = [i[0] for i in sorted(enumerate(dct['angles']), key=lambda x:x[1])]
-                dct['frames'] = [dct['frames'][i] for i in order]
-                dct['masks'] = [dct['masks'][i] for i in order]
+                dct['frames'] = [dct['frames'][i][::-1,:] for i in order]
+                dct['masks'] = [dct['masks'][i][::-1,:] for i in order]
 
                 # then assemble the data and masks
                 dp_new['iterable'].append({
@@ -1023,6 +1026,7 @@ class Bragg3dModel(Vanilla):
                     'data': np.array(dct['frames'], dtype=self.ptycho.FType),
                     'mask': np.array(dct['masks'], dtype=bool),
                     })
+
             else:
                 logger.debug('3d diffraction data for position %d isn\'t ready, have %d out of %d frames'
                     % (idx, len(dct['angles']), self.geometries[0].shape[0]))

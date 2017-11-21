@@ -23,7 +23,6 @@ p.scans.scan01.name = 'Bragg3dModel'
 p.scans.scan01.illumination = illumination
 p.scans.scan01.data= u.Param()
 p.scans.scan01.data.name = 'Bragg3dSimScan'
-p.scans.scan01.data.scantype = '2d'
 p.scans.scan01.data.illumination = illumination
 p.scans.scan01.sample = u.Param()
 p.scans.scan01.sample.fill = 1e-3

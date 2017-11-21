@@ -726,9 +726,13 @@ class Bragg3dClient(object):
         self.plot_probe()
 
     def plot_object(self):
+
         data = self.ob.values()[0]['data'][0]
         center = self.ob.values()[0]['center']
         psize = self.ob.values()[0]['psize']
+        lims_r3 = (-center[0] * psize[0], (data.shape[0] - center[0]) * psize[0])
+        lims_r1 = (-center[1] * psize[1], (data.shape[1] - center[1]) * psize[1])
+        lims_r2 = (-center[2] * psize[2], (data.shape[2] - center[2]) * psize[2])
 
         if self.plotted:
             for ax_ in self.ax_obj:
@@ -736,14 +740,25 @@ class Bragg3dClient(object):
                 ax_.old_ylim = ax_.get_ylim()
                 ax_.clear()
 
-        self.ax_obj[0].imshow(np.mean(np.abs(data), axis=2).T, interpolation='none')
+        arr = np.mean(np.abs(data), axis=2).T # (r1, r3) from top left
+        arr = np.flipud(arr)                  # (r1, r3) from bottom left
+        self.ax_obj[0].imshow(arr, interpolation='none',
+            extent=lims_r3+lims_r1) # extent changes limits, not image orientation
         self.plt.setp(self.ax_obj[0], ylabel='r1', xlabel='r3', title='side view')
 
-        self.ax_obj[1].imshow(np.mean(np.abs(data), axis=1).T, interpolation='none')
+        arr = np.mean(np.abs(data), axis=1).T # (r2, r3) from top left
+        self.ax_obj[1].imshow(arr, interpolation='none',
+            extent=lims_r3+lims_r2[::-1])
         self.plt.setp(self.ax_obj[1], ylabel='r2', xlabel='r3', title='top view')
 
-        self.ax_obj[2].imshow(np.mean(np.abs(data), axis=0), interpolation='none')
+        arr = np.mean(np.abs(data), axis=0)   # (r1, r2) from top left
+        arr = np.flipud(arr)                  # (r1, r2) from bottom left
+        self.ax_obj[2].imshow(arr, interpolation='none',
+            extent=lims_r2+lims_r1)
         self.plt.setp(self.ax_obj[2], ylabel='r1', xlabel='r2', title='front view')
+
+        for ax_ in self.ax_obj:
+            ax_.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
 
         if self.plotted:
             for ax_ in self.ax_obj:

@@ -52,8 +52,8 @@ S_display[objView] = 1
 
 # Then, to see how the probe is contained by this field of view, we add
 # the probe and the numerical sample itself to the above view.
-S_display[objView] += probeView.data
-S_display.data += S_true.data
+S_display[objView][np.where(np.abs(probeView.data) > .1)] = 2
+S_display.data[np.where(S_true.data)] = 3
 
 # Until now, we've been operating in the non-orthogonal 'natural'
 # coordinate system, which is good but hard to understand. We can
@@ -65,10 +65,24 @@ S_display_cart = geo.coordinate_shift(S_display, input_system='natural', input_s
 # Plot some slices
 fig, ax = plt.subplots(nrows=1, ncols=3)
 x, z, y = S_display_cart.grids()
-ax[0].imshow(np.abs(S_display_cart.data[0][:,:,objView.dcoord[2]]).T, extent=[x.min(), x.max(), z.min(), z.max()], interpolation='none', origin='lower', vmin=0, vmax=3)
+
+# all Bragg storages are (r3, r1, r2) or (x, z, y), so...
+
+arr = np.abs(S_display_cart.data[0][:,:,objView.dcoord[2]]).T # (z, x) from top left
+arr = np.flipud(arr)                                          # (z, x) from bottom left
+ax[0].imshow(arr, extent=[x.min(), x.max(), z.min(), z.max()],
+    interpolation='none', vmin=0, vmax=3)
 plt.setp(ax[0], ylabel='z', xlabel='x', title='side view')
-ax[1].imshow(np.abs(S_display_cart.data[0][:,objView.dcoord[1],:]).T, extent=[x.min(), x.max(), y.min(), y.max()], interpolation='none', origin='lower', vmin=0, vmax=3)
+
+arr = np.abs(S_display_cart.data[0][:,objView.dcoord[1],:]).T # (y, x) from top left
+ax[1].imshow(arr, extent=[x.min(), x.max(), y.max(), y.min()],
+    interpolation='none', vmin=0, vmax=3)
 plt.setp(ax[1], ylabel='y', xlabel='x', title='top view')
-ax[2].imshow(np.abs(S_display_cart.data[0][objView.dcoord[0],:,:]), extent=[y.min(), y.max(), z.min(), z.max()], interpolation='none', origin='lower', vmin=0, vmax=3)
+
+arr = np.abs(S_display_cart.data[0][objView.dcoord[0],:,:]) # (z, y) from top left
+arr = np.flipud(arr)                                        # (z, y) from bottom left
+ax[2].imshow(arr, extent=[y.min(), y.max(), z.min(), z.max()],
+    interpolation='none', vmin=0, vmax=3)
 plt.setp(ax[2], ylabel='z', xlabel='y', title='front view')
+
 plt.show()

@@ -276,11 +276,16 @@ class Bragg3dSimScan(PtyScan):
         return self.positions
 
     def load(self, indices):
+        """
+        This function returns diffraction image indexed from top left as
+        viewed along the beam, i e they have (-q1, q2) indexing. PtyScan
+        can always flip/rotate images.
+        """
         raw, positions, weights = {}, {}, {}
 
         # pick out the requested indices
         for i in indices:
-            raw[i] = self.diff[i]
+            raw[i] = self.diff[i][::-1,:]
 
         return raw, positions, weights
 
