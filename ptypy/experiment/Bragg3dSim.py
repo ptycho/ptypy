@@ -8,6 +8,7 @@ import ptypy.utils as u
 from ptypy.utils.descriptor import defaults_tree, EvalDescriptor
 from ptypy.core import geometry_bragg
 from ptypy.core import illumination
+from ptypy.core import xy
 
 import numpy as np
 import time
@@ -77,10 +78,28 @@ class Bragg3dSimScan(PtyScan):
     help = Don't calculate diffraction patterns
     doc = Skips the heavy FFT and just returns empty diff patterns.
 
+    [illumination.aperture.form]
+    default = 'rect'
+    type = str
+    help = default override, see :any:`scan.Full.illumination`
+    doc =
+
     [illumination.aperture.size]
-    default = 1e-6
+    default = 3e-6
     type = float
-    help = override
+    help = default override, see :any:`scan.Full.illumination`
+    doc =
+
+    [scantype]
+    default = '1d'
+    type = str
+    help = Type of position scan
+    doc = '1d' for scan along y as in the paper, '2d' for xy spiral scan
+
+    [stepsize]
+    default = .43e-6
+    type = float
+    help = Step size of the spiral scan
 
     """
 
@@ -113,12 +132,25 @@ class Bragg3dSimScan(PtyScan):
         logger.info('Data will be simulated with these geometric parameters:')
         logger.info(g)
 
-        # Set up scan positions along y, perpendicular to the incoming beam and
-        # to the thin layer stripes.
-        Npos = 11
-        positions = np.zeros((Npos,3))
-        positions[:, 2] = np.arange(Npos) - Npos/2.0
-        positions *= .43e-6
+        # Set up scan positions in the xy plane
+        if self.p.scantype == '2d':
+            pos = u.Param()
+            pos.spacing = self.p.stepsize
+            pos.extent = (2e-6, 5e-6)
+            pos.model = 'spiral'
+            pos = xy.from_pars(pos)
+            Npos = pos.shape[0]
+            positions = np.zeros((Npos, 3))
+            positions[:, 0] = pos[:, 0]
+            positions[:, 2] = pos[:, 1]
+            #import matplotlib.pyplot as plt
+            #plt.plot(pos[:,0], pos[:,1], 'o-')
+            #plt.show()
+        elif self.p.scantype == '1d':
+            pos = np.arange(-2.5e-6, 2.5e-6, self.p.stepsize)
+            Npos = len(pos)
+            positions = np.zeros((Npos, 3))
+            positions[:, 2] = pos
 
         # Set up the object and its views
         # -------------------------------
@@ -144,25 +176,36 @@ class Bragg3dSimScan(PtyScan):
         S.fill(0.0)
         S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= 1e-6) & (yy - .3*zz< 2e-6) & (xx < 1e-6)] = 1
         S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= -2e-6) & (yy - .3*zz < -1e-6)] = 1
+
         self.simulated_object = S
-        #import matplotlib.pyplot as plt
-        #plt.imshow(np.abs(S.data[0, S.data.shape[0]/2, :, :]), interpolation='none')
-        #plt.show()
 
         # Set up the probe and calculate diffraction patterns
         # ---------------------------------------------------
 
-        # First set up a two-dimensional representation of the probe, with
-        # arbitrary pixel spacing. The probe here is defined as a 1.5 um by 3 um
-        # flat square, but this container will typically come from a 2d
-        # transmission ptycho scan of an easy test object.
+        # First set up a two-dimensional representation of the incoming
+        # probe, with arbitrary pixel spacing.
+
+        # some geometry to work out the extent of the incoming probe
+        b, a, c = g.shape * g.resolution
+        ap = a + b * g.sintheta
+        bp = b * g.costheta
+        y = np.sqrt(ap**2 + bp**2)
+        gamma = np.arcsin(ap / y)
+        phi = (np.pi / 2 - gamma - np.deg2rad(g.theta_bragg))
+        zi_extent = np.cos(phi) * y
+        yi_extent = c
+        psize = g.resolution.min() / 10
+        extent = np.max((zi_extent, yi_extent))
+        shape = int(np.ceil(extent / psize))
+        logger.info('Generating incoming probe %d x %d (%.3e x %.3e) with psize %.3e'
+            % (shape, shape, extent, extent, psize))
+
         Cprobe = ptypy.core.Container(data_dims=2, data_type='float')
-        Sprobe = Cprobe.new_storage(psize=10e-9, shape=500)
-        print 'WARNING! fix simulation probe extent'
+        Sprobe = Cprobe.new_storage(psize=psize, shape=shape)
         zi, yi = Sprobe.grids()
 
         # fill the incoming probe
-        illumination.init_storage(Sprobe, self.p.illumination)
+        illumination.init_storage(Sprobe, self.p.illumination, energy=g.energy)
 
         # The Bragg geometry has a method to prepare a 3d Storage by extruding
         # the 2d probe and interpolating to the right grid. The returned storage

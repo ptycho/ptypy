@@ -8,12 +8,20 @@ p = u.Param()
 
 p.verbose_level = 3
 
+# illumination for data simulation and pods
+illumination = u.Param()
+illumination.aperture = u.Param()
+illumination.aperture.size = 3e-6
+illumination.aperture.form = 'circ'
+
 # these parameters determine the whole geometry (rocking steps, theta, energy, ...)
 p.scans = u.Param()
 p.scans.scan01 = u.Param()
 p.scans.scan01.name = 'Bragg3dModel'            # 3d Bragg
+p.scans.scan01.illumination = illumination
 p.scans.scan01.data= u.Param()
 p.scans.scan01.data.name = 'Bragg3dSimScan'     # PtyScan which provides simulated data
+p.scans.scan01.data.illumination = illumination
 p.scans.scan01.data.theta_bragg = 20.0          # the central Bragg angle
 p.scans.scan01.data.shape = 512
 p.scans.scan01.data.psize = 40e-6
