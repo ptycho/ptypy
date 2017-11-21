@@ -945,11 +945,6 @@ class Bragg3dModel(Vanilla):
     type = str
     help =
 
-    [illumination.aperture.size]
-    default = 1e-6
-    type = float
-    help = override
-
     """
 
     def __init__(self, ptycho=None, pars=None, label=None):
@@ -1090,6 +1085,7 @@ class Bragg3dModel(Vanilla):
         """
         Initialize the probe storage referred to by probe_ids.keys()[0]
         """
+        import time
         logger.info('\n'+headerline('Probe initialization', 'l'))
 
         # pick storage from container, there's only one probe
@@ -1099,15 +1095,20 @@ class Bragg3dModel(Vanilla):
 
         # create an oversampled probe perpendicular to its incoming
         # direction, using the illumination module as a utility.
-        logger.info('Initializing probe')
+        t0 = time.time()
         Cprobe = Container(data_dims=2, data_type='float')
         geo = self.geometries[0]
-        psize = min(geo.resolution) * .1
-        extent = int(np.ceil(self.p.illumination.aperture.size / psize))
-        Sprobe = Cprobe.new_storage(psize=10e-9, shape=extent)
+        psize = geo.resolution.min() / 5
+        extent = max(geo.sufficient_probe_extent())
+        shape = int(np.ceil(extent / psize))
+        Sprobe = Cprobe.new_storage(psize=psize, shape=shape)
+        logger.info('Initializing 2d probe %d x %d (%.3e x %.3e) with psize %.3e...'
+            % (shape, shape, extent, extent, psize))
+        t0 = time.time()
 
         # fill the incoming probe
-        illumination.init_storage(Sprobe, self.p.illumination)
+        illumination.init_storage(Sprobe, self.p.illumination, energy=geo.energy)
+        logger.info('...done in %.2f seconds' % (time.time() - t0))
 
         # Extrude the incoming probe in the right direction and frame
         s.data[:] = geo.prepare_3d_probe(Sprobe, system='natural').data
