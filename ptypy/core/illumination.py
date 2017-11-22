@@ -80,7 +80,7 @@ illumination_desc.from_string(r"""
 
     [aperture.size]
     default = None
-    type = float
+    type = float, tuple
     help = Aperture width or diameter
     doc = May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture
     lowlim = 0.
