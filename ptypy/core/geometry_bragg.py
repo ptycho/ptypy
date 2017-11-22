@@ -496,6 +496,27 @@ class Geo_Bragg(_Geo):
 
         return S_3d
 
+    def probe_extent_vs_fov(self):
+        """
+        Calculates the extent of the field of view as seen from the
+        incoming beam. This is the size of the smallest probe (along its
+        vertical direction zi and horizontal direction yi) which
+        completely covers the field of view.
+
+        Returns: zi_extent, yi_extent
+        """
+        g = self
+        b, a, c = g.shape * g.resolution
+        ap = a + b * g.sintheta
+        bp = b * g.costheta
+        y = np.sqrt(ap**2 + bp**2)
+        gamma = np.arcsin(ap / y)
+        phi = (np.pi / 2 - gamma - np.deg2rad(g.theta_bragg))
+        zi_extent = np.cos(phi) * y
+        yi_extent = c
+
+        return zi_extent, yi_extent
+
 
 class BasicBragg3dPropagator(object):
     """

@@ -14,6 +14,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
+import time
 from collections import OrderedDict
 from . import illumination
 from . import sample
@@ -1099,15 +1100,20 @@ class Bragg3dModel(Vanilla):
 
         # create an oversampled probe perpendicular to its incoming
         # direction, using the illumination module as a utility.
-        logger.info('Initializing probe')
-        Cprobe = Container(data_dims=2, data_type='float')
         geo = self.geometries[0]
-        psize = min(geo.resolution) * .1
-        extent = int(np.ceil(self.p.illumination.aperture.size / psize))
-        Sprobe = Cprobe.new_storage(psize=10e-9, shape=extent)
+        extent = max(geo.probe_extent_vs_fov())
+        psize = min(geo.resolution) / 5
+        shape = int(np.ceil(extent / psize))
+        logger.info('Generating incoming probe %d x %d (%.3e x %.3e) with psize %.3e...'
+            % (shape, shape, extent, extent, psize))
+        t0 = time.time()
+
+        Cprobe = Container(data_dims=2, data_type='float')
+        Sprobe = Cprobe.new_storage(psize=psize, shape=shape)
 
         # fill the incoming probe
-        illumination.init_storage(Sprobe, self.p.illumination)
+        illumination.init_storage(Sprobe, self.p.illumination, energy=geo.energy)
+        logger.info('...done in %.3f seconds' % (time.time() - t0))
 
         # Extrude the incoming probe in the right direction and frame
         s.data[:] = geo.prepare_3d_probe(Sprobe, system='natural').data

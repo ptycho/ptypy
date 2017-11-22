@@ -185,27 +185,19 @@ class Bragg3dSimScan(PtyScan):
         # First set up a two-dimensional representation of the incoming
         # probe, with arbitrary pixel spacing.
 
-        # some geometry to work out the extent of the incoming probe
-        b, a, c = g.shape * g.resolution
-        ap = a + b * g.sintheta
-        bp = b * g.costheta
-        y = np.sqrt(ap**2 + bp**2)
-        gamma = np.arcsin(ap / y)
-        phi = (np.pi / 2 - gamma - np.deg2rad(g.theta_bragg))
-        zi_extent = np.cos(phi) * y
-        yi_extent = c
-        psize = g.resolution.min() / 10
-        extent = np.max((zi_extent, yi_extent))
+        extent = max(g.probe_extent_vs_fov())
+        psize = g.resolution.min() / 5
         shape = int(np.ceil(extent / psize))
-        logger.info('Generating incoming probe %d x %d (%.3e x %.3e) with psize %.3e'
+        logger.info('Generating incoming probe %d x %d (%.3e x %.3e) with psize %.3e...'
             % (shape, shape, extent, extent, psize))
+        t0 = time.time()
 
         Cprobe = ptypy.core.Container(data_dims=2, data_type='float')
         Sprobe = Cprobe.new_storage(psize=psize, shape=shape)
-        zi, yi = Sprobe.grids()
 
         # fill the incoming probe
         illumination.init_storage(Sprobe, self.p.illumination, energy=g.energy)
+        logger.info('...done in %.3f seconds' % (time.time() - t0))
 
         # The Bragg geometry has a method to prepare a 3d Storage by extruding
         # the 2d probe and interpolating to the right grid. The returned storage
