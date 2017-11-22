@@ -946,11 +946,6 @@ class Bragg3dModel(Vanilla):
     type = str
     help =
 
-    [illumination.aperture.size]
-    default = 1e-6
-    type = float
-    help = override
-
     """
 
     def __init__(self, ptycho=None, pars=None, label=None):

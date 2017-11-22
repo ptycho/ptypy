@@ -11,8 +11,8 @@ p.verbose_level = 3
 # illumination for data simulation and pods
 illumination = u.Param()
 illumination.aperture = u.Param()
-illumination.aperture.size = 3e-6
-illumination.aperture.form = 'circ'
+illumination.aperture.size = (1e-6, 3e-6)
+illumination.aperture.form = 'rect'
 
 # these parameters determine the whole geometry (rocking steps, theta, energy, ...)
 p.scans = u.Param()
@@ -68,21 +68,27 @@ x, z, y = S_display_cart.grids()
 
 # all Bragg storages are (r3, r1, r2) or (x, z, y), so...
 
+cmap = plt.get_cmap('viridis', lut=4)
+
 arr = np.abs(S_display_cart.data[0][:,:,objView.dcoord[2]]).T # (z, x) from top left
 arr = np.flipud(arr)                                          # (z, x) from bottom left
 ax[0].imshow(arr, extent=[x.min(), x.max(), z.min(), z.max()],
-    interpolation='none', vmin=0, vmax=3)
+    interpolation='none', vmin=0, vmax=3, cmap=cmap)
 plt.setp(ax[0], ylabel='z', xlabel='x', title='side view')
 
 arr = np.abs(S_display_cart.data[0][:,objView.dcoord[1],:]).T # (y, x) from top left
 ax[1].imshow(arr, extent=[x.min(), x.max(), y.max(), y.min()],
-    interpolation='none', vmin=0, vmax=3)
+    interpolation='none', vmin=0, vmax=3, cmap=cmap)
 plt.setp(ax[1], ylabel='y', xlabel='x', title='top view')
 
 arr = np.abs(S_display_cart.data[0][objView.dcoord[0],:,:]) # (z, y) from top left
 arr = np.flipud(arr)                                        # (z, y) from bottom left
-ax[2].imshow(arr, extent=[y.min(), y.max(), z.min(), z.max()],
-    interpolation='none', vmin=0, vmax=3)
+im = ax[2].imshow(arr, extent=[y.min(), y.max(), z.min(), z.max()],
+    interpolation='none', vmin=0, vmax=3, cmap=cmap)
 plt.setp(ax[2], ylabel='z', xlabel='y', title='front view')
+
+pc = plt.colorbar(im, ax=list(ax))
+pc.set_ticks([1, 2, 3])
+pc.set_ticklabels(['field of view', 'probe', 'object'])
 
 plt.show()

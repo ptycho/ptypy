@@ -22,7 +22,9 @@ defaults_tree['scandata.Bragg3dSimScan.illumination'].prune_child('diversity')
 class Bragg3dSimScan(PtyScan):
     """
     Provides simulated 3D Bragg data based on the numerical 
-    experiment in Berenguer et al., PRB 88 (2013) 144101.
+    experiment in Berenguer et al., PRB 88 (2013) 144101. The settings
+    from that paper are very expensive, so the defaults here are simpler
+    and do not necessarily make physical sense.
 
     Defaults:
 
@@ -32,7 +34,6 @@ class Bragg3dSimScan(PtyScan):
     help = PtyScan subclass identifier
 
     [shape]
-    # Godard: default = 1024
     default = 256
 
     [distance]
@@ -45,13 +46,11 @@ class Bragg3dSimScan(PtyScan):
     default = 8.5
 
     [rocking_step]
-    # Godard: default = .01
     default = .0025
     type = float
     help = Step size in the rocking curve in degrees
 
     [n_rocking_positions]
-    # Godard: default = 9
     default = 40
     type = int
     help = Number of rocking positions
@@ -86,7 +85,7 @@ class Bragg3dSimScan(PtyScan):
 
     [illumination.aperture.size]
     default = 3e-6
-    type = float
+    type = float, tuple
     help = default override, see :any:`scan.Full.illumination`
     doc =
 
@@ -97,7 +96,7 @@ class Bragg3dSimScan(PtyScan):
     doc = '1d' for scan along y as in the paper, '2d' for xy spiral scan
 
     [stepsize]
-    default = .43e-6
+    default = .5e-6
     type = float
     help = Step size of the spiral scan
 
@@ -113,9 +112,7 @@ class Bragg3dSimScan(PtyScan):
         self.simulate()
 
     def simulate(self):
-        # Set up a 3D geometry and a scan
-        # -------------------------------
-
+        ### Set up a 3D geometry
         shape = tuple(u.expect2(self.p.shape))
         psize = tuple(u.expect2(self.p.psize))
         g = ptypy.core.geometry_bragg.Geo_Bragg(
@@ -125,14 +122,10 @@ class Bragg3dSimScan(PtyScan):
             distance=self.p.distance, 
             theta_bragg=self.p.theta_bragg)
 
-        # The Geo_Bragg object contains mostly the same things as Geo, but in
-        # three dimensions. The third element of the shape is the number of
-        # rocking curve positions, the third element of the psize denotes theta
-        # step in degrees. 
         logger.info('Data will be simulated with these geometric parameters:')
         logger.info(g)
 
-        # Set up scan positions in the xy plane
+        ### Set up scan positions in the xy plane
         if self.p.scantype == '2d':
             pos = u.Param()
             pos.spacing = self.p.stepsize
@@ -143,48 +136,48 @@ class Bragg3dSimScan(PtyScan):
             positions = np.zeros((Npos, 3))
             positions[:, 0] = pos[:, 0]
             positions[:, 2] = pos[:, 1]
-            #import matplotlib.pyplot as plt
-            #plt.plot(pos[:,0], pos[:,1], 'o-')
-            #plt.show()
         elif self.p.scantype == '1d':
             pos = np.arange(-2.5e-6, 2.5e-6, self.p.stepsize)
             Npos = len(pos)
             positions = np.zeros((Npos, 3))
             positions[:, 2] = pos
 
-        # Set up the object and its views
-        # -------------------------------
+        ### Set up the object and its views
 
-        # Create a container for the object array, which will represent the
-        # object in the non-orthogonal coordinate system conjugate to the
-        # q-space measurement frame.
+        # Create a container for the object array, which will represent
+        # the object in the non-orthogonal coordinate system conjugate
+        # to the q-space measurement frame.
         C = ptypy.core.Container(data_type=np.complex128, data_dims=3)
 
-        # For each scan position in the orthogonal coordinate system, find the
-        # natural coordinates and create a View instance there.
+        # For each scan position in the orthogonal coordinate system,
+        # find the natural coordinates and create a View instance there.
         views = []
         for pos in positions:
             pos_ = g._r3r1r2(pos)
-            views.append(ptypy.core.View(C, storageID='Sobj', psize=g.resolution, coord=pos_, shape=g.shape))
+            views.append(ptypy.core.View(C, storageID='Sobj', 
+                psize=g.resolution, coord=pos_, shape=g.shape))
         S = C.storages['Sobj']
         C.reformat()
 
-        # Define the test sample based on the orthogonal position of each voxel.
-        # First, the cartesian grid is obtained from the geometry object, then
-        # this grid is used as a condition for the sample's magnitude.
-        xx, zz, yy = g.transformed_grid(S, input_space='real', input_system='natural')
+        # Define the test sample based on the orthogonal position of
+        # each voxel. First, the cartesian grid is obtained from the
+        # geometry object, then this grid is used as a condition for the
+        # sample's magnitude.
+        xx, zz, yy = g.transformed_grid(S, input_space='real',
+            input_system='natural')
         S.fill(0.0)
-        S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= 1e-6) & (yy - .3*zz< 2e-6) & (xx < 1e-6)] = 1
-        S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= -2e-6) & (yy - .3*zz < -1e-6)] = 1
+        S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= 1e-6) &
+            (yy - .3*zz< 2e-6) & (xx < 1e-6)] = 1
+        S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= -2e-6) &
+            (yy - .3*zz < -1e-6)] = 1
 
+        # save this for possible export
         self.simulated_object = S
 
-        # Set up the probe and calculate diffraction patterns
-        # ---------------------------------------------------
+        ### Set up the probe and calculate diffraction patterns
 
         # First set up a two-dimensional representation of the incoming
         # probe, with arbitrary pixel spacing.
-
         extent = max(g.probe_extent_vs_fov())
         psize = g.resolution.min() / 5
         shape = int(np.ceil(extent / psize))
@@ -212,11 +205,13 @@ class Bragg3dSimScan(PtyScan):
                 diff.append(np.zeros(probeView.shape))
         else:
             for v in views:
-                diff.append(np.abs(g.propagator.fw(v.data * probeView.data))**2)
+                diff.append(np.abs(g.propagator.fw(
+                    v.data * probeView.data))**2)
 
         # dump the 3d arrays for testing
         if self.p.dump is not None:
-            np.savez(self.p.dump, **{'diff%02d'%i : diff[i] for i in range(len(diff))})
+            np.savez(self.p.dump, 
+                **{'diff%02d'%i : diff[i] for i in range(len(diff))})
 
         # stack the 2d diffraction patterns and save
         self.diff = []
@@ -224,10 +219,10 @@ class Bragg3dSimScan(PtyScan):
             for j in range(len(diff[i])):
                 self.diff.append(diff[i][j,:,:])
 
-        # convert the positions from (x, z, y) to (angle, x, z, y) and 
-        # save, we need the angle and in future we won't know in which 
-        # plane the scan was done (although here it is in xy).
-        # these xyz axis still follow Berenguer et al PRB 2013.
+        # convert the positions from (x, z, y) to (angle, x, z, y) and
+        # save, we need the angle and in future we won't know in which
+        # plane the scan was done (although here it is in xy). these xyz
+        # axis still follow Berenguer et al PRB 2013.
         self.positions = np.empty((g.shape[0] * Npos, 4), dtype=float)
         angles = (np.arange(g.shape[0]) - g.shape[0] / 2.0 + 1.0/2) * g.psize[0]
         for i in range(Npos):
