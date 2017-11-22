@@ -1,8 +1,3 @@
-"""
-This template sets up a Bragg 3d geometry, simulates a sample, and
-shows how beam and sample are contained in the field of view.
-"""
-
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import matplotlib.pyplot as plt
@@ -16,8 +11,8 @@ p.verbose_level = 3
 # illumination for data simulation and pods
 illumination = u.Param()
 illumination.aperture = u.Param()
-illumination.aperture.size = (1e-6, 3e-6)
-illumination.aperture.form = 'rect'
+illumination.aperture.size = 3e-6
+illumination.aperture.form = 'circ'
 
 # these parameters determine the whole geometry (rocking steps, theta, energy, ...)
 p.scans = u.Param()
@@ -27,6 +22,10 @@ p.scans.scan01.illumination = illumination
 p.scans.scan01.data= u.Param()
 p.scans.scan01.data.name = 'Bragg3dSimScan'     # PtyScan which provides simulated data
 p.scans.scan01.data.illumination = illumination
+p.scans.scan01.data.theta_bragg = 20.0          # the central Bragg angle
+p.scans.scan01.data.shape = 512
+p.scans.scan01.data.psize = 40e-6
+p.scans.scan01.data.n_rocking_positions = 40    # 40 rocking positions per scanning position
 p.scans.scan01.data.dry_run = True              # Don't actually calculate diff patterns
 
 # Create a Ptycho instance, this creates a numerical sample and simulates
