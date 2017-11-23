@@ -146,7 +146,8 @@ class ScanModel(object):
 
         from .. import experiment
 
-        if name in u.all_subclasses(data.PtyScan, names=True):
+        if name in (u.all_subclasses(data.PtyScan, names=True)) \
+                or name == 'PtyScan':
             ps_class = eval('experiment.' + name)
             logger.info('Scan will be prepared with the PtyScan subclass "%s"' % name)
             ps_instance = ps_class(pars)

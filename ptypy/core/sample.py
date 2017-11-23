@@ -93,7 +93,7 @@ sample_desc.from_string(r"""
     help = Zoom value for object simulation.
     doc = If ``None``, leave the array untouched. Otherwise the modeled or loaded image will be
       resized using :py:func:`zoom`.
-    type = tuple
+    type = tuple, float
     userlevel = 2
     lowlim = 0
 
