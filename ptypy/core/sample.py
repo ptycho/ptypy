@@ -35,7 +35,7 @@ sample_desc.from_string(r"""
       In script, you may pass a numpy.array here directly as the model. This array will be
       processed according to `process` in order to *simulate* a sample from e.g. a thickness
       profile.
-    type = str
+    type = str, array
     userlevel = 0
 
     [fill]

@@ -805,7 +805,7 @@ class EvalDescriptor(ArgParseDescriptor):
             children = self.children
 
         # Main yield: check type here.
-        if not pars or \
+        if pars is None or \
                 (type(pars).__name__ in self.type) or \
                 (hasattr(pars, 'items') and 'Param' in self.type) or \
                 (type(pars).__name__ == 'int' and 'float' in self.type):
