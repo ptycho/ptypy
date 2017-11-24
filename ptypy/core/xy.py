@@ -27,8 +27,8 @@ xy_desc = EvalDescriptor('xy')
 xy_desc.from_string(r"""
     [override]
     default =
-    type = str
-    help = Parameters for popular scan methods
+    type = array
+    help =
 
     [model]
     default =

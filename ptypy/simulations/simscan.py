@@ -97,6 +97,11 @@ class SimScan(PtyScan):
     type = bool
     help =
 
+    [propagation]
+    default = farfield
+    type = str
+    help = farfield or nearfield
+
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -131,6 +136,7 @@ class SimScan(PtyScan):
         pp.scans=u.Param()
         pp.scans.sim = u.Param()
         pp.scans.sim.name = 'Full'
+        pp.scans.sim.propagation = self.info.propagation
         pp.scans.sim.data=u.Param()
         pp.scans.sim.data.positions_theory = xy.from_pars(self.info.xy)
         pp.scans.sim.data.name = 'PtyScan'
