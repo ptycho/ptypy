@@ -133,7 +133,7 @@ illumination_desc.from_string(r"""
     userlevel = 0
 
     [photons]
-    type = int, None
+    type = int, float, None
     default = None
     help = Number of photons in the incident illumination
     doc = A value specified here will take precedence over calculated statistics from the loaded data.
