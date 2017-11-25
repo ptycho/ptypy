@@ -29,6 +29,7 @@ class CoreTest(unittest.TestCase):
     data = S1[V1]
     V1.coord = (0.28, 0.28)
     S1.update_views(V1)
+    print V1.storageID
     mn = S1[V1].mean()
     S1.fill_value = mn
     S1.reformat()
@@ -36,6 +37,7 @@ class CoreTest(unittest.TestCase):
     ar2 = ar.copy()
     ar2.coord = (-0.82, -0.82)
     V2 = View(C1, ID=None, accessrule=ar2)
+    
     S1.fill_value = 0.
     S1.reformat()
 

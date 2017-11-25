@@ -181,9 +181,9 @@ class TestBase(unittest.TestCase):
 
     def test_to_dict(self):
         """Extract information from container object and store in a dict"""
-        self.assertDictEqual(
-            self.basic_base._to_dict(),
-            self.basic_base.__dict__,
+        self.assertListEqual(
+            self.basic_base._to_dict().keys(),
+            self.basic_base.__slots__,
             'Converting container object information to dictionary failed.'
         )
 
@@ -1294,26 +1294,6 @@ class TestView(unittest.TestCase):
         self.assertIsNone(
             self.basic_view_dpt.storageID,
             'Assigning of instance attribute storageID failed.'
-        )
-
-        # This is a bit messy as _arint gets updated with _set
-        self.assertTrue(
-            np.array_equal(
-                self.basic_view_dpt._arint,
-                np.array([[1, 1], [0, 0], [1, 1], [0, 0]], dtype=np.int)
-            ),
-            'Assigning of instance attribute _arint failed.'
-        )
-
-        # This is a bit messy as _arfloat gets updated with _set
-        self.assertTrue(
-            np.array_equal(
-                self.basic_view_dpt._arfloat,
-                np.array(
-                    [[1, 1], [0., 0.], [0., 0.], [0, 0]], dtype=np.float
-                )
-            ),
-            'Assigning of instance attribute _arfloat failed.'
         )
 
         self.assertEqual(

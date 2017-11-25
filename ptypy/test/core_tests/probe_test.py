@@ -5,8 +5,12 @@ A test for the Base
 import unittest
 import ptypy.utils as u
 import numpy as np
-from ptypy.core import geometry, Base, Container
+from ptypy.core import geometry, Container
 from ptypy.resources import moon_pr
+from ptypy.core import Base as theBase
+
+# subclass for dictionary access
+Base = type('Base',(theBase,),{})
 
 def get_P():
     P = Base()
