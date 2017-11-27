@@ -1267,10 +1267,9 @@ class TestView(unittest.TestCase):
             'View is not Base instance.'
         )
 
-        self.assertIsInstance(
-            self.basic_view_dpt.pods,
-            wr.WeakValueDictionary,
-            'Assigning of attribute pods failed.'
+        self.assertIsNone(
+            self.basic_view_dpt._pods,
+            'Assigning of instance attribute _pods failed.'
         )
 
         self.assertIsNone(

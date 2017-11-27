@@ -1114,7 +1114,7 @@ class View(Base):
                 ('psize', '(2,)f8'),
                 ('coord', '(2,)f8'),
                 ('sp', '(2,)f8')]
-    __slots__ = Base.__slots__ + ['ndim', 'storage', 'storageID','_pod','pods','error']
+    __slots__ = Base.__slots__ + ['ndim', 'storage', 'storageID','_pod','_pods','error']
     ########
     # TODO #
     ########
@@ -1168,11 +1168,11 @@ class View(Base):
         super(View, self).__init__(container, ID, False)
 
         # Prepare a dictionary for PODs (volatile!)
-        self.pods = weakref.WeakValueDictionary()
-        """ Volatile dictionary for all :any:`POD`\ s that connect to
-            this view """
+        self._pods = None 
+        """ Potential volatile dictionary for all :any:`POD`\ s that 
+            connect to this view. Set by :any:`POD` """
 
-        # A single pod lookup (weak reference).
+        # A single pod lookup (weak reference), set by POD instance.
         self._pod = None
 
         self.active = True
@@ -1289,8 +1289,23 @@ class View(Base):
         This is a common call in the code and has therefore found
         its way here. May return ``None`` if there is no pod connected.
         """
-        return self._pod()  # weak reference
+        if isinstance(self._pod,weakref.ref):
+            return self._pod()  # weak reference
+        else:
+            return self._pod
         # return self.pods.values()[0]
+        
+    @property
+    def pods(self):
+        """
+        Returns all :any:`POD`s still connected to this view as a dict.
+        """
+        if self._pods is not None:
+            return self._pods
+        else:
+            pod = self.pod
+            return {} if pod is None else {pod.ID: pod}  
+  
 
     @property
     def data(self):
@@ -2003,7 +2018,10 @@ class POD(Base):
         for v in self.V.values():
             if v is None:
                 continue
-            v.pods[self.ID] = self
+            if v._pod is not None:
+                # View has at least one POD connected
+                v.pods = weakref.WeakValueDictionary()
+                v.pods[self.ID] = self
             v._pod = weakref.ref(self)
 
         #: :any:`Geo` instance with propagators
