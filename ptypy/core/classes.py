@@ -1197,9 +1197,10 @@ class View(Base):
         # Look for storage, create one if necessary
         s = self.owner.storages.get(self.storageID, None)
         if s is None:
+            sh = (1,) + tuple(self.shape) if self.shape is not None else None
             s = self.owner.new_storage(ID=self.storageID,
                                        psize=rule.psize,
-                                       shape=self.shape)
+                                       shape=sh)
         self.storage = s
 
 

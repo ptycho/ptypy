@@ -328,15 +328,15 @@ class ScanModel(object):
         """
         if self.ptycho is None:
             # Stand-alone use
-            self.Cdiff = Container(ptycho=self, ID='Cdiff', data_type='real')
-            self.Cmask = Container(ptycho=self, ID='Cmask', data_type='bool')
+            self.Cdiff = Container(self, ID='Cdiff', data_type='real')
+            self.Cmask = Container(self, ID='Cmask', data_type='bool')
         else:
             # Use with a Ptycho instance
-            self.ptycho.probe = Container(ptycho=self.ptycho, ID='Cprobe', data_type='complex')
-            self.ptycho.obj = Container(ptycho=self.ptycho, ID='Cobj', data_type='complex')
-            self.ptycho.exit = Container(ptycho=self.ptycho, ID='Cexit', data_type='complex')
-            self.ptycho.diff = Container(ptycho=self.ptycho, ID='Cdiff', data_type='real')
-            self.ptycho.mask = Container(ptycho=self.ptycho, ID='Cmask', data_type='bool')
+            self.ptycho.probe = Container(self.ptycho, ID='Cprobe', data_type='complex')
+            self.ptycho.obj = Container(self.ptycho, ID='Cobj', data_type='complex')
+            self.ptycho.exit = Container(self.ptycho, ID='Cexit', data_type='complex')
+            self.ptycho.diff = Container(self.ptycho, ID='Cdiff', data_type='real')
+            self.ptycho.mask = Container(self.ptycho, ID='Cmask', data_type='bool')
             self.Cdiff = self.ptycho.diff
             self.Cmask = self.ptycho.mask
         self.containers_initialized = True
