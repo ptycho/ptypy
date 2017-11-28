@@ -15,7 +15,7 @@ from collections import namedtuple
 
 __all__ = ['str2int', 'str2range', 'complex_overload', 'expect2',
            'expect3', 'keV2m', 'keV2nm', 'nm2keV', 'clean_path',
-           'unique_path', 'Table', 'all_subclasses']
+           'unique_path', 'Table', 'all_subclasses', 'expectN']
 
 
 def all_subclasses(cls, names=False):
@@ -266,6 +266,14 @@ def expect3(a):
     else:
         b=np.array([a.flat[0],a.flat[1],a.flat[2]])
     return b
+
+def expectN(a, N):
+    if N==2:
+        return expect2(a)
+    elif N==3:
+        return expect3(a)
+    else:
+        raise ValueError('N must be 2 or 3')
 
 def complex_overload(func):
     """\
