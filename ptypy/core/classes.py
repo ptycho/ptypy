@@ -474,24 +474,28 @@ class Storage(Base):
                If float, set the content to this value. If None, copy the
                current content.
         """
-        if fill is None:
-            # Return a new Storage or sub-class object with a copy of the data.
-            return type(self)(owner,
-                              ID,
-                              data=self.data.copy(),
-                              psize=self.psize,
-                              origin=self.origin,
-                              layermap=self.layermap)
-        else:
-            # Return a new Storage or sub-class object with an empty buffer
-            new_storage = type(self)(owner,
-                                     ID,
-                                     shape=self.shape,
-                                     psize=self.psize,
-                                     origin=self.origin,
-                                     layermap=self.layermap)
+
+        # if fill is None:
+        #     # Return a new Storage or sub-class object with a copy of the data.
+        #     return type(self)(owner,
+        #                       ID,
+        #                       data=self.data.copy(),
+        #                       psize=self.psize,
+        #                       origin=self.origin,
+        #                       layermap=self.layermap)
+        # else:
+        #     # Return a new Storage or sub-class object with an empty buffer
+        new_storage = type(self)(owner,
+                                 ID,
+                                 shape=self.shape,
+                                 psize=self.psize,
+                                 origin=self.origin,
+                                 layermap=self.layermap)
+        if fill is not None:
             new_storage.fill(fill)
-            return new_storage
+        else:
+            new_storage.fill(self.data.copy())
+        return new_storage
 
     def fill(self, fill=None):
         """
@@ -1205,7 +1209,7 @@ class View(Base):
 
 
         if self.shape is None:
-            self._set_full_frame(self.s)
+            self._set_full_frame(s)
 
         # Information to access the slice within the storage buffer
         self.psize = rule.psize
@@ -1326,8 +1330,9 @@ class View(Base):
         """
         Two dimensional shape of View.
         """
-        sh = self._record['shape'][:self._ndim]
-        return sh if (sh > 0).all() else None
+
+        sh = self._record['shape']
+        return None if (sh==0).all() else sh[:self._ndim]
 
     @shape.setter
     def shape(self, v):
