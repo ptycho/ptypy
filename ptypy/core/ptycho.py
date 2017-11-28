@@ -397,7 +397,7 @@ class Ptycho(Base):
                     from multiprocessing import Process
                     logger.info('Spawning plot client in new Process.')
                     self.plotter = Process(target=u.spawn_MPLClient,
-                                           args=(iaction, autoplot,))
+                                           args=(iaction, autoplot, self.p.io.home))
                     self.plotter.start()
         else:
             # No interaction wanted

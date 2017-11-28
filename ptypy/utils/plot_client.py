@@ -612,14 +612,14 @@ class MPLClient(MPLplotter):
 
     DEFAULT = DEFAULT
 
-    def __init__(self, client_pars=None, autoplot_pars=None,\
+    def __init__(self, client_pars=None, autoplot_pars=None, home=None,\
                  layout_pars=None, in_thread=False, is_slave=False):
         
         from ptypy.core.ptycho import Ptycho
         self.config = Ptycho.DEFAULT.io.autoplot.copy(depth=3)
         self.config.update(autoplot_pars)
         # set a home directory
-        self.config.home = self.config.get('home',self.DEFAULT.get('home'))
+        self.config.home = home if home is not None else self.DEFAULT.get('home')
 
         layout = self.config.get('layout',layout_pars)
 
@@ -672,16 +672,20 @@ class Bragg3dClient(object):
     before plotting.
     """
 
-    def __init__(self, client_pars=None, autoplot_pars=None,
+    def __init__(self, client_pars=None, autoplot_pars=None, home=None,
                  in_thread=False, is_slave=False):
 
         from ptypy.core.ptycho import Ptycho
         self.p = Ptycho.DEFAULT.io.autoplot.copy(depth=3)
         self.p.update(autoplot_pars)
+        # need a home directory
+        self.p.home = home if home is not None else DEFAULT.get('home')
 
         self.runtime = Param()
         self.ob = Param()
         self.pr = Param()
+
+        self.log_level = 5 if in_thread else 3
 
         self.pc = PlotClient(client_pars, in_thread=in_thread)
         self.pc.start()
@@ -692,6 +696,7 @@ class Bragg3dClient(object):
         self.plt = plt
         plt.ion()
         fig, self.ax = plt.subplots(nrows=2, ncols=2)
+        self.plot_fig = fig
         self.ax_err = self.ax[1,1]
         self.ax_obj = (self.ax[0,0], self.ax[0,1], self.ax[1,0])
 
@@ -785,13 +790,24 @@ class Bragg3dClient(object):
 
     def save(self, pattern, count=0):
         try:
-            print 'would save to:', (pattern % count)
-        except TypeError:
-            print 'would fail to save:', pattern, count
-        pass
+            r = self.runtime.copy(depth=1)
+            r.update(r.iter_info[-1])
+            plot_file = clean_path(pattern % r)
+        except BaseException:
+            log(self.log_level,'Could not auto generate image dump file from runtime.')
+            plot_file = 'ptypy_%05d.png' % count
+
+        log(self.log_level,'Dumping plot to %s' % plot_file)
+        self.plot_fig.savefig(plot_file,dpi=300)
+        folder,fname = os.path.split(plot_file)
+        mode ='w' if count==1 else 'a'
+        self._framefile = folder+os.path.sep+'frames.txt'
+        with open(self._framefile,mode) as f:
+            f.write(plot_file+'\n')
+            f.close()
 
 
-def spawn_MPLClient(client_pars, autoplot_pars):
+def spawn_MPLClient(client_pars, autoplot_pars, home):
     """
     A function that creates and runs a silent instance of MPLClient.
     """
@@ -803,7 +819,7 @@ def spawn_MPLClient(client_pars, autoplot_pars):
     except:
         pass
 
-    mplc = cls(client_pars,autoplot_pars, in_thread=True, is_slave=True)
+    mplc = cls(client_pars, autoplot_pars, home, in_thread=True, is_slave=True)
     try:
         mplc.loop_plot()
     except KeyboardInterrupt:

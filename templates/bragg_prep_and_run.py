@@ -2,14 +2,17 @@ from ptypy.core import Ptycho
 from ptypy import utils as u
 
 p = u.Param()
+p.run = 'no_mpi'
 
 # for verbose output
-p.verbose_level = 3
+p.verbose_level = 4
 
 # no 2d plotting of 3d data
 p.io = u.Param()
+#p.io.home = './'
 p.io.autoplot = u.Param()
 p.io.autoplot.layout = 'bragg3d'
+p.io.autoplot.dump = True
 
 # illumination for simulation and reconstruction
 illumination = u.Param()
@@ -30,7 +33,7 @@ p.scans.scan01.sample.fill = 1e-3
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter = 100000
+p.engines.engine00.numiter = 50
 p.engines.engine00.probe_update_start = 100000
 p.engines.engine00.probe_support = None
 
