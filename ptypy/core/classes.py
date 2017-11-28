@@ -184,7 +184,7 @@ class Base(object):
             self._recs[prefix] = recs
         rec = recs[idx] 
         obj._record = rec
-        rec['ID'] = ID
+        rec['ID'] = nID
         
         return
         
@@ -323,7 +323,7 @@ class Storage(Base):
     _PREFIX = STORAGE_PREFIX
 
     def __init__(self, container, ID=None, data=None, shape=(1, 1, 1), fill=0.,
-                 psize=None, origin=None, layermap=None, padonly=False,
+                 psize=1., origin=None, layermap=None, padonly=False,
                  **kwargs):
         """
         Parameters
@@ -337,6 +337,7 @@ class Storage(Base):
 
         data: ndarray or None
             A numpy array to use as initial buffer.
+            *Deprecated* in v0.3, use fill method instead.
 
         shape : 3-tuple
             The shape of the buffer
@@ -561,7 +562,7 @@ class Storage(Base):
                 'data dimensions' % (self.ID, self.ndim, v.ID, v.ndim))
 
         # Synchronize pixel size
-        v.psize = self.psize.copy()
+        v.psize = self.psize #.copy()
 
         # Convert the physical coordinates of the view to pixel coordinates
         pcoord = self._to_pix(v.coord)
@@ -580,7 +581,7 @@ class Storage(Base):
         # else:
         #     v.slayer = self.layermap.index(v.layer)
 
-    def reformat(self, newID=None):
+    def reformat(self, newID=None, update=True):
         """
         Crop or pad if required.
 
@@ -589,6 +590,11 @@ class Storage(Base):
         newID : str or int
             If None (default) act on self. Otherwise create a copy
             of self before doing the cropping and padding.
+            
+        update : bool
+            If True, updates all Views before reformatting. Not necessarily
+            needed, if Views have been recently instantiated. Roughly doubles 
+            execution time.
 
         Returns
         -------
@@ -599,10 +605,11 @@ class Storage(Base):
         # If a new storage is requested, make a copy.
         if newID is not None:
             s = self.copy(newID)
-            s.reformat(newID=None)
+            s.reformat()
             return s
 
         # Make sure all views are up to date
+        # This call takes roughly half the time of .reformat()
         self.update()
 
         # List of views on this storage
@@ -613,8 +620,13 @@ class Storage(Base):
         logger.debug('%s[%s] :: %d views for this storage'
                      % (self.owner.ID, self.ID, len(views)))
 
+        sh = self.data.shape
+        
         # Loop through all active views to get individual boundaries
-        axes = [[]] * self.ndim
+        #axes = [[]] * self.ndim
+        
+        mn = [np.inf] * self.ndim
+        mx = [-np.inf] * self.ndim
         layers = []
         dims = range(self.ndim)
         for v in views:
@@ -624,8 +636,10 @@ class Storage(Base):
             # Accumulate the regions of interest to
             # compute the full field of view
             for d in dims:
-                axes[d] += [v.dlow[d], v.dhigh[d]]
-
+                #axes[d] += [v.dlow[d], v.dhigh[d]]
+                mn[d] = min(mn[d],v.dlow[d])
+                mx[d] = max(mx[d],v.dhigh[d])
+                
             # Gather a (unique) list of layers
             if v.layer not in layers:
                 layers.append(v.layer)
@@ -634,8 +648,8 @@ class Storage(Base):
 
         # Compute Nd misfit (distance between the buffer boundaries and the
         # region required to fit all the views)
-        misfit = np.array([[-np.min(axes[d]), np.max(axes[d]) - sh[d+1]] for d in dims])
-
+        misfit = np.array([[-mn[d], mx[d] - sh[d+1]] for d in dims])
+        
         _misfit_str = ', '.join(['%s' % m for m in misfit])
         logger.debug('%s[%s] :: misfit = [%s]'
                      % (self.owner.ID, self.ID, _misfit_str))
@@ -651,7 +665,7 @@ class Storage(Base):
                 'Storage %s of container %s has a misfit of [%s] between '
                 'its data and its views'
                 % (str(self.ID), str(self.owner.ID), _misfit_str))
-
+        
         if needtocrop_or_pad:
             if self.padonly:
                 misfit[negmisfit] = 0
@@ -687,9 +701,10 @@ class Storage(Base):
             new_data = self.data
             new_shape = sh
             new_center = self.center
-
+        
         # Deal with layermap
         new_layermap = sorted(layers)
+
         if self.layermap != new_layermap:
             relaid_data = []
             for i in new_layermap:
@@ -706,9 +721,8 @@ class Storage(Base):
             self.layermap = new_layermap
 
         self.nlayers = len(new_layermap)
-
-        # BE: set a layer index in the view the datalist access has proven to
-        # be too slow.
+        
+        # set layer index in the view
         for v in views:
             v.dlayer = self.layermap.index(v.layer)
 
