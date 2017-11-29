@@ -13,7 +13,7 @@ import time
 from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline
-from ..utils.descriptor import defaults_tree
+from ..utils.descriptor import EvalDescriptor
 
 __all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info']
 
@@ -26,7 +26,8 @@ DEFAULT_iter_info = u.Param(
 )
 
 
-@defaults_tree.parse_doc('engine.common')
+local_tree = EvalDescriptor('')
+@local_tree.parse_doc('engine.common')
 class BaseEngine(object):
     """
     Base reconstruction engine.

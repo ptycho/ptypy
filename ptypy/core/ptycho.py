@@ -475,20 +475,12 @@ class Ptycho(Base):
             except KeyError('No parameter set available for engine label %s\n'
                             'Skipping..' % label):
                 pass
-            # Copy common parameters
-            engine_pars = self.p.engine.common.copy()
 
             # Identify engine by name
             engine_class = engines.by_name(pars.name)
 
-            # Update engine type specific parameters
-            engine_pars.update(self.p.engine[pars.name])
-
-            # Update engine instance specific parameters
-            engine_pars.update(pars)
-
             # Create instance
-            engine = engine_class(self, engine_pars)
+            engine = engine_class(self, pars)
 
             # Attach label
             engine.label = label

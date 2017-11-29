@@ -12,31 +12,61 @@ import warnings
 
 from .. import utils as u
 from ..utils.verbose import logger
+from ..utils.descriptor import EvalDescriptor
 
 warnings.simplefilter('always', DeprecationWarning)
 
-__all__ = ['DEFAULT', 'from_pars', 'round_scan', 'raster_scan', 'spiral_scan']
+__all__ = ['xy_desc', 'from_pars', 'round_scan', 'raster_scan', 'spiral_scan']
 
 TEMPLATES = u.Param()
 
-DEFAULT = u.Param(
-    # Parameters for popular scan methods
-    override=None,
-    # Model: [None, 'round', 'raster', 'spiral' or array-like]
-    model=None,
-    # round_roi: Width of ROI
-    extent=15e-6,
-    # raster scan: step size (grid spacing)
-    spacing=1.5e-6,
-    steps=10,
-    # raster scan: step size (grid spacing)
-    offset=0,
-    jitter=None,
-    count=None,
-)
-""" Default pattern parameters. See :py:data:`.scan.xy`
-    and a short listing below """
 
+# Local, module-level defaults. These can be appended to the defaults of
+# other classes.
+xy_desc = EvalDescriptor('xy')
+xy_desc.from_string(r"""
+    [override]
+    default =
+    type = array
+    help =
+
+    [model]
+    default =
+    type = str
+    help = None, 'round', 'raster', 'spiral' or array-like
+
+    [extent]
+    default = 15e-6
+    type = float, tuple
+    help =
+
+    [spacing]
+    default = 1.5e-6
+    type = float
+    help = Step size (grid spacing)
+
+    [steps]
+    default = 10
+    type = int
+    help =
+
+    [offset]
+    default = 0.
+    type = float
+    help =
+
+    [jitter]
+    default =
+    type = float
+    help =
+
+    [count]
+    default =
+    type = int
+    help =
+    """)
+
+DEFAULT = xy_desc.make_default(99)
 
 def from_pars(xypars=None):
     """

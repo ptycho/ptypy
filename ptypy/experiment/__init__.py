@@ -32,4 +32,5 @@ from nanomax import NanomaxStepscanMay2017, NanomaxStepscanNov2016, NanomaxFlysc
 from ALS_5321 import ALS5321Scan
 from Bragg3dSim import Bragg3dSimScan
 
-from ..core.data import MoonFlowerScan, PtydScan
+from ..core.data import MoonFlowerScan, PtydScan, PtyScan
+from ..simulations import SimScan

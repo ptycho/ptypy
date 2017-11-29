@@ -49,6 +49,7 @@ __all__ = ['PtyScan', 'PTYD', 'PtydScan',
            'MoonFlowerScan']
 
 
+@defaults_tree.parse_doc('scandata.PtyScan')
 class PtyScan(object):
     """
     PtyScan: A single ptychography scan, created on the fly or read from file.
@@ -64,6 +65,11 @@ class PtyScan(object):
 
     Default data parameters. See :py:data:`.scan.data`
     Defaults:
+
+    [name]
+    default = PtyScan
+    type = str
+    help =
 
     [dfile]
     type = file

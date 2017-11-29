@@ -5,8 +5,12 @@ A test for the Base
 import unittest
 import ptypy.utils as u
 import numpy as np
-from ptypy.core import geometry, Base, Container
+from ptypy.core import geometry, Container
 from ptypy.resources import moon_pr
+from ptypy.core import Base as theBase
+
+# subclass for dictionary access
+Base = type('Base',(theBase,),{})
 
 def get_P():
     P = Base()
@@ -31,9 +35,12 @@ def set_up_probes(P,G):
     P.probe = Container(get_P(), 'Cprobe', data_type='complex')
     y, x = G.propagator.grids_sam
     apert = u.smooth_step(fsize[0]/5-np.sqrt(x**2+y**2), 1e-6)
-    pr = P.probe.new_storage(data=-moon_pr(G.shape), psize=G.resolution)
-    pr2 = P.probe.new_storage(data=apert, psize=G.resolution)
-    pr3 = P.probe.new_storage(shape=G.shape, psize=G.resolution)
+    sh = (1,) + tuple(G.shape)
+    pr = P.probe.new_storage(shape=sh, psize=G.resolution)
+    pr.fill(-moon_pr(G.shape))
+    pr2 = P.probe.new_storage(shape=sh, psize=G.resolution)
+    pr2.fill(apert)
+    pr3 = P.probe.new_storage(shape=sh, psize=G.resolution)
     y, x = pr3.grids()
     apert = u.smooth_step(fsize[0]/5-np.abs(x), 3e-5)*u.smooth_step(fsize[1]/5-np.abs(y), 3e-5)
     pr3.fill(apert)

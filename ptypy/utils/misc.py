@@ -14,8 +14,9 @@ from collections import OrderedDict
 from collections import namedtuple
 
 __all__ = ['str2int', 'str2range', 'complex_overload', 'expect2',
-           'expect3', 'expectN', 'keV2m', 'keV2nm', 'nm2keV', 
-           'clean_path', 'unique_path', 'Table', 'all_subclasses']
+           'expect3', 'keV2m', 'keV2nm', 'nm2keV', 'clean_path',
+           'unique_path', 'Table', 'all_subclasses', 'expectN']
+
 
 def all_subclasses(cls, names=False):
     """
@@ -273,7 +274,7 @@ def expectN(a, N):
         return expect3(a)
     else:
         raise ValueError('N must be 2 or 3')
- 
+
 def complex_overload(func):
     """\
     Overloads function specified only for floats in the following manner

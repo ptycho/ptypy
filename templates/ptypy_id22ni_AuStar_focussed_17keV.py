@@ -7,19 +7,22 @@ p = u.Param()
 ### PTYCHO PARAMETERS
 p.verbose_level = 3
 
-p.interaction = u.Param()
-
 p.data_type = "single"
 p.run = None
 
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.run = None
 p.io.autoplot = u.Param()
 p.io.autoplot.layout='weak'
 p.io.autosave = None
+p.io.interaction = u.Param()
 
+# Simulation parameters
 sim = u.Param()
+sim.energy = 17.0
+sim.distance = 2.886
+sim.psize = 51e-6
+sim.shape = 256
 sim.xy = u.Param()
 sim.xy.model = "round"
 sim.xy.spacing = 250e-9
@@ -54,74 +57,54 @@ sim.sample.fill = 1.0+0.j
 #sim.detector = 'FRELON_TAPER'
 sim.detector = 'GenericCCD32bit'
 sim.verbose_level = 1
-sim.coherence = u.Param()
-sim.coherence.num_probe_modes = 1
-sim.psf = 1.
+sim.psf = 1. # emulates partial coherence
 sim.plot = False
 
-p.scan = sim.copy(depth=4)
-
-p.scan.geometry = u.Param()
-p.scan.geometry.energy = 17.0
-p.scan.geometry.lam = None
-p.scan.geometry.distance = 2.886
-p.scan.geometry.psize = 51e-6
-p.scan.geometry.shape = 256
-p.scan.geometry.propagation = "farfield"
-
-
-p.scan.coherence = u.Param()
-p.scan.coherence.num_probe_modes = 4
-p.scan.coherence.num_object_modes = 1
-p.scan.coherence.energies = [1.0]
-
-
-p.scan.sample.model = 'stxm'
-p.scan.sample.process =  None
-p.scan.illumination.aperture.form = 'circ'
-p.scan.illumination.propagation.focussed = 0.06
-p.scan.illumination.diversity = u.Param()
-p.scan.illumination.diversity.power = 0.1
-p.scan.illumination.diversity.noise = (np.pi,3.0)
-
+# Scan model and initial value parameters
 p.scans = u.Param()
-p.scans.sim = u.Param()
-p.scans.sim.data=u.Param()
-p.scans.sim.data.source = 'sim'
-p.scans.sim.data.recipe = sim
-p.scans.sim.data.save = None
+p.scans.scan00 = u.Param()
+p.scans.scan00.name = 'Full'
 
+p.scans.scan00.coherence = u.Param()
+p.scans.scan00.coherence.num_probe_modes = 4
+p.scans.scan00.coherence.num_object_modes = 1
+p.scans.scan00.coherence.energies = [1.0]
 
-p.engine = u.Param()
-p.engine.common = u.Param()
-p.engine.common.numiter = 100
-p.engine.common.numiter_contiguous = 1
-p.engine.common.probe_support = 0.7
-p.engine.common.probe_inertia = 0.01
-p.engine.common.object_inertia = 0.1
-p.engine.common.clip_object = [0,1.]
+p.scans.scan00.sample = u.Param()
+p.scans.scan00.sample.model = 'stxm'
+p.scans.scan00.sample.process =  None
 
-p.engine.DM = u.Param()
-p.engine.DM.name = "DM"
-p.engine.DM.alpha = 1
-p.engine.DM.probe_update_start = 2
-p.engine.DM.update_object_first = True
-p.engine.DM.overlap_converge_factor = 0.05
-p.engine.DM.overlap_max_iterations = 100
-p.engine.DM.fourier_relax_factor = 0.1
-p.engine.DM.obj_smooth_std = 5
+# (copy the simulation illumination and change specific things)
+p.scans.scan00.illumination = sim.illumination.copy(99)
+p.scans.scan00.illumination.aperture.form = 'circ'
+p.scans.scan00.illumination.propagation.focussed = 0.06
+p.scans.scan00.illumination.diversity = u.Param()
+p.scans.scan00.illumination.diversity.power = 0.1
+p.scans.scan00.illumination.diversity.noise = (np.pi,3.0)
 
-p.engine.ML = u.Param()
+# Scan data (simulation) parameters
+p.scans.scan00.data = u.Param()
+p.scans.scan00.data.name = 'SimScan'
+p.scans.scan00.data.update(sim)
+p.scans.scan00.data.save = None
 
+# Reconstruction parameters
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
 p.engines.engine00.numiter = 150
 p.engines.engine00.fourier_relax_factor = 0.05
+p.engines.engine00.numiter_contiguous = 1
+p.engines.engine00.probe_support = 0.7
+p.engines.engine00.probe_inertia = 0.01
+p.engines.engine00.object_inertia = 0.1
+p.engines.engine00.clip_object = (0, 1.)
+p.engines.engine00.alpha = 1
+p.engines.engine00.probe_update_start = 2
+p.engines.engine00.update_object_first = True
+p.engines.engine00.overlap_converge_factor = 0.05
+p.engines.engine00.overlap_max_iterations = 100
+p.engines.engine00.obj_smooth_std = 5
 
 u.verbose.set_level(3)
 P = Ptycho(p,level=5)
-
-
-
-
