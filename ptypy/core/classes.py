@@ -1068,8 +1068,30 @@ class Storage(Base):
         # self.data[v.slayer, v.roi[0, 0]:v.roi[1, 0],
         #          v.roi[0, 1]:v.roi[1, 1]] = shift(newdata, -v.sp)
         if isinstance(v, View):
-            self.data[v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]] = (
-                shift(newdata, -v.sp))
+            # there must be a nicer way to do this, numpy.take is nearly
+            # right, but returns copies and not views.
+            if self.ndim == 2:
+                self.data[v.dlayer,
+                          v.dlow[0]:v.dhigh[0],
+                          v.dlow[1]:v.dhigh[1]] = (shift(newdata, -v.sp))
+            elif self.ndim == 3:
+                self.data[v.dlayer,
+                          v.dlow[0]:v.dhigh[0],
+                          v.dlow[1]:v.dhigh[1],
+                          v.dlow[2]:v.dhigh[2]] = (shift(newdata, -v.sp))
+            elif self.ndim == 4:
+                self.data[v.dlayer,
+                          v.dlow[0]:v.dhigh[0],
+                          v.dlow[1]:v.dhigh[1],
+                          v.dlow[2]:v.dhigh[2],
+                          v.dlow[3]:v.dhigh[3]] = (shift(newdata, -v.sp))
+            elif self.ndim == 5:
+                self.data[v.dlayer,
+                          v.dlow[0]:v.dhigh[0],
+                          v.dlow[1]:v.dhigh[1],
+                          v.dlow[2]:v.dhigh[2],
+                          v.dlow[3]:v.dhigh[3],
+                          v.dlow[4]:v.dhigh[4]] = (shift(newdata, -v.sp))
         elif v in self.layermap:
             self.data[self.layermap.index(v)] = newdata
         else:
