@@ -1182,6 +1182,8 @@ class Bragg3dModel(Vanilla):
 
         # make a Geo instance and fix resolution
         g = geometry_bragg.Geo_Bragg(owner=self.ptycho, pars=geo_pars)
+        logger.info('Reconstruction will use these geometric parameters:')
+        logger.info(g)
         g.p.resolution_is_fix = True
 
         # save the geometry
