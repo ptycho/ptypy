@@ -2,14 +2,13 @@ from ptypy.core import Ptycho
 from ptypy import utils as u
 
 p = u.Param()
-p.run = 'no_mpi'
+p.run = 'Si110_stripes'
 
 # for verbose output
-p.verbose_level = 4
+p.verbose_level = 3
 
-# no 2d plotting of 3d data
+# use special plot layout for 3d data
 p.io = u.Param()
-#p.io.home = './'
 p.io.autoplot = u.Param()
 p.io.autoplot.layout = 'bragg3d'
 p.io.autoplot.dump = True

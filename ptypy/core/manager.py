@@ -37,15 +37,6 @@ CType = np.complex128
 __all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel']
 
 
-def tmp_print(*args):
-    parallel.barrier()
-    time.sleep(.05 * parallel.rank)
-    for arg in args:
-        print(arg, end=' ')
-    print('')
-    parallel.barrier()
-
-
 @defaults_tree.parse_doc('scan.ScanModel')
 class ScanModel(object):
     """
@@ -971,7 +962,7 @@ class Bragg3dModel(Vanilla):
 
     def _new_data_extra_analysis(self, dp):
         """
-        The heavy override is new_data. I've inserted an extra method
+        The heavy override is new_data. I've inserted this extra method
         for now, so as not to duplicate all the new_data code.
 
         The PtyScans give 2d diff images at 4d (angle, x, z, y)
@@ -986,19 +977,101 @@ class Bragg3dModel(Vanilla):
         plane of the sample with respect to the incident beam.
         """
 
-        tmp = sum([(d['data'] is not None) for d in dp['iterable']])
-        tmp_print('** node %d now has %d raw frames, %d with data' % (parallel.rank, len(dp['iterable']), tmp))
-        if parallel.size > 1:
-            dp = self._mpi_redistribute_raw_frames(dp)
-        tmp = sum([(d['data'] is not None) for d in dp['iterable']])
-        tmp_print('** and node %d now has %d raw frames, %d with data' % (parallel.rank, len(dp['iterable']), tmp))
+        logger.info(
+            'Redistributing incoming frames so that all data from each scanning position is on the same node.')
+        dp = self._mpi_redistribute_raw_frames(dp)
 
-        # go through and buffer the new 2d frames
+        logger.info(
+            'Buffering incoming frames and binning these by scanning position.')
+        self._buffer_incoming_frames(dp)
+
+        logger.info(
+            'Repackaging complete buffered rocking curves as 3d data packages.')
+        dp_new = self._make_3d_data_package()
+
+        # continue to pod creation if there is data for it
+        if len(dp_new['iterable']):
+            logger.info('Will continue with POD creation for %d complete positions.'
+                % len(dp_new['iterable']))
+            return dp_new
+        else:
+            return None
+
+    def _mpi_redistribute_raw_frames(self, dp):
+        """
+        Linear decomposition of incoming frames based on the scan
+        dimension that varies the most. Modifies a data package in-place
+        so that the angles of each unique scanning position end up on
+        the same node.
+        """
+
+        # work out the xyz range, we have all positions here
+        pos = []
         for dct in dp['iterable']:
-#            # for parallel loading, skip empty frames
-#            if dct['data'] is None:
-#                continue
+            pos.append(dct['position'][1:])
+        pos = np.array(pos)
+        xmin, xmax = pos[:,0].min(), pos[:,0].max()
+        ymin, ymax = pos[:,2].min(), pos[:,2].max()
+        zmin, zmax = pos[:,1].min(), pos[:,1].max()
+        diffs = [xmax - xmin, zmax - zmin, ymax - ymin]
+        time.sleep(parallel.rank * .01)
 
+        # the axis along which to slice
+        axis = diffs.index(max(diffs))
+        logger.info(
+            'Will slice incoming frames along axis %d (%s).' % (axis, ['x', 'z', 'y'][axis]))
+
+        # pick the relevant limits and expand slightly to avoid edge effects
+        lims = {0: [xmin, xmax], 1: [zmin, zmax], 2: [ymin, ymax]}[axis]
+        lims = np.array(lims) + np.array([-1, 1]) * np.diff(lims) * .01
+        domain_width = np.diff(lims) / parallel.size
+
+        # now we can work out which node should own a certain position
+        def __node(pos):
+            return int((pos - lims[0]) / domain_width)
+
+        # work out which node should have each of my buffered frames
+        N = parallel.size
+        senditems = {}
+        for idx in range(len(dp['iterable'])):
+            if dp['iterable'][idx]['data'] is None:
+                continue
+            pos_ = pos[idx][axis]
+            if not __node(pos_) == parallel.rank:
+                senditems[idx] = __node(pos_)
+
+        # transfer data as a list corresponding to dp['iterable']
+        for sending_node in range(parallel.size):
+            if sending_node == parallel.rank:
+                # My turn to send
+                for receiver in range(parallel.size):
+                    if receiver == parallel.rank:
+                        continue
+                    lst = []
+                    for idx, rec in senditems.iteritems():
+                        if rec == receiver:
+                            lst.append(dp['iterable'][idx])
+                    parallel.send(lst, dest=receiver)
+            else:
+                received = parallel.receive(source=sending_node)
+                for frame in received:
+                    idx = frame['index']
+                    dp['iterable'][idx] = frame.copy()
+
+        # mark sent frames disabled, would be nice to do in the loop but
+        # you can't trust communication will be blocking.
+        for idx in senditems.keys():
+            dp['iterable'][idx]['data'] = None
+            dp['iterable'][idx]['mask'] = None
+
+        return dp
+
+    def _buffer_incoming_frames(self, dp):
+        """
+        Store incoming frames in an internal buffer, binned by scanning
+        position.
+        """
+        for dct in dp['iterable']:
             pos = dct['position'][1:]
             try:
                 # index into the frame buffer where this frame belongs
@@ -1022,14 +1095,12 @@ class Bragg3dModel(Vanilla):
             self.buffered_frames[idx]['masks'].append(dct['mask'])
             self.buffered_frames[idx]['angles'].append(dct['position'][0])
 
-        tmp_print('node %d now has %d buffers'%(parallel.rank, len(self.buffered_positions)))
-
-        tmp = [len(self.buffered_frames[i_]['frames']) for i_ in range(len(self.buffered_frames))]
-        time.sleep(.1 * parallel.rank)
-
-        # go through the buffer to see if any positions have all their
-        # 2d frames, and create a new dp-compatible structure with
-        # complete positions.
+    def _make_3d_data_package(self):
+        """
+        Go through the internal buffer to see if any positions have all
+        their 2d frames, and create a new dp-compatible structure with
+        complete 3d positions.
+        """
         dp_new = {'iterable': []}
         for idx, dct in self.buffered_frames.iteritems():
             if len(dct['angles']) == self.geometries[0].shape[0]:
@@ -1070,93 +1141,12 @@ class Bragg3dModel(Vanilla):
         # make the indices on the 3d dp contiguous and unique
         cnt = {parallel.rank: sum([(d['data'] is not None) for d in dp_new['iterable']])}
         parallel.allgather_dict(cnt)
-        tmp_print('%d: '%parallel.rank, cnt)
         offset = sum([cnt[i] for i in range(parallel.rank)])
         idx = 0
         for dct in dp_new['iterable']:
             dct['index'] = offset + idx
             idx += 1
-
-        # continue to pod creation if there is data for it
-        if len(dp_new['iterable']):
-            logger.debug('Will continue with POD creation for %d complete positions'
-                % len(dp_new['iterable']))
-            return dp_new
-        else:
-            #print(parallel.rank), print('None')
-            return None
-
-    def _mpi_redistribute_raw_frames(self, dp):
-        """
-        Linear decomposition of data based on the scan dimension that
-        varies the most. Modifies a data package in-place so that the
-        angles of each unique scanning position end up on the same node.
-        """
-
-        # work out the xyz range, we have all positions
-        pos = []
-        for dct in dp['iterable']:
-            pos.append(dct['position'][1:])
-        pos = np.array(pos)
-        time.sleep(.1 * parallel.rank)
-        xmin, xmax = pos[:,0].min(), pos[:,0].max()
-        ymin, ymax = pos[:,2].min(), pos[:,2].max()
-        zmin, zmax = pos[:,1].min(), pos[:,1].max()
-        diffs = [xmax - xmin, zmax - zmin, ymax - ymin]
-        time.sleep(parallel.rank * .01)
-        tmp_print('rank %d has this xzy range' % parallel.rank, diffs)
-
-        # the axis along which to slice
-        axis = diffs.index(max(diffs))
-        if parallel.rank == 0:
-            print('********** will slice along axis %d (%s)' % (axis, ['x', 'z', 'y'][axis]))
-
-        # pick the relevant limits and expand slightly to avoid edge effects
-        lims = {0: [xmin, xmax], 1: [zmin, zmax], 2: [ymin, ymax]}[axis]
-        lims = np.array(lims) + np.array([-1, 1]) * np.diff(lims) * .01
-        domain_width = np.diff(lims) / parallel.size
-        tmp_print('node %d has this domain width' % parallel.rank, domain_width)
-
-        # now we can work out which node should own a certain position
-        def __node(pos):
-            return int((pos - lims[0]) / domain_width)
-
-        # work out which node should have each of my buffered frames
-        N = parallel.size
-        senditems = {}
-        for idx in range(len(dp['iterable'])):
-            if dp['iterable'][idx]['data'] is None:
-                continue
-            pos_ = pos[idx][axis]
-            if not __node(pos_) == parallel.rank:
-                senditems[idx] = __node(pos_)
-        #tmp_print('******* node %d will send these things (internal idx: node)' % parallel.rank, senditems)
-
-        # transfer data as a list corresponding to dp['iterable']
-        for sending_node in range(parallel.size):
-            if sending_node == parallel.rank:
-                # My turn to send
-                for receiver in range(parallel.size):
-                    if receiver == parallel.rank:
-                        continue
-                    lst = []
-                    for idx, rec in senditems.iteritems():
-                        if rec == receiver:
-                            lst.append(dp['iterable'][idx])
-                    parallel.send(lst, dest=receiver)
-            else:
-                received = parallel.receive(source=sending_node)
-                for frame in received:
-                    idx = frame['index']
-                    dp['iterable'][idx] = frame.copy()
-
-        # mark sent frames disabled, would be nice to do in the loop but
-        # you can't trust communication will be blocking.
-        for idx in senditems.keys():
-            dp['iterable'][idx]['data'] = None
-            dp['iterable'][idx]['mask'] = None
-
-        return dp
+        return dp_new
 
     def _initialize_containers(self):
         """
