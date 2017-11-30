@@ -13,7 +13,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import print_function
 import numpy as np
 import time
 from collections import OrderedDict
@@ -1015,7 +1014,6 @@ class Bragg3dModel(Vanilla):
         ymin, ymax = pos[:,2].min(), pos[:,2].max()
         zmin, zmax = pos[:,1].min(), pos[:,1].max()
         diffs = [xmax - xmin, zmax - zmin, ymax - ymin]
-        time.sleep(parallel.rank * .01)
 
         # the axis along which to slice
         axis = diffs.index(max(diffs))

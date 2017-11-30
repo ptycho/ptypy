@@ -813,7 +813,7 @@ class TestStorage(unittest.TestCase):
 
         self.assertEqual(
             self.basic_storage_dpt.data,
-            np.empty(c.DEFAULT_SHAPE[self.basic_container_dpt.ndim], np.complex128),
+            np.empty(c.DEFAULT_SHAPE, np.complex128),
             'Assigning and filling of instance attribute data failed.'
         )
 
