@@ -384,7 +384,8 @@ class Geo_Bragg(_Geo):
             elif input_system == 'natural':
                 new_psize = S.psize * np.array([self.costheta, 1, 1])
             old_center = S.origin + S.psize * shape / 2
-            S_out = C_.new_storage(ID='S0', psize=new_psize, padonly=False)
+            S_out = C_.new_storage(ID='S0', psize=new_psize,
+                                   padonly=False, shape=None)
             V = View(container=C_, storageID='S0', coord=old_center,
                      shape=d.shape, psize=new_psize)
             S_out.reformat()
@@ -419,7 +420,8 @@ class Geo_Bragg(_Geo):
             elif input_system == 'natural':
                 new_psize = S.psize * np.array([1, self.costheta, 1])
             old_center = S.origin + S.psize * shape / 2
-            S_out = C_.new_storage(ID='S0', psize=new_psize, padonly=False)
+            S_out = C_.new_storage(ID='S0', psize=new_psize,
+                                   padonly=False, shape=None)
             V = View(container=C_, storageID='S0', coord=old_center,
                      shape=d.shape, psize=new_psize)
             S_out.reformat()
