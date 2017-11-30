@@ -14,6 +14,7 @@ from .. import utils as u
 from base import BaseEngine, DEFAULT_iter_info
 from . import DM
 from . import DM_simple
+from . import Bragg3d_engines
 from . import ML
 from . import dummy
 from . import ePIE
@@ -21,7 +22,7 @@ from . import ePIE
 __all__ = ['DM', 'ML', 'ePIE', 'BaseEngine']
 
 # List of supported engines
-engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE']
+engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE', 'DM_3dBragg']
 
 # Supported engines defaults
 DEFAULTS = u.Param(
@@ -29,7 +30,8 @@ DEFAULTS = u.Param(
     DM_simple=DM_simple.DM_simple.DEFAULT,
     DM=DM.DM.DEFAULT,
     ML=ML.ML.DEFAULT,
-    ePIE=ePIE.EPIE.DEFAULT
+    ePIE=ePIE.EPIE.DEFAULT,
+    DM_3dBragg=Bragg3d_engines.DM_3dBragg.DEFAULT
 )
 
 # Engine objects
@@ -38,7 +40,8 @@ ENGINES = u.Param(
     DM_simple=DM_simple.DM_simple,
     DM=DM.DM,
     ML=ML.ML,
-    ePIE=ePIE.EPIE
+    ePIE=ePIE.EPIE,
+    DM_3dBragg=Bragg3d_engines.DM_3dBragg,
 )
 
 

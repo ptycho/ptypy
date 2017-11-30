@@ -730,6 +730,23 @@ class Bragg3dClient(object):
         self.plot_object()
         self.plot_probe()
 
+        if 'shrinkwrap' in self.runtime.iter_info[-1].keys():
+            self.plot_shrinkwrap()
+
+    def plot_shrinkwrap(self):
+        try:
+            self.ax_shrinkwrap
+        except:
+            _, self.ax_shrinkwrap = plt.subplots()
+        sx, sprofile, low, high = self.runtime.iter_info[-1]['shrinkwrap']
+        iteration = self.runtime.iter_info[-1]['iteration']
+        self.ax_shrinkwrap.clear()
+        self.ax_shrinkwrap.plot(sx, sprofile, 'b')
+        self.ax_shrinkwrap.axvline(low, color='red')
+        self.ax_shrinkwrap.axvline(high, color='red')
+        self.ax_shrinkwrap.set_title('iter: %d, interval: %.3e'
+            %(iteration, (high-low)))
+
     def plot_object(self):
 
         data = self.ob.values()[0]['data'][0]
