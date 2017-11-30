@@ -322,7 +322,7 @@ class Storage(Base):
 
     _PREFIX = STORAGE_PREFIX
 
-    def __init__(self, container, ID=None, data=None, shape=(1, 1, 1), fill=0.,
+    def __init__(self, container, ID=None, data=None, shape=DEFAULT_SHAPE, fill=0.,
                  psize=1., origin=None, layermap=None, padonly=False,
                  **kwargs):
         """
@@ -339,8 +339,9 @@ class Storage(Base):
             A numpy array to use as initial buffer.
             *Deprecated* in v0.3, use fill method instead.
 
-        shape : 3-tuple
-            The shape of the buffer
+        shape : tuple, int, or None
+            The shape of the buffer. If None or int, the dimensionality
+            is found from the owning Container instance.
 
         fill : float or complex
             The default value to fill storage with, will be converted to
