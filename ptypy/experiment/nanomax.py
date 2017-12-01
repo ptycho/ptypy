@@ -99,13 +99,15 @@ class NanomaxStepscanMay2017(PtyScan):
     """
     Loads Nanomax step scan data in the format of May 2017.
     """
-
+    
     RECIPE = u.Param()
     RECIPE.dataPath = None
     RECIPE.datafile = None
     RECIPE.maskfile = None
-    RECIPE.pilatusPath = None
-    RECIPE.pilatusPattern = None
+    RECIPE.detFilePath = None
+    RECIPE.detFilePattern = None
+    RECIPE.detNormalizationFilePattern = None
+    RECIPE.detNormalizationIndices = None
     RECIPE.hdfPath = 'entry_0000/measurement/Pilatus/data'
     RECIPE.scannr = None
     RECIPE.xMotorFlipped = False
@@ -173,21 +175,54 @@ class NanomaxStepscanMay2017(PtyScan):
 
         raw, weights, positions = {}, {}, {}
         scannr = self.info.recipe.scannr
-        path = self.info.recipe.pilatusPath
-        filepattern = self.info.recipe.pilatusPattern
+        path = self.info.recipe.detFilePath
+        pattern = self.info.recipe.detFilePattern
+        normfile = self.info.recipe.detNormalizationFilePattern
+        normind = self.info.recipe.detNormalizationIndices
+
         if not (path[-1] == '/'):
             path += '/'
 
+        # read the entire dataset
+        done = False
+        line = 0
         data = []
-        for im in range(self.info.positions_scan.shape[0]):
-            with h5py.File(path + filepattern % (scannr, im), 'r') as hf:
-                dataset = hf.get(self.info.recipe.hdfPath)
-                data.append(np.array(dataset)[0])
+        while not done:
+            try:
+                with h5py.File(path + pattern % (scannr, line), 'r') as hf:
+                    logger.info('loading data: ' + pattern % (scannr, line))
+                    dataset = hf.get(self.info.recipe.hdfPath)
+                    linedata = np.array(dataset)
+                if normfile:
+                    dtype = linedata.dtype
+                    linedata = np.array(linedata, dtype=float)
+                    with h5py.File(path + normfile % (scannr, line), 'r') as hf:
+                        dataset = hf.get(
+                            self.info.recipe.detNormalizationHdfPath)
+                        normdata = np.array(dataset)
+                        if not normind:
+                            shape = linedata[0].shape
+                            normind = [0, shape[0], 0, shape[1]]
+                        norm = np.mean(normdata[:, normind[0]:normind[
+                                       1], normind[2]:normind[3]], axis=(1, 2))
+                        if line == 0:
+                            norm0 = norm[0]
+                        norm /= norm0  # to avoid dividing integers by huge numbers
+                        # normalize the data
+                        linedata[0, :, :] = linedata / norm
+                    linedata = np.array(np.round(linedata), dtype=dtype)
 
+                data.append(linedata)
+                line += 1
+            except IOError:
+                done = True
+        logger.info("loaded %d points of detector data" % len(data))
+        data = np.concatenate(data, axis=0)
+        
         # pick out the requested indices
         for i in indices:
             raw[i] = data[i]
-
+            
         return raw, positions, weights
 
     def load_weight(self):
@@ -197,8 +232,8 @@ class NanomaxStepscanMay2017(PtyScan):
         """
 
         scannr = self.info.recipe.scannr
-        path = self.info.recipe.pilatusPath
-        pattern = self.info.recipe.pilatusPattern
+        path = self.info.recipe.detFilePath
+        pattern = self.info.recipe.detFilePattern
         if not (path[-1] == '/'):
             path += '/'
 
@@ -227,7 +262,6 @@ class NanomaxFlyscanJune2017(PtyScan):
     """
     Loads Nanomax fly scan data in the format of June 2017.
     """
-
     RECIPE = u.Param()
     RECIPE.dataPath = None
     RECIPE.datafile = None
