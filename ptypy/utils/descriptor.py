@@ -24,18 +24,12 @@ from .parameters import Param
 __all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
 
 
-class _Adict(object):
-
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-# ! Validator message codes
-CODES = _Adict(
-    PASS=1,
-    FAIL=0,
-    UNKNOWN=2,
-    MISSING=3,
-    INVALID=4)
+class CODES:
+    PASS = 1
+    FAIL = 0
+    UNKNOWN = 2
+    MISSING = 3
+    INVALID = 4
 
 # ! Inverse message codes
 CODE_LABEL = dict((v, k) for k, v in CODES.__dict__.items())
