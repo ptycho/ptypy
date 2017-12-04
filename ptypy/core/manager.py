@@ -332,11 +332,6 @@ class ScanModel(object):
             self.Cmask = Container(self, ID='Cmask', data_type='bool')
         else:
             # Use with a Ptycho instance
-            self.ptycho.probe = Container(self.ptycho, ID='Cprobe', data_type='complex')
-            self.ptycho.obj = Container(self.ptycho, ID='Cobj', data_type='complex')
-            self.ptycho.exit = Container(self.ptycho, ID='Cexit', data_type='complex')
-            self.ptycho.diff = Container(self.ptycho, ID='Cdiff', data_type='real')
-            self.ptycho.mask = Container(self.ptycho, ID='Cmask', data_type='bool')
             self.Cdiff = self.ptycho.diff
             self.Cmask = self.ptycho.mask
         self.containers_initialized = True
@@ -469,8 +464,8 @@ class Vanilla(ScanModel):
         new_probe_ids = {}
         new_object_ids = {}
 
-        # We can just decide what the storage ID:s will be
-        ID ='S00G00'
+        # One probe / object storage per scan.
+        ID ='S'+self.label
 
         # We need to return info on what storages are created
         if not ID in self.ptycho.probe.storages.keys():
@@ -507,7 +502,7 @@ class Vanilla(ScanModel):
                       accessrule={'shape': geometry.shape,
                                   'psize': geometry.resolution,
                                   'coord': u.expect2(0.0),
-                                  'storageID': ID,
+                                  'storageID': dv.storageID,
                                   'layer': dv.layer,
                                   'active': dv.active})
 
@@ -686,8 +681,8 @@ class Full(ScanModel):
         logger.info('Found these probes : ' + ', '.join(existing_probes))
         logger.info('Found these objects: ' + ', '.join(existing_objects))
 
-        object_id = 'S00'
-        probe_id = 'S00'
+        object_id = 'S' + self.label
+        probe_id = 'S' + self.label
 
         positions = self.new_positions
         di_views = self.new_diff_views
@@ -765,8 +760,7 @@ class Full(ScanModel):
                                   accessrule={'shape': geometry.shape,
                                               'psize': geometry.resolution,
                                               'coord': pos_pr,
-                                              'storageID': (probe_id +
-                                                            object_id[1:] +
+                                              'storageID': (dv.storageID +
                                                             'G%02d' % ii),
                                               'layer': exit_index,
                                               'active': dv.active})

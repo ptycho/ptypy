@@ -416,7 +416,11 @@ class Ptycho(Base):
         the exit waves, :py:attr:`diff` for diffraction data and
         :py:attr:`mask` for detectors masks
         """
-
+        self.probe = Container(self, ID='Cprobe', data_type='complex')
+        self.obj = Container(self, ID='Cobj', data_type='complex')
+        self.exit = Container(self, ID='Cexit', data_type='complex')
+        self.diff = Container(self, ID='Cdiff', data_type='real')
+        self.mask = Container(self, ID='Cmask', data_type='bool')
         # Initialize the model manager. This also initializes the
         # containers.
         self.modelm = ModelManager(self, self.p.scans)
