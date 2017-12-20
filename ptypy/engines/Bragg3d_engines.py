@@ -90,7 +90,7 @@ class DM_3dBragg(DM):
     [sample_support.shrinkwrap.start]
     default = 10
     type = int
-    help = Start shrink wrap at this iteration
+    help = Start shrink wrap after this iteration
     doc =
 
     [sample_support.shrinkwrap.plot]
@@ -142,7 +142,7 @@ class DM_3dBragg(DM):
             slow = -shigh
 
         # shrink wrap
-        elif self.curiter > self.p.sample_support.shrinkwrap.start:
+        elif self.curiter >= self.p.sample_support.shrinkwrap.start:
             logger.info('Shrink wrapping...')
             t0 = time.time()
 
@@ -241,7 +241,9 @@ class DM_3dBragg(DM):
         """
         super(DM_3dBragg, self)._fill_runtime()
 
-        if not self.p.sample_support.shrinkwrap.plot:
+        try:
+            assert self.p.sample_support.shrinkwrap.plot
+        except AttributeError, AssertionError:
             return
 
         try:
