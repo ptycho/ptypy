@@ -128,9 +128,15 @@ class Ptycho(Base):
     help = Reconstruction file name (or format string)
     doc = Reconstruction file name or format string (constructed against runtime dictionary)
 
+    [io.interaction]
+    default = None
+    type = Param, bool
+    help = ZeroMQ interactor options
+    doc = Options for the communications server
+
     [io.autosave]
     default = None
-    type = Param
+    type = Param, bool
     help = Auto-save options
     doc = Options for automatic saving during reconstruction.
 
@@ -156,7 +162,7 @@ class Ptycho(Base):
 
     [io.autoplot]
     default = None
-    type = Param
+    type = Param, bool
     help = Plotting client parameters
     doc = In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
 

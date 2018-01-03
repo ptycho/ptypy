@@ -322,8 +322,8 @@ class Storage(Base):
 
     _PREFIX = STORAGE_PREFIX
 
-    def __init__(self, container, ID=None, data=None, shape=DEFAULT_SHAPE, fill=0.,
-                 psize=1., origin=None, layermap=None, padonly=False,
+    def __init__(self, container, ID=None, data=None, shape=DEFAULT_SHAPE, 
+                 fill=0., psize=1., origin=None, layermap=None, padonly=False,
                  **kwargs):
         """
         Parameters
@@ -1486,7 +1486,13 @@ class View(Base):
         else:
             self._record['sp'][:self._ndim] = v
 
-
+    @property
+    def pcoord(self):
+        """ 
+        The physical coordinate in pixel space
+        """
+        return self.dcoord + self.sp
+        
 class Container(Base):
     """
     High-level container class.

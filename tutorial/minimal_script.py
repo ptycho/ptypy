@@ -74,11 +74,10 @@ p.scan = u.Param()
 # branch mentioned above.
 # Obviously at least the ``data`` branch will differ from
 # :py:data:`.scan.data`. In this tutorial we
-# create a new scan parameter branch ``MF`` where we only specify
-# the data branch and tell |ptypy| to use scan meta data when possible.
+# create a new scan parameter branch ``MF``.
 p.scans = u.Param()
 p.scans.MF = u.Param()
-p.scans.MF.if_conflict_use_meta = True
+p.scans.MF.name = 'Vanilla' 
 p.scans.MF.data = u.Param()
 
 # As data source we have choosen the *'test'* source.
@@ -87,7 +86,7 @@ p.scans.MF.data = u.Param()
 # This class is meant for testing, and it provides/simulates
 # diffraction patterns without using the more complex generic
 # :any:`SimScan` class.
-p.scans.MF.data.source = 'test'
+p.scans.MF.data.name = 'MoonFlowerScan'
 
 # We set the diffraction frame shape to a small value (128x128px) and
 # limit the number af diffraction patterns at 100. The

@@ -1,4 +1,4 @@
-# In this tutorial, we learn how to subclass :any:`PtyScan` to make
+# In this tutorial, we learn how to subclass :py:class:`PtyScan` to make
 # ptypy work with any experimental setup.
 
 # This tutorial can be used as a direct follow-up to :ref:`simupod`

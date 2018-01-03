@@ -917,7 +917,7 @@ class EvalDescriptor(ArgParseDescriptor):
             PASS=logging.INFO,
             FAIL=logging.CRITICAL,
             UNKNOWN=logging.WARN,
-            MISSING=logging.WARN,
+            MISSING=logging.INFO,
             INVALID=logging.ERROR
         )
 

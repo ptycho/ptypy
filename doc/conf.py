@@ -22,8 +22,8 @@ import os
 
 # generate paramters.rst and other rst
 import subprocess
-subprocess.call(['python', 'script2rst.py'])  # We need this to have a clean sys.argv
-execfile('parameters2rst.py')
+#subprocess.call(['python', 'script2rst.py'])  # We need this to have a clean sys.argv
+#execfile('parameters2rst.py')
 execfile('tmp2rst.py')
 execfile('version.py')
 

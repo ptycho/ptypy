@@ -26,8 +26,9 @@ p.data_type = "single"
 # :any:`MoonFlowerScan`
 p.scans = u.Param()
 p.scans.MF = u.Param()
+p.scans.MF.name = 'Vanilla'
 p.scans.MF.data = u.Param()
-p.scans.MF.data.source = 'test'
+p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
 p.scans.MF.data.num_frames = 400
 
@@ -51,7 +52,7 @@ fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Probe and object are not so exciting to look at for now. As default,
 # probes are initialized with an aperture like support.
 probe_storage = P.probe.storages.values()[0]
-fig = u.plot_storage(P.probe.S['S00G00'], 1)
+fig = u.plot_storage(P.probe.S.values()[0], 1)
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the starting guess for the probe.
 
@@ -80,7 +81,7 @@ def fourier_update(pods):
     # Propagate the exit waves
     for gamma, pod in pods.iteritems():
         Dphi[gamma] = pod.fw(2*pod.probe*pod.object - pod.exit)
-        Imodel += Dphi[gamma] * Dphi[gamma].conj()
+        Imodel += np.abs(Dphi[gamma] * Dphi[gamma].conj())
     # Calculate common correction factor
     factor = (1-mask) + mask * modulus / (np.sqrt(Imodel) + 1e-10)
     # Apply correction and propagate back
@@ -152,14 +153,14 @@ iterate(P, 9)
 # We note that the error (here only displayed for 3 iterations) is
 # already declining. That is a good sign.
 # Let us have a look how the probe has developed.
-fig = u.plot_storage(P.probe.S['S00G00'], 2)
+fig = u.plot_storage(P.probe.S.values()[0], 2)
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the reconstructed probe after 9 iterations. We observe that
 # the actaul illumination of the sample must be larger than the initial
 # guess.
 
 # Looks like the probe is on a good way. How about the object?
-fig = u.plot_storage(P.obj.S['S00G00'], 3, slices='0,120:-120,120:-120')
+fig = u.plot_storage(P.obj.S.values()[0], 3, slices='0,120:-120,120:-120')
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the reconstructed object after 9 iterations. It is not quite
 # clear what object is reconstructed
@@ -169,13 +170,13 @@ iterate(P, 36)
 
 # Error is still on a steady descent. Let us look at the final
 # reconstructed probe and object.
-fig = u.plot_storage(P.probe.S['S00G00'], 4)
+fig = u.plot_storage(P.probe.S.values()[0], 4)
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the reconstructed probe after a total of 45 iterations.
 # It's a moon !
 
 
-fig = u.plot_storage(P.obj.S['S00G00'], 5, slices='0,120:-120,120:-120')
+fig = u.plot_storage(P.obj.S.values()[0], 5, slices='0,120:-120,120:-120')
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the reconstructed object after a total of 45 iterations.
 # It's a bunch of flowers !
