@@ -2,8 +2,9 @@
 """
 Maximum Likelihood reconstruction engine.
 
-TODO:
- * Implement other regularizers
+TODO.
+
+  * Implement other regularizers
 
 This file is part of the PTYPY package.
 

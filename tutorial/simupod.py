@@ -21,6 +21,7 @@ from ptypy.core import View, Container, Storage, Base, POD
 plt = mpl.pyplot
 import sys
 scriptname = sys.argv[0].split('.')[0]
+
 # We create a managing top-level class instance. We will not use the
 # the :any:`Ptycho` class for now, as its rich set of methods may be
 # a bit overwhelming to start with. Instead we start of a plain
@@ -31,7 +32,7 @@ scriptname = sys.argv[0].split('.')[0]
 # python class. To reenable ths feature we have to subclasse once.
 class Base2(Base):
     pass
-     
+
 P = Base2()
 
 # Now we can start attaching attributes

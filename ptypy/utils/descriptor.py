@@ -21,7 +21,7 @@ from copy import deepcopy
 from .parameters import Param
 
 
-__all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
+__all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor', 'defaults_tree']
 
 
 class _Adict(object):
@@ -43,25 +43,36 @@ CODE_LABEL = dict((v, k) for k, v in CODES.__dict__.items())
 
 class Descriptor(object):
     """
-    Base class for parameter descriptions and validation. This class is used to hold both command line arguments
-    and Param-type parameter descriptions.
-    """
+    Base class for parameter descriptions and validation. This class is used to 
+    hold both command line arguments and Param-type parameter descriptions.
 
-    # Options definitions as a class variable:
-    # a dictionary whose keys are attribute names and values are description
-    # of the attribute. It this description contains the text "required" or
-    # "mandatory", the attribute is registered as required.
+    Attributes
+    ----------
+
+    OPTIONS_DEF : 
+        A dictionary whose keys are attribute names and values are description
+        of the attribute. It this description contains the text "required" or
+        "mandatory", the attribute is registered as required.
+
+    """
+    
     OPTIONS_DEF = None
 
     def __init__(self, name, parent=None, separator='.'):
         """
 
-        :param name: The name of the parameter represented by this instance
-        :param parent: Parent parameter or None
-        :param separator: defaults to '.'
-        :param options_def: a dictionary whose keys are attribute names and values are description
-                     of the attribute. It this description contains the text "required" or
-                     "mandatory", the attribute is registered as required.
+        Parameters
+        ----------
+
+        name : str
+            The name of the parameter represented by this instance
+
+        parent : Descriptor or None
+            Parent parameter or None if no parent parameter.
+
+        separator : str
+            Subtree separator character. Defaults to '.'.
+
         """
 
         #: Name of parameter
@@ -377,6 +388,7 @@ class Descriptor(object):
         Keyword arguments are forwarded to `ConfigParser.RawConfigParser`
         """
         from ConfigParser import RawConfigParser as Parser
+        #kwargs['empty_lines_in_values'] = True # This will only work in Python3
         parser = Parser(**kwargs)
         parser.readfp(fbuffer)
         for num, sec in enumerate(parser.sections()):

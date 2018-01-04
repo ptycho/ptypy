@@ -64,6 +64,7 @@ class PtyScan(object):
      - mpi capable, child classes should not worry about mpi
 
     Default data parameters. See :py:data:`.scan.data`
+
     Defaults:
 
     [name]
@@ -92,18 +93,21 @@ class PtyScan(object):
     default = None
     help = Saving mode
     doc = Mode to use to save data to file.
-       - ``None``: No saving
-       - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-       - ``'append'``: appends each chunk in master \*.ptyd file
-       - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-      in the path given by the link. Links file paths are relative to master file.
+        <newline>
+        - ``None``: No saving
+        - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
+        - ``'append'``: appends each chunk in master \*.ptyd file
+        - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
+        <newline>
+        in the path given by the link. Links file paths are relative to master file.
     userlevel = 1
 
     [auto_center]
     type = bool
     default = None
     help = Determine if center in data is calculated automatically
-    doc =  - ``False``, no automatic centering
+    doc =  
+       - ``False``, no automatic centering
        - ``None``, only if :py:data:`center` is ``None``
        - ``True``, it will be enforced
     userlevel = 0
@@ -127,15 +131,17 @@ class PtyScan(object):
     type = int, tuple
     default = None
     help = Data frame orientation
-    doc =  - ``None`` or ``0``: correct orientation
+    doc = Choose
+       <newline> 
+       - ``None`` or ``0``: correct orientation
        - ``1``: invert columns (numpy.flip_lr)
        - ``2``: invert columns, invert rows
        - ``3``: invert rows  (numpy.flip_ud)
        - ``4``: transpose (numpy.transpose)
        - ``4+i``: tranpose + other operations from above
-
-      Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, do_flipud,
-      do_fliplr)``
+       <newline>
+       Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, 
+       do_flipud, do_fliplr)``
     userlevel = 1
 
     [min_frames]
@@ -149,7 +155,7 @@ class PtyScan(object):
     type = ndarray
     default = None
     help = Theoretical positions for this scan
-    doc = If provided, experimental positions from :any:`PtyScan` subclass will be ignored. If data
+    doc = If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
       preparation is called from Ptycho instance, the calculated positions from the
       :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
     userlevel = 2
@@ -268,7 +274,7 @@ class PtyScan(object):
             p.rebin = 1
 
         self.info = p
-        """:any:`Param` container that stores all input parameters."""
+        """:py:class:`Param` container that stores all input parameters."""
 
         # Print a report
         log(4, 'Ptypy Scan instance got the following parameters:')
@@ -985,7 +991,7 @@ class PtyScan(object):
         for preparation and should determine if data acquisition for this
         scan is finished. Its main purpose is to allow for a data
         acquisition scheme, where the number of frames is not known
-        when :any:`PtyScan` is constructed, i.e. a data stream or an
+        when :py:class:`PtyScan` is constructed, i.e. a data stream or an
         on-the-fly reconstructions.
 
         Note
@@ -1063,7 +1069,7 @@ class PtyScan(object):
         Note
         ----
         This is the *most* important method to change when subclassing
-        :any:`PtyScan`. Most often it suffices to override the constructor
+        :py:class:`PtyScan`. Most often it suffices to override the constructor
         and this method to create a subclass suited for a specific
         experiment.
         """

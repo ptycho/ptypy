@@ -29,7 +29,7 @@ def switch_orientation(A, orientation, center=None):
 
     orientation : tuple or int
         3-tuple of booleans (transpose,flipud,fliplr)
-        if int: converted according to binary representation:
+        if integer, value is converted according to binary representation:
             0: [False, False, False]
             1: [False, False, True]
             2: [False, True, False]

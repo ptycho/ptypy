@@ -772,7 +772,7 @@ class Storage(Base):
     @property
     def psize(self):
         """
-        :returns: The pixel size.
+        The pixel size.
         """
         return self._psize
 
@@ -1179,11 +1179,10 @@ class View(Base):
             Shape of the view in pixels (*default* is ``None``)
 
         coord : 2-tuple of float,
-            Physical coordinates [meter] of the center of the view.
+            Physical coordinates *[meter]* of the center of the view.
 
         psize : float or tuple of float
-            Pixel size [meters]. Required for storage initialization,
-            See :py:data:`DEFAULT_PSIZE`
+            Pixel size *[meter]*. Required for storage initialization.
 
         layer : int
             Index of the third dimension if applicable.
@@ -1439,7 +1438,7 @@ class View(Base):
     @psize.setter
     def psize(self, v):
         """
-        Set pixel size
+        Set pixel size.
         """
         if v is None:
             self._record['psize'][:] = 0.
@@ -2042,7 +2041,7 @@ class POD(Base):
         ptycho : Ptycho
             The instance of Ptycho associated with this pod.
 
-        model : ScanModel
+        model : ~ptypy.core.manager.ScanModel
             The instance of ScanModel (or it subclasses) which describes
             this pod.
 

@@ -199,7 +199,7 @@ illumination_desc.from_string(r"""
 DEFAULT = illumination_desc.make_default(99)
 DEFAULT_aperture = DEFAULT.aperture
 
-__all__ = ['init_storage', 'aperture']
+__all__ = ['init_storage', 'aperture', 'DEFAULT']
 
 
 def rectangle(grids, dims=None, ew=2):
@@ -231,7 +231,7 @@ def aperture(A, grids=None, pars=None, **kwargs):
     A : ndarray
         Model array (at least 2-dimensional) to place aperture on top.
 
-    pars: dict or ptypy.utils.Param
+    pars : dict or ptypy.utils.Param
         Parameters, see :any:`DEFAULT`.aperture
 
     grids : ndarray
@@ -300,22 +300,24 @@ def init_storage(storage, pars, energy=None, **kwargs):
 
     Parameters
     ----------
-    storage : ptypy.core.Storage
+    storage : ~ptypy.core.classes.Storage
         A :any:`Storage` instance in the *probe* container of :any:`Ptycho`
 
     pars : Param
         Parameter structure for creating a probe / illumination.
-        See :any:`DEFAULT`
+        See :py:data:`~ptypy.core.illumination.DEFAULT`
         Also accepted as argument:
-         * string giving the filename of a previous reconstruction to
-           extract storage from.
-         * string giving the name of an available TEMPLATE
-         * FIXME: document other string cases.
-         * numpy array: interpreted as initial illumination.
+
+          * string giving the filename of a previous reconstruction to 
+            extract storage from.
+          * string giving the name of an available TEMPLATE
+          * FIXME: document other string cases.
+          * numpy array: interpreted as initial illumination.
 
     energy : float, optional
         Energy associated with this storage. If None, tries to retrieve
         the energy from the already initialized ptypy network.
+
     """
     s = storage
     prefix = "[Object %s] " % str(s.ID)

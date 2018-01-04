@@ -1,6 +1,6 @@
 # In this tutorial, we want to provide the information
 # needed to create an engine compatible with the state mixture
-# expansion of ptychogrpahy as described in Thibault et. al 2013 [Thi2013]_ .
+# expansion of ptychogrpahy as described in Thibault et. al 2013 [modes]_ .
 
 # First we import ptypy and the utility module
 import ptypy
@@ -23,10 +23,10 @@ p.data_type = "single"
 # Now, we need to create a set of scans that we wish to reconstruct
 # in the reconstruction run. We will use a single scan that we call 'MF' and
 # mark the data source as 'test' to use the |ptypy| internal
-# :any:`MoonFlowerScan`
+# :py:class:`MoonFlowerScan`
 p.scans = u.Param()
 p.scans.MF = u.Param()
-p.scans.MF.name = 'Vanilla'
+p.scans.MF.name = 'Full'
 p.scans.MF.data = u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
@@ -182,4 +182,4 @@ fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # It's a bunch of flowers !
 
 
-# .. [Thi2013] P. Thibault and A. Menzel, **Nature** 494, 68 (2013)
+# .. [#modes] P. Thibault and A. Menzel, **Nature** 494, 68 (2013)

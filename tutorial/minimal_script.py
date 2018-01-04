@@ -32,8 +32,8 @@ p.verbose_level = 3
 p.data_type = "single"
 
 # We give this reconstruction the name ``'minimal'`` although it
-# will automatically choose one from the file name of the script if we put in ``None``.
-# (But then the tutorial may not work on your computer as the chosen
+# will automatically choose one from the file name of the script if we put in 
+# ``None``. (But then the tutorial may not work on your computer as the chosen
 # run name may differ from the one that this tutorial was created with)
 p.run = 'minimal'
 
@@ -80,12 +80,12 @@ p.scans.MF = u.Param()
 p.scans.MF.name = 'Vanilla' 
 p.scans.MF.data = u.Param()
 
-# As data source we have choosen the *'test'* source.
+# As data source we have choosen the *'MoonFlowerScan'* test source.
 # That will make |ptypy| use the internal
-# :py:class:`~ptypy.core.data.MoonFlowerScan` class.
+# :py:class:`~ptypy.core.data.MoonFlowerScan` class to generate data.
 # This class is meant for testing, and it provides/simulates
 # diffraction patterns without using the more complex generic
-# :any:`SimScan` class.
+# :py:class:`SimScan` class.
 p.scans.MF.data.name = 'MoonFlowerScan'
 
 # We set the diffraction frame shape to a small value (128x128px) and
