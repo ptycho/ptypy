@@ -1,6 +1,6 @@
 # In this tutorial, we want to provide the information
 # needed to create an engine compatible with the state mixture
-# expansion of ptychogrpahy as described in Thibault et. al 2013 [modes]_ .
+# expansion of ptychogrpahy as described in Thibault et. al 2013 [#modes]_ .
 
 # First we import ptypy and the utility module
 import ptypy

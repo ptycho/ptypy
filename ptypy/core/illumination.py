@@ -224,15 +224,15 @@ def aperture(A, grids=None, pars=None, **kwargs):
     """
     Creates an aperture in the shape and dtype of `A` according
     to x,y-grids `grids`. Keyword Arguments may be any of
-    :any:`DEFAULT`.aperture.
+    (*FIXME* link to kwargs)
 
     Parameters
     ----------
     A : ndarray
         Model array (at least 2-dimensional) to place aperture on top.
 
-    pars : dict or ptypy.utils.Param
-        Parameters, see :any:`DEFAULT`.aperture
+    pars : dict or ~ptypy.utils.Param
+        Parameters, *FIXME* link to parameters
 
     grids : ndarray
         Cartesian coordinate grids, if None, they will be created with

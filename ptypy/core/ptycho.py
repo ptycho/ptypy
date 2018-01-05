@@ -53,11 +53,11 @@ class Ptycho(Base):
     runtime : Param
         Runtime information, e.g. errors, iteration etc.
 
-    modelm : ModelManager
+    ~Ptycho.model : ModelManager
         THE managing instance for :any:`POD`, :any:`View` and
         :any:`Geo` instances
 
-    probe,obj,exit,diff,mask : Container
+    ~Ptycho.probe, ~Ptycho.obj,~Ptycho.exit,~Ptycho.diff,~Ptycho.mask : Container
         Container instances for illuminations, samples, exit waves,
         diffraction data and detector masks / weights
 
@@ -256,7 +256,7 @@ class Ptycho(Base):
             - 2 : also configures Containers, initializes ModelManager
                   see :py:meth:`init_data`
             - 3 : also initializes ZeroMQ-communication
-                  :py:meth:`init_communication`
+                  see :py:meth:`init_communication`
             - 4 : also initializes reconstruction engines,
                   see :py:meth:`init_engine`
             - >= 4 : also and starts reconstruction
@@ -279,6 +279,8 @@ class Ptycho(Base):
         self.p.update(kwargs)
 
         # Validate the incoming parameters
+        # FIXME : Validation should maybe happen for each class that uses the
+        #         the parameters, i.e. like a depth=1 validation
         defaults_tree.validate(self.p)
 
         # Instance attributes
@@ -289,8 +291,8 @@ class Ptycho(Base):
         self.exit = None
         self.diff = None
         self.mask = None
-        self.modelm = None
-
+        self.model = None
+        
         # Communication
         self.interactor = None
         self.plotter = None
@@ -417,10 +419,10 @@ class Ptycho(Base):
         Called on __init__ if ``level >= 1``.
 
         Prepare everything for reconstruction. Creates attributes
-        :py:attr:`modelm` and the containers :py:attr:`probe` for
+        :py:attr:`model` and the containers :py:attr:`probe` for
         illumination, :py:attr:`obj` for the samples, :py:attr:`exit` for
         the exit waves, :py:attr:`diff` for diffraction data and
-        :py:attr:`mask` for detectors masks
+        :py:attr:`Ptycho.mask` for detectors masks
         """
         self.probe = Container(self, ID='Cprobe', data_type='complex')
         self.obj = Container(self, ID='Cobj', data_type='complex')
@@ -429,7 +431,7 @@ class Ptycho(Base):
         self.mask = Container(self, ID='Cmask', data_type='bool')
         # Initialize the model manager. This also initializes the
         # containers.
-        self.modelm = ModelManager(self, self.p.scans)
+        self.model = ModelManager(self, self.p.scans)
     
     def init_data(self, print_stats=True):
         """
@@ -440,7 +442,7 @@ class Ptycho(Base):
         """
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs.
-        self.modelm.new_data()
+        self.model.new_data()
 
         # Print stats
         parallel.barrier()
@@ -537,7 +539,7 @@ class Ptycho(Base):
             using :py:meth:`init_engine` and run immediately afterwards.
             For parameters see :py:data:`.engine`
 
-        engine : BaseEngine, optional
+        engine : ~ptypy.engines.base.BaseEngine, optional
             An engine instance that should be a subclass of
             :py:class:`BaseEngine` or have the same methods.
         """
@@ -570,7 +572,7 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                self.modelm.new_data()
+                self.model.new_data()
 
                 # Last minute preparation before a contiguous block of
                 # iterations
@@ -725,7 +727,7 @@ class Ptycho(Base):
 
             logger.info('Regenerating exit waves')
             P.exit.reformat()
-            P.modelm._initialize_exit(P.pods.values())
+            P.model._initialize_exit(P.pods.values())
 
         if load_data:
             logger.info('Loading data')

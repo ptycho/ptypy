@@ -109,7 +109,7 @@ class SimScan(PtyScan):
         Parameters
         ----------
         pars : Param
-            PtyScan parameters. See :any:`data.GENERIC`.
+            PtyScan parameters. See :py:data:`scandata.SimScan`.
 
         """
 

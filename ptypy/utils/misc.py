@@ -123,7 +123,7 @@ class Table(object):
     def modify_add(self,record_ids,**kwargs):
         """
         Take selected record ids and overwrite fields with values
-        **kwargs.
+        `**kwargs`.
         """
         old_records = self.pull_records(record_ids)
         recs = [r._replace(**kwargs) for r in old_records]
@@ -285,7 +285,7 @@ def complex_overload(func):
     """
     @wraps(func)
     def overloaded(c,*args,**kwargs):
-        return func(np.real(c),*args,**kwargs) +1j *func(np.imag(c),*args,**kwargs)
+        return func(np.real(c),*args,**kwargs).astype(c.dtype) +1j *func(np.imag(c),*args,**kwargs)
 
     return overloaded
 

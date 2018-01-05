@@ -1179,10 +1179,10 @@ class View(Base):
             Shape of the view in pixels (*default* is ``None``)
 
         coord : 2-tuple of float,
-            Physical coordinates *[meter]* of the center of the view.
+            Physical coordinates *(meter)* of the center of the view.
 
         psize : float or tuple of float
-            Pixel size *[meter]*. Required for storage initialization.
+            Pixel size in *(meter)* . Required for storage initialization.
 
         layer : int
             Index of the third dimension if applicable.
@@ -1205,7 +1205,7 @@ class View(Base):
         """ Active state. If False this view will be ignored when
             resizing the data buffer of the associated :any:`Storage`."""
 
-        #: The :any:`Storage` instance that this view applies to by default.
+        #: The :py:class:`Storage` instance that this view applies to by default.
         self.storage = None
 
         self.storageID = None
@@ -1430,7 +1430,7 @@ class View(Base):
     @property
     def psize(self):
         """
-        Pixel size of the View.
+        Pixel size of the `View`.
         """
         ps = self._record['psize'][:self._ndim]
         return ps if (ps > 0.).all() else None
