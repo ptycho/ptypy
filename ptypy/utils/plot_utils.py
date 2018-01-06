@@ -677,8 +677,6 @@ class PtyAxis(object):
                 self.mask = mask
                 if self.shape is None:
                     self.shape = self.mask.shape
-                else:
-                    assert self.shape == self.mask.shape
         else:
             self.mask = None
         if update:

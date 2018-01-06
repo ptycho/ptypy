@@ -530,7 +530,6 @@ class MPLplotter(object):
         if np.isscalar(pp.mask):
             x, y = np.indices(sh)-np.reshape(np.array(sh)//2, (len(sh),)+len(sh)*(1,))
             mask = (np.sqrt(x**2+y**2) < pp.mask*min(sh)/2.)
-            pp.mask = mask
 
         # cropping
         crop = np.array(sh)*np.array(pp.crop)//2
@@ -558,6 +557,7 @@ class MPLplotter(object):
                     ptya._resize_cid = self.plot_fig.canvas.mpl_connect('resize_event', ptya._after_resize_event)
                     pty_axes.append(ptya)
                 # get the layer
+                ptya.set_mask(mask, False)
                 ptya.set_data(data[layer])
                 ptya.ax.set_ylim(crop[0],sh[0]-crop[0])
                 ptya.ax.set_xlim(crop[1],sh[1]-crop[1])

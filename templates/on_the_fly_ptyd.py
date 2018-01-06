@@ -32,6 +32,9 @@ data.auto_center = None
 data.rebin = None
 data.orientation = None
 
+# optionally validate the parameter tree
+u.descriptor.defaults_tree['scandata.MoonFlowerScan'].validate(data)
+
 # create PtyScan instance
 MF = ptypy.core.data.MoonFlowerScan(data)
 MF.initialize()
