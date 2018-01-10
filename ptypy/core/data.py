@@ -713,7 +713,7 @@ class PtyScan(object):
         self.info.shape = sh
 
         cen = self.info.center
-        if str(cen) == cen:
+        if str(cen) is cen:
             cen = geometry.translate_to_pix(dsh, cen)
 
         auto = self.info.auto_center

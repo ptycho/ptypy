@@ -1278,16 +1278,16 @@ class View(Base):
 
     @property
     def active(self):
-        return self._record['active'] 
-        
+        return self._record['active']
+
     @active.setter
     def active(self, v):
         self._record['active'] = v
-        
+
     @property
     def dlayer(self):
         return self._record['dlayer']
-        
+
     @dlayer.setter
     def dlayer(self, v):
         self._record['dlayer'] = v
@@ -1295,7 +1295,7 @@ class View(Base):
     @property
     def layer(self):
         return self._record['layer']
-        
+
     @layer.setter
     def layer(self, v):
         self._record['layer'] = v
