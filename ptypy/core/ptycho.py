@@ -182,8 +182,8 @@ class Ptycho(Base):
     doc = Auto-save file name or format string (constructed against runtime dictionary)
 
     [io.autoplot]
-    default = Param
-    type = Param
+    default = True
+    type = Param, bool
     help = Plotting client parameters
     doc = Csontainer for the plotting.
 

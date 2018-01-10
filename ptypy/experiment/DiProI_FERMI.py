@@ -2,7 +2,7 @@
 """\
 Data preparation for the DiProI beamline, FERMI.
 
-Written by S. Sala, August 2016.
+Started by S. Sala, August 2016.
 
 This file is part of the PTYPY package.
 
@@ -24,12 +24,15 @@ IO_par = Ptycho.DEFAULT['io']
 # testing commits again
 # Parameters for the h5 file
 H5_PATHS = u.Param()
-H5_PATHS.frame_pattern = 'image/ccd1'
+#H5_PATHS.frame_pattern = 'image/ccd1' # no longer used
+# functionality moved to data_key so different key can be given as input
 H5_PATHS.motor_x = 'DPI/SampleX'
 H5_PATHS.motor_y = 'DPI/SampleY'
 # H5_PATHS.energy = '??/??/' #it seems like this hasn't been stored
+DARK_PATHS = u.Param()
+DARK_PATHS.key = 'data'
 FLAT_PATHS = u.Param()
-FLAT_PATHS.key = "flat"
+FLAT_PATHS.key = 'data'
 
 
 @register()
@@ -49,6 +52,11 @@ class DiProIFERMIScan(PtyScan):
     type = str
     help = 
 
+    [date]
+    default = None
+    type = str
+    help = timestamp-like date for documenting recons
+
     [scan_name]
     default = None
     type = str
@@ -59,73 +67,70 @@ class DiProIFERMIScan(PtyScan):
     type = str
     help = has to be a string (e.g. 'Scan018')
 
-    [dark_name]
-    default = None
+    [data_file]
+    default = '%(base_path)s/raw/%(scan_name)s.hdf'
     type = str
-    help = has to be a string (e.g. 'Dark')
+    help = path to data file
 
-    [dark_value]
-    default = 200.0
-    type = float
-    help = Used if dark_number is None (?!)
-
-    [detector_flat_file]
-    default = None
+    [data_key]
+    default = 'image/ccd1'
     type = str
-    help = 
-
-    [h5_file_pattern]
-    default = '%(base_path)s/imported/%(run_ID)s/%(scan_name)s/rawdata/'
-    type = str
-    help = 
-
-    [dark_h5_file_pattern]
-    default = '%(base_path)s/imported/%(run_ID)s/%(dark_name)s/rawdata/'
-    type = str
-    help = 
-
-    [date]
-    default = None
-    type = str
-    help = 
-
-    [motors]
-    default = ['sample_x', 'sample_y']
-    type = list
-    help = check orientation
-
-    [motors_multiplier]
-    default = 1e-3
-    type = float
-    help = DiProI-specific
+    help = key to load raws from data file
 
     [mask_file]
     default = None
     type = str
-    help = Mask file name
+    help = path to mask file
 
-    [use_refined_positions]
-    default = False
-    type = bool
-    help = 
-
-    [refined_positions_pattern]
-    default = '%(base_path)s/imported/%(run_ID)s/%(scan_name)s/'
+    [posi_file]
+    default = None
     type = str
-    help = 
+    help = path to positions file
 
-    [flat_division]
-    default = False
-    type = bool
-    help = Switch for flat division
+    [posi_key]
+    default = None
+    type = str
+    help = position key referring to subset of indices
+
+    [motors_multiplier]
+    default = 1e-3
+    type = float
+    help = specific to DiProI
+
+    [motors_multiplier_refined]
+    default = 1.0
+    type = float
+    help = specific to refined positions
+
+    [dark_file]
+    default = None
+    type = str
+    help = path do dark file
+
+    [dark_value]
+    default = 200.0
+    type = float
+    help = Used for dark subtraction if dark_number is None
+
+    [dark_std]
+    default = None
+    type = float
+    help = Multiplying dark_std within dark subtraction
 
     [dark_subtraction]
     default = False
     type = bool
     help = Switch for dark subtraction
 
-    [auto_center]
+    [flat_file]
+    default = None
+    type = str
+    help = path to flat file
+
+    [flat_division]
     default = False
+    type = bool
+    help = Switch for flat division
 
     """
 
@@ -144,23 +149,11 @@ class DiProIFERMIScan(PtyScan):
         if self.info.base_path is None:
             raise RuntimeError('Base path missing.')
 
-        # Construct the file names
-        self.h5_filename_list = sorted([i for i in os.listdir(
-            self.info.h5_file_pattern % self.info)
-                                        if not i.startswith('.')])
+        u.log(3, 'Will read data from file {data_file}'.format(
+            data_file=self.info.data_file))
 
-        # Path to data files
-        self.data_path = (self.info.h5_file_pattern % self.info)
-
-        u.log(3, 'Will read data from h5 files in {data_path}'.format(
-            data_path=self.data_path))
-
-        # Path to data files
-        self.dark_path = (self.info.dark_h5_file_pattern %
-                          self.info)
-
-        u.log(3, 'Will read dark from h5 files in {dark_path}'.format(
-            dark_path=self.dark_path))
+        u.log(3, 'Will read dark from file {dark_file}'.format(
+            dark_file=self.info.dark_file))
 
         # Check whether ptyd file name exists
         if self.info.dfile is None:
@@ -174,8 +167,11 @@ class DiProIFERMIScan(PtyScan):
         # FIXME: do something better here. (detector-dependent)
         # Load mask as weight
         if self.info.mask_file is not None:
-            return io.h5read(self.info.mask_file, 'mask')['mask'].astype(
-                np.float32)
+            return io.h5read(self.info.mask_file)['mask'].astype(np.float32)
+        elif self.info.shape is not None:
+            return np.ones(u.expect2(self.info.shape), dtype='bool')
+        else:
+            return None
 
     def load_positions(self):
         """
@@ -184,27 +180,32 @@ class DiProIFERMIScan(PtyScan):
         mmult = u.expect2(self.info.motors_multiplier)
 
         # Load positions
-        if self.info.use_refined_positions:
-            # From prepared .h5 file
-            positions = io.h5read(self.info.refined_positions_pattern %
-                                  self.info + '/Fermi_reconstruction.h5',
-                                  'data.probe_positions')['probe_positions']
-
-            positions = [(positions[0, i], positions[1, i])
-                         for i in range(positions.shape[-1])]
-            positions = np.array(positions)
-        else:
+        if self.info.posi_file is None:
             # From raw data
             key_x = H5_PATHS.motor_x
             key_y = H5_PATHS.motor_y
-            positions = [(io.h5read(self.data_path + i, key_x)[key_x].tolist(),
-                         (io.h5read(self.data_path + i, key_y)[key_y].tolist()))
-                         for i in self.h5_filename_list]
+            positions = np.array(
+                [(io.h5read(self.info.data_file, key_x)[key_x].tolist()),
+                 (io.h5read(self.info.data_file, key_y)[key_y].tolist())]).T
+        else:
+            positions = io.h5read(self.info.posi_file % self.info,
+                                  'data.probe_positions')['probe_positions'].T
+            positions *= self.info.motors_multiplier_refined
 
-            positions = np.array(positions) * mmult[0]
+        positions *= mmult[0]
 
         # load the positions => check required structure vs currently dict with (x,y)
-        ### is this less efficient than loading the whole file and calling individually raw and pos when needed?
+        ### is this less efficient than loading the whole file and calling individually
+        # raw and pos when needed?
+        # ---> 20180512 SS: yes, it is; positions might be loaded from a different file than raws
+        # (e.g. '2016_06_FERMIDiProI_ptycho' required separate position refinement step)
+
+        if self.info.posi_key is not None:
+            # use subset of indices
+            indices_used = io.h5read(self.info.posi_file % self.info,
+                                     self.info.posi_key)[
+                                     self.info.posi_key][0].astype(int) - 1
+            positions = positions[indices_used]
 
         return positions
 
@@ -213,21 +214,21 @@ class DiProIFERMIScan(PtyScan):
         loading dark and flat
         """
         common = u.Param()
-        key = H5_PATHS.frame_pattern
 
-        if self.info.dark_name is not None:
-            dark = [io.h5read(self.dark_path + i, key)[key].astype(np.float32)
-                    for i in os.listdir(self.dark_path) if i.startswith('Dark')]
+        if self.info.dark_file is not None:
+            dark = io.h5read(self.info.dark_file,
+                             DARK_PATHS.key)[DARK_PATHS.key]
         else:
-            dark = self.info.dark_value
+            dark = [self.info.dark_value]
 
-        if self.info.detector_flat_file is not None:
-            flat = io.h5read(self.info.detector_flat_file,
+        if self.info.flat_file is not None:
+            flat = io.h5read(self.info.flat_file,
                              FLAT_PATHS.key)[FLAT_PATHS.key]
         else:
             flat = 1.
 
         common.dark = np.array(dark).mean(0)
+        common.dark_std = np.array(dark).std(0)
         common.flat = flat
 
         return common
@@ -242,11 +243,21 @@ class DiProIFERMIScan(PtyScan):
         raw = {}  # Container for the frames
         pos = {}  # Container for the positions
         weights = {}  # Container for the weights
-        key = H5_PATHS.frame_pattern
+        key = self.info.data_key
+
+        if self.info.posi_key is None:
+            indices_used = indices
+        else:
+            # use subset of indices
+            key_pos = self.info.posi_key
+            indices_used = io.h5read(self.info.posi_file
+                % self.info, key_pos)[key_pos][0].astype(int) - 1
+
+        raw_temp = io.h5read(self.info.data_file % self.info,
+                             key)[key].astype(np.float32)
 
         for i in range(len(indices)):
-            raw[i] = io.h5read(self.data_path + self.h5_filename_list[i],
-                               key)[key].astype(np.float32)
+            raw[i] = raw_temp[indices_used[i]]
 
         return raw, pos, weights
 
@@ -264,16 +275,19 @@ class DiProIFERMIScan(PtyScan):
             for j in raw:
                 raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
                 raw[j][raw[j] < 0] = 0
-            data = raw
         elif self.info.dark_subtraction:
             for j in raw:
                 raw[j] = raw[j] - common.dark
-                raw[j][raw[j] < 0] = 0
-            data = raw
-        else:
-            data = raw
+                if self.info.dark_std is not None:
+                    #raw[j] = raw[j] - (self.info.dark_std*common.dark_std)
+                    raw[j][raw[j]<self.info.dark_std*common.dark_std] = 0.
+                raw[j][raw[j]<0] = 0.
+
+        data = raw
 
         # FIXME: this will depend on the detector type used.
+        ### 20180516 SS: this script is specific to DiProI@FERMI
+        # => unlikely to frequently change detector
 
         weights = weights
 

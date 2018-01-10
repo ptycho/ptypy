@@ -107,12 +107,6 @@ class I13ScanFFP(PtyScan):
     type = float
     help = Angle of rotation
 
-    [auto_center]
-    default = False
-
-    [orientation]
-    default = (False, False, False)
-
     """
 
     def __init__(self, pars=None, **kwargs):
