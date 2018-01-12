@@ -820,7 +820,9 @@ class EvalDescriptor(ArgParseDescriptor):
             yield {'d': self, 'path': path, 'status': 'wrongtype', 'info': type(pars).__name__}
             return
 
-        if not children or depth == 0:
+        if (depth == 0) or \
+                (not children) or \
+                (not hasattr(pars, 'items')):
             # Nothing else to do
             return
 
