@@ -469,5 +469,85 @@ class EvalDescriptorTest(unittest.TestCase):
         assert out['engines.engine01']['symlink'] == CODES.INVALID
 
 
+    def test_multiple_parameter_types_param(self):
+        '''
+        This tests that multiple possible parameter types are handled correctly
+        '''
+        root = EvalDescriptor('')
+
+        # Add the io part
+        @root.parse_doc()
+        class FakeIOClass(object):
+            """
+            A fake IO class
+
+            Defaults:
+            
+            [io]
+            default = None
+            type = Param
+            help = Global parameters for I/O
+            doc = Global parameter container for I/O settings.
+
+            [io.autoplot]
+            default = None
+            type = Param, bool
+            help = Plotting client parameters
+            doc = In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
+            
+            [io.autoplot.imfile]
+            default = "plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png"
+            type = str
+            help = Plot images file name (or format string)
+            doc = Plot images file name (or format string).
+            userlevel = 1
+        
+            [io.autoplot.interval]
+            default = 1
+            type = int
+            help = Number of iterations between plot updates
+            doc = Requests to the server will happen with this iteration intervals. Note that this will work
+              only if interaction.polling_interval is smaller or equal to this number. If ``interval
+              =0`` plotting is disabled which should be used, when ptypy is run on a cluster.
+            lowlim = -1
+        
+            [io.autoplot.threaded]
+            default = True
+            type = bool
+            help = Live plotting switch
+            doc = If ``True``, a plotting client will be spawned in a new thread and connected at
+              initialization. If ``False``, the master node will carry out the plotting, pausing the
+              reconstruction. This option should be set to ``True`` when ptypy is run on an isolated
+              workstation.
+        
+            [io.autoplot.layout]
+            default = None
+            type = str, Param
+            help = Options for default plotter or template name
+            doc = Flexible layout for default plotter is not implemented yet. Please choose one of the
+              templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``
+            userlevel = 2
+        
+            [io.autoplot.dump]
+            default = False
+            type = bool
+            help = Switch to dump plots as image files
+            doc = Switch to dump plots as image files during reconstruction.
+        
+            [io.autoplot.make_movie]
+            default = False
+            type = bool
+            help = Produce reconstruction movie after the reconstruction.
+            doc = Switch to request the production of a movie from the dumped plots at the end of the
+              reconstruction.
+            
+            """
+            pass
+
+        p = Param()
+        p.io = Param()
+        p.io.autoplot = True
+        out = root.check(p)
+
 if __name__ == "__main__":
     unittest.main()
