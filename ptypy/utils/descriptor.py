@@ -822,7 +822,7 @@ class EvalDescriptor(ArgParseDescriptor):
 
         if (depth == 0) or \
                 (not children) or \
-                (type(pars).__name__=='bool'):
+                ((type(pars).__name__=='bool') and not hasattr(pars, 'items')):
             # Nothing else to do
             return
 
