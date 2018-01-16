@@ -822,10 +822,13 @@ class EvalDescriptor(ArgParseDescriptor):
 
         if (depth == 0) or \
                 (not children) or \
-                ((type(pars).__name__=='bool') and not hasattr(pars, 'items')):
+                (not hasattr(pars, 'items') and (pars is not None)):
             # Nothing else to do
             return
+        
 
+            
+        
         # Look for unrecognised entries in pars
         if pars:
             for k, v in pars.items():

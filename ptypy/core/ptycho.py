@@ -135,8 +135,8 @@ class Ptycho(Base):
     doc = Options for the communications server
 
     [io.autosave]
-    default = None
-    type = Param, bool
+    default = Param
+    type = Param
     help = Auto-save options
     doc = Options for automatic saving during reconstruction.
 
@@ -144,14 +144,14 @@ class Ptycho(Base):
     default = True
     type = bool
     help = Activation switch
-    doc = If ``True`` the current reconstruction will be saved at regular intervals. **unused**
+    doc = If ``True`` the current reconstruction will be saved at regular intervals. 
 
     [io.autosave.interval]
     default = 10
     type = int
     help = Auto-save interval
     doc = If ``>0`` the current reconstruction will be saved at regular intervals according to the
-      pattern in :py:data:`paths.autosave` . If ``<=0`` not automatic saving
+    pattern in :py:data:`paths.autosave` . If ``<=0`` not automatic saving
     lowlim = -1
 
     [io.autosave.rfile]
@@ -161,10 +161,16 @@ class Ptycho(Base):
     doc = Auto-save file name or format string (constructed against runtime dictionary)
 
     [io.autoplot]
-    default = None
-    type = Param, bool
+    default = Param
+    type = Param
     help = Plotting client parameters
-    doc = In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
+    doc = Csontainer for the plotting.
+
+    [io.autoplot.active]
+    default = True
+    type = bool
+    help = Activation switch
+    doc = If ``True`` the current reconstruction will be plotted at regular intervals. 
 
     [io.autoplot.imfile]
     default = "plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png"
