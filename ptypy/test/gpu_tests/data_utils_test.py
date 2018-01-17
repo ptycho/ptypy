@@ -6,9 +6,8 @@ Created on 4 Jan 2018
 import unittest
 import numpy as np
 from ptypy.gpu import data_utils as du
-from ptypy.core import View, Container, Base, POD, geometry, xy
+from ptypy.core import Ptycho
 from ptypy import utils as u
-from ptypy.resources import moon_pr, flower_obj
 
 
 class DataUtilsTest(unittest.TestCase):
@@ -17,96 +16,59 @@ class DataUtilsTest(unittest.TestCase):
     '''
 
     def setUp(self):
-        P = Base()
-        P.CType = np.complex128
-        P.FType = np.float64
-        g = u.Param()
-        g.energy = None  # u.keV2m(1.0)/6.32e-7
-        g.lam = 5.32e-7
-        g.distance = 15e-2
-        g.psize = 24e-6
-        g.shape = 256
-        g.propagation = "farfield"
-        G = geometry.Geo(owner=P, pars=g)
-        fsize = G.shape * G.resolution
-        P.probe = Container(P, 'Cprobe', data_type='complex')
-        pr = -moon_pr(G.shape)
-        pr = P.probe.new_storage(data=pr, psize=G.resolution)
-        pos = u.Param()
-        pos.model = "round"
-        pos.spacing = fsize[0]/8
-        pos.steps = None
-        pos.extent = fsize*1.5
-        positions = xy.from_pars(pos)
-        P.obj = Container(P, 'Cobj', data_type='complex')
-        oar = View.DEFAULT_ACCESSRULE.copy()
-        oar.storageID = 'S00'
-        oar.psize = G.resolution
-        oar.layer = 0
-        oar.shape = G.shape
-        oar.active = True
-        for pos in positions:
-            # the rule
-            r = oar.copy()
-            r.coord = pos
-            _V = View(P.obj, None, r)
-
-        probe_ar = View.DEFAULT_ACCESSRULE.copy()
-        probe_ar.psize = G.resolution
-        probe_ar.shape = G.shape
-        probe_ar.active = True
-        probe_ar.storageID = pr.ID
-
-        exit_ar = probe_ar.copy()
-        exit_ar.layer = 0
-        exit_ar.active = True
-
-        diff_ar = probe_ar.copy()
-        diff_ar.layer = 0
-        diff_ar.active = True
-        diff_ar.psize = G.psize
-        mask_ar = diff_ar.copy()
-
-        storage = P.obj.storages['S00']
-        storage.fill(flower_obj(storage.shape[-2:]))
-        P.exit = Container(P, 'Cexit', data_type='complex')
-        P.diff = Container(P, 'Cdiff', data_type='real')
-        P.mask = Container(P, 'Cmask', data_type='real')
-        objviews = P.obj.views.values()
-        pods = []
-
-        for obview in objviews:
-            # we keep the same probe access
-            prview = View(P.probe, None, probe_ar)
-            # For diffraction and exit wave we need to increase the
-            # layer index as there is a new exit wave and diffraction
-            # pattern for each
-            # scan position
-            exit_ar.layer += 1
-            diff_ar.layer += 1
-            exview = View(P.exit, None, exit_ar)
-            maview = View(P.mask, None, mask_ar)
-            diview = View(P.diff, None, diff_ar)
-            views = {'probe': prview,
-                     'obj': obview,
-                     'exit': exview,
-                     'diff': diview,
-                     'mask': maview}
-            pod = POD(P, ID=None, views=views, geometry=G)
-            pods.append(pod)
-
-        # We let the storage arrays adapt to the new Views.
-        for C in [P.mask, P.exit, P.diff, P.probe]:
-            C.reformat()
-
-        # And the rest of the simulation fits in three lines of code!
-        for pod in pods:
-            pod.exit = pod.probe * pod.object
-            pod.mask = np.ones_like(pod.diff)
-
-        self.pods = pods
+        '''
+        new ptypy probably has a better way of doing this.
+        '''
+        p = u.Param()
+        p.verbose_level = 0
+        p.data_type = "single"
+        p.run = 'test_indep_probes'
+        p.io = u.Param()
+        p.io.home = "/tmp/ptypy/"
+        p.io.interaction = u.Param()
+        p.io.autoplot = u.Param(active=False)
+        p.scan = u.Param()
+        p.scans = u.Param()
+        p.scans.MF = u.Param()
+        p.scans.MF.name = 'Full'
+        p.scans.MF.propagation = 'farfield'
+        p.scans.MF.data = u.Param()
+        p.scans.MF.data.name = 'MoonFlowerScan'
+        p.scans.MF.data.positions_theory = None
+        p.scans.MF.data.auto_center = None
+        p.scans.MF.data.min_frames = 1
+        p.scans.MF.data.orientation = None
+        p.scans.MF.data.num_frames = 100
+        p.scans.MF.data.energy = 6.2
+        p.scans.MF.data.shape = 256
+        p.scans.MF.data.chunk_format = '.chunk%02d'
+        p.scans.MF.data.rebin = None
+        p.scans.MF.data.experimentID = None
+        p.scans.MF.data.label = None
+        p.scans.MF.data.version = 0.1
+        p.scans.MF.data.dfile = None
+        p.scans.MF.data.psize = 0.000172
+        p.scans.MF.data.load_parallel = None
+        p.scans.MF.data.distance = 7.0
+        p.scans.MF.data.save = None
+        p.scans.MF.data.center = 'fftshift'
+        p.scans.MF.data.photons = 100000000.0
+        p.scans.MF.data.psf = 0.0
+        p.scans.MF.data.density = 0.2
+        p.scans.MF.illumination = u.Param()
+        p.scans.MF.illumination.model = None
+        p.scans.MF.illumination.aperture = u.Param()
+        p.scans.MF.illumination.aperture.diffuser = None
+        p.scans.MF.illumination.aperture.form = "circ"
+        p.scans.MF.illumination.aperture.size = 3e-6
+        p.scans.MF.illumination.aperture.edge = 10
+        self.PtychoInstance = Ptycho(p, level=4)
 
     def test_pod_to_numpy(self):
+        '''
+        does this even run?
+        '''
+        du.pod_to_arrays(self.PtychoInstance, 'S0000')
 
 
     def test_numpy_to_pod(self):

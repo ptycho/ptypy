@@ -8,7 +8,7 @@ import numpy as np
 from ..utils.verbose import log
 
 
-def serialize_array_access(diff_storage):
+def _serialize_array_access(diff_storage):
     # Sort views according to layer in diffraction stack
     views = diff_storage.views
     dlayers = [view.dlayer for view in views]
@@ -45,12 +45,24 @@ def serialize_array_access(diff_storage):
     return view_IDs, poe_ID, np.array(addr).astype(np.int32)
 
 
-def pod_to_numpy(diff_storage):
-    '''
-    converts between the pod structure and a series of numpy arrays and a look-up table
-    :param diff_storage: The diffraction storage.
-    :return: dictionary containing the probe, mask, diffraction data, exit wave and object buffers and a LUT of the metadata.
-    '''
-    
+def pod_to_arrays(P, storage_id):
+    diffraction_storages_to_iterate = P.diff.storages[storage_id]
+    mask_storages = P.mask.storages[storage_id]
+    view_IDs, poe_IDs, addr = _serialize_array_access(diffraction_storages_to_iterate)
+    meta = {'view_IDs': view_IDs,
+            'poe_IDs': poe_IDs,
+            'addr': addr}
+    main_pod = P.diff.V[view_IDs[0]].pod # we will use this to get all the information
+    probe_array = main_pod.pr_view.data
+    obj_array = main_pod.ob_view.data
+    exit_wave_array = main_pod.ex_view.data
+    mask_array = mask_storages.data.astype(np.float32) # can we have booleans?
+    diff_array = diffraction_storages_to_iterate.data
+    return {'diffraction': diff_array,
+            'probe': probe_array,
+            'obj': obj_array,
+            'exit wave': exit_wave_array,
+            'mask': mask_array,
+            'meta': meta}
 
 
