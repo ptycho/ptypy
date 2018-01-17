@@ -820,10 +820,15 @@ class EvalDescriptor(ArgParseDescriptor):
             yield {'d': self, 'path': path, 'status': 'wrongtype', 'info': type(pars).__name__}
             return
 
-        if not children or depth == 0:
+        if (depth == 0) or \
+                (not children) or \
+                (not hasattr(pars, 'items') and (pars is not None)):
             # Nothing else to do
             return
+        
 
+            
+        
         # Look for unrecognised entries in pars
         if pars:
             for k, v in pars.items():

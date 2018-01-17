@@ -49,8 +49,14 @@ def EngineTestRunner(engine_params,propagator='farfield'):
     p.io = u.Param()
     p.io.home = './'
     p.io.rfile = None
-    p.io.autosave = None
-    p.io.autoplot = None
+    p.io.autosave = u.Param(active=True)
+    p.io.autoplot = u.Param(active=True)
+#     p.io.autoplot.threaded = True
+#     p.io.autoplot.imfile = 'plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png'
+#     p.io.autoplot.interval = 1
+#     p.io.autoplot.layout = 'weak'
+#     p.io.autoplot.dump = False
+#     p.io.autoplot.make_movie = False
     p.ipython_kernel = False
     p.scans = u.Param()
     p.scans.MF = u.Param()
