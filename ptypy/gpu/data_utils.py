@@ -46,6 +46,12 @@ def _serialize_array_access(diff_storage):
 
 
 def pod_to_arrays(P, storage_id):
+    '''
+    returns a dictionary with arrays for:
+    diffraction: The diffraction data
+    probe: the probe from the FIRST POD
+    obj: The 
+    '''
     diffraction_storages_to_iterate = P.diff.storages[storage_id]
     mask_storages = P.mask.storages[storage_id]
     view_IDs, poe_IDs, addr = _serialize_array_access(diffraction_storages_to_iterate)
@@ -53,9 +59,9 @@ def pod_to_arrays(P, storage_id):
             'poe_IDs': poe_IDs,
             'addr': addr}
     main_pod = P.diff.V[view_IDs[0]].pod # we will use this to get all the information
-    probe_array = main_pod.pr_view.data
-    obj_array = main_pod.ob_view.data
-    exit_wave_array = main_pod.ex_view.data
+    probe_array = main_pod.pr_view.storage.data
+    obj_array = main_pod.ob_view.storage.data
+    exit_wave_array = main_pod.ex_view.storage.data
     mask_array = mask_storages.data.astype(np.float32) # can we have booleans?
     diff_array = diffraction_storages_to_iterate.data
     return {'diffraction': diff_array,
