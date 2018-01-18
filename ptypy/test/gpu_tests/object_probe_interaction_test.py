@@ -21,3 +21,6 @@ class ObjectProbeInteractionTest(unittest.TestCase):
     
     def test_difference_map_realspace_constraint(self):
         opi.difference_map_realspace_constraint(self.serialized_scan, alpha=1.0)
+
+if __name__ == "__main__":
+    unittest.main()
