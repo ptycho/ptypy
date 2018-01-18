@@ -5,8 +5,6 @@ Test for the propagation in numpy
 import unittest
 import numpy as np
 import utils as tu
-import scisoftpy as dnp
-from copy import deepcopy as copy
 from ptypy.gpu import data_utils as du
 from ptypy.gpu import object_probe_interaction as opi
 from ptypy.gpu import propagation as prop
@@ -19,112 +17,132 @@ class PropagationTest(unittest.TestCase):
         self.serialized_scan = du.pod_to_arrays(self.PtychoInstance, 'S0000')
         self.serialized_scan = opi.difference_map_realspace_constraint(self.serialized_scan, alpha=1.0)
         first_view_id = self.serialized_scan['meta']['view_IDs'][0]
+        self.exit_wave = self.serialized_scan['exit wave']
         self.master_pod = self.PtychoInstance.diff.V[first_view_id].pod
 
-    def test_generate_far_field_fft_filters(self):
-        '''
-        We might just be able to use the ones from the geo class and just copy them to the gpu. 
-        This function essentially replicates this code, but for the gpu.
-        '''
-        geo = self.master_pod.geometry
-        shape = self.serialized_scan['probe'].shape[-2:]
-        prop.generate_far_field_fft_filters(geo.lam * geo.distance, shape, geo.resolution, geo.psize)
-
-    def test_generate_far_field_fft_filters_UNITY(self):
-        '''
-        This test checks to see if the numpy version reproduces the same filters as the geo class.
-        '''
-        
-        geo = self.master_pod.geometry
-        shape = self.serialized_scan['probe'].shape[-2:]
-        filters = prop.generate_far_field_fft_filters(geo.lam * geo.distance, shape, geo.resolution, geo.psize)
-        dnp.plot.image(filters[0], name='prefilter')
-        dnp.plot.image(geo.propagator.pre_fft, name='geo prefilter')
-        self.assertTrue(np.allclose(filters[0], geo.propagator.pre_fft))
-        self.assertTrue(np.allclose(filters[1], geo.propagator.post_fft))
-        self.assertTrue(np.allclose(filters[2], geo.propagator.pre_fft))
-        self.assertTrue(np.allclose(filters[3], geo.propagator.post_fft))
-# 
-#     def test_fourier_transform_farfield_nofilter(self):
-#         prop.forward_transform(self.serialized_scan, mode="farfield")
-# 
+    def test_fourier_transform_farfield_nofilter(self):
+        prop.diffraction_transform(self.exit_wave)
+#  
 #     def test_fourier_transform_farfield_nofilter_UNITY(self):
-#         geo = self.master_pod.geometry
-#         prefft = geo.pre_fft
-#         postfft = geo.post_fft
-#         geo.pre_fft = np.ones_like(self.serialized_scan['exit wave'].shape[-2:])
-#         geo.post_fft = np.ones_like(self.serialized_scan['exit wave'].shape[-2:])
-#         result_array_npy = prop.forward_transform(self.serialized_scan, mode="farfield")
-#         result_array_geo = self.forward_transform_with_geo(geo)
-#         self.assertTrue(np.allclose(result_array_npy, result_array_geo))
-#         geo.pre_fft = prefft
-#         geo.post_fft = postfft
-# 
-#     def test_fourier_transform_farfield_with_prefilter(self):
-#         geo = self.master_geo
-#         shape = self.serialized_scan['probe'].shape[-2:]
-#         filters = prop.generate_far_field_fft_filters(geo.lam * geo.distance, shape, geo.resolution, geo.psize)
-#         prop.forward_transform(self.serialized_scan, mode="farfield", prefilter=filters[0])
-# 
+#         propagator = self.master_pod.geometry.propagator
+#         propagator.pre_fft = np.ones(self.exit_wave['exit wave'].shape[-2:])
+#         propagator.post_fft = np.ones(self.exit_wave['exit wave'].shape[-2:])
+#         result_array_npy = prop.diffraction_transform(self.exit_wave, mode="farfield")
+#         result_array_geo = self.diffraction_transform_with_geo(propagator)
+#         self.assertTrue(np.allclose(result_array_npy, result_array_geo), atol=1e-5)
+
+    def test_fourier_transform_farfield_with_prefilter(self):
+        propagator = self.master_pod.geometry.propagator
+        prop.diffraction_transform(self.exit_wave, prefilter=propagator.pre_fft)
+   
 #     def test_fourier_transform_farfield_with_prefilter_UNITY(self):
-#         geo = copy(self.master_geo)
-#         shape = self.serialized_scan['probe'].shape[-2:]
-#         filters = prop.generate_far_field_fft_filters(geo.lam * geo.distance, shape, geo.resolution, geo.psize)
-#         result_array_npy = prop.forward_transform(self.serialized_scan, mode="farfield", prefilter=filters[0])
-#         geo.post_fft = np.ones_like(self.serialized_scan['exit wave'].shape[-2:])
-#         result_array_geo = self.forward_transform_with_geo(geo)
+#         propagator = self.master_pod.geometry.propagator
+#         result_array_npy = prop.diffraction_transform(self.exit_wave, mode="farfield", prefilter=propagator.pre_fft)
+#         propagator.post_fft = np.ones(self.exit_wave['exit wave'].shape[-2:])
+#         result_array_geo = self.diffraction_transform_with_geo(propagator)
+#         dnp.plot.image(np.log10(np.abs(result_array_geo[0])), name='result geo')
+#         dnp.plot.image(np.log10(np.abs(result_array_npy[0])), name='result np')
 #         self.assertTrue(np.allclose(result_array_npy, result_array_geo))
-# 
-#     def test_fourier_transform_farfield_with_postfilter(self):
-#         geo = self.master_geo
-#         shape = self.serialized_scan['probe'].shape[-2:]
-#         filters = prop.generate_far_field_fft_filters(geo.lam * geo.distance, shape, geo.resolution, geo.psize)
-#         prop.forward_transform(self.serialized_scan, mode="farfield", postfilter=filters[1])
-# 
+# #   
+    def test_fourier_transform_farfield_with_postfilter(self):
+        propagator = self.master_pod.geometry.propagator
+        prop.diffraction_transform(self.exit_wave, mode="farfield", postfilter=propagator.post_fft)
+#   
 #     def test_fourier_transform_farfield_with_postfilter_UNITY(self):
 #         geo = copy(self.master_geo)
-#         shape = self.serialized_scan['probe'].shape[-2:]
+#         shape = self.exit_wave['probe'].shape[-2:]
 #         filters = prop.generate_far_field_fft_filters(geo.lam * geo.distance, shape, geo.resolution, geo.psize)
-#         result_array_npy = prop.forward_transform(self.serialized_scan, mode="farfield", postfilter=filters[1])
-#         geo.pre_fft = np.ones_like(self.serialized_scan['exit wave'].shape[-2:])
-#         result_array_geo = self.forward_transform_with_geo(geo)
+#         result_array_npy = prop.diffraction_transform(self.exit_wave, mode="farfield", postfilter=filters[1])
+#         geo.pre_fft = np.ones_like(self.exit_wave['exit wave'].shape[-2:])
+#         result_array_geo = self.diffraction_transform_with_geo(geo)
 #         self.assertTrue(np.allclose(result_array_npy, result_array_geo))
-# 
-#     def test_fourier_transform_farfield_with_pre_and_post_filter(self):
-#         geo = self.master_geo
-#         shape = self.serialized_scan['probe'].shape[-2:]
-#         filters = prop.generate_far_field_fft_filters(geo.lam * geo.distance, shape, geo.resolution, geo.psize)
-#         prop.forward_transform(self.serialized_scan, mode="farfield", prefilter=filters[0], postfilter=filters[1])
-# 
+#   
+    def test_fourier_transform_farfield_with_pre_and_post_filter(self):
+        propagator = self.master_pod.geometry.propagator
+        prop.diffraction_transform(self.exit_wave, mode="farfield",
+                               prefilter=propagator.pre_fft,
+                               postfilter=propagator.post_fft)
+#   
 #     def test_fourier_transform_farfield_with_pre_and_post_filter_UNITY(self):
 #         geo = copy(self.master_geo)
-#         shape = self.serialized_scan['probe'].shape[-2:]
+#         shape = self.exit_wave['probe'].shape[-2:]
 #         filters = prop.generate_far_field_fft_filters(geo.lam * geo.distance, shape, geo.resolution, geo.psize)
-#         result_array_npy = prop.forward_transform(self.serialized_scan, mode="farfield", prefilter=filters[0], postfilter=filters[1])
-#         result_array_geo = self.forward_transform_with_geo(geo)
+#         result_array_npy = prop.diffraction_transform(self.exit_wave, mode="farfield", prefilter=filters[0], postfilter=filters[1])
+#         result_array_geo = self.diffraction_transform_with_geo(geo)
 #         self.assertTrue(np.allclose(result_array_npy, result_array_geo))
-# 
-#     def test_inverse_fourier_transform_farfield_nofilter(self):
-#         prop.forward_transform(self.serialized_scan, mode="farfield")
-# 
-#     def test_inverse_fourier_transform_farfield_with_prefilter(self):
-#         pass
-# 
-#     def test_inverse_fourier_transform_farfield_with_postfilter(self):
-#         pass
-# 
-#     def test_inverse_fourier_transform_farfield_with_pre_and_post_filter(self):
-#         pass
-#     
-#     def forward_transform_with_geo(self, propagator):
-#         exit_wave = self.serialized_scan['exit wave']
-#         result_array_geo = np.zeros_like(exit_wave)
-#         meta = self.serialized_scan['meta'] # probably want to extract these at a later date, but just to get stuff going...
-#         view_dlayer = 0 # what is this?
-#         addr_info = meta['addr'][:,(view_dlayer)] # addresses, object references
-#         for _pa, _oa, _ea,  da, _ma in addr_info:
-#             result_array_geo[da[0]] = propagator.fw(exit_wave[da[0]])
-#         return result_array_geo
+#   
+    def test_inverse_fourier_transform_farfield_nofilter(self):
+        propagator = self.master_pod.geometry.propagator
+        farfield_stack = prop.diffraction_transform(self.exit_wave,
+                                                mode="farfield")
+        prop.diffraction_transform(farfield_stack,
+                               mode="farfield",
+                               direction='backward')
+#         
+   
+    def test_inverse_fourier_transform_farfield_with_prefilter(self):
+        propagator = self.master_pod.geometry.propagator
+        farfield_stack = prop.diffraction_transform(self.exit_wave,
+                                                mode="farfield",
+                                                prefilter=propagator.pre_fft)
+        prop.diffraction_transform(farfield_stack,
+                               mode="farfield",
+                               prefilter=propagator.pre_ifft,
+                               direction='backward')
 
+    def test_inverse_fourier_transform_farfield_with_postfilter(self):
+        propagator = self.master_pod.geometry.propagator
+        farfield_stack = prop.diffraction_transform(self.exit_wave,
+                                                mode="farfield",
+                                                postfilter=propagator.post_fft)
+        prop.diffraction_transform(farfield_stack,
+                               mode="farfield",
+                               postfilter=propagator.post_ifft,
+                               direction='backward')
+   
+    def test_inverse_fourier_transform_farfield_with_pre_and_post_filter(self):
+        propagator = self.master_pod.geometry.propagator
+        farfield_stack = prop.diffraction_transform(self.exit_wave,
+                                                mode="farfield",
+                                                prefilter=propagator.pre_fft,
+                                                postfilter=propagator.post_fft)
+
+        result = prop.diffraction_transform(farfield_stack,
+                                        mode="farfield", 
+                                        prefilter=propagator.pre_ifft,
+                                        postfilter=propagator.post_ifft,
+                                        direction='backward')
+       
+    def test_inverse_fourier_transform_farfield_with_pre_and_post_filter_self_consistency(self):
+        propagator = self.master_pod.geometry.propagator
+        farfield_stack = prop.diffraction_transform(self.exit_wave,
+                                                mode="farfield",
+                                                prefilter=propagator.pre_fft,
+                                                postfilter=propagator.post_fft)
+        result = prop.diffraction_transform(farfield_stack,
+                                        mode="farfield", 
+                                        prefilter=propagator.pre_ifft,
+                                        postfilter=propagator.post_ifft)
+        self.assertTrue(np.allclose(result, self.exit_wave,atol=1e-5))
+
+    def test_inverse_fourier_transform_farfield_self_consistency(self):
+        propagator = self.master_pod.geometry.propagator
+        farfield_stack = prop.diffraction_transform(self.exit_wave,
+                                                mode="farfield")
+        result = prop.diffraction_transform(farfield_stack,
+                                        mode="farfield",
+                                        direction='backward')
+
+        self.assertTrue(np.allclose(result, self.exit_wave, atol=1e-5)) # this tolerance is equivalent to the current scipy implementation. It comes from the filters
+        
+    def diffraction_transform_with_geo(self, propagator):
+        result_array_geo = np.zeros_like(self.exit_wave)
+        meta = self.serialized_scan['meta'] # probably want to extract these at a later date, but just to get stuff going...
+        view_dlayer = 0 # what is this?
+        addr_info = meta['addr'][:,(view_dlayer)] # addresses, object references
+        for _pa, _oa, ea,  _da, _ma in addr_info:
+            result_array_geo[ea[0]] = propagator.bw(propagator.fw(self.exit_wave[ea[0]]))
+        return result_array_geo
+  
 if __name__ == "__main__":
     unittest.main()
