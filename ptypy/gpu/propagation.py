@@ -3,7 +3,8 @@ All propagation based kernels
 '''
 import numpy as np
 
-def diffraction_transform(data_to_be_transformed, mode='farfield', prefilter=None, postfilter=None, direction='forward'):
+
+def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None, direction='forward'):
     '''
     performs a fourier transform on the exit wave. Can be either farfield or nearfield depending on argument
     useful for technique development
@@ -28,3 +29,4 @@ def diffraction_transform(data_to_be_transformed, mode='farfield', prefilter=Non
     elif (prefilter is not None) and (postfilter is not None):
         return np.multiply(postfilter.astype(dt), fft(np.multiply(data_to_be_transformed, prefilter.astype(dt)), axes=(-2,-1)).astype(dt)) * sc
 
+def fourier_constraint():

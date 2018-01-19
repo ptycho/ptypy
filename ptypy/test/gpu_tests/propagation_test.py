@@ -21,23 +21,23 @@ class PropagationTest(unittest.TestCase):
         self.master_pod = self.PtychoInstance.diff.V[first_view_id].pod
 
     def test_fourier_transform_farfield_nofilter(self):
-        prop.diffraction_transform(self.exit_wave)
+        prop.farfield_propagator(self.exit_wave)
 #  
 #     def test_fourier_transform_farfield_nofilter_UNITY(self):
 #         propagator = self.master_pod.geometry.propagator
 #         propagator.pre_fft = np.ones(self.exit_wave['exit wave'].shape[-2:])
 #         propagator.post_fft = np.ones(self.exit_wave['exit wave'].shape[-2:])
-#         result_array_npy = prop.diffraction_transform(self.exit_wave, mode="farfield")
+#         result_array_npy = prop.farfield_propagator(self.exit_wave, mode="farfield")
 #         result_array_geo = self.diffraction_transform_with_geo(propagator)
 #         self.assertTrue(np.allclose(result_array_npy, result_array_geo), atol=1e-5)
 
     def test_fourier_transform_farfield_with_prefilter(self):
         propagator = self.master_pod.geometry.propagator
-        prop.diffraction_transform(self.exit_wave, prefilter=propagator.pre_fft)
+        prop.farfield_propagator(self.exit_wave, prefilter=propagator.pre_fft)
    
 #     def test_fourier_transform_farfield_with_prefilter_UNITY(self):
 #         propagator = self.master_pod.geometry.propagator
-#         result_array_npy = prop.diffraction_transform(self.exit_wave, mode="farfield", prefilter=propagator.pre_fft)
+#         result_array_npy = prop.farfield_propagator(self.exit_wave, mode="farfield", prefilter=propagator.pre_fft)
 #         propagator.post_fft = np.ones(self.exit_wave['exit wave'].shape[-2:])
 #         result_array_geo = self.diffraction_transform_with_geo(propagator)
 #         dnp.plot.image(np.log10(np.abs(result_array_geo[0])), name='result geo')
@@ -46,20 +46,20 @@ class PropagationTest(unittest.TestCase):
 # #   
     def test_fourier_transform_farfield_with_postfilter(self):
         propagator = self.master_pod.geometry.propagator
-        prop.diffraction_transform(self.exit_wave, mode="farfield", postfilter=propagator.post_fft)
+        prop.farfield_propagator(self.exit_wave, mode="farfield", postfilter=propagator.post_fft)
 #   
 #     def test_fourier_transform_farfield_with_postfilter_UNITY(self):
 #         geo = copy(self.master_geo)
 #         shape = self.exit_wave['probe'].shape[-2:]
 #         filters = prop.generate_far_field_fft_filters(geo.lam * geo.distance, shape, geo.resolution, geo.psize)
-#         result_array_npy = prop.diffraction_transform(self.exit_wave, mode="farfield", postfilter=filters[1])
+#         result_array_npy = prop.farfield_propagator(self.exit_wave, mode="farfield", postfilter=filters[1])
 #         geo.pre_fft = np.ones_like(self.exit_wave['exit wave'].shape[-2:])
 #         result_array_geo = self.diffraction_transform_with_geo(geo)
 #         self.assertTrue(np.allclose(result_array_npy, result_array_geo))
 #   
     def test_fourier_transform_farfield_with_pre_and_post_filter(self):
         propagator = self.master_pod.geometry.propagator
-        prop.diffraction_transform(self.exit_wave, mode="farfield",
+        prop.farfield_propagator(self.exit_wave, mode="farfield",
                                prefilter=propagator.pre_fft,
                                postfilter=propagator.post_fft)
 #   
@@ -67,47 +67,47 @@ class PropagationTest(unittest.TestCase):
 #         geo = copy(self.master_geo)
 #         shape = self.exit_wave['probe'].shape[-2:]
 #         filters = prop.generate_far_field_fft_filters(geo.lam * geo.distance, shape, geo.resolution, geo.psize)
-#         result_array_npy = prop.diffraction_transform(self.exit_wave, mode="farfield", prefilter=filters[0], postfilter=filters[1])
+#         result_array_npy = prop.farfield_propagator(self.exit_wave, mode="farfield", prefilter=filters[0], postfilter=filters[1])
 #         result_array_geo = self.diffraction_transform_with_geo(geo)
 #         self.assertTrue(np.allclose(result_array_npy, result_array_geo))
 #   
     def test_inverse_fourier_transform_farfield_nofilter(self):
         propagator = self.master_pod.geometry.propagator
-        farfield_stack = prop.diffraction_transform(self.exit_wave,
+        farfield_stack = prop.farfield_propagator(self.exit_wave,
                                                 mode="farfield")
-        prop.diffraction_transform(farfield_stack,
+        prop.farfield_propagator(farfield_stack,
                                mode="farfield",
                                direction='backward')
 #         
    
     def test_inverse_fourier_transform_farfield_with_prefilter(self):
         propagator = self.master_pod.geometry.propagator
-        farfield_stack = prop.diffraction_transform(self.exit_wave,
+        farfield_stack = prop.farfield_propagator(self.exit_wave,
                                                 mode="farfield",
                                                 prefilter=propagator.pre_fft)
-        prop.diffraction_transform(farfield_stack,
+        prop.farfield_propagator(farfield_stack,
                                mode="farfield",
                                prefilter=propagator.pre_ifft,
                                direction='backward')
 
     def test_inverse_fourier_transform_farfield_with_postfilter(self):
         propagator = self.master_pod.geometry.propagator
-        farfield_stack = prop.diffraction_transform(self.exit_wave,
+        farfield_stack = prop.farfield_propagator(self.exit_wave,
                                                 mode="farfield",
                                                 postfilter=propagator.post_fft)
-        prop.diffraction_transform(farfield_stack,
+        prop.farfield_propagator(farfield_stack,
                                mode="farfield",
                                postfilter=propagator.post_ifft,
                                direction='backward')
    
     def test_inverse_fourier_transform_farfield_with_pre_and_post_filter(self):
         propagator = self.master_pod.geometry.propagator
-        farfield_stack = prop.diffraction_transform(self.exit_wave,
+        farfield_stack = prop.farfield_propagator(self.exit_wave,
                                                 mode="farfield",
                                                 prefilter=propagator.pre_fft,
                                                 postfilter=propagator.post_fft)
 
-        result = prop.diffraction_transform(farfield_stack,
+        result = prop.farfield_propagator(farfield_stack,
                                         mode="farfield", 
                                         prefilter=propagator.pre_ifft,
                                         postfilter=propagator.post_ifft,
@@ -115,11 +115,11 @@ class PropagationTest(unittest.TestCase):
        
     def test_inverse_fourier_transform_farfield_with_pre_and_post_filter_self_consistency(self):
         propagator = self.master_pod.geometry.propagator
-        farfield_stack = prop.diffraction_transform(self.exit_wave,
+        farfield_stack = prop.farfield_propagator(self.exit_wave,
                                                 mode="farfield",
                                                 prefilter=propagator.pre_fft,
                                                 postfilter=propagator.post_fft)
-        result = prop.diffraction_transform(farfield_stack,
+        result = prop.farfield_propagator(farfield_stack,
                                         mode="farfield", 
                                         prefilter=propagator.pre_ifft,
                                         postfilter=propagator.post_ifft)
@@ -127,9 +127,9 @@ class PropagationTest(unittest.TestCase):
 
     def test_inverse_fourier_transform_farfield_self_consistency(self):
         propagator = self.master_pod.geometry.propagator
-        farfield_stack = prop.diffraction_transform(self.exit_wave,
+        farfield_stack = prop.farfield_propagator(self.exit_wave,
                                                 mode="farfield")
-        result = prop.diffraction_transform(farfield_stack,
+        result = prop.farfield_propagator(farfield_stack,
                                         mode="farfield",
                                         direction='backward')
 
