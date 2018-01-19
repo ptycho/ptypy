@@ -42,5 +42,8 @@ def fourier_constraint(mask, diffraction, farfield_stack, addr):
     :param addr. The addresses of the stacks.
     :return: The updated iterant.
     '''
+    fmag = np.sqrt(np.abs(diffraction))
+    
+    
     
     pass
