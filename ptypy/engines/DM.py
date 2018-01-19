@@ -22,7 +22,7 @@ __all__ = ['DM']
 @defaults_tree.parse_doc('engine.DM')
 class DM(BaseEngine):
     """
-    A full-fledged Difference Map enine.
+    A full-fledged Difference Map engine.
 
 
     Defaults:
