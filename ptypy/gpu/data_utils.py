@@ -5,8 +5,6 @@ Created on 4 Jan 2018
 '''
 
 import numpy as np
-from ..utils.verbose import log
-
 
 def _serialize_array_access(diff_storage):
     # Sort views according to layer in diffraction stack
