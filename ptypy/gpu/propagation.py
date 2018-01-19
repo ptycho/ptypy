@@ -6,9 +6,13 @@ import numpy as np
 
 def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None, direction='forward'):
     '''
-    performs a fourier transform on the exit wave. Can be either farfield or nearfield depending on argument
-    useful for technique development
-    also, will be the fastest.
+    performs a fourier transform on the nd exit wave stack. FFT shift and normalisation performed by 
+    multiplication with prefilter and postfilter 
+    :param data_to_be_transformed. The nd stack of the current iterant.
+    :param prefilter. The filter to multiply before fourier transforming. Default: None.
+    :param postfilter. The filter to multiply after fourier transforming. Default: None.
+    :param direction. The direction of the transform forward or backward. Default: Forward.
+    :return: The transformed stack.
     '''
     dt = data_to_be_transformed.dtype
     if direction is 'forward':
@@ -29,4 +33,14 @@ def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None,
     elif (prefilter is not None) and (postfilter is not None):
         return np.multiply(postfilter.astype(dt), fft(np.multiply(data_to_be_transformed, prefilter.astype(dt)), axes=(-2,-1)).astype(dt)) * sc
 
-def fourier_constraint():
+def fourier_constraint(mask, diffraction, farfield_stack, addr):
+    '''
+    This kernel just performs the fourier renormalisation.
+    :param mask. The nd mask array
+    :param diffraction. The nd diffraction data
+    :param farfield_stack. The current iterant.
+    :param addr. The addresses of the stacks.
+    :return: The updated iterant.
+    '''
+    
+    pass
