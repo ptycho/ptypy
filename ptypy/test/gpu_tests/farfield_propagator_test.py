@@ -10,7 +10,7 @@ from ptypy.gpu import object_probe_interaction as opi
 from ptypy.gpu import propagation as prop
 
 
-class PropagationTest(unittest.TestCase):
+class FarfieldPropagatorTest(unittest.TestCase):
     def setUp(self):
         self.PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
