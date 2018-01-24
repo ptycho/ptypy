@@ -16,7 +16,8 @@ from .utils import basic_fourier_update
 from DM import DM
 from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla
-from 
+from ..gpu import data_utils as du
+from ..gpu.propagation import difference_map_fourier_constraint as dmfc
 
 __all__ = ['DMNpy']
 
@@ -115,7 +116,7 @@ class DMNpy(DM):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla]
+    SUPPORTED_MODELS = [Vanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -131,6 +132,12 @@ class DMNpy(DM):
         """
         super(DMNpy, self).engine_prepare(self)
         # and then something to convert the arrays to numpy
+        self.serialized_scan = {}
+        self.master_pod = {}
+        for dID, _diffs in self.di.S.iteritems():
+            self.serialized_scan[dID] = du.pod_to_arrays(self, dID)
+            first_view_id = self.serialized_scan['meta']['view_IDs'][0]
+            self.master_pod[dID] = self.di.V[first_view_id].pod
 
     def engine_iterate(self, num=1):
         """
@@ -138,23 +145,32 @@ class DMNpy(DM):
         """
         to = 0.
         tf = 0.
-        for it in range(num):
-            t1 = time.time()
+        # run the data for `num` iterations on the cards, then pull the relevant off to sync
+        for dID, _diffs in self.di.S.iteritems():
 
-            # Fourier update
-            error_dct = self.fourier_update()
+            mask = self.serialized_scan[dID]['mask']
+            Idata = self.serialized_scan[dID]['diffraction']
+            obj = self.serialized_scan[dID]['obj']
+            probe = self.serialized_scan[dID]['probe']
+            exit_wave = self.serialized_scan[dID]['exit wave']
+            addr = self.serialized_scan[dID]['meta']['addr']
+            for it in range(num):
+                t1 = time.time()
 
-            t2 = time.time()
-            tf += t2 - t1
+                # Fourier update
+                # error_dct = self.fourier_update()
+                exit_wave, errors = self.numpy_fourier_update(mask, Idata, obj, probe, exit_wave, addr, dID)
+                t2 = time.time()
+                tf += t2 - t1
 
-            # Overlap update
-            self.overlap_update()
+                # Overlap update
+                self.overlap_update()
 
-            t3 = time.time()
-            to += t3 - t2
+                t3 = time.time()
+                to += t3 - t2
 
-            # count up
-            self.curiter +=1
+                # count up
+                self.curiter +=1
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
@@ -182,6 +198,11 @@ class DMNpy(DM):
                                                    alpha=self.p.alpha)
         return error_dct
 
+    def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, ID):
+        propagator = self.master_pod[ID].geometry.propagator
+
+        exit_wave, errors =  dmfc(mask, Idata, obj, probe, exit_wave, addr, propagator.pre_fft, propagator.post_fft, pbound=None, alpha=1.0, LL_error=True
+        return exit_wave, errors
     def overlap_update(self):
         """
         DM overlap constraint update.
