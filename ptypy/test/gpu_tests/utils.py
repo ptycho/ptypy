@@ -20,7 +20,6 @@ def get_ptycho_instance(label=None):
     p.io.home = "/tmp/ptypy/"
     p.io.interaction = u.Param()
     p.io.autoplot = u.Param(active=False)
-    p.scan = u.Param()
     p.scans = u.Param()
     p.scans.MF = u.Param()
     p.scans.MF.name = 'Full'
@@ -55,4 +54,6 @@ def get_ptycho_instance(label=None):
     p.scans.MF.illumination.aperture.form = "circ"
     p.scans.MF.illumination.aperture.size = 3e-6
     p.scans.MF.illumination.aperture.edge = 10
+    p.scans.MF.coherence = u.Param()
+    p.scans.MF.coherence.num_probe_modes = 1
     return Ptycho(p, level=4)

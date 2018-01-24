@@ -49,14 +49,8 @@ def EngineTestRunner(engine_params,propagator='farfield'):
     p.io = u.Param()
     p.io.home = './'
     p.io.rfile = None
-    p.io.autosave = u.Param(active=True)
-    p.io.autoplot = u.Param(active=True)
-#     p.io.autoplot.threaded = True
-#     p.io.autoplot.imfile = 'plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png'
-#     p.io.autoplot.interval = 1
-#     p.io.autoplot.layout = 'weak'
-#     p.io.autoplot.dump = False
-#     p.io.autoplot.make_movie = False
+    p.io.autosave = u.Param(active=False)
+    p.io.autoplot = u.Param(active=False)
     p.ipython_kernel = False
     p.scans = u.Param()
     p.scans.MF = u.Param()
@@ -85,6 +79,8 @@ def EngineTestRunner(engine_params,propagator='farfield'):
     p.scans.MF.data.photons = 100000000.0
     p.scans.MF.data.psf = 0.0
     p.scans.MF.data.density = 0.2
+    p.scans.MF.coherence = u.Param()
+    p.scans.MF.coherence.num_probe_modes = 1 # currently breaks when this is =2
     p.engines = u.Param()
     p.engines.engine00 = engine_params
     P = Ptycho(p, level=5)
