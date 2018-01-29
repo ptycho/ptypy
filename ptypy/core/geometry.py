@@ -474,7 +474,7 @@ class BasicFarfieldPropagator(object):
     coordinates are rolled periodically, just like in the conventional fft case.
     """
 
-    def __init__(self, geo_pars=None, ffttype='fftw', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='scipy', **kwargs):
         """
         Parameters
         ----------
@@ -596,6 +596,7 @@ class BasicFarfieldPropagator(object):
         Computes forward propagated wavefront of input wavefront W.
         """
         # Check for cropping
+
         if (self.crop_pad != 0).any():
             w = u.crop_pad(W, self.crop_pad)
         else:
