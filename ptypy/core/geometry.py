@@ -474,7 +474,7 @@ class BasicFarfieldPropagator(object):
     coordinates are rolled periodically, just like in the conventional fft case.
     """
 
-    def __init__(self, geo_pars=None, ffttype='scipy', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='numpy', **kwargs):
         """
         Parameters
         ----------

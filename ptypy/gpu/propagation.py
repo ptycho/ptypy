@@ -17,13 +17,13 @@ def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None,
     '''
 
     if direction is 'forward':
-        # fft = np.fft.fft2
-        fft = sci.fftpack.fft2
+        fft = np.fft.fft2
+        # fft = sci.fftpack.fft2
         sc = 1.0 / np.sqrt(np.prod(data_to_be_transformed.shape[-2:]))
 
     elif direction is 'backward':
-        # fft  = np.fft.ifft2
-        fft = sci.fftpack.ifft2
+        fft  = np.fft.ifft2
+        # fft = sci.fftpack.ifft2
         sc = np.sqrt(np.prod(data_to_be_transformed.shape[-2:]))
     
     if (prefilter is None) and (postfilter is None):
