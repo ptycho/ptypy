@@ -39,9 +39,6 @@ def sqrt_abs(diffraction):
     return np.sqrt(np.abs(diffraction))
 
 
-
-
-
 def calculate_err_phot(Idata, LL, addr_info, mask):
     err_phot = np.zeros(Idata.shape[0])
     for _pa, _oa, _ea, da, ma in addr_info:
