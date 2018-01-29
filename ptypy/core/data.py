@@ -1480,6 +1480,11 @@ class MoonFlowerScan(PtyScan):
     default = 0.
     type = float
     help = Point spread function of the detector
+    
+    [add_poisson_noise]
+    default = True
+    type = bool
+    help = Decides whether the scan should have poisson noise or not
 
     """
 
@@ -1541,7 +1546,13 @@ class MoonFlowerScan(PtyScan):
             if self.p.psf > 0.:
                 intensity_j = u.gf(intensity_j, self.p.psf)
 
-            raw[k] = np.random.poisson(intensity_j).astype(np.int32)
+            if self.p.add_poisson_noise:
+                logger.info("Generating data with poisson noise.")
+                raw[k] = np.random.poisson(intensity_j).astype(np.int32)
+            else:
+                logger.info("Generating data without poisson noise.")
+                raw[k] = intensity_j.astype(np.int32)
+
 
         return raw, {}, {}
 
