@@ -51,7 +51,8 @@ class FarfieldPropagatorTest(unittest.TestCase):
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
     def test_fourier_transform_farfield_with_postfilter(self):
-        prop.farfield_propagator(self.exit_wave,  postfilter=self.propagator.post_fft)
+        prop.farfield_propagator(self.exit_wave,
+                                 postfilter=self.propagator.post_fft)
 
     def test_fourier_transform_farfield_with_postfilter_UNITY(self):
         pre_fft = 1.0
@@ -59,14 +60,16 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_fft = pre_fft
         propagator.post_fft = post_fft
-        result_array_npy= prop.farfield_propagator(self.exit_wave, postfilter=post_fft)
+        result_array_npy= prop.farfield_propagator(self.exit_wave,
+                                                   postfilter=post_fft)
         result_array_geo = self.diffraction_transform_with_geo(propagator)
+
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
     def test_fourier_transform_farfield_with_pre_and_post_filter(self):
         prop.farfield_propagator(self.exit_wave,
-                               prefilter=self.propagator.pre_fft,
-                               postfilter=self.propagator.post_fft)
+                                prefilter=self.propagator.pre_fft,
+                                postfilter=self.propagator.post_fft)
 
     def test_fourier_transform_farfield_with_pre_and_post_filter_UNITY(self):
         pre_fft = self.propagator.pre_fft
@@ -74,8 +77,11 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_fft = pre_fft
         propagator.post_fft = post_fft
-        result_array_npy = prop.farfield_propagator(self.exit_wave, prefilter=pre_fft, postfilter=post_fft)
+        result_array_npy = prop.farfield_propagator(self.exit_wave,
+                                                    prefilter=pre_fft,
+                                                    postfilter=post_fft)
         result_array_geo = self.diffraction_transform_with_geo(propagator)
+
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
 
@@ -88,12 +94,15 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_ifft = pre_ifft
         propagator.post_ifft = post_ifft
-        result_array_npy = prop.farfield_propagator(self.exit_wave, direction='backward')
+        result_array_npy = prop.farfield_propagator(self.exit_wave,
+                                                    direction='backward')
         result_array_geo = self.inverse_diffraction_transform_with_geo(propagator)
+
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
     def test_inverse_fourier_transform_farfield_with_prefilter(self):
-        prop.farfield_propagator(self.exit_wave, prefilter=self.propagator.pre_ifft)
+        prop.farfield_propagator(self.exit_wave,
+                                 prefilter=self.propagator.pre_ifft)
 
     def test_inverse_fourier_transform_farfield_with_prefilter_UNITY(self):
         pre_ifft = self.propagator.pre_ifft
@@ -101,12 +110,17 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_ifft = pre_ifft
         propagator.post_ifft = post_ifft
-        result_array_npy = prop.farfield_propagator(self.exit_wave, prefilter=pre_ifft, direction='backward')
+        result_array_npy = prop.farfield_propagator(self.exit_wave,
+                                                    prefilter=pre_ifft,
+                                                    direction='backward')
         result_array_geo = self.inverse_diffraction_transform_with_geo(propagator)
+
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
     def test_inverse_fourier_transform_farfield_with_postfilter(self):
-        prop.farfield_propagator(self.exit_wave,  postfilter=self.propagator.post_ifft, direction='backward')
+        prop.farfield_propagator(self.exit_wave,
+                                 postfilter=self.propagator.post_ifft,
+                                 direction='backward')
 
     def test_inverse_fourier_transform_farfield_with_postfilter_UNITY(self):
         pre_ifft = 1.0
@@ -114,8 +128,11 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_ifft = pre_ifft
         propagator.post_ifft = post_ifft
-        result_array_npy = prop.farfield_propagator(self.exit_wave, postfilter=post_ifft, direction='backward')
+        result_array_npy = prop.farfield_propagator(self.exit_wave,
+                                                    postfilter=post_ifft,
+                                                    direction='backward')
         result_array_geo = self.inverse_diffraction_transform_with_geo(propagator)
+
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
     def test_inverse_fourier_transform_farfield_with_pre_and_post_filter(self):
@@ -130,8 +147,12 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_ifft = pre_ifft
         propagator.post_ifft = post_ifft
-        result_array_npy = prop.farfield_propagator(self.exit_wave, prefilter=pre_ifft, postfilter=post_ifft, direction='backward')
+        result_array_npy = prop.farfield_propagator(self.exit_wave,
+                                                    prefilter=pre_ifft,
+                                                    postfilter=post_ifft,
+                                                    direction='backward')
         result_array_geo = self.inverse_diffraction_transform_with_geo(propagator)
+
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
 
