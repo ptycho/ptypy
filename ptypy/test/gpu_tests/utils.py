@@ -18,7 +18,7 @@ def get_ptycho_instance(label=None):
     p.run = label
     p.io = u.Param()
     p.io.home = "/tmp/ptypy/"
-    p.io.interaction = u.Param()
+    p.io.interaction = u.Param(active=False)
     p.io.autoplot = u.Param(active=False)
     p.scans = u.Param()
     p.scans.MF = u.Param()
@@ -46,6 +46,7 @@ def get_ptycho_instance(label=None):
     p.scans.MF.data.center = 'fftshift'
     p.scans.MF.data.photons = 100000000.0
     p.scans.MF.data.psf = 0.0
+    p.scans.MF.data.add_poisson_noise = False
     p.scans.MF.data.density = 0.2
     p.scans.MF.illumination = u.Param()
     p.scans.MF.illumination.model = None
