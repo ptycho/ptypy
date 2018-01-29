@@ -4,7 +4,7 @@ tests for the object-probe interactions, including the specific DM, ePIE etc upd
 '''
 
 import unittest
-
+import numpy as np
 import utils as tu
 from ptypy.gpu import data_utils as du
 from ptypy.gpu import object_probe_interaction as opi
@@ -19,6 +19,25 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         self.probe = self.serialized_scan['probe']
         self.obj = self.serialized_scan['obj']
         self.exit_wave = self.serialized_scan['exit wave']
+
+    def test_scan_and_multiply(self):
+        blank = np.ones_like(self.probe)
+        addr_info = self.addr[:, 0]
+
+        po = opi.scan_and_multiply(blank, self.obj, self.exit_wave.shape, addr_info)
+        for idx, p in enumerate(self.PtychoInstance.pods.itervalues()):
+            np.testing.assert_array_equal(po[idx], p.object)
+
+    def test_exit_wave_calculation(self):
+        addr_info = self.addr[:, 0]
+
+        po = opi.scan_and_multiply(self.probe, self.obj, self.exit_wave.shape, addr_info)
+        for idx, p in enumerate(self.PtychoInstance.pods.itervalues()):
+            np.testing.assert_array_equal(po[idx], p.object * p.probe)
+
+
+
+
     def test_get_exit_wave(self):
         opi.get_exit_wave(self.obj, self.probe, self.exit_wave, self.addr)
     
