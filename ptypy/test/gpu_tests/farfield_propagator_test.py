@@ -33,12 +33,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_fft = pre_fft
         propagator.post_fft = post_fft
-        result_array_npy = np.zeros_like(self.exit_wave)
-        meta = self.serialized_scan['meta'] #  probably want to extract these at a later date, but just to get stuff going...
-        view_dlayer = 0 # what is this?
-        addr_info = meta['addr'][:,view_dlayer] # addresses, object references
-        for _pa, _oa, ea,  _da, _ma in addr_info:
-            result_array_npy[ea[0]] = prop.farfield_propagator(self.exit_wave[ea[0]])
+        result_array_npy = prop.farfield_propagator(self.exit_wave)
         result_array_geo = self.diffraction_transform_with_geo(propagator)
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
@@ -47,16 +42,11 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
     def test_fourier_transform_farfield_with_prefilter_UNITY(self):
         pre_fft = self.propagator.pre_fft
-        post_fft = 1.0  # np.ones_like(self.propagator.post_fft)
+        post_fft = 1.0
         propagator = copy(self.propagator)
         propagator.pre_fft = pre_fft
         propagator.post_fft = post_fft
-        result_array_npy = np.zeros_like(self.exit_wave)
-        meta = self.serialized_scan['meta']  # probably want to extract these at a later date, but just to get stuff going...
-        view_dlayer = 0  # what is this?
-        addr_info = meta['addr'][:, view_dlayer]  # addresses, object references
-        for _pa, _oa, ea, _da, _ma in addr_info:
-            result_array_npy[ea[0]] = prop.farfield_propagator(self.exit_wave[ea[0]], prefilter=pre_fft)
+        result_array_npy = prop.farfield_propagator(self.exit_wave, prefilter=pre_fft)
         result_array_geo = self.diffraction_transform_with_geo(propagator)
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
@@ -69,12 +59,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_fft = pre_fft
         propagator.post_fft = post_fft
-        result_array_npy = np.zeros_like(self.exit_wave)
-        meta = self.serialized_scan['meta']  # probably want to extract these at a later date, but just to get stuff going...
-        view_dlayer = 0  # what is this?
-        addr_info = meta['addr'][:, view_dlayer]  # addresses, object references
-        for _pa, _oa, ea, _da, _ma in addr_info:
-            result_array_npy[ea[0]] = prop.farfield_propagator(self.exit_wave[ea[0]], postfilter=post_fft)
+        result_array_npy= prop.farfield_propagator(self.exit_wave, postfilter=post_fft)
         result_array_geo = self.diffraction_transform_with_geo(propagator)
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
@@ -89,12 +74,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_fft = pre_fft
         propagator.post_fft = post_fft
-        result_array_npy = np.zeros_like(self.exit_wave)
-        meta = self.serialized_scan['meta']  # probably want to extract these at a later date, but just to get stuff going...
-        view_dlayer = 0  # what is this?
-        addr_info = meta['addr'][:, view_dlayer]  # addresses, object references
-        for _pa, _oa, ea, _da, _ma in addr_info:
-            result_array_npy[ea[0]] = prop.farfield_propagator(self.exit_wave[ea[0]], prefilter=pre_fft, postfilter=post_fft)
+        result_array_npy = prop.farfield_propagator(self.exit_wave, prefilter=pre_fft, postfilter=post_fft)
         result_array_geo = self.diffraction_transform_with_geo(propagator)
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
@@ -108,12 +88,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_ifft = pre_ifft
         propagator.post_ifft = post_ifft
-        result_array_npy = np.zeros_like(self.exit_wave)
-        meta = self.serialized_scan['meta'] #  probably want to extract these at a later date, but just to get stuff going...
-        view_dlayer = 0 # what is this?
-        addr_info = meta['addr'][:,view_dlayer] # addresses, object references
-        for _pa, _oa, ea,  _da, _ma in addr_info:
-            result_array_npy[ea[0]] = prop.farfield_propagator(self.exit_wave[ea[0]], direction='backward')
+        result_array_npy = prop.farfield_propagator(self.exit_wave, direction='backward')
         result_array_geo = self.inverse_diffraction_transform_with_geo(propagator)
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
@@ -122,16 +97,11 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
     def test_inverse_fourier_transform_farfield_with_prefilter_UNITY(self):
         pre_ifft = self.propagator.pre_ifft
-        post_ifft = 1.0  # np.ones_like(self.propagator.post_ifft)
+        post_ifft = 1.0
         propagator = copy(self.propagator)
         propagator.pre_ifft = pre_ifft
         propagator.post_ifft = post_ifft
-        result_array_npy = np.zeros_like(self.exit_wave)
-        meta = self.serialized_scan['meta']  # probably want to extract these at a later date, but just to get stuff going...
-        view_dlayer = 0  # what is this?
-        addr_info = meta['addr'][:, view_dlayer]  # addresses, object references
-        for _pa, _oa, ea, _da, _ma in addr_info:
-            result_array_npy[ea[0]] = prop.farfield_propagator(self.exit_wave[ea[0]], prefilter=pre_ifft, direction='backward')
+        result_array_npy = prop.farfield_propagator(self.exit_wave, prefilter=pre_ifft, direction='backward')
         result_array_geo = self.inverse_diffraction_transform_with_geo(propagator)
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
@@ -144,12 +114,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_ifft = pre_ifft
         propagator.post_ifft = post_ifft
-        result_array_npy = np.zeros_like(self.exit_wave)
-        meta = self.serialized_scan['meta']  # probably want to extract these at a later date, but just to get stuff going...
-        view_dlayer = 0  # what is this?
-        addr_info = meta['addr'][:, view_dlayer]  # addresses, object references
-        for _pa, _oa, ea, _da, _ma in addr_info:
-            result_array_npy[ea[0]] = prop.farfield_propagator(self.exit_wave[ea[0]], postfilter=post_ifft, direction='backward')
+        result_array_npy = prop.farfield_propagator(self.exit_wave, postfilter=post_ifft, direction='backward')
         result_array_geo = self.inverse_diffraction_transform_with_geo(propagator)
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
@@ -165,12 +130,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         propagator = copy(self.propagator)
         propagator.pre_ifft = pre_ifft
         propagator.post_ifft = post_ifft
-        result_array_npy = np.zeros_like(self.exit_wave)
-        meta = self.serialized_scan['meta']  # probably want to extract these at a later date, but just to get stuff going...
-        view_dlayer = 0  # what is this?
-        addr_info = meta['addr'][:, view_dlayer]  # addresses, object references
-        for _pa, _oa, ea, _da, _ma in addr_info:
-            result_array_npy[ea[0]] = prop.farfield_propagator(self.exit_wave[ea[0]], prefilter=pre_ifft, postfilter=post_ifft, direction='backward')
+        result_array_npy = prop.farfield_propagator(self.exit_wave, prefilter=pre_ifft, postfilter=post_ifft, direction='backward')
         result_array_geo = self.inverse_diffraction_transform_with_geo(propagator)
         np.testing.assert_allclose(result_array_npy, result_array_geo)
 
