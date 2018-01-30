@@ -1141,7 +1141,7 @@ class View(Base):
                 ('psize', '(5,)f8'),
                 ('coord', '(5,)f8'),
                 ('sp', '(5,)f8')]
-    __slots__ = Base.__slots__ + ['_ndim', 'storage', 'storageID','_pod','_pods','error']
+    __slots__ = Base.__slots__ + ['_ndim', 'storage', 'storageID','_pod','_pods','error', 'pods']
     ########
     # TODO #
     ########
@@ -2072,7 +2072,8 @@ class POD(Base):
                 continue
             if v._pod is not None:
                 # View has at least one POD connected
-                v.pods = weakref.WeakValueDictionary()
+                if v.pods is None:
+                    v.pods = weakref.WeakValueDictionary()
                 v.pods[self.ID] = self
             v._pod = weakref.ref(self)
 
