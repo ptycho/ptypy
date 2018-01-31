@@ -34,7 +34,10 @@ class DataUtilsTest(unittest.TestCase):
         pass
 
     def test_numpy_pod_consistency(self):
-        pass
+        foo = du.pod_to_arrays(self.PtychoInstance, 'S0000')
+        bar = du.arrays_to_pods(self.PtychoInstance, 'S0000')
+
+
 
 if __name__ == "__main__":
     unittest.main()

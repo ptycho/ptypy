@@ -8,7 +8,7 @@ import numpy as np
 import utils as tu
 from ptypy.gpu import data_utils as du
 from ptypy.gpu import object_probe_interaction as opi
-
+from collections import OrderedDict
 
 class ObjectProbeInteractionTest(unittest.TestCase):
     def setUp(self):
@@ -35,11 +35,6 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         for idx, p in enumerate(self.PtychoInstance.pods.itervalues()):
             np.testing.assert_array_equal(po[idx], p.object * p.probe)
 
-
-
-
-    def test_get_exit_wave(self):
-        opi.get_exit_wave(self.obj, self.probe, self.exit_wave, self.addr)
     
     def test_difference_map_realspace_constraint(self):
         opi.difference_map_realspace_constraint(self.obj,
@@ -47,6 +42,30 @@ class ObjectProbeInteractionTest(unittest.TestCase):
                                                 self.exit_wave,
                                                 self.addr,
                                                 alpha=1.0)
+
+    def test_difference_map_realspace_constraint_UNITY(self):
+        ptypy_dm_constraint = self.ptypy_apply_difference_map()
+        numpy_dm_constraint = opi.difference_map_realspace_constraint(self.obj,
+                                                                      self.probe,
+                                                                      self.exit_wave,
+                                                                      self.addr,
+                                                                      alpha=1.0)
+        for idx, key in enumerate(ptypy_dm_constraint):
+            np.testing.assert_allclose(ptypy_dm_constraint[key], numpy_dm_constraint[idx])
+
+
+
+
+    def ptypy_apply_difference_map(self):
+        f = OrderedDict()
+        alpha = 1.0
+        for dname, diff_view in self.PtychoInstance.diff.views.iteritems():
+            for name, pod in diff_view.pods.iteritems():
+                if not pod.active:
+                    continue
+                f[name] = (1 + alpha) * pod.probe * pod.object - alpha * pod.exit
+        return f
+
 
 if __name__ == "__main__":
     unittest.main()

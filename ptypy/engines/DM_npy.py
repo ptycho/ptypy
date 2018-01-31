@@ -17,8 +17,7 @@ from DM import DM
 from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla
 from ..gpu import data_utils as du
-from ..gpu.propagation import difference_map_fourier_constraint as dmfc
-
+from ..gpu import constraints as con
 __all__ = ['DMNpy']
 
 
@@ -116,7 +115,7 @@ class DMNpy(DM):
 
     """
 
-    SUPPORTED_MODELS = [Vanilla]
+    SUPPORTED_MODELS = [Vanilla, Full]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -130,13 +129,13 @@ class DMNpy(DM):
 
         Everything that needs to be recalculated when new data arrives.
         """
-        super(DMNpy, self).engine_prepare(self)
+        super(DMNpy, self).engine_prepare()
         # and then something to convert the arrays to numpy
         self.serialized_scan = {}
         self.master_pod = {}
         for dID, _diffs in self.di.S.iteritems():
             self.serialized_scan[dID] = du.pod_to_arrays(self, dID)
-            first_view_id = self.serialized_scan['meta']['view_IDs'][0]
+            first_view_id = self.serialized_scan[dID]['meta']['view_IDs'][0]
             self.master_pod[dID] = self.di.V[first_view_id].pod
 
     def engine_iterate(self, num=1):
@@ -159,7 +158,11 @@ class DMNpy(DM):
 
                 # Fourier update
                 # error_dct = self.fourier_update()
-                exit_wave, errors = self.numpy_fourier_update(mask, Idata, obj, probe, exit_wave, addr, dID)
+                exit_wave, error_dct = self.numpy_fourier_update(mask, Idata, obj, probe, exit_wave, addr, dID)
+
+
+                array_dictionary = {'exit wave': exit_wave}
+                self = du.array_to_pods(self, dID, array_dictionary, scan_model='Full')
                 t2 = time.time()
                 tf += t2 - t1
 
@@ -199,10 +202,27 @@ class DMNpy(DM):
         return error_dct
 
     def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, ID):
+        error_dct = {}
         propagator = self.master_pod[ID].geometry.propagator
+        exit_wave, errors = con.difference_map_fourier_constraint(mask,
+                                                              Idata,
+                                                              obj,
+                                                              probe,
+                                                              exit_wave,
+                                                              addr,
+                                                              prefilter=propagator.pre_fft,
+                                                              postfilter=propagator.post_fft,
+                                                              pbound=None,
+                                                              alpha=1.0,
+                                                             LL_error=True)
 
-        exit_wave, errors =  dmfc(mask, Idata, obj, probe, exit_wave, addr, propagator.pre_fft, propagator.post_fft, pbound=None, alpha=1.0, LL_error=True
-        return exit_wave, errors
+        k=0
+        for idx, name in self.di.views.iteritems():
+            error_dct[idx] = errors[:, k]
+            k+=1
+
+        return exit_wave, error_dct
+
     def overlap_update(self):
         """
         DM overlap constraint update.

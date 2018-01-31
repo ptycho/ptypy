@@ -6,6 +6,11 @@ Created on 4 Jan 2018
 
 import numpy as np
 
+# TODO
+# class Serializer
+
+
+
 def _serialize_array_access(diff_storage):
     # Sort views according to layer in diffraction stack
     views = diff_storage.views
@@ -42,21 +47,35 @@ def _serialize_array_access(diff_storage):
     # store them for each storage
     return view_IDs, poe_ID, np.array(addr).astype(np.int32)
 
+def _deserialize_array_access(diff_storage):
+    '''
+    will the layers and dlow ever change? position correct probably
+    :param diff_storage: 
+    :return: 
+    '''
+    pass
 
 def pod_to_arrays(P, storage_id):
     '''
-    returns a dictionary with arrays for:
-    diffraction: The diffraction data
-    probe: the probe from the FIRST POD
-    obj: The 
+    :param P. A ptycho instance
+    :param: storage_id The storage ID for this scan.
+    
+    :return
+    a dictionary containing:
+        diffraction: The diffraction data
+        probe: the probe from the FIRST POD
+        obj: The object buffer
+        exit wave: The exit wave buffer
+        mask: The diffraction masks
+        meta: The meta data, containing an 'addr' array for the addresses
     '''
-    diffraction_storages_to_iterate = P.diff.storages[storage_id]
-    mask_storages = P.mask.storages[storage_id]
+    diffraction_storages_to_iterate = P.di.storages[storage_id]
+    mask_storages = P.ma.storages[storage_id]
     view_IDs, poe_IDs, addr = _serialize_array_access(diffraction_storages_to_iterate)
     meta = {'view_IDs': view_IDs,
             'poe_IDs': poe_IDs,
             'addr': addr}
-    main_pod = P.diff.V[view_IDs[0]].pod # we will use this to get all the information
+    main_pod = P.di.V[view_IDs[0]].pod # we will use this to get all the information
     probe_array = main_pod.pr_view.storage.data
     obj_array = main_pod.ob_view.storage.data
     exit_wave_array = main_pod.ex_view.storage.data
@@ -70,3 +89,46 @@ def pod_to_arrays(P, storage_id):
             'meta': meta}
 
 
+def array_to_pods(P, storage_id, array_dictionary, scan_model='Full'):
+    '''
+    :param P. A ptycho instance
+    :param storage_id The storage ID for this scan.
+    :param array_dictionary. A dictionary with any of the following in
+        a dictionary containing:
+        diffraction: The diffraction data
+        probe: the probe from the FIRST POD
+        obj: The object buffer
+        exit wave: The exit wave buffer
+        mask: The diffraction masks
+        meta: The meta data, containing an 'addr' array for the addresses
+    :param P. A ptycho instance
+    :param storage_id The storage ID for this scan.
+
+    :return
+        An updated ptycho instance
+    '''
+    diffraction_storages_to_iterate = P.di.storages[storage_id]
+
+    view_IDs, poe_IDs, addr = _serialize_array_access(diffraction_storages_to_iterate)
+    meta = {'view_IDs': view_IDs,
+            'poe_IDs': poe_IDs,
+            'addr': addr}
+    main_pod = P.di.V[view_IDs[0]].pod # we will use this to get all the information
+
+
+    if scan_model is 'Full':
+        out_dict = {}
+        out_dict['diffraction'] = diffraction_storages_to_iterate
+        out_dict['probe'] = main_pod.pr_view.storage
+        out_dict['obj'] = main_pod.ob_view.storage
+        out_dict['exit wave'] = main_pod.ex_view.storage
+        out_dict['mask'] = P.ma.storages[storage_id]
+        out_dict['meta'] = {}
+
+    for key, val in array_dictionary.iteritems():
+        if key is 'meta':
+            _deserialize_array_access(storage_id)
+        else:
+            out_dict[key].data = val
+
+    return P

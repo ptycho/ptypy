@@ -35,30 +35,31 @@ class FourierConstraintTest(unittest.TestCase):
             i+=1
             if not di_view.active:
                 continue
+            # print "view"
             pbound = self.PtychoInstance.pbound[di_view.storage.ID]
             error_dct[name] = basic_fourier_update(di_view,
                                                    pbound=pbound,
                                                    alpha=self.PtychoInstance.p.alpha)
-            # print error_dct
+        print np.array(error_dct.values())[:, 1]
 
-    def test_fourier_update_numpy(self):
-        mask = self.serialized_scan['mask']
-        Idata = self.serialized_scan['diffraction']
-        obj = self.serialized_scan['obj']
-        probe = self.serialized_scan['probe']
-        exit_wave = self.serialized_scan['exit wave']
-        addr = self.serialized_scan['meta']['addr']
-        propagator = self.master_pod.geometry.propagator
-
-
-        difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, prefilter=propagator.pre_fft,
-                                          postfilter=propagator.post_fft, pbound=None, alpha=1, LL_error=True)
-
+    # def test_fourier_update_numpy(self):
+    #     mask = self.serialized_scan['mask']
+    #     Idata = self.serialized_scan['diffraction']
+    #     obj = self.serialized_scan['obj']
+    #     probe = self.serialized_scan['probe']
+    #     exit_wave = self.serialized_scan['exit wave']
+    #     addr = self.serialized_scan['meta']['addr']
+    #     propagator = self.master_pod.geometry.propagator
+    #
+    #     error_phot = difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr,
+    #                                                           prefilter=propagator.pre_fft,
+    #                                                           postfilter=propagator.post_fft,
+    #                                                           pbound=None, alpha=1, LL_error=True)
+    #     print error_phot
 
 
 
     def test_fourier_update_numpy_vectorised(self):
         pass
 
-if __name__ == "__main__":
-    unittest.main()
+
