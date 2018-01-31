@@ -42,7 +42,7 @@ def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='app
             shutil.rmtree(outdir)
         return out_dict
 
-def EngineTestRunner(engine_params,propagator='farfield'):
+def EngineTestRunner(engine_params, propagator='farfield'):
 
     p = u.Param()
     p.verbose_level = 3

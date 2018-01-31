@@ -383,10 +383,10 @@ class Ptycho(Base):
         Initializes ZeroMQ communication on the master node and
         spawns an optional plotting client.
         """
-        iaction = self.p.io.interaction.active
-        autoplot = self.p.io.autoplot.active
+        iaction = self.p.io.interaction
+        autoplot = self.p.io.autoplot
 
-        if parallel.master and iaction:
+        if parallel.master and iaction.active:
             # Create the interaction server
             self.interactor = interaction.Server(iaction)
 
@@ -413,13 +413,13 @@ class Ptycho(Base):
 
                 # Start automated plot client
                 self.plotter = None
-                if (parallel.master and autoplot and autoplot.threaded and
-                        autoplot.interval > 0):
-                    from multiprocessing import Process
-                    logger.info('Spawning plot client in new Process.')
-                    self.plotter = Process(target=u.spawn_MPLClient,
-                                           args=(iaction, autoplot,))
-                    self.plotter.start()
+                if (parallel.master and autoplot.active):
+                    if (autoplot.threaded and autoplot.interval > 0):
+                        from multiprocessing import Process
+                        logger.info('Spawning plot client in new Process.')
+                        self.plotter = Process(target=u.spawn_MPLClient,
+                                               args=(iaction, autoplot,))
+                        self.plotter.start()
         else:
             # No interaction wanted
             self.interactor = None
