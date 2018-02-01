@@ -57,4 +57,10 @@ def get_ptycho_instance(label=None):
     p.scans.MF.illumination.aperture.edge = 10
     p.scans.MF.coherence = u.Param()
     p.scans.MF.coherence.num_probe_modes = 1
-    return Ptycho(p, level=4)
+    P = Ptycho(p, level=4)
+    P.di = P.diff
+    P.ma = P.mask
+    P.ex = P.exit
+    P.pr = P.probe
+    P.ob = P.obj
+    return P
