@@ -5,7 +5,7 @@ p = u.Param()
 p.verbose_level = 3
 p.io = u.Param()
 p.io.autosave = u.Param(active=False)
-p.io.autoplot = u.Param(active=False)
+p.io.autoplot = u.Param(active=True)
 p.ipython_kernel = False
 p.scans = u.Param()
 p.scans.MF = u.Param()
@@ -34,6 +34,7 @@ p.scans.MF.data.center = 'fftshift'
 p.scans.MF.data.photons = 100000000.0
 p.scans.MF.data.psf = 0.0
 p.scans.MF.data.density = 0.2
+p.scans.MF.data.add_poisson_noise = False
 p.scans.MF.coherence = u.Param()
 p.scans.MF.coherence.num_probe_modes = 1  # currently breaks when this is =2
 
@@ -42,7 +43,7 @@ p.engines = u.Param()
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM'
+p.engines.engine00.name = 'DMNpy'
 p.engines.engine00.numiter = 80
 
 # prepare and run
