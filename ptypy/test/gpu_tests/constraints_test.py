@@ -57,10 +57,9 @@ class ConstraintsTest(unittest.TestCase):
                                                               alpha=1.0,
                                                               LL_error=True)
 
-        print errors.shape
         for idx, key in enumerate(ptypy_ewf.keys()):
             np.testing.assert_allclose(ptypy_ewf[key], exit_wave[idx])
-        import pylab as plt
+
 
 
         ptypy_fmag = []
@@ -81,7 +80,9 @@ class ConstraintsTest(unittest.TestCase):
         npy_phot = errors[1, :]
         npy_exit = errors[2, :]
 
-        import pylab
+
+
+        import pylab as plt
         x = np.arange(92)
         plt.figure('fmag')
         plt.plot(x, npy_fmag, x, ptypy_fmag)
@@ -97,7 +98,7 @@ class ConstraintsTest(unittest.TestCase):
         exit_wave = OrderedDict()
 
         for dname in self.error_dict.keys():
-            di_view = self.PtychoInstance.diff.V[dname]
+            di_view = ptycho_instance.diff.V[dname]
             error_dct[dname] = basic_fourier_update(di_view,
                                                    pbound=None,
                                                    alpha=1.0)
