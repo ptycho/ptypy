@@ -24,10 +24,10 @@ def log_likelihood(probe, obj, mask, exit_wave, Idata, prefilter, postfilter, ad
 
 def far_field_error(current_solution, measured_solution, mask):
     fdev = np.subtract(current_solution, measured_solution)
-    summed_mask = np.sum(mask, axis=(1, 2))
+    summed_mask = np.sum(mask, axis=(-2, -1))
     fdev2 = np.power(fdev, 2)
     masked_fdev2 = np.multiply(mask, fdev2)
-    summed_masked_fdev2 = np.sum(masked_fdev2, axis=(1, 2))
+    summed_masked_fdev2 = np.sum(masked_fdev2, axis=(-2, -1))
     return summed_masked_fdev2 / summed_mask
 
 def realspace_error(difference_in_exitwave):
