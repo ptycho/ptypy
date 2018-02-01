@@ -9,6 +9,7 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
+
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
@@ -18,6 +19,8 @@ from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla
 from ..gpu import data_utils as du
 from ..gpu import constraints as con
+
+
 __all__ = ['DMNpy']
 
 
@@ -132,11 +135,12 @@ class DMNpy(DM):
         super(DMNpy, self).engine_prepare()
         # and then something to convert the arrays to numpy
         self.serialized_scan = {}
-        self.master_pod = {}
+        self.propagator = {}
         for dID, _diffs in self.di.S.iteritems():
             self.serialized_scan[dID] = du.pod_to_arrays(self, dID)
             first_view_id = self.serialized_scan[dID]['meta']['view_IDs'][0]
-            self.master_pod[dID] = self.di.V[first_view_id].pod
+            self.propagator[dID] = self.di.V[first_view_id].pod.geometry.propagator
+
 
     def engine_iterate(self, num=1):
         """
@@ -146,23 +150,33 @@ class DMNpy(DM):
         tf = 0.
         # run the data for `num` iterations on the cards, then pull the relevant off to sync
         for dID, _diffs in self.di.S.iteritems():
-
             mask = self.serialized_scan[dID]['mask']
             Idata = self.serialized_scan[dID]['diffraction']
             obj = self.serialized_scan[dID]['obj']
             probe = self.serialized_scan[dID]['probe']
             exit_wave = self.serialized_scan[dID]['exit wave']
             addr = self.serialized_scan[dID]['meta']['addr']
+            propagator = self.propagator[dID]
+
             for it in range(num):
                 t1 = time.time()
 
                 # Fourier update
                 # error_dct = self.fourier_update()
-                exit_wave, error_dct = self.numpy_fourier_update(mask, Idata, obj, probe, exit_wave, addr, dID)
+                exit_wave, error_dct = self.numpy_fourier_update(mask,
+                                                                 Idata,
+                                                                 obj,
+                                                                 probe,
+                                                                 exit_wave,
+                                                                 addr,
+                                                                 propagator)
 
 
-                array_dictionary = {'exit wave': exit_wave}
-                self = du.array_to_pods(self, dID, array_dictionary, scan_model='Full')
+                array_dictionary = {'exit wave': exit_wave,
+                                    'obj': obj,
+                                    'probe': probe}
+
+                # self = du.array_to_pods(self, dID, array_dictionary, scan_model='Full')
                 t2 = time.time()
                 tf += t2 - t1
 
@@ -201,20 +215,19 @@ class DMNpy(DM):
                                                    alpha=self.p.alpha)
         return error_dct
 
-    def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, ID):
+    def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, propagator):
         error_dct = {}
-        propagator = self.master_pod[ID].geometry.propagator
         exit_wave, errors = con.difference_map_fourier_constraint(mask,
-                                                              Idata,
-                                                              obj,
-                                                              probe,
-                                                              exit_wave,
-                                                              addr,
-                                                              prefilter=propagator.pre_fft,
-                                                              postfilter=propagator.post_fft,
-                                                              pbound=None,
-                                                              alpha=1.0,
-                                                             LL_error=True)
+                                                                  Idata,
+                                                                  obj,
+                                                                  probe,
+                                                                  exit_wave,
+                                                                  addr,
+                                                                  prefilter=propagator.pre_fft,
+                                                                  postfilter=propagator.post_fft,
+                                                                  pbound=None,
+                                                                  alpha=1.0,
+                                                                  LL_error=True)
 
         k=0
         for idx, name in self.di.views.iteritems():
