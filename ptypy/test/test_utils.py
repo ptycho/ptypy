@@ -79,6 +79,7 @@ def EngineTestRunner(engine_params, propagator='farfield'):
     p.scans.MF.data.photons = 100000000.0
     p.scans.MF.data.psf = 0.0
     p.scans.MF.data.density = 0.2
+    p.scans.MF.data.add_poisson_noise = False
     p.scans.MF.coherence = u.Param()
     p.scans.MF.coherence.num_probe_modes = 1 # currently breaks when this is =2
     p.engines = u.Param()
