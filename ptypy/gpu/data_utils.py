@@ -7,7 +7,7 @@ Created on 4 Jan 2018
 import numpy as np
 
 # TODO
-# class Serializer
+# class Vectorizer
 
 
 
@@ -55,7 +55,7 @@ def _deserialize_array_access(diff_storage):
     '''
     pass
 
-def pod_to_arrays(P, storage_id):
+def pod_to_arrays(P, storage_id, scan_model='Full'):
     '''
     :param P. A ptycho instance
     :param: storage_id The storage ID for this scan.
@@ -69,18 +69,19 @@ def pod_to_arrays(P, storage_id):
         mask: The diffraction masks
         meta: The meta data, containing an 'addr' array for the addresses
     '''
-    diffraction_storages_to_iterate = P.di.storages[storage_id]
-    mask_storages = P.ma.storages[storage_id]
-    view_IDs, poe_IDs, addr = _serialize_array_access(diffraction_storages_to_iterate)
-    meta = {'view_IDs': view_IDs,
-            'poe_IDs': poe_IDs,
-            'addr': addr}
-    main_pod = P.di.V[view_IDs[0]].pod # we will use this to get all the information
-    probe_array = main_pod.pr_view.storage.data
-    obj_array = main_pod.ob_view.storage.data
-    exit_wave_array = main_pod.ex_view.storage.data
-    mask_array = mask_storages.data.astype(np.float32) # can we have booleans?
-    diff_array = diffraction_storages_to_iterate.data
+    if scan_model is 'Full':
+        diffraction_storages_to_iterate = P.di.storages[storage_id]
+        mask_storages = P.ma.storages[storage_id]
+        view_IDs, poe_IDs, addr = _serialize_array_access(diffraction_storages_to_iterate)
+        meta = {'view_IDs': view_IDs,
+                'poe_IDs': poe_IDs,
+                'addr': addr}
+        main_pod = P.di.V[view_IDs[0]].pod # we will use this to get all the information
+        probe_array = main_pod.pr_view.storage.data
+        obj_array = main_pod.ob_view.storage.data
+        exit_wave_array = main_pod.ex_view.storage.data
+        mask_array = mask_storages.data.astype(np.float32) # can we have booleans?
+        diff_array = diffraction_storages_to_iterate.data
     return {'diffraction': diff_array,
             'probe': probe_array,
             'obj': obj_array,
@@ -101,34 +102,26 @@ def array_to_pods(P, storage_id, array_dictionary, scan_model='Full'):
         exit wave: The exit wave buffer
         mask: The diffraction masks
         meta: The meta data, containing an 'addr' array for the addresses
+    :param scan_model. The scan model to pack to.
     :param P. A ptycho instance
     :param storage_id The storage ID for this scan.
 
     :return
         An updated ptycho instance
     '''
-    diffraction_storages_to_iterate = P.di.storages[storage_id]
-
-    view_IDs, poe_IDs, addr = _serialize_array_access(diffraction_storages_to_iterate)
-    meta = {'view_IDs': view_IDs,
-            'poe_IDs': poe_IDs,
-            'addr': addr}
-    main_pod = P.di.V[view_IDs[0]].pod # we will use this to get all the information
 
 
     if scan_model is 'Full':
-        out_dict = {}
-        out_dict['diffraction'] = diffraction_storages_to_iterate
-        out_dict['probe'] = main_pod.pr_view.storage
-        out_dict['obj'] = main_pod.ob_view.storage
-        out_dict['exit wave'] = main_pod.ex_view.storage
-        out_dict['mask'] = P.ma.storages[storage_id]
-        out_dict['meta'] = {}
+        if 'obj' in array_dictionary.keys():
+            for name, s in P.ob.S.iteritems():
+                s.data[:] = array_dictionary['obj']
+        if 'probe' in array_dictionary.keys():
+            for name, s in P.pr.S.iteritems():
+                s.data[:] = array_dictionary['probe']
 
-    for key, val in array_dictionary.iteritems():
-        if key is 'meta':
-            _deserialize_array_access(storage_id)
-        else:
-            out_dict[key].data = val
+        # costly but needed to sync back with
+        if 'exit wave' in array_dictionary.keys():
+            for name, s in P.ex.S.iteritems():
+                s.data[:] = array_dictionary['exit wave']
 
     return P
