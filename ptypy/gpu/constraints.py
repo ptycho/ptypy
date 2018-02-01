@@ -2,10 +2,13 @@
 a module to holds the constraints
 '''
 
+import numpy as np
+
 from error_metrics import log_likelihood, far_field_error, realspace_error
 from object_probe_interaction import difference_map_realspace_constraint, scan_and_multiply
 from propagation import farfield_propagator
-import numpy as np
+import array_utils as au
+
 
 
 def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, prefilter, postfilter, pbound=None, alpha=1.0, LL_error=True):
@@ -21,7 +24,6 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     view_dlayer = 0 # what is this?
     addr_info = addr[:,(view_dlayer)] # addresses, object references
     # Buffer for accumulated photons
-    af2 = np.zeros_like(Idata)
     # For log likelihood error # need to double check this adp
     if LL_error is True:
         err_phot = log_likelihood(probe, obj, mask, exit_wave, Idata, prefilter, postfilter, addr)
@@ -32,21 +34,19 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     constrained = difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha)
     f = farfield_propagator(constrained, prefilter, postfilter, direction='forward')
 
-    for _pa, _oa, ea, da, _ma in addr_info:
-        af2[da[0]] += np.power(np.abs(f[ea[0]]), 2)
+    pa, oa, ea, da, ma = zip(*addr_info)
+    af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da)
 
     fmag = np.sqrt(np.abs(Idata))
     af = np.sqrt(af2)
-    fdev = af - fmag
     # # Fourier magnitudes deviations
-    err_fmag = []
-    for i in range(af.shape[0]):
-        fdev = af - fmag
-        err_fmag.append(np.sum(mask[i] * fdev**2) / mask[i].sum()) #far_field_error(af, fmag, mask)
 
-    err_fmag = np.array(err_fmag)
+    err_fmag = far_field_error(af, fmag, mask)
+
     probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+
     fm = None
+
     for _pa, _oa, ea, da, ma in addr_info:
         if (pbound is None) or (err_fmag[da[0]] > pbound[da[0]]):
             # No power bound
@@ -63,7 +63,11 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     if fm is None:
         df = np.multiply(alpha, (np.subtract(probe_object, exit_wave)))
     else:
-        backpropagated_solution = farfield_propagator(np.multiply(fm, f), prefilter, postfilter, direction='backward')
+        backpropagated_solution = farfield_propagator(np.multiply(fm, f),
+                                                      prefilter.conj(),
+                                                      postfilter.conj(),
+                                                      direction='backward')
+
         df = np.subtract(backpropagated_solution, probe_object)
 
     exit_wave += df
