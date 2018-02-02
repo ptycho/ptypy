@@ -13,12 +13,12 @@ from copy import deepcopy as copy
 class FarfieldPropagatorTest(unittest.TestCase):
     def setUp(self):
         self.PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
-        self.serialized_scan = du.pod_to_arrays(self.PtychoInstance, 'S0000')
-        self.addr = self.serialized_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
-        self.probe = self.serialized_scan['probe']
-        self.obj = self.serialized_scan['obj']
-        self.exit_wave = self.serialized_scan['exit wave']
-        first_view_id = self.serialized_scan['meta']['view_IDs'][0]
+        self.vectorised_scan = du.pod_to_arrays(self.PtychoInstance, 'S0000')
+        self.addr = self.vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        self.probe = self.vectorised_scan['probe']
+        self.obj = self.vectorised_scan['obj']
+        self.exit_wave = self.vectorised_scan['exit wave']
+        first_view_id = self.vectorised_scan['meta']['view_IDs'][0]
         master_pod = self.PtychoInstance.diff.V[first_view_id].pod
         self.propagator = master_pod.geometry.propagator
         addr_info = self.addr[:, 0]
@@ -158,7 +158,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
     def inverse_diffraction_transform_with_geo(self, propagator):
         result_array_geo = np.zeros_like(self.exit_wave)
-        meta = self.serialized_scan['meta'] #  probably want to extract these at a later date, but just to get stuff going...
+        meta = self.vectorised_scan['meta'] #  probably want to extract these at a later date, but just to get stuff going...
         view_dlayer = 0 # what is this?
         addr_info = meta['addr'][:,view_dlayer] # addresses, object references
         for _pa, _oa, ea,  _da, _ma in addr_info:
@@ -168,7 +168,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
     def diffraction_transform_with_geo(self, propagator):
         result_array_geo = np.zeros_like(self.exit_wave)
-        meta = self.serialized_scan['meta'] #  probably want to extract these at a later date, but just to get stuff going...
+        meta = self.vectorised_scan['meta'] #  probably want to extract these at a later date, but just to get stuff going...
         view_dlayer = 0 # what is this?
         addr_info = meta['addr'][:,view_dlayer] # addresses, object references
         for _pa, _oa, ea,  _da, _ma in addr_info:

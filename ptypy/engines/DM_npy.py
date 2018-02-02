@@ -134,11 +134,11 @@ class DMNpy(DM):
         """
         super(DMNpy, self).engine_prepare()
         # and then something to convert the arrays to numpy
-        self.serialized_scan = {}
+        self.vectorised_scan = {}
         self.propagator = {}
         for dID, _diffs in self.di.S.iteritems():
-            self.serialized_scan[dID] = du.pod_to_arrays(self, dID)
-            first_view_id = self.serialized_scan[dID]['meta']['view_IDs'][0]
+            self.vectorised_scan[dID] = du.pod_to_arrays(self, dID)
+            first_view_id = self.vectorised_scan[dID]['meta']['view_IDs'][0]
             self.propagator[dID] = self.di.V[first_view_id].pod.geometry.propagator
 
 
@@ -150,12 +150,12 @@ class DMNpy(DM):
         tf = 0.
         # run the data for `num` iterations on the cards, then pull the relevant off to sync
         for dID, _diffs in self.di.S.iteritems():
-            mask = self.serialized_scan[dID]['mask']
-            Idata = self.serialized_scan[dID]['diffraction']
-            obj = self.serialized_scan[dID]['obj']
-            probe = self.serialized_scan[dID]['probe']
-            exit_wave = self.serialized_scan[dID]['exit wave']
-            addr = self.serialized_scan[dID]['meta']['addr']
+            mask = self.vectorised_scan[dID]['mask']
+            Idata = self.vectorised_scan[dID]['diffraction']
+            obj = self.vectorised_scan[dID]['obj']
+            probe = self.vectorised_scan[dID]['probe']
+            exit_wave = self.vectorised_scan[dID]['exit wave']
+            addr = self.vectorised_scan[dID]['meta']['addr']
             propagator = self.propagator[dID]
 
             for it in range(num):

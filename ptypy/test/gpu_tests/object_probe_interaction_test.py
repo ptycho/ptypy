@@ -14,11 +14,11 @@ class ObjectProbeInteractionTest(unittest.TestCase):
     def setUp(self):
         self.PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
-        self.serialized_scan = du.pod_to_arrays(self.PtychoInstance, 'S0000')
-        self.addr = self.serialized_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
-        self.probe = self.serialized_scan['probe']
-        self.obj = self.serialized_scan['obj']
-        self.exit_wave = self.serialized_scan['exit wave']
+        self.vectorised_scan = du.pod_to_arrays(self.PtychoInstance, 'S0000')
+        self.addr = self.vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        self.probe = self.vectorised_scan['probe']
+        self.obj = self.vectorised_scan['obj']
+        self.exit_wave = self.vectorised_scan['exit wave']
 
     def test_scan_and_multiply(self):
         blank = np.ones_like(self.probe)

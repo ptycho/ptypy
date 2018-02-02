@@ -11,7 +11,7 @@ import numpy as np
 
 
 
-def _serialize_array_access(diff_storage):
+def _vectorise_array_access(diff_storage):
     # Sort views according to layer in diffraction stack
     views = diff_storage.views
     dlayers = [view.dlayer for view in views]
@@ -47,7 +47,7 @@ def _serialize_array_access(diff_storage):
     # store them for each storage
     return view_IDs, poe_ID, np.array(addr).astype(np.int32)
 
-def _deserialize_array_access(diff_storage):
+def _devectorise_array_access(diff_storage):
     '''
     will the layers and dlow ever change? position correct probably
     :param diff_storage: 
@@ -72,7 +72,7 @@ def pod_to_arrays(P, storage_id, scan_model='Full'):
     if scan_model is 'Full':
         diffraction_storages_to_iterate = P.di.storages[storage_id]
         mask_storages = P.ma.storages[storage_id]
-        view_IDs, poe_IDs, addr = _serialize_array_access(diffraction_storages_to_iterate)
+        view_IDs, poe_IDs, addr = _vectorise_array_access(diffraction_storages_to_iterate)
         meta = {'view_IDs': view_IDs,
                 'poe_IDs': poe_IDs,
                 'addr': addr}

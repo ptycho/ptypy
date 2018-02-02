@@ -16,16 +16,16 @@ class ConstraintsTest(unittest.TestCase):
     def setUp(self):
         self.PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
-        self.serialized_scan = du.pod_to_arrays(self.PtychoInstance, 'S0000')
-        self.addr = self.serialized_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
-        self.probe = self.serialized_scan['probe']
-        self.obj = self.serialized_scan['obj']
-        self.exit_wave = self.serialized_scan['exit wave']
-        self.diffraction = self.serialized_scan['diffraction']
-        self.mask = self.serialized_scan['mask']
+        self.vectorised_scan = du.pod_to_arrays(self.PtychoInstance, 'S0000')
+        self.addr = self.vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        self.probe = self.vectorised_scan['probe']
+        self.obj = self.vectorised_scan['obj']
+        self.exit_wave = self.vectorised_scan['exit wave']
+        self.diffraction = self.vectorised_scan['diffraction']
+        self.mask = self.vectorised_scan['mask']
         view_names = self.PtychoInstance.diff.views.keys()
         self.error_dict = OrderedDict.fromkeys(view_names)
-        first_view_id = self.serialized_scan['meta']['view_IDs'][0]
+        first_view_id = self.vectorised_scan['meta']['view_IDs'][0]
         master_pod = self.PtychoInstance.diff.V[first_view_id].pod
         self.propagator = master_pod.geometry.propagator
 
@@ -60,8 +60,6 @@ class ConstraintsTest(unittest.TestCase):
         for idx, key in enumerate(ptypy_ewf.keys()):
             np.testing.assert_allclose(ptypy_ewf[key], exit_wave[idx])
 
-
-
         ptypy_fmag = []
         ptypy_phot = []
         ptypy_exit = []
@@ -82,12 +80,15 @@ class ConstraintsTest(unittest.TestCase):
 
 
 
-        import pylab as plt
-        x = np.arange(92)
-        plt.figure('fmag')
-        plt.plot(x, npy_fmag, x, ptypy_fmag)
-        plt.legend(['npy', 'ptypy'])
-        plt.show()
+        # import pylab as plt
+        # x = np.arange(92)
+        # plt.figure('fmag')
+        # plt.plot(x, npy_fmag, x, ptypy_fmag)
+        # plt.legend(['npy', 'ptypy'])
+        # plt.show()
+
+
+
 
 
 
