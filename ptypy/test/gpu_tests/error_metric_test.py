@@ -12,27 +12,22 @@ from ptypy.gpu.error_metrics import log_likelihood, far_field_error
 
 
 class ErrorMetricTest(unittest.TestCase):
-    def setUp(self):
-        self.PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
-        # now convert to arrays
-        self.vectorised_scan = du.pod_to_arrays(self.PtychoInstance, 'S0000')
-        self.addr = self.vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
-        self.probe = self.vectorised_scan['probe']
-        self.obj = self.vectorised_scan['obj']
-        self.mask = self.vectorised_scan['mask']
-        self.exit_wave = self.vectorised_scan['exit wave']
-        self.diffraction = self.vectorised_scan['diffraction']
-        view_names = self.PtychoInstance.diff.views.keys()
-        self.error_metric = OrderedDict.fromkeys(view_names)
-        first_view_id = self.vectorised_scan['meta']['view_IDs'][0]
-        master_pod = self.PtychoInstance.diff.V[first_view_id].pod
-        self.propagator = master_pod.geometry.propagator
 
     def test_loglikelihood_numpy(self):
         '''
         Test that it runs
         '''
-        log_likelihood(self.probe, self.obj, self.mask, self.exit_wave, self.diffraction, self.propagator.pre_fft, self.propagator.post_fft, self.addr)
+        PtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
+        vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
+        first_view_id = vectorised_scan['meta']['view_IDs'][0]
+        propagator = PtychoInstance.diff.V[first_view_id].pod.geometry.propagator
+        addr = vectorised_scan['meta']['addr']  # probably want to extract these at a later date, but just to get stuff going...
+        probe = vectorised_scan['probe']
+        obj = vectorised_scan['obj']
+        mask = vectorised_scan['mask']
+        exit_wave = vectorised_scan['exit wave']
+        diffraction = vectorised_scan['diffraction']
+        log_likelihood(probe, obj, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
 
 
     def test_loglikelihood_numpy_UNITY(self):
@@ -40,36 +35,53 @@ class ErrorMetricTest(unittest.TestCase):
         Check that it gives the same result as the ptypy original
 
         '''
-        ptypy_error_metric =self.get_ptypy_loglikelihood()
-        vals =log_likelihood(self.probe, self.obj, self.mask, self.exit_wave, self.diffraction, self.propagator.pre_fft, self.propagator.post_fft, self.addr)
-        for idx, key in enumerate(self.error_metric.keys()):
-            self.error_metric[key] = vals[idx]
+        error_metric = {}
+        PodPtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
+        ptypy_error_metric =self.get_ptypy_loglikelihood(PodPtychoInstance)
+        PtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
+        vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
+        first_view_id = vectorised_scan['meta']['view_IDs'][0]
+        propagator = PtychoInstance.diff.V[first_view_id].pod.geometry.propagator
+        addr = vectorised_scan['meta']['addr']  # probably want to extract these at a later date, but just to get stuff going...
+        probe = vectorised_scan['probe']
+        obj = vectorised_scan['obj']
+        mask = vectorised_scan['mask']
+        exit_wave = vectorised_scan['exit wave']
+        diffraction = vectorised_scan['diffraction']
+        vals = log_likelihood(probe, obj, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
+        k = 0
+        for name, view in PtychoInstance.diff.V.iteritems():
+            error_metric[name] = vals[k]
+            k += 1
 
 
-        for key in self.error_metric.keys():
-            ptypy_error = ptypy_error_metric[key]
-            numpy_error = self.error_metric[key]
+        for name, view in PodPtychoInstance.diff.V.iteritems():
+            ptypy_error = ptypy_error_metric[name]
+            numpy_error = error_metric[name]
             np.testing.assert_allclose(ptypy_error, numpy_error, rtol=1e-3)
 
     def test_far_field_error(self):
-        af, fmag, mask = self.get_current_and_measured_solution()
+        PtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
+        af, fmag, mask = self.get_current_and_measured_solution(PtychoInstance)
 
         far_field_error(af, fmag, mask)
 
     def test_far_field_error_UNITY(self):
-        af, fmag, mask = self.get_current_and_measured_solution()
+        PtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
+        PodPtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
+        af, fmag, mask = self.get_current_and_measured_solution(PtychoInstance)
         fmag_npy = far_field_error(af, fmag, mask)
-        fmag_ptypy = self.get_ptypy_far_field_error()
+        fmag_ptypy = self.get_ptypy_far_field_error(PodPtychoInstance)
         np.testing.assert_allclose(fmag_ptypy, fmag_npy)
 
 
-    def get_current_and_measured_solution(self):
+    def get_current_and_measured_solution(self, a_ptycho_instance):
         alpha = 1.0
 
         fmag = []
         af = []
         mask = []
-        for dname, diff_view in self.PtychoInstance.diff.views.iteritems():
+        for dname, diff_view in a_ptycho_instance.diff.views.iteritems():
             fmag.append(np.sqrt(np.abs(diff_view.data)))
             af2 = np.zeros_like(diff_view.data)
             f = OrderedDict()
@@ -84,19 +96,19 @@ class ErrorMetricTest(unittest.TestCase):
         return np.array(af), np.array(fmag), np.array(mask)
 
 
-    def get_ptypy_far_field_error(self):
+    def get_ptypy_far_field_error(self, a_ptycho_instance):
 
         err_fmag = []
-        af, fmag, mask = self.get_current_and_measured_solution()
+        af, fmag, mask = self.get_current_and_measured_solution(a_ptycho_instance)
         for i in range(af.shape[0]):
             fdev = af[i] - fmag[i]
             err_fmag.append(np.sum(mask[i] * fdev ** 2) / mask[i].sum())
         return np.array(err_fmag)
 
 
-    def get_ptypy_loglikelihood(self):
+    def get_ptypy_loglikelihood(self, a_ptycho_instance):
         error_dct = {}
-        for dname, diff_view in self.PtychoInstance.diff.views.iteritems():
+        for dname, diff_view in a_ptycho_instance.diff.views.iteritems():
             I = diff_view.data
             fmask = diff_view.pod.mask
             LL = np.zeros_like(diff_view.data)
