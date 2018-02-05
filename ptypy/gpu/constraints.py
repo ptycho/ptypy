@@ -11,20 +11,19 @@ import array_utils as au
 
 
 def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound):
-    fm = np.zeros(shape=f.shape, dtype=np.float64)
     renormed_f = np.zeros_like(f)
 
     for _pa, _oa, ea, da, ma in addr_info:
         if (pbound[da[0]] is None) or (err_fmag[da[0]] > pbound[da[0]]):
             if pbound[da[0]] is None:
-                fm[ea[0]] = (1 - mask[ma[0]]) + mask[ma[0]] * fmag[da[0]] / (af[da[0]] + 1e-10)
-                renormed_f[ea[0]] = np.multiply(fm[ea[0]], f[ea[0]])
+                fm = (1 - mask[ma[0]]) + mask[ma[0]] * fmag[da[0]] / (af[da[0]] + 1e-10)
+                renormed_f[ea[0]] = np.multiply(fm, f[ea[0]])
             elif err_fmag[da[0]] > pbound[da[0]]:
                 # Power bound is applied
                 fdev = af[da[0]] - fmag[da[0]]
-                fm[ea[0]] = (1 - mask[ma[0]]) + mask[ma[0]] * (
+                fm = (1 - mask[ma[0]]) + mask[ma[0]] * (
                 fmag[da[0]] + fdev[da[0]] * np.sqrt(pbound[da[0]] / err_fmag[da[0]])) / (af[da[0]] + 1e-10)
-                renormed_f[ea[0]] = np.multiply(fm[ea[0]], f[ea[0]])
+                renormed_f[ea[0]] = np.multiply(fm, f[ea[0]])
             else:
                 renormed_f[ea[0]] = f[ea[0]]
     return renormed_f
@@ -54,7 +53,7 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     view_dlayer = 0 # what is this?
     addr_info = addr[:,(view_dlayer)] # addresses, object references
     if pbound is None:#
-        pbound = [None] * addr_info.shape[0]
+        pbound = np.array([None] * addr_info.shape[0])
     # Buffer for accumulated photons
     # For log likelihood error # need to double check this adp
     if LL_error is True:

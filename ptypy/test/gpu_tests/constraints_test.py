@@ -14,6 +14,18 @@ from ptypy.gpu.constraints import difference_map_fourier_constraint
 
 class ConstraintsTest(unittest.TestCase):
 
+    def test_get_difference(self):
+        pass
+
+    def test_get_difference_UNITY(self):
+        pass
+
+    def test_renormalise_fourier_magnitudes(self):
+        pass
+
+    def test_renormalise_fourier_magnitudes_UNITY(self):
+        pass
+
     def test_difference_map_fourier_constraint(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
@@ -73,6 +85,8 @@ class ConstraintsTest(unittest.TestCase):
                                                               LL_error=True)
 
         for idx, key in enumerate(ptypy_ewf.keys()):
+            print ptypy_ewf[key].dtype, exit_wave[idx].dtype
+            print (np.abs(ptypy_ewf[key]-exit_wave[idx])**2).sum()
             np.testing.assert_allclose(ptypy_ewf[key],
                                        exit_wave[idx],
                                        err_msg="The array-based and pod-based exit waves are not consistent")
