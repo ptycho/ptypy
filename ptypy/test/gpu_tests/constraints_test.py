@@ -73,8 +73,9 @@ class ConstraintsTest(unittest.TestCase):
                                                               LL_error=True)
 
         for idx, key in enumerate(ptypy_ewf.keys()):
-            print key, idx
-            np.testing.assert_allclose(ptypy_ewf[key], exit_wave[idx])
+            np.testing.assert_allclose(ptypy_ewf[key],
+                                       exit_wave[idx],
+                                       err_msg="The array-based and pod-based exit waves are not consistent")
 
         ptypy_fmag = []
         ptypy_phot = []
@@ -93,23 +94,18 @@ class ConstraintsTest(unittest.TestCase):
         npy_fmag = errors[0, :]
         npy_phot = errors[1, :]
         npy_exit = errors[2, :]
-        import pylab as plt
-        x = np.arange(92)
-        plt.figure('fmag')
-        plt.plot(x, npy_fmag, x, ptypy_fmag)
-        plt.legend(['npy', 'ptypy'])
-        plt.show()
-        np.testing.assert_array_equal(npy_fmag, ptypy_fmag)
 
-        np.testing.assert_array_equal(npy_phot, ptypy_phot)
-        np.testing.assert_array_equal(npy_exit, ptypy_exit)
+        np.testing.assert_allclose(npy_fmag,
+                                   ptypy_fmag,
+                                   err_msg="The array-based and pod-based fmag errors are not consistent")
 
+        np.testing.assert_allclose(npy_phot,
+                                   ptypy_phot,
+                                   err_msg="The array-based and pod-based phot errors are not consistent")
 
-
-
-
-
-
+        np.testing.assert_allclose(npy_exit,
+                                   ptypy_exit,
+                                   err_msg="The array-based and pod-based exit errors are not consistent")
 
 
     def ptypy_difference_map_fourier_constraint(self, a_ptycho_instance):

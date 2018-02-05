@@ -150,33 +150,20 @@ class DMNpy(DM):
         tf = 0.
         # run the data for `num` iterations on the cards, then pull the relevant off to sync
         for dID, _diffs in self.di.S.iteritems():
-            mask = self.vectorised_scan[dID]['mask']
-            Idata = self.vectorised_scan[dID]['diffraction']
-            obj = self.vectorised_scan[dID]['obj']
-            probe = self.vectorised_scan[dID]['probe']
-            exit_wave = self.vectorised_scan[dID]['exit wave']
-            addr = self.vectorised_scan[dID]['meta']['addr']
-            propagator = self.propagator[dID]
 
             for it in range(num):
                 t1 = time.time()
 
                 # Fourier update
                 # error_dct = self.fourier_update()
-                exit_wave, error_dct = self.numpy_fourier_update(mask,
-                                                                 Idata,
-                                                                 obj,
-                                                                 probe,
-                                                                 exit_wave,
-                                                                 addr,
-                                                                 propagator)
+                exit_wave, error_dct = self.numpy_fourier_update(self.vectorised_scan[dID]['mask'],
+                                                                 self.vectorised_scan[dID]['diffraction'],
+                                                                 self.vectorised_scan[dID]['obj'],
+                                                                 self.vectorised_scan[dID]['probe'],
+                                                                 self.vectorised_scan[dID]['exit wave'],
+                                                                 self.vectorised_scan[dID]['meta']['addr'],
+                                                                 self.propagator[dID])
 
-
-                array_dictionary = {'exit wave': exit_wave,
-                                    'obj': obj,
-                                    'probe': probe}
-
-                # self = du.array_to_pods(self, dID, array_dictionary, scan_model='Full')
                 t2 = time.time()
                 tf += t2 - t1
 
@@ -217,6 +204,10 @@ class DMNpy(DM):
 
     def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, propagator):
         error_dct = {}
+        pbound = []
+        for name, di_view in self.di.views.iteritems():
+            pbound.append(self.pbound[di_view.storage.ID])
+        pbound = np.array(pbound)
         exit_wave, errors = con.difference_map_fourier_constraint(mask,
                                                                   Idata,
                                                                   obj,
@@ -225,7 +216,7 @@ class DMNpy(DM):
                                                                   addr,
                                                                   prefilter=propagator.pre_fft,
                                                                   postfilter=propagator.post_fft,
-                                                                  pbound=None,
+                                                                  pbound=pbound,
                                                                   alpha=1.0,
                                                                   LL_error=True)
 
