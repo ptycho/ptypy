@@ -5,7 +5,7 @@ Created on 4 Jan 2018
 '''
 
 import numpy as np
-
+from . import FLOAT_TYPE
 # TODO
 # class Vectorizer
 
@@ -76,11 +76,11 @@ def pod_to_arrays(P, storage_id, scan_model='Full'):
         meta = {'view_IDs': view_IDs,
                 'poe_IDs': poe_IDs,
                 'addr': addr}
-        main_pod = P.di.V[view_IDs[0]].pod # we will use this to get all the information
+        main_pod = P.di.V[view_IDs[5]].pod # we will use this to get all the information
         probe_array = main_pod.pr_view.storage.data
         obj_array = main_pod.ob_view.storage.data
         exit_wave_array = main_pod.ex_view.storage.data
-        mask_array = mask_storages.data.astype(np.float32) # can we have booleans?
+        mask_array = mask_storages.data.astype(FLOAT_TYPE) # can we have booleans?
         diff_array = diffraction_storages_to_iterate.data
     return {'diffraction': diff_array,
             'probe': probe_array,

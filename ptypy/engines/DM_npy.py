@@ -138,7 +138,7 @@ class DMNpy(DM):
         self.propagator = {}
         for dID, _diffs in self.di.S.iteritems():
             self.vectorised_scan[dID] = du.pod_to_arrays(self, dID)
-            first_view_id = self.vectorised_scan[dID]['meta']['view_IDs'][0]
+            first_view_id = self.vectorised_scan[dID]['meta']['view_IDs'][5]
             self.propagator[dID] = self.di.V[first_view_id].pod.geometry.propagator
 
 
@@ -162,7 +162,8 @@ class DMNpy(DM):
                                                                  self.vectorised_scan[dID]['probe'],
                                                                  self.vectorised_scan[dID]['exit wave'],
                                                                  self.vectorised_scan[dID]['meta']['addr'],
-                                                                 self.propagator[dID])
+                                                                 self.propagator[dID],
+                                                                 pbound=self.pbound[dID])
 
                 t2 = time.time()
                 tf += t2 - t1
@@ -194,20 +195,16 @@ class DMNpy(DM):
         """
         error_dct = {}
         for name, di_view in self.di.views.iteritems():
-            if not di_view.active:
-                continue
+
             pbound = self.pbound[di_view.storage.ID]
             error_dct[name] = basic_fourier_update(di_view,
                                                    pbound=pbound,
                                                    alpha=self.p.alpha)
         return error_dct
 
-    def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, propagator):
+    def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, propagator, pbound):
         error_dct = {}
-        pbound = []
-        for name, di_view in self.di.views.iteritems():
-            pbound.append(self.pbound[di_view.storage.ID])
-        pbound = np.array(pbound)
+
         exit_wave, errors = con.difference_map_fourier_constraint(mask,
                                                                   Idata,
                                                                   obj,
@@ -217,8 +214,8 @@ class DMNpy(DM):
                                                                   prefilter=propagator.pre_fft,
                                                                   postfilter=propagator.post_fft,
                                                                   pbound=pbound,
-                                                                  alpha=1.0,
-                                                                  LL_error=True)
+                                                                  alpha=self.p.alpha,
+                                                                  LL_error=False)
 
         k=0
         for idx, name in self.di.views.iteritems():

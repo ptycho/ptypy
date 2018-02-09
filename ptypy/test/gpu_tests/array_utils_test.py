@@ -5,7 +5,7 @@ Tests for the array_utils module
 
 import unittest
 import numpy as np
-
+from ptypy.gpu import FLOAT_TYPE
 from ptypy.gpu import array_utils as au
 
 
@@ -56,7 +56,7 @@ class ArrayUtilsTest(unittest.TestCase):
                               (0, 0, 0),
                               (1, 0, 0)])
 
-        out = au.sum_to_buffer(in1, outshape, in1_addr, out1_addr)
+        out = au.sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype=FLOAT_TYPE)
         np.testing.assert_array_equal(out, expected_out)
 
 

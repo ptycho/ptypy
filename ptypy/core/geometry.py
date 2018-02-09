@@ -588,8 +588,8 @@ class BasicFarfieldPropagator(object):
         # Factors for inverse operation
         self.pre_ifft = self.post_fft.conj()
         self.post_ifft = self.pre_fft.conj()
-
         self.sc, self.isc = self.FFTch.assign_scaling(self.sh)
+
 
     def fw(self, W):
         """

@@ -6,7 +6,7 @@ Should have all the engine updates
 '''
 
 import numpy as np
-
+from . import COMPLEX_TYPE
 
 def difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha):
     '''
@@ -20,7 +20,7 @@ def difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha):
 
 def scan_and_multiply(probe, obj, exit_shape, addresses):
     sh = exit_shape
-    po = np.zeros((sh[0], sh[1], sh[2]), dtype=obj.dtype)
+    po = np.zeros((sh[0], sh[1], sh[2]), dtype=COMPLEX_TYPE)
     for pa, oa, ea, _da, _ma in addresses:
         po[ea] = np.multiply(probe[pa[0], pa[1]:(pa[1] + sh[1]), pa[2]:(pa[2] + sh[2])],
                              obj[oa[0], oa[1]:(oa[1] + sh[1]), oa[2]:(oa[2] + sh[2])])
