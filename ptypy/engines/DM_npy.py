@@ -138,7 +138,7 @@ class DMNpy(DM):
         self.propagator = {}
         for dID, _diffs in self.di.S.iteritems():
             self.vectorised_scan[dID] = du.pod_to_arrays(self, dID)
-            first_view_id = self.vectorised_scan[dID]['meta']['view_IDs'][5]
+            first_view_id = self.vectorised_scan[dID]['meta']['view_IDs'][0]
             self.propagator[dID] = self.di.V[first_view_id].pod.geometry.propagator
 
 
@@ -165,6 +165,8 @@ class DMNpy(DM):
                                                                  self.propagator[dID],
                                                                  pbound=self.pbound[dID])
 
+
+
                 t2 = time.time()
                 tf += t2 - t1
 
@@ -176,6 +178,9 @@ class DMNpy(DM):
 
                 # count up
                 self.curiter +=1
+
+
+
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)

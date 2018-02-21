@@ -11,7 +11,7 @@ import array_utils as au
 from . import COMPLEX_TYPE, FLOAT_TYPE
 
 def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound):
-    renormed_f = np.zeros(f.shape, dtype=COMPLEX_TYPE)
+    renormed_f = np.zeros(f.shape, dtype=np.complex128)
     for _pa, _oa, ea, da, ma in addr_info:
         if pbound is None:
             fm = (1 - mask[ma[0]]) + mask[ma[0]] * fmag[da[0]] / (af[da[0]] + 1e-10)
@@ -26,16 +26,14 @@ def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pboun
             renormed_f[ea[0]] = f[ea[0]]
     return renormed_f
 
-
 def get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object):
-    df = np.zeros(exit_wave.shape, dtype=COMPLEX_TYPE)
+    df = np.zeros(exit_wave.shape, dtype=np.complex128)
     for _pa, _oa, ea, da, ma in addr_info:
         if (pbound is None) or (err_fmag[da[0]] > pbound):
             df[ea[0]] = np.subtract(backpropagated_solution[ea[0]], probe_object[ea[0]])
         else:
             df[ea[0]] = alpha * np.subtract(probe_object[ea[0]], exit_wave[ea[0]])
     return df
-
 
 def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, prefilter, postfilter, pbound=None, alpha=1.0, LL_error=True):
     '''
@@ -58,22 +56,21 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     else:
         err_phot = np.zeros(Idata.shape[0], dtype=FLOAT_TYPE)
 
-    # # Propagate the exit waves
     constrained = difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha)
     f = farfield_propagator(constrained, prefilter, postfilter, direction='forward')
     pa, oa, ea, da, ma = zip(*addr_info)
     af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)
 
-    fmag = np.sqrt(Idata)
+    fmag = np.sqrt(np.abs(Idata))
     af = np.sqrt(af2)
     # # Fourier magnitudes deviations(current_solution, pbound, measured_solution, mask, addr)
     err_fmag = far_field_error(af, fmag, mask)
 
-    renormed_f = renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
+    vectorised_rfm = renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
 
     probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
 
-    backpropagated_solution = farfield_propagator(renormed_f,
+    backpropagated_solution = farfield_propagator(vectorised_rfm,
                                                   postfilter.conj(),
                                                   prefilter.conj(),
                                                   direction='backward')

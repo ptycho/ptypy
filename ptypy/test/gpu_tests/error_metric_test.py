@@ -58,26 +58,20 @@ class ErrorMetricTest(unittest.TestCase):
         for name, view in PodPtychoInstance.diff.V.iteritems():
             ptypy_error = ptypy_error_metric[name]
             numpy_error = error_metric[name]
-            np.testing.assert_allclose(ptypy_error, numpy_error, rtol=1e-3)
+            np.testing.assert_array_equal(ptypy_error, numpy_error)
 
     def test_far_field_error(self):
         PtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
         af, fmag, mask = self.get_current_and_measured_solution(PtychoInstance)
-        vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
-        addr = vectorised_scan['meta']['addr']  # probably want to extract these at a later date, but just to get stuff going...
-        pbound = np.array([None] * len(addr))
         far_field_error(af, fmag, mask)
 
     def test_far_field_error_UNITY(self):
         PtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
         PodPtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
-        vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
-        addr = vectorised_scan['meta']['addr']  # probably want to extract these at a later date, but just to get stuff going...
-        pbound = np.array([None] * len(addr))
         af, fmag, mask = self.get_current_and_measured_solution(PtychoInstance)
         fmag_npy = far_field_error(af, fmag, mask)
         fmag_ptypy = self.get_ptypy_far_field_error(PodPtychoInstance)
-        np.testing.assert_allclose(fmag_ptypy, fmag_npy)
+        np.testing.assert_array_equal(fmag_ptypy, fmag_npy)
 
 
     def get_current_and_measured_solution(self, a_ptycho_instance):
