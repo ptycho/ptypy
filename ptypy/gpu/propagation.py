@@ -15,13 +15,14 @@ def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None,
     :return: The transformed stack.
     '''
 
+    dtype = data_to_be_transformed.dtype
     if direction is 'forward':
-        fft = lambda x: np.fft.fft2(x, axes=(-2, -1)).astype(COMPLEX_TYPE)
+        fft = lambda x: np.fft.fft2(x, axes=(-2, -1)).astype(dtype)
         # fft = sci.fftpack.fft2
         sc = 1.0 / np.sqrt(np.prod(data_to_be_transformed.shape[-2:]))
 
     elif direction is 'backward':
-        fft = lambda x: np.fft.ifft2(x,  axes=(-2, -1)).astype(COMPLEX_TYPE)
+        fft = lambda x: np.fft.ifft2(x,  axes=(-2, -1)).astype(dtype)
         # fft = sci.fftpack.ifft2
 
         sc = np.sqrt(np.prod(data_to_be_transformed.shape[-2:]))
@@ -29,14 +30,14 @@ def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None,
     if (prefilter is None) and (postfilter is None):
         return fft(data_to_be_transformed) * sc
     elif (prefilter is None) and (postfilter is not None):
-        postfilter = postfilter.astype(COMPLEX_TYPE)
+        postfilter = postfilter.astype(dtype)
         return np.multiply(postfilter, fft(data_to_be_transformed)) * sc
     elif (prefilter is not None) and (postfilter is None):
-        prefilter = prefilter.astype(COMPLEX_TYPE)
+        prefilter = prefilter.astype(dtype)
         return fft(np.multiply(data_to_be_transformed, prefilter))* sc
     elif (prefilter is not None) and (postfilter is not None):
-        prefilter = prefilter.astype(COMPLEX_TYPE)
-        postfilter = postfilter.astype(COMPLEX_TYPE)
+        prefilter = prefilter.astype(dtype)
+        postfilter = postfilter.astype(dtype)
         return np.multiply(postfilter, fft(np.multiply(data_to_be_transformed, prefilter))) * sc
 
 def sqrt_abs(diffraction):

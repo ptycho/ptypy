@@ -17,11 +17,10 @@ def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pboun
             fm = (1 - mask[ma[0]]) + mask[ma[0]] * fmag[da[0]] / (af[da[0]] + 1e-10)
             renormed_f[ea[0]] = np.multiply(fm, f[ea[0]])
         elif (err_fmag[da[0]] > pbound):
-
             # Power bound is applied
             fdev = af[da[0]] - fmag[da[0]]
             renorm = np.sqrt(pbound / err_fmag[da[0]])
-            fm = (1 - mask[ma[0]]) + mask[ma[0]] * (fmag[da[0]] + fdev[da[0]] * renorm) / (af[da[0]] + 1e-10)
+            fm = (1 - mask[ma[0]]) + mask[ma[0]] * (fmag[da[0]] + fdev * renorm) / (af[da[0]] + 1e-10)
             renormed_f[ea[0]] = np.multiply(fm, f[ea[0]])
         else:
             renormed_f[ea[0]] = f[ea[0]]
@@ -32,7 +31,6 @@ def get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wav
     df = np.zeros(exit_wave.shape, dtype=COMPLEX_TYPE)
     for _pa, _oa, ea, da, ma in addr_info:
         if (pbound is None) or (err_fmag[da[0]] > pbound):
-            print "here"
             df[ea[0]] = np.subtract(backpropagated_solution[ea[0]], probe_object[ea[0]])
         else:
             df[ea[0]] = alpha * np.subtract(probe_object[ea[0]], exit_wave[ea[0]])

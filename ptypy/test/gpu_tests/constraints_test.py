@@ -171,12 +171,14 @@ class ConstraintsTest(unittest.TestCase):
     def test_renormalise_fourier_magnitudes_pbound_UNITY(self):
         alpha = 1.0
         pbound = 0.597053604126
+
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         master_pod = PtychoInstance.diff.V[first_view_id].pod
         propagator = master_pod.geometry.propagator
-        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+
+        addr = vectorised_scan['meta']['addr']
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
@@ -197,13 +199,15 @@ class ConstraintsTest(unittest.TestCase):
         err_fmag = far_field_error(af, fmag, mask)
         err_fmag = np.ones_like(err_fmag)* 145.824958919
         vectorised_rfm = renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
-        POD_ptycho_instance = tu.get_ptycho_instance('pod_to_numpy_test')
-        ptypy_renormalised_fourier_magnitudes, ptypy_back_propagated_solution, ptypy_differences, ptypy_probe_object = self.ptypy_get_renormalised_fourier_magnitudes(POD_ptycho_instance,
-                                                                                                                    pbound, ferr=145.824958919)
-        print ptypy_renormalised_fourier_magnitudes.dtype, vectorised_rfm.dtype
-        np.testing.assert_allclose(ptypy_renormalised_fourier_magnitudes,
-                                   vectorised_rfm,
-                                   err_msg="The POD based and vectorised fourier magnitude renomalisation is not consistent.")
+        ptypy_result = self.ptypy_get_renormalised_fourier_magnitudes(tu.get_ptycho_instance('pod_to_numpy_test'),
+                                                                      pbound,
+                                                                      ferr=145.824958919)
+
+        # double check the inputs
+
+        np.testing.assert_allclose(ptypy_result['renormalised'],
+                                    vectorised_rfm,
+                                    err_msg="The POD based and vectorised fourier magnitude renomalisation is not consistent.")
 
     def test_difference_map_fourier_constraint(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
@@ -215,7 +219,6 @@ class ConstraintsTest(unittest.TestCase):
         exit_wave = vectorised_scan['exit wave']
         diffraction = vectorised_scan['diffraction']
         mask = vectorised_scan['mask']
-        view_names = PtychoInstance.diff.views.keys()
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         master_pod = PtychoInstance.diff.V[first_view_id].pod
         propagator = master_pod.geometry.propagator
@@ -238,23 +241,18 @@ class ConstraintsTest(unittest.TestCase):
 
         # now convert to arrays
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
-        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
-        probe = vectorised_scan['probe']
-        obj = vectorised_scan['obj']
-        exit_wave = vectorised_scan['exit wave']
-        diffraction = vectorised_scan['diffraction']
-        mask = vectorised_scan['mask']
 
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         master_pod = PtychoInstance.diff.V[first_view_id].pod
         propagator = master_pod.geometry.propagator
+
         ptypy_ewf, ptypy_error= self.ptypy_difference_map_fourier_constraint(PodPtychoInstance)
-        exit_wave, errors = difference_map_fourier_constraint(mask,
-                                                              diffraction,
-                                                              obj,
-                                                              probe,
-                                                              exit_wave,
-                                                              addr,
+        exit_wave, errors = difference_map_fourier_constraint(vectorised_scan['mask'],
+                                                              vectorised_scan['diffraction'],
+                                                              vectorised_scan['obj'],
+                                                              vectorised_scan['probe'],
+                                                              vectorised_scan['exit wave'],
+                                                              vectorised_scan['meta']['addr'],
                                                               prefilter=propagator.pre_fft,
                                                               postfilter=propagator.post_fft,
                                                               pbound=None,
@@ -262,14 +260,8 @@ class ConstraintsTest(unittest.TestCase):
                                                               LL_error=True)
 
         for idx, key in enumerate(ptypy_ewf.keys()):
-            # print ptypy_ewf[key].dtype, exit_wave.dtype
-            # import pylab as plt
-            # plt.figure('ratio')
-            # plt.imshow(np.abs(ptypy_ewf[key])/ np.abs(exit_wave[idx]), interpolation='nearest')
-            # plt.colorbar()
-            # plt.show()
-
-            np.testing.assert_allclose(ptypy_ewf[key],
+            print idx, ptypy_ewf[key].dtype, exit_wave[idx].dtype
+            np.testing.assert_equal(ptypy_ewf[key],
                                        exit_wave[idx],
                                        err_msg="The array-based and pod-based exit waves are not consistent")
 
@@ -309,8 +301,8 @@ class ConstraintsTest(unittest.TestCase):
         for dname, diff_view in a_ptycho_instance.diff.views.iteritems():
             di_view = a_ptycho_instance.diff.V[dname]
             error_dct[dname] = basic_fourier_update(di_view,
-                                                   pbound=None,
-                                                   alpha=1.0)
+                                                    pbound=None,
+                                                    alpha=1.0)
             for name, pod in di_view.pods.iteritems():
                 exit_wave[name] = pod.exit
 
@@ -319,11 +311,13 @@ class ConstraintsTest(unittest.TestCase):
         return exit_wave, error_dct
 
     def ptypy_get_renormalised_fourier_magnitudes(self, a_ptycho_instance, pbound, ferr=None):
+        out_dict = {}
         alpha = 1.0
         renormalised = []
         differences = []
         backpropagated = []
         probe_object = []
+
         for name, diff_view in a_ptycho_instance.di.views.iteritems():
             f = {}
 
@@ -335,17 +329,14 @@ class ConstraintsTest(unittest.TestCase):
 
             # Get the mask
             fmask = diff_view.pod.mask
-
             # Propagate the exit waves
             for name, pod in diff_view.pods.iteritems():
                 f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
                                  - alpha * pod.exit)
-
                 af2 += u.abs2(f[name])
 
             fmag = np.sqrt(np.abs(I))
             af = np.sqrt(af2)
-
             # Fourier magnitudes deviations
             fdev = af - fmag
             if ferr is None:
@@ -357,7 +348,7 @@ class ConstraintsTest(unittest.TestCase):
                 # No power bound
                 fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
                 for name, pod in diff_view.pods.iteritems():
-                    renormalised_fourier_space = (fm * f[name]).astype(COMPLEX_TYPE)
+                    renormalised_fourier_space = (fm * f[name])
                     backpropagated_solution = pod.bw(renormalised_fourier_space)
                     backpropagated.append(backpropagated_solution)
                     probe_object_mult = pod.probe * pod.object
@@ -369,7 +360,9 @@ class ConstraintsTest(unittest.TestCase):
             elif err_fmag > pbound:
                 # Power bound is applied
                 renorm = np.sqrt(pbound / err_fmag)
-                fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
+
+                fm =  (1 - fmask) + fmask * (fmag + fdev * renorm)/ (af + 1e-10)
+
                 for name, pod in diff_view.pods.iteritems():
                     renormalised_fourier_space = (fm * f[name])
                     backpropagated_solution = pod.bw(renormalised_fourier_space)
@@ -392,7 +385,11 @@ class ConstraintsTest(unittest.TestCase):
                     renormalised.append(renormalised_fourier_space)
                     differences.append(df)
 
-        return np.array(renormalised), np.array(backpropagated), np.array(differences), np.array(probe_object)
+        out_dict['renormalised'] = np.array(renormalised)
+        out_dict['backpropagated'] = np.array(backpropagated)
+        out_dict['differences'] = np.array(differences)
+        out_dict['probe_object'] = np.array(probe_object)
+        return  out_dict
 
 if __name__ == '__main__':
     unittest.main()
