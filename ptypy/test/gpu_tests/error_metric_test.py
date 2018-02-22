@@ -8,7 +8,7 @@ import utils as tu
 from ptypy.gpu import data_utils as du
 import ptypy.utils as u
 from collections import OrderedDict
-from ptypy.gpu.error_metrics import log_likelihood, far_field_error
+from ptypy.gpu.error_metrics import log_likelihood, far_field_error, realspace_error
 
 
 class ErrorMetricTest(unittest.TestCase):
@@ -28,7 +28,6 @@ class ErrorMetricTest(unittest.TestCase):
         exit_wave = vectorised_scan['exit wave']
         diffraction = vectorised_scan['diffraction']
         log_likelihood(probe, obj, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
-
 
     def test_loglikelihood_numpy_UNITY(self):
         '''
@@ -73,10 +72,8 @@ class ErrorMetricTest(unittest.TestCase):
         fmag_ptypy = self.get_ptypy_far_field_error(PodPtychoInstance)
         np.testing.assert_array_equal(fmag_ptypy, fmag_npy)
 
-
     def get_current_and_measured_solution(self, a_ptycho_instance):
         alpha = 1.0
-
         fmag = []
         af = []
         mask = []
@@ -94,7 +91,6 @@ class ErrorMetricTest(unittest.TestCase):
             af.append(np.sqrt(af2))
         return np.array(af), np.array(fmag), np.array(mask)
 
-
     def get_ptypy_far_field_error(self, a_ptycho_instance):
 
         err_fmag = []
@@ -103,7 +99,6 @@ class ErrorMetricTest(unittest.TestCase):
             fdev = af[i] - fmag[i]
             err_fmag.append(np.sum(mask[i] * fdev ** 2) / mask[i].sum())
         return np.array(err_fmag)
-
 
     def get_ptypy_loglikelihood(self, a_ptycho_instance):
         error_dct = {}
@@ -117,7 +112,6 @@ class ErrorMetricTest(unittest.TestCase):
             error_dct[dname] = (np.sum(fmask * (LL - I) ** 2 / (I + 1.))
                             / np.prod(LL.shape))
         return error_dct
-
 
 if __name__ == '__main__':
     unittest.main()

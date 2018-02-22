@@ -317,7 +317,6 @@ class ConstraintsTest(unittest.TestCase):
                                                               LL_error=True)
 
         for idx, key in enumerate(ptypy_ewf.keys()):
-            print idx, ptypy_ewf[key].dtype, exit_wave[idx].dtype
             np.testing.assert_array_equal(ptypy_ewf[key],
                                        exit_wave[idx],
                                        err_msg="The array-based and pod-based exit waves are not consistent")
@@ -347,9 +346,8 @@ class ConstraintsTest(unittest.TestCase):
         np.testing.assert_array_equal(npy_phot,
                                    ptypy_phot,
                                    err_msg="The array-based and pod-based phot errors are not consistent")
-
-
-        np.testing.assert_array_equal(npy_exit,
+        # there is a slight difference in numpy in the way the mean is calculated here.  It 1e-13 and a diagnostic so almost equal is fine
+        np.testing.assert_array_almost_equal(npy_exit,
                                    ptypy_exit,
                                    err_msg="The array-based and pod-based exit errors are not consistent")
 
