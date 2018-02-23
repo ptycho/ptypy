@@ -156,7 +156,7 @@ class DMNpy(DM):
 
                 # Fourier update
                 # error_dct = self.fourier_update()
-                exit_wave, error_dct = self.numpy_fourier_update(self.vectorised_scan[dID]['mask'],
+                self.vectorised_scan[dID]['exit wave'], error_dct = self.numpy_fourier_update(self.vectorised_scan[dID]['mask'],
                                                                  self.vectorised_scan[dID]['diffraction'],
                                                                  self.vectorised_scan[dID]['obj'],
                                                                  self.vectorised_scan[dID]['probe'],
@@ -191,7 +191,7 @@ class DMNpy(DM):
         """
         Try deleting ever helper container.
         """
-        super(DMNpy, self).engine_finalize(self)
+        super(DMNpy, self).engine_finalize()
         # and then something to clean up the gpu
 
     def fourier_update(self):

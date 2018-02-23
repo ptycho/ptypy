@@ -23,7 +23,7 @@ def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pboun
             fm = (1 - mask[ma[0]]) + mask[ma[0]] * (fmag[da[0]] + fdev * renorm) / (af[da[0]] + 1e-10)
             renormed_f[ea[0]] = np.multiply(fm, f[ea[0]])
         else:
-            renormed_f[ea[0]] = f[ea[0]]
+            renormed_f[ea[0]] = np.zeros_like(f[ea[0]])
     return renormed_f
 
 def get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object):
