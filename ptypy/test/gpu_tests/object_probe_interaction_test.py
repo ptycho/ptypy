@@ -7,64 +7,38 @@ import unittest
 import numpy as np
 import utils as tu
 from ptypy.gpu import data_utils as du
-from ptypy.gpu import object_probe_interaction as opi
+from ptypy.array_based import object_probe_interaction as opi
+from ptypy.gpu import object_probe_interaction as gopi
 from collections import OrderedDict
 
 class ObjectProbeInteractionTest(unittest.TestCase):
-    def setUp(self):
-        self.PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
+
+    @unittest.skip("This method is not implemented yet")
+    def test_scan_and_multiply_UNITY(self):
+        PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
-        self.vectorised_scan = du.pod_to_arrays(self.PtychoInstance, 'S0000')
-        self.addr = self.vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
-        self.probe = self.vectorised_scan['probe']
-        self.obj = self.vectorised_scan['obj']
-        self.exit_wave = self.vectorised_scan['exit wave']
+        vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
+        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        probe = vectorised_scan['probe']
+        obj = vectorised_scan['obj']
+        exit_wave = vectorised_scan['exit wave']
+        addr_info = addr[:, 0]
+        po = opi.scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        gpo = gopi.scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        np.testing.assert_array_equal(po, gpo)
 
-    def test_scan_and_multiply(self):
-        blank = np.ones_like(self.probe)
-        addr_info = self.addr[:, 0]
-
-        po = opi.scan_and_multiply(blank, self.obj, self.exit_wave.shape, addr_info)
-        for idx, p in enumerate(self.PtychoInstance.pods.itervalues()):
-            np.testing.assert_array_equal(po[idx], p.object)
-
-    def test_exit_wave_calculation(self):
-        addr_info = self.addr[:, 0]
-
-        po = opi.scan_and_multiply(self.probe, self.obj, self.exit_wave.shape, addr_info)
-        for idx, p in enumerate(self.PtychoInstance.pods.itervalues()):
-            np.testing.assert_array_equal(po[idx], p.object * p.probe)
-
-    
-    def test_difference_map_realspace_constraint(self):
-        opi.difference_map_realspace_constraint(self.obj,
-                                                self.probe,
-                                                self.exit_wave,
-                                                self.addr,
-                                                alpha=1.0)
-
+    @unittest.skip("This method is not implemented yet")
     def test_difference_map_realspace_constraint_UNITY(self):
-        ptypy_dm_constraint = self.ptypy_apply_difference_map()
-        numpy_dm_constraint = opi.difference_map_realspace_constraint(self.obj,
-                                                                      self.probe,
-                                                                      self.exit_wave,
-                                                                      self.addr,
-                                                                      alpha=1.0)
-        for idx, key in enumerate(ptypy_dm_constraint):
-            np.testing.assert_allclose(ptypy_dm_constraint[key], numpy_dm_constraint[idx])
-
-
-
-
-    def ptypy_apply_difference_map(self):
-        f = OrderedDict()
-        alpha = 1.0
-        for dname, diff_view in self.PtychoInstance.diff.views.iteritems():
-            for name, pod in diff_view.pods.iteritems():
-                if not pod.active:
-                    continue
-                f[name] = (1 + alpha) * pod.probe * pod.object - alpha * pod.exit
-        return f
+        PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
+        # now convert to arrays
+        vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
+        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        probe = vectorised_scan['probe']
+        obj = vectorised_scan['obj']
+        exit_wave = vectorised_scan['exit wave']
+        po = opi.difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha=1.0)
+        gpo = gopi.difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha=1.0)
+        np.testing.assert_array_equal(po, gpo)
 
 
 if __name__ == "__main__":
