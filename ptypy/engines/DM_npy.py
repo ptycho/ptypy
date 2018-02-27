@@ -17,8 +17,8 @@ from .utils import basic_fourier_update
 from DM import DM
 from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla
-from ..gpu import data_utils as du
-from ..gpu import constraints as con
+from ..array_based import data_utils as du
+from ..array_based import constraints as con
 
 
 __all__ = ['DMNpy']
