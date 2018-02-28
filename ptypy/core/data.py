@@ -331,7 +331,7 @@ class PtyScan(object):
 
         # A note about how much this scan class knows about the number
         # of frames expected. PtydScan uses this information.
-        self.info.num_frames_actual = self.num_frames
+        self.meta.num_frames = self.num_frames
         parallel.barrier()
         """
         #logger.info('#######  MPI Report: ########\n')
@@ -1206,19 +1206,20 @@ class PtydScan(PtyScan):
             # Get number of frames supposedly in the file
             # FIXME: try/except clause only for backward compatibilty 
             # for .ptyd files created priot to commit 2e626ff
-            try:
-                source_frames = f.get('info/num_frames_actual')[...].item()
-            except TypeError:
-                source_frames = len(f.get('info/positions_scan')[...])
+            #try:
+            #    source_frames = f.get('info/num_frames_actual')[...].item()
+            #except TypeError:
+            #    source_frames = len(f.get('info/positions_scan')[...])
             f.close()
 
         if check is None:
             raise IOError('Ptyd source %s contains no data. Load aborted'
                           % source)
-
+        """
         if source_frames is None:
             logger.warning('Ptyd source is not aware of the total'
                            'number of diffraction frames expected')
+        """
 
         # Get meta information
         meta = u.Param(io.h5read(self.source, 'meta')['meta'])
@@ -1238,6 +1239,7 @@ class PtydScan(PtyScan):
             # Initialize parent class and fill self
             super(PtydScan, self).__init__(p, **kwargs)
 
+        """    
         if source_frames is not None:
             if self.num_frames is None:
                 self.num_frames = source_frames
@@ -1248,6 +1250,7 @@ class PtydScan(PtyScan):
             # but we cannot do anything about it. This should be dealt
             # with with a flag in the meta package probably.
             pass
+        """
 
         # Other instance attributes
         self._checked = {}

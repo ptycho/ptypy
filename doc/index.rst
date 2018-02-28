@@ -1,12 +1,12 @@
 Welcome Ptychonaut!
 ===================
      
-|ptypy| [#pronounciation]_ is a
+|ptypy| [#Enders2016]_ is a
 framework for scientific ptychography compiled by 
 P.Thibault and B. Enders and licensed under the GPLv2 license.
 
 It comprises 7 years of experience in the field of ptychography condensed  
-to a veratile python package. The package covers the whole path of 
+to a versatile python package. The package covers the whole path of
 ptychographic analysis after the actual experiment 
 - from data management to reconstruction to visualization.
 
@@ -40,8 +40,8 @@ Highlights
   computer displays the reconstruction progress.
   
 
-* **Mixed-state** reconstructions of probe and object [Thi2013]_ for 
-  overcoming partial coherence or related phenomane.
+* **Mixed-state** reconstructions of probe and object [#Thi2013]_ for
+  overcoming partial coherence or related phenomena.
   
 * **On-the-fly** reconstructions (while data is being acquired) using the
   the :any:`PtyScan` class in the linking mode :ref:`linking mode<case_flyscan>` 
@@ -68,9 +68,9 @@ Quicklinks
 
 .. rubric:: Footnotes
 
-.. [#pronounciation] Pronounced *typy*, forget the *p*, as in psychology.
+.. [#Enders2016] B.Enders and P.Thibault, **Proc. R. Soc. A** 472, 20160640 (2016), `doi <http://dx.doi.org/10.1098/rspa.2016.0640>`_
 
-.. [Thi2013] P.Thibault and A.Menzel, **Nature** 494, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`_
+.. [#Thi2013] P.Thibault and A.Menzel, **Nature** 494, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`_
 
 .. [#ml] P.Thibault and M.Guizar-Sicairos, **New J. of Phys.** 14, 6 (2012), `doi <http://dx.doi.org/10.1126/science.1158573>`_
 
