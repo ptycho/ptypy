@@ -10,6 +10,8 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 
+from copy import deepcopy
+
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
@@ -17,8 +19,8 @@ from .utils import basic_fourier_update
 from DM import DM
 from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla
-from ..gpu import data_utils as du
-from ..gpu import constraints as con
+from ..array_based import data_utils as du
+from ..array_based import constraints as con
 
 
 __all__ = ['DMNpy']
@@ -125,6 +127,7 @@ class DMNpy(DM):
         Difference map reconstruction engine.
         """
         super(DMNpy, self).__init__(ptycho_parent, pars)
+        self.thingamejog = 0
 
     def engine_prepare(self):
         """
@@ -149,28 +152,36 @@ class DMNpy(DM):
         to = 0.
         tf = 0.
         # run the data for `num` iterations on the cards, then pull the relevant off to sync
-        for dID, _diffs in self.di.S.iteritems():
+        # error_dct = {}
+        # k=0
+        # for idx, name in self.di.views.iteritems():
+        #     error_dct[idx] = np.zeros((3,))
+        #     k+=1
 
+
+
+        for dID, _diffs in self.di.S.iteritems():
             for it in range(num):
                 t1 = time.time()
 
                 # Fourier update
                 # error_dct = self.fourier_update()
-                self.vectorised_scan[dID]['exit wave'], error_dct = self.numpy_fourier_update(self.vectorised_scan[dID]['mask'],
-                                                                 self.vectorised_scan[dID]['diffraction'],
-                                                                 self.vectorised_scan[dID]['obj'],
-                                                                 self.vectorised_scan[dID]['probe'],
-                                                                 self.vectorised_scan[dID]['exit wave'],
-                                                                 self.vectorised_scan[dID]['meta']['addr'],
-                                                                 self.propagator[dID],
-                                                                 pbound=self.pbound[dID])
+                # if self.thingamejog < 1:
+                error_dct = self.numpy_fourier_update(self.vectorised_scan[dID]['mask'],
+                                                     self.vectorised_scan[dID]['diffraction'],
+                                                     self.vectorised_scan[dID]['obj'],
+                                                     self.vectorised_scan[dID]['probe'],
+                                                     self.vectorised_scan[dID]['exit wave'],
+                                                     self.vectorised_scan[dID]['meta']['addr'],
+                                                     self.propagator[dID],
+                                                     pbound=self.pbound[dID])
 
 
 
                 t2 = time.time()
                 tf += t2 - t1
 
-                # Overlap update
+
                 self.overlap_update()
 
                 t3 = time.time()
@@ -187,210 +198,26 @@ class DMNpy(DM):
         error = parallel.gather_dict(error_dct)
         return error
 
-    def engine_finalize(self):
-        """
-        Try deleting ever helper container.
-        """
-        super(DMNpy, self).engine_finalize()
-        # and then something to clean up the gpu
-
-    def fourier_update(self):
-        """
-        DM Fourier constraint update (including DM step).
-        """
-        error_dct = {}
-        for name, di_view in self.di.views.iteritems():
-
-            pbound = self.pbound[di_view.storage.ID]
-            error_dct[name] = basic_fourier_update(di_view,
-                                                   pbound=pbound,
-                                                   alpha=self.p.alpha)
-        return error_dct
-
     def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, propagator, pbound):
         error_dct = {}
 
-        exit_wave, errors = con.difference_map_fourier_constraint(mask,
-                                                                  Idata,
-                                                                  obj,
-                                                                  probe,
-                                                                  exit_wave,
-                                                                  addr,
-                                                                  prefilter=propagator.pre_fft,
-                                                                  postfilter=propagator.post_fft,
-                                                                  pbound=pbound,
-                                                                  alpha=self.p.alpha,
-                                                                  LL_error=False)
+        errors = con.difference_map_fourier_constraint(mask,
+                                                      Idata,
+                                                      obj,
+                                                      probe,
+                                                      exit_wave,
+                                                      addr,
+                                                      prefilter=propagator.pre_fft,
+                                                      postfilter=propagator.post_fft,
+                                                      pbound=pbound,
+                                                      alpha=self.p.alpha,
+                                                      LL_error=False)
 
         k=0
         for idx, name in self.di.views.iteritems():
             error_dct[idx] = errors[:, k]
             k+=1
 
-        return exit_wave, error_dct
+        return error_dct
 
-    def overlap_update(self):
-        """
-        DM overlap constraint update.
-        """
-        # Condition to update probe
-        do_update_probe = (self.p.probe_update_start <= self.curiter)
 
-        for inner in range(self.p.overlap_max_iterations):
-            pre_str = 'Iteration (Overlap) #%02d:  ' % inner
-
-            # Update object first
-            if self.p.update_object_first or (inner > 0):
-                # Update object
-                log(4, pre_str + '----- object update -----')
-                self.object_update()
-
-            # Exit if probe should not be updated yet
-            if not do_update_probe:
-                break
-
-            # Update probe
-            log(4, pre_str + '----- probe update -----')
-            change = self.probe_update()
-            log(4, pre_str + 'change in probe is %.3f' % change)
-
-            # Recenter the probe
-            self.center_probe()
-
-            # Stop iteration if probe change is small
-            if change < self.p.overlap_converge_factor:
-                break
-
-    def center_probe(self):
-        if self.p.probe_center_tol is not None:
-            for name, s in self.pr.storages.iteritems():
-                c1 = u.mass_center(u.abs2(s.data).sum(0))
-                c2 = np.asarray(s.shape[-2:]) // 2
-                # fft convention should however use geometry instead
-                if u.norm(c1 - c2) < self.p.probe_center_tol:
-                    break
-                # SC: possible BUG here, wrong input parameter
-                s.data[:] = u.shift_zoom(s.data,
-                                         (1.,) * 3,
-                                         (0, c1[0], c1[1]),
-                                         (0, c2[0], c2[1]))
-
-                log(4,'Probe recentered from %s to %s'
-                            % (str(tuple(c1)), str(tuple(c2))))
-
-    def object_update(self):
-        """
-        DM object update.
-        """
-        ob = self.ob
-        ob_nrm = self.ob_nrm
-
-        # Fill container
-        if not parallel.master:
-            ob.fill(0.0)
-            ob_nrm.fill(0.)
-        else:
-            for name, s in self.ob.storages.iteritems():
-                # The amplitude of the regularization term has to be scaled with the
-                # power of the probe (which is estimated from the power in diffraction patterns).
-                # This estimate assumes that the probe power is uniformly distributed through the
-                # array and therefore underestimate the strength of the probe terms.
-                cfact = self.p.object_inertia * self.mean_power *\
-                    (self.ob_viewcover.storages[name].data + 1.)
-
-                if self.p.obj_smooth_std is not None:
-                    logger.info(
-                        'Smoothing object, average cfact is %.2f'
-                        % np.mean(cfact).real)
-                    smooth_mfs = [0,
-                                  self.p.obj_smooth_std,
-                                  self.p.obj_smooth_std]
-                    s.data[:] = cfact * u.c_gf(s.data, smooth_mfs)
-                else:
-                    s.data[:] = s.data * cfact
-
-                ob_nrm.storages[name].fill(cfact)
-
-        # DM update per node
-        for name, pod in self.pods.iteritems():
-            if not pod.active:
-                continue
-            pod.object += pod.probe.conj() * pod.exit * pod.object_weight
-            ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
-
-        # Distribute result with MPI
-        for name, s in self.ob.storages.iteritems():
-            # Get the np arrays
-            nrm = ob_nrm.storages[name].data
-            parallel.allreduce(s.data)
-            parallel.allreduce(nrm)
-            s.data /= nrm
-
-            # A possible (but costly) sanity check would be as follows:
-            # if all((np.abs(nrm)-np.abs(cfact))/np.abs(cfact) < 1.):
-            #    logger.warning('object_inertia seem too high!')
-
-            # Clip object
-            if self.p.clip_object is not None:
-                clip_min, clip_max = self.p.clip_object
-                ampl_obj = np.abs(s.data)
-                phase_obj = np.exp(1j * np.angle(s.data))
-                too_high = (ampl_obj > clip_max)
-                too_low = (ampl_obj < clip_min)
-                s.data[too_high] = clip_max * phase_obj[too_high]
-                s.data[too_low] = clip_min * phase_obj[too_low]
-
-    def probe_update(self):
-        """
-        DM probe update.
-        """
-        pr = self.pr
-        pr_nrm = self.pr_nrm
-        pr_buf = self.pr_buf
-
-        # Fill container
-        # "cfact" fill
-        # BE: was this asymmetric in original code
-        # only because of the number of MPI nodes ?
-        if parallel.master:
-            for name, s in pr.storages.iteritems():
-                # Instead of Npts_scan, the number of views should be considered
-                # Please note that a call to s.views may be
-                # slow for many views in the probe.
-                cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
-                s.data[:] = cfact * s.data
-                pr_nrm.storages[name].fill(cfact)
-        else:
-            pr.fill(0.0)
-            pr_nrm.fill(0.0)
-
-        # DM update per node
-        for name, pod in self.pods.iteritems():
-            if not pod.active:
-                continue
-            pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
-            pr_nrm[pod.pr_view] += u.cabs2(pod.object) * pod.probe_weight
-
-        change = 0.
-
-        # Distribute result with MPI
-        for name, s in pr.storages.iteritems():
-            # MPI reduction of results
-            nrm = pr_nrm.storages[name].data
-            parallel.allreduce(s.data)
-            parallel.allreduce(nrm)
-            s.data /= nrm
-
-            # Apply probe support if requested
-            support = self.probe_support.get(name)
-            if support is not None:
-                s.data *= self.probe_support[name]
-
-            # Compute relative change in probe
-            buf = pr_buf.storages[name].data
-            change += u.norm2(s.data - buf) / u.norm2(s.data)
-
-            # Fill buffer with new probe
-            buf[:] = s.data
-
-        return np.sqrt(change / len(pr.storages))

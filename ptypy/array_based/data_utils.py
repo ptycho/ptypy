@@ -6,9 +6,6 @@ Created on 4 Jan 2018
 
 import numpy as np
 from . import FLOAT_TYPE
-# TODO
-# class Vectorizer
-
 
 
 def _vectorise_array_access(diff_storage):
@@ -47,14 +44,6 @@ def _vectorise_array_access(diff_storage):
     # store them for each storage
     return view_IDs, poe_ID, np.array(addr).astype(np.int32)
 
-def _devectorise_array_access(diff_storage):
-    '''
-    will the layers and dlow ever change? position correct probably
-    :param diff_storage: 
-    :return: 
-    '''
-    pass
-
 def pod_to_arrays(P, storage_id, scan_model='Full'):
     '''
     :param P. A ptycho instance
@@ -89,39 +78,3 @@ def pod_to_arrays(P, storage_id, scan_model='Full'):
             'mask': mask_array,
             'meta': meta}
 
-
-def array_to_pods(P, storage_id, array_dictionary, scan_model='Full'):
-    '''
-    :param P. A ptycho instance
-    :param storage_id The storage ID for this scan.
-    :param array_dictionary. A dictionary with any of the following in
-        a dictionary containing:
-        diffraction: The diffraction data
-        probe: the probe from the FIRST POD
-        obj: The object buffer
-        exit wave: The exit wave buffer
-        mask: The diffraction masks
-        meta: The meta data, containing an 'addr' array for the addresses
-    :param scan_model. The scan model to pack to.
-    :param P. A ptycho instance
-    :param storage_id The storage ID for this scan.
-
-    :return
-        An updated ptycho instance
-    '''
-
-
-    if scan_model is 'Full':
-        if 'obj' in array_dictionary.keys():
-            for name, s in P.ob.S.iteritems():
-                s.data[:] = array_dictionary['obj']
-        if 'probe' in array_dictionary.keys():
-            for name, s in P.pr.S.iteritems():
-                s.data[:] = array_dictionary['probe']
-
-        # costly but needed to sync back with
-        if 'exit wave' in array_dictionary.keys():
-            for name, s in P.ex.S.iteritems():
-                s.data[:] = array_dictionary['exit wave']
-
-    return P

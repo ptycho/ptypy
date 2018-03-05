@@ -13,17 +13,22 @@ from . import COMPLEX_TYPE, FLOAT_TYPE
 def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound):
     renormed_f = np.zeros(f.shape, dtype=np.complex128)
     for _pa, _oa, ea, da, ma in addr_info:
+        m = mask[ma[0]]
+        magnitudes = fmag[da[0]]
+        absolute_magnitudes = af[da[0]]
+        fourier_space_solution = f[ea[0]]
+        fourier_error = err_fmag[da[0]]
         if pbound is None:
-            fm = (1 - mask[ma[0]]) + mask[ma[0]] * fmag[da[0]] / (af[da[0]] + 1e-10)
-            renormed_f[ea[0]] = np.multiply(fm, f[ea[0]])
-        elif (err_fmag[da[0]] > pbound):
+            fm = (1 - m) + m * magnitudes / (absolute_magnitudes + 1e-10)
+            renormed_f[ea[0]] = np.multiply(fm, fourier_space_solution)
+        elif (fourier_error > pbound):
             # Power bound is applied
-            fdev = af[da[0]] - fmag[da[0]]
-            renorm = np.sqrt(pbound / err_fmag[da[0]])
-            fm = (1 - mask[ma[0]]) + mask[ma[0]] * (fmag[da[0]] + fdev * renorm) / (af[da[0]] + 1e-10)
-            renormed_f[ea[0]] = np.multiply(fm, f[ea[0]])
+            fdev = absolute_magnitudes - magnitudes
+            renorm = np.sqrt(pbound / fourier_error)
+            fm = (1 - m) + m * (magnitudes + fdev * renorm) / (absolute_magnitudes + 1e-10)
+            renormed_f[ea[0]] = np.multiply(fm, fourier_space_solution)
         else:
-            renormed_f[ea[0]] = np.zeros_like(f[ea[0]])
+            renormed_f[ea[0]] = np.zeros_like(fourier_space_solution)
     return renormed_f
 
 def get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object):
@@ -45,7 +50,6 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     :return: The updated iterant
             : fourier errors
     '''
-
     view_dlayer = 0 # what is this?
     addr_info = addr[:,(view_dlayer)] # addresses, object references
 
@@ -84,6 +88,6 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     if pbound is not None:
         err_fmag /= pbound
 
-    return exit_wave, np.array([err_fmag, err_phot, err_exit])
+    return np.array([err_fmag, err_phot, err_exit])
 
 
