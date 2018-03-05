@@ -396,21 +396,21 @@ class ConstraintsTest(unittest.TestCase):
         propagator = master_pod.geometry.propagator
 
         ptypy_ewf, ptypy_error= self.ptypy_difference_map_fourier_constraint(PodPtychoInstance)
-        exit_wave, errors = difference_map_fourier_constraint(vectorised_scan['mask'],
-                                                              vectorised_scan['diffraction'],
-                                                              vectorised_scan['obj'],
-                                                              vectorised_scan['probe'],
-                                                              vectorised_scan['exit wave'],
-                                                              vectorised_scan['meta']['addr'],
-                                                              prefilter=propagator.pre_fft,
-                                                              postfilter=propagator.post_fft,
-                                                              pbound=None,
-                                                              alpha=1.0,
-                                                              LL_error=True)
+        errors = difference_map_fourier_constraint(vectorised_scan['mask'],
+                                                  vectorised_scan['diffraction'],
+                                                  vectorised_scan['obj'],
+                                                  vectorised_scan['probe'],
+                                                  vectorised_scan['exit wave'],
+                                                  vectorised_scan['meta']['addr'],
+                                                  prefilter=propagator.pre_fft,
+                                                  postfilter=propagator.post_fft,
+                                                  pbound=None,
+                                                  alpha=1.0,
+                                                  LL_error=True)
 
         for idx, key in enumerate(ptypy_ewf.keys()):
             np.testing.assert_array_equal(ptypy_ewf[key],
-                                       exit_wave[idx],
+                                          vectorised_scan['exit wave'][idx],
                                        err_msg="The array-based and pod-based exit waves are not consistent")
 
         ptypy_fmag = []
@@ -455,21 +455,21 @@ class ConstraintsTest(unittest.TestCase):
         propagator = master_pod.geometry.propagator
 
         ptypy_ewf, ptypy_error= self.ptypy_difference_map_fourier_constraint(PodPtychoInstance, pbound=pbound)
-        exit_wave, errors = difference_map_fourier_constraint(vectorised_scan['mask'],
-                                                              vectorised_scan['diffraction'],
-                                                              vectorised_scan['obj'],
-                                                              vectorised_scan['probe'],
-                                                              vectorised_scan['exit wave'],
-                                                              vectorised_scan['meta']['addr'],
-                                                              prefilter=propagator.pre_fft,
-                                                              postfilter=propagator.post_fft,
-                                                              pbound=pbound,
-                                                              alpha=1.0,
-                                                              LL_error=True)
+        errors = difference_map_fourier_constraint(vectorised_scan['mask'],
+                                                  vectorised_scan['diffraction'],
+                                                  vectorised_scan['obj'],
+                                                  vectorised_scan['probe'],
+                                                  vectorised_scan['exit wave'],
+                                                  vectorised_scan['meta']['addr'],
+                                                  prefilter=propagator.pre_fft,
+                                                  postfilter=propagator.post_fft,
+                                                  pbound=pbound,
+                                                  alpha=1.0,
+                                                  LL_error=True)
 
         for idx, key in enumerate(ptypy_ewf.keys()):
             np.testing.assert_array_equal(ptypy_ewf[key],
-                                       exit_wave[idx],
+                                          vectorised_scan['exit wave'][idx],
                                        err_msg="The array-based and pod-based exit waves are not consistent")
 
         ptypy_fmag = []
@@ -514,21 +514,21 @@ class ConstraintsTest(unittest.TestCase):
         propagator = master_pod.geometry.propagator
 
         ptypy_ewf, ptypy_error = self.ptypy_difference_map_fourier_constraint(PodPtychoInstance, pbound=pbound)
-        exit_wave, errors = difference_map_fourier_constraint(vectorised_scan['mask'],
-                                                              vectorised_scan['diffraction'],
-                                                              vectorised_scan['obj'],
-                                                              vectorised_scan['probe'],
-                                                              vectorised_scan['exit wave'],
-                                                              vectorised_scan['meta']['addr'],
-                                                              prefilter=propagator.pre_fft,
-                                                              postfilter=propagator.post_fft,
-                                                              pbound=pbound,
-                                                              alpha=1.0,
-                                                              LL_error=True)
+        errors = difference_map_fourier_constraint(vectorised_scan['mask'],
+                                                  vectorised_scan['diffraction'],
+                                                  vectorised_scan['obj'],
+                                                  vectorised_scan['probe'],
+                                                  vectorised_scan['exit wave'],
+                                                  vectorised_scan['meta']['addr'],
+                                                  prefilter=propagator.pre_fft,
+                                                  postfilter=propagator.post_fft,
+                                                  pbound=pbound,
+                                                  alpha=1.0,
+                                                  LL_error=True)
 
         for idx, key in enumerate(ptypy_ewf.keys()):
             np.testing.assert_array_equal(ptypy_ewf[key],
-                                          exit_wave[idx],
+                                          vectorised_scan['exit wave'][idx],
                                           err_msg="The array-based and pod-based exit waves are not consistent")
 
         ptypy_fmag = []
