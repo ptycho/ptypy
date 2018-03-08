@@ -24,9 +24,24 @@ def sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype):
     :return: The real valued abs**2 array
     '''
     out1 = np.zeros(outshape, dtype=dtype)
+    inshape = in1.shape
     for i1, o1 in zip(in1_addr, out1_addr):
-        out1[o1[0]] += in1[i1[0]]
+        out1[o1[0], o1[1]:(o1[1] + inshape[1]), o1[2]:(o1[2] + inshape[2])] += in1[i1[0]]
     return out1
+
+def sum_to_buffer_inplace(in1, out, in1_addr, out1_addr):
+    '''
+    :param in1. An array . Can be inplace. Can be complex or real.
+    :param outshape. An array. Can be inplace. Can be complex or real.
+    :param in1_addr. An array . Can be inplace. Can be complex or real.
+    :param out1_addr. An array . Can be inplace. Can be complex or real.
+    :return: The real valued abs**2 array
+    '''
+    inshape = in1.shape
+    for i1, o1 in zip(in1_addr, out1_addr):
+        out[o1[0], o1[1]:(o1[1] + inshape[1]), o1[2]:(o1[2] + inshape[2])] += in1[i1[0]]
+
+
 
 def norm2(input):
     return np.sum(abs2(input))
@@ -99,3 +114,10 @@ def shift_zoom(c, zoom, cen_old, cen_new):
     offset = np.asarray(cen_old) - np.asarray(cen_new).dot(zoom)
 
     return affine_transform(np.real(c), zoom, offset) + 1j*affine_transform(np.imag(c), zoom, offset)
+
+
+def clip_complex_magnitudes_to_range(complex_input, clip_min, clip_max):
+    ampl = np.abs(complex_input)
+    phase = np.exp(1j * np.angle(complex_input))
+    ampl = np.clip(ampl, clip_min, clip_max)
+    complex_input = ampl * phase
