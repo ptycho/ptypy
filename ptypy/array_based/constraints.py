@@ -52,15 +52,17 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     '''
     view_dlayer = 0 # what is this?
     addr_info = addr[:,(view_dlayer)] # addresses, object references
+    probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
 
     # Buffer for accumulated photons
     # For log likelihood error # need to double check this adp
     if LL_error is True:
-        err_phot = log_likelihood(probe, obj, mask, exit_wave, Idata, prefilter, postfilter, addr)
+        err_phot = log_likelihood(probe_object, mask, exit_wave, Idata, prefilter, postfilter, addr)
     else:
         err_phot = np.zeros(Idata.shape[0], dtype=FLOAT_TYPE)
-
-    constrained = difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha)
+    
+    
+    constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
     f = farfield_propagator(constrained, prefilter, postfilter, direction='forward')
     pa, oa, ea, da, ma = zip(*addr_info)
     af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)
@@ -71,8 +73,6 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     err_fmag = far_field_error(af, fmag, mask)
 
     vectorised_rfm = renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
-
-    probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
 
     backpropagated_solution = farfield_propagator(vectorised_rfm,
                                                   postfilter.conj(),

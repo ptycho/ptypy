@@ -9,6 +9,7 @@ from ptypy.array_based import data_utils as du
 import ptypy.utils as u
 from collections import OrderedDict
 from ptypy.array_based.error_metrics import log_likelihood, far_field_error, realspace_error
+from ptypy.array_based.object_probe_interaction import scan_and_multiply
 
 
 class ErrorMetricTest(unittest.TestCase):
@@ -27,7 +28,11 @@ class ErrorMetricTest(unittest.TestCase):
         mask = vectorised_scan['mask']
         exit_wave = vectorised_scan['exit wave']
         diffraction = vectorised_scan['diffraction']
-        log_likelihood(probe, obj, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
+
+        view_dlayer = 0  # what is this?
+        addr_info = addr[:, (view_dlayer)]  # addresses, object references
+        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        log_likelihood(probe_object, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
 
     def test_loglikelihood_numpy_UNITY(self):
         '''
@@ -47,7 +52,12 @@ class ErrorMetricTest(unittest.TestCase):
         mask = vectorised_scan['mask']
         exit_wave = vectorised_scan['exit wave']
         diffraction = vectorised_scan['diffraction']
-        vals = log_likelihood(probe, obj, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
+        
+        view_dlayer = 0  # what is this?
+        addr_info = addr[:, (view_dlayer)]  # addresses, object references
+        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+
+        vals = log_likelihood(probe_object, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
         k = 0
         for name, view in PtychoInstance.diff.V.iteritems():
             error_metric[name] = vals[k]

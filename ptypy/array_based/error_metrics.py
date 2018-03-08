@@ -8,12 +8,11 @@ from . import FLOAT_TYPE
 import numpy as np
 
 
-def log_likelihood(probe, obj, mask, exit_wave, Idata, prefilter, postfilter, addr):
+def log_likelihood(probe_and_obj, mask, exit_wave, Idata, prefilter, postfilter, addr):
     view_dlayer=0
     addr_info = addr[:, view_dlayer]
     LLerror = np.zeros(Idata.shape[0], dtype=FLOAT_TYPE)
-    probe_and_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
-    ft = farfield_propagator(probe_and_object, prefilter, postfilter, direction='forward')
+    ft = farfield_propagator(probe_and_obj, prefilter, postfilter, direction='forward')
     abs2 = (np.multiply(ft, ft.conj())).real
     LL = np.zeros_like(Idata)
     for pa, oa, ea, da, ma in addr_info:

@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 import utils as tu
 from ptypy.array_based import data_utils as du
-from ptypy.array_based.constraints import difference_map_realspace_constraint
+from ptypy.array_based.constraints import difference_map_realspace_constraint, scan_and_multiply
 from ptypy.array_based.propagation import farfield_propagator
 import ptypy.array_based.array_utils  as au
 from ptypy.array_based import FLOAT_TYPE
@@ -29,8 +29,13 @@ class ErrorMetricTest(unittest.TestCase):
         diffraction=vectorised_scan['diffraction']
         mask = vectorised_scan['mask']
         exit_wave = vectorised_scan['exit wave']
-        ll = log_likelihood(probe, obj, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
-        gll = glog_likelihood(probe, obj, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
+        
+        view_dlayer = 0  # what is this?
+        addr_info = addr[:, (view_dlayer)]  # addresses, object references
+        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        
+        ll = log_likelihood(probe_object, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
+        gll = glog_likelihood(probe_object, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
         np.testing.assert_array_equal(ll, gll)
 
 
@@ -49,7 +54,10 @@ class ErrorMetricTest(unittest.TestCase):
         mask = vectorised_scan['mask']
         exit_wave = vectorised_scan['exit wave']
 
-        constrained = difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha=1.0)
+        view_dlayer = 0  # what is this?
+        addr_info = addr[:, (view_dlayer)]  # addresses, object references
+        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha=1.0)
         f = farfield_propagator(constrained, propagator.pre_fft, propagator.post_fft, direction='forward')
         pa, oa, ea, da, ma = zip(*addr_info)
         af2 = au.sum_to_buffer(au.abs2(f), diffraction.shape, ea, da, dtype=FLOAT_TYPE)

@@ -52,12 +52,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
+        
+        view_dlayer = 0 # what is this?
+        addr_info = addr[:,(view_dlayer)] # addresses, object references
+        probe_and_object = opi.scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
 
-
-        opi.difference_map_realspace_constraint(obj,
-                                                probe,
+        opi.difference_map_realspace_constraint(probe_and_object,
                                                 exit_wave,
-                                                addr,
                                                 alpha=1.0)
 
     def test_difference_map_realspace_constraint_UNITY(self):
@@ -70,12 +71,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
 
+        view_dlayer = 0 # what is this?
+        addr_info = addr[:,(view_dlayer)] # addresses, object references
+        probe_and_object = opi.scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
 
         ptypy_dm_constraint = self.ptypy_apply_difference_map(a_ptycho_instance)
-        numpy_dm_constraint = opi.difference_map_realspace_constraint(obj,
-                                                                      probe,
+        numpy_dm_constraint = opi.difference_map_realspace_constraint(probe_and_object,
                                                                       exit_wave,
-                                                                      addr,
                                                                       alpha=1.0)
         for idx, key in enumerate(ptypy_dm_constraint):
             np.testing.assert_allclose(ptypy_dm_constraint[key], numpy_dm_constraint[idx])
