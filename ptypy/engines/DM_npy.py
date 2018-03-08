@@ -259,7 +259,8 @@ class DMNpy(DM):
             log(4, pre_str + 'change in probe is %.3f' % change)
 
             # Recenter the probe
-            self.center_probe()
+            if self.p.probe_center_tol is not None:
+                opi.center_probe(probe, self.p.probe_center_tol)
 
             # Stop iteration if probe change is small
             if change < self.p.overlap_converge_factor:
