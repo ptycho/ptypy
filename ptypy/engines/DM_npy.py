@@ -122,7 +122,6 @@ class DMNpy(DM):
         Difference map reconstruction engine.
         """
         super(DMNpy, self).__init__(ptycho_parent, pars)
-        self.thingamejog = 0
 
     def engine_prepare(self):
         """
@@ -178,6 +177,7 @@ class DMNpy(DM):
                                           self.vectorised_scan[dID]['object viewcover'],
                                           self.vectorised_scan[dID]['probe'],
                                           self.vectorised_scan[dID]['probe weights'],
+                                          self.vectorised_scan[dID]['probe support'],
                                           self.vectorised_scan[dID]['exit wave'],
                                           self.mean_power,
                                           self.vectorised_scan[dID]['meta']['addr'][:, 0])
@@ -216,7 +216,7 @@ class DMNpy(DM):
 
         return error_dct
 
-    def numpy_overlap_update(self, ob, object_weights, ob_viewcover ,probe, probe_weights, exit_wave, mean_power, addr_info):
+    def numpy_overlap_update(self, ob, object_weights, ob_viewcover ,probe, probe_weights, probe_support, exit_wave, mean_power, addr_info):
         """
         DM overlap constraint update.
         """
@@ -230,7 +230,16 @@ class DMNpy(DM):
             if self.p.update_object_first or (inner > 0):
                 # Update object
                 log(4, pre_str + '----- object update -----')
-                self.numpy_object_update(ob, object_weights, probe, exit_wave, ob_viewcover, addr_info, mean_power)
+                opi.difference_map_update_object(ob,
+                                                 object_weights,
+                                                 probe,
+                                                 exit_wave,
+                                                 ob_viewcover,
+                                                 addr_info,
+                                                 mean_power,
+                                                 ob_inertia=self.p.object_inertia,
+                                                 ob_smooth_std=self.p.obj_smooth_std,
+                                                 clip_object=self.p.clip_object)
 
             # Exit if probe should not be updated yet
             if not do_update_probe:
@@ -238,7 +247,15 @@ class DMNpy(DM):
 
             # Update probe
             log(4, pre_str + '----- probe update -----')
-            change = self.probe_update()
+            # change = self.probe_update()
+            change = opi.difference_map_update_probe(ob,
+                                                     probe_weights,
+                                                     probe,
+                                                     exit_wave,
+                                                     addr_info,
+                                                     self.p.probe_inertia,
+                                                     probe_support)
+
             log(4, pre_str + 'change in probe is %.3f' % change)
 
             # Recenter the probe
@@ -248,18 +265,3 @@ class DMNpy(DM):
             if change < self.p.overlap_converge_factor:
                 break
 
-    def numpy_object_update(self, ob, object_weights, probe, exit_wave, ob_viewcover, addr_info, mean_power):
-        """
-        DM object update.
-        """
-
-        opi.difference_map_update_object(ob,
-                                         object_weights,
-                                         probe,
-                                         exit_wave,
-                                         ob_viewcover,
-                                         addr_info,
-                                         mean_power,
-                                         ob_inertia=self.p.object_inertia,
-                                         ob_smooth_std=self.p.obj_smooth_std,
-                                         clip_object=self.p.clip_object)

@@ -34,7 +34,7 @@ def difference_map_update_object(ob, object_weights, probe, exit_wave, ob_viewco
     sh = exit_wave.shape
 
     cfact = ob_inertia * mean_power  *  (ob_viewcover + 1.)
-    ob_nrm  = cfact
+    ob_nrm  = np.ones_like(ob) * cfact
     print('average cfact is %s' % np.mean(ob_nrm).real)
 
     if ob_smooth_std is not None:
@@ -59,3 +59,34 @@ def difference_map_update_object(ob, object_weights, probe, exit_wave, ob_viewco
         too_low = (ampl_obj < clip_min)
         ob[too_high] = clip_max * phase_obj[too_high]
         ob[too_low] = clip_min * phase_obj[too_low]
+
+def difference_map_update_probe(ob, probe_weights, probe, exit_wave, addr_info, probe_inertia, probe_support=None):
+    """
+     DM probe update.
+     """
+    sh = exit_wave.shape
+    old_probe = probe
+
+
+    cfact = probe_inertia * len(addr_info) / probe.shape[0]
+    probe *= cfact
+    pr_nrm = np.ones_like(probe)*cfact
+
+    # DM update per node
+    for pa, oa, ea, _da, _ma in addr_info:
+        ob_mode = ob[oa[0], oa[1]:(oa[1] + sh[1]), oa[2]:(oa[2] + sh[2])]
+        probe[pa[0]] += ob_mode.conj() * exit_wave[ea[0]] * probe_weights[pa[0]]
+        pr_nrm[pa[0]] += u.cabs2(ob_mode) * probe_weights[pa[0]]
+
+    probe /= pr_nrm
+    change = 0.
+
+    # Distribute result with MPI
+    if probe_support is not None:
+        probe *= probe_support
+
+    # Compute relative change in probe
+    change += u.norm2(probe - old_probe) / u.norm2(probe)
+
+
+    return np.sqrt(change / probe.shape[0])
