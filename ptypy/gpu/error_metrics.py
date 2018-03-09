@@ -8,7 +8,7 @@ from . import FLOAT_TYPE
 import numpy as np
 
 
-def log_likelihood(probe, obj, mask, exit_wave, Idata, prefilter, postfilter, addr):
+def log_likelihood(probe_obj, mask, exit_wave, Idata, prefilter, postfilter, addr):
     raise NotImplementedError("This method is not implemented yet.")
 
 def far_field_error(current_solution, measured_solution, mask):

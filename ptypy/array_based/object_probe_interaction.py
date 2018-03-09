@@ -10,13 +10,10 @@ from array_utils import norm2, complex_gaussian_filter, abs2, mass_center, shift
 from . import COMPLEX_TYPE
 
 
-def difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha):
+def difference_map_realspace_constraint(probe_and_object, exit_wave, alpha):
     '''
     in theory this can just be called in ptypy instead of get_exit_wave
     '''
-    view_dlayer = 0 # what is this?
-    addr_info = addr[:,(view_dlayer)] # addresses, object references
-    probe_and_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
     return (1.0 + alpha) * probe_and_object - alpha*exit_wave
 
 

@@ -40,7 +40,8 @@ class ConstraintsTest(unittest.TestCase):
         view_dlayer = 0  # what is this?
         addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
-        constrained = difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha)
+        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
         f = farfield_propagator(constrained, propagator.pre_fft, propagator.post_fft, direction='forward')
         pa, oa, ea, da, ma = zip(*addr_info)
         af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)
@@ -50,7 +51,7 @@ class ConstraintsTest(unittest.TestCase):
         # # Fourier magnitudes deviations(current_solution, pbound, measured_solution, mask, addr)
         err_fmag = far_field_error(af, fmag, mask)
         renormed_f = renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
-        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        
 
         backpropagated_solution = farfield_propagator(renormed_f,
                                                       propagator.post_fft.conj(),
@@ -81,7 +82,8 @@ class ConstraintsTest(unittest.TestCase):
         view_dlayer = 0  # what is this?
         addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
-        constrained = difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha)
+        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
         f = farfield_propagator(constrained, propagator.pre_fft, propagator.post_fft, direction='forward')
         pa, oa, ea, da, ma = zip(*addr_info)
         af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)
@@ -92,8 +94,7 @@ class ConstraintsTest(unittest.TestCase):
         err_fmag = far_field_error(af, fmag, mask)
         err_fmag = np.ones_like(err_fmag) * 145.824958919
         renormed_f = renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
-        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
-
+        
         backpropagated_solution = farfield_propagator(renormed_f,
                                                       propagator.post_fft.conj(),
                                                       propagator.pre_fft.conj(),
@@ -123,7 +124,8 @@ class ConstraintsTest(unittest.TestCase):
         view_dlayer = 0  # what is this?
         addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
-        constrained = difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha)
+        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
         f = farfield_propagator(constrained, propagator.pre_fft, propagator.post_fft, direction='forward')
         pa, oa, ea, da, ma = zip(*addr_info)
         af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)
@@ -134,8 +136,7 @@ class ConstraintsTest(unittest.TestCase):
         err_fmag = far_field_error(af, fmag, mask)
         err_fmag = np.ones_like(err_fmag) * 0.4
         renormed_f = renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
-        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
-
+        
         backpropagated_solution = farfield_propagator(renormed_f,
                                                       propagator.post_fft.conj(),
                                                       propagator.pre_fft.conj(),
@@ -165,7 +166,8 @@ class ConstraintsTest(unittest.TestCase):
         view_dlayer = 0  # what is this?
         addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
-        constrained = difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha)
+        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
         f = farfield_propagator(constrained, propagator.pre_fft, propagator.post_fft, direction='forward')
         pa, oa, ea, da, ma = zip(*addr_info)
         af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)
@@ -198,7 +200,8 @@ class ConstraintsTest(unittest.TestCase):
         view_dlayer = 0  # what is this?
         addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
-        constrained = difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha)
+        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
         f = farfield_propagator(constrained, propagator.pre_fft, propagator.post_fft, direction='forward')
         pa, oa, ea, da, ma = zip(*addr_info)
         af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)
@@ -232,7 +235,8 @@ class ConstraintsTest(unittest.TestCase):
         view_dlayer = 0  # what is this?
         addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
-        constrained = difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha)
+        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
         f = farfield_propagator(constrained, propagator.pre_fft, propagator.post_fft, direction='forward')
         pa, oa, ea, da, ma = zip(*addr_info)
         af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)

@@ -8,7 +8,7 @@ Should have all the engine updates
 import numpy as np
 from . import COMPLEX_TYPE
 
-def difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha):
+def difference_map_realspace_constraint(probe_and_object, exit_wave, alpha):
     raise NotImplementedError("This method is not implemented yet.")
 
 

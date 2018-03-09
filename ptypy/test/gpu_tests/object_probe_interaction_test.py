@@ -36,8 +36,12 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
-        po = opi.difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha=1.0)
-        gpo = gopi.difference_map_realspace_constraint(obj, probe, exit_wave, addr, alpha=1.0)
+        
+        view_dlayer = 0  # what is this?
+        addr_info = addr[:, (view_dlayer)]  # addresses, object references
+        probe_object = opi.scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        po = opi.difference_map_realspace_constraint(probe_object, exit_wave, alpha=1.0)
+        gpo = gopi.difference_map_realspace_constraint(probe_object, exit_wave, alpha=1.0)
         np.testing.assert_array_equal(po, gpo)
 
 
