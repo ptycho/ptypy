@@ -37,14 +37,14 @@ class ArrayUtilsTest(unittest.TestCase):
         self.assertEqual(absed.dtype, np.float)
 
     def test_sum_to_buffer(self):
-        in1 = np.array([[1.0, 1.0, 1.0, 1.0],
-                        [2.0, 2.0, 2.0, 2.0],
-                        [3.0, 3.0, 3.0, 3.0],
-                        [4.0, 4.0, 4.0, 4.0]])
+        in1 = np.array([np.ones((4,4)),
+                        np.ones((4, 4))*2.0,
+                        np.ones((4, 4))*3.0,
+                        np.ones((4, 4))*4.0])
 
-        outshape = (2, 4)
-        expected_out = np.array([[4.0, 4.0, 4.0, 4.0],
-                                 [6.0, 6.0, 6.0, 6.0]])
+        outshape = (2, 4, 4)
+        expected_out = np.array([np.ones((4, 4))*4.0,
+                                 np.ones((4, 4)) * 6.0])
 
         in1_addr = np.array([(0, 0, 0),
                             (1, 0, 0),
