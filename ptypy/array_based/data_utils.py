@@ -76,7 +76,7 @@ def pod_to_arrays(P, storage_id, scan_model='Full'):
         exit_wave_array = main_pod.ex_view.storage.data
         mask_array = mask_storages.data # can we have booleans?
         diff_array = diffraction_storages_to_iterate.data
-        probe_support = P.probe_support[poe_IDs[0]]
+        probe_support = np.zeros_like(probe_array)
 
 
     return {'diffraction': diff_array,
