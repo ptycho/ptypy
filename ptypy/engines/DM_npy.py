@@ -144,22 +144,11 @@ class DMNpy(DM):
         """
         to = 0.
         tf = 0.
-        # run the data for `num` iterations on the cards, then pull the relevant off to sync
-        # error_dct = {}
-        # k=0
-        # for idx, name in self.di.views.iteritems():
-        #     error_dct[idx] = np.zeros((3,))
-        #     k+=1
-
-
 
         for dID, _diffs in self.di.S.iteritems():
             for it in range(num):
                 t1 = time.time()
 
-                # Fourier update
-                # error_dct = self.fourier_update()
-                # if self.thingamejog < 1:
                 error_dct = self.numpy_fourier_update(self.vectorised_scan[dID]['mask'],
                                                       self.vectorised_scan[dID]['diffraction'],
                                                       self.vectorised_scan[dID]['obj'],
@@ -177,7 +166,7 @@ class DMNpy(DM):
                                           self.vectorised_scan[dID]['object viewcover'],
                                           self.vectorised_scan[dID]['probe'],
                                           self.vectorised_scan[dID]['probe weights'],
-                                          self.vectorised_scan[dID]['probe support'],
+                                          self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]],
                                           self.vectorised_scan[dID]['exit wave'],
                                           self.mean_power,
                                           self.vectorised_scan[dID]['meta']['addr'][:, 0])
@@ -216,14 +205,21 @@ class DMNpy(DM):
 
         return error_dct
 
-    def numpy_overlap_update(self, ob, object_weights, ob_viewcover ,probe, probe_weights, probe_support, exit_wave, mean_power, addr_info):
+    def numpy_overlap_update(self, ob, object_weights, ob_viewcover, probe, probe_weights, probe_support, exit_wave, mean_power, addr_info):
         """
         DM overlap constraint update.
         """
         # Condition to update probe
         do_update_probe = (self.p.probe_update_start <= self.curiter)
+        cfact_probe =  (self.p.probe_inertia * len(addr_info) / probe.shape[0])*np.ones_like(probe)
+        cfact_object = self.p.object_inertia * mean_power  *  (ob_viewcover + 1.)
+        self.apply_difference_map_overlap_constraint(addr_info, cfact_object, cfact_probe, do_update_probe, exit_wave,
+                                                     ob, object_weights, probe, probe_support, probe_weights)
 
-        for inner in range(self.p.overlap_max_iterations):
+
+    def apply_difference_map_overlap_constraint(self, addr_info, cfact_object, cfact_probe, do_update_probe, exit_wave,
+                                                ob, object_weights, probe, probe_support, probe_weights):
+        for inner in range(self.p.overlap_max_iterations): # do we want to make this into a kernel of it's own?
             pre_str = 'Iteration (Overlap) #%02d:  ' % inner
 
             # Update object first
@@ -234,10 +230,8 @@ class DMNpy(DM):
                                                  object_weights,
                                                  probe,
                                                  exit_wave,
-                                                 ob_viewcover,
                                                  addr_info,
-                                                 mean_power,
-                                                 ob_inertia=self.p.object_inertia,
+                                                 cfact_object,
                                                  ob_smooth_std=self.p.obj_smooth_std,
                                                  clip_object=self.p.clip_object)
 
@@ -253,7 +247,7 @@ class DMNpy(DM):
                                                      probe,
                                                      exit_wave,
                                                      addr_info,
-                                                     self.p.probe_inertia,
+                                                     cfact_probe,
                                                      probe_support)
 
             log(4, pre_str + 'change in probe is %.3f' % change)
