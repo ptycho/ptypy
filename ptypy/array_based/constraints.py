@@ -57,7 +57,7 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     # Buffer for accumulated photons
     # For log likelihood error # need to double check this adp
     if LL_error is True:
-        err_phot = log_likelihood(probe_object, mask, exit_wave, Idata, prefilter, postfilter, addr)
+        err_phot = log_likelihood(probe_object, mask, Idata, prefilter, postfilter, addr)
     else:
         err_phot = np.zeros(Idata.shape[0], dtype=FLOAT_TYPE)
     

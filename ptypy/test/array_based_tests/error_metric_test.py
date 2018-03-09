@@ -32,7 +32,7 @@ class ErrorMetricTest(unittest.TestCase):
         view_dlayer = 0  # what is this?
         addr_info = addr[:, (view_dlayer)]  # addresses, object references
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
-        log_likelihood(probe_object, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
+        log_likelihood(probe_object, mask, diffraction, propagator.pre_fft, propagator.post_fft, addr)
 
     def test_loglikelihood_numpy_UNITY(self):
         '''
@@ -57,7 +57,7 @@ class ErrorMetricTest(unittest.TestCase):
         addr_info = addr[:, (view_dlayer)]  # addresses, object references
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
 
-        vals = log_likelihood(probe_object, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
+        vals = log_likelihood(probe_object, mask, diffraction, propagator.pre_fft, propagator.post_fft, addr)
         k = 0
         for name, view in PtychoInstance.diff.V.iteritems():
             error_metric[name] = vals[k]
