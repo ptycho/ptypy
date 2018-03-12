@@ -18,7 +18,7 @@ def abs2(input):
 def sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype):
     '''
     :param in1. An array . Can be inplace. Can be complex or real.
-    :param outshape. An array. Can be inplace. Can be complex or real.
+    :param outshape. An array.
     :param in1_addr. An array . Can be inplace. Can be complex or real.
     :param out1_addr. An array . Can be inplace. Can be complex or real.
     :return: The real valued abs**2 array
@@ -28,20 +28,6 @@ def sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype):
     for i1, o1 in zip(in1_addr, out1_addr):
         out1[o1[0], o1[1]:(o1[1] + inshape[1]), o1[2]:(o1[2] + inshape[2])] += in1[i1[0]]
     return out1
-
-def sum_to_buffer_inplace(in1, out, in1_addr, out1_addr):
-    '''
-    :param in1. An array . Can be inplace. Can be complex or real.
-    :param outshape. An array. Can be inplace. Can be complex or real.
-    :param in1_addr. An array . Can be inplace. Can be complex or real.
-    :param out1_addr. An array . Can be inplace. Can be complex or real.
-    :return: The real valued abs**2 array
-    '''
-    inshape = in1.shape
-    for i1, o1 in zip(in1_addr, out1_addr):
-        out[o1[0], o1[1]:(o1[1] + inshape[1]), o1[2]:(o1[2] + inshape[2])] += in1[i1[0]]
-
-
 
 def norm2(input):
     return np.sum(abs2(input))
