@@ -6,7 +6,7 @@ Should have all the engine updates
 '''
 
 import numpy as np
-from array_utils import norm2, complex_gaussian_filter, abs2, mass_center, shift_zoom, clip_complex_magnitudes_to_range, sum_to_buffer_inplace
+from array_utils import norm2, complex_gaussian_filter, abs2, mass_center, shift_zoom, clip_complex_magnitudes_to_range
 from . import COMPLEX_TYPE
 
 def difference_map_realspace_constraint(probe_and_object, exit_wave, alpha):
