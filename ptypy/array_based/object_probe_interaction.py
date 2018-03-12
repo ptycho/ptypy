@@ -33,6 +33,17 @@ def difference_map_update_object(ob, object_weights, probe, exit_wave, addr_info
         ob = cfact_object * complex_gaussian_filter(ob, smooth_mfs)
     else:
         ob *= cfact_object
+
+    print("Exit_wave %s %s" % (exit_wave.shape, exit_wave.dtype))
+    print("probe %s %s" % (probe.shape, probe.dtype))
+    print("object %s %s" % (ob.shape, ob.dtype))
+    print("cfact %s %s" % (cfact_object.shape, cfact_object.dtype))
+    print("object_weights %s %s" % (object_weights.shape, object_weights.dtype))
+    print("ea %s %s" % (len(ea), ea[0].dtype))
+    print("pa %s %s" % (len(pa), pa[0].dtype))
+    print("oa %s %s" % (len(oa), oa[0].dtype))
+
+
     extract_array_from_exit_wave(exit_wave, ea, probe, pa, ob, oa, cfact_object, object_weights)
 
     if clip_object is not None:
@@ -65,7 +76,7 @@ def extract_array_from_exit_wave(exit_wave, exit_addr, array_to_be_extracted, ex
                                                                       extracted_array_conj * \
                                                                       weights[pa[0]]
     array_to_be_updated /= cfact
-    return array_to_be_updated
+
 
 
 def center_probe(probe, center_tolerance):
