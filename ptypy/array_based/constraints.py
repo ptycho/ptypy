@@ -40,7 +40,7 @@ def get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wav
             df[ea[0]] = alpha * np.subtract(probe_object[ea[0]], exit_wave[ea[0]])
     return df
 
-def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, prefilter, postfilter, pbound=None, alpha=1.0, LL_error=True):
+def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, prefilter, postfilter, pbound=None, alpha=1.0, LL_error=True, do_realspace_error=True):
     '''
     This kernel just performs the fourier renormalisation.
     :param mask. The nd mask array
@@ -83,7 +83,10 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
 
     exit_wave += df
 
-    err_exit = realspace_error(df)
+    if do_realspace_error:
+        err_exit = realspace_error(df)
+    else:
+        err_exit = np.zeros((Idata.shape[0]))
 
     if pbound is not None:
         err_fmag /= pbound

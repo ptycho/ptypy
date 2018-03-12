@@ -6,6 +6,7 @@ import unittest
 import numpy as np
 import utils as tu
 from ptypy.array_based import data_utils as du
+from ptypy.array_based import COMPLEX_TYPE
 import ptypy.utils as u
 from collections import OrderedDict
 from ptypy.array_based.error_metrics import log_likelihood, far_field_error, realspace_error
@@ -81,6 +82,29 @@ class ErrorMetricTest(unittest.TestCase):
         fmag_npy = far_field_error(af, fmag, mask)
         fmag_ptypy = self.get_ptypy_far_field_error(PodPtychoInstance)
         np.testing.assert_array_equal(fmag_ptypy, fmag_npy)
+
+    def test_realspace_error(self):
+        I = 5
+        M = 20
+        N = 30
+
+        difference = np.empty(shape=(I, M, N), dtype=COMPLEX_TYPE)
+        for idx in range(I):
+            difference[idx] = np.ones((M, N)) *idx + 1j * np.ones((M, N)) *idx
+        error = realspace_error(difference)
+
+    def test_realspace_error_regression(self):
+        I = 5
+        M = 20
+        N = 30
+
+        difference = np.empty(shape=(I, M, N), dtype=COMPLEX_TYPE)
+        for idx in range(I):
+            difference[idx] = np.ones((M, N)) *idx + 1j * np.ones((M, N)) *idx
+
+        error = realspace_error(difference)
+        expected_error = np.array([ 0.0, 1.99999976, 7.99999905,17.99999809, 31.99999619], dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(error, expected_error)
 
     def get_current_and_measured_solution(self, a_ptycho_instance):
         alpha = 1.0
