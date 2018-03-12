@@ -9,7 +9,6 @@ import numpy as np
 from array_utils import norm2, complex_gaussian_filter, abs2, mass_center, shift_zoom, clip_complex_magnitudes_to_range, sum_to_buffer_inplace
 from . import COMPLEX_TYPE
 
-
 def difference_map_realspace_constraint(probe_and_object, exit_wave, alpha):
     '''
     in theory this can just be called in ptypy instead of get_exit_wave
@@ -26,79 +25,47 @@ def scan_and_multiply(probe, obj, exit_shape, addresses):
     return po
 
 
-def difference_map_update_object(ob, object_weights, ob_nrm, probe, exit_wave, addr_info, cfact_object, ob_smooth_std=None, clip_object=None):
-
-    ob_nrm  *= cfact_object
+def difference_map_update_object(ob, object_weights, probe, exit_wave, addr_info, cfact_object, ob_smooth_std=None, clip_object=None):
+    pa, oa, ea, _da, _ma = zip(*addr_info)
 
     if ob_smooth_std is not None:
         smooth_mfs = [ob_smooth_std, ob_smooth_std]
-        ob = ob_nrm * complex_gaussian_filter(ob, smooth_mfs)
+        ob = cfact_object * complex_gaussian_filter(ob, smooth_mfs)
     else:
-        ob *= ob_nrm
-
-    extract_object_from_exit_wave(exit_wave, ob, ob_nrm, object_weights, probe, addr_info)
+        ob *= cfact_object
+    extract_array_from_exit_wave(exit_wave, ea, probe, pa, ob, oa, cfact_object, object_weights)
 
     if clip_object is not None:
         clip_min, clip_max = clip_object
         clip_complex_magnitudes_to_range(ob, clip_min, clip_max)
 
 
-def extract_object_from_exit_wave(exit_wave, ob, ob_nrm, object_weights, probe, addr_info):
+def difference_map_update_probe(ob, probe_weights, probe, exit_wave, addr_info, cfact_probe, probe_support=None):
     pa, oa, ea, _da, _ma = zip(*addr_info)
-    divided_exit_wave = np.zeros_like(exit_wave)
-    normalisation = np.zeros_like(exit_wave)
-    factor_out_exit_wave(divided_exit_wave, exit_wave, probe, object_weights, ea, pa, oa)
-    get_object_probe_normalisation(normalisation, probe, object_weights, ea, pa, oa)
-    sum_to_buffer_inplace(divided_exit_wave, ob, ea, oa)
-    sum_to_buffer_inplace(normalisation, ob_nrm, ea, oa)
-    ob /= ob_nrm
-    return ob
-
-
-def difference_map_update_probe(ob, probe_weights, probe, pr_nrm, exit_wave, addr_info, cfact_probe, probe_support=None):
-
     old_probe = probe
     probe *= cfact_probe
-    pr_nrm *=cfact_probe
-
-    extract_probe_from_exit_wave(exit_wave, ob, pr_nrm, probe, probe_weights, addr_info)
-
-    # Distribute result with MPI
+    extract_array_from_exit_wave(exit_wave, ea, ob, oa, probe, pa, cfact_probe, probe_weights)
     if probe_support is not None:
         probe *= probe_support
-
-    # Compute relative change in probe
 
     change = norm2(probe - old_probe) /norm2(probe)
 
     return np.sqrt(change / probe.shape[0])
 
 
-def extract_probe_from_exit_wave(exit_wave, ob, pr_nrm, probe, probe_weights, addr_info):
-    pa, oa, ea, _da, _ma = zip(*addr_info)
-    divided_exit_wave = np.zeros_like(exit_wave)
-    normalisation = np.zeros_like(exit_wave)
-    factor_out_exit_wave(divided_exit_wave, exit_wave, ob, probe_weights, ea, oa, pa)
-    get_object_probe_normalisation(normalisation, ob, probe_weights, ea, oa, pa)
-    sum_to_buffer_inplace(divided_exit_wave, probe, ea, pa)
-    sum_to_buffer_inplace(normalisation, pr_nrm, ea, pa)
-    probe /= pr_nrm
-    return probe
-
-
-def get_object_probe_normalisation(normalisation, ob, probe_weights, norm_addr, ob_addr, pw_addr):
-    outshape = normalisation.shape
-    for ea, oa, pa in zip(norm_addr, ob_addr, pw_addr):
-        normalisation[ea[0]] = ob[oa[0], oa[1]:(oa[1] + outshape[1]), oa[2]:(oa[2] + outshape[2])] * \
-                               ob[oa[0], oa[1]:(oa[1] + outshape[1]), oa[2]:(oa[2] + outshape[2])].conj() * \
-                               probe_weights[pa[0]]
-
-
-def factor_out_exit_wave(divided_exit_wave, exit_wave, ob, probe_weights, ew_addr, ob_addr, pr_addr):
+def extract_array_from_exit_wave(exit_wave, exit_addr, array_to_be_extracted, extract_addr, array_to_be_updated, update_addr, cfact, weights):
     sh = exit_wave.shape
-    for ea, oa, pa in zip(ew_addr, ob_addr, pr_addr):
-        divided_exit_wave[ea[0]] = ob[oa[0], oa[1]:(oa[1] + sh[1]), oa[2]:(oa[2] + sh[2])].conj() * exit_wave[ea[0]] * \
-                                   probe_weights[pa[0]]
+    for pa, oa, ea in zip(update_addr, extract_addr, exit_addr):
+        extracted_array = array_to_be_extracted[oa[0], oa[1]:(oa[1] + sh[1]), oa[2]:(oa[2] + sh[2])]
+        extracted_array_conj = extracted_array.conj()
+        array_to_be_updated[pa[0], pa[1]:(pa[1] + sh[1]), pa[2]:(pa[2] + sh[2])] += extracted_array_conj * \
+                                                                                    exit_wave[ea[0]] * \
+                                                                                    weights[pa[0]]
+        cfact[pa[0], pa[1]:(pa[1] + sh[1]), pa[2]:(pa[2] + sh[2])] += extracted_array * \
+                                                                      extracted_array_conj * \
+                                                                      weights[pa[0]]
+    array_to_be_updated /= cfact
+    return array_to_be_updated
 
 
 def center_probe(probe, center_tolerance):
