@@ -6,8 +6,9 @@ Should have all the engine updates
 '''
 
 import numpy as np
-from array_utils import norm2, complex_gaussian_filter, abs2, mass_center, shift_zoom, clip_complex_magnitudes_to_range
+from array_utils import norm2, complex_gaussian_filter, abs2, mass_center, shift, clip_complex_magnitudes_to_range
 from . import COMPLEX_TYPE
+
 
 def difference_map_realspace_constraint(probe_and_object, exit_wave, alpha):
     '''
@@ -29,20 +30,10 @@ def difference_map_update_object(ob, object_weights, probe, exit_wave, addr_info
     pa, oa, ea, _da, _ma = zip(*addr_info)
 
     if ob_smooth_std is not None:
-        smooth_mfs = [ob_smooth_std, ob_smooth_std]
+        smooth_mfs = [0, ob_smooth_std, ob_smooth_std]
         ob = cfact_object * complex_gaussian_filter(ob, smooth_mfs)
     else:
         ob *= cfact_object
-
-    print("Exit_wave %s %s" % (exit_wave.shape, exit_wave.dtype))
-    print("probe %s %s" % (probe.shape, probe.dtype))
-    print("object %s %s" % (ob.shape, ob.dtype))
-    print("cfact %s %s" % (cfact_object.shape, cfact_object.dtype))
-    print("object_weights %s %s" % (object_weights.shape, object_weights.dtype))
-    print("ea %s %s" % (len(ea), ea[0].dtype))
-    print("pa %s %s" % (len(pa), pa[0].dtype))
-    print("oa %s %s" % (len(oa), oa[0].dtype))
-
 
     extract_array_from_exit_wave(exit_wave, ea, probe, pa, ob, oa, cfact_object, object_weights)
 
@@ -78,17 +69,13 @@ def extract_array_from_exit_wave(exit_wave, exit_addr, array_to_be_extracted, ex
     array_to_be_updated /= cfact
 
 
-
 def center_probe(probe, center_tolerance):
-    for idx in range(probe.shape[0]):
-        c1 = mass_center(abs2(probe[idx]).sum(0))
-        c2 = np.asarray(probe[idx].shape[-2:]) // 2
-        if np.sqrt(norm2(c1 - c2)) < center_tolerance:
-            break
+    c1 = np.array(mass_center(abs2(probe).sum(axis=0)))
+    c2 = np.array(probe.shape[-2:]) // 2
+    if np.sqrt(norm2(c1 - c2)) < center_tolerance:
+        return
 
-        probe[idx] = shift_zoom(probe[idx],
-                                 (1.,) * 3,
-                                 (0, c1[0], c1[1]),
-                                 (0, c2[0], c2[1]))
+    for idx in range(probe.shape[0]):
+        probe[idx] = shift(probe[idx], c1, c2)
 
 
