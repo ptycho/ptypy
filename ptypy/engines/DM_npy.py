@@ -241,7 +241,6 @@ class DMNpy(DM):
 
             # Update probe
             log(4, pre_str + '----- probe update -----')
-            # change = self.probe_update()
             change = opi.difference_map_update_probe(ob,
                                                      probe_weights,
                                                      probe,

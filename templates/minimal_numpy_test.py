@@ -1,6 +1,6 @@
 from ptypy.core import Ptycho
 from ptypy import utils as u
-
+import cProfile
 p = u.Param()
 p.verbose_level = 3
 p.io = u.Param()
@@ -44,7 +44,13 @@ p.engines = u.Param()
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DMNpy'
-p.engines.engine00.numiter = 80
-
+p.engines.engine00.numiter = 50
+# p.engines.engine00.overlap_max_iterations = 1
 # prepare and run
-P = Ptycho(p, level=5)
+
+
+P = Ptycho(p, level=4)
+P.run()
+# cProfile.run('P.run()',
+#              '/home/clb02321/Desktop/profiling_thing_with_realspace_error.prof',
+#              'tottime')

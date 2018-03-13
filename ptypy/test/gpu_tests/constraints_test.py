@@ -105,7 +105,7 @@ class ConstraintsTest(unittest.TestCase):
 
         np.testing.assert_array_equal(difference, gdifference)
 
-    @unittest.skip("This method is not implemented yet")
+    # @unittest.skip("This method is not implemented yet")
     def test_get_difference_no_update_UNITY(self):
         alpha = 1.0
         pbound = 0.597053604126
@@ -143,8 +143,8 @@ class ConstraintsTest(unittest.TestCase):
                                                       direction='backward')
 
         difference = get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
-        gdifference = gget_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
-
+        gdifference = get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
+        print difference
         np.testing.assert_array_equal(difference, gdifference)
 
     @unittest.skip("This method is not implemented yet")

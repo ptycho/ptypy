@@ -11,9 +11,7 @@ def abs2(input):
     :param input. An array that we want to take the absolute value of and square. Can be inplace. Can be complex or real. 
     :return: The real valued abs**2 array
     '''
-    
     return np.multiply(input, input.conj()).real
-
 
 def sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype):
     '''
@@ -30,80 +28,38 @@ def sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype):
     return out1
 
 def norm2(input):
+    '''
+    Input here could be a variety of 1D, 2D, 3D complex or real. all will be single precision at least.
+    return should be real
+    '''
     return np.sum(abs2(input))
 
 def complex_gaussian_filter(input, mfs):
-    return ndi.gaussian_filter(np.real(input), mfs).astype(input.dtype) +1j *ndi.gaussian_filter(np.imag(input))
+    '''
+    takes 2D and 3D arrays. Complex input, complex output. mfs has len==input.ndim
+    '''
+    return (ndi.gaussian_filter(np.real(input), mfs) +1j *ndi.gaussian_filter(np.imag(input), mfs)).astype(input.dtype)
 
-def mass_center(A, axes=None):
-    """
-    Calculates mass center of n-dimensional array `A`
-    along tuple of axis `axes`.
+def mass_center(A):
+    '''
+    Input will always be real, and 2d or 3d, single precision here
+    '''
+    return np.array(ndi.measurements.center_of_mass(A))
 
-    Parameters
-    ----------
-    A : ndarray
-        input array
-
-    axes : list, tuple
-        Sequence of axes that contribute to distributed mass. If
-        ``axes==None``, all axes are considered.
-
-    Returns
-    -------
-    mass : 1d array
-        Center of mass in pixel for each `axis` selected.
-    """
-    A = np.asarray(A)
-
-    if axes is None:
-        axes = tuple(range(1, A.ndim + 1))
-    else:
-        axes = tuple(np.array(axes) + 1)
-
-    return np.sum(A * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A, dtype=np.float)
-
-
-def shift_zoom(c, zoom, cen_old, cen_new):
-    """\
-    Move array from center `cen_old` to `cen_new` and perform a zoom `zoom`.
-
-    This function wraps `scipy.ndimage.affine_transform <https://docs.scipy.org/
-    doc/scipy/reference/generated/scipy.ndimage.affine_transform.html>`_ and 
-    uses the same keyword arguments.
-
-    Addiionally, it allows for complex input and out by complex overloading, see
-    :any:`complex_overload`\ . 
-
-    Parameters
-    ----------
-    c : numpy.ndarray
-        Array to shiftzoom. Can be float or complex
-
-    zoom : float
-        Zoom factor
-
-    cen_old : array_like
-        Center in input array `c`
-
-    cen_new : array_like
-        Desired new center position in shiftzoomed array
-
-    Returns
-    -------
-    numpy.ndarray
-        Shifted and zoomed array
-    """
-
-    from scipy.ndimage import affine_transform
-    zoom = np.diag(zoom)
-    offset = np.asarray(cen_old) - np.asarray(cen_new).dot(zoom)
-
-    return affine_transform(np.real(c), zoom, offset) + 1j*affine_transform(np.imag(c), zoom, offset)
+def interpolated_shift(c, shift):
+    '''
+    complex bicubic interpolated shift.
+    complex output. This shift should be applied to 2D arrays. shift should have len=c.ndims 
+    
+    '''
+    return ndi.interpolation.shift(np.real(c), shift, order=5) + 1j*ndi.interpolation.shift(np.imag(c), shift, order=5)
 
 
 def clip_complex_magnitudes_to_range(complex_input, clip_min, clip_max):
+    '''
+    This takes a single precision 2D complex input, clips the absolute magnitudes to be within a range, but leaves the phase untouched.
+    '''
     ampl = np.abs(complex_input)
     phase = np.exp(1j * np.angle(complex_input))
     ampl = np.clip(ampl, clip_min, clip_max)
-    complex_input = ampl * phase
+    complex_input[:] = ampl * phase

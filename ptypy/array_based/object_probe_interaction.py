@@ -6,7 +6,7 @@ Should have all the engine updates
 '''
 
 import numpy as np
-from array_utils import norm2, complex_gaussian_filter, abs2, mass_center, shift, clip_complex_magnitudes_to_range
+from array_utils import norm2, complex_gaussian_filter, abs2, mass_center, interpolated_shift, clip_complex_magnitudes_to_range
 from . import COMPLEX_TYPE
 
 
@@ -74,8 +74,8 @@ def center_probe(probe, center_tolerance):
     c2 = np.array(probe.shape[-2:]) // 2
     if np.sqrt(norm2(c1 - c2)) < center_tolerance:
         return
-
+    offset = c2-c1
     for idx in range(probe.shape[0]):
-        probe[idx] = shift(probe[idx], c1, c2)
+        probe[idx] = interpolated_shift(probe[idx], offset)
 
 

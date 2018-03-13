@@ -567,14 +567,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         addr_info  = zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr)
         clip = (0.8, 1.0)
         opi.difference_map_update_object(array_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info, cfact, ob_smooth_std=None, clip_object=clip)
-
-        expected_output = np.array([[-5.00000000 + 5.j, 4.00000000 + 4.j],
-                                    [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
-                                    [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
-                                    [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
-                                    [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
-                                    [1.00000000 + 1.j, 5.71428585 + 0.95238096j],
-                                    [1.00000000 + 1.j, 4.00000000 + 4.j]], dtype=COMPLEX_TYPE)
+        expected_output = np.array([[-0.70710677+0.70710677j, 0.70710677+0.70710683j],
+                                    [-0.70710677+0.70710677j, 0.98639393+0.16439897j],
+                                    [-0.70710677+0.70710677j, 0.98639393+0.16439897j],
+                                    [-0.70710677+0.70710677j, 0.98639393+0.16439897j],
+                                    [-0.70710677+0.70710677j, 0.98639393+0.16439897j],
+                                    [ 0.70710677+0.70710683j, 0.98639393+0.16439897j],
+                                    [ 0.70710677+0.70710683j, 0.70710677+0.70710683j]], dtype=COMPLEX_TYPE)
 
         np.testing.assert_array_equal(np.diagonal(array_to_be_updated), expected_output)
 
@@ -609,7 +608,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         not_shifted_probe = np.zeros((1, npts, npts), dtype=COMPLEX_TYPE)
         not_shifted_probe[0, (X)**2 + (Y)**2 < rad**2] = probe_vals
         opi.center_probe(probe, center_tolerance)
-        np.testing.assert_array_almost_equal(probe, not_shifted_probe, decimal=8)
+        np.testing.assert_array_almost_equal(probe, not_shifted_probe, decimal=8) # interpolation obviously won't make this exact!
 
 
 
