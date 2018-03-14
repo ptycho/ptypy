@@ -1,56 +1,58 @@
+"""
+This script is a test for ptychographic reconstruction in the absence
+of actual data. It uses the test Scan class
+`ptypy.core.data.MoonFlowerScan` to provide "data".
+"""
+#import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import cProfile
 p = u.Param()
-p.verbose_level = 3
+
+# for verbose output
+p.verbose_level = 4
+
+# set home path
 p.io = u.Param()
-p.io.autosave = u.Param(active=False)
-p.io.autoplot = u.Param(active=True)
-p.ipython_kernel = False
+p.io.home = "/tmp/ptypy/"
+p.io.autosave = None
+#p.io.autoplot = u.Param()
+#p.io.autoplot.dump = True
+#p.io.autoplot = False
+
+# max 100 frames (128x128px) of diffraction data
 p.scans = u.Param()
 p.scans.MF = u.Param()
 p.scans.MF.name = 'Full'
-p.scans.MF.propagation = 'farfield'
-p.scans.MF.data = u.Param()
+p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
-p.scans.MF.data.positions_theory = None
-p.scans.MF.data.auto_center = None
-p.scans.MF.data.min_frames = 1
-p.scans.MF.data.orientation = None
-p.scans.MF.data.num_frames = 100
-p.scans.MF.data.energy = 6.2
 p.scans.MF.data.shape = 256
-p.scans.MF.data.chunk_format = '.chunk%02d'
-p.scans.MF.data.rebin = None
-p.scans.MF.data.experimentID = None
-p.scans.MF.data.label = None
-p.scans.MF.data.version = 0.1
-p.scans.MF.data.dfile = None
-p.scans.MF.data.psize = 0.000172
-p.scans.MF.data.load_parallel = None
-p.scans.MF.data.distance = 7.0
+p.scans.MF.data.num_frames = 100
 p.scans.MF.data.save = None
-p.scans.MF.data.center = 'fftshift'
-p.scans.MF.data.photons = 100000000.0
-p.scans.MF.data.psf = 0.0
-p.scans.MF.data.density = 0.2
-p.scans.MF.data.add_poisson_noise = False
-p.scans.MF.coherence = u.Param()
-p.scans.MF.coherence.num_probe_modes = 1  # currently breaks when this is =2
 
-p.engines = u.Param()
+# position distance in fraction of illumination frame
+p.scans.MF.data.density = 0.2
+# total number of photon in empty beam
+p.scans.MF.data.photons = 1e8
+# Gaussian FWHM of possible detector blurring
+p.scans.MF.data.psf = 0.
 
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DMNpy'
-p.engines.engine00.numiter = 50
-# p.engines.engine00.overlap_max_iterations = 1
+p.engines.engine00.name = 'MLNpy'
+p.engines.engine00.reg_del2 = True                      # Whether to use a Gaussian prior (smoothing) regularizer
+p.engines.engine00.reg_del2_amplitude = 1.             # Amplitude of the Gaussian prior if used
+p.engines.engine00.scale_precond = True
+#p.engines.engine00.scale_probe_object = 1.
+p.engines.engine00.smooth_gradient = 20.
+p.engines.engine00.smooth_gradient_decay = 1/50.
+p.engines.engine00.floating_intensities = False
+p.engines.engine00.numiter = 300
+
 # prepare and run
-
-
-P = Ptycho(p, level=4)
-P.run()
-# cProfile.run('P.run()',
-#              '/home/clb02321/Desktop/profiling_thing_with_realspace_error.prof',
-#              'tottime')
+P = Ptycho(p,level=4)
+# P.run()
+cProfile.run('P.run()',
+             '/home/clb02321/Desktop/profiling_MLNpy_no_kernels_noastype.prof',
+              'tottime')

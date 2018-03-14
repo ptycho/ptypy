@@ -18,10 +18,12 @@ from . import ML
 from . import dummy
 from . import ePIE
 from . import DM_npy
+from . import ML_npy
+
 __all__ = ['DM', 'ML', 'ePIE', 'BaseEngine']
 
 # List of supported engines
-engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE','DMnpy']
+engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE','DMNpy', 'MLNpy']
 
 # Supported engines defaults
 DEFAULTS = u.Param(
@@ -39,7 +41,8 @@ ENGINES = u.Param(
     DM=DM.DM,
     ML=ML.ML,
     ePIE=ePIE.EPIE,
-    DMNpy=DM_npy.DMNpy
+    DMNpy=DM_npy.DMNpy,
+    MLNpy=ML_npy.MLNpy
 )
 
 

@@ -119,6 +119,9 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     return np.array([err_fmag, err_phot, err_exit])
 
 
+
+
+
 def Cnorm2(c):
     """\
     Computes a norm2 on whole container `c`.
