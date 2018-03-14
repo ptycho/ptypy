@@ -499,13 +499,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         addr_info  = zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr)
         obj_smooth_std = 2 # integer
         opi.difference_map_update_object(array_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info, cfact, ob_smooth_std=obj_smooth_std, clip_object=None)
-        expected_output = np.array([[1. + 1.j, 4. + 4.j],
-                                    [1. + 1.j, 4. + 4.j],
-                                    [1. + 1.j, 4. + 4.j],
-                                    [1. + 1.j, 4. + 4.j],
-                                    [1. + 1.j, 4. + 4.j],
-                                    [1. + 1.j, 4. + 4.j],
-                                    [1. + 1.j, 4. + 4.j]], dtype=COMPLEX_TYPE)
+        expected_output = np.array([[-5.00000000 + 5.j, 4.00000000 + 4.j,],
+                                     [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
+                                     [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
+                                     [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
+                                     [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
+                                     [1.00000000 + 1.j, 5.71428585 + 0.95238096j],
+                                     [1.00000000 + 1.j, 4.00000000 + 4.j]], dtype=COMPLEX_TYPE)
 
         np.testing.assert_array_equal(np.diagonal(array_to_be_updated), expected_output)
 
