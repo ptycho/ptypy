@@ -230,7 +230,142 @@ class ArrayUtilsTest(unittest.TestCase):
         au.clip_complex_magnitudes_to_range(data, clip_min, clip_max)
         np.testing.assert_array_almost_equal(data, expected_out, decimal=7) # floating point precision I guess...
 
+    def test_delxf_ax0(self):
+        A = 5
+        B = 6
+        ax = -2 # this seems to be always referenced as -1 numbers
+        sh = (1, A, B)
+        h = np.empty(sh, dtype=COMPLEX_TYPE)
+        data = np.arange(A*B).reshape(sh)
+        h[:] = data + 1j * data
+        output = au.delxf(h, axis=ax, out=None)
+        expected_out = np.array([[[6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j],
+                                  [6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j],
+                                  [6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j],
+                                  [6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j],
+                                  [0. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j]]], dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(output, expected_out)
 
+    def test_delxf_ax1(self):
+        A = 5
+        B = 6
+        ax = -1 # this seems to be always referenced as -1 numbers
+        sh = (1, A, B)
+        h = np.empty(sh, dtype=COMPLEX_TYPE)
+        data = np.arange(A*B).reshape(sh)
+        h[:] = data + 1j * data
+        output = au.delxf(h, axis=ax, out=None)
+        expected_out = np.array([[[ 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 0.+0.j],
+                                  [ 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 0.+0.j],
+                                  [ 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 0.+0.j],
+                                  [ 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 0.+0.j],
+                                  [ 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 0.+0.j]]], dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(output, expected_out)
+
+    def test_delxf_ax0_inplace(self):
+        A = 6
+        B = 5
+        ax = -2
+        sh = (1, A, B)
+        h = np.empty(sh, dtype=COMPLEX_TYPE)
+        data = np.arange(A*B).reshape(sh)
+        h[:] = data + 1j * data
+        au.delxf(h, axis=ax, out=h)
+        expected_output = np.array([[[5. + 5.j, 5. + 5.j, 5. + 5.j, 5. + 5.j, 5. + 5.j],
+                                     [5. + 5.j, 5. + 5.j, 5. + 5.j, 5. + 5.j, 5. + 5.j],
+                                     [5. + 5.j, 5. + 5.j, 5. + 5.j, 5. + 5.j, 5. + 5.j],
+                                     [5. + 5.j, 5. + 5.j, 5. + 5.j, 5. + 5.j, 5. + 5.j],
+                                     [0. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j],
+                                     [0. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j]]], dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(h, expected_output)
+
+    def test_delxf_ax1_inplace(self):
+        A = 6
+        B = 5
+        ax = -1
+        sh = (1, A, B)
+        h = np.empty(sh, dtype=COMPLEX_TYPE)
+        data = np.arange(A*B).reshape(sh)
+        h[:] = data + 1j * data
+        au.delxf(h, axis=ax, out=h)
+        expected_output = np.array([[[1. + 1.j, 1. + 1.j, 1. + 1.j, 0. + 0.j, 0. + 0.j],
+                                     [1. + 1.j, 1. + 1.j, 1. + 1.j, 0. + 0.j, 0. + 0.j],
+                                     [1. + 1.j, 1. + 1.j, 1. + 1.j, 0. + 0.j, 0. + 0.j],
+                                     [1. + 1.j, 1. + 1.j, 1. + 1.j, 0. + 0.j, 0. + 0.j],
+                                     [1. + 1.j, 1. + 1.j, 1. + 1.j, 0. + 0.j, 0. + 0.j],
+                                     [1. + 1.j, 1. + 1.j, 1. + 1.j, 0. + 0.j, 0. + 0.j]]], dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(h, expected_output)
+
+
+    def test_delxb_ax0(self):
+        A = 5
+        B = 6
+        ax = -2 # this seems to be always referenced as -1 numbers
+        sh = (1, A, B)
+        h = np.empty(sh, dtype=COMPLEX_TYPE)
+        data = np.arange(A*B).reshape(sh)
+        h[:] = data + 1j * data
+        output = au.delxb(h, axis=ax)
+        expected_out = np.array([[[0. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j],
+                                  [6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j],
+                                  [6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j],
+                                  [6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j],
+                                  [6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j]]], dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(output, expected_out)
+
+    def test_delxb_ax1(self):
+        A = 5
+        B = 6
+        ax = -1 # this seems to be always referenced as -1 numbers
+        sh = (1, A, B)
+        h = np.empty(sh, dtype=COMPLEX_TYPE)
+        data = np.arange(A*B).reshape(sh)
+        h[:] = data + 1j * data
+        output = au.delxb(h, axis=ax)
+        expected_out = np.array([[[0. + 0.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j],
+                                  [0. + 0.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j],
+                                  [0. + 0.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j],
+                                  [0. + 0.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j],
+                                  [0. + 0.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j]]], dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(output, expected_out)
+
+    def test_delxc_ax0(self):
+        A = 5
+        B = 6
+        ax = -2 # this seems to be always referenced as -1 numbers
+        sh = (1, A, B)
+        h = np.empty(sh, dtype=COMPLEX_TYPE)
+        data = np.arange(A*B).reshape(sh)
+        h[:] = data + 1j * data
+        output = au.delxc(h, axis=ax)
+        expected_out = np.array([[[6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j],
+                                  [6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j],
+                                  [6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j],
+                                  [6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j],
+                                  [6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j, 6. + 6.j]]], dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(output, expected_out)
+
+    def test_delxc_ax1(self):
+        A = 5
+        B = 6
+        ax = -1 # this seems to be always referenced as -1 numbers
+        sh = (1, A, B)
+        h = np.empty(sh, dtype=COMPLEX_TYPE)
+        data = np.arange(A*B).reshape(sh)
+        h[:] = data + 1j * data
+        output = au.delxc(h, axis=ax)
+        expected_out = np.array([[[1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j],
+                                  [1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j],
+                                  [1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j],
+                                  [1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j],
+                                  [1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j]]], dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(output, expected_out)
+
+    def test_vdot(self):
+        pass
+
+    def test_dot(self):
+        pass
 
 if __name__=='__main__':
     unittest.main()

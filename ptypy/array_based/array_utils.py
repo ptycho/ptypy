@@ -63,3 +63,116 @@ def clip_complex_magnitudes_to_range(complex_input, clip_min, clip_max):
     phase = np.exp(1j * np.angle(complex_input))
     ampl = np.clip(ampl, clip_min, clip_max)
     complex_input[:] = ampl * phase
+
+
+def delxf(h, axis=-1, out=None):
+    """\
+    Forward first order derivative for finite difference calculation.
+    f(x+h)-f(x)
+    .. note::
+        The last element along the derivative direction is set to 0.\n
+        Pixel units are used (:math:`\\Delta x = \\Delta h = 1`).
+
+    Parameters
+    ----------
+    h : ndarray
+        Input array.
+
+    axis : int, Default=-1, optional
+        Which direction used for the derivative.
+
+    out : ndarray, Default=None, optional
+        Array in wich the resault is written (same size as ``a``).
+
+    Returns
+    -------
+    out : ndarray
+        Derived array.
+    """
+    nd = h.ndim
+    axis = range(nd)[axis]
+
+    slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
+    slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
+
+    if out is None:
+        out = np.zeros_like(h)
+
+    out[slice2] = h[slice1] - h[slice2]
+
+    if out is h:
+        # required for in-place operation
+        slice3 = [slice(-2, None) if i == axis else slice(None)
+                  for i in range(nd)]
+        out[slice3] = 0.0
+
+    return out
+
+
+def delxb(h, axis=-1):
+    """\
+    Backward first order derivative for finite difference calculation.
+    f(x)-f(x-h)
+    .. note::
+        The first element along the derivative direction is set to 0.\n
+        Pixel units are used (:math:`\\Delta x = \\Delta h = 1`).
+
+    Parameters
+    ----------
+    h : ndarray
+        Input array.
+
+    axis : int, Default=-1, optional
+        Which direction used for the derivative.
+
+    Returns
+    -------
+    out : ndarray
+        Derived array.
+    """
+
+    nd = h.ndim
+    axis = range(nd)[axis]
+    slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
+    slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
+    b = np.zeros_like(h)
+    b[slice1] = h[slice1] - h[slice2]
+    return b
+
+
+def delxc(h, axis=-1):
+    """\
+    Central first order derivative for finite difference calculation.
+    f(x+h/2) - f(x-h/2)
+    .. note::
+        Forward and backward derivatives are used for first and last
+        elements along the derivative direction.\n
+        Pixel units are used (:math:`\\Delta x = \\Delta h = 1`).
+
+    Parameters
+    ----------
+    h : nd-numpy-array
+        Input array.
+
+    axis : int, Default=-1, optional
+        Which direction used for the derivative.
+
+    Returns
+    -------
+    out : nd-numpy-array
+        Derived array.
+    """
+    nd = h.ndim
+    axis = range(nd)[axis]
+    slice_middle = [slice(1,-1) if i==axis else slice(None) for i in range(nd)]
+    b = delxf(h, axis) + delxb(h, axis)
+    b[slice_middle] *= 0.5
+    return b
+
+
+def dot(a, b):
+    return np.dot(a, b)
+
+
+def vdot(a, b):
+    return np.vdot(a, b)
