@@ -57,7 +57,7 @@ Plotter.plot_fig.canvas.mpl_connect('close_event', handle_close)
 #Plotter.plot_fig.canvas.mpl_connect('resize_event', handle_resize)
 
 if save is not None:
-    Plotter.plot_fig.savefig(sys.argv[3],dpi = 300)
+    Plotter.plot_fig.savefig(save, dpi = 300)
 else:
     while Plotter:
         #Plotter.plot_all()
