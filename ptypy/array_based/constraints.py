@@ -4,11 +4,12 @@ a module to holds the constraints
 
 import numpy as np
 
+import array_utils as au
 from error_metrics import log_likelihood, far_field_error, realspace_error
 from object_probe_interaction import difference_map_realspace_constraint, scan_and_multiply
 from propagation import farfield_propagator
-import array_utils as au
-from . import COMPLEX_TYPE, FLOAT_TYPE
+from . import FLOAT_TYPE
+
 
 def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound):
     renormed_f = np.zeros(f.shape, dtype=np.complex128)
@@ -93,105 +94,117 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
 
     return np.array([err_fmag, err_phot, err_exit])
 
-def ML_Gaussian_grad(ob_grad, pr_grad, weights, floating_intensities):
 
-    # We need an array for MPI
-    LL = np.array([0.])
-
-
+def ML_grad_fourier_update(mask, Idata, obj, probe, exit_wave, addr, prefilter, postfilter, ob_grad, pr_grad, weights,
+                           floating_intensities):
+    error_out = []
+    floating_intensity_coefficient = []
+    LL = np.array([0.0])
     # Outer loop: through diffraction patterns
     for dname, diff_view in self.di.views.iteritems():
+
 
         # Weights and intensities for this view
         w = weights[diff_view]
         I = diff_view.data
-        Imodel = np.zeros_like(I)
 
+        Imodel = np.zeros_like(I)
         f = {}
 
         # First pod loop: compute total intensity
         for name, pod in diff_view.pods.iteritems():
+
             f[name] = pod.fw(pod.probe * pod.object)
-            Imodel += u.abs2(f[name])
+            Imodel += au.abs2(f[name])
 
         # Floating intensity option
         if floating_intensities:
-            diff_view.float_intens_coeff = ((w * Imodel * I).sum()
-                                            / (w * Imodel ** 2).sum())
-            Imodel *= diff_view.float_intens_coeff
+            float_intensity = ((w * Imodel * I).sum()
+                               / (w * Imodel ** 2).sum())
+            floating_intensity_coefficient.append(float_intensity)
+            Imodel *= float_intensity
 
         DI = Imodel - I
 
         # Second pod loop: gradients computation
-        LLL = np.sum((w * DI ** 2))
+        LLL = np.sum(w * DI ** 2)
         for name, pod in diff_view.pods.iteritems():
-
             xi = pod.bw(w * DI * f[name])
             ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
             pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
-            # Negative log-likelihood term
-            # LLL += (w * DI**2).sum()
-
-        # LLL
         diff_view.error = LLL
-        error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
         LL += LLL
+        error_out.append(np.array([0, LLL / np.prod(DI.shape), 0]))
 
-    # Object regularizer
-    if self.regularizer:
-        for name, s in self.ob.storages.iteritems():
-            self.ob_grad.storages[name].data += self.regularizer.grad(
-                s.data)
-            LL += self.regularizer.LL
+    error_out = np.array(error_out)
+    if floating_intensities:
+        floating_intensity_coefficient = np.array(floating_intensity_coefficient)
+    return LL, error_out, floating_intensity_coefficient
 
-    self.LL = LL / self.tot_measpts
 
-    return ob_grad, pr_grad, error_dct
+def ML_poly_line_fourier_update(mask, Idata, obj, probe, exit_wave, addr, prefilter, postfilter, LL, ob_h, pr_h,
+                                weights, floating_intensities):
+    B = np.zeros((3,), dtype=np.longdouble)
+    Brenorm = 1. / LL[0] ** 2
 
-def ML_gaussian_grad(probe, obj, exit_wave, Idata, ob_grad, pr_grad, weights, floating_intensities, prefilter, postfilter, addr, regularizer='regul_del2'):
-    view_dlayer = 0
-    addr_info = addr[:, (view_dlayer)]
-    sh = exit_wave.shape
-    pa, oa, ea, da, ma  = zip(*addr_info)
-    probe_object = scan_and_multiply(probe, obj, sh, addr_info)
-    f = farfield_propagator(probe_object, prefilter, postfilter, direction='forward')
-    Imodel = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)
-    DI = Imodel - Idata
-    weights_DI = weights * DI
-    renormed_f = np.zeros_like(f)
-    for pa, oa, ea, da, ma  in addr_info:
-        renormed_f[ea[0]] = np.multiply(weights_DI[da[0]], f[ea[0]])
+    # Outer loop: through diffraction patterns
+    k = 0
+    for dname, diff_view in self.di.views.iteritems():
+        if not diff_view.active:
+            continue
 
-    xi = farfield_propagator(renormed_f, postfilter.conj(), prefilter.conj(), direction='backward')
+        # Weights and intensities for this view
+        w = weights[diff_view]
+        I = diff_view.data
 
-    for pa, oa, ea, da, ma  in addr_info:
-        ob_grad[oa[0],oa[1]:(oa[1]+sh[1]), oa[2]:(oa[2]+sh[2])] += 2.0 * xi[ea[0]] * probe[pa[0]].conj()
-        pr_grad[pa[0]] += 2.0 * xi[ea[0]] * obj[oa[0],oa[1]:(oa[1]+sh[1]), oa[2]:(oa[2]+sh[2])].conj()
+        A0 = None
+        A1 = None
+        A2 = None
 
-    LLL = (np.sum((weights_DI * DI), axis=(-2, -1)))/ Idata.size
-    if regularizer is 'regul_del2':
-        for pa, oa, ea, da, ma in addr_info:
-            ob_grad[oa[0],oa[1]:(oa[1]+sh[1]), oa[2]:(oa[2]+sh[2])] += regul_del2_grad(obj[oa[0],oa[1]:(oa[1]+sh[1]), oa[2]:(oa[2]+sh[2])], LLL, delxy, axes)
-    else:
-        raise NotImplementedError("Don't recognize regularizer: %s. Only 'regul_del2' is supported" % regularizer)
+        for name, pod in diff_view.pods.iteritems():
+            if not pod.active:
+                continue
+            f = pod.fw(pod.probe * pod.object)
+            a = pod.fw(pod.probe * ob_h[pod.ob_view]
+                       + pr_h[pod.pr_view] * pod.object)
+            b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
 
-    error = np.array([0.0, LLL/ np.probe(DI.shape[-2:]), 0.0])
+            if A0 is None:
+                A0 = au.abs2(f)
+                A1 = 2 * np.real(f * a.conj())
+                A2 = (2 * np.real(f * b.conj())
+                      + au.abs2(a))
+            else:
+                A0 += au.abs2(f)
+                A1 += 2 * np.real(f * a.conj())
+                A2 += 2 * np.real(f * b.conj()) + au.abs2(a)
 
-    return ob_grad, pr_grad, error
+        if floating_intensities:
+            A0 *= floating_intensities[k]
+            A1 *= floating_intensities[k]
+            A2 *= floating_intensities[k]
+            k += 1
+        A0 -= I
+
+        B[0] += np.dot(w.flat, (A0 ** 2).flat) * Brenorm
+        B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
+        B[2] += np.dot(w.flat, (A1 ** 2 + 2 * A0 * A2).flat) * Brenorm
+    return B, Brenorm
+
 
 def regul_del2_grad(x, amplitude,  LLL, delxy, axes):
-    del_xf = u.delxf(x, axis=axes[0])
-    del_yf = u.delxf(x, axis=axes[1])
-    del_xb = u.delxb(x, axis=axes[0])
-    del_yb = u.delxb(x, axis=axes[1])
+    del_xf = au.delxf(x, axis=axes[0])
+    del_yf = au.delxf(x, axis=axes[1])
+    del_xb = au.delxb(x, axis=axes[0])
+    del_yb = au.delxb(x, axis=axes[1])
 
     delxy[:] = [del_xf, del_yf, del_xb, del_yb]
     grad = 2. * amplitude * (del_xb + del_yb - del_xf - del_yf)
 
-    LLL[:] = amplitude * (u.norm2(del_xf)
-                                + u.norm2(del_yf)
-                                + u.norm2(del_xb)
-                                + u.norm2(del_yb))
+    LLL[:] = amplitude * (au.norm2(del_xf)
+                          + au.norm2(del_yf)
+                          + au.norm2(del_xb)
+                          + au.norm2(del_yb))
 
     return grad

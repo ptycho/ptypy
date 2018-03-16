@@ -12,12 +12,13 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import time
+from collections import OrderedDict
 
 import numpy as np
 
+from ptypy.array_based import constraints as con
 from . import BaseEngine
 from .utils import Cnorm2, Cdot, prepare_smoothing_preconditioner, Regul_del2
-from .. import utils as u
 from ..core.manager import Full, Vanilla
 from ..utils import parallel
 from ..utils.descriptor import defaults_tree
@@ -170,10 +171,13 @@ class MLNpy(BaseEngine):
         Last minute initialization, everything, that needs to be recalculated,
         when new data arrives.
         """
-        # - # fill object with coverage of views
-        # - for name,s in self.ob_viewcover.S.iteritems():
-        # -    s.fill(s.get_view_coverage())
-        pass
+
+        self.vectorised_scan = {}
+        self.propagator = {}
+        for dID, _diffs in self.di.S.iteritems():
+            self.vectorised_scan[dID] = du.pod_to_arrays(self, dID)
+            first_view_id = self.vectorised_scan[dID]['meta']['view_IDs'][0]
+            self.propagator[dID] = self.di.V[first_view_id].pod.geometry.propagator
 
     def engine_iterate(self, num=1):
         """
@@ -240,8 +244,8 @@ class MLNpy(BaseEngine):
 
             # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
 
-            self.ob_grad *= 2 * new_ob_grad
-            self.pr_grad *= 2 * new_pr_grad
+            self.ob_grad << new_ob_grad
+            self.pr_grad << new_pr_grad
 
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
@@ -307,7 +311,8 @@ class ML_Gaussian(object):
         self.p = self.engine.p
         self.ob = self.engine.ob
         self.pr = self.engine.pr
-
+        self.B = None
+        self.float_intens_coeff = OrderedDict()
         if self.p.intensity_renormalization is None:
             self.Irenorm = 1.
         else:
@@ -372,6 +377,34 @@ class ML_Gaussian(object):
             except:
                 pass
 
+    def grad_fourier_update(self):
+        self.ob_grad.fill(0.)
+        self.pr_grad.fill(0.)
+
+        # We need an array for MPI
+        error_dct = OrderedDict()
+
+        LL, error_out, floating_intensity_coefficient = con.ML_grad_fourier_update(mask,
+                                                                                   Idata,
+                                                                                   obj,
+                                                                                   probe,
+                                                                                   exit_wave,
+                                                                                   addr,
+                                                                                   prefilter,
+                                                                                   postfilter,
+                                                                                   ob_grad,
+                                                                                   pr_grad,
+                                                                                   self.weights,
+                                                                                   self.p.floating_intensities)
+
+        k = 0
+        for dname, diff_view in self.di.views.iteritems():
+            error_dct[dname] = error_out[k]
+            if self.p.floating_intensities:
+                self.float_intens_coeff[dname] = floating_intensity_coefficient[k]
+            k += 1
+        return LL, error_dct
+
     def new_grad(self):
         """
         Compute a new gradient direction according to a Gaussian noise model.
@@ -379,66 +412,13 @@ class ML_Gaussian(object):
         Note: The negative log-likelihood and local errors are also computed
         here.
         """
-        self.ob_grad.fill(0.)
-        self.pr_grad.fill(0.)
 
-        # We need an array for MPI
-        LL = np.array([0.])
-        error_dct = {}
-
-        # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
-            if not diff_view.active:
-                continue
-
-            # Weights and intensities for this view
-            w = self.weights[diff_view]
-            I = diff_view.data
-
-            Imodel = np.zeros_like(I)
-            f = {}
-
-            # First pod loop: compute total intensity
-            for name, pod in diff_view.pods.iteritems():
-                if not pod.active:
-                    continue
-                f[name] = pod.fw(pod.probe * pod.object)
-                Imodel += u.abs2(f[name])
-
-            # Floating intensity option
-            if self.p.floating_intensities:
-                diff_view.float_intens_coeff = ((w * Imodel * I).sum()
-                                                / (w * Imodel**2).sum())
-                Imodel *= diff_view.float_intens_coeff
-
-            DI = Imodel - I
-
-            # Second pod loop: gradients computation
-            LLL = np.sum((w * DI ** 2))
-            for name, pod in diff_view.pods.iteritems():
-                if not pod.active:
-                    continue
-                xi = pod.bw(w * DI * f[name])
-                self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
-                self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
-
-                # Negative log-likelihood term
-                # LLL += (w * DI**2).sum()
-
-            # LLL
-            diff_view.error = LLL
-            error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
-            LL += LLL
+        LL, error_dct = self.grad_fourier_update()
 
         # MPI reduction of gradients
         self.ob_grad.allreduce()
         self.pr_grad.allreduce()
-        """
-        for name, s in ob_grad.storages.iteritems():
-            parallel.allreduce(s.data)
-        for name, s in pr_grad.storages.iteritems():
-            parallel.allreduce(s.data)
-        """
+
         parallel.allreduce(LL)
 
         # Object regularizer
@@ -452,55 +432,29 @@ class ML_Gaussian(object):
 
         return self.ob_grad, self.pr_grad, error_dct
 
+    def poly_line_fourier_update(self, ob_h, pr_h):
+
+        B, Brenorm = con.ML_poly_line_fourier_update(mask,
+                                                     Idata,
+                                                     obj,
+                                                     probe,
+                                                     exit_wave,
+                                                     addr,
+                                                     prefilter,
+                                                     postfilter,
+                                                     ob_grad,
+                                                     pr_grad,
+                                                     self.weights,
+                                                     self.p.floating_intensities)
+
+        return B, Brenorm
+
     def poly_line_coeffs(self, ob_h, pr_h):
         """
         Compute the coefficients of the polynomial for line minimization
         in direction h
         """
-
-        B = np.zeros((3,), dtype=np.longdouble)
-        Brenorm = 1. / self.LL[0]**2
-
-        # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
-            if not diff_view.active:
-                continue
-
-            # Weights and intensities for this view
-            w = self.weights[diff_view]
-            I = diff_view.data
-
-            A0 = None
-            A1 = None
-            A2 = None
-
-            for name, pod in diff_view.pods.iteritems():
-                if not pod.active:
-                    continue
-                f = pod.fw(pod.probe * pod.object)
-                a = pod.fw(pod.probe * ob_h[pod.ob_view]
-                           + pr_h[pod.pr_view] * pod.object)
-                b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
-
-                if A0 is None:
-                    A0 = u.abs2(f)
-                    A1 = 2 * np.real(f * a.conj())
-                    A2 = (2 * np.real(f * b.conj())
-                          + u.abs2(a))
-                else:
-                    A0 += u.abs2(f)
-                    A1 += 2 * np.real(f * a.conj())
-                    A2 += 2 * np.real(f * b.conj()) + u.abs2(a)
-
-            if self.p.floating_intensities:
-                A0 *= diff_view.float_intens_coeff
-                A1 *= diff_view.float_intens_coeff
-                A2 *= diff_view.float_intens_coeff
-            A0 -= I
-
-            B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
-            B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
-            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
+        B, Brenorm = self.poly_line_fourier_update(ob_h, pr_h)
 
         parallel.allreduce(B)
 
