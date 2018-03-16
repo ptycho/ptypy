@@ -4,7 +4,9 @@ Tests for the array_utils module
 
 
 import unittest
+
 import numpy as np
+
 from ptypy.array_based import FLOAT_TYPE, COMPLEX_TYPE
 from ptypy.array_based import array_utils as au
 
@@ -365,6 +367,12 @@ class ArrayUtilsTest(unittest.TestCase):
         pass
 
     def test_dot(self):
+        pass
+
+    def test_regul_del2_grad(self):
+        pass
+
+    def test_regul_del2_poly_line_coeffs(self):
         pass
 
 if __name__=='__main__':

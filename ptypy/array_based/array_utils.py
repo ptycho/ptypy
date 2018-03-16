@@ -176,3 +176,63 @@ def dot(a, b):
 
 def vdot(a, b):
     return np.vdot(a, b)
+
+
+def regul_del2_grad(x, amplitude, delxy, g, LL, axes=None):
+    '''
+    In place update of delxy, g, and LL for the del2 regulariser
+    '''
+    if axes is None:
+        ax0, ax1 = (-2, -1)
+    else:
+        ax0, ax1 = axes
+
+    del_xf = delxf(x, axis=ax0)
+    del_yf = delxf(x, axis=ax1)
+    del_xb = delxb(x, axis=ax0)
+    del_yb = delxb(x, axis=ax1)
+
+    delxy[:] = [del_xf, del_yf, del_xb, del_yb]
+    g[:] = 2. * amplitude * (del_xb + del_yb - del_xf - del_yf)
+
+    LL[:] = amplitude * (norm2(del_xf)
+                         + norm2(del_yf)
+                         + norm2(del_xb)
+                         + norm2(del_yb))
+
+
+def regul_del2_poly_line_coeffs(h, amplitude, delxy, x=None, axes=None):
+    if axes is None:
+        ax0, ax1 = (-2, -1)
+    else:
+        ax0, ax1 = axes
+
+    if x is None:
+        del_xf, del_yf, del_xb, del_yb = delxy
+    else:
+        del_xf = delxf(x, axis=ax0)
+        del_yf = delxf(x, axis=ax1)
+        del_xb = delxb(x, axis=ax0)
+        del_yb = delxb(x, axis=ax1)
+
+    hdel_xf = delxf(h, axis=ax0)
+    hdel_yf = delxf(h, axis=ax1)
+    hdel_xb = delxb(h, axis=ax0)
+    hdel_yb = delxb(h, axis=ax1)
+
+    c0 = amplitude * (norm2(del_xf)
+                      + norm2(del_yf)
+                      + norm2(del_xb)
+                      + norm2(del_yb))
+
+    c1 = 2 * amplitude * np.real(vdot(del_xf, hdel_xf)
+                                 + vdot(del_yf, hdel_yf)
+                                 + vdot(del_xb, hdel_xb)
+                                 + vdot(del_yb, hdel_yb))
+
+    c2 = amplitude * (norm2(hdel_xf)
+                      + norm2(hdel_yf)
+                      + norm2(hdel_xb)
+                      + norm2(hdel_yb))
+
+    return np.array([c0, c1, c2])
