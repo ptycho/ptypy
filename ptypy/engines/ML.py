@@ -11,16 +11,17 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-import numpy as np
 import time
 
-from .. import utils as u
-from ..utils.verbose import logger
-from ..utils import parallel
-from .utils import Cnorm2, Cdot
+import numpy as np
+
 from . import BaseEngine
-from ..utils.descriptor import defaults_tree
+from .utils import Cnorm2, Cdot, prepare_smoothing_preconditioner, Regul_del2
+from .. import utils as u
 from ..core.manager import Full, Vanilla
+from ..utils import parallel
+from ..utils.descriptor import defaults_tree
+from ..utils.verbose import logger
 
 __all__ = ['ML']
 
@@ -239,7 +240,7 @@ class ML(BaseEngine):
 
             # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
 
-            self.ob_grad << new_ob_grad
+            self.ob_grad << new_ob_grad  # self.ob_grad *2*new_ob_grad bitwise
             self.pr_grad << new_pr_grad
             """
             for name, s in self.ob_grad.storages.iteritems():
@@ -552,114 +553,3 @@ class ML_Gaussian(object):
 
         return B
 
-# Regul class does not exist, replace by objectclass
-# class Regul_del2(Regul):
-
-
-class Regul_del2(object):
-    """\
-    Squared gradient regularizer (Gaussian prior).
-
-    This class applies to any numpy array.
-    """
-    def __init__(self, amplitude, axes=[-2, -1]):
-        # Regul.__init__(self, axes)
-        self.axes = axes
-        self.amplitude = amplitude
-        self.delxy = None
-        self.g = None
-        self.LL = None
-
-    def grad(self, x):
-        """
-        Compute and return the regularizer gradient given the array x.
-        """
-        ax0, ax1 = self.axes
-        del_xf = u.delxf(x, axis=ax0)
-        del_yf = u.delxf(x, axis=ax1)
-        del_xb = u.delxb(x, axis=ax0)
-        del_yb = u.delxb(x, axis=ax1)
-
-        self.delxy = [del_xf, del_yf, del_xb, del_yb]
-        self.g = 2. * self.amplitude*(del_xb + del_yb - del_xf - del_yf)
-
-        self.LL = self.amplitude * (u.norm2(del_xf)
-                               + u.norm2(del_yf)
-                               + u.norm2(del_xb)
-                               + u.norm2(del_yb))
-
-        return self.g
-
-    def poly_line_coeffs(self, h, x=None):
-        ax0, ax1 = self.axes
-        if x is None:
-            del_xf, del_yf, del_xb, del_yb = self.delxy
-        else:
-            del_xf = u.delxf(x, axis=ax0)
-            del_yf = u.delxf(x, axis=ax1)
-            del_xb = u.delxb(x, axis=ax0)
-            del_yb = u.delxb(x, axis=ax1)
-
-        hdel_xf = u.delxf(h, axis=ax0)
-        hdel_yf = u.delxf(h, axis=ax1)
-        hdel_xb = u.delxb(h, axis=ax0)
-        hdel_yb = u.delxb(h, axis=ax1)
-
-        c0 = self.amplitude * (u.norm2(del_xf)
-                               + u.norm2(del_yf)
-                               + u.norm2(del_xb)
-                               + u.norm2(del_yb))
-
-        c1 = 2 * self.amplitude * np.real(np.vdot(del_xf, hdel_xf)
-                                          + np.vdot(del_yf, hdel_yf)
-                                          + np.vdot(del_xb, hdel_xb)
-                                          + np.vdot(del_yb, hdel_yb))
-
-        c2 = self.amplitude * (u.norm2(hdel_xf)
-                               + u.norm2(hdel_yf)
-                               + u.norm2(hdel_xb)
-                               + u.norm2(hdel_yb))
-
-        self.coeff = np.array([c0, c1, c2])
-        return self.coeff
-
-
-def prepare_smoothing_preconditioner(amplitude):
-    """
-    Factory for smoothing preconditioner.
-    """
-    if amplitude == 0.:
-        return None
-
-    class GaussFilt:
-        def __init__(self, sigma):
-            self.sigma = sigma
-
-        def __call__(self, x):
-            return u.c_gf(x, [0, self.sigma, self.sigma])
-
-    # from scipy.signal import correlate2d
-    # class HannFilt:
-    #    def __call__(self, x):
-    #        y = np.empty_like(x)
-    #        sh = x.shape
-    #        xf = x.reshape((-1,) + sh[-2:])
-    #        yf = y.reshape((-1,) + sh[-2:])
-    #        for i in range(len(xf)):
-    #            yf[i] = correlate2d(xf[i],
-    #                                np.array([[.0625, .125, .0625],
-    #                                          [.125, .25, .125],
-    #                                          [.0625, .125, .0625]]),
-    #                                mode='same')
-    #        return y
-
-    if amplitude > 0.:
-        logger.debug(
-            'Using a smooth gradient filter (Gaussian blur - only for ML)')
-        return GaussFilt(amplitude)
-
-    elif amplitude < 0.:
-        raise RuntimeError('Hann filter not implemented (negative smoothing amplitude not supported)')
-        # logger.debug(
-        #    'Using a smooth gradient filter (Hann window - only for ML)')
-        # return HannFilt()

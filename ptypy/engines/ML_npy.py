@@ -11,24 +11,23 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-import numpy as np
 import time
 
+import numpy as np
+
+from . import BaseEngine
+from .utils import Cnorm2, Cdot, prepare_smoothing_preconditioner, Regul_del2
 from .. import utils as u
-from ..utils.verbose import logger
-from ..utils import parallel
-from .utils import Cnorm2, Cdot
-from ML import ML, ML_Gaussian
-from ptypy.array_based import data_utils as du
-from ptypy.array_based import FLOAT_TYPE, COMPLEX_TYPE
-from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla
+from ..utils import parallel
+from ..utils.descriptor import defaults_tree
+from ..utils.verbose import logger
 
 __all__ = ['MLNpy']
 
 
 @defaults_tree.parse_doc('engine.MLNpy')
-class MLNpy(ML):
+class MLNpy(BaseEngine):
     """
     Maximum likelihood reconstruction engine.
 
@@ -36,7 +35,7 @@ class MLNpy(ML):
     Defaults:
 
     [name]
-    default = MLNpy
+    default = ML
     type = str
     help =
     doc =
@@ -107,24 +106,74 @@ class MLNpy(ML):
 
     def __init__(self, ptycho_parent, pars=None):
         """
-        Difference map reconstruction engine.
+        Maximum likelihood reconstruction engine.
         """
         super(MLNpy, self).__init__(ptycho_parent, pars)
 
+        p = self.DEFAULT.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
+
+        # Instance attributes
+
+        # Object gradient
+        self.ob_grad = None
+
+        # Object minimization direction
+        self.ob_h = None
+
+        # Probe gradient
+        self.pr_grad = None
+
+        # Probe minimization direction
+        self.pr_h = None
+
+        # Other
+        self.tmin = None
+        self.ML_model = None
+        self.smooth_gradient = None
+        self.scale_p_o = None
+        self.scale_p_o_memory = .9
+
+    def engine_initialize(self):
+        """
+        Prepare for ML reconstruction.
+        """
+
+        # Object gradient and minimization direction
+        self.ob_grad = self.ob.copy(self.ob.ID + '_grad', fill=0.)
+        self.ob_h = self.ob.copy(self.ob.ID + '_h', fill=0.)
+
+        # Probe gradient and minimization direction
+        self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
+        self.pr_h = self.pr.copy(self.pr.ID + '_h', fill=0.)
+
+        self.tmin = 1.
+
+        # Create noise model
+        if self.p.ML_type.lower() == "gaussian":
+            self.ML_model = ML_Gaussian(self)
+        elif self.p.ML_type.lower() == "poisson":
+            self.ML_model = ML_Gaussian(self)
+        elif self.p.ML_type.lower() == "euclid":
+            self.ML_model = ML_Gaussian(self)
+        else:
+            raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
+
+        # Other options
+        self.smooth_gradient = prepare_smoothing_preconditioner(
+            self.p.smooth_gradient)
+
     def engine_prepare(self):
         """
-        Last minute initialization.
-
-        Everything that needs to be recalculated when new data arrives.
+        Last minute initialization, everything, that needs to be recalculated,
+        when new data arrives.
         """
-        super(MLNpy, self).engine_prepare()
-        # and then something to convert the arrays to numpy
-        self.vectorised_scan = {}
-        self.propagator = {}
-        for dID, _diffs in self.di.S.iteritems():
-            self.vectorised_scan[dID] = du.pod_to_arrays(self, dID)
-            first_view_id = self.vectorised_scan[dID]['meta']['view_IDs'][0]
-            self.propagator[dID] = self.di.V[first_view_id].pod.geometry.propagator
+        # - # fill object with coverage of views
+        # - for name,s in self.ob_viewcover.S.iteritems():
+        # -    s.fill(s.get_view_coverage())
+        pass
 
     def engine_iterate(self, num=1):
         """
@@ -191,9 +240,14 @@ class MLNpy(ML):
 
             # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
 
-            self.ob_grad << new_ob_grad
+            self.ob_grad << new_ob_grad  # self.ob_grad *2*new_ob_grad bitwise
             self.pr_grad << new_pr_grad
-
+            """
+            for name, s in self.ob_grad.storages.iteritems():
+                s.data[:] = new_ob_grad.storages[name].data
+            for name, s in self.pr_grad.storages.iteritems():
+                s.data[:] = new_pr_grad.storages[name].data
+            """
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
 
@@ -206,7 +260,33 @@ class MLNpy(ML):
             self.pr_h *= bt / self.tmin
             self.pr_grad *= self.scale_p_o
             self.pr_h -= self.pr_grad
+            """
+            for name,s in self.ob_h.storages.iteritems():
+                s.data *= bt
+                s.data -= self.ob_grad.storages[name].data
 
+            for name,s in self.pr_h.storages.iteritems():
+                s.data *= bt
+                s.data -= scale_p_o * self.pr_grad.storages[name].data
+            """
+            # 3. Next conjugate
+            # ob_h = self.ob_h
+            # ob_h *= bt
+
+            # Smoothing preconditioner not implemented.
+            # if self.smooth_gradient:
+            #    ob_h -= object_smooth_filter(grad_obj)
+            # else:
+            #    ob_h -= ob_grad
+
+            # ob_h -= ob_grad
+            # pr_h *= bt
+            # pr_h -= scale_p_o * pr_grad
+
+            # Minimize - for now always use quadratic approximation
+            # (i.e. single Newton-Raphson step)
+            # In principle, the way things are now programmed this part
+            # could be iterated over in a real NR style.
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
@@ -222,20 +302,114 @@ class MLNpy(ML):
             self.pr_h *= self.tmin
             self.ob += self.ob_h
             self.pr += self.pr_h
+            """
+            for name,s in self.ob.storages.iteritems():
+                s.data += tmin*self.ob_h.storages[name].data
+            for name,s in self.pr.storages.iteritems():
+                s.data += tmin*self.pr_h.storages[name].data
+            """
+            # Newton-Raphson loop would end here
 
-            # increase iteration conter
+            # increase iteration counter
             self.curiter +=1
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
-        return error_dct
+        return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
+
+    def engine_finalize(self):
+        """
+        Delete temporary containers.
+        """
+        del self.ptycho.containers[self.ob_grad.ID]
+        del self.ob_grad
+        del self.ptycho.containers[self.ob_h.ID]
+        del self.ob_h
+        del self.ptycho.containers[self.pr_grad.ID]
+        del self.pr_grad
+        del self.ptycho.containers[self.pr_h.ID]
+        del self.pr_h
 
 
-
-class ML_Gaussian_gpu(ML_Gaussian):
+class ML_Gaussian(object):
+    """
+    """
 
     def __init__(self, MLengine):
-        super(ML_Gaussian_gpu, self).__init__(MLengine)
+        """
+        Core functions for ML computation using a Gaussian model.
+        """
+        self.engine = MLengine
+
+        # Transfer commonly used attributes from ML engine
+        self.di = self.engine.di
+        self.p = self.engine.p
+        self.ob = self.engine.ob
+        self.pr = self.engine.pr
+
+        if self.p.intensity_renormalization is None:
+            self.Irenorm = 1.
+        else:
+            self.Irenorm = self.p.intensity_renormalization
+
+        # Create working variables
+        # New object gradient
+        self.ob_grad = self.engine.ob.copy(self.ob.ID + '_ngrad', fill=0.)
+        # New probe gradient
+        self.pr_grad = self.engine.pr.copy(self.pr.ID + '_ngrad', fill=0.)
+        self.LL = 0.
+
+        # Gaussian model requires weights
+        # TODO: update this part of the code once actual weights are passed in the PODs
+        self.weights = self.engine.di.copy(self.engine.di.ID + '_weights')
+        # FIXME: This part needs to be updated once statistical weights are properly
+        # supported in the data preparation.
+        for name, di_view in self.di.views.iteritems():
+            if not di_view.active:
+                continue
+            self.weights[di_view] = (self.Irenorm * di_view.pod.ma_view.data
+                                     / (1. / self.Irenorm + di_view.data))
+
+        # Useful quantities
+        self.tot_measpts = sum(s.data.size
+                               for s in self.di.storages.values())
+        self.tot_power = self.Irenorm * sum(s.tot_power
+                                            for s in self.di.storages.values())
+        # Prepare regularizer
+        if self.p.reg_del2:
+            obj_Npix = self.ob.size
+            expected_obj_var = obj_Npix / self.tot_power  # Poisson
+            reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
+            logger.debug(
+                'Rescaling regularization amplitude using '
+                'the Poisson distribution assumption.')
+            logger.debug('Factor: %8.5g' % reg_rescale)
+            reg_del2_amplitude = self.p.reg_del2_amplitude * reg_rescale
+            self.regularizer = Regul_del2(amplitude=reg_del2_amplitude)
+        else:
+            self.regularizer = None
+
+    def __del__(self):
+        """
+        Clean up routine
+        """
+        # Delete containers
+        del self.engine.ptycho.containers[self.weights.ID]
+        del self.weights
+        del self.engine.ptycho.containers[self.ob_grad.ID]
+        del self.ob_grad
+        del self.engine.ptycho.containers[self.pr_grad.ID]
+        del self.pr_grad
+
+        # Remove working attributes
+        for name, diff_view in self.di.views.iteritems():
+            if not diff_view.active:
+                continue
+            try:
+                del diff_view.float_intens_coeff
+                del diff_view.error
+            except:
+                pass
 
     def new_grad(self):
         """
@@ -279,7 +453,7 @@ class ML_Gaussian_gpu(ML_Gaussian):
             DI = Imodel - I
 
             # Second pod loop: gradients computation
-            LLL = np.sum((w * DI**2))
+            LLL = np.sum((w * DI ** 2).astype(np.float64))
             for name, pod in diff_view.pods.iteritems():
                 if not pod.active:
                     continue
@@ -295,6 +469,16 @@ class ML_Gaussian_gpu(ML_Gaussian):
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
 
+        # MPI reduction of gradients
+        self.ob_grad.allreduce()
+        self.pr_grad.allreduce()
+        """
+        for name, s in ob_grad.storages.iteritems():
+            parallel.allreduce(s.data)
+        for name, s in pr_grad.storages.iteritems():
+            parallel.allreduce(s.data)
+        """
+        parallel.allreduce(LL)
 
         # Object regularizer
         if self.regularizer:
@@ -338,10 +522,10 @@ class ML_Gaussian_gpu(ML_Gaussian):
                 b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
 
                 if A0 is None:
-                    A0 = u.abs2(f)
-                    A1 = 2 * np.real(f * a.conj())
-                    A2 = (2 * np.real(f * b.conj())
-                          + u.abs2(a))
+                    A0 = u.abs2(f).astype(np.longdouble)
+                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
+                    A2 = (2 * np.real(f * b.conj()).astype(np.longdouble)
+                          + u.abs2(a).astype(np.longdouble))
                 else:
                     A0 += u.abs2(f)
                     A1 += 2 * np.real(f * a.conj())
@@ -368,73 +552,4 @@ class ML_Gaussian_gpu(ML_Gaussian):
         self.B = B
 
         return B
-
-
-
-class Regul_del2(object):
-    """\
-    Squared gradient regularizer (Gaussian prior).
-
-    This class applies to any numpy array.
-    """
-    def __init__(self, amplitude, axes=[-2, -1]):
-        # Regul.__init__(self, axes)
-        self.axes = axes
-        self.amplitude = amplitude
-        self.delxy = None
-        self.g = None
-        self.LL = None
-
-    def grad(self, x):
-        """
-        Compute and return the regularizer gradient given the array x.
-        """
-        ax0, ax1 = self.axes
-        del_xf = u.delxf(x, axis=ax0)
-        del_yf = u.delxf(x, axis=ax1)
-        del_xb = u.delxb(x, axis=ax0)
-        del_yb = u.delxb(x, axis=ax1)
-
-        self.delxy = [del_xf, del_yf, del_xb, del_yb]
-        self.g = 2. * self.amplitude*(del_xb + del_yb - del_xf - del_yf)
-
-        self.LL = self.amplitude * (u.norm2(del_xf)
-                               + u.norm2(del_yf)
-                               + u.norm2(del_xb)
-                               + u.norm2(del_yb))
-
-        return self.g
-
-    def poly_line_coeffs(self, h, x=None):
-        ax0, ax1 = self.axes
-        if x is None:
-            del_xf, del_yf, del_xb, del_yb = self.delxy
-        else:
-            del_xf = u.delxf(x, axis=ax0)
-            del_yf = u.delxf(x, axis=ax1)
-            del_xb = u.delxb(x, axis=ax0)
-            del_yb = u.delxb(x, axis=ax1)
-
-        hdel_xf = u.delxf(h, axis=ax0)
-        hdel_yf = u.delxf(h, axis=ax1)
-        hdel_xb = u.delxb(h, axis=ax0)
-        hdel_yb = u.delxb(h, axis=ax1)
-
-        c0 = self.amplitude * (u.norm2(del_xf)
-                               + u.norm2(del_yf)
-                               + u.norm2(del_xb)
-                               + u.norm2(del_yb))
-
-        c1 = 2 * self.amplitude * np.real(np.vdot(del_xf, hdel_xf)
-                                          + np.vdot(del_yf, hdel_yf)
-                                          + np.vdot(del_xb, hdel_xb)
-                                          + np.vdot(del_yb, hdel_yb))
-
-        c2 = self.amplitude * (u.norm2(hdel_xf)
-                               + u.norm2(hdel_yf)
-                               + u.norm2(hdel_xb)
-                               + u.norm2(hdel_yb))
-
-        self.coeff = np.array([c0, c1, c2])
-        return self.coeff
 
