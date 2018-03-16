@@ -240,14 +240,9 @@ class MLNpy(BaseEngine):
 
             # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
 
-            self.ob_grad << new_ob_grad  # self.ob_grad *2*new_ob_grad bitwise
-            self.pr_grad << new_pr_grad
-            """
-            for name, s in self.ob_grad.storages.iteritems():
-                s.data[:] = new_ob_grad.storages[name].data
-            for name, s in self.pr_grad.storages.iteritems():
-                s.data[:] = new_pr_grad.storages[name].data
-            """
+            self.ob_grad *= 2 * new_ob_grad
+            self.pr_grad *= 2 * new_pr_grad
+
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
 
@@ -260,33 +255,7 @@ class MLNpy(BaseEngine):
             self.pr_h *= bt / self.tmin
             self.pr_grad *= self.scale_p_o
             self.pr_h -= self.pr_grad
-            """
-            for name,s in self.ob_h.storages.iteritems():
-                s.data *= bt
-                s.data -= self.ob_grad.storages[name].data
 
-            for name,s in self.pr_h.storages.iteritems():
-                s.data *= bt
-                s.data -= scale_p_o * self.pr_grad.storages[name].data
-            """
-            # 3. Next conjugate
-            # ob_h = self.ob_h
-            # ob_h *= bt
-
-            # Smoothing preconditioner not implemented.
-            # if self.smooth_gradient:
-            #    ob_h -= object_smooth_filter(grad_obj)
-            # else:
-            #    ob_h -= ob_grad
-
-            # ob_h -= ob_grad
-            # pr_h *= bt
-            # pr_h -= scale_p_o * pr_grad
-
-            # Minimize - for now always use quadratic approximation
-            # (i.e. single Newton-Raphson step)
-            # In principle, the way things are now programmed this part
-            # could be iterated over in a real NR style.
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
@@ -302,20 +271,12 @@ class MLNpy(BaseEngine):
             self.pr_h *= self.tmin
             self.ob += self.ob_h
             self.pr += self.pr_h
-            """
-            for name,s in self.ob.storages.iteritems():
-                s.data += tmin*self.ob_h.storages[name].data
-            for name,s in self.pr.storages.iteritems():
-                s.data += tmin*self.pr_h.storages[name].data
-            """
-            # Newton-Raphson loop would end here
 
-            # increase iteration counter
             self.curiter +=1
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
-        return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
+        return error_dct
 
     def engine_finalize(self):
         """
@@ -453,7 +414,7 @@ class ML_Gaussian(object):
             DI = Imodel - I
 
             # Second pod loop: gradients computation
-            LLL = np.sum((w * DI ** 2).astype(np.float64))
+            LLL = np.sum((w * DI ** 2))
             for name, pod in diff_view.pods.iteritems():
                 if not pod.active:
                     continue
@@ -522,10 +483,10 @@ class ML_Gaussian(object):
                 b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
 
                 if A0 is None:
-                    A0 = u.abs2(f).astype(np.longdouble)
-                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
-                    A2 = (2 * np.real(f * b.conj()).astype(np.longdouble)
-                          + u.abs2(a).astype(np.longdouble))
+                    A0 = u.abs2(f)
+                    A1 = 2 * np.real(f * a.conj())
+                    A2 = (2 * np.real(f * b.conj())
+                          + u.abs2(a))
                 else:
                     A0 += u.abs2(f)
                     A1 += 2 * np.real(f * a.conj())

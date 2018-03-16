@@ -163,7 +163,6 @@ class Regul_del2(object):
     """
 
     def __init__(self, amplitude, axes=(-2, -1)):  # TODO: This default argument should not be mutable!
-        # Regul.__init__(self, axes)
         self.axes = axes
         self.amplitude = amplitude
         self.delxy = None
@@ -199,7 +198,6 @@ class Regul_del2(object):
             del_yf = u.delxf(x, axis=ax1)
             del_xb = u.delxb(x, axis=ax0)
             del_yb = u.delxb(x, axis=ax1)
-        print "thing", ax0, ax1
         hdel_xf = u.delxf(h, axis=ax0)
         hdel_yf = u.delxf(h, axis=ax1)
         hdel_xb = u.delxb(h, axis=ax0)
@@ -238,21 +236,6 @@ def prepare_smoothing_preconditioner(amplitude):
         def __call__(self, x):
             return u.c_gf(x, [0, self.sigma, self.sigma])
 
-    # from scipy.signal import correlate2d
-    # class HannFilt:
-    #    def __call__(self, x):
-    #        y = np.empty_like(x)
-    #        sh = x.shape
-    #        xf = x.reshape((-1,) + sh[-2:])
-    #        yf = y.reshape((-1,) + sh[-2:])
-    #        for i in range(len(xf)):
-    #            yf[i] = correlate2d(xf[i],
-    #                                np.array([[.0625, .125, .0625],
-    #                                          [.125, .25, .125],
-    #                                          [.0625, .125, .0625]]),
-    #                                mode='same')
-    #        return y
-
     if amplitude > 0.:
         logger.debug(
             'Using a smooth gradient filter (Gaussian blur - only for ML)')
@@ -260,6 +243,3 @@ def prepare_smoothing_preconditioner(amplitude):
 
     elif amplitude < 0.:
         raise RuntimeError('Hann filter not implemented (negative smoothing amplitude not supported)')
-        # logger.debug(
-        #    'Using a smooth gradient filter (Hann window - only for ML)')
-        # return HannFilt()
