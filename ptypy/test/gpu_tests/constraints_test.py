@@ -17,11 +17,10 @@ from ptypy.array_based import COMPLEX_TYPE, FLOAT_TYPE
 from ptypy.gpu.constraints import get_difference as gget_difference
 from ptypy.gpu.constraints import renormalise_fourier_magnitudes as grenormalise_fourier_magnitudes
 from ptypy.gpu.constraints import difference_map_fourier_constraint as gdifference_map_fourier_constraint
-
+from ptypy.gpu import array_utils as gau
 
 class ConstraintsTest(unittest.TestCase):
 
-    @unittest.skip("This method is not implemented yet")
     def test_get_difference_UNITY(self):
         alpha = 1.0
         pbound = None
@@ -61,9 +60,12 @@ class ConstraintsTest(unittest.TestCase):
         difference = get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
         gdifference = gget_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
 
-        np.testing.assert_array_equal(difference, gdifference)
+        np.testing.assert_allclose(difference, gdifference, rtol=6e-5)
+        # Detailed errors
+        max_relerr = np.max(np.abs((gdifference-difference) / difference))
+        max_abserr = np.max(np.abs(gdifference-difference))
+        print("Max errors: rel={}, abs={}".format(max_relerr, max_abserr))
 
-    @unittest.skip("This method is not implemented yet")
     def test_get_difference_pbound_UNITY(self):
         alpha = 1.0
         pbound = 0.597053604126
@@ -103,9 +105,12 @@ class ConstraintsTest(unittest.TestCase):
         difference = get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
         gdifference = gget_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
 
-        np.testing.assert_array_equal(difference, gdifference)
+        np.testing.assert_allclose(difference, gdifference, rtol=6e-5)
+        # Detailed errors
+        max_relerr = np.max(np.abs((gdifference-difference) / difference))
+        max_abserr = np.max(np.abs(gdifference-difference))
+        print("Max errors: rel={}, abs={}".format(max_relerr, max_abserr))
 
-    # @unittest.skip("This method is not implemented yet")
     def test_get_difference_no_update_UNITY(self):
         alpha = 1.0
         pbound = 0.597053604126
@@ -143,11 +148,12 @@ class ConstraintsTest(unittest.TestCase):
                                                       direction='backward')
 
         difference = get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
-        gdifference = get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
-        print difference
-        np.testing.assert_array_equal(difference, gdifference)
+        gdifference = gget_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
 
-    @unittest.skip("This method is not implemented yet")
+        # result is actually all-zero, so array_equal works
+        np.testing.assert_array_equal(difference, gdifference)
+        
+
     def test_renormalise_fourier_magnitudes_UNITY(self):
         alpha = 1.0
         pbound = None
@@ -176,12 +182,13 @@ class ConstraintsTest(unittest.TestCase):
         af = np.sqrt(af2)
         # # Fourier magnitudes deviations(current_solution, pbound, measured_solution, mask, addr)
         err_fmag = far_field_error(af, fmag, mask)
+
         renormed_f = renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
         grenormed_f = grenormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
 
-        np.testing.assert_array_equal(renormed_f, grenormed_f)
+        np.testing.assert_allclose(renormed_f, grenormed_f, rtol=1e-6)
+        
 
-    @unittest.skip("This method is not implemented yet")
     def test_renormalise_fourier_magnitudes_pbound_UNITY(self):
         alpha = 1.0
         pbound = 0.597053604126
@@ -213,10 +220,9 @@ class ConstraintsTest(unittest.TestCase):
         err_fmag = np.ones_like(err_fmag) * 145.824958919
         renormed_f = renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
         grenormed_f = grenormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
+        
+        np.testing.assert_allclose(renormed_f, grenormed_f, rtol=1e-6)
 
-        np.testing.assert_array_equal(renormed_f, grenormed_f)
-
-    @unittest.skip("This method is not implemented yet")
     def test_renormalise_fourier_magnitudes_no_update_UNITY(self):
         alpha = 1.0
         pbound = 0.597053604126
@@ -250,9 +256,9 @@ class ConstraintsTest(unittest.TestCase):
         grenormed_f = grenormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
 
         np.testing.assert_array_equal(renormed_f, grenormed_f)
+  
 
 
-    @unittest.skip("This method is not implemented yet")
     def test_difference_map_fourier_constraint_UNITY(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
@@ -260,35 +266,57 @@ class ConstraintsTest(unittest.TestCase):
         master_pod = PtychoInstance.diff.V[first_view_id].pod
         propagator = master_pod.geometry.propagator
 
-        exit_wave, errors = difference_map_fourier_constraint(vectorised_scan['mask'],
-                                                              vectorised_scan['diffraction'],
-                                                              vectorised_scan['obj'],
-                                                              vectorised_scan['probe'],
-                                                              vectorised_scan['exit wave'],
-                                                              vectorised_scan['meta']['addr'],
-                                                              prefilter=propagator.pre_fft,
-                                                              postfilter=propagator.post_fft,
-                                                              pbound=None,
-                                                              alpha=1.0,
-                                                              LL_error=True)
+        # take a copy of the starting point, as function updates in-place
+        exit_wave_start = np.copy(vectorised_scan['exit wave'])
 
+        errors = difference_map_fourier_constraint(
+            vectorised_scan['mask'],
+            vectorised_scan['diffraction'],
+            vectorised_scan['obj'],
+            vectorised_scan['probe'],
+            vectorised_scan['exit wave'],
+            vectorised_scan['meta']['addr'],
+            prefilter=propagator.pre_fft,
+            postfilter=propagator.post_fft,
+            pbound=None,
+            alpha=1.0,
+            LL_error=True)
 
-        gexit_wave, gerrors = gdifference_map_fourier_constraint(vectorised_scan['mask'],
-                                                              vectorised_scan['diffraction'],
-                                                              vectorised_scan['obj'],
-                                                              vectorised_scan['probe'],
-                                                              vectorised_scan['exit wave'],
-                                                              vectorised_scan['meta']['addr'],
-                                                              prefilter=propagator.pre_fft,
-                                                              postfilter=propagator.post_fft,
-                                                              pbound=None,
-                                                              alpha=1.0,
-                                                              LL_error=True)
+        # keep result, copy original back
+        exit_wave = vectorised_scan['exit wave']
+        vectorised_scan['exit wave'] = exit_wave_start
 
-        np.testing.assert_array_equal(exit_wave, gexit_wave)
-        np.testing.assert_array_equal(errors, gerrors)
+        gerrors = gdifference_map_fourier_constraint(vectorised_scan['mask'],
+                                                    vectorised_scan['diffraction'],
+                                                    vectorised_scan['obj'],
+                                                    vectorised_scan['probe'],
+                                                    vectorised_scan['exit wave'],
+                                                    vectorised_scan['meta']['addr'],
+                                                    prefilter=propagator.pre_fft,
+                                                    postfilter=propagator.post_fft,
+                                                    pbound=None,
+                                                    alpha=1.0,
+                                                    LL_error=True)
+            
+        gexit_wave = vectorised_scan['exit wave']
 
-    @unittest.skip("This method is not implemented yet")
+        max_relerr = np.max(np.abs((exit_wave-gexit_wave) / exit_wave))
+        mean_relerr = np.mean(np.abs((exit_wave-gexit_wave) / exit_wave))
+        max_abserr = np.max(np.abs(exit_wave-gexit_wave))
+        mean_abserr = np.mean(np.abs(exit_wave-gexit_wave))
+        print("Exit wave max errors: rel={}, abs={}".format(max_relerr, max_abserr))
+        print("Exit wave mean errors: rel={}, abs={}".format(mean_relerr, mean_abserr))
+
+        max_relerr = np.max(np.abs((errors-gerrors) / errors), axis=None)
+        mean_relerr = np.mean(np.abs((errors-gerrors) / errors), axis=None)
+        max_abserr = np.max(np.abs(errors-gerrors), axis=None)
+        mean_abserr = np.mean(np.abs(errors-gerrors), axis=None)
+        print("Errors max errors: rel={}, abs={}".format(max_relerr, max_abserr))
+        print("Errors mean errors: rel={}, abs={}".format(mean_relerr, mean_abserr))
+
+        np.testing.assert_allclose(exit_wave, gexit_wave, rtol=1e-1, atol=18)
+        np.testing.assert_allclose(errors, gerrors, rtol=2e-4)
+
     def test_difference_map_fourier_constraint_pbound_UNITY(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
@@ -297,7 +325,10 @@ class ConstraintsTest(unittest.TestCase):
         propagator = master_pod.geometry.propagator
         pbound = 0.597053604126
 
-        exit_wave, errors = difference_map_fourier_constraint(vectorised_scan['mask'],
+         # take a copy of the starting point, as function updates in-place
+        exit_wave_start = np.copy(vectorised_scan['exit wave'])
+
+        errors = difference_map_fourier_constraint(vectorised_scan['mask'],
                                                               vectorised_scan['diffraction'],
                                                               vectorised_scan['obj'],
                                                               vectorised_scan['probe'],
@@ -309,8 +340,11 @@ class ConstraintsTest(unittest.TestCase):
                                                               alpha=1.0,
                                                               LL_error=True)
 
+        # keep result, copy original back
+        exit_wave = vectorised_scan['exit wave']
+        vectorised_scan['exit wave'] = exit_wave_start
 
-        gexit_wave, gerrors = gdifference_map_fourier_constraint(vectorised_scan['mask'],
+        gerrors = gdifference_map_fourier_constraint(vectorised_scan['mask'],
                                                               vectorised_scan['diffraction'],
                                                               vectorised_scan['obj'],
                                                               vectorised_scan['probe'],
@@ -322,10 +356,26 @@ class ConstraintsTest(unittest.TestCase):
                                                               alpha=1.0,
                                                               LL_error=True)
 
-        np.testing.assert_array_equal(exit_wave, gexit_wave)
-        np.testing.assert_array_equal(errors, gerrors)
+        gexit_wave = vectorised_scan['exit wave']
 
-    @unittest.skip("This method is not implemented yet")
+        max_relerr = np.max(np.abs((exit_wave-gexit_wave) / exit_wave))
+        mean_relerr = np.mean(np.abs((exit_wave-gexit_wave) / exit_wave))
+        max_abserr = np.max(np.abs(exit_wave-gexit_wave))
+        mean_abserr = np.mean(np.abs(exit_wave-gexit_wave))
+        print("Exit wave max errors: rel={}, abs={}".format(max_relerr, max_abserr))
+        print("Exit wave mean errors: rel={}, abs={}".format(mean_relerr, mean_abserr))
+
+        max_relerr = np.max(np.abs((errors-gerrors) / errors), axis=None)
+        mean_relerr = np.mean(np.abs((errors-gerrors) / errors), axis=None)
+        max_abserr = np.max(np.abs(errors-gerrors), axis=None)
+        mean_abserr = np.mean(np.abs(errors-gerrors), axis=None)
+        print("Errors max errors: rel={}, abs={}".format(max_relerr, max_abserr))
+        print("Errors mean errors: rel={}, abs={}".format(mean_relerr, mean_abserr))
+
+        np.testing.assert_allclose(exit_wave, gexit_wave, rtol=1e-1, atol=16)
+        np.testing.assert_allclose(errors, gerrors, rtol=2e-4)
+
+
     def test_difference_map_fourier_constraint_no_update_UNITY(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
@@ -334,7 +384,26 @@ class ConstraintsTest(unittest.TestCase):
         propagator = master_pod.geometry.propagator
         pbound = 200.0
 
-        exit_wave, errors = difference_map_fourier_constraint(vectorised_scan['mask'],
+         # take a copy of the starting point, as function updates in-place
+        exit_wave_start = np.copy(vectorised_scan['exit wave'])
+
+        errors = difference_map_fourier_constraint(vectorised_scan['mask'],
+                                                              vectorised_scan['diffraction'],
+                                                              vectorised_scan['obj'],
+                                                              vectorised_scan['probe'],
+                                                              vectorised_scan['exit wave'],
+                                                              vectorised_scan['meta']['addr'],
+                                                              prefilter=propagator.pre_fft,
+                                                              postfilter=propagator.post_fft,
+                                                              pbound=pbound,
+                                                              alpha=1.0,
+                                                              LL_error=True)
+        # keep result, copy original back
+        exit_wave = vectorised_scan['exit wave']
+        vectorised_scan['exit wave'] = exit_wave_start
+
+
+        gerrors = gdifference_map_fourier_constraint(vectorised_scan['mask'],
                                                               vectorised_scan['diffraction'],
                                                               vectorised_scan['obj'],
                                                               vectorised_scan['probe'],
@@ -346,21 +415,24 @@ class ConstraintsTest(unittest.TestCase):
                                                               alpha=1.0,
                                                               LL_error=True)
 
+        gexit_wave = vectorised_scan['exit wave']
 
-        gexit_wave, gerrors = gdifference_map_fourier_constraint(vectorised_scan['mask'],
-                                                              vectorised_scan['diffraction'],
-                                                              vectorised_scan['obj'],
-                                                              vectorised_scan['probe'],
-                                                              vectorised_scan['exit wave'],
-                                                              vectorised_scan['meta']['addr'],
-                                                              prefilter=propagator.pre_fft,
-                                                              postfilter=propagator.post_fft,
-                                                              pbound=pbound,
-                                                              alpha=1.0,
-                                                              LL_error=True)
+        max_relerr = np.nanmax(np.abs((exit_wave-gexit_wave) / exit_wave))
+        mean_relerr = np.nanmean(np.abs((exit_wave-gexit_wave) / exit_wave))
+        max_abserr = np.max(np.abs(exit_wave-gexit_wave))
+        mean_abserr = np.mean(np.abs(exit_wave-gexit_wave))
+        print("Exit wave max errors: rel={}, abs={}".format(max_relerr, max_abserr))
+        print("Exit wave mean errors: rel={}, abs={}".format(mean_relerr, mean_abserr))
 
-        np.testing.assert_array_equal(exit_wave, gexit_wave)
-        np.testing.assert_array_equal(errors, gerrors)
+        max_relerr = np.nanmax(np.abs((errors-gerrors) / errors), axis=None)
+        mean_relerr = np.nanmean(np.abs((errors-gerrors) / errors), axis=None)
+        max_abserr = np.max(np.abs(errors-gerrors), axis=None)
+        mean_abserr = np.mean(np.abs(errors-gerrors), axis=None)
+        print("Errors max errors: rel={}, abs={}".format(max_relerr, max_abserr))
+        print("Errors mean errors: rel={}, abs={}".format(mean_relerr, mean_abserr))
+
+        np.testing.assert_allclose(exit_wave, gexit_wave, rtol=1e-1, atol=8)
+        np.testing.assert_allclose(errors, gerrors, rtol=1e-4)
 
 
 if __name__ == '__main__':

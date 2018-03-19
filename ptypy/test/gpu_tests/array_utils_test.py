@@ -15,26 +15,58 @@ import numpy as np
 
 class ArrayUtilsTest(unittest.TestCase):
 
-    @unittest.skip("This method is not implemented yet")
-    def test_abs2_real_input_UNITY(self):
+    #@unittest.skip("This method is not implemented yet")
+    def test_abs2_real_input_2D_float32_UNITY(self):
+        x = np.ones((3,3), dtype=np.float32)
+        np.testing.assert_array_equal(au.abs2(x), gau.abs2(x))
+
+    #@unittest.skip("This method is not implemented yet")
+    def test_abs2_complex_input_2D_float32_UNITY(self):
+        x = np.ones((3,3)) + 1j*np.ones((3,3))
+        x = x.astype(np.complex64)
+        np.testing.assert_array_equal(au.abs2(x), gau.abs2(x))
+    
+    #@unittest.skip("This method is not implemented yet")
+    def test_abs2_real_input_3D_float32_UNITY(self):
+        x = np.ones((3,3,3), dtype=np.float32)
+        np.testing.assert_array_equal(au.abs2(x), gau.abs2(x))
+
+    #@unittest.skip("This method is not implemented yet")
+    def test_abs2_complex_input_3D_float32_UNITY(self):
+        x = np.ones((3,3,3)) + 1j*np.ones((3,3,3))
+        x = x.astype(np.complex64)
+        np.testing.assert_array_equal(au.abs2(x), gau.abs2(x))
+
+    #@unittest.skip("This method is not implemented yet")
+    def test_abs2_real_input_2D_float64_UNITY(self):
         x = np.ones((3,3))
         np.testing.assert_array_equal(au.abs2(x), gau.abs2(x))
 
-    @unittest.skip("This method is not implemented yet")
-    def test_abs2_complex_input_UNITY(self):
+    #@unittest.skip("This method is not implemented yet")
+    def test_abs2_complex_input_2D_float64_UNITY(self):
         x = np.ones((3,3)) + 1j*np.ones((3,3))
         np.testing.assert_array_equal(au.abs2(x), gau.abs2(x))
+    
+    #@unittest.skip("This method is not implemented yet")
+    def test_abs2_real_input_3D_float64_UNITY(self):
+        x = np.ones((3,3,3))
+        np.testing.assert_array_equal(au.abs2(x), gau.abs2(x))
 
-    @unittest.skip("This method is not implemented yet")
-    def test_sum_to_buffer_UNITY(self):
+    #@unittest.skip("This method is not implemented yet")
+    def test_abs2_complex_input_3D_float64_UNITY(self):
+        x = np.ones((3,3,3)) + 1j*np.ones((3,3,3))
+        np.testing.assert_array_equal(au.abs2(x), gau.abs2(x))
 
-        in1 = np.array([[1.0, 1.0, 1.0, 1.0],
-                        [2.0, 2.0, 2.0, 2.0],
-                        [3.0, 3.0, 3.0, 3.0],
-                        [4.0, 4.0, 4.0, 4.0]])
+    #@unittest.skip("This method is not implemented yet")
+    def test_sum_to_buffer_real_UNITY(self):
 
-        outshape = (2, 4)
+        in1 = np.array([np.ones((4, 4)),
+                        np.ones((4, 4))*2.0,
+                        np.ones((4, 4))*3.0,
+                        np.ones((4, 4))*4.0], dtype=FLOAT_TYPE)
 
+        outshape = (2, 4, 4)
+        
         in1_addr = np.array([(0, 0, 0),
                             (1, 0, 0),
                             (2, 0, 0),
@@ -44,8 +76,93 @@ class ArrayUtilsTest(unittest.TestCase):
                               (1, 0, 0),
                               (0, 0, 0),
                               (1, 0, 0)])
-        np.testing.assert_array_equal(au.sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype=FLOAT_TYPE),
-                                      gau.sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype=GPU_FLOAT_TYPE))
+
+        s1 = au.sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype=FLOAT_TYPE)
+        s2 = gau.sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype=FLOAT_TYPE)
+
+        np.testing.assert_array_equal(s1, s2)
+        
+    def test_sum_to_buffer_stride_real_UNITY(self):
+
+        in1 = np.array([np.ones((4, 4)),
+                        np.ones((4, 4))*2.0,
+                        np.ones((4, 4))*3.0,
+                        np.ones((4, 4))*4.0], dtype=FLOAT_TYPE)
+
+        outshape = (2, 4, 4)
+        
+        addr_info = np.zeros((4, 5, 3), dtype=np.int)
+        addr_info[:,2,:] = np.array([(0, 0, 0),
+                            (1, 0, 0),
+                            (2, 0, 0),
+                            (3, 0, 0)])
+
+        addr_info[:,3,:] = np.array([(0, 0, 0),
+                              (1, 0, 0),
+                              (0, 0, 0),
+                              (1, 0, 0)])
+
+        s1 = au.sum_to_buffer(in1, outshape, addr_info[:,2,:], addr_info[:,3,:], dtype=FLOAT_TYPE)
+        s2 = gau.sum_to_buffer_stride(in1, outshape, addr_info, dtype=FLOAT_TYPE)
+        
+        np.testing.assert_array_equal(s1, s2)
+
+    def test_sum_to_buffer_complex_UNITY(self):
+
+        in1 = np.array([np.ones((4,4)),
+                        np.ones((4, 4))*2.0,
+                        np.ones((4, 4))*3.0,
+                        np.ones((4, 4))*4.0], dtype=FLOAT_TYPE) \
+            + 1j*np.array([np.ones((4,4)),
+                        np.ones((4, 4))*2.0,
+                        np.ones((4, 4))*3.0,
+                        np.ones((4, 4))*4.0], dtype=FLOAT_TYPE)
+
+        outshape = (2, 4, 4)
+        
+        in1_addr = np.array([(0, 0, 0),
+                            (1, 0, 0),
+                            (2, 0, 0),
+                            (3, 0, 0)])
+
+        out1_addr = np.array([(0, 0, 0),
+                              (1, 0, 0),
+                              (0, 0, 0),
+                              (1, 0, 0)])
+
+        s1 = au.sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype=in1.dtype)
+        s2 = gau.sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype=in1.dtype)
+
+        np.testing.assert_array_equal(s1, s2)
+    
+    def test_sum_to_buffer_stride_complex_UNITY(self):
+
+        in1 = np.array([np.ones((4,4)),
+                        np.ones((4, 4))*2.0,
+                        np.ones((4, 4))*3.0,
+                        np.ones((4, 4))*4.0], dtype=FLOAT_TYPE) \
+            + 1j*np.array([np.ones((4,4)),
+                        np.ones((4, 4))*2.0,
+                        np.ones((4, 4))*3.0,
+                        np.ones((4, 4))*4.0], dtype=FLOAT_TYPE)
+
+        outshape = (2, 4, 4)
+        
+        addr_info = np.zeros((4, 5, 3), dtype=np.int)
+        addr_info[:,2,:] = np.array([(0, 0, 0),
+                            (1, 0, 0),
+                            (2, 0, 0),
+                            (3, 0, 0)])
+
+        addr_info[:,3,:] = np.array([(0, 0, 0),
+                              (1, 0, 0),
+                              (0, 0, 0),
+                              (1, 0, 0)])
+
+        s1 = au.sum_to_buffer(in1, outshape, addr_info[:,2,:], addr_info[:,3,:], dtype=in1.dtype)
+        s2 = gau.sum_to_buffer_stride(in1, outshape, addr_info, dtype=in1.dtype)
+        
+        np.testing.assert_array_equal(s1, s2)
 
     @unittest.skip("This method is not implemented yet")
     def test_sum_to_buffer_complex_UNITY(self):

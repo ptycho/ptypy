@@ -16,7 +16,7 @@ from copy import deepcopy
 
 class ObjectProbeInteractionTest(unittest.TestCase):
 
-    @unittest.skip("This method is not implemented yet")
+    #@unittest.skip("This method is not implemented yet")
     def test_scan_and_multiply_UNITY(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
@@ -26,11 +26,18 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
         addr_info = addr[:, 0]
+
+        # add one, to avoid having a lot of zeros and hence disturbing the result
+        probe = np.add(probe, 1)
+        obj = np.add(obj,1)
+
         po = opi.scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
         gpo = gopi.scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+        
         np.testing.assert_array_equal(po, gpo)
-
-    @unittest.skip("This method is not implemented yet")
+        #np.testing.assert_allclose(po, gpo)
+        
+    #@unittest.skip("This method is not implemented yet")
     def test_difference_map_realspace_constraint_UNITY(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays

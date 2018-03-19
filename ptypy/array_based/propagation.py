@@ -3,6 +3,11 @@ All propagation based kernels
 '''
 import numpy as np
 from . import COMPLEX_TYPE
+#import scipy as sci
+
+#import pyfftw
+#import pyfftw.interfaces.numpy_fft as fftw_np
+
 
 def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None, direction='forward'):
     '''
@@ -15,15 +20,21 @@ def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None,
     :return: The transformed stack.
     '''
 
+    #pyfftw.interfaces.cache.enable()
+    #pyfftw.interfaces.cache.set_keepalive_time(15.0)
+    #pe = 'FFTW_MEASURE'
+
     dtype = data_to_be_transformed.dtype
     if direction is 'forward':
         fft = lambda x: np.fft.fft2(x, axes=(-2, -1)).astype(dtype)
-        # fft = sci.fftpack.fft2
+        #fft = lambda x: fftw_np.fft2(x, planner_effort=pe, axes=(-2, -1))
+        #fft = sci.fftpack.fft2
         sc = 1.0 / np.sqrt(np.prod(data_to_be_transformed.shape[-2:]))
 
     elif direction is 'backward':
         fft = lambda x: np.fft.ifft2(x,  axes=(-2, -1)).astype(dtype)
-        # fft = sci.fftpack.ifft2
+        #fft = lambda x: fftw_np.ifft2(x, planner_effort=pe, axes=(-2, -1))
+        #fft = sci.fftpack.ifft2
 
         sc = np.sqrt(np.prod(data_to_be_transformed.shape[-2:]))
 
