@@ -81,7 +81,7 @@ GEO_PREFIX = 'G'
 
 # Hard-coded limit in array size
 # TODO: make this dynamic from available memory.
-MEGAPIXEL_LIMIT = 50
+MEGAPIXEL_LIMIT = 1000
 
 
 class Base(object):
