@@ -170,7 +170,8 @@ setup(
               'ptypy.resources',
               'ptypy.experiment',
               'ptypy.test',
-              'ptypy.gpu'],
+              'ptypy.gpu',
+              'ptypy.array_based'],
     package_data={'ptypy': ['resources/*', ]},
     #include_package_data=True
     scripts=[
