@@ -2070,11 +2070,16 @@ class POD(Base):
         for v in self.V.values():
             if v is None:
                 continue
-            if v._pod is not None:
+            if v._pod is None:
+                # you are first
+                v._pod = weakref.ref(self)
+            else:
                 # View has at least one POD connected
-                v.pods = weakref.WeakValueDictionary()
-                v.pods[self.ID] = self
-            v._pod = weakref.ref(self)
+                if v._pods is None:
+                    v._pods = weakref.WeakValueDictionary()
+                    # register the older view
+                    v._pods[v.pod.ID] = v.pod
+                v._pods[self.ID] = self            
 
         #: :any:`Geo` instance with propagators
         self.geometry = geometry
