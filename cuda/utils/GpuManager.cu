@@ -13,7 +13,7 @@ GpuManager::GpuManager()
 
   checkCudaErrors(cudaDeviceSynchronize());
   
-  // init cufft and cuda context by creating a plan 
+  // init cufft and cuda context by creating a plan, this is completely unused, but just forces handle creation here.
   int dims[] = {int(256), int(256)};
   size_t workSize;
   checkCudaErrors(cufftCreate(&fftplan));

@@ -16,7 +16,7 @@ __global__ void far_field_error_kernel(const float *current,
   int tx = threadIdx.x;
   int ty = threadIdx.y;
 
-  extern __shared__ float sum_v[];
+  __shared__ float sum_v[BlockX*BlockY*2];
   auto sum_mask = (int*)(sum_v + BlockX*BlockY);
   auto shidx = tx * BlockY + ty;
   sum_v[shidx] = 0.0;
@@ -40,7 +40,7 @@ __global__ void far_field_error_kernel(const float *current,
     }
   }
 
-  // now sum up the data in shared memory
+  // now sum up the data in shared memory, tree type reduction
   __syncthreads();
   int nt = BlockX*BlockY;
   int c = nt;
@@ -109,8 +109,7 @@ void FarFieldError::run()
   dim3 threadsPerBlock = {32u, 32u, 1u};
   dim3 blocks = {unsigned(i_), 1u, 1u};
   far_field_error_kernel<32,32><<<blocks,
-                           threadsPerBlock,
-                           2 * 32 * 32 * sizeof(float)>>>(
+                           threadsPerBlock>>>(
       d_current_.get(), d_measured_.get(), d_mask_.get(), d_out_.get(), m_, n_);
   checkLaunchErrors();
 
