@@ -9,7 +9,8 @@
 class FarfieldPropagator : public CudaFunction
 {
 public:
-  FarfieldPropagator(size_t batch_size, size_t m, size_t n);
+  FarfieldPropagator();
+  void setParameters(size_t batch_size, size_t m, size_t n);
 
   // for setting external memory to be used
   // (can be null if internal should be used)
@@ -28,8 +29,8 @@ public:
   ~FarfieldPropagator();
 
 private:
-  size_t batch_size_, m_, n_;
-  float sc_;
+  size_t batch_size_ = 0, m_ = 0, n_ = 0;
+  float sc_ = 1.0f;
   DevicePtrWrapper<complex<float>> d_datain_;
   DevicePtrWrapper<complex<float>> d_dataout_;
   DevicePtrWrapper<complex<float>> d_pre_;

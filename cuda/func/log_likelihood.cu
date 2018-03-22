@@ -1,5 +1,6 @@
 #include "log_likelihood.h"
 
+#include "utils/GpuManager.h"
 #include "utils/Memory.h"
 #include "utils/ScopedTimer.h"
 
@@ -76,17 +77,23 @@ __global__ void calc_LLError_kernel(const unsigned char *mask,
 
 /*************** Class implementation **********/
 
-LogLikelihood::LogLikelihood(int i, int m, int n, int addr_i)
-    : CudaFunction("log_likelihood"),
-      i_(i),
-      m_(m),
-      n_(n),
-      addr_i_(addr_i),
-      ffprop_(i, m, n),
-      abs2_(i * m * n),
-      sum2buffer_(i, m, n, i, m, n, addr_i, addr_i)
+LogLikelihood::LogLikelihood() : CudaFunction("log_likelihood") {}
+
+void LogLikelihood::setParameters(int i, int m, int n, int addr_i, int Idata_i)
 {
-  sum2buffer_.setAddrStride(5 * 3);
+  i_ = i;
+  m_ = m;
+  n_ = n;
+  Idata_i_ = Idata_i;
+  addr_i_ = addr_i;
+
+  ffprop_ = gpuManager.get_cuda_function<FarfieldPropagator>(
+      "loglikelihood.farfield_propagator", i, m, n);
+  abs2_ = gpuManager.get_cuda_function<Abs2<complex<float>, float>>(
+      "loglikelihood.abs2", i * m * n);
+  sum2buffer_ = gpuManager.get_cuda_function<SumToBuffer<float>>(
+      "loglikelihood.sum2buffer", i, m, n, i, m, n, addr_i, addr_i);
+  sum2buffer_->setAddrStride(5 * 3);
 }
 
 void LogLikelihood::setDeviceBuffers(complex<float> *d_probe_obj,
@@ -116,7 +123,7 @@ void LogLikelihood::setDeviceBuffers(complex<float> *d_probe_obj,
 
 int LogLikelihood::calculateAddrIndices(const int *out1_addr)
 {
-  outidx_size_ = sum2buffer_.calculateAddrIndices(out1_addr);
+  outidx_size_ = sum2buffer_->calculateAddrIndices(out1_addr);
   return outidx_size_;
 }
 
@@ -125,7 +132,7 @@ void LogLikelihood::allocate()
   ScopedTimer t(this, "allocate (joint)");
   d_probe_obj_.allocate(i_ * m_ * n_);
   d_mask_.allocate(i_ * m_ * n_);
-  d_Idata_.allocate(i_ * m_ * n_);
+  d_Idata_.allocate(Idata_i_ * m_ * n_);
   d_prefilter_.allocate(m_ * n_);
   d_postfilter_.allocate(m_ * n_);
   d_addr_info_.allocate(addr_i_ * 5 * 3);
@@ -133,22 +140,22 @@ void LogLikelihood::allocate()
   d_LL_.allocate(i_ * m_ * n_);
   d_ft_.allocate(i_ * m_ * n_);
 
-  ffprop_.setDeviceBuffers(
+  ffprop_->setDeviceBuffers(
       d_probe_obj_.get(), d_ft_.get(), d_prefilter_.get(), d_postfilter_.get());
-  ffprop_.allocate();
+  ffprop_->allocate();
 
-  abs2_.setDeviceBuffers(d_ft_.get(), d_LL_.get());
-  abs2_.allocate();
+  abs2_->setDeviceBuffers(d_ft_.get(), d_LL_.get());
+  abs2_->allocate();
 
-  sum2buffer_.setDeviceBuffers(d_LL_.get(),
-                               d_LL_.get(),  // in-place - ok here
-                               d_addr_info_.get() + 6,
-                               d_addr_info_.get() + 9,
-                               d_outidx_,
-                               d_startidx_,
-                               d_indices_,
-                               outidx_size_);
-  sum2buffer_.allocate();
+  sum2buffer_->setDeviceBuffers(d_LL_.get(),
+                                d_LL_.get(),  // in-place - ok here
+                                d_addr_info_.get() + 6,
+                                d_addr_info_.get() + 9,
+                                d_outidx_,
+                                d_startidx_,
+                                d_indices_,
+                                outidx_size_);
+  sum2buffer_->allocate();
 }
 
 float *LogLikelihood::getOutput() const { return d_out_.get(); }
@@ -163,10 +170,10 @@ void LogLikelihood::transfer_in(const complex<float> *probe_obj,
   ScopedTimer t(this, "transfer in");
   gpu_memcpy_h2d(d_probe_obj_.get(), probe_obj, i_ * m_ * n_);
   gpu_memcpy_h2d(d_mask_.get(), mask, i_ * m_ * n_);
-  gpu_memcpy_h2d(d_Idata_.get(), Idata, i_ * m_ * n_);
+  gpu_memcpy_h2d(d_Idata_.get(), Idata, Idata_i_ * m_ * n_);
   gpu_memcpy_h2d(d_prefilter_.get(), prefilter, m_ * n_);
   gpu_memcpy_h2d(d_postfilter_.get(), postfilter, m_ * n_);
-  // TODO: handle this case more explicitly 
+  // TODO: handle this case more explicitly
   if (!d_addr_info_.isExternal())
   {
     gpu_memcpy_h2d(d_addr_info_.get(), addr_info, i_ * 5 * 3);
@@ -174,7 +181,7 @@ void LogLikelihood::transfer_in(const complex<float> *probe_obj,
 
   // transfer-in on sum_to_buffer needs to be called, for the internal
   // outidx buffers
-  sum2buffer_.transfer_in(nullptr, nullptr, nullptr);
+  sum2buffer_->transfer_in(nullptr, nullptr, nullptr);
 }
 
 void LogLikelihood::transfer_out(float *out)
@@ -186,9 +193,9 @@ void LogLikelihood::transfer_out(float *out)
 void LogLikelihood::run()
 {
   ScopedTimer t(this, "run");
-  ffprop_.run(true, true, true);
-  abs2_.run();
-  sum2buffer_.run();
+  ffprop_->run(true, true, true);
+  abs2_->run();
+  sum2buffer_->run();
 
   dim3 threadsPerBlock = {32u, 32u, 1u};
   dim3 blocks = {unsigned(i_), 1u, 1u};
@@ -219,16 +226,18 @@ extern "C" void log_likelihood_c(const float *fprobe_obj,
                                  int i,
                                  int m,
                                  int n,
-                                 int addr_i)
+                                 int addr_i,
+                                 int Idata_i)
 {
   auto probe_obj = reinterpret_cast<const complex<float> *>(fprobe_obj);
   auto prefilter = reinterpret_cast<const complex<float> *>(fprefilter);
   auto postfilter = reinterpret_cast<const complex<float> *>(fpostfilter);
 
-  LogLikelihood ll(i, m, n, addr_i);
-  ll.calculateAddrIndices(addr_info + 9);
-  ll.allocate();
-  ll.transfer_in(probe_obj, mask, Idata, prefilter, postfilter, addr_info);
-  ll.run();
-  ll.transfer_out(out);
+  auto ll = gpuManager.get_cuda_function<LogLikelihood>(
+      "loglikelihood", i, m, n, addr_i, Idata_i);
+  ll->calculateAddrIndices(addr_info + 9);
+  ll->allocate();
+  ll->transfer_in(probe_obj, mask, Idata, prefilter, postfilter, addr_info);
+  ll->run();
+  ll->transfer_out(out);
 }

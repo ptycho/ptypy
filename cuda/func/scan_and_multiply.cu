@@ -1,5 +1,6 @@
 #include "scan_and_multiply.h"
 
+#include "utils/GpuManager.h"
 #include "utils/ScopedTimer.h"
 
 /*********** Kernels ******************/
@@ -63,26 +64,27 @@ __global__ void scan_and_multiply_kernel(
 
 /*********** Class implementation *****************/
 
-ScanAndMultiply::ScanAndMultiply(int batch_size,
-                                 int m,
-                                 int n,
-                                 int probe_i,
-                                 int probe_m,
-                                 int probe_n,
-                                 int obj_i,
-                                 int obj_m,
-                                 int obj_n)
-    : CudaFunction("scan_and_multiply"),
-      batch_size_(batch_size),
-      m_(m),
-      n_(n),
-      probe_i_(probe_i),
-      probe_m_(probe_m),
-      probe_n_(probe_n),
-      obj_i_(obj_i),
-      obj_m_(obj_m),
-      obj_n_(obj_n)
+ScanAndMultiply::ScanAndMultiply() : CudaFunction("scan_and_multiply") {}
+
+void ScanAndMultiply::setParameters(int batch_size,
+                                    int m,
+                                    int n,
+                                    int probe_i,
+                                    int probe_m,
+                                    int probe_n,
+                                    int obj_i,
+                                    int obj_m,
+                                    int obj_n)
 {
+  batch_size_ = batch_size;
+  m_ = m;
+  n_ = n;
+  probe_i_ = probe_i;
+  probe_m_ = probe_m;
+  probe_n_ = probe_n;
+  obj_i_ = obj_i;
+  obj_m_ = obj_m;
+  obj_n_ = obj_n;
 }
 
 void ScanAndMultiply::setDeviceBuffers(complex<float> *d_probe,
@@ -166,10 +168,18 @@ extern "C" void scan_and_multiply_c(const float *fprobe,
   auto obj = reinterpret_cast<const complex<float> *>(fobj);
   auto out = reinterpret_cast<complex<float> *>(fout);
 
-  ScanAndMultiply sam(
-      batch_size, m, n, probe_i, probe_m, probe_n, obj_i, obj_m, obj_n);
-  sam.allocate();
-  sam.transfer_in(probe, obj, addr_info);
-  sam.run();
-  sam.transfer_out(out);
+  auto sam = gpuManager.get_cuda_function<ScanAndMultiply>("scan_and_multiply",
+                                                           batch_size,
+                                                           m,
+                                                           n,
+                                                           probe_i,
+                                                           probe_m,
+                                                           probe_n,
+                                                           obj_i,
+                                                           obj_m,
+                                                           obj_n);
+  sam->allocate();
+  sam->transfer_in(probe, obj, addr_info);
+  sam->run();
+  sam->transfer_out(out);
 }

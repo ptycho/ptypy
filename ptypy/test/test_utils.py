@@ -22,10 +22,6 @@ def get_test_data_path(name):
     return '/'.join(os.path.split(path)[0].split(os.sep)[:-2] +
                     ['test_data/', name,'/'])
 
-def printArrayInfo(a, name):
-    print("{}: {}, {}".format(name, a.shape, a.dtype))
-
-
 def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='append', auto_frames=20, ncalls=1, cleanup=True):
         u.verbose.set_level(3)
         out_dict = {}

@@ -1,6 +1,7 @@
 #include "abs2.h"
 
 #include "utils/Complex.h"
+#include "utils/GpuManager.h"
 #include "utils/ScopedTimer.h"
 
 /************ Kernels *********************/
@@ -30,8 +31,14 @@ __global__ void abs2_kernel(const Tc *in, T *out, size_t n)
 /************ Class methods *****************/
 
 template <class Tin, class Tout>
-Abs2<Tin, Tout>::Abs2(size_t n) : CudaFunction("abs2"), n_(n)
+Abs2<Tin, Tout>::Abs2() : CudaFunction("abs2")
 {
+}
+
+template <class Tin, class Tout>
+void Abs2<Tin, Tout>::setParameters(size_t n)
+{
+  n_ = n;
 }
 
 template <class Tin, class Tout>
@@ -93,11 +100,12 @@ template class Abs2<complex<double>, double>;
 template <class Tin, class Tout>
 static void entryFunc(const Tin *in, Tout *out, int n)
 {
-  Abs2<Tin, Tout> abs2(n);
-  abs2.allocate();
-  abs2.transfer_in(in);
-  abs2.run();
-  abs2.transfer_out(out);
+  auto abs2 = gpuManager.get_cuda_function<Abs2<Tin, Tout>>(
+      "abs2." + getTypeName<Tin>() + "," + getTypeName<Tout>() + ">", n);
+  abs2->allocate();
+  abs2->transfer_in(in);
+  abs2->run();
+  abs2->transfer_out(out);
 }
 
 extern "C" void abs2_c(const float *in, float *out, int n, int iisComplex)

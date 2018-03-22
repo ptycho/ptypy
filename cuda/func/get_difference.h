@@ -6,7 +6,8 @@
 class GetDifference : public CudaFunction
 {
 public:
-  GetDifference(int i, int m, int n);
+  GetDifference();
+  void setParameters(int i, int m, int n);
   void setDeviceBuffers(int *d_addr_info,
                         complex<float> *d_backpropagated_solution,
                         float *d_err_fmag,
@@ -30,5 +31,5 @@ private:
   DevicePtrWrapper<complex<float>> d_exit_wave_;
   DevicePtrWrapper<complex<float>> d_probe_obj_;
   DevicePtrWrapper<complex<float>> d_out_;
-  int i_, m_, n_;
+  int i_ = 0, m_ = 0, n_ = 0;
 };

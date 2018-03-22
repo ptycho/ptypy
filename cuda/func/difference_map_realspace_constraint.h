@@ -7,7 +7,8 @@
 class DifferenceMapRealspaceConstraint : public CudaFunction
 {
 public:
-  DifferenceMapRealspaceConstraint(int i, int m, int n);
+  DifferenceMapRealspaceConstraint();
+  void setParameters(int i, int m, int n);
   void setDeviceBuffers(complex<float> *d_obj_and_probe,
                         complex<float> *d_exit_wave,
                         complex<float> *d_out);
@@ -22,5 +23,5 @@ private:
   DevicePtrWrapper<complex<float>> d_obj_and_probe_;
   DevicePtrWrapper<complex<float>> d_exit_wave_;
   DevicePtrWrapper<complex<float>> d_out_;
-  int i_, m_, n_;
+  int i_ = 0, m_ = 0, n_ = 0;
 };

@@ -1,6 +1,7 @@
 #include "difference_map_realspace_constraint.h"
 
 #include "utils/Complex.h"
+#include "utils/GpuManager.h"
 #include "utils/ScopedTimer.h"
 
 /************ Kernels ******************/
@@ -23,11 +24,16 @@ __global__ void difference_map_realspace_constraint_kernel(
 
 /***************** Class implementation ***********/
 
-DifferenceMapRealspaceConstraint::DifferenceMapRealspaceConstraint(int i,
-                                                                   int m,
-                                                                   int n)
-    : CudaFunction("difference_map_realspace_constraint"), i_(i), m_(m), n_(n)
+DifferenceMapRealspaceConstraint::DifferenceMapRealspaceConstraint()
+    : CudaFunction("difference_map_realspace_constraint")
 {
+}
+
+void DifferenceMapRealspaceConstraint::setParameters(int i, int m, int n) 
+{
+  i_ = i;
+  m_ = m;
+  n_ = n;
 }
 
 void DifferenceMapRealspaceConstraint::setDeviceBuffers(
@@ -97,9 +103,12 @@ extern "C" void difference_map_realspace_constraint_c(
   auto exit_wave = reinterpret_cast<const complex<float> *>(f_exit_wave);
   auto out = reinterpret_cast<complex<float> *>(fout);
 
-  DifferenceMapRealspaceConstraint dmc(i, m, n);
-  dmc.allocate();
-  dmc.transfer_in(obj_and_probe, exit_wave);
-  dmc.run(alpha);
-  dmc.transfer_out(out);
+  auto dmc = gpuManager.get_cuda_function<DifferenceMapRealspaceConstraint>(
+    "dm_realspace_constraint",
+    i, m, n
+    );
+  dmc->allocate();
+  dmc->transfer_in(obj_and_probe, exit_wave);
+  dmc->run(alpha);
+  dmc->transfer_out(out);
 }

@@ -14,6 +14,10 @@ import time
 
 doTiming = False
 
+from ptypy.gpu.config import init_gpus, reset_function_cache
+init_gpus(0)
+
+
 def calculatePrintErrors(expected, actual):
     abserr = np.abs(expected-actual)
     max_abserr = np.max(abserr)
@@ -32,6 +36,10 @@ def calculatePrintErrors(expected, actual):
     
 
 class FarfieldPropagatorTest(unittest.TestCase):
+
+    def tearDown(self):
+        # reset the cached GPU functions after each test
+        reset_function_cache()
 
     #@unittest.skip("This method is not implemented yet")
     def test_fourier_transform_farfield_nofilter_UNITY(self):

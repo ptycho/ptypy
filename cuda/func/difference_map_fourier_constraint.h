@@ -17,15 +17,18 @@
 class DifferenceMapFourierConstraint : public CudaFunction
 {
 public:
-  DifferenceMapFourierConstraint(int i,
-                                 int m,
-                                 int n,
-                                 int obj_m,
-                                 int obj_n,
-                                 int probe_m,
-                                 int probe_n,
-                                 bool do_LL_error,
-                                 bool do_realspace_error);
+  DifferenceMapFourierConstraint();
+  void setParameters(int i,
+                     int m,
+                     int n,
+                     int obj_m,
+                     int obj_n,
+                     int probe_m,
+                     int probe_n,
+                     int addr_len,
+                     int Idata_i,
+                     bool do_LL_error,
+                     bool do_realspace_error);
   void setDeviceBuffers(unsigned char *d_mask,
                         float *d_Idata,
                         complex<float> *d_obj,
@@ -65,27 +68,28 @@ private:
 
   DevicePtrWrapper<int> d_outidx_, d_startidx_, d_indices_;
   std::vector<int> outidx_, startidx_, indices_;
-  int outidx_size_;
+  int outidx_size_ = 0;
 
-  int i_, m_, n_;
-  int obj_m_, obj_n_;
-  int probe_m_, probe_n_;
-  bool do_LL_error_;
-  bool do_realspace_error_;
+  int i_ = 0, m_ = 0, n_ = 0;
+  int obj_m_ = 0, obj_n_ = 0;
+  int probe_m_ = 0, probe_n_ = 0;
+  int addr_len_ = 0, Idata_i_ = 0;
+  bool do_LL_error_ = 0;
+  bool do_realspace_error_ = 0;
   // intermediate buffers
   DevicePtrWrapper<complex<float>> d_prefilter_conj_;
   DevicePtrWrapper<complex<float>> d_postfilter_conj_;
   DevicePtrWrapper<float> d_fmag_;
   // other kernels
-  ScanAndMultiply scan_and_multiply_;
-  LogLikelihood log_likelihood_;
-  DifferenceMapRealspaceConstraint difference_map_realspace_constraint_;
-  FarfieldPropagator farfield_propagator_fwd_;
-  Abs2<complex<float>, float> abs2_;
-  SumToBuffer<float> sum_to_buffer_;
-  FarFieldError far_field_error_;
-  RenormaliseFourierMagnitudes renormalise_fourier_magnitudes_;
-  FarfieldPropagator farfield_propagator_rev_;
-  GetDifference get_difference_;
-  RealspaceError realspace_error_;
+  ScanAndMultiply* scan_and_multiply_ = nullptr;
+  LogLikelihood* log_likelihood_ = nullptr;
+  DifferenceMapRealspaceConstraint* difference_map_realspace_constraint_ = nullptr;
+  FarfieldPropagator* farfield_propagator_fwd_ = nullptr;
+  Abs2<complex<float>, float>* abs2_ = nullptr;
+  SumToBuffer<float>* sum_to_buffer_ = nullptr;
+  FarFieldError* far_field_error_ = nullptr;
+  RenormaliseFourierMagnitudes* renormalise_fourier_magnitudes_ = nullptr;
+  FarfieldPropagator* farfield_propagator_rev_ = nullptr;
+  GetDifference* get_difference_ = nullptr;
+  RealspaceError* realspace_error_ = nullptr;
 };

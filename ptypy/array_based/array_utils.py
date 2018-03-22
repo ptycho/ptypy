@@ -44,15 +44,18 @@ def mass_center(A):
     '''
     Input will always be real, and 2d or 3d, single precision here
     '''
-    return np.array(ndi.measurements.center_of_mass(A))
+    return np.array(ndi.measurements.center_of_mass(A), dtype=A.dtype)
 
-def interpolated_shift(c, shift):
+def interpolated_shift(c, shift, do_linear=False):
     '''
     complex bicubic interpolated shift.
     complex output. This shift should be applied to 2D arrays. shift should have len=c.ndims 
     
     '''
-    return ndi.interpolation.shift(np.real(c), shift, order=5) + 1j*ndi.interpolation.shift(np.imag(c), shift, order=5)
+    if not do_linear:
+        return ndi.interpolation.shift(np.real(c), shift, order=3, prefilter=True) + 1j*ndi.interpolation.shift(np.imag(c), shift, order=3, prefilter=True)
+    else:
+        return ndi.interpolation.shift(np.real(c), shift, order=1, mode='constant', cval=0, prefilter=False) + 1j * ndi.interpolation.shift(np.imag(c), shift, order=1, mode='constant', cval=0, prefilter=False)
 
 
 def clip_complex_magnitudes_to_range(complex_input, clip_min, clip_max):

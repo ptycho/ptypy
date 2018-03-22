@@ -7,6 +7,8 @@ import unittest
 from ptypy.core import Ptycho
 from ptypy import utils as u
 
+def print_array_info(a, name):
+    print("{}: {}, {}".format(name, a.shape, a.dtype))
 
 def get_ptycho_instance(label=None):
     '''

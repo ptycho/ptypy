@@ -2,7 +2,9 @@
 
 #include "addr_info_helpers.h"
 #include "utils/Complex.h"
+#include "utils/GpuManager.h"
 #include "utils/ScopedTimer.h"
+
 #include <iostream>
 
 /********** Kernels ***********************/
@@ -51,24 +53,28 @@ __global__ void sum_to_buffer_kernel(T *out,
 /********** Class implementation **************/
 
 template <class T>
-SumToBuffer<T>::SumToBuffer(int in1_0,
-                            int in1_1,
-                            int in1_2,
-                            int os_0,
-                            int os_1,
-                            int os_2,
-                            int in1_addr_0,
-                            int out1_addr_0)
-    : CudaFunction("sum_to_buffer"),
-      in1_0_(in1_0),
-      in1_1_(in1_1),
-      in1_2_(in1_2),
-      os_0_(os_0),
-      os_1_(os_1),
-      os_2_(os_2),
-      in1_addr_0_(in1_addr_0),
-      out1_addr_0_(out1_addr_0)
+SumToBuffer<T>::SumToBuffer() : CudaFunction("sum_to_buffer")
 {
+}
+
+template <class T>
+void SumToBuffer<T>::setParameters(int in1_0,
+                                   int in1_1,
+                                   int in1_2,
+                                   int os_0,
+                                   int os_1,
+                                   int os_2,
+                                   int in1_addr_0,
+                                   int out1_addr_0)
+{
+  in1_0_ = in1_0;
+  in1_1_ = in1_1;
+  in1_2_ = in1_2;
+  os_0_ = os_0;
+  os_1_ = os_1;
+  os_2_ = os_2;
+  in1_addr_0_ = in1_addr_0;
+  out1_addr_0_ = out1_addr_0;
 }
 
 template <class T>
@@ -212,13 +218,21 @@ void sum_to_buffer_tc(const T *in1,
                       const int *out_addr,
                       int out_addr_0)
 {
-  SumToBuffer<T> s2b(
-      in1_0, in1_1, in1_2, out_0, out_1, out_2, in_addr_0, out_addr_0);
-  s2b.calculateAddrIndices(out_addr);
-  s2b.allocate();
-  s2b.transfer_in(in1, in_addr, out_addr);
-  s2b.run();
-  s2b.transfer_out(out);
+  auto s2b = gpuManager.get_cuda_function<SumToBuffer<T>>(
+      "sum_to_buffer<" + getTypeName<T>() + ">",
+      in1_0,
+      in1_1,
+      in1_2,
+      out_0,
+      out_1,
+      out_2,
+      in_addr_0,
+      out_addr_0);
+  s2b->calculateAddrIndices(out_addr);
+  s2b->allocate();
+  s2b->transfer_in(in1, in_addr, out_addr);
+  s2b->run();
+  s2b->transfer_out(out);
 }
 
 extern "C" void sum_to_buffer_c(const float *in1,
@@ -279,16 +293,24 @@ void sum_to_buffer_stride_tc(const T *in1,
                              const int *addr_info,
                              int addr_info_0)
 {
-  SumToBuffer<T> s2b(
-      in1_0, in1_1, in1_2, out_0, out_1, out_2, addr_info_0, addr_info_0);
-  s2b.setAddrStride(15);
+  auto s2b = gpuManager.get_cuda_function<SumToBuffer<T>>(
+      "sum_to_buffer<" + getTypeName<T>() + ">",
+      in1_0,
+      in1_1,
+      in1_2,
+      out_0,
+      out_1,
+      out_2,
+      addr_info_0,
+      addr_info_0);
+  s2b->setAddrStride(15);
   auto in_addr = addr_info + 6;
   auto out_addr = addr_info + 9;
-  s2b.calculateAddrIndices(out_addr);
-  s2b.allocate();
-  s2b.transfer_in(in1, in_addr, out_addr);
-  s2b.run();
-  s2b.transfer_out(out);
+  s2b->calculateAddrIndices(out_addr);
+  s2b->allocate();
+  s2b->transfer_in(in1, in_addr, out_addr);
+  s2b->run();
+  s2b->transfer_out(out);
 }
 
 extern "C" void sum_to_buffer_stride_c(const float *in1,

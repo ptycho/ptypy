@@ -10,7 +10,6 @@ import numpy as np
 from ptypy.gpu import data_utils as du
 
 
-
 class DataUtilsTest(unittest.TestCase):
     '''
     tests the conversion between pods and numpy arrays

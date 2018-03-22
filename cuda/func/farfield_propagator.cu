@@ -1,6 +1,8 @@
 #include "farfield_propagator.h"
 
+#include "utils/GpuManager.h"
 #include "utils/ScopedTimer.h"
+
 #include <iostream>
 
 /**************** Kernels ***************/
@@ -40,14 +42,17 @@ __global__ void applyPostfilter(complex<float> *data,
 
 /*************** Class implementation ********************/
 
-FarfieldPropagator::FarfieldPropagator(size_t batch_size, size_t m, size_t n)
-    : CudaFunction("farfield_propagator"),
-      batch_size_(batch_size),
-      m_(m),
-      n_(n),
-      sc_(1.0f /
-          std::sqrt(float(m *n)))  // with cuFFT, we need to scale both ways
+FarfieldPropagator::FarfieldPropagator() : CudaFunction("farfield_propagator")
 {
+}
+
+void FarfieldPropagator::setParameters(size_t batch_size, size_t m, size_t n)
+{
+  batch_size_ = batch_size;
+  m_ = m;
+  n_ = n;
+  sc_ =
+      1.0f / std::sqrt(float(m * n));  // with cuFFT, we need to scale both ways
 }
 
 void FarfieldPropagator::setDeviceBuffers(complex<float> *d_datain,
@@ -179,9 +184,9 @@ extern "C" void farfield_propagator_c(const float *fdata_to_be_transformed,
   auto out = reinterpret_cast<complex<float> *>(fout);
   auto isForward = iisForward != 0;
 
-  FarfieldPropagator prop(b, m, n);
-  prop.allocate();
-  prop.transfer_in(data_to_be_transformed, prefilter, postfilter);
-  prop.run(prefilter != nullptr, postfilter != nullptr, isForward);
-  prop.transfer_out(out);
+  auto prop = gpuManager.get_cuda_function<FarfieldPropagator>("farfield_propagator", b, m, n);
+  prop->allocate();
+  prop->transfer_in(data_to_be_transformed, prefilter, postfilter);
+  prop->run(prefilter != nullptr, postfilter != nullptr, isForward);
+  prop->transfer_out(out);
 }

@@ -7,14 +7,15 @@ template <class T>
 class SumToBuffer : public CudaFunction
 {
 public:
-  SumToBuffer(int in1_0,
-              int in1_1,
-              int in1_2,
-              int os_0,
-              int os_1,
-              int os_2,
-              int in1_addr_0,
-              int out1_addr_0);
+  SumToBuffer();
+  void setParameters(int in1_0,
+                     int in1_1,
+                     int in1_2,
+                     int os_0,
+                     int os_1,
+                     int os_2,
+                     int in1_addr_0,
+                     int out1_addr_0);
   void setAddrStride(int stride);
   int calculateAddrIndices(const int *out1_addr);
   void setDeviceBuffers(T *d_in1,
@@ -38,9 +39,9 @@ private:
   DevicePtrWrapper<int> d_out1_addr_;
   DevicePtrWrapper<int> d_outidx_, d_startidx_, d_indices_;
   std::vector<int> outidx_, startidx_, indices_;
-  int in1_0_, in1_1_, in1_2_;
-  int os_0_, os_1_, os_2_;
-  int in1_addr_0_, out1_addr_0_;
+  int in1_0_ = 0, in1_1_ = 0, in1_2_ = 0;
+  int os_0_ = 0, os_1_ = 0, os_2_ = 0;
+  int in1_addr_0_ = 0, out1_addr_0_ = 0;
   int addr_stride_ = 3;
   int outidx_size_ = 0;
 };

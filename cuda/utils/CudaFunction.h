@@ -17,7 +17,7 @@ protected:
 public:
   void printTimes() const;
   /** Calls printTimes() if timing is enabled */
-  ~CudaFunction();
+  virtual ~CudaFunction();
 
 private:
   friend class ScopedTimer;

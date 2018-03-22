@@ -44,6 +44,16 @@ add_library(gpu_extension STATIC
   func/renormalise_fourier_magnitudes.cu
   func/difference_map_fourier_constraint.h
   func/difference_map_fourier_constraint.cu
+  func/norm2.h
+  func/norm2.cu
+  func/mass_center.h
+  func/mass_center.cu
+  func/clip_complex_magnitudes_to_range.h
+  func/clip_complex_magnitudes_to_range.cu
+  func/extract_array_from_exit_wave.h
+  func/extract_array_from_exit_wave.cu
+  func/interpolated_shift.cu
+  func/interpolated_shift.h
 )
 
 target_compile_features(gpu_extension PUBLIC cxx_std_11)

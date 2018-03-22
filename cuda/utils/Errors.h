@@ -32,12 +32,7 @@ public:
 
 /// Use this macro to check if a kernel launch failed.
 /// That is, call this straight after a manual kernel launch, without sync.
-#define checkLaunchErrors()                                                    \
-  do                                                                           \
-  {                                                                            \
-    checkCudaErrors(cudaPeekAtLastError());                                    \
-    checkCudaErrors(cudaGetLastError());                                       \
-  } while (false)
+#define checkLaunchErrors() checkCudaErrors(cudaPeekAtLastError())
 
 /// Implementation details, translating macro to exception
 namespace detail
