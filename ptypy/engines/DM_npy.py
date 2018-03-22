@@ -123,6 +123,10 @@ class DMNpy(DM):
         """
         super(DMNpy, self).__init__(ptycho_parent, pars)
 
+    def engine_initialize(self):
+        self.error = []
+        self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
+
     def engine_prepare(self):
         """
         Last minute initialization.
@@ -149,6 +153,9 @@ class DMNpy(DM):
             for it in range(num):
                 t1 = time.time()
 
+                # numpy dump here for 64x64 and 4096x4096
+
+
                 error_dct = self.numpy_fourier_update(self.vectorised_scan[dID]['mask'],
                                                       self.vectorised_scan[dID]['diffraction'],
                                                       self.vectorised_scan[dID]['obj'],
@@ -157,10 +164,10 @@ class DMNpy(DM):
                                                       self.vectorised_scan[dID]['meta']['addr'],
                                                       self.propagator[dID],
                                                       pbound=self.pbound[dID])
-
+                # numpy dump here for 64x64 and 4096x4096
                 t2 = time.time()
                 tf += t2 - t1
-
+                # numpy dump here for 64x64 and 4096x4096
                 self.numpy_overlap_update(self.vectorised_scan[dID]['obj'],
                                           self.vectorised_scan[dID]['object weights'],
                                           self.vectorised_scan[dID]['object viewcover'],
@@ -170,7 +177,7 @@ class DMNpy(DM):
                                           self.vectorised_scan[dID]['exit wave'],
                                           self.mean_power,
                                           self.vectorised_scan[dID]['meta']['addr'][:, 0])
-
+                # numpy dump here for 64x64 and 4096x4096
                 t3 = time.time()
                 to += t3 - t2
 
@@ -186,6 +193,18 @@ class DMNpy(DM):
     def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, propagator, pbound):
         error_dct = {}
 
+        out_dict = {'mask': mask,
+                    'Idata': Idata,
+                    'obj': obj,
+                    'probe': probe,
+                    'exit wave': exit_wave,
+                    'addr': addr,
+                    'prefilter':propagator.pre_fft,
+                    'postfilter' : propagator.post_fft,
+                    'pbound' : pbound,
+                    'alpha' : self.p.alpha,
+                    'LL_error' : False}
+        np.save('/tmp/i08_case_64x64_inputs.npy', out_dict)
         errors = con.difference_map_fourier_constraint(mask,
                                                        Idata,
                                                        obj,
@@ -259,3 +278,10 @@ class DMNpy(DM):
             if change < self.p.overlap_converge_factor:
                 break
 
+    def engine_finalize(self):
+        """
+        Try deleting ever helper container.
+        """
+
+        del self.ptycho.containers[self.ob_viewcover.ID]
+        del self.ob_viewcover

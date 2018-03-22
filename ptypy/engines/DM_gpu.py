@@ -9,20 +9,18 @@ This file is part of the PTYPY package.
 """
 
 import time
-from ..utils.verbose import logger, log
+from ..utils.verbose import logger
 from ..utils import parallel
-from DM import DM
+from DM_npy import DMNpy
 from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla
-from ..array_based import data_utils as du
-from ..array_based import constraints as con
-from ..array_based import object_probe_interaction as opi
-import numpy as np
-__all__ = ['DMNpy']
+from ..gpu import constraints as con
+
+__all__ = ['DMGpu']
 
 
-@defaults_tree.parse_doc('engine.DMNpy')
-class DMNpy(DM):
+@defaults_tree.parse_doc('engine.DMGpu')
+class DMGpu(DMNpy):
     """
     A full-fledged Difference Map engine that uses numpy arrays instead of iteration.
 
@@ -121,29 +119,7 @@ class DMNpy(DM):
         """
         Difference map reconstruction engine.
         """
-        super(DMNpy, self).__init__(ptycho_parent, pars)
-
-    def engine_initialize(self):
-        """
-        Prepare for reconstruction.
-        """
-        self.error = []
-        self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
-
-    def engine_prepare(self):
-        """
-        Last minute initialization.
-
-        Everything that needs to be recalculated when new data arrives.
-        """
-        super(DMNpy, self).engine_prepare()
-        # and then something to convert the arrays to numpy
-        self.vectorised_scan = {}
-        self.propagator = {}
-        for dID, _diffs in self.di.S.iteritems():
-            self.vectorised_scan[dID] = du.pod_to_arrays(self, dID)
-            first_view_id = self.vectorised_scan[dID]['meta']['view_IDs'][0]
-            self.propagator[dID] = self.di.V[first_view_id].pod.geometry.propagator
+        super(DMGpu, self).__init__(ptycho_parent, pars)
 
     def engine_iterate(self, num=1):
         """
@@ -211,58 +187,4 @@ class DMNpy(DM):
             k += 1
 
         return error_dct
-
-    def numpy_overlap_update(self, ob, object_weights, ob_viewcover, probe, probe_weights, probe_support, exit_wave, mean_power, addr_info):
-        """
-        DM overlap constraint update.
-        """
-        # Condition to update probe
-        do_update_probe = (self.p.probe_update_start <= self.curiter)
-        cfact_probe =  (self.p.probe_inertia * len(addr_info) / probe.shape[0])*np.ones_like(probe)
-        cfact_object = self.p.object_inertia * mean_power  *  (ob_viewcover + 1.)
-        self.apply_difference_map_overlap_constraint(addr_info, cfact_object, cfact_probe, do_update_probe, exit_wave,
-                                                     ob, object_weights, probe, probe_support, probe_weights)
-
-
-    def apply_difference_map_overlap_constraint(self, addr_info, cfact_object, cfact_probe, do_update_probe, exit_wave,
-                                                ob, object_weights, probe, probe_support, probe_weights):
-        for inner in range(self.p.overlap_max_iterations): # do we want to make this into a kernel of it's own?
-            pre_str = 'Iteration (Overlap) #%02d:  ' % inner
-
-            # Update object first
-            if self.p.update_object_first or (inner > 0):
-                # Update object
-                log(4, pre_str + '----- object update -----')
-                opi.difference_map_update_object(ob,
-                                                 object_weights,
-                                                 probe,
-                                                 exit_wave,
-                                                 addr_info,
-                                                 cfact_object,
-                                                 ob_smooth_std=self.p.obj_smooth_std,
-                                                 clip_object=self.p.clip_object)
-
-            # Exit if probe should not be updated yet
-            if not do_update_probe:
-                break
-
-            # Update probe
-            log(4, pre_str + '----- probe update -----')
-            change = opi.difference_map_update_probe(ob,
-                                                     probe_weights,
-                                                     probe,
-                                                     exit_wave,
-                                                     addr_info,
-                                                     cfact_probe,
-                                                     probe_support)
-
-            log(4, pre_str + 'change in probe is %.3f' % change)
-
-            # Recenter the probe
-            if self.p.probe_center_tol is not None:
-                opi.center_probe(probe, self.p.probe_center_tol)
-
-            # Stop iteration if probe change is small
-            if change < self.p.overlap_converge_factor:
-                break
 

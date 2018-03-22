@@ -18,10 +18,11 @@ from . import ML
 from . import dummy
 from . import ePIE
 from . import DM_npy
+from . import DM_gpu
 __all__ = ['DM', 'ML', 'ePIE', 'BaseEngine']
 
 # List of supported engines
-engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE','DMnpy']
+engine_names = ['Dummy', 'DM_simple', 'DM', 'ML', 'ML_new', 'ePIE','DMNpy', 'DMGpu']
 
 # Supported engines defaults
 DEFAULTS = u.Param(
@@ -39,8 +40,8 @@ ENGINES = u.Param(
     DM=DM.DM,
     ML=ML.ML,
     ePIE=ePIE.EPIE,
-    DMNpy=DM_npy.DMNpy
-)
+    DMNpy=DM_npy.DMNpy,
+    DMGpu=DM_gpu.DMGpu)
 
 
 def by_name(name):

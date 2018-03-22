@@ -3,9 +3,9 @@ from ptypy import utils as u
 import cProfile
 
 beamlines = {}
-beamlines['i08'] = [64, 70000]
-beamlines['i14'] = [4096, 70000]
-beamlines['i13'] = [4096, 5000]
+beamlines['i08'] = [64, 20000]#45000]
+# beamlines['i14'] = [4096, 70000]
+# beamlines['i13'] = [4096, 5000]
 
 for beamline in beamlines.keys():
     print "####### RUNNING %s #########" % beamline
@@ -13,7 +13,7 @@ for beamline in beamlines.keys():
     p.verbose_level = 3
     p.io = u.Param()
     p.io.autosave = u.Param(active=False)
-    p.io.autoplot = u.Param(active=False)
+    p.io.autoplot = u.Param(active=True)
     p.ipython_kernel = False
     p.scans = u.Param()
     p.scans.MF = u.Param()
@@ -44,16 +44,17 @@ for beamline in beamlines.keys():
     p.scans.MF.data.density = 0.2
     p.scans.MF.data.add_poisson_noise = False
     p.scans.MF.coherence = u.Param()
-    p.scans.MF.coherence.num_probe_modes = 1  # currently breaks when this is =2
+    p.scans.MF.coherence.num_probe_modes = 2  # currently breaks when this is =2
     p.engines = u.Param()
     # attach a reconstrucion engine
     p.engines = u.Param()
     p.engines.engine00 = u.Param()
-    p.engines.engine00.name = 'DMNpy'
+    p.engines.engine00.name = 'DMGpu'
     p.engines.engine00.numiter = 50
     # p.engines.engine00.overlap_max_iterations = 1
     # prepare and run
 
 
     P = Ptycho(p, level=4)
-    cProfile.run("P.run()", filename="/home/diag/scarf569/profiling_%s_50iterations_DMNpy" % beamline, sort='tottime')
+    P.run()
+    # cProfile.run("P.run()", filename="/home/clb02321/profiling_%s_%s_50iterations_DMCpu" % (beamline, '28826'), sort='tottime')
