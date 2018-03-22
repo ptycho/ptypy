@@ -4,7 +4,7 @@ A module of the relevant error metrics
 
 from propagation import farfield_propagator
 from array_utils import sum_to_buffer, abs2
-from . import FLOAT_TYPE
+from . import FLOAT_TYPE, COMPLEX_TYPE
 import numpy as np
 
 
@@ -30,5 +30,9 @@ def far_field_error(current_solution, measured_solution, mask):
     err_fmag = summed_masked_fdev2 / summed_mask
     return err_fmag
 
-def realspace_error(difference_in_exitwave):
-    return np.mean(np.power(np.abs(difference_in_exitwave), 2), axis=(-2,-1))
+def realspace_error(difference_in_exitwave, ea_first_column, da_first_column, out_length):
+    errors = np.mean(abs2(difference_in_exitwave), axis=(-2, -1))
+    collapsed_errors = np.zeros((out_length,), dtype=FLOAT_TYPE)
+    for ea_idx, da_idx in zip(ea_first_column, da_first_column):
+        collapsed_errors[da_idx] += errors[ea_idx]
+    return collapsed_errors

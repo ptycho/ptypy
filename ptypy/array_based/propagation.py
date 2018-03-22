@@ -3,11 +3,10 @@ All propagation based kernels
 '''
 import numpy as np
 from . import COMPLEX_TYPE
-# import scipy as sci
-import scipy.fftpack
+#import scipy as sci
 
-# import pyfftw
-# import pyfftw.interfaces.numpy_fft as fftw_np
+import pyfftw
+import pyfftw.interfaces.numpy_fft as fftw_np
 
 
 def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None, direction='forward'):
@@ -27,23 +26,24 @@ def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None,
 
     dtype = data_to_be_transformed.dtype
     if direction is 'forward':
+        # fft = lambda x: np.fft.fft2(x, axes=[-2,-1])
 
         def fft(x):
             output = np.zeros(x.shape, dtype=dtype)
             for idx in range(output.shape[0]):
-                output[idx] = scipy.fftpack.fft2(x[idx])
+                output[idx] = np.fft.fft2(x[idx])
             return output
 
-        sc = 1.0 / np.sqrt(np.prod(data_to_be_transformed.shape))#[-2:]))
+        sc = 1.0 / np.sqrt(np.prod(data_to_be_transformed.shape[-2:]))
 
     elif direction is 'backward':
         def fft(x):
             output = np.zeros(x.shape, dtype=dtype)
             for idx in range(output.shape[0]):
-                output[idx] = scipy.fftpack.ifft2(x[idx])
+                output[idx] = np.fft.ifft2(x[idx])
             return output
 
-        sc = np.sqrt(np.prod(data_to_be_transformed.shape))#[-2:]))
+        sc = np.sqrt(np.prod(data_to_be_transformed.shape[-2:]))
 
     if (prefilter is None) and (postfilter is None):
         return fft(data_to_be_transformed) * sc

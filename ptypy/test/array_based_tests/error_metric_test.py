@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 import utils as tu
 from ptypy.array_based import data_utils as du
-from ptypy.array_based import COMPLEX_TYPE
+from ptypy.array_based import COMPLEX_TYPE, FLOAT_TYPE
 import ptypy.utils as u
 from collections import OrderedDict
 from ptypy.array_based.error_metrics import log_likelihood, far_field_error, realspace_error
@@ -53,7 +53,7 @@ class ErrorMetricTest(unittest.TestCase):
         mask = vectorised_scan['mask']
         exit_wave = vectorised_scan['exit wave']
         diffraction = vectorised_scan['diffraction']
-        
+
         view_dlayer = 0  # what is this?
         addr_info = addr[:, (view_dlayer)]  # addresses, object references
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
@@ -83,28 +83,43 @@ class ErrorMetricTest(unittest.TestCase):
         fmag_ptypy = self.get_ptypy_far_field_error(PodPtychoInstance)
         np.testing.assert_array_equal(fmag_ptypy, fmag_npy)
 
-    def test_realspace_error(self):
+
+    def test_realspace_error_regression1(self):
+        # the case when there is only one mode
         I = 5
         M = 20
         N = 30
-
-        difference = np.empty(shape=(I, M, N), dtype=COMPLEX_TYPE)
-        for idx in range(I):
-            difference[idx] = np.ones((M, N)) *idx + 1j * np.ones((M, N)) *idx
-        error = realspace_error(difference)
-
-    def test_realspace_error_regression(self):
-        I = 5
-        M = 20
-        N = 30
+        out_length = I
+        ea_first_column = range(I)
+        da_first_column = range(I)
 
         difference = np.empty(shape=(I, M, N), dtype=COMPLEX_TYPE)
         for idx in range(I):
             difference[idx] = np.ones((M, N)) *idx + 1j * np.ones((M, N)) *idx
 
-        error = realspace_error(difference)
-        expected_error = np.array([ 0.0, 1.99999976, 7.99999905,17.99999809, 31.99999619], dtype=COMPLEX_TYPE)
+        error = realspace_error(difference, ea_first_column, da_first_column, out_length)
+
+        expected_error = np.array([ 0.0, 2.0, 8.0, 18.0, 32.0], dtype=FLOAT_TYPE)
         np.testing.assert_array_equal(error, expected_error)
+
+    def test_realspace_error_regression2(self):
+        # multiple modes
+        I = 10
+        M = 20
+        N = 30
+        out_length = 5
+        ea_first_column = range(I)
+        da_first_column = range(I/2) + range(I/2)
+
+        difference = np.empty(shape=(I, M, N), dtype=COMPLEX_TYPE)
+        for idx in range(I):
+            difference[idx] = np.ones((M, N)) * idx + 1j * np.ones((M, N)) * idx
+
+        error = realspace_error(difference, ea_first_column, da_first_column, out_length)
+
+        expected_error = np.array([50., 74., 106., 146., 194.], dtype=FLOAT_TYPE)
+        np.testing.assert_array_equal(error, expected_error)
+
 
     def get_current_and_measured_solution(self, a_ptycho_instance):
         alpha = 1.0

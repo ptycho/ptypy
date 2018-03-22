@@ -9,7 +9,7 @@ from ptypy.array_based import data_utils as du
 from ptypy.array_based import object_probe_interaction as opi
 from ptypy.array_based import propagation as prop
 from copy import deepcopy as copy
-
+TOLERANCE=4
 class FarfieldPropagatorTest(unittest.TestCase):
     def setUp(self):
         self.PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
@@ -36,7 +36,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
         result_array_npy = prop.farfield_propagator(vec_ew, prefilter=None, postfilter=None)
         result_array_geo = self.diffraction_transform_with_geo(geo_propagator, pod_ew)
-        np.testing.assert_array_equal(result_array_npy, result_array_geo)
+        np.testing.assert_array_almost_equal(result_array_npy, result_array_geo, decimal=TOLERANCE)
 
 
     def test_fourier_transform_farfield_with_prefilter(self):
@@ -56,7 +56,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
         result_array_npy = prop.farfield_propagator(vec_ew, prefilter=propagator.pre_fft, postfilter=None)
         result_array_geo = self.diffraction_transform_with_geo(geo_propagator, pod_ew)
-        np.testing.assert_array_equal(result_array_npy, result_array_geo)
+        np.testing.assert_array_almost_equal(result_array_npy, result_array_geo, decimal=TOLERANCE)
 
 
     def test_fourier_transform_farfield_with_postfilter(self):
@@ -76,7 +76,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
         result_array_npy = prop.farfield_propagator(vec_ew, prefilter=None, postfilter=propagator.post_fft)
         result_array_geo = self.diffraction_transform_with_geo(geo_propagator, pod_ew)
-        np.testing.assert_array_equal(result_array_npy, result_array_geo)
+        np.testing.assert_array_almost_equal(result_array_npy, result_array_geo, decimal=TOLERANCE)
 
     def test_fourier_transform_farfield_with_pre_and_post_filter(self):
         vec_ew = self.get_exit_wave(self.vectorised_scan)
@@ -92,7 +92,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
         result_array_npy = prop.farfield_propagator(vec_ew, prefilter=propagator.pre_fft, postfilter=propagator.post_fft)
         result_array_geo = self.diffraction_transform_with_geo(geo_propagator, pod_ew)
-        np.testing.assert_array_equal(result_array_npy, result_array_geo)
+        np.testing.assert_array_almost_equal(result_array_npy, result_array_geo)
 
     def test_inverse_fourier_transform_farfield_nofilter(self):
         vec_ew = self.get_exit_wave(self.vectorised_scan)
@@ -112,7 +112,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
         result_array_npy = prop.farfield_propagator(vec_ew, prefilter=None, postfilter=None, direction='backward')
         result_array_geo = self.diffraction_transform_with_geo(geo_propagator, pod_ew, direction='backward')
-        np.testing.assert_array_equal(result_array_npy, result_array_geo)
+        np.testing.assert_array_almost_equal(result_array_npy, result_array_geo, decimal=TOLERANCE)
 
 
     def test_inverse_fourier_transform_farfield_with_prefilter(self):
@@ -132,7 +132,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
         result_array_npy = prop.farfield_propagator(vec_ew, prefilter=propagator.pre_ifft, postfilter=None, direction='backward')
         result_array_geo = self.diffraction_transform_with_geo(geo_propagator, pod_ew, direction='backward')
-        np.testing.assert_array_equal(result_array_npy, result_array_geo)
+        np.testing.assert_array_almost_equal(result_array_npy, result_array_geo, decimal=TOLERANCE)
 
 
     def test_inverse_fourier_transform_farfield_with_postfilter(self):
@@ -152,7 +152,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
         result_array_npy = prop.farfield_propagator(vec_ew, prefilter=None, postfilter=propagator.post_ifft, direction='backward')
         result_array_geo = self.diffraction_transform_with_geo(geo_propagator, pod_ew, direction='backward')
-        np.testing.assert_array_equal(result_array_npy, result_array_geo)
+        np.testing.assert_array_almost_equal(result_array_npy, result_array_geo, decimal=TOLERANCE)
 
     def test_inverse_fourier_transform_farfield_with_pre_and_post_filter(self):
         vec_ew = self.get_exit_wave(self.vectorised_scan)
@@ -168,7 +168,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
 
         result_array_npy = prop.farfield_propagator(vec_ew, prefilter=propagator.pre_ifft, postfilter=propagator.post_ifft, direction='backward')
         result_array_geo = self.diffraction_transform_with_geo(geo_propagator, pod_ew, direction='backward')
-        np.testing.assert_array_equal(result_array_npy, result_array_geo)
+        np.testing.assert_array_almost_equal(result_array_npy, result_array_geo, decimal=TOLERANCE)
 
 
     def get_exit_wave(self, a_vectorised_scan):

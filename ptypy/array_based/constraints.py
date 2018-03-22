@@ -82,9 +82,10 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     df = get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
 
     exit_wave += df
-
     if do_realspace_error:
-        err_exit = realspace_error(df)
+        ea_first_column = np.array(ea)[:, 0]
+        da_first_column = np.array(da)[:, 0]
+        err_exit = realspace_error(df, ea_first_column, da_first_column, Idata.shape[0])
     else:
         err_exit = np.zeros((Idata.shape[0]))
 
