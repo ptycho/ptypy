@@ -470,6 +470,8 @@ extern "C" void difference_map_fourier_constraint_c(const unsigned char *mask,
   auto prefilter = reinterpret_cast<const complex<float> *>(f_prefilter);
   auto postfilter = reinterpret_cast<const complex<float> *>(f_postfilter);
 
+    std::cout << "address length: " << addr_len << std::endl;
+
   auto dmfc = gpuManager.get_cuda_function<DifferenceMapFourierConstraint>(
       "dm_fourier_constraint",
       i,

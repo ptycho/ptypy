@@ -127,25 +127,29 @@ cdef extern void renormalise_fourier_magnitudes_c(
     int usePbound
 ) except +
 
-cdef extern void difference_map_fourier_constraint_c(
-    const unsigned char* mask,
-    const float* Idata,
-    const float* f_obj,
-    const float* f_probe,
-    const float* f_exit_wave,
-    const int* addr_info,
-    const float* f_prefilter,
-    const float* f_postfilter,
-    float pbound,
-    float alpha,
-    int do_LL_error,
-    int do_realspace_error,
-    int doPbound,
-    int i, int m, int n,
-    int obj_m, int obj_n,
-    int probe_m, int probe_n,
-    int addr_len, int Idata_i,
-    float* errors
+cdef extern void difference_map_fourier_constraint_c(const unsigned char *mask,
+                                                    const float *Idata,
+                                                    const float *f_obj,
+                                                    const float *f_probe,
+                                                    float *f_exit_wave,
+                                                    const int *addr_info,
+                                                    const float *f_prefilter,
+                                                    const float *f_postfilter,
+                                                    float pbound,
+                                                    float alpha,
+                                                    int do_LL_error,
+                                                    int do_realspace_error,
+                                                    int doPbound,
+                                                    int i,
+                                                    int m,
+                                                    int n,
+                                                    int obj_m,
+                                                    int obj_n,
+                                                    int probe_m,
+                                                    int probe_n,
+                                                    int addr_len,
+                                                    int Idata_i,
+                                                    float *errors
 ) except +
 
 cdef extern void norm2_c(const float* data, float* out, int size, int isComplex) except +
@@ -170,7 +174,7 @@ cdef extern void extract_array_from_exit_wave_c(
     const float* weights,    
     const float* f_cfact           
 ) except +
-cdef extern void interpolated_shift_c(const float* f_in, float* f_out, int rows, int columns, float offsetRow, float offsetCol, int doLinear) except+
+cdef extern void interpolated_shift_c(const float* f_in, float* f_out, int items, int rows, int columns, float offsetRow, float offsetCol, int doLinear) except+
 cdef extern int get_num_gpus_c() except +
 cdef extern int get_gpu_compute_capability_c(int dev) except +
 cdef extern void select_gpu_device_c(int dev) except +

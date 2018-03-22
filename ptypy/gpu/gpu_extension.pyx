@@ -378,7 +378,7 @@ def realspace_error(difference, ea_first_column, da_first_column, out_length):
         da_first_column = np.array(da_first_column, dtype=np.int32)
     cdef np.int32_t [::1] ea_first_column_c = np.ascontiguousarray(ea_first_column)
     cdef np.int32_t [::1] da_first_column_c = np.ascontiguousarray(da_first_column)
-    cdef int addr_len = ea_first_column.shape[0]
+    cdef int addr_len = min(ea_first_column.shape[0], da_first_column.shape[0])
     cdef int out_length_c = out_length
     realspace_error_c(
         <const float*>&difference_c[0,0,0],
@@ -637,17 +637,29 @@ def extract_array_from_exit_wave(exit_wave, exit_addr, array_to_be_extracted, ex
 def interpolated_shift(c, shift, do_linear=False):
     if not do_linear and all([int(s) != s for s in shift]):
         raise NotImplementedError("Bicubic interpolated shifts are not implemented yet")
-    cdef np.complex64_t [:,::1] c_c = np.ascontiguousarray(c)
-    cdef int rows = c.shape[0]
-    cdef int columns = c.shape[1]
+    if c.dtype != np.complex64:
+        raise NotImplementedError("Only complex single precision type supported")
+    cdef int items = 0
+    cdef int rows = 0
+    cdef int columns = 0
+    if len(c.shape) == 3:
+        items = c.shape[0]
+        rows = c.shape[1]
+        columns = c.shape[2]
+    else:
+        items = 1
+        rows = c.shape[0]
+        columns = c.shape[1]
+    cdef np.complex64_t [::1] c_c = \
+        np.frombuffer(np.ascontiguousarray(c), dtype=np.complex64)
     out = np.zeros(c.shape, dtype=np.complex64)
-    cdef np.complex64_t [:,::1] out_c = out
+    cdef np.complex64_t [::1] out_c = np.frombuffer(out, dtype=np.complex64)
     cdef float offsetRow = shift[0]
     cdef float offsetCol = shift[1]
     interpolated_shift_c(
-        <const float*>&c_c[0,0],
-        <float*>&out_c[0,0],
-        rows, columns, 
+        <const float*>&c_c[0],
+        <float*>&out_c[0],
+        items, rows, columns, 
         offsetRow, offsetCol,
         1
     )
