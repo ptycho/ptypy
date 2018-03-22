@@ -19,7 +19,15 @@ from ptypy.gpu.constraints import renormalise_fourier_magnitudes as grenormalise
 from ptypy.gpu.constraints import difference_map_fourier_constraint as gdifference_map_fourier_constraint
 from ptypy.gpu import array_utils as gau
 
+from ptypy.gpu.config import init_gpus, reset_function_cache
+init_gpus(0)
+
+
 class ConstraintsTest(unittest.TestCase):
+
+    def tearDown(self):
+        # reset the cached GPU functions after each test
+        reset_function_cache()
 
     def test_get_difference_UNITY(self):
         alpha = 1.0

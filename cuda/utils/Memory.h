@@ -53,6 +53,15 @@ inline void gpu_memcpy_d2h(T *host, const T *device, size_t size)
       cudaMemcpy(host, device, sizeof(T) * size, cudaMemcpyDeviceToHost));
 }
 
+template <class T>
+inline void gpu_memcpy_d2d(T *dev_dst, const T *dev_src, size_t size)
+{
+  if (!dev_dst || !dev_src)
+    return;
+  checkCudaErrors(
+      cudaMemcpy(dev_dst, dev_src, sizeof(T) * size, cudaMemcpyDeviceToDevice));
+}
+
 /** Wraps a device pointer in RAII fashion, allowing to set an externally
  * allocated pointer as well.
  *

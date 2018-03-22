@@ -1,6 +1,7 @@
 #include "far_field_error.h"
 
 #include "utils/ScopedTimer.h"
+#include "utils/GpuManager.h"
 
 /************* Kernels **********************/
 
@@ -17,16 +18,16 @@ __global__ void far_field_error_kernel(const float *current,
   int ty = threadIdx.y;
 
   extern __shared__ float sum_v[];
-  auto sum_mask = (int*)(sum_v + BlockX*BlockY);
+  auto sum_mask = (int *)(sum_v + BlockX * BlockY);
   auto shidx = tx * BlockY + ty;
   sum_v[shidx] = 0.0;
   sum_mask[shidx] = 0.0;
 
   auto offset = batch * m * n;
-  #pragma unroll(2)
+#pragma unroll(2)
   for (int i = tx; i < m; i += BlockX)
   {
-    #pragma unroll(1)
+#pragma unroll(1)
     for (int j = ty; j < n; j += BlockY)
     {
       auto idx = offset + i * n + j;
@@ -42,7 +43,7 @@ __global__ void far_field_error_kernel(const float *current,
 
   // now sum up the data in shared memory
   __syncthreads();
-  int nt = BlockX*BlockY;
+  int nt = BlockX * BlockY;
   int c = nt;
   while (c > 1)
   {
@@ -64,9 +65,13 @@ __global__ void far_field_error_kernel(const float *current,
 
 /************* class implementation ********************/
 
-FarFieldError::FarFieldError(int i, int m, int n)
-    : CudaFunction("far_field_error"), i_(i), m_(m), n_(m)
+FarFieldError::FarFieldError() : CudaFunction("far_field_error") {}
+
+void FarFieldError::setParameters(int i, int m, int n)
 {
+  i_ = i;
+  m_ = m;
+  n_ = n;
 }
 
 void FarFieldError::setDeviceBuffers(float *d_current,
@@ -108,10 +113,14 @@ void FarFieldError::run()
   // always use a 32x32 block of threads
   dim3 threadsPerBlock = {32u, 32u, 1u};
   dim3 blocks = {unsigned(i_), 1u, 1u};
-  far_field_error_kernel<32,32><<<blocks,
-                           threadsPerBlock,
-                           2 * 32 * 32 * sizeof(float)>>>(
-      d_current_.get(), d_measured_.get(), d_mask_.get(), d_out_.get(), m_, n_);
+  far_field_error_kernel<32, 32>
+      <<<blocks, threadsPerBlock, 2 * 32 * 32 * sizeof(float)>>>(
+          d_current_.get(),
+          d_measured_.get(),
+          d_mask_.get(),
+          d_out_.get(),
+          m_,
+          n_);
   checkLaunchErrors();
 
   timing_sync();
@@ -133,9 +142,10 @@ extern "C" void far_field_error_c(const float *current,
                                   int m,
                                   int n)
 {
-  FarFieldError ffe(i, m, n);
-  ffe.allocate();
-  ffe.transfer_in(current, measured, mask);
-  ffe.run();
-  ffe.transfer_out(out);
+  auto ffe =
+      gpuManager.get_cuda_function<FarFieldError>("farfield_error", i, m, n);
+  ffe->allocate();
+  ffe->transfer_in(current, measured, mask);
+  ffe->run();
+  ffe->transfer_out(out);
 }

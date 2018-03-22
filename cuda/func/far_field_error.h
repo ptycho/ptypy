@@ -5,7 +5,8 @@
 class FarFieldError : public CudaFunction
 {
 public:
-  FarFieldError(int i, int m, int n);
+  FarFieldError();
+  void setParameters(int i, int m, int n);
   void setDeviceBuffers(float *d_current,
                         float *d_measured,
                         unsigned char *d_mask,
@@ -19,7 +20,7 @@ public:
   void transfer_out(float *out);
 
 private:
-  int i_, m_, n_;
+  int i_ = 0, m_ = 0, n_ = 0;
   DevicePtrWrapper<unsigned char> d_mask_;
   DevicePtrWrapper<float> d_current_;
   DevicePtrWrapper<float> d_measured_;

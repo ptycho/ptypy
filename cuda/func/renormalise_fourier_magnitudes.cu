@@ -1,5 +1,6 @@
 #include "renormalise_fourier_magnitudes.h"
 
+#include "utils/GpuManager.h"
 #include "utils/ScopedTimer.h"
 
 #include <cmath>
@@ -80,9 +81,16 @@ __global__ void renormalise_fourier_magnitudes_kernel(const complex<float> *f,
 
 /********** class implementation ********/
 
-RenormaliseFourierMagnitudes::RenormaliseFourierMagnitudes(int i, int m, int n)
-    : CudaFunction("renormalise_fourier_magnitudes"), i_(i), m_(m), n_(n)
+RenormaliseFourierMagnitudes::RenormaliseFourierMagnitudes()
+    : CudaFunction("renormalise_fourier_magnitudes")
 {
+}
+
+void RenormaliseFourierMagnitudes::setParameters(int i, int m, int n)
+{
+  i_ = i;
+  m_ = m;
+  n_ = n;
 }
 
 void RenormaliseFourierMagnitudes::setDeviceBuffers(complex<float> *d_f,
@@ -200,9 +208,10 @@ extern "C" void renormalise_fourier_magnitudes_c(const float *f_f,
   auto f = reinterpret_cast<const complex<float> *>(f_f);
   auto out = reinterpret_cast<complex<float> *>(f_out);
 
-  RenormaliseFourierMagnitudes rfm(i, m, n);
-  rfm.allocate();
-  rfm.transfer_in(f, af, fmag, mask, err_fmag, addr_info);
-  rfm.run(pbound, usePbound != 0);
-  rfm.transfer_out(out);
+  auto rfm = gpuManager.get_cuda_function<RenormaliseFourierMagnitudes>(
+      "renormalise_fourier_magnitudes", i, m, n);
+  rfm->allocate();
+  rfm->transfer_in(f, af, fmag, mask, err_fmag, addr_info);
+  rfm->run(pbound, usePbound != 0);
+  rfm->transfer_out(out);
 }

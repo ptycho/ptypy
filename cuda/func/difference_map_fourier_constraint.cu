@@ -60,39 +60,71 @@ __global__ void conjugate_kernel(const complex<T> *in, complex<T> *out, int n)
 
 /*************** class implementation ***********/
 
-DifferenceMapFourierConstraint::DifferenceMapFourierConstraint(
-    int i,
-    int m,
-    int n,
-    int obj_m,
-    int obj_n,
-    int probe_m,
-    int probe_n,
-    bool do_LL_error,
-    bool do_realspace_error)
-    : CudaFunction("difference_map_fourier_constraint"),
-      i_(i),
-      m_(m),
-      n_(n),
-      obj_m_(obj_m),
-      obj_n_(obj_n),
-      probe_m_(probe_m),
-      probe_n_(probe_n),
-      do_LL_error_(do_LL_error),
-      do_realspace_error_(do_realspace_error),
-      scan_and_multiply_(i, m, n, 1, probe_m, probe_n, 1, obj_m, obj_n),
-      log_likelihood_(i, m, n, i),
-      difference_map_realspace_constraint_(i, m, n),
-      farfield_propagator_fwd_(i, m, n),
-      abs2_(i * n * m),
-      sum_to_buffer_(i, m, n, i, m, n, i, i),
-      far_field_error_(i, m, n),
-      renormalise_fourier_magnitudes_(i, m, n),
-      farfield_propagator_rev_(i, m, n),
-      get_difference_(i, m, n),
-      realspace_error_(i, m, n)
+DifferenceMapFourierConstraint::DifferenceMapFourierConstraint()
+    : CudaFunction("difference_map_fourier_constraint")
 {
-  sum_to_buffer_.setAddrStride(15);
+}
+
+void DifferenceMapFourierConstraint::setParameters(int i,
+                                                   int m,
+                                                   int n,
+                                                   int obj_m,
+                                                   int obj_n,
+                                                   int probe_m,
+                                                   int probe_n,
+                                                   int addr_len,
+                                                   int Idata_i,
+                                                   bool do_LL_error,
+                                                   bool do_realspace_error)
+{
+  i_ = i;
+  m_ = m;
+  n_ = n;
+  obj_m_ = obj_m;
+  obj_n_ = obj_n;
+  probe_m_ = probe_m;
+  probe_n_ = probe_n;
+  addr_len_ = addr_len;
+  Idata_i_ = Idata_i;
+  do_LL_error_ = do_LL_error;
+  do_realspace_error_ = do_realspace_error;
+
+  scan_and_multiply_ = gpuManager.get_cuda_function<ScanAndMultiply>(
+      "dm_fourier_contraint.scan_and_multiply",
+      i,
+      m,
+      n,
+      1,
+      probe_m,
+      probe_n,
+      1,
+      obj_m,
+      obj_n);
+  log_likelihood_ = gpuManager.get_cuda_function<LogLikelihood>(
+      "dm_fourier_contraint.log_likelihood", i, m, n, addr_len, Idata_i_);
+  difference_map_realspace_constraint_ =
+      gpuManager.get_cuda_function<DifferenceMapRealspaceConstraint>(
+          "dm_fourier_constraint.dm_realspace_constraint", i, m, n);
+  farfield_propagator_fwd_ = gpuManager.get_cuda_function<FarfieldPropagator>(
+      "dm_fourier_constraint.farfield_propagator_fwd", i, m, n);
+  abs2_ = gpuManager.get_cuda_function<Abs2<complex<float>, float>>(
+      "dm_fourier_contraint.abs2", i * m * n);
+  sum_to_buffer_ = gpuManager.get_cuda_function<SumToBuffer<float>>(
+      "dm_fourier_constraint.sum2buffer", i, m, n, i, m, n, addr_len, addr_len);
+  far_field_error_ = gpuManager.get_cuda_function<FarFieldError>(
+      "dm_fourier_constraint.farfield_error", i, m, n);
+  renormalise_fourier_magnitudes_ =
+      gpuManager.get_cuda_function<RenormaliseFourierMagnitudes>(
+          "dm_fourier_constraint.renormalise_fourier_magnitudes", i, m, n);
+  farfield_propagator_rev_ = gpuManager.get_cuda_function<FarfieldPropagator>(
+      "dm_fourier_constraint.farfield_propagator_rev", i, m, n);
+  get_difference_ = gpuManager.get_cuda_function<GetDifference>(
+      "dm_fourier_constraint.get_difference", i, m, n);
+  realspace_error_ = gpuManager.get_cuda_function<RealspaceError>(
+      "dm_fourier_constraint.realspace_error", i, m, n, addr_len, Idata_i);
+
+  sum_to_buffer_->setAddrStride(15);
+  realspace_error_->setAddrStride(15);
 }
 
 void DifferenceMapFourierConstraint::setDeviceBuffers(
@@ -141,7 +173,7 @@ void DifferenceMapFourierConstraint::allocate()
   ScopedTimer t(this, "allocate (joint)");
 
   d_mask_.allocate(i_ * m_ * n_);
-  d_Idata_.allocate(i_ * m_ * n_);
+  d_Idata_.allocate(Idata_i_ * m_ * n_);
   d_obj_.allocate(obj_m_ * obj_n_);
   d_probe_.allocate(probe_m_ * probe_n_);
   d_exit_wave_.allocate(i_ * m_ * n_);
@@ -163,65 +195,67 @@ void DifferenceMapFourierConstraint::allocate()
   }
 
   // probe, obj, addr_info --> probe_obj
-  scan_and_multiply_.setDeviceBuffers(d_probe_.get(),
-                                      d_obj_.get(),
-                                      d_addr_info_.get(),
-                                      nullptr  // the output buffer is allocated
+  scan_and_multiply_->setDeviceBuffers(
+      d_probe_.get(),
+      d_obj_.get(),
+      d_addr_info_.get(),
+      nullptr  // the output buffer is allocated
   );
-  scan_and_multiply_.allocate();
-  auto d_probe_obj = scan_and_multiply_.getOutput();
+  scan_and_multiply_->allocate();
+  auto d_probe_obj = scan_and_multiply_->getOutput();
 
   if (do_LL_error_)
   {
     // probe_object, mask, Idata, prefilter, postfilter, addr --> err_phot
-    log_likelihood_.setDeviceBuffers(d_probe_obj,
-                                     d_mask_.get(),
-                                     d_Idata_.get(),
-                                     d_prefilter_.get(),
-                                     d_postfilter_.get(),
-                                     d_addr_info_.get(),
-                                     d_errors_.get() + i_,
-                                     d_outidx_.get(),
-                                     d_startidx_.get(),
-                                     d_indices_.get(),
-                                     outidx_size_);
-    log_likelihood_.allocate();
+    log_likelihood_->setDeviceBuffers(d_probe_obj,
+                                      d_mask_.get(),
+                                      d_Idata_.get(),
+                                      d_prefilter_.get(),
+                                      d_postfilter_.get(),
+                                      d_addr_info_.get(),
+                                      d_errors_.get() + i_,
+                                      d_outidx_.get(),
+                                      d_startidx_.get(),
+                                      d_indices_.get(),
+                                      outidx_size_);
+    log_likelihood_->allocate();
   }
 
   // probe_obj, exit_wave -> constrained
-  difference_map_realspace_constraint_.setDeviceBuffers(
+  difference_map_realspace_constraint_->setDeviceBuffers(
       d_probe_obj,
       d_exit_wave_.get(),
       nullptr  // the output is allocated in there
   );
-  difference_map_realspace_constraint_.allocate();
-  auto d_constrained = difference_map_realspace_constraint_.getOutput();
+  difference_map_realspace_constraint_->allocate();
+  auto d_constrained = difference_map_realspace_constraint_->getOutput();
 
-  farfield_propagator_fwd_.setDeviceBuffers(d_constrained,
-                                            d_constrained,  // in-place, ok here
-                                            d_prefilter_.get(),
-                                            d_postfilter_.get());
-  farfield_propagator_fwd_.allocate();
+  farfield_propagator_fwd_->setDeviceBuffers(
+      d_constrained,
+      d_constrained,  // in-place, ok here
+      d_prefilter_.get(),
+      d_postfilter_.get());
+  farfield_propagator_fwd_->allocate();
   // output is in d_constrained
   auto d_f = d_constrained;
 
-  abs2_.setDeviceBuffers(d_f, nullptr);
-  abs2_.allocate();
+  abs2_->setDeviceBuffers(d_f, nullptr);
+  abs2_->allocate();
 
   // abs2f, idata shape, ea, da => af2
   // giving strided access to addr_info to avoid another copy
   // (constructor sets the stride to 15 instead of 3, we
   // just offset it here to get to the ea and da parts)
-  sum_to_buffer_.setDeviceBuffers(abs2_.getOutput(),
-                                  nullptr,  // output is allocated in here
-                                  d_addr_info_.get() + 6,
-                                  d_addr_info_.get() + 9,
-                                  d_outidx_.get(),
-                                  d_startidx_.get(),
-                                  d_indices_.get(),
-                                  outidx_size_);
-  sum_to_buffer_.allocate();
-  auto d_af2 = sum_to_buffer_.getOutput();
+  sum_to_buffer_->setDeviceBuffers(abs2_->getOutput(),
+                                   nullptr,  // output is allocated in here
+                                   d_addr_info_.get() + 6,
+                                   d_addr_info_.get() + 9,
+                                   d_outidx_.get(),
+                                   d_startidx_.get(),
+                                   d_indices_.get(),
+                                   outidx_size_);
+  sum_to_buffer_->allocate();
+  auto d_af2 = sum_to_buffer_->getOutput();
 
   // we'll run sqrt(af2) in-place
   auto d_af = d_af2;
@@ -229,13 +263,13 @@ void DifferenceMapFourierConstraint::allocate()
   // d_fmag = sqrt(abs(Idata)) will be run in a kernel
 
   // af, fmag, mask => err_fmag
-  far_field_error_.setDeviceBuffers(
+  far_field_error_->setDeviceBuffers(
       d_af, d_fmag_.get(), d_mask_.get(), d_errors_.get());
-  far_field_error_.allocate();
+  far_field_error_->allocate();
   auto d_err_fmag = d_errors_.get();
 
   // f, af, fmag, mask, err_fmag, addr_info, pbound => vectorised_rfm
-  renormalise_fourier_magnitudes_.setDeviceBuffers(
+  renormalise_fourier_magnitudes_->setDeviceBuffers(
       d_f,
       d_af,
       d_fmag_.get(),
@@ -244,35 +278,39 @@ void DifferenceMapFourierConstraint::allocate()
       d_addr_info_.get(),
       nullptr  // gets allocated inside
   );
-  renormalise_fourier_magnitudes_.allocate();
-  auto d_vectorised_rfm = renormalise_fourier_magnitudes_.getOutput();
+  renormalise_fourier_magnitudes_->allocate();
+  auto d_vectorised_rfm = renormalise_fourier_magnitudes_->getOutput();
 
   // vectorised_rfm, postfilter.conj, prefilter.conj, 'reverse' ->
   // backpropagated_solution (flipped / conjugated post/pre filter)
-  farfield_propagator_rev_.setDeviceBuffers(d_vectorised_rfm,
-                                            d_vectorised_rfm,
-                                            d_postfilter_conj_.get(),
-                                            d_prefilter_conj_.get());
-  farfield_propagator_rev_.allocate();
+  farfield_propagator_rev_->setDeviceBuffers(d_vectorised_rfm,
+                                             d_vectorised_rfm,
+                                             d_postfilter_conj_.get(),
+                                             d_prefilter_conj_.get());
+  farfield_propagator_rev_->allocate();
   auto d_backpropagated_solution = d_vectorised_rfm;
 
   // addr_info, alpha, backpropagated_solution, err_fmag, pbound, probe_object
   // -> df
-  get_difference_.setDeviceBuffers(d_addr_info_.get(),
-                                   d_backpropagated_solution,
-                                   d_err_fmag,
-                                   d_exit_wave_.get(),
-                                   d_probe_obj,
-                                   nullptr);
-  get_difference_.allocate();
-  auto d_df = get_difference_.getOutput();
+  get_difference_->setDeviceBuffers(d_addr_info_.get(),
+                                    d_backpropagated_solution,
+                                    d_err_fmag,
+                                    d_exit_wave_.get(),
+                                    d_probe_obj,
+                                    nullptr);
+  get_difference_->allocate();
+  auto d_df = get_difference_->getOutput();
 
   // we'll add df to exit_wave in-place
 
   if (do_realspace_error_)
   {
-    realspace_error_.setDeviceBuffers(d_df, d_errors_.get() + 2 * i_);
-    realspace_error_.allocate();
+    realspace_error_->setDeviceBuffers(
+        d_df,
+        d_addr_info_.get() + 2 * 3,
+        d_addr_info_.get() + 3 * 3,
+        d_errors_.get() + 2 * i_);
+    realspace_error_->allocate();
   }
 
   // we'll div by pbound in-place for d_err_fmag
@@ -291,7 +329,7 @@ void DifferenceMapFourierConstraint::transfer_in(
   ScopedTimer t(this, "transfer in");
 
   gpu_memcpy_h2d(d_mask_.get(), mask, i_ * m_ * n_);
-  gpu_memcpy_h2d(d_Idata_.get(), Idata, i_ * m_ * n_);
+  gpu_memcpy_h2d(d_Idata_.get(), Idata, Idata_i_ * m_ * n_);
   gpu_memcpy_h2d(d_obj_.get(), obj, obj_m_ * obj_n_);
   gpu_memcpy_h2d(d_probe_.get(), probe, probe_m_ * probe_n_);
   gpu_memcpy_h2d(d_exit_wave_.get(), exit_wave, i_ * m_ * n_);
@@ -332,20 +370,20 @@ void DifferenceMapFourierConstraint::run(float pbound,
     checkLaunchErrors();
   }
 
-  scan_and_multiply_.run();
+  scan_and_multiply_->run();
 
   if (do_LL_error_)
   {
-    log_likelihood_.run();
+    log_likelihood_->run();
   }
-  difference_map_realspace_constraint_.run(alpha);
-  farfield_propagator_fwd_.run(
+  difference_map_realspace_constraint_->run(alpha);
+  farfield_propagator_fwd_->run(
       d_prefilter_.get() != nullptr, d_postfilter_.get() != nullptr, true);
-  abs2_.run();
-  sum_to_buffer_.run();
+  abs2_->run();
+  sum_to_buffer_->run();
 
   // sqrt(abs(Idata))
-  total = i_ * m_ * n_;
+  total = Idata_i_ * m_ * n_;
   threadsPerBlock = 256;
   blocks = (total + threadsPerBlock - 1) / threadsPerBlock;
   sqrt_abs_kernel<<<blocks, threadsPerBlock>>>(
@@ -354,18 +392,18 @@ void DifferenceMapFourierConstraint::run(float pbound,
 
   // sqrt(af2), in-place
   sqrt_kernel<<<blocks, threadsPerBlock>>>(
-      sum_to_buffer_.getOutput(), sum_to_buffer_.getOutput(), total);
+      sum_to_buffer_->getOutput(), sum_to_buffer_->getOutput(), total);
   checkLaunchErrors();
 
-  far_field_error_.run();
-  renormalise_fourier_magnitudes_.run(pbound, doPbound);
+  far_field_error_->run();
+  renormalise_fourier_magnitudes_->run(pbound, doPbound);
 
-  farfield_propagator_rev_.run(
+  farfield_propagator_rev_->run(
       d_prefilter_.get() != nullptr, d_postfilter_.get() != nullptr, false);
 
-  get_difference_.run(alpha, pbound, doPbound);
+  get_difference_->run(alpha, pbound, doPbound);
 
-  auto df = get_difference_.getOutput();
+  auto df = get_difference_->getOutput();
 
   total = i_ * m_ * n_;
   threadsPerBlock = 256;
@@ -377,7 +415,7 @@ void DifferenceMapFourierConstraint::run(float pbound,
 
   if (do_realspace_error_)
   {
-    realspace_error_.run();
+    realspace_error_->run();
   }
 
   if (doPbound)
@@ -422,31 +460,33 @@ extern "C" void difference_map_fourier_constraint_c(const unsigned char *mask,
                                                     int obj_n,
                                                     int probe_m,
                                                     int probe_n,
+                                                    int addr_len,
+                                                    int Idata_i,
                                                     float *errors)
 {
-  if (gpuManager.num_devices() == 0) {
-    throw GPUException("No GPU devices available");
-  }
-
   auto obj = reinterpret_cast<const complex<float> *>(f_obj);
   auto probe = reinterpret_cast<const complex<float> *>(f_probe);
   auto exit_wave = reinterpret_cast<complex<float> *>(f_exit_wave);
   auto prefilter = reinterpret_cast<const complex<float> *>(f_prefilter);
   auto postfilter = reinterpret_cast<const complex<float> *>(f_postfilter);
 
-  DifferenceMapFourierConstraint dmfc(i,
-                                      m,
-                                      n,
-                                      obj_m,
-                                      obj_n,
-                                      probe_m,
-                                      probe_n,
-                                      do_LL_error != 0,
-                                      do_realspace_error != 0);
-  dmfc.calculateAddrIndices(addr_info + 9);
-  dmfc.allocate();
-  dmfc.transfer_in(
+  auto dmfc = gpuManager.get_cuda_function<DifferenceMapFourierConstraint>(
+      "dm_fourier_constraint",
+      i,
+      m,
+      n,
+      obj_m,
+      obj_n,
+      probe_m,
+      probe_n,
+      addr_len,
+      Idata_i,
+      do_LL_error != 0,
+      do_realspace_error != 0);
+  dmfc->calculateAddrIndices(addr_info + 9);
+  dmfc->allocate();
+  dmfc->transfer_in(
       mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter);
-  dmfc.run(pbound, alpha, doPbound != 0);
-  dmfc.transfer_out(errors, exit_wave);
+  dmfc->run(pbound, alpha, doPbound != 0);
+  dmfc->transfer_out(errors, exit_wave);
 }

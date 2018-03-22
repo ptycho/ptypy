@@ -11,12 +11,17 @@ from ptypy.array_based import object_probe_interaction as opi
 from ptypy.array_based import COMPLEX_TYPE, FLOAT_TYPE
 from ptypy.gpu import object_probe_interaction as gopi
 from copy import deepcopy
+from utils import print_array_info
 
-
+from ptypy.gpu.config import init_gpus, reset_function_cache
+init_gpus(0)
 
 class ObjectProbeInteractionTest(unittest.TestCase):
 
-    #@unittest.skip("This method is not implemented yet")
+    def tearDown(self):
+        # reset the cached GPU functions after each test
+        reset_function_cache()
+
     def test_scan_and_multiply_UNITY(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
@@ -37,7 +42,6 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         np.testing.assert_array_equal(po, gpo)
         #np.testing.assert_allclose(po, gpo)
         
-    #@unittest.skip("This method is not implemented yet")
     def test_difference_map_realspace_constraint_UNITY(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
@@ -54,7 +58,6 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         gpo = gopi.difference_map_realspace_constraint(probe_object, exit_wave, alpha=1.0)
         np.testing.assert_array_equal(po, gpo)
 
-    @unittest.skip("This method is not implemented yet")
     def test_extract_array_from_exit_wave_UNITY_case_a(self):
         # two cases for this a) the array to be updated is bigger than the extracted array (which is the same size as the exit wave)
         #                    b) the other way round
@@ -112,19 +115,19 @@ class ObjectProbeInteractionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         garray_to_be_updated = deepcopy(array_to_be_updated)
+        gcfact = deepcopy(cfact)
 
         opi.extract_array_from_exit_wave(exit_wave, exit_addr, array_to_be_extracted, extract_addr, array_to_be_updated,
                                          update_addr, cfact, weights)
 
         gopi.extract_array_from_exit_wave(exit_wave, exit_addr, array_to_be_extracted, extract_addr, garray_to_be_updated,
-                                         update_addr, cfact, weights)
+                                         update_addr, gcfact, weights)
 
 
         np.testing.assert_array_equal(array_to_be_updated,
                                       garray_to_be_updated,
                                       err_msg="The array has not been extracted properly from the exit wave.")
 
-    @unittest.skip("This method is not implemented yet")
     def test_extract_array_from_exit_wave_UNITY_case_b(self):
         # two cases for this a) the array to be updated is bigger than the extracted array (which is the same size as the exit wave)
         #                    b) the other way round
@@ -185,12 +188,14 @@ class ObjectProbeInteractionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         garray_to_be_updated = deepcopy(array_to_be_updated)
+        gcfact = deepcopy(cfact)
+
         opi.extract_array_from_exit_wave(exit_wave, exit_addr, array_to_be_extracted, extract_addr,
                                          array_to_be_updated,
                                          update_addr, cfact, weights)
         gopi.extract_array_from_exit_wave(exit_wave, exit_addr, array_to_be_extracted, extract_addr,
                                          garray_to_be_updated,
-                                         update_addr, cfact, weights)
+                                         update_addr, gcfact, weights)
 
 
         np.testing.assert_array_equal(array_to_be_updated, garray_to_be_updated)

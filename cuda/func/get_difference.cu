@@ -1,5 +1,6 @@
 #include "get_difference.h"
 
+#include "utils/GpuManager.h"
 #include "utils/ScopedTimer.h"
 
 /************* kernels ******************************/
@@ -30,10 +31,10 @@ __global__ void get_difference_kernel(
 
   auto da_0 = da[0];
 
-  #pragma unroll(2)
+#pragma unroll(2)
   for (int i = tx; i < m; i += BlockX)
   {
-    #pragma unroll(1)  // to make sure the compiler doesn't unroll
+#pragma unroll(1)  // to make sure the compiler doesn't unroll
     for (int j = ty; j < n; j += BlockY)
     {
       auto outidx = offset + i * n + j;
@@ -51,9 +52,13 @@ __global__ void get_difference_kernel(
 
 /************* class implementation *****************/
 
-GetDifference::GetDifference(int i, int m, int n)
-    : CudaFunction("get_difference"), i_(i), m_(m), n_(n)
+GetDifference::GetDifference() : CudaFunction("get_difference") {}
+
+void GetDifference::setParameters(int i, int m, int n)
 {
+  i_ = i;
+  m_ = m;
+  n_ = n;
 }
 
 void GetDifference::setDeviceBuffers(int *d_addr_info,
@@ -111,7 +116,7 @@ void GetDifference::run(float alpha, float pbound, bool usePbound)
   dim3 blocks = {unsigned(i_), 1u, 1u};
   if (usePbound)
   {
-    get_difference_kernel<true,32,32>
+    get_difference_kernel<true, 32, 32>
         <<<blocks, threadsPerBlock>>>(d_addr_info_.get(),
                                       alpha,
                                       d_backpropagated_solution_.get(),
@@ -126,7 +131,7 @@ void GetDifference::run(float alpha, float pbound, bool usePbound)
   }
   else
   {
-    get_difference_kernel<false,32,32>
+    get_difference_kernel<false, 32, 32>
         <<<blocks, threadsPerBlock>>>(d_addr_info_.get(),
                                       alpha,
                                       d_backpropagated_solution_.get(),
@@ -170,10 +175,11 @@ extern "C" void get_difference_c(const int *addr_info,
   auto probe_obj = reinterpret_cast<const complex<float> *>(fprobe_obj);
   auto out = reinterpret_cast<complex<float> *>(fout);
 
-  GetDifference gd(i, m, n);
-  gd.allocate();
-  gd.transfer_in(
+  auto gd =
+      gpuManager.get_cuda_function<GetDifference>("get_difference", i, m, n);
+  gd->allocate();
+  gd->transfer_in(
       addr_info, backpropagated_solution, err_fmag, exit_wave, probe_obj);
-  gd.run(alpha, pbound, usePbound != 0);
-  gd.transfer_out(out);
+  gd->run(alpha, pbound, usePbound != 0);
+  gd->transfer_out(out);
 }

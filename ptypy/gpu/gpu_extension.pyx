@@ -11,7 +11,7 @@ from cuda_functions cimport *
 cimport numpy as np 
 import cython
 import time
-
+from libcpp.string cimport string
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -136,7 +136,8 @@ def log_likelihood(probe_obj, mask, exit_wave, Idata, prefilter, postfilter, add
         <const float*>&postfilter_c[0,0],
         <const int*>&addr_info_c[0,0,0],
         <float*>&out_c[0],
-        i, m, n, addr_info.shape[0]
+        i, m, n, addr_info.shape[0],
+        Idata.shape[0]
     )
     return out
 
@@ -364,17 +365,29 @@ def far_field_error(current_solution, measured_solution, mask):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def realspace_error(difference):
+def realspace_error(difference, ea_first_column, da_first_column, out_length):
     cdef np.complex64_t [:,:,::1] difference_c = np.ascontiguousarray(difference)
-    out = np.empty((difference.shape[0],), dtype=np.float32)
+    out = np.empty((out_length,), dtype=np.float32)
     cdef np.float32_t [::1] out_c = out
     cdef i = difference.shape[0]
     cdef m = difference.shape[1]
     cdef n = difference.shape[2]
+    if not isinstance(ea_first_column, np.ndarray):
+        ea_first_column = np.array(ea_first_column, dtype=np.int32)
+    if not isinstance(da_first_column, np.ndarray):
+        da_first_column = np.array(da_first_column, dtype=np.int32)
+    cdef np.int32_t [::1] ea_first_column_c = np.ascontiguousarray(ea_first_column)
+    cdef np.int32_t [::1] da_first_column_c = np.ascontiguousarray(da_first_column)
+    cdef int addr_len = ea_first_column.shape[0]
+    cdef int out_length_c = out_length
     realspace_error_c(
         <const float*>&difference_c[0,0,0],
+        <const int*>&ea_first_column_c[0],
+        <const int*>&da_first_column_c[0],
+        addr_len,
         <float*>&out_c[0],
-        i, m, n
+        i, m, n,
+        out_length_c
     )
     return out
 
@@ -502,6 +515,163 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
         ews2,
         os1, os2,
         ps1, ps2,
+        addr_info.shape[0],
+        Idata.shape[0],
         <float*>&errors_c[0,0]
     )
     return errors
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def norm2f(input):
+    cdef np.float32_t [::1] input_c = np.frombuffer(np.ascontiguousarray(input), dtype=np.float32)
+    cdef int size = np.prod(input.shape)
+    cdef float out = 0.0
+    norm2_c(
+        <const float*>&input_c[0],
+        <float*>&out,
+        size,
+        0
+    )
+    return out
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def norm2c(input):
+    cdef np.complex64_t [::1] input_c = np.frombuffer(np.ascontiguousarray(input), dtype=np.complex64)
+    cdef int size = np.prod(input.shape)
+    cdef float out = 0.0
+    norm2_c(
+        <const float*>&input_c[0],
+        <float*>&out,
+        size,
+        1
+    )
+    return out
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def norm2(input):
+    if input.dtype == np.float32:
+        return norm2f(input)
+    elif input.dtype == np.complex64:
+        return norm2c(input)
+    else:
+        raise NotImplementedError("Norm2 is only implemented for single precision")
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def mass_center(A):
+    if A.dtype != np.float32:
+        raise NotImplementedError("Only single precision is supported")
+
+    cdef np.float32_t [::1] input_c = np.frombuffer(np.ascontiguousarray(A), dtype=np.float32)
+    cdef int i = A.shape[0]
+    cdef int m = A.shape[1]
+    cdef int n = 1
+    if len(A.shape) == 3:
+        n = A.shape[2]
+    out = np.empty(len(A.shape), np.float32)
+    cdef np.float32_t [::1] out_c = out
+    mass_center_c(
+        <const float*>&input_c[0],
+        i, m, n, 
+        <float*>&out_c[0]
+    )
+    return out
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def clip_complex_magnitudes_to_range(complex_input, clip_min, clip_max):
+    if complex_input.dtype != np.complex64:
+        raise NotImplementedError("Only single precision complex data supported")
+    if not complex_input.flags['C_CONTIGUOUS']:
+        raise NotImplementedError("Can only handle contiguous arrays, due to in-place updates")
+    cdef int n = np.prod(complex_input.shape)
+    cdef float c_min = clip_min
+    cdef float c_max = clip_max
+    # discard all dimensionality information
+    cdef np.complex64_t [::1] input_c = np.frombuffer(np.ascontiguousarray(complex_input), dtype=np.complex64)
+    clip_complex_magnitudes_to_range_c(
+        <float*>&input_c[0],
+        n, c_min, c_max
+    )
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def extract_array_from_exit_wave(exit_wave, exit_addr, array_to_be_extracted, extract_addr, array_to_be_updated, update_addr, cfact, weights):
+    cdef np.complex64_t [:,:,::1] exit_wave_c = np.ascontiguousarray(exit_wave)
+    cdef np.int32_t [:,::1] exit_addr_c = np.ascontiguousarray(exit_addr).astype(np.int32)
+    cdef np.complex64_t [:,:,::1] array_to_be_extracted_c = np.ascontiguousarray(array_to_be_extracted)
+    cdef np.int32_t [:,::1] extract_addr_c = np.ascontiguousarray(extract_addr).astype(np.int32)
+    cdef np.complex64_t [:,:,::1] array_to_be_updated_c = np.ascontiguousarray(array_to_be_updated)
+    cdef np.int32_t [:,::1] update_addr_c = np.ascontiguousarray(update_addr).astype(np.int32)
+    cdef np.complex64_t [:,:,::1] cfact_c = np.ascontiguousarray(cfact)
+    cdef np.float32_t [::1] weights_c = np.ascontiguousarray(weights)
+    cdef int A = exit_wave.shape[0]
+    cdef int B = exit_wave.shape[1]
+    cdef int C = exit_wave.shape[2]
+    cdef int D = array_to_be_extracted.shape[0]
+    cdef int E = array_to_be_extracted.shape[1]
+    cdef int F = array_to_be_extracted.shape[2]
+    cdef int G = array_to_be_updated.shape[0]
+    cdef int H = array_to_be_updated.shape[1]
+    cdef int I = array_to_be_updated.shape[2]
+    extract_array_from_exit_wave_c(
+        <const float*>&exit_wave_c[0,0,0],
+        A, B, C,
+        <const int*>&exit_addr_c[0,0],
+        <const float*>&array_to_be_extracted_c[0,0,0],
+        D, E, F,
+        <const int*>&extract_addr_c[0,0],
+        <float*>&array_to_be_updated_c[0,0,0],
+        G, H, I,
+        <const int*>&update_addr_c[0,0],
+        <const float*>&weights_c[0],
+        <const float*>&cfact_c[0,0,0]
+    )
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def interpolated_shift(c, shift, do_linear=False):
+    if not do_linear and all([int(s) != s for s in shift]):
+        raise NotImplementedError("Bicubic interpolated shifts are not implemented yet")
+    cdef np.complex64_t [:,::1] c_c = np.ascontiguousarray(c)
+    cdef int rows = c.shape[0]
+    cdef int columns = c.shape[1]
+    out = np.zeros(c.shape, dtype=np.complex64)
+    cdef np.complex64_t [:,::1] out_c = out
+    cdef float offsetRow = shift[0]
+    cdef float offsetCol = shift[1]
+    interpolated_shift_c(
+        <const float*>&c_c[0,0],
+        <float*>&out_c[0,0],
+        rows, columns, 
+        offsetRow, offsetCol,
+        1
+    )
+    return out
+
+def get_num_gpus():
+    return get_num_gpus_c()
+
+def get_gpu_compute_capability(dev):
+    cdef int dev_c = dev
+    return get_gpu_compute_capability_c(dev_c)
+
+def select_gpu_device(dev):
+    cdef int dev_c = dev
+    select_gpu_device_c(dev_c)
+
+def get_gpu_memory_mb(dev):
+    cdef int dev_c = dev
+    return get_gpu_memory_mb_c(dev_c)
+
+def get_gpu_name(dev):
+    cdef int dev_c = dev
+    cdef string name = get_gpu_name_c(dev_c)
+    return name.decode('UTF-8')
+
+def reset_function_cache():
+    reset_function_cache_c()

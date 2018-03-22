@@ -7,7 +7,8 @@
 class RenormaliseFourierMagnitudes : public CudaFunction
 {
 public:
-  RenormaliseFourierMagnitudes(int i, int m, int n);
+  RenormaliseFourierMagnitudes();
+  void setParameters(int i, int m, int n);
   void setDeviceBuffers(complex<float> *d_f,
                         float *d_af,
                         float *d_fmag,
@@ -16,7 +17,7 @@ public:
                         int *d_addr_info,
                         complex<float> *d_out);
   void allocate();
-  complex<float>* getOutput() const;
+  complex<float> *getOutput() const;
   void transfer_in(const complex<float> *f,
                    const float *af,
                    const float *fmag,
@@ -34,5 +35,5 @@ private:
   DevicePtrWrapper<float> d_err_fmag_;
   DevicePtrWrapper<int> d_addr_info_;
   DevicePtrWrapper<complex<float>> d_out_;
-  int i_, m_, n_;
+  int i_ = 0, m_ = 0, n_ = 0;
 };

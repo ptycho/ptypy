@@ -10,7 +10,8 @@
 class LogLikelihood : public CudaFunction
 {
 public:
-  LogLikelihood(int i, int m, int n, int addr_i);
+  LogLikelihood();
+  void setParameters(int i, int m, int n, int addr_i, int Idata_i);
 
   void setDeviceBuffers(complex<float> *d_probe_obj,
                         unsigned char *d_mask,
@@ -53,8 +54,9 @@ private:
   int *d_indices_ = nullptr;
   int outidx_size_ = 0;
 
-  int i_, m_, n_, addr_i_;
-  FarfieldPropagator ffprop_;
-  Abs2<complex<float>, float> abs2_;
-  SumToBuffer<float> sum2buffer_;
+  int i_ = 0, m_ = 0, n_ = 0, addr_i_ = 0;
+  int Idata_i_ = 0;
+  FarfieldPropagator *ffprop_ = nullptr;
+  Abs2<complex<float>, float> *abs2_ = nullptr;
+  SumToBuffer<float> *sum2buffer_ = nullptr;
 };
