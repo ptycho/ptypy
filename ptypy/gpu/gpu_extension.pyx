@@ -114,15 +114,13 @@ def sqrt_abs(np.complex64_t [:,::1] diffraction not None):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def log_likelihood(probe_obj, mask, exit_wave, Idata, prefilter, postfilter, addr):
+def log_likelihood(probe_obj, mask, exit_wave, Idata, prefilter, postfilter, addr_info):
     cdef np.complex64_t [:,:,::1] probe_obj_c = np.ascontiguousarray(probe_obj)
     cdef np.uint8_t [::1] mask_c = np.frombuffer(np.ascontiguousarray(mask), dtype=np.uint8)
     cdef np.complex64_t [:,:,::1] exit_wave_c = np.ascontiguousarray(exit_wave)
     cdef np.float32_t [:,:,::1] Idata_c = np.ascontiguousarray(Idata)
     cdef np.complex64_t [:,::1] prefilter_c = np.ascontiguousarray(prefilter)
     cdef np.complex64_t [:,::1] postfilter_c = np.ascontiguousarray(postfilter)
-    view_dlayer=0
-    addr_info = addr[:, view_dlayer]
     cdef np.int32_t [:,:,::1] addr_info_c = np.ascontiguousarray(addr_info)
     out = np.empty([92], np.float32)
     cdef np.float32_t [::1] out_c = out
@@ -459,15 +457,13 @@ def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pboun
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, prefilter, postfilter, pbound=None, alpha=1.0, LL_error=True, do_realspace_error=True):
+def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter, pbound=None, alpha=1.0, LL_error=True, do_realspace_error=True):
     cdef np.uint8_t [::1] mask_c = np.frombuffer(np.ascontiguousarray(mask), dtype=np.uint8)
     cdef np.float32_t [:,:,::1] Idata_c = np.ascontiguousarray(Idata)
     cdef np.complex64_t [:,:,::1] obj_c = np.ascontiguousarray(obj)
     cdef np.complex64_t [:,:,::1] probe_c = np.ascontiguousarray(probe)
     # can't cast to continous array here, as it might copy and we update in-place
     cdef np.complex64_t [:,:,::1] exit_wave_c = exit_wave
-    view_dlayer = 0 # what is this?
-    addr_info = addr[:,(view_dlayer)] # addresses, object references
     cdef np.int32_t [:,:,::1] addr_info_c = np.ascontiguousarray(addr_info)
     cdef np.complex64_t [:,::1] prefilter_c = None
     if not prefilter is None:

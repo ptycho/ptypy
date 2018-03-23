@@ -40,7 +40,7 @@ def get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wav
             df[ea[0]] = alpha * np.subtract(probe_object[ea[0]], exit_wave[ea[0]])
     return df
 
-def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, prefilter, postfilter, pbound=None, alpha=1.0, LL_error=True, do_realspace_error=True):
+def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter, pbound=None, alpha=1.0, LL_error=True, do_realspace_error=True):
     '''
     This kernel just performs the fourier renormalisation.
     :param mask. The nd mask array
@@ -50,14 +50,13 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     :return: The updated iterant
             : fourier errors
     '''
-    view_dlayer = 0 # what is this?
-    addr_info = addr[:,(view_dlayer)] # addresses, object references
+
     probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
 
     # Buffer for accumulated photons
     # For log likelihood error # need to double check this adp
     if LL_error is True:
-        err_phot = log_likelihood(probe_object, mask, Idata, prefilter, postfilter, addr)
+        err_phot = log_likelihood(probe_object, mask, Idata, prefilter, postfilter, addr_info)
     else:
         err_phot = np.zeros(Idata.shape[0], dtype=FLOAT_TYPE)
     

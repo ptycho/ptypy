@@ -176,7 +176,7 @@ class DMNpy(DM):
                                           self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]],
                                           self.vectorised_scan[dID]['exit wave'],
                                           self.mean_power,
-                                          self.vectorised_scan[dID]['meta']['addr'][:, 0])
+                                          self.vectorised_scan[dID]['meta']['addr'])
                 # numpy dump here for 64x64 and 4096x4096
                 t3 = time.time()
                 to += t3 - t2
@@ -204,7 +204,7 @@ class DMNpy(DM):
                     'pbound' : pbound,
                     'alpha' : self.p.alpha,
                     'LL_error' : False}
-        np.save('/tmp/i08_case_64x64_inputs.npy', out_dict)
+        # np.save('/tmp/i08_case_64x64_inputs.npy', out_dict)
         errors = con.difference_map_fourier_constraint(mask,
                                                        Idata,
                                                        obj,

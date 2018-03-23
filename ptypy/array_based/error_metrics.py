@@ -8,9 +8,7 @@ from . import FLOAT_TYPE, COMPLEX_TYPE
 import numpy as np
 
 
-def log_likelihood(probe_and_obj, mask, Idata, prefilter, postfilter, addr):
-    view_dlayer=0
-    addr_info = addr[:, view_dlayer]
+def log_likelihood(probe_and_obj, mask, Idata, prefilter, postfilter, addr_info):
     _pa, _oa, ea, da, _ma = zip(*addr_info)
     LLerror = np.zeros(Idata.shape[0], dtype=FLOAT_TYPE)
     ft = farfield_propagator(probe_and_obj, prefilter, postfilter, direction='forward')
