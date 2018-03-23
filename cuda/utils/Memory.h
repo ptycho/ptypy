@@ -20,7 +20,7 @@ inline void gpu_malloc(T *&ptr, size_t size)
   checkCudaErrors(cudaMalloc((void **)&ptr, sizeof(T) * size));
 #ifndef NDEBUG
   debug_addMemory((void*)ptr, size);
-  std::cout << "Allocated " << (void*)ptr << ", total (excl cuFFT internal): " << double(debug_getMemory()) / 1024/1024 << std::endl;
+  std::cout << "Allocated " << (void*)ptr << ", total: " << double(debug_getMemory()) / 1024/1024 << std::endl;
 #endif
 }
 
@@ -35,7 +35,7 @@ inline void gpu_free(T *ptr)
   #endif
     cudaFree(ptr);
   #ifndef NDEBUG
-    std::cout << "Total allocated (excluding cuFFT internal): " << double(debug_getMemory()) / 1024/1024 << std::endl;
+    std::cout << "Total allocated: " << double(debug_getMemory()) / 1024/1024 << std::endl;
   #endif
 
   }
