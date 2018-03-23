@@ -35,5 +35,7 @@ private:
   DevicePtrWrapper<complex<float>> d_dataout_;
   DevicePtrWrapper<complex<float>> d_pre_;
   DevicePtrWrapper<complex<float>> d_post_;
-  cufftHandle plan_;
+  cufftHandle plan_ = 0;
+  // to keep track of previously-used plan to avoid realloc
+  size_t old_batch_size_ = 0, old_m_ = 0, old_n_ = 0;
 };

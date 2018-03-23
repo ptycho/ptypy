@@ -74,7 +74,8 @@ void ScanAndMultiply::setParameters(int batch_size,
                                     int probe_n,
                                     int obj_i,
                                     int obj_m,
-                                    int obj_n)
+                                    int obj_n,
+                                    int addr_len)
 {
   batch_size_ = batch_size;
   m_ = m;
@@ -85,6 +86,7 @@ void ScanAndMultiply::setParameters(int batch_size,
   obj_i_ = obj_i;
   obj_m_ = obj_m;
   obj_n_ = obj_n;
+  addr_len_ = addr_len;
 }
 
 void ScanAndMultiply::setDeviceBuffers(complex<float> *d_probe,
@@ -102,7 +104,7 @@ void ScanAndMultiply::allocate()
 {
   ScopedTimer t(this, "allocate");
   d_out_.allocate(batch_size_ * m_ * n_);
-  d_addr_info_.allocate(batch_size_ * 5 * 3);
+  d_addr_info_.allocate(addr_len_ * 5 * 3);
   d_probe_.allocate(probe_i_ * probe_m_ * probe_n_);
   d_obj_.allocate(obj_i_ * obj_m_ * obj_n_);
 }
@@ -116,7 +118,7 @@ void ScanAndMultiply::transfer_in(const complex<float> *probe,
   ScopedTimer t(this, "transfer in");
   gpu_memcpy_h2d(d_probe_.get(), probe, probe_i_ * probe_m_ * probe_n_);
   gpu_memcpy_h2d(d_obj_.get(), obj, obj_i_ * obj_m_ * obj_n_);
-  gpu_memcpy_h2d(d_addr_info_.get(), addr_info, batch_size_ * 5 * 3);
+  gpu_memcpy_h2d(d_addr_info_.get(), addr_info, addr_len_ * 5 * 3);
 }
 
 void ScanAndMultiply::transfer_out(complex<float> *out)
@@ -128,9 +130,11 @@ void ScanAndMultiply::transfer_out(complex<float> *out)
 void ScanAndMultiply::run()
 {
   ScopedTimer t(this, "run");
+  checkCudaErrors(cudaMemset(
+      d_out_.get(), 0, batch_size_ * m_ * n_ * sizeof(complex<float>)));
   // always use a 32x32 block of threads
   dim3 threadsPerBlock = {32, 32, 1u};
-  dim3 blocks = {unsigned(batch_size_), 1u, 1u};
+  dim3 blocks = {unsigned(addr_len_), 1u, 1u};
   scan_and_multiply_kernel<32, 32>
       <<<blocks, threadsPerBlock>>>(d_out_.get(),
                                     d_addr_info_.get(),
@@ -159,6 +163,7 @@ extern "C" void scan_and_multiply_c(const float *fprobe,
                                     int obj_m,
                                     int obj_n,
                                     const int *addr_info,
+                                    int addr_len,
                                     int batch_size,
                                     int m,
                                     int n,
@@ -177,7 +182,8 @@ extern "C" void scan_and_multiply_c(const float *fprobe,
                                                            probe_n,
                                                            obj_i,
                                                            obj_m,
-                                                           obj_n);
+                                                           obj_n,
+                                                           addr_len);
   sam->allocate();
   sam->transfer_in(probe, obj, addr_info);
   sam->run();

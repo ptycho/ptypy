@@ -68,8 +68,10 @@ DifferenceMapFourierConstraint::DifferenceMapFourierConstraint()
 void DifferenceMapFourierConstraint::setParameters(int i,
                                                    int m,
                                                    int n,
+                                                   int obj_i,
                                                    int obj_m,
                                                    int obj_n,
+                                                   int probe_i,
                                                    int probe_m,
                                                    int probe_n,
                                                    int addr_len,
@@ -80,8 +82,10 @@ void DifferenceMapFourierConstraint::setParameters(int i,
   i_ = i;
   m_ = m;
   n_ = n;
+  obj_i_ = obj_i;
   obj_m_ = obj_m;
   obj_n_ = obj_n;
+  probe_i_ = probe_i;
   probe_m_ = probe_m;
   probe_n_ = probe_n;
   addr_len_ = addr_len;
@@ -94,12 +98,13 @@ void DifferenceMapFourierConstraint::setParameters(int i,
       i,
       m,
       n,
-      1,
+      probe_i,
       probe_m,
       probe_n,
-      1,
+      obj_i,
       obj_m,
-      obj_n);
+      obj_n,
+      addr_len);
   log_likelihood_ = gpuManager.get_cuda_function<LogLikelihood>(
       "dm_fourier_contraint.log_likelihood", i, m, n, addr_len, Idata_i_);
   difference_map_realspace_constraint_ =
@@ -110,7 +115,7 @@ void DifferenceMapFourierConstraint::setParameters(int i,
   abs2_ = gpuManager.get_cuda_function<Abs2<complex<float>, float>>(
       "dm_fourier_contraint.abs2", i * m * n);
   sum_to_buffer_ = gpuManager.get_cuda_function<SumToBuffer<float>>(
-      "dm_fourier_constraint.sum2buffer", i, m, n, i, m, n, addr_len, addr_len);
+      "dm_fourier_constraint.sum2buffer", i, m, n, Idata_i_, m, n, addr_len, addr_len);
   far_field_error_ = gpuManager.get_cuda_function<FarFieldError>(
       "dm_fourier_constraint.farfield_error", i, m, n);
   renormalise_fourier_magnitudes_ =
@@ -163,7 +168,7 @@ int DifferenceMapFourierConstraint::calculateAddrIndices(const int *out1_addr)
   outidx_.clear();
   startidx_.clear();
   indices_.clear();
-  flatten_out_addr(out1_addr, i_, 15, outidx_, startidx_, indices_);
+  flatten_out_addr(out1_addr, addr_len_, 15, outidx_, startidx_, indices_);
   outidx_size_ = outidx_.size();
   return outidx_size_;
 }
@@ -174,8 +179,8 @@ void DifferenceMapFourierConstraint::allocate()
 
   d_mask_.allocate(i_ * m_ * n_);
   d_Idata_.allocate(Idata_i_ * m_ * n_);
-  d_obj_.allocate(obj_m_ * obj_n_);
-  d_probe_.allocate(probe_m_ * probe_n_);
+  d_obj_.allocate(obj_i_ * obj_m_ * obj_n_);
+  d_probe_.allocate(probe_i_ * probe_m_ * probe_n_);
   d_exit_wave_.allocate(i_ * m_ * n_);
   d_addr_info_.allocate(i_ * 3 * 5);
   // TODO: check prefilter/postfilter if this is actually needed
@@ -330,10 +335,10 @@ void DifferenceMapFourierConstraint::transfer_in(
 
   gpu_memcpy_h2d(d_mask_.get(), mask, i_ * m_ * n_);
   gpu_memcpy_h2d(d_Idata_.get(), Idata, Idata_i_ * m_ * n_);
-  gpu_memcpy_h2d(d_obj_.get(), obj, obj_m_ * obj_n_);
-  gpu_memcpy_h2d(d_probe_.get(), probe, probe_m_ * probe_n_);
+  gpu_memcpy_h2d(d_obj_.get(), obj, obj_i_ * obj_m_ * obj_n_);
+  gpu_memcpy_h2d(d_probe_.get(), probe, probe_i_ * probe_m_ * probe_n_);
   gpu_memcpy_h2d(d_exit_wave_.get(), exit_wave, i_ * m_ * n_);
-  gpu_memcpy_h2d(d_addr_info_.get(), addr_info, i_ * 3 * 5);
+  gpu_memcpy_h2d(d_addr_info_.get(), addr_info, addr_len_ * 3 * 5);
   gpu_memcpy_h2d(d_prefilter_.get(), prefilter, m_ * n_);
   gpu_memcpy_h2d(d_postfilter_.get(), postfilter, m_ * n_);
   // conjugate will be run first-time in the run function
@@ -456,8 +461,10 @@ extern "C" void difference_map_fourier_constraint_c(const unsigned char *mask,
                                                     int i,
                                                     int m,
                                                     int n,
+                                                    int obj_i, 
                                                     int obj_m,
                                                     int obj_n,
+                                                    int probe_i,
                                                     int probe_m,
                                                     int probe_n,
                                                     int addr_len,
@@ -470,13 +477,17 @@ extern "C" void difference_map_fourier_constraint_c(const unsigned char *mask,
   auto prefilter = reinterpret_cast<const complex<float> *>(f_prefilter);
   auto postfilter = reinterpret_cast<const complex<float> *>(f_postfilter);
 
+    std::cout << "address length: " << addr_len << std::endl;
+
   auto dmfc = gpuManager.get_cuda_function<DifferenceMapFourierConstraint>(
       "dm_fourier_constraint",
       i,
       m,
       n,
+      obj_i,
       obj_m,
       obj_n,
+      probe_i,
       probe_m,
       probe_n,
       addr_len,

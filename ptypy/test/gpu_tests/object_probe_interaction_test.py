@@ -536,7 +536,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
 
         np.testing.assert_array_equal(array_to_be_updated, garray_to_be_updated)
 
-    @unittest.skip("This method is not implemented yet")
+    
     def test_center_probe_no_change_UNITY(self):
         npts = 64
         probe = np.zeros((1, npts, npts), dtype=COMPLEX_TYPE)
@@ -550,12 +550,12 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         center_tolerance = 10.0
 
         gprobe = deepcopy(probe)
+        print_array_info(probe, "probe")
         opi.center_probe(probe, center_tolerance)
         gopi.center_probe(gprobe, center_tolerance)
 
         np.testing.assert_array_equal(probe, gprobe)
 
-    @unittest.skip("This method is not implemented yet")
     def test_center_probe_with_change_UNITY(self):
         npts = 64
         probe = np.zeros((1, npts, npts), dtype=COMPLEX_TYPE)

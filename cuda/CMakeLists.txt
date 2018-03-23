@@ -13,6 +13,7 @@ add_library(gpu_extension STATIC
   utils/CudaFunction.cpp
   utils/Errors.h
   utils/Memory.h
+  utils/Memory.cpp
   utils/ScopedTimer.h
   utils/Timer.h
   utils/GpuManager.h 

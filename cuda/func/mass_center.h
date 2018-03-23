@@ -6,7 +6,7 @@ class MassCenter : public CudaFunction
 {
 public:
   MassCenter();
-  void setParameters(int i, int m, int n);
+  void setParameters(int i, int m, int n = 1);
   void setDeviceBuffers(float* d_data, float* d_out);
   void allocate();
   void transfer_in(const float* data);

@@ -21,8 +21,10 @@ public:
   void setParameters(int i,
                      int m,
                      int n,
+                     int obj_i,
                      int obj_m,
                      int obj_n,
+                     int probe_i,
                      int probe_m,
                      int probe_n,
                      int addr_len,
@@ -71,8 +73,8 @@ private:
   int outidx_size_ = 0;
 
   int i_ = 0, m_ = 0, n_ = 0;
-  int obj_m_ = 0, obj_n_ = 0;
-  int probe_m_ = 0, probe_n_ = 0;
+  int obj_i_ = 0, obj_m_ = 0, obj_n_ = 0;
+  int probe_i_ = 0, probe_m_ = 0, probe_n_ = 0;
   int addr_len_ = 0, Idata_i_ = 0;
   bool do_LL_error_ = 0;
   bool do_realspace_error_ = 0;

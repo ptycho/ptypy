@@ -59,20 +59,19 @@ __global__ void indexed_sum_lastdim(
     const float* data, float* sums, int n, int i, float scale)
 {
   int ty = threadIdx.y + blockIdx.y * BlockY;
-  if (ty >= i)
-    return;
-
-  data += ty;  // column to work on
-
   int tx = threadIdx.x;
 
-  // we collaborate along the x axis (columns) to get more threads in case i is
-  // small
-
   auto val = 0.0f;
-  for (int r = tx; r < n; r += BlockX)
+  if (ty < i)
   {
-    val += data[r * i];
+    data += ty;  // column to work on
+
+    // we collaborate along the x axis (columns) to get more threads in case i
+    // is small
+    for (int r = tx; r < n; r += BlockX)
+    {
+      val += data[r * i];
+    }
   }
 
   // reduce along X dimension in shared memory (column sum)
@@ -91,6 +90,11 @@ __global__ void indexed_sum_lastdim(
     }
     __syncthreads();
     c = c - half;
+  }
+
+  if (ty >= i)
+  {
+    return;
   }
 
   if (tx == 0)
