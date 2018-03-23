@@ -152,7 +152,7 @@ class DMGpu(DMNpy):
                                           self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]],
                                           self.vectorised_scan[dID]['exit wave'],
                                           self.mean_power,
-                                          self.vectorised_scan[dID]['meta']['addr'][:, 0])
+                                          self.vectorised_scan[dID]['meta']['addr'])
 
                 t3 = time.time()
                 to += t3 - t2
