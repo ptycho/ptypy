@@ -42,6 +42,47 @@ __global__ void applyPostfilter(complex<float> *data,
 
 /*************** Class implementation ********************/
 
+cufftHandle FFTPlanManager::get_or_create_plan(int i, int m, int n)
+{
+  auto key = std::make_tuple(i, m, n);
+  if (plans_.find(key) == plans_.end())
+  {
+    cufftHandle plan;
+    checkCudaErrors(cufftCreate(&plan));
+    plans_[key] = plan;
+
+    int dims[] = {m, n};
+    size_t workSize;
+    checkCudaErrors(cufftMakePlanMany(
+        plan, 2, dims, 0, 0, 0, 0, 0, 0, CUFFT_C2C, i, &workSize));
+#ifndef NDEBUG
+    debug_addMemory((void *)&plan, workSize);
+    std::cout << "Made FFT Plan for " << m << "x" << n << ", batch=" << i
+              << std::endl;
+    std::cout << "Allocated " << (void *)plan
+              << ", total: " << double(debug_getMemory()) / 1024 / 1024
+              << std::endl;
+#endif
+  }
+
+  return plans_[key];
+}
+
+FFTPlanManager::~FFTPlanManager()
+{
+  for (auto &item : plans_)
+  {
+    cufftDestroy(item.second);
+#ifndef NDEBUG
+    debug_freeMemory((void *)item.second);
+#endif
+  }
+}
+
+/******************************/
+
+FFTPlanManager FarfieldPropagator::planManager_;
+
 FarfieldPropagator::FarfieldPropagator() : CudaFunction("farfield_propagator")
 {
 }
@@ -77,35 +118,10 @@ void FarfieldPropagator::allocate()
     d_post_.allocate(m_ * n_);
   }
 
-  if (old_m_ != m_ || old_n_ != n_ ||
-      old_batch_size_ != batch_size_)  // only re-recreate if not already done
   {
     ScopedTimer t(this, "plan create");
-
-    if (old_m_ != 0)
-    {
-      // this is the second time around and dimensions changed
-    #ifndef NDEBUG
-      debug_freeMemory((void*)&plan_);
-    #endif
-      checkCudaErrors(cufftDestroy(plan_));
-    }
-
-    int dims[] = {int(m_), int(n_)};
-    size_t workSize;
-    checkCudaErrors(cufftCreate(&plan_));
-    checkCudaErrors(cufftMakePlanMany(
-        plan_, 2, dims, 0, 0, 0, 0, 0, 0, CUFFT_C2C, batch_size_, &workSize));
-    old_batch_size_ = batch_size_;
-    old_m_ = m_;
-    old_n_ = n_;
-#ifndef NDEBUG
-    debug_addMemory((void*)&plan_, workSize);
-    std::cout << "Made FFT Plan for " << m_ << "x" << n_
-              << ", batch=" << batch_size_ 
-              << std::endl;
-    std::cout << "Allocated " << (void*)&plan_ << ", total: " << double(debug_getMemory()) / 1024/1024 << std::endl;
-#endif
+    plan_ = FarfieldPropagator::planManager_.get_or_create_plan(
+        batch_size_, m_, n_);
   }
 }
 
@@ -183,8 +199,6 @@ void FarfieldPropagator::run(bool doPreFilter,
   // sync device if timing is enabled
   timing_sync();
 }
-
-FarfieldPropagator::~FarfieldPropagator() { cufftDestroy(plan_); }
 
 /************* Interface function ************/
 
