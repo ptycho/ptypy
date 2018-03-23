@@ -193,18 +193,7 @@ class DMNpy(DM):
     def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, propagator, pbound):
         error_dct = {}
 
-        out_dict = {'mask': mask,
-                    'Idata': Idata,
-                    'obj': obj,
-                    'probe': probe,
-                    'exit wave': exit_wave,
-                    'addr': addr,
-                    'prefilter':propagator.pre_fft,
-                    'postfilter' : propagator.post_fft,
-                    'pbound' : pbound,
-                    'alpha' : self.p.alpha,
-                    'LL_error' : False}
-        # np.save('/tmp/i08_case_64x64_inputs.npy', out_dict)
+
         errors = con.difference_map_fourier_constraint(mask,
                                                        Idata,
                                                        obj,
@@ -245,6 +234,7 @@ class DMNpy(DM):
             if self.p.update_object_first or (inner > 0):
                 # Update object
                 log(4, pre_str + '----- object update -----')
+
                 opi.difference_map_update_object(ob,
                                                  object_weights,
                                                  probe,
@@ -260,6 +250,8 @@ class DMNpy(DM):
 
             # Update probe
             log(4, pre_str + '----- probe update -----')
+
+
             change = opi.difference_map_update_probe(ob,
                                                      probe_weights,
                                                      probe,
