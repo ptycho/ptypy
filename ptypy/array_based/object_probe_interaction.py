@@ -44,7 +44,7 @@ def difference_map_update_object(ob, object_weights, probe, exit_wave, addr_info
 
 def difference_map_update_probe(ob, probe_weights, probe, exit_wave, addr_info, cfact_probe, probe_support=None):
     pa, oa, ea, _da, _ma = zip(*addr_info)
-    old_probe = probe
+    old_probe = probe[:]
     probe *= cfact_probe
     extract_array_from_exit_wave(exit_wave, ea, ob, oa, probe, pa, cfact_probe, probe_weights)
     if probe_support is not None:
