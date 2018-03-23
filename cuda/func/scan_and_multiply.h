@@ -16,7 +16,8 @@ public:
                      int probe_n,
                      int obj_i,
                      int obj_m,
-                     int obj_n);
+                     int obj_n,
+                     int addr_len);
 
   void setDeviceBuffers(complex<float> *d_probe,
                         complex<float> *d_obj,
@@ -41,5 +42,5 @@ private:
   int m_ = 0;
   int n_ = 0;
   int probe_i_ = 0, probe_m_ = 0, probe_n_ = 0, obj_i_ = 0, obj_m_ = 0,
-      obj_n_ = 0;
+      obj_n_ = 0, addr_len_ = 0;
 };

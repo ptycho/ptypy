@@ -8,11 +8,12 @@
 class InterpolatedShift : public CudaFunction {
 public:
     InterpolatedShift();
-    void setParameters(int rows, int columns);
+    void setParameters(int items, int rows, int columns);
     void setDeviceBuffers(
         complex<float>* d_in,
         complex<float>* d_out
     );
+    complex<float>* getOutput() const { return d_out_.get(); }
     void allocate();
     void transfer_in(
         const complex<float>* in
@@ -25,5 +26,5 @@ public:
 private:
     DevicePtrWrapper<complex<float>> d_in_;
     DevicePtrWrapper<complex<float>> d_out_;
-    int rows_ = 0, columns_ = 0;
+    int rows_ = 0, columns_ = 0, items_ = 0;
 };

@@ -2,12 +2,26 @@
 
 #include "utils/Errors.h"
 #include <cuda_runtime.h>
+#include <iostream>
+
+// debugging functions, to record allocated and freed GPU memory
+// allows inspection of how much memory has been allocated on the gpu
+void debug_addMemory(void* ptr, size_t size);
+void debug_freeMemory(void* ptr);
+size_t debug_getMemory();
 
 /** Allocate GPU memory, giving size in unit of sizeof(T) */
 template <class T>
 inline void gpu_malloc(T *&ptr, size_t size)
 {
+#ifndef NDEBUG
+  std::cout << "allocating " << double(size)/1024/1024 << "MB on the GPU" << std::endl;
+#endif
   checkCudaErrors(cudaMalloc((void **)&ptr, sizeof(T) * size));
+#ifndef NDEBUG
+  debug_addMemory((void*)ptr, size);
+  std::cout << "Allocated " << (void*)ptr << ", total (excl cuFFT internal): " << double(debug_getMemory()) / 1024/1024 << std::endl;
+#endif
 }
 
 template <class T>
@@ -15,7 +29,15 @@ inline void gpu_free(T *ptr)
 {
   if (ptr)
   {
+  #ifndef NDEBUG
+    std::cout << "freeing for pointer: " << (void*)ptr << std::endl;
+    debug_freeMemory((void*)ptr);
+  #endif
     cudaFree(ptr);
+  #ifndef NDEBUG
+    std::cout << "Total allocated (excluding cuFFT internal): " << double(debug_getMemory()) / 1024/1024 << std::endl;
+  #endif
+
   }
 }
 

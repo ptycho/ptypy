@@ -77,14 +77,35 @@ void FarfieldPropagator::allocate()
     d_post_.allocate(m_ * n_);
   }
 
+  if (old_m_ != m_ || old_n_ != n_ ||
+      old_batch_size_ != batch_size_)  // only re-recreate if not already done
   {
     ScopedTimer t(this, "plan create");
+
+    if (old_m_ != 0)
+    {
+      // this is the second time around and dimensions changed
+    #ifndef NDEBUG
+      debug_freeMemory((void*)&plan_);
+    #endif
+      checkCudaErrors(cufftDestroy(plan_));
+    }
 
     int dims[] = {int(m_), int(n_)};
     size_t workSize;
     checkCudaErrors(cufftCreate(&plan_));
     checkCudaErrors(cufftMakePlanMany(
         plan_, 2, dims, 0, 0, 0, 0, 0, 0, CUFFT_C2C, batch_size_, &workSize));
+    old_batch_size_ = batch_size_;
+    old_m_ = m_;
+    old_n_ = n_;
+#ifndef NDEBUG
+    debug_addMemory((void*)&plan_, workSize);
+    std::cout << "Made FFT Plan for " << m_ << "x" << n_
+              << ", batch=" << batch_size_ 
+              << std::endl;
+    std::cout << "Allocated " << (void*)&plan_ << ", total: " << double(debug_getMemory()) / 1024/1024 << std::endl;
+#endif
   }
 }
 
@@ -184,7 +205,8 @@ extern "C" void farfield_propagator_c(const float *fdata_to_be_transformed,
   auto out = reinterpret_cast<complex<float> *>(fout);
   auto isForward = iisForward != 0;
 
-  auto prop = gpuManager.get_cuda_function<FarfieldPropagator>("farfield_propagator", b, m, n);
+  auto prop = gpuManager.get_cuda_function<FarfieldPropagator>(
+      "farfield_propagator", b, m, n);
   prop->allocate();
   prop->transfer_in(data_to_be_transformed, prefilter, postfilter);
   prop->run(prefilter != nullptr, postfilter != nullptr, isForward);

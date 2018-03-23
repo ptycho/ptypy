@@ -46,6 +46,7 @@ def scan_and_multiply(probe, obj, exit_shape, addresses):
     cdef m_obj = obj.shape[1]
     cdef n_obj = obj.shape[2]
     cdef np.int32_t [:,:,::1] addr_info_c = np.ascontiguousarray(addresses)
+    cdef int addr_len = addresses.shape[0]
     cdef batch_size = exit_shape[0]
     cdef m = exit_shape[1]
     cdef n = exit_shape[2]
@@ -57,6 +58,7 @@ def scan_and_multiply(probe, obj, exit_shape, addresses):
         <const float*>&obj_c[0,0,0],
         i_obj, m_obj, n_obj,
         <int*>&addr_info_c[0,0,0],
+        addr_len,
         batch_size, m, n,
         <float*>&out_c[0,0,0]
     )
@@ -394,14 +396,6 @@ def realspace_error(difference, ea_first_column, da_first_column, out_length):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object):
-    #addr_info: (92, 5, 3), int32
-    #alpha: float64
-    #backpropagated_solution: (92, 256, 256), complex128
-    #err_fmag: (92,), float64
-    #exit_wave: (92, 256, 256), complex64
-    #pbound: float64
-    #probe_object: (92, 256, 256), complex64
-    #out: (92, 256, 256), complex128
     cdef np.int32_t [:,:,::1] addr_info_c = np.ascontiguousarray(addr_info)
     cdef alpha_c = alpha
     bp_sol = backpropagated_solution.astype(np.complex64)
@@ -493,10 +487,13 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
     cdef int ews0 = exit_wave.shape[0]
     cdef int ews1 = exit_wave.shape[1]
     cdef int ews2 = exit_wave.shape[2]
+    cdef int os0 = obj.shape[0]
     cdef int os1 = obj.shape[1]
     cdef int os2 = obj.shape[2]
+    cdef int ps0 = probe.shape[0]
     cdef int ps1 = probe.shape[1]
     cdef int ps2 = probe.shape[2]
+    
     difference_map_fourier_constraint_c(
         <const unsigned char*>&mask_c[0],
         <const float*>&Idata_c[0,0,0],
@@ -513,8 +510,8 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr, 
         ews0,
         ews1,
         ews2,
-        os1, os2,
-        ps1, ps2,
+        os0, os1, os2,
+        ps0, ps1, ps2,
         addr_info.shape[0],
         Idata.shape[0],
         <float*>&errors_c[0,0]
