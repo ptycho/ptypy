@@ -200,7 +200,6 @@ class ObjectProbeInteractionTest(unittest.TestCase):
 
         np.testing.assert_array_equal(array_to_be_updated, garray_to_be_updated)
 
-    @unittest.skip("This method is not implemented yet")
     def test_difference_map_update_probe_UNITY_with_support(self):
         '''
         This tests difference_map_update_probe, which wraps extract_array_from_exit_wave
@@ -264,13 +263,16 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         #(ob, probe_weights, probe, exit_wave, addr_info, cfact_probe, probe_support = None)
 
         garray_to_be_updated = deepcopy(array_to_be_updated)
-        opi.difference_map_update_probe(array_to_be_extracted, weights, array_to_be_updated, exit_wave, addr_info, cfact, probe_support=probe_support)
-        gopi.difference_map_update_probe(array_to_be_extracted, weights, array_to_be_updated, exit_wave, addr_info,
-                                        cfact, probe_support=probe_support)
+        gcfact = deepcopy(cfact)
+        err  = opi.difference_map_update_probe(array_to_be_extracted, weights, array_to_be_updated, exit_wave, addr_info, cfact, probe_support=probe_support)
+                
+        gerr = gopi.difference_map_update_probe(array_to_be_extracted, weights, garray_to_be_updated, exit_wave, addr_info,
+                                        gcfact, probe_support=probe_support)
 
+        self.assertAlmostEqual(err, gerr, 6)
         np.testing.assert_array_equal(array_to_be_updated, garray_to_be_updated)
 
-    @unittest.skip("This method is not implemented yet")
+    #@unittest.skip("This method is not implemented yet")
     def test_difference_map_update_probe_UNITY_without_support(self):
         '''
         This tests difference_map_update_probe, which wraps extract_array_from_exit_wave
@@ -333,9 +335,10 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         #(ob, probe_weights, probe, exit_wave, addr_info, cfact_probe, probe_support = None)
 
         garray_to_be_updated = deepcopy(array_to_be_updated)
+        gcfact = deepcopy(cfact)
         opi.difference_map_update_probe(array_to_be_extracted, weights, array_to_be_updated, exit_wave, addr_info, cfact, probe_support=None)
         gopi.difference_map_update_probe(array_to_be_extracted, weights, garray_to_be_updated, exit_wave, addr_info,
-                                        cfact, probe_support=None)
+                                        gcfact, probe_support=None)
 
         np.testing.assert_array_equal(array_to_be_updated, garray_to_be_updated)
 

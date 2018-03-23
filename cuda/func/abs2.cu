@@ -101,7 +101,7 @@ template <class Tin, class Tout>
 static void entryFunc(const Tin *in, Tout *out, int n)
 {
   auto abs2 = gpuManager.get_cuda_function<Abs2<Tin, Tout>>(
-      "abs2." + getTypeName<Tin>() + "," + getTypeName<Tout>() + ">", n);
+      "abs2<" + getTypeName<Tin>() + "," + getTypeName<Tout>() + ">", n);
   abs2->allocate();
   abs2->transfer_in(in);
   abs2->run();

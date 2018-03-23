@@ -11,9 +11,9 @@
 
 __device__ inline void atomicAdd(complex<float>* x, complex<float> y)
 {
-  auto xf = reinterpret_cast<float2*>(x);
-  atomicAdd(&xf->x, y.real());
-  atomicAdd(&xf->y, y.imag());
+  auto xf = reinterpret_cast<float*>(x);
+  atomicAdd(xf, y.real());
+  atomicAdd(xf + 1, y.imag());
 }
 
 template <int BlockX, int BlockY>
@@ -46,9 +46,13 @@ __global__ void extract_array_from_exit_wave_kernel(
   auto oa = extract_addr + bid * addr_stride;
   auto ea = exit_addr + bid * addr_stride;
 
+  
   array_to_be_extracted += oa[0] * E * F + oa[1] * F + oa[2];
   array_to_be_updated += pa[0] * H * I + pa[1] * I + pa[2];
   cfact += pa[0] * H * I + pa[1] * I + pa[2];
+ 
+  assert(pa[0] * H * I + pa[1] * I + pa[2] + (B-1)* I + C-1 < G*H*I);
+ 
   auto weight = weights[pa[0]];
   exit_wave += ea[0] * B * C;
 

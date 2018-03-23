@@ -57,6 +57,8 @@ add_library(gpu_extension STATIC
   func/interpolated_shift.h
   func/center_probe.h
   func/center_probe.cu
+  func/difference_map_update_probe.h
+  func/difference_map_update_probe.cu
 )
 
 target_compile_features(gpu_extension PUBLIC cxx_std_11)

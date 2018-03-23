@@ -185,3 +185,15 @@ cdef extern int get_gpu_memory_mb_c(int dev) except +
 cdef extern string get_gpu_name_c(int dev) except +
 cdef extern void reset_function_cache_c() except +
 cdef extern void center_probe_c(float* f_probe, float center_tolerance, int i, int m, int n) except +
+cdef extern float difference_map_update_probe_c(
+    const float* f_obj,
+    const float* probe_weights,        
+    float* f_probe,
+    const float* f_exit_wave,    
+    const int* addr_info,        
+    const float* f_cfact_probe,        
+    const float* f_probe_support, 
+    int A, int B, int C,
+    int D, int E, int F,
+    int G, int H, int I
+) except +

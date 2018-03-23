@@ -70,7 +70,7 @@ void Norm2<T>::setParameters(int size)
 }
 
 template <class T>
-void Norm2<T>::setDeviceBuffers(T* d_input, T* d_output)
+void Norm2<T>::setDeviceBuffers(T* d_input, float* d_output)
 {
   d_input_ = d_input;
   d_output_ = d_output;
@@ -143,6 +143,9 @@ void norm2_tc(const T* data, float* out, int size)
   n2->run();
   n2->transfer_out(out);
 }
+
+template class Norm2<float>;
+template class Norm2<complex<float>>;
 
 extern "C" void norm2_c(const float* data, float* out, int size, int isComplex)
 {
