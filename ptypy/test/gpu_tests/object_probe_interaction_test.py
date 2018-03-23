@@ -550,7 +550,6 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         center_tolerance = 10.0
 
         gprobe = deepcopy(probe)
-        print_array_info(probe, "probe")
         opi.center_probe(probe, center_tolerance)
         gopi.center_probe(gprobe, center_tolerance)
 

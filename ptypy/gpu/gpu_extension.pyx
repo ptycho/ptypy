@@ -680,3 +680,18 @@ def get_gpu_name(dev):
 
 def reset_function_cache():
     reset_function_cache_c()
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def center_probe(probe, center_tolerance):
+    # can't convert to contiguous array here, as it's in-place returned
+    # we let Cython flag this if not contiguous
+    cdef np.complex64_t [:,:,::1] probe_c = probe
+    cdef float tol = center_tolerance
+    cdef int i = probe.shape[0]
+    cdef int m = probe.shape[1]
+    cdef int n = probe.shape[2]
+    center_probe_c(
+        <float*>&probe_c[0,0,0],
+        tol, i, m, n
+    )

@@ -55,6 +55,8 @@ add_library(gpu_extension STATIC
   func/extract_array_from_exit_wave.cu
   func/interpolated_shift.cu
   func/interpolated_shift.h
+  func/center_probe.h
+  func/center_probe.cu
 )
 
 target_compile_features(gpu_extension PUBLIC cxx_std_11)

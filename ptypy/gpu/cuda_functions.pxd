@@ -184,3 +184,4 @@ cdef extern void select_gpu_device_c(int dev) except +
 cdef extern int get_gpu_memory_mb_c(int dev) except +
 cdef extern string get_gpu_name_c(int dev) except +
 cdef extern void reset_function_cache_c() except +
+cdef extern void center_probe_c(float* f_probe, float center_tolerance, int i, int m, int n) except +
