@@ -6,4 +6,5 @@ Should have all the engine updates
 '''
 
 from gpu_extension import difference_map_realspace_constraint, \
-    scan_and_multiply, extract_array_from_exit_wave
+    scan_and_multiply, extract_array_from_exit_wave, center_probe, \
+    difference_map_update_probe

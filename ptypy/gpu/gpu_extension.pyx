@@ -680,3 +680,56 @@ def get_gpu_name(dev):
 
 def reset_function_cache():
     reset_function_cache_c()
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def center_probe(probe, center_tolerance):
+    # can't convert to contiguous array here, as it's in-place returned
+    # we let Cython flag this if not contiguous
+    cdef np.complex64_t [:,:,::1] probe_c = probe
+    cdef float tol = center_tolerance
+    cdef int i = probe.shape[0]
+    cdef int m = probe.shape[1]
+    cdef int n = probe.shape[2]
+    center_probe_c(
+        <float*>&probe_c[0,0,0],
+        tol, i, m, n
+    )
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def difference_map_update_probe(obj, probe_weights, probe, exit_wave, addr_info, cfact_probe, probe_support=None):
+    cdef np.complex64_t [:,:,::1] obj_c = np.ascontiguousarray(obj)
+    cdef np.float32_t [::1] probe_weights_c = np.ascontiguousarray(probe_weights)
+    # updated in-place, so can't use ascontiguousarray
+    cdef np.complex64_t [:,:,::1] probe_c = probe
+    cdef np.complex64_t [:,:,::1] exit_wave_c = np.ascontiguousarray(exit_wave)
+    if not isinstance(addr_info, np.ndarray):
+        addr_info = np.array(addr_info, dtype=np.int32)
+    else:
+        addr_info = addr_info.astype(np.int32)
+    cdef np.int32_t [:,:,::1] addr_info_c = np.ascontiguousarray(addr_info)
+    cdef np.complex64_t [:,:,::1] cfact_probe_c = np.ascontiguousarray(cfact_probe)
+    cdef np.complex64_t [:,:,::1] probe_support_c = None
+    if probe_support is not None:
+        probe_support_c = np.ascontiguousarray(probe_support)
+    cdef int A = exit_wave.shape[0]
+    cdef int B = exit_wave.shape[1]
+    cdef int C = exit_wave.shape[2]
+    cdef int D = obj.shape[0]
+    cdef int E = obj.shape[1]
+    cdef int F = obj.shape[2]
+    cdef int G = cfact_probe.shape[0]
+    cdef int H = cfact_probe.shape[1]
+    cdef int I = cfact_probe.shape[2]
+    return difference_map_update_probe_c(
+        <const float*>&obj_c[0,0,0],
+        <const float*>&probe_weights_c[0],
+        <float*>&probe_c[0,0,0],
+        <const float*>&exit_wave_c[0,0,0],
+        <const int*>&addr_info_c[0,0,0],
+        <const float*>&cfact_probe_c[0,0,0],
+        <const float*>&probe_support_c[0,0,0],
+        A,B,C,D,E,F,G,H,I
+    )

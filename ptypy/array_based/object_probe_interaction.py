@@ -7,6 +7,7 @@ Should have all the engine updates
 
 import numpy as np
 from array_utils import norm2, complex_gaussian_filter, abs2, mass_center, interpolated_shift, clip_complex_magnitudes_to_range
+from copy import deepcopy
 from . import COMPLEX_TYPE
 
 
@@ -44,14 +45,14 @@ def difference_map_update_object(ob, object_weights, probe, exit_wave, addr_info
 
 def difference_map_update_probe(ob, probe_weights, probe, exit_wave, addr_info, cfact_probe, probe_support=None):
     pa, oa, ea, _da, _ma = zip(*addr_info)
-    old_probe = probe[:]
+    old_probe = deepcopy(probe)
     probe *= cfact_probe
     extract_array_from_exit_wave(exit_wave, ea, ob, oa, probe, pa, cfact_probe, probe_weights)
     if probe_support is not None:
         probe *= probe_support
-
+    
     change = norm2(probe - old_probe) /norm2(probe)
-
+    
     return np.sqrt(change / probe.shape[0])
 
 

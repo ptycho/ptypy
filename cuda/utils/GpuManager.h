@@ -80,7 +80,7 @@ public:
    *   calls to allocate, transfer_in, setDeviceBuffers, etc... 
    */
   template <typename T, typename... Args>
-  T* get_cuda_function(const std::string& name, Args&&... args)
+  T* get_cuda_function(const std::string& key, Args&&... args)
   {
     // setup device if not already done
     if (selectedDevice_ == -1)
@@ -89,17 +89,17 @@ public:
     }
 
     // create if not already there (with default constructor)
-    if (functions_cache_.find(name) == functions_cache_.end())
+    if (functions_cache_.find(key) == functions_cache_.end())
     {
-      functions_cache_[name] = std::unique_ptr<T>(new T());
+      functions_cache_[key] = std::unique_ptr<T>(new T());
     }
 
     // retrieve and set the parameters (they might have changed
     // since we cached them)
-    auto ret = dynamic_cast<T*>(functions_cache_[name].get());
+    auto ret = dynamic_cast<T*>(functions_cache_[key].get());
     if (ret == nullptr)
     {
-      throw GPUException("cached CudaFunction with name " + name +
+      throw GPUException("cached CudaFunction with key " + key +
                          " doesn't match the requested type");
     }
     ret->setParameters(std::forward<Args>(args)...);

@@ -64,10 +64,11 @@ void CenterProbe::setParameters(int i, int m, int n)
   mass_center_ = gpuManager.get_cuda_function<MassCenter>(
       "center_probe.mass_center", m_, n_, 1);
   interp_shift_ = gpuManager.get_cuda_function<InterpolatedShift>(
-      "center_probe.interpolated_shift", m_, n_);
+      "center_probe.interpolated_shift", i_, m_, n_);
 }
 
-void CenterProbe::setDeviceBuffers(complex<float>* d_probe, complex<float>* d_out)
+void CenterProbe::setDeviceBuffers(complex<float>* d_probe,
+                                   complex<float>* d_out)
 {
   d_probe_ = d_probe;
   d_out_ = d_out;
@@ -80,7 +81,9 @@ void CenterProbe::allocate()
   d_out_.allocate(i_ * m_ * n_);
   d_buffer_.allocate(m_ * n_);
   mass_center_->setDeviceBuffers(d_buffer_.get(), nullptr);
+  mass_center_->allocate();
   interp_shift_->setDeviceBuffers(d_probe_.get(), d_out_.get());
+  interp_shift_->allocate();
 }
 
 void CenterProbe::transfer_in(const complex<float>* probe)
@@ -92,7 +95,7 @@ void CenterProbe::transfer_in(const complex<float>* probe)
 void CenterProbe::transfer_out(complex<float>* probe)
 {
   ScopedTimer t(this, "transfer out");
-  gpu_memcpy_d2h(probe, interp_shift_->getOutput(), i_ * m_ * n_);
+  gpu_memcpy_d2h(probe, d_probe_.get(), i_ * m_ * n_);
 }
 
 void CenterProbe::run(float center_tolerance)
@@ -107,15 +110,19 @@ void CenterProbe::run(float center_tolerance)
 
   // now mass_center across the buffer
   mass_center_->run();
+
+  // TODO: see if this can be done on the GPU directly,
+  // avoiding a sync point in chain of async kernels
+  // Note: means putting interp_shift offset as a device buffer,
+  // not as parameter to the run function itself
   float c1[2];
   mass_center_->transfer_out(c1);
-  
-  float c2[] = {float(m_ / 2), float(n_/2)};
-
+  float c2[] = {float(m_ / 2), float(n_ / 2)};
   auto err_1 = c1[0] - c2[0];
   auto err_2 = c1[1] - c2[1];
+  auto err = std::sqrt(err_1 * err_1 + err_2 * err_2);
 
-  if (std::sqrt(err_1 * err_1 + err_2 * err_2) < center_tolerance)
+  if (err < center_tolerance)
   {
     return;
   }
@@ -123,13 +130,8 @@ void CenterProbe::run(float center_tolerance)
   float offset[] = {c2[0] - c1[0], c2[1] - c1[1]};
 
   // now interpolated_shift on the data, and back into probe array
-  for (int i = 0; i < i_; ++i) {
-      interp_shift_->setDeviceBuffers(
-          d_probe_.get() + i * m_*n_,
-          d_out_.get() + i * m_*n_
-      );
-      interp_shift_->run(offset[0], offset[1], true);
-  }
+  interp_shift_->run(offset[0], offset[1], true);
+  gpu_memcpy_d2d(d_probe_.get(), interp_shift_->getOutput(), i_ * m_ * n_);
 
   timing_sync();
 }

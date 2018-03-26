@@ -9,7 +9,7 @@ class Norm2 : public CudaFunction
 public:
   Norm2();
   void setParameters(int size);
-  void setDeviceBuffers(T* d_input, T* d_output);
+  void setDeviceBuffers(T* d_input, float* d_output);
   void allocate();
   float* getOutput() const;
   void transfer_in(const T* input);
