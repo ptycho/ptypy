@@ -512,9 +512,16 @@ class ModelManager(object):
                 index = dct['index']
                 active = dct['active']
                 # tpos = positions_theory[index]
+
+                # Old version where I could not load the coordinates in the reconstruction script
+                # if (scan.pars.geometry.precedence == 'meta'
+                #         and scan.pos_theory is not None):
+                #     pos = scan.pos_theory[index]
+
+                # The following should enable loading coordinates in the script
                 if (scan.pars.geometry.precedence == 'meta'
-                        and scan.pos_theory is not None):
-                    pos = scan.pos_theory[index]
+                        and scan.pars.data.positions_theory is not None):
+                    pos = scan.pars.data.positions_theory[index]
                 else:
                     pos = dct.get('position')  # ,positions_theory[index])
 
