@@ -516,8 +516,8 @@ class Vanilla(ScanModel):
                       ID=None,
                       views=views,
                       geometry=geometry)
-            pod.probe_weight = 1
-            pod.object_weight = 1
+            pod.probe_weight = 1.0
+            pod.object_weight = 1.0
 
             new_pods.append(pod)
 
@@ -778,8 +778,8 @@ class Full(ScanModel):
 
                         new_pods.append(pod)
 
-                        pod.probe_weight = 1
-                        pod.object_weight = 1
+                        pod.probe_weight = 1.0
+                        pod.object_weight = 1.0
 
         return new_pods, new_probe_ids, new_object_ids
 
