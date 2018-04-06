@@ -134,37 +134,132 @@ class ConstraintsRegressionTest(unittest.TestCase):
 
         out = con.renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
         np.testing.assert_allclose(out, expected_out)
-    #
-    # def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound):
-    #     renormed_f = np.zeros(f.shape, dtype=np.complex128)
-    #     for _pa, _oa, ea, da, ma in addr_info:
-    #         m = mask[ma[0]]
-    #         magnitudes = fmag[da[0]]
-    #         absolute_magnitudes = af[da[0]]
-    #         fourier_space_solution = f[ea[0]]
-    #         fourier_error = err_fmag[da[0]]
-    #         if pbound is None:
-    #             fm = (1 - m) + m * magnitudes / (absolute_magnitudes + 1e-10)
-    #             renormed_f[ea[0]] = np.multiply(fm, fourier_space_solution)
-    #         elif (fourier_error > pbound):
-    #             # Power bound is applied
-    #             fdev = absolute_magnitudes - magnitudes
-    #             renorm = np.sqrt(pbound / fourier_error)
-    #             fm = (1 - m) + m * (magnitudes + fdev * renorm) / (absolute_magnitudes + 1e-10)
-    #             renormed_f[ea[0]] = np.multiply(fm, fourier_space_solution)
-    #         else:
-    #             renormed_f[ea[0]] = np.zeros_like(fourier_space_solution)
-    #     return renormed_f
-    #
-    # def get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object):
-    #     df = np.zeros(exit_wave.shape, dtype=np.complex128)
-    #     for _pa, _oa, ea, da, ma in addr_info:
-    #         if (pbound is None) or (err_fmag[da[0]] > pbound):
-    #             df[ea[0]] = np.subtract(backpropagated_solution[ea[0]], probe_object[ea[0]])
-    #         else:
-    #             df[ea[0]] = alpha * np.subtract(probe_object[ea[0]], exit_wave[ea[0]])
-    #     return df
-    #
+
+    def test_get_difference_pbound_is_none(self):
+        alpha = 1.0 # feedback constant
+        pbound = 5.0  # the power bound
+        num_object_modes = 1 # for example
+        num_probe_modes = 2 # for example
+
+        N = 3 # number of measured points
+        M = N * num_object_modes * num_probe_modes # exit wave length
+        A = 2 # for example
+        B = 4 # for example
+
+        backpropagated_solution = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)# The current iterant backpropagated
+        probe_object = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)# the probe multiplied by the object
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)# deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE) # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)# the address book
+
+        # now fill it with stuff
+
+        backpropagated_solution_fill = np.array([ix + 1j*(ix**2) for ix in range(np.prod(backpropagated_solution.shape))]).reshape((M, A, B))
+        backpropagated_solution[:] = backpropagated_solution_fill
+
+        probe_object_fill = np.array([ix + 1j*ix for ix in range(10, 10+np.prod(backpropagated_solution.shape), 1)]).reshape((M, A, B))
+        probe_object[:] = probe_object_fill
+
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill =  np.array([ix**2 + 1j*ix for ix in range(20, 20+np.prod(backpropagated_solution.shape), 1)]).reshape((M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32) # not going to be used here
+        oa = np.zeros((M, 3), dtype=np.int32) # not going to be used here
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)]*num_probe_modes*num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        expected_out = np.array([[[-390.-10.j, -430.-10.j, -472.-10.j, -516.-10.j],
+                                  [-562.-10.j, -610.-10.j, -660.-10.j, -712.-10.j]],
+                                 [[-766.-10.j, -822.-10.j, -880.-10.j, -940.-10.j],
+                                  [-1002.-10.j, -1066.-10.j, -1132.-10.j, -1200.-10.j]],
+                                 [[-1270.-10.j, -1342.-10.j, -1416.-10.j, -1492.-10.j],
+                                  [-1570.-10.j, -1650.-10.j, -1732.-10.j, -1816.-10.j]],
+                                 [[-1902.-10.j, -1990.-10.j, -2080.-10.j, -2172.-10.j],
+                                  [-2266.-10.j, -2362.-10.j, -2460.-10.j, -2560.-10.j]],
+                                 [[-2662.-10.j, -2766.-10.j, -2872.-10.j, -2980.-10.j],
+                                  [-3090.-10.j, -3202.-10.j, -3316.-10.j, -3432.-10.j]],
+                                 [[-3550.-10.j, -3670.-10.j, -3792.-10.j, -3916.-10.j],
+                                  [-4042.-10.j, -4170.-10.j, -4300.-10.j, -4432.-10.j]]], dtype=COMPLEX_TYPE)
+
+        out = con.get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
+        np.testing.assert_allclose(expected_out, out)
+
+    def test_get_difference_pbound_is_not_none(self):
+        alpha = 1.0  # feedback constant
+        pbound = 5.0  # the power bound
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
+
+        N = 3  # number of measured points
+        M = N * num_object_modes * num_probe_modes  # exit wave length
+        A = 2  # for example
+        B = 4  # for example
+
+        backpropagated_solution = np.empty(shape=(M, A, B),
+                                           dtype=COMPLEX_TYPE)  # The current iterant backpropagated
+        probe_object = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # the probe multiplied by the object
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
+
+        # now fill it with stuff
+
+        backpropagated_solution_fill = np.array(
+            [ix + 1j * (ix ** 2) for ix in range(np.prod(backpropagated_solution.shape))]).reshape((M, A, B))
+        backpropagated_solution[:] = backpropagated_solution_fill
+
+        probe_object_fill = np.array(
+            [ix + 1j * ix for ix in range(10, 10 + np.prod(backpropagated_solution.shape), 1)]).reshape((M, A, B))
+        probe_object[:] = probe_object_fill
+
+        err_fmag_fill = np.ones((N,))*(pbound+0.1) # should be higher than pbound
+        err_fmag_fill[N // 2] = 4.0# except for this one!!
+        err_fmag[:] = err_fmag_fill
+
+        exit_wave_fill = np.array(
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(backpropagated_solution.shape), 1)]).reshape(
+            (M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)  # not going to be used here
+        oa = np.zeros((M, 3), dtype=np.int32)  # not going to be used here
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        expected_out = np.array([[[-10.0 -10.0j, -10.0 -10.0j, -10.0 -8.0j, -10.0 -4.0j],
+                                  [-10.0 + 2.0j, -10.0 +10.0j, -10.0 +20.0j, -10. +32.0j]],
+                                 [[-766.0 -10.0j, -822.0 -10.00j, -880.0 -10.0j, -940.0 -10.0j],
+                                  [-1002.0 -10.0j, -1066.0 -10.0j, -1132.0 -10.0j, -1200.0 -10.0j]],
+                                 [[-10.0 +230.0j, -10.0 +262.0j, -10.0 +296.0j, -10.0 +332.0j],
+                                  [-10.0 +370.0j, -10.0 +410.0j, -10.0 +452.0j, -10.0 +496.0j]],
+                                 [[-10.0 +542.0j, -10.0 +590.0j, -10.0 +640.0j, -10.0 +692.0j],
+                                  [-10.0 +746.0j, -10.0 +802.0j, -10.0 +860.0j, -10.0 +920.0j]],
+                                 [[-2662.0 -10.0j, -2766.0 -10.0j, -2872.0 -10.0j,-2980.0 -10.0j],
+                                  [-3090.0 -10.0j, -3202.0 -10.0j, -3316.0 -10.0j, -3432.0 -10.0j]],
+                                 [[-10.0 +1550.0j, -10.0 +1630.0j, -10.0 +1712.0j, -10.0 +1796.0j],
+                                  [-10.0 +1882.0j, -10.0 +1970.0j, -10.0 +2060.0j,-10.0 +2152.0j]]])
+
+        out = con.get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound,
+                                 probe_object)
+        np.testing.assert_allclose(expected_out, out)
+
     # def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter,
     #                                       pbound=None, alpha=1.0, LL_error=True, do_realspace_error=True):
     #     '''

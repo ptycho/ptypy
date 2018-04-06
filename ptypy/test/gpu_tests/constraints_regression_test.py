@@ -123,6 +123,131 @@ class ConstraintsRegressionTest(unittest.TestCase):
                                        gout_test[idx],
                                        err_msg=("failed on index:%s\n" % (idx)))
 
+
+    def test_get_difference_pbound_is_none(self):
+        alpha = 1.0  # feedback constant
+        pbound = 5.0  # the power bound
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
+
+        N = 3  # number of measured points
+        M = N * num_object_modes * num_probe_modes  # exit wave length
+        A = 2  # for example
+        B = 4  # for example
+
+        backpropagated_solution = np.empty(shape=(M, A, B),
+                                           dtype=COMPLEX_TYPE)  # The current iterant backpropagated
+        probe_object = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # the probe multiplied by the object
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
+
+        # now fill it with stuff
+
+        backpropagated_solution_fill = np.array(
+            [ix + 1j * (ix ** 2) for ix in range(np.prod(backpropagated_solution.shape))]).reshape((M, A, B))
+        backpropagated_solution[:] = backpropagated_solution_fill
+
+        probe_object_fill = np.array(
+            [ix + 1j * ix for ix in range(10, 10 + np.prod(backpropagated_solution.shape), 1)]).reshape(
+            (M, A, B))
+        probe_object[:] = probe_object_fill
+
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill = np.array(
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(backpropagated_solution.shape), 1)]).reshape(
+            (M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)  # not going to be used here
+        oa = np.zeros((M, 3), dtype=np.int32)  # not going to be used here
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        gout = gcon.get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound,
+                                 probe_object)
+
+        out = con.get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound,
+                                 probe_object)
+        out_test = out.reshape((np.prod(out.shape),))
+        gout_test = gout.reshape((np.prod(gout.shape),))
+        for idx in range(len(out)):
+            np.testing.assert_allclose(out_test[idx],
+                                       gout_test[idx],
+                                       err_msg=("failed on index:%s\n" % (idx)))
+
+    def test_get_difference_pbound_is_not_none(self):
+        alpha = 1.0  # feedback constant
+        pbound = 5.0  # the power bound
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
+
+        N = 3  # number of measured points
+        M = N * num_object_modes * num_probe_modes  # exit wave length
+        A = 2  # for example
+        B = 4  # for example
+
+        backpropagated_solution = np.empty(shape=(M, A, B),
+                                           dtype=COMPLEX_TYPE)  # The current iterant backpropagated
+        probe_object = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # the probe multiplied by the object
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
+
+        # now fill it with stuff
+
+        backpropagated_solution_fill = np.array(
+            [ix + 1j * (ix ** 2) for ix in range(np.prod(backpropagated_solution.shape))]).reshape((M, A, B))
+        backpropagated_solution[:] = backpropagated_solution_fill
+
+        probe_object_fill = np.array(
+            [ix + 1j * ix for ix in range(10, 10 + np.prod(backpropagated_solution.shape), 1)]).reshape(
+            (M, A, B))
+        probe_object[:] = probe_object_fill
+
+        err_fmag_fill = np.ones((N,)) * (pbound + 0.1)  # should be higher than pbound
+        err_fmag_fill[N // 2] = 4.0  # except for this one!!
+        err_fmag[:] = err_fmag_fill
+
+        exit_wave_fill = np.array(
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(backpropagated_solution.shape), 1)]).reshape(
+            (M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)  # not going to be used here
+        oa = np.zeros((M, 3), dtype=np.int32)  # not going to be used here
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        gout = gcon.get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound,
+                                 probe_object)
+
+        out = con.get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound,
+                                 probe_object)
+        out_test = out.reshape((np.prod(out.shape),))
+        gout_test = gout.reshape((np.prod(gout.shape),))
+
+        for idx in range(len(out)):
+            np.testing.assert_allclose(out_test[idx],
+                                       gout_test[idx],
+                                       err_msg=("failed on index:%s\n" % (idx)))
+
     #
     # def get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object):
     #     df = np.zeros(exit_wave.shape, dtype=np.complex128)
