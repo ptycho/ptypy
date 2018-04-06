@@ -14,7 +14,8 @@ from ..utils import parallel
 from DM_npy import DMNpy
 from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla
-from ..gpu import constraints as con
+
+
 
 __all__ = ['DMGpu']
 
@@ -169,7 +170,7 @@ class DMGpu(DMNpy):
     def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, propagator, pbound):
         error_dct = {}
 
-        errors = con.difference_map_fourier_constraint(mask,
+        errors = difference_map_fourier_constraint(mask,
                                                        Idata,
                                                        obj,
                                                        probe,
@@ -188,3 +189,73 @@ class DMGpu(DMNpy):
 
         return error_dct
 
+
+def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter, pbound=None,
+                                      alpha=1.0, LL_error=True, do_realspace_error=True):
+    '''
+    This kernel just performs the fourier renormalisation.
+    :param mask. The nd mask array
+    :param diffraction. The nd diffraction data
+    :param farfield_stack. The current iterant.
+    :param addr. The addresses of the stacks.
+    :return: The updated iterant
+            : fourier errors
+    '''
+
+    # from ptypy.array_based.object_probe_interaction import scan_and_multiply
+    from ptypy.gpu.object_probe_interaction import scan_and_multiply
+    from ptypy.gpu.error_metrics import log_likelihood, far_field_error, realspace_error
+    from ptypy.gpu.object_probe_interaction import difference_map_realspace_constraint
+    from ptypy.gpu.constraints import get_difference #renormalise_fourier_magnitudes
+    # from ptypy.array_based.propagation import farfield_propagator
+    from ptypy.gpu.propagation import farfield_propagator
+    # from ptypy.array_based import array_utils as au
+    from ptypy.gpu import array_utils as au
+    from ptypy.array_based import FLOAT_TYPE
+    import numpy as np
+
+    # this seems to make a difference
+    # from ptypy.array_based.constraints import renormalise_fourier_magnitudes
+    from ptypy.gpu.constraints import renormalise_fourier_magnitudes# seg faults with nprobes=2, but works when it is 1
+
+
+    probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
+
+    # Buffer for accumulated photons
+    # For log likelihood error # need to double check this adp
+    if LL_error is True:
+        err_phot = log_likelihood(probe_object, mask, Idata, prefilter, postfilter, addr_info)
+    else:
+        err_phot = np.zeros(Idata.shape[0], dtype=FLOAT_TYPE)
+
+    constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
+    f = farfield_propagator(constrained, prefilter, postfilter, direction='forward')
+    pa, oa, ea, da, ma = zip(*addr_info)
+    af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)
+
+    fmag = np.sqrt(np.abs(Idata))
+    af = np.sqrt(af2)
+    # # Fourier magnitudes deviations(current_solution, pbound, measured_solution, mask, addr)
+    err_fmag = far_field_error(af, fmag, mask)
+
+    vectorised_rfm = renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
+
+    backpropagated_solution = farfield_propagator(vectorised_rfm,
+                                                  postfilter.conj(),
+                                                  prefilter.conj(),
+                                                  direction='backward')
+
+    df = get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
+
+    exit_wave += df
+    if do_realspace_error:
+        ea_first_column = np.array(ea)[:, 0]
+        da_first_column = np.array(da)[:, 0]
+        err_exit = realspace_error(df, ea_first_column, da_first_column, Idata.shape[0])
+    else:
+        err_exit = np.zeros((Idata.shape[0]))
+
+    if pbound is not None:
+        err_fmag /= pbound
+
+    return np.array([err_fmag, err_phot, err_exit])
