@@ -11,7 +11,7 @@ import array_utils as au
 from . import COMPLEX_TYPE, FLOAT_TYPE
 
 def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound):
-    renormed_f = np.zeros(f.shape, dtype=np.complex128)
+    renormed_f = np.zeros(f.shape, dtype=COMPLEX_TYPE)
     for _pa, _oa, ea, da, ma in addr_info:
         m = mask[ma[0]]
         magnitudes = fmag[da[0]]
@@ -32,7 +32,7 @@ def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pboun
     return renormed_f
 
 def get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object):
-    df = np.zeros(exit_wave.shape, dtype=np.complex128)
+    df = np.zeros(exit_wave.shape, dtype=COMPLEX_TYPE)
     for _pa, _oa, ea, da, ma in addr_info:
         if (pbound is None) or (err_fmag[da[0]] > pbound):
             df[ea[0]] = np.subtract(backpropagated_solution[ea[0]], probe_object[ea[0]])
