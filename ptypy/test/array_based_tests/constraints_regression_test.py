@@ -258,7 +258,248 @@ class ConstraintsRegressionTest(unittest.TestCase):
 
         out = con.get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound,
                                  probe_object)
+
         np.testing.assert_allclose(expected_out, out)
+
+
+    def test_difference_map_fourier_constraint_pbound_is_none_with_realspace_error_and_LL_error(self):
+
+        alpha = 1.0 # feedback constant
+        pbound = None  # the power bound
+        num_object_modes = 1 # for example
+        num_probe_modes = 2 # for example
+
+        N = 4 # number of measured points
+        M = N * num_object_modes * num_probe_modes # exit wave length
+        A = 2 # for example
+        B = 4 # for example
+        npts_greater_than = int(np.sqrt(N)) # object is bigger than the probe by this amount
+        C = A + npts_greater_than
+        D = B + npts_greater_than
+
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)# deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE) # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)# the address book
+        Idata = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)# the measured intensities NxAxB
+        mask = np.empty(shape=(N, A, B), dtype=np.int32)# the masks for the measured magnitudes either 1xAxB or NxAxB
+        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE) # the probe function
+        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+
+
+        # now fill it with stuff. Data won't ever look like this except in type and usage!
+        Idata_fill = np.arange(np.prod(Idata.shape)).reshape(Idata.shape).astype(Idata.dtype)
+        Idata[:] = Idata_fill
+
+        obj_fill = np.array([ix + 1j*(ix**2) for ix in range(np.prod(obj.shape))]).reshape((num_object_modes, C, D))
+        obj[:] = obj_fill
+
+        probe_fill = np.array([ix + 1j*ix for ix in range(10, 10+np.prod(probe.shape), 1)]).reshape((num_probe_modes, A, B))
+        probe[:] = probe_fill
+
+        prefilter.fill(30.0 + 2.0j)# this would actually vary
+        postfilter.fill(20.0 + 3.0j)# this too
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill =  np.array([ix**2 + 1j*ix for ix in range(20, 20+np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0 # checkerboard for testing
+        mask[:] = mask_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)
+        for idx in range(num_probe_modes):
+            if idx>0:
+                pa[::idx,0]=idx # multimodal could work like this, but this is not a concrete thing.
+
+
+        X, Y = np.meshgrid(range(npts_greater_than), range(npts_greater_than)) # assume square scan grid. Again, not always true.
+        oa = np.zeros((M, 3), dtype=np.int32)
+        oa[:N, 1] = X.ravel()
+        oa[N:, 1] = X.ravel()
+        oa[:N, 2] = Y.ravel()
+        oa[N:, 2] = Y.ravel()
+        for idx in range(num_object_modes):
+            if idx>0:
+                oa[::idx,0]=idx # multimodal could work like this, but this is not a concrete thing (less likely for object)
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)]*num_probe_modes*num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        expected_out = np.array([[6.07364329e+12, 8.87756439e+13, 9.12644403e+12, 1.39851186e+14],
+                                 [6.38221460e+23, 8.94021509e+24, 3.44468266e+23, 6.03329184e+24],
+                                 [3.88072739e+18, 2.67132771e+19, 9.15414239e+18,4.41441340e+19]], dtype=FLOAT_TYPE)
+
+        expected_ew = np.array([[[-4.24456960e+08 +3.33502272e+08j, -5.54233664e+08 +4.81765952e+08j, -7.26160640e+08 +6.74398016e+08j, -9.44673984e+08 +9.15834816e+08j],
+                                 [-4.24455232e+08 +3.33500608e+08j, -5.54232768e+08 +4.81764832e+08j, -7.26159680e+08 +6.74396992e+08j, -9.44673792e+08 +9.15834752e+08j]],
+                                [[-1.60761126e+09 +1.53736205e+09j, -1.97845542e+09 +1.92965094e+09j, -2.40919706e+09 +2.38405555e+09j, -2.90427264e+09 +2.90501248e+09j],
+                                 [-1.60760742e+09 +1.53735821e+09j, -1.97845261e+09 +1.92964813e+09j, -2.40919450e+09 +2.38405299e+09j, -2.90427085e+09 +2.90501120e+09j]],
+                                [[-8.77013248e+08 +4.54775968e+08j, -1.05411565e+09 +6.40012672e+08j, -1.27632653e+09 +8.72576064e+08j, -1.54808115e+09 +1.15690163e+09j],
+                                 [-8.77010560e+08 +4.54773344e+08j, -1.05411462e+09 +6.40011584e+08j, -1.27632589e+09 +8.72575488e+08j, -1.54808205e+09 +1.15690304e+09j]],
+                                [[-2.33229235e+09 +1.83610880e+09j, -2.75933594e+09 +2.27424461e+09j, -3.24923520e+09 +2.77745434e+09j, -3.80642586e+09 +3.35017344e+09j],
+                                 [-2.33228800e+09 +1.83610432e+09j, -2.75933338e+09 +2.27424154e+09j, -3.24923290e+09 +2.77745203e+09j, -3.80642509e+09 +3.35017293e+09j]],
+                                [[-1.32365261e+09 +3.21670784e+08j, -1.47709235e+09 +4.69934400e+08j, -1.67268250e+09 +6.62566528e+08j, -1.91485875e+09 +9.04003328e+08j],
+                                 [-1.32365056e+09 +3.21669120e+08j, -1.47709133e+09 +4.69933312e+08j, -1.67268122e+09 +6.62565568e+08j, -1.91485837e+09 +9.04003328e+08j]],
+                                [[-2.69611136e+09 +1.52553024e+09j, -3.09061837e+09 +1.91781939e+09j, -3.54502349e+09 +2.37222400e+09j, -4.06376115e+09 +2.89318067e+09j],
+                                 [-2.69610726e+09 +1.52552653e+09j, -3.09061555e+09 +1.91781658e+09j, -3.54502042e+09 +2.37222144e+09j, -4.06375987e+09 +2.89317965e+09j]],
+                                [[-2.15481728e+09 +4.42944416e+08j, -2.35558246e+09 +6.28181120e+08j, -2.60145664e+09 +8.60744448e+08j, -2.89687424e+09 +1.14507034e+09j],
+                                 [-2.15481421e+09 +4.42941824e+08j, -2.35558118e+09 +6.28180096e+08j, -2.60145562e+09 +8.60743936e+08j, -2.89687475e+09 +1.14507149e+09j]],
+                                [[-3.79940096e+09 +1.82427738e+09j, -4.25010765e+09 +2.26241280e+09j, -4.76367002e+09 +2.76562253e+09j, -5.34452326e+09 +3.33834163e+09j],
+                                 [-3.79939610e+09 +1.82427277e+09j, -4.25010458e+09 +2.26240998e+09j, -4.76366746e+09 +2.76562022e+09j, -5.34452275e+09 +3.33834138e+09j]]], dtype= COMPLEX_TYPE)
+
+        out = con.difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter, pbound=pbound, alpha=alpha, LL_error=True, do_realspace_error=True)
+        np.testing.assert_allclose(out,
+                                   expected_out,
+                                   err_msg="The returned errors are not consistent.")
+
+        np.testing.assert_allclose(exit_wave,
+                                   expected_ew,
+                                   err_msg="The expected in-place update of the exit wave didn't work properly.")
+
+    def test_difference_map_fourier_constraint_pbound_is_none_no_error(self):
+
+        alpha = 1.0  # feedback constant
+        pbound = None  # the power bound
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
+
+        N = 4  # number of measured points
+        M = N * num_object_modes * num_probe_modes  # exit wave length
+        A = 2  # for example
+        B = 4  # for example
+        npts_greater_than = int(np.sqrt(N))  # object is bigger than the probe by this amount
+        C = A + npts_greater_than
+        D = B + npts_greater_than
+
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
+        Idata = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
+        mask = np.empty(shape=(N, A, B),
+                        dtype=np.int32)  # the masks for the measured magnitudes either 1xAxB or NxAxB
+        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE)  # the probe function
+        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+
+        # now fill it with stuff. Data won't ever look like this except in type and usage!
+        Idata_fill = np.arange(np.prod(Idata.shape)).reshape(Idata.shape).astype(Idata.dtype)
+        Idata[:] = Idata_fill
+
+        obj_fill = np.array([ix + 1j * (ix ** 2) for ix in range(np.prod(obj.shape))]).reshape(
+            (num_object_modes, C, D))
+        obj[:] = obj_fill
+
+        probe_fill = np.array([ix + 1j * ix for ix in range(10, 10 + np.prod(probe.shape), 1)]).reshape(
+            (num_probe_modes, A, B))
+        probe[:] = probe_fill
+
+        prefilter.fill(30.0 + 2.0j)  # this would actually vary
+        postfilter.fill(20.0 + 3.0j)  # this too
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill = np.array(
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        mask[:] = mask_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)
+        for idx in range(num_probe_modes):
+            if idx > 0:
+                pa[::idx, 0] = idx  # multimodal could work like this, but this is not a concrete thing.
+
+        X, Y = np.meshgrid(range(npts_greater_than),
+                           range(npts_greater_than))  # assume square scan grid. Again, not always true.
+        oa = np.zeros((M, 3), dtype=np.int32)
+        oa[:N, 1] = X.ravel()
+        oa[N:, 1] = X.ravel()
+        oa[:N, 2] = Y.ravel()
+        oa[N:, 2] = Y.ravel()
+        for idx in range(num_object_modes):
+            if idx > 0:
+                oa[::idx,
+                0] = idx  # multimodal could work like this, but this is not a concrete thing (less likely for object)
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        expected_out = np.array([[6.07364329e+12, 8.87756439e+13, 9.12644403e+12, 1.39851186e+14],
+                                 [0.0, 0.0, 0.0, 0.0],
+                                 [0.0, 0.0, 0.0, 0.0]],
+                                dtype=FLOAT_TYPE)
+
+        expected_ew = np.array([[[-4.24456960e+08 + 3.33502272e+08j, -5.54233664e+08 + 4.81765952e+08j,
+                                  -7.26160640e+08 + 6.74398016e+08j, -9.44673984e+08 + 9.15834816e+08j],
+                                 [-4.24455232e+08 + 3.33500608e+08j, -5.54232768e+08 + 4.81764832e+08j,
+                                  -7.26159680e+08 + 6.74396992e+08j, -9.44673792e+08 + 9.15834752e+08j]],
+                                [[-1.60761126e+09 + 1.53736205e+09j, -1.97845542e+09 + 1.92965094e+09j,
+                                  -2.40919706e+09 + 2.38405555e+09j, -2.90427264e+09 + 2.90501248e+09j],
+                                 [-1.60760742e+09 + 1.53735821e+09j, -1.97845261e+09 + 1.92964813e+09j,
+                                  -2.40919450e+09 + 2.38405299e+09j, -2.90427085e+09 + 2.90501120e+09j]],
+                                [[-8.77013248e+08 + 4.54775968e+08j, -1.05411565e+09 + 6.40012672e+08j,
+                                  -1.27632653e+09 + 8.72576064e+08j, -1.54808115e+09 + 1.15690163e+09j],
+                                 [-8.77010560e+08 + 4.54773344e+08j, -1.05411462e+09 + 6.40011584e+08j,
+                                  -1.27632589e+09 + 8.72575488e+08j, -1.54808205e+09 + 1.15690304e+09j]],
+                                [[-2.33229235e+09 + 1.83610880e+09j, -2.75933594e+09 + 2.27424461e+09j,
+                                  -3.24923520e+09 + 2.77745434e+09j, -3.80642586e+09 + 3.35017344e+09j],
+                                 [-2.33228800e+09 + 1.83610432e+09j, -2.75933338e+09 + 2.27424154e+09j,
+                                  -3.24923290e+09 + 2.77745203e+09j, -3.80642509e+09 + 3.35017293e+09j]],
+                                [[-1.32365261e+09 + 3.21670784e+08j, -1.47709235e+09 + 4.69934400e+08j,
+                                  -1.67268250e+09 + 6.62566528e+08j, -1.91485875e+09 + 9.04003328e+08j],
+                                 [-1.32365056e+09 + 3.21669120e+08j, -1.47709133e+09 + 4.69933312e+08j,
+                                  -1.67268122e+09 + 6.62565568e+08j, -1.91485837e+09 + 9.04003328e+08j]],
+                                [[-2.69611136e+09 + 1.52553024e+09j, -3.09061837e+09 + 1.91781939e+09j,
+                                  -3.54502349e+09 + 2.37222400e+09j, -4.06376115e+09 + 2.89318067e+09j],
+                                 [-2.69610726e+09 + 1.52552653e+09j, -3.09061555e+09 + 1.91781658e+09j,
+                                  -3.54502042e+09 + 2.37222144e+09j, -4.06375987e+09 + 2.89317965e+09j]],
+                                [[-2.15481728e+09 + 4.42944416e+08j, -2.35558246e+09 + 6.28181120e+08j,
+                                  -2.60145664e+09 + 8.60744448e+08j, -2.89687424e+09 + 1.14507034e+09j],
+                                 [-2.15481421e+09 + 4.42941824e+08j, -2.35558118e+09 + 6.28180096e+08j,
+                                  -2.60145562e+09 + 8.60743936e+08j, -2.89687475e+09 + 1.14507149e+09j]],
+                                [[-3.79940096e+09 + 1.82427738e+09j, -4.25010765e+09 + 2.26241280e+09j,
+                                  -4.76367002e+09 + 2.76562253e+09j, -5.34452326e+09 + 3.33834163e+09j],
+                                 [-3.79939610e+09 + 1.82427277e+09j, -4.25010458e+09 + 2.26240998e+09j,
+                                  -4.76366746e+09 + 2.76562022e+09j, -5.34452275e+09 + 3.33834138e+09j]]],
+                               dtype=COMPLEX_TYPE)
+
+        out = con.difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter,
+                                                    postfilter, pbound=pbound, alpha=alpha, LL_error=False,
+                                                    do_realspace_error=False)
+        np.testing.assert_allclose(out,
+                                   expected_out,
+                                   err_msg="The returned errors are not consistent.")
+
+        np.testing.assert_allclose(exit_wave,
+                                   expected_ew,
+                                   err_msg="The expected in-place update of the exit wave didn't work properly.")
+
+    @unittest.skip("out of time!Do this Monday")
+    def test_difference_map_fourier_constraint_pbound_is_not_none_no_error(self):
+        '''
+        mixture of high and low p bound values respect to the fourier error
+        '''
+        pass
+
+
 
     # def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter,
     #                                       pbound=None, alpha=1.0, LL_error=True, do_realspace_error=True):

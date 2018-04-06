@@ -5,6 +5,7 @@ The tests for the constraints
 
 import unittest
 import numpy as np
+from copy import deepcopy
 from ptypy.array_based import constraints as con, FLOAT_TYPE, COMPLEX_TYPE
 from ptypy.gpu import constraints as gcon
 
@@ -248,15 +249,199 @@ class ConstraintsRegressionTest(unittest.TestCase):
                                        gout_test[idx],
                                        err_msg=("failed on index:%s\n" % (idx)))
 
-    #
-    # def get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object):
-    #     df = np.zeros(exit_wave.shape, dtype=np.complex128)
-    #     for _pa, _oa, ea, da, ma in addr_info:
-    #         if (pbound is None) or (err_fmag[da[0]] > pbound):
-    #             df[ea[0]] = np.subtract(backpropagated_solution[ea[0]], probe_object[ea[0]])
-    #         else:
-    #             df[ea[0]] = alpha * np.subtract(probe_object[ea[0]], exit_wave[ea[0]])
-    #     return df
+    def test_difference_map_fourier_constraint_pbound_is_none_with_realspace_error_and_LL_error(self):
+
+        alpha = 1.0  # feedback constant
+        pbound = None  # the power bound
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
+
+        N = 4  # number of measured points
+        M = N * num_object_modes * num_probe_modes  # exit wave length
+        A = 2  # for example
+        B = 4  # for example
+        npts_greater_than = int(np.sqrt(N))  # object is bigger than the probe by this amount
+        C = A + npts_greater_than
+        D = B + npts_greater_than
+
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
+        Idata = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
+        mask = np.empty(shape=(N, A, B),
+                        dtype=np.int32)  # the masks for the measured magnitudes either 1xAxB or NxAxB
+        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE)  # the probe function
+        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+
+        # now fill it with stuff. Data won't ever look like this except in type and usage!
+        Idata_fill = np.arange(np.prod(Idata.shape)).reshape(Idata.shape).astype(Idata.dtype)
+        Idata[:] = Idata_fill
+
+        obj_fill = np.array([ix + 1j * (ix ** 2) for ix in range(np.prod(obj.shape))]).reshape(
+            (num_object_modes, C, D))
+        obj[:] = obj_fill
+
+        probe_fill = np.array([ix + 1j * ix for ix in range(10, 10 + np.prod(probe.shape), 1)]).reshape(
+            (num_probe_modes, A, B))
+        probe[:] = probe_fill
+
+        prefilter.fill(30.0 + 2.0j)  # this would actually vary
+        postfilter.fill(20.0 + 3.0j)  # this too
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill = np.array(
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        mask[:] = mask_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)
+        for idx in range(num_probe_modes):
+            if idx > 0:
+                pa[::idx, 0] = idx  # multimodal could work like this, but this is not a concrete thing.
+
+        X, Y = np.meshgrid(range(npts_greater_than),
+                           range(npts_greater_than))  # assume square scan grid. Again, not always true.
+        oa = np.zeros((M, 3), dtype=np.int32)
+        oa[:N, 1] = X.ravel()
+        oa[N:, 1] = X.ravel()
+        oa[:N, 2] = Y.ravel()
+        oa[N:, 2] = Y.ravel()
+        for idx in range(num_object_modes):
+            if idx > 0:
+                oa[::idx,
+                0] = idx  # multimodal could work like this, but this is not a concrete thing (less likely for object)
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        gexit_wave = deepcopy(exit_wave)
+
+        out = con.difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter,
+                                                    postfilter, pbound=pbound, alpha=alpha, LL_error=True,
+                                                    do_realspace_error=True)
+
+        gout = gcon.difference_map_fourier_constraint(mask, Idata, obj, probe, gexit_wave, addr_info, prefilter,
+                                                    postfilter, pbound=pbound, alpha=alpha, LL_error=True,
+                                                    do_realspace_error=True)
+        np.testing.assert_allclose(out,
+                                   gout,
+                                   err_msg="The returned errors are not consistent.")
+
+        np.testing.assert_allclose(exit_wave,
+                                   gexit_wave,
+                                   err_msg="The expected in-place update of the exit wave didn't work properly.")
+
+
+    def test_difference_map_fourier_constraint_pbound_is_none_no_error(self):
+
+        alpha = 1.0  # feedback constant
+        pbound = None  # the power bound
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
+
+        N = 4  # number of measured points
+        M = N * num_object_modes * num_probe_modes  # exit wave length
+        A = 2  # for example
+        B = 4  # for example
+        npts_greater_than = int(np.sqrt(N))  # object is bigger than the probe by this amount
+        C = A + npts_greater_than
+        D = B + npts_greater_than
+
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
+        Idata = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
+        mask = np.empty(shape=(N, A, B),
+                        dtype=np.int32)  # the masks for the measured magnitudes either 1xAxB or NxAxB
+        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE)  # the probe function
+        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+
+        # now fill it with stuff. Data won't ever look like this except in type and usage!
+        Idata_fill = np.arange(np.prod(Idata.shape)).reshape(Idata.shape).astype(Idata.dtype)
+        Idata[:] = Idata_fill
+
+        obj_fill = np.array([ix + 1j * (ix ** 2) for ix in range(np.prod(obj.shape))]).reshape(
+            (num_object_modes, C, D))
+        obj[:] = obj_fill
+
+        probe_fill = np.array([ix + 1j * ix for ix in range(10, 10 + np.prod(probe.shape), 1)]).reshape(
+            (num_probe_modes, A, B))
+        probe[:] = probe_fill
+
+        prefilter.fill(30.0 + 2.0j)  # this would actually vary
+        postfilter.fill(20.0 + 3.0j)  # this too
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill = np.array(
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        mask[:] = mask_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)
+        for idx in range(num_probe_modes):
+            if idx > 0:
+                pa[::idx, 0] = idx  # multimodal could work like this, but this is not a concrete thing.
+
+        X, Y = np.meshgrid(range(npts_greater_than),
+                           range(npts_greater_than))  # assume square scan grid. Again, not always true.
+        oa = np.zeros((M, 3), dtype=np.int32)
+        oa[:N, 1] = X.ravel()
+        oa[N:, 1] = X.ravel()
+        oa[:N, 2] = Y.ravel()
+        oa[N:, 2] = Y.ravel()
+        for idx in range(num_object_modes):
+            if idx > 0:
+                oa[::idx,
+                0] = idx  # multimodal could work like this, but this is not a concrete thing (less likely for object)
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+
+        gexit_wave = deepcopy(exit_wave)
+
+        out = con.difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter,
+                                                    postfilter, pbound=pbound, alpha=alpha, LL_error=False,
+                                                    do_realspace_error=False)
+
+        gout = con.difference_map_fourier_constraint(mask, Idata, obj, probe, gexit_wave, addr_info, prefilter,
+                                                    postfilter, pbound=pbound, alpha=alpha, LL_error=False,
+                                                    do_realspace_error=False)
+
+        np.testing.assert_allclose(out,
+                                   gout,
+                                   err_msg="The returned errors are not consistent.")
+
+        np.testing.assert_allclose(exit_wave,
+                                   gexit_wave,
+                                   err_msg="The expected in-place update of the exit wave didn't work properly.")
+
+
+
     #
     # def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter,
     #                                       pbound=None, alpha=1.0, LL_error=True, do_realspace_error=True):
