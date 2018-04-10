@@ -80,3 +80,40 @@ def center_probe(probe, center_tolerance):
         probe[idx] = interpolated_shift(probe[idx], offset)
 
 
+def difference_map_overlap_update(addr_info, cfact_object, cfact_probe, do_update_probe, exit_wave, ob, object_weights,
+                                  probe, probe_support, probe_weights,max_iterations, update_object_first,
+                                  obj_smooth_std, overlap_converge_factor, probe_center_tol, clip_object=None):
+    for inner in range(max_iterations):
+
+        # Update object first
+        if update_object_first or (inner > 0):
+            # Update object
+            difference_map_update_object(ob,
+                                         object_weights,
+                                         probe,
+                                         exit_wave,
+                                         addr_info,
+                                         cfact_object,
+                                         ob_smooth_std=obj_smooth_std,
+                                         clip_object=clip_object)
+
+        # Exit if probe should not be updated yet
+        if not do_update_probe:
+            break
+        # Update probe
+        change = difference_map_update_probe(ob,
+                                             probe_weights,
+                                             probe,
+                                             exit_wave,
+                                             addr_info,
+                                             cfact_probe,
+                                             probe_support)
+
+
+        # Recenter the probe
+        if probe_center_tol is not None:
+            center_probe(probe, probe_center_tol)
+
+        # Stop iteration if probe change is small
+        if change < overlap_converge_factor:
+            break

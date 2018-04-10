@@ -5,7 +5,7 @@ a module to holds the constraints
 import numpy as np
 
 from error_metrics import log_likelihood, far_field_error, realspace_error
-from object_probe_interaction import difference_map_realspace_constraint, scan_and_multiply
+from object_probe_interaction import difference_map_realspace_constraint, scan_and_multiply, difference_map_overlap_update
 from propagation import farfield_propagator
 import array_utils as au
 from . import COMPLEX_TYPE, FLOAT_TYPE
@@ -94,3 +94,46 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_i
     return np.array([err_fmag, err_phot, err_exit])
 
 
+def difference_map_iterator(diffraction, obj, object_weights, cfact_object, mask, probe, cfact_probe, probe_support,
+                            probe_weights, exit_wave, addr, pre_fft, post_fft, pbound, overlap_max_iterations, update_object_first,
+                            obj_smooth_std, overlap_converge_factor, probe_center_tol, update_probe_after, alpha=1,
+                            clip_object=None, LL_error=False, num_iterations=1):
+    curiter = 0
+    errors = np.zeros((num_iterations, 3, len(diffraction)), dtype=COMPLEX_TYPE)
+    for it in range(num_iterations):
+
+        print("iteration:%s" % (it//10)) # it's probably a good idea to print this if possible for some idea of progress
+        # numpy dump here for 64x64 and 4096x4096
+
+
+        do_update_probe = (update_probe_after <= curiter)
+        errors[it] = difference_map_fourier_constraint(mask,
+                                                   diffraction,
+                                                   obj,
+                                                   probe,
+                                                   exit_wave,
+                                                   addr,
+                                                   prefilter=pre_fft,
+                                                   postfilter=post_fft,
+                                                   pbound=pbound,
+                                                   alpha=alpha,
+                                                   LL_error=LL_error)
+
+        difference_map_overlap_update(addr,
+                                      cfact_object,
+                                      cfact_probe,
+                                      do_update_probe,
+                                      exit_wave,
+                                      obj,
+                                      object_weights,
+                                      probe,
+                                      probe_support,
+                                      probe_weights,
+                                      overlap_max_iterations,
+                                      update_object_first,
+                                      obj_smooth_std,
+                                      overlap_converge_factor,
+                                      probe_center_tol,
+                                      clip_object=clip_object)
+        curiter += 1
+    return errors
