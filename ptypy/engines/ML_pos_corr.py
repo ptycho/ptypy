@@ -1,0 +1,842 @@
+# -*- coding: utf-8 -*-
+"""
+Maximum Likelihood reconstruction engine.
+
+TODO:
+ * Implement other regularizers
+
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: GPLv2, see LICENSE for details.
+"""
+import numpy as np
+import time
+from .. import utils as u
+from ..utils.verbose import logger, log
+from ..utils import parallel
+from utils import Cnorm2, Cdot
+from . import BaseEngine
+
+# Parallesiation imports
+from ..core.classes import DEFAULT_ACCESSRULE
+from ..core import View
+import sys
+import os
+import utils_pos_corr as pos_corr
+
+# debugging
+import matplotlib.pyplot as plt
+plt.switch_backend("Qt5Agg")
+# end
+
+__all__ = ['ML_pos_corr']
+
+DEFAULT = u.Param(
+    ML_type='gaussian',
+    floating_intensities=False,
+    intensity_renormalization=1.,
+    reg_del2=False,
+    reg_del2_amplitude=.01,
+    smooth_gradient=0,
+    smooth_gradient_decay=0,
+    scale_precond=False,
+    scale_probe_object=1.
+)
+
+
+class ML_pos_corr(BaseEngine):
+
+    DEFAULT = DEFAULT
+
+    def __init__(self, ptycho_parent, pars=None):
+        """
+        Maximum likelihood reconstruction engine.
+        """
+        if pars is None:
+            pars = DEFAULT.copy()
+
+        super(ML_pos_corr, self).__init__(ptycho_parent, pars)
+
+        # Instance attributes
+
+        # Object gradient
+        self.ob_grad = None
+
+        # Object minimization direction
+        self.ob_h = None
+
+        # Probe gradient
+        self.pr_grad = None
+
+        # Probe minimization direction
+        self.pr_h = None
+
+        # Other
+        self.tmin = None
+        self.ML_model = None
+        self.smooth_gradient = None
+        self.scale_p_o = None
+        self.scale_p_o_memory = .9
+
+    def engine_initialize(self):
+        """
+        Prepare for ML reconstruction.
+        """
+
+        # Object gradient and minimization direction
+        self.ob_grad = self.ob.copy(self.ob.ID + '_grad', fill=0.)
+        self.ob_h = self.ob.copy(self.ob.ID + '_h', fill=0.)
+
+        # Probe gradient and minimization direction
+        self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
+        self.pr_h = self.pr.copy(self.pr.ID + '_h', fill=0.)
+
+        self.tmin = 1.
+
+        # Create noise model
+        if self.p.ML_type.lower() == "gaussian":
+            self.ML_model = ML_Gaussian(self)
+        elif self.p.ML_type.lower() == "poisson":
+            self.ML_model = ML_Gaussian(self)
+        elif self.p.ML_type.lower() == "euclid":
+            self.ML_model = ML_Gaussian(self)
+        else:
+            raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
+
+        # Other options
+        self.smooth_gradient = prepare_smoothing_preconditioner(
+            self.p.smooth_gradient)
+
+    def engine_prepare(self):
+        """
+        Last minute initialization, everything, that needs to be recalculated,
+        when new data arrives.
+        """
+        # - # fill object with coverage of views
+        # - for name,s in self.ob_viewcover.S.iteritems():
+        # -    s.fill(s.get_view_coverage())
+        pass
+
+    def engine_iterate(self, num=1):
+        """
+        Compute `num` iterations.
+        """
+        ########################
+        # Compute new gradient
+        ########################
+        tg = 0.
+        tc = 0.
+
+        ta = time.time()
+        for it in range(num):
+            t1 = time.time()
+            new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad()
+            tg += time.time() - t1
+
+            if self.p.probe_update_start <= self.curiter:
+                # Apply probe support if needed
+                for name, s in new_pr_grad.storages.iteritems():
+                    support = self.probe_support.get(name)
+                    if support is not None:
+                        s.data *= support
+            else:
+                new_pr_grad.fill(0.)
+
+            # Smoothing preconditioner
+            if self.smooth_gradient:
+                self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
+                for name, s in new_ob_grad.storages.iteritems():
+                    s.data[:] = self.smooth_gradient(s.data)
+
+            # probe/object rescaling
+            if self.p.scale_precond:
+                cn2_new_pr_grad = Cnorm2(new_pr_grad)
+                if cn2_new_pr_grad > 1e-5:
+                    scale_p_o = (self.p.scale_probe_object * Cnorm2(new_ob_grad)
+                                 / Cnorm2(new_pr_grad))
+                else:
+                    scale_p_o = self.p.scale_probe_object
+                if self.scale_p_o is None:
+                    self.scale_p_o = scale_p_o
+                else:
+                    self.scale_p_o = self.scale_p_o ** self.scale_p_o_memory
+                    self.scale_p_o *= scale_p_o ** (1-self.scale_p_o_memory)
+                logger.debug('Scale P/O: %6.3g' % scale_p_o)
+            else:
+                self.scale_p_o = self.p.scale_probe_object
+
+            ############################
+            # Compute next conjugate
+            ############################
+            if self.curiter == 0:
+                bt = 0.
+            else:
+                bt_num = (self.scale_p_o
+                          * (Cnorm2(new_pr_grad)
+                             - np.real(Cdot(new_pr_grad, self.pr_grad)))
+                          + (Cnorm2(new_ob_grad)
+                             - np.real(Cdot(new_ob_grad, self.ob_grad))))
+
+                bt_denom = self.scale_p_o*Cnorm2(self.pr_grad) + Cnorm2(self.ob_grad)
+
+                bt = max(0, bt_num/bt_denom)
+
+            # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
+
+            self.ob_grad << new_ob_grad
+            self.pr_grad << new_pr_grad
+            """
+            for name, s in self.ob_grad.storages.iteritems():
+                s.data[:] = new_ob_grad.storages[name].data
+            for name, s in self.pr_grad.storages.iteritems():
+                s.data[:] = new_pr_grad.storages[name].data
+            """
+            # 3. Next conjugate
+            self.ob_h *= bt / self.tmin
+
+            # Smoothing preconditioner
+            if self.smooth_gradient:
+                for name, s in self.ob_h.storages.iteritems():
+                    s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
+            else:
+                self.ob_h -= self.ob_grad
+            self.pr_h *= bt / self.tmin
+            self.pr_grad *= self.scale_p_o
+            self.pr_h -= self.pr_grad
+            """
+            for name,s in self.ob_h.storages.iteritems():
+                s.data *= bt
+                s.data -= self.ob_grad.storages[name].data
+
+            for name,s in self.pr_h.storages.iteritems():
+                s.data *= bt
+                s.data -= scale_p_o * self.pr_grad.storages[name].data
+            """
+            # 3. Next conjugate
+            # ob_h = self.ob_h
+            # ob_h *= bt
+
+            # Smoothing preconditioner not implemented.
+            # if self.smooth_gradient:
+            #    ob_h -= object_smooth_filter(grad_obj)
+            # else:
+            #    ob_h -= ob_grad
+
+            # ob_h -= ob_grad
+            # pr_h *= bt
+            # pr_h -= scale_p_o * pr_grad
+
+            # Minimize - for now always use quadratic approximation
+            # (i.e. single Newton-Raphson step)
+            # In principle, the way things are now programmed this part
+            # could be iterated over in a real NR style.
+            t2 = time.time()
+            B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
+            tc += time.time() - t2
+
+            if np.isinf(B).any() or np.isnan(B).any():
+                logger.warning(
+                    'Warning! inf or nan found! Trying to continue...')
+                B[np.isinf(B)] = 0.
+                B[np.isnan(B)] = 0.
+
+            self.tmin = -.5 * B[1] / B[2]
+            self.ob_h *= self.tmin
+            self.pr_h *= self.tmin
+
+            # Debugging end
+
+            self.ob += self.ob_h
+            self.pr += self.pr_h
+            """
+            for name,s in self.ob.storages.iteritems():
+                s.data += tmin*self.ob_h.storages[name].data
+            for name,s in self.pr.storages.iteritems():
+                s.data += tmin*self.pr_h.storages[name].data
+            """
+            # Newton-Raphson loop would end here
+
+            # start position correction here
+            if self.curiter == 1 and self.p.pos_ref:
+                length = len(self.di.views)
+                self.initial_pos = np.zeros((length, 2))
+                pos_corr.save_pos(self)
+
+                # Save the initial position
+                di_view_order = self.di.views.keys()
+                di_view_order.sort()
+
+                self.shape = self.di.views[di_view_order[0]].shape
+
+                for i, name in enumerate(di_view_order):
+                    di_view = self.di.views[name]
+                    self.initial_pos[i, 0] = di_view.pod.ob_view.coord[0]
+                    self.initial_pos[i, 1] = di_view.pod.ob_view.coord[1]
+
+            if self.p.pos_ref_stop > self.curiter >= self.p.pos_ref_start and self.curiter % self.p.pos_ref_cycle == 0 \
+                    and self.p.pos_ref:
+                pos_corr.pos_ref(self)
+                pos_corr.save_pos(self)
+
+                # Move this maybe in the prepare method
+                self.ob_h.reformat()
+                self.ob_grad.reformat()
+                self.ML_model = ML_Gaussian(self)
+            # End of the position correction code
+
+            # increase iteration counter
+            self.curiter +=1
+
+        logger.info('Time spent in gradient calculation: %.2f' % tg)
+        logger.info('  ....  in coefficient calculation: %.2f' % tc)
+        return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
+
+    def engine_finalize(self):
+        """
+        Delete temporary containers.
+        """
+        del self.ptycho.containers[self.ob_grad.ID]
+        del self.ob_grad
+        del self.ptycho.containers[self.ob_h.ID]
+        del self.ob_h
+        del self.ptycho.containers[self.pr_grad.ID]
+        del self.pr_grad
+        del self.ptycho.containers[self.pr_h.ID]
+        del self.pr_h
+
+    # For the first try put methods simply here, later remove them in an own module
+    def save_pos(self):
+        """
+        Debugging purpose, to see if the reconstructed coordinates match the real coordinates.
+        """
+        pod_names = self.pods.keys()
+        pod_names.sort()
+        coords = []
+
+        for name in pod_names:
+            # print(name)
+            pod = self.pods[name]
+            coords.append(pod.ob_view.coord)
+
+        coords = np.asarray(coords)
+        coords = coords
+
+        directory = "positions_" + sys.argv[0][:-3] + "\\"
+
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        np.savetxt(directory + "pos_" + str(self.p.name) + "_" + str(self.curiter).zfill(4) + ".txt", coords)
+
+    def single_pos_ref(self, pod_name):
+        pod = self.pods[pod_name]
+        # Monte Carlo parameter
+        number_rand_shifts = self.p.number_rand_shifts
+        pxl_size_obj = self.ob.S.values()[0].psize[0]  # Pixel size in the object plane
+        num_pixel = 15.
+        end = self.p.pos_ref_stop
+        start = self.p.pos_ref_start
+        it = self.curiter
+        max_shift_dist = pxl_size_obj * num_pixel * (end - it) / (end - start)
+
+        if max_shift_dist < pxl_size_obj * 3.:
+            # smallest distance is 3 pixel in every direction
+            max_shift_dist = pxl_size_obj * 3.
+
+        max_shift_allowed = self.p.max_shift_allowed
+        delta = np.zeros((number_rand_shifts, 2))  # coordinate shift
+        errors = np.zeros(number_rand_shifts)  # calculated error for the shifted position
+        coord = np.copy(pod.ob_view.coord)
+        self.ar.coord = coord
+        self.ar.storageID = pod.ob_view.storageID
+        # Create temporal object view that can be shifted without reformatting
+
+        ob_view_temp = View(self.temp_ob, accessrule=self.ar)
+
+        # This can be optimized by saving existing iteration fourier error...
+        error_inital = self.get_fourier_error_view(pod_name, ob_view_temp)
+
+        for i in range(number_rand_shifts):
+
+            delta_y = np.random.uniform(0, max_shift_dist)
+            delta_x = np.random.uniform(0, max_shift_dist)
+
+            if i % 4 == 1:
+                delta_y *= -1
+                delta_x *= -1
+            elif i % 4 == 2:
+                delta_x *= -1
+            elif i % 4 == 3:
+                delta_y *= -1
+
+            delta[i, 0] = delta_y
+            delta[i, 1] = delta_x
+
+            rand_coord = [coord[0] + delta_y, coord[1] + delta_x]
+            norm = np.linalg.norm(rand_coord - self.initial_pos[int(pod_name[1:]), :])
+
+            if norm > max_shift_allowed:
+                # log(4, "Position drifted too far!")
+                errors[i] = error_inital + 1.
+                continue
+
+            self.ar.coord = rand_coord
+            ob_view_temp = View(self.temp_ob, accessrule=self.ar)
+
+            if ob_view_temp.dlow[0] < 0:
+                ob_view_temp.dlow[0] = 0
+
+            if ob_view_temp.dlow[1] < 0:
+                ob_view_temp.dlow[1] = 0
+
+            shape = (256, 256)  # still has to be changed
+            new_obj = np.zeros(shape)
+
+            if ob_view_temp.data.shape != (256, 256):
+                # if the data of the view has the wrong shape, zero-pad the data
+                # new data for calculating the fourier transform
+                # calculate limits of the grid
+                ymin = self.ob.storages["S00G00"].grids()[0][0, 0, 0]
+                ymax = self.ob.storages["S00G00"].grids()[0][0, -1, -1]
+                xmin = self.ob.storages["S00G00"].grids()[1][0, 0, 0]
+                xmax = self.ob.storages["S00G00"].grids()[1][0, -1, -1]
+
+                # check if the new array would be bigger
+                new_xmin = rand_coord[1] - (pxl_size_obj * shape[1] / 2.)
+                new_xmax = rand_coord[1] + pxl_size_obj * shape[1] / 2.
+                new_ymin = rand_coord[0] - (pxl_size_obj * shape[0] / 2.)
+                new_ymax = rand_coord[0] + pxl_size_obj * shape[0] / 2.
+
+                # probably not needed
+                from copy import copy
+
+                idx_x_low = 0
+                idx_x_high = shape[1]
+                idx_y_low = 0
+                idx_y_high = shape[0]
+
+                if new_ymin < ymin:
+                    idx_y_low = shape[0] - ob_view_temp.data.shape[0]
+                elif new_ymax > ymax:
+                    idx_y_high = ob_view_temp.data.shape[0]
+
+                if new_xmin < xmin:
+                    idx_x_low = shape[1] - ob_view_temp.data.shape[1]
+                elif new_xmax > xmax:
+                    idx_x_high = ob_view_temp.data.shape[1]
+
+                new_obj[idx_y_low: idx_y_high, idx_x_low: idx_x_high] = copy(ob_view_temp.data)
+            else:
+                new_obj = ob_view_temp.data
+
+            # debugging stuff
+            # errors[i] = self.get_fourier_error_view(pod_name, ob_view_temp)
+            errors[i] = self.get_fourier_error_obj(pod_name, new_obj)
+            # log(4, "Error pos " + str(rand_coord) + ": " + str(errors[i]))
+
+        if np.min(errors) < error_inital:
+            # if a better coordinate is found
+            arg = np.argmin(errors)
+            new_coordinate = np.array([coord[0] + delta[arg, 0], coord[1] + delta[arg, 1]])
+            # log(4, "New position found for pos: " + str(new_coordinate))
+
+        else:
+            new_coordinate = (0, 0)
+
+        return new_coordinate
+
+    def pos_ref(self):
+        log(4, "----------- START POS REF -------------")
+        pod_names = self.pods.keys()
+        pod_names.sort()
+        t_pos_s = time.time()
+        # List of refined coordinates which will be used to reformat the object
+        # has to be initialized only once
+        new_coords = np.zeros((len(pod_names), 2))
+
+        # Only used for calculating the shifted pos
+        self.temp_ob = self.ob.copy()
+
+        for i, pod_name in enumerate(pod_names):
+
+            pod = self.pods[pod_name]
+            if i == 0:
+                # create accessrule
+                # actually this has to be created only once in the first iteration
+                self.ar = DEFAULT_ACCESSRULE.copy()
+                self.ar.psize = pod.ob_view.psize
+                self.ar.shape = pod.ob_view.shape
+
+            if pod.active:
+                new_coords[i, :] = self.single_pos_ref(pod_name)
+
+        new_coords = parallel.allreduce(new_coords)
+
+        for i, pod_name in enumerate(pod_names):
+            # change this for the case that the actual new coordinate is (0,0)
+            pod = self.pods[pod_name]
+
+            if new_coords[i, 0] != 0 and new_coords[i, 1] != 0:
+                log(4, "Old coordinate: " + str(pod.ob_view.coord), parallel=True)
+                log(4, "New coordinate: " + str(new_coords[i, :]), parallel=True)
+                pod.ob_view.coord = new_coords[i, :]
+
+        # Change the coordinates of the object
+        self.ob.reformat()
+
+        t_pos_f = time.time()
+        log(4, "Pos ref time: " + str(t_pos_f - t_pos_s))
+
+    def get_fourier_error_view(self, pod_name, ob_view):
+        pod = self.pods[pod_name]
+        probe = np.copy(pod.probe)
+        probe[np.abs(probe) < np.mean(np.abs(probe)) * .1] = 0
+
+        object = ob_view.data
+        error = np.sum((np.abs(pod.fw(object * probe)) - np.sqrt(pod.diff)) ** 2)
+
+        return error
+
+    def get_fourier_error_obj(self, pod_name, object):
+        pod = self.pods[pod_name]
+        probe = np.copy(pod.probe)
+        probe[np.abs(probe) < np.mean(np.abs(probe)) * .1] = 0
+
+        error = np.sum((np.abs(pod.fw(object * probe)) - np.sqrt(pod.diff)) ** 2)
+
+        return error
+
+class ML_Gaussian(object):
+    """
+    """
+
+    def __init__(self, MLengine):
+        """
+        Core functions for ML computation using a Gaussian model.
+        """
+        self.engine = MLengine
+
+        # Transfer commonly used attributes from ML engine
+        self.di = self.engine.di
+        self.p = self.engine.p
+        self.ob = self.engine.ob
+        self.pr = self.engine.pr
+
+        if self.p.intensity_renormalization is None:
+            self.Irenorm = 1.
+        else:
+            self.Irenorm = self.p.intensity_renormalization
+
+        # Create working variables
+        # New object gradient
+        self.ob_grad = self.engine.ob.copy(self.ob.ID + '_ngrad', fill=0.)
+        # New probe gradient
+        self.pr_grad = self.engine.pr.copy(self.pr.ID + '_ngrad', fill=0.)
+        self.LL = 0.
+
+        # Gaussian model requires weights
+        # TODO: update this part of the code once actual weights are passed in the PODs
+        self.weights = self.engine.di.copy(self.engine.di.ID + '_weights')
+        # FIXME: This part needs to be updated once statistical weights are properly
+        # supported in the data preparation.
+        for name, di_view in self.di.views.iteritems():
+            if not di_view.active:
+                continue
+            self.weights[di_view] = (self.Irenorm * di_view.pod.ma_view.data
+                                     / (1./self.Irenorm + di_view.data))
+
+        # Useful quantities
+        self.tot_measpts = sum(s.data.size
+                               for s in self.di.storages.values())
+        self.tot_power = self.Irenorm * sum(s.tot_power
+                                            for s in self.di.storages.values())
+        # Prepare regularizer
+        if self.p.reg_del2:
+            obj_Npix = self.ob.size
+            expected_obj_var = obj_Npix / self.tot_power  # Poisson
+            reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
+            logger.debug(
+                'Rescaling regularization amplitude using '
+                'the Poisson distribution assumption.')
+            logger.debug('Factor: %8.5g' % reg_rescale)
+            reg_del2_amplitude = self.p.reg_del2_amplitude * reg_rescale
+            self.regularizer = Regul_del2(amplitude=reg_del2_amplitude)
+        else:
+            self.regularizer = None
+
+    def __del__(self):
+        """
+        Clean up routine
+        """
+        # Delete containers
+        del self.engine.ptycho.containers[self.weights.ID]
+        del self.weights
+        del self.engine.ptycho.containers[self.ob_grad.ID]
+        del self.ob_grad
+        del self.engine.ptycho.containers[self.pr_grad.ID]
+        del self.pr_grad
+
+        # Remove working attributes
+        for name, diff_view in self.di.views.iteritems():
+            if not diff_view.active:
+                continue
+            try:
+                del diff_view.float_intens_coeff
+                del diff_view.error
+            except:
+                pass
+
+    def new_grad(self):
+        """
+        Compute a new gradient direction according to a Gaussian noise model.
+
+        Note: The negative log-likelihood and local errors are also computed
+        here.
+        """
+        self.ob_grad.fill(0.)
+        self.pr_grad.fill(0.)
+
+        # We need an array for MPI
+        LL = np.array([0.])
+        error_dct = {}
+
+        # Outer loop: through diffraction patterns
+        for dname, diff_view in self.di.views.iteritems():
+            if not diff_view.active:
+                continue
+
+            # Weights and intensities for this view
+            w = self.weights[diff_view]
+            I = diff_view.data
+
+            Imodel = np.zeros_like(I)
+            f = {}
+
+            # First pod loop: compute total intensity
+            for name, pod in diff_view.pods.iteritems():
+                if not pod.active:
+                    continue
+                f[name] = pod.fw(pod.probe * pod.object)
+                Imodel += u.abs2(f[name])
+
+            # Floating intensity option
+            if self.p.floating_intensities:
+                diff_view.float_intens_coeff = ((w * Imodel * I).sum()
+                                                / (w * Imodel**2).sum())
+                Imodel *= diff_view.float_intens_coeff
+
+            DI = Imodel - I
+
+            # Second pod loop: gradients computation
+            LLL = np.sum((w * DI**2).astype(np.float64))
+            for name, pod in diff_view.pods.iteritems():
+                if not pod.active:
+                    continue
+                xi = pod.bw(w * DI * f[name])
+                self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
+                self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
+
+                # Negative log-likelihood term
+                # LLL += (w * DI**2).sum()
+
+            # LLL
+            diff_view.error = LLL
+            error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
+            LL += LLL
+
+        # MPI reduction of gradients
+        self.ob_grad.allreduce()
+        self.pr_grad.allreduce()
+        """
+        for name, s in ob_grad.storages.iteritems():
+            parallel.allreduce(s.data)
+        for name, s in pr_grad.storages.iteritems():
+            parallel.allreduce(s.data)
+        """
+        parallel.allreduce(LL)
+
+        # Object regularizer
+        if self.regularizer:
+            for name, s in self.ob.storages.iteritems():
+                self.ob_grad.storages[name].data += self.regularizer.grad(
+                    s.data)
+                LL += self.regularizer.LL
+
+        self.LL = LL / self.tot_measpts
+
+        return self.ob_grad, self.pr_grad, error_dct
+
+    def poly_line_coeffs(self, ob_h, pr_h):
+        """
+        Compute the coefficients of the polynomial for line minimization
+        in direction h
+        """
+
+        B = np.zeros((3,), dtype=np.longdouble)
+        Brenorm = 1. / self.LL[0]**2
+
+        # Outer loop: through diffraction patterns
+        for dname, diff_view in self.di.views.iteritems():
+            if not diff_view.active:
+                continue
+
+            # Weights and intensities for this view
+            w = self.weights[diff_view]
+            I = diff_view.data
+
+            A0 = None
+            A1 = None
+            A2 = None
+
+            for name, pod in diff_view.pods.iteritems():
+                if not pod.active:
+                    continue
+                f = pod.fw(pod.probe * pod.object)
+                a = pod.fw(pod.probe * ob_h[pod.ob_view]
+                           + pr_h[pod.pr_view] * pod.object)
+                b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
+
+                if A0 is None:
+                    A0 = u.abs2(f).astype(np.longdouble)
+                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
+                    A2 = (2 * np.real(f * b.conj()).astype(np.longdouble)
+                          + u.abs2(a).astype(np.longdouble))
+                else:
+                    A0 += u.abs2(f)
+                    A1 += 2 * np.real(f * a.conj())
+                    A2 += 2 * np.real(f * b.conj()) + u.abs2(a)
+
+            if self.p.floating_intensities:
+                A0 *= diff_view.float_intens_coeff
+                A1 *= diff_view.float_intens_coeff
+                A2 *= diff_view.float_intens_coeff
+            A0 -= I
+
+            B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
+            B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
+            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
+
+        parallel.allreduce(B)
+
+        # Object regularizer
+        if self.regularizer:
+            for name, s in self.ob.storages.iteritems():
+                B += Brenorm * self.regularizer.poly_line_coeffs(
+                    ob_h.storages[name].data, s.data)
+
+        self.B = B
+
+        return B
+
+# Regul class does not exist, replace by objectclass
+# class Regul_del2(Regul):
+
+
+class Regul_del2(object):
+    """\
+    Squared gradient regularizer (Gaussian prior).
+
+    This class applies to any numpy array.
+    """
+    def __init__(self, amplitude, axes=[-2, -1]):
+        # Regul.__init__(self, axes)
+        self.axes = axes
+        self.amplitude = amplitude
+        self.delxy = None
+        self.g = None
+        self.LL = None
+
+    def grad(self, x):
+        """
+        Compute and return the regularizer gradient given the array x.
+        """
+        ax0, ax1 = self.axes
+        del_xf = u.delxf(x, axis=ax0)
+        del_yf = u.delxf(x, axis=ax1)
+        del_xb = u.delxb(x, axis=ax0)
+        del_yb = u.delxb(x, axis=ax1)
+
+        self.delxy = [del_xf, del_yf, del_xb, del_yb]
+        self.g = 2. * self.amplitude*(del_xb + del_yb - del_xf - del_yf)
+
+        self.LL = self.amplitude * (u.norm2(del_xf)
+                               + u.norm2(del_yf)
+                               + u.norm2(del_xb)
+                               + u.norm2(del_yb))
+
+        return self.g
+
+    def poly_line_coeffs(self, h, x=None):
+        ax0, ax1 = self.axes
+        if x is None:
+            del_xf, del_yf, del_xb, del_yb = self.delxy
+        else:
+            del_xf = u.delxf(x, axis=ax0)
+            del_yf = u.delxf(x, axis=ax1)
+            del_xb = u.delxb(x, axis=ax0)
+            del_yb = u.delxb(x, axis=ax1)
+
+        hdel_xf = u.delxf(h, axis=ax0)
+        hdel_yf = u.delxf(h, axis=ax1)
+        hdel_xb = u.delxb(h, axis=ax0)
+        hdel_yb = u.delxb(h, axis=ax1)
+
+        c0 = self.amplitude * (u.norm2(del_xf)
+                               + u.norm2(del_yf)
+                               + u.norm2(del_xb)
+                               + u.norm2(del_yb))
+
+        c1 = 2 * self.amplitude * np.real(np.vdot(del_xf, hdel_xf)
+                                          + np.vdot(del_yf, hdel_yf)
+                                          + np.vdot(del_xb, hdel_xb)
+                                          + np.vdot(del_yb, hdel_yb))
+
+        c2 = self.amplitude * (u.norm2(hdel_xf)
+                               + u.norm2(hdel_yf)
+                               + u.norm2(hdel_xb)
+                               + u.norm2(hdel_yb))
+
+        self.coeff = np.array([c0, c1, c2])
+        return self.coeff
+
+
+def prepare_smoothing_preconditioner(amplitude):
+    """
+    Factory for smoothing preconditioner.
+    """
+    if amplitude == 0.:
+        return None
+
+    class GaussFilt:
+        def __init__(self, sigma):
+            self.sigma = sigma
+
+        def __call__(self, x):
+            return u.c_gf(x, [0, self.sigma, self.sigma])
+
+    # from scipy.signal import correlate2d
+    # class HannFilt:
+    #    def __call__(self, x):
+    #        y = np.empty_like(x)
+    #        sh = x.shape
+    #        xf = x.reshape((-1,) + sh[-2:])
+    #        yf = y.reshape((-1,) + sh[-2:])
+    #        for i in range(len(xf)):
+    #            yf[i] = correlate2d(xf[i],
+    #                                np.array([[.0625, .125, .0625],
+    #                                          [.125, .25, .125],
+    #                                          [.0625, .125, .0625]]),
+    #                                mode='same')
+    #        return y
+
+    if amplitude > 0.:
+        logger.debug(
+            'Using a smooth gradient filter (Gaussian blur - only for ML)')
+        return GaussFilt(amplitude)
+
+    elif amplitude < 0.:
+        raise RuntimeError('Hann filter not implemented (negative smoothing amplitude not supported)')
+        # logger.debug(
+        #    'Using a smooth gradient filter (Hann window - only for ML)')
+        # return HannFilt()
