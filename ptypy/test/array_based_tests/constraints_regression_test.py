@@ -493,7 +493,7 @@ class ConstraintsRegressionTest(unittest.TestCase):
                                    err_msg="The expected in-place update of the exit wave didn't work properly.")
 
 
-    def test_difference_map_fourier_constraint_pbound_is_not_none_no_error(self):
+    def test_difference_map_fourier_constraint_pbound_is_not_none_with_realspace_and_LL_error(self):
         '''
         mixture of high and low p bound values respect to the fourier error
         '''

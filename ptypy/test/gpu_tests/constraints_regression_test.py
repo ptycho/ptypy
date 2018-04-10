@@ -523,8 +523,8 @@ class ConstraintsRegressionTest(unittest.TestCase):
         gexit_wave = deepcopy(exit_wave)
 
         out = con.difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter,
-                                                    postfilter, pbound=pbound, alpha=alpha, LL_error=False,
-                                                    do_realspace_error=False)
+                                                    postfilter, pbound=pbound, alpha=alpha, LL_error=True,
+                                                    do_realspace_error=True)
         gout = gcon.difference_map_fourier_constraint(mask, Idata, obj, probe, gexit_wave, addr_info, prefilter,
                                                     postfilter, pbound=pbound, alpha=alpha, LL_error=True,
                                                     do_realspace_error=True)
