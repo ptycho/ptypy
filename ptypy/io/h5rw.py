@@ -55,7 +55,7 @@ def _h5write(filename, mode, *args, **kwargs):
 
     Writes variables var1, var2, ... to file filename. The file mode
     can be chosen according to the h5py documentation. The key-value
-    arguments have precedence on the provided dictionnary.
+    arguments have precedence on the provided dictionary.
 
     supported variable types are:
     * scalars

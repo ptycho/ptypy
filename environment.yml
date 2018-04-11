@@ -14,6 +14,7 @@ dependencies:
   - mpi4py
   - pil
   - pyfftw
+  - fabio
   - pip:
     - pytest-cov
     - coveralls
