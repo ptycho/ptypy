@@ -96,17 +96,16 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_i
 
 def difference_map_iterator(diffraction, obj, object_weights, cfact_object, mask, probe, cfact_probe, probe_support,
                             probe_weights, exit_wave, addr, pre_fft, post_fft, pbound, overlap_max_iterations, update_object_first,
-                            obj_smooth_std, overlap_converge_factor, probe_center_tol, update_probe_after, alpha=1,
+                            obj_smooth_std, overlap_converge_factor, probe_center_tol, probe_update_start, alpha=1,
                             clip_object=None, LL_error=False, num_iterations=1):
     curiter = 0
+
     errors = np.zeros((num_iterations, 3, len(diffraction)), dtype=COMPLEX_TYPE)
     for it in range(num_iterations):
-
-        print("iteration:%s" % (it//10)) # it's probably a good idea to print this if possible for some idea of progress
+        if (((it+1) % 10) == 0) and (it>0):
+            print("iteration:%s" % (it+1)) # it's probably a good idea to print this if possible for some idea of progress
         # numpy dump here for 64x64 and 4096x4096
 
-
-        do_update_probe = (update_probe_after <= curiter)
         errors[it] = difference_map_fourier_constraint(mask,
                                                    diffraction,
                                                    obj,
@@ -119,6 +118,7 @@ def difference_map_iterator(diffraction, obj, object_weights, cfact_object, mask
                                                    alpha=alpha,
                                                    LL_error=LL_error)
 
+        do_update_probe = (probe_update_start <= curiter)
         difference_map_overlap_update(addr,
                                       cfact_object,
                                       cfact_probe,
