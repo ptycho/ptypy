@@ -14,25 +14,24 @@ import time
 
 logger = u.verbose.logger
 
-# new recipe for this one
-RECIPE = u.Param()
-RECIPE.dataPath = None
-RECIPE.datafile = None
-RECIPE.maskfile = None
-RECIPE.pilatusPath = None
-RECIPE.pilatusPattern = None
-RECIPE.scannr = None
-
 
 class NanomaxStepscanNov2016(PtyScan):
     """
     Loads Nanomax step scan data in the format of week Nov/Dec 2016
     """
 
+    RECIPE = u.Param()
+    RECIPE.dataPath = None
+    RECIPE.datafile = None
+    RECIPE.maskfile = None
+    RECIPE.pilatusPath = None
+    RECIPE.pilatusPattern = None
+    RECIPE.scannr = None
+
     def __init__(self, pars=None, **kwargs):
 
         p = PtyScan.DEFAULT.copy(depth=10)
-        p.recipe = RECIPE.copy()
+        p.recipe = self.RECIPE.copy()
         p.update(pars, in_place_depth=10)
         super(NanomaxStepscanNov2016, self).__init__(p)
 
@@ -95,29 +94,31 @@ class NanomaxStepscanNov2016(PtyScan):
                         (mask.shape + (np.sum(mask),)))
         return mask
 
-# new recipe for this one too
-RECIPE = u.Param()
-RECIPE.dataPath = None
-RECIPE.datafile = None
-RECIPE.maskfile = None
-RECIPE.pilatusPath = None
-RECIPE.pilatusPattern = None
-RECIPE.hdfPath = 'entry_0000/measurement/Pilatus/data'
-RECIPE.scannr = None
-RECIPE.xMotorFlipped = None
-RECIPE.yMotorFlipped = None
-RECIPE.xMotorAngle = 0.0
-
 
 class NanomaxStepscanMay2017(PtyScan):
     """
     Loads Nanomax step scan data in the format of May 2017.
     """
+    
+    RECIPE = u.Param()
+    RECIPE.dataPath = None
+    RECIPE.datafile = None
+    RECIPE.maskfile = None
+    RECIPE.detFilePath = None
+    RECIPE.detFilePattern = None
+    RECIPE.detNormalizationFilePattern = None
+    RECIPE.detNormalizationIndices = None
+    RECIPE.hdfPath = 'entry_0000/measurement/Pilatus/data'
+    RECIPE.scannr = None
+    RECIPE.xMotorFlipped = False
+    RECIPE.yMotorFlipped = False
+    RECIPE.xMotorAngle = 0.0
+    RECIPE.nominalPositions = False
 
     def __init__(self, pars=None, **kwargs):
 
         p = PtyScan.DEFAULT.copy(depth=10)
-        p.recipe = RECIPE.copy()
+        p.recipe = self.RECIPE.copy()
         p.update(pars, in_place_depth=10)
         super(NanomaxStepscanMay2017, self).__init__(p)
 
@@ -139,9 +140,33 @@ class NanomaxStepscanMay2017(PtyScan):
             "x motor angle results in multiplication by %.2f" % xCosFactor)
 
         with h5py.File(fileName, 'r') as hf:
-            x = xFlipper * \
-                np.array(hf.get(entry + '/measurement/samx')) * xCosFactor
-            y = yFlipper * np.array(hf.get(entry + '/measurement/samy'))
+            if self.info.recipe.nominalPositions:
+                title = str(hf.get(entry + '/title').value).split(' ')
+                xmotorInd = title.index('samx')
+                ymotorInd = title.index('samy')
+                x = np.linspace(float(title[xmotorInd+1]),
+                                float(title[xmotorInd+2]),
+                                int(title[xmotorInd+3]) + 1,
+                                endpoint=True)
+                y = np.linspace(float(title[ymotorInd+1]),
+                                float(title[ymotorInd+2]),
+                                int(title[ymotorInd+3]) + 1,
+                                endpoint=True)
+                nx = len(x)
+                ny = len(y)
+                if xmotorInd < ymotorInd:
+                    # x is the fast motor
+                    y = y.repeat(nx)
+                    x = np.tile(x, ny)
+                else:
+                    # y is the fast motor
+                    x = x.repeat(ny)
+                    y = np.tile(y, nx)
+            else:
+                x = np.array(hf.get(entry + '/measurement/samx'))
+                y = np.array(hf.get(entry + '/measurement/samy'))
+            x *= xFlipper * xCosFactor
+            y *= yFlipper
 
         positions = -np.vstack((y, x)).T * 1e-6
         return positions
@@ -150,21 +175,54 @@ class NanomaxStepscanMay2017(PtyScan):
 
         raw, weights, positions = {}, {}, {}
         scannr = self.info.recipe.scannr
-        path = self.info.recipe.pilatusPath
-        filepattern = self.info.recipe.pilatusPattern
+        path = self.info.recipe.detFilePath
+        pattern = self.info.recipe.detFilePattern
+        normfile = self.info.recipe.detNormalizationFilePattern
+        normind = self.info.recipe.detNormalizationIndices
+
         if not (path[-1] == '/'):
             path += '/'
 
+        # read the entire dataset
+        done = False
+        line = 0
         data = []
-        for im in range(self.info.positions_scan.shape[0]):
-            with h5py.File(path + filepattern % (scannr, im), 'r') as hf:
-                dataset = hf.get(self.info.recipe.hdfPath)
-                data.append(np.array(dataset)[0])
+        while not done:
+            try:
+                with h5py.File(path + pattern % (scannr, line), 'r') as hf:
+                    logger.info('loading data: ' + pattern % (scannr, line))
+                    dataset = hf.get(self.info.recipe.hdfPath)
+                    linedata = np.array(dataset)
+                if normfile:
+                    dtype = linedata.dtype
+                    linedata = np.array(linedata, dtype=float)
+                    with h5py.File(path + normfile % (scannr, line), 'r') as hf:
+                        dataset = hf.get(
+                            self.info.recipe.detNormalizationHdfPath)
+                        normdata = np.array(dataset)
+                        if not normind:
+                            shape = linedata[0].shape
+                            normind = [0, shape[0], 0, shape[1]]
+                        norm = np.mean(normdata[:, normind[0]:normind[
+                                       1], normind[2]:normind[3]], axis=(1, 2))
+                        if line == 0:
+                            norm0 = norm[0]
+                        norm /= norm0  # to avoid dividing integers by huge numbers
+                        # normalize the data
+                        linedata[0, :, :] = linedata / norm
+                    linedata = np.array(np.round(linedata), dtype=dtype)
 
+                data.append(linedata)
+                line += 1
+            except IOError:
+                done = True
+        logger.info("loaded %d points of detector data" % len(data))
+        data = np.concatenate(data, axis=0)
+        
         # pick out the requested indices
         for i in indices:
             raw[i] = data[i]
-
+            
         return raw, positions, weights
 
     def load_weight(self):
@@ -174,8 +232,8 @@ class NanomaxStepscanMay2017(PtyScan):
         """
 
         scannr = self.info.recipe.scannr
-        path = self.info.recipe.pilatusPath
-        pattern = self.info.recipe.pilatusPattern
+        path = self.info.recipe.detFilePath
+        pattern = self.info.recipe.detFilePattern
         if not (path[-1] == '/'):
             path += '/'
 
@@ -199,30 +257,29 @@ class NanomaxStepscanMay2017(PtyScan):
 
         return mask
 
-# new recipe for this one too
-RECIPE = u.Param()
-RECIPE.dataPath = None
-RECIPE.datafile = None
-RECIPE.maskfile = None
-RECIPE.detFilePath = None
-RECIPE.detFilePattern = None
-RECIPE.detNormalizationFilePattern = None
-RECIPE.detNormalizationIndices = None
-RECIPE.hdfPath = 'entry_0000/measurement/Pilatus/data'
-RECIPE.scannr = None
-RECIPE.xMotorFlipped = None
-RECIPE.yMotorFlipped = None
-RECIPE.xMotorAngle = 0.0
-
 
 class NanomaxFlyscanJune2017(PtyScan):
     """
     Loads Nanomax fly scan data in the format of June 2017.
     """
+    RECIPE = u.Param()
+    RECIPE.dataPath = None
+    RECIPE.datafile = None
+    RECIPE.maskfile = None
+    RECIPE.detFilePath = None
+    RECIPE.detFilePattern = None
+    RECIPE.detNormalizationFilePattern = None
+    RECIPE.detNormalizationIndices = None
+    RECIPE.hdfPath = 'entry_0000/measurement/Pilatus/data'
+    RECIPE.scannr = None
+    RECIPE.xMotorFlipped = None
+    RECIPE.yMotorFlipped = None
+    RECIPE.xMotorAngle = 0.0
+    RECIPE.nominalYPositions = False
 
     def __init__(self, pars=None, **kwargs):
         p = PtyScan.DEFAULT.copy(depth=10)
-        p.recipe = RECIPE.copy()
+        p.recipe = self.RECIPE.copy()
         p.update(pars, in_place_depth=10)
         super(NanomaxFlyscanJune2017, self).__init__(p)
 
@@ -244,8 +301,16 @@ class NanomaxFlyscanJune2017(PtyScan):
             x = xall[:, :Nx].flatten()
 
             # get slow y positions
-            ydataset = hf.get(entry + '/measurement/samy')
-            yall = np.array(ydataset)
+            if self.info.recipe.nominalYPositions:
+                title = str(hf.get(entry + '/title').value).split(' ')
+                yall = np.linspace(
+                    float(title[2]),
+                    float(title[3]),
+                    int(title[4])+1,
+                    endpoint=True)
+            else:
+                ydataset = hf.get(entry + '/measurement/samy')
+                yall = np.array(ydataset)
             if not (len(yall) == Ny):
                 raise Exception('Something''s wrong with the positions')
             y = np.repeat(yall, Nx)
