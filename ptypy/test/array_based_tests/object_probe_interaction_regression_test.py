@@ -6,25 +6,23 @@ tests for the object-probe interactions, including the specific DM, ePIE etc upd
 import unittest
 import numpy as np
 import utils as tu
+from copy import deepcopy
 from ptypy.array_based import COMPLEX_TYPE, FLOAT_TYPE
 from ptypy.array_based import data_utils as du
 from ptypy.array_based import object_probe_interaction as opi
-from collections import OrderedDict
 
 
-class ObjectProbeInteractionTest(unittest.TestCase):
+
+class ObjectProbeInteractionRegressionTest(unittest.TestCase):
     def test_scan_and_multiply(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
-        addr = vectorised_scan['meta'][
-            'addr']  # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr']  # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
         blank = np.ones_like(probe)
-        addr_info = addr[:, 0]
-
         po = opi.scan_and_multiply(blank, obj, exit_wave.shape, addr_info)
 
         for idx, p in enumerate(PtychoInstance.pods.itervalues()):
@@ -34,12 +32,10 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
-        addr = vectorised_scan['meta'][
-            'addr']  # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr']  # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
-        addr_info = addr[:, 0]
 
         po = opi.scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
         for idx, p in enumerate(PtychoInstance.pods.itervalues()):
@@ -49,14 +45,10 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
-        addr = vectorised_scan['meta'][
-            'addr']  # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr']  # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
-
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
         probe_and_object = opi.scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
 
         opi.difference_map_realspace_constraint(probe_and_object,
@@ -476,13 +468,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         addr_info  = zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr)
         obj_smooth_std = 2 # integer
         opi.difference_map_update_object(array_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info, cfact, ob_smooth_std=obj_smooth_std, clip_object=None)
-        expected_output = np.array([[-5.00000000 + 5.j, 4.00000000 + 4.j,],
-                                     [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
-                                     [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
-                                     [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
-                                     [-5.00000000 + 5.j, 5.71428585 + 0.95238096j],
-                                     [1.00000000 + 1.j, 5.71428585 + 0.95238096j],
-                                     [1.00000000 + 1.j, 4.00000000 + 4.j]], dtype=COMPLEX_TYPE)
+        expected_output = np.array([[1.+1.j, 4.+4.j],
+                                    [1.+1.j, 4.+4.j],
+                                    [1.+1.j, 4.+4.j],
+                                    [1.+1.j, 4.+4.j],
+                                    [1.+1.j, 4.+4.j],
+                                    [1.+1.j, 4.+4.j],
+                                    [1.+1.j, 4.+4.j]], dtype=COMPLEX_TYPE)
 
         np.testing.assert_array_equal(np.diagonal(array_to_be_updated), expected_output)
 
@@ -587,6 +579,720 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         opi.center_probe(probe, center_tolerance)
         np.testing.assert_array_almost_equal(probe, not_shifted_probe, decimal=8) # interpolation obviously won't make this exact!
 
+    def test_difference_map_overlap_update_test_order_of_updates_a(self):
+        '''
+        This tests the order in which the object and probe are updated 
+        '''
+        smooth_std = None # anything else currently not supported
+        max_iterations = 1
+        update_object_first = True
+        do_update_probe = False
+        # this should mean that the object gets updated but the probe does not change
+        ocf  = 1 # spam this for this test Not needed.
+
+        # create some inputs - I should really make this a utility...
+        B = 5
+        C = 5
+
+        D = 2
+        E = B
+        F = C
+
+        npts_greater_than = 2
+        G = 2
+        H = B + npts_greater_than
+        I = C + npts_greater_than
+
+        scan_pts = 2
+        A = scan_pts ** 2 * G * D  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        # shapes and types outlined here
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        exit_addr = np.empty(shape=(A, 3), dtype=int)
+        exit_addr[:, 0] = np.array(range(A))
+        exit_addr[:, 1] = np.zeros((A,))
+        exit_addr[:, 2] = np.zeros((A,))
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+        probe_addr = np.empty(shape=(A, 3), dtype=int)
+        probe_addr[:, 0] = np.array(range(D)).repeat(A / D)
+        probe_addr[:, 1] = np.zeros((A,))
+        probe_addr[:, 2] = np.zeros((A,))
+
+        obj = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            obj[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+        obj_addr = np.empty(shape=(A, 3), dtype=int)
+        obj_addr[:, 0] = np.array(range(G)).repeat(A / G)
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((scan_pts ** 2))
+        Y = Y.reshape((scan_pts ** 2))
+        for idx in range(G):
+            for idy in range(D):
+                index = idy + 2 * idx
+                obj_addr[index::scan_pts ** 2, 1] = X
+                obj_addr[index::scan_pts ** 2, 2] = Y
+
+        obj_weights = np.empty(shape=(G,), dtype=FLOAT_TYPE)
+        obj_weights[:] = np.linspace(-1, 1, G)
+
+        probe_weights = np.empty(shape=(D,), dtype=FLOAT_TYPE)
+        probe_weights[:] = np.linspace(-1, 1, D)
+
+        cfact_object = np.empty_like(obj)
+        for idx in range(G):
+            cfact_object[idx] = np.ones((H, I)) * 10 * (idx + 1)
+
+        cfact_probe = np.empty_like(probe)
+        for idx in range(G):
+            cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
+
+        dummy_addr = np.zeros_like(probe_addr) #  these aren't used by the function, but are passed as a top level address book
+        addr_info  = zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr)
+
+        original_probe = deepcopy(probe)
+        expected_object=np.array([[[-5.00000000+5.j,-5.00000000+5.j,-5.00000000+5.j,
+                                    -5.00000000+5.j,-5.00000000+5.j,1.00000000+1.j,1.00000000+1.j],
+                                   [10.33333397-1.66666675j,10.33333397-1.66666675j,
+                                    10.33333397-1.66666675j,10.33333397-1.66666675j,
+                                    10.33333397-1.66666675j,1.00000000+1.j,1.00000000+1.j],
+                                   [10.33333397-1.66666675j,10.33333397-1.66666675j,
+                                    10.33333397-1.66666675j,10.33333397-1.66666675j,
+                                    10.33333397-1.66666675j,1.00000000+1.j,1.00000000+1.j],
+                                   [10.33333397-1.66666675j,10.33333397-1.66666675j,
+                                    10.33333397-1.66666675j,10.33333397-1.66666675j,
+                                    10.33333397-1.66666675j,1.00000000+1.j,1.00000000+1.j],
+                                   [10.33333397-1.66666675j,10.33333397-1.66666675j,
+                                    10.33333397-1.66666675j,10.33333397-1.66666675j,
+                                    10.33333397-1.66666675j,1.00000000+1.j,1.00000000+1.j],
+                                   [-21.00000000+5.j,-21.00000000+5.j,-21.00000000+5.j,
+                                    -21.00000000+5.j,-21.00000000+5.j,1.00000000+1.j,
+                                    1.00000000+1.j],
+                                   [1.00000000+1.j,1.00000000+1.j,1.00000000+1.j,
+                                    1.00000000+1.j,1.00000000+1.j,1.00000000+1.j,
+                                    1.00000000+1.j]],
+
+                                  [[4.00000000+4.j,4.76923084+1.53846157j,
+                                    4.76923084+1.53846157j,4.76923084+1.53846157j,
+                                    4.76923084+1.53846157j,4.76923084+1.53846157j,4.00000000+4.j],
+                                   [4.00000000+4.j,5.71428585+0.95238096j,
+                                    5.71428585+0.95238096j,5.71428585+0.95238096j,
+                                    5.71428585+0.95238096j,5.71428585+0.95238096j,4.00000000+4.j],
+                                   [4.00000000+4.j,5.71428585+0.95238096j,
+                                    5.71428585+0.95238096j,5.71428585+0.95238096j,
+                                    5.71428585+0.95238096j,5.71428585+0.95238096j,4.00000000+4.j],
+                                   [4.00000000+4.j,5.71428585+0.95238096j,
+                                    5.71428585+0.95238096j,5.71428585+0.95238096j,
+                                    5.71428585+0.95238096j,5.71428585+0.95238096j,4.00000000+4.j],
+                                   [4.00000000+4.j,5.71428585+0.95238096j,
+                                    5.71428585+0.95238096j,5.71428585+0.95238096j,
+                                    5.71428585+0.95238096j,5.71428585+0.95238096j,4.00000000+4.j],
+                                   [4.00000000+4.j,6.00000000+1.53846157j,
+                                    6.00000000+1.53846157j,6.00000000+1.53846157j,
+                                    6.00000000+1.53846157j,6.00000000+1.53846157j,4.00000000+4.j],
+                                   [4.00000000+4.j,4.00000000+4.j,4.00000000+4.j,
+                                    4.00000000+4.j,4.00000000+4.j,4.00000000+4.j,
+                                    4.00000000+4.j]]], dtype=COMPLEX_TYPE)
+
+        opi.difference_map_overlap_update(addr_info=addr_info,
+                                          cfact_object=cfact_object,
+                                          cfact_probe=cfact_probe,
+                                          do_update_probe=do_update_probe,
+                                          exit_wave=exit_wave,
+                                          ob=obj,
+                                          object_weights=obj_weights,
+                                          probe=probe,
+                                          probe_support=None,
+                                          probe_weights=probe_weights,
+                                          max_iterations=max_iterations,
+                                          update_object_first=update_object_first,
+                                          obj_smooth_std=smooth_std,
+                                          overlap_converge_factor=ocf,
+                                          probe_center_tol=None,
+                                          clip_object=None)
+
+        np.testing.assert_array_equal(original_probe,
+                                      probe,
+                                      err_msg="The probe has been updated when it shouldn't have been.")
+        np.testing.assert_array_equal(expected_object,
+                                      obj,
+                                      err_msg="The object has not been updated correctly.")
+
+
+    def test_difference_map_overlap_update_test_order_of_updates_b(self):
+        '''
+        This tests the order in which the object and probe are updated
+        '''
+
+        smooth_std = None # anything else currently not supported
+        max_iterations = 1
+        update_object_first = False
+        do_update_probe = True
+        # This should mean that the probe is updated, but not the object since max_iterations=1
+        ocf  = 1 # spam this for this test Not needed.
+
+        # create some inputs - I should really make this a utility...
+        B = 5
+        C = 5
+
+        D = 2
+        E = B
+        F = C
+
+        npts_greater_than = 2
+        G = 2
+        H = B + npts_greater_than
+        I = C + npts_greater_than
+
+        scan_pts = 2
+        A = scan_pts ** 2 * G * D  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        # shapes and types outlined here
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        exit_addr = np.empty(shape=(A, 3), dtype=int)
+        exit_addr[:, 0] = np.array(range(A))
+        exit_addr[:, 1] = np.zeros((A,))
+        exit_addr[:, 2] = np.zeros((A,))
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+        probe_addr = np.empty(shape=(A, 3), dtype=int)
+        probe_addr[:, 0] = np.array(range(D)).repeat(A / D)
+        probe_addr[:, 1] = np.zeros((A,))
+        probe_addr[:, 2] = np.zeros((A,))
+
+        obj = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            obj[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+        obj_addr = np.empty(shape=(A, 3), dtype=int)
+        obj_addr[:, 0] = np.array(range(G)).repeat(A / G)
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((scan_pts ** 2))
+        Y = Y.reshape((scan_pts ** 2))
+        for idx in range(G):
+            for idy in range(D):
+                index = idy + 2 * idx
+                obj_addr[index::scan_pts ** 2, 1] = X
+                obj_addr[index::scan_pts ** 2, 2] = Y
+
+        obj_weights = np.empty(shape=(G,), dtype=FLOAT_TYPE)
+        obj_weights[:] = np.linspace(-1, 1, G)
+
+        probe_weights = np.empty(shape=(D,), dtype=FLOAT_TYPE)
+        probe_weights[:] = np.linspace(-1, 1, D)
+
+        cfact_object = np.empty_like(obj)
+        for idx in range(G):
+            cfact_object[idx] = np.ones((H, I)) * 10 * (idx + 1)
+
+        cfact_probe = np.empty_like(probe)
+        for idx in range(G):
+            cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
+
+        dummy_addr = np.zeros_like(probe_addr) #  these aren't used by the function, but are passed as a top level address book
+        addr_info  = zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr)
+
+        original_obj = deepcopy(obj)
+
+        expected_probe = np.array([[[ 6.09090948-0.45454547j, 6.09090948-0.45454547j, 6.09090948-0.45454547j,
+                                      6.09090948-0.45454547j, 6.09090948-0.45454547j],
+                                    [ 6.09090948-0.45454547j, 6.09090948-0.45454547j, 6.09090948-0.45454547j,
+                                      6.09090948-0.45454547j, 6.09090948-0.45454547j],
+                                    [ 6.09090948-0.45454547j, 6.09090948-0.45454547j, 6.09090948-0.45454547j,
+                                      6.09090948-0.45454547j, 6.09090948-0.45454547j],
+                                    [ 6.09090948-0.45454547j, 6.09090948-0.45454547j, 6.09090948-0.45454547j,
+                                      6.09090948-0.45454547j, 6.09090948-0.45454547j],
+                                    [ 6.09090948-0.45454547j, 6.09090948-0.45454547j, 6.09090948-0.45454547j,
+                                      6.09090948-0.45454547j, 6.09090948-0.45454547j]],
+                                   [[ 3.08270693+0.07518797j, 3.08270693+0.07518797j, 3.08270693+0.07518797j,
+                                      3.08270693+0.07518797j, 3.08270693+0.07518797j],
+                                    [ 3.08270693+0.07518797j, 3.08270693+0.07518797j, 3.08270693+0.07518797j,
+                                      3.08270693+0.07518797j, 3.08270693+0.07518797j],
+                                    [ 3.08270693+0.07518797j, 3.08270693+0.07518797j, 3.08270693+0.07518797j,
+                                      3.08270693+0.07518797j, 3.08270693+0.07518797j],
+                                    [ 3.08270693+0.07518797j, 3.08270693+0.07518797j, 3.08270693+0.07518797j,
+                                      3.08270693+0.07518797j, 3.08270693+0.07518797j],
+                                    [ 3.08270693+0.07518797j, 3.08270693+0.07518797j, 3.08270693+0.07518797j,
+                                      3.08270693+0.07518797j, 3.08270693+0.07518797j]]], dtype=COMPLEX_TYPE)
+
+        opi.difference_map_overlap_update(addr_info=addr_info,
+                                          cfact_object=cfact_object,
+                                          cfact_probe=cfact_probe,
+                                          do_update_probe=do_update_probe,
+                                          exit_wave=exit_wave,
+                                          ob=obj,
+                                          object_weights=obj_weights,
+                                          probe=probe,
+                                          probe_support=None,
+                                          probe_weights=probe_weights,
+                                          max_iterations=max_iterations,
+                                          update_object_first=update_object_first,
+                                          obj_smooth_std=smooth_std,
+                                          overlap_converge_factor=ocf,
+                                          probe_center_tol=None,
+                                          clip_object=None)
+
+        np.testing.assert_array_equal(original_obj,
+                                      obj,
+                                      err_msg="The object has been updated when it shouldn't have been.")
+        np.testing.assert_array_equal(expected_probe,
+                                      probe,
+                                      err_msg="The probe has not been updated correctly.")
+
+    def test_difference_map_overlap_update_test_order_of_updates_c(self):
+        '''
+        This tests the order in which the object and probe are updated
+        '''
+
+        smooth_std = None # anything else currently not supported
+        max_iterations = 1
+        update_object_first = False
+        do_update_probe = False
+        # neither the probe or the object are updated
+        ocf  = 1 # spam this for this test Not needed.
+
+        # create some inputs - I should really make this a utility...
+        B = 5
+        C = 5
+
+        D = 2
+        E = B
+        F = C
+
+        npts_greater_than = 2
+        G = 2
+        H = B + npts_greater_than
+        I = C + npts_greater_than
+
+        scan_pts = 2
+        A = scan_pts ** 2 * G * D  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        # shapes and types outlined here
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        exit_addr = np.empty(shape=(A, 3), dtype=int)
+        exit_addr[:, 0] = np.array(range(A))
+        exit_addr[:, 1] = np.zeros((A,))
+        exit_addr[:, 2] = np.zeros((A,))
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+        probe_addr = np.empty(shape=(A, 3), dtype=int)
+        probe_addr[:, 0] = np.array(range(D)).repeat(A / D)
+        probe_addr[:, 1] = np.zeros((A,))
+        probe_addr[:, 2] = np.zeros((A,))
+
+        obj = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            obj[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+        obj_addr = np.empty(shape=(A, 3), dtype=int)
+        obj_addr[:, 0] = np.array(range(G)).repeat(A / G)
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((scan_pts ** 2))
+        Y = Y.reshape((scan_pts ** 2))
+        for idx in range(G):
+            for idy in range(D):
+                index = idy + 2 * idx
+                obj_addr[index::scan_pts ** 2, 1] = X
+                obj_addr[index::scan_pts ** 2, 2] = Y
+
+        obj_weights = np.empty(shape=(G,), dtype=FLOAT_TYPE)
+        obj_weights[:] = np.linspace(-1, 1, G)
+
+        probe_weights = np.empty(shape=(D,), dtype=FLOAT_TYPE)
+        probe_weights[:] = np.linspace(-1, 1, D)
+
+        cfact_object = np.empty_like(obj)
+        for idx in range(G):
+            cfact_object[idx] = np.ones((H, I)) * 10 * (idx + 1)
+
+        cfact_probe = np.empty_like(probe)
+        for idx in range(G):
+            cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
+
+        dummy_addr = np.zeros_like(probe_addr) #  these aren't used by the function, but are passed as a top level address book
+        addr_info  = zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr)
+
+        original_obj = deepcopy(obj)
+        original_probe = deepcopy(probe)
+
+
+        opi.difference_map_overlap_update(addr_info=addr_info,
+                                          cfact_object=cfact_object,
+                                          cfact_probe=cfact_probe,
+                                          do_update_probe=do_update_probe,
+                                          exit_wave=exit_wave,
+                                          ob=obj,
+                                          object_weights=obj_weights,
+                                          probe=probe,
+                                          probe_support=None,
+                                          probe_weights=probe_weights,
+                                          max_iterations=max_iterations,
+                                          update_object_first=update_object_first,
+                                          obj_smooth_std=smooth_std,
+                                          overlap_converge_factor=ocf,
+                                          probe_center_tol=None,
+                                          clip_object=None)
+
+        np.testing.assert_array_equal(original_obj,
+                                      obj,
+                                      err_msg="The object has been updated when it shouldn't have been.")
+        np.testing.assert_array_equal(original_probe,
+                                      probe,
+                                      err_msg="The probe has been updated when it shouldn't have been.")
+
+    def test_difference_map_overlap_update_test_order_of_updates_d(self):
+        '''
+        This tests the order in which the object and probe are updated
+        '''
+
+        smooth_std = None # anything else currently not supported
+        max_iterations = 1
+        update_object_first = True
+        do_update_probe = True
+        # both the object and the probe are updated
+        ocf  = 1 # spam this for this test Not needed.
+
+        # create some inputs - I should really make this a utility...
+        B = 5
+        C = 5
+
+        D = 2
+        E = B
+        F = C
+
+        npts_greater_than = 2
+        G = 2
+        H = B + npts_greater_than
+        I = C + npts_greater_than
+
+        scan_pts = 2
+        A = scan_pts ** 2 * G * D  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        # shapes and types outlined here
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        exit_addr = np.empty(shape=(A, 3), dtype=int)
+        exit_addr[:, 0] = np.array(range(A))
+        exit_addr[:, 1] = np.zeros((A,))
+        exit_addr[:, 2] = np.zeros((A,))
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+        probe_addr = np.empty(shape=(A, 3), dtype=int)
+        probe_addr[:, 0] = np.array(range(D)).repeat(A / D)
+        probe_addr[:, 1] = np.zeros((A,))
+        probe_addr[:, 2] = np.zeros((A,))
+
+        obj = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            obj[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+        obj_addr = np.empty(shape=(A, 3), dtype=int)
+        obj_addr[:, 0] = np.array(range(G)).repeat(A / G)
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((scan_pts ** 2))
+        Y = Y.reshape((scan_pts ** 2))
+        for idx in range(G):
+            for idy in range(D):
+                index = idy + 2 * idx
+                obj_addr[index::scan_pts ** 2, 1] = X
+                obj_addr[index::scan_pts ** 2, 2] = Y
+
+        obj_weights = np.empty(shape=(G,), dtype=FLOAT_TYPE)
+        obj_weights[:] = np.linspace(-1, 1, G)
+
+        probe_weights = np.empty(shape=(D,), dtype=FLOAT_TYPE)
+        probe_weights[:] = np.linspace(-1, 1, D)
+
+        cfact_object = np.empty_like(obj)
+        for idx in range(G):
+            cfact_object[idx] = np.ones((H, I)) * 10 * (idx + 1)
+
+        cfact_probe = np.empty_like(probe)
+        for idx in range(G):
+            cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
+
+        dummy_addr = np.zeros_like(
+            probe_addr)  # these aren't used by the function, but are passed as a top level address book
+        addr_info = zip(probe_addr, obj_addr, exit_addr, dummy_addr, dummy_addr)
+
+        expected_probe = np.array([[[ 0.34795576+0.32689944j, 0.34795576+0.32689944j,  0.34795576+0.32689944j,
+                                      0.34795576+0.32689944j, 0.34795576+0.32689944j],
+                                    [ 0.35228869+0.48999104j,  0.35228869+0.48999104j,  0.35228869+0.48999104j,
+                                      0.35228869+0.48999104j,  0.35228869+0.48999104j],
+                                    [ 0.35228869+0.48999104j,  0.35228869+0.48999104j,  0.35228869+0.48999104j,
+                                      0.35228869+0.48999104j,  0.35228869+0.48999104j],
+                                    [ 0.35228869+0.48999104j,  0.35228869+0.48999104j,  0.35228869+0.48999104j,
+                                      0.35228869+0.48999104j,  0.35228869+0.48999104j],
+                                    [-0.14553808-0.24420798j, -0.14553808-0.24420798j, -0.14553808-0.24420798j,
+                                     -0.14553808-0.24420798j, -0.14553808-0.24420798j]],
+
+                                   [[ 2.74465489+1.76501989j,  2.74465489+1.76501989j,  2.74465489+1.76501989j,
+                                      2.74465489+1.76501989j,  2.74465489+1.76501989j],
+                                    [ 2.46576023+1.78177691j,  2.46576023+1.78177691j,  2.46576023+1.78177691j,
+                                      2.46576023+1.78177691j,  2.46576023+1.78177691j],
+                                    [ 2.46576023+1.78177691j,  2.46576023+1.78177691j,  2.46576023+1.78177691j,
+                                      2.46576023+1.78177691j,  2.46576023+1.78177691j],
+                                    [ 2.46576023+1.78177691j,  2.46576023+1.78177691j,  2.46576023+1.78177691j,
+                                      2.46576023+1.78177691j,  2.46576023+1.78177691j],
+                                    [ 2.47635674+1.60818517j,  2.47635674+1.60818517j,  2.47635674+1.60818517j,
+                                      2.47635674+1.60818517j,  2.47635674+1.60818517j]]], dtype=COMPLEX_TYPE)
+
+        expected_object = np.array([[[-5.00000000 + 5.j, -5.00000000 + 5.j, -5.00000000 + 5.j,
+                                      -5.00000000 + 5.j, -5.00000000 + 5.j, 1.00000000 + 1.j, 1.00000000 + 1.j],
+                                     [10.33333397 - 1.66666675j, 10.33333397 - 1.66666675j,
+                                      10.33333397 - 1.66666675j, 10.33333397 - 1.66666675j,
+                                      10.33333397 - 1.66666675j, 1.00000000 + 1.j, 1.00000000 + 1.j],
+                                     [10.33333397 - 1.66666675j, 10.33333397 - 1.66666675j,
+                                      10.33333397 - 1.66666675j, 10.33333397 - 1.66666675j,
+                                      10.33333397 - 1.66666675j, 1.00000000 + 1.j, 1.00000000 + 1.j],
+                                     [10.33333397 - 1.66666675j, 10.33333397 - 1.66666675j,
+                                      10.33333397 - 1.66666675j, 10.33333397 - 1.66666675j,
+                                      10.33333397 - 1.66666675j, 1.00000000 + 1.j, 1.00000000 + 1.j],
+                                     [10.33333397 - 1.66666675j, 10.33333397 - 1.66666675j,
+                                      10.33333397 - 1.66666675j, 10.33333397 - 1.66666675j,
+                                      10.33333397 - 1.66666675j, 1.00000000 + 1.j, 1.00000000 + 1.j],
+                                     [-21.00000000 + 5.j, -21.00000000 + 5.j, -21.00000000 + 5.j,
+                                      -21.00000000 + 5.j, -21.00000000 + 5.j, 1.00000000 + 1.j,
+                                      1.00000000 + 1.j],
+                                     [1.00000000 + 1.j, 1.00000000 + 1.j, 1.00000000 + 1.j,
+                                      1.00000000 + 1.j, 1.00000000 + 1.j, 1.00000000 + 1.j,
+                                      1.00000000 + 1.j]],
+
+                                    [[4.00000000 + 4.j, 4.76923084 + 1.53846157j,
+                                      4.76923084 + 1.53846157j, 4.76923084 + 1.53846157j,
+                                      4.76923084 + 1.53846157j, 4.76923084 + 1.53846157j, 4.00000000 + 4.j],
+                                     [4.00000000 + 4.j, 5.71428585 + 0.95238096j,
+                                      5.71428585 + 0.95238096j, 5.71428585 + 0.95238096j,
+                                      5.71428585 + 0.95238096j, 5.71428585 + 0.95238096j, 4.00000000 + 4.j],
+                                     [4.00000000 + 4.j, 5.71428585 + 0.95238096j,
+                                      5.71428585 + 0.95238096j, 5.71428585 + 0.95238096j,
+                                      5.71428585 + 0.95238096j, 5.71428585 + 0.95238096j, 4.00000000 + 4.j],
+                                     [4.00000000 + 4.j, 5.71428585 + 0.95238096j,
+                                      5.71428585 + 0.95238096j, 5.71428585 + 0.95238096j,
+                                      5.71428585 + 0.95238096j, 5.71428585 + 0.95238096j, 4.00000000 + 4.j],
+                                     [4.00000000 + 4.j, 5.71428585 + 0.95238096j,
+                                      5.71428585 + 0.95238096j, 5.71428585 + 0.95238096j,
+                                      5.71428585 + 0.95238096j, 5.71428585 + 0.95238096j, 4.00000000 + 4.j],
+                                     [4.00000000 + 4.j, 6.00000000 + 1.53846157j,
+                                      6.00000000 + 1.53846157j, 6.00000000 + 1.53846157j,
+                                      6.00000000 + 1.53846157j, 6.00000000 + 1.53846157j, 4.00000000 + 4.j],
+                                     [4.00000000 + 4.j, 4.00000000 + 4.j, 4.00000000 + 4.j,
+                                      4.00000000 + 4.j, 4.00000000 + 4.j, 4.00000000 + 4.j,
+                                      4.00000000 + 4.j]]], dtype=COMPLEX_TYPE)
+
+        opi.difference_map_overlap_update(addr_info=addr_info,
+                                          cfact_object=cfact_object,
+                                          cfact_probe=cfact_probe,
+                                          do_update_probe=do_update_probe,
+                                          exit_wave=exit_wave,
+                                          ob=obj,
+                                          object_weights=obj_weights,
+                                          probe=probe,
+                                          probe_support=None,
+                                          probe_weights=probe_weights,
+                                          max_iterations=max_iterations,
+                                          update_object_first=update_object_first,
+                                          obj_smooth_std=smooth_std,
+                                          overlap_converge_factor=ocf,
+                                          probe_center_tol=None,
+                                          clip_object=None)
+
+        np.testing.assert_array_equal(expected_probe,
+                                      probe,
+                                      err_msg="The probe has been updated when it shouldn't have been.")
+        np.testing.assert_array_equal(expected_object,
+                                      obj,
+                                      err_msg="The object has not been updated correctly.")
+
+
+
+
+    def test_difference_map_overlap_update_break_when_in_tolerance(self):
+        '''
+        This tests if the loop breaks according to the convergence criterion.
+        '''
+
+        '''
+        This tests the order in which the object and probe are updated
+        '''
+
+        smooth_std = None # anything else currently not supported
+        max_iterations = 100
+        update_object_first = False
+        do_update_probe = True
+        # both the object and the probe are updated
+        ocf  = 1.4e-3 # chosen so that this should terminate on teh 26th iteration
+
+        # create some inputs - I should really make this a utility...
+        B = 5
+        C = 5
+
+        D = 2
+        E = B
+        F = C
+
+        npts_greater_than = 2
+        G = 2
+        H = B + npts_greater_than
+        I = C + npts_greater_than
+
+        scan_pts = 2
+        A = scan_pts ** 2 * G * D  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        # shapes and types outlined here
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        exit_addr = np.empty(shape=(A, 3), dtype=int)
+        exit_addr[:, 0] = np.array(range(A))
+        exit_addr[:, 1] = np.zeros((A,))
+        exit_addr[:, 2] = np.zeros((A,))
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+        probe_addr = np.empty(shape=(A, 3), dtype=int)
+        probe_addr[:, 0] = np.array(range(D)).repeat(A / D)
+        probe_addr[:, 1] = np.zeros((A,))
+        probe_addr[:, 2] = np.zeros((A,))
+
+        obj = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            obj[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+        obj_addr = np.empty(shape=(A, 3), dtype=int)
+        obj_addr[:, 0] = np.array(range(G)).repeat(A / G)
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((scan_pts ** 2))
+        Y = Y.reshape((scan_pts ** 2))
+        for idx in range(G):
+            for idy in range(D):
+                index = idy + 2 * idx
+                obj_addr[index::scan_pts ** 2, 1] = X
+                obj_addr[index::scan_pts ** 2, 2] = Y
+
+        obj_weights = np.empty(shape=(G,), dtype=FLOAT_TYPE)
+        obj_weights[:] = np.linspace(-1, 1, G)
+
+        probe_weights = np.empty(shape=(D,), dtype=FLOAT_TYPE)
+        probe_weights[:] = np.linspace(-1, 1, D)
+
+        cfact_object = np.empty_like(obj)
+        for idx in range(G):
+            cfact_object[idx] = np.ones((H, I)) * 10 * (idx + 1)
+
+        cfact_probe = np.empty_like(probe)
+        for idx in range(G):
+            cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
+
+        dummy_addr = np.zeros_like(probe_addr)  # these aren't used by the function, but are passed as a top level address book
+        addr_info = zip(probe_addr, obj_addr, exit_addr, dummy_addr, dummy_addr)
+
+        expected_probe = np.array([[[ 9.09412193-0.70329767j,  9.09412193-0.70329767j,  9.09412193-0.70329767j,
+                                      9.09412193-0.70329767j,  9.09412193-0.70329767j],
+                                    [ 6.54680109-0.50316954j,  6.54680109-0.50316954j,  6.54680109-0.50316954j,
+                                      6.54680109-0.50316954j,  6.54680109-0.50316954j],
+                                    [ 6.14579964-0.47170654j,  6.14579964-0.47170654j,  6.14579964-0.47170654j,
+                                      6.14579964-0.47170654j,  6.14579964-0.47170654j],
+                                    [ 5.90408182-0.4541125j ,  5.90408182-0.4541125j,   5.90408182-0.4541125j,
+                                      5.90408182-0.4541125j ,  5.90408182-0.4541125j ],
+                                    [ 4.61261368-0.35782164j,  4.61261368-0.35782164j,  4.61261368-0.35782164j,
+                                      4.61261368-0.35782164j,  4.61261368-0.35782164j]],
+
+                                   [[ 3.49120140+0.0705148j,   3.49120140+0.0705148j,   3.49120140+0.0705148j,
+                                      3.49120140+0.0705148j,   3.49120140+0.0705148j ],
+                                    [ 3.14379764+0.06552192j,  3.14379764+0.06552192j,  3.14379764+0.06552192j,
+                                      3.14379764+0.06552192j,  3.14379764+0.06552192j],
+                                    [ 3.08963704+0.06493596j,  3.08963704+0.06493596j,  3.08963704+0.06493596j,
+                                      3.08963704+0.06493596j,  3.08963704+0.06493596j],
+                                    [ 3.04668784+0.06343807j,  3.04668784+0.06343807j,  3.04668784+0.06343807j,
+                                      3.04668784+0.06343807j,  3.04668784+0.06343807j],
+                                    [ 2.78638887+0.05607619j,  2.78638887+0.05607619j,  2.78638887+0.05607619j,
+                                      2.78638887+0.05607619j,  2.78638887+0.05607619j]]], dtype=COMPLEX_TYPE)
+
+        expected_object=np.array([[[0.27179495+0.31753245j,0.27179495+0.31753245j,0.27179495+0.31753245j,
+                                    0.27179495+0.31753245j,0.27179495+0.31753245j,1.00000000+1.j,
+                                    1.00000000+1.j],
+                                   [0.58112150+0.67839354j,0.58112150+0.67839354j,0.58112150+0.67839354j,
+                                    0.58112150+0.67839354j,0.58112150+0.67839354j,1.00000000+1.j,
+                                    1.00000000+1.j],
+                                   [0.66542435+0.77613211j,0.66542435+0.77613211j,0.66542435+0.77613211j,
+                                    0.66542435+0.77613211j,0.66542435+0.77613211j,1.00000000+1.j,
+                                    1.00000000+1.j],
+                                   [0.68367511+0.7973848j,0.68367511+0.7973848j,0.68367511+0.7973848j,
+                                    0.68367511+0.7973848j,0.68367511+0.7973848j,1.00000000+1.j,
+                                    1.00000000+1.j],
+                                   [0.77851987+0.90848058j,0.77851987+0.90848058j,0.77851987+0.90848058j,
+                                    0.77851987+0.90848058j,0.77851987+0.90848058j,1.00000000+1.j,
+                                    1.00000000+1.j],
+                                   [1.20245206+1.40492487j,1.20245206+1.40492487j,1.20245206+1.40492487j,
+                                    1.20245206+1.40492487j,1.20245206+1.40492487j,1.00000000+1.j,
+                                    1.00000000+1.j],
+                                   [1.00000000+1.j,1.00000000+1.j,1.00000000+1.j,
+                                    1.00000000+1.j,1.00000000+1.j,1.00000000+1.j,
+                                    1.00000000+1.j]],
+
+                                  [[4.00000000+4.j,3.17660427+3.05242205j,3.17660427+3.05242205j,
+                                    3.17660427+3.05242205j,3.17660427+3.05242205j,3.17660427+3.05242205j,
+                                    4.00000000+4.j],
+                                   [4.00000000+4.j,3.94026518+3.78214717j,3.94026518+3.78214717j,
+                                    3.94026518+3.78214717j,3.94026518+3.78214717j,3.94026518+3.78214717j,
+                                    4.00000000+4.j,],
+                                   [4.00000000+4.j,4.11254692+3.94367075j,4.11254692+3.94367075j,
+                                    4.11254692+3.94367075j,4.11254692+3.94367075j,4.11254692+3.94367075j,
+                                    4.00000000+4.j],
+                                   [4.00000000+4.j,4.14782619+3.9773953j,4.14782619+3.9773953j,
+                                    4.14782619+3.9773953j,4.14782619+3.9773953j,4.14782619+3.9773953j,
+                                    4.00000000+4.j,],
+                                   [4.00000000+4.j,4.31528330+4.14124584j,4.31528330+4.14124584j,
+                                    4.31528330+4.14124584j,4.31528330+4.14124584j,4.31528330+4.14124584j,
+                                    4.00000000+4.j],
+                                   [4.00000000+4.j,5.13210011+4.93122625j,5.13210011+4.93122625j,
+                                    5.13210011+4.93122625j, 5.13210011+4.93122625j,5.13210011+4.93122625j,
+                                    4.00000000+4.j,],
+                                   [4.00000000+4.j,4.00000000+4.j,4.00000000+4.j,
+                                    4.00000000+4.j,4.00000000+4.j,4.00000000+4.j,
+                                    4.00000000+4.j]]],dtype=COMPLEX_TYPE)
+
+        opi.difference_map_overlap_update(addr_info=addr_info,
+                                          cfact_object=cfact_object,
+                                          cfact_probe=cfact_probe,
+                                          do_update_probe=do_update_probe,
+                                          exit_wave=exit_wave,
+                                          ob=obj,
+                                          object_weights=obj_weights,
+                                          probe=probe,
+                                          probe_support=None,
+                                          probe_weights=probe_weights,
+                                          max_iterations=max_iterations,
+                                          update_object_first=update_object_first,
+                                          obj_smooth_std=smooth_std,
+                                          overlap_converge_factor=ocf,
+                                          probe_center_tol=None,
+                                          clip_object=None)
+
+        np.testing.assert_array_equal(expected_probe,
+                                      probe,
+                                      err_msg="The probe has not been updated correctly")
+        np.testing.assert_array_equal(expected_object,
+                                      obj,
+                                      err_msg="The object has not been updated correctly.")
 
 
     if __name__ == "__main__":
