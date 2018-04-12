@@ -5,6 +5,7 @@ The tests for the constraints
 
 import unittest
 import numpy as np
+from copy import deepcopy
 from ptypy.array_based import constraints as con, FLOAT_TYPE, COMPLEX_TYPE
 
 class ConstraintsRegressionTest(unittest.TestCase):
@@ -608,7 +609,7 @@ class ConstraintsRegressionTest(unittest.TestCase):
                                    err_msg="The expected in-place update of the exit wave didn't work properly.")
 
 
-    def test_difference_map_iterator(self):
+    def test_difference_map_iterator_with_probe_update(self):
         '''
         This test, assumes the logic below this function works fine, and just does some iterations of difference map on 
         some spoof data to check that the combination works.         
@@ -768,6 +769,161 @@ class ConstraintsRegressionTest(unittest.TestCase):
                                       errors,
                                       err_msg="The object has not behaved as expected.")
 
+    def test_difference_map_iterator_with_probe_update(self):
+        '''
+        This test, assumes the logic below this function works fine, and just does some iterations of difference map on 
+        some spoof data to check that the combination works.         
+        '''
+        num_iter = 1
+
+        pbound = 8.86e13 # this should now mean some of the arrays update differently through the logic
+        alpha = 1.0  # feedback constant
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
+
+        N = 4  # number of measured points
+        M = N * num_object_modes * num_probe_modes  # exit wave length
+        A = 2  # for example
+        B = 4  # for example
+        npts_greater_than = int(np.sqrt(N))  # object is bigger than the probe by this amount
+        C = A + npts_greater_than
+        D = B + npts_greater_than
+
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
+        diffraction = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
+        mask = np.empty(shape=(N, A, B),
+                        dtype=np.int32)  # the masks for the measured magnitudes either 1xAxB or NxAxB
+        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE)  # the probe function
+        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+
+        # now fill it with stuff. Data won't ever look like this except in type and usage!
+        diffraction_fill = np.arange(np.prod(diffraction.shape)).reshape(diffraction.shape).astype(diffraction.dtype)
+        diffraction[:] = diffraction_fill
+
+        obj_fill = np.array([ix + 1j * (ix ** 2) for ix in range(np.prod(obj.shape))]).reshape(
+            (num_object_modes, C, D))
+        obj[:] = obj_fill
+
+        probe_fill = np.array([ix + 1j * ix for ix in range(10, 10 + np.prod(probe.shape), 1)]).reshape(
+            (num_probe_modes, A, B))
+        probe[:] = probe_fill
+
+        prefilter.fill(30.0 + 2.0j)  # this would actually vary
+        postfilter.fill(20.0 + 3.0j)  # this too
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill = np.array(
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        mask[:] = mask_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)
+        for idx in range(num_probe_modes):
+            if idx > 0:
+                pa[::idx, 0] = idx  # multimodal could work like this, but this is not a concrete thing.
+
+        X, Y = np.meshgrid(range(npts_greater_than),
+                           range(npts_greater_than))  # assume square scan grid. Again, not always true.
+        oa = np.zeros((M, 3), dtype=np.int32)
+        oa[:N, 1] = X.ravel()
+        oa[N:, 1] = X.ravel()
+        oa[:N, 2] = Y.ravel()
+        oa[N:, 2] = Y.ravel()
+        for idx in range(num_object_modes):
+            if idx > 0:
+                oa[::idx,
+                0] = idx  # multimodal could work like this, but this is not a concrete thing (less likely for object)
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        obj_weights = np.empty(shape=(num_object_modes,), dtype=FLOAT_TYPE)
+        obj_weights[:] = np.linspace(-1, 1, num_object_modes)
+
+        probe_weights = np.empty(shape=(num_probe_modes,), dtype=FLOAT_TYPE)
+        probe_weights[:] = np.linspace(-1, 1, num_probe_modes)
+
+        cfact_object = np.empty_like(obj)
+        for idx in range(num_object_modes):
+            cfact_object[idx] = np.ones((C, D)) * 10 * (idx + 1)
+
+        cfact_probe = np.empty_like(probe)
+
+        for idx in range(num_probe_modes):
+            cfact_probe[idx] = np.ones((A, B)) * 5 * (idx + 1)
+
+        expected_probe = deepcopy(probe)
+
+        expected_obj = np.array([[[ -0.00000000e+00 -0.00000000e+00j,   1.00000000e+00 +1.00000000e+00j,
+                                     2.00000000e+00 +4.00000000e+00j,   3.00000000e+00 +9.00000000e+00j,
+                                     4.00000000e+00 +1.60000000e+01j,   5.00000000e+00 +2.50000000e+01j],
+                                   [ -7.45201700e+06 +1.96028840e+07j,  -1.03846540e+07 +2.91038260e+07j,
+                                     -9.95947000e+06 +3.39651800e+07j,  -9.54440100e+06 +3.95277960e+07j,
+                                     -1.24987250e+07 +5.24547880e+07j,   1.10000000e+01 +1.21000000e+02j],
+                                   [ -1.31103180e+07 +1.28211152e+08j,  -1.95810240e+07 +1.48626336e+08j,
+                                     -1.85168140e+07 +1.67779600e+08j,  -1.74942640e+07 +1.88444368e+08j,
+                                     -2.40259020e+07 +2.11376496e+08j,   1.70000000e+01 +2.89000000e+02j],
+                                   [  1.80000000e+01 +3.24000000e+02j,   1.90000000e+01 +3.61000000e+02j,
+                                      2.00000000e+01 +4.00000000e+02j,   2.10000000e+01 +4.41000000e+02j,
+                                      2.20000000e+01 +4.84000000e+02j,   2.30000000e+01 +5.29000000e+02j]]], dtype=COMPLEX_TYPE)
+
+        expected_errors = np.array([[[  6.85512796e-02+0.j,   1.00198245e+00+0.j,   1.03007272e-01+0.j,
+                                        1.57845581e+00+0.j],
+                                     [  6.38221460e+23+0.j,   8.94021509e+24+0.j,   3.44468266e+23+0.j,
+                                        6.03329184e+24+0.j],
+                                     [  1.89878600e+07+0.j,   3.28113995e+19+0.j,   4.72013640e+07+0.j,
+                                        4.89360300e+19+0.j]]], dtype=COMPLEX_TYPE)
+
+        errors = con.difference_map_iterator(diffraction=diffraction,
+                                             obj=obj,
+                                             object_weights=obj_weights,
+                                             cfact_object=cfact_object,
+                                             mask=mask,
+                                             probe=probe,
+                                             cfact_probe=cfact_probe,
+                                             probe_support=None,
+                                             probe_weights=probe_weights,
+                                             exit_wave=exit_wave,
+                                             addr=addr_info,
+                                             pre_fft=prefilter,
+                                             post_fft=postfilter,
+                                             pbound=pbound,
+                                             overlap_max_iterations=10,
+                                             update_object_first=True,
+                                             obj_smooth_std=None,
+                                             overlap_converge_factor=1.4e-3,
+                                             probe_center_tol=None,
+                                             probe_update_start=1,
+                                             alpha=alpha,
+                                             clip_object=None,
+                                             LL_error=True,
+                                             num_iterations=num_iter)
+
+        np.testing.assert_array_equal(expected_probe,
+                                      probe,
+                                      err_msg="The probe has not behaved as expected.")
+
+        np.testing.assert_array_equal(expected_obj,
+                                      obj,
+                                      err_msg="The object has not behaved as expected.")
+
+        np.testing.assert_array_equal(expected_errors,
+                                      errors,
+                                      err_msg="The error has not behaved as expected.")
 
 
 
