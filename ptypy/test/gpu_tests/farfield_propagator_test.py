@@ -48,7 +48,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         exit_wave = opi.scan_and_multiply(vectorised_scan['probe'],
                                         vectorised_scan['obj'],
                                         vectorised_scan['exit wave'].shape,
-                                        vectorised_scan['meta']['addr'][:, 0])
+                                        vectorised_scan['meta']['addr'])
 
         if doTiming: tstart = time.time()
         array_propagated = prop.farfield_propagator(exit_wave, prefilter=None, postfilter=None)
@@ -82,7 +82,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         exit_wave = opi.scan_and_multiply(vectorised_scan['probe'],
                                         vectorised_scan['obj'],
                                         vectorised_scan['exit wave'].shape,
-                                        vectorised_scan['meta']['addr'][:, 0])
+                                        vectorised_scan['meta']['addr'])
 
         array_propagated = prop.farfield_propagator(exit_wave, prefilter=propagator.pre_fft, postfilter=None)
         gpu_propagated = gprop.farfield_propagator(exit_wave, prefilter=propagator.pre_fft, postfilter=None)
@@ -102,7 +102,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         exit_wave = opi.scan_and_multiply(vectorised_scan['probe'],
                                         vectorised_scan['obj'],
                                         vectorised_scan['exit wave'].shape,
-                                        vectorised_scan['meta']['addr'][:, 0])
+                                        vectorised_scan['meta']['addr'])
 
         array_propagated = prop.farfield_propagator(exit_wave, prefilter=None, postfilter=propagator.post_fft)
         gpu_propagated = gprop.farfield_propagator(exit_wave, prefilter=None, postfilter=propagator.post_fft)
@@ -122,7 +122,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         exit_wave = opi.scan_and_multiply(vectorised_scan['probe'],
                                         vectorised_scan['obj'],
                                         vectorised_scan['exit wave'].shape,
-                                        vectorised_scan['meta']['addr'][:, 0])
+                                        vectorised_scan['meta']['addr'])
         if doTiming: tstart = time.time()
         array_propagated = prop.farfield_propagator(exit_wave, prefilter=propagator.pre_fft, postfilter=propagator.post_fft)
         if doTiming: 
@@ -152,7 +152,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         exit_wave = opi.scan_and_multiply(vectorised_scan['probe'],
                                         vectorised_scan['obj'],
                                         vectorised_scan['exit wave'].shape,
-                                        vectorised_scan['meta']['addr'][:, 0])
+                                        vectorised_scan['meta']['addr'])
 
         array_propagated = prop.farfield_propagator(exit_wave, prefilter=None, postfilter=None, direction='backward')
         gpu_propagated = gprop.farfield_propagator(exit_wave, prefilter=None, postfilter=None, direction='backward')
@@ -172,7 +172,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         exit_wave = opi.scan_and_multiply(vectorised_scan['probe'],
                                         vectorised_scan['obj'],
                                         vectorised_scan['exit wave'].shape,
-                                        vectorised_scan['meta']['addr'][:, 0])
+                                        vectorised_scan['meta']['addr'])
 
         array_propagated = prop.farfield_propagator(exit_wave, prefilter=propagator.pre_fft, postfilter=None, direction='backward')
         gpu_propagated = gprop.farfield_propagator(exit_wave, prefilter=propagator.pre_fft, postfilter=None, direction='backward')
@@ -192,7 +192,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         exit_wave = opi.scan_and_multiply(vectorised_scan['probe'],
                                         vectorised_scan['obj'],
                                         vectorised_scan['exit wave'].shape,
-                                        vectorised_scan['meta']['addr'][:, 0])
+                                        vectorised_scan['meta']['addr'])
 
         array_propagated = prop.farfield_propagator(exit_wave, prefilter=None, postfilter=propagator.post_fft, direction='backward')
         gpu_propagated = gprop.farfield_propagator(exit_wave, prefilter=None, postfilter=propagator.post_fft, direction='backward')
@@ -212,7 +212,7 @@ class FarfieldPropagatorTest(unittest.TestCase):
         exit_wave = opi.scan_and_multiply(vectorised_scan['probe'],
                                         vectorised_scan['obj'],
                                         vectorised_scan['exit wave'].shape,
-                                        vectorised_scan['meta']['addr'][:, 0])
+                                        vectorised_scan['meta']['addr'])
 
         array_propagated = prop.farfield_propagator(exit_wave, prefilter=propagator.pre_fft, postfilter=propagator.post_fft, direction='backward')
         gpu_propagated = gprop.farfield_propagator(exit_wave, prefilter=propagator.pre_fft, postfilter=propagator.post_fft, direction='backward')

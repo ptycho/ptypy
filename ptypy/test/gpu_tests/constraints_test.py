@@ -37,15 +37,13 @@ class ConstraintsTest(unittest.TestCase):
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         master_pod = PtychoInstance.diff.V[first_view_id].pod
         propagator = master_pod.geometry.propagator
-        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
         Idata = vectorised_scan['diffraction']
         mask = vectorised_scan['mask']
 
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
         constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
@@ -82,15 +80,13 @@ class ConstraintsTest(unittest.TestCase):
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         master_pod = PtychoInstance.diff.V[first_view_id].pod
         propagator = master_pod.geometry.propagator
-        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
         Idata = vectorised_scan['diffraction']
         mask = vectorised_scan['mask']
 
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
         constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
@@ -127,15 +123,13 @@ class ConstraintsTest(unittest.TestCase):
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         master_pod = PtychoInstance.diff.V[first_view_id].pod
         propagator = master_pod.geometry.propagator
-        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
         Idata = vectorised_scan['diffraction']
         mask = vectorised_scan['mask']
 
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
         constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
@@ -170,15 +164,12 @@ class ConstraintsTest(unittest.TestCase):
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         master_pod = PtychoInstance.diff.V[first_view_id].pod
         propagator = master_pod.geometry.propagator
-        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
         Idata = vectorised_scan['diffraction']
         mask = vectorised_scan['mask']
-
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
         constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
@@ -205,15 +196,13 @@ class ConstraintsTest(unittest.TestCase):
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         master_pod = PtychoInstance.diff.V[first_view_id].pod
         propagator = master_pod.geometry.propagator
-        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
         Idata = vectorised_scan['diffraction']
         mask = vectorised_scan['mask']
 
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
         constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
@@ -239,15 +228,13 @@ class ConstraintsTest(unittest.TestCase):
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         master_pod = PtychoInstance.diff.V[first_view_id].pod
         propagator = master_pod.geometry.propagator
-        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
         Idata = vectorised_scan['diffraction']
         mask = vectorised_scan['mask']
 
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
         # # Propagate the exit waves
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
         constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)

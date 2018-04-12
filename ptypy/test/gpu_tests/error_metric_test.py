@@ -30,19 +30,17 @@ class ErrorMetricTest(unittest.TestCase):
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         propagator = PtychoInstance.di.V[first_view_id].pod.geometry.propagator
-        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         diffraction=vectorised_scan['diffraction']
         mask = vectorised_scan['mask']
         exit_wave = vectorised_scan['exit wave']
-        
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
+
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
         
-        ll = log_likelihood(probe_object, mask, diffraction, propagator.pre_fft, propagator.post_fft, addr)
-        gll = glog_likelihood(probe_object, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr)
+        ll = log_likelihood(probe_object, mask, diffraction, propagator.pre_fft, propagator.post_fft, addr_info)
+        gll = glog_likelihood(probe_object, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr_info)
         np.testing.assert_allclose(ll, gll, rtol=1e-6, atol=5e-4)
 
     def test_far_field_error_UNITY(self):
@@ -50,16 +48,14 @@ class ErrorMetricTest(unittest.TestCase):
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         propagator = PtychoInstance.di.V[first_view_id].pod.geometry.propagator
-        addr = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
-        addr_info = addr[:, 0]
+        addr_info = vectorised_scan['meta']['addr'] # probably want to extract these at a later date, but just to get stuff going...
+
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         diffraction=vectorised_scan['diffraction']
         mask = vectorised_scan['mask']
         exit_wave = vectorised_scan['exit wave']
 
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
         constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha=1.0)
         f = farfield_propagator(constrained, propagator.pre_fft, propagator.post_fft, direction='forward')
