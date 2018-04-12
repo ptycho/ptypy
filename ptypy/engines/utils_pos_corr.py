@@ -120,11 +120,13 @@ def single_pos_ref(obj, di_view_name):
 
         obj.ar.coord = rand_coord
         ob_view_temp = View(obj.temp_ob, accessrule=obj.ar)
+
         dcoord = ob_view_temp.dcoord                            # coordinate in pixel
 
         # check if new coordinate is on a different pixel since there is no subpixel shift, if there is no shift
         # skip the calculation of the fourier error
         if any((dcoord == x).all() for x in dcoords):
+            errors[i] = error_inital + 1.
             continue
 
         dcoords[i + 1, :] = dcoord
@@ -178,7 +180,6 @@ def single_pos_ref(obj, di_view_name):
         log(4, "New coordinate with smaller Fourier Error found!", parallel=True)
         arg = np.argmin(errors)
         new_coordinate = np.array([coord[0] + delta[arg, 0], coord[1] + delta[arg, 1]])
-
     else:
         new_coordinate = (0, 0)
     return new_coordinate
@@ -196,11 +197,13 @@ def pos_ref(obj):
     :param obj: Self of the calling engine class.
     """
     log(4, "----------- START POS REF -------------")
-    pod_names = obj.pods.keys()
-    pod_names.sort()
     t_pos_s = time.time()
+
+    di_view_names = obj.di.views.keys()
+    # di_view_names.sort()
+
     # List of refined coordinates which will be used to reformat the object
-    new_coords = np.zeros((len(pod_names), 2))
+    new_coords = np.zeros((len(di_view_names), 2))
 
     # Only used for calculating the shifted pos
     obj.temp_ob = obj.ob.copy()
