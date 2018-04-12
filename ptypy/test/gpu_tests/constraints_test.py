@@ -6,6 +6,8 @@ The tests for the constraints
 import unittest
 import utils as tu
 import numpy as np
+from copy import deepcopy
+from ptypy.array_based import constraints as con
 from ptypy.array_based import data_utils as du
 from ptypy.array_based.constraints import difference_map_fourier_constraint, renormalise_fourier_magnitudes, get_difference
 from ptypy.array_based.error_metrics import far_field_error
@@ -14,6 +16,7 @@ from ptypy.array_based.propagation import farfield_propagator
 import ptypy.array_based.array_utils as au
 from ptypy.array_based import COMPLEX_TYPE, FLOAT_TYPE
 
+from ptypy.gpu import constraints as gcon
 from ptypy.gpu.constraints import get_difference as gget_difference
 from ptypy.gpu.constraints import renormalise_fourier_magnitudes as grenormalise_fourier_magnitudes
 from ptypy.gpu.constraints import difference_map_fourier_constraint as gdifference_map_fourier_constraint
@@ -154,7 +157,6 @@ class ConstraintsTest(unittest.TestCase):
 
         # result is actually all-zero, so array_equal works
         np.testing.assert_array_equal(difference, gdifference)
-        
 
     def test_renormalise_fourier_magnitudes_UNITY(self):
         alpha = 1.0
@@ -186,7 +188,6 @@ class ConstraintsTest(unittest.TestCase):
         grenormed_f = grenormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
 
         np.testing.assert_allclose(renormed_f, grenormed_f, rtol=1e-6)
-        
 
     def test_renormalise_fourier_magnitudes_pbound_UNITY(self):
         alpha = 1.0
@@ -251,8 +252,6 @@ class ConstraintsTest(unittest.TestCase):
         grenormed_f = grenormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
 
         np.testing.assert_array_equal(renormed_f, grenormed_f)
-  
-
 
     def test_difference_map_fourier_constraint_UNITY(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
@@ -370,7 +369,6 @@ class ConstraintsTest(unittest.TestCase):
         np.testing.assert_allclose(exit_wave, gexit_wave, rtol=1e-1, atol=16)
         np.testing.assert_allclose(errors, gerrors, rtol=2e-4)
 
-
     def test_difference_map_fourier_constraint_no_update_UNITY(self):
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
@@ -428,6 +426,622 @@ class ConstraintsTest(unittest.TestCase):
 
         np.testing.assert_allclose(exit_wave, gexit_wave, rtol=1e-1, atol=8)
         np.testing.assert_allclose(errors, gerrors, rtol=1e-4)
+
+    def test_difference_map_fourier_constraint_pbound_is_none_with_realspace_error_and_LL_error(self):
+
+        alpha = 1.0 # feedback constant
+        pbound = None  # the power bound
+        num_object_modes = 1 # for example
+        num_probe_modes = 2 # for example
+
+        N = 4 # number of measured points
+        M = N * num_object_modes * num_probe_modes # exit wave length
+        A = 2 # for example
+        B = 4 # for example
+        npts_greater_than = int(np.sqrt(N)) # object is bigger than the probe by this amount
+        C = A + npts_greater_than
+        D = B + npts_greater_than
+
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)# deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE) # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)# the address book
+        Idata = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)# the measured intensities NxAxB
+        mask = np.empty(shape=(N, A, B), dtype=np.int32)# the masks for the measured magnitudes either 1xAxB or NxAxB
+        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE) # the probe function
+        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+
+
+        # now fill it with stuff. Data won't ever look like this except in type and usage!
+        Idata_fill = np.arange(np.prod(Idata.shape)).reshape(Idata.shape).astype(Idata.dtype)
+        Idata[:] = Idata_fill
+
+        obj_fill = np.array([ix + 1j*(ix**2) for ix in range(np.prod(obj.shape))]).reshape((num_object_modes, C, D))
+        obj[:] = obj_fill
+
+        probe_fill = np.array([ix + 1j*ix for ix in range(10, 10+np.prod(probe.shape), 1)]).reshape((num_probe_modes, A, B))
+        probe[:] = probe_fill
+
+        prefilter.fill(30.0 + 2.0j)# this would actually vary
+        postfilter.fill(20.0 + 3.0j)# this too
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill =  np.array([ix**2 + 1j*ix for ix in range(20, 20+np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0 # checkerboard for testing
+        mask[:] = mask_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)
+        for idx in range(num_probe_modes):
+            if idx>0:
+                pa[::idx,0]=idx # multimodal could work like this, but this is not a concrete thing.
+
+
+        X, Y = np.meshgrid(range(npts_greater_than), range(npts_greater_than)) # assume square scan grid. Again, not always true.
+        oa = np.zeros((M, 3), dtype=np.int32)
+        oa[:N, 1] = X.ravel()
+        oa[N:, 1] = X.ravel()
+        oa[:N, 2] = Y.ravel()
+        oa[N:, 2] = Y.ravel()
+        for idx in range(num_object_modes):
+            if idx>0:
+                oa[::idx,0]=idx # multimodal could work like this, but this is not a concrete thing (less likely for object)
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)]*num_probe_modes*num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        gexit_wave = deepcopy(exit_wave)
+
+        out = con.difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter, pbound=pbound, alpha=alpha, LL_error=True, do_realspace_error=True)
+        gout = gcon.difference_map_fourier_constraint(mask, Idata, obj, probe, gexit_wave, addr_info, prefilter,
+                                                     postfilter, pbound=pbound, alpha=alpha, LL_error=True,
+                                                     do_realspace_error=True)
+        np.testing.assert_allclose(gout,
+                                   out,
+                                   err_msg="The returned errors are not consistent.")
+
+        np.testing.assert_allclose(gexit_wave,
+                                   exit_wave,
+                                   err_msg="The expected in-place update of the exit wave didn't work properly.")
+
+    def test_difference_map_fourier_constraint_pbound_is_none_no_error(self):
+
+        alpha = 1.0  # feedback constant
+        pbound = None  # the power bound
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
+
+        N = 4  # number of measured points
+        M = N * num_object_modes * num_probe_modes  # exit wave length
+        A = 2  # for example
+        B = 4  # for example
+        npts_greater_than = int(np.sqrt(N))  # object is bigger than the probe by this amount
+        C = A + npts_greater_than
+        D = B + npts_greater_than
+
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
+        Idata = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
+        mask = np.empty(shape=(N, A, B),
+                        dtype=np.int32)  # the masks for the measured magnitudes either 1xAxB or NxAxB
+        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE)  # the probe function
+        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+
+        # now fill it with stuff. Data won't ever look like this except in type and usage!
+        Idata_fill = np.arange(np.prod(Idata.shape)).reshape(Idata.shape).astype(Idata.dtype)
+        Idata[:] = Idata_fill
+
+        obj_fill = np.array([ix + 1j * (ix ** 2) for ix in range(np.prod(obj.shape))]).reshape(
+            (num_object_modes, C, D))
+        obj[:] = obj_fill
+
+        probe_fill = np.array([ix + 1j * ix for ix in range(10, 10 + np.prod(probe.shape), 1)]).reshape(
+            (num_probe_modes, A, B))
+        probe[:] = probe_fill
+
+        prefilter.fill(30.0 + 2.0j)  # this would actually vary
+        postfilter.fill(20.0 + 3.0j)  # this too
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill = np.array(
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        mask[:] = mask_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)
+        for idx in range(num_probe_modes):
+            if idx > 0:
+                pa[::idx, 0] = idx  # multimodal could work like this, but this is not a concrete thing.
+
+        X, Y = np.meshgrid(range(npts_greater_than),
+                           range(npts_greater_than))  # assume square scan grid. Again, not always true.
+        oa = np.zeros((M, 3), dtype=np.int32)
+        oa[:N, 1] = X.ravel()
+        oa[N:, 1] = X.ravel()
+        oa[:N, 2] = Y.ravel()
+        oa[N:, 2] = Y.ravel()
+        for idx in range(num_object_modes):
+            if idx > 0:
+                oa[::idx,
+                0] = idx  # multimodal could work like this, but this is not a concrete thing (less likely for object)
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        gexit_wave = deepcopy(exit_wave)
+
+        gout = gcon.difference_map_fourier_constraint(mask, Idata, obj, probe, gexit_wave, addr_info, prefilter,
+                                                    postfilter, pbound=pbound, alpha=alpha, LL_error=False,
+                                                    do_realspace_error=False)
+        out = con.difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter,
+                                                    postfilter, pbound=pbound, alpha=alpha, LL_error=False,
+                                                    do_realspace_error=False)
+        np.testing.assert_allclose(gout,
+                                   out,
+                                   err_msg="The returned errors are not consistent.")
+
+        np.testing.assert_allclose(gexit_wave,
+                                   exit_wave,
+                                   err_msg="The expected in-place update of the exit wave didn't work properly.")
+
+
+    def test_difference_map_fourier_constraint_pbound_is_not_none_with_realspace_and_LL_error(self):
+        '''
+        mixture of high and low p bound values respect to the fourier error
+        '''
+        #expected_fourier_error = np.array([6.07364329e+12, 8.87756439e+13, 9.12644403e+12, 1.39851186e+14])
+        pbound = 8.86e13 # this should now mean some of the arrays update differently through the logic
+        alpha = 1.0  # feedback constant
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
+
+        N = 4  # number of measured points
+        M = N * num_object_modes * num_probe_modes  # exit wave length
+        A = 2  # for example
+        B = 4  # for example
+        npts_greater_than = int(np.sqrt(N))  # object is bigger than the probe by this amount
+        C = A + npts_greater_than
+        D = B + npts_greater_than
+
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
+        Idata = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
+        mask = np.empty(shape=(N, A, B),
+                        dtype=np.int32)  # the masks for the measured magnitudes either 1xAxB or NxAxB
+        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE)  # the probe function
+        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+
+        # now fill it with stuff. Data won't ever look like this except in type and usage!
+        Idata_fill = np.arange(np.prod(Idata.shape)).reshape(Idata.shape).astype(Idata.dtype)
+        Idata[:] = Idata_fill
+
+        obj_fill = np.array([ix + 1j * (ix ** 2) for ix in range(np.prod(obj.shape))]).reshape(
+            (num_object_modes, C, D))
+        obj[:] = obj_fill
+
+        probe_fill = np.array([ix + 1j * ix for ix in range(10, 10 + np.prod(probe.shape), 1)]).reshape(
+            (num_probe_modes, A, B))
+        probe[:] = probe_fill
+
+        prefilter.fill(30.0 + 2.0j)  # this would actually vary
+        postfilter.fill(20.0 + 3.0j)  # this too
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill = np.array(
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        mask[:] = mask_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)
+        for idx in range(num_probe_modes):
+            if idx > 0:
+                pa[::idx, 0] = idx  # multimodal could work like this, but this is not a concrete thing.
+
+        X, Y = np.meshgrid(range(npts_greater_than),
+                           range(npts_greater_than))  # assume square scan grid. Again, not always true.
+        oa = np.zeros((M, 3), dtype=np.int32)
+        oa[:N, 1] = X.ravel()
+        oa[N:, 1] = X.ravel()
+        oa[:N, 2] = Y.ravel()
+        oa[N:, 2] = Y.ravel()
+        for idx in range(num_object_modes):
+            if idx > 0:
+                oa[::idx,
+                0] = idx  # multimodal could work like this, but this is not a concrete thing (less likely for object)
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        gexit_wave = deepcopy(exit_wave)
+
+        gout = gcon.difference_map_fourier_constraint(mask, Idata, obj, probe, gexit_wave, addr_info, prefilter,
+                                                    postfilter, pbound=pbound, alpha=alpha, LL_error=True,
+                                                    do_realspace_error=True)
+        out = con.difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter,
+                                                    postfilter, pbound=pbound, alpha=alpha, LL_error=True,
+                                                    do_realspace_error=True)
+
+        np.testing.assert_allclose(gout,
+                                   out,
+                                   err_msg="The returned errors are not consistent.")
+
+        np.testing.assert_allclose(gexit_wave,
+                                   exit_wave,
+                                   err_msg="The expected in-place update of the exit wave didn't work properly.")
+
+
+    def test_difference_map_iterator_with_probe_update(self):
+        '''
+        This test, assumes the logic below this function works fine, and just does some iterations of difference map on 
+        some spoof data to check that the combination works.         
+        '''
+        num_iter = 2
+
+        pbound = 8.86e13 # this should now mean some of the arrays update differently through the logic
+        alpha = 1.0  # feedback constant
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
+
+        N = 4  # number of measured points
+        M = N * num_object_modes * num_probe_modes  # exit wave length
+        A = 2  # for example
+        B = 4  # for example
+        npts_greater_than = int(np.sqrt(N))  # object is bigger than the probe by this amount
+        C = A + npts_greater_than
+        D = B + npts_greater_than
+
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
+        diffraction = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
+        mask = np.empty(shape=(N, A, B),
+                        dtype=np.int32)  # the masks for the measured magnitudes either 1xAxB or NxAxB
+        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE)  # the probe function
+        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+
+        # now fill it with stuff. Data won't ever look like this except in type and usage!
+        diffraction_fill = np.arange(np.prod(diffraction.shape)).reshape(diffraction.shape).astype(diffraction.dtype)
+        diffraction[:] = diffraction_fill
+
+        obj_fill = np.array([ix + 1j * (ix ** 2) for ix in range(np.prod(obj.shape))]).reshape(
+            (num_object_modes, C, D))
+        obj[:] = obj_fill
+
+        probe_fill = np.array([ix + 1j * ix for ix in range(10, 10 + np.prod(probe.shape), 1)]).reshape(
+            (num_probe_modes, A, B))
+        probe[:] = probe_fill
+
+        prefilter.fill(30.0 + 2.0j)  # this would actually vary
+        postfilter.fill(20.0 + 3.0j)  # this too
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill = np.array(
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        mask[:] = mask_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)
+        for idx in range(num_probe_modes):
+            if idx > 0:
+                pa[::idx, 0] = idx  # multimodal could work like this, but this is not a concrete thing.
+
+        X, Y = np.meshgrid(range(npts_greater_than),
+                           range(npts_greater_than))  # assume square scan grid. Again, not always true.
+        oa = np.zeros((M, 3), dtype=np.int32)
+        oa[:N, 1] = X.ravel()
+        oa[N:, 1] = X.ravel()
+        oa[:N, 2] = Y.ravel()
+        oa[N:, 2] = Y.ravel()
+        for idx in range(num_object_modes):
+            if idx > 0:
+                oa[::idx,
+                0] = idx  # multimodal could work like this, but this is not a concrete thing (less likely for object)
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        obj_weights = np.empty(shape=(num_object_modes,), dtype=FLOAT_TYPE)
+        obj_weights[:] = np.linspace(-1, 1, num_object_modes)
+
+        probe_weights = np.empty(shape=(num_probe_modes,), dtype=FLOAT_TYPE)
+        probe_weights[:] = np.linspace(-1, 1, num_probe_modes)
+
+        cfact_object = np.empty_like(obj)
+        for idx in range(num_object_modes):
+            cfact_object[idx] = np.ones((C, D)) * 10 * (idx + 1)
+
+        cfact_probe = np.empty_like(probe)
+
+        for idx in range(num_probe_modes):
+            cfact_probe[idx] = np.ones((A, B)) * 5 * (idx + 1)
+
+        gexit_wave = deepcopy(exit_wave)
+        gprobe = deepcopy(probe)
+        gobj = deepcopy(obj)
+
+        errors = con.difference_map_iterator(diffraction=diffraction,
+                                             obj=obj,
+                                             object_weights=obj_weights,
+                                             cfact_object=cfact_object,
+                                             mask=mask,
+                                             probe=probe,
+                                             cfact_probe=cfact_probe,
+                                             probe_support=None,
+                                             probe_weights=probe_weights,
+                                             exit_wave=exit_wave,
+                                             addr=addr_info,
+                                             pre_fft=prefilter,
+                                             post_fft=postfilter,
+                                             pbound=pbound,
+                                             overlap_max_iterations=10,
+                                             update_object_first=False,
+                                             obj_smooth_std=None,
+                                             overlap_converge_factor=1.4e-3,
+                                             probe_center_tol=None,
+                                             probe_update_start=1,
+                                             alpha=alpha,
+                                             clip_object=None,
+                                             LL_error=True,
+                                             num_iterations=num_iter)
+
+        gerrors = gcon.difference_map_iterator(diffraction=diffraction,
+                                             obj=gobj,
+                                             object_weights=obj_weights,
+                                             cfact_object=cfact_object,
+                                             mask=mask,
+                                             probe=gprobe,
+                                             cfact_probe=cfact_probe,
+                                             probe_support=None,
+                                             probe_weights=probe_weights,
+                                             exit_wave=gexit_wave,
+                                             addr=addr_info,
+                                             pre_fft=prefilter,
+                                             post_fft=postfilter,
+                                             pbound=pbound,
+                                             overlap_max_iterations=10,
+                                             update_object_first=False,
+                                             obj_smooth_std=None,
+                                             overlap_converge_factor=1.4e-3,
+                                             probe_center_tol=None,
+                                             probe_update_start=1,
+                                             alpha=alpha,
+                                             clip_object=None,
+                                             LL_error=True,
+                                             num_iterations=num_iter)
+
+        np.testing.assert_allclose(gerrors,
+                                   errors,
+                                   err_msg="The returned errors are not consistent.")
+
+        np.testing.assert_allclose(gprobe,
+                                   probe,
+                                   err_msg="The returned probes are not consistent.")
+
+        np.testing.assert_allclose(gobj,
+                                   obj,
+                                   err_msg="The returned objects are not consistent.")
+
+        np.testing.assert_allclose(gexit_wave,
+                                   exit_wave,
+                                   err_msg="The returned exit_waves are not consistent.")
+
+    def test_difference_map_iterator_with_probe_update(self):
+        '''
+        This test, assumes the logic below this function works fine, and just does some iterations of difference map on 
+        some spoof data to check that the combination works.         
+        '''
+        num_iter = 1
+
+        pbound = 8.86e13 # this should now mean some of the arrays update differently through the logic
+        alpha = 1.0  # feedback constant
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
+
+        N = 4  # number of measured points
+        M = N * num_object_modes * num_probe_modes  # exit wave length
+        A = 2  # for example
+        B = 4  # for example
+        npts_greater_than = int(np.sqrt(N))  # object is bigger than the probe by this amount
+        C = A + npts_greater_than
+        D = B + npts_greater_than
+
+        err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
+        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
+        diffraction = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
+        mask = np.empty(shape=(N, A, B),
+                        dtype=np.int32)  # the masks for the measured magnitudes either 1xAxB or NxAxB
+        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE)  # the probe function
+        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+
+        # now fill it with stuff. Data won't ever look like this except in type and usage!
+        diffraction_fill = np.arange(np.prod(diffraction.shape)).reshape(diffraction.shape).astype(diffraction.dtype)
+        diffraction[:] = diffraction_fill
+
+        obj_fill = np.array([ix + 1j * (ix ** 2) for ix in range(np.prod(obj.shape))]).reshape(
+            (num_object_modes, C, D))
+        obj[:] = obj_fill
+
+        probe_fill = np.array([ix + 1j * ix for ix in range(10, 10 + np.prod(probe.shape), 1)]).reshape(
+            (num_probe_modes, A, B))
+        probe[:] = probe_fill
+
+        prefilter.fill(30.0 + 2.0j)  # this would actually vary
+        postfilter.fill(20.0 + 3.0j)  # this too
+        err_fmag_fill = np.ones((N,))
+        err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
+
+        exit_wave_fill = np.array(
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+        exit_wave[:] = exit_wave_fill
+
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        mask[:] = mask_fill
+
+        pa = np.zeros((M, 3), dtype=np.int32)
+        for idx in range(num_probe_modes):
+            if idx > 0:
+                pa[::idx, 0] = idx  # multimodal could work like this, but this is not a concrete thing.
+
+        X, Y = np.meshgrid(range(npts_greater_than),
+                           range(npts_greater_than))  # assume square scan grid. Again, not always true.
+        oa = np.zeros((M, 3), dtype=np.int32)
+        oa[:N, 1] = X.ravel()
+        oa[N:, 1] = X.ravel()
+        oa[:N, 2] = Y.ravel()
+        oa[N:, 2] = Y.ravel()
+        for idx in range(num_object_modes):
+            if idx > 0:
+                oa[::idx,
+                0] = idx  # multimodal could work like this, but this is not a concrete thing (less likely for object)
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
+        ma = np.zeros((M, 3), dtype=np.int32)
+
+        addr_info[:, 0, :] = pa
+        addr_info[:, 1, :] = oa
+        addr_info[:, 2, :] = ea
+        addr_info[:, 3, :] = da
+        addr_info[:, 4, :] = ma
+
+        obj_weights = np.empty(shape=(num_object_modes,), dtype=FLOAT_TYPE)
+        obj_weights[:] = np.linspace(-1, 1, num_object_modes)
+
+        probe_weights = np.empty(shape=(num_probe_modes,), dtype=FLOAT_TYPE)
+        probe_weights[:] = np.linspace(-1, 1, num_probe_modes)
+
+        cfact_object = np.empty_like(obj)
+        for idx in range(num_object_modes):
+            cfact_object[idx] = np.ones((C, D)) * 10 * (idx + 1)
+
+        cfact_probe = np.empty_like(probe)
+
+        for idx in range(num_probe_modes):
+            cfact_probe[idx] = np.ones((A, B)) * 5 * (idx + 1)
+
+        gexit_wave = deepcopy(exit_wave)
+        gprobe = deepcopy(probe)
+        gobj = deepcopy(obj)
+
+        errors = con.difference_map_iterator(diffraction=diffraction,
+                                             obj=obj,
+                                             object_weights=obj_weights,
+                                             cfact_object=cfact_object,
+                                             mask=mask,
+                                             probe=probe,
+                                             cfact_probe=cfact_probe,
+                                             probe_support=None,
+                                             probe_weights=probe_weights,
+                                             exit_wave=exit_wave,
+                                             addr=addr_info,
+                                             pre_fft=prefilter,
+                                             post_fft=postfilter,
+                                             pbound=pbound,
+                                             overlap_max_iterations=10,
+                                             update_object_first=True,
+                                             obj_smooth_std=None,
+                                             overlap_converge_factor=1.4e-3,
+                                             probe_center_tol=None,
+                                             probe_update_start=1,
+                                             alpha=alpha,
+                                             clip_object=None,
+                                             LL_error=True,
+                                             num_iterations=num_iter)
+
+        gerrors = gcon.difference_map_iterator(diffraction=diffraction,
+                                             obj=gobj,
+                                             object_weights=obj_weights,
+                                             cfact_object=cfact_object,
+                                             mask=mask,
+                                             probe=gprobe,
+                                             cfact_probe=cfact_probe,
+                                             probe_support=None,
+                                             probe_weights=probe_weights,
+                                             exit_wave=gexit_wave,
+                                             addr=addr_info,
+                                             pre_fft=prefilter,
+                                             post_fft=postfilter,
+                                             pbound=pbound,
+                                             overlap_max_iterations=10,
+                                             update_object_first=True,
+                                             obj_smooth_std=None,
+                                             overlap_converge_factor=1.4e-3,
+                                             probe_center_tol=None,
+                                             probe_update_start=1,
+                                             alpha=alpha,
+                                             clip_object=None,
+                                             LL_error=True,
+                                             num_iterations=num_iter)
+
+
+        np.testing.assert_allclose(gerrors,
+                                   errors,
+                                   err_msg="The returned errors are not consistent.")
+
+        np.testing.assert_allclose(gprobe,
+                                   probe,
+                                   err_msg="The returned probes are not consistent.")
+
+        np.testing.assert_allclose(gobj,
+                                   obj,
+                                   err_msg="The returned objects are not consistent.")
+
+        np.testing.assert_allclose(gexit_wave,
+                                   exit_wave,
+                                   err_msg="The returned exit_waves are not consistent.")
+
+
 
 
 if __name__ == '__main__':
