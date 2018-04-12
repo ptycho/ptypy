@@ -87,6 +87,12 @@ extensions = [
     )
 ]
 
+
+
+
+
+
+
 # chain this before build_ext
 class BuildExtCudaCommand(setuptools.command.build_ext.build_ext):
     """Custom build command, extending the build with CUDA / Cmake."""
@@ -160,18 +166,7 @@ setup(
                         #'scipy>=0.13',\
                         #'mpi4py>=1.3'],
     package_dir={'ptypy': 'ptypy'},
-    packages=['ptypy',
-              'ptypy.core',
-              'ptypy.debug',
-              'ptypy.utils',
-              'ptypy.simulations',
-              'ptypy.engines',
-              'ptypy.io',
-              'ptypy.resources',
-              'ptypy.experiment',
-              'ptypy.test',
-              'ptypy.gpu',
-              'ptypy.array_based'],
+    packages=setuptools.find_packages(),
     package_data={'ptypy': ['resources/*', ]},
     #include_package_data=True
     scripts=[
