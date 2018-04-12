@@ -187,7 +187,7 @@ class DMNpy(DM):
                                         probe_update_start=0,
                                         alpha=self.p.alpha,
                                         clip_object=self.p.clip_object,
-                                        LL_error=False,
+                                        LL_error=True,
                                         num_iterations=num)
 
 
