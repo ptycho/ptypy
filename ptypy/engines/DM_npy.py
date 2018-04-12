@@ -18,6 +18,8 @@ from ..array_based import data_utils as du
 from ..array_based import constraints as con
 from ..array_based import object_probe_interaction as opi
 import numpy as np
+import sys
+from memory_profiler import profile
 __all__ = ['DMNpy']
 
 
@@ -142,133 +144,77 @@ class DMNpy(DM):
             first_view_id = self.vectorised_scan[dID]['meta']['view_IDs'][0]
             self.propagator[dID] = self.di.V[first_view_id].pod.geometry.propagator
 
+
+
     def engine_iterate(self, num=1):
         """
         Compute `num` iterations.
         """
         to = 0.
         tf = 0.
-
+        # num=5
         for dID, _diffs in self.di.S.iteritems():
-            for it in range(num):
-                t1 = time.time()
+            pre_fft = self.propagator[dID].pre_fft
+            post_fft = self.propagator[dID].post_fft
+            cfact_probe = (self.p.probe_inertia * len(self.vectorised_scan[dID]['meta']['addr']) /
+                           self.vectorised_scan[dID]['probe'].shape[0]) * np.ones_like(
+                self.vectorised_scan[dID]['probe'])
 
-                # numpy dump here for 64x64 and 4096x4096
+
+            cfact_object = self.p.object_inertia * self.mean_power * (self.vectorised_scan[dID]['object viewcover'] + 1.)
 
 
-                error_dct = self.numpy_fourier_update(self.vectorised_scan[dID]['mask'],
-                                                      self.vectorised_scan[dID]['diffraction'],
-                                                      self.vectorised_scan[dID]['obj'],
-                                                      self.vectorised_scan[dID]['probe'],
-                                                      self.vectorised_scan[dID]['exit wave'],
-                                                      self.vectorised_scan[dID]['meta']['addr'],
-                                                      self.propagator[dID],
-                                                      pbound=self.pbound[dID])
-                # numpy dump here for 64x64 and 4096x4096
-                t2 = time.time()
-                tf += t2 - t1
-                # numpy dump here for 64x64 and 4096x4096
-                self.numpy_overlap_update(self.vectorised_scan[dID]['obj'],
-                                          self.vectorised_scan[dID]['object weights'],
-                                          self.vectorised_scan[dID]['object viewcover'],
-                                          self.vectorised_scan[dID]['probe'],
-                                          self.vectorised_scan[dID]['probe weights'],
-                                          self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]],
-                                          self.vectorised_scan[dID]['exit wave'],
-                                          self.mean_power,
-                                          self.vectorised_scan[dID]['meta']['addr'])
-                # numpy dump here for 64x64 and 4096x4096
-                t3 = time.time()
-                to += t3 - t2
 
-                # count up
-                self.curiter += 1
+            errors = con.difference_map_iterator(diffraction=self.vectorised_scan[dID]['diffraction'],
+                                        obj=self.vectorised_scan[dID]['obj'],
+                                        object_weights=self.vectorised_scan[dID]['object weights'],
+                                        cfact_object=cfact_object,
+                                        mask=self.vectorised_scan[dID]['mask'],
+                                        probe=self.vectorised_scan[dID]['probe'],
+                                        cfact_probe=cfact_probe,
+                                        probe_support=self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]],
+                                        probe_weights=self.vectorised_scan[dID]['probe weights'],
+                                        exit_wave=self.vectorised_scan[dID]['exit wave'],
+                                        addr=self.vectorised_scan[dID]['meta']['addr'],
+                                        pre_fft=pre_fft,
+                                        post_fft=post_fft,
+                                        pbound=self.pbound[dID],
+                                        overlap_max_iterations=self.p.overlap_max_iterations,
+                                        update_object_first=self.p.update_object_first,
+                                        obj_smooth_std=self.p.obj_smooth_std,
+                                        overlap_converge_factor=self.p.overlap_converge_factor,
+                                        probe_center_tol=self.p.probe_center_tol,
+                                        probe_update_start=0,
+                                        alpha=self.p.alpha,
+                                        clip_object=self.p.clip_object,
+                                        LL_error=False,
+                                        num_iterations=num)
+
+
+
+
+            #yuk yuk yuk
+            error_dct = {}
+            print errors.shape
+            jx =0
+            for jx in range(num):
+                k = 0
+                for idx, name in self.di.views.iteritems():
+                    error_dct[idx] = errors[jx, :, k]
+                    k += 1
+                jx +=1
+                error = parallel.gather_dict(error_dct)
+            # t3 = time.time()
+            # to += t3 - t2
+
+            # count up
+            self.curiter += num
 
         # self.mpi_numpy_overlap_update()
-        logger.info('Time spent in Fourier update: %.2f' % tf)
-        logger.info('Time spent in Overlap update: %.2f' % to)
-        error = parallel.gather_dict(error_dct)
+        # logger.info('Time spent in Fourier update: %.2f' % tf)
+        # logger.info('Time spent in Overlap update: %.2f' % to)
+        # error = parallel.gather_dict(error_dct)
         return error
-
-    def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, propagator, pbound):
-        error_dct = {}
-
-
-        errors = con.difference_map_fourier_constraint(mask,
-                                                       Idata,
-                                                       obj,
-                                                       probe,
-                                                       exit_wave,
-                                                       addr,
-                                                       prefilter=propagator.pre_fft,
-                                                       postfilter=propagator.post_fft,
-                                                       pbound=pbound,
-                                                       alpha=self.p.alpha,
-                                                       LL_error=False)
-
-        k = 0
-        for idx, name in self.di.views.iteritems():
-            error_dct[idx] = errors[:, k]
-            k += 1
-
-        return error_dct
-
-    def numpy_overlap_update(self, ob, object_weights, ob_viewcover, probe, probe_weights, probe_support, exit_wave, mean_power, addr_info):
-        """
-        DM overlap constraint update.
-        """
-        # Condition to update probe
-        do_update_probe = (self.p.probe_update_start <= self.curiter)
-        cfact_probe =  (self.p.probe_inertia * len(addr_info) / probe.shape[0])*np.ones_like(probe)
-        cfact_object = self.p.object_inertia * mean_power  *  (ob_viewcover + 1.)
-        self.apply_difference_map_overlap_constraint(addr_info, cfact_object, cfact_probe, do_update_probe, exit_wave,
-                                                     ob, object_weights, probe, probe_support, probe_weights)
-
-
-    def apply_difference_map_overlap_constraint(self, addr_info, cfact_object, cfact_probe, do_update_probe, exit_wave,
-                                                ob, object_weights, probe, probe_support, probe_weights):
-        for inner in range(self.p.overlap_max_iterations): # do we want to make this into a kernel of it's own?
-            pre_str = 'Iteration (Overlap) #%02d:  ' % inner
-
-            # Update object first
-            if self.p.update_object_first or (inner > 0):
-                # Update object
-                log(4, pre_str + '----- object update -----')
-
-                opi.difference_map_update_object(ob,
-                                                 object_weights,
-                                                 probe,
-                                                 exit_wave,
-                                                 addr_info,
-                                                 cfact_object,
-                                                 ob_smooth_std=self.p.obj_smooth_std,
-                                                 clip_object=self.p.clip_object)
-
-            # Exit if probe should not be updated yet
-            if not do_update_probe:
-                break
-
-            # Update probe
-            log(4, pre_str + '----- probe update -----')
-
-
-            change = opi.difference_map_update_probe(ob,
-                                                     probe_weights,
-                                                     probe,
-                                                     exit_wave,
-                                                     addr_info,
-                                                     cfact_probe,
-                                                     probe_support)
-
-            log(4, pre_str + 'change in probe is %.3f' % change)
-
-            # Recenter the probe
-            if self.p.probe_center_tol is not None:
-                opi.center_probe(probe, self.p.probe_center_tol)
-
-            # Stop iteration if probe change is small
-            if change < self.p.overlap_converge_factor:
-                break
 
     def engine_finalize(self):
         """
