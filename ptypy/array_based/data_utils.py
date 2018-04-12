@@ -42,15 +42,7 @@ def _vectorise_array_access(diff_storage):
                 (pod.di_view.dlayer, pod.di_view.dlow[0], pod.di_view.dlow[1]),
                 (pod.ma_view.dlayer, pod.ma_view.dlow[0], pod.ma_view.dlow[1])])
             addr.append(a)
-            # address.append(a)
-        # store data for each view
-        # addresses
-        # addr.append(address)
-    # store them for each storage
 
-    # addr = np.array(addr).astype(np.int32)
-    # addr_out = [addr[:,0]]
-    # addr_out.extend(addr[:,1])
     addr_out = np.array(addr).astype(np.int32)
 
 
