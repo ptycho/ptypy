@@ -29,15 +29,14 @@ class DataUtilsTest(unittest.TestCase):
         '''
         PtychoInstance = tu.get_ptycho_instance('pod_to_numpy_test')
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
-        addr = vectorised_scan['meta']['addr'][:, 0]
+        addr = vectorised_scan['meta']['addr']
         view_IDS = vectorised_scan['meta']['view_IDs']
 
         # check the probe references match up
         vectorised_scan['probe'] *= np.random.rand(*vectorised_scan['probe'].shape)
-        # vectorised_scan['probe'] = vectorised_scan['probe'] * np.random.rand(*vectorised_scan['probe'].shape)
 
         pa, oa, ea, da, ma = zip(*addr)
-        import pylab as plt
+
         for idx, vID in enumerate(view_IDS):
             np.testing.assert_array_equal(vectorised_scan['probe'][pa[idx][0]], PtychoInstance.pr.V[vID].data)
 
@@ -49,12 +48,6 @@ class DataUtilsTest(unittest.TestCase):
             np.testing.assert_array_equal(vectorised_scan['exit wave'][ea[idx][0]], PtychoInstance.ex.V[vID].data)
 
 
-        # vectorised_scan['mask'],
-        # vectorised_scan['diffraction'],
-        # vectorised_scan['obj'],
-        # vectorised_scan['probe'],
-        # vectorised_scan['exit wave'],
-        # vectorised_scan['meta']['addr']
 
 
 if __name__ == "__main__":

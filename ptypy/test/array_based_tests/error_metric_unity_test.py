@@ -1,5 +1,6 @@
 '''
 A test for the module of the relevant error metrics
+ SHOULD THIS EXIST? Ptypy has no in built functions for these, so I could refactor so that it does, or just not both testing.
 '''
 
 import unittest
@@ -13,27 +14,7 @@ from ptypy.array_based.error_metrics import log_likelihood, far_field_error, rea
 from ptypy.array_based.object_probe_interaction import scan_and_multiply
 
 
-class ErrorMetricTest(unittest.TestCase):
-
-    def test_loglikelihood_numpy(self):
-        '''
-        Test that it runs
-        '''
-        PtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
-        vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
-        first_view_id = vectorised_scan['meta']['view_IDs'][0]
-        propagator = PtychoInstance.diff.V[first_view_id].pod.geometry.propagator
-        addr = vectorised_scan['meta']['addr']  # probably want to extract these at a later date, but just to get stuff going...
-        probe = vectorised_scan['probe']
-        obj = vectorised_scan['obj']
-        mask = vectorised_scan['mask']
-        exit_wave = vectorised_scan['exit wave']
-        diffraction = vectorised_scan['diffraction']
-
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
-        probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
-        log_likelihood(probe_object, mask, diffraction, propagator.pre_fft, propagator.post_fft, addr)
+class ErrorMetricUnityTest(unittest.TestCase):
 
     def test_loglikelihood_numpy_UNITY(self):
         '''
@@ -47,18 +28,16 @@ class ErrorMetricTest(unittest.TestCase):
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
         first_view_id = vectorised_scan['meta']['view_IDs'][0]
         propagator = PtychoInstance.diff.V[first_view_id].pod.geometry.propagator
-        addr = vectorised_scan['meta']['addr']  # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr']  # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         mask = vectorised_scan['mask']
         exit_wave = vectorised_scan['exit wave']
         diffraction = vectorised_scan['diffraction']
 
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
 
-        vals = log_likelihood(probe_object, mask, diffraction, propagator.pre_fft, propagator.post_fft, addr)
+        vals = log_likelihood(probe_object, mask, diffraction, propagator.pre_fft, propagator.post_fft, addr_info)
         k = 0
         for name, view in PtychoInstance.diff.V.iteritems():
             error_metric[name] = vals[k]
@@ -70,11 +49,6 @@ class ErrorMetricTest(unittest.TestCase):
             numpy_error = error_metric[name]
             np.testing.assert_array_equal(ptypy_error, numpy_error)
 
-    def test_far_field_error(self):
-        PtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
-        af, fmag, mask = self.get_current_and_measured_solution(PtychoInstance)
-        far_field_error(af, fmag, mask)
-
     def test_far_field_error_UNITY(self):
         PtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
         PodPtychoInstance = tu.get_ptycho_instance('log_likelihood_test')
@@ -83,42 +57,9 @@ class ErrorMetricTest(unittest.TestCase):
         fmag_ptypy = self.get_ptypy_far_field_error(PodPtychoInstance)
         np.testing.assert_array_equal(fmag_ptypy, fmag_npy)
 
-
-    def test_realspace_error_regression1(self):
-        # the case when there is only one mode
-        I = 5
-        M = 20
-        N = 30
-        out_length = I
-        ea_first_column = range(I)
-        da_first_column = range(I)
-
-        difference = np.empty(shape=(I, M, N), dtype=COMPLEX_TYPE)
-        for idx in range(I):
-            difference[idx] = np.ones((M, N)) *idx + 1j * np.ones((M, N)) *idx
-
-        error = realspace_error(difference, ea_first_column, da_first_column, out_length)
-
-        expected_error = np.array([ 0.0, 2.0, 8.0, 18.0, 32.0], dtype=FLOAT_TYPE)
-        np.testing.assert_array_equal(error, expected_error)
-
-    def test_realspace_error_regression2(self):
-        # multiple modes
-        I = 10
-        M = 20
-        N = 30
-        out_length = 5
-        ea_first_column = range(I)
-        da_first_column = range(I/2) + range(I/2)
-
-        difference = np.empty(shape=(I, M, N), dtype=COMPLEX_TYPE)
-        for idx in range(I):
-            difference[idx] = np.ones((M, N)) * idx + 1j * np.ones((M, N)) * idx
-
-        error = realspace_error(difference, ea_first_column, da_first_column, out_length)
-
-        expected_error = np.array([50., 74., 106., 146., 194.], dtype=FLOAT_TYPE)
-        np.testing.assert_array_equal(error, expected_error)
+    @unittest.skip("I wonder if its possible to put this in.")
+    def test_real_space_error_UNITY(self):
+        pass
 
 
     def get_current_and_measured_solution(self, a_ptycho_instance):

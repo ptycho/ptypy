@@ -18,14 +18,10 @@ class ObjectProbeInteractionUnityTest(unittest.TestCase):
         a_ptycho_instance = tu.get_ptycho_instance('pod_to_numpy_test')
         # now convert to arrays
         vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
-        addr = vectorised_scan['meta'][
-            'addr']  # probably want to extract these at a later date, but just to get stuff going...
+        addr_info = vectorised_scan['meta']['addr']  # probably want to extract these at a later date, but just to get stuff going...
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']
         exit_wave = vectorised_scan['exit wave']
-
-        view_dlayer = 0  # what is this?
-        addr_info = addr[:, (view_dlayer)]  # addresses, object references
         probe_and_object = opi.scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
 
         ptypy_dm_constraint = self.ptypy_apply_difference_map(a_ptycho_instance)
