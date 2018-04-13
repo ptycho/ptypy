@@ -14,8 +14,9 @@ def log_likelihood(probe_and_obj, mask, Idata, prefilter, postfilter, addr_info)
     ft = farfield_propagator(probe_and_obj, prefilter, postfilter, direction='forward')
     abs2_ft = abs2(ft)
     LL = sum_to_buffer(abs2_ft, Idata.shape, ea, da, dtype=Idata.dtype)
-    max_da = np.max(da)+1
-    for dai, mai in zip(da[:max_da], ma[:max_da]):
+
+    unq, idx = np.unique(np.array(da)[:,0], return_index=True)
+    for dai, mai in zip(np.array(da)[idx], np.array(ma)[idx]):
         LLerror[dai[0]] = np.divide(np.sum(np.power(np.multiply(mask[mai[0]], (np.subtract(LL[dai[0]], Idata[dai[0]]))), 2) / np.add(Idata[dai[0]], 1.)), np.prod(LL[dai[0]].shape))
     return LLerror
 
