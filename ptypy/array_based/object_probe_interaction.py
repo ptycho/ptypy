@@ -76,9 +76,11 @@ def extract_array_from_exit_wave(exit_wave, exit_addr, array_to_be_extracted, ex
         array_to_be_updated[pa[0], pa[1]:(pa[1] + sh[1]), pa[2]:(pa[2] + sh[2])] += extracted_array_conj * \
                                                                                     exit_wave[ea[0]] * \
                                                                                     weights[pa[0]]
-        array_to_be_updated_denominator[pa[0], pa[1]:(pa[1] + sh[1]), pa[2]:(pa[2] + sh[2])] = array_to_be_updated_denominator[pa[0], pa[1]:(pa[1] + sh[1]), pa[2]:(pa[2] + sh[2])] + extracted_array * \
-                                                                      extracted_array_conj * \
+
+        array_to_be_updated_denominator[pa[0], pa[1]:(pa[1] + sh[1]), pa[2]:(pa[2] + sh[2])] += extracted_array * \
+                                                                    extracted_array_conj * \
                                                                       weights[pa[0]]
+
     array_to_be_updated /= array_to_be_updated_denominator
 
 
@@ -120,7 +122,6 @@ def difference_map_overlap_update(addr_info, cfact_object, cfact_probe, do_updat
                                              addr_info,
                                              cfact_probe,
                                              probe_support)
-
 
         # Recenter the probe
         if probe_center_tol is not None:
