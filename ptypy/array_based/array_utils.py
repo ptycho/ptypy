@@ -36,8 +36,14 @@ def norm2(input):
 
 def complex_gaussian_filter(input, mfs):
     '''
-    takes 2D and 3D arrays. Complex input, complex output. mfs has len==input.ndim
+    takes 2D and 3D arrays. Complex input, complex output. mfs has len 0<x<=2
     '''
+    if len(mfs)>2:
+        raise NotImplementedError("Only batches of 2D arrays allowed!")
+
+    if input.ndim == 3:
+        mfs = np.insert(mfs, 0, 0)
+
     return (ndi.gaussian_filter(np.real(input), mfs) +1j *ndi.gaussian_filter(np.imag(input), mfs)).astype(input.dtype)
 
 def mass_center(A):
