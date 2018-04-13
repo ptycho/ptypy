@@ -57,17 +57,29 @@ def difference_map_update_probe(ob, probe_weights, probe, exit_wave, addr_info, 
 
 
 def extract_array_from_exit_wave(exit_wave, exit_addr, array_to_be_extracted, extract_addr, array_to_be_updated, update_addr, cfact, weights):
+    '''
+    :param exit_wave: The exit wave buffer
+    :param exit_addr: The addresses for 
+    :param array_to_be_extracted: the array to be extracted from the exit_wave buffer. This is not updated
+    :param extract_addr: The addresses for the array to be extracted.
+    :param array_to_be_updated: This is updated in place.
+    :param update_addr: The addresses for the array that is to be updated
+    :param cfact: This is the scaling for the denominator of the updated array. Not updated.
+    :param weights: The weights for the extracted array
+    
+    '''
     sh = exit_wave.shape
+    array_to_be_updated_denominator = deepcopy(cfact)
     for pa, oa, ea in zip(update_addr, extract_addr, exit_addr):
         extracted_array = array_to_be_extracted[oa[0], oa[1]:(oa[1] + sh[1]), oa[2]:(oa[2] + sh[2])]
         extracted_array_conj = extracted_array.conj()
         array_to_be_updated[pa[0], pa[1]:(pa[1] + sh[1]), pa[2]:(pa[2] + sh[2])] += extracted_array_conj * \
                                                                                     exit_wave[ea[0]] * \
                                                                                     weights[pa[0]]
-        cfact[pa[0], pa[1]:(pa[1] + sh[1]), pa[2]:(pa[2] + sh[2])] += extracted_array * \
+        array_to_be_updated_denominator[pa[0], pa[1]:(pa[1] + sh[1]), pa[2]:(pa[2] + sh[2])] = array_to_be_updated_denominator[pa[0], pa[1]:(pa[1] + sh[1]), pa[2]:(pa[2] + sh[2])] + extracted_array * \
                                                                       extracted_array_conj * \
                                                                       weights[pa[0]]
-    array_to_be_updated /= cfact
+    array_to_be_updated /= array_to_be_updated_denominator
 
 
 def center_probe(probe, center_tolerance):
