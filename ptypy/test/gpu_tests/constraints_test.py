@@ -715,38 +715,47 @@ class ConstraintsTest(unittest.TestCase):
 
         pbound = 8.86e13 # this should now mean some of the arrays update differently through the logic
         alpha = 1.0  # feedback constant
-        num_object_modes = 1  # for example
-        num_probe_modes = 2  # for example
+        # diffraction frame size
+        B = 2  # for example
+        C = 4  # for example
 
-        N = 4  # number of measured points
-        M = N * num_object_modes * num_probe_modes  # exit wave length
-        A = 2  # for example
-        B = 4  # for example
+        # probe dimensions
+        D = 2  # for example
+        E = B
+        F = C
+
+        scan_pts = 2 # a 2x2 grid
+        N = scan_pts**2 # the number of measurement points in a scan
         npts_greater_than = int(np.sqrt(N))  # object is bigger than the probe by this amount
-        C = A + npts_greater_than
-        D = B + npts_greater_than
+
+        # object dimensions
+        G = 1  # for example
+        H = B + npts_greater_than
+        I = C + npts_greater_than
+
+        A = scan_pts ** 2 * G * D # number of exit waves
 
         err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
-        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
-        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
-        diffraction = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
-        mask = np.empty(shape=(N, A, B),
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(A, 5, 3), dtype=np.int32)  # the address book
+        diffraction = np.empty(shape=(N, B, C), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
+        mask = np.empty(shape=(N, B, C),
                         dtype=np.int32)  # the masks for the measured magnitudes either 1xAxB or NxAxB
-        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE)  # the probe function
-        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
-        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
-        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)  # the probe function
+        obj = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(B, C), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(B, C), dtype=COMPLEX_TYPE)
 
         # now fill it with stuff. Data won't ever look like this except in type and usage!
         diffraction_fill = np.arange(np.prod(diffraction.shape)).reshape(diffraction.shape).astype(diffraction.dtype)
         diffraction[:] = diffraction_fill
 
         obj_fill = np.array([ix + 1j * (ix ** 2) for ix in range(np.prod(obj.shape))]).reshape(
-            (num_object_modes, C, D))
+            (G, H, I))
         obj[:] = obj_fill
 
         probe_fill = np.array([ix + 1j * ix for ix in range(10, 10 + np.prod(probe.shape), 1)]).reshape(
-            (num_probe_modes, A, B))
+            (D, B, C))
         probe[:] = probe_fill
 
         prefilter.fill(30.0 + 2.0j)  # this would actually vary
@@ -755,32 +764,29 @@ class ConstraintsTest(unittest.TestCase):
         err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
 
         exit_wave_fill = np.array(
-            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((A, B, C))
         exit_wave[:] = exit_wave_fill
 
         mask_fill = np.ones_like(mask)
-        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        # mask_fill[::2, ::2] = 0  # checkerboard for testing
         mask[:] = mask_fill
 
-        pa = np.zeros((M, 3), dtype=np.int32)
-        for idx in range(num_probe_modes):
-            if idx > 0:
-                pa[::idx, 0] = idx  # multimodal could work like this, but this is not a concrete thing.
+        pa = np.zeros((A, 3), dtype=np.int32)
+        pa[:N,0] = 0
+        pa[N:, 0] = 1
 
         X, Y = np.meshgrid(range(npts_greater_than),
                            range(npts_greater_than))  # assume square scan grid. Again, not always true.
-        oa = np.zeros((M, 3), dtype=np.int32)
+        oa = np.zeros((A, 3), dtype=np.int32)
         oa[:N, 1] = X.ravel()
         oa[N:, 1] = X.ravel()
         oa[:N, 2] = Y.ravel()
         oa[N:, 2] = Y.ravel()
-        for idx in range(num_object_modes):
-            if idx > 0:
-                oa[::idx,
-                0] = idx  # multimodal could work like this, but this is not a concrete thing (less likely for object)
-        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
-        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
-        ma = np.zeros((M, 3), dtype=np.int32)
+
+
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(A)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * D * G)
+        ma = np.zeros((A, 3), dtype=np.int32)
 
         addr_info[:, 0, :] = pa
         addr_info[:, 1, :] = oa
@@ -788,20 +794,20 @@ class ConstraintsTest(unittest.TestCase):
         addr_info[:, 3, :] = da
         addr_info[:, 4, :] = ma
 
-        obj_weights = np.empty(shape=(num_object_modes,), dtype=FLOAT_TYPE)
-        obj_weights[:] = np.linspace(-1, 1, num_object_modes)
+        obj_weights = np.empty(shape=(G,), dtype=FLOAT_TYPE)
+        obj_weights[:] = np.linspace(-1, 1, G)
 
-        probe_weights = np.empty(shape=(num_probe_modes,), dtype=FLOAT_TYPE)
-        probe_weights[:] = np.linspace(-1, 1, num_probe_modes)
+        probe_weights = np.empty(shape=(D,), dtype=FLOAT_TYPE)
+        probe_weights[:] = np.linspace(-1, 1, D)
 
         cfact_object = np.empty_like(obj)
-        for idx in range(num_object_modes):
-            cfact_object[idx] = np.ones((C, D)) * 10 * (idx + 1)
+        for idx in range(G):
+            cfact_object[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         cfact_probe = np.empty_like(probe)
 
-        for idx in range(num_probe_modes):
-            cfact_probe[idx] = np.ones((A, B)) * 5 * (idx + 1)
+        for idx in range(D):
+            cfact_probe[idx] = np.ones((B, C)) * 5 * (idx + 1)
 
         gexit_wave = deepcopy(exit_wave)
         gprobe = deepcopy(probe)
@@ -873,7 +879,7 @@ class ConstraintsTest(unittest.TestCase):
                                    exit_wave,
                                    err_msg="The returned exit_waves are not consistent.")
 
-    def test_difference_map_iterator_with_probe_update(self):
+    def test_difference_map_iterator_with_no_probe_update_and_object_update(self):
         '''
         This test, assumes the logic below this function works fine, and just does some iterations of difference map on 
         some spoof data to check that the combination works.         
@@ -882,38 +888,47 @@ class ConstraintsTest(unittest.TestCase):
 
         pbound = 8.86e13 # this should now mean some of the arrays update differently through the logic
         alpha = 1.0  # feedback constant
-        num_object_modes = 1  # for example
-        num_probe_modes = 2  # for example
+        # diffraction frame size
+        B = 2  # for example
+        C = 4  # for example
 
-        N = 4  # number of measured points
-        M = N * num_object_modes * num_probe_modes  # exit wave length
-        A = 2  # for example
-        B = 4  # for example
+        # probe dimensions
+        D = 2  # for example
+        E = B
+        F = C
+
+        scan_pts = 2 # a 2x2 grid
+        N = scan_pts**2 # the number of measurement points in a scan
         npts_greater_than = int(np.sqrt(N))  # object is bigger than the probe by this amount
-        C = A + npts_greater_than
-        D = B + npts_greater_than
+
+        # object dimensions
+        G = 1  # for example
+        H = B + npts_greater_than
+        I = C + npts_greater_than
+
+        A = scan_pts ** 2 * G * D # number of exit waves
 
         err_fmag = np.empty(shape=(N,), dtype=FLOAT_TYPE)  # deviation from the diffraction pattern for each af
-        exit_wave = np.empty(shape=(M, A, B), dtype=COMPLEX_TYPE)  # exit wave
-        addr_info = np.empty(shape=(M, 5, 3), dtype=np.int32)  # the address book
-        diffraction = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
-        mask = np.empty(shape=(N, A, B),
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)  # exit wave
+        addr_info = np.empty(shape=(A, 5, 3), dtype=np.int32)  # the address book
+        diffraction = np.empty(shape=(N, B, C), dtype=FLOAT_TYPE)  # the measured intensities NxAxB
+        mask = np.empty(shape=(N, B, C),
                         dtype=np.int32)  # the masks for the measured magnitudes either 1xAxB or NxAxB
-        probe = np.empty(shape=(num_probe_modes, A, B), dtype=COMPLEX_TYPE)  # the probe function
-        obj = np.empty(shape=(num_object_modes, C, D), dtype=COMPLEX_TYPE)  # the object function
-        prefilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
-        postfilter = np.empty(shape=(A, B), dtype=COMPLEX_TYPE)
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)  # the probe function
+        obj = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)  # the object function
+        prefilter = np.empty(shape=(B, C), dtype=COMPLEX_TYPE)
+        postfilter = np.empty(shape=(B, C), dtype=COMPLEX_TYPE)
 
         # now fill it with stuff. Data won't ever look like this except in type and usage!
         diffraction_fill = np.arange(np.prod(diffraction.shape)).reshape(diffraction.shape).astype(diffraction.dtype)
         diffraction[:] = diffraction_fill
 
         obj_fill = np.array([ix + 1j * (ix ** 2) for ix in range(np.prod(obj.shape))]).reshape(
-            (num_object_modes, C, D))
+            (G, H, I))
         obj[:] = obj_fill
 
         probe_fill = np.array([ix + 1j * ix for ix in range(10, 10 + np.prod(probe.shape), 1)]).reshape(
-            (num_probe_modes, A, B))
+            (D, B, C))
         probe[:] = probe_fill
 
         prefilter.fill(30.0 + 2.0j)  # this would actually vary
@@ -922,32 +937,29 @@ class ConstraintsTest(unittest.TestCase):
         err_fmag[:] = err_fmag_fill  # this shouldn't be used as pbound is None
 
         exit_wave_fill = np.array(
-            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((M, A, B))
+            [ix ** 2 + 1j * ix for ix in range(20, 20 + np.prod(exit_wave.shape), 1)]).reshape((A, B, C))
         exit_wave[:] = exit_wave_fill
 
         mask_fill = np.ones_like(mask)
-        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        # mask_fill[::2, ::2] = 0  # checkerboard for testing
         mask[:] = mask_fill
 
-        pa = np.zeros((M, 3), dtype=np.int32)
-        for idx in range(num_probe_modes):
-            if idx > 0:
-                pa[::idx, 0] = idx  # multimodal could work like this, but this is not a concrete thing.
+        pa = np.zeros((A, 3), dtype=np.int32)
+        pa[:N,0] = 0
+        pa[N:, 0] = 1
 
         X, Y = np.meshgrid(range(npts_greater_than),
                            range(npts_greater_than))  # assume square scan grid. Again, not always true.
-        oa = np.zeros((M, 3), dtype=np.int32)
+        oa = np.zeros((A, 3), dtype=np.int32)
         oa[:N, 1] = X.ravel()
         oa[N:, 1] = X.ravel()
         oa[:N, 2] = Y.ravel()
         oa[N:, 2] = Y.ravel()
-        for idx in range(num_object_modes):
-            if idx > 0:
-                oa[::idx,
-                0] = idx  # multimodal could work like this, but this is not a concrete thing (less likely for object)
-        ea = np.array([np.array([ix, 0, 0]) for ix in range(M)])
-        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * num_probe_modes * num_object_modes)
-        ma = np.zeros((M, 3), dtype=np.int32)
+
+
+        ea = np.array([np.array([ix, 0, 0]) for ix in range(A)])
+        da = np.array([np.array([ix, 0, 0]) for ix in range(N)] * D * G)
+        ma = np.zeros((A, 3), dtype=np.int32)
 
         addr_info[:, 0, :] = pa
         addr_info[:, 1, :] = oa
@@ -955,20 +967,20 @@ class ConstraintsTest(unittest.TestCase):
         addr_info[:, 3, :] = da
         addr_info[:, 4, :] = ma
 
-        obj_weights = np.empty(shape=(num_object_modes,), dtype=FLOAT_TYPE)
-        obj_weights[:] = np.linspace(-1, 1, num_object_modes)
+        obj_weights = np.empty(shape=(G,), dtype=FLOAT_TYPE)
+        obj_weights[:] = np.linspace(-1, 1, G)
 
-        probe_weights = np.empty(shape=(num_probe_modes,), dtype=FLOAT_TYPE)
-        probe_weights[:] = np.linspace(-1, 1, num_probe_modes)
+        probe_weights = np.empty(shape=(D,), dtype=FLOAT_TYPE)
+        probe_weights[:] = np.linspace(-1, 1, D)
 
         cfact_object = np.empty_like(obj)
-        for idx in range(num_object_modes):
-            cfact_object[idx] = np.ones((C, D)) * 10 * (idx + 1)
+        for idx in range(G):
+            cfact_object[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         cfact_probe = np.empty_like(probe)
 
-        for idx in range(num_probe_modes):
-            cfact_probe[idx] = np.ones((A, B)) * 5 * (idx + 1)
+        for idx in range(D):
+            cfact_probe[idx] = np.ones((B, C)) * 5 * (idx + 1)
 
         gexit_wave = deepcopy(exit_wave)
         gprobe = deepcopy(probe)
