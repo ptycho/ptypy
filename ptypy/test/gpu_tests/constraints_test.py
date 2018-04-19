@@ -1053,8 +1053,120 @@ class ConstraintsTest(unittest.TestCase):
                                    exit_wave,
                                    err_msg="The returned exit_waves are not consistent.")
 
+    def test_engine_iterate_mathod(self):
+        num_probe_modes = 2  # number of modes
+        num_iters = 10  # number of iterations
+        frame_size = 64  # frame size
+        num_points = 50  # number of points in the scan (length of the diffraction array).
+        alpha = 1.0
+        mean_power = 9013.946875
+        pbound = 8.96912658691
+        for m in range(num_probe_modes):
+            PtychoInstanceVec = tu.get_ptycho_instance('testing_iterate', num_modes=m, size=frame_size,
+                                                       length=num_points)  # this one we run with GPU
+            vectorised_scan = du.pod_to_arrays(PtychoInstanceVec, 'S0000')
+            first_view_id = vectorised_scan['meta']['view_IDs'][0]
+            master_pod = PtychoInstanceVec.diff.V[first_view_id].pod
+            propagator = master_pod.geometry.propagator
+
+            # this is for the numpy based
+            diffraction = vectorised_scan['S0000']['diffraction']
+            obj = vectorised_scan['S0000']['obj']
+            probe = vectorised_scan['S0000']['probe']
+            mask = vectorised_scan['S0000']['mask']
+            exit_wave = vectorised_scan['S0000']['exit_wave']
+            addr_info = vectorised_scan['S0000']['addr_info']
+            object_weights = vectorised_scan['S0000']['object weights']
+            probe_weights = vectorised_scan['S0000']['probe weights']
+
+            prefilter = propagator.pre_fft
+            postfilter = propagator.post_fft
+            cfact_object = PtychoInstanceVec.p.object_inertia * mean_power * \
+                           (vectorised_scan['ob_viewcover'] + 1.)
+            cfact_probe = (PtychoInstanceVec.p.probe_inertia * len(addr_info) /
+                           vectorised_scan['S0000']['probe'].shape[0]) * np.ones_like(vectorised_scan['S0000']['probe'])
+
+            probe_support = np.zeros_like(probe)
+            X ,Y = np.meshgrid(range(probe.shape[1]), range(probe.shape[2]))
+            R = (0.7*probe.shape[1])/2
+            for idx in range(probe.shape[0]):
+                probe_support[idx, X**2 + Y**2 < R**2] = 1.0
+
+            # take exact copies for the gpu implementation
+            gdiffraction = deepcopy(diffraction)
+            gobj = deepcopy(diffraction)
+            gprobe = deepcopy(probe)
+            gmask = deepcopy(mask)
+            gexit_wave = deepcopy(exit_wave)
+            gaddr_info = deepcopy(addr_info)
+            gobject_weights = deepcopy(object_weights)
+            gprobe_weights = deepcopy(probe_weights)
+
+            gprefilter = deepcopy(prefilter)
+            gpostfilter = deepcopy(postfilter)
+            gcfact_object = deepcopy(cfact_object)
+            gcfact_probe = deepcopy(cfact_probe)
+
+            gpbound = deepcopy(pbound)
+            galpha = deepcopy(alpha)
+            gprobe_support = deepcopy(probe_support)
+
+            errors = con.difference_map_iterator(diffraction=diffraction,
+                                                 obj=obj,
+                                                 object_weights=object_weights,
+                                                 cfact_object=cfact_object,
+                                                 mask=mask,
+                                                 probe=probe,
+                                                 cfact_probe=cfact_probe,
+                                                 probe_support=probe_support,
+                                                 probe_weights=probe_weights,
+                                                 exit_wave=exit_wave,
+                                                 addr=addr_info,
+                                                 pre_fft=prefilter,
+                                                 post_fft=postfilter,
+                                                 pbound=pbound,
+                                                 overlap_max_iterations=10,
+                                                 update_object_first=False,
+                                                 obj_smooth_std=None,
+                                                 overlap_converge_factor=0.05,
+                                                 probe_center_tol=None,
+                                                 probe_update_start=1,
+                                                 alpha=alpha,
+                                                 clip_object=None,
+                                                 LL_error=True,
+                                                 num_iterations=num_iters)
+
+            gerrors = gcon.difference_map_iterator(diffraction=gdiffraction,
+                                                  obj=gobj,
+                                                  object_weights=gobject_weights,
+                                                  cfact_object=gcfact_object,
+                                                  mask=gmask,
+                                                  probe=gprobe,
+                                                  cfact_probe=gcfact_probe,
+                                                  probe_support=gprobe_support,
+                                                  probe_weights=gprobe_weights,
+                                                  exit_wave=gexit_wave,
+                                                  addr=gaddr_info,
+                                                  pre_fft=gprefilter,
+                                                  post_fft=gpostfilter,
+                                                  pbound=gpbound,
+                                                  overlap_max_iterations=10,
+                                                  update_object_first=False,
+                                                  obj_smooth_std=None,
+                                                  overlap_converge_factor=0.05,
+                                                  probe_center_tol=None,
+                                                  probe_update_start=1,
+                                                  alpha=galpha,
+                                                  clip_object=None,
+                                                  LL_error=True,
+                                                  num_iterations=num_iters)
 
 
+            np.testing.assert_allclose(gerrors, errors)
+            np.testing.assert_allclose(obj, gobj)
+            np.testing.assert_allclose(probe, gprobe)
+            np.testing.assert_allclose(exit_wave, gexit_wave)
+            np.testing.assert_allclose(probe, gprobe)
 
 if __name__ == '__main__':
     unittest.main()
