@@ -10,7 +10,7 @@ from ptypy import utils as u
 def print_array_info(a, name):
     print("{}: {}, {}".format(name, a.shape, a.dtype))
 
-def get_ptycho_instance(label=None, num_modes=1, size=64, length=8):
+def get_ptycho_instance(label=None, num_modes=1, frame_size=64, scan_length=8):
     '''
     new ptypy probably has a better way of doing this.
     '''
@@ -32,9 +32,9 @@ def get_ptycho_instance(label=None, num_modes=1, size=64, length=8):
     p.scans.MF.data.auto_center = None
     p.scans.MF.data.min_frames = 1
     p.scans.MF.data.orientation = None
-    p.scans.MF.data.num_frames =length
+    p.scans.MF.data.num_frames =scan_length
     p.scans.MF.data.energy = 6.2
-    p.scans.MF.data.shape = size
+    p.scans.MF.data.shape = frame_size
     p.scans.MF.data.chunk_format = '.chunk%02d'
     p.scans.MF.data.rebin = None
     p.scans.MF.data.experimentID = None
