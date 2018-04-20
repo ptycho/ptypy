@@ -9,13 +9,13 @@ This file is part of the PTYPY package.
 """
 
 import time
-from ..utils.verbose import logger
+
 from ..utils import parallel
 from DM_npy import DMNpy
 from ..utils.descriptor import defaults_tree
 from ..core.manager import Full, Vanilla
-
-
+from ptypy.gpu.constraints import difference_map_iterator
+import numpy as np
 
 __all__ = ['DMGpu']
 
@@ -126,136 +126,60 @@ class DMGpu(DMNpy):
         """
         Compute `num` iterations.
         """
-        to = 0.
-        tf = 0.
 
         for dID, _diffs in self.di.S.iteritems():
-            for it in range(num):
-                t1 = time.time()
 
-                error_dct = self.numpy_fourier_update(self.vectorised_scan[dID]['mask'],
-                                                      self.vectorised_scan[dID]['diffraction'],
-                                                      self.vectorised_scan[dID]['obj'],
-                                                      self.vectorised_scan[dID]['probe'],
-                                                      self.vectorised_scan[dID]['exit wave'],
-                                                      self.vectorised_scan[dID]['meta']['addr'],
-                                                      self.propagator[dID],
-                                                      pbound=self.pbound[dID])
+            cfact_probe = (self.p.probe_inertia * len(self.vectorised_scan[dID]['meta']['addr']) /
+                           self.vectorised_scan[dID]['probe'].shape[0]) * np.ones_like(
+                self.vectorised_scan[dID]['probe'])
 
-                t2 = time.time()
-                tf += t2 - t1
 
-                self.numpy_overlap_update(self.vectorised_scan[dID]['obj'],
-                                          self.vectorised_scan[dID]['object weights'],
-                                          self.vectorised_scan[dID]['object viewcover'],
-                                          self.vectorised_scan[dID]['probe'],
-                                          self.vectorised_scan[dID]['probe weights'],
-                                          self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]],
-                                          self.vectorised_scan[dID]['exit wave'],
-                                          self.mean_power,
-                                          self.vectorised_scan[dID]['meta']['addr'])
+            cfact_object = self.p.object_inertia * self.mean_power * (self.vectorised_scan[dID]['object viewcover'] + 1.)
 
-                t3 = time.time()
-                to += t3 - t2
 
-                # count up
-                self.curiter += 1
+            pre_fft = self.propagator[dID].pre_fft
+            post_fft = self.propagator[dID].post_fft
 
-        # self.mpi_numpy_overlap_update()
-        logger.info('Time spent in Fourier update: %.2f' % tf)
-        logger.info('Time spent in Overlap update: %.2f' % to)
-        error = parallel.gather_dict(error_dct)
+            errors =difference_map_iterator(diffraction=self.vectorised_scan[dID]['diffraction'],
+                                        obj=self.vectorised_scan[dID]['obj'],
+                                        object_weights=self.vectorised_scan[dID]['object weights'],
+                                        cfact_object=cfact_object,
+                                        mask=self.vectorised_scan[dID]['mask'],
+                                        probe=self.vectorised_scan[dID]['probe'],
+                                        cfact_probe=cfact_probe,
+                                        probe_support=self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]],
+                                        probe_weights=self.vectorised_scan[dID]['probe weights'],
+                                        exit_wave=self.vectorised_scan[dID]['exit wave'],
+                                        addr=self.vectorised_scan[dID]['meta']['addr'],
+                                        pre_fft=pre_fft,
+                                        post_fft=post_fft,
+                                        pbound=self.pbound[dID],
+                                        overlap_max_iterations=self.p.overlap_max_iterations,
+                                        update_object_first=self.p.update_object_first,
+                                        obj_smooth_std=self.p.obj_smooth_std,
+                                        overlap_converge_factor=self.p.overlap_converge_factor,
+                                        probe_center_tol=self.p.probe_center_tol,
+                                        probe_update_start=0,
+                                        alpha=self.p.alpha,
+                                        clip_object=self.p.clip_object,
+                                        LL_error=True,
+                                        num_iterations=num)
+
+
+            #yuk yuk yuk
+            error_dct = {}
+            print errors.shape
+            jx =0
+            for jx in range(num):
+                k = 0
+                for idx, name in self.di.views.iteritems():
+                    error_dct[idx] = errors[jx, :, k]
+                    k += 1
+                jx +=1
+                error = parallel.gather_dict(error_dct)
+
+            # count up
+            self.curiter += num
+
         return error
 
-    def numpy_fourier_update(self, mask, Idata, obj, probe, exit_wave, addr, propagator, pbound):
-        error_dct = {}
-
-        errors = difference_map_fourier_constraint(mask,
-                                                       Idata,
-                                                       obj,
-                                                       probe,
-                                                       exit_wave,
-                                                       addr,
-                                                       prefilter=propagator.pre_fft,
-                                                       postfilter=propagator.post_fft,
-                                                       pbound=pbound,
-                                                       alpha=self.p.alpha,
-                                                       LL_error=False)
-
-        k = 0
-        for idx, name in self.di.views.iteritems():
-            error_dct[idx] = errors[:, k]
-            k += 1
-
-        return error_dct
-
-
-def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter, pbound=None,
-                                      alpha=1.0, LL_error=True, do_realspace_error=True):
-    '''
-    This kernel just performs the fourier renormalisation.
-    :param mask. The nd mask array
-    :param diffraction. The nd diffraction data
-    :param farfield_stack. The current iterant.
-    :param addr. The addresses of the stacks.
-    :return: The updated iterant
-            : fourier errors
-    '''
-
-    # from ptypy.array_based.object_probe_interaction import scan_and_multiply
-    from ptypy.gpu.object_probe_interaction import scan_and_multiply
-    from ptypy.gpu.error_metrics import log_likelihood, far_field_error, realspace_error
-    from ptypy.gpu.object_probe_interaction import difference_map_realspace_constraint
-    from ptypy.gpu.constraints import get_difference #renormalise_fourier_magnitudes
-    # from ptypy.array_based.propagation import farfield_propagator
-    from ptypy.gpu.propagation import farfield_propagator
-    # from ptypy.array_based import array_utils as au
-    from ptypy.gpu import array_utils as au
-    from ptypy.array_based import FLOAT_TYPE
-    import numpy as np
-
-    # this seems to make a difference
-    # from ptypy.array_based.constraints import renormalise_fourier_magnitudes
-    from ptypy.gpu.constraints import renormalise_fourier_magnitudes# seg faults with nprobes=2, but works when it is 1
-
-
-    probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
-
-    # Buffer for accumulated photons
-    # For log likelihood error # need to double check this adp
-    if LL_error is True:
-        err_phot = log_likelihood(probe_object, mask, Idata, prefilter, postfilter, addr_info)
-    else:
-        err_phot = np.zeros(Idata.shape[0], dtype=FLOAT_TYPE)
-
-    constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
-    f = farfield_propagator(constrained, prefilter, postfilter, direction='forward')
-    pa, oa, ea, da, ma = zip(*addr_info)
-    af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)
-
-    fmag = np.sqrt(np.abs(Idata))
-    af = np.sqrt(af2)
-    # # Fourier magnitudes deviations(current_solution, pbound, measured_solution, mask, addr)
-    err_fmag = far_field_error(af, fmag, mask)
-
-    vectorised_rfm = renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
-
-    backpropagated_solution = farfield_propagator(vectorised_rfm,
-                                                  postfilter.conj(),
-                                                  prefilter.conj(),
-                                                  direction='backward')
-
-    df = get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
-
-    exit_wave += df
-    if do_realspace_error:
-        ea_first_column = np.array(ea)[:, 0]
-        da_first_column = np.array(da)[:, 0]
-        err_exit = realspace_error(df, ea_first_column, da_first_column, Idata.shape[0])
-    else:
-        err_exit = np.zeros((Idata.shape[0]))
-
-    if pbound is not None:
-        err_fmag /= pbound
-
-    return np.array([err_fmag, err_phot, err_exit])
