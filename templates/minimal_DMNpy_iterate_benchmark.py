@@ -43,7 +43,7 @@ p.engines = u.Param()
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DMGpu'
+p.engines.engine00.name = 'DMNpy'
 p.engines.engine00.numiter = 500
 # p.engines.engine00.overlap_max_iterations = 1
 # prepare and run
