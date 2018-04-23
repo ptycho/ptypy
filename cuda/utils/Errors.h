@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utils/Patches.h"
+
 #include <cuda_runtime.h>
 #include <cufft.h>
 #include <stdexcept>

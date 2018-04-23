@@ -3,6 +3,8 @@
 #include "utils/GpuManager.h"
 #include "utils/ScopedTimer.h"
 
+#include <cassert>
+
 /*********** Kernels ******************/
 
 template <int BlockX, int BlockY>
@@ -135,6 +137,7 @@ void ScanAndMultiply::run()
   // always use a 32x32 block of threads
   dim3 threadsPerBlock = {32, 32, 1u};
   dim3 blocks = {unsigned(addr_len_), 1u, 1u};
+
   scan_and_multiply_kernel<32, 32>
       <<<blocks, threadsPerBlock>>>(d_out_.get(),
                                     d_addr_info_.get(),

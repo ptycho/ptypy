@@ -15,7 +15,8 @@ public:
                         complex<float> *d_probe_obj,
                         complex<float> *d_out);
   void allocate();
-  complex<float>* getOutput() const;
+  void updateErrorInput(float *d_err_fmag);
+  complex<float> *getOutput() const;
   void transfer_in(const int *addr_info,
                    const complex<float> *backpropagated_solution,
                    const float *err_fmag,

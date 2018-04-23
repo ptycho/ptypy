@@ -114,15 +114,14 @@ def sqrt_abs(np.complex64_t [:,::1] diffraction not None):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def log_likelihood(probe_obj, mask, exit_wave, Idata, prefilter, postfilter, addr_info):
+def log_likelihood(probe_obj, mask, Idata, prefilter, postfilter, addr_info):
     cdef np.complex64_t [:,:,::1] probe_obj_c = np.ascontiguousarray(probe_obj)
-    cdef np.uint8_t [::1] mask_c = np.frombuffer(np.ascontiguousarray(mask), dtype=np.uint8)
-    cdef np.complex64_t [:,:,::1] exit_wave_c = np.ascontiguousarray(exit_wave)
+    cdef np.uint8_t [::1] mask_c = np.frombuffer(np.ascontiguousarray(mask.astype(np.bool)), dtype=np.uint8)
     cdef np.float32_t [:,:,::1] Idata_c = np.ascontiguousarray(Idata)
     cdef np.complex64_t [:,::1] prefilter_c = np.ascontiguousarray(prefilter)
     cdef np.complex64_t [:,::1] postfilter_c = np.ascontiguousarray(postfilter)
     cdef np.int32_t [:,:,::1] addr_info_c = np.ascontiguousarray(addr_info)
-    out = np.empty([92], np.float32)
+    out = np.empty(Idata.shape[0], np.float32)
     cdef np.float32_t [::1] out_c = out
     cdef int i = probe_obj.shape[0]
     cdef int m = probe_obj.shape[1]
@@ -130,7 +129,6 @@ def log_likelihood(probe_obj, mask, exit_wave, Idata, prefilter, postfilter, add
     log_likelihood_c(
         <const float*>&probe_obj_c[0,0,0],
         <const unsigned char*>&mask_c[0],
-        <const float*>&exit_wave_c[0,0,0],
         <const float*>&Idata_c[0,0,0],
         <const float*>&prefilter_c[0,0],
         <const float*>&postfilter_c[0,0],
@@ -348,7 +346,7 @@ def sum_to_buffer_stride(in1, outshape, addr_info, dtype):
 def far_field_error(current_solution, measured_solution, mask):
     cdef np.float32_t [:,:,::1] current_c = np.ascontiguousarray(current_solution)
     cdef np.float32_t [:,:,::1] measured_c = np.ascontiguousarray(measured_solution)
-    cdef np.uint8_t [::1] mask_c = np.frombuffer(np.ascontiguousarray(mask), dtype=np.uint8)
+    cdef np.uint8_t [::1] mask_c = np.frombuffer(np.ascontiguousarray(mask.astype(np.bool)), dtype=np.uint8)
     out = np.empty((current_c.shape[0],), np.float32)
     cdef np.float32_t [::1] out_c = out
     cdef i = current_solution.shape[0]
@@ -430,7 +428,7 @@ def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pboun
     cdef np.complex64_t [:,:,::1] f_c = np.ascontiguousarray(f)
     cdef np.float32_t [:,:,::1] af_c = np.ascontiguousarray(af)
     cdef np.float32_t [:, :, ::1] fmag_c = np.ascontiguousarray(fmag)
-    cdef np.uint8_t [::1] mask_c = np.frombuffer(np.ascontiguousarray(mask), dtype=np.uint8)
+    cdef np.uint8_t [::1] mask_c = np.frombuffer(np.ascontiguousarray(mask.astype(np.bool)), dtype=np.uint8)
     cdef np.float32_t [::1] err_fmag_c = np.ascontiguousarray(err_fmag.astype(np.float32))
     cdef np.int32_t [:,:,::1] addr_info_c = np.ascontiguousarray(addr_info)
     cdef pbound_c = 0.0
@@ -438,9 +436,16 @@ def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pboun
         pbound_c = pbound
     out = np.empty_like(f)
     cdef np.complex64_t [:,:,::1] out_c = out
-    cdef int i = f.shape[0]
-    cdef int m = f.shape[1]
-    cdef int n = f.shape[2]
+    cdef int M = f.shape[0]
+    cdef int N = fmag.shape[0]
+    cdef int A = f.shape[1]
+    cdef int B = f.shape[2]
+    assert(M == out.shape[0])
+    # assert(N == af.shape[0])
+    assert(N == mask.shape[0])
+    assert(N == err_fmag.shape[0])
+    assert(len(err_fmag.shape) == 1)
+    assert(M == addr_info.shape[0])
     renormalise_fourier_magnitudes_c(
         <const float*>&f_c[0,0,0],
         <const float*>&af_c[0,0,0],
@@ -450,7 +455,7 @@ def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pboun
         <const int*>&addr_info_c[0,0,0],
         pbound_c,
         <float*>&out_c[0,0,0],
-        i, m, n,
+        M, N, A, B,
         0 if pbound == None else 1
     )
     return out
@@ -458,7 +463,7 @@ def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pboun
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter, pbound=None, alpha=1.0, LL_error=True, do_realspace_error=True):
-    cdef np.uint8_t [::1] mask_c = np.frombuffer(np.ascontiguousarray(mask), dtype=np.uint8)
+    cdef np.uint8_t [::1] mask_c = np.frombuffer(np.ascontiguousarray(mask.astype(np.bool)), dtype=np.uint8)
     cdef np.float32_t [:,:,::1] Idata_c = np.ascontiguousarray(Idata)
     cdef np.complex64_t [:,:,::1] obj_c = np.ascontiguousarray(obj)
     cdef np.complex64_t [:,:,::1] probe_c = np.ascontiguousarray(probe)
@@ -474,21 +479,30 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_i
     cdef float pbound_c = 0.0
     if not pbound is None:
         pbound_c = pbound
-    errors = np.empty((3, exit_wave.shape[0]), dtype=np.float32)
+    errors = np.empty((3, mask.shape[0]), dtype=np.float32)
     cdef np.float32_t [:,::1] errors_c = errors
     cdef float alpha_c = alpha 
     cdef int doLLError = 1 if LL_error else 0
     cdef int doRealspaceError = 1 if do_realspace_error else 0
     cdef int doPbound = 0 if pbound == None else 1
-    cdef int ews0 = exit_wave.shape[0]
-    cdef int ews1 = exit_wave.shape[1]
-    cdef int ews2 = exit_wave.shape[2]
-    cdef int os0 = obj.shape[0]
-    cdef int os1 = obj.shape[1]
-    cdef int os2 = obj.shape[2]
-    cdef int ps0 = probe.shape[0]
-    cdef int ps1 = probe.shape[1]
-    cdef int ps2 = probe.shape[2]
+    cdef int M = exit_wave.shape[0]
+    cdef int A = exit_wave.shape[1]
+    cdef int B = exit_wave.shape[2]
+    cdef int ob_modes = obj.shape[0]
+    cdef int C = obj.shape[1]
+    cdef int D = obj.shape[2]
+    cdef int pr_modes = probe.shape[0]
+    cdef int N = mask.shape[0]
+    # assertions to make sure dimensions are as expected
+    assert(probe.shape[1] == A)
+    assert(probe.shape[2] == B)
+    assert(mask.shape[1] == A)
+    assert(mask.shape[2] == B)
+    assert(Idata.shape[0] == N)
+    assert(Idata.shape[1] == A)
+    assert(Idata.shape[2] == B)
+    assert(addr_info.shape[0] == M)
+    assert(errors.shape[1] == N)
     
     difference_map_fourier_constraint_c(
         <const unsigned char*>&mask_c[0],
@@ -503,13 +517,10 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_i
         doLLError,
         doRealspaceError,
         doPbound,
-        ews0,
-        ews1,
-        ews2,
-        os0, os1, os2,
-        ps0, ps1, ps2,
-        addr_info.shape[0],
-        Idata.shape[0],
+        M,
+        N,
+        A, B, C, D,
+        ob_modes, pr_modes,
         <float*>&errors_c[0,0]
     )
     return errors
@@ -733,3 +744,277 @@ def difference_map_update_probe(obj, probe_weights, probe, exit_wave, addr_info,
         <const float*>&probe_support_c[0,0,0],
         A,B,C,D,E,F,G,H,I
     )
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def difference_map_update_object(obj, object_weights, probe, exit_wave, addr_info, cfact_object, ob_smooth_std=None, clip_object=None):
+    # updated in-place, so can't use ascontiguousarray
+    cdef np.complex64_t [:,:,::1] obj_c = obj
+    cdef np.complex64_t [:,:,::1] probe_c = np.ascontiguousarray(probe)
+    cdef np.float32_t [::1] object_weights_c = np.ascontiguousarray(object_weights)
+    cdef np.complex64_t [:,:,::1] exit_wave_c = np.ascontiguousarray(exit_wave)
+    if not isinstance(addr_info, np.ndarray):
+        addr_info = np.array(addr_info, dtype=np.int32)
+    else:
+        addr_info = addr_info.astype(np.int32)
+    cdef np.int32_t [:,:,::1] addr_info_c = np.ascontiguousarray(addr_info)
+    cdef np.complex64_t [:,:,::1] cfact_object_c = np.ascontiguousarray(cfact_object)
+    cdef float ob_smooth_std_c = 0
+    cdef int doSmoothing = 0
+    cdef int doClipping = 0
+    if ob_smooth_std is not None:
+        ob_smooth_std_c = ob_smooth_std
+        doSmoothing = 1
+    cdef float clip_min_c = 0
+    cdef float clip_max_c = 0
+    if clip_object is not None:
+        clip_min_c = clip_object[0]
+        clip_max_c = clip_object[1]
+        doClipping = 1
+    cdef int A = exit_wave.shape[0]
+    cdef int B = exit_wave.shape[1]
+    cdef int C = exit_wave.shape[2]
+    cdef int D = probe.shape[0]
+    cdef int E = probe.shape[1]
+    cdef int F = probe.shape[2]
+    cdef int G = obj.shape[0]
+    cdef int H = obj.shape[1]
+    cdef int I = obj.shape[2]
+
+    difference_map_update_object_c(
+        <float*>&obj_c[0,0,0],
+        <const float*>&object_weights_c[0],
+        <const float*>&probe_c[0,0,0],
+        <const float*>&exit_wave_c[0,0,0],
+        <const int*>&addr_info_c[0,0,0],
+        <const float*>&cfact_object_c[0,0,0],
+        ob_smooth_std_c, clip_min_c, clip_max_c,
+        doSmoothing, doClipping,
+        A,B,C,D,E,F,G,H,I
+    )
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def difference_map_overlap_update(addr_info, cfact_object, cfact_probe, do_update_probe, exit_wave, ob, object_weights,
+                                  probe, probe_support, probe_weights,max_iterations, update_object_first,
+                                  obj_smooth_std, overlap_converge_factor, probe_center_tol, clip_object=None):
+    # updated in-place, so can't use ascontiguousarray
+    cdef np.complex64_t [:,:,::1] obj_c = ob
+    cdef np.complex64_t [:,:,::1] probe_c = probe
+    cdef np.float32_t [::1] object_weights_c = np.ascontiguousarray(object_weights)
+    cdef np.float32_t [::1] probe_weights_c = np.ascontiguousarray(probe_weights)
+    cdef np.complex64_t [:,:,::1] exit_wave_c = np.ascontiguousarray(exit_wave)
+    cdef np.complex64_t [:,:,::1] cfact_object_c = np.ascontiguousarray(cfact_object)
+    cdef np.complex64_t [:,:,::1] cfact_probe_c = np.ascontiguousarray(cfact_probe)
+    cdef np.complex64_t [:,:,::1] probe_support_c = None
+    if probe_support is not None:
+        probe_support_c = np.ascontiguousarray(probe_support)
+    if not isinstance(addr_info, np.ndarray):
+        addr_info = np.array(addr_info, dtype=np.int32)
+    else:
+        addr_info = addr_info.astype(np.int32)
+    cdef np.int32_t [:,:,::1] addr_info_c = np.ascontiguousarray(addr_info)
+    cdef float overlap_converge_factor_c = overlap_converge_factor
+    cdef int max_iterations_c = max_iterations
+
+    cdef int doUpdateObjectFirst = 0
+    cdef int doUpdateProbe = 0
+    cdef int doSmoothing = 0
+    cdef int doClipping = 0
+    cdef int doCentering = 0
+
+    cdef float ob_smooth_std_c = 0
+    cdef float clip_min_c = 0
+    cdef float clip_max_c = 0
+    cdef float probe_center_tol_c = 0
+
+    if update_object_first:
+        doUpdateObjectFirst = 1
+    if do_update_probe:
+        doUpdateProbe = 1
+    
+    if obj_smooth_std is not None:
+        ob_smooth_std_c = obj_smooth_std
+        doSmoothing = 1
+    
+    if clip_object is not None:
+        clip_min_c = clip_object[0]
+        clip_max_c = clip_object[1]
+        doClipping = 1
+    
+    if probe_center_tol is not None:
+        probe_center_tol_c = probe_center_tol
+        doCentering = 1
+    
+    cdef int A = exit_wave.shape[0]
+    cdef int B = exit_wave.shape[1]
+    cdef int C = exit_wave.shape[2]
+    cdef int D = probe.shape[0]
+    cdef int E = probe.shape[1]
+    cdef int F = probe.shape[2]
+    cdef int G = ob.shape[0]
+    cdef int H = ob.shape[1]
+    cdef int I = ob.shape[2]
+
+    difference_map_overlap_constraint_c(
+        <const int*>&addr_info_c[0,0,0],
+        <const float*>&cfact_object_c[0,0,0],
+        <const float*>&cfact_probe_c[0,0,0],
+        <const float*>&exit_wave_c[0,0,0],
+        <float*>&obj_c[0,0,0],
+        <const float*>&object_weights_c[0],
+        <float*>&probe_c[0,0,0],
+        <const float*>&probe_support_c[0,0,0],
+        <const float*>&probe_weights_c[0],
+        ob_smooth_std_c,
+        clip_min_c, clip_max_c,
+        probe_center_tol_c, overlap_converge_factor_c,
+        max_iterations_c, 
+        doUpdateObjectFirst, doUpdateProbe, doSmoothing,
+        doClipping, doCentering,
+        A, B, C, D, E, F, G, H, I
+    )
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def complex_gaussian_filter(input, mfs):
+    cdef int ndims = len(input.shape)
+    shape = np.ascontiguousarray(np.array(input.shape, dtype=np.int32))
+    cdef np.int32_t [::1] shape_c = shape
+    mfs = np.ascontiguousarray(np.array(mfs, dtype=np.float32))
+    cdef np.float32_t [::1] mfs_c = mfs 
+    if input.dtype != np.complex64:
+        raise NotImplementedError("only complex64 type is supported")
+    cdef np.complex64_t [::1] input_c = np.frombuffer(np.ascontiguousarray(input), dtype=np.complex64)
+    out = np.empty_like(input)
+    cdef np.complex64_t [::1] output_c = np.frombuffer(out, dtype=np.complex64)
+    complex_gaussian_filter_c(
+        <const float*>&input_c[0],
+        <float*>&output_c[0],
+        <const float*>&mfs_c[0],
+        len(shape),
+        <const int*>&shape_c[0]
+    )
+    return out
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def difference_map_iterator(diffraction, obj, object_weights, cfact_object, mask, probe, cfact_probe, probe_support,
+                            probe_weights, exit_wave, addr, pre_fft, post_fft, pbound, overlap_max_iterations, update_object_first,
+                            obj_smooth_std, overlap_converge_factor, probe_center_tol, probe_update_start, alpha=1,
+                            clip_object=None, LL_error=False, num_iterations=1, do_realspace_error=True):
+    cdef np.float32_t [:,:,::1] diffraction_c = np.ascontiguousarray(diffraction)
+    # updated in-place, so can't use ascontiguousarray
+    cdef np.complex64_t [:,:,::1] obj_c = obj
+    cdef np.float32_t [::1] object_weights_c = np.ascontiguousarray(object_weights)
+    cdef np.complex64_t [:,:,::1] cfact_object_c = np.ascontiguousarray(cfact_object)
+    # converted to np.bool if needed!
+    cdef np.uint8_t [::1] mask_c = np.frombuffer(np.ascontiguousarray(mask.astype(np.bool)), dtype=np.uint8)
+    # updated in-place, so can't use ascontiguousarray
+    cdef np.complex64_t [:,:,::1] probe_c = probe
+    cdef np.complex64_t [:,:,::1] cfact_probe_c = np.ascontiguousarray(cfact_probe)
+    cdef np.complex64_t [:,:,::1] probe_support_c = None
+    if probe_support is not None:
+        probe_support_c = np.ascontiguousarray(probe_support)
+    cdef np.float32_t [::1] probe_weights_c = np.ascontiguousarray(probe_weights)
+    # updated in-place, so can't use ascontiguousarray
+    cdef np.complex64_t [:,:,::1] exit_wave_c = exit_wave
+        
+    if not isinstance(addr, np.ndarray):
+        addr_info = np.array(addr, dtype=np.int32)
+    else:
+        addr_info = addr.astype(np.int32)
+    cdef np.int32_t [:,:,::1] addr_info_c = np.ascontiguousarray(addr_info)
+    cdef np.complex64_t [:,::1] pre_fft_c = np.ascontiguousarray(pre_fft)
+    cdef np.complex64_t [:,::1] post_fft_c = np.ascontiguousarray(post_fft)
+    errors = np.empty((num_iterations, 3, diffraction.shape[0]), dtype=np.float32)
+    cdef np.float32_t [:,:,::1] errors_c = errors
+
+    cdef float pbound_c = 0.0
+    cdef int doPbound = 0
+    if not pbound is None:
+        pbound_c = pbound
+        doPbound = 1
+
+    cdef int overlap_max_iterations_c = overlap_max_iterations
+
+    cdef int doUpdateObjectFirst = 0
+    if update_object_first:
+        doUpdateObjectFirst = 1
+    
+    cdef float ob_smooth_std_c = 0
+    cdef int doSmoothing = 0
+    if obj_smooth_std is not None:
+        ob_smooth_std_c = obj_smooth_std
+        doSmoothing = 1
+
+    cdef float overlap_converge_factor_c = overlap_converge_factor
+
+    cdef int doCentering = 0
+    cdef float probe_center_tol_c = 0
+    if probe_center_tol is not None:
+        probe_center_tol_c = probe_center_tol
+        doCentering = 1
+
+    cdef int probe_update_start_c = probe_update_start
+    cdef float alpha_c = alpha
+
+    cdef int doClipping = 0
+    cdef float clip_min_c = 0
+    cdef float clip_max_c = 0
+    if clip_object is not None:
+        clip_min_c = clip_object[0]
+        clip_max_c = clip_object[1]
+        doClipping = 1
+
+    cdef int do_LL_Error = 0
+    if LL_error:
+        do_LL_Error = 1
+    
+    cdef int doRealspaceError = 0
+    if do_realspace_error:
+        doRealspaceError = 1
+    
+    cdef int num_iterations_c = num_iterations
+    
+    cdef int A = exit_wave.shape[0]
+    cdef int B = exit_wave.shape[1]
+    cdef int C = exit_wave.shape[2]
+    cdef int D = probe.shape[0]
+    cdef int E = probe.shape[1]
+    cdef int F = probe.shape[2]
+    cdef int G = obj.shape[0]
+    cdef int H = obj.shape[1]
+    cdef int I = obj.shape[2]
+    cdef int N = diffraction.shape[0]
+
+    difference_map_iterator_c(
+        <const float*>&diffraction_c[0,0,0],
+        <float*>&obj_c[0,0,0],
+        <const float*>&object_weights_c[0],
+        <const float*>&cfact_object_c[0,0,0],
+        <const unsigned char*>&mask_c[0],
+        <float*>&probe_c[0,0,0],
+        <const float*>&cfact_probe_c[0,0,0],
+        <const float*>&probe_support_c[0,0,0],
+        <const float*>&probe_weights_c[0],
+        <float*>&exit_wave_c[0,0,0],
+        <const int*>&addr_info_c[0,0,0],
+        <const float*>&pre_fft_c[0,0],
+        <const float*>&post_fft_c[0,0],
+        <float*>&errors_c[0,0,0],
+        pbound_c,
+        overlap_max_iterations_c,
+        doUpdateObjectFirst,
+        ob_smooth_std_c,
+        overlap_converge_factor_c,
+        probe_center_tol_c,
+        probe_update_start_c,
+        alpha_c,
+        clip_min_c, clip_max_c,
+        do_LL_Error, doRealspaceError,
+        num_iterations_c,
+        A, B, C, D, E, F, G, H, I, N,
+        doSmoothing, doClipping, doCentering, doPbound
+    )
+    return errors

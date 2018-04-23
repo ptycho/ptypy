@@ -32,7 +32,7 @@ def difference_map_update_object(ob, object_weights, probe, exit_wave, addr_info
 
     if ob_smooth_std is not None:
         smooth_mfs = [ob_smooth_std, ob_smooth_std]
-        ob = cfact_object * complex_gaussian_filter(ob, smooth_mfs)
+        ob[:] = cfact_object * complex_gaussian_filter(ob, smooth_mfs)
     else:
         ob *= cfact_object
 

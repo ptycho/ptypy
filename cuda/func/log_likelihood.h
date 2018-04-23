@@ -25,7 +25,9 @@ public:
                         int *d_indices,
                         int outidx_size);
   int calculateAddrIndices(const int *out1_addr);
+  void calculateUniqueDaIndices(const int *da_addr);
   void allocate();
+  void updateErrorOutput(float *d_out);
   float *getOutput() const;
   void transfer_in(const complex<float> *probe_obj,
                    const unsigned char *mask,
@@ -47,12 +49,15 @@ private:
   DevicePtrWrapper<float> d_LL_;
   // internal buffer for intermediate results
   DevicePtrWrapper<complex<float>> d_ft_;
+  DevicePtrWrapper<float> d_abs2_ft_;
   // these three are for bookkeeping between setDeviceBuffers and allocate
   // so that they can be forwarded to sum2buffer
   int *d_outidx_ = nullptr;
   int *d_startidx_ = nullptr;
   int *d_indices_ = nullptr;
   int outidx_size_ = 0;
+  // unique indices for da
+  DevicePtrWrapper<int> d_da_unique_;
 
   int i_ = 0, m_ = 0, n_ = 0, addr_i_ = 0;
   int Idata_i_ = 0;

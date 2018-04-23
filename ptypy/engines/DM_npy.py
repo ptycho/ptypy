@@ -19,7 +19,7 @@ from ..array_based import constraints as con
 from ..array_based import object_probe_interaction as opi
 import numpy as np
 import sys
-from memory_profiler import profile
+#from memory_profiler import profile
 __all__ = ['DMNpy']
 
 

@@ -92,6 +92,11 @@ void RealspaceError::allocate()
   d_out_.allocate(outlen_);
 }
 
+void RealspaceError::updateErrorOutput(float *d_out) 
+{ 
+  d_out_ = d_out; 
+}
+
 void RealspaceError::transfer_in(const complex<float> *difference,
                                  const int *ea_first_column,
                                  const int *da_first_column)

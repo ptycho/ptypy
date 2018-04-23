@@ -86,6 +86,11 @@ void GetDifference::allocate()
   d_out_.allocate(i_ * m_ * n_);
 }
 
+void GetDifference::updateErrorInput(float *d_err_fmag)
+{
+  d_err_fmag_ = d_err_fmag;
+}
+
 complex<float> *GetDifference::getOutput() const { return d_out_.get(); }
 
 void GetDifference::transfer_in(const int *addr_info,

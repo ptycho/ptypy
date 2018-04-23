@@ -6,7 +6,7 @@
 
 /********* kernels *****************/
 
-__global__ void multiply_kernel(const complex<float>* in1,
+static __global__ void multiply_kernel(const complex<float>* in1,
                                 const complex<float>* in2,
                                 complex<float>* out,
                                 int n)
@@ -17,7 +17,7 @@ __global__ void multiply_kernel(const complex<float>* in1,
   out[gid] = in1[gid] * in2[gid];
 }
 
-__global__ void diff_kernel(const complex<float>* a,
+static __global__ void diff_kernel(const complex<float>* a,
                             const complex<float>* b,
                             complex<float>* res,
                             int n)
@@ -119,7 +119,8 @@ void DifferenceMapUpdateProbe::allocate()
                                                   d_buffer_.get(),
                                                   d_addr_info_.get(),
                                                   d_probe_weights_.get(),
-                                                  d_cfact_probe_.get());
+                                                  d_cfact_probe_.get(),
+                                                  nullptr);
   extract_array_from_exit_wave_->allocate();
 
   norm2_probe_->setDeviceBuffers(d_buffer_.get(),

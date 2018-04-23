@@ -2,6 +2,7 @@
 #include <complex>
 
 // doing this on the CPU for now - this isn't needed anywhere on its own
+// - this was used as a test for the cython interfacing
 extern "C" void sqrt_abs_c(const float *in, float *out, int m, int n)
 {
   auto cin = reinterpret_cast<const std::complex<float> *>(in);

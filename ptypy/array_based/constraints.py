@@ -62,6 +62,7 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_i
     
     
     constrained = difference_map_realspace_constraint(probe_object, exit_wave, alpha)
+
     f = farfield_propagator(constrained, prefilter, postfilter, direction='forward')
     pa, oa, ea, da, ma = zip(*addr_info)
     af2 = au.sum_to_buffer(au.abs2(f), Idata.shape, ea, da, dtype=FLOAT_TYPE)
@@ -78,7 +79,10 @@ def difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_i
                                                   prefilter.conj(),
                                                   direction='backward')
 
+    
     df = get_difference(addr_info, alpha, backpropagated_solution, err_fmag, exit_wave, pbound, probe_object)
+
+    
 
     exit_wave += df
     if do_realspace_error:
@@ -100,7 +104,7 @@ def difference_map_iterator(diffraction, obj, object_weights, cfact_object, mask
                             clip_object=None, LL_error=False, num_iterations=1):
     curiter = 0
 
-    errors = np.zeros((num_iterations, 3, len(diffraction)), dtype=COMPLEX_TYPE)
+    errors = np.zeros((num_iterations, 3, len(diffraction)), dtype=FLOAT_TYPE)
     for it in range(num_iterations):
         if (((it+1) % 10) == 0) and (it>0):
             print("iteration:%s" % (it+1)) # it's probably a good idea to print this if possible for some idea of progress

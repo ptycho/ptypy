@@ -79,16 +79,10 @@ extensions = [
         library_dirs=libdirs,
         depends=[
             'build/cuda/libgpu_extension.a',
-            #'cuda/*.cu',
-            #'cuda/*.h',
-            #'cuda/CMakeLists.txt'
             ],
         language="c++"
     )
 ]
-
-
-
 
 
 

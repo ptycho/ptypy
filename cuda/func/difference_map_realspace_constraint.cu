@@ -29,7 +29,7 @@ DifferenceMapRealspaceConstraint::DifferenceMapRealspaceConstraint()
 {
 }
 
-void DifferenceMapRealspaceConstraint::setParameters(int i, int m, int n) 
+void DifferenceMapRealspaceConstraint::setParameters(int i, int m, int n)
 {
   i_ = i;
   m_ = m;
@@ -104,9 +104,7 @@ extern "C" void difference_map_realspace_constraint_c(
   auto out = reinterpret_cast<complex<float> *>(fout);
 
   auto dmc = gpuManager.get_cuda_function<DifferenceMapRealspaceConstraint>(
-    "dm_realspace_constraint",
-    i, m, n
-    );
+      "dm_realspace_constraint", i, m, n);
   dmc->allocate();
   dmc->transfer_in(obj_and_probe, exit_wave);
   dmc->run(alpha);

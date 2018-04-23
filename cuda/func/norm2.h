@@ -17,7 +17,7 @@ public:
   void transfer_out(float* output);
 
 private:
-  static const int BLOCK_SIZE = 1024;  // TODO: max-size = BLOCK_SIZE * BLOCK_SIZE!! 
+  static const int BLOCK_SIZE = 1024;
   DevicePtrWrapper<T> d_input_;
   DevicePtrWrapper<float> d_intermediate_;
   DevicePtrWrapper<float> d_output_;

@@ -165,93 +165,6 @@ class ArrayUtilsTest(unittest.TestCase):
         
         np.testing.assert_array_equal(s1, s2)
 
-        s1 = au.sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype=FLOAT_TYPE)
-        s2 = gau.sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype=FLOAT_TYPE)
-
-        np.testing.assert_array_equal(s1, s2)
-        
-    def test_sum_to_buffer_stride_real_UNITY(self):
-
-        in1 = np.array([np.ones((4, 4)),
-                        np.ones((4, 4))*2.0,
-                        np.ones((4, 4))*3.0,
-                        np.ones((4, 4))*4.0], dtype=FLOAT_TYPE)
-
-        outshape = (2, 4, 4)
-        
-        addr_info = np.zeros((4, 5, 3), dtype=np.int)
-        addr_info[:,2,:] = np.array([(0, 0, 0),
-                            (1, 0, 0),
-                            (2, 0, 0),
-                            (3, 0, 0)])
-
-        addr_info[:,3,:] = np.array([(0, 0, 0),
-                              (1, 0, 0),
-                              (0, 0, 0),
-                              (1, 0, 0)])
-
-        s1 = au.sum_to_buffer(in1, outshape, addr_info[:,2,:], addr_info[:,3,:], dtype=FLOAT_TYPE)
-        s2 = gau.sum_to_buffer_stride(in1, outshape, addr_info, dtype=FLOAT_TYPE)
-        
-        np.testing.assert_array_equal(s1, s2)
-
-    def test_sum_to_buffer_complex_UNITY(self):
-
-        in1 = np.array([np.ones((4,4)),
-                        np.ones((4, 4))*2.0,
-                        np.ones((4, 4))*3.0,
-                        np.ones((4, 4))*4.0], dtype=FLOAT_TYPE) \
-            + 1j*np.array([np.ones((4,4)),
-                        np.ones((4, 4))*2.0,
-                        np.ones((4, 4))*3.0,
-                        np.ones((4, 4))*4.0], dtype=FLOAT_TYPE)
-
-        outshape = (2, 4, 4)
-        
-        in1_addr = np.array([(0, 0, 0),
-                            (1, 0, 0),
-                            (2, 0, 0),
-                            (3, 0, 0)])
-
-        out1_addr = np.array([(0, 0, 0),
-                              (1, 0, 0),
-                              (0, 0, 0),
-                              (1, 0, 0)])
-
-        s1 = au.sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype=in1.dtype)
-        s2 = gau.sum_to_buffer(in1, outshape, in1_addr, out1_addr, dtype=in1.dtype)
-
-        np.testing.assert_array_equal(s1, s2)
-    
-    def test_sum_to_buffer_stride_complex_UNITY(self):
-
-        in1 = np.array([np.ones((4,4)),
-                        np.ones((4, 4))*2.0,
-                        np.ones((4, 4))*3.0,
-                        np.ones((4, 4))*4.0], dtype=FLOAT_TYPE) \
-            + 1j*np.array([np.ones((4,4)),
-                        np.ones((4, 4))*2.0,
-                        np.ones((4, 4))*3.0,
-                        np.ones((4, 4))*4.0], dtype=FLOAT_TYPE)
-
-        outshape = (2, 4, 4)
-        
-        addr_info = np.zeros((4, 5, 3), dtype=np.int)
-        addr_info[:,2,:] = np.array([(0, 0, 0),
-                            (1, 0, 0),
-                            (2, 0, 0),
-                            (3, 0, 0)])
-
-        addr_info[:,3,:] = np.array([(0, 0, 0),
-                              (1, 0, 0),
-                              (0, 0, 0),
-                              (1, 0, 0)])
-
-        s1 = au.sum_to_buffer(in1, outshape, addr_info[:,2,:], addr_info[:,3,:], dtype=in1.dtype)
-        s2 = gau.sum_to_buffer_stride(in1, outshape, addr_info, dtype=in1.dtype)
-        
-        np.testing.assert_array_equal(s1, s2)
-
 
     def test_norm2_1d_real_UNITY(self):
         a = np.array([1.0, 2.0], dtype=FLOAT_TYPE)
@@ -303,23 +216,52 @@ class ArrayUtilsTest(unittest.TestCase):
         outg = gau.norm2(a)
         np.testing.assert_array_equal(out, outg)
 
-    @unittest.skip("This method is not implemented yet")
+    def test_complex_gaussian_filter_1d_UNITY(self):
+        data = np.zeros((11,), dtype=COMPLEX_TYPE)
+        data[5] = 1.0 +1.0j
+        mfs = [1.0]
+        out = au.complex_gaussian_filter(data, mfs)
+        outg = gau.complex_gaussian_filter(data, mfs)
+        #for i in xrange(11):
+        #    print("{} vs {}".format(out[i], outg[i]))
+        np.testing.assert_allclose(out, outg, rtol=1e-6)
+
+    def test_complex_gaussian_filter_2d_simple_UNITY(self):
+        data = np.zeros((11, 11), dtype=COMPLEX_TYPE)
+        data[5, 5] = 1.0+1.0j
+        mfs = 1.0,0.0
+        out = au.complex_gaussian_filter(data, mfs)
+        outg = gau.complex_gaussian_filter(data, mfs)
+        np.testing.assert_allclose(out, outg, rtol=1e-6)
+
+    def test_complex_gaussian_filter_2d_simple2_UNITY(self):
+        data = np.zeros((11, 11), dtype=COMPLEX_TYPE)
+        data[5, 5] = 1.0+1.0j
+        mfs = 0.0,1.0
+        out = au.complex_gaussian_filter(data, mfs)
+        outg = gau.complex_gaussian_filter(data, mfs)
+        np.testing.assert_allclose(out, outg, rtol=1e-6)
+
     def test_complex_gaussian_filter_2d_UNITY(self):
         data = np.zeros((8, 8), dtype=COMPLEX_TYPE)
         data[3:5, 3:5] = 2.0+2.0j
         mfs = 3.0,4.0
         out = au.complex_gaussian_filter(data, mfs)
         outg = gau.complex_gaussian_filter(data, mfs)
-        np.testing.assert_array_almost_equal(np.diagonal(out), np.diagonal(outg))
+        np.testing.assert_allclose(out, outg, rtol=1e-6)
 
-    @unittest.skip("This method is not implemented yet")
-    def test_complex_gaussian_filter_3d_UNITY(self):
-        data = np.zeros((4, 4, 4), dtype=COMPLEX_TYPE)
-        data[2:3, 2:3, 2:3] = 2.0+2.0j
-        mfs = 2.0,3.0,4.0
+    def test_complex_gaussian_filter_2d_batched(self):
+        batch_number = 2
+        A = 5
+        B = 5
+
+        data = np.zeros((batch_number, A, B), dtype=COMPLEX_TYPE)
+        data[:, 2:3, 2:3] = 2.0+2.0j
+        mfs = 3.0,4.0
         out = au.complex_gaussian_filter(data, mfs)
         gout = gau.complex_gaussian_filter(data, mfs)
-        np.testing.assert_array_almost_equal(np.diagonal(out), np.diagonal(gout))
+        
+        np.testing.assert_allclose(out, gout, rtol=1e-6)
 
     def test_mass_center_2d_simple(self):
         data = np.array([[0,0,0,0],

@@ -1,7 +1,7 @@
 #include "far_field_error.h"
 
-#include "utils/ScopedTimer.h"
 #include "utils/GpuManager.h"
+#include "utils/ScopedTimer.h"
 
 /************* Kernels **********************/
 
@@ -16,7 +16,6 @@ __global__ void far_field_error_kernel(const float *current,
   int batch = blockIdx.x;
   int tx = threadIdx.x;
   int ty = threadIdx.y;
-
 
   extern __shared__ float sum_v[];
   auto sum_mask = (int *)(sum_v + BlockX * BlockY);
@@ -94,6 +93,8 @@ void FarFieldError::allocate()
   d_mask_.allocate(i_ * m_ * n_);
   d_out_.allocate(i_);
 }
+
+void FarFieldError::updateErrorOutput(float *d_out) { d_out_ = d_out; }
 
 float *FarFieldError::getOutput() const { return d_out_.get(); }
 

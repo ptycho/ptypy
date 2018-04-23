@@ -44,7 +44,7 @@ __global__ void applyPostfilter(complex<float> *data,
 
 cufftHandle FFTPlanManager::get_or_create_plan(int i, int m, int n)
 {
-  auto key = std::make_tuple(i, m, n);
+  key_t key{i, m, n};
   if (plans_.find(key) == plans_.end())
   {
     cufftHandle plan;
@@ -56,28 +56,33 @@ cufftHandle FFTPlanManager::get_or_create_plan(int i, int m, int n)
     checkCudaErrors(cufftMakePlanMany(
         plan, 2, dims, 0, 0, 0, 0, 0, 0, CUFFT_C2C, i, &workSize));
 #ifndef NDEBUG
-    debug_addMemory((void *)&plan, workSize);
+    debug_addMemory((void *)long(plan), workSize);
     std::cout << "Made FFT Plan for " << m << "x" << n << ", batch=" << i
               << std::endl;
-    std::cout << "Allocated " << (void *)plan
-              << ", total: " << double(debug_getMemory()) / 1024 / 1024
-              << std::endl;
+    std::cout << "Allocated " << (void *)long(plan)
+              << ", total: " << double(debug_getMemory()) << std::endl;
 #endif
   }
 
   return plans_[key];
 }
 
-FFTPlanManager::~FFTPlanManager()
+void FFTPlanManager::clearCache()
 {
   for (auto &item : plans_)
   {
     cufftDestroy(item.second);
 #ifndef NDEBUG
-    debug_freeMemory((void *)item.second);
+    std::cout << "Freeing for FFT plan " << (void *)long(item.second)
+              << std::endl;
+    debug_freeMemory((void *)long(item.second));
+    std::cout << "Total allocated: " << double(debug_getMemory()) << std::endl;
 #endif
   }
+  plans_.clear();
 }
+
+FFTPlanManager::~FFTPlanManager() { clearCache(); }
 
 /******************************/
 
@@ -171,7 +176,6 @@ void FarfieldPropagator::run(bool doPreFilter,
                      reinterpret_cast<cufftComplex *>(indata),
                      reinterpret_cast<cufftComplex *>(d_dataout_.get()),
                      CUFFT_FORWARD));
-    // std::cout << "running forward" << std::endl;
   }
   else
   {
@@ -180,7 +184,6 @@ void FarfieldPropagator::run(bool doPreFilter,
                      reinterpret_cast<cufftComplex *>(indata),
                      reinterpret_cast<cufftComplex *>(d_dataout_.get()),
                      CUFFT_INVERSE));
-    // std::cout << "running reverse" << std::endl;
   }
 
   if (doPostFilter)

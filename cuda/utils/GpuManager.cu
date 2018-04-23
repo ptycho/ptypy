@@ -34,7 +34,6 @@ void GpuManager::selectDevice(int dev)
   }
   selectedDevice_ = dev;
 
-
   // not initialised yet
   if (fftDummyHandles_[dev] == 0)
   {
@@ -43,71 +42,63 @@ void GpuManager::selectDevice(int dev)
   }
 }
 
-int GpuManager::getNumDevices() const {
-    return int(properties_.size());
+int GpuManager::getNumDevices() const { return int(properties_.size()); }
+
+std::string GpuManager::getDeviceName(int id) const
+{
+  return properties_[id].name;
 }
 
-std::string GpuManager::getDeviceName(int id) const {
-    return properties_[id].name;
+int GpuManager::getDeviceComputeCapability(int id) const
+{
+  return properties_[id].major * 10 + properties_[id].minor;
 }
 
-int GpuManager::getDeviceComputeCapability(int id) const {
-    return properties_[id].major * 10 + properties_[id].minor;
+int GpuManager::getDeviceMemoryMB(int id) const
+{
+  return int(properties_[id].totalGlobalMem / 1024ul / 1024ul);
 }
 
-int GpuManager::getDeviceMemoryMB(int id) const {
-    return int(properties_[id].totalGlobalMem / 1024ul / 1024ul);
-}
-
-void GpuManager::resetFunctionCache() {
-  functions_cache_.clear();
-}
+void GpuManager::resetFunctionCache() { functions_cache_.clear(); }
 
 GpuManager::~GpuManager()
 {
-  for (int i = 0, ni = int(fftDummyHandles_.size()); i < ni; ++i) {
-      if (fftDummyHandles_[i] != 0) {
-        cudaSetDevice(i);
-        cufftDestroy(fftDummyHandles_[i]);
-        cudaDeviceReset();
-      }
+  for (int i = 0, ni = int(fftDummyHandles_.size()); i < ni; ++i)
+  {
+    if (fftDummyHandles_[i] != 0)
+    {
+      cudaSetDevice(i);
+      cufftDestroy(fftDummyHandles_[i]);
+      cudaDeviceReset();
+    }
   }
 }
+
+// for memory tracking - see Memory.cpp
+// needs to be here so that it gets destructed
+// after the GpuManager object
+std::map<void*, size_t> alloc_map_;
+size_t alloc_total = 0;
 
 // instatiate the object
 GpuManager gpuManager;
 
-
 /**** interface functions for python ******/
 
-extern "C" {
-
-int get_num_gpus_c() {
-  return gpuManager.getNumDevices();
-}
-
-int get_gpu_compute_capability_c(int dev)
+extern "C"
 {
-  return gpuManager.getDeviceComputeCapability(dev);
-}
+  int get_num_gpus_c() { return gpuManager.getNumDevices(); }
 
-void select_gpu_device_c(int dev) {
-  gpuManager.selectDevice(dev);
-}
+  int get_gpu_compute_capability_c(int dev)
+  {
+    return gpuManager.getDeviceComputeCapability(dev);
+  }
 
-int get_gpu_memory_mb_c(int dev)
-{
-  return gpuManager.getDeviceMemoryMB(dev);
-}
+  void select_gpu_device_c(int dev) { gpuManager.selectDevice(dev); }
 
-std::string get_gpu_name_c(int dev)
-{
-  return gpuManager.getDeviceName(dev);
-}
+  int get_gpu_memory_mb_c(int dev) { return gpuManager.getDeviceMemoryMB(dev); }
 
-void reset_function_cache_c()
-{
-  gpuManager.resetFunctionCache();
-}
+  std::string get_gpu_name_c(int dev) { return gpuManager.getDeviceName(dev); }
 
+  void reset_function_cache_c() { gpuManager.resetFunctionCache(); }
 }

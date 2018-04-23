@@ -40,7 +40,7 @@ class ErrorMetricTest(unittest.TestCase):
         probe_object = scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
         
         ll = log_likelihood(probe_object, mask, diffraction, propagator.pre_fft, propagator.post_fft, addr_info)
-        gll = glog_likelihood(probe_object, mask, exit_wave, diffraction, propagator.pre_fft, propagator.post_fft, addr_info)
+        gll = glog_likelihood(probe_object, mask, diffraction, propagator.pre_fft, propagator.post_fft, addr_info)
         np.testing.assert_allclose(ll, gll, rtol=1e-6, atol=5e-4)
 
     def test_far_field_error_UNITY(self):

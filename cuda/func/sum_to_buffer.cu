@@ -111,17 +111,7 @@ void SumToBuffer<T>::allocate()
 {
   ScopedTimer t(this, "allocate");
   d_in1_.allocate(in1_0_ * in1_1_ * in1_2_);
-  /*
-  if (!d_out_.isExternal() && os_0_ * os_1_ * os_2_ <= in1_0_ * in1_1_ * in1_2_)
-  {
-    d_out_ = d_in1_.get();
-  }
-  else
-  {
-    */
-    d_out_.allocate(os_0_ * os_1_ * os_2_);
-
-  //}
+  d_out_.allocate(os_0_ * os_1_ * os_2_);
   d_in1_addr_.allocate(in1_addr_0_ * addr_stride_);
   d_out1_addr_.allocate(out1_addr_0_ * addr_stride_);
   if (!outidx_.empty())

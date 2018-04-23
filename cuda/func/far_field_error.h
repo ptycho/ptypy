@@ -12,7 +12,8 @@ public:
                         unsigned char *d_mask,
                         float *d_out);
   void allocate();
-  float* getOutput() const;
+  void updateErrorOutput(float *d_out);
+  float *getOutput() const;
   void transfer_in(const float *current,
                    const float *measured,
                    const unsigned char *mask);

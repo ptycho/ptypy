@@ -71,7 +71,7 @@ class ConstraintsRegressionTest(unittest.TestCase):
 
 
         out = con.renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound)
-        np.testing.assert_allclose(out, expected_out)
+        np.testing.assert_allclose(out, expected_out, rtol=1e-6)
 
 
     def test_renormalise_fourier_magnitudes_pbound_not_none(self):

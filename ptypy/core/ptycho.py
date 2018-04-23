@@ -610,7 +610,7 @@ class Ptycho(Base):
                     # err = np.array(info['error'].values()).mean(0)
                     err = info['error']
                     logger.info('Iteration #%(iteration)d of %(engine)s :: '
-                                'Time %(duration).2f' % info)
+                                'Time %(duration).3f' % info)
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, '
                                 'Exit %.2e' % tuple(err))
 

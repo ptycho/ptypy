@@ -268,7 +268,6 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         self.assertAlmostEqual(err, gerr, 6)
         np.testing.assert_array_equal(array_to_be_updated, garray_to_be_updated)
 
-    #@unittest.skip("This method is not implemented yet")
     def test_difference_map_update_probe_UNITY_without_support(self):
         '''
         This tests difference_map_update_probe, which wraps extract_array_from_exit_wave
@@ -338,7 +337,6 @@ class ObjectProbeInteractionTest(unittest.TestCase):
 
         np.testing.assert_array_equal(array_to_be_updated, garray_to_be_updated)
 
-    @unittest.skip("This method is not implemented yet")
     def test_difference_map_update_object_with_no_smooth_or_clip_UNITY(self):
         B = 5
         C = 5
@@ -397,13 +395,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         addr_info  = zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr)
 
         garray_to_be_updated = deepcopy(array_to_be_updated)
+        gcfact = deepcopy(cfact)
         opi.difference_map_update_object(array_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info, cfact, ob_smooth_std=None, clip_object=None)
         gopi.difference_map_update_object(garray_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info,
-                                         cfact, ob_smooth_std=None, clip_object=None)
+                                         gcfact, ob_smooth_std=None, clip_object=None)
 
         np.testing.assert_array_equal(array_to_be_updated, garray_to_be_updated)
 
-    @unittest.skip("This method is not implemented yet")
     def test_difference_map_update_object_with_smooth_but_no_clip_UNITY(self):
         B = 5
         C = 5
@@ -460,16 +458,22 @@ class ObjectProbeInteractionTest(unittest.TestCase):
 
         dummy_addr = np.zeros_like(extract_addr) #  these aren't used by the function, but are passed as a top level address book
         addr_info  = zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr)
-        obj_smooth_std = 2 # integer
+        obj_smooth_std = 2.0 # integer
 
         garray_to_be_updated = deepcopy(array_to_be_updated)
-        opi.difference_map_update_object(array_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info, cfact, ob_smooth_std=obj_smooth_std, clip_object=None)
         gopi.difference_map_update_object(garray_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info,
                                          cfact, ob_smooth_std=obj_smooth_std, clip_object=None)
+        opi.difference_map_update_object(array_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info, cfact, ob_smooth_std=obj_smooth_std, clip_object=None)
 
-        np.testing.assert_array_equal(array_to_be_updated, garray_to_be_updated)
+        print("Gpu={}".format(garray_to_be_updated))
+        print("Cpu={}".format(array_to_be_updated))
 
-    @unittest.skip("This method is not implemented yet")
+        np.testing.assert_allclose(
+            array_to_be_updated, 
+            garray_to_be_updated,
+            rtol=1e-6
+            )
+
     def test_difference_map_update_object_with_no_smooth_but_clipping_UNITY(self):
         B = 5
         C = 5
@@ -529,11 +533,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         clip = (0.8, 1.0)
 
         garray_to_be_updated = deepcopy(array_to_be_updated)
+        gcfact = deepcopy(cfact)
         opi.difference_map_update_object(array_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info, cfact, ob_smooth_std=None, clip_object=clip)
         gopi.difference_map_update_object(garray_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info,
-                                         cfact, ob_smooth_std=None, clip_object=clip)
+                                         gcfact, ob_smooth_std=None, clip_object=clip)
 
-        np.testing.assert_array_equal(array_to_be_updated, garray_to_be_updated)
+        np.testing.assert_allclose(array_to_be_updated, garray_to_be_updated)
+
     
     def test_center_probe_no_change_UNITY(self):
         npts = 64
@@ -649,7 +655,6 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         gobj = deepcopy(obj)
         gprobe = deepcopy(probe)
 
-
         opi.difference_map_overlap_update(addr_info=addr_info,
                                           cfact_object=cfact_object,
                                           cfact_probe=cfact_probe,
@@ -684,11 +689,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
                                           probe_center_tol=None,
                                           clip_object=None)
 
-        np.testing.assert_array_equal(gprobe,
-                                      probe,
-                                      err_msg="The gpu and numpy probes are different.")
-        np.testing.assert_array_equal(gobj,
+        np.testing.assert_allclose(gprobe,
+                                   probe,
+                                   rtol=1e-6,
+                                   err_msg="The gpu and numpy probes are different.")
+        np.testing.assert_allclose(gobj,
                                       obj,
+                                      rtol=1e-6,
                                       err_msg="The gpu and numpy object are different.")
 
     def test_difference_map_overlap_update_test_order_of_updates_b(self):
@@ -805,11 +812,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
                                           probe_center_tol=None,
                                           clip_object=None)
 
-        np.testing.assert_array_equal(gprobe,
+        np.testing.assert_allclose(gprobe,
                                       probe,
+                                      rtol=1e-6,
                                       err_msg="The gpu and numpy probes are different.")
-        np.testing.assert_array_equal(gobj,
+        np.testing.assert_allclose(gobj,
                                       obj,
+                                      rtol=1e-6,
                                       err_msg="The gpu and numpy object are different.")
 
     def test_difference_map_overlap_update_test_order_of_updates_c(self):
@@ -927,11 +936,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
                                           probe_center_tol=None,
                                           clip_object=None)
 
-        np.testing.assert_array_equal(gprobe,
+        np.testing.assert_allclose(gprobe,
                                       probe,
+                                      rtol=1e-6,
                                       err_msg="The gpu and numpy probes are different.")
-        np.testing.assert_array_equal(gobj,
+        np.testing.assert_allclose(gobj,
                                       obj,
+                                      rtol=1e-6,
                                       err_msg="The gpu and numpy object are different.")
 
     def test_difference_map_overlap_update_test_order_of_updates_d(self):
@@ -1049,11 +1060,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
                                           probe_center_tol=None,
                                           clip_object=None)
 
-        np.testing.assert_array_equal(gprobe,
+        np.testing.assert_allclose(gprobe,
                                       probe,
+                                      rtol=1e-6,
                                       err_msg="The gpu and numpy probes are different.")
-        np.testing.assert_array_equal(gobj,
+        np.testing.assert_allclose(gobj,
                                       obj,
+                                      rtol=1e-6,
                                       err_msg="The gpu and numpy object are different.")
 
 
@@ -1073,7 +1086,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
         update_object_first = False
         do_update_probe = True
         # both the object and the probe are updated
-        ocf  = 1.4e-3 # chosen so that this should terminate on teh 26th iteration
+        ocf  = 4.2e-2 # chosen so that this should terminate on teh 6th iteration
 
         # create some inputs - I should really make this a utility...
         B = 5
@@ -1243,11 +1256,13 @@ class ObjectProbeInteractionTest(unittest.TestCase):
                                           probe_center_tol=None,
                                           clip_object=None)
 
-        np.testing.assert_array_equal(gprobe,
+        np.testing.assert_allclose(gprobe,
                                       probe,
+                                      rtol=5e-5,
                                       err_msg="The gpu and numpy probes are different.")
-        np.testing.assert_array_equal(gobj,
+        np.testing.assert_allclose(gobj,
                                       obj,
+                                      rtol=5e-5,
                                       err_msg="The gpu and numpy object are different.")
 
 

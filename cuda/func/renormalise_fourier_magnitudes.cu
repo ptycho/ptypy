@@ -3,7 +3,9 @@
 #include "utils/GpuManager.h"
 #include "utils/ScopedTimer.h"
 
+#include <cassert>
 #include <cmath>
+#include <cstdio>
 
 /********** kernels *****************/
 
@@ -17,8 +19,8 @@ __global__ void renormalise_fourier_magnitudes_kernel(const complex<float> *f,
                                                       const int *addr_info,
                                                       complex<float> *out,
                                                       float pbound,
-                                                      int M,
-                                                      int N)
+                                                      int A,
+                                                      int B)
 {
   using std::sqrt;
 
@@ -42,13 +44,13 @@ __global__ void renormalise_fourier_magnitudes_kernel(const complex<float> *f,
   auto ma_1 = 0;
   auto ma_2 = 0;
 
-  for (int i = tx; i < M; i += blockDim.x)
+  for (int i = tx; i < A; i += blockDim.x)
   {
-    for (int j = ty; j < N; j += blockDim.y)
+    for (int j = ty; j < B; j += blockDim.y)
     {
-      auto maidx = ma_0 * M * N + (ma_1 + i) * N + (ma_2 + j);
-      auto eaidx = ea_0 * M * N + (ea_1 + i) * N + (ea_2 + j);
-      auto daidx = da_0 * M * N + (da_1 + i) * N + (da_2 + j);
+      auto maidx = ma_0 * A * B + (ma_1 + i) * B + (ma_2 + j);
+      auto eaidx = ea_0 * A * B + (ea_1 + i) * B + (ea_2 + j);
+      auto daidx = da_0 * A * B + (da_1 + i) * B + (da_2 + j);
 
       auto m = mask[maidx];
       auto magnitudes = fmag[daidx];
@@ -59,9 +61,10 @@ __global__ void renormalise_fourier_magnitudes_kernel(const complex<float> *f,
       if (!usePbound)
       {
         auto fm = m ? magnitudes / (absolute_magnitudes + 1e-10f) : 1.0f;
-        out[eaidx] = fm * fourier_space_solution;
+        auto v = fm * fourier_space_solution;
+        out[eaidx] = v;
       }
-      else if (err_fmag[ea_0] > pbound)
+      else if (fourier_error > pbound)
       {
         // power bound is applied
         auto fdev = absolute_magnitudes - magnitudes;
@@ -86,11 +89,12 @@ RenormaliseFourierMagnitudes::RenormaliseFourierMagnitudes()
 {
 }
 
-void RenormaliseFourierMagnitudes::setParameters(int i, int m, int n)
+void RenormaliseFourierMagnitudes::setParameters(int M, int N, int A, int B)
 {
-  i_ = i;
-  m_ = m;
-  n_ = n;
+  M_ = M;
+  N_ = N;
+  A_ = A;
+  B_ = B;
 }
 
 void RenormaliseFourierMagnitudes::setDeviceBuffers(complex<float> *d_f,
@@ -113,13 +117,18 @@ void RenormaliseFourierMagnitudes::setDeviceBuffers(complex<float> *d_f,
 void RenormaliseFourierMagnitudes::allocate()
 {
   ScopedTimer t(this, "allocate");
-  d_f_.allocate(i_ * m_ * n_);
-  d_af_.allocate(i_ * m_ * n_);
-  d_fmag_.allocate(i_ * m_ * n_);
-  d_mask_.allocate(i_ * m_ * n_);
-  d_err_fmag_.allocate(i_);
-  d_addr_info_.allocate(i_ * 5 * 3);
-  d_out_.allocate(i_ * m_ * n_);
+  d_f_.allocate(M_ * A_ * B_);
+  d_af_.allocate(N_ * A_ * B_);
+  d_fmag_.allocate(N_ * A_ * B_);
+  d_mask_.allocate(N_ * A_ * B_);
+  d_err_fmag_.allocate(N_);
+  d_addr_info_.allocate(M_ * 5 * 3);
+  d_out_.allocate(M_ * A_ * B_);
+}
+
+void RenormaliseFourierMagnitudes::updateErrorInput(float *d_err_fmag)
+{
+  d_err_fmag_ = d_err_fmag;
 }
 
 complex<float> *RenormaliseFourierMagnitudes::getOutput() const
@@ -135,12 +144,12 @@ void RenormaliseFourierMagnitudes::transfer_in(const complex<float> *f,
                                                const int *addr_info)
 {
   ScopedTimer t(this, "transfer in");
-  gpu_memcpy_h2d(d_f_.get(), f, i_ * m_ * n_);
-  gpu_memcpy_h2d(d_af_.get(), af, i_ * m_ * n_);
-  gpu_memcpy_h2d(d_fmag_.get(), fmag, i_ * m_ * n_);
-  gpu_memcpy_h2d(d_mask_.get(), mask, i_ * m_ * n_);
-  gpu_memcpy_h2d(d_err_fmag_.get(), err_fmag, i_);
-  gpu_memcpy_h2d(d_addr_info_.get(), addr_info, i_ * 5 * 3);
+  gpu_memcpy_h2d(d_f_.get(), f, M_ * A_ * B_);
+  gpu_memcpy_h2d(d_af_.get(), af, N_ * A_ * B_);
+  gpu_memcpy_h2d(d_fmag_.get(), fmag, N_ * A_ * B_);
+  gpu_memcpy_h2d(d_mask_.get(), mask, N_ * A_ * B_);
+  gpu_memcpy_h2d(d_err_fmag_.get(), err_fmag, N_);
+  gpu_memcpy_h2d(d_addr_info_.get(), addr_info, M_ * 5 * 3);
 }
 
 void RenormaliseFourierMagnitudes::run(float pbound, bool usePbound)
@@ -149,7 +158,8 @@ void RenormaliseFourierMagnitudes::run(float pbound, bool usePbound)
 
   // always use a 32x32 block of threads
   dim3 threadsPerBlock = {32, 32, 1u};
-  dim3 blocks = {unsigned(i_), 1u, 1u};
+  dim3 blocks = {unsigned(M_), 1u, 1u};
+
   if (usePbound)
   {
     renormalise_fourier_magnitudes_kernel<true>
@@ -161,8 +171,8 @@ void RenormaliseFourierMagnitudes::run(float pbound, bool usePbound)
                                       d_addr_info_.get(),
                                       d_out_.get(),
                                       pbound,
-                                      m_,
-                                      n_);
+                                      A_,
+                                      B_);
     checkLaunchErrors();
   }
   else
@@ -176,8 +186,8 @@ void RenormaliseFourierMagnitudes::run(float pbound, bool usePbound)
                                       d_addr_info_.get(),
                                       d_out_.get(),
                                       pbound,
-                                      m_,
-                                      n_);
+                                      A_,
+                                      B_);
     checkLaunchErrors();
   }
 
@@ -187,29 +197,31 @@ void RenormaliseFourierMagnitudes::run(float pbound, bool usePbound)
 void RenormaliseFourierMagnitudes::transfer_out(complex<float> *out)
 {
   ScopedTimer t(this, "transfer out");
-  gpu_memcpy_d2h(out, d_out_.get(), i_ * m_ * n_);
+  gpu_memcpy_d2h(out, d_out_.get(), M_ * A_ * B_);
 }
 
 /********* interface function *********/
 
-extern "C" void renormalise_fourier_magnitudes_c(const float *f_f,
-                                                 const float *af,
-                                                 const float *fmag,
-                                                 const unsigned char *mask,
-                                                 const float *err_fmag,
-                                                 const int *addr_info,
-                                                 float pbound,
-                                                 float *f_out,
-                                                 int i,
-                                                 int m,
-                                                 int n,
-                                                 int usePbound)
+extern "C" void renormalise_fourier_magnitudes_c(
+    const float *f_f,           // M x A x B
+    const float *af,            // N x A x B
+    const float *fmag,          // N x A x B
+    const unsigned char *mask,  // N x A x B
+    const float *err_fmag,      // N
+    const int *addr_info,       // M x 5 x 3
+    float pbound,
+    float *f_out,  // M x A x B
+    int M,
+    int N,
+    int A,
+    int B,
+    int usePbound)
 {
   auto f = reinterpret_cast<const complex<float> *>(f_f);
   auto out = reinterpret_cast<complex<float> *>(f_out);
 
   auto rfm = gpuManager.get_cuda_function<RenormaliseFourierMagnitudes>(
-      "renormalise_fourier_magnitudes", i, m, n);
+      "renormalise_fourier_magnitudes", M, N, A, B);
   rfm->allocate();
   rfm->transfer_in(f, af, fmag, mask, err_fmag, addr_info);
   rfm->run(pbound, usePbound != 0);

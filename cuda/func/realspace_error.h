@@ -14,6 +14,7 @@ public:
                         int* d_da_first_column,
                         float* d_out);
   void allocate();
+  void updateErrorOutput(float* d_out);
   void transfer_in(const complex<float>* difference,
                    const int* ea_first_column,
                    const int* da_first_column);

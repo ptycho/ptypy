@@ -34,7 +34,7 @@ __global__ void extract_array_from_exit_wave_kernel(
     int I,
     const int* update_addr,
     const float* weights,
-    complex<float>* cfact,
+    complex<float>* denominator,
     int addr_stride)
 {
   // one block per addr instance
@@ -46,13 +46,12 @@ __global__ void extract_array_from_exit_wave_kernel(
   auto oa = extract_addr + bid * addr_stride;
   auto ea = exit_addr + bid * addr_stride;
 
-  
   array_to_be_extracted += oa[0] * E * F + oa[1] * F + oa[2];
   array_to_be_updated += pa[0] * H * I + pa[1] * I + pa[2];
-  cfact += pa[0] * H * I + pa[1] * I + pa[2];
- 
-  assert(pa[0] * H * I + pa[1] * I + pa[2] + (B-1)* I + C-1 < G*H*I);
- 
+  denominator += pa[0] * H * I + pa[1] * I + pa[2];
+
+  assert(pa[0] * H * I + pa[1] * I + pa[2] + (B - 1) * I + C - 1 < G * H * I);
+
   auto weight = weights[pa[0]];
   exit_wave += ea[0] * B * C;
 
@@ -64,21 +63,21 @@ __global__ void extract_array_from_exit_wave_kernel(
       auto extracted_array_conj = conj(extracted_array);
       atomicAdd(&array_to_be_updated[b * I + c],
                 extracted_array_conj * exit_wave[b * C + c] * weight);
-      atomicAdd(&cfact[b * I + c],
+      atomicAdd(&denominator[b * I + c],
                 extracted_array * extracted_array_conj * weight);
     }
   }
 }
 
 template <int BlockX>
-__global__ void div_by_cfact(complex<float>* array_to_be_updated,
-                             const complex<float>* cfact,
-                             int n)
+__global__ void div_by_denominator(complex<float>* array_to_be_updated,
+                                   const complex<float>* denominator,
+                                   int n)
 {
   int gid = threadIdx.x + blockIdx.x * blockDim.x;
   if (gid >= n)
     return;
-  array_to_be_updated[gid] /= cfact[gid];
+  array_to_be_updated[gid] /= denominator[gid];
 }
 
 /*********** class implementation *********/
@@ -111,7 +110,8 @@ void ExtractArrayFromExitWave::setDeviceBuffers(
     complex<float>* d_array_to_be_updated,
     int* d_update_addr,
     float* d_weights,
-    complex<float>* d_cfact)
+    complex<float>* d_cfact,
+    complex<float>* d_denominator)
 {
   d_exit_wave_ = d_exit_wave;
   d_exit_addr_ = d_exit_addr;
@@ -121,6 +121,7 @@ void ExtractArrayFromExitWave::setDeviceBuffers(
   d_update_addr_ = d_update_addr;
   d_weights_ = d_weights;
   d_cfact_ = d_cfact;
+  d_denominator_ = d_denominator;
 }
 
 void ExtractArrayFromExitWave::allocate()
@@ -135,6 +136,7 @@ void ExtractArrayFromExitWave::allocate()
   d_update_addr_.allocate(A_ * addr_stride_);
   d_weights_.allocate(G_);
   d_cfact_.allocate(G_ * H_ * I_);
+  d_denominator_.allocate(G_ * H_ * I_);
 }
 
 void ExtractArrayFromExitWave::transfer_in(
@@ -165,6 +167,8 @@ void ExtractArrayFromExitWave::run()
 {
   ScopedTimer t(this, "run");
 
+  gpu_memcpy_d2d(d_denominator_.get(), d_cfact_.get(), G_ * H_ * I_);
+
   // we used one block per updateidx
   dim3 threadsPerBlock = {32u, 32u, 1u};
   dim3 blocks = {unsigned(A_), 1u, 1u};
@@ -185,14 +189,14 @@ void ExtractArrayFromExitWave::run()
                                     I_,
                                     d_update_addr_.get(),
                                     d_weights_.get(),
-                                    d_cfact_.get(),
+                                    d_denominator_.get(),
                                     addr_stride_);
   checkLaunchErrors();
 
-  int total = A_ * B_ * C_;
+  int total = G_ * H_ * I_;
   int blocks2 = (total + 255) / 256;
-  div_by_cfact<256>
-      <<<blocks2, 256>>>(d_array_to_be_updated_.get(), d_cfact_.get(), total);
+  div_by_denominator<256><<<blocks2, 256>>>(
+      d_array_to_be_updated_.get(), d_denominator_.get(), total);
 
   checkLaunchErrors();
   timing_sync();

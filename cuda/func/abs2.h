@@ -11,7 +11,7 @@ public:
   void setParameters(size_t n);
   void setDeviceBuffers(Tin *d_datain, Tout *d_dataout);
   void allocate();
-  Tout* getOutput() const;
+  Tout *getOutput() const;
   void transfer_in(const Tin *datain);
   void transfer_out(Tout *dataout);
   void run();

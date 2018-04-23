@@ -337,10 +337,12 @@ class ConstraintsRegressionTest(unittest.TestCase):
                                                     do_realspace_error=True)
         np.testing.assert_allclose(out,
                                    gout,
+                                   rtol=1e-6,
                                    err_msg="The returned errors are not consistent.")
 
         np.testing.assert_allclose(exit_wave,
                                    gexit_wave,
+                                   rtol=1e-6,
                                    err_msg="The expected in-place update of the exit wave didn't work properly.")
 
 
@@ -530,10 +532,12 @@ class ConstraintsRegressionTest(unittest.TestCase):
                                                     do_realspace_error=True)
         np.testing.assert_allclose(out,
                                    gout,
+                                   rtol=1e-6,
                                    err_msg="The returned errors are not consistent.")
 
         np.testing.assert_allclose(exit_wave,
                                    gexit_wave,
+                                   rtol=1e-6,
                                    err_msg="The expected in-place update of the exit wave didn't work properly.")
 
 

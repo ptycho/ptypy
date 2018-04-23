@@ -6,7 +6,7 @@
 
 /** Used as base class for all CUDA functions.
  *
- * Mainly used for factoring out gpu timing events, using 
+ * Mainly used for factoring out gpu timing events, using
  * ScopedTimer inside the child.
  */
 class CudaFunction

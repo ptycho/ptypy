@@ -139,16 +139,18 @@ class DMGpu(DMNpy):
 
             pre_fft = self.propagator[dID].pre_fft
             post_fft = self.propagator[dID].post_fft
+            psupp = self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]].astype(np.complex64)
+            #print("{}, {}".format(psupp.shape, psupp.dtype))
 
             errors =difference_map_iterator(diffraction=self.vectorised_scan[dID]['diffraction'],
                                         obj=self.vectorised_scan[dID]['obj'],
-                                        object_weights=self.vectorised_scan[dID]['object weights'],
+                                        object_weights=self.vectorised_scan[dID]['object weights'].astype(np.float32),
                                         cfact_object=cfact_object,
                                         mask=self.vectorised_scan[dID]['mask'],
                                         probe=self.vectorised_scan[dID]['probe'],
                                         cfact_probe=cfact_probe,
-                                        probe_support=self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]],
-                                        probe_weights=self.vectorised_scan[dID]['probe weights'],
+                                        probe_support=psupp, #self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]],
+                                        probe_weights=self.vectorised_scan[dID]['probe weights'].astype(np.float32),
                                         exit_wave=self.vectorised_scan[dID]['exit wave'],
                                         addr=self.vectorised_scan[dID]['meta']['addr'],
                                         pre_fft=pre_fft,
@@ -183,3 +185,4 @@ class DMGpu(DMNpy):
 
         return error
 
+    
