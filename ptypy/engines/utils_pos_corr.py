@@ -6,6 +6,8 @@ from ..core import View
 from ..core.classes import DEFAULT_ACCESSRULE
 from ..utils import parallel
 from ..utils.verbose import log
+import matplotlib.pyplot as plt
+plt.switch_backend("QT5Agg")
 import numpy as np
 import os
 import sys
@@ -239,7 +241,7 @@ def pos_ref(obj):
     log(4, "Pos ref time: " + str(t_pos_f - t_pos_s))
 
 
-def get_fourier_error(di_view, object):
+def get_fourier_error(di_view, object, threshold=0):
     """
     Calculates the fourier error for a given diffractin view and a numpy array which contains the corresponding object.
     (Stolen from the DM engine)
@@ -254,6 +256,9 @@ def get_fourier_error(di_view, object):
 
     for name, pod in di_view.pods.iteritems():
         probe = np.copy(pod.probe)
+        max = np.max(probe)
+        probe[probe < max*threshold] = 0
+
         # If there multiple incoherent modes calculate the accumulated diffraction pattern
         af2 += np.abs(pod.fw(probe*object))**2
 

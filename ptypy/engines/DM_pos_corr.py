@@ -13,8 +13,6 @@ import sys
 import time
 from .. import utils as u
 # This is needed for parallesiation and position correction
-from ..core import View
-from ..core.classes import DEFAULT_ACCESSRULE
 import utils_pos_corr as pos_corr
 # new imports end
 from ..utils.verbose import logger, log
@@ -117,12 +115,9 @@ class DM_pos_corr(BaseEngine):
             mean_power += s.tot_power/np.prod(s.shape)
         self.mean_power = mean_power / len(self.di.storages)
 
-        # Fill object with coverage of views
-        # this is only testing
+        # The size of the object might have been changed
         self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
-        # creepy fix??
         self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
-        # testing end
 
         for name, s in self.ob_viewcover.storages.iteritems():
             s.fill(s.get_view_coverage())
@@ -150,7 +145,7 @@ class DM_pos_corr(BaseEngine):
             to += t3 - t2
 
             # count up
-            self.curiter +=1
+            self.curiter += 1
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
@@ -233,7 +228,7 @@ class DM_pos_corr(BaseEngine):
             # Update object first
             if self.p.update_object_first or (inner > 0):
                 # Update object
-                log(4,pre_str + '----- object update -----')
+                log(4, pre_str + '----- object update -----')
                 self.object_update()
 
             # Exit if probe should not be updated yet
@@ -241,9 +236,9 @@ class DM_pos_corr(BaseEngine):
                 break
 
             # Update probe
-            log(4,pre_str + '----- probe update -----')
+            log(4, pre_str + '----- probe update -----')
             change = self.probe_update()
-            log(4,pre_str + 'change in probe is %.3f' % change)
+            log(4, pre_str + 'change in probe is %.3f' % change)
 
             # Recenter the probe
             self.center_probe()
@@ -301,7 +296,6 @@ class DM_pos_corr(BaseEngine):
                     s.data[:] = cfact * u.c_gf(s.data, smooth_mfs)
                 else:
                     s.data[:] = s.data * cfact
-
                 ob_nrm.storages[name].fill(cfact)
 
         # DM update per node
@@ -410,181 +404,3 @@ class DM_pos_corr(BaseEngine):
             os.makedirs(directory)
 
         np.savetxt(directory + "pos_" + str(self.p.name) + "_" + str(self.curiter).zfill(4) + ".txt", coords)
-
-    # def single_pos_ref(self, pod_name):
-    #     pod = self.pods[pod_name]
-    #     # Monte Carlo parameter
-    #     number_rand_shifts = self.p.number_rand_shifts  # should be a multiple of 4
-    #     pxl_size_obj = self.ob.S.values()[0].psize[0]  # Pixel size in the object plane
-    #     num_pixel = 15.
-    #     end = self.p.pos_ref_stop
-    #     start = self.p.pos_ref_start
-    #     it = self.curiter
-    #     max_shift_dist = pxl_size_obj * num_pixel * (end - it) / (end - start)
-    #
-    #     if max_shift_dist < pxl_size_obj * 3.:
-    #         # smallest distance is 3 pixel in every direction
-    #         max_shift_dist = pxl_size_obj * 3.
-    #
-    #     max_shift_allowed = self.p.max_shift_allowed
-    #     delta = np.zeros((number_rand_shifts, 2))   # coordinate shift
-    #     errors = np.zeros(number_rand_shifts)       # calculated error for the shifted position
-    #     coord = np.copy(pod.ob_view.coord)
-    #     self.ar.coord = coord
-    #     self.ar.storageID = pod.ob_view.storageID
-    #     # Create temporal object view that can be shifted without reformatting
-    #
-    #     ob_view_temp = View(self.temp_ob, accessrule=self.ar)
-    #
-    #     # This can be optimized by saving existing iteration fourier error...
-    #     error_inital = self.get_fourier_error_view(pod_name, ob_view_temp)
-    #
-    #     for i in range(number_rand_shifts):
-    #
-    #         delta_y = np.random.uniform(0, max_shift_dist)
-    #         delta_x = np.random.uniform(0, max_shift_dist)
-    #
-    #         if i % 4 == 1:
-    #             delta_y *= -1
-    #             delta_x *= -1
-    #         elif i % 4 == 2:
-    #             delta_x *= -1
-    #         elif i % 4 == 3:
-    #             delta_y *= -1
-    #
-    #         delta[i, 0] = delta_y
-    #         delta[i, 1] = delta_x
-    #
-    #         rand_coord = [coord[0] + delta_y, coord[1] + delta_x]
-    #         norm = np.linalg.norm(rand_coord - self.initial_pos[int(pod_name[1:]), :])
-    #
-    #         if norm > max_shift_allowed:
-    #             # log(4, "Position drifted too far!")
-    #             errors[i] = error_inital + 1.
-    #             continue
-    #
-    #         self.ar.coord = rand_coord
-    #         ob_view_temp = View(self.temp_ob, accessrule=self.ar)
-    #
-    #         if ob_view_temp.dlow[0] < 0:
-    #             ob_view_temp.dlow[0] = 0
-    #
-    #         if ob_view_temp.dlow[1] < 0:
-    #             ob_view_temp.dlow[1] = 0
-    #
-    #         shape = (256, 256)  # still has to be changed
-    #         new_obj = np.zeros(shape)
-    #
-    #         if ob_view_temp.data.shape != (256, 256):
-    #             # if the data of the view has the wrong shape, zero-pad the data
-    #             # new data for calculating the fourier transform
-    #             # calculate limits of the grid
-    #             ymin = self.ob.storages["S00G00"].grids()[0][0, 0, 0]
-    #             ymax = self.ob.storages["S00G00"].grids()[0][0, -1, -1]
-    #             xmin = self.ob.storages["S00G00"].grids()[1][0, 0, 0]
-    #             xmax = self.ob.storages["S00G00"].grids()[1][0, -1, -1]
-    #
-    #             # check if the new array would be bigger
-    #             new_xmin = rand_coord[1] - (pxl_size_obj * shape[1] / 2.)
-    #             new_xmax = rand_coord[1] + pxl_size_obj * shape[1] / 2.
-    #             new_ymin = rand_coord[0] - (pxl_size_obj * shape[0] / 2.)
-    #             new_ymax = rand_coord[0] + pxl_size_obj * shape[0] / 2.
-    #
-    #             # probably not needed
-    #             from copy import copy
-    #
-    #             idx_x_low = 0
-    #             idx_x_high = shape[1]
-    #             idx_y_low = 0
-    #             idx_y_high = shape[0]
-    #
-    #             if new_ymin < ymin:
-    #                 idx_y_low = shape[0] - ob_view_temp.data.shape[0]
-    #             elif new_ymax > ymax:
-    #                 idx_y_high = ob_view_temp.data.shape[0]
-    #
-    #             if new_xmin < xmin:
-    #                 idx_x_low = shape[1] - ob_view_temp.data.shape[1]
-    #             elif new_xmax > xmax:
-    #                 idx_x_high = ob_view_temp.data.shape[1]
-    #
-    #             new_obj[idx_y_low: idx_y_high, idx_x_low: idx_x_high] = copy(ob_view_temp.data)
-    #         else:
-    #             new_obj = ob_view_temp.data
-    #
-    #         # debugging stuff
-    #         # errors[i] = self.get_fourier_error_view(pod_name, ob_view_temp)
-    #         errors[i] = self.get_fourier_error_obj(pod_name, new_obj)
-    #         # log(4, "Error pos " + str(rand_coord) + ": " + str(errors[i]))
-    #
-    #     if np.min(errors) < error_inital:
-    #         # if a better coordinate is found
-    #         arg = np.argmin(errors)
-    #         new_coordinate = np.array([coord[0] + delta[arg, 0], coord[1] + delta[arg, 1]])
-    #         # log(4, "New position found for pos: " + str(new_coordinate))
-    #
-    #     else:
-    #         new_coordinate = (0, 0)
-    #
-    #     return new_coordinate
-    #
-    # def pos_ref(self):
-    #     log(4, "----------- START POS REF -------------")
-    #     pod_names = self.pods.keys()
-    #     pod_names.sort()
-    #     t_pos_s = time.time()
-    #     # List of refined coordinates which will be used to reformat the object
-    #     # has to be initialized only once
-    #     new_coords = np.zeros((len(pod_names), 2))
-    #
-    #     # Only used for calculating the shifted pos
-    #     self.temp_ob = self.ob.copy()
-    #
-    #     for i, pod_name in enumerate(pod_names):
-    #
-    #         pod = self.pods[pod_name]
-    #         if i == 0:
-    #             # create accessrule
-    #             # actually this has to be created only once in the first iteration
-    #             self.ar = DEFAULT_ACCESSRULE.copy()
-    #             self.ar.psize = pod.ob_view.psize
-    #             self.ar.shape = pod.ob_view.shape
-    #
-    #         if pod.active:
-    #             new_coords[i, :] = self.single_pos_ref(pod_name)
-    #
-    #     new_coords = parallel.allreduce(new_coords)
-    #
-    #     for i, pod_name in enumerate(pod_names):
-    #         # change this for the case that the actual new coordinate is (0,0)
-    #         pod = self.pods[pod_name]
-    #
-    #         if new_coords[i, 0] != 0 and new_coords[i, 1] != 0:
-    #             log(4, "Old coordinate: " + str(pod.ob_view.coord), parallel=True)
-    #             log(4, "New coordinate: " + str(new_coords[i, :]), parallel=True)
-    #             pod.ob_view.coord = new_coords[i, :]
-    #
-    #     # Change the coordinates of the object
-    #     self.ob.reformat()
-    #
-    #     t_pos_f = time.time()
-    #     log(4, "Pos ref time: " + str(t_pos_f - t_pos_s))
-    #
-    # def get_fourier_error_view(self, pod_name, ob_view):
-    #     pod = self.pods[pod_name]
-    #     probe = np.copy(pod.probe)
-    #     probe[np.abs(probe) < np.mean(np.abs(probe)) * .1] = 0
-    #
-    #     object = ob_view.data
-    #     error = np.sum((np.abs(pod.fw(object * probe)) - np.sqrt(pod.diff)) ** 2)
-    #
-    #     return error
-    #
-    # def get_fourier_error_obj(self, pod_name, object):
-    #     pod = self.pods[pod_name]
-    #     probe = np.copy(pod.probe)
-    #     probe[np.abs(probe) < np.mean(np.abs(probe)) * .1] = 0
-    #
-    #     error = np.sum((np.abs(pod.fw(object * probe)) - np.sqrt(pod.diff)) ** 2)
-    #
-    #     return error

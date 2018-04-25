@@ -17,8 +17,6 @@ from ..utils.verbose import logger, log
 from ..utils import parallel
 from utils import Cnorm2, Cdot
 from . import BaseEngine
-
-# Parallesiation imports
 from ..core.classes import DEFAULT_ACCESSRULE
 from ..core import View
 import sys
@@ -283,10 +281,11 @@ class ML_pos_corr(BaseEngine):
                 self.ob_h.reformat()
                 self.ob_grad.reformat()
                 self.ML_model = ML_Gaussian(self)
+
             # End of the position correction code
 
             # increase iteration counter
-            self.curiter +=1
+            self.curiter += 1
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
