@@ -46,7 +46,7 @@ def _vectorise_array_access(diff_storage):
     addr_out = np.array(addr).astype(np.int32)
 
 
-    return view_IDs, poe_ID, addr_out, np.array(probe_weights), np.array(object_weights)
+    return view_IDs, poe_ID, addr_out, np.array(probe_weights, dtype=np.float32), np.array(object_weights, dtype=np.float32)
 
 def pod_to_arrays(P, storage_id, scan_model='Full'):
     '''
