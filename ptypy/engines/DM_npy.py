@@ -169,11 +169,11 @@ class DMNpy(DM):
 
             cfact_object = self.p.object_inertia * self.mean_power * (self.vectorised_scan[dID]['object viewcover'] + 1.)
 
-            # path_to_numpy_file = "/dls/mx-scratch/aaron/gpu_real_world_test_cases/i14_iterate_inputs_quadro_1mode.npy"
-            # path_to_hdf_file = "/dls/mx-scratch/aaron/gpu_real_world_test_cases/i14_iterate_inputs_quadro_1mode.h5"
-            #
+            # path_to_numpy_file = "/dls/mx-scratch/aaron/gpu_real_world_test_cases/i08_iterate_inputs_p100_2modes.npy"
+            # path_to_hdf_file = "/dls/mx-scratch/aaron/gpu_real_world_test_cases/i08_iterate_inputs_p100_2modes.h5"
+
             # import h5py as h5
-            #
+
             # print "saving out the data"
             # f = h5.File(path_to_hdf_file, 'w')
             # f['diffraction'] = self.vectorised_scan[dID]['diffraction']
@@ -183,13 +183,13 @@ class DMNpy(DM):
             # f['obj'] = self.vectorised_scan[dID]['obj']
             # f.close()
             # print "done"
-            #
-            # probe_support = self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]]
-            # mean_power = self.mean_power
-            # object_weights = self.vectorised_scan[dID]['object weights']
-            # probe_weights = self.vectorised_scan[dID]['probe weights']
-            # pbound = self.pbound
-            # object_viewcover = self.vectorised_scan[dID]['object viewcover']
+
+            probe_support = self.probe_support[self.vectorised_scan[dID]['meta']['poe_IDs'][0]]
+            mean_power = self.mean_power
+            object_weights = self.vectorised_scan[dID]['object weights']
+            probe_weights = self.vectorised_scan[dID]['probe weights']
+            pbound = self.pbound
+            object_viewcover = self.vectorised_scan[dID]['object viewcover']
             # overlap_max_iterations = self.vectorised_scan[dID]['overlap_max_iterations']
             # update_object_first = self.vectorised_scan[dID]['update_object_first']
             # obj_smooth_std = self.vectorised_scan[dID]['obj_smooth_std']
