@@ -256,8 +256,9 @@ def get_fourier_error(di_view, object, threshold=0):
 
     for name, pod in di_view.pods.iteritems():
         probe = np.copy(pod.probe)
-        max = np.max(probe)
-        probe[probe < max*threshold] = 0
+
+        # max = np.max(np.abs(probe))
+        # probe[np.abs(probe) < max * threshold] = 0
 
         # If there multiple incoherent modes calculate the accumulated diffraction pattern
         af2 += np.abs(pod.fw(probe*object))**2
