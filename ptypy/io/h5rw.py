@@ -13,38 +13,47 @@ import cPickle
 import time
 import os
 import glob
+from collections import OrderedDict
 
 from ..utils import Param
 from ..utils.verbose import logger
 
 __all__ = ['h5write', 'h5append', 'h5read', 'h5info', 'h5options']
 
-h5options=dict(
-H5RW_VERSION = '0.1',
-H5PY_VERSION = h5py.version.version,
-#UNSUPPORTED = 'pickle'
-#UNSUPPORTED = 'ignore'
-UNSUPPORTED = 'fail',
-SLASH_ESCAPE = '_SLASH_')
+h5options = dict(
+    H5RW_VERSION='0.1',
+    H5PY_VERSION=h5py.version.version,
+    # UNSUPPORTED = 'pickle'
+    # UNSUPPORTED = 'ignore'
+    UNSUPPORTED='fail',
+    SLASH_ESCAPE='_SLASH_')
 STR_CONVERT = [type]
+
 
 def sdebug(f):
     """
     debugging decorator for _store functions
     """
+
     def newf(*args, **kwds):
         print '{0:20} {1:20}'.format(f.func_name, args[2])
         return f(*args, **kwds)
+
     newf.__doc__ = f.__doc__
     return newf
+
 
 # Helper functions to load slices
 class Str_to_Slice(object):
     def __getitem__(self, x):
         return x
+
     def __call__(self, s):
         return eval('self' + s)
+
+
 str_to_slice = Str_to_Slice()
+
 
 def _h5write(filename, mode, *args, **kwargs):
     """\
@@ -78,7 +87,7 @@ def _h5write(filename, mode, *args, **kwargs):
 
     # Update input dictionnary
     if args:
-        d = args[0].copy() # shallow copy
+        d = args[0].copy()  # shallow copy
     else:
         d = {}
     d.update(kwargs)
@@ -96,9 +105,9 @@ def _h5write(filename, mode, *args, **kwargs):
             ids.append(id)
 
     def pop_id(id):
-        ids[:] = [x for x in ids if x!=id]
+        ids[:] = [x for x in ids if x != id]
 
-    #@sdebug
+    # @sdebug
     def _store_numpy(group, a, name, compress=True):
         if compress:
             dset = group.create_dataset(name, data=a, compression='gzip')
@@ -107,20 +116,19 @@ def _h5write(filename, mode, *args, **kwargs):
         dset.attrs['type'] = 'array'
         return dset
 
-    #@sdebug
+    # @sdebug
     def _store_string(group, s, name):
         dset = group.create_dataset(name, data=np.asarray(s), dtype=dt)
         dset.attrs['type'] = 'string'
         return dset
 
-    #@sdebug
+    # @sdebug
     def _store_unicode(group, s, name):
         dset = group.create_dataset(name, data=np.asarray(s.encode('utf8')), dtype=dt)
         dset.attrs['type'] = 'unicode'
         return dset
 
-
-    #@sdebug
+    # @sdebug
     def _store_list(group, l, name):
         check_id(id(l))
         arrayOK = len(set([type(x) for x in l])) == 1
@@ -131,36 +139,36 @@ def _h5write(filename, mode, *args, **kwargs):
                 if la.dtype.type is np.string_:
                     arrayOK = False
                 else:
-                    dset = _store_numpy(group,la,name)
+                    dset = _store_numpy(group, la, name)
                     dset.attrs['type'] = 'arraylist'
             except:
                 arrayOK = False
         if not arrayOK:
             # inhomogenous list. Store all elements individually
             dset = group.create_group(name)
-            for i,v in enumerate(l):
+            for i, v in enumerate(l):
                 _store(dset, v, '%05d' % i)
             dset.attrs['type'] = 'list'
         pop_id(id(l))
         return dset
 
-    #@sdebug
+    # @sdebug
     def _store_tuple(group, t, name):
         dset = _store_list(group, list(t), name)
         dset_type = dset.attrs['type']
         dset.attrs['type'] = 'arraytuple' if dset_type == 'arraylist' else 'tuple'
         return dset
 
-    #@sdebug
+    # @sdebug
     def _store_dict(group, d, name):
         check_id(id(d))
         if any([type(k) not in [str, unicode] for k in d.keys()]):
             raise RuntimeError('Only dictionaries with string keys are supported.')
         dset = group.create_group(name)
         dset.attrs['type'] = 'dict'
-        for k,v in d.iteritems():
+        for k, v in d.iteritems():
             if k.find('/') > -1:
-                k = k.replace('/',h5options['SLASH_ESCAPE'])
+                k = k.replace('/', h5options['SLASH_ESCAPE'])
                 ndset = _store(dset, v, k)
                 if ndset is not None:
                     ndset.attrs['escaped'] = '1'
@@ -169,10 +177,28 @@ def _h5write(filename, mode, *args, **kwargs):
         pop_id(id(d))
         return dset
 
-    #@sdebug
+    # @sdebug
+    def _store_ordered_dict(group, d, name):
+        check_id(id(d))
+        if any([type(k) not in [str, unicode] for k in d.keys()]):
+            raise RuntimeError('Only dictionaries with string keys are supported.')
+        dset = group.create_group(name)
+        dset.attrs['type'] = 'ordered_dict'
+        for k, v in d.iteritems():
+            if k.find('/') > -1:
+                k = k.replace('/', h5options['SLASH_ESCAPE'])
+                ndset = _store(dset, v, k)
+                if ndset is not None:
+                    ndset.attrs['escaped'] = '1'
+            else:
+                _store(dset, v, k)
+        pop_id(id(d))
+        return dset
+
+    # @sdebug
     def _store_param(group, d, name):
         # call _to_dict method
-        dset = _store_dict(group,d._to_dict(),name)
+        dset = _store_dict(group, d._to_dict(), name)
         dset.attrs['type'] = 'param'
         return dset
 
@@ -180,66 +206,77 @@ def _h5write(filename, mode, *args, **kwargs):
         check_id(id(d))
         dset = group.create_group(name)
         dset.attrs['type'] = 'dict'
-        for i,kv in enumerate(d.iteritems()):
+        for i, kv in enumerate(d.iteritems()):
             _store(dset, kv, '%05d' % i)
         pop_id(id(d))
         return dset
 
-    #@sdebug
+    # @sdebug
     def _store_None(group, a, name):
-        dset = group.create_dataset(name, data = np.zeros((1,)))
+        dset = group.create_dataset(name, data=np.zeros((1,)))
         dset.attrs['type'] = 'None'
         return dset
 
-    #@sdebug
+    # @sdebug
     def _store_pickle(group, a, name):
         apic = cPickle.dumps(a)
         dset = group.create_dataset(name, data=np.asarray(apic), dtype=dt)
         dset.attrs['type'] = 'pickle'
         return dset
 
-    #@sdebug
+    # @sdebug
+    def _store_numpy_record_array(group, a, name):
+        apic = cPickle.dumps(a)
+        dset = group.create_dataset(name, data=np.asarray(apic), dtype=h5py.special_dtype(vlen=unicode))
+        dset.attrs['type'] = 'record_array'
+        return dset
+
+    # @sdebug
     def _store(group, a, name):
         if type(a) is str:
-            dset = _store_string(group,a,name)
+            dset = _store_string(group, a, name)
         elif type(a) is unicode:
-            dset = _store_unicode(group,a,name)
+            dset = _store_unicode(group, a, name)
         elif type(a) is dict:
-            dset = _store_dict(group,a,name)
+            dset = _store_dict(group, a, name)
+        elif type(a) is OrderedDict:
+            dset = _store_ordered_dict(group, a, name)
         elif type(a) is Param:
-            dset = _store_param(group,a,name)
+            dset = _store_param(group, a, name)
         elif type(a) is list:
-            dset = _store_list(group,a,name)
+            dset = _store_list(group, a, name)
         elif type(a) is tuple:
-            dset = _store_tuple(group,a,name)
+            dset = _store_tuple(group, a, name)
         elif type(a) is np.ndarray:
-            dset = _store_numpy(group,a,name)
+            dset = _store_numpy(group, a, name)
+        elif isinstance(a, (np.record, np.recarray)): # h5py can't handle this.
+            dset = _store_numpy_record_array(group, a, name)
         elif np.isscalar(a):
-            dset = _store_numpy(group,np.asarray(a),name, compress=False)
+            dset = _store_numpy(group, np.asarray(a), name, compress=False)
             dset.attrs['type'] = 'scalar'
         elif a is None:
             dset = _store_None(group, a, name)
         elif type(a) in STR_CONVERT:
-            dset = _store_string(group,str(a),name)
+            dset = _store_string(group, str(a), name)
         else:
-            if h5options['UNSUPPORTED']=='fail':
+            if h5options['UNSUPPORTED'] == 'fail':
                 raise RuntimeError('Unsupported data type : %s' % type(a))
-            elif h5options['UNSUPPORTED']=='pickle':
-                dset = _store_pickle(group,a,name)
+            elif h5options['UNSUPPORTED'] == 'pickle':
+                dset = _store_pickle(group, a, name)
             else:
                 dset = None
         return dset
 
     # generate all parent directories
-    base= os.path.split(filename)[0]
+    base = os.path.split(filename)[0]
     if not os.path.exists(base):
         os.makedirs(base)
     # Open the file and save everything
-    with h5py.File(filename,mode) as f:
+    with h5py.File(filename, mode) as f:
         f.attrs['h5rw_version'] = h5options['H5RW_VERSION']
         f.attrs['ctime'] = ctime
         f.attrs['mtime'] = mtime
-        for k,v in d.iteritems():
+        for k, v in d.iteritems():
             # if the first group key exists, make an overwrite, i.e. delete group `k`
             # Otherwise it was not possible in this framework to write
             # into an existing file, where a key is already occupied,
@@ -247,8 +284,9 @@ def _h5write(filename, mode, *args, **kwargs):
             # the pure 'appending' nature of h5append
             if k in f.keys():
                 del f[k]
-            _store(f,v,k)
+            _store(f, v, k)
     return
+
 
 def h5write(filename, *args, **kwargs):
     """\
@@ -277,6 +315,7 @@ def h5write(filename, *args, **kwargs):
     _h5write(filename, 'w', *args, **kwargs)
     return
 
+
 def h5append(filename, *args, **kwargs):
     """\
     h5append(filename, {'var1'=..., 'var2'=..., ...})
@@ -303,6 +342,7 @@ def h5append(filename, *args, **kwargs):
 
     _h5write(filename, 'a', *args, **kwargs)
     return
+
 
 def h5read(filename, *args, **kwargs):
     """\
@@ -333,8 +373,8 @@ def h5read(filename, *args, **kwargs):
 
     """
     doglob = kwargs.pop('doglob', None)
-    depth = kwargs.pop('depth',None)
-    depth = 99 if depth is None else depth+1
+    depth = kwargs.pop('depth', None)
+    depth = 99 if depth is None else depth + 1
 
     # Used if we read a list of files
     fnames = []
@@ -373,25 +413,25 @@ def h5read(filename, *args, **kwargs):
             d[dk] = dv
         return d
 
-    def _load_dict(dset,depth):
+    def _load_dict(dset, depth):
         d = {}
-        if depth>0:
-            for k,v in dset.items():
+        if depth > 0:
+            for k, v in dset.items():
                 if v.attrs.get('escaped', None) is not None:
                     k = k.replace(h5options['SLASH_ESCAPE'], '/')
-                d[k] = _load(v,depth-1)
+                d[k] = _load(v, depth - 1)
         return d
 
-    def _load_list(dset,depth):
+    def _load_list(dset, depth):
         l = []
-        if depth>0:
+        if depth > 0:
             keys = dset.keys()
             keys.sort()
             for k in keys:
-                l.append(_load(dset[k],depth-1))
+                l.append(_load(dset[k], depth - 1))
         return l
 
-    def _load_numpy(dset,sl=None):
+    def _load_numpy(dset, sl=None):
         if sl is not None:
             return dset[sl]
         else:
@@ -403,6 +443,12 @@ def h5read(filename, *args, **kwargs):
         except:
             return dset[...]
 
+    def _load_ordered_dict(dset, depth):
+        raise NotImplementedError("This is coming soon...")
+
+    def _load_numpy_record_array(dset):
+        raise NotImplementedError("This is coming soon...")
+
     def _load_str(dset):
         return dset.value
 
@@ -412,31 +458,35 @@ def h5read(filename, *args, **kwargs):
     def _load_pickle(dset):
         return cPickle.loads(dset[...])
 
-    def _load(dset, depth,sl=None):
-        dset_type = dset.attrs.get('type',None)
+    def _load(dset, depth, sl=None):
+        dset_type = dset.attrs.get('type', None)
 
         # Treat groups as dicts
         if (dset_type is None) and (type(dset) is h5py.Group):
             dset_type = 'dict'
 
-        if dset_type == 'dict' or dset_type =='param':
+        if dset_type == 'dict' or dset_type == 'param':
             if sl is not None:
                 raise RuntimeError('Dictionaries or ptypy.Param do not support slicing')
-            val = _load_dict(dset,depth)
-            if dset_type =='param':
+            val = _load_dict(dset, depth)
+            if dset_type == 'param':
                 val = Param(val)
         elif dset_type == 'list':
-            val = _load_list(dset,depth)
+            val = _load_list(dset, depth)
             if sl is not None:
                 val = val[sl]
+        elif dset_type == 'ordered_dict':
+            val = _load_ordered_dict(dset, depth)
+        elif dset_type == 'record_array':
+            val = _load_numpy_record_array(dset)
         elif dset_type == 'array':
-            val = _load_numpy(dset,sl)
+            val = _load_numpy(dset, sl)
         elif dset_type == 'arraylist':
             val = [x for x in _load_numpy(dset)]
             if sl is not None:
                 val = val[sl]
         elif dset_type == 'tuple':
-            val = tuple(_load_list(dset,depth))
+            val = tuple(_load_list(dset, depth))
             if sl is not None:
                 val = val[sl]
         elif dset_type == 'arraytuple':
@@ -455,15 +505,15 @@ def h5read(filename, *args, **kwargs):
             val = _load_scalar(dset)
         elif dset_type == 'None':
             # 24.4.13 : B.E. commented due to hr5read not being able to return None type
-            #try:
+            # try:
             #   val = _load_numpy(dset)
-            #except:
+            # except:
             #    val = None
             val = None
         elif dset_type == 'pickle':
             val = _load_pickle(dset)
         elif dset_type is None:
-            val = _load_numpy(dset,sl)
+            val = _load_numpy(dset, sl)
         else:
             raise RuntimeError('Unsupported data type : %s' % dset_type)
         return val
@@ -474,7 +524,7 @@ def h5read(filename, *args, **kwargs):
     slice = kwargs.get('slice', None)
 
     try:
-        f = h5py.File(filename,'r')
+        f = h5py.File(filename, 'r')
     except:
         print 'Error when opening file %s.' % filename
         raise
@@ -506,7 +556,7 @@ def h5read(filename, *args, **kwargs):
                 else:
                     # detect slicing
                     if '[' in k:
-                        k,slice_string = k.split('[')
+                        k, slice_string = k.split('[')
                         slice_string = slice_string.split(']')[0]
                         sl = str_to_slice('[' + slice_string + ']')
                     else:
@@ -519,12 +569,11 @@ def h5read(filename, *args, **kwargs):
                     gr = f[glist[0]]
                     for gname in glist[1:-1]:
                         gr = gr[gname]
-                    outdict[k] = _load(gr[k],depth,sl=sl)
+                    outdict[k] = _load(gr[k], depth, sl=sl)
                 else:
-                    outdict[k] = _load(f[k],depth,sl=sl)
+                    outdict[k] = _load(f[k], depth, sl=sl)
 
     return outdict
-
 
 
 def h5info(filename, path='', output=None, depth=8):
@@ -533,119 +582,122 @@ def h5info(filename, path='', output=None, depth=8):
 
     Prints out a tree structure of given h5 file.
     """
-    depth=8 if depth is None else depth
+    depth = 8 if depth is None else depth
     indent = 4
     filename = os.path.abspath(os.path.expanduser(filename))
 
-    def _format_dict(d,key, dset, isParam=False):
-        ss='Param' if isParam else 'dict'
-        stringout = ' '*key[0] + ' * %s [%s %d]:\n' % (key[1],ss,len(dset))
-        if d>0:
-            for k,v in dset.items():
+    def _format_dict(d, key, dset, isParam=False):
+        ss = 'Param' if isParam else 'dict'
+        stringout = ' ' * key[0] + ' * %s [%s %d]:\n' % (key[1], ss, len(dset))
+        if d > 0:
+            for k, v in dset.items():
                 if v is not None and v.attrs.get('escaped', None) is not None:
                     k = k.replace(h5options['SLASH_ESCAPE'], '/')
-                stringout += _format(d-1,(key[0]+indent, k), v)
+                stringout += _format(d - 1, (key[0] + indent, k), v)
         return stringout
 
-    def _format_list(d,key, dset):
-        stringout = ' '*key[0] + ' * %s [list %d]:\n' % (key[1],len(dset))
-        if d>0:
+    def _format_list(d, key, dset):
+        stringout = ' ' * key[0] + ' * %s [list %d]:\n' % (key[1], len(dset))
+        if d > 0:
             keys = dset.keys()
             keys.sort()
             for k in keys:
-                stringout += _format(d-1,(key[0]+indent, ''), dset[k])
+                stringout += _format(d - 1, (key[0] + indent, ''), dset[k])
         return stringout
 
     def _format_tuple(key, dset):
-        stringout = ' '*key[0] + ' * %s [tuple]:\n' % key[1]
-        if d>0:
+        stringout = ' ' * key[0] + ' * %s [tuple]:\n' % key[1]
+        if d > 0:
             keys = dset.keys()
             keys.sort()
             for k in keys:
-                stringout += _format(d-1,(key[0]+indent, ''), dset[k])
+                stringout += _format(d - 1, (key[0] + indent, ''), dset[k])
         return stringout
 
     def _format_arraytuple(key, dset):
         a = dset[...]
         if len(a) < 5:
-            stringout = ' '*key[0] + ' * ' + key[1] + ' [tuple = ' + str(tuple(a.ravel())) + ']\n'
+            stringout = ' ' * key[0] + ' * ' + key[1] + ' [tuple = ' + str(tuple(a.ravel())) + ']\n'
         else:
             try:
                 float(a.ravel()[0])
-                stringout = ' '*key[0] + ' * ' + key[1] + ' [tuple = (' + (('%f, '*4) % tuple(a.ravel()[:4]) ) + ' ...)]\n'
+                stringout = ' ' * key[0] + ' * ' + key[1] + ' [tuple = (' + (
+                            ('%f, ' * 4) % tuple(a.ravel()[:4])) + ' ...)]\n'
             except ValueError:
-                stringout = ' '*key[0] + ' * ' + key[1] + ' [tuple = (%d x %s objects)]\n' % (a.size, str(a.dtype))
+                stringout = ' ' * key[0] + ' * ' + key[1] + ' [tuple = (%d x %s objects)]\n' % (a.size, str(a.dtype))
         return stringout
 
     def _format_arraylist(key, dset):
         a = dset[...]
         if len(a) < 5:
-            stringout = ' '*key[0] + ' * ' + key[1] + ' [list = ' + str(a.tolist()) + ']\n'
+            stringout = ' ' * key[0] + ' * ' + key[1] + ' [list = ' + str(a.tolist()) + ']\n'
         else:
             try:
                 float(a.ravel()[0])
-                stringout = ' '*key[0] + ' * ' + key[1] + ' [list = [' + (('%f, '*4) % tuple(a.ravel()[:4]) ) + ' ...]]\n'
+                stringout = ' ' * key[0] + ' * ' + key[1] + ' [list = [' + (
+                            ('%f, ' * 4) % tuple(a.ravel()[:4])) + ' ...]]\n'
             except ValueError:
-                stringout = ' '*key[0] + ' * ' + key[1] + ' [list = [%d x %s objects]]\n' % (a.size, str(a.dtype))
+                stringout = ' ' * key[0] + ' * ' + key[1] + ' [list = [%d x %s objects]]\n' % (a.size, str(a.dtype))
         return stringout
 
     def _format_numpy(key, dset):
         a = dset[...]
         if len(a) < 5 and a.ndim == 1:
-            stringout = ' '*key[0] + ' * ' + key[1] + ' [array = ' + str(a.ravel()) + ']\n'
+            stringout = ' ' * key[0] + ' * ' + key[1] + ' [array = ' + str(a.ravel()) + ']\n'
         else:
-            stringout = ' '*key[0] + ' * ' + key[1] + ' [' + (('%dx'*(a.ndim-1) + '%d') % a.shape) + ' ' + str(a.dtype) + ' array]\n'
+            stringout = ' ' * key[0] + ' * ' + key[1] + ' [' + (('%dx' * (a.ndim - 1) + '%d') % a.shape) + ' ' + str(
+                a.dtype) + ' array]\n'
         return stringout
 
     def _format_scalar(key, dset):
-        stringout = ' '*key[0] + ' * ' + key[1] + ' [scalar = ' + str(dset[...]) + ']\n'
+        stringout = ' ' * key[0] + ' * ' + key[1] + ' [scalar = ' + str(dset[...]) + ']\n'
         return stringout
 
     def _format_str(key, dset):
         s = str(dset[...])
         if len(s) > 40:
             s = s[:40] + '...'
-        stringout = ' '*key[0] + ' * ' + key[1] + ' [string = "' + s + '"]\n'
+        stringout = ' ' * key[0] + ' * ' + key[1] + ' [string = "' + s + '"]\n'
         return stringout
 
     def _format_unicode(key, dset):
         s = str(dset[...]).decode('utf8')
         if len(s) > 40:
             s = s[:40] + '...'
-        stringout = ' '*key[0] + ' * ' + key[1] + ' [unicode = "' + s + '"]\n'
+        stringout = ' ' * key[0] + ' * ' + key[1] + ' [unicode = "' + s + '"]\n'
         return stringout
 
     def _format_pickle(key, dset):
-        stringout = ' '*key[0] + ' * ' + key[1] + ' [pickled object]\n'
+        stringout = ' ' * key[0] + ' * ' + key[1] + ' [pickled object]\n'
         return stringout
 
     def _format_None(key, dset):
-        stringout = ' '*key[0] + ' * ' + key[1] + ' [None]\n'
+        stringout = ' ' * key[0] + ' * ' + key[1] + ' [None]\n'
         return stringout
 
     def _format_unknown(key, dset):
-        stringout = ' '*key[0] + ' * ' + key[1] + ' [unknown]\n'
+        stringout = ' ' * key[0] + ' * ' + key[1] + ' [unknown]\n'
         return stringout
 
-    def _format(d,key, dset):
-        dset_type = 'None' if dset is None else dset.attrs.get('type',None)
+    def _format(d, key, dset):
+        dset_type = 'None' if dset is None else dset.attrs.get('type', None)
 
         # Treat groups as dicts
         if (dset_type is None) and (type(dset) is h5py.Group):
             dset_type = 'dict'
 
         if dset_type == 'dict':
-            stringout = _format_dict(d,key, dset,False)
+            stringout = _format_dict(d, key, dset, False)
         elif dset_type == 'param':
-            stringout = _format_dict(d,key, dset,True)
+            stringout = _format_dict(d, key, dset, True)
         elif dset_type == 'list':
-            stringout = _format_list(d,key, dset)
+            stringout = _format_list(d, key, dset)
         elif dset_type == 'array':
             stringout = _format_numpy(key, dset)
         elif dset_type == 'arraylist':
             stringout = _format_arraylist(key, dset)
         elif dset_type == 'tuple':
-            stringout = _format_tuple(d,key, dset)
+            stringout = _format_tuple(d, key, dset)
         elif dset_type == 'arraytuple':
             stringout = _format_arraytuple(key, dset)
         elif dset_type == 'string':
@@ -664,22 +716,21 @@ def h5info(filename, path='', output=None, depth=8):
             stringout = _format_unknown(key, dset)
         return stringout
 
-    with h5py.File(filename,'r') as f:
+    with h5py.File(filename, 'r') as f:
         # h5rw_version = f.attrs.get('h5rw_version',None)
         # if h5rw_version is None:
         #     print('Warning: this file does not seem to follow h5read format.')
         ctime = f.attrs.get('ctime', None)
         if ctime is not None:
             print('File created : ' + ctime)
-        if not path.endswith('/'): path+='/'
+        if not path.endswith('/'): path += '/'
         key_list = f[path].keys()
         outstring = ''
         for k in key_list:
-            outstring += _format(depth,(0,k),f[path+k])
+            outstring += _format(depth, (0, k), f[path + k])
 
     print outstring
 
     # return string if output variable passed as option
     if output != None:
         return outstring
-
