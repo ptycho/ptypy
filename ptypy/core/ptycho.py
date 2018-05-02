@@ -406,7 +406,7 @@ class Ptycho(Base):
 
                 # Start automated plot client
                 self.plotter = None
-                if (parallel.master and autoplot and autoplot.threaded and
+                if (parallel.master and autoplot.active and autoplot.threaded and
                         autoplot.interval > 0):
                     from multiprocessing import Process
                     logger.info('Spawning plot client in new Process.')
@@ -847,6 +847,7 @@ class Ptycho(Base):
                                for ID, S in self.obj.storages.items()}
                 minimal.pars = self.p.copy()  # _to_dict(Recursive=True)
                 minimal.runtime = self.runtime.copy()
+
                 content = minimal
 
             h5opt = io.h5options['UNSUPPORTED']
