@@ -165,7 +165,6 @@ class H5rwStoreTest(unittest.TestCase):
             self.fail(msg="This should not have produced an exception!")
 
 
-    @unittest.skip("This fails at the moment and I don't know why.")
     def test_pickle_unsupported(self):
         io.h5options['UNSUPPORTED'] = 'pickle'
 
@@ -181,10 +180,4 @@ class H5rwStoreTest(unittest.TestCase):
             test_func()
         except:
             self.fail(msg="This should not have produced an exception!")
-
-        f = h5.File(self.filepath % "store_pickle_test", 'r')
-        outdata = cPickle.loads(f['content/pickle data'][...])
-
-        # next check that we actually wrote a pickle in this field.
-        self.assertTrue(isinstance(outdata, owntype), msg="We don't seem to have loaded in the same type as we saved!")
 

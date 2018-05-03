@@ -444,19 +444,25 @@ def h5read(filename, *args, **kwargs):
             return dset[...]
 
     def _load_ordered_dict(dset, depth):
-        raise NotImplementedError("This is coming soon...")
+        d = OrderedDict()
+        if depth > 0:
+            for k, v in dset.items():
+                if v.attrs.get('escaped', None) is not None:
+                    k = k.replace(h5options['SLASH_ESCAPE'], '/')
+                d[k] = _load(v, depth - 1)
+        return d
 
     def _load_numpy_record_array(dset):
-        raise NotImplementedError("This is coming soon...")
+        return cPickle.loads(dset.value.encode('utf-8'))
 
     def _load_str(dset):
         return dset.value
 
     def _load_unicode(dset):
-        return dset.value.decode('utf8')
+        return dset.value.decode('utf-8')
 
     def _load_pickle(dset):
-        return cPickle.loads(dset[...])
+        return cPickle.loads(dset.value)
 
     def _load(dset, depth, sl=None):
         dset_type = dset.attrs.get('type', None)
@@ -498,7 +504,7 @@ def h5read(filename, *args, **kwargs):
             if sl is not None:
                 val = val[sl]
         elif dset_type == 'unicode':
-            val = _load_str(dset)
+            val = _load_unicode(dset)
             if sl is not None:
                 val = val[sl]
         elif dset_type == 'scalar':
