@@ -3,6 +3,7 @@
 Beamline-specific data preparation modules.
 
 Currently available:
+ * cSAXS
  * I13DLS, FFP and NFP
  * I08DLS, FFP and NFP
  * ID16A ESRF, NFP
@@ -16,7 +17,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 # Import instrument-specific modules
-#import cSAXS
+from cSAXS import cSAXSScan
 from I13_ffp import I13ScanFFP
 from I13_nfp import I13ScanNFP
 from DLS import DlsScan
