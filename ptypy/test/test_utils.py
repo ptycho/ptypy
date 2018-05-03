@@ -42,15 +42,16 @@ def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='app
             shutil.rmtree(outdir)
         return out_dict
 
-def EngineTestRunner(engine_params,propagator='farfield'):
+def EngineTestRunner(engine_params,propagator='farfield',output_path='./', output_file=None):
+
 
     p = u.Param()
     p.verbose_level = 3
     p.io = u.Param()
-    p.io.home = './'
-    p.io.rfile = None
-    p.io.autosave = u.Param(active=True)
-    p.io.autoplot = u.Param(active=True)
+    p.io.home = output_path
+    p.io.rfile = "%s.ptyr" % output_file
+    p.io.autosave = u.Param(active=False)
+    p.io.autoplot = u.Param(active=False)
     p.ipython_kernel = False
     p.scans = u.Param()
     p.scans.MF = u.Param()
@@ -64,13 +65,13 @@ def EngineTestRunner(engine_params,propagator='farfield'):
     p.scans.MF.data.orientation = None
     p.scans.MF.data.num_frames = 100
     p.scans.MF.data.energy = 6.2
-    p.scans.MF.data.shape = 256
+    p.scans.MF.data.shape = 64
     p.scans.MF.data.chunk_format = '.chunk%02d'
     p.scans.MF.data.rebin = None
     p.scans.MF.data.experimentID = None
     p.scans.MF.data.label = None
     p.scans.MF.data.version = 0.1
-    p.scans.MF.data.dfile = None
+    p.scans.MF.data.dfile = "%s.ptyd" % output_file
     p.scans.MF.data.psize = 0.000172
     p.scans.MF.data.load_parallel = None
     p.scans.MF.data.distance = 7.0
