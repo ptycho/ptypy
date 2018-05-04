@@ -15,8 +15,8 @@ class PtypyI13AuStarNearfield9p7keVTest(unittest.TestCase):
         p.io = u.Param()
         p.io.home = tempfile.mkdtemp()
         p.io.run = None
-        p.io.autoplot =  u.Param()
-        p.io.autoplot.layout ='nearfield'
+        p.io.autosave = u.Param(active=False)
+        p.io.autoplot = u.Param(active=False)
         p.scan = u.Param()
         p.scan.source = None
         p.scan.geometry = u.Param()

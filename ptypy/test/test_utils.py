@@ -48,6 +48,8 @@ def EngineTestRunner(engine_params,propagator='farfield',output_path='./', outpu
     p = u.Param()
     p.verbose_level = 3
     p.io = u.Param()
+    p.io.interaction = u.Param()
+    p.io.interaction.active = False
     p.io.home = output_path
     p.io.rfile = "%s.ptyr" % output_file
     p.io.autosave = u.Param(active=False)

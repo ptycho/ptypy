@@ -130,9 +130,15 @@ class Ptycho(Base):
 
     [io.interaction]
     default = None
-    type = Param, bool
+    type = Param
     help = ZeroMQ interactor options
     doc = Options for the communications server
+
+    [io.interaction.active]
+    default = True
+    type = bool
+    help = turns on the interaction
+    doc = If True the interaction starts, if False all interaction is turned off
 
     [io.autosave]
     default = Param
@@ -379,7 +385,7 @@ class Ptycho(Base):
         iaction = self.p.io.interaction
         autoplot = self.p.io.autoplot
 
-        if parallel.master and iaction:
+        if parallel.master and iaction.active:
             # Create the interaction server
             self.interactor = interaction.Server(iaction)
 
