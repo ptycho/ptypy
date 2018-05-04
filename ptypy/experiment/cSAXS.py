@@ -19,8 +19,8 @@ logger = u.verbose.logger
 
 
 
-@defaults_tree.parse_doc('scandata.cSAXSScan')
-class cSAXSScan(PtyScan):
+@defaults_tree.parse_doc('scandata.cSAXS')
+class cSAXS(PtyScan):
     def __init__(self, pars=None, **kwargs):
         '''
         Defaults:
