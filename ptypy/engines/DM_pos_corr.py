@@ -14,6 +14,7 @@ import time
 from .. import utils as u
 # This is needed for parallesiation and position correction
 import utils_pos_corr as pos_corr
+import gc
 # new imports end
 from ..utils.verbose import logger, log
 from ..utils import parallel
@@ -115,12 +116,17 @@ class DM_pos_corr(BaseEngine):
             mean_power += s.tot_power/np.prod(s.shape)
         self.mean_power = mean_power / len(self.di.storages)
 
-        # The size of the object might have been changed
-        self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
-        self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
+        if self.p.pos_ref_stop > self.curiter >= self.p.pos_ref_start and self.curiter % self.p.pos_ref_cycle == 0 \
+                and self.p.pos_ref:
 
-        for name, s in self.ob_viewcover.storages.iteritems():
-            s.fill(s.get_view_coverage())
+            # collect the garbage
+            gc.collect()
+
+            # The size of the object might have been changed
+            self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
+            self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
+            for name, s in self.ob_viewcover.storages.iteritems():
+                s.fill(s.get_view_coverage())
 
     def engine_iterate(self, num=1):
         """

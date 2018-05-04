@@ -176,6 +176,7 @@ def single_pos_ref(obj, di_view_name):
             new_obj = ob_view_temp.data
 
         errors[i] = get_fourier_error(di_view, new_obj)
+        del new_obj
 
     if np.min(errors) < error_inital:
         # if a better coordinate is found
@@ -184,6 +185,10 @@ def single_pos_ref(obj, di_view_name):
         new_coordinate = np.array([coord[0] + delta[arg, 0], coord[1] + delta[arg, 1]])
     else:
         new_coordinate = (0, 0)
+
+    del ob_view_temp
+    del di_view
+
     return new_coordinate
 
 
@@ -237,11 +242,15 @@ def pos_ref(obj):
     # Change the coordinates of the object
     obj.ob.reformat()
 
+    # clean up
+    del obj.ptycho.containers[obj.temp_ob.ID]
+    del obj.temp_ob
+
     t_pos_f = time.time()
     log(4, "Pos ref time: " + str(t_pos_f - t_pos_s))
 
 
-def get_fourier_error(di_view, object, threshold=0):
+def get_fourier_error(di_view, object):
     """
     Calculates the fourier error for a given diffractin view and a numpy array which contains the corresponding object.
     (Stolen from the DM engine)
@@ -252,20 +261,18 @@ def get_fourier_error(di_view, object, threshold=0):
     """
 
     af2 = np.zeros_like(di_view.data)
-    fmask = di_view.pod.mask
+    # fmask = di_view.pod.mask
 
     for name, pod in di_view.pods.iteritems():
-        probe = np.copy(pod.probe)
-
-        # max = np.max(np.abs(probe))
-        # probe[np.abs(probe) < max * threshold] = 0
-
-        # If there multiple incoherent modes calculate the accumulated diffraction pattern
-        af2 += np.abs(pod.fw(probe*object))**2
+        af2 += np.abs(pod.fw(pod.probe*object))**2
 
     af = np.sqrt(af2)
     fmag = np.sqrt(np.abs(di_view.data))
 
-    error = np.sum(fmask * (af - fmag)**2)
+    error = np.sum(di_view.pod.mask * (af - fmag)**2)
+
+    del fmag
+    del af2
+    del af
 
     return error
