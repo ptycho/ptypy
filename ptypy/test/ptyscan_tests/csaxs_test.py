@@ -1,7 +1,7 @@
 
 import unittest
 from ptypy.test import test_utils as tu
-from ptypy.experiment.cSAXS import cSAXSScan
+from ptypy.experiment.cSAXS import cSAXS
 from ptypy import utils as u
 
 
@@ -17,7 +17,7 @@ class CsaxsTest(unittest.TestCase):
         r.motors_multiplier = (1e-6,1e-6)
         r.mask_path = None
         r.mask_file = 'binary_mask_6.2keV.mat'
-        tu.PtyscanTestRunner(cSAXSScan,r,cleanup=False)
+        tu.PtyscanTestRunner(cSAXS,r,cleanup=False)
 
 #     def test_flomny(self):
 #         r = u.Param()

@@ -17,7 +17,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 # Import instrument-specific modules
-from cSAXS import cSAXSScan
+from cSAXS import cSAXS
 from I13_ffp import I13ScanFFP
 from I13_nfp import I13ScanNFP
 from DLS import DlsScan
