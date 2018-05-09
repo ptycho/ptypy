@@ -47,5 +47,63 @@ class ParamTest(unittest.TestCase):
         assert 'b.c.d' in p['a']
         assert 'c.d' in p['a.b']
 
+    def test_from_dict_conversion_convert_false(self):
+        '''
+        Tests whether Param can convert correctly from dict. ref #90
+        '''
+        dct = {'one': {'one1': 1},
+               'two': {'two1':
+                           {'two1b': 'b'}}}
+        p = Param()
+        p.update(dct, Convert=False)
+        exp_p = Param()
+        exp_p = dct
+        # print p
+        self.assertEqual(exp_p, p, msg="The from dict method isn't working as expected")
+
+    def test_from_dict_conversion_convert_true(self):
+
+        dct = {'one': {'one1': 1},
+               'two': {'two1':
+                           {'two1b': 'b'}}}
+        p = Param()
+        p.update(dct, Convert=True)
+
+        exp_p = Param()
+        exp_p.one =Param()
+        exp_p.one.one1 = 1
+        exp_p.two = Param()
+        exp_p.two.two1 = Param()
+        exp_p.two.two1.two1b = 'b'
+        # print p
+        self.assertEqual(exp_p, p, msg='The from dict conversion has not worked as expected')
+
+
+    def test_to_dict_conversion_convert_true(self):
+
+        dct = {'one': {'one1': 1},
+               'two': {'two1':
+                           {'two1b': 'b'}}}
+        p = Param()
+        p.update(dct, Convert=True)
+
+        out_dct = p._to_dict()
+
+        self.assertDictEqual(dct, out_dct, msg='The to-dict method has not worked as expected.')
+
+
+    def test_to_dict_conversion_convert_false(self):
+
+        dct = {'one': {'one1': 1},
+               'two': {'two1':
+                           {'two1b': 'b'}}}
+        p = Param()
+        p.update(dct, Convert=False)
+
+        out_dct = p._to_dict()
+
+        self.assertDictEqual(dct, out_dct, msg='The to-dict method has not worked as expected.')
+
+
 if __name__ == "__main__":
     unittest.main()
