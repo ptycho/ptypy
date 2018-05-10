@@ -419,7 +419,7 @@ def h5read(filename, *args, **kwargs):
             for k, v in dset.items():
                 if v.attrs.get('escaped', None) is not None:
                     k = k.replace(h5options['SLASH_ESCAPE'], '/')
-                d[k] = _load(v, depth - 1)
+                d[str(k)] = _load(v, depth - 1)
         return d
 
     def _load_list(dset, depth):
@@ -456,7 +456,7 @@ def h5read(filename, *args, **kwargs):
         return cPickle.loads(dset.value.encode('utf-8'))
 
     def _load_str(dset):
-        return dset.value
+        return str(dset.value)
 
     def _load_unicode(dset):
         return dset.value.decode('utf-8')
