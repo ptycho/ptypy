@@ -284,8 +284,9 @@ class Ptycho(Base):
             return
 
         # Continue with initialization from parameters
+
         if pars is not None:
-            self.p.update(pars, in_place_depth=3)
+            self.p.update(pars, in_place_depth=99)
 
         # That may be a little dangerous
         self.p.update(kwargs)
@@ -294,7 +295,6 @@ class Ptycho(Base):
         # FIXME : Validation should maybe happen for each class that uses the
         #         the parameters, i.e. like a depth=1 validation
         defaults_tree.validate(self.p)
-
         # Instance attributes
 
         # Structures
@@ -709,7 +709,13 @@ class Ptycho(Base):
         header = u.Param(io.h5read(runfile, 'header')['header'])
         if header['kind'] == 'minimal':
             logger.info('Found minimal ptypy dump')
-            content = u.Param(io.h5read(runfile, 'content')['content'])
+            content = io.h5read(runfile, 'content')['content']
+
+            logger.info('Checking the loaded parameters make sense...')
+            try:
+                defaults_tree.validate(content.pars)  # check the parameters are actually able to be read back in
+            except RuntimeError:
+                raise
 
             logger.info('Creating new Ptycho instance')
             P = Ptycho(content.pars, level=1)
@@ -767,6 +773,9 @@ class Ptycho(Base):
         """
         import save_load
         from .. import io
+
+
+
 
         dest_file = None
 
@@ -833,6 +842,10 @@ class Ptycho(Base):
                               for ID, S in self.probe.storages.items()}
                 dump.obj = {ID: S._to_dict()
                             for ID, S in self.obj.storages.items()}
+                try:
+                    defaults_tree.validate(self.p) # check the parameters are actually able to be read back in
+                except RuntimeError:
+                    logger.warn("The parameters we are saving won't pass a validator check!")
                 dump.pars = self.p.copy()  # _to_dict(Recursive=True)
                 dump.runtime = self.runtime.copy()
                 # Discard some bits of runtime to save space
@@ -851,6 +864,10 @@ class Ptycho(Base):
                                  for ID, S in self.probe.storages.items()}
                 minimal.obj = {ID: S._to_dict()
                                for ID, S in self.obj.storages.items()}
+                try:
+                    defaults_tree.validate(self.p) # check the parameters are actually able to be read back in
+                except RuntimeError:
+                    logger.warn("The parameters we are saving won't pass a validator check!")
                 minimal.pars = self.p.copy()  # _to_dict(Recursive=True)
                 minimal.runtime = self.runtime.copy()
 

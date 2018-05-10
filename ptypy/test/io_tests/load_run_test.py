@@ -18,7 +18,7 @@ class LoadRunTest(unittest.TestCase):
 
         file_path = outpath + os.sep + 'reconstruction.ptyr'
         p = u.Param()
-        p.verbose_level = 3
+        p.verbose_level = 1
         p.io = u.Param()
         p.io.home = outpath
         p.io.rfile = file_path
@@ -65,6 +65,7 @@ class LoadRunTest(unittest.TestCase):
         p.engines.engine00.fourier_relax_factor = 0.01
         p.engines.engine00.obj_smooth_std = 20
 
+
         P = Ptycho(p, level=2) # this is what we should get back
         Pcomp = deepcopy(P)
         P.init_communication()
@@ -72,11 +73,22 @@ class LoadRunTest(unittest.TestCase):
         P.run()
         P.finalize()
 
-
+        # external check!
+        # from ptypy import io
+        # content = io.h5read(file_path, 'content')['content']
+        # self.maxDiff =None
+        # print content.pars.io._to_dict(Recursive=True)
+        # set_vals = P.p._to_dict(Recursive=True)
+        # print set_vals
+        # file_vals = content.pars._to_dict(Recursive=True)
+        # for name, val in file_vals.iteritems():
+        #     self.assertEqual(file_vals[name], set_vals[name])
+        # self.assertDictEqual(content.pars._to_dict(Recursive=True), set_vals)
+        #
+        # print "NOW LOADING FROM FILE"
         b = Ptycho.load_run(file_path)
         np.testing.assert_equal(type(b), type(Pcomp))
         np.testing.assert_equal(b.__dict__, Pcomp.__dict__) # this is as far as I want to go for now
-
 
 
     @unittest.skip("To be filled in")
