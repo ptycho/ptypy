@@ -227,6 +227,11 @@ class PtyScan(object):
     doc =
     userlevel = 0
     lowlim = 0
+
+    [add_poisson_noise]
+    default = True
+    type = bool
+    help = Decides whether the scan should have poisson noise or not
     """
 
     WAIT = WAIT
@@ -1541,7 +1546,12 @@ class MoonFlowerScan(PtyScan):
             if self.p.psf > 0.:
                 intensity_j = u.gf(intensity_j, self.p.psf)
 
-            raw[k] = np.random.poisson(intensity_j).astype(np.int32)
+            if self.p.add_poisson_noise:
+                logger.info("Generating data with poisson noise.")
+                raw[k] = np.random.poisson(intensity_j).astype(np.int32)
+            else:
+                logger.info("Generating data without poisson noise.")
+                raw[k] = intensity_j.astype(np.int32)
 
         return raw, {}, {}
 

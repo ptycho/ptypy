@@ -284,7 +284,6 @@ class Ptycho(Base):
             return
 
         # Continue with initialization from parameters
-
         if pars is not None:
             self.p.update(pars, in_place_depth=99)
 
@@ -311,7 +310,6 @@ class Ptycho(Base):
 
         # Early boot strapping
         self._configure()
-
         if level >= 1:
             logger.info('\n' + headerline('Ptycho init level 1', 'l'))
             self.init_structures()
@@ -387,7 +385,7 @@ class Ptycho(Base):
 
         if parallel.master and iaction.active:
             # Create the interaction server
-            self.interactor = interaction.Server(iaction)
+            self.interactor = interaction.Server(iaction.server)
 
             # Register self as an accessible object for the client
             self.interactor.objects['Ptycho'] = self
@@ -404,7 +402,7 @@ class Ptycho(Base):
                 self.plotter = None
             else:
                 # Modify port
-                iaction.port = port
+                iaction.server.port = port
 
                 # Inform the audience
                 log(4, 'Started interaction got the following parameters:'
@@ -417,7 +415,7 @@ class Ptycho(Base):
                     from multiprocessing import Process
                     logger.info('Spawning plot client in new Process.')
                     self.plotter = Process(target=u.spawn_MPLClient,
-                                           args=(iaction, autoplot,))
+                                           args=(iaction.client, autoplot,))
                     self.plotter.start()
         else:
             # No interaction wanted
@@ -448,7 +446,7 @@ class Ptycho(Base):
     def init_data(self, print_stats=True):
         """
         Called on __init__ if ``level >= 2``.
-        
+
         Call :py:meth:`ModelManager.new_data()`
         Prints statistics on the ptypy structure if ``print_stats=True``
         """
@@ -710,12 +708,6 @@ class Ptycho(Base):
         if header['kind'] == 'minimal':
             logger.info('Found minimal ptypy dump')
             content = io.h5read(runfile, 'content')['content']
-
-            logger.info('Checking the loaded parameters make sense...')
-            try:
-                defaults_tree.validate(content.pars)  # check the parameters are actually able to be read back in
-            except RuntimeError:
-                raise
 
             logger.info('Creating new Ptycho instance')
             P = Ptycho(content.pars, level=1)

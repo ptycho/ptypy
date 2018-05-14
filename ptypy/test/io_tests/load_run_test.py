@@ -13,12 +13,12 @@ from ptypy.core import Ptycho
 import ptypy.utils as u
 
 class LoadRunTest(unittest.TestCase):
-    def test_load_run_with_data(self):
+    def test_load_run(self):
         outpath = tempfile.mkdtemp(prefix='something')
 
         file_path = outpath + os.sep + 'reconstruction.ptyr'
         p = u.Param()
-        p.verbose_level = 1
+        p.verbose_level = 5
         p.io = u.Param()
         p.io.home = outpath
         p.io.rfile = file_path
@@ -51,6 +51,7 @@ class LoadRunTest(unittest.TestCase):
         p.scans.MF.data.center = 'fftshift'
         p.scans.MF.data.photons = 100000000.0
         p.scans.MF.data.psf = 0.0
+        p.scans.MF.data.add_poisson_noise = False
         p.scans.MF.data.density = 0.2
         p.engines = u.Param()
         p.engines.engine00 = u.Param()
@@ -64,7 +65,6 @@ class LoadRunTest(unittest.TestCase):
         p.engines.engine00.object_inertia = 0.1
         p.engines.engine00.fourier_relax_factor = 0.01
         p.engines.engine00.obj_smooth_std = 20
-
 
         P = Ptycho(p, level=2) # this is what we should get back
         Pcomp = deepcopy(P)
@@ -84,16 +84,19 @@ class LoadRunTest(unittest.TestCase):
         # for name, val in file_vals.iteritems():
         #     self.assertEqual(file_vals[name], set_vals[name])
         # self.assertDictEqual(content.pars._to_dict(Recursive=True), set_vals)
-        #
-        # print "NOW LOADING FROM FILE"
+
         b = Ptycho.load_run(file_path)
         np.testing.assert_equal(type(b), type(Pcomp))
-        np.testing.assert_equal(b.__dict__, Pcomp.__dict__) # this is as far as I want to go for now
+        for name, st in b.mask.storages.iteritems():
+            np.testing.assert_equal(st.data, P.mask.storages[name].data)
+
+        for name, st in b.diff.storages.iteritems():
+            np.testing.assert_equal(st.data, P.diff.storages[name].data)
+
+        for name, st in b.probe.storages.iteritems():
+            np.testing.assert_equal(st.data, P.probe.storages[name].data)
+
+        for name, st in b.obj.storages.iteritems():
+            np.testing.assert_equal(st.data, P.obj.storages[name].data)
 
 
-    @unittest.skip("To be filled in")
-    def test_load_run_no_data(self):
-        b = Ptycho.load_run(self.parameters['ptyr_file'], False)  # load in the run but without the data
-
-        p = b.p
-        pass

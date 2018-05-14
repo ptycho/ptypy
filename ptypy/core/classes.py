@@ -206,7 +206,7 @@ class Base(object):
             if k not in dct:
                 continue
             else:
-                setattr(inst,dct[k])
+                setattr(inst,k ,dct[k])
         if hasattr(inst,'__dict__'):
             inst.__dict__.update(dct)
         
