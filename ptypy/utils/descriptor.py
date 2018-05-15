@@ -565,8 +565,8 @@ class ArgParseDescriptor(Descriptor):
 
             if typ is bool:
                 # Command line switches have no arguments, so treated differently
-                flag = '--no-' + name if pd.value else '--' + name
-                action = 'store_false' if pd.value else 'store_true'
+                flag = '--no-' + name if pd.default else '--' + name
+                action = 'store_false' if pd.default else 'store_true'
                 parse.add_argument(flag, dest=name, action=action, help=pd.help)
             else:
                 d = pd.default
