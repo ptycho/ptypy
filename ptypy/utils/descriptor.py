@@ -925,10 +925,10 @@ class EvalDescriptor(ArgParseDescriptor):
         import logging
 
         _logging_levels = dict(
-            PASS=logging.INFO,
+            PASS=logging.DEBUG,
             FAIL=logging.CRITICAL,
             UNKNOWN=logging.WARN,
-            MISSING=logging.INFO,
+            MISSING=logging.DEBUG,
             INVALID=logging.ERROR
         )
 

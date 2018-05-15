@@ -1538,6 +1538,11 @@ class MoonFlowerScan(PtyScan):
         s = self.geo.shape
         raw = {}
 
+        if self.p.add_poisson_noise:
+            logger.info("Generating data with poisson noise.")
+        else:
+            logger.info("Generating data without poisson noise.")
+
         for k in indices:
             intensity_j = u.abs2(self.geo.propagator.fw(
                 self.pr * self.obj[p[k][0]:p[k][0] + s[0],
@@ -1547,10 +1552,8 @@ class MoonFlowerScan(PtyScan):
                 intensity_j = u.gf(intensity_j, self.p.psf)
 
             if self.p.add_poisson_noise:
-                logger.info("Generating data with poisson noise.")
                 raw[k] = np.random.poisson(intensity_j).astype(np.int32)
             else:
-                logger.info("Generating data without poisson noise.")
                 raw[k] = intensity_j.astype(np.int32)
 
         return raw, {}, {}
