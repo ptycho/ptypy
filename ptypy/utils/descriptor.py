@@ -817,7 +817,8 @@ class EvalDescriptor(ArgParseDescriptor):
         if pars is None or \
                 (type(pars).__name__ in self.type) or \
                 (hasattr(pars, 'items') and 'Param' in self.type) or \
-                (type(pars).__name__ == 'int' and 'float' in self.type):
+                (type(pars).__name__ == 'int' and 'float' in self.type) or \
+                (type(pars).__name__[:5] == 'float' and 'float' in self.type):
             yield {'d': self, 'path': path, 'status': 'ok', 'info': ''}
         else:
             yield {'d': self, 'path': path, 'status': 'wrongtype', 'info': type(pars).__name__}
