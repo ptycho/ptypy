@@ -527,7 +527,6 @@ class ArgParseDescriptor(Descriptor):
         """
 
         sep = self.separator
-        pd = self
         argsep = '-'
 
         if parser is None:
@@ -535,46 +534,50 @@ class ArgParseDescriptor(Descriptor):
             description = """
             Parser for %s
             Doc: %s
-            """ % (pd.name, pd.help)
+            """ % (self.name, self.help)
             parser = ArgumentParser(description=description)
 
         # overload the parser
         if not hasattr(parser, '_aux_translator'):
             parser._aux_translator = {}
 
-        # get list of descendants and remove separator
-        ndesc = dict((k.replace(sep, argsep), self[k]) for k, _ in self.descendants)
+        # get list of descendants, remove separator and replace underscores with argsep
+        ndesc = dict((k.replace(sep, argsep).replace('_', argsep), self[k]) for k, _ in self.descendants)
+        parser._aux_translator.update(ndesc)
 
         groups = {}
 
-        for name, pd in ndesc.items():
-            if pd.name in excludes:
+        # Identify argument groups (first level children)
+        for name, desc in ndesc.items():
+            if desc.name in excludes:
                 continue
-            if pd.children:
-                groups[name] = parser.add_argument_group(title=prefix + name, description=pd.help)
+            if desc.children:
+                groups[name] = parser.add_argument_group(title=prefix + name, description=desc.help.replace('%', '%%'))
 
-        for name, pd in ndesc.iteritems():
+        # Add all arguments
+        for name, desc in ndesc.iteritems():
 
-            if pd.name in excludes:
+            if desc.name in excludes:
                 continue
+
+            # Attempt to retrieve the group
             up = argsep.join(name.split(argsep)[:-1])
-            # recursive part
             parse = groups.get(up, parser)
 
-            typ = pd._get_type_argparse()
-
+            # Manage boolean parameters as switches
+            typ = desc._get_type_argparse()
             if typ is bool:
                 # Command line switches have no arguments, so treated differently
-                flag = '--no-' + name if pd.default else '--' + name
-                action = 'store_false' if pd.default else 'store_true'
-                parse.add_argument(flag, dest=name, action=action, help=pd.help)
+                flag = '--no-' + name if desc.default else '--' + name
+                action = 'store_false' if desc.default else 'store_true'
+                parse.add_argument(flag, dest=name, action=action, help=desc.help.replace('%', '%%'))
             else:
-                d = pd.default
+                d = desc.default
                 defstr = d.replace('%(', '%%(') if str(d) == d else str(d)
-                parse.add_argument('--' + name, dest=name, type=typ, default=pd.default, choices=pd.choices,
-                                   help=pd.help + ' (default=%s)' % defstr)
+                parse.add_argument('--' + name, dest=name, type=typ, default=desc.default, choices=desc.choices,
+                                   help=desc.help.replace('%', '%%') + ' (default=%s)' % defstr.replace('%', '%%'))
 
-            parser._aux_translator[name] = pd
+            #parser._aux_translator[name] = desc
 
         return parser
 

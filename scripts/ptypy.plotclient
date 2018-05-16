@@ -20,12 +20,13 @@ client_pars = client_desc.make_default(depth=5)
 
 # TODO: apply command line options onto defaults
 
-#for key, pd in parser._ptypy_translator.items():
-#    pd.set_default(getattr(args, key, pd.default))
+args = parser.parse_args()
+
+for key, desc in parser._aux_translator.items():
+    desc.set_default(getattr(args, key, pd.default))
 
 #plot_pars['home'] = getattr(args, 'directory', pd.value)
 
-args = parser.parse_args()
 
 """
 parser = argparse.ArgumentParser(description='Create a ZeroMQ plotting client.')
