@@ -657,6 +657,18 @@ class EvalDescriptor(ArgParseDescriptor):
 
         return out
 
+    @default.setter
+    def default(self, val):
+        """
+        Set default.
+        """
+        if val is None:
+            self.options['default'] = ''
+        elif str(val) == val:
+            self.options['default'] = "'%s'" % val
+        else:
+            self.options['default'] = str(val)
+
     @property
     def is_evaluable(self):
         for t in self.type:
@@ -829,9 +841,6 @@ class EvalDescriptor(ArgParseDescriptor):
                 (not hasattr(pars, 'items') and (pars is not None)):
             # Nothing else to do
             return
-        
-
-            
         
         # Look for unrecognised entries in pars
         if pars:

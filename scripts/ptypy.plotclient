@@ -23,7 +23,7 @@ client_pars = client_desc.make_default(depth=5)
 args = parser.parse_args()
 
 for key, desc in parser._aux_translator.items():
-    desc.set_default(getattr(args, key, pd.default))
+    desc.default = getattr(args, key, desc.default)
 
 #plot_pars['home'] = getattr(args, 'directory', pd.value)
 
