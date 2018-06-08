@@ -10,12 +10,13 @@ This file is part of the PTYPY package.
 import numpy as np
 import os
 
-from .. import utils as u
-from ..utils.descriptor import defaults_tree
-from .. import io
-from ..core.data import PtyScan
-from ..core.paths import Paths
-from ..core import Ptycho
+from ptypy import utils as u
+from ptypy.utils.descriptor import defaults_tree
+from ptypy import io
+from ptypy.core.data import PtyScan
+from ptypy.core.paths import Paths
+from ptypy.core import Ptycho
+from ptypy.utils.verbose import log
 
 IO_par = Ptycho.DEFAULT['io']
 
@@ -123,6 +124,7 @@ class I13ScanFFP(PtyScan):
         :param kwargs: key-value pair
             - additional parameters.
         """
+        log(2, "The DLS loader will be deprecated in the next release. Please use the Hdf5Loader.")
         p = self.DEFAULT.copy(99)
         p.update(pars)
         super(I13ScanFFP, self).__init__(p, **kwargs)

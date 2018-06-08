@@ -23,15 +23,14 @@ def get_test_data_path(name):
                     ['test_data/', name,'/'])
 
 
-def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='append', auto_frames=20, ncalls=1, cleanup=True):
+def PtyscanTestRunner(ptyscan_instance, data_params, save_type='append', auto_frames=20, ncalls=1, cleanup=True):
         u.verbose.set_level(3)
         out_dict = {}
         outdir = tempfile.mkdtemp()
-        data.recipe = r
-        data.dfile = '%s/prep.ptyd' % outdir
-        out_dict['output_file'] = data.dfile
-        data.save = save_type
-        a = ptyscan_instance(data)
+        data_params.dfile = '%s/prep.h5' % outdir
+        out_dict['output_file'] = data_params.dfile
+        data_params.save = save_type
+        a = ptyscan_instance(data_params)
         a.initialize()
         out_dict['msgs'] = []
         i=0

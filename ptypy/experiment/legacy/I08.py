@@ -14,15 +14,15 @@ import numpy as np
 import time
 import os
 
-from .. import utils as u
-from .. import io
-from ..utils.verbose import log
-from ..core.paths import Paths
+from ptypy import utils as u
+from ptypy import io
+from ptypy.utils.verbose import log
+from ptypy.core.paths import Paths
 # FIXME: Accessing the real "io" from the parent Ptycho class would be much better
 #from ptypy.core import DEFAULT_io as IO_par
-from ..core import Ptycho
-from ..core.data import PtyScan
-from ..utils.descriptor import defaults_tree
+from ptypy.core import Ptycho
+from ptypy.core.data import PtyScan
+from ptypy.utils.descriptor import defaults_tree
 
 IO_par = Ptycho.DEFAULT['io']
 
@@ -125,6 +125,7 @@ class I08Scan(PtyScan):
         """
         # Initialize parent class. All updated parameters are now in
         # self.info
+        log(2, "The I08Scan loader will be deprecated in the next release. Please use the Hdf5Loader.")
         p = self.DEFAULT.copy(99)
         p.update(pars)
         super(I08Scan, self).__init__(p, **kwargs)

@@ -18,10 +18,11 @@ This file is part of the PTYPY package.
 """
 # Import instrument-specific modules
 from cSAXS import cSAXS
-from I13_ffp import I13ScanFFP
-from I13_nfp import I13ScanNFP
-from DLS import DlsScan
-from I08 import I08Scan
+from legacy.I13_ffp import I13ScanFFP
+from legacy.I13_nfp import I13ScanNFP
+from legacy.DLS import DlsScan
+from legacy.I08 import I08Scan
+from hdf5_loader import Hdf5Loader
 from savu import Savu
 from plugin import makeScanPlugin
 from ID16Anfp import ID16AScan
@@ -32,5 +33,3 @@ from UCL import UCLLaserScan
 from nanomax import NanomaxStepscanMay2017, NanomaxStepscanNov2016, NanomaxFlyscanJune2017
 from ALS_5321 import ALS5321Scan
 
-from ..core.data import MoonFlowerScan, PtydScan, PtyScan
-from ..simulations import SimScan
