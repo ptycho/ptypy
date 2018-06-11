@@ -262,8 +262,12 @@ class Hdf5Loader(PtyScan):
         log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(data_shape,
                                                                                                                               positions_slow_shape,
                                                                                                                       positions_fast_shape))
-
+        # move the following into a helper method, I hate this block of logic. Can we remove it somehow aside from nexus format?
         if data_shape[:-2] == positions_slow_shape == positions_fast_shape:
+            '''
+            axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n) or
+            axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n)
+            '''
             log(3, "Everything is wonderful, each diffraction point has a co-ordinate.")
             self.num_frames = np.prod(positions_fast_shape)
             self._ismapped = True
@@ -271,8 +275,38 @@ class Hdf5Loader(PtyScan):
                 self._scantype = "raster"
             else:
                 self._scantype = "arb"
-        else:
+
+        elif data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
+            '''
+            axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
+            '''
+            log(3, "Positions are raster, but data is a list of frames. Unpacking the data to match the positions...")
+            self.num_frames = np.prod(positions_fast_shape)
             self._ismapped = False
+            self._scantype = 'raster'
+
+        elif (len(positions_slow_shape) == 1) and (len(positions_fast_shape) == 1):
+            if data_shape[:-2] == (positions_slow_shape[0], positions_fast_shape[0]):
+                '''
+                axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the size of the other axis,
+                '''
+                log(3, "Assuming the axes are 1D and need to be meshed to match the raster style data")
+                self.num_frames = np.prod(data_shape[:-2])
+                self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
+                self._ismapped = True
+                self._scantype = 'raster'
+            elif data_shape[0] == (positions_slow_shape[0]*positions_fast_shape[0]):
+                '''
+                axis_data.shape (C,) for data.shape (C*D, frame_size_m, frame_size_n) where D is the size of the other axis.
+                '''
+                self.num_frames = data_shape[0]
+                self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
+                self._ismapped = False
+                self._scantype = 'raster'
+            else:
+                raise IOError("I don't know what to do with these positions/data shapes")
+        else:
+            raise IOError("I don't know what to do with these positions/data shapes")
 
     def load_weight(self):
         # Load mask as weight
@@ -305,18 +339,28 @@ class Hdf5Loader(PtyScan):
         intensities = {}
         positions = {}
         weights = {}
+        # shouldn't be able to get here without having something that matches this logic.
+        # move the following into a helper method.
+        if (self._ismapped and (self._scantype is 'arb')):
+            # easy peasy
+            for jj in indices:
+                intensities[jj] = self.intensities[jj]
+                positions[jj] = self.slow_axis[jj], self.fast_axis[jj]
+
         if (self._ismapped and (self._scantype is 'raster')):
             sh = self.slow_axis.shape
             for jj in indices:
                 intensities[jj] = self.intensities[jj % sh[0], jj // sh[1]]  # or the other way round???
                 positions[jj] = self.slow_axis[jj % sh[0], jj // sh[1]], self.fast_axis[jj % sh[0], jj // sh[1]]
 
-        if (self._ismapped and (self._scantype is 'arb')):
-            for jj in indices:
-                intensities[jj] = self.intensities[jj]  # or the other way round???
-                positions[jj] = self.slow_axis[jj], self.fast_axis[jj]
 
-        log(3, 'Data loaded successfully.')
+        if (self._scantype is 'raster') and not self._ismapped:
+            sh = self.slow_axis.shape
+            for jj in indices:
+                intensities[jj] = self.intensities[jj]
+                positions[jj] = self.slow_axis[jj % sh[0], jj // sh[1]], self.fast_axis[jj % sh[0], jj // sh[1]]
+        log(3, 'Data loaded successfully. Now applying the corrections.')
+
         return intensities, positions, weights
 
 

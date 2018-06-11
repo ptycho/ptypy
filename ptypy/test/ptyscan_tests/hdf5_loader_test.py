@@ -4,7 +4,7 @@ import os
 import h5py as h5
 import numpy as np
 
-from ptypy.test.test_utils import PtyscanTestRunner
+from ptypy.test.utils import PtyscanTestRunner
 from ptypy.experiment import Hdf5Loader
 from ptypy import utils as u
 
@@ -140,10 +140,107 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
 
     def test_position_data_mapping_case_3(self):
-        pass
+        '''
+        axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
+        '''
+        C = 3
+        D = 4
+        frame_size_m = 50
+        frame_size_n = 60
+
+
+        positions_slow = np.arange(C)
+        positions_fast = np.arange(D)
+        fast, slow = np.meshgrid(positions_fast, positions_slow) # just pretend it's a simple grid
+        # now chuck them in the files
+        with h5.File(self.positions_file, 'w') as f:
+            f[self.positions_slow_key] = slow
+            f[self.positions_fast_key] = fast
+
+        # make up some data ...
+        data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C*D, frame_size_m, frame_size_n)
+        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+
+        data_params = u.Param()
+        data_params.auto_center = False
+        data_params.intensities = u.Param()
+        data_params.intensities.file = self.intensity_file
+        data_params.intensities.key = self.intensity_key
+
+        data_params.positions = u.Param()
+        data_params.positions.file = self.positions_file
+        data_params.positions.slow_key = self.positions_slow_key
+        data_params.positions.fast_key = self.positions_fast_key
+        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
+
 
     def test_position_data_mapping_case_4(self):
-        pass
+        '''
+        axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the size of the other axis,
+        '''
+        C = 3
+        D = 4
+        frame_size_m = 50
+        frame_size_n = 60
+
+
+        slow = np.arange(C)
+        fast = np.arange(D)
+        # now chuck them in the files
+        with h5.File(self.positions_file, 'w') as f:
+            f[self.positions_slow_key] = slow
+            f[self.positions_fast_key] = fast
+
+        # make up some data ...
+        data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C, D, frame_size_m, frame_size_n)
+        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+
+        data_params = u.Param()
+        data_params.auto_center = False
+        data_params.intensities = u.Param()
+        data_params.intensities.file = self.intensity_file
+        data_params.intensities.key = self.intensity_key
+
+        data_params.positions = u.Param()
+        data_params.positions.file = self.positions_file
+        data_params.positions.slow_key = self.positions_slow_key
+        data_params.positions.fast_key = self.positions_fast_key
+        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
+
+    def test_position_data_mapping_case_5(self):
+        '''
+        axis_data.shape (C,) for data.shape (C*D, frame_size_m, frame_size_n) where D is the size of the other axis.
+        '''
+
+        C = 3
+        D = 4
+        frame_size_m = 50
+        frame_size_n = 60
+
+
+        slow = np.arange(C)
+        fast = np.arange(D)
+        # now chuck them in the files
+        with h5.File(self.positions_file, 'w') as f:
+            f[self.positions_slow_key] = slow
+            f[self.positions_fast_key] = fast
+
+        # make up some data ...
+        data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C*D, frame_size_m, frame_size_n)
+        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+
+        data_params = u.Param()
+        data_params.auto_center = False
+        data_params.intensities = u.Param()
+        data_params.intensities.file = self.intensity_file
+        data_params.intensities.key = self.intensity_key
+
+        data_params.positions = u.Param()
+        data_params.positions.file = self.positions_file
+        data_params.positions.slow_key = self.positions_slow_key
+        data_params.positions.fast_key = self.positions_fast_key
+        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
+
 
     def test_flatfield_applied_case_1(self):
         pass

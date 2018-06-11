@@ -2,7 +2,7 @@
 Utility functions and classes to support MPI computing.
 
 This file is part of the PTYPY package.
-    module:: test_utils
+    module:: utils
 .. moduleauthor:: Aaron Parsons <scientificsoftware@diamond.ac.uk>
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
