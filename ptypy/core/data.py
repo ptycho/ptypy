@@ -135,8 +135,8 @@ class PtyScan(object):
        <newline> 
        - ``None`` or ``0``: correct orientation
        - ``1``: invert columns (numpy.flip_lr)
-       - ``2``: invert columns, invert rows
-       - ``3``: invert rows  (numpy.flip_ud)
+       - ``2``: invert rows  (numpy.flip_ud)
+       - ``3``: invert columns, invert rows
        - ``4``: transpose (numpy.transpose)
        - ``4+i``: tranpose + other operations from above
        <newline>
