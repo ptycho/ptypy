@@ -11,6 +11,7 @@ import unittest
 # class PrepAndRunDMMFMultipleProbesTest(unittest.TestCase):
 #     def test_multiprobe(self):
 
+p = u.Param()
 # for verbose output
 p.verbose_level = 3
 

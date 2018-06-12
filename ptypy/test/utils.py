@@ -52,7 +52,7 @@ def EngineTestRunner(engine_params,propagator='farfield',output_path='./', outpu
     p.io.interaction.active = False
     p.io.home = output_path
     p.io.rfile = "%s.ptyr" % output_file
-    p.io.autosave = u.Param(active=False)
+    p.io.autosave = u.Param(active=True)
     p.io.autoplot = u.Param(active=False)
     p.ipython_kernel = False
     p.scans = u.Param()

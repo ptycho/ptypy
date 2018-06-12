@@ -22,7 +22,7 @@ class LoadRunTest(unittest.TestCase):
         p.io = u.Param()
         p.io.home = outpath
         p.io.rfile = file_path
-        p.io.autosave = u.Param(active=False)
+        p.io.autosave = u.Param(active=True)
         p.io.autoplot = u.Param(active=False)
         p.ipython_kernel = False
         p.scans = u.Param()
