@@ -10,7 +10,6 @@ This file is part of the PTYPY package.
 
 import h5py as h5
 import numpy as np
-import copy
 
 from ptypy import utils as u
 from ptypy.core.data import PtyScan
@@ -369,6 +368,20 @@ class Hdf5Loader(PtyScan):
             self.info.center = self.p.center
             self.p.shape = pshape
 
+        # it's much better to have this logic here than in load!
+        if (self._ismapped and (self._scantype is 'arb')):
+            # easy peasy
+            log(3, "This scan looks to be a mapped arbitrary trajectory scan.")
+            self.load = self.load_mapped_and_arbitrary_scan
+
+        if (self._ismapped and (self._scantype is 'raster')):
+            log(3, "This scan looks to be a mapped raster scan.")
+            self.load = self.loaded_mapped_and_raster_scan
+
+        if (self._scantype is 'raster') and not self._ismapped:
+            log(3, "This scan looks to be an unmapped raster scan.")
+            self.load = self.load_unmapped_raster_scan
+
 
     def load_weight(self):
         # Load mask as weight
@@ -394,34 +407,39 @@ class Hdf5Loader(PtyScan):
 
         return self.num_frames, True
 
-    def load(self, indices):
-        """
-        Load frames given by the indices.
-        indices:
-        """
+
+    def load_unmapped_raster_scan(self, indices):
         intensities = {}
         positions = {}
         weights = {}
-        # shouldn't be able to get here without having something that matches this logic.
-        # move the following into a helper method.
-        if (self._ismapped and (self._scantype is 'arb')):
-            # easy peasy
-            for jj in indices:
-                intensities[jj] = self.get_corrected_intensities(jj)
-                positions[jj] = np.array([self.slow_axis[jj]*self.p.positions.slow_multiplier, self.fast_axis[jj]*self.p.positions.fast_multiplier])
+        sh = self.slow_axis.shape
+        for jj in indices:
+            intensities[jj] = self.get_corrected_intensities(jj)
+            positions[jj] = np.array([self.slow_axis[jj % sh[0], jj // sh[1]] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[jj % sh[0], jj // sh[1]] * self.p.positions.fast_multiplier])
+        log(3, 'Data loaded successfully.')
+        return intensities, positions, weights
 
-        if (self._ismapped and (self._scantype is 'raster')):
-            sh = self.slow_axis.shape
-            for jj in indices:
-                intensities[jj] = self.get_corrected_intensities((jj % sh[0], jj // sh[1]))  # or the other way round???
-                positions[jj] = np.array([self.slow_axis[jj % sh[0], jj // sh[1]]*self.p.positions.slow_multiplier, self.fast_axis[jj % sh[0], jj // sh[1]]*self.p.positions.fast_multiplier])
+    def loaded_mapped_and_raster_scan(self, indices):
+        intensities = {}
+        positions = {}
+        weights = {}
+        sh = self.slow_axis.shape
+        for jj in indices:
+            intensities[jj] = self.get_corrected_intensities((jj % sh[0], jj // sh[1]))  # or the other way round???
+            positions[jj] = np.array([self.slow_axis[jj % sh[0], jj // sh[1]] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[jj % sh[0], jj // sh[1]] * self.p.positions.fast_multiplier])
+        log(3, 'Data loaded successfully.')
+        return intensities, positions, weights
 
-
-        if (self._scantype is 'raster') and not self._ismapped:
-            sh = self.slow_axis.shape
-            for jj in indices:
-                intensities[jj] = self.get_corrected_intensities(jj)
-                positions[jj] = np.array([self.slow_axis[jj % sh[0], jj // sh[1]]*self.p.positions.slow_multiplier, self.fast_axis[jj % sh[0], jj // sh[1]]*self.p.positions.fast_multiplier])
+    def load_mapped_and_arbitrary_scan(self, indices):
+        intensities = {}
+        positions = {}
+        weights = {}
+        for jj in indices:
+            intensities[jj] = self.get_corrected_intensities(jj)
+            positions[jj] = np.array([self.slow_axis[jj] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[jj] * self.p.positions.fast_multiplier])
         log(3, 'Data loaded successfully.')
         return intensities, positions, weights
 
