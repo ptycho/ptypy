@@ -204,8 +204,8 @@ class Ptycho(Base):
       workstation.
 
     [io.autoplot.layout]
-    default = None
-    type = str, Param
+    default = "default"
+    type = str
     help = Options for default plotter or template name
     doc = Flexible layout for default plotter is not implemented yet. Please choose one of the
       templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``

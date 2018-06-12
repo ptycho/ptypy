@@ -59,7 +59,6 @@ class BaseEngine(object):
     default = 0.7
     type = float
     lowlim = 0.0
-    uplim = 1.0
     help = Valid probe area as fraction of the probe frame
     doc = Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
 
