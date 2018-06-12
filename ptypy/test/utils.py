@@ -2,7 +2,7 @@
 Utility functions and classes to support MPI computing.
 
 This file is part of the PTYPY package.
-    module:: test_utils
+    module:: utils
 .. moduleauthor:: Aaron Parsons <scientificsoftware@diamond.ac.uk>
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
@@ -22,15 +22,15 @@ def get_test_data_path(name):
     return '/'.join(os.path.split(path)[0].split(os.sep)[:-2] +
                     ['test_data/', name,'/'])
 
-def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='append', auto_frames=20, ncalls=1, cleanup=True):
+
+def PtyscanTestRunner(ptyscan_instance, data_params, save_type='append', auto_frames=20, ncalls=1, cleanup=True):
         u.verbose.set_level(3)
         out_dict = {}
         outdir = tempfile.mkdtemp()
-        data.recipe = r
-        data.dfile = '%s/prep.ptyd' % outdir
-        out_dict['output_file'] = data.dfile
-        data.save = save_type
-        a = ptyscan_instance(data)
+        data_params.dfile = '%s/prep.h5' % outdir
+        out_dict['output_file'] = data_params.dfile
+        data_params.save = save_type
+        a = ptyscan_instance(data_params)
         a.initialize()
         out_dict['msgs'] = []
         i=0
@@ -41,13 +41,17 @@ def PtyscanTestRunner(ptyscan_instance,r=u.Param(),data=u.Param(),save_type='app
             shutil.rmtree(outdir)
         return out_dict
 
-def EngineTestRunner(engine_params, propagator='farfield'):
+
+def EngineTestRunner(engine_params,propagator='farfield',output_path='./', output_file=None):
+
 
     p = u.Param()
     p.verbose_level = 3
     p.io = u.Param()
-    p.io.home = './'
-    p.io.rfile = None
+    p.io.interaction = u.Param()
+    p.io.interaction.active = False
+    p.io.home = output_path
+    p.io.rfile = "%s.ptyr" % output_file
     p.io.autosave = u.Param(active=False)
     p.io.autoplot = u.Param(active=False)
     p.ipython_kernel = False
@@ -63,13 +67,13 @@ def EngineTestRunner(engine_params, propagator='farfield'):
     p.scans.MF.data.orientation = None
     p.scans.MF.data.num_frames = 100
     p.scans.MF.data.energy = 6.2
-    p.scans.MF.data.shape = 256
+    p.scans.MF.data.shape = 64
     p.scans.MF.data.chunk_format = '.chunk%02d'
     p.scans.MF.data.rebin = None
     p.scans.MF.data.experimentID = None
     p.scans.MF.data.label = None
     p.scans.MF.data.version = 0.1
-    p.scans.MF.data.dfile = None
+    p.scans.MF.data.dfile = "%s.ptyd" % output_file
     p.scans.MF.data.psize = 0.000172
     p.scans.MF.data.load_parallel = None
     p.scans.MF.data.distance = 7.0

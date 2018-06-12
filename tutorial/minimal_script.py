@@ -51,11 +51,15 @@ p.io.autosave = u.Param()
 p.io.autosave.interval = 20
 
 # In this tutorial we switch off the threaded plotting client.
-p.io.autoplot = False
+# (alternative one-liners would be `p['io.autoplot.active'] = False`
+# or `p.io['autoplot.active'] = False`)
+p.io.autoplot = u.Param()
+p.io.autoplot.active = False
 
 # Since we do not want to plot anything, we don't need the
 # interaction server either.
-p.io.interaction = False
+p.io.interaction = u.Param()
+p.io.interaction.active = False
 
 # Now we have to insert actual parameters associated with a
 # ptychographic scan.

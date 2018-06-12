@@ -104,6 +104,8 @@ class DataReader(object):
         Mask, flat or dark should be either None, scan numbers (integer) or file paths
         """
         # Semi-smart base path detection: we are looking for a "raw" directory
+        log(2, "The I13DLSScan loader will be deprecated in the next release. Please use the Hdf5Loader.")
+
         p = u.Param(DEFAULT)
         if pars is not None:
             p.update(pars)

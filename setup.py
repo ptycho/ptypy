@@ -160,7 +160,9 @@ setup(
                         #'scipy>=0.13',\
                         #'mpi4py>=1.3'],
     package_dir={'ptypy': 'ptypy'},
+
     packages=setuptools.find_packages(),
+
     package_data={'ptypy': ['resources/*', ]},
     #include_package_data=True
     scripts=[

@@ -135,8 +135,8 @@ class PtyScan(object):
        <newline> 
        - ``None`` or ``0``: correct orientation
        - ``1``: invert columns (numpy.flip_lr)
-       - ``2``: invert columns, invert rows
-       - ``3``: invert rows  (numpy.flip_ud)
+       - ``2``: invert rows  (numpy.flip_ud)
+       - ``3``: invert columns, invert rows
        - ``4``: transpose (numpy.transpose)
        - ``4+i``: tranpose + other operations from above
        <newline>
@@ -227,6 +227,11 @@ class PtyScan(object):
     doc =
     userlevel = 0
     lowlim = 0
+
+    [add_poisson_noise]
+    default = True
+    type = bool
+    help = Decides whether the scan should have poisson noise or not
     """
 
     WAIT = WAIT
@@ -1538,6 +1543,11 @@ class MoonFlowerScan(PtyScan):
         s = self.geo.shape
         raw = {}
 
+        if self.p.add_poisson_noise:
+            logger.info("Generating data with poisson noise.")
+        else:
+            logger.info("Generating data without poisson noise.")
+
         for k in indices:
             intensity_j = u.abs2(self.geo.propagator.fw(
                 self.pr * self.obj[p[k][0]:p[k][0] + s[0],
@@ -1547,10 +1557,8 @@ class MoonFlowerScan(PtyScan):
                 intensity_j = u.gf(intensity_j, self.p.psf)
 
             if self.p.add_poisson_noise:
-                logger.info("Generating data with poisson noise.")
                 raw[k] = np.random.poisson(intensity_j).astype(np.int32)
             else:
-                logger.info("Generating data without poisson noise.")
                 raw[k] = intensity_j.astype(np.int32)
 
 

@@ -120,7 +120,7 @@ illumination_desc.from_string(r"""
 
     [model] 
     default = None
-    type = str
+    type = str, ndarray
     help = Type of illumination model
     doc = One of:
     	 - ``None`` : model initialitziation defaults to flat array filled with the specified number of photons

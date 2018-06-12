@@ -137,8 +137,8 @@ class Ptycho(Base):
     [io.interaction.active]
     default = True
     type = bool
-    help = Switch for the interaction
-    doc = Options for the communications server
+    help = turns on the interaction
+    doc = If True the interaction starts, if False all interaction is turned off
 
 
     [io.autosave]
@@ -205,8 +205,8 @@ class Ptycho(Base):
       workstation.
 
     [io.autoplot.layout]
-    default = None
-    type = str, Param
+    default = "default"
+    type = str
     help = Options for default plotter or template name
     doc = Flexible layout for default plotter is not implemented yet. Please choose one of the
       templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``
@@ -286,7 +286,7 @@ class Ptycho(Base):
 
         # Continue with initialization from parameters
         if pars is not None:
-            self.p.update(pars, in_place_depth=3)
+            self.p.update(pars, in_place_depth=99)
 
         # That may be a little dangerous
         self.p.update(kwargs)
@@ -295,7 +295,6 @@ class Ptycho(Base):
         # FIXME : Validation should maybe happen for each class that uses the
         #         the parameters, i.e. like a depth=1 validation
         defaults_tree.validate(self.p)
-
         # Instance attributes
 
         # Structures
@@ -312,7 +311,6 @@ class Ptycho(Base):
 
         # Early boot strapping
         self._configure()
-
         if level >= 1:
             logger.info('\n' + headerline('Ptycho init level 1', 'l'))
             self.init_structures()
@@ -388,7 +386,7 @@ class Ptycho(Base):
 
         if parallel.master and iaction.active:
             # Create the interaction server
-            self.interactor = interaction.Server(iaction)
+            self.interactor = interaction.Server(iaction.server)
 
             # Register self as an accessible object for the client
             self.interactor.objects['Ptycho'] = self
@@ -405,7 +403,7 @@ class Ptycho(Base):
                 self.plotter = None
             else:
                 # Modify port
-                iaction.port = port
+                iaction.server.port = port
 
                 # Inform the audience
                 log(4, 'Started interaction got the following parameters:'
@@ -413,13 +411,15 @@ class Ptycho(Base):
 
                 # Start automated plot client
                 self.plotter = None
-                if (parallel.master and autoplot.active):
-                    if (autoplot.threaded and autoplot.interval > 0):
-                        from multiprocessing import Process
-                        logger.info('Spawning plot client in new Process.')
-                        self.plotter = Process(target=u.spawn_MPLClient,
-                                               args=(iaction, autoplot,))
-                        self.plotter.start()
+
+                if (parallel.master and autoplot.active and autoplot.threaded and
+                        autoplot.interval > 0):
+                    from multiprocessing import Process
+                    logger.info('Spawning plot client in new Process.')
+                    self.plotter = Process(target=u.spawn_MPLClient,
+                                           args=(iaction.client, autoplot,))
+                    self.plotter.start()
+
         else:
             # No interaction wanted
             self.interactor = None
@@ -449,7 +449,7 @@ class Ptycho(Base):
     def init_data(self, print_stats=True):
         """
         Called on __init__ if ``level >= 2``.
-        
+
         Call :py:meth:`ModelManager.new_data()`
         Prints statistics on the ptypy structure if ``print_stats=True``
         """
@@ -710,7 +710,7 @@ class Ptycho(Base):
         header = u.Param(io.h5read(runfile, 'header')['header'])
         if header['kind'] == 'minimal':
             logger.info('Found minimal ptypy dump')
-            content = u.Param(io.h5read(runfile, 'content')['content'])
+            content = io.h5read(runfile, 'content')['content']
 
             logger.info('Creating new Ptycho instance')
             P = Ptycho(content.pars, level=1)
@@ -768,6 +768,9 @@ class Ptycho(Base):
         """
         import save_load
         from .. import io
+
+
+
 
         dest_file = None
 
@@ -834,6 +837,10 @@ class Ptycho(Base):
                               for ID, S in self.probe.storages.items()}
                 dump.obj = {ID: S._to_dict()
                             for ID, S in self.obj.storages.items()}
+                try:
+                    defaults_tree.validate(self.p) # check the parameters are actually able to be read back in
+                except RuntimeError:
+                    logger.warn("The parameters we are saving won't pass a validator check!")
                 dump.pars = self.p.copy()  # _to_dict(Recursive=True)
                 dump.runtime = self.runtime.copy()
                 # Discard some bits of runtime to save space
@@ -852,8 +859,13 @@ class Ptycho(Base):
                                  for ID, S in self.probe.storages.items()}
                 minimal.obj = {ID: S._to_dict()
                                for ID, S in self.obj.storages.items()}
+                try:
+                    defaults_tree.validate(self.p) # check the parameters are actually able to be read back in
+                except RuntimeError:
+                    logger.warn("The parameters we are saving won't pass a validator check!")
                 minimal.pars = self.p.copy()  # _to_dict(Recursive=True)
                 minimal.runtime = self.runtime.copy()
+
                 content = minimal
 
             h5opt = io.h5options['UNSUPPORTED']

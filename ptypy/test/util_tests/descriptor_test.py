@@ -549,5 +549,39 @@ class EvalDescriptorTest(unittest.TestCase):
         p.io.autoplot = True
         out = root.check(p)
 
+    def test_float_validation(self):
+        """
+        Check float validation.
+        """
+        import numpy as np
+
+        x = EvalDescriptor('')
+        x.from_string("""
+        [p]
+        default = 0.
+        type = float
+        help = A parameter
+        uplim = 5.
+        lowlim = 0.""")
+
+        # Basic test
+        s = Param({'p': 1.})
+        x.validate(s)
+
+        # int to float
+        s.p = 1
+        x.validate(s)
+
+        # numpy floats
+        s.p = np.float16(1.)
+        x.validate(s)
+        s.p = np.float32(1.)
+        x.validate(s)
+        s.p = np.float64(1.)
+        x.validate(s)
+        s.p = np.float128(1.)
+        x.validate(s)
+
+
 if __name__ == "__main__":
     unittest.main()

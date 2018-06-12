@@ -6,10 +6,9 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
-import unittest
+import numpy as np
 
-# class PrepAndRunDMMFMultipleProbesTest(unittest.TestCase):
-#     def test_multiprobe(self):
+p = u.Param()
 
 # for verbose output
 p.verbose_level = 3
@@ -17,8 +16,8 @@ p.verbose_level = 3
 # set home path
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.autosave = u.Param(active=False)
-p.io.autoplot = u.Param(active=False)
+p.io.autosave = None
+
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
 p.scans.MF = u.Param()
@@ -27,31 +26,26 @@ p.scans.MF = u.Param()
 p.scans.MF.name = 'Full' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
-p.scans.MF.data.shape = 128
+p.scans.MF.data.shape = 256
 p.scans.MF.data.num_frames = 200
 p.scans.MF.data.save = None
-
+p.scans.MF.illumination = u.Param()
+p.scans.MF.illumination.model = np.random.rand(*u.expect2(p.scans.MF.data.shape))
+print type(p.scans.MF.illumination.model)
 # position distance in fraction of illumination frame
-p.scans.MF.data.density = 0.15
+p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
 p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
-p.scans.MF.data.psf = 0.7
-p.scans.MF.coherence=u.Param()
-p.scans.MF.coherence.num_probe_modes = 6
-p.scans.MF.illumination = u.Param()
-p.scans.MF.illumination.diversity = u.Param(noise=(1.0, 1.0))
+p.scans.MF.data.psf = 0.
+
 
 
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter = 130
-p.engines.engine00.fourier_relax_factor = 0.05
-
+p.engines.engine00.numiter = 80
 
 # prepare and run
-P = Ptycho(p,level=4)
-P.plot_overview()
-
+P = Ptycho(p,level=5)
