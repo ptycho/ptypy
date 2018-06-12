@@ -455,6 +455,7 @@ class Hdf5Loader(PtyScan):
         indexed_frame_slices += self.frame_slices
 
         intensity = self.intensities[indexed_frame_slices]
+        # TODO: Remove these logic blocks into something a bit more sensible.
         if self.darkfield is not None:
             if self.darkfield_laid_out_like_data:
                 intensity -= self.darkfield[indexed_frame_slices]
