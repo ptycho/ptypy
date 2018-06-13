@@ -287,7 +287,8 @@ class ScanModel(object):
         report_time()
         logger.info('Inserting data in diff and mask storages')
         
-        # Second pass: copy the data
+        # Second pass: copy the data 
+        # Benchmark: scales quadratic (!!) with number of frames per node.
         for dct in dp['iterable']:
             if dct['data'] is None:
                 continue

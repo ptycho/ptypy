@@ -815,6 +815,7 @@ class PtyScan(object):
 
             # restore contiguity of the cropped/padded/rotated/flipped array
             d = np.ascontiguousarray(d)
+            w = np.ascontiguousarray(w)
 
             if has_data:
                 # Translate back to dictionaries
