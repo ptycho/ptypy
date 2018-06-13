@@ -506,10 +506,10 @@ userlevel = 2
 type = float
 
 [scan.sample.process.ref_index]
-help = Assigned refractive index
-default = 0.5+0.j
-doc = If ``None``, treat source array as projection of refractive index. If a refractive index
-  is provided the array's absolute value will be used to scale the refractive index.
+ default = (0.5, 0.0)
+ help = Assigned refractive index, tuple of format (real, complex)
+ doc = If ``None``, treat source array as projection of refractive index a+bj for (a, b). If a refractive index
+      is provided the array's absolute value will be used to scale the refractive index.
 userlevel = 2
 type = complex
 

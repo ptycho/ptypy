@@ -164,6 +164,7 @@ class DlsScan(PtyScan):
 
     [orientation]
     default = (False, False, False)
+    type = int, tuple, list
 
     """
 

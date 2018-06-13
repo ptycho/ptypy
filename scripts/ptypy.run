@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+
+import argparse
+import json
+
+from ptypy.core import Ptycho
+from ptypy import utils as u
+
+
+def setup_parser():
+    global parser
+    parser = argparse.ArgumentParser(description='Runs a ptychography from the command line')
+    parser.add_argument('--json-path', '-J',
+                        dest="json_path",
+                        help="The path to the json configuration file.",
+                        type=str)
+    parser.add_argument('--output-folder', '-O',
+                        dest="output_folder",
+                        help="The path we want the outputs to exist in (will get created).",
+                        type=str)
+    parser.add_argument('--ptypy-level', '-L',
+                        dest="ptypy_level",
+                        help="The level we want to run to ptypy to.",
+                        default=5,
+                        type=str)
+    parser.add_argument('--identifier', '-I',
+                        dest="identifier",
+                        help="For diamond this is the scan number.",
+                        default=None,
+                        type=str)
+    return parser
+
+def _byteify(data, ignore_dicts = False):
+    # if this is a unicode string, return its string representation
+    if isinstance(data, unicode):
+        return data.encode('utf-8')
+    # if this is a list of values, return list of byteified values
+    if isinstance(data, list):
+        return [ _byteify(item, ignore_dicts=True) for item in data ]
+    # if this is a dictionary, return dictionary of byteified keys and values
+    # but only if we haven't already byteified it
+    if isinstance(data, dict) and not ignore_dicts:
+        return {
+            _byteify(key, ignore_dicts=True): _byteify(value, ignore_dicts=True)
+            for key, value in data.iteritems()
+        }
+    # if it's anything else, return it in its original form
+    return data
+
+def get_parameters(args):
+    in_dict = json.load(open(args.json_path), object_hook=_byteify)
+    parameters_to_run = u.Param()
+    if in_dict['base_file'] is not None:
+        previous_scan = Ptycho.load_run(in_dict['base_file'], False)  # load in the run but without the data
+        previous_parameters = previous_scan.p
+        parameters_to_run.update(previous_parameters)
+    if in_dict['parameter_tree'] is not None:
+        parameters_to_run.update(in_dict['parameter_tree'], Convert=True)
+
+    return parameters_to_run
+
+def get_file_name(args):
+    from datetime import datetime
+    now = datetime.datetime.now()
+    if args.identifier is not None:
+        return "{}{}{}".format(args.output_folder, args.identifier, now.strftime("%Y%m%d_%H%M%S"))
+    else:
+        return "{}{}".format(args.output_folder, now.strftime("%Y%m%d_%H%M%S"))
+
+
+parser = setup_parser()
+args = parser.parse_args()
+parameters = get_parameters(args)
+parameters.io.autoplot = u.Param(active=False)
+
+# make sure we aren't randomly writing somewhere if this isn't set.
+if args.output_folder is not None:
+    parameters.io.rfile = "%s.ptyr" % get_file_name(args)
+    parameters.io.autosave = u.Param(active=True)
+else:
+    #make sure it is turned off
+    parameters.io.rfile = None
+    parameters.io.autosave = u.Param(active=False)
+
+
+P = Ptycho(parameters, level=args.ptypy_level)
+
+

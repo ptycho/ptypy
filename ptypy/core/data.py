@@ -128,7 +128,7 @@ class PtyScan(object):
     uplim = 8
 
     [orientation]
-    type = int, tuple
+    type = int, tuple, list
     default = None
     help = Data frame orientation
     doc = Choose
