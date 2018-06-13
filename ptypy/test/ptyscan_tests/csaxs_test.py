@@ -1,6 +1,6 @@
 
 import unittest
-from ptypy.test import test_utils as tu
+from ptypy.test import utils as tu
 from ptypy.experiment.cSAXS import cSAXS
 from ptypy import utils as u
 
