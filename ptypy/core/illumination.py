@@ -202,24 +202,6 @@ DEFAULT_aperture = DEFAULT.aperture
 __all__ = ['init_storage', 'aperture', 'DEFAULT']
 
 
-def rectangle(grids, dims=None, ew=2):
-    if dims is None:
-        dims = (grids.shape[-2] / 2., grids.shape[-1] / 2.)
-    v, h = dims
-    V, H = grids
-    return (u.smooth_step(-np.abs(V) + v/2, ew)
-            * u.smooth_step(-np.abs(H) + h/2, ew))
-
-
-def ellipsis(grids, dims=None, ew=2):
-    if dims is None:
-        dims = (grids.shape[-2] / 2., grids.shape[-1] / 2.)
-    v, h = dims
-    V, H = grids
-    return u.smooth_step(
-        0.5 - np.sqrt(V**2/v**2 + H**2/h**2), ew/np.sqrt(v * h))
-
-
 def aperture(A, grids=None, pars=None, **kwargs):
     """
     Creates an aperture in the shape and dtype of `A` according
@@ -273,9 +255,9 @@ def aperture(A, grids=None, pars=None, **kwargs):
         grids[1] = cgrid.imag / psize[1]
 
         if str(p.form) == 'circ':
-            apert = lambda x: ellipsis(grids, x, p.edge)
+            apert = lambda x: u.ellipsis(grids, x, p.edge)
         elif str(p.form) == 'rect':
-            apert = lambda x: rectangle(grids, x, p.edge)
+            apert = lambda x: u.rectangle(grids, x, p.edge)
         else:
             raise NotImplementedError(
                 'Only elliptical `circ` or rectangular `rect` apertures are'

@@ -1518,10 +1518,20 @@ class MoonFlowerScan(PtyScan):
         self.pixel = np.round(pixel).astype(int) + 10
         frame = self.pixel.max(0) + 10 + geo.shape
         self.geo = geo
-        self.obj = resources.flower_obj(frame)
-
+        
+        try:
+            self.obj = resources.flower_obj(frame)
+        except:
+            # matplotlib failsafe
+            self.obj = u.gf_2d(u.parallel.MPInoise2d(frame),1.)
+            
         # Get probe
-        moon = resources.moon_pr(self.geo.shape)
+        try:
+            moon = resources.moon_pr(self.geo.shape)
+        except:
+            # matplotlib failsafe
+            moon = u.ellipsis(u.grids(self.geo.shape)).astype(complex)
+        
         moon /= np.sqrt(u.abs2(moon).sum() / p.photons)
         self.pr = moon
         self.load_common_in_parallel = True

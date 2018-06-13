@@ -396,8 +396,9 @@ class ScanModel(object):
 
         parallel.allreduce(mean_frame)
         parallel.allreduce(norm)
-        parallel.allreduce(max_frame, parallel.MPI.MAX)
-        parallel.allreduce(max_frame, parallel.MPI.MIN)
+        if parallel.MPIenabled:
+            parallel.allreduce(max_frame, parallel.MPI.MAX)
+            parallel.allreduce(min_frame, parallel.MPI.MIN)
         mean_frame /= (norm + (norm == 0))
 
         self.diff.norm = norm

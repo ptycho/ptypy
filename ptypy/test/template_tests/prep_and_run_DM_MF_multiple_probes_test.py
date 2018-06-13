@@ -54,4 +54,6 @@ p.engines.engine00.fourier_relax_factor = 0.05
 
 # prepare and run
 P = Ptycho(p,level=4)
-P.plot_overview()
+
+# We shouldn't plot
+#P.plot_overview()
