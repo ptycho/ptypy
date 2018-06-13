@@ -15,31 +15,38 @@ To cite PTYPY in publications, use
 
 del short_version, release
 
+__zmq_msg = 'ZeroMQ not found.\nInteraction server & client disabled.\n\
+Install python-zmq via the package repositories or with `pip install --user pyzmq`'
+__mpi_msg = 'Message Passaging for Python (mpi4py) not found.\n\
+CPU-parallelization disabled.\n\
+Install python-mpi4py via the package repositories or with `pip install --user mpi4py`'
+__mpl_msg = 'Plotting for Python (matplotlib) not found.\n\
+Plotting disabled.\n\
+Install python-matplotlib via the package repositories or with `pip install --user matplotlib`'
+
 try:
     import zmq
+except ImportError as ie:
+    __has_zmq__ = False
+else:
     __has_zmq__ = True
     del zmq
-except ImportError('ZeroMQ not found.\nInteraction server & client disabled.\n\
-Install python-zmq via the package repositories or with `pip install --user pyzmq`'):
-    __has_zmq__ = False
 
 try:
     import mpi4py
+except ImportError as ie:
+    __has_mpi4py__ = False
+else:
     __has_mpi4py__ = True
     del mpi4py
-except ImportError('Message Passaging for Python (mpi4py) not found.\n\
-CPU-parallelization disabled.\n\
-Install python-mpi4py via the package repositories or with `pip install --user mpi4py`'):
-    __has_mpi4py__ = False
 
 try:
     import matplotlib
+except ImportError as ie:
+    __has_matplotlib__ = False
+else:
     __has_matplotlib__ = True
     del matplotlib
-except ImportError('Plotting for Python (matplotlib) not found.\n\
-Plotting disabled.\n\
-Install python-matplotlib via the package repositories or with `pip install --user matplotlib`'):
-    __has_matplotlib__ = False
 
 # Initialize MPI (eventually GPU)
 from .utils import parallel
