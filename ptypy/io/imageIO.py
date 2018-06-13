@@ -4,7 +4,7 @@ Wrapper over Python Imaging Library to read images (+ metadata) and write images
 """
 import numpy as np
 import glob
-import PIL.Image as PIL
+
 
 # Tentative support for 12-bit tiff. Requires libtiff library
 # This trick might be deprecated if using pillow
@@ -36,6 +36,7 @@ def imread(filename, doglob=None, roi=None):
             returns a region of interest (applied on all files if gobbing or if filename is a list)
 
     """
+    import PIL.Image as PIL
     if not isinstance(filename, str):
         # We have a list
         fnames = filename
