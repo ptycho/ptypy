@@ -24,6 +24,7 @@ script:
   - conda install pytest # additional dependencies for the tests
   - pip install pytest-cov
   - pip install coveralls
+  - echo $PYTHONPATH
   - conda list
   - python setup.py install # install ptypy
   - py.test ptypy/test -v --cov ptypy --cov-report term-missing # now run the tests
