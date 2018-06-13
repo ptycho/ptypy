@@ -26,8 +26,8 @@ DEFAULT_iter_info = u.Param(
 )
 
 
-local_tree = EvalDescriptor('')
-@local_tree.parse_doc('engine.common')
+#local_tree = EvalDescriptor('')
+#@local_tree.parse_doc('engine.common')
 class BaseEngine(object):
     """
     Base reconstruction engine.

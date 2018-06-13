@@ -19,7 +19,7 @@ from .. import engines
 from ..io import interaction
 from .classes import Base, Container, Storage, PTYCHO_PREFIX
 from .manager import ModelManager
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 
 __all__ = ['Ptycho']
 

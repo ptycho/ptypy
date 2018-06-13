@@ -48,7 +48,11 @@ from .utils import parallel
 from .utils import verbose
 
 # Start a parameter tree
-from .utils.descriptor import defaults_tree
+#from .utils.descriptor import defaults_tree
+from .utils.descriptor import EvalDescriptor
+defaults_tree = EvalDescriptor('root')
+del EvalDescriptor
+
 
 # Import core modules
 from . import utils

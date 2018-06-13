@@ -15,7 +15,7 @@ from collections import namedtuple
 
 __all__ = ['str2int', 'str2range', 'complex_overload', 'expect2',
            'expect3', 'keV2m', 'keV2nm', 'nm2keV', 'clean_path',
-           'unique_path', 'Table', 'all_subclasses', 'expectN']
+           'unique_path', 'Table', 'all_subclasses', 'expectN', 'isstr']
 
 
 def all_subclasses(cls, names=False):
@@ -130,6 +130,20 @@ class Table(object):
         self.add_records(recs)
         
 
+def isstr(s):
+    """
+    This function should be used for checking if an object is of string type
+    """
+    import sys
+
+    if sys.version_info[0] == 3:
+        string_types = str,
+    else:
+        string_types = basestring,
+    
+    return isinstance(s, string_types)
+    
+    
 def str2index(s):
     """
     Converts a str that is supposed to represent a numpy index expression

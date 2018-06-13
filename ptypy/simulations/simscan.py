@@ -20,14 +20,14 @@ if __name__ == "__main__":
     from ptypy.core.sample import sample_desc
     from ptypy.core.illumination import illumination_desc
     from ptypy.core import xy
-    from ptypy.utils.descriptor import defaults_tree, EvalDescriptor
+    from ptypy import defaults_tree
 else:
     from .. import utils as u
     from detector import Detector, conv
     from ..core.data import PtyScan
     from ..core.ptycho import Ptycho
     from ..core.manager import Full as ScanModel
-    from ..utils.descriptor import defaults_tree, EvalDescriptor
+    from .. import defaults_tree
     from ..core.sample import sample_desc
     from ..core.illumination import illumination_desc
     from ..core import xy
@@ -37,7 +37,7 @@ logger = u.verbose.logger
 __all__ = ['SimScan']
 
 
-defaults_tree['scandata'].add_child(EvalDescriptor('SimScan'))
+defaults_tree['scandata'].add_child(u.descriptor.EvalDescriptor('SimScan'))
 defaults_tree['scandata.SimScan'].add_child(illumination_desc, copy=True)
 defaults_tree['scandata.SimScan'].add_child(sample_desc, copy=True)
 defaults_tree['scandata.SimScan'].add_child(xy.xy_desc, copy=True)

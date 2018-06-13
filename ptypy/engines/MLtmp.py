@@ -21,7 +21,7 @@ from ..utils.descriptor import defaults_tree
 
 __all__ = ['ML']
 
-@defaults_tree.parse_doc('engine.ML')
+@register()
 class ML(BaseEngine):
     """
     Maximum likelihood reconstruction engine.

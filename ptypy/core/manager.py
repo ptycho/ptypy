@@ -26,7 +26,7 @@ from .classes import *
 from .classes import DEFAULT_ACCESSRULE
 from .classes import MODEL_PREFIX
 from ..utils import parallel
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 
 # Please set these globally later
 FType = np.float64
@@ -132,8 +132,8 @@ class ScanModel(object):
     @classmethod
     def makePtyScan(cls, pars):
         """
-        Factory for PtyScan object. Return an instance of the appropriate PtyScan subclass based on the
-        input parameters.
+        Factory for PtyScan object. Return an instance of the appropriate PtyScan 
+        subclass based on the input parameters.
 
         Parameters
         ----------
@@ -162,13 +162,22 @@ class ScanModel(object):
         :return: None if no data is available, True otherwise.
         """
 
+        import time
+        self._t = time.time()
+        def report_time():
+            logger.info('Time %.2f' % (time.time()-self._t ))
+            self._t  = time.time()
+            
         # Initialize if that has not been done yet
         if not self.ptyscan.is_initialized:
             self.ptyscan.initialize()
-
+        
+        report_time()
         # Get data
+        logger.info('Importing data from scan %s.' % self.label)
         dp = self.ptyscan.auto(self.frames_per_call)
-
+        
+        
         self.data_available = (dp != data.EOS)
         logger.debug(u.verbose.report(dp))
 
@@ -176,8 +185,8 @@ class ScanModel(object):
             return None
 
         label = self.label
-        logger.info('Importing data from scan %s.' % label)
-
+        report_time()
+        logger.info('Creating views and storages.' )
         # Prepare the scan geometry if not already done.
         if not self.geometries:
             self._initialize_geo(dp['common'])
@@ -275,10 +284,11 @@ class ScanModel(object):
         # that will create the right sizes and the datalist access
         self.diff.reformat()
         self.mask.reformat()
-
+        report_time()
+        logger.info('Inserting data in diff and mask storages')
+        
         # Second pass: copy the data
         for dct in dp['iterable']:
-            parallel.barrier()
             if dct['data'] is None:
                 continue
             diff_data = dct['data']
@@ -297,7 +307,9 @@ class ScanModel(object):
         self.positions += positions
         self.diff_views += diff_views
         self.mask_views += mask_views
-
+        report_time()
+        logger.info('Data organization complete, updating stats')
+        
         self._update_stats()
 
         # Create new views on object, probe, and exit wave, and connect
@@ -309,7 +321,8 @@ class ScanModel(object):
             pod_.model = self
         logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
             parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
-
+        
+        report_time()
         # Adjust storages
         self.ptycho.probe.reformat(True)
         self.ptycho.obj.reformat(True)
