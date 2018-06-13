@@ -1,4 +1,4 @@
-name: core_dependences
+name: core_dependencies
 channels:
   - conda-forge
 dependencies:

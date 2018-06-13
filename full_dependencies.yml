@@ -1,4 +1,4 @@
-name: full_dependences
+name: full_dependencies
 channels:
   - conda-forge
 dependencies:
