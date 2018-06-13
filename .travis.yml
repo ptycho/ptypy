@@ -10,9 +10,6 @@ before_install:
   - conda config --set always_yes yes --set changeps1 no # we want it to always do yes, and start a new console
   - conda update -q conda # update this quietly
   - conda install pyyaml
-  - conda install pytest
-  - pip install pytest-cov
-  - pip install coveralls
   - conda info -a # and print the info
 
 env:
@@ -24,6 +21,10 @@ install: True
 script:
   - conda env create --file ${TEST_ENV_NAME}.yml #set up the environment thats in the file
   - source activate ${TEST_ENV_NAME} # activate it
+  - conda install pytest # additional dependencies for the tests
+  - pip install pytest-cov
+  - pip install coveralls
+  - conda list
   - python setup.py install # install ptypy
   - py.test ptypy/test -v --cov ptypy --cov-report term-missing # now run the tests
 
