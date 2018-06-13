@@ -27,7 +27,7 @@ class Hdf5Loader(PtyScan):
     Defaults:
 
     [name]
-    default = 'Hdf5'
+    default = 'Hdf5Loader'
     type = str
     help =
 
