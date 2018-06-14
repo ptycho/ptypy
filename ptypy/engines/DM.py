@@ -74,12 +74,14 @@ class DM(BaseEngine):
         self.mean_power = None
 
         self.ptycho.citations.add_article(
-            comment = 'The difference map reconstruction algorithm',
+            title = 'Probe retrieval in ptychographic coherent diffractive imaging',
             author = 'Thibault et al.',
             journal = 'Ultramicroscopy',
             volume = 109,
             year = 2009,
             page = 338,
+            DOI = '10.1016/j.ultramic.2008.12.011',
+            comment = 'The difference map reconstruction algorithm',
         )
 
     def engine_initialize(self):
