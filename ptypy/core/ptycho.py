@@ -188,11 +188,14 @@ class Ptycho(Base):
         # Keep a bibliography
         self.citations = u.Bibliography()
         self.citations.add_article(
-            comment = 'The Ptypy framework',
+            title = 'A computational framework for ptychographic reconstructions',
             author = 'Enders and Thibault',
             journal = 'Proc. Royal Soc. A',
             volume = 472,
-            year = 2196,
+            year = 2016,
+            page = 20160640,
+            doi = '10.1098/rspa.2016.0640',
+            comment = 'The Ptypy framework',
         )
 
         if level >= 1:
@@ -598,9 +601,10 @@ class Ptycho(Base):
             pass
 
         # Hint at citations (for all log levels)
-        print '\n' + headerline('This reconstruction relied on the following work', 'l', '=')
-        print self.citations
-        print headerline('', 'l', '=')
+        citation_info = '\n'.join(headerline('This reconstruction relied on the following work', 'l', '='),
+        str(self.citations),
+        headerline('', 'l', '='))
+        logger.warn(citation_info)
 
     def _run(self, run_label=None):
         """
