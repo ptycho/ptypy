@@ -14,11 +14,16 @@ import ptypy.utils as u
 
 class LoadRunTest(unittest.TestCase):
     def test_load_run(self):
+
+        # in the core tests, the moonflower defaults to random noise. We need to keep this consistent for this check,
+        # so we set the random seed
+        np.random.seed(1)
+
         outpath = tempfile.mkdtemp(prefix='something')
 
         file_path = outpath + os.sep + 'reconstruction.ptyr'
         p = u.Param()
-        p.verbose_level = 5
+        p.verbose_level = 0
         p.io = u.Param()
         p.io.home = outpath
         p.io.rfile = file_path
@@ -84,6 +89,7 @@ class LoadRunTest(unittest.TestCase):
         # for name, val in file_vals.iteritems():
         #     self.assertEqual(file_vals[name], set_vals[name])
         # self.assertDictEqual(content.pars._to_dict(Recursive=True), set_vals)
+        np.random.seed(1)
 
         b = Ptycho.load_run(file_path)
         np.testing.assert_equal(type(b), type(Pcomp))
