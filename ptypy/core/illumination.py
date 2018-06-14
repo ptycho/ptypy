@@ -94,9 +94,9 @@ illumination_desc.from_string(r"""
     userlevel = 1
 
     [diversity.noise]
-    default = None
+    default = (0.5,1.0)
     type = tuple
-    help = Noise in the generated modes of the illumination
+    help = Noise in each non-primary mode of the illumination.
     doc = Can be either:
     	 - ``None`` : no noise
     	 - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
