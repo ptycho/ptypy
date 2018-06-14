@@ -582,6 +582,12 @@ class EvalDescriptorTest(unittest.TestCase):
         s.p = np.float128(1.)
         x.validate(s)
 
+    def test_save_json(self):
+
+        pass
+
+    def test_load_json(self):
+        pass
 
 if __name__ == "__main__":
     unittest.main()
