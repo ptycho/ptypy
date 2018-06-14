@@ -94,12 +94,14 @@ class EPIE(BaseEngine):
         self.ob_nodecover = None
 
         self.ptycho.citations.add_article(
-            comment = 'The ePIE reconstruction algorithm',
-            author = 'Maiden and Rodenburg',
+            title = 'An improved ptychographical phase retrieval algorithm for diffractive imaging',
+            author = 'Maiden A. and Rodenburg J.',
             journal = 'Ultramicroscopy',
             volume = 10,
             year = 2009,
             page = 1256,
+            DOI = '10.1016/j.ultramic.2009.05.012',
+            comment = 'The ePIE reconstruction algorithm',
         )
 
     def engine_initialize(self):
