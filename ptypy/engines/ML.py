@@ -68,12 +68,14 @@ class ML(BaseEngine):
         self.scale_p_o_memory = .9
 
         self.ptycho.citations.add_article(
-            comment = 'The maximum likelihood reconstruction algorithm',
-            author = 'Thibault et al.',
+            title = 'Maximum-likelihood refinement for coherent diffractive imaging',
+            author = 'Thibault P. and Guizar-Sicairos M.',
             journal = 'New Journal of Physics',
             volume = 14,
             year = 2012,
             page = 63004,
+            DOI = '10.1088/1367-2630/14/6/063004',
+            comment = 'The maximum likelihood reconstruction algorithm',
         )
 
     def engine_initialize(self):
