@@ -53,7 +53,7 @@ ptypy.utils.plot_client module
     :show-inheritance:
 
 ptypy.utils.plot_utils module
------------------------------
+------------------------------
 
 .. automodule:: ptypy.utils.plot_utils
     :members:
@@ -69,7 +69,7 @@ ptypy.utils.scripts module
     :show-inheritance:
 
 ptypy.utils.descriptor module
-----------------------------
+-----------------------------
 
 .. automodule:: ptypy.utils.descriptor
     :members:
