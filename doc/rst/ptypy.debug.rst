@@ -1,4 +1,4 @@
-ptypy.utils package
+ptypy.debug package
 ===================
 
 Submodules
