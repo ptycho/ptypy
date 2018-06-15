@@ -68,10 +68,10 @@ ptypy.utils.scripts module
     :undoc-members:
     :show-inheritance:
 
-ptypy.utils.validator module
+ptypy.utils.descriptor module
 ----------------------------
 
-.. automodule:: ptypy.utils.validator
+.. automodule:: ptypy.utils.descriptor
     :members:
     :undoc-members:
     :show-inheritance:
