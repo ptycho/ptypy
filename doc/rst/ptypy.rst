@@ -13,6 +13,7 @@ Subpackages
     ptypy.resources
     ptypy.simulations
     ptypy.utils
+    ptypy.debug
 
 Module contents
 ---------------
