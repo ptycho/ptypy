@@ -188,14 +188,14 @@ class Ptycho(Base):
         # Keep a bibliography
         self.citations = u.Bibliography()
         self.citations.add_article(
-            title = 'A computational framework for ptychographic reconstructions',
-            author = 'Enders and Thibault',
-            journal = 'Proc. Royal Soc. A',
-            volume = 472,
-            year = 2016,
-            page = 20160640,
-            doi = '10.1098/rspa.2016.0640',
-            comment = 'The Ptypy framework',
+            title='A computational framework for ptychographic reconstructions',
+            author='Enders B. and Thibault P.',
+            journal='Proc. Royal Soc. A',
+            volume=472,
+            year=2016,
+            page=20160640,
+            doi='10.1098/rspa.2016.0640',
+            comment='The Ptypy framework',
         )
 
         if level >= 1:
