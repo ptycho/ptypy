@@ -601,9 +601,9 @@ class Ptycho(Base):
             pass
 
         # Hint at citations (for all log levels)
-        citation_info = '\n'.join(headerline('This reconstruction relied on the following work', 'l', '='),
+        citation_info = '\n'.join([headerline('This reconstruction relied on the following work', 'l', '='),
         str(self.citations),
-        headerline('', 'l', '='))
+        headerline('', 'l', '=')])
         logger.warn(citation_info)
 
     def _run(self, run_label=None):
