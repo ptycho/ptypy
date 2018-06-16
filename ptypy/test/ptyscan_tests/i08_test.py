@@ -7,8 +7,8 @@ This file is part of the PTYPY package.
 """
 
 import unittest
-from ptypy.test import test_utils as tu
-from ptypy.experiment.I08 import I08Scan
+from ptypy.test import utils as tu
+from ptypy.experiment.legacy.I08 import I08Scan
 from ptypy import utils as u
 
 

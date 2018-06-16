@@ -15,7 +15,7 @@ from collections import namedtuple
 
 __all__ = ['str2int', 'str2range', 'complex_overload', 'expect2',
            'expect3', 'keV2m', 'keV2nm', 'nm2keV', 'clean_path',
-           'unique_path', 'Table', 'all_subclasses', 'expectN']
+           'unique_path', 'Table', 'all_subclasses', 'expectN', 'isstr']
 
 
 def all_subclasses(cls, names=False):
@@ -123,13 +123,27 @@ class Table(object):
     def modify_add(self,record_ids,**kwargs):
         """
         Take selected record ids and overwrite fields with values
-        **kwargs.
+        `**kwargs`.
         """
         old_records = self.pull_records(record_ids)
         recs = [r._replace(**kwargs) for r in old_records]
         self.add_records(recs)
         
 
+def isstr(s):
+    """
+    This function should be used for checking if an object is of string type
+    """
+    import sys
+
+    if sys.version_info[0] == 3:
+        string_types = str,
+    else:
+        string_types = basestring,
+    
+    return isinstance(s, string_types)
+    
+    
 def str2index(s):
     """
     Converts a str that is supposed to represent a numpy index expression
@@ -285,7 +299,7 @@ def complex_overload(func):
     """
     @wraps(func)
     def overloaded(c,*args,**kwargs):
-        return func(np.real(c),*args,**kwargs) +1j *func(np.imag(c),*args,**kwargs)
+        return func(np.real(c),*args,**kwargs).astype(c.dtype) +1j *func(np.imag(c),*args,**kwargs)
 
     return overloaded
 

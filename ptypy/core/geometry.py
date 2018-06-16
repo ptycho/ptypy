@@ -18,7 +18,8 @@ try:
     import pyfftw
     import pyfftw.interfaces.numpy_fft as fftw_np
 except ImportError:
-    logger.warning("Unable to import pyFFTW! Will use a slower FFT method.")
+    pass
+    #logger.warning("Unable to import pyFFTW! Will use a slower FFT method.")
 
 __all__ = ['Geo', 'BasicNearfieldPropagator', 'BasicFarfieldPropagator']
 
@@ -53,9 +54,11 @@ class Geo(Base):
     interact : bool (True)
         If set to True, changes to properties like :py:meth:`energy`,
         :py:meth:`lam`, :py:meth:`shape` or :py:meth:`psize` will cause
-        a call to :py:meth:`update`
+        a call to :py:meth:`update`.
+    
 
     Default geometry parameters. See also :py:data:`.scan.geometry`
+
     Defaults:
 
     [energy]
@@ -546,12 +549,12 @@ class BasicFarfieldPropagator(object):
         lz /= (self.sh[0] + mis[0] - self.crop_pad[0]) / self.sh[0]
 
         # Calculate the grids
-        if str(p.origin) == p.origin:
+        if u.isstr(p.origin):
             c_sam = p.origin
         else:
             c_sam = p.origin + self.crop_pad / 2.
 
-        if str(p.center) == p.center:
+        if u.isstr(p.center):
             c_det = p.center
         else:
             c_det = p.center + self.crop_pad / 2.

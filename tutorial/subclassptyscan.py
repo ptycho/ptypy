@@ -1,4 +1,4 @@
-# In this tutorial, we learn how to subclass :any:`PtyScan` to make
+# In this tutorial, we learn how to subclass :py:class:`PtyScan` to make
 # ptypy work with any experimental setup.
 
 # This tutorial can be used as a direct follow-up to :ref:`simupod`
@@ -46,7 +46,7 @@ class NumpyScan(PtyScan):
 # because its defaults are not properly managed. For this, Ptypy provides a
 # powerful self-documenting tool call a "descriptor" which can be applied
 # to any new class using a decorator. The tree of all valid ptypy parameters
-# is located at :any:`ptypy.utils.descriptor.defaults_tree`. To manage the default
+# is located at :ref:`here <parameters>`. To manage the default
 # parameters of our subclass and document its existence, we would need to write
 from ptypy.utils.descriptor import defaults_tree
 

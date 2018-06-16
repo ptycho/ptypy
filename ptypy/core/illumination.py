@@ -94,9 +94,9 @@ illumination_desc.from_string(r"""
     userlevel = 1
 
     [diversity.noise]
-    default = None
+    default = (0.5,1.0)
     type = tuple
-    help = Noise in the generated modes of the illumination
+    help = Noise in each non-primary mode of the illumination.
     doc = Can be either:
     	 - ``None`` : no noise
     	 - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
@@ -120,7 +120,7 @@ illumination_desc.from_string(r"""
 
     [model] 
     default = None
-    type = str
+    type = str, ndarray
     help = Type of illumination model
     doc = One of:
     	 - ``None`` : model initialitziation defaults to flat array filled with the specified number of photons
@@ -199,40 +199,22 @@ illumination_desc.from_string(r"""
 DEFAULT = illumination_desc.make_default(99)
 DEFAULT_aperture = DEFAULT.aperture
 
-__all__ = ['init_storage', 'aperture']
-
-
-def rectangle(grids, dims=None, ew=2):
-    if dims is None:
-        dims = (grids.shape[-2] / 2., grids.shape[-1] / 2.)
-    v, h = dims
-    V, H = grids
-    return (u.smooth_step(-np.abs(V) + v/2, ew)
-            * u.smooth_step(-np.abs(H) + h/2, ew))
-
-
-def ellipsis(grids, dims=None, ew=2):
-    if dims is None:
-        dims = (grids.shape[-2] / 2., grids.shape[-1] / 2.)
-    v, h = dims
-    V, H = grids
-    return u.smooth_step(
-        0.5 - np.sqrt(V**2/v**2 + H**2/h**2), ew/np.sqrt(v * h))
+__all__ = ['init_storage', 'aperture', 'DEFAULT']
 
 
 def aperture(A, grids=None, pars=None, **kwargs):
     """
     Creates an aperture in the shape and dtype of `A` according
     to x,y-grids `grids`. Keyword Arguments may be any of
-    :any:`DEFAULT`.aperture.
+    (*FIXME* link to kwargs)
 
     Parameters
     ----------
     A : ndarray
         Model array (at least 2-dimensional) to place aperture on top.
 
-    pars: dict or ptypy.utils.Param
-        Parameters, see :any:`DEFAULT`.aperture
+    pars : dict or ~ptypy.utils.Param
+        Parameters, *FIXME* link to parameters
 
     grids : ndarray
         Cartesian coordinate grids, if None, they will be created with
@@ -273,9 +255,9 @@ def aperture(A, grids=None, pars=None, **kwargs):
         grids[1] = cgrid.imag / psize[1]
 
         if str(p.form) == 'circ':
-            apert = lambda x: ellipsis(grids, x, p.edge)
+            apert = lambda x: u.ellipsis(grids, x, p.edge)
         elif str(p.form) == 'rect':
-            apert = lambda x: rectangle(grids, x, p.edge)
+            apert = lambda x: u.rectangle(grids, x, p.edge)
         else:
             raise NotImplementedError(
                 'Only elliptical `circ` or rectangular `rect` apertures are'
@@ -300,22 +282,24 @@ def init_storage(storage, pars, energy=None, **kwargs):
 
     Parameters
     ----------
-    storage : ptypy.core.Storage
+    storage : ~ptypy.core.classes.Storage
         A :any:`Storage` instance in the *probe* container of :any:`Ptycho`
 
     pars : Param
         Parameter structure for creating a probe / illumination.
-        See :any:`DEFAULT`
+        See :py:data:`~ptypy.core.illumination.DEFAULT`
         Also accepted as argument:
-         * string giving the filename of a previous reconstruction to
-           extract storage from.
-         * string giving the name of an available TEMPLATE
-         * FIXME: document other string cases.
-         * numpy array: interpreted as initial illumination.
+
+          * string giving the filename of a previous reconstruction to 
+            extract storage from.
+          * string giving the name of an available TEMPLATE
+          * FIXME: document other string cases.
+          * numpy array: interpreted as initial illumination.
 
     energy : float, optional
         Energy associated with this storage. If None, tries to retrieve
         the energy from the already initialized ptypy network.
+
     """
     s = storage
     prefix = "[Object %s] " % str(s.ID)

@@ -133,8 +133,8 @@ class ScanModel(object):
     @classmethod
     def makePtyScan(cls, pars):
         """
-        Factory for PtyScan object. Return an instance of the appropriate PtyScan subclass based on the
-        input parameters.
+        Factory for PtyScan object. Return an instance of the appropriate PtyScan 
+        subclass based on the input parameters.
 
         Parameters
         ----------
@@ -163,13 +163,22 @@ class ScanModel(object):
         :return: None if no data is available, True otherwise.
         """
 
+        import time
+        self._t = time.time()
+        def report_time():
+            logger.info('Time %.2f' % (time.time()-self._t ))
+            self._t  = time.time()
+            
         # Initialize if that has not been done yet
         if not self.ptyscan.is_initialized:
             self.ptyscan.initialize()
-
+        
+        report_time()
         # Get data
+        logger.info('Importing data from scan %s.' % self.label)
         dp = self.ptyscan.auto(self.frames_per_call)
-
+        
+        
         self.data_available = (dp != data.EOS)
         logger.debug(u.verbose.report(dp))
 
@@ -177,8 +186,8 @@ class ScanModel(object):
             return None
 
         label = self.label
-        logger.info('Importing data from scan %s.' % label)
-
+        report_time()
+        logger.info('Creating views and storages.' )
         # Prepare the scan geometry if not already done.
         if not self.geometries:
             self._initialize_geo(dp['common'])
@@ -281,13 +290,12 @@ class ScanModel(object):
         # that will create the right sizes and the datalist access
         self.diff.reformat()
         self.mask.reformat()
-
-        # Second pass: copy the data
+        report_time()
+        logger.info('Inserting data in diff and mask storages')
+        
+        # Second pass: copy the data 
+        # Benchmark: scales quadratic (!!) with number of frames per node.
         for dct in dp['iterable']:
-            parallel.barrier()
-            ###
-            ### because of this barrier, each node has to have all the dp:s!!!
-            ###
             if dct['data'] is None:
                 continue
             diff_data = dct['data']
@@ -306,7 +314,9 @@ class ScanModel(object):
         self.positions += positions
         self.diff_views += diff_views
         self.mask_views += mask_views
-
+        report_time()
+        logger.info('Data organization complete, updating stats')
+        
         self._update_stats()
 
         # Create new views on object, probe, and exit wave, and connect
@@ -318,7 +328,8 @@ class ScanModel(object):
             pod_.model = self
         logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
             parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
-
+        
+        report_time()
         # Adjust storages
         self.ptycho.probe.reformat(True)
         self.ptycho.obj.reformat(True)
@@ -349,11 +360,6 @@ class ScanModel(object):
             self.Cmask = Container(self, ID='Cmask', data_type='bool')
         else:
             # Use with a Ptycho instance
-            self.ptycho.probe = Container(self.ptycho, ID='Cprobe', data_type='complex')
-            self.ptycho.obj = Container(self.ptycho, ID='Cobj', data_type='complex')
-            self.ptycho.exit = Container(self.ptycho, ID='Cexit', data_type='complex')
-            self.ptycho.diff = Container(self.ptycho, ID='Cdiff', data_type='real')
-            self.ptycho.mask = Container(self.ptycho, ID='Cmask', data_type='bool')
             self.Cdiff = self.ptycho.diff
             self.Cmask = self.ptycho.mask
         self.containers_initialized = True
@@ -404,8 +410,9 @@ class ScanModel(object):
 
         parallel.allreduce(mean_frame)
         parallel.allreduce(norm)
-        parallel.allreduce(max_frame, parallel.MPI.MAX)
-        parallel.allreduce(max_frame, parallel.MPI.MIN)
+        if parallel.MPIenabled:
+            parallel.allreduce(max_frame, parallel.MPI.MAX)
+            parallel.allreduce(min_frame, parallel.MPI.MIN)
         mean_frame /= (norm + (norm == 0))
 
         self.diff.norm = norm
@@ -486,8 +493,8 @@ class Vanilla(ScanModel):
         new_probe_ids = {}
         new_object_ids = {}
 
-        # We can just decide what the storage ID:s will be
-        ID ='S00G00'
+        # One probe / object storage per scan.
+        ID ='S'+self.label
 
         # We need to return info on what storages are created
         if not ID in self.ptycho.probe.storages.keys():
@@ -523,7 +530,7 @@ class Vanilla(ScanModel):
                       accessrule={'shape': geometry.shape,
                                   'psize': geometry.resolution,
                                   'coord': u.expectN(0.0, ndim),
-                                  'storageID': ID,
+                                  'storageID': dv.storageID,
                                   'layer': dv.layer,
                                   'active': dv.active})
 
@@ -702,8 +709,8 @@ class Full(ScanModel):
         logger.info('Found these probes : ' + ', '.join(existing_probes))
         logger.info('Found these objects: ' + ', '.join(existing_objects))
 
-        object_id = 'S00'
-        probe_id = 'S00'
+        object_id = 'S' + self.label
+        probe_id = 'S' + self.label
 
         positions = self.new_positions
         di_views = self.new_diff_views
@@ -781,8 +788,7 @@ class Full(ScanModel):
                                   accessrule={'shape': geometry.shape,
                                               'psize': geometry.resolution,
                                               'coord': pos_pr,
-                                              'storageID': (probe_id +
-                                                            object_id[1:] +
+                                              'storageID': (dv.storageID +
                                                             'G%02d' % ii),
                                               'layer': exit_index,
                                               'active': dv.active})
@@ -869,6 +875,13 @@ class Full(ScanModel):
                 illu_pars['photons'] = phot_max
             elif np.abs(np.log10(phot)-np.log10(phot_max)) > 1:
                 logger.warn('Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' % (phot, phot_max))
+
+            if (self.p.coherence.num_probe_modes>1) and (type(illu_pars) is not np.ndarray):
+
+                if (illu_pars.diversity is None) or (None in [illu_pars.diversity.noise, illu_pars.diversity.power]):
+                    log(2, "You are doing a multimodal reconstruction with none/ not much diversity between the modes! \n"
+                           "This will likely not reconstruct. You should set .scan.illumination.diversity.power and "
+                           ".scan.illumination.diversity.noise to something for the best results.")
 
             illumination.init_storage(s, illu_pars)
 

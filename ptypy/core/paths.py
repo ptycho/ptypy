@@ -92,7 +92,6 @@ class Paths(object):
         File path for plot file
         """
         p = self.get_path(self.autoplot, runtime)
-        print p
         return self.get_path(self.autoplot, runtime)
 
     def get_path(self, path, runtime):

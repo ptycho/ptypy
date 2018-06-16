@@ -330,9 +330,11 @@ class ID16AScan(PtyScan):
         :param frames: Number of frames to load
         :param start: starting point
         :return: (frames_available, end_of_scan)
+
         - the number of frames available from a starting point `start`
         - bool if the end of scan was reached
           (None if this routine doesn't know)
+
         """
         npos = self.num_frames
         frames_accessible = min((frames, npos - start))

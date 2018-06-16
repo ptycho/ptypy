@@ -81,10 +81,10 @@ sample_desc.from_string(r"""
     userlevel = 
 
     [process.offset]
-    default = (0,0)
+    default = (0, 0)
     help = Offset between center of object array and scan pattern
     doc = 
-    type = tuple
+    type = tuple, list
     userlevel = 2
     lowlim = 0
 
@@ -93,7 +93,7 @@ sample_desc.from_string(r"""
     help = Zoom value for object simulation.
     doc = If ``None``, leave the array untouched. Otherwise the modeled or loaded image will be
       resized using :py:func:`zoom`.
-    type = tuple, float
+    type = list, tuple, float
     userlevel = 2
     lowlim = 0
 
@@ -119,11 +119,11 @@ sample_desc.from_string(r"""
     userlevel = 2
 
     [process.ref_index]
-    default = 0.5+0.j
-    help = Assigned refractive index
-    doc = If ``None``, treat source array as projection of refractive index. If a refractive index
+    default = (0.5, 0.0)
+    help = Assigned refractive index, tuple of format (real, complex)
+    doc = If ``None``, treat source array as projection of refractive index a+bj for (a, b). If a refractive index
       is provided the array's absolute value will be used to scale the refractive index.
-    type = complex
+    type = list, tuple
     userlevel = 2
     lowlim = 0
 
@@ -168,9 +168,8 @@ sample_desc.from_string(r"""
     """)
 
 DEFAULT = sample_desc.make_default(99)
-DEFAULT_process = DEFAULT.process
 
-__all__ = ['init_storage', 'simulate']
+DEFAULT_process = DEFAULT.process
 
 
 def init_storage(storage, sample_pars=None, energy=None):
@@ -184,12 +183,12 @@ def init_storage(storage, sample_pars=None, energy=None):
 
     sample_pars : Param
         Parameter structure that defines how the sample is created.
-        See :any:`DEFAULT` for the parameters.
+        *FIXME* Link to parameters
 
     energy : float, optional
         Energy associated in the experiment for this sample object.
         If None, the ptypy structure is searched for the appropriate
-        :any:`Geo` instance:  ``storage.views[0].pod.geometry.energy``
+        :py:class:`Geo` instance:  ``storage.views[0].pod.geometry.energy``
     """
     s = storage
     prefix = "[Object %s] " % s.ID
@@ -300,7 +299,7 @@ def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
         Numpy array as buffer. Must be at least two-dimensional
 
     pars : Param
-        Simulation parameters. See :any:`DEFAULT` .simulate
+        Simulation parameters. *FIXME* link to paramaters.
     """
     lam = u.keV2m(energy)
     p = DEFAULT_process.copy()

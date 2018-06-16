@@ -4,10 +4,10 @@ Wrapper over Python Imaging Library to read images (+ metadata) and write images
 """
 import numpy as np
 import glob
-import PIL.Image as PIL
-from .. import verbose
+
 
 # Tentative support for 12-bit tiff. Requires libtiff library
+# This trick might be deprecated if using pillow
 try:
     import libtiff12bit
 except:
@@ -36,6 +36,7 @@ def imread(filename, doglob=None, roi=None):
             returns a region of interest (applied on all files if gobbing or if filename is a list)
 
     """
+    import PIL.Image as PIL
     if not isinstance(filename, str):
         # We have a list
         fnames = filename
@@ -52,31 +53,32 @@ def imread(filename, doglob=None, roi=None):
     ldat = []
     lmeta = []
     for f in fnames:
-        verbose(3, 'Reading "%s"' % f)
         try:
             im = PIL.open(f)
             meta = readHeader(im)
             dat = np.array(im)
         except IOError:
             # Maybe we have an unsupported tiff...
-            if libtiff12bit is None: raise
+            if libtiff12bit is None:
+                raise
             im = libtiff12bit.TIFF.open(f)
             c = im.GetField('Compression')
             b = im.GetField('BitsPerSample')
             compname = libtiff12bit.define_to_name_map['Compression'][c]
-            meta = {'compression': compname[12:].lower(), 'format':'TIFF', 'mode': ('I;%d' % b)}
+            meta = {'compression': compname[12:].lower(), 'format': 'TIFF', 'mode': ('I;%d' % b)}
             dat = im.read_image()
 
         meta['filename'] = f
         lmeta.append(meta)
         if roi is not None:
-            ldat.append(dat[roi[0]:roi[1],roi[2]:roi[3],...].copy())
+            ldat.append(dat[roi[0]:roi[1], roi[2]:roi[3], ...].copy())
         else:
             ldat.append(dat)
     if doglob:
         dat = ldat
         meta = lmeta
-    return dat,meta
+    return dat, meta
+
 
 def readHeader(im):
     """\

@@ -206,7 +206,7 @@ class Base(object):
             if k not in dct:
                 continue
             else:
-                setattr(inst,dct[k])
+                setattr(inst,k ,dct[k])
         if hasattr(inst,'__dict__'):
             inst.__dict__.update(dct)
         
@@ -322,8 +322,8 @@ class Storage(Base):
 
     _PREFIX = STORAGE_PREFIX
 
-    def __init__(self, container, ID=None, data=None, shape=DEFAULT_SHAPE, fill=0.,
-                 psize=1., origin=None, layermap=None, padonly=False,
+    def __init__(self, container, ID=None, data=None, shape=DEFAULT_SHAPE, 
+                 fill=0., psize=1., origin=None, layermap=None, padonly=False,
                  **kwargs):
         """
         Parameters
@@ -772,7 +772,7 @@ class Storage(Base):
     @property
     def psize(self):
         """
-        :returns: The pixel size.
+        The pixel size.
         """
         return self._psize
 
@@ -1179,11 +1179,10 @@ class View(Base):
             Shape of the view in pixels (*default* is ``None``)
 
         coord : 2-tuple of float,
-            Physical coordinates [meter] of the center of the view.
+            Physical coordinates *(meter)* of the center of the view.
 
         psize : float or tuple of float
-            Pixel size [meters]. Required for storage initialization,
-            See :py:data:`DEFAULT_PSIZE`
+            Pixel size in *(meter)* . Required for storage initialization.
 
         layer : int
             Index of the third dimension if applicable.
@@ -1206,7 +1205,7 @@ class View(Base):
         """ Active state. If False this view will be ignored when
             resizing the data buffer of the associated :any:`Storage`."""
 
-        #: The :any:`Storage` instance that this view applies to by default.
+        #: The :py:class:`Storage` instance that this view applies to by default.
         self.storage = None
 
         self.storageID = None
@@ -1431,7 +1430,7 @@ class View(Base):
     @property
     def psize(self):
         """
-        Pixel size of the View.
+        Pixel size of the `View`.
         """
         ps = self._record['psize'][:self._ndim]
         return ps if (ps > 0.).all() else None
@@ -1439,7 +1438,7 @@ class View(Base):
     @psize.setter
     def psize(self, v):
         """
-        Set pixel size
+        Set pixel size.
         """
         if v is None:
             self._record['psize'][:] = 0.
@@ -1486,7 +1485,13 @@ class View(Base):
         else:
             self._record['sp'][:self._ndim] = v
 
-
+    @property
+    def pcoord(self):
+        """ 
+        The physical coordinate in pixel space
+        """
+        return self.dcoord + self.sp
+        
 class Container(Base):
     """
     High-level container class.
@@ -2036,7 +2041,7 @@ class POD(Base):
         ptycho : Ptycho
             The instance of Ptycho associated with this pod.
 
-        model : ScanModel
+        model : ~ptypy.core.manager.ScanModel
             The instance of ScanModel (or it subclasses) which describes
             this pod.
 
@@ -2065,11 +2070,16 @@ class POD(Base):
         for v in self.V.values():
             if v is None:
                 continue
-            if v._pod is not None:
+            if v._pod is None:
+                # you are first
+                v._pod = weakref.ref(self)
+            else:
                 # View has at least one POD connected
-                v.pods = weakref.WeakValueDictionary()
-                v.pods[self.ID] = self
-            v._pod = weakref.ref(self)
+                if v._pods is None:
+                    v._pods = weakref.WeakValueDictionary()
+                    # register the older view
+                    v._pods[v.pod.ID] = v.pod
+                v._pods[self.ID] = self            
 
         #: :any:`Geo` instance with propagators
         self.geometry = geometry

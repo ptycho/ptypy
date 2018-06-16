@@ -27,7 +27,7 @@ from .. import io
 from .. import resources
 from ..utils import parallel
 from ..utils.verbose import logger, log, headerline
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 
 PTYD = dict(
     # frames, positions
@@ -64,6 +64,7 @@ class PtyScan(object):
      - mpi capable, child classes should not worry about mpi
 
     Default data parameters. See :py:data:`.scan.data`
+
     Defaults:
 
     [name]
@@ -92,18 +93,21 @@ class PtyScan(object):
     default = None
     help = Saving mode
     doc = Mode to use to save data to file.
-       - ``None``: No saving
-       - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-       - ``'append'``: appends each chunk in master \*.ptyd file
-       - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-      in the path given by the link. Links file paths are relative to master file.
+        <newline>
+        - ``None``: No saving
+        - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
+        - ``'append'``: appends each chunk in master \*.ptyd file
+        - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
+        <newline>
+        in the path given by the link. Links file paths are relative to master file.
     userlevel = 1
 
     [auto_center]
     type = bool
     default = None
     help = Determine if center in data is calculated automatically
-    doc =  - ``False``, no automatic centering
+    doc =  
+       - ``False``, no automatic centering
        - ``None``, only if :py:data:`center` is ``None``
        - ``True``, it will be enforced
     userlevel = 0
@@ -124,18 +128,20 @@ class PtyScan(object):
     uplim = 8
 
     [orientation]
-    type = int, tuple
+    type = int, tuple, list
     default = None
     help = Data frame orientation
-    doc =  - ``None`` or ``0``: correct orientation
+    doc = Choose
+       <newline> 
+       - ``None`` or ``0``: correct orientation
        - ``1``: invert columns (numpy.flip_lr)
-       - ``2``: invert columns, invert rows
-       - ``3``: invert rows  (numpy.flip_ud)
+       - ``2``: invert rows  (numpy.flip_ud)
+       - ``3``: invert columns, invert rows
        - ``4``: transpose (numpy.transpose)
        - ``4+i``: tranpose + other operations from above
-
-      Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, do_flipud,
-      do_fliplr)``
+       <newline>
+       Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, 
+       do_flipud, do_fliplr)``
     userlevel = 1
 
     [min_frames]
@@ -149,7 +155,7 @@ class PtyScan(object):
     type = ndarray
     default = None
     help = Theoretical positions for this scan
-    doc = If provided, experimental positions from :any:`PtyScan` subclass will be ignored. If data
+    doc = If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
       preparation is called from Ptycho instance, the calculated positions from the
       :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
     userlevel = 2
@@ -221,6 +227,11 @@ class PtyScan(object):
     doc =
     userlevel = 0
     lowlim = 0
+
+    [add_poisson_noise]
+    default = True
+    type = bool
+    help = Decides whether the scan should have poisson noise or not
     """
 
     WAIT = WAIT
@@ -268,7 +279,7 @@ class PtyScan(object):
             p.rebin = 1
 
         self.info = p
-        """:any:`Param` container that stores all input parameters."""
+        """:py:class:`Param` container that stores all input parameters."""
 
         # Print a report
         log(4, 'Ptypy Scan instance got the following parameters:')
@@ -804,6 +815,7 @@ class PtyScan(object):
 
             # restore contiguity of the cropped/padded/rotated/flipped array
             d = np.ascontiguousarray(d)
+            w = np.ascontiguousarray(w)
 
             if has_data:
                 # Translate back to dictionaries
@@ -985,7 +997,7 @@ class PtyScan(object):
         for preparation and should determine if data acquisition for this
         scan is finished. Its main purpose is to allow for a data
         acquisition scheme, where the number of frames is not known
-        when :any:`PtyScan` is constructed, i.e. a data stream or an
+        when :py:class:`PtyScan` is constructed, i.e. a data stream or an
         on-the-fly reconstructions.
 
         Note
@@ -1063,7 +1075,7 @@ class PtyScan(object):
         Note
         ----
         This is the *most* important method to change when subclassing
-        :any:`PtyScan`. Most often it suffices to override the constructor
+        :py:class:`PtyScan`. Most often it suffices to override the constructor
         and this method to create a subclass suited for a specific
         experiment.
         """
@@ -1506,14 +1518,24 @@ class MoonFlowerScan(PtyScan):
         self.pixel = np.round(pixel).astype(int) + 10
         frame = self.pixel.max(0) + 10 + geo.shape
         self.geo = geo
-        self.obj = resources.flower_obj(frame)
-
+        
+        try:
+            self.obj = resources.flower_obj(frame)
+        except:
+            # matplotlib failsafe
+            self.obj = u.gf_2d(u.parallel.MPInoise2d(frame),1.)
+            
         # Get probe
-        moon = resources.moon_pr(self.geo.shape)
+        try:
+            moon = resources.moon_pr(self.geo.shape)
+        except:
+            # matplotlib failsafe
+            moon = u.ellipsis(u.grids(self.geo.shape)).astype(complex)
+        
         moon /= np.sqrt(u.abs2(moon).sum() / p.photons)
         self.pr = moon
         self.load_common_in_parallel = True
-
+        
         self.p = p
 
     def load_positions(self):
@@ -1527,6 +1549,11 @@ class MoonFlowerScan(PtyScan):
         s = self.geo.shape
         raw = {}
 
+        if self.p.add_poisson_noise:
+            logger.info("Generating data with poisson noise.")
+        else:
+            logger.info("Generating data without poisson noise.")
+
         for k in indices:
             intensity_j = u.abs2(self.geo.propagator.fw(
                 self.pr * self.obj[p[k][0]:p[k][0] + s[0],
@@ -1535,11 +1562,90 @@ class MoonFlowerScan(PtyScan):
             if self.p.psf > 0.:
                 intensity_j = u.gf(intensity_j, self.p.psf)
 
-            raw[k] = np.random.poisson(intensity_j).astype(np.int32)
+            if self.p.add_poisson_noise:
+                raw[k] = np.random.poisson(intensity_j).astype(np.int32)
+            else:
+                raw[k] = intensity_j.astype(np.int32)
 
         return raw, {}, {}
 
+@defaults_tree.parse_doc('scandata.QuickScan')
+class QuickScan(PtyScan):
+    """
+    Test PtyScan to benchmark graph creation further down the line.
 
+    Override parent class default:
+
+    Defaults:
+
+    [name]
+    default = MoonFlowerScan
+    type = str
+    help =
+    doc =
+
+    [num_frames]
+    default = 100
+    type = int
+    help = Number of frames to simulate
+    doc =
+
+    [shape]
+    type = int, tuple
+    default = 64
+    help = Shape of the region of interest cropped from the raw data.
+    doc = Cropping dimension of the diffraction frame
+      Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
+    userlevel = 1
+
+    [density]
+    default = 0.05
+    type = float
+    help = Position distance in fraction of illumination frame
+    """
+
+    def __init__(self, pars=None, **kwargs):
+        """
+        Parent pars are for the
+        """
+
+        p = self.DEFAULT.copy(depth=99)
+        p.update(pars)
+
+        # Initialize parent class
+        super(QuickScan, self).__init__(p, **kwargs)
+
+        # Derive geometry from input
+        geo = geometry.Geo(pars=self.meta)
+
+        # Derive scan pattern
+        pos = u.Param()
+        pos.spacing = geo.resolution * geo.shape * p.density
+        pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+        pos.extent = pos.steps * pos.spacing
+        pos.model = 'round'
+        pos.count = self.num_frames
+        self.pos = xy.from_pars(pos)
+        self.geo = geo
+        # dumm diff pattern
+        self.diff = np.zeros(geo.shape)
+        self.diff[0,0] = 1e7
+        self.diff = np.fft.fftshift(self.diff)
+        
+        self.p = p
+
+    def load_positions(self):
+        return self.pos
+
+    def load_weight(self):
+        return np.ones(self.diff.shape)
+
+    def load(self, indices):
+        raw = {}
+        for k in indices:
+            raw[k] = self.diff.copy().astype(np.int32)
+        return raw, {}, {}
+        
 if __name__ == "__main__":
     u.verbose.set_level(3)
     MS = MoonFlowerScan(num_frames=100)

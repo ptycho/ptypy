@@ -21,21 +21,15 @@ from copy import deepcopy
 from .parameters import Param
 
 
-__all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
+__all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor', 'defaults_tree']
 
 
-class _Adict(object):
-
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-# ! Validator message codes
-CODES = _Adict(
-    PASS=1,
-    FAIL=0,
-    UNKNOWN=2,
-    MISSING=3,
-    INVALID=4)
+class CODES:
+    PASS = 1
+    FAIL = 0
+    UNKNOWN = 2
+    MISSING = 3
+    INVALID = 4
 
 # ! Inverse message codes
 CODE_LABEL = dict((v, k) for k, v in CODES.__dict__.items())
@@ -43,25 +37,36 @@ CODE_LABEL = dict((v, k) for k, v in CODES.__dict__.items())
 
 class Descriptor(object):
     """
-    Base class for parameter descriptions and validation. This class is used to hold both command line arguments
-    and Param-type parameter descriptions.
-    """
+    Base class for parameter descriptions and validation. This class is used to 
+    hold both command line arguments and Param-type parameter descriptions.
 
-    # Options definitions as a class variable:
-    # a dictionary whose keys are attribute names and values are description
-    # of the attribute. It this description contains the text "required" or
-    # "mandatory", the attribute is registered as required.
+    Attributes
+    ----------
+
+    OPTIONS_DEF : 
+        A dictionary whose keys are attribute names and values are description
+        of the attribute. It this description contains the text "required" or
+        "mandatory", the attribute is registered as required.
+
+    """
+    
     OPTIONS_DEF = None
 
     def __init__(self, name, parent=None, separator='.'):
         """
 
-        :param name: The name of the parameter represented by this instance
-        :param parent: Parent parameter or None
-        :param separator: defaults to '.'
-        :param options_def: a dictionary whose keys are attribute names and values are description
-                     of the attribute. It this description contains the text "required" or
-                     "mandatory", the attribute is registered as required.
+        Parameters
+        ----------
+
+        name : str
+            The name of the parameter represented by this instance
+
+        parent : Descriptor or None
+            Parent parameter or None if no parent parameter.
+
+        separator : str
+            Subtree separator character. Defaults to '.'.
+
         """
 
         #: Name of parameter
@@ -377,6 +382,7 @@ class Descriptor(object):
         Keyword arguments are forwarded to `ConfigParser.RawConfigParser`
         """
         from ConfigParser import RawConfigParser as Parser
+        #kwargs['empty_lines_in_values'] = True # This will only work in Python3
         parser = Parser(**kwargs)
         parser.readfp(fbuffer)
         for num, sec in enumerate(parser.sections()):
@@ -521,7 +527,6 @@ class ArgParseDescriptor(Descriptor):
         """
 
         sep = self.separator
-        pd = self
         argsep = '-'
 
         if parser is None:
@@ -529,46 +534,50 @@ class ArgParseDescriptor(Descriptor):
             description = """
             Parser for %s
             Doc: %s
-            """ % (pd.name, pd.help)
+            """ % (self.name, self.help)
             parser = ArgumentParser(description=description)
 
         # overload the parser
         if not hasattr(parser, '_aux_translator'):
             parser._aux_translator = {}
 
-        # get list of descendants and remove separator
-        ndesc = dict((k.replace(sep, argsep), self[k]) for k, _ in self.descendants)
+        # get list of descendants, remove separator and replace underscores with argsep
+        ndesc = dict((k.replace(sep, argsep).replace('_', argsep), self[k]) for k, _ in self.descendants)
+        parser._aux_translator.update(ndesc)
 
         groups = {}
 
-        for name, pd in ndesc.items():
-            if pd.name in excludes:
+        # Identify argument groups (first level children)
+        for name, desc in ndesc.items():
+            if desc.name in excludes:
                 continue
-            if pd.children:
-                groups[name] = parser.add_argument_group(title=prefix + name, description=pd.help)
+            if desc.children:
+                groups[name] = parser.add_argument_group(title=prefix + name, description=desc.help.replace('%', '%%'))
 
-        for name, pd in ndesc.iteritems():
+        # Add all arguments
+        for name, desc in ndesc.iteritems():
 
-            if pd.name in excludes:
+            if desc.name in excludes:
                 continue
+
+            # Attempt to retrieve the group
             up = argsep.join(name.split(argsep)[:-1])
-            # recursive part
             parse = groups.get(up, parser)
 
-            typ = pd._get_type_argparse()
-
+            # Manage boolean parameters as switches
+            typ = desc._get_type_argparse()
             if typ is bool:
                 # Command line switches have no arguments, so treated differently
-                flag = '--no-' + name if pd.value else '--' + name
-                action = 'store_false' if pd.value else 'store_true'
-                parse.add_argument(flag, dest=name, action=action, help=pd.help)
+                flag = '--no-' + name if desc.default else '--' + name
+                action = 'store_false' if desc.default else 'store_true'
+                parse.add_argument(flag, dest=name, action=action, help=desc.help.replace('%', '%%'))
             else:
-                d = pd.default
+                d = desc.default
                 defstr = d.replace('%(', '%%(') if str(d) == d else str(d)
-                parse.add_argument('--' + name, dest=name, type=typ, default=pd.default, choices=pd.choices,
-                                   help=pd.help + ' (default=%s)' % defstr)
+                parse.add_argument('--' + name, dest=name, type=typ, default=desc.default, choices=desc.choices,
+                                   help=desc.help.replace('%', '%%') + ' (default=%s)' % defstr.replace('%', '%%'))
 
-            parser._aux_translator[name] = pd
+            #parser._aux_translator[name] = desc
 
         return parser
 
@@ -647,6 +656,18 @@ class EvalDescriptor(ArgParseDescriptor):
             out = out.strip('"').strip("'")
 
         return out
+
+    @default.setter
+    def default(self, val):
+        """
+        Set default.
+        """
+        if val is None:
+            self.options['default'] = ''
+        elif str(val) == val:
+            self.options['default'] = "'%s'" % val
+        else:
+            self.options['default'] = str(val)
 
     @property
     def is_evaluable(self):
@@ -808,16 +829,19 @@ class EvalDescriptor(ArgParseDescriptor):
         if pars is None or \
                 (type(pars).__name__ in self.type) or \
                 (hasattr(pars, 'items') and 'Param' in self.type) or \
-                (type(pars).__name__ == 'int' and 'float' in self.type):
+                (type(pars).__name__ == 'int' and 'float' in self.type) or \
+                (type(pars).__name__[:5] == 'float' and 'float' in self.type):
             yield {'d': self, 'path': path, 'status': 'ok', 'info': ''}
         else:
             yield {'d': self, 'path': path, 'status': 'wrongtype', 'info': type(pars).__name__}
             return
 
-        if not children or depth == 0:
+        if (depth == 0) or \
+                (not children) or \
+                (not hasattr(pars, 'items') and (pars is not None)):
             # Nothing else to do
             return
-
+        
         # Look for unrecognised entries in pars
         if pars:
             for k, v in pars.items():
@@ -914,10 +938,10 @@ class EvalDescriptor(ArgParseDescriptor):
         import logging
 
         _logging_levels = dict(
-            PASS=logging.INFO,
+            PASS=logging.DEBUG,
             FAIL=logging.CRITICAL,
             UNKNOWN=logging.WARN,
-            MISSING=logging.WARN,
+            MISSING=logging.DEBUG,
             INVALID=logging.ERROR
         )
 
@@ -1174,4 +1198,5 @@ class EvalDescriptor(ArgParseDescriptor):
             fp.write('\n\n### Reconstruction ###\n\n')
             fp.write('Ptycho(%s,level=5)\n'%base)
 
+#: Singular entity to save all defualts all ptypy
 defaults_tree = EvalDescriptor('root')

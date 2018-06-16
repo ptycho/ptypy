@@ -12,12 +12,15 @@ scripts = ['minimal_script.py',
 
 if len(sys.argv) == 1:
     import pkg_resources
+    import subprocess
+
     for script in scripts:
         scr = pkg_resources.resource_filename('ptypy', tutorial_dir+script)
         if not os.path.exists(scr):
             print('Using backup tutorial for %s' % script)
             scr = '../tutorial/'+script
-        os.system('python '+sys.argv[0]+' '+scr)
+        #subprocess.call(['python',sys.argv[0]+' '+scr]) # doesn't work
+        os.system('python ' + sys.argv[0]+' '+scr)
     sys.exit()
 
 indent_keys = ['for', 'if', 'with', 'def', 'class']

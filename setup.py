@@ -78,6 +78,7 @@ setup(
               'ptypy.io',
               'ptypy.resources',
               'ptypy.experiment',
+              'ptypy.experiment.legacy',
               'ptypy.test'],
     package_data={'ptypy': ['resources/*', ]},
     #include_package_data=True
@@ -86,6 +87,7 @@ setup(
         'scripts/ptypy.inspect',
         'scripts/ptypy.plotclient',
         'scripts/ptypy.new',
-        'scripts/ptypy.csv2cp'
+        'scripts/ptypy.csv2cp',
+        'scripts/ptypy.run'
     ],
     )

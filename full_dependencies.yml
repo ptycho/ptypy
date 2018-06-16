@@ -1,4 +1,4 @@
-name: test-environment
+name: full_dependencies
 channels:
   - conda-forge
 dependencies:
@@ -6,14 +6,13 @@ dependencies:
   - numpy
   - scipy
   - matplotlib
-  - pytest
   - h5py
   - pyzmq
   - pep8
-  - pytest
   - mpi4py
   - pil
   - pyfftw
   - pip:
     - pytest-cov
     - coveralls
+    - fabio

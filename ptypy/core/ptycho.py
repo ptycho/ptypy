@@ -16,12 +16,17 @@ from .. import utils as u
 from ..utils.verbose import logger, _, report, headerline, log
 from ..utils import parallel
 from .. import engines
-from ..io import interaction
 from .classes import Base, Container, Storage, PTYCHO_PREFIX
 from .manager import ModelManager
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
+
+# This needs to be done here as it populates the defaults tree
+from .. import __has_zmq__
+if __has_zmq__:
+    from ..io import interaction
 
 __all__ = ['Ptycho']
+
 
 
 @defaults_tree.parse_doc()
@@ -53,11 +58,11 @@ class Ptycho(Base):
     runtime : Param
         Runtime information, e.g. errors, iteration etc.
 
-    modelm : ModelManager
+    ~Ptycho.model : ModelManager
         THE managing instance for :any:`POD`, :any:`View` and
         :any:`Geo` instances
 
-    probe,obj,exit,diff,mask : Container
+    ~Ptycho.probe, ~Ptycho.obj,~Ptycho.exit,~Ptycho.diff,~Ptycho.mask : Container
         Container instances for illuminations, samples, exit waves,
         diffraction data and detector masks / weights
 
@@ -128,8 +133,20 @@ class Ptycho(Base):
     help = Reconstruction file name (or format string)
     doc = Reconstruction file name or format string (constructed against runtime dictionary)
 
-    [io.autosave]
+    [io.interaction]
     default = None
+    type = Param
+    help = ZeroMQ interactor options
+    doc = Options for the communications server
+
+    [io.interaction.active]
+    default = True
+    type = bool
+    help = turns on the interaction
+    doc = If True the interaction starts, if False all interaction is turned off
+
+    [io.autosave]
+    default = Param
     type = Param
     help = Auto-save options
     doc = Options for automatic saving during reconstruction.
@@ -138,14 +155,14 @@ class Ptycho(Base):
     default = True
     type = bool
     help = Activation switch
-    doc = If ``True`` the current reconstruction will be saved at regular intervals. **unused**
+    doc = If ``True`` the current reconstruction will be saved at regular intervals. 
 
     [io.autosave.interval]
     default = 10
     type = int
     help = Auto-save interval
     doc = If ``>0`` the current reconstruction will be saved at regular intervals according to the
-      pattern in :py:data:`paths.autosave` . If ``<=0`` not automatic saving
+    pattern in :py:data:`paths.autosave` . If ``<=0`` not automatic saving
     lowlim = -1
 
     [io.autosave.rfile]
@@ -155,10 +172,16 @@ class Ptycho(Base):
     doc = Auto-save file name or format string (constructed against runtime dictionary)
 
     [io.autoplot]
-    default = None
+    default = Param
     type = Param
     help = Plotting client parameters
-    doc = In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
+    doc = Csontainer for the plotting.
+
+    [io.autoplot.active]
+    default = True
+    type = bool
+    help = Activation switch
+    doc = If ``True`` the current reconstruction will be plotted at regular intervals. 
 
     [io.autoplot.imfile]
     default = "plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png"
@@ -186,8 +209,8 @@ class Ptycho(Base):
       workstation.
 
     [io.autoplot.layout]
-    default = None
-    type = str, Param
+    default = "default"
+    type = str
     help = Options for default plotter or template name
     doc = Flexible layout for default plotter is not implemented yet. Please choose one of the
       templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``
@@ -250,7 +273,7 @@ class Ptycho(Base):
             - 2 : also configures Containers, initializes ModelManager
                   see :py:meth:`init_data`
             - 3 : also initializes ZeroMQ-communication
-                  :py:meth:`init_communication`
+                  see :py:meth:`init_communication`
             - 4 : also initializes reconstruction engines,
                   see :py:meth:`init_engine`
             - >= 4 : also and starts reconstruction
@@ -267,14 +290,15 @@ class Ptycho(Base):
 
         # Continue with initialization from parameters
         if pars is not None:
-            self.p.update(pars, in_place_depth=3)
+            self.p.update(pars, in_place_depth=99)
 
         # That may be a little dangerous
         self.p.update(kwargs)
 
         # Validate the incoming parameters
+        # FIXME : Validation should maybe happen for each class that uses the
+        #         the parameters, i.e. like a depth=1 validation
         defaults_tree.validate(self.p)
-
         # Instance attributes
 
         # Structures
@@ -283,15 +307,14 @@ class Ptycho(Base):
         self.exit = None
         self.diff = None
         self.mask = None
-        self.modelm = None
-
+        self.model = None
+        
         # Communication
         self.interactor = None
         self.plotter = None
 
         # Early boot strapping
         self._configure()
-
         if level >= 1:
             logger.info('\n' + headerline('Ptycho init level 1', 'l'))
             self.init_structures()
@@ -365,9 +388,9 @@ class Ptycho(Base):
         iaction = self.p.io.interaction
         autoplot = self.p.io.autoplot
 
-        if parallel.master and iaction:
+        if __has_zmq__ and parallel.master and iaction.active:
             # Create the interaction server
-            self.interactor = interaction.Server(iaction)
+            self.interactor = interaction.Server(iaction.server)
 
             # Register self as an accessible object for the client
             self.interactor.objects['Ptycho'] = self
@@ -384,7 +407,7 @@ class Ptycho(Base):
                 self.plotter = None
             else:
                 # Modify port
-                iaction.port = port
+                iaction.server.port = port
 
                 # Inform the audience
                 log(4, 'Started interaction got the following parameters:'
@@ -392,12 +415,12 @@ class Ptycho(Base):
 
                 # Start automated plot client
                 self.plotter = None
-                if (parallel.master and autoplot and autoplot.threaded and
+                if (parallel.master and autoplot.active and autoplot.threaded and
                         autoplot.interval > 0):
                     from multiprocessing import Process
                     logger.info('Spawning plot client in new Process.')
                     self.plotter = Process(target=u.spawn_MPLClient,
-                                           args=(iaction, autoplot, self.p.io.home))
+                                           args=(iaction.client, autoplot,))
                     self.plotter.start()
         else:
             # No interaction wanted
@@ -411,26 +434,30 @@ class Ptycho(Base):
         Called on __init__ if ``level >= 1``.
 
         Prepare everything for reconstruction. Creates attributes
-        :py:attr:`modelm` and the containers :py:attr:`probe` for
+        :py:attr:`model` and the containers :py:attr:`probe` for
         illumination, :py:attr:`obj` for the samples, :py:attr:`exit` for
         the exit waves, :py:attr:`diff` for diffraction data and
-        :py:attr:`mask` for detectors masks
+        :py:attr:`Ptycho.mask` for detectors masks
         """
-
+        self.probe = Container(self, ID='Cprobe', data_type='complex')
+        self.obj = Container(self, ID='Cobj', data_type='complex')
+        self.exit = Container(self, ID='Cexit', data_type='complex')
+        self.diff = Container(self, ID='Cdiff', data_type='real')
+        self.mask = Container(self, ID='Cmask', data_type='bool')
         # Initialize the model manager. This also initializes the
         # containers.
-        self.modelm = ModelManager(self, self.p.scans)
+        self.model = ModelManager(self, self.p.scans)
     
     def init_data(self, print_stats=True):
         """
         Called on __init__ if ``level >= 2``.
-        
+
         Call :py:meth:`ModelManager.new_data()`
         Prints statistics on the ptypy structure if ``print_stats=True``
         """
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs.
-        self.modelm.new_data()
+        self.model.new_data()
 
         # Print stats
         parallel.barrier()
@@ -527,7 +554,7 @@ class Ptycho(Base):
             using :py:meth:`init_engine` and run immediately afterwards.
             For parameters see :py:data:`.engine`
 
-        engine : BaseEngine, optional
+        engine : ~ptypy.engines.base.BaseEngine, optional
             An engine instance that should be a subclass of
             :py:class:`BaseEngine` or have the same methods.
         """
@@ -560,7 +587,7 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                self.modelm.new_data()
+                self.model.new_data()
 
                 # Last minute preparation before a contiguous block of
                 # iterations
@@ -685,7 +712,7 @@ class Ptycho(Base):
         header = u.Param(io.h5read(runfile, 'header')['header'])
         if header['kind'] == 'minimal':
             logger.info('Found minimal ptypy dump')
-            content = u.Param(io.h5read(runfile, 'content')['content'])
+            content = io.h5read(runfile, 'content')['content']
 
             logger.info('Creating new Ptycho instance')
             P = Ptycho(content.pars, level=1)
@@ -715,7 +742,7 @@ class Ptycho(Base):
 
             logger.info('Regenerating exit waves')
             P.exit.reformat()
-            P.modelm._initialize_exit(P.pods.values())
+            P.model._initialize_exit(P.pods.values())
 
         if load_data:
             logger.info('Loading data')
@@ -743,6 +770,9 @@ class Ptycho(Base):
         """
         import save_load
         from .. import io
+
+
+
 
         dest_file = None
 
@@ -809,6 +839,10 @@ class Ptycho(Base):
                               for ID, S in self.probe.storages.items()}
                 dump.obj = {ID: S._to_dict()
                             for ID, S in self.obj.storages.items()}
+                try:
+                    defaults_tree.validate(self.p) # check the parameters are actually able to be read back in
+                except RuntimeError:
+                    logger.warn("The parameters we are saving won't pass a validator check!")
                 dump.pars = self.p.copy()  # _to_dict(Recursive=True)
                 dump.runtime = self.runtime.copy()
                 # Discard some bits of runtime to save space
@@ -827,8 +861,13 @@ class Ptycho(Base):
                                  for ID, S in self.probe.storages.items()}
                 minimal.obj = {ID: S._to_dict()
                                for ID, S in self.obj.storages.items()}
+                try:
+                    defaults_tree.validate(self.p) # check the parameters are actually able to be read back in
+                except RuntimeError:
+                    logger.warn("The parameters we are saving won't pass a validator check!")
                 minimal.pars = self.p.copy()  # _to_dict(Recursive=True)
                 minimal.runtime = self.runtime.copy()
+
                 content = minimal
 
             h5opt = io.h5options['UNSUPPORTED']

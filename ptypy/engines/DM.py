@@ -13,16 +13,16 @@ from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
 from .utils import basic_fourier_update
-from . import BaseEngine
-from ..utils.descriptor import defaults_tree
+from . import BaseEngine, register
+from .. import defaults_tree
 from ..core.manager import Full, Vanilla, Bragg3dModel
 
 __all__ = ['DM']
 
-@defaults_tree.parse_doc('engine.DM')
+@register()
 class DM(BaseEngine):
     """
-    A full-fledged Difference Map enine.
+    A full-fledged Difference Map engine.
 
 
     Defaults:

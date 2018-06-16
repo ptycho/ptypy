@@ -378,4 +378,3 @@ branch :py:data:`.engine` for detailed parameter descriptions.
 .. literalinclude:: ../../templates/minimal_load_and_run.py
    :language: python
    :linenos:
-   :emphasize-lines: 25-56

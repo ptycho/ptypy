@@ -11,13 +11,13 @@ This file is part of the PTYPY package.
 import numpy as np
 import h5py as h5
 
-from .. import utils as u
-from .. import io
-from ..utils.descriptor import defaults_tree
-from ..core.data import PtyScan
-from ..utils.verbose import log
-from ..core.paths import Paths
-from ..core import Ptycho
+from ptypy import utils as u
+from ptypy import io
+from ptypy.utils.descriptor import defaults_tree
+from ptypy.core.data import PtyScan
+from ptypy.utils.verbose import log
+from ptypy.core.paths import Paths
+from ptypy.core import Ptycho
 
 IO_par = Ptycho.DEFAULT['io']
 
@@ -164,6 +164,7 @@ class DlsScan(PtyScan):
 
     [orientation]
     default = (False, False, False)
+    type = int, tuple, list
 
     """
 
@@ -171,6 +172,7 @@ class DlsScan(PtyScan):
         """
         I13 (Diamond Light Source) data preparation class.
         """
+        log(2, "The DLS loader will be deprecated in the next release. Please use the Hdf5Loader.")
         # Initialise parent class
         p = self.DEFAULT.copy(99)
         p.update(pars)
