@@ -17,7 +17,7 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from utils import Cnorm2, Cdot
 from . import BaseEngine
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 
 __all__ = ['ML']
 

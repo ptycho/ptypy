@@ -16,7 +16,7 @@ from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..core.paths import Paths
 from ..core import Ptycho
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 
 IO_par = Ptycho.DEFAULT['io']
 

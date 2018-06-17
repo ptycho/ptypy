@@ -11,7 +11,7 @@ import numpy as np
 import os
 
 from ptypy import utils as u
-from ptypy.utils.descriptor import defaults_tree
+from ptypy import defaults_tree
 from ptypy import io
 from ptypy.core.data import PtyScan
 from ptypy.core.paths import Paths

@@ -13,7 +13,7 @@ import h5py as h5
 
 from ptypy import utils as u
 from ptypy import io
-from ptypy.utils.descriptor import defaults_tree
+from ptypy import defaults_tree
 from ptypy.core.data import PtyScan
 from ptypy.utils.verbose import log
 from ptypy.core.paths import Paths
