@@ -13,7 +13,7 @@ import numpy as np
 
 from ptypy import utils as u
 from ptypy.core.data import PtyScan
-from ptypy.utils.descriptor import defaults_tree
+from ptypy import defaults_tree
 from ptypy.utils.verbose import log
 from ptypy.utils.array_utils import _translate_to_pix
 

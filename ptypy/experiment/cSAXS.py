@@ -14,7 +14,7 @@ from scipy.io import loadmat
 from .. import utils as u
 from ..core.data import PtyScan
 from ..utils.verbose import log
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 logger = u.verbose.logger
 
 

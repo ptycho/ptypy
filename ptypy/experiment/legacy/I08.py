@@ -22,7 +22,7 @@ from ptypy.core.paths import Paths
 #from ptypy.core import DEFAULT_io as IO_par
 from ptypy.core import Ptycho
 from ptypy.core.data import PtyScan
-from ptypy.utils.descriptor import defaults_tree
+from ptypy import defaults_tree
 
 IO_par = Ptycho.DEFAULT['io']
 

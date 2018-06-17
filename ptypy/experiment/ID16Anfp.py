@@ -13,7 +13,7 @@ import os
 
 from .. import utils as u
 from .. import io
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..core.paths import Paths

@@ -8,7 +8,7 @@ import h5py
 
 from ..core.data import PtyScan
 from .. import utils as u
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 
 logger = u.verbose.logger
 

@@ -11,7 +11,7 @@ This file is part of the PTYPY package.
 from .. import utils as u
 from ..core.data import PtyScan
 from ..utils.verbose import log
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 
 logger = u.verbose.logger
 

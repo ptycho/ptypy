@@ -15,7 +15,7 @@ import numpy as np
 import os
 
 from .. import utils as u
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 from .. import io
 from ..core.data import PtyScan
 from ..core import Ptycho
