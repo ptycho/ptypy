@@ -5,7 +5,8 @@ This module provides simulated 3D Bragg data.
 import ptypy
 from ptypy.core.data import PtyScan
 import ptypy.utils as u
-from ptypy.utils.descriptor import defaults_tree, EvalDescriptor
+from ptypy import defaults_tree
+from ptypy.utils.descriptor import EvalDescriptor
 from ptypy.core import geometry_bragg
 from ptypy.core import illumination
 from ptypy.core import xy

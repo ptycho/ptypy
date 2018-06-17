@@ -5,7 +5,7 @@ This module provides simulated 3D Bragg data.
 import ptypy
 from ptypy.core.data import PtyScan
 import ptypy.utils as u
-from ptypy.utils.descriptor import defaults_tree
+from ptypy import defaults_tree
 
 import h5py
 import numpy as np

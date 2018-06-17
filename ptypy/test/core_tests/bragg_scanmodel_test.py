@@ -10,19 +10,19 @@ import numpy as np
 
 class Bragg3dModelTest(unittest.TestCase):
     def test_frame_assembly(self):
-
+        from ptypy.experiment.Bragg3dSim import Bragg3dSimScan
         # parameter tree
         p = u.Param()
         p.scans = u.Param()
         p.scans.scan01 = u.Param()
         p.scans.scan01.name = 'Bragg3dModel'
-        p.scans.scan01.data= u.Param()
+        p.scans.scan01.data = u.Param()
         p.scans.scan01.data.name = 'Bragg3dSimScan'
         p.scans.scan01.data.dump = '/tmp/tmp.npz'
         p.scans.scan01.data.shuffle = True
 
         # simulate and then load data
-        P = Ptycho(p,level=2)
+        P = Ptycho(p, level=2)
 
         # load raw simulation data
         diff = np.load('/tmp/tmp.npz')

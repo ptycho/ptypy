@@ -8,7 +8,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .DM import DM
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 from ..core.manager import Bragg3dModel
 from ..utils import parallel
 from ..utils.verbose import logger

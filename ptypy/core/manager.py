@@ -27,7 +27,8 @@ from .classes import *
 from .classes import DEFAULT_ACCESSRULE
 from .classes import MODEL_PREFIX
 from ..utils import parallel
-from ..utils.descriptor import defaults_tree, EvalDescriptor
+from ..utils.descriptor import EvalDescriptor
+from .. import defaults_tree
 
 # Please set these globally later
 FType = np.float64

@@ -3,7 +3,8 @@ Test descriptor submodule
 """
 import unittest
 
-from ptypy.utils.descriptor import EvalDescriptor, CODES, defaults_tree
+from ptypy import defaults_tree
+from ptypy.utils.descriptor import EvalDescriptor, CODES
 from ptypy.utils import Param
 
 
