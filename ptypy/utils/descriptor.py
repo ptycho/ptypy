@@ -711,7 +711,9 @@ class EvalDescriptor(ArgParseDescriptor):
                 # wildcard in symlink: needed to grab dynamically added entries
                 if types[0].endswith('.*'):
                     parent = self.get(types[0][1:-2])
-                    types = [c for n, c in parent.children.items()]
+                    # Here we need to take into account the possibility that the symlink has not
+                    # yet been declared. It may happen when walking the tree early during initialisation.
+                    types = [] if parent is None else [c for n, c in parent.children.items()]
                 else:
                     types = [self.get(t[1:]) for t in types]
         return types
