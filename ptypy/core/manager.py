@@ -148,7 +148,9 @@ class ScanModel(object):
 
         if name in (u.all_subclasses(data.PtyScan, names=True)) \
                 or name == 'PtyScan':
-            ps_class = eval('experiment.' + name)
+            ps_class = experiment.PTYSCANS.get(name, None)
+            if ps_class is None:
+                raise RuntimeError('Unknown PtyScan subclass: "%s". Did you import it?' % name)
             logger.info('Scan will be prepared with the PtyScan subclass "%s"' % name)
             ps_instance = ps_class(pars)
         else:

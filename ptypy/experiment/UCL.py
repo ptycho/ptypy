@@ -16,14 +16,14 @@ from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..core.paths import Paths
 from ..core import Ptycho
-from .. import defaults_tree
+from . import register
 
 IO_par = Ptycho.DEFAULT['io']
 
 logger = u.verbose.logger
 
 
-@defaults_tree.parse_doc('scandata.UCLLaserScan')
+@register()
 class UCLLaserScan(PtyScan):
     """
     Laser imaging setup (UCL) data preparation class.

@@ -14,13 +14,13 @@ from scipy.io import loadmat
 from .. import utils as u
 from ..core.data import PtyScan
 from ..utils.verbose import log
-from .. import defaults_tree
+from . import register
 logger = u.verbose.logger
 
 
 
-@defaults_tree.parse_doc('scandata.cSAXS')
-class cSAXS(PtyScan):
+@register()
+class cSAXSScan(PtyScan):
     def __init__(self, pars=None, **kwargs):
         '''
         Defaults:

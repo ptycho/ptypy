@@ -11,12 +11,12 @@ This file is part of the PTYPY package.
 from .. import utils as u
 from ..core.data import PtyScan
 from ..utils.verbose import log
-from .. import defaults_tree
+from . import register
 
 logger = u.verbose.logger
 
 
-@defaults_tree.parse_doc('scandata.Savu')
+@register()
 class Savu(PtyScan):
     """
     Defaults:
