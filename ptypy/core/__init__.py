@@ -14,5 +14,6 @@ from . import xy
 from . import illumination
 from . import sample
 from . import geometry
+from . import geometry_bragg
 from . import save_load
 from . import data

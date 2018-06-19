@@ -890,9 +890,9 @@ class PtyScan(object):
         -------
         variable
             one of the following
-              - None, if scan's end is not reached,
+              - WAIT, if scan's end is not reached,
                 but no data could be prepared yet
-              - False, if scan's end is reached
+              - EOS, if scan's end is reached
               - a data package otherwise
         """
         # attempt to get data:

@@ -612,14 +612,14 @@ class MPLClient(MPLplotter):
 
     DEFAULT = DEFAULT
 
-    def __init__(self, client_pars=None, autoplot_pars=None,\
+    def __init__(self, client_pars=None, autoplot_pars=None, home=None,\
                  layout_pars=None, in_thread=False, is_slave=False):
         
         from ptypy.core.ptycho import Ptycho
         self.config = Ptycho.DEFAULT.io.autoplot.copy(depth=3)
         self.config.update(autoplot_pars)
         # set a home directory
-        self.config.home = self.config.get('home',self.DEFAULT.get('home'))
+        self.config.home = home if home is not None else self.DEFAULT.get('home')
 
         layout = self.config.get('layout',layout_pars)
 
@@ -666,11 +666,177 @@ class MPLClient(MPLplotter):
             u.png2mpg(self._framefile, RemoveImages=True)
 
 
-def spawn_MPLClient(client_pars, autoplot_pars):
+class Bragg3dClient(object):
+    """
+    MPLClient analog for 3d Bragg data, which needs to be reduced to 2d
+    before plotting.
+    """
+
+    def __init__(self, client_pars=None, autoplot_pars=None, home=None,
+                 in_thread=False, is_slave=False):
+
+        from ptypy.core.ptycho import Ptycho
+        self.p = Ptycho.DEFAULT.io.autoplot.copy(depth=3)
+        self.p.update(autoplot_pars)
+        # need a home directory
+        self.p.home = home if home is not None else DEFAULT.get('home')
+
+        self.runtime = Param()
+        self.ob = Param()
+        self.pr = Param()
+
+        self.log_level = 5 if in_thread else 3
+
+        self.pc = PlotClient(client_pars, in_thread=in_thread)
+        self.pc.start()
+
+        # set up axes
+        self.plotted = False
+        import matplotlib.pyplot as plt
+        self.plt = plt
+        plt.ion()
+        fig, self.ax = plt.subplots(nrows=2, ncols=2)
+        self.plot_fig = fig
+        self.ax_err = self.ax[1,1]
+        self.ax_obj = (self.ax[0,0], self.ax[0,1], self.ax[1,0])
+
+    def loop_plot(self):
+        """
+        Plot forever.
+        """
+        count = 0
+        initialized = False
+        while True:
+            status = self.pc.status
+            if status == self.pc.DATA:
+                self.pr, self.ob, runtime = self.pc.get_data()
+                self.runtime.update(runtime)
+                self.plot_all()
+                count+=1
+                if self.p.dump:
+                    self.save(self.p.home + self.p.imfile, count)
+                    #plot_file = clean_path(runtime['plot_file'])
+
+            elif status == self.pc.STOPPED:
+                break
+            self.plt.pause(.1)
+
+        if self.p.get('make_movie'):
+            from ptypy import utils as u
+            u.png2mpg(self._framefile, RemoveImages=True)
+
+    def plot_all(self):
+        self.plot_error()
+        self.plot_object()
+        self.plot_probe()
+
+        if 'shrinkwrap' in self.runtime.iter_info[-1].keys():
+            self.plot_shrinkwrap()
+
+    def plot_shrinkwrap(self):
+        try:
+            self.ax_shrinkwrap
+        except:
+            _, self.ax_shrinkwrap = plt.subplots()
+        sx, sprofile, low, high = self.runtime.iter_info[-1]['shrinkwrap']
+        iteration = self.runtime.iter_info[-1]['iteration']
+        self.ax_shrinkwrap.clear()
+        self.ax_shrinkwrap.plot(sx, sprofile, 'b')
+        self.ax_shrinkwrap.axvline(low, color='red')
+        self.ax_shrinkwrap.axvline(high, color='red')
+        self.ax_shrinkwrap.set_title('iter: %d, interval: %.3e'
+            %(iteration, (high-low)))
+
+    def plot_object(self):
+
+        data = self.ob.values()[0]['data'][0]
+        center = self.ob.values()[0]['center']
+        psize = self.ob.values()[0]['psize']
+        lims_r3 = (-center[0] * psize[0], (data.shape[0] - center[0]) * psize[0])
+        lims_r1 = (-center[1] * psize[1], (data.shape[1] - center[1]) * psize[1])
+        lims_r2 = (-center[2] * psize[2], (data.shape[2] - center[2]) * psize[2])
+
+        if self.plotted:
+            for ax_ in self.ax_obj:
+                ax_.old_xlim = ax_.get_xlim()
+                ax_.old_ylim = ax_.get_ylim()
+                ax_.clear()
+
+        arr = np.mean(np.abs(data), axis=2).T # (r1, r3) from top left
+        arr = np.flipud(arr)                  # (r1, r3) from bottom left
+        self.ax_obj[0].imshow(arr, interpolation='none',
+            extent=lims_r3+lims_r1) # extent changes limits, not image orientation
+        self.plt.setp(self.ax_obj[0], ylabel='r1', xlabel='r3', title='side view')
+
+        arr = np.mean(np.abs(data), axis=1).T # (r2, r3) from top left
+        self.ax_obj[1].imshow(arr, interpolation='none',
+            extent=lims_r3+lims_r2[::-1])
+        self.plt.setp(self.ax_obj[1], ylabel='r2', xlabel='r3', title='top view')
+
+        arr = np.mean(np.abs(data), axis=0)   # (r1, r2) from top left
+        arr = np.flipud(arr)                  # (r1, r2) from bottom left
+        self.ax_obj[2].imshow(arr, interpolation='none',
+            extent=lims_r2+lims_r1)
+        self.plt.setp(self.ax_obj[2], ylabel='r1', xlabel='r2', title='front view')
+
+        for ax_ in self.ax_obj:
+            ax_.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
+
+        if self.plotted:
+            for ax_ in self.ax_obj:
+                ax_.set_xlim(ax_.old_xlim)
+                ax_.set_ylim(ax_.old_ylim)
+
+        self.plotted = True
+
+    def plot_probe(self):
+        pass
+
+    def plot_error(self):
+        # error
+        error = np.array([info['error'] for info in self.runtime.iter_info])
+        err_fmag = error[:, 0] / np.max(error[:, 0])
+        err_phot = error[:, 1] / np.max(error[:, 1])
+        err_exit = error[:, 2] / np.max(error[:, 2])
+
+        self.ax_err.clear()
+        self.ax_err.plot(err_fmag, label='err_fmag')
+        self.ax_err.plot(err_phot, label='err_phot')
+        self.ax_err.plot(err_exit, label='err_exit')
+        self.ax_err.legend(loc='upper right')
+
+    def save(self, pattern, count=0):
+        try:
+            r = self.runtime.copy(depth=1)
+            r.update(r.iter_info[-1])
+            plot_file = clean_path(pattern % r)
+        except BaseException:
+            log(self.log_level,'Could not auto generate image dump file from runtime.')
+            plot_file = 'ptypy_%05d.png' % count
+
+        log(self.log_level,'Dumping plot to %s' % plot_file)
+        self.plot_fig.savefig(plot_file,dpi=300)
+        folder,fname = os.path.split(plot_file)
+        mode ='w' if count==1 else 'a'
+        self._framefile = folder+os.path.sep+'frames.txt'
+        with open(self._framefile,mode) as f:
+            f.write(plot_file+'\n')
+            f.close()
+
+
+def spawn_MPLClient(client_pars, autoplot_pars, home):
     """
     A function that creates and runs a silent instance of MPLClient.
     """
-    mplc = MPLClient(client_pars,autoplot_pars, in_thread=True, is_slave=True)
+    cls = MPLClient
+    # 3d Bragg is handled by a MPLClient subclass and is identified by the layout
+    try:
+        if autoplot_pars.layout == 'bragg3d':
+            cls = Bragg3dClient
+    except:
+        pass
+
+    mplc = cls(client_pars, autoplot_pars, home, in_thread=True, is_slave=True)
     try:
         mplc.loop_plot()
     except KeyboardInterrupt:

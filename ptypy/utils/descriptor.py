@@ -1197,6 +1197,3 @@ class EvalDescriptor(ArgParseDescriptor):
             # write the Ptycho instantiation
             fp.write('\n\n### Reconstruction ###\n\n')
             fp.write('Ptycho(%s,level=5)\n'%base)
-
-#: Singular entity to save all defualts all ptypy
-defaults_tree = EvalDescriptor('root')
