@@ -6,6 +6,7 @@ import ptypy
 from ptypy.core.data import PtyScan
 import ptypy.utils as u
 from ptypy import defaults_tree
+from ptypy.experiment import register
 from ptypy.utils.descriptor import EvalDescriptor
 from ptypy.core import geometry_bragg
 from ptypy.core import illumination
@@ -16,10 +17,7 @@ import time
 
 logger = u.verbose.logger
 
-defaults_tree['scandata'].add_child(EvalDescriptor('Bragg3dSimScan'))
-defaults_tree['scandata.Bragg3dSimScan'].add_child(illumination.illumination_desc, copy=True)
-defaults_tree['scandata.Bragg3dSimScan.illumination'].prune_child('diversity')
-@defaults_tree.parse_doc('scandata.Bragg3dSimScan')
+@register()
 class Bragg3dSimScan(PtyScan):
     """
     Provides simulated 3D Bragg data based on the numerical 
@@ -279,6 +277,9 @@ class Bragg3dSimScan(PtyScan):
 
     def load_weight(self):
         return np.ones_like(self.diff[0])
+
+defaults_tree['scandata.Bragg3dSimScan'].add_child(illumination.illumination_desc, copy=True)
+defaults_tree['scandata.Bragg3dSimScan.illumination'].prune_child('diversity')
 
 
 if __name__ == '__main__':
