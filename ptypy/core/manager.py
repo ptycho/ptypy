@@ -1167,10 +1167,15 @@ class Bragg3dModel(Vanilla):
         """
         Override to get 3D containers.
         """
+        self.ptycho._pool['C'].pop('Cprobe')
         self.ptycho.probe = Container(self.ptycho, ID='Cprobe', data_type='complex', data_dims=3)
+        self.ptycho._pool['C'].pop('Cobj')
         self.ptycho.obj = Container(self.ptycho, ID='Cobj', data_type='complex', data_dims=3)
+        self.ptycho._pool['C'].pop('Cexit')
         self.ptycho.exit = Container(self.ptycho, ID='Cexit', data_type='complex', data_dims=3)
+        self.ptycho._pool['C'].pop('Cdiff')
         self.ptycho.diff = Container(self.ptycho, ID='Cdiff', data_type='real', data_dims=3)
+        self.ptycho._pool['C'].pop('Cmask')
         self.ptycho.mask = Container(self.ptycho, ID='Cmask', data_type='bool', data_dims=3)
         self.Cdiff = self.ptycho.diff
         self.Cmask = self.ptycho.mask
