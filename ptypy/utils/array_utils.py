@@ -283,7 +283,7 @@ def rectangle(grids, dims=None, ew=2):
     v, h = dims
     V, H = grids
     return (smooth_step(-np.abs(V) + v/2, ew)
-            * u.smooth_step(-np.abs(H) + h/2, ew))
+            * smooth_step(-np.abs(H) + h/2, ew))
 
 
 def ellipsis(grids, dims=None, ew=2):
