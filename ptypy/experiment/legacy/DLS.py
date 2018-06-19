@@ -13,7 +13,7 @@ import h5py as h5
 
 from ptypy import utils as u
 from ptypy import io
-from ptypy import defaults_tree
+from ptypy.experiment import register
 from ptypy.core.data import PtyScan
 from ptypy.utils.verbose import log
 from ptypy.core.paths import Paths
@@ -39,7 +39,7 @@ NEXUS_PATHS.label = 'entry1/entry_identifier'
 NEXUS_PATHS.experiment = 'entry1/experiment_identifier'
 
 
-@defaults_tree.parse_doc('scandata.DlsScan')
+@register()
 class DlsScan(PtyScan):
     """
     I13 (Diamond Light Source) data preparation class.

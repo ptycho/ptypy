@@ -15,7 +15,7 @@ import numpy as np
 import os
 
 from .. import utils as u
-from .. import defaults_tree
+from . import register
 from .. import io
 from ..core.data import PtyScan
 from ..core import Ptycho
@@ -32,7 +32,7 @@ FLAT_PATHS = u.Param()
 FLAT_PATHS.key = "flat"
 
 
-@defaults_tree.parse_doc('scandata.DiProIFERMIScan')
+@register()
 class DiProIFERMIScan(PtyScan):
     """
     DiProI (FERMI) data preparation class.

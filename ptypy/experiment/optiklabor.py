@@ -10,7 +10,7 @@ import glob
 from . import spec
 from .. import utils as u
 from ..core.data import PtyScan
-from .. import defaults_tree
+from . import register
 
 logger = u.verbose.logger
 
@@ -21,7 +21,7 @@ pp.num_frames = 50
 pp.save = 'extlink'
 
 
-@defaults_tree.parse_doc('scandata.FliSpecScanMultexp')
+@register()
 class FliSpecScanMultexp(PtyScan):
     """
     Defaults:

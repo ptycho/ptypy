@@ -10,29 +10,30 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-ENGINES = dict()
-
 from .. import utils as u
 from .. import defaults_tree
+from .utils import *
 
-from utils import *
+ENGINES = dict()
 
 
-def register(name = None):
-    return lambda cls : register_engine_class(cls, name)
+def register(name=None):
+    """Engine registration decorator"""
+    return lambda cls: _register_engine_class(cls, name)
 
-def register_engine_class(cls, name = None):
+
+def _register_engine_class(cls, name=None):
     from ptypy import defaults_tree
     name = cls.__name__ if name is None else name
-    ENGINES[name]=cls
+    ENGINES[name] = cls
     cls = defaults_tree.parse_doc('engine.' + name, True)(cls)
     return cls
-    
+
+
 def by_name(name):
     if name not in ENGINES.keys():
         raise RuntimeError('Unknown engine: %s' % name)
     return ENGINES[name]
-
 
 from base import BaseEngine
 

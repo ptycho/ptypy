@@ -17,7 +17,7 @@ from .. import core
 from ..utils.verbose import log
 from ..core.paths import Paths
 from ..core import Ptycho
-from .. import defaults_tree
+from . import register
 
 IO_par = Ptycho.DEFAULT['io']
 
@@ -28,7 +28,7 @@ H5_PATHS = u.Param()
 H5_PATHS.frame_pattern = 'data/photons'
 
 
-@defaults_tree.parse_doc('scandata.AMOScan')
+@register()
 class AMOScan(core.data.PtyScan):
     """
     Defaults:
