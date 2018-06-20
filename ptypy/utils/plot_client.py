@@ -824,7 +824,7 @@ class Bragg3dClient(object):
             f.close()
 
 
-def spawn_MPLClient(client_pars, autoplot_pars, home):
+def spawn_MPLClient(client_pars, autoplot_pars, home=None):
     """
     A function that creates and runs a silent instance of MPLClient.
     """
