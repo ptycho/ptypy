@@ -71,9 +71,6 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
             f[self.positions_fast_key] = h5.ExternalLink(self.positions_file, self.positions_fast_key)
             f[self.normalisation_key] = h5.ExternalLink(self.normalisation_file, self.normalisation_key)
 
-    def tearDown(self):
-        if os.path.exists(self.outdir):
-            shutil.rmtree(self.outdir)
 
 
     def test_position_data_mapping_case_1(self):
