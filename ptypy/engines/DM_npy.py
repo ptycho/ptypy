@@ -12,18 +12,19 @@ import time
 from ..utils.verbose import logger, log
 from ..utils import parallel
 from DM import DM
-from ..utils.descriptor import defaults_tree
+from ptypy import defaults_tree
 from ..core.manager import Full, Vanilla
 from ..array_based import data_utils as du
 from ..array_based import constraints as con
 from ..array_based import object_probe_interaction as opi
 import numpy as np
+from . import register
 import sys
 #from memory_profiler import profile
 __all__ = ['DMNpy']
 
 
-@defaults_tree.parse_doc('engine.DMNpy')
+@register()
 class DMNpy(DM):
     """
     A full-fledged Difference Map engine that uses numpy arrays instead of iteration.

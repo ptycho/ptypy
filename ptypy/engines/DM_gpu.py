@@ -12,15 +12,16 @@ import time
 
 from ..utils import parallel
 from DM_npy import DMNpy
-from ..utils.descriptor import defaults_tree
+from ptypy import defaults_tree
 from ..core.manager import Full, Vanilla
 from ptypy.gpu.constraints import difference_map_iterator
+from . import register
 import numpy as np
 
 __all__ = ['DMGpu']
 
 
-@defaults_tree.parse_doc('engine.DMGpu')
+@register()
 class DMGpu(DMNpy):
     """
     A full-fledged Difference Map engine that uses numpy arrays instead of iteration.
@@ -29,7 +30,7 @@ class DMGpu(DMNpy):
     Defaults:
 
     [name]
-    default = DMNpy
+    default = DMGpu
     type = str
     help =
     doc =

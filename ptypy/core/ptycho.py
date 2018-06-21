@@ -176,7 +176,7 @@ class Ptycho(Base):
     default = Param
     type = Param
     help = Plotting client parameters
-    doc = Csontainer for the plotting.
+    doc = Container for the plotting.
 
     [io.autoplot.active]
     default = True
