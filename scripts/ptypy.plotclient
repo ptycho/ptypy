@@ -2,7 +2,7 @@
 
 import sys
 import argparse
-from ptypy.utils.descriptor import defaults_tree
+from ptypy import defaults_tree
 from ptypy.utils.plot_client import MPLClient
 
 parser = argparse.ArgumentParser(description='Create a ZeroMQ plotting client.')

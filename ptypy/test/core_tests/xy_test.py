@@ -4,9 +4,7 @@ Testing the xy.py
 
 
 import unittest
-from ptypy.core.xy import from_pars, augment_to_coordlist,spiral_scan,spiral_scan_legacy, round_scan, round_scan_legacy, round_scan_roi_legacy, spiral_scan_roi_legacy,\
-    raster_scan, raster_scan_legacy
-
+from ptypy.core.xy import from_pars, augment_to_coordlist,spiral_scan, round_scan, raster_scan
 
 class XyTest(unittest.TestCase):
     def test_from_pars(self):

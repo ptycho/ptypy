@@ -13,7 +13,7 @@ import os
 
 from .. import utils as u
 from .. import io
-from ..utils.descriptor import defaults_tree
+from . import register
 from ..core.data import PtyScan
 from ..utils.verbose import log
 from ..core.paths import Paths
@@ -41,7 +41,7 @@ H5_PATHS.frames = '{entry}/ptycho/data'
 H5_PATHS.motors = '{entry}/ptycho/motors'
 
 
-@defaults_tree.parse_doc('scandata.ID16AScan')
+@register()
 class ID16AScan(PtyScan):
     """
     Subclass of PtyScan for ID16A beamline (specifically for near-field
@@ -445,6 +445,7 @@ def undistort(frame, delta):
 
     deltah, deltav = delta
 
+    sh = frame.shape
     x, y = np.meshgrid(np.arange(sh[0]), np.arange(sh[1]))
 
     sh = frame.shape
@@ -459,7 +460,7 @@ def undistort(frame, delta):
 
     pts_in = (nyc < sh[0]) & (nyc > 0) & (nxc < sh[1]) & (nxc > 0)
     pts_out = ~pts_in
-    outf = np.zeros_like(ff)
+    outf = np.zeros_like(frame)
     outf[pts_out] = frame.mean()
     nxf = nxf[pts_in]
     nxc = nxc[pts_in]

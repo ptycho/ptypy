@@ -170,7 +170,8 @@ setup(
         'scripts/ptypy.inspect',
         'scripts/ptypy.plotclient',
         'scripts/ptypy.new',
-        'scripts/ptypy.csv2cp'
+        'scripts/ptypy.csv2cp',
+        'scripts/ptypy.run'
     ],
     ext_modules=cythonize(
         extensions        

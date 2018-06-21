@@ -2,8 +2,7 @@ cache: apt
 sudo: true
 language: python
 python:
-  - "2.7"
-  - "3.3"
+  - 2.7
 before_install:
   - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh; # grab miniconda
   - bash miniconda.sh -b -p $HOME/miniconda # install miniconda
@@ -13,13 +12,22 @@ before_install:
   - conda install pyyaml
   - conda info -a # and print the info
 
-install:
-  - conda env create --file environment.yml #set up the environment thats in the file
-  - source activate test-environment # activate it
-  - python setup.py install # install ptypy
+env:
+  - TEST_ENV_NAME=core_dependencies
+  - TEST_ENV_NAME=full_dependencies
+
+install: True
 
 script:
-  - py.test ptypy/test -v --ignore ptypy/test/gpu_tests/ --cov ptypy --cov-report term-missing # now run the tests
+  - conda env create --file ${TEST_ENV_NAME}.yml #set up the environment thats in the file
+  - source activate ${TEST_ENV_NAME} # activate it
+  - conda install pytest # additional dependencies for the tests
+  - pip install pytest-cov
+  - pip install coveralls
+  - echo $PYTHONPATH
+  - conda list
+  - python setup.py install # install ptypy
+  - py.test ptypy/test -v --cov ptypy --cov-report term-missing # now run the tests
 
 after_script:
   - coveralls

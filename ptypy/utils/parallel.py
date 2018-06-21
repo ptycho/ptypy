@@ -205,11 +205,12 @@ def _MPIop(a, op, axis=None):
     Apply operation op on accross a list of arrays distributed between
     processes. Supported operations are SUM, MAX, MIN, and PROD.
     """
+    
+    if MPIenabled:
+        MPIop = {'SUM': MPI.SUM, 'MAX': MPI.MAX, 'MIN': MPI.MIN, 'PROD': MPI.PROD}[op.upper()]
 
-    MPIop, npop = \
-        {'SUM': (MPI.SUM, np.sum), 'MAX': (MPI.MAX, np.max), 'MIN': (MPI.MIN, np.min), 'PROD': (MPI.PROD, np.prod)}[
-            op.upper()]
-
+    npop = {'SUM': np.sum, 'MAX':  np.max, 'MIN': np.min, 'PROD': np.prod}[op.upper()]
+    
     # Total op
     if axis is None:
         # Very special case: calling with an empty object might make sense in a few situations.

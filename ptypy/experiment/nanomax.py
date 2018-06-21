@@ -8,7 +8,7 @@ import h5py
 
 from ..core.data import PtyScan
 from .. import utils as u
-from ..utils.descriptor import defaults_tree
+from . import register
 
 logger = u.verbose.logger
 
@@ -56,7 +56,7 @@ class NanomaxBase(PtyScan):
     pass
 
 
-@defaults_tree.parse_doc('scandata.NanomaxStepscanNov2016')
+@register()
 class NanomaxStepscanNov2016(NanomaxBase):
     """
     Loads Nanomax step scan data in the format of week Nov/Dec 2016
@@ -136,7 +136,7 @@ class NanomaxStepscanNov2016(NanomaxBase):
         return mask
 
 
-@defaults_tree.parse_doc('scandata.NanomaxStepscanMay2017')
+@register()
 class NanomaxStepscanMay2017(NanomaxBase):
     """
     Loads Nanomax step scan data in the format of May 2017.
@@ -259,7 +259,7 @@ class NanomaxStepscanMay2017(NanomaxBase):
         return mask
 
 
-@defaults_tree.parse_doc('scandata.NanomaxFlyscanJune2017')
+@register()
 class NanomaxFlyscanJune2017(NanomaxStepscanMay2017):
     """
     Loads Nanomax fly scan data in the format of June 2017.

@@ -27,7 +27,7 @@ from .. import io
 from .. import resources
 from ..utils import parallel
 from ..utils.verbose import logger, log, headerline
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 
 PTYD = dict(
     # frames, positions
@@ -128,7 +128,7 @@ class PtyScan(object):
     uplim = 8
 
     [orientation]
-    type = int, tuple
+    type = int, tuple, list
     default = None
     help = Data frame orientation
     doc = Choose
@@ -815,6 +815,7 @@ class PtyScan(object):
 
             # restore contiguity of the cropped/padded/rotated/flipped array
             d = np.ascontiguousarray(d)
+            w = np.ascontiguousarray(w)
 
             if has_data:
                 # Translate back to dictionaries
@@ -889,9 +890,9 @@ class PtyScan(object):
         -------
         variable
             one of the following
-              - None, if scan's end is not reached,
+              - WAIT, if scan's end is not reached,
                 but no data could be prepared yet
-              - False, if scan's end is reached
+              - EOS, if scan's end is reached
               - a data package otherwise
         """
         # attempt to get data:
@@ -1522,14 +1523,24 @@ class MoonFlowerScan(PtyScan):
         self.pixel = np.round(pixel).astype(int) + 10
         frame = self.pixel.max(0) + 10 + geo.shape
         self.geo = geo
-        self.obj = resources.flower_obj(frame)
-
+        
+        try:
+            self.obj = resources.flower_obj(frame)
+        except:
+            # matplotlib failsafe
+            self.obj = u.gf_2d(u.parallel.MPInoise2d(frame),1.)
+            
         # Get probe
-        moon = resources.moon_pr(self.geo.shape)
+        try:
+            moon = resources.moon_pr(self.geo.shape)
+        except:
+            # matplotlib failsafe
+            moon = u.ellipsis(u.grids(self.geo.shape)).astype(complex)
+        
         moon /= np.sqrt(u.abs2(moon).sum() / p.photons)
         self.pr = moon
         self.load_common_in_parallel = True
-
+        
         self.p = p
 
     def load_positions(self):
@@ -1564,7 +1575,83 @@ class MoonFlowerScan(PtyScan):
 
         return raw, {}, {}
 
+@defaults_tree.parse_doc('scandata.QuickScan')
+class QuickScan(PtyScan):
+    """
+    Test PtyScan to benchmark graph creation further down the line.
 
+    Override parent class default:
+
+    Defaults:
+
+    [name]
+    default = MoonFlowerScan
+    type = str
+    help =
+    doc =
+
+    [num_frames]
+    default = 100
+    type = int
+    help = Number of frames to simulate
+    doc =
+
+    [shape]
+    type = int, tuple
+    default = 64
+    help = Shape of the region of interest cropped from the raw data.
+    doc = Cropping dimension of the diffraction frame
+      Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
+    userlevel = 1
+
+    [density]
+    default = 0.05
+    type = float
+    help = Position distance in fraction of illumination frame
+    """
+
+    def __init__(self, pars=None, **kwargs):
+        """
+        Parent pars are for the
+        """
+
+        p = self.DEFAULT.copy(depth=99)
+        p.update(pars)
+
+        # Initialize parent class
+        super(QuickScan, self).__init__(p, **kwargs)
+
+        # Derive geometry from input
+        geo = geometry.Geo(pars=self.meta)
+
+        # Derive scan pattern
+        pos = u.Param()
+        pos.spacing = geo.resolution * geo.shape * p.density
+        pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+        pos.extent = pos.steps * pos.spacing
+        pos.model = 'round'
+        pos.count = self.num_frames
+        self.pos = xy.from_pars(pos)
+        self.geo = geo
+        # dumm diff pattern
+        self.diff = np.zeros(geo.shape)
+        self.diff[0,0] = 1e7
+        self.diff = np.fft.fftshift(self.diff)
+        
+        self.p = p
+
+    def load_positions(self):
+        return self.pos
+
+    def load_weight(self):
+        return np.ones(self.diff.shape)
+
+    def load(self, indices):
+        raw = {}
+        for k in indices:
+            raw[k] = self.diff.copy().astype(np.int32)
+        return raw, {}, {}
+        
 if __name__ == "__main__":
     u.verbose.set_level(3)
     MS = MoonFlowerScan(num_frames=100)

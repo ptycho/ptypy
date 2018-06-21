@@ -13,12 +13,12 @@ import numpy as np
 
 from ptypy import utils as u
 from ptypy.core.data import PtyScan
-from ptypy.utils.descriptor import defaults_tree
+from ptypy.experiment import register
 from ptypy.utils.verbose import log
 from ptypy.utils.array_utils import _translate_to_pix
 
 
-@defaults_tree.parse_doc('scandata.Hdf5Loader')
+@register()
 class Hdf5Loader(PtyScan):
     """
     First attempt to make a generalised hdf5 loader for data. Please raise a ticket in github if changes are required
@@ -27,7 +27,7 @@ class Hdf5Loader(PtyScan):
     Defaults:
 
     [name]
-    default = 'Hdf5'
+    default = 'Hdf5Loader'
     type = str
     help =
 

@@ -45,6 +45,10 @@ def diversify(A, noise=None, shift=None, power=1.0):
     --------
     ptypy.utils.parallel.MPInoise2d
     """
+    # Nothing to do if only one mode
+    if A.shape[0] == 1:
+        return
+
     if noise is not None:
         noise = parallel.MPInoise2d(A.shape, *noise)
         # No noise where the main mode is

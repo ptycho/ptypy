@@ -170,6 +170,13 @@ class Geo(Base):
                 p[k] = v
 
         self.p = p
+        self._initialize(p)
+
+    def _initialize(self, p):
+        """
+        Parse input parameters, fill missing parameters and set up a
+        propagator.
+        """
         self.interact = False
 
         # Set distance
@@ -542,12 +549,12 @@ class BasicFarfieldPropagator(object):
         lz /= (self.sh[0] + mis[0] - self.crop_pad[0]) / self.sh[0]
 
         # Calculate the grids
-        if str(p.origin) == p.origin:
+        if u.isstr(p.origin):
             c_sam = p.origin
         else:
             c_sam = p.origin + self.crop_pad / 2.
 
-        if str(p.center) == p.center:
+        if u.isstr(p.center):
             c_det = p.center
         else:
             c_det = p.center + self.crop_pad / 2.

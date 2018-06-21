@@ -16,12 +16,17 @@ from .. import utils as u
 from ..utils.verbose import logger, _, report, headerline, log
 from ..utils import parallel
 from .. import engines
-from ..io import interaction
 from .classes import Base, Container, Storage, PTYCHO_PREFIX
 from .manager import ModelManager
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
+
+# This needs to be done here as it populates the defaults tree
+from .. import __has_zmq__
+if __has_zmq__:
+    from ..io import interaction
 
 __all__ = ['Ptycho']
+
 
 
 @defaults_tree.parse_doc()
@@ -384,7 +389,7 @@ class Ptycho(Base):
         iaction = self.p.io.interaction
         autoplot = self.p.io.autoplot
 
-        if parallel.master and iaction.active:
+        if __has_zmq__ and parallel.master and iaction.active:
             # Create the interaction server
             self.interactor = interaction.Server(iaction.server)
 

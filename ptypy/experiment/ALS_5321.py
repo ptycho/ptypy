@@ -9,12 +9,12 @@ import numpy as np
 
 from ..core.data import PtyScan
 from .. import utils as u
-from ..utils.descriptor import defaults_tree
+from . import register
 
 logger = u.verbose.logger
 
 
-@defaults_tree.parse_doc('scandata.ALS5321Scan')
+@register()
 class ALS5321Scan(PtyScan):
     """
     Basic class to load 5.3.2.1 data offline.

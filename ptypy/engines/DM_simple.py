@@ -12,15 +12,15 @@ import numpy as np
 
 from .. import utils as u
 from .utils import basic_fourier_update
-from . import BaseEngine
+from . import BaseEngine, register
 from ..utils.verbose import logger
 from ..utils import parallel
-from ..utils.descriptor import defaults_tree
+from .. import defaults_tree
 from ..core.manager import Full, Vanilla
 
 __all__ = ['DM_simple']
 
-@defaults_tree.parse_doc('engine.DM_simple')
+@register()
 class DM_simple(BaseEngine):
     """
     Bare-bones DM reconstruction engine.

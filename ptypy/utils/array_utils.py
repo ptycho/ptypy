@@ -10,11 +10,12 @@ This file is part of the PTYPY package.
 
 import numpy as np
 from .misc import *
+from .math_utils import smooth_step
 
 __all__ = ['grids', 'switch_orientation', 'mirror',
            'crop_pad_symmetric_2d', 'crop_pad_axis', 'crop_pad',
            'pad_lr', 'zoom', 'shift_zoom', 'c_zoom',
-           'rebin', 'rebin_2d']
+           'rebin', 'rebin_2d', 'rectangle', 'ellipsis']
 
 
 def switch_orientation(A, orientation, center=None):
@@ -207,15 +208,16 @@ def _translate_to_pix(sh,center):
     Take arbitrary input and translate it to a pixel position with respect to sh.
     """
     sh=np.array(sh)
-    if center=='fftshift':
+    if not isstr(center):
+        cen = np.asarray(center) % sh
+    elif center=='fftshift':
         cen=sh//2.0
     elif center=='geometric':
         cen=sh/2.0-0.5
     elif center=='fft':
         cen=sh*0.0
-    elif center is not None:
-        #cen=sh*np.asarray(center) % sh - 0.5
-        cen = np.asarray(center) % sh
+    else:
+        raise TypeError('Input %s not understood for center' % str(center))
 
     return cen
 """
@@ -274,6 +276,23 @@ def grids(sh,psize=None,center='geometric',FFTlike=True):
             psize = psize * np.ones((len(sh),))
         psize = np.asarray(psize).reshape( (len(sh),) + len(sh)*(1,))
         return grid * psize
+
+def rectangle(grids, dims=None, ew=2):
+    if dims is None:
+        dims = (grids.shape[-2] / 2., grids.shape[-1] / 2.)
+    v, h = dims
+    V, H = grids
+    return (smooth_step(-np.abs(V) + v/2, ew)
+            * smooth_step(-np.abs(H) + h/2, ew))
+
+
+def ellipsis(grids, dims=None, ew=2):
+    if dims is None:
+        dims = (grids.shape[-2] / 2., grids.shape[-1] / 2.)
+    v, h = dims
+    V, H = grids
+    return smooth_step(
+        0.5 - np.sqrt(V**2/v**2 + H**2/h**2), ew/np.sqrt(v * h))
 
 def zoom(c,*arg,**kwargs):
     """

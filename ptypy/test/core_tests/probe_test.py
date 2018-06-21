@@ -36,15 +36,16 @@ def set_up_probes(P,G):
     y, x = G.propagator.grids_sam
     apert = u.smooth_step(fsize[0]/5-np.sqrt(x**2+y**2), 1e-6)
     sh = (1,) + tuple(G.shape)
-    pr = P.probe.new_storage(shape=sh, psize=G.resolution)
-    pr.fill(-moon_pr(G.shape))
+    #pr = P.probe.new_storage(shape=sh, psize=G.resolution)
+    #pr.fill(-moon_pr(G.shape))
     pr2 = P.probe.new_storage(shape=sh, psize=G.resolution)
     pr2.fill(apert)
     pr3 = P.probe.new_storage(shape=sh, psize=G.resolution)
     y, x = pr3.grids()
     apert = u.smooth_step(fsize[0]/5-np.abs(x), 3e-5)*u.smooth_step(fsize[1]/5-np.abs(y), 3e-5)
     pr3.fill(apert)
-    return [pr, pr2, pr3]
+    #return [pr, pr2, pr3]
+    return [pr2, pr3]
 
 def propagate_probes(G, probes):
     propagated_ill = []
@@ -61,7 +62,8 @@ class ProbeTest(unittest.TestCase):
         probes = set_up_probes(P,G)
         prop_probes = propagate_probes(G,probes)
         av = [np.mean(foo) for foo in prop_probes]
-        res = np.array([0.006+26.9j, 0.023+23.638j,-0.027+26.908j])
+        #res = np.array([0.006+26.9j, 0.023+23.638j,-0.027+26.908j])
+        res = np.array([0.023+23.638j,-0.027+26.908j])
         assert (np.round(np.array(av),3)==res).all(), "Probes are not equal"
 
 if __name__ == '__main__':

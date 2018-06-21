@@ -81,10 +81,10 @@ sample_desc.from_string(r"""
     userlevel = 
 
     [process.offset]
-    default = (0,0)
+    default = (0, 0)
     help = Offset between center of object array and scan pattern
     doc = 
-    type = tuple
+    type = tuple, list
     userlevel = 2
     lowlim = 0
 
@@ -93,7 +93,7 @@ sample_desc.from_string(r"""
     help = Zoom value for object simulation.
     doc = If ``None``, leave the array untouched. Otherwise the modeled or loaded image will be
       resized using :py:func:`zoom`.
-    type = tuple, float
+    type = list, tuple, float
     userlevel = 2
     lowlim = 0
 
@@ -119,11 +119,11 @@ sample_desc.from_string(r"""
     userlevel = 2
 
     [process.ref_index]
-    default = 0.5+0.j
-    help = Assigned refractive index
-    doc = If ``None``, treat source array as projection of refractive index. If a refractive index
+    default = (0.5, 0.0)
+    help = Assigned refractive index, tuple of format (real, complex)
+    doc = If ``None``, treat source array as projection of refractive index a+bj for (a, b). If a refractive index
       is provided the array's absolute value will be used to scale the refractive index.
-    type = complex
+    type = list, tuple
     userlevel = 2
     lowlim = 0
 

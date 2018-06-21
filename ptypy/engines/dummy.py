@@ -12,14 +12,13 @@ import time
 import numpy as np
 
 from ..utils import parallel
-from . import BaseEngine
-from ..utils.descriptor import defaults_tree
+from . import BaseEngine, register
+from .. import defaults_tree
 from ..core.manager import Full, Vanilla
 
 __all__ = ['Dummy']
 
-
-@defaults_tree.parse_doc('engine.Dummy')
+@register()
 class Dummy(BaseEngine):
     """
     Dummy reconstruction engine.
@@ -41,7 +40,7 @@ class Dummy(BaseEngine):
     """
 
     SUPPORTED_MODELS = [Full, Vanilla]
-
+    
     def __init__(self, ptycho_parent, pars=None):
         """
         Dummy reconstruction engine.

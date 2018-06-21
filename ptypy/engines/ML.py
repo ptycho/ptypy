@@ -18,14 +18,14 @@ from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
 from .utils import Cnorm2, Cdot
-from . import BaseEngine
-from ..utils.descriptor import defaults_tree
+from . import BaseEngine, register
+from .. import defaults_tree
 from ..core.manager import Full, Vanilla
 
 __all__ = ['ML']
 
 
-@defaults_tree.parse_doc('engine.ML')
+@register()
 class ML(BaseEngine):
     """
     Maximum likelihood reconstruction engine.
