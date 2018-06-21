@@ -40,7 +40,6 @@ def _register_PtyScan_class(cls, name=None):
 
     # Apply descriptor decorator
     cls = defaults_tree.parse_doc('scandata.' + name, True)(cls)
-
     # Add class to namespace
     globals()[name] = cls
     __all__.append(name)
@@ -59,6 +58,7 @@ try:
     from UCL import UCLLaserScan
     from nanomax import NanomaxStepscanMay2017, NanomaxStepscanNov2016, NanomaxFlyscanJune2017
     from ALS_5321 import ALS5321Scan
+    from hdf5_loader import Hdf5Loader
 except:
     pass
 #from I13_ffp import I13ScanFFP

@@ -13,7 +13,7 @@ import numpy as np
 
 from ptypy import utils as u
 from ptypy.core.data import PtyScan
-from ptypy.experiment import register
+from . import register
 from ptypy.utils.verbose import log
 from ptypy.utils.array_utils import _translate_to_pix
 
@@ -363,7 +363,7 @@ class Hdf5Loader(PtyScan):
             pshape = u.expect2(self.p.shape)
             low_pix = center - pshape // 2
             high_pix = low_pix + pshape
-            self.frame_slices = (slice(low_pix[0], high_pix[0], 1), slice(low_pix[1], high_pix[1], 1))
+            self.frame_slices = (slice(int(low_pix[0]), int(high_pix[0]), 1), slice(int(low_pix[1]), int(high_pix[1]), 1))
             self.p.center = pshape // 2 #the  new center going forward
             self.info.center = self.p.center
             self.p.shape = pshape
@@ -392,21 +392,6 @@ class Hdf5Loader(PtyScan):
             return mask_dset[mask_slices].astype(np.float)
         else:
             log(4, "No mask was loaded. mask.key was {} and mask.file was {}".format(self.p.mask.file, self.p.mask.key))
-
-    def check(self, frames, start):
-        """
-        Returns the number of frames available from starting index `start`, and whether the end of the scan
-        was reached.
-
-        :param frames: Number of frames to load
-        :param start: starting point
-        :return: (frames_available, end_of_scan)
-        - the number of frames available from a starting point `start`
-        - bool if the end of scan was reached (None if this routine doesn't know)
-        """
-
-        return self.num_frames, True
-
 
     def load_unmapped_raster_scan(self, indices):
         intensities = {}
@@ -451,9 +436,8 @@ class Hdf5Loader(PtyScan):
         '''
         if isinstance(index, int):
             index = (index,)
-        indexed_frame_slices = tuple([slice(ix, ix+1, 1) for ix in index])
+        indexed_frame_slices = tuple([slice(int(ix), int(ix+1), 1) for ix in index])
         indexed_frame_slices += self.frame_slices
-
         intensity = self.intensities[indexed_frame_slices]
         # TODO: Remove these logic blocks into something a bit more sensible.
         if self.darkfield is not None:
