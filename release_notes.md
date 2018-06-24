@@ -4,9 +4,22 @@ We are happy to announce that ptypy 0.3 is now out. If you have been using the p
 
 ## New features
 
+
+
 ## Improvements
 
+
+
 ## Breaking changes
+
+The streamlining of the input parameters means that *all reconstruction scripts for version 0.2 will now fail*. We had no choice.
+
+The changes were needed to solve the following problems:
+  1. Parameter definitions, documentations and defaults were in different locations, so hard to track and maintain
+  2. The meaning of a branch set to `None` was ambiguous.
+  3. In general, the standards were not clear.
+
+The solution to all these problems came with the `descriptor` submodule. For a user, what matter most is that `ptypy.defaults_tree` now contains the description of the full set parameters known to ptypy. 
 
 ## Bug fixes
 
