@@ -525,59 +525,80 @@ class ArgParseDescriptor(Descriptor):
         Add parameter to an argparse.ArgumentParser instance (or create and return one if parser is None)
         prefix is
         """
+        import argparse
 
+        # Command line arguments will use '-'
         sep = self.separator
         argsep = '-'
 
+        # Create parser if none has been provided
         if parser is None:
-            from argparse import ArgumentParser
             description = """
             Parser for %s
             Doc: %s
             """ % (self.name, self.help)
-            parser = ArgumentParser(description=description)
+            parser = argparse.ArgumentParser(description=description)
 
-        # overload the parser
-        if not hasattr(parser, '_aux_translator'):
-            parser._aux_translator = {}
-
-        # get list of descendants, remove separator and replace underscores with argsep
-        ndesc = dict((k.replace(sep, argsep).replace('_', argsep), self[k]) for k, _ in self.descendants)
-        parser._aux_translator.update(ndesc)
-
-        groups = {}
+        # Create the list of descendants with properly formatted command-line options
+        ndesc = dict((k.replace(sep, argsep).replace('_', argsep), desc) for k, desc in self.descendants)
 
         # Identify argument groups (first level children)
-        for name, desc in ndesc.items():
+        groups = {}
+        for argname, desc in ndesc.items():
             if desc.name in excludes:
                 continue
             if desc.children:
-                groups[name] = parser.add_argument_group(title=prefix + name, description=desc.help.replace('%', '%%'))
+                groups[argname] = parser.add_argument_group(title=prefix + argname, description=desc.help.replace('%', '%%'))
+
+        # Factory function that creates custom actions for argparse. This is needed to
+        # update the defaults
+        def mk_custom_action(ParentCls, inner_desc):
+
+            # Custom action to change defaults
+            class CustomAction(ParentCls):
+
+                # Store parent descriptor and descendant name as class attributes
+                desc = inner_desc
+
+                def __call__(self, parser, namespace, values, option_string=None):
+                    # Store new default
+                    self.desc.options['default'] = str(values)
+
+                    # Usual stuff - though useless here.
+                    setattr(namespace, self.dest, values)
+
+            return CustomAction
 
         # Add all arguments
-        for name, desc in ndesc.iteritems():
+        for argname, desc in ndesc.iteritems():
 
-            if desc.name in excludes:
+            if desc.name in excludes or argname in groups:
                 continue
 
             # Attempt to retrieve the group
-            up = argsep.join(name.split(argsep)[:-1])
+            up = argsep.join(argname.split(argsep)[:-1])
             parse = groups.get(up, parser)
 
             # Manage boolean parameters as switches
             typ = desc._get_type_argparse()
             if typ is bool:
                 # Command line switches have no arguments, so treated differently
-                flag = '--no-' + name if desc.default else '--' + name
-                action = 'store_false' if desc.default else 'store_true'
-                parse.add_argument(flag, dest=name, action=action, help=desc.help.replace('%', '%%'))
+                if desc.default:
+                    # Default is true, so option is to turn it off
+                    flag = '--no-' + argname
+                    action = mk_custom_action(argparse._StoreFalseAction, desc)
+                else:
+                    flag = '--' + argname
+                    action = mk_custom_action(argparse._StoreTrueAction, desc)
+
+                parse.add_argument(flag, dest=argname, action=action, help=desc.help.replace('%', '%%'))
             else:
                 d = desc.default
                 defstr = d.replace('%(', '%%(') if str(d) == d else str(d)
-                parse.add_argument('--' + name, dest=name, type=typ, default=desc.default, choices=desc.choices,
+                action = mk_custom_action(argparse.Action, desc)
+                parse.add_argument('--' + argname, dest=argname, type=typ, default=desc.default,
+                                   choices=desc.choices, action=action,
                                    help=desc.help.replace('%', '%%') + ' (default=%s)' % defstr.replace('%', '%%'))
-
-            #parser._aux_translator[name] = desc
 
         return parser
 
