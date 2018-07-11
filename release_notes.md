@@ -4,7 +4,7 @@ We are happy to announce that ptypy 0.3 is now out. If you have been using the p
   1. a redesign of ptypy's internal structure, especially the introduction of an extendable [`ScanModel`](https://github.com/ptycho/ptypy/blob/master/ptypy/core/manager.py), which should make new ideas and new algorithms easier to implement (a big collective effort involving A. Björling, A. Parsons, B. Enders and P. Thibault),
   2. support for 3D Bragg ptychography, which uses the new `ScanModel` structure (all thanks to A. Björling),
 
-  3. extensive testing of most components of the code, and Travis CI integration (huge work by A. Parsons), and
+  3. extensive testing of most components of the code, and Travis CI integration (huge work by A. Parsons and important contributions by S. Chalkidis), and
 
   4. the introduction of the [`descriptor`](https://github.com/ptycho/ptypy/blob/master/ptypy/utils/descriptor.py) submodule, which manages the whole parameter tree, including validation, defaults, and documentation (collective effort led by B. Enders and P. Thibault)
 
@@ -108,12 +108,11 @@ ERROR root - numiter                                            type            
 
 ## Other contributions
 
- * fftw (ESRF)
- * scalability tests (Kewish)
- * Bug fixes and tests (...)
+ * Option to use pyfftw (thanks to L. Bloch, ESRF)
+ * Scalability tests (thanks to C. Kewish, Australian Synchrotron)
+ * A first draft jupyter-based plot client (B. Daurer, now National University of Singapore)
+ * Bug fixes and tests (many people)
 
 ## Roadmap
 
-1. GPU acceleration
-2. New features (OPR, position refinement, ...)
-3. ...
+The next release will focus on optimisation and speed. We will also soon switch to python 3.
