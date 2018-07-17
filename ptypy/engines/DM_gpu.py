@@ -15,6 +15,7 @@ from DM_npy import DMNpy
 from ptypy import defaults_tree
 from ..core.manager import Full, Vanilla
 from ptypy.gpu.constraints import difference_map_iterator
+from ptypy.gpu.config import init_gpus
 from . import register
 import numpy as np
 
@@ -113,6 +114,11 @@ class DMGpu(DMNpy):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
+    [gpu_device]
+    default = 0
+    type = int
+    help = The device number for the gpu that we will use
+
     """
 
     SUPPORTED_MODELS = [Vanilla, Full]
@@ -121,7 +127,10 @@ class DMGpu(DMNpy):
         """
         Difference map reconstruction engine.
         """
+
         super(DMGpu, self).__init__(ptycho_parent, pars)
+        init_gpus(self.p.gpu_device)
+
 
     def engine_iterate(self, num=1):
         """
