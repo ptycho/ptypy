@@ -267,10 +267,13 @@ class Hdf5Loader(PtyScan):
         self.fast_axis = None
         self.darkfield = None
         self.flatfield = None
+        self.mask = None
         self.normalisation = None
         self.normalisation_laid_out_like_positions = None
         self.darkfield_laid_out_like_data = None
         self.flatfield_field_laid_out_like_data = None
+        self.mask_laid_out_like_data = None
+
         # lets raise some exceptions here for the essentials
         if None in [self.p.intensities.file,
                     self.p.intensities.key,
@@ -323,6 +326,21 @@ class Hdf5Loader(PtyScan):
                 raise RuntimeError("I have no idea what to do with this shape of flatfield data.")
         else:
             log(3, "No flatfield will be applied.")
+
+        if None not in [self.p.mask.file, self.p.mask.key]:
+            self.mask = h5.File(self.p.mask.file, 'r')[self.p.mask.key]
+            log(3, "The mask has shape: {}".format(self.mask.shape))
+            if self.mask.shape == data_shape:
+                log(3, "The mask is laid out like the data.")
+                self.mask_laid_out_like_data = True
+            elif self.mask.shape == data_shape[-2:]:
+                log(3, "The mask is not laid out like the data.")
+                self.mask_laid_out_like_data = False
+            else:
+                raise RuntimeError("I have no idea what to do with this shape of mask data.")
+        else:
+            log(3, "No mask will be applied.")
+
 
         if None not in [self.p.normalisation.file, self.p.normalisation.key]:
             self.normalisation = h5.File(self.p.normalisation.file, 'r')[self.p.normalisation.key]
@@ -383,23 +401,13 @@ class Hdf5Loader(PtyScan):
             self.load = self.load_unmapped_raster_scan
 
 
-    def load_weight(self):
-        # Load mask as weight
-        if (self.p.mask.key is not None) and (self.p.mask.file is not None):
-            mask_dset = h5.File(self.p.mask.file)[self.p.mask.key]
-            mask_slices = tuple([slice(0, ix, 1) for ix in mask_dset.shape[:-2]])
-            mask_slices += self.frame_slices
-            return mask_dset[mask_slices].astype(np.float)
-        else:
-            log(4, "No mask was loaded. mask.key was {} and mask.file was {}".format(self.p.mask.file, self.p.mask.key))
-
     def load_unmapped_raster_scan(self, indices):
         intensities = {}
         positions = {}
         weights = {}
         sh = self.slow_axis.shape
         for jj in indices:
-            intensities[jj] = self.get_corrected_intensities(jj)
+            weights[jj], intensities[jj] = self.get_corrected_intensities(jj)
             positions[jj] = np.array([self.slow_axis[jj % sh[0], jj // sh[1]] * self.p.positions.slow_multiplier,
                                       self.fast_axis[jj % sh[0], jj // sh[1]] * self.p.positions.fast_multiplier])
         log(3, 'Data loaded successfully.')
@@ -411,7 +419,7 @@ class Hdf5Loader(PtyScan):
         weights = {}
         sh = self.slow_axis.shape
         for jj in indices:
-            intensities[jj] = self.get_corrected_intensities((jj % sh[0], jj // sh[1]))  # or the other way round???
+            weights[jj], intensities[jj] = self.get_corrected_intensities((jj % sh[0], jj // sh[1]))  # or the other way round???
             positions[jj] = np.array([self.slow_axis[jj % sh[0], jj // sh[1]] * self.p.positions.slow_multiplier,
                                       self.fast_axis[jj % sh[0], jj // sh[1]] * self.p.positions.fast_multiplier])
         log(3, 'Data loaded successfully.')
@@ -422,9 +430,10 @@ class Hdf5Loader(PtyScan):
         positions = {}
         weights = {}
         for jj in indices:
-            intensities[jj] = self.get_corrected_intensities(jj)
+            weights[jj], intensities[jj] = self.get_corrected_intensities(jj)
             positions[jj] = np.array([self.slow_axis[jj] * self.p.positions.slow_multiplier,
                                       self.fast_axis[jj] * self.p.positions.fast_multiplier])
+
         log(3, 'Data loaded successfully.')
         return intensities, positions, weights
 
@@ -457,7 +466,15 @@ class Hdf5Loader(PtyScan):
                 intensity /= self.normalisation[index]
             else:
                 intensity /= self.normalisation
-        return intensity
+
+        if self.mask is not None:
+            if self.mask_laid_out_like_data:
+                mask = self.mask[indexed_frame_slices]
+            else:
+                mask = self.mask[self.frame_slices]
+        else:
+            mask = np.ones_like(intensity, dtype=np.int)
+        return mask, intensity
 
     def compute_scan_mapping_and_trajectory(self, data_shape, positions_fast_shape, positions_slow_shape):
         '''
