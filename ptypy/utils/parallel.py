@@ -32,7 +32,7 @@ __all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
 
 def useMPI(do=None):
     """\
-    Toggle using MPI or not. Is this useful?
+    Toggle using MPI or not. Is this useful? YES!
     """
     global MPIenabled
     if do is None:
@@ -41,6 +41,15 @@ def useMPI(do=None):
         MPIenabled = False
     else:
         MPIenabled = do
+        if do is False:
+            global size
+            global master
+            global loadmanager
+            size = 1
+            master = True
+            loadmanager = LoadManager()
+
+
 
 
 ###################################
@@ -93,7 +102,6 @@ class LoadManager(object):
             A nested list, (a list of lists) such that ``R[rank]=list``
             of elements of `idlist` managed by process of given `rank`.
         """
-
         # Simplest case
         if idlist is None:
             r = size - 1 - self.load[::-1].argmin()
@@ -125,6 +133,7 @@ class LoadManager(object):
         # Update the loads
         part = np.zeros_like(self.load)
         part[li] = ipart
+
         self.load += part
 
         # Cumulative sum give the index boundaries between the ranks
@@ -132,6 +141,7 @@ class LoadManager(object):
 
         # Now assign the rank
         rlist = np.arange(size)
+
         out = [[] for x in range(size)]
         for i, k in enumerate(idlist):
             r = rlist[i < cumpart][0]
