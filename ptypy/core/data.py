@@ -782,6 +782,7 @@ class PtyScan(object):
             # have a different center than the raw data.
             # NOTE: Maybe distinguish between no mask provided and mask
             # with wrong size in warning
+
             if (dsh == np.array(w[0].shape)).all():
                 w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
             else:
@@ -1121,7 +1122,7 @@ class PtyScan(object):
             cen[k] = u.mass_center(d * (weights[k] > 0))
 
         # For some nodes, cen may still be empty.
-        # Therefore we use gather_dict to be save
+        # Therefore we use gather_dict to be safe
         cen = parallel.gather_dict(cen)
         parallel.barrier()
 
@@ -1129,9 +1130,9 @@ class PtyScan(object):
         if parallel.master:
             cen = np.array(cen.values()).mean(0)
         else:
-            cen = np.array([0., 0.])
-
+            cen = np.array([0.]*data.ndim)
         parallel.allreduce(cen)
+
 
         return cen
 
