@@ -12,7 +12,10 @@ dependencies:
   - mpi4py
   - pil
   - pyfftw
+  - cmake
   - pip:
     - pytest-cov
     - coveralls
+    - cython
     - fabio
+

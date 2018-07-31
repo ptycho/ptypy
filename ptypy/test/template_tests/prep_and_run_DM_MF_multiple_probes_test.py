@@ -10,8 +10,8 @@ import unittest
 
 # class PrepAndRunDMMFMultipleProbesTest(unittest.TestCase):
 #     def test_multiprobe(self):
-p = u.Param()
 
+p = u.Param()
 # for verbose output
 p.verbose_level = 3
 
@@ -55,5 +55,3 @@ p.engines.engine00.fourier_relax_factor = 0.05
 # prepare and run
 P = Ptycho(p,level=4)
 
-# We shouldn't plot
-#P.plot_overview()

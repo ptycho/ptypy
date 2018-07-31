@@ -5,7 +5,7 @@ Scan management.
 The main task of this module is to prepare the data structure for
 reconstruction, taking a data feed and connecting individual diffraction
 measurements to the other containers. The way this connection is done
-is defined by ScanModel and its subclasses. The connections are
+as defined by ScanModel and its subclasses. The connections are
 described by the POD objects.
 
 This file is part of the PTYPY package.
@@ -547,8 +547,8 @@ class Vanilla(ScanModel):
                       ID=None,
                       views=views,
                       geometry=geometry)
-            pod.probe_weight = 1
-            pod.object_weight = 1
+            pod.probe_weight = 1.0
+            pod.object_weight = 1.0
 
             new_pods.append(pod)
 
@@ -809,8 +809,8 @@ class Full(ScanModel):
 
                         new_pods.append(pod)
 
-                        pod.probe_weight = 1
-                        pod.object_weight = 1
+                        pod.probe_weight = 1.0
+                        pod.object_weight = 1.0
 
         return new_pods, new_probe_ids, new_object_ids
 

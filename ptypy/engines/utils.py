@@ -111,7 +111,6 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
 
     # Buffer for accumulated photons
     af2 = np.zeros_like(diff_view.data)
-
     # Get measured data
     I = diff_view.data
 
