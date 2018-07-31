@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+
+import argparse
+import numpy as np
+from ptypy.core import Base
+from ptypy import utils as u
+from ptypy.core import geometry
+import h5py as h5
+from scipy import constants as const
+
+u.verbose.set_level(3)
+parser = argparse.ArgumentParser(description='Plots the ptychography reconstruction through a focus')
+
+parser.add_argument("ptyr_path",
+                    help="The path to the ptyr file with the probe in it.",
+                    type=str)
+
+parser.add_argument('--output-file', '-O',
+                    dest="output_file",
+                    help="The path we want to save the output hdf to (will get created).",
+                    default=None,
+                    type=str)
+
+parser.add_argument('--zrange',
+                    dest="zrange",
+                    help="The z range. zstart, zstop",
+                    default=(-1e-3, 1e-3),
+                    type=tuple)
+
+parser.add_argument('--scan_name',
+                    dest="scan_name",
+                    help="The particular scan name we are interested in.",
+                    default=None,
+                    type=str)
+#
+# parser.add_argument('--probe-mode',
+#                     dest="probe-mode",
+#                     help="The z range. zstart, zstop, zstep",
+#                     default=[-1e-3, 1e-3, 1e-6],
+#                     type='+')
+
+args = parser.parse_args()
+if args.output_file is None:
+    raise IOError('You need to specify an output file path.')
+
+NPTS = 1024
+f = h5.File(args.ptyr_path, 'r')
+
+if args.scan_name is None:
+    scan_name = f['content/pars/scans'].keys()[0]
+else:
+    scan_name = args.scan_name
+
+
+data = f['content/probe/S%sG00/data' % scan_name]
+probe = data[0]  # should be able to iterate over all modes
+psize = f['content/probe/S%sG00/_psize' % scan_name].value
+energy = f['content/pars/scans/%s/data/energy' % scan_name].value  # should be able to get these from the reconstruction
+distance = f['content/pars/scans/%s/data/distance' % scan_name].value  # should be able to get these from the reconstruction
+
+
+probe_modes, xsize, ysize = data.shape
+
+xaxis = ((np.arange(xsize) - xsize // 2) * psize[0])
+yaxis = ((np.arange(ysize) - ysize // 2) * psize[0])
+zrange = np.linspace(args.zrange[0], args.zrange[1], NPTS)
+outshape = (len(zrange),) + probe.shape
+z, x, y = np.meshgrid(zrange, xaxis, yaxis)
+
+P = Base()
+
+g = u.Param()
+g.energy = None
+g.lam = const.h * const.c / (const.e * energy * 1e3)
+g.distance = distance
+g.psize = psize
+g.shape = xsize
+g.propagation = "nearfield"
+G = geometry.Geo(owner=P, pars=g)
+
+print("Propagating probe...")
+with h5.File(args.output_file, 'w') as fout:
+    fout.create_group('entry')
+    fout['entry'].create_group('abs_probe')
+    abs_probe = fout['entry/abs_probe'].create_dataset('data', dtype=np.abs(probe).dtype, shape=outshape)
+    fout['entry'].create_group('phase_probe')
+    angle_probe = fout['entry/phase_probe'].create_dataset('data', dtype=np.angle(probe).dtype, shape=outshape)
+    fout['entry'].create_group('complex_probe')
+    complex_probe = fout['entry/complex_probe'].create_dataset('data', dtype=probe.dtype, shape=outshape)
+    fout['entry/x/data'] = xaxis
+    fout['entry/y/data'] = yaxis
+    fout['entry/z/data'] = zrange
+    for idx, z in enumerate(zrange):
+        g.distance = z
+        G = geometry.Geo(owner=P, pars=g)
+        propagated_probe = G.propagator.bw(probe)
+        abs_probe[idx] = np.abs(propagated_probe)
+        angle_probe[idx] = np.angle(propagated_probe)
+        complex_probe[idx] = propagated_probe
+
+print("DONE.")
+
+
