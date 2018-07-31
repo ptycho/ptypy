@@ -400,7 +400,6 @@ class Hdf5Loader(PtyScan):
             log(3, "This scan looks to be an unmapped raster scan.")
             self.load = self.load_unmapped_raster_scan
 
-
     def load_unmapped_raster_scan(self, indices):
         intensities = {}
         positions = {}

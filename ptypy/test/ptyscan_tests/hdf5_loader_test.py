@@ -72,7 +72,6 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
             f[self.normalisation_key] = h5.ExternalLink(self.normalisation_file, self.normalisation_key)
 
 
-
     def test_position_data_mapping_case_1(self):
         '''
         axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
