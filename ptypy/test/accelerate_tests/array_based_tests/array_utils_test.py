@@ -5,8 +5,8 @@ Tests for the array_utils module
 
 import unittest
 import numpy as np
-from ptypy.array_based import FLOAT_TYPE, COMPLEX_TYPE
-from ptypy.array_based import array_utils as au
+from ptypy.accelerate.array_based import FLOAT_TYPE, COMPLEX_TYPE
+from ptypy.accelerate.array_based import array_utils as au
 
 
 class ArrayUtilsTest(unittest.TestCase):

@@ -6,11 +6,11 @@ The tests for the constraints
 import unittest
 import numpy as np
 import utils as tu
-from ptypy.array_based import data_utils as du
+from ptypy.accelerate.array_based import data_utils as du
 from collections import OrderedDict
 from ptypy.engines.utils import basic_fourier_update
-from ptypy.array_based.constraints import difference_map_fourier_constraint
-from ptypy import array_based as ab
+from ptypy.accelerate.array_based.constraints import difference_map_fourier_constraint
+from ptypy.accelerate import array_based as ab
 
 @unittest.skip("Skip these until I have had chance to investigate the tolerances.")
 class ConstraintsUnityTest(unittest.TestCase):

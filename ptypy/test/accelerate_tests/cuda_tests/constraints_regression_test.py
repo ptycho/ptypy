@@ -6,8 +6,8 @@ The tests for the constraints
 import unittest
 import numpy as np
 from copy import deepcopy
-from ptypy.array_based import constraints as con, FLOAT_TYPE, COMPLEX_TYPE
-from ptypy.gpu import constraints as gcon
+from ptypy.accelerate.array_based import constraints as con, FLOAT_TYPE, COMPLEX_TYPE
+from ptypy.accelerate.cuda import constraints as gcon
 
 class ConstraintsRegressionTest(unittest.TestCase):
     '''

@@ -7,7 +7,7 @@ import unittest
 import utils as tu
 import numpy as np
 
-from ptypy.array_based import data_utils as du
+from ptypy.accelerate.array_based import data_utils as du
 
 
 

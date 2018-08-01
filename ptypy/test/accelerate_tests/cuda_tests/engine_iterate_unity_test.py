@@ -8,10 +8,10 @@ import numpy as np
 from copy import deepcopy
 
 import utils as tu
-from ptypy.array_based import data_utils as du
-from ptypy.gpu import constraints as gcon
-from ptypy.array_based import constraints as con
-from ptypy.gpu.config import init_gpus, reset_function_cache
+from ptypy.accelerate.array_based import data_utils as du
+from ptypy.accelerate.cuda import constraints as gcon
+from ptypy.accelerate.array_based import constraints as con
+from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
 init_gpus(0)
 
 
@@ -101,7 +101,7 @@ class EngineIterateUnityTest(unittest.TestCase):
                                            cfact_probe.shape, cfact_probe.dtype,
                                            probe_support.shape, probe_support.dtype))
 
-            # take exact copies for the gpu implementation
+            # take exact copies for the cuda implementation
             gdiffraction = deepcopy(diffraction)
             gobj = deepcopy(obj)
             gprobe = deepcopy(probe)

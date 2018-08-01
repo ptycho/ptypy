@@ -4,19 +4,19 @@ Tests for the array_utils module
 
 
 import unittest
-from ptypy.array_based import array_utils as au
-from ptypy.array_based import FLOAT_TYPE, COMPLEX_TYPE
-from ptypy.gpu import array_utils as gau
-from ptypy.gpu import FLOAT_TYPE as GPU_FLOAT_TYPE
+from ptypy.accelerate.array_based import array_utils as au
+from ptypy.accelerate.array_based import FLOAT_TYPE, COMPLEX_TYPE
+from ptypy.accelerate.cuda import array_utils as gau
+from ptypy.accelerate.cuda import FLOAT_TYPE as GPU_FLOAT_TYPE
 from copy import deepcopy
-from ptypy.gpu import COMPLEX_TYPE as GPU_COMPLEX_TYPE
+from ptypy.accelerate.cuda import COMPLEX_TYPE as GPU_COMPLEX_TYPE
 import numpy as np
 from utils import print_array_info
 
 from scipy import ndimage as ndi
 from scipy import signal as sig
 
-from ptypy.gpu.config import init_gpus, reset_function_cache
+from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
 init_gpus(0)
 
 class ArrayUtilsTest(unittest.TestCase):

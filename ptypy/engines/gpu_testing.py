@@ -1,39 +1,39 @@
 #from pytpy.array_based import COMPLEX_TYPE, FLOAT_TYPE
 import numpy as np
 
-from ptypy.gpu.gpu_extension import difference_map_fourier_constraint
-#from ptypy.array_based.constraints import difference_map_fourier_constraint
+from ptypy.accelerate.cuda.gpu_extension import difference_map_fourier_constraint
+#from ptypy.accelerate.array_based.constraints import difference_map_fourier_constraint
 
-from ptypy.gpu.gpu_extension import difference_map_overlap_update
-#from ptypy.array_based.constraints import difference_map_overlap_update
+from ptypy.accelerate.cuda.gpu_extension import difference_map_overlap_update
+#from ptypy.accelerate.array_based.constraints import difference_map_overlap_update
 
 
-from ptypy.gpu.gpu_extension import far_field_error, realspace_error
-#from ptypy.array_based.error_metrics import far_field_error, realspace_error
+from ptypy.accelerate.cuda.gpu_extension import far_field_error, realspace_error
+#from ptypy.accelerate.array_based.error_metrics import far_field_error, realspace_error
 
-#from ptypy.array_based.error_metrics import log_likelihood
-from ptypy.gpu.gpu_extension import log_likelihood
+#from ptypy.accelerate.array_based.error_metrics import log_likelihood
+from ptypy.accelerate.cuda.gpu_extension import log_likelihood
 
-from ptypy.gpu.gpu_extension import difference_map_realspace_constraint 
-#from ptypy.array_based.object_probe_interaction import difference_map_realspace_constraint
+from ptypy.accelerate.cuda.gpu_extension import difference_map_realspace_constraint
+#from ptypy.accelerate.array_based.object_probe_interaction import difference_map_realspace_constraint
 
-from ptypy.gpu.gpu_extension import scan_and_multiply
-#from ptypy.array_based.object_probe_interaction import scan_and_multiply
+from ptypy.accelerate.cuda.gpu_extension import scan_and_multiply
+#from ptypy.accelerate.array_based.object_probe_interaction import scan_and_multiply
 
-from ptypy.gpu.gpu_extension import renormalise_fourier_magnitudes
-#from ptypy.array_based.constraints import renormalise_fourier_magnitudes
+from ptypy.accelerate.cuda.gpu_extension import renormalise_fourier_magnitudes
+#from ptypy.accelerate.array_based.constraints import renormalise_fourier_magnitudes
 
-from ptypy.gpu.gpu_extension import get_difference
-#from ptypy.array_based.constraints import get_difference
+from ptypy.accelerate.cuda.gpu_extension import get_difference
+#from ptypy.accelerate.array_based.constraints import get_difference
 
-from ptypy.gpu.gpu_extension import abs2
-#from ptypy.array_based.array_utils import abs2
+from ptypy.accelerate.cuda.gpu_extension import abs2
+#from ptypy.accelerate.array_based.array_utils import abs2
 
-from ptypy.gpu.gpu_extension import sum_to_buffer
-#from ptypy.array_based.array_utils import sum_to_buffer
+from ptypy.accelerate.cuda.gpu_extension import sum_to_buffer
+#from ptypy.accelerate.array_based.array_utils import sum_to_buffer
 
-from ptypy.gpu.gpu_extension import farfield_propagator
-#from ptypy.array_based.propagation import farfield_propagator
+from ptypy.accelerate.cuda.gpu_extension import farfield_propagator
+#from ptypy.accelerate.array_based.propagation import farfield_propagator
 
 
 FLOAT_TYPE = np.float32

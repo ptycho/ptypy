@@ -8,22 +8,22 @@ import utils as tu
 import numpy as np
 from copy import deepcopy
 
-from ptypy.array_based import constraints as con
-from ptypy.array_based import data_utils as du
-from ptypy.array_based.constraints import difference_map_fourier_constraint, renormalise_fourier_magnitudes, get_difference
-from ptypy.array_based.error_metrics import far_field_error
-from ptypy.array_based.object_probe_interaction import difference_map_realspace_constraint, scan_and_multiply
-from ptypy.array_based.propagation import farfield_propagator
-import ptypy.array_based.array_utils as au
-from ptypy.array_based import COMPLEX_TYPE, FLOAT_TYPE
+from ptypy.accelerate.array_based import constraints as con
+from ptypy.accelerate.array_based import data_utils as du
+from ptypy.accelerate.array_based.constraints import difference_map_fourier_constraint, renormalise_fourier_magnitudes, get_difference
+from ptypy.accelerate.array_based.error_metrics import far_field_error
+from ptypy.accelerate.array_based.object_probe_interaction import difference_map_realspace_constraint, scan_and_multiply
+from ptypy.accelerate.array_based.propagation import farfield_propagator
+import ptypy.accelerate.array_based.array_utils as au
+from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 
-from ptypy.gpu import constraints as gcon
-from ptypy.gpu.constraints import get_difference as gget_difference
-from ptypy.gpu.constraints import renormalise_fourier_magnitudes as grenormalise_fourier_magnitudes
-from ptypy.gpu.constraints import difference_map_fourier_constraint as gdifference_map_fourier_constraint
-from ptypy.gpu import array_utils as gau
+from ptypy.accelerate.cuda import constraints as gcon
+from ptypy.accelerate.cuda.constraints import get_difference as gget_difference
+from ptypy.accelerate.cuda.constraints import renormalise_fourier_magnitudes as grenormalise_fourier_magnitudes
+from ptypy.accelerate.cuda.constraints import difference_map_fourier_constraint as gdifference_map_fourier_constraint
+from ptypy.accelerate.cuda import array_utils as gau
 
-from ptypy.gpu.config import init_gpus, reset_function_cache
+from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
 init_gpus(0)
 
 

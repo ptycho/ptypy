@@ -5,9 +5,9 @@ This is a unity test comparing to the pod based framework
 import unittest
 import numpy as np
 import utils as tu
-from ptypy.array_based import COMPLEX_TYPE, FLOAT_TYPE
-from ptypy.array_based import data_utils as du
-from ptypy.array_based import object_probe_interaction as opi
+from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
+from ptypy.accelerate.array_based import data_utils as du
+from ptypy.accelerate.array_based import object_probe_interaction as opi
 from collections import OrderedDict
 
 

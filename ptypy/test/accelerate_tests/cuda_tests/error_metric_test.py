@@ -5,18 +5,18 @@ A test for the module of the relevant error metrics
 import unittest
 import numpy as np
 import utils as tu
-from ptypy.array_based import data_utils as du
-from ptypy.array_based.constraints import difference_map_realspace_constraint, scan_and_multiply
-from ptypy.array_based.propagation import farfield_propagator
-import ptypy.array_based.array_utils  as au
-from ptypy.array_based import FLOAT_TYPE
-from ptypy.gpu.error_metrics import log_likelihood as glog_likelihood
-from ptypy.gpu.error_metrics import far_field_error as gfar_field_error
-from ptypy.gpu.error_metrics import realspace_error as grealspace_error
-from ptypy.array_based.error_metrics import log_likelihood, far_field_error, realspace_error
-from ptypy.array_based import COMPLEX_TYPE, FLOAT_TYPE
+from ptypy.accelerate.array_based import data_utils as du
+from ptypy.accelerate.array_based.constraints import difference_map_realspace_constraint, scan_and_multiply
+from ptypy.accelerate.array_based.propagation import farfield_propagator
+import ptypy.accelerate.array_based.array_utils  as au
+from ptypy.accelerate.array_based import FLOAT_TYPE
+from ptypy.accelerate.cuda.error_metrics import log_likelihood as glog_likelihood
+from ptypy.accelerate.cuda.error_metrics import far_field_error as gfar_field_error
+from ptypy.accelerate.cuda.error_metrics import realspace_error as grealspace_error
+from ptypy.accelerate.array_based.error_metrics import log_likelihood, far_field_error, realspace_error
+from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 
-from ptypy.gpu.config import init_gpus, reset_function_cache
+from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
 init_gpus(0)
 
 class ErrorMetricTest(unittest.TestCase):

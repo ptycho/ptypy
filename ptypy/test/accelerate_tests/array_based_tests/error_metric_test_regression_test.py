@@ -5,12 +5,12 @@ A test for the module of the relevant error metrics
 import unittest
 import numpy as np
 import utils as tu
-from ptypy.array_based import data_utils as du
-from ptypy.array_based import COMPLEX_TYPE, FLOAT_TYPE
+from ptypy.accelerate.array_based import data_utils as du
+from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 import ptypy.utils as u
 from collections import OrderedDict
-from ptypy.array_based.error_metrics import log_likelihood, far_field_error, realspace_error
-from ptypy.array_based.object_probe_interaction import scan_and_multiply
+from ptypy.accelerate.array_based.error_metrics import log_likelihood, far_field_error, realspace_error
+from ptypy.accelerate.array_based.object_probe_interaction import scan_and_multiply
 
 
 class ErrorMetricRegressionTest(unittest.TestCase):

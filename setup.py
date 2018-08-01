@@ -71,7 +71,7 @@ if 'LD_LIBRARY_PATH' in os.environ:
 extensions = [
     Extension(            
         '*',
-        sources=['ptypy/gpu/gpu_extension.pyx'],
+        sources=['ptypy/accelerate/cuda/gpu_extension.pyx'],
         include_dirs=[np.get_include()],
         libraries=[
             'gpu_extension', 

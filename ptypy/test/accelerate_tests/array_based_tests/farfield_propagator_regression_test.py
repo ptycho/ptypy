@@ -6,9 +6,9 @@ SHOULD REFACTOR HERE to be less dependent on the main framework. We just want to
 import unittest
 import numpy as np
 import utils as tu
-from ptypy.array_based import data_utils as du
-from ptypy.array_based import object_probe_interaction as opi
-from ptypy.array_based import propagation as prop
+from ptypy.accelerate.array_based import data_utils as du
+from ptypy.accelerate.array_based import object_probe_interaction as opi
+from ptypy.accelerate.array_based import propagation as prop
 from copy import deepcopy as copy
 TOLERANCE=4
 

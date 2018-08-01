@@ -8,18 +8,13 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-import time
-from ..utils.verbose import logger, log
 from ..utils import parallel
 from DM import DM
-from ptypy import defaults_tree
 from ..core.manager import Full, Vanilla
-from ..array_based import data_utils as du
-from ..array_based import constraints as con
-from ..array_based import object_probe_interaction as opi
+from ptypy.accelerate.array_based import constraints as con, data_utils as du
 import numpy as np
 from . import register
-import sys
+
 #from memory_profiler import profile
 __all__ = ['DMNpy']
 

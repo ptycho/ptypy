@@ -6,7 +6,7 @@ The tests for the constraints
 import unittest
 import numpy as np
 from copy import deepcopy
-from ptypy.array_based import constraints as con, FLOAT_TYPE, COMPLEX_TYPE
+from ptypy.accelerate.array_based import constraints as con, FLOAT_TYPE, COMPLEX_TYPE
 
 class ConstraintsRegressionTest(unittest.TestCase):
     '''

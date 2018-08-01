@@ -5,16 +5,16 @@ Test for the propagation in numpy
 import unittest
 import numpy as np
 import utils as tu
-from ptypy.array_based import data_utils as du
-from ptypy.array_based import object_probe_interaction as opi
-from ptypy.gpu import propagation as gprop
-from ptypy.array_based import propagation as prop
+from ptypy.accelerate.array_based import data_utils as du
+from ptypy.accelerate.array_based import object_probe_interaction as opi
+from ptypy.accelerate.cuda import propagation as gprop
+from ptypy.accelerate.array_based import propagation as prop
 
 import time
 
 doTiming = False
 
-from ptypy.gpu.config import init_gpus, reset_function_cache
+from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
 init_gpus(0)
 
 
