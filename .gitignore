@@ -14,3 +14,12 @@ ghostdriver*
 ptypy/version.py
 .idea/
 .cache/
+.vscode/
+*.so
+*.a
+/.cproject
+/.project
+/.pydevproject
+/.settings/
+/dumps/
+/.coverage

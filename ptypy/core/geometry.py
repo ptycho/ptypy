@@ -481,7 +481,7 @@ class BasicFarfieldPropagator(object):
     coordinates are rolled periodically, just like in the conventional fft case.
     """
 
-    def __init__(self, geo_pars=None, ffttype='fftw', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='numpy', **kwargs):
         """
         Parameters
         ----------
@@ -595,14 +595,15 @@ class BasicFarfieldPropagator(object):
         # Factors for inverse operation
         self.pre_ifft = self.post_fft.conj()
         self.post_ifft = self.pre_fft.conj()
-
         self.sc, self.isc = self.FFTch.assign_scaling(self.sh)
+
 
     def fw(self, W):
         """
         Computes forward propagated wavefront of input wavefront W.
         """
         # Check for cropping
+
         if (self.crop_pad != 0).any():
             w = u.crop_pad(W, self.crop_pad)
         else:

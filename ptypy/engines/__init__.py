@@ -10,9 +10,12 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+
 from .. import utils as u
 from .. import defaults_tree
 from .utils import *
+
+
 
 ENGINES = dict()
 
@@ -39,6 +42,8 @@ from base import BaseEngine
 
 # These imports should be executable separately
 from . import DM
+from . import DM_gpu
+from . import DM_npy
 from . import DM_simple
 from . import ML
 from . import dummy

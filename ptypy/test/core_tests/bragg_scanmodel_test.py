@@ -7,6 +7,7 @@ import unittest
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import numpy as np
+
 import os
 import tempfile
 
@@ -22,6 +23,7 @@ class Bragg3dModelTest(unittest.TestCase):
         p.scans.scan01.data = u.Param()
         p.scans.scan01.data.name = 'Bragg3dSimScan'
         p.scans.scan01.data.dump = os.path.join(outpath, 'tmp.npz')
+
         p.scans.scan01.data.shuffle = True
 
         # simulate and then load data

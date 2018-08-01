@@ -145,6 +145,7 @@ class Ptycho(Base):
     help = turns on the interaction
     doc = If True the interaction starts, if False all interaction is turned off
 
+
     [io.autosave]
     default = Param
     type = Param
@@ -175,7 +176,7 @@ class Ptycho(Base):
     default = Param
     type = Param
     help = Plotting client parameters
-    doc = Csontainer for the plotting.
+    doc = Container for the plotting.
 
     [io.autoplot.active]
     default = True
@@ -415,6 +416,7 @@ class Ptycho(Base):
 
                 # Start automated plot client
                 self.plotter = None
+
                 if (parallel.master and autoplot.active and autoplot.threaded and
                         autoplot.interval > 0):
                     from multiprocessing import Process
@@ -422,6 +424,7 @@ class Ptycho(Base):
                     self.plotter = Process(target=u.spawn_MPLClient,
                                            args=(iaction.client, autoplot,))
                     self.plotter.start()
+
         else:
             # No interaction wanted
             self.interactor = None
@@ -594,7 +597,7 @@ class Ptycho(Base):
                 engine.prepare()
 
                 auto_save = self.p.io.autosave
-                if auto_save is not None and auto_save.interval > 0:
+                if auto_save.active and auto_save.interval > 0:
                     if engine.curiter % auto_save.interval == 0:
                         auto = self.paths.auto_file(self.runtime)
                         logger.info(headerline('Autosaving'))
@@ -612,7 +615,7 @@ class Ptycho(Base):
                     # err = np.array(info['error'].values()).mean(0)
                     err = info['error']
                     logger.info('Iteration #%(iteration)d of %(engine)s :: '
-                                'Time %(duration).2f' % info)
+                                'Time %(duration).3f' % info)
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, '
                                 'Exit %.2e' % tuple(err))
 
@@ -622,7 +625,7 @@ class Ptycho(Base):
             engine.finalize()
 
             # Save
-            if self.p.io.rfile:
+            if self.p.io.rfile and auto_save.active:
                 self.save_run()
             else:
                 pass
