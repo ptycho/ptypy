@@ -38,6 +38,7 @@ parser.add_argument('--plot', '-P',
 
 args = parser.parse_args()
 
+
 def _byteify(data, ignore_dicts = False):
     # if this is a unicode string, return its string representation
     if isinstance(data, unicode):
@@ -55,6 +56,7 @@ def _byteify(data, ignore_dicts = False):
     # if it's anything else, return it in its original form
     return data
 
+
 def get_parameters(args):
     in_dict = json.load(open(args.json_file), object_hook=_byteify)
     parameters_to_run = u.Param()
@@ -67,6 +69,7 @@ def get_parameters(args):
         parameters_to_run.update(in_dict['parameter_tree'], Convert=True)
     return parameters_to_run
 
+
 def get_file_name(args):
     from datetime import datetime
     now = datetime.now()
@@ -77,6 +80,17 @@ def get_file_name(args):
     log(3, "Output is going in: {}".format(output_path))
     return output_path
 
+
+def parse_data_paths_with_parameters(parameters):
+    for scan_key, scan in parameters.scans.iteritems():
+        data_entry = scan.data
+        for sub_entry_key, sub_entry in data_entry.iteritems():
+            if isinstance(sub_entry, dict):
+                for dict_entry_key, dict_entry in sub_entry.iteritems():
+                    if isinstance(dict_entry, str):
+                        sub_entry[dict_entry_key] = dict_entry % parameters
+            elif isinstance(sub_entry, str):
+                data_entry[sub_entry_key] = sub_entry % parameters
 
 parameters = get_parameters(args)
 parameters.run = args.identifier
@@ -97,6 +111,13 @@ else:
     parameters.io.rfile = None
     parameters.io.autosave = u.Param(active=False)
     log(3, "Autosave is off. No output will be saved.")
+
+
+
+
+
+# have to get the identifier into scan.data somehow.
+parse_data_paths_with_parameters(parameters)
 
 
 P = Ptycho(parameters, level=args.ptypy_level)
