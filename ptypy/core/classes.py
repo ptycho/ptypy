@@ -2143,11 +2143,13 @@ class POD(Base):
         if not self.is_empty:
             return self.ob_view.data
         else:
+            # Empty probe means no object (perfect transmission)
             return np.ones(self.geometry.shape, dtype=self.owner.CType)
 
     @object.setter
     def object(self, v):
-        self.ob_view.data = v
+        if not self.is_empty:
+            self.ob_view.data = v
 
     @property
     def probe(self):
