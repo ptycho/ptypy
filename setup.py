@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 
-import distutils
 import setuptools
-from distutils.core import setup, Extension
-from distutils.version import LooseVersion
+from distutils.core import setup
 from Cython.Build import cythonize
-import numpy as np
-import re
-import os
-import multiprocessing
+import sys
+
+from extensions import CudaExtension
 
 CLASSIFIERS = """\
 Development Status :: 3 - Alpha
@@ -20,14 +17,16 @@ Topic :: Software Development
 Operating System :: Unix
 """
 
-MAJOR               = 0
-MINOR               = 2
-MICRO               = 0
-ISRELEASED          = False
-VERSION             = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
+MAJOR = 0
+MINOR = 2
+MICRO = 0
+ISRELEASED = False
+VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 
-#import os
-#if os.path.exists('MANIFEST'): os.remove('MANIFEST')
+DEBUG = False
+
+# import os
+# if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
 
 def write_version_py(filename='ptypy/version.py'):
@@ -56,6 +55,7 @@ if not release:
     finally:
         a.close()
 
+
 if __name__ == '__main__':
     write_version_py()
     try:
@@ -64,88 +64,61 @@ if __name__ == '__main__':
     except:
         vers = VERSION
 
-libdirs = ['build/cuda']
-if 'LD_LIBRARY_PATH' in os.environ:
-    libdirs += os.environ['LD_LIBRARY_PATH'].split(':')
 
-extensions = [
-    Extension(            
-        '*',
-        sources=['ptypy/accelerate/cuda/gpu_extension.pyx'],
-        include_dirs=[np.get_include()],
-        libraries=[
-            'gpu_extension', 
-            'cudart', 'cufft'],
-        library_dirs=libdirs,
-        depends=[
-            'build/cuda/libgpu_extension.a',
-            ],
-        language="c++"
-    )
-]
+# optional packages that we don't always want to build
+exclude_packages = ['*test*',
+                    '*array_based*',
+                    '*cuda*']
 
+acceleration_build_steps = []
 
+# I don't like this particularly, but I can't currently find a better way to give the desired result...
+if '--tests' in sys.argv:
+    sys.argv.remove('--tests')
+    exclude_packages.remove('*test*')
+
+if '--with-cuda' in sys.argv:
+    sys.argv.remove('--with-cuda')
+    acceleration_build_steps.append(CudaExtension(DEBUG))
+    exclude_packages.remove('*cuda*')
+
+if '--all-acceleration' in sys.argv:
+    sys.argv.remove('--all-acceleration')
+    # cuda
+    acceleration_build_steps.append(CudaExtension(DEBUG))
+    exclude_packages.remove('*cuda*')
+    exclude_packages.remove('*array_based*')
 
 
 # chain this before build_ext
-class BuildExtCudaCommand(setuptools.command.build_ext.build_ext):
+class BuildExtAcceleration(setuptools.command.build_ext.build_ext):
     """Custom build command, extending the build with CUDA / Cmake."""
-
-    user_options = setuptools.command.build_ext.build_ext.user_options + \
-        [
-            ('cudadir=', None, 'CUDA directory'),
-            ('cudaflags=', None, 'Flags to the CUDA compiler'),
-            ('gputiming', None, 'Do GPU timing')
-        ]
-    boolean_options = setuptools.command.build_ext.build_ext.boolean_options + \
-        ['gputiming']
+    # add the build parameters via reflection for each extension.
+    for ext in acceleration_build_steps:
+        user_options, boolean_options = ext.get_reflection_options()
+        setuptools.command.build_ext.build_ext.user_options.append(user_options)
+        setuptools.command.build_ext.build_ext.boolean_options.append(boolean_options)
 
     def initialize_options(self):
+        # initialise the options for each extension
         setuptools.command.build_ext.build_ext.initialize_options(self)
-        self.cudadir = ''
-        self.cudaflags = '-gencode arch=compute_35,\\"code=sm_35\\" ' + \
-                         '-gencode arch=compute_37,\\"code=sm_37\\" ' + \
-                         '-gencode arch=compute_60,\\"code=sm_60\\" ' + \
-                         '-gencode arch=compute_70,\\"code=sm_70\\" ' + \
-                         '-gencode arch=compute_70,\\"code=compute_70\\"'
-        self.gputiming = False
+        for ext in acceleration_build_steps:
+            for key, desc in ext.get_full_options().iteritems():
+                self.__dict__[key] = desc['default']
 
     def run(self):
-        #print "----------{}-------".format(self.build_temp)
-        self.run_cuda_cmake()
+        # run the build for each extension
+        for ext in acceleration_build_steps:
+            options = {}
+            for key, desc in ext.get_full_options().iteritems():
+                options[key] = self.__dict__[key]
+            ext.build(options)
         setuptools.command.build_ext.build_ext.run(self)
 
 
-    def run_cuda_cmake(self):
-        try:
-            out = subprocess.check_output(['cmake', '--version'])
-        except OSError:
-            raise RuntimeError(
-                "CMake must be installed to build the CUDA extensions.")
+extensions = [ext.getExtension() for ext in acceleration_build_steps]
 
-        cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)',
-                                     out.decode()).group(1))
-        if cmake_version < '3.8.0':
-            raise RuntimeError("CMake >= 3.8.0 is required")
-
-        srcdir = os.path.abspath('cuda')
-        buildtmp = os.path.abspath(os.path.join('build', 'cuda'))
-        cmake_args = [
-            "-DCMAKE_BUILD_TYPE=" + ("Debug" if self.debug else "Release"),
-            '-DCMAKE_CUDA_FLAGS={}'.format(self.cudaflags),
-            '-DGPU_TIMING={}'.format("ON" if self.gputiming  else "OFF")
-        ]
-        if self.cudadir:
-            cmake_args += '-DCMAKE_CUDA_COMPILER="{}/bin/nvcc"'.format(self.cudadir)
-        build_args = ["--config", "Debug" if self.debug else "Release", "--", "-j{}".format(multiprocessing.cpu_count() + 1)]
-        if not os.path.exists(buildtmp):
-            os.makedirs(buildtmp)
-        env = os.environ.copy()
-        subprocess.check_call(['cmake', srcdir] + cmake_args,
-                              cwd=buildtmp, env=env)
-        subprocess.check_call(['cmake', '--build', '.'] + build_args,
-                              cwd=buildtmp)
-        print ""
+package_list = setuptools.find_packages(exclude=exclude_packages)
 
 setup(
     name='Python Ptychography toolbox',
@@ -153,30 +126,16 @@ setup(
     author='Pierre Thibault, Bjoern Enders, Martin Dierolf and others',
     description='Ptychographic reconstruction toolbox',
     long_description=file('README.rst', 'r').read(),
-    #install_requires = ['numpy>=1.8',\
-                        #'h5py>=2.2',\
-                        #'matplotlib>=1.3',\
-                        #'pyzmq>=14.0',\
-                        #'scipy>=0.13',\
-                        #'mpi4py>=1.3'],
     package_dir={'ptypy': 'ptypy'},
-
-    packages=setuptools.find_packages(),
-
+    packages=package_list,
     package_data={'ptypy': ['resources/*', ]},
-    #include_package_data=True
-    scripts=[
-        'scripts/ptypy.plot',
-        'scripts/ptypy.inspect',
-        'scripts/ptypy.plotclient',
-        'scripts/ptypy.new',
-        'scripts/ptypy.csv2cp',
-        'scripts/ptypy.run'
-    ],
-    ext_modules=cythonize(
-        extensions        
-    ),
-    cmdclass = {
-        'build_ext' : BuildExtCudaCommand
+    scripts=['scripts/ptypy.plot',
+             'scripts/ptypy.inspect',
+             'scripts/ptypy.plotclient',
+             'scripts/ptypy.new',
+             'scripts/ptypy.csv2cp',
+             'scripts/ptypy.run'],
+    ext_modules=cythonize(extensions),
+    cmdclass={'build_ext': BuildExtAcceleration
     }
 )
