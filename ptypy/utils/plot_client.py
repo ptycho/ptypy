@@ -114,7 +114,7 @@ class PlotClient(object):
         self.cmd_dct = {}
 
         # Initialize data containers. Here we use our own "Param" class, which adds attribute access
-        # On top of dictionary.
+        # on top of dictionary.
         self.pr = Param()  # Probe
         self.ob = Param()  # Object
         self.runtime = Param()  # Runtime information (contains reconstruction metrics)
