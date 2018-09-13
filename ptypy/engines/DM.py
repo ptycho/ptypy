@@ -169,7 +169,7 @@ class DM(BaseEngine):
         for name, s in self.di.storages.iteritems():
             self.pbound[name] = (
                 .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
-            mean_power += s.tot_power/np.prod(s.shape)
+            mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
 
         # Fill object with coverage of views
