@@ -56,6 +56,7 @@ def truncate_docstring(app, what, name, obj, options, lines):
 
 def remove_mod_docstring(app, what, name, obj, options, lines):
     from ptypy import utils as u
+    from ptypy import defaults_tree
     u.verbose.report.headernewline='\n\n'
     searchstr = ':py:data:'
     
@@ -88,7 +89,7 @@ def remove_mod_docstring(app, what, name, obj, options, lines):
                 newstr = l[start:]
                 newstr = newstr.split('`')[1]
                 newstr = newstr.replace('~', '')
-                pd = u.descriptor.defaults_tree.get(newstr)
+                pd = defaults_tree.get(newstr)
                 break
                 
         if pd is not None:

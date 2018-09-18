@@ -1129,10 +1129,7 @@ class PtyScan(object):
         # Now master possesses all calculated centers
         if parallel.master:
             cen = np.array(cen.values()).mean(0)
-        else:
-            cen = np.array([0.]*data.ndim)
-        parallel.allreduce(cen)
-
+        cen = parallel.bcast(cen)
 
         return cen
 

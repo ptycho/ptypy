@@ -48,7 +48,7 @@ class NumpyScan(PtyScan):
 # to any new class using a decorator. The tree of all valid ptypy parameters
 # is located at :ref:`here <parameters>`. To manage the default
 # parameters of our subclass and document its existence, we would need to write
-from ptypy.utils.descriptor import defaults_tree
+from ptypy import defaults_tree
 
 @defaults_tree.parse_doc('scandata.numpyscan')
 class NumpyScan(PtyScan):

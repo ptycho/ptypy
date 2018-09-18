@@ -4,9 +4,12 @@ We are happy to announce that ptypy 0.3 is now out. If you have been using the p
   1. a redesign of ptypy's internal structure, especially the introduction of an extendable [`ScanModel`](https://github.com/ptycho/ptypy/blob/master/ptypy/core/manager.py), which should make new ideas and new algorithms easier to implement (a big collective effort involving A. Björling, A. Parsons, B. Enders and P. Thibault),
   2. support for 3D Bragg ptychography, which uses the new `ScanModel` structure (all thanks to A. Björling),
 
-  3. extensive testing of most components of the code, and Travis CI integration (huge work by A. Parsons and important contributions by S. Chalkidis), and
+  3. extensive testing of most components of the code, and Travis CI integration (huge work by A. Parsons and important contributions by S. Chalkidis), 
 
-  4. the introduction of the [`descriptor`](https://github.com/ptycho/ptypy/blob/master/ptypy/utils/descriptor.py) submodule, which manages the whole parameter tree, including validation, defaults, and documentation (collective effort led by B. Enders and P. Thibault)
+  4. more dimensions for `Storage` classes, reduced memory footprint and reduced object count, as `Views` are now slotted and don't hold other objects (B. Enders and A. Björling), and
+  
+  5. the introduction of the [`descriptor`](https://github.com/ptycho/ptypy/blob/master/ptypy/utils/descriptor.py) submodule, which manages the whole parameter tree, including validation, defaults, and documentation (collective effort led by B. Enders and P. Thibault)
+   
 
 ## Breaking changes
 
