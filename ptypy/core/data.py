@@ -1478,6 +1478,11 @@ class MoonFlowerScan(PtyScan):
     type = float
     help = Position distance in fraction of illumination frame
 
+    [model]
+    default = 'round'
+    type = str
+    help = The scan pattern
+
     [photons]
     default = 1e8
     type = float
@@ -1505,13 +1510,23 @@ class MoonFlowerScan(PtyScan):
         geo = geometry.Geo(pars=self.meta)
 
         # Derive scan pattern
-        pos = u.Param()
-        pos.spacing = geo.resolution * geo.shape * p.density
-        pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
-        pos.extent = pos.steps * pos.spacing
-        pos.model = 'round'
-        pos.count = self.num_frames
-        self.pos = xy.from_pars(pos)
+        if p.model is 'raster':
+            pos = u.Param()
+            pos.spacing = geo.resolution * geo.shape * p.density
+            pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+            pos.extent = pos.steps * pos.spacing
+            pos.model = p.model
+            self.num_frames = pos.steps**2
+            pos.count = self.num_frames
+            self.pos = xy.raster_scan(pos.spacing, pos.spacing, pos.steps, pos.steps)
+        else:
+            pos = u.Param()
+            pos.spacing = geo.resolution * geo.shape * p.density
+            pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+            pos.extent = pos.steps * pos.spacing
+            pos.model = p.model
+            pos.count = self.num_frames
+            self.pos = xy.from_pars(pos)
 
         # Calculate pixel positions
         pixel = self.pos / geo.resolution
