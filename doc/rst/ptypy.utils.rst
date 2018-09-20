@@ -12,14 +12,6 @@ ptypy.utils.array_utils module
     :undoc-members:
     :show-inheritance:
 
-ptypy.utils.embedded_shell module
----------------------------------
-
-.. automodule:: ptypy.utils.embedded_shell
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ptypy.utils.math_utils module
 -----------------------------
 
@@ -76,10 +68,10 @@ ptypy.utils.scripts module
     :undoc-members:
     :show-inheritance:
 
-ptypy.utils.validator module
-----------------------------
+ptypy.utils.descriptor module
+-----------------------------
 
-.. automodule:: ptypy.utils.validator
+.. automodule:: ptypy.utils.descriptor
     :members:
     :undoc-members:
     :show-inheritance:
