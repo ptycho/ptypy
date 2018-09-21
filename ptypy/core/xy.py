@@ -185,7 +185,7 @@ def augment_to_coordlist(a, Npos):
     return b[:Npos, :2]
 
 
-def raster_scan(ny=10, nx=10, dy=1.5e-6, dx=1.5e-6):
+def raster_scan(dy=1.5e-6, dx=1.5e-6, ny=10, nx=10):
     """
     Generates a raster scan.
 
@@ -210,7 +210,7 @@ def raster_scan(ny=10, nx=10, dy=1.5e-6, dx=1.5e-6):
     >>> pos = xy.raster_scan()
     >>> plt.plot(pos[:, 1], pos[:, 0], 'o-'); plt.show()
     """
-    iix, iiy = np.indices((nx+1, ny+1))
+    iix, iiy = np.indices((nx, ny))
     positions = [(dx*i, dy*j) for i, j in zip(iix.ravel(), iiy.ravel())]
     return np.asarray(positions)
 

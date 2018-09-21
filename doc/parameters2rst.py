@@ -1,5 +1,5 @@
 
-from ptypy.utils.descriptor import defaults_tree
+from ptypy import defaults_tree
 
 prst = open('rst/parameters.rst','w')
 

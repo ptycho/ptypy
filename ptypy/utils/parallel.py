@@ -409,35 +409,43 @@ def bcast(data, source=0):
     if not MPIenabled:
         return data
 
-    # Communicate size or send pickled thing directly.
+    # Communicate if array or pickle.
     if rank == source:
         if type(data) is np.ndarray:
-            thing = comm.bcast(('npy',data.shape, data.dtype.str), source)
+            msg = comm.bcast('array', source)
         else:
-            thing = comm.bcast(data, source)
+            msg = comm.bcast('pickle', source)
     else:
-        thing = comm.bcast(None, source)
+        msg = comm.bcast(None, source)
 
-    try:
-        if str(thing[0])=='npy':
-            shape = thing[1]
-            dtypestr = thing[2]
+    if str(msg) == 'array':
+        # Communicate size before sending array
+        if rank == source:
+            shape, dtypestr = comm.bcast((data.shape, data.dtype.str), source)
+        else:
+            shape, dtypestr = comm.bcast(None, source)
 
-            newdtype = '|u1' if dtypestr == '|b1' else dtypestr
+        newdtype = '|u1' if dtypestr == '|b1' else dtypestr
 
-            if rank == source:
-                buf = data.astype(newdtype)
-            else:
-                buf = np.empty(shape, dtype=newdtype)
+        if rank == source:
+            buf = data.astype(newdtype)
+        else:
+            buf = np.empty(shape, dtype=newdtype)
 
-            # Send
-            comm.Bcast(buf, source)
+        # Send
+        comm.Bcast(buf, source)
 
-            if dtypestr == '|b1':
-                buf = buf.astype('bool')
+        if dtypestr == '|b1':
+            buf = buf.astype('bool')
 
-            return buf
-    except BaseException:
+        return buf
+    else:
+        # Send pickled thing directly.
+        if rank == source:
+            thing = comm.bcast(data, source)
+        else:
+            thing = comm.bcast(None, source)
+
         return thing
 
 def bcast_dict(dct, keys='all', source=0):

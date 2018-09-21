@@ -169,7 +169,7 @@ class DM(BaseEngine):
         for name, s in self.di.storages.iteritems():
             self.pbound[name] = (
                 .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
-            mean_power += s.tot_power/np.prod(s.shape)
+            mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
 
         # Fill object with coverage of views
@@ -309,8 +309,7 @@ class DM(BaseEngine):
                 # power of the probe (which is estimated from the power in diffraction patterns).
                 # This estimate assumes that the probe power is uniformly distributed through the
                 # array and therefore underestimate the strength of the probe terms.
-                cfact = self.p.object_inertia * self.mean_power *\
-                    (self.ob_viewcover.storages[name].data + 1.)
+                cfact = self.p.object_inertia * self.mean_power
 
                 if self.p.obj_smooth_std is not None:
                     logger.info(

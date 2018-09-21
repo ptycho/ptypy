@@ -29,7 +29,7 @@ __all__ = ['Ptycho']
 
 
 
-@defaults_tree.parse_doc()
+@defaults_tree.parse_doc('ptycho')
 class Ptycho(Base):
     """
     Ptycho : A ptychographic data holder and reconstruction manager.
@@ -145,6 +145,15 @@ class Ptycho(Base):
     help = turns on the interaction
     doc = If True the interaction starts, if False all interaction is turned off
 
+    [io.interaction.server]
+    default =
+    type = @io.interaction.server
+    help = Link to server parameter tree
+
+    [io.interaction.client]
+    default =
+    type = @io.interaction.client
+    help = Link to client parameter tree
 
     [io.autosave]
     default = Param
@@ -299,7 +308,7 @@ class Ptycho(Base):
         # Validate the incoming parameters
         # FIXME : Validation should maybe happen for each class that uses the
         #         the parameters, i.e. like a depth=1 validation
-        defaults_tree.validate(self.p)
+        defaults_tree['ptycho'].validate(self.p)
         # Instance attributes
 
         # Structures
