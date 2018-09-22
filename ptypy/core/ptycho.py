@@ -325,6 +325,20 @@ class Ptycho(Base):
 
         # Early boot strapping
         self._configure()
+
+        # Keep a bibliography
+        self.citations = u.Bibliography()
+        self.citations.add_article(
+            title='A computational framework for ptychographic reconstructions',
+            author='Enders B. and Thibault P.',
+            journal='Proc. Royal Soc. A',
+            volume=472,
+            year=2016,
+            page=20160640,
+            doi='10.1098/rspa.2016.0640',
+            comment='The Ptypy framework',
+        )
+
         if level >= 1:
             logger.info('\n' + headerline('Ptycho init level 1', 'l'))
             self.init_structures()
@@ -681,6 +695,12 @@ class Ptycho(Base):
             self.interactor.stop()
         except BaseException:
             pass
+
+        # Hint at citations (for all log levels)
+        citation_info = '\n'.join([headerline('This reconstruction relied on the following work', 'l', '='),
+        str(self.citations),
+        headerline('', 'l', '=')])
+        logger.warn(citation_info)
 
     @classmethod
     def _from_dict(cls, dct):

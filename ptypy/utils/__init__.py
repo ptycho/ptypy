@@ -13,6 +13,7 @@ from .array_utils import *
 from .scripts import *
 from .parameters import Param, asParam
 from .verbose import *
+from citations import *
 from . import descriptor
 from . import parallel
 from .. import __has_matplotlib__ as hmpl
