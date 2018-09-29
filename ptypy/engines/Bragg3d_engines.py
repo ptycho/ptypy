@@ -8,6 +8,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .DM import DM
+from . import register
 from .. import defaults_tree
 from ..core.manager import Bragg3dModel
 from ..utils import parallel
@@ -17,7 +18,7 @@ import numpy as np
 
 __all__ = ['DM_3dBragg']
 
-@defaults_tree.parse_doc('engine.DM_3dBragg')
+@register()
 class DM_3dBragg(DM):
     """
     DM engine adapted to 3d Bragg reconstruction. Specifically, sample
@@ -35,7 +36,7 @@ class DM_3dBragg(DM):
     doc =
 
     [sample_support]
-    default =
+    default = None
     type = Param
     help = Sample support settings
     doc =
@@ -123,7 +124,7 @@ class DM_3dBragg(DM):
         types can easily be added.
         """
         super(DM_3dBragg, self).object_update()
-        
+
         # no support
         if self.p.sample_support is None:
             return
@@ -243,8 +244,10 @@ class DM_3dBragg(DM):
 
         try:
             assert self.p.sample_support.shrinkwrap.plot
-        except AttributeError, AssertionError:
+        except AttributeError:
             return
+	except AssertionError:
+	    return
 
         try:
             self.ptycho.runtime.iter_info[-1]['shrinkwrap'] = [self.sx, self.sprofile, self.slow, self.shigh]
