@@ -1,17 +1,27 @@
 import numpy as np
-from imageIO import imread
-from edfIO import edfread
-from rawIO import rawread
+import os
+import glob
+
+from .imageIO import imread
+from .edfIO import edfread
+from .rawIO import rawread
+from .h5rw import h5read
 
 __all__ = ['image_read']
 
 
 def image_read(filename, *args, **kwargs):
-    """\
-    Attempts to import image data from any file.
     """
-    import os
-    import glob
+    Try to load image data from any file.
+
+    Parameters
+    ----------
+    filename: str
+              Name of the file. If filename contains a wildcard, load all files that match the pattern.
+    Returns
+    -------
+    (image, metadict) or (list of images, list of metadicts)
+    """
 
     use_imread = True
     special_format = ['.raw', '.edf', '.h5']
@@ -37,13 +47,15 @@ def image_read(filename, *args, **kwargs):
     elif ext == '.h5':
         h5_image = h5read(filename, *args, **kwargs)
         def look_for_ndarray(d):
-            for k,v in d.iteritems():
-                if type(v) is np.ndarray:
-                    return k,v
-                elif type(v) is type({}):
+            for k, v in d.iteritems():
+                if isinstance(v, np.ndarray):
+                    return k, v
+                elif isinstance(v, dict):
                     out = look_for_ndarray(v)
-                    if out is not None: return (k,) +out
-                else: pass
+                    if out is not None:
+                        return (k,) + out
+                else:
+                    pass
             return None
         if isinstance(h5_image, list):
             h5_arrays = []
@@ -51,10 +63,10 @@ def image_read(filename, *args, **kwargs):
             for h5s in h5_image:
                 h5a = look_for_ndarray(h5s)
                 h5_arrays.append(h5a[-1])
-                h5_metas.append({'filename':filename, 'path': '/'.join(h5a[0:-1])})
+                h5_metas.append({'filename': filename, 'path': '/'.join(h5a[0:-1])})
             return h5_arrays, h5_metas
         else:
             h5_array = look_for_ndarray(h5_image)
-            return h5_array[-1], {'filename':filename, 'path': '/'.join(h5_array[0:-1])}
+            return h5_array[-1], {'filename': filename, 'path': '/'.join(h5_array[0:-1])}
     else:
-        raise RuntimeError('Unkown file type')
+        raise RuntimeError('Unknown file type')

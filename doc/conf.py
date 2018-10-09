@@ -21,11 +21,11 @@ import os
 #sys.path.insert(0, os.path.abspath('.'))
 
 # generate paramters.rst and other rst
-execfile('parameters2rst.py')
-execfile('tmp2rst.py')
-execfile('version.py')
 import subprocess
-subprocess.call(['python', 'script2rst.py'])  # We need this to have a clean sys.argv
+subprocess.check_call(['python', 'script2rst.py'])  # We need this to have a clean sys.argv
+subprocess.check_call(['python','parameters2rst.py'])
+subprocess.check_call(['python','tmp2rst.py'])
+execfile('version.py')
 
 # -- General configuration ------------------------------------------------
 
@@ -42,73 +42,63 @@ extensions = [
 ]
 
 
+def truncate_docstring(app, what, name, obj, options, lines):
+    """
+    Remove the Default parameter entries.
+    """
+    if not hasattr(obj, 'DEFAULT'):
+        return
+    if any(l.strip().startswith('Defaults:') for l in lines):
+        while True:
+            if lines.pop(-1).strip().startswith('Defaults:'):
+                break
+
+
 def remove_mod_docstring(app, what, name, obj, options, lines):
     from ptypy import utils as u
-    import numpy as np
+    from ptypy import defaults_tree
     u.verbose.report.headernewline='\n\n'
     searchstr = ':py:data:'
     
-    def get_refs(dct,pd,depth=2, indent = ''):
-        if depth<0:
+    def get_refs(dct, pd, depth=2, indent=''):
+        if depth < 0:
             return
         
         for k, value in dct.iteritems():
             ref = ', see :py:data:`~%s`' % pd.children[k].entry_point if pd.children.has_key(k) else ''
-            if hasattr(value,'items'):
+            if hasattr(value, 'items'):
                 v = str(value.__class__.__name__)
-            elif str(value)==value:
-                v='"%s"' % value
+            elif str(value) == value:
+                v = '"%s"' % value
             else:
-                v=str(value)
+                v = str(value)
                 
-            lines.append(indent+'* *' +k+'* = ``'+v+'``' +ref)#+'\n')
+            lines.append(indent + '* *' + k + '* = ``' + v + '``' + ref)
             
-            if hasattr(value,'items'):
-                #lines.append('\n\n')
+            if hasattr(value, 'items'):
                 lines.append("")
-                get_refs(value,pd.children[k],depth=depth-1, indent = indent+'  ')
+                get_refs(value, pd.children[k], depth=depth-1, indent=indent+'  ')
                 lines.append("")
-                #lines.append('\n\n')
 
-    #if name.find('DEFAULT')>=0:
     if isinstance(obj, u.Param) or isinstance(obj, dict):
-        keys = obj.keys()
         pd = None
         
-        """
-        # auto_matching
-        for entry,pdesc in u.validator.entry_points_Param.iteritems():
-            chkeys = ':'.join([k.split('.')[-1] for k in pdesc.children.keys()])
-            #print chkeys
-            #print keys
-            matches = [key in chkeys for key in keys]
-            #print matches
-            print np.mean(matches)
-            if np.mean(matches)>0.8:
-                print 'Param match'
-                e=entry
-                print e
-                pd = pdesc
-                break
-        """
         for l in lines:
             start = l.find(searchstr)
             if start > -1:
                 newstr = l[start:]
                 newstr = newstr.split('`')[1]
                 newstr = newstr.replace('~', '')
-                #print newstr, what, name, options
-                pd = u.validator.entry_points_dct.get(newstr,None)
+                pd = defaults_tree.get(newstr)
                 break
                 
         if pd is not None:
-            #lines.append('Match with :py:data:`.%s` \n\n' %pd.entry_point)
             get_refs(obj, pd, depth=2, indent='')
-            #print lines
 
         
 def setup(app):
     app.connect('autodoc-process-docstring', remove_mod_docstring)
+    app.connect('autodoc-process-docstring', truncate_docstring)
 
 
 napoleon_use_ivar = True

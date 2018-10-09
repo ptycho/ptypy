@@ -24,9 +24,18 @@ scriptname = sys.argv[0].split('.')[0]
 
 # We create a managing top-level class instance. We will not use the
 # the :any:`Ptycho` class for now, as its rich set of methods may be
-# a bit overwhelming to start with. Instead we take a plain
-# :py:class:`~ptypy.core.classes.Base` instance.
-P = Base()
+# a bit overwhelming to start with. Instead we start of a plain
+# :py:class:`~ptypy.core.classes.Base` instance. 
+
+# As the ``Base`` class is slotted starting with version 0.3.0, we
+# can't attach attributes after initialisation as we could with a normal
+# python class. To reenable ths feature we have to subclasse once.
+class Base2(Base):
+    pass
+
+P = Base2()
+
+# Now we can start attaching attributes
 P.CType = np.complex128
 P.FType = np.float64
 
@@ -65,8 +74,16 @@ P.probe = Container(P, 'Cprobe', data_type='complex')
 # For convenience, there is a test probing illumination in |ptypy|'s
 # resources.
 from ptypy.resources import moon_pr
-pr = -moon_pr(G.shape)
-pr = P.probe.new_storage(data=pr, psize=G.resolution)
+moon_probe = -moon_pr(G.shape)
+
+# As of version 0.3.0 the Storage classes are no longer limited to 3d arrays.
+# This means, however, that the shape is better explicitly specified upon 
+# creation to align the coordinate system.
+pr_shape = (1,)+ tuple(G.shape)
+pr = P.probe.new_storage(shape=pr_shape, psize=G.resolution)
+
+# Probe is loaded through the :py:meth:`~ptypy.core.classes.Storage.fill` method.
+pr.fill(moon_probe)
 fig = u.plot_storage(pr, 0)
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # Ptypy's default testing illumination, an image of the moon.
@@ -75,13 +92,14 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # from the propagator to model a probe,
 y, x = G.propagator.grids_sam
 apert = u.smooth_step(fsize[0]/5-np.sqrt(x**2+y**2), 1e-6)
-pr2 = P.probe.new_storage(data=apert, psize=G.resolution)
+pr2 = P.probe.new_storage(shape=pr_shape, psize=G.resolution)
+pr2.fill(apert)
 fig = u.plot_storage(pr2, 1, channel='c')
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # Round test illumination (not necessarily smoothly varying).
 
 # or the coordinate grids from the Storage itself.
-pr3 = P.probe.new_storage(shape=G.shape, psize=G.resolution)
+pr3 = P.probe.new_storage(shape=pr_shape, psize=G.resolution)
 y, x = pr3.grids()
 apert = u.smooth_step(fsize[0]/5-np.abs(x), 3e-5)*u.smooth_step(fsize[1]/5-np.abs(y), 3e-5)
 pr3.fill(apert)

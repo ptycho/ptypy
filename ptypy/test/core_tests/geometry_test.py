@@ -5,7 +5,11 @@ A test for the Base
 import unittest
 import ptypy.utils as u
 import numpy as np
-from ptypy.core import geometry, Base
+from ptypy.core import geometry
+from ptypy.core import Base as theBase
+
+# subclass for dictionary access
+Base = type('Base',(theBase,),{})
 
 class GeometryTest(unittest.TestCase):
 

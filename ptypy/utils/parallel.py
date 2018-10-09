@@ -7,17 +7,14 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-__all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
-           'LoadManager', 'loadmanager','allreduce','send','receive','bcast',
-           'bcast_dict', 'gather_dict','MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
-
 import numpy as np
+
+from .. import __has_mpi4py__ as hmpi
+
 size = 1
 rank = 0
 MPI = None
 comm = None
-
-from .. import __has_mpi4py__ as hmpi
 if hmpi:
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
@@ -28,10 +25,14 @@ del hmpi
 MPIenabled = not (size == 1)
 master = (rank == 0)
 
+__all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
+           'LoadManager', 'loadmanager','allreduce','send','receive','bcast',
+           'bcast_dict', 'gather_dict','MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
+
 
 def useMPI(do=None):
     """\
-    Toggle using MPI or not. Is this useful?
+    Toggle using MPI or not. Is this useful? YES!
     """
     global MPIenabled
     if do is None:
@@ -40,6 +41,15 @@ def useMPI(do=None):
         MPIenabled = False
     else:
         MPIenabled = do
+        if do is False:
+            global size
+            global master
+            global loadmanager
+            size = 1
+            master = True
+            loadmanager = LoadManager()
+
+
 
 
 ###################################
@@ -92,7 +102,6 @@ class LoadManager(object):
             A nested list, (a list of lists) such that ``R[rank]=list``
             of elements of `idlist` managed by process of given `rank`.
         """
-
         # Simplest case
         if idlist is None:
             r = size - 1 - self.load[::-1].argmin()
@@ -124,6 +133,7 @@ class LoadManager(object):
         # Update the loads
         part = np.zeros_like(self.load)
         part[li] = ipart
+
         self.load += part
 
         # Cumulative sum give the index boundaries between the ranks
@@ -131,6 +141,7 @@ class LoadManager(object):
 
         # Now assign the rank
         rlist = np.arange(size)
+
         out = [[] for x in range(size)]
         for i, k in enumerate(idlist):
             r = rlist[i < cumpart][0]
@@ -204,11 +215,12 @@ def _MPIop(a, op, axis=None):
     Apply operation op on accross a list of arrays distributed between
     processes. Supported operations are SUM, MAX, MIN, and PROD.
     """
+    
+    if MPIenabled:
+        MPIop = {'SUM': MPI.SUM, 'MAX': MPI.MAX, 'MIN': MPI.MIN, 'PROD': MPI.PROD}[op.upper()]
 
-    MPIop, npop = \
-        {'SUM': (MPI.SUM, np.sum), 'MAX': (MPI.MAX, np.max), 'MIN': (MPI.MIN, np.min), 'PROD': (MPI.PROD, np.prod)}[
-            op.upper()]
-
+    npop = {'SUM': np.sum, 'MAX':  np.max, 'MIN': np.min, 'PROD': np.prod}[op.upper()]
+    
     # Total op
     if axis is None:
         # Very special case: calling with an empty object might make sense in a few situations.
@@ -405,8 +417,8 @@ def bcast(data, source=0):
             msg = comm.bcast('pickle', source)
     else:
         msg = comm.bcast(None, source)
-        
-    if str(msg)=='array':
+
+    if str(msg) == 'array':
         # Communicate size before sending array
         if rank == source:
             shape, dtypestr = comm.bcast((data.shape, data.dtype.str), source)
@@ -433,7 +445,7 @@ def bcast(data, source=0):
             thing = comm.bcast(data, source)
         else:
             thing = comm.bcast(None, source)
-            
+
         return thing
 
 def bcast_dict(dct, keys='all', source=0):

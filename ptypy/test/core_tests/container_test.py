@@ -13,7 +13,7 @@ class ContainerTest(unittest.TestCase):
     def test_container_copy(self):
         # make a container with a storage and two views
         B = Base()
-        C = Container(data_type=float, ptycho=B)
+        C = Container(B,data_type=float)
         V1 = View(container=C, shape=10, coord=(0, 0), storageID='S0')
         V2 = View(container=C, shape=10, coord=(3, 3), storageID='S0')
         C.reformat()

@@ -16,101 +16,138 @@ if __name__ == "__main__":
     from detector import Detector, conv
     from ptypy.core.data import PtyScan
     from ptypy.core.ptycho import Ptycho
-    from ptypy.core.manager import DEFAULT as scan_DEFAULT
+    from ptypy.core.manager import Full as ScanModel
+    from ptypy.core.sample import sample_desc
+    from ptypy.core.illumination import illumination_desc
+    from ptypy.core import xy
+    from ptypy import defaults_tree
 else:
     from .. import utils as u
     from detector import Detector, conv
     from ..core.data import PtyScan
     from ..core.ptycho import Ptycho
-    from ..core.manager import DEFAULT as scan_DEFAULT
+    from ..core.manager import Full as ScanModel
+    from .. import defaults_tree
+    from ..core.sample import sample_desc
+    from ..core.illumination import illumination_desc
+    from ..core import xy
 
 logger = u.verbose.logger
-
-DEFAULT = u.Param(
-    pos_noise = 1e-10,  # (float) unformly distributed noise in xy experimental positions
-    pos_scale = 0,      # (float, list) amplifier for noise. Will be extended to match number of positions. Maybe used to only put nois on individual points
-    pos_drift = 0,      # (float, list) drift or offset paramter. Noise independent drift. Will be extended like pos_scale.
-    detector = 'PILATUS_300K',
-    frame_size = None ,   # (None, or float, 2-tuple) final frame size when saving if None, no cropping/padding happens
-    psf = None,          # (None or float, 2-tuple, array) Parameters for gaussian convolution or convolution kernel after propagation
-                        # use it for simulating partial coherence
-    verbose_level = 1, # verbose level when simulating
-    plot = True,
-)
 
 __all__ = ['SimScan']
 
 
+defaults_tree['scandata'].add_child(u.descriptor.EvalDescriptor('SimScan'))
+defaults_tree['scandata.SimScan'].add_child(illumination_desc, copy=True)
+defaults_tree['scandata.SimScan'].add_child(sample_desc, copy=True)
+defaults_tree['scandata.SimScan'].add_child(xy.xy_desc, copy=True)
+@defaults_tree.parse_doc('scandata.SimScan')
 class SimScan(PtyScan):
     """
     Simulates a ptychographic scan and acts as Virtual data source.
-    The simulation is carried out in the following way.
 
-    TO BE FILLED WITH CONTENT
+    Defaults:
+
+    [name]
+    default = 'SimScan'
+    type = str
+    help =
+
+    [pos_noise]
+    default =  1e-10
+    type = float
+    help = Uniformly distributed noise in xy experimental positions
+
+    [pos_scale]
+    default = 0.
+    type = float, list
+    help = Amplifier for noise.
+    doc = Will be extended to match number of positions. Maybe used to only put nois on individual points
+
+    [pos_drift]
+    default = 0.
+    type = float, list
+    help = Drift or offset paramter
+    doc = Noise independent drift. Will be extended like pos_scale.
+
+    [detector]
+    default = 'PILATUS_300K'
+    type = str, Param
+    help =
+
+    [frame_size]
+    default =
+    type = float, tuple
+    help = Final frame size when saving
+    doc = If None, no cropping/padding happens.
+
+    [psf]
+    default =
+    type = float, tuple, array
+    help = Parameters for gaussian convolution or convolution kernel after propagation
+    doc = Use it for simulating partial coherence.
+
+    [verbose_level]
+    default = 1
+    type = int
+    help = Verbose level when simulating
+
+    [plot]
+    default = True
+    type = bool
+    help =
+
+    [propagation]
+    default = farfield
+    type = str
+    help = farfield or nearfield
+
     """
-    RECIPE = DEFAULT.copy(depth=4)
 
-    def __init__(self, pars = None,scan_pars=None,recipe_pars=None,**kwargs):
+    def __init__(self, pars=None, **kwargs):
         """
         Parameters
         ----------
         pars : Param
-            PtyScan parameters including a *recipe*. See :any:`data.GENERIC`.
+            PtyScan parameters. See :py:data:`scandata.SimScan`.
 
-        scan_pars : Param or dict
-            Parameters for a single scan. Use this especially to set
-            positions, illumination and sample.
-
-        recipe_pars : Param or dict
-            Equivalent alternative to *pars['recipe']*.
         """
-        # Initialize parent class
-        super(SimScan, self).__init__(pars, **kwargs)
 
+        p = self.DEFAULT.copy(99)
+        p.update(pars)
+
+        # Initialize parent class
+        super(SimScan, self).__init__(p, **kwargs)
 
         # we will use ptypy to figure out everything
         pp = u.Param()
 
         # we don't want a server
-        pp.interaction = None
-
-        # get scan parameters
-        if scan_pars is None:
-            pp.scan = scan_DEFAULT.copy(depth =4)
-        else:
-            pp.scan = scan_pars.copy(depth =4)
-
-        # note that shape cannot be None
-        if self.info.shape is None:
-            self.info.shape = pp.scan.geometry.shape
-
-        rinfo = self.RECIPE.copy()
-        rinfo.update(self.info.recipe, in_place_depth = 4)
-        if recipe_pars is not None:
-            rinfo.update(recipe_pars, in_place_depth = 4)
-        rinfo.update(kwargs, in_place_depth = 4)
-
-        self.rinfo = rinfo
-        self.info.recipe = rinfo
+        pp.io = u.Param()
+        pp.io.interaction = None
 
         # be as silent as possible
         self.verbose_level = u.verbose.get_level()
-        pp.verbose_level = rinfo.verbose_level
-
-        # update changes specified in recipe
-        pp.scan.update(rinfo, in_place_depth = 4)
+        pp.verbose_level = p.verbose_level
 
         # Create a Scan that will deliver empty diffraction patterns
         # FIXME: This may be obsolete if the dry_run switch works.
 
         pp.scans=u.Param()
         pp.scans.sim = u.Param()
+        pp.scans.sim.name = 'Full'
+        pp.scans.sim.propagation = self.info.propagation
         pp.scans.sim.data=u.Param()
-        pp.scans.sim.data.source = 'empty'
-        pp.scans.sim.data.shape = pp.scan.geometry.shape
+        pp.scans.sim.data.positions_theory = xy.from_pars(self.info.xy)
+        pp.scans.sim.data.name = 'PtyScan'
+        pp.scans.sim.data.shape = self.info.shape
+        pp.scans.sim.data.psize = self.info.psize
+        pp.scans.sim.data.energy = self.info.energy
+        pp.scans.sim.data.distance = self.info.distance
+        pp.scans.sim.sample = self.info.sample
+        pp.scans.sim.illumination = self.info.illumination
+
         pp.scans.sim.data.auto_center = False
-        # deactivate sharing since we create a seperate Ptycho instance fro each scan
-        pp.scans.sim.sharing = None
 
         # Now we let Ptycho sort out things
         logger.info('Generating simulating Ptycho instance for scan `%s`.' % str(self.info.get('label')))
@@ -131,11 +168,11 @@ class SimScan(PtyScan):
         logger.info('Propagating exit waves.')
         for name,pod in P.pods.iteritems():
             if not pod.active: continue
-            pod.diff += conv(u.abs2(pod.fw(pod.exit)),rinfo.psf)
+            pod.diff += conv(u.abs2(pod.fw(pod.exit)), self.info.psf)
 
         # Simulate detector reponse
-        if rinfo.detector is not None:
-            Det = Detector(rinfo.detector)
+        if self.info.detector is not None:
+            Det = Detector(self.info.detector)
             save_dtype = Det.dtype
             acquire = Det.filter
         else:
@@ -149,7 +186,7 @@ class SimScan(PtyScan):
 
 
         ID,Sdiff = P.diff.S.items()[0]
-        logger.info('Collectiong simulated `raw` data.')
+        logger.info('Collecting simulated `raw` data.')
         for view in Sdiff.views:
             ind = view.layer
             dat, mask = acquire(view.data)
@@ -162,7 +199,7 @@ class SimScan(PtyScan):
             self.pos[ind] = pos
 
         # plot overview
-        if self.rinfo.plot and u.parallel.master:
+        if self.info.plot and u.parallel.master:
             logger.info('Plotting simulation overview')
             P.plot_overview(200)
             u.pause(5.)

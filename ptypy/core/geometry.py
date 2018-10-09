@@ -6,51 +6,23 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-# for solo use ##########
-if __name__ == "__main__":
-    from ptypy import utils as u
-    from ptypy.utils.verbose import logger
-    from ptypy.core import Base
-    GEO_PREFIX = 'G'
-# for in package use #####
-else:
-    from .. import utils as u
-    from ..utils.verbose import logger
-    from classes import Base,GEO_PREFIX
-
 import numpy as np
 from scipy import fftpack
+
+from .. import utils as u
+from ..utils.verbose import logger
+from .classes import Base, GEO_PREFIX
+from ..utils.descriptor import EvalDescriptor
+
 try:
     import pyfftw
     import pyfftw.interfaces.numpy_fft as fftw_np
 except ImportError:
-    print "Warning: unable to import pyFFTW! Will use a slower FFT method."
+    pass
+    #logger.warning("Unable to import pyFFTW! Will use a slower FFT method.")
 
-__all__ = ['DEFAULT', 'Geo', 'BasicNearfieldPropagator',
-           'BasicFarfieldPropagator']
+__all__ = ['Geo', 'BasicNearfieldPropagator', 'BasicFarfieldPropagator']
 
-DEFAULT = u.Param(
-    # Incident photon energy (in keV)
-    energy=6.2,
-    # Wavelength (in meters)
-    lam=None,
-    # Distance from object to screen
-    distance=7.0,
-    # Pixel size (in meters) at detector plane
-    psize=172e-6,
-    # Pixel size (in meters) at sample plane
-    resolution=None,
-    # Number of detector pixels
-    shape=256,
-    # Propagation type
-    propagation='farfield',
-    misfit=0,
-    center='fftshift',
-    origin='fftshift',
-    precedence=None,
-)
-""" Default geometry parameters. See also :py:data:`.scan.geometry`
-    and an unflattened representation below """
 
 _old2new = u.Param(
     # Distance from object to screen
@@ -67,6 +39,8 @@ _old2new = u.Param(
 )
 
 
+local_tree = EvalDescriptor('')
+@local_tree.parse_doc()
 class Geo(Base):
     """
     Hold and keep consistent the information about experimental parameters.
@@ -80,11 +54,89 @@ class Geo(Base):
     interact : bool (True)
         If set to True, changes to properties like :py:meth:`energy`,
         :py:meth:`lam`, :py:meth:`shape` or :py:meth:`psize` will cause
-        a call to :py:meth:`update`
+        a call to :py:meth:`update`.
+    
 
+    Default geometry parameters. See also :py:data:`.scan.geometry`
+
+    Defaults:
+
+    [energy]
+    type = float
+    default = 6.2
+    help = Energy (in keV)
+    doc = If ``None``, uses `lam` instead.
+    userlevel = 0
+    lowlim = 0
+
+    [lam]
+    type = float
+    default = None
+    help = Wavelength (in meters)
+    doc = Used only if `energy` is ``None``
+    userlevel = 0
+    lowlim = 0
+
+    [distance]
+    type = float
+    default = 7.19
+    help = Distance from object to detector (in meters)
+    doc =
+    userlevel = 0
+    lowlim = 0
+
+    [psize]
+    type = float
+    default = 0.000172
+    help = Pixel size in the detector plane (in meters)
+    doc =
+    userlevel = 1
+    lowlim = 0
+
+    [resolution]
+    type = float
+    default = None
+    help = Pixel size in the sample plane
+    doc = This parameter is used only for simulations
+    userlevel = 2
+    lowlim = 0
+
+    [propagation]
+    type = str
+    default = farfield
+    help = Propagation type
+    doc = Either "farfield" or "nearfield"
+    userlevel = 1
+
+    [shape]
+    type = int, tuple
+    default = 256
+    help = Number of pixels in detector frame
+    doc = Can be a 2-tuple of int (Nx, Ny) or an int N, in which case it is interpreted as (N, N).
+    userlevel = 1
+
+    [misfit]
+    type = float, tuple
+    default = 0.
+    help = TODO: WHAT IS MISFIT?
+    doc =
+    userlevel = 2
+
+    [center]
+    type = int, tuple, str
+    default = 'fftshift'
+    help = TODO: document this parameter.
+    doc =
+    userlevel = 2
+
+    [origin]
+    type = int, tuple, str
+    default = 'fftshift'
+    help = TODO: document this parameter.
+    doc =
+    userlevel = 2
     """
 
-    DEFAULT = DEFAULT
     _keV2m = 1.23984193e-09
     _PREFIX = GEO_PREFIX
 
@@ -105,13 +157,9 @@ class Geo(Base):
             if the key exists in `Geo.DEFAULT`.
         """
         super(Geo, self).__init__(owner, ID)
-        # if len(kwargs)>0:
-        #     self._initialize(**kwargs)
-
-    # def _initialize(self, pars=None, **kwargs):
 
         # Starting parameters
-        p = u.Param(DEFAULT)
+        p = self.DEFAULT.copy(99)
         if pars is not None:
             p.update(pars)
             for k, v in p.items():
@@ -122,6 +170,13 @@ class Geo(Base):
                 p[k] = v
 
         self.p = p
+        self._initialize(p)
+
+    def _initialize(self, p):
+        """
+        Parse input parameters, fill missing parameters and set up a
+        propagator.
+        """
         self.interact = False
 
         # Set distance
@@ -410,8 +465,8 @@ class FFTchooser(object):
         elif str(self.ffttype) == 'numpy':
             self._numpy_fft()
         elif isinstance(self.ffttype, tuple):
-            self.fft = ffttype[0]
-            self.ifft = ffttype[1]
+            self.fft = self.ffttype[0]
+            self.ifft = self.ffttype[1]
 
         return (self.fft, self.ifft)
 
@@ -425,7 +480,6 @@ class BasicFarfieldPropagator(object):
     Be aware though, that if the origin is not in the center of the frame,
     coordinates are rolled periodically, just like in the conventional fft case.
     """
-    DEFAULT = DEFAULT
 
     def __init__(self, geo_pars=None, ffttype='fftw', **kwargs):
         """
@@ -456,7 +510,7 @@ class BasicFarfieldPropagator(object):
         self.post_ifft = None
 
         # Get default parameters and update
-        self.p = u.Param(DEFAULT)
+        self.p = u.Param(Geo.DEFAULT)
         if 'dtype' in kwargs:
             self.dtype = kwargs['dtype']
         else:
@@ -495,12 +549,12 @@ class BasicFarfieldPropagator(object):
         lz /= (self.sh[0] + mis[0] - self.crop_pad[0]) / self.sh[0]
 
         # Calculate the grids
-        if str(p.origin) == p.origin:
+        if u.isstr(p.origin):
             c_sam = p.origin
         else:
             c_sam = p.origin + self.crop_pad / 2.
 
-        if str(p.center) == p.center:
+        if u.isstr(p.center):
             c_det = p.center
         else:
             c_det = p.center + self.crop_pad / 2.
@@ -604,7 +658,6 @@ class BasicNearfieldPropagator(object):
     """
     Basic two step (i.e. two ffts) Nearfield Propagator.
     """
-    DEFAULT = DEFAULT
 
     def __init__(self, geo_pars=None, ffttype='fftw', **kwargs):
         """
@@ -630,7 +683,7 @@ class BasicNearfieldPropagator(object):
         self.ikernel = None
 
         # Get default parameters and update
-        self.p = u.Param(DEFAULT)
+        self.p = u.Param(Geo.DEFAULT)
         self.dtype = kwargs['dtype'] if 'dtype' in kwargs else np.complex128
         self.update(geo_pars, **kwargs)
         self.FFTch = FFTchooser(ffttype)

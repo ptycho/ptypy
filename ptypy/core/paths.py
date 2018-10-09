@@ -10,12 +10,7 @@ This file is part of the PTYPY package.
 import sys
 import os
 
-# for solo use ##########
-if __name__ == "__main__":
-    from ptypy import utils as u
-# for in package use #####
-else:
-    from .. import utils as u
+from .. import utils as u
 
 __all__ = ['DEFAULT', 'Paths']
 
@@ -97,7 +92,6 @@ class Paths(object):
         File path for plot file
         """
         p = self.get_path(self.autoplot, runtime)
-        print p
         return self.get_path(self.autoplot, runtime)
 
     def get_path(self, path, runtime):

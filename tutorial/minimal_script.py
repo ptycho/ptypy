@@ -24,7 +24,7 @@ p = u.Param()  # root level
 
 # We set the verbosity to a high level, in order to have information on the
 # reconstruction process printed to the terminal.
-# See :py:data:`.verbose_level`.
+# See :py:data:`~ptycho.verbose_level`.
 p.verbose_level = 3
 
 # We limit this reconstruction to single precision. The other choice is to
@@ -32,8 +32,8 @@ p.verbose_level = 3
 p.data_type = "single"
 
 # We give this reconstruction the name ``'minimal'`` although it
-# will automatically choose one from the file name of the script if we put in ``None``.
-# (But then the tutorial may not work on your computer as the chosen
+# will automatically choose one from the file name of the script if we put in 
+# ``None``. (But then the tutorial may not work on your computer as the chosen
 # run name may differ from the one that this tutorial was created with)
 p.run = 'minimal'
 
@@ -51,11 +51,15 @@ p.io.autosave = u.Param()
 p.io.autosave.interval = 20
 
 # In this tutorial we switch off the threaded plotting client.
-p.io.autoplot = False
+# (alternative one-liners would be `p['io.autoplot.active'] = False`
+# or `p.io['autoplot.active'] = False`)
+p.io.autoplot = u.Param()
+p.io.autoplot.active = False
 
 # Since we do not want to plot anything, we don't need the
 # interaction server either.
-p.io.interaction = False
+p.io.interaction = u.Param()
+p.io.interaction.active = False
 
 # Now we have to insert actual parameters associated with a
 # ptychographic scan.
@@ -74,20 +78,19 @@ p.scan = u.Param()
 # branch mentioned above.
 # Obviously at least the ``data`` branch will differ from
 # :py:data:`.scan.data`. In this tutorial we
-# create a new scan parameter branch ``MF`` where we only specify
-# the data branch and tell |ptypy| to use scan meta data when possible.
+# create a new scan parameter branch ``MF``.
 p.scans = u.Param()
 p.scans.MF = u.Param()
-p.scans.MF.if_conflict_use_meta = True
+p.scans.MF.name = 'Vanilla' 
 p.scans.MF.data = u.Param()
 
-# As data source we have choosen the *'test'* source.
+# As data source we have choosen the *'MoonFlowerScan'* test source.
 # That will make |ptypy| use the internal
-# :py:class:`~ptypy.core.data.MoonFlowerScan` class.
+# :py:class:`~ptypy.core.data.MoonFlowerScan` class to generate data.
 # This class is meant for testing, and it provides/simulates
 # diffraction patterns without using the more complex generic
-# :any:`SimScan` class.
-p.scans.MF.data.source = 'test'
+# :py:class:`SimScan` class.
+p.scans.MF.data.name = 'MoonFlowerScan'
 
 # We set the diffraction frame shape to a small value (128x128px) and
 # limit the number af diffraction patterns at 100. The

@@ -1,15 +1,16 @@
 
-from ptypy import utils as u
-from ..io import h5write, h5read
-from classes import *
-from geometry import Geo
-from manager import ModelManager
-from classes import get_class
-from ..utils.verbose import logger
-from ptycho import Ptycho
-from weakref import WeakValueDictionary as WVD
 import numpy as np
 import time
+from weakref import WeakValueDictionary as WVD
+
+from .. import utils as u
+from ..io import h5write, h5read
+from .classes import *
+from .geometry import Geo
+from .manager import ModelManager
+from .classes import get_class
+from ..utils.verbose import logger
+from .ptycho import Ptycho
 
 __all__ = ['link', 'unlink', 'to_h5', 'from_h5']
 

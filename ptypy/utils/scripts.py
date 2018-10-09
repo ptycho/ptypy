@@ -8,16 +8,17 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import parallel
-import urllib
 import urllib2 # TODO: make compatible with python 3.5
-import array_utils as au
 from scipy import ndimage as ndi
-from misc import expect2
+
+from . import array_utils as au
+from .misc import expect2
 # from .. import io # FIXME: SC: when moved here, io fails
 
 __all__ = ['hdr_image', 'diversify', 'cxro_iref', 'xradia_star', 'png2mpg',
            'mass_center', 'phase_from_dpc', 'radial_distribution',
-           'stxm_analysis','stxm_init', 'load_from_ptyr', 'remove_hot_pixels']
+           'stxm_analysis', 'stxm_init', 'load_from_ptyr', 'remove_hot_pixels']
+
 
 def diversify(A, noise=None, shift=None, power=1.0):
     """
@@ -44,6 +45,10 @@ def diversify(A, noise=None, shift=None, power=1.0):
     --------
     ptypy.utils.parallel.MPInoise2d
     """
+    # Nothing to do if only one mode
+    if A.shape[0] == 1:
+        return
+
     if noise is not None:
         noise = parallel.MPInoise2d(A.shape, *noise)
         # No noise where the main mode is
