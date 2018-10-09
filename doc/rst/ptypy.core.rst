@@ -44,14 +44,6 @@ ptypy.core.manager module
     :undoc-members:
     :show-inheritance:
 
-ptypy.core.model module
------------------------
-
-.. automodule:: ptypy.core.model
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ptypy.core.paths module
 -----------------------
 

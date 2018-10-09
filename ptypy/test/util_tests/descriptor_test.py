@@ -207,6 +207,7 @@ class EvalDescriptorTest(unittest.TestCase):
         """
         root = EvalDescriptor('')
 
+        @root.parse_doc('haha')
         class FakeEngineBaseClass(object):
             """
             Dummy documentation

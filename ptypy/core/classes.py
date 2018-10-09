@@ -1117,7 +1117,7 @@ def shift(v, sp):
 
 class View(Base):
     """
-    A "window" on a Container.
+    A 'window' on a Container.
 
     A view stores all the slicing information to extract a 2D piece
     of Container.
@@ -1126,7 +1126,7 @@ class View(Base):
     ----
     The final structure of this class is yet up to debate
     and the constructor signature may change. Especially since
-    "DEFAULT_ACCESSRULE" is yet so small, its contents could be
+    'DEFAULT_ACCESSRULE' is yet so small, its contents could be
     incorporated in the constructor call.
 
     """
@@ -1329,7 +1329,7 @@ class View(Base):
         This is a common call in the code and has therefore found
         its way here. May return ``None`` if there is no pod connected.
         """
-        if isinstance(self._pod,weakref.ref):
+        if isinstance(self._pod, weakref.ref):
             return self._pod()  # weak reference
         else:
             return self._pod
@@ -1345,7 +1345,6 @@ class View(Base):
         else:
             pod = self.pod
             return {} if pod is None else {pod.ID: pod}  
-  
 
     @property
     def data(self):
@@ -1430,7 +1429,7 @@ class View(Base):
     @property
     def psize(self):
         """
-        Pixel size of the `View`.
+        Pixel size of the View.
         """
         ps = self._record['psize'][:self._ndim]
         return ps if (ps > 0.).all() else None
@@ -1491,7 +1490,8 @@ class View(Base):
         The physical coordinate in pixel space
         """
         return self.dcoord + self.sp
-        
+
+
 class Container(Base):
     """
     High-level container class.
@@ -2143,11 +2143,13 @@ class POD(Base):
         if not self.is_empty:
             return self.ob_view.data
         else:
+            # Empty probe means no object (perfect transmission)
             return np.ones(self.geometry.shape, dtype=self.owner.CType)
 
     @object.setter
     def object(self, v):
-        self.ob_view.data = v
+        if not self.is_empty:
+            self.ob_view.data = v
 
     @property
     def probe(self):

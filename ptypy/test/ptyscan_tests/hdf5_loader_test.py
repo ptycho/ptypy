@@ -75,8 +75,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         '''
         axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
         '''
-        A = 3
-        B = 4
+        A = 106
+        B = 101
         frame_size_m = 50
         frame_size_n = 50
 
@@ -84,6 +84,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         positions_slow = np.arange(A)
         positions_fast = np.arange(B)
         fast, slow = np.meshgrid(positions_fast, positions_slow) # just pretend it's a simple grid
+        fast = fast[..., np.newaxis, np.newaxis]
+        slow = slow[..., np.newaxis, np.newaxis]
         # now chuck them in the files
         with h5.File(self.positions_file, 'w') as f:
             f[self.positions_slow_key] = slow

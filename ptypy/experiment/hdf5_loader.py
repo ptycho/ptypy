@@ -290,9 +290,11 @@ class Hdf5Loader(PtyScan):
 
         self.intensities = h5.File(self.p.intensities.file, 'r')[self.p.intensities.key]
         data_shape = self.intensities.shape
-        self.slow_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.slow_key]
+        slow_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.slow_key][...]
+        self.slow_axis = np.squeeze(slow_axis) if slow_axis.ndim>2 else slow_axis
         positions_slow_shape = self.slow_axis.shape
-        self.fast_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.fast_key]
+        fast_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.fast_key][...]
+        self.fast_axis = np.squeeze(fast_axis) if fast_axis.ndim>2 else fast_axis
         positions_fast_shape = self.fast_axis.shape
         log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(data_shape,
                                                                                                                        positions_slow_shape,
@@ -418,9 +420,11 @@ class Hdf5Loader(PtyScan):
         weights = {}
         sh = self.slow_axis.shape
         for jj in indices:
-            weights[jj], intensities[jj] = self.get_corrected_intensities((jj % sh[0], jj // sh[1]))  # or the other way round???
-            positions[jj] = np.array([self.slow_axis[jj % sh[0], jj // sh[1]] * self.p.positions.slow_multiplier,
-                                      self.fast_axis[jj % sh[0], jj // sh[1]] * self.p.positions.fast_multiplier])
+            fast_idx = jj % sh[1]
+            slow_idx = jj // sh[1]
+            weights[jj], intensities[jj] = self.get_corrected_intensities((slow_idx, fast_idx))  # or the other way round???
+            positions[jj] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
         log(3, 'Data loaded successfully.')
         return intensities, positions, weights
 

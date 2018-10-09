@@ -21,7 +21,7 @@ from copy import deepcopy
 from .parameters import Param
 
 
-__all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor', 'defaults_tree']
+__all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
 
 
 class CODES:
@@ -1138,10 +1138,11 @@ class EvalDescriptor(ArgParseDescriptor):
             return ''
 
         # Get doc from base
+        base_parameters = ''
+
         if recursive:
-            base_parameters = self._extract_doc_from_class(cls.__base__)
-        else:
-            base_parameters = ''
+            for bcls in cls.__bases__:
+                base_parameters += self._extract_doc_from_class(bcls)
 
         # Append doc from class
         docstring = cls.__doc__ if cls.__doc__ is not None else ' '
