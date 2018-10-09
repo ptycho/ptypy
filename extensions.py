@@ -66,7 +66,7 @@ class CudaExtension(AccelerationExtension): # probably going to inherit from som
 
         cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)',
                                                out.decode()).group(1))
-        if str(cmake_version) < '3.8.0':
+        if cmake_version < '3.8.0':
             raise RuntimeError("CMake >= 3.8.0 is required")
 
         srcdir = os.path.abspath('cuda')
