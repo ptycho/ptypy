@@ -4,6 +4,21 @@ body {
     font-family: 'Ubuntu','PT Sans' ,'Cuprum', sans-serif;
     max-width: 1140px;
 }
+
+div.disclaimer{
+    text-align: left;
+    //margin-top: -12px;
+    color: #f9eed0;//white;
+    background-color: #2c5d8a;//#CA7900;//#40fbce;//#11557C;
+    padding: 1em;
+    padding-left: 1em;
+    padding-right: 1em;
+    font-weight: bold;
+}
+
+div.disclaimer a{
+    color: #d8b340;//white;
+}
              
 div.pageheader {
     background-image: url(ptypy_header_bg_sphinx.jpg);
