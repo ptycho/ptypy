@@ -206,8 +206,8 @@ Quickstart with a minimal script
 This tutorial explains the minimal settings to get a reconstruction
 runnig in |ptypy|. A |ptypy| script consists of two parts:
 
-* Creation of a parameter tree with parameters 
-  as listed in :ref:`parameters` and 
+* Creation of a parameter tree with parameters
+  as listed in :ref:`parameters` and
 * calling a :any:`Ptycho` instance with this parameter tree,
   specifying a level that determines how much the Ptycho
   instance will do.
@@ -218,7 +218,10 @@ Preparing the parameter tree
 We begin with opening an empty python file of arbitrary name
 in an editor of your choice, e.g.::
 
-  $ gedit minimal_script.py
+::
+
+   >>> #
+   $ gedit minimal_script.py
 
 Next we create an empty parameter tree. In |ptypy|, parameters
 are managed by the :any:`Param` class which is a convenience class subclassing Python's
@@ -231,8 +234,8 @@ class attributes, making the scripts and code much more readable.
    >>> p = u.Param()  # root level
 
 We set the verbosity to a high level, in order to have information on the
-reconstruction process printed to the terminal. 
-See :py:data:`.verbose_level`.
+reconstruction process printed to the terminal.
+See :py:data:`~ptycho.verbose_level`.
 
 ::
 
@@ -245,19 +248,19 @@ use double precision.
 
    >>> p.data_type = "single"
 
-We give this reconstruction the name ``'minimal'`` although it 
-will automatically choose one from the file name of the script if we put in ``None``.
-(But then the tutorial may not work on your computer as the chosen
+We give this reconstruction the name ``'minimal'`` although it
+will automatically choose one from the file name of the script if we put in 
+``None``. (But then the tutorial may not work on your computer as the chosen
 run name may differ from the one that this tutorial was created with)
 
 ::
 
    >>> p.run = 'minimal'
 
-Next, we set the home path. The :any:`Ptycho` instance will use this 
+Next, we set the home path. The :any:`Ptycho` instance will use this
 path as base for any other relative file path (e.g :py:data:`.io.autosave.path`
 or :py:data:`.io.rfile`). Relative paths lack a leading "/"
-(or "C:\\" on windows). Make sure to replace all "/" with "\\" 
+(or "C:\\" on windows). Make sure to replace all "/" with "\\"
 if you run the scripts on a Windows system.
 
 ::
@@ -265,7 +268,7 @@ if you run the scripts on a Windows system.
    >>> p.io = u.Param()
    >>> p.io.home = "/tmp/ptypy/"
 
-We want an intermediate result of the reconstruction 
+We want an intermediate result of the reconstruction
 to be dumped regularly every 20 reconstructions.
 
 ::
@@ -274,17 +277,21 @@ to be dumped regularly every 20 reconstructions.
    >>> p.io.autosave.interval = 20
 
 In this tutorial we switch off the threaded plotting client.
+(alternative one-liners would be `p['io.autoplot.active'] = False`
+or `p.io['autoplot.active'] = False`)
 
 ::
 
-   >>> p.io.autoplot = False
+   >>> p.io.autoplot = u.Param()
+   >>> p.io.autoplot.active = False
 
-Since we do not want to plot anything, we don't need the 
+Since we do not want to plot anything, we don't need the
 interaction server either.
 
 ::
 
-   >>> p.io.interaction = False
+   >>> p.io.interaction = u.Param()
+   >>> p.io.interaction.active = False
 
 Now we have to insert actual parameters associated with a
 ptychographic scan.
@@ -306,29 +313,28 @@ in these branches are those that differ from the *defaults* in the ``scan``
 branch mentioned above.
 Obviously at least the ``data`` branch will differ from
 :py:data:`.scan.data`. In this tutorial we
-create a new scan parameter branch ``MF`` where we only specify 
-the data branch and tell |ptypy| to use scan meta data when possible.
+create a new scan parameter branch ``MF``.
 
 ::
 
    >>> p.scans = u.Param()
    >>> p.scans.MF = u.Param()
-   >>> p.scans.MF.if_conflict_use_meta = True
+   >>> p.scans.MF.name = 'Vanilla'
    >>> p.scans.MF.data = u.Param()
 
-As data source we have choosen the *'test'* source. 
-That will make |ptypy| use the internal 
-:py:class:`~ptypy.core.data.MoonFlowerScan` class.
+As data source we have choosen the *'MoonFlowerScan'* test source.
+That will make |ptypy| use the internal
+:py:class:`~ptypy.core.data.MoonFlowerScan` class to generate data.
 This class is meant for testing, and it provides/simulates
-diffraction patterns without using the more complex generic 
-:any:`SimScan` class.
+diffraction patterns without using the more complex generic
+:py:class:`SimScan` class.
 
 ::
 
-   >>> p.scans.MF.data.source = 'test'
+   >>> p.scans.MF.data.name = 'MoonFlowerScan'
 
-We set the diffraction frame shape to a small value (128x128px) and 
-limit the number af diffraction patterns at 100. The 
+We set the diffraction frame shape to a small value (128x128px) and
+limit the number af diffraction patterns at 100. The
 :py:class:`~ptypy.core.data.MoonFlowerScan` instance will balance the
 diffraction patterns accordingly.
 
@@ -365,145 +371,7 @@ using all reconstruction engines in ``p.engines`` immediately upon construction.
 ::
 
    >>> from ptypy.core import Ptycho
-   >>> P = Ptycho(p, level=5)
-   Verbosity set to 3
-   Data type:               single
-   
-   ---- Ptycho init level 1 -------------------------------------------------------
-   Model: sharing probe between scans (one new probe every 1 scan)
-   Model: sharing probe between scans (one new probe every 1 scan)
-   
-   ---- Ptycho init level 2 -------------------------------------------------------
-   Prepared 92 positions
-   Processing new data.
-   ---- Enter PtyScan.initialixe() ------------------------------------------------
-                Common weight : True
-                       shape = (128, 128)
-   All experimental positions : True
-                       shape = (92, 2)
-   Scanning positions (92) are fewer than the desired number of scan points (100).
-   Resetting `num_frames` to lower value
-   ---- Leaving PtyScan.initialixe() ----------------------------------------------
-   ROI center is [ 64.  64.], automatic guess is [ 63.44565217  63.55434783].
-   Feeding data chunk
-   Importing data from MF as scan MF.
-   End of scan reached
-   End of scan reached
-   
-   --- Scan MF photon report ---
-   Total photons   : 3.66e+09 
-   Average photons : 3.98e+07
-   Maximum photons : 7.13e+07
-   -----------------------------
-   
-   ---- Creating PODS -------------------------------------------------------------
-   Found these probes : 
-   Found these objects: 
-   Process 0 created 92 new PODs, 1 new probes and 1 new objects.
-   
-   ---- Probe initialization ------------------------------------------------------
-   Initializing probe storage S00G00 using scan MF
-   Found no photon count for probe in parameters.
-   Using photon count 7.13e+07 from photon report
-   
-   ---- Object initialization -----------------------------------------------------
-   Initializing object storage S00G00 using scan MF
-   Simulation resource is object transmission
-   
-   ---- Creating exit waves -------------------------------------------------------
-   
-   Process #0 ---- Total Pods 92 (92 active) ----
-   --------------------------------------------------------------------------------
-   (C)ontnr : Memory : Shape            : Pixel size      : Dimensions      : Views
-   (S)torgs : (MB)   : (Pixel)          : (meters)        : (meters)        : act. 
-   --------------------------------------------------------------------------------
-   Cprobe   :    0.1 : complex64
-   S00G00   :    0.1 :        1*128*128 :   6.36*6.36e-08 :   8.14*8.14e-06 :    92
-   Cmask    :    1.5 :   bool
-   S0000    :    1.5 :       92*128*128 :   1.72*1.72e-04 :   2.20*2.20e-02 :    92
-   Cexit    :   12.1 : complex64
-   S0000G00 :   12.1 :       92*128*128 :   6.36*6.36e-08 :   8.14*8.14e-06 :    92
-   Cobj     :    1.3 : complex64
-   S00G00   :    1.3 :        1*394*408 :   6.36*6.36e-08 :   2.51*2.60e-05 :    92
-   Cdiff    :    6.0 : float32
-   S0000    :    6.0 :       92*128*128 :   1.72*1.72e-04 :   2.20*2.20e-02 :    92
-   
-   
-   
-   ---- Ptycho init level 3 -------------------------------------------------------
-   
-   ---- Ptycho init level 4 -------------------------------------------------------
-   
-   ==== Starting DM-algoritm. =====================================================
-   
-   Parameter set:
-   * id3V0S9PUCL0           : ptypy.utils.parameters.Param(16)
-     * clip_object          : None
-     * fourier_relax_factor : 0.05
-     * numiter_contiguous   : 5
-     * overlap_converge_... : 0.1
-     * probe_update_start   : 0
-     * probe_inertia        : 0.001
-     * name                 : DM
-     * subpix_start         : 0
-     * update_object_first  : True
-     * obj_smooth_std       : None
-     * alpha                : 1
-     * overlap_max_itera... : 10
-     * object_inertia       : 0.1
-     * numiter              : 40
-     * probe_support        : 0.8
-     * subpix               : linear
-   ================================================================================
-   ---------------------------------- Autosaving ----------------------------------
-   WARNING root - Save file exists but will be overwritten (force_overwrite is True)
-   Generating copies of probe, object and parameters and runtime
-   Saving to /tmp/ptypy/dumps/minimal/minimal_None_0000.ptyr
-   --------------------------------------------------------------------------------
-   Time spent in Fourier update: 1.14
-   Time spent in Overlap update: 0.35
-   Iteration #5 of DM :: Time 1.49
-   Errors :: Fourier 1.21e+03, Photons 1.84e+03, Exit 8.43e+02
-   Time spent in Fourier update: 1.17
-   Time spent in Overlap update: 0.21
-   Iteration #10 of DM :: Time 1.38
-   Errors :: Fourier 9.49e+02, Photons 8.09e+02, Exit 6.06e+02
-   Time spent in Fourier update: 1.16
-   Time spent in Overlap update: 0.21
-   Iteration #15 of DM :: Time 1.37
-   Errors :: Fourier 8.88e+02, Photons 5.32e+02, Exit 4.18e+02
-   Time spent in Fourier update: 1.15
-   Time spent in Overlap update: 0.22
-   Iteration #20 of DM :: Time 1.37
-   Errors :: Fourier 7.29e+02, Photons 2.91e+02, Exit 2.48e+02
-   ---------------------------------- Autosaving ----------------------------------
-   WARNING root - Save file exists but will be overwritten (force_overwrite is True)
-   Generating copies of probe, object and parameters and runtime
-   Saving to /tmp/ptypy/dumps/minimal/minimal_DM_0020.ptyr
-   --------------------------------------------------------------------------------
-   Time spent in Fourier update: 1.16
-   Time spent in Overlap update: 0.21
-   Iteration #25 of DM :: Time 1.37
-   Errors :: Fourier 5.26e+02, Photons 1.44e+02, Exit 1.23e+02
-   Time spent in Fourier update: 1.14
-   Time spent in Overlap update: 0.21
-   Iteration #30 of DM :: Time 1.35
-   Errors :: Fourier 3.84e+02, Photons 6.54e+01, Exit 5.93e+01
-   Time spent in Fourier update: 1.15
-   Time spent in Overlap update: 0.21
-   Iteration #35 of DM :: Time 1.35
-   Errors :: Fourier 2.69e+02, Photons 3.51e+01, Exit 3.05e+01
-   Time spent in Fourier update: 1.14
-   Time spent in Overlap update: 0.22
-   Iteration #40 of DM :: Time 1.36
-   Errors :: Fourier 1.61e+02, Photons 2.11e+01, Exit 1.53e+01
-   WARNING root - Save file exists but will be overwritten (force_overwrite is True)
-   Generating shallow copies of probe, object and parameters and runtime
-   Saving to /tmp/ptypy/recons/minimal/minimal_DM.ptyr
-   
 
-From the terminal log, we note that there was an autosave every 20
-iterations and the error reduced from iteration to iteration.
 
 .. _morescripts:
 
@@ -652,10 +520,9 @@ We encourage you to use the script ``[ptypy_root]/templates/minimal_prep_and_run
 and modify the *recipe* part of the data parameter branch.
 Observe what changes in the reconstruction when scan parameters change.
 
-.. literalinclude:: ../../templates_bkp/minimal_prep_and_run.py
+.. literalinclude:: ../../templates/minimal_prep_and_run.py
    :language: python
    :linenos:
-   :lines: 1-50
    :emphasize-lines: 31,33,35
    
 Creating a .ptyd data-file
@@ -668,10 +535,9 @@ forward to :ref:`ptypy_data` and take a look at |ptypy|'s data management.
 Check out the data parameter branch :py:data:`.scan.data` for detailed parameter
 descriptions.
 
-.. literalinclude:: ../../templates_bkp/make_sample_ptyd.py
+.. literalinclude:: ../../templates/make_sample_ptyd.py
    :language: python
    :linenos:
-   :lines: 1-50
    :emphasize-lines: 15-26
    
 Loading a data file to run a reconstruction
@@ -684,7 +550,6 @@ and alter the reconstruction parameters and algorithms to find out if you
 can make the recontruction converge. Check out the engine parameter
 branch :py:data:`.engine` for detailed parameter descriptions.
 
-.. literalinclude:: ../../templates_bkp/minimal_load_and_run.py
+.. literalinclude:: ../../templates/minimal_load_and_run.py
    :language: python
    :linenos:
-   :emphasize-lines: 25-56

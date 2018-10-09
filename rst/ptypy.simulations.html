@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>ptypy.simulations package &mdash; ptypy 0.2.0 documentation</title>
+    <title>ptypy.simulations package &mdash; ptypy 0.3.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/header.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.2.0',
+        VERSION:     '0.3.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
-    <link rel="top" title="ptypy 0.2.0 documentation" href="../content.html" />
+    <link rel="top" title="ptypy 0.3.0 documentation" href="../content.html" />
     <link rel="up" title="ptypy package" href="ptypy.html" />
     <link rel="next" title="ptypy.utils package" href="ptypy.utils.html" />
     <link rel="prev" title="ptypy.resources package" href="ptypy.resources.html" />
@@ -33,6 +33,9 @@
 
   </head>
   <body role="document">
+
+
+
 <div class="pageheader">
   <ul>
     <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
@@ -62,7 +65,7 @@
         <li class="right" >
           <a href="ptypy.resources.html" title="ptypy.resources package"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &raquo;</li> 
       </ul>
     </div>
@@ -86,6 +89,7 @@
 <li class="toctree-l3"><a class="reference internal" href="ptypy.resources.html">ptypy.resources package</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="">ptypy.simulations package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.utils.html">ptypy.utils package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.debug.html">ptypy.debug package</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="ptypy.html#module-ptypy">Module contents</a></li>
@@ -228,28 +232,20 @@ dark_curr : electrons per second per pixel on average</p>
 </div></blockquote>
 <dl class="class">
 <dt id="ptypy.simulations.simscan.SimScan">
-<em class="property">class </em><code class="descclassname">ptypy.simulations.simscan.</code><code class="descname">SimScan</code><span class="sig-paren">(</span><em>pars=None</em>, <em>scan_pars=None</em>, <em>recipe_pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.simscan.SimScan" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">ptypy.simulations.simscan.</code><code class="descname">SimScan</code><span class="sig-paren">(</span><em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.simscan.SimScan" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.data.PtyScan</span></code></a></p>
-<p>Simulates a ptychographic scan and acts as Virtual data source.
-The simulation is carried out in the following way.</p>
-<p>TO BE FILLED WITH CONTENT</p>
+<p>Simulates a ptychographic scan and acts as Virtual data source.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>pars</strong> (<a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; PtyScan parameters including a <em>recipe</em>. See <a class="reference internal" href="ptypy.core.html#ptypy.core.data.GENERIC" title="ptypy.core.data.GENERIC"><code class="xref any py py-data docutils literal"><span class="pre">data.GENERIC</span></code></a>.</li>
-<li><strong>scan_pars</strong> (<em>Param or dict</em>) &#8211; Parameters for a single scan. Use this especially to set
-positions, illumination and sample.</li>
-<li><strong>recipe_pars</strong> (<em>Param or dict</em>) &#8211; Equivalent alternative to <em>pars[&#8216;recipe&#8217;]</em>.</li>
-</ul>
-</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>pars</strong> (<a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; PtyScan parameters. See <a class="reference internal" href="parameters.html#scandata.SimScan" title="scandata.SimScan"><code class="xref py py-data docutils literal"><span class="pre">scandata.SimScan</span></code></a>.</td>
 </tr>
 </tbody>
 </table>
 <dl class="attribute">
-<dt id="ptypy.simulations.simscan.SimScan.RECIPE">
-<code class="descname">RECIPE</code><em class="property"> = Param({'pos_noise': 1e-10, 'plot': True, 'verbose_level': 1, 'psf': None, 'pos_drift': 0, 'frame_size': None, 'detector': 'PILATUS_300K', 'pos_scale': 0})</em><a class="headerlink" href="#ptypy.simulations.simscan.SimScan.RECIPE" title="Permalink to this definition">¶</a></dt>
+<dt id="ptypy.simulations.simscan.SimScan.DEFAULT">
+<code class="descname">DEFAULT</code><em class="property"> = Param({'auto_center': None, 'positions_theory': None, 'min_frames': 1, 'orientation': None, 'num_frames': None, 'energy': 7.2, 'sample': Param({'diversity': Param({'shift': None, 'noise': None, 'power': 0.1}), 'recon': Param({'rfile': '\\*.ptyr'}), 'process': Param({'density': 1, 'offset': (0, 0), 'zoom': None, 'thickness': 1e-06, 'ref_index': (0.5, 0.0), 'formula': None, 'smoothing': 2}), 'stxm': Param({'label': None}), 'model': None, 'fill': 1}), 'shape': 256, 'xy': Param({'count': None, 'jitter': None, 'spacing': 1.5e-06, 'steps': 10, 'extent': 1.5e-05, 'offset': 0.0, 'override': None, 'model': None}), 'illumination': Param({'diversity': Param({'shift': None, 'noise': (0.5, 1.0), 'power': 0.1}), 'recon': Param({'rfile': '\\*.ptyr', 'label': None}), 'photons': None, 'propagation': Param({'antialiasing': 1, 'focussed': None, 'parallel': None, 'spot_size': None}), 'aperture': Param({'rotate': 0.0, 'form': 'circ', 'central_stop': None, 'edge': 2.0, 'diffuser': None, 'offset': 0.0, 'size': None}), 'model': None}), 'chunk_format': '.chunk%02d', 'plot': True, 'rebin': None, 'experimentID': None, 'label': None, 'version': 0.1, 'detector': Param({}), 'save': None, 'pos_noise': 1e-10, 'verbose_level': 1, 'psf': None, 'psize': 0.000172, 'load_parallel': 'data', 'frame_size': None, 'pos_scale': 0.0, 'pos_drift': 0.0, 'center': 'fftshift', 'distance': 7.19, 'dfile': None, 'name': 'SimScan', 'propagation': 'farfield', 'add_poisson_noise': True})</em><a class="headerlink" href="#ptypy.simulations.simscan.SimScan.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -308,13 +304,13 @@ of the ptycho instance that is created by the Simulation</p>
         <li class="right" >
           <a href="ptypy.resources.html" title="ptypy.resources package"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.6.
     </div>
   </body>
 </html>

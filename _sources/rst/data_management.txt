@@ -42,9 +42,9 @@ prior to a successful image reconstruction.
 reconstruction software naturally **cannot** provide actual experimental 
 data. Nevertheless, the treatment of raw data is usually very similar for
 every experiment. Consequently, |ptypy| provides an abstract base class,
-called :any:`PtyScan`, which aims to help with steps (B) and (C). In order
+called :py:class:`PtyScan`, which aims to help with steps (B) and (C). In order
 to adapt |ptypy| for a specific experimental setup, we simply
-subclass :any:`PtyScan` and reimplement only that subset of its methods which are 
+subclass :py:class:`PtyScan` and reimplement only that subset of its methods which are 
 affected by the specifics of the experiemental setup
 (see :ref:`subclassptyscan`). 
 
@@ -53,7 +53,7 @@ affected by the specifics of the experiemental setup
 The PtyScan class
 =================
 
-:any:`PtyScan` is the abstract base class in |ptypy| that manages raw input
+:py:class:`PtyScan` is the abstract base class in |ptypy| that manages raw input
 data.
 
 A PtyScan instance is constructed from a set of generic parameters,
@@ -67,7 +67,7 @@ It provides the following features:
   process only loads the data it will later use in the reconstruction.
   Hence, the load on the network is not affected by the number of
   processes.
-  The parallel behavior of :any:`PtyScan`, is controlled by the parameter 
+  The parallel behavior of :py:class:`PtyScan`, is controlled by the parameter 
   :py:data:`.scan.data.load_parallel`. It uses the :py:class:`~ptypy.utils.parallel.LoadManager`
 
 **Preparation**
@@ -135,7 +135,7 @@ The PtyScan class of |ptypy| provides support for three use cases.
   
   In this use case, the researcher has integrated |ptypy| into the beamline 
   end-station or experimental setup
-  with the help of a custom subclass of :any:`PtyScan` that we call
+  with the help of a custom subclass of :py:class:`PtyScan` that we call
   ``UserScan``. This subclass has its own methods to extract many of the 
   of the generic parameters of :py:data:`.scan.data` and also defaults
   for specific custom parameters, for instance file paths or file name
@@ -149,7 +149,7 @@ The PtyScan class of |ptypy| provides support for three use cases.
      :figclass: highlights
      :name: case_integrated
 
-     Intergrated use case of :any:`PtyScan`.
+     Integrated use case of :py:class:`PtyScan`.
      
      A custom subclass ``UserScan``
      serves as a translator between |ptypy|'s generic parameters and 
@@ -189,11 +189,11 @@ The PtyScan class of |ptypy| provides support for three use cases.
      :figclass: highlights
      :name: case_prepared
      
-     Standard supported use case of :any:`PtyScan`.
+     Standard supported use case of :py:class:`PtyScan`.
      
      If a structure-compatible (see :ref:`ptyd_file`) ``*.hdf5``-file is 
      available, |ptypy| can be used without customizing a subclass of 
-     :any:`PtyScan`. It will use the shipped subclass :any:`PtydScan`
+     :py:class:`PtyScan`. It will use the shipped subclass :py:class:`PtydScan`
      to read in the (prepared) raw data. 
      
 **Preparation and reconstruction on-the-fly with data acquisition.**
@@ -218,7 +218,7 @@ The PtyScan class of |ptypy| provides support for three use cases.
      :figclass: highlights
      :name: case_flyscan
 
-     On-the-fly or demon-like use case of :any:`PtyScan`.
+     On-the-fly or demon-like use case of :py:class:`PtyScan`.
      
      A separate process prepares the data *chunks* and saves them 
      in separate files which are
@@ -299,7 +299,7 @@ are general (optional) parameters.
     expected in the dataset (see :py:data:`~.scan.data.num_frames`)
     It is important to set this parameter when the data acquisition is not
     finished but the reconstruction has already started. If the dataset
-    is complete, the loading class :any:`PtydScan` retrieves the 
+    is complete, the loading class :py:class:`PtydScan` retrieves the 
     total number of frames from the payload ``chunks/``
     
 The next set of optional parameters are
@@ -360,22 +360,19 @@ Tutorial : Subclassing PtyScan
    
      $ python [ptypy_root]/tutorial/subclassptyscan.py
 
-In this tutorial, we learn how to subclass :any:`PtyScan` to make 
+In this tutorial, we learn how to subclass :py:class:`PtyScan` to make
 ptypy work with any experimental setup.
 
-This tutorial can be used as a direct follow-up to :ref:`simupod` 
+This tutorial can be used as a direct follow-up to :ref:`simupod`
 if section :ref:`store` was completed
 
 Again, the imports first.
 
 ::
 
-   >>> import matplotlib as mpl
    >>> import numpy as np
-   >>> import ptypy
+   >>> from ptypy.core.data import PtyScan
    >>> from ptypy import utils as u
-   >>> plt = mpl.pyplot
-   >>> import sys
 
 For this tutorial we assume that the data and meta information is
 in this path:
@@ -385,137 +382,302 @@ in this path:
    >>> save_path = '/tmp/ptypy/sim/'
 
 Furthermore, we assume that a file about the experimental geometry is
-located at 
+located at
 
 ::
 
    >>> geofilepath = save_path + 'geometry.txt'
-   >>> print geofilepath
+   >>> print(geofilepath)
    /tmp/ptypy/sim/geometry.txt
    
 and has contents of the following form
 
 ::
 
-   >>> print ''.join([line for line in open(geofilepath, 'r')])
+   >>> print(''.join([line for line in open(geofilepath, 'r')]))
    distance 1.5000e-01
-   energy 2.3319e-03
+   energy 2.3305e-03
    psize 2.4000e-05
    shape 256
    
    
 
-The scanning positions are in 
+The scanning positions are in
 
 ::
 
    >>> positionpath = save_path + 'positions.txt'
-   >>> print positionpath
+   >>> print(positionpath)
    /tmp/ptypy/sim/positions.txt
    
 
 with a list of positions for vertical and horizontanl movement and the
-image frame from the "camera" 
+image frame from the "camera"
 
 ::
 
-   >>> print ''.join([line for line in open(positionpath, 'r')][:6])+'....'
-   ccd/diffraction_0000.npy 1.4658e-03 2.0175e-03
-   ccd/diffraction_0001.npy 1.8532e-03 1.6686e-03
-   ccd/diffraction_0002.npy -1.7546e-03 1.1135e-03
-   ccd/diffraction_0003.npy -1.4226e-03 1.5149e-03
-   ccd/diffraction_0004.npy -2.0740e-03 1.3049e-04
-   ccd/diffraction_0005.npy -1.9764e-03 6.4218e-04
+   >>> print(''.join([line for line in open(positionpath, 'r')][:6])+'....')
+   ccd/diffraction_0000.npy 0.0000e+00 0.0000e+00
+   ccd/diffraction_0001.npy 0.0000e+00 4.1562e-04
+   ccd/diffraction_0002.npy 3.9528e-04 1.2844e-04
+   ccd/diffraction_0003.npy 2.4430e-04 -3.3625e-04
+   ccd/diffraction_0004.npy -2.4430e-04 -3.3625e-04
+   ccd/diffraction_0005.npy -3.9528e-04 1.2844e-04
    ....
    
 
 Writing a subclass
 ------------------
 
-A subclass of :any:`PtyScan` takes the same input parameter 
-tree as PtyScan itself, i.e :py:data:`.scan.data`. As the subclass
-will most certainly require additional parameters, there has to be 
-a flexible additional container. For PtyScan, that is the 
-:py:data:`.scan.data.recipe` parameter. A subclass must extract all 
-additional parameters from this source and, in script, you fill
-the recipe with the appropriate items.
-
-In this case we can assume that the only parameter of the recipe
-is the base path ``/tmp/ptypy/sim/``\ . Hence we write
-
-::
-
-   >>> RECIPE = u.Param()
-   >>> RECIPE.base_path = '/tmp/ptypy/sim/'
-
-Now we import the default generic parameter set from
-
-::
-
-   >>> from ptypy.core.data import PtyScan
-   >>> DEFAULT = PtyScan.DEFAULT.copy()
-
-This would be the perfect point to change any default value.
-For sure we need to set the recipe parameter
-
-::
-
-   >>> DEFAULT.recipe = RECIPE
-
-A default data file location may be handy too and we allow saving of
-data in a single file. And since we know it is simulated data we do not
-have to find the optical axes in the diffraction pattern with
-the help of auto_center
-
-::
-
-   >>> DEFAULT.dfile = '/tmp/ptypy/sim/npy.ptyd'
-   >>> DEFAULT.auto_center = False
-
-Our defaults are now
-
-::
-
-   >>> print u.verbose.report(DEFAULT, noheader=True)
-   * id3VSFF3C638           : ptypy.utils.parameters.Param(19)
-     * positions_theory     : None
-     * auto_center          : False
-     * chunk_format         : .chunk%02d
-     * min_frames           : 1
-     * orientation          : None
-     * num_frames           : None
-     * energy               : None
-     * center               : None
-     * recipe               : ptypy.utils.parameters.Param(1)
-       * base_path          : /tmp/ptypy/sim/
-     * psize                : None
-     * label                : None
-     * load_parallel        : data
-     * shape                : None
-     * rebin                : None
-     * experimentID         : None
-     * version              : 0.1
-     * save                 : None
-     * dfile                : /tmp/ptypy/sim/npy.ptyd
-     * distance             : None
-   
-   
-
 The simplest subclass of PtyScan would look like this
 
 ::
 
    >>> class NumpyScan(PtyScan):
-   >>>     # We overwrite the DEFAULT with the new DEFAULT.
-   >>>     DEFAULT = DEFAULT
-   >>>     
+   >>>     """
+   >>>     A PtyScan subclass to extract data from a numpy array.
+   >>>     """
+   >>> 
    >>>     def __init__(self, pars=None, **kwargs):
    >>>         # In init we need to call the parent.
    >>>         super(NumpyScan, self).__init__(pars, **kwargs)
+   >>> 
 
 Of course this class does nothing special beyond PtyScan.
+As it is, the class also cannot be used as a real PtyScan instance
+because its defaults are not properly managed. For this, Ptypy provides a
+powerful self-documenting tool call a "descriptor" which can be applied
+to any new class using a decorator. The tree of all valid ptypy parameters
+is located at :ref:`here <parameters>`. To manage the default
+parameters of our subclass and document its existence, we would need to write
 
-An additional step of initialisation would be to retrieve 
+::
+
+   >>> from ptypy import defaults_tree
+
+
+::
+
+   >>> @defaults_tree.parse_doc('scandata.numpyscan')
+   >>> class NumpyScan(PtyScan):
+   >>>     """
+   >>>     A PtyScan subclass to extract data from a numpy array.
+   >>>     """
+   >>> 
+   >>>     def __init__(self, pars=None, **kwargs):
+   >>>         # In init we need to call the parent.
+   >>>         super(NumpyScan, self).__init__(pars, **kwargs)
+   >>> 
+
+The decorator extracts information from the docstring of the subclass and
+parent classes about the expected input parameters. Currently the docstring
+of `NumpyScan` does not contain anything special, thus the only parameters
+registered are those of the parent class, `PtyScan`:
+
+::
+
+   >>> print(defaults_tree['scandata.numpyscan'].to_string())
+   [name]
+   help = 
+   default = PtyScan
+   type = str
+   
+   [dfile]
+   help = Prepared data file path
+   default = None
+   doc = If source was ``None`` or ``'file'``, data will be loaded from this file and processing as
+   	well as saving is deactivated. If source is the name of an experiment recipe or path to a
+   	file, data will be saved to this file
+   userlevel = 0
+   type = file
+   
+   [chunk_format]
+   help = Appendix to saved files if save == 'link'
+   default = .chunk%02d
+   doc = 
+   userlevel = 2
+   type = str
+   
+   [save]
+   help = Saving mode
+   default = None
+   doc = Mode to use to save data to file.
+   	<newline>
+   	- ``None``: No saving
+   	- ``'merge'``: attemts to merge data in single chunk **[not implemented]**
+   	- ``'append'``: appends each chunk in master \*.ptyd file
+   	- ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
+   	<newline>
+   	in the path given by the link. Links file paths are relative to master file.
+   userlevel = 1
+   type = str
+   
+   [auto_center]
+   help = Determine if center in data is calculated automatically
+   default = None
+   doc = 
+   	- ``False``, no automatic centering
+   	- ``None``, only if :py:data:`center` is ``None``
+   	- ``True``, it will be enforced
+   userlevel = 0
+   type = bool
+   
+   [load_parallel]
+   help = Determines what will be loaded in parallel
+   default = data
+   doc = Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
+   type = str
+   
+   [rebin]
+   lowlim = 1
+   help = Rebinning factor
+   default = None
+   doc = Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
+   uplim = 8
+   userlevel = 1
+   type = int
+   
+   [orientation]
+   help = Data frame orientation
+   default = None
+   doc = Choose
+   	<newline>
+   	- ``None`` or ``0``: correct orientation
+   	- ``1``: invert columns (numpy.flip_lr)
+   	- ``2``: invert rows  (numpy.flip_ud)
+   	- ``3``: invert columns, invert rows
+   	- ``4``: transpose (numpy.transpose)
+   	- ``4+i``: tranpose + other operations from above
+   	<newline>
+   	Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
+   	do_flipud, do_fliplr)``
+   userlevel = 1
+   type = int, tuple, list
+   
+   [min_frames]
+   help = Minimum number of frames loaded by each node
+   default = 1
+   doc = 
+   userlevel = 2
+   type = int
+   
+   [positions_theory]
+   help = Theoretical positions for this scan
+   default = None
+   doc = If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
+   	preparation is called from Ptycho instance, the calculated positions from the
+   	:py:func:`ptypy.core.xy.from_pars` dict will be inserted here
+   userlevel = 2
+   type = ndarray
+   
+   [num_frames]
+   help = Maximum number of frames to be prepared
+   default = None
+   doc = If `positions_theory` are provided, num_frames will be ovverriden with the number of
+   	positions available
+   userlevel = 1
+   type = int
+   
+   [label]
+   help = The scan label
+   default = None
+   doc = Unique string identifying the scan
+   userlevel = 1
+   type = str
+   
+   [experimentID]
+   help = Name of the experiment
+   default = None
+   doc = If None, a default value will be provided by the recipe. **unused**
+   userlevel = 2
+   type = str
+   
+   [version]
+   help = TODO: Explain this and decide if it is a user parameter.
+   default = 0.1
+   doc = 
+   userlevel = 2
+   type = float
+   
+   [shape]
+   help = Shape of the region of interest cropped from the raw data.
+   default = 256
+   doc = Cropping dimension of the diffraction frame
+   	Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
+   userlevel = 1
+   type = int, tuple
+   
+   [center]
+   help = Center (pixel) of the optical axes in raw data
+   default = 'fftshift'
+   doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
+   userlevel = 1
+   type = tuple, str
+   
+   [psize]
+   lowlim = 0
+   help = Detector pixel size
+   default = 0.000172
+   doc = Dimensions of the detector pixels (in meters)
+   userlevel = 0
+   type = float, tuple
+   
+   [distance]
+   lowlim = 0
+   help = Sample to detector distance
+   default = 7.19
+   doc = In meters.
+   userlevel = 0
+   type = float
+   
+   [energy]
+   lowlim = 0
+   help = Photon energy of the incident radiation in keV
+   default = 7.2
+   doc = 
+   userlevel = 0
+   type = float
+   
+   [add_poisson_noise]
+   help = Decides whether the scan should have poisson noise or not
+   default = True
+   type = bool
+   
+
+As you can see, there are already many parameters documented in `PtyScan`'s
+class. For each parameter, most important are the *type*, *default* value and
+*help* string. The decorator does more than collect this information: it also
+generates from it a class variable called `DEFAULT`, which stores all defaults:
+
+::
+
+   >>> print(u.verbose.report(NumpyScan.DEFAULT, noheader=True))
+   * id3VRD9IGECG           : ptypy.utils.parameters.Param(20)
+     * auto_center          : None
+     * positions_theory     : None
+     * dfile                : None
+     * name                 : PtyScan
+     * num_frames           : None
+     * min_frames           : 1
+     * center               : fftshift
+     * chunk_format         : .chunk%02d
+     * label                : None
+     * experimentID         : None
+     * load_parallel        : data
+     * shape                : 256
+     * rebin                : None
+     * psize                : 0.000172
+     * version              : 0.1
+     * add_poisson_noise    : True
+     * save                 : None
+     * distance             : 7.19
+     * energy               : 7.2
+     * orientation          : None
+   
+   
+
+Now we are ready to add functionality to our subclass.
+A first step of initialisation would be to retrieve
 the geometric information that we stored in ``geofilepath`` and update
 the input parameters with it.
 
@@ -530,88 +692,121 @@ We write a tiny file parser.
    >>>             key, value = line.strip().split()
    >>>             out[key] = eval(value)
    >>>     return out
+   >>> 
 
 We test it.
 
 ::
 
-   >>> print extract_geo(save_path)
-   {'distance': 0.15, 'energy': 0.0023319, 'shape': 256, 'psize': 2.4e-05}
+   >>> print(extract_geo(save_path))
+   {'distance': 0.15, 'energy': 0.0023305, 'shape': 256, 'psize': 2.4e-05}
    
 
-That seems to work. We can integrate this parser into 
-the initialisation as we assume that this small access can be 
+That seems to work. We can integrate this parser into
+the initialisation as we assume that this small access can be
 done by all MPI nodes without data access problems. Hence,
 our subclass becomes
 
 ::
 
+   >>> @defaults_tree.parse_doc('scandata.numpyscan')
    >>> class NumpyScan(PtyScan):
-   >>>     # We overwrite the DEFAULT with the new DEFAULT.
-   >>>     DEFAULT = DEFAULT
-   >>>     
+   >>>     """
+   >>>     A PtyScan subclass to extract data from a numpy array.
+   >>> 
+   >>>     Defaults:
+   >>> 
+   >>>     [name]
+   >>>     type = str
+   >>>     default = numpyscan
+   >>>     help =
+   >>> 
+   >>>     [base_path]
+   >>>     type = str
+   >>>     default = './'
+   >>>     help = Base path to extract data files from.
+   >>>     """
+   >>> 
    >>>     def __init__(self, pars=None, **kwargs):
-   >>>         p = DEFAULT.copy(depth=2)
-   >>>         p.update(pars) 
-   >>>         
-   >>>         with open(p.recipe.base_path+'geometry.txt') as f:
+   >>>         p = self.DEFAULT.copy(depth=2)
+   >>>         p.update(pars)
+   >>> 
+   >>>         with open(p.base_path+'geometry.txt') as f:
    >>>             for line in f:
    >>>                 key, value = line.strip().split()
    >>>                 # we only replace Nones or missing keys
    >>>                 if p.get(key) is None:
    >>>                     p[key] = eval(value)
-   >>>         
+   >>> 
    >>>         super(NumpyScan, self).__init__(p, **kwargs)
+   >>> 
+
+We now need a new input parameter called `base_path`, so we documented it
+in the docstring after the section header "Defaults:".
+
+::
+
+   >>> print(defaults_tree['scandata.numpyscan.base_path'])
+   [base_path]
+   help = Base path to extract data files from.
+   default = './'
+   type = str
+   
+
+As you can see, the first step in `__init__` is to build a default
+parameter structure to ensure that all input parameters are available.
+The next line updates this structure to overwrite the entries specified by
+the user.
 
 Good! Next, we need to implement how the class finds out about
-the positions in the scan. The method 
+the positions in the scan. The method
 :py:meth:`~ptypy.core.data.PtyScan.load_positions` can be used
 for this purpose.
 
 ::
 
-   >>> print PtyScan.load_positions.__doc__
+   >>> print(PtyScan.load_positions.__doc__)
    
            **Override in subclass for custom implementation**
-           
+   
            *Called in* :py:meth:`initialize`
-           
-           Loads all positions for all diffraction patterns in this scan. 
-           The positions loaded here will be available by all processes 
+   
+           Loads all positions for all diffraction patterns in this scan.
+           The positions loaded here will be available by all processes
            through the attribute ``self.positions``. If you specify position
-           on a per frame basis in :py:meth:`load` , this function has no 
+           on a per frame basis in :py:meth:`load` , this function has no
            effect.
-           
-           If theoretical positions :py:data:`positions_theory` are 
-           provided in the initial parameter set :py:data:`DEFAULT`, 
-           specifyiing positions here has NO effect and will be ignored.
-           
+   
+           If theoretical positions :py:data:`positions_theory` are
+           provided in the initial parameter set :py:data:`DEFAULT`,
+           specifying positions here has NO effect and will be ignored.
+   
            The purpose of this function is to avoid reloading and parallel
            reads on files that may require intense parsing to retrieve the
-           information, e.g. long SPEC log files. If parallel reads or 
+           information, e.g. long SPEC log files. If parallel reads or
            log file parsing for each set of frames is not a time critical
            issue of the subclass, reimplementing this function can be ignored
-           and it is recommended to only reimplement the :py:meth:`load` 
+           and it is recommended to only reimplement the :py:meth:`load`
            method.
-           
-           If `load_parallel` is set to `all` or common`, this function is 
+   
+           If `load_parallel` is set to `all` or common`, this function is
            executed by all nodes, otherwise the master node executes this
-           function and braodcasts the results to other nodes. 
-           
+           function and broadcasts the results to other nodes.
+   
            Returns
            -------
            positions : ndarray
                A (N,2)-array where *N* is the number of positions.
-               
+   
            Note
            ----
            Be aware that this method sets attribute :py:attr:`num_frames`
            in the following manner.
-           
+   
            * If ``num_frames == None`` : ``num_frames = N``.
            * If ``num_frames < N`` , no effect.
            * If ``num_frames > N`` : ``num_frames = N``.
-            
+   
            
    
 
@@ -628,56 +823,72 @@ The parser for the positions file would look like this.
    >>>             pos.append((eval(y), eval(x)))
    >>>             files.append(fname)
    >>>     return files, pos
+   >>> 
 
 And the test:
 
 ::
 
    >>> files, pos = extract_pos(save_path)
-   >>> print files[:2]
+   >>> print(files[:2])
    ['ccd/diffraction_0000.npy', 'ccd/diffraction_0001.npy']
    
-   >>> print pos[:2]
-   [(0.0014658, 0.0020175), (0.0018532, 0.0016686)]
+   >>> print(pos[:2])
+   [(0.0, 0.0), (0.0, 0.00041562)]
    
 
 
 ::
 
+   >>> @defaults_tree.parse_doc('scandata.numpyscan')
    >>> class NumpyScan(PtyScan):
-   >>>     # We overwrite the DEFAULT with the new DEFAULT.
-   >>>     DEFAULT = DEFAULT
-   >>>     
-   >>>     def __init__(self,pars=None, **kwargs):
-   >>>         p = DEFAULT.copy(depth=2)
-   >>>         p.update(pars) 
-   >>>         
-   >>>         with open(p.recipe.base_path+'geometry.txt') as f:
+   >>>     """
+   >>>     A PtyScan subclass to extract data from a numpy array.
+   >>> 
+   >>>     Defaults:
+   >>> 
+   >>>     [name]
+   >>>     type = str
+   >>>     default = numpyscan
+   >>>     help =
+   >>> 
+   >>>     [base_path]
+   >>>     type = str
+   >>>     default = /tmp/ptypy/sim/
+   >>>     help = Base path to extract data files from.
+   >>>     """
+   >>> 
+   >>>     def __init__(self, pars=None, **kwargs):
+   >>>         p = self.DEFAULT.copy(depth=2)
+   >>>         p.update(pars)
+   >>> 
+   >>>         with open(p.base_path+'geometry.txt') as f:
    >>>             for line in f:
    >>>                 key, value = line.strip().split()
    >>>                 # we only replace Nones or missing keys
    >>>                 if p.get(key) is None:
-   >>>                     p[key]=eval(value)
-   >>>         
+   >>>                     p[key] = eval(value)
+   >>> 
    >>>         super(NumpyScan, self).__init__(p, **kwargs)
-   >>>         # all input data is now in self.info
-   >>>         
+   >>> 
    >>>     def load_positions(self):
-   >>>         # the base path is now stored in 
-   >>>         base_path = self.info.recipe.base_path
+   >>>         # the base path is now stored in
+   >>>         base_path = self.info.base_path
+   >>>         pos = []
    >>>         with open(base_path+'positions.txt') as f:
    >>>             for line in f:
    >>>                 fname, y, x = line.strip().split()
-   >>>                 pos.append((eval(y),eval(x)))
+   >>>                 pos.append((eval(y), eval(x)))
    >>>                 files.append(fname)
    >>>         return np.asarray(pos)
+   >>> 
 
 One nice thing about rewriting ``self.load_positions`` is that
 the maximum number of frames will be set and we do not need to
 manually adapt :py:meth:`~ptypy.core.data.PtyScan.check`
 
 The last step is to overwrite the actual loading of data.
-Loading happens (MPI-compatible) in 
+Loading happens (MPI-compatible) in
 :py:meth:`~ptypy.core.data.PtyScan.load`
 
 ::
@@ -685,70 +896,91 @@ Loading happens (MPI-compatible) in
    >>> print PtyScan.load.__doc__
    
            **Override in subclass for custom implementation**
-           
-           Loads data according to node specific scanpoint indeces that have 
-           been determined by :py:class:`LoadManager` or otherwise
-           
+   
+           Loads data according to node specific scanpoint indices that have
+           been determined by :py:class:`LoadManager` or otherwise.
+   
            Returns
            -------
            raw, positions, weight : dict
-               Dictionaries whose keys are the given scan point `indices` 
-               and whose values are the respective frame / position according 
+               Dictionaries whose keys are the given scan point `indices`
+               and whose values are the respective frame / position according
                to the scan point index. `weight` and `positions` may be empty
-               
+   
            Note
            ----
            This is the *most* important method to change when subclassing
-           :any:`PtyScan`. Most often it suffices to override the constructor
-           and this method to createa subclass of suited for a specific 
+           :py:class:`PtyScan`. Most often it suffices to override the constructor
+           and this method to create a subclass suited for a specific
            experiment.
            
    
 
-Load seems a bit more complex than ``self.load_positions`` for its 
+Load seems a bit more complex than ``self.load_positions`` for its
 return values. However, we can opt-out of providing weights (masks)
 and positions, as we have already adapted ``self.load_positions``
 and there were no bad pixels in the (linear) detector
 
-The final subclass looks like this.
+The final subclass looks like this. We overwrite two defaults from
+`PtyScan`:
 
 ::
 
+   >>> @defaults_tree.parse_doc('scandata.numpyscan')
    >>> class NumpyScan(PtyScan):
-   >>>     # We overwrite the DEFAULT with the new DEFAULT.
-   >>>     DEFAULT = DEFAULT
-   >>>     
-   >>>     def __init__(self,pars=None, **kwargs):
-   >>>         p = DEFAULT.copy(depth=2)
-   >>>         p.update(pars) 
-   >>>         
-   >>>         with open(p.recipe.base_path+'geometry.txt') as f:
+   >>>     """
+   >>>     A PtyScan subclass to extract data from a numpy array.
+   >>> 
+   >>>     Defaults:
+   >>> 
+   >>>     [name]
+   >>>     type = str
+   >>>     default = numpyscan
+   >>>     help =
+   >>> 
+   >>>     [base_path]
+   >>>     type = str
+   >>>     default = /tmp/ptypy/sim/
+   >>>     help = Base path to extract data files from.
+   >>> 
+   >>>     [auto_center]
+   >>>     default = False
+   >>> 
+   >>>     [dfile]
+   >>>     default = /tmp/ptypy/sim/npy.ptyd
+   >>>     """
+   >>> 
+   >>>     def __init__(self, pars=None, **kwargs):
+   >>>         p = self.DEFAULT.copy(depth=2)
+   >>>         p.update(pars)
+   >>> 
+   >>>         with open(p.base_path+'geometry.txt') as f:
    >>>             for line in f:
    >>>                 key, value = line.strip().split()
    >>>                 # we only replace Nones or missing keys
    >>>                 if p.get(key) is None:
-   >>>                     p[key]=eval(value)
-   >>>         
+   >>>                     p[key] = eval(value)
+   >>> 
    >>>         super(NumpyScan, self).__init__(p, **kwargs)
-   >>>         # all input data is now in self.info
-   >>>         
+   >>> 
    >>>     def load_positions(self):
    >>>         # the base path is now stored in
-   >>>         pos=[] 
-   >>>         base_path = self.info.recipe.base_path
+   >>>         base_path = self.info.base_path
+   >>>         pos = []
    >>>         with open(base_path+'positions.txt') as f:
    >>>             for line in f:
    >>>                 fname, y, x = line.strip().split()
-   >>>                 pos.append((eval(y),eval(x)))
+   >>>                 pos.append((eval(y), eval(x)))
    >>>                 files.append(fname)
    >>>         return np.asarray(pos)
-   >>>     
+   >>> 
    >>>     def load(self, indices):
    >>>         raw = {}
-   >>>         bp = self.info.recipe.base_path
+   >>>         bp = self.info.base_path
    >>>         for ii in indices:
    >>>             raw[ii] = np.load(bp+'ccd/diffraction_%04d.npy' % ii)
    >>>         return raw, {}, {}
+   >>> 
 
 Loading the data
 ----------------
@@ -760,94 +992,92 @@ With the subclass we create a scan only using defaults
    >>> NPS = NumpyScan()
    >>> NPS.initialize()
 
-In order to process the data. We need to call 
+In order to process the data. We need to call
 :py:meth:`~ptypy.core.data.PtyScan.auto` with the chunk size
 as arguments. It returns a data chunk that we can inspect
-with :py:func:`ptypy.utils.verbose.report`. The information is 
+with :py:func:`ptypy.utils.verbose.report`. The information is
 concatenated, but the length of iterables or dicts is always indicated
 in parantheses.
 
 ::
 
    >>> print u.verbose.report(NPS.auto(80), noheader=True)
-   * id3VSFF2N0SO           : dict(2)
-     * common               : ptypy.utils.parameters.Param(9)
-       * distance           : 0.15
+   * id3VRD9IG7K8           : dict(2)
+     * common               : ptypy.utils.parameters.Param(8)
+       * distance           : 7.19
        * center             : [array = [ 128.  128.]]
-       * energy             : 0.0023319
-       * psize              : [array = [  2.40000000e-05   2.40000000e-05]]
+       * num_frames         : 116
+       * energy             : 7.2
+       * psize              : [array = [ 0.000172  0.000172]]
        * label              : None
        * shape              : [array = [256 256]]
        * version            : 0.1
-       * experimentID       : None
-       * weight2d           : [256x256 bool array]
      * iterable             : list(80)
-       * id3VSFF2OGSO       : dict(4)
+       * id3VRD9I5KB8       : dict(4)
          * index            : 0
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
-         * position         : [array = [ 0.0014658  0.0020175]]
-       * id3VSFF2N15G       : dict(4)
+         * position         : [array = [ 0.  0.]]
+       * id3VRD9JL4K0       : dict(4)
          * index            : 1
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
-         * position         : [array = [ 0.0018532  0.0016686]]
-       * id3VSFF2NEH8       : dict(4)
+         * position         : [array = [ 0.          0.00041562]]
+       * id3VRD9IIK2G       : dict(4)
          * index            : 2
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
-         * position         : [array = [-0.0017546  0.0011135]]
-       * id3VSFF2NCK0       : dict(4)
+         * position         : [array = [ 0.00039528  0.00012844]]
+       * id3VRD9K83BG       : dict(4)
          * index            : 3
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
-         * position         : [array = [-0.0014226  0.0015149]]
-       * id3VSFF2LFK8       : dict(4)
+         * position         : [array = [ 0.0002443  -0.00033625]]
+       * id3VRD9IJ82G       : dict(4)
          * index            : 4
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
-         * position         : [array = [-0.002074    0.00013049]]
+         * position         : [array = [-0.0002443  -0.00033625]]
        * ...                : ....
    
    
    >>> print u.verbose.report(NPS.auto(80), noheader=True)
-   * id3VSFF2O1VO           : dict(2)
-     * common               : ptypy.utils.parameters.Param(9)
-       * distance           : 0.15
+   * id3VRD9I568G           : dict(2)
+     * common               : ptypy.utils.parameters.Param(8)
+       * distance           : 7.19
        * center             : [array = [ 128.  128.]]
-       * energy             : 0.0023319
-       * psize              : [array = [  2.40000000e-05   2.40000000e-05]]
+       * num_frames         : 116
+       * energy             : 7.2
+       * psize              : [array = [ 0.000172  0.000172]]
        * label              : None
        * shape              : [array = [256 256]]
        * version            : 0.1
-       * experimentID       : None
-       * weight2d           : [256x256 bool array]
-     * iterable             : list(34)
-       * id3VSFF2OH5G       : dict(4)
+     * iterable             : list(36)
+       * id3VRD9IJ9VO       : dict(4)
          * index            : 80
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
-         * position         : [array = [-0.0021597 -0.0012469]]
-       * id3VSFF2ND5G       : dict(4)
+         * position         : [array = [ 0.0018532  0.0016686]]
+       * id3VRD9IJ9N0       : dict(4)
          * index            : 81
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
-         * position         : [array = [-0.0023717  -0.00077061]]
-       * id3VSFF2LCB8       : dict(4)
+         * position         : [array = [ 0.0021597  0.0012469]]
+       * id3VRD9KIEH8       : dict(4)
          * index            : 82
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
-         * position         : [array = [-0.0024801  -0.00026067]]
-       * id3VSFF2OGK0       : dict(4)
+         * position         : [array = [ 0.0023717   0.00077061]]
+       * id3VRD9IG5VO       : dict(4)
          * index            : 83
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
-         * position         : [array = [-0.0024801   0.00026067]]
-       * id3VSFF2O1N0       : dict(4)
+         * position         : [array = [ 0.0024801   0.00026067]]
+       * id3VRD9IIFBG       : dict(4)
          * index            : 84
          * data             : [256x256 int32 array]
          * mask             : [256x256 bool array]
-         * position         : [array = [-0.00051848 -0.0024393 ]]
+         * position         : [array = [ 0.0024801  -0.00026067]]
        * ...                : ....
    
    
@@ -856,7 +1086,7 @@ We observe the second chunk was not 80 frames deep but 34
 as we only had 114 frames of data.
 
 So where is the *.ptyd* data-file? As default, PtyScan does not
-actually save data. We have to manually activate it in in the 
+actually save data. We have to manually activate it in in the
 input paramaters.
 
 ::
@@ -865,7 +1095,7 @@ input paramaters.
    >>> data.save = 'append'
    >>> NPS = NumpyScan(pars=data)
    >>> NPS.initialize()
-   WARNING root - File /tmp/ptypy/sim/npy.ptyd already exist. Renamed to /tmp/ptypy/sim/npy.ptyd.old
+   WARNING root - File /tmp/ptypy/sim/npy.ptyd already exist. Renamed to /tmp/ptypy/sim/npy.ptyd.old.
    
 
 ::
@@ -874,15 +1104,16 @@ input paramaters.
    >>>     msg = NPS.auto(20)
    >>>     if msg == NPS.EOS:
    >>>         break
+   >>> 
 
-We can analyse the saved ``npy.ptyd`` with 
+We can analyse the saved ``npy.ptyd`` with
 :py:func:`~ptypy.io.h5IO.h5info`
 
 ::
 
    >>> from ptypy.io import h5info
    >>> print h5info(NPS.info.dfile)
-   File created : Mon Jun 22 11:27:49 2015
+   File created : Mon Oct  8 18:48:37 2018
     * chunks [dict 6]:
         * 0 [dict 4]:
             * data [20x256x256 int32 array]
@@ -910,42 +1141,43 @@ We can analyse the saved ``npy.ptyd`` with
             * positions [20x2 float64 array]
             * weights [array = []]
         * 5 [dict 4]:
-            * data [14x256x256 int32 array]
+            * data [16x256x256 int32 array]
             * indices [list = [100.000000, 101.000000, 102.000000, 103.000000,  ...]]
-            * positions [14x2 float64 array]
+            * positions [16x2 float64 array]
             * weights [array = []]
-    * info [dict 20]:
+    * info [dict 23]:
+        * add_poisson_noise [scalar = True]
         * auto_center [scalar = False]
-        * center [array = [128 128]]
+        * base_path [string = "/tmp/ptypy/sim/"]
+        * center [array = [ 128.  128.]]
         * chunk_format [string = ".chunk%02d"]
         * dfile [string = "/tmp/ptypy/sim/npy.ptyd"]
-        * distance [scalar = 0.15]
-        * energy [scalar = 0.0023319]
+        * distance [scalar = 7.19]
+        * energy [scalar = 7.2]
         * experimentID [None]
         * label [None]
         * load_parallel [string = "data"]
         * min_frames [scalar = 1]
+        * name [string = "numpyscan"]
         * num_frames [None]
         * orientation [None]
-        * positions_scan [114x2 float64 array]
+        * positions_scan [116x2 float64 array]
         * positions_theory [None]
-        * psize [scalar = 2.4e-05]
+        * psize [scalar = 0.000172]
         * rebin [scalar = 1]
-        * recipe [Param 1]:
-            * base_path [string = "/tmp/ptypy/sim/"]
         * save [string = "append"]
         * shape [array = [256 256]]
-        * version [string = "0.1"]
-    * meta [dict 9]:
+        * version [scalar = 0.1]
+        * weight2d [scalar = True]
+    * meta [dict 8]:
         * center [array = [ 128.  128.]]
-        * distance [scalar = 0.15]
-        * energy [scalar = 0.0023319]
-        * experimentID [None]
+        * distance [scalar = 7.19]
+        * energy [scalar = 7.2]
         * label [None]
-        * psize [array = [  2.40000000e-05   2.40000000e-05]]
+        * num_frames [scalar = 116]
+        * psize [array = [ 0.000172  0.000172]]
         * shape [array = [256 256]]
-        * version [string = "0.1"]
-        * weight2d [256x256 bool array]
+        * version [scalar = 0.1]
    
    None
    

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Concepts and Classes &mdash; ptypy 0.2.0 documentation</title>
+    <title>Concepts and Classes &mdash; ptypy 0.3.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/header.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.2.0',
+        VERSION:     '0.3.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,13 +25,16 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
-    <link rel="top" title="ptypy 0.2.0 documentation" href="../content.html" />
+    <link rel="top" title="ptypy 0.3.0 documentation" href="../content.html" />
     <link rel="next" title="Data management" href="data_management.html" />
     <link rel="prev" title="Getting started with Ptypy" href="getting_started.html" />
 <link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
 
   </head>
   <body role="document">
+
+
+
 <div class="pageheader">
   <ul>
     <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
@@ -61,7 +64,7 @@
         <li class="right" >
           <a href="getting_started.html" title="Getting started with Ptypy"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -189,7 +192,8 @@ about the classes this tutorial covers.</p>
 <p>The governing object is a <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><code class="xref any py py-class docutils literal"><span class="pre">Container</span></code></a> instance, which we need
 to construct as first object. It does not need much for an input but
 the data type.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">C1</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">data_type</span><span class="o">=</span><span class="s">&#39;real&#39;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">C1</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;real&#39;</span><span class="p">)</span>
+<span class="go">WARNING root - Failed registering instance of &lt;class &#39;ptypy.core.classes.Container&#39;&gt; with ID None to object None</span>
 </pre></div>
 </div>
 <p>This class itself holds nothing at first. In order to store data in
@@ -212,7 +216,7 @@ In this case that will be <code class="docutils literal"><span class="pre">S0000
 <span class="go">(C)ontnr : Memory : Shape            : Pixel size      : Dimensions      : Views</span>
 <span class="go">(S)torgs : (MB)   : (Pixel)          : (meters)        : (meters)        : act.</span>
 <span class="go">--------------------------------------------------------------------------------</span>
-<span class="go">S0000    :    0.0 :            1*7*7 :   1.00*1.00e+00 :   7.00*7.00e+00 :     0</span>
+<span class="go">S0000    :    0.0 :        1 * 7 * 7 :       1.0*1.0e0 :       7.0*7.0e0 :     0</span>
 </pre></div>
 </div>
 <p>Apart from the ID on the left we discover a few other entries, for
@@ -340,7 +344,7 @@ and the corresponding <em>numpy</em> syntax, ptypy offers acces through a
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core.classes</span> <span class="kn">import</span> <span class="n">DEFAULT_ACCESSRULE</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span> <span class="o">=</span> <span class="n">DEFAULT_ACCESSRULE</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">ar</span>
-<span class="go">* id3V02DED3HG           : ptypy.utils.parameters.Param(6)</span>
+<span class="go">* id3VCIU1CM38           : ptypy.utils.parameters.Param(6)</span>
 <span class="go">  * layer                : 0</span>
 <span class="go">  * psize                : 1.0</span>
 <span class="go">  * shape                : None</span>
@@ -351,8 +355,8 @@ and the corresponding <em>numpy</em> syntax, ptypy offers acces through a
 </div>
 <p>Let&#8217;s say we want a 4x4 view on Storage <code class="docutils literal"><span class="pre">S1</span></code> around the origin.
 We set</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>  <span class="c"># ar.shape = 4 would have been also valid.</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">coord</span> <span class="o">=</span> <span class="mf">0.</span>      <span class="c"># ar.coord = (0.,0.) would have been accepted, too.</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>  <span class="c1"># ar.shape = 4 would have been also valid.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">coord</span> <span class="o">=</span> <span class="mf">0.</span>      <span class="c1"># ar.coord = (0.,0.) would have been accepted, too.</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">storageID</span> <span class="o">=</span> <span class="n">S1</span><span class="o">.</span><span class="n">ID</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">psize</span> <span class="o">=</span> <span class="bp">None</span>
 </pre></div>
@@ -422,7 +426,7 @@ and the second acces method worked because it uses the View&#8217;s
 <p>We observe that the coordinate [0.0,0.0] is not part of the grid
 in S1 anymore. Consequently, the View was put as close to [0.0,0.0]
 as possible. The coordinate in data space that the View would have as
-center is the attribute <code class="xref py py-meth docutils literal"><span class="pre">pcoord()</span></code> while
+center is the attribute <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.View.pcoord" title="ptypy.core.classes.View.pcoord"><code class="xref py py-meth docutils literal"><span class="pre">pcoord()</span></code></a> while
 <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.View.dcoord" title="ptypy.core.classes.View.dcoord"><code class="xref py py-meth docutils literal"><span class="pre">dcoord()</span></code></a> is the closest data coordinate.
 The difference is held by <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.View.sp" title="ptypy.core.classes.View.sp"><code class="xref py py-meth docutils literal"><span class="pre">sp()</span></code></a> such
 that a subpixel correction may be applied if needed (future release)</p>
@@ -519,6 +523,7 @@ Now let us add more and more Views!</p>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">ar2</span> <span class="o">=</span> <span class="n">ar</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">ar2</span><span class="o">.</span><span class="n">coord</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.82</span><span class="o">+</span><span class="n">i</span><span class="o">*</span><span class="mf">0.1</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.82</span><span class="o">+</span><span class="n">i</span><span class="o">*</span><span class="mf">0.1</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">View</span><span class="p">(</span><span class="n">C1</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">accessrule</span><span class="o">=</span><span class="n">ar2</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <p>A handy method of the <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a> class is to determine
@@ -539,7 +544,7 @@ exist.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span> <span class="o">=</span> <span class="n">DEFAULT_ACCESSRULE</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="mi">200</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">coord</span> <span class="o">=</span> <span class="mf">0.</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">storageID</span> <span class="o">=</span> <span class="s">&#39;S100&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">storageID</span> <span class="o">=</span> <span class="s1">&#39;S100&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span><span class="o">.</span><span class="n">psize</span> <span class="o">=</span> <span class="mf">1.0</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">V3</span><span class="o">=</span><span class="n">View</span><span class="p">(</span><span class="n">C1</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">accessrule</span><span class="o">=</span><span class="n">ar</span><span class="p">)</span>
 </pre></div>
@@ -550,8 +555,8 @@ exist.</p>
 <span class="go">(S)torgs : (MB)   : (Pixel)          : (meters)        : (meters)        : act.</span>
 <span class="go">--------------------------------------------------------------------------------</span>
 <span class="go">None     :    0.3 : float64</span>
-<span class="go">S100     :    0.3 :        1*200*200 :   1.00*1.00e+00 :   2.00*2.00e+02 :     1</span>
-<span class="go">S0000    :    0.0 :          1*15*15 :   1.00*1.00e-01 :   1.50*1.50e+00 :    12</span>
+<span class="go">S0000    :    0.0 :      1 * 15 * 15 :      1.0*1.0e-1 :       1.5*1.5e0 :    12</span>
+<span class="go">S100     :    0.3 :    1 * 200 * 200 :       1.0*1.0e0 :       2.0*2.0e2 :     1</span>
 </pre></div>
 </div>
 </div>
@@ -586,15 +591,27 @@ physical quantities only simulate an experimental setup.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">View</span><span class="p">,</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Base</span><span class="p">,</span> <span class="n">POD</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span> <span class="o">=</span> <span class="n">mpl</span><span class="o">.</span><span class="n">pyplot</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sys</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">scriptname</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scriptname</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>We create a managing top-level class instance. We will not use the
 the <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal"><span class="pre">Ptycho</span></code></a> class for now, as its rich set of methods may be
-a bit overwhelming to start with. Instead we take a plain
+a bit overwhelming to start with. Instead we start of a plain
 <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Base" title="ptypy.core.classes.Base"><code class="xref py py-class docutils literal"><span class="pre">Base</span></code></a> instance.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span> <span class="o">=</span> <span class="n">Base</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">CType</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span>
+<p>As the <code class="docutils literal"><span class="pre">Base</span></code> class is slotted starting with version 0.3.0, we
+can&#8217;t attach attributes after initialisation as we could with a normal
+python class. To reenable ths feature we have to subclasse once.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Base2</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">pass</span>
+<span class="go">&gt;&gt;&gt;</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span> <span class="o">=</span> <span class="n">Base2</span><span class="p">()</span>
+<span class="go">WARNING root - Failed registering instance of &lt;class &#39;__main__.Base2&#39;&gt; with ID None to object None</span>
+</pre></div>
+</div>
+<p>Now we can start attaching attributes</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">CType</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">FType</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
 </pre></div>
 </div>
@@ -604,12 +621,12 @@ a bit overwhelming to start with. Instead we take a plain
 a propagator and pixel sizes for sample and detector space.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">geometry</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">energy</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c"># u.keV2m(1.0)/6.32e-7</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">energy</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1"># u.keV2m(1.0)/6.32e-7</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">lam</span> <span class="o">=</span> <span class="mf">5.32e-7</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">distance</span> <span class="o">=</span> <span class="mf">15e-2</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">psize</span> <span class="o">=</span> <span class="mf">24e-6</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="mi">256</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">propagation</span> <span class="o">=</span> <span class="s">&quot;farfield&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">propagation</span> <span class="o">=</span> <span class="s2">&quot;farfield&quot;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">Geo</span><span class="p">(</span><span class="n">owner</span><span class="o">=</span><span class="n">P</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="n">g</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -623,7 +640,7 @@ pixel size in the sample plane (aka resolution),</p>
 </div>
 <p>which sets the shifting frame to be of the following size:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fsize</span> <span class="o">=</span> <span class="n">G</span><span class="o">.</span><span class="n">shape</span> <span class="o">*</span> <span class="n">G</span><span class="o">.</span><span class="n">resolution</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="s">&quot;</span><span class="si">%.2f</span><span class="s">x</span><span class="si">%.2f</span><span class="s">mm&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">fsize</span><span class="o">*</span><span class="mf">1e3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="s2">&quot;</span><span class="si">%.2f</span><span class="s2">x</span><span class="si">%.2f</span><span class="s2">mm&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">fsize</span><span class="o">*</span><span class="mf">1e3</span><span class="p">)</span>
 <span class="go">3.32x3.32mm</span>
 </pre></div>
 </div>
@@ -632,14 +649,24 @@ pixel size in the sample plane (aka resolution),</p>
 <h3>Create probing illumination<a class="headerlink" href="#create-probing-illumination" title="Permalink to this headline">¶</a></h3>
 <p>Next, we need to create a probing illumination.
 We start with a suited container that we call <em>probe</em></p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">probe</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s">&#39;Cprobe&#39;</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s">&#39;complex&#39;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">probe</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s1">&#39;Cprobe&#39;</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;complex&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>For convenience, there is a test probing illumination in PtyPy&#8216;s
 resources.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.resources</span> <span class="kn">import</span> <span class="n">moon_pr</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pr</span> <span class="o">=</span> <span class="o">-</span><span class="n">moon_pr</span><span class="p">(</span><span class="n">G</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pr</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">new_storage</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">pr</span><span class="p">,</span> <span class="n">psize</span><span class="o">=</span><span class="n">G</span><span class="o">.</span><span class="n">resolution</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">moon_probe</span> <span class="o">=</span> <span class="o">-</span><span class="n">moon_pr</span><span class="p">(</span><span class="n">G</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>As of version 0.3.0 the Storage classes are no longer limited to 3d arrays.
+This means, however, that the shape is better explicitly specified upon
+creation to align the coordinate system.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">pr_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)</span><span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">G</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pr</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">new_storage</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">pr_shape</span><span class="p">,</span> <span class="n">psize</span><span class="o">=</span><span class="n">G</span><span class="o">.</span><span class="n">resolution</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Probe is loaded through the <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Storage.fill" title="ptypy.core.classes.Storage.fill"><code class="xref py py-meth docutils literal"><span class="pre">fill()</span></code></a> method.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">pr</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">moon_probe</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">pr</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -652,8 +679,9 @@ resources.</p>
 from the propagator to model a probe,</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">G</span><span class="o">.</span><span class="n">propagator</span><span class="o">.</span><span class="n">grids_sam</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">apert</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">smooth_step</span><span class="p">(</span><span class="n">fsize</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mi">5</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span><span class="p">),</span> <span class="mf">1e-6</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pr2</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">new_storage</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">apert</span><span class="p">,</span> <span class="n">psize</span><span class="o">=</span><span class="n">G</span><span class="o">.</span><span class="n">resolution</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">pr2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="s">&#39;c&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pr2</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">new_storage</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">pr_shape</span><span class="p">,</span> <span class="n">psize</span><span class="o">=</span><span class="n">G</span><span class="o">.</span><span class="n">resolution</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pr2</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">apert</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">pr2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-01"><span>Fig. 6</span></a> for the plotted image.</p>
@@ -662,7 +690,7 @@ from the propagator to model a probe,</p>
 <p class="caption"><span class="caption-number">Fig. 6 </span><span class="caption-text">Round test illumination (not necessarily smoothly varying).</span><a class="headerlink" href="#simupod-01" title="Permalink to this image">¶</a></p>
 </div>
 <p>or the coordinate grids from the Storage itself.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">pr3</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">new_storage</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">G</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">psize</span><span class="o">=</span><span class="n">G</span><span class="o">.</span><span class="n">resolution</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">pr3</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">new_storage</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">pr_shape</span><span class="p">,</span> <span class="n">psize</span><span class="o">=</span><span class="n">G</span><span class="o">.</span><span class="n">resolution</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">pr3</span><span class="o">.</span><span class="n">grids</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">apert</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">smooth_step</span><span class="p">(</span><span class="n">fsize</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mi">5</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="mf">3e-5</span><span class="p">)</span><span class="o">*</span><span class="n">u</span><span class="o">.</span><span class="n">smooth_step</span><span class="p">(</span><span class="n">fsize</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mi">5</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="mf">3e-5</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pr3</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">apert</span><span class="p">)</span>
@@ -678,6 +706,10 @@ from the propagator to model a probe,</p>
 photons to 1 billion</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">pp</span> <span class="ow">in</span> <span class="p">[</span><span class="n">pr</span><span class="p">,</span> <span class="n">pr2</span><span class="p">,</span> <span class="n">pr3</span><span class="p">]:</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">pp</span><span class="o">.</span><span class="n">data</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1e9</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">pp</span><span class="o">.</span><span class="n">data</span><span class="o">*</span><span class="n">pp</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">conj</span><span class="p">()))</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">u</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="n">pr</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="go">1000000000.0</span>
 </pre></div>
 </div>
 <p>and we quickly check if the propagation works.</p>
@@ -699,7 +731,7 @@ photons to 1 billion</p>
 <h3>Create scan pattern and object<a class="headerlink" href="#create-scan-pattern-and-object" title="Permalink to this headline">¶</a></h3>
 <p>We use the <a class="reference internal" href="ptypy.core.html#module-ptypy.core.xy" title="ptypy.core.xy"><code class="xref py py-mod docutils literal"><span class="pre">ptypy.core.xy</span></code></a> module to create a scan pattern.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="s">&quot;round&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="s2">&quot;round&quot;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span><span class="o">.</span><span class="n">spacing</span> <span class="o">=</span> <span class="n">fsize</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mi">8</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span><span class="o">.</span><span class="n">steps</span> <span class="o">=</span> <span class="bp">None</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span><span class="o">.</span><span class="n">extent</span> <span class="o">=</span> <span class="n">fsize</span><span class="o">*</span><span class="mf">1.5</span>
@@ -707,7 +739,7 @@ photons to 1 billion</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">positions</span> <span class="o">=</span> <span class="n">xy</span><span class="o">.</span><span class="n">from_pars</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positions</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">positions</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="s">&#39;o-&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positions</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">positions</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;o-&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-04"><span>Fig. 9</span></a> for the plotted image.</p>
@@ -717,14 +749,14 @@ photons to 1 billion</p>
 </div>
 <p>Next, we need to model a sample through an object transmisson function.
 We start of with a suited container which we call <em>obj</em>.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s">&#39;Cobj&#39;</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s">&#39;complex&#39;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s1">&#39;Cobj&#39;</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;complex&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>As we have learned from the previous <a class="reference internal" href="#ptypyclasses"><span>Tutorial: Data access - Storage, View, Container</span></a>,
 we can use <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.View" title="ptypy.core.classes.View"><code class="xref any py py-class docutils literal"><span class="pre">View</span></code></a>&#8216;s to create a Storage data buffer of the
 right size.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">oar</span> <span class="o">=</span> <span class="n">View</span><span class="o">.</span><span class="n">DEFAULT_ACCESSRULE</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">oar</span><span class="o">.</span><span class="n">storageID</span> <span class="o">=</span> <span class="s">&#39;S00&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">oar</span><span class="o">.</span><span class="n">storageID</span> <span class="o">=</span> <span class="s1">&#39;S00&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">oar</span><span class="o">.</span><span class="n">psize</span> <span class="o">=</span> <span class="n">G</span><span class="o">.</span><span class="n">resolution</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">oar</span><span class="o">.</span><span class="n">layer</span> <span class="o">=</span> <span class="mi">0</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">oar</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">G</span><span class="o">.</span><span class="n">shape</span>
@@ -732,10 +764,11 @@ right size.</p>
 </pre></div>
 </div>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># the rule</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># the rule</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">r</span> <span class="o">=</span> <span class="n">oar</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">r</span><span class="o">.</span><span class="n">coord</span> <span class="o">=</span> <span class="n">pos</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">V</span> <span class="o">=</span> <span class="n">View</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <p>We let the Storages in <code class="docutils literal"><span class="pre">P.obj</span></code> reformat in order to
@@ -747,13 +780,13 @@ with Container.<a class="reference internal" href="ptypy.core.html#ptypy.core.cl
 <span class="go">(S)torgs : (MB)   : (Pixel)          : (meters)        : (meters)        : act.</span>
 <span class="go">--------------------------------------------------------------------------------</span>
 <span class="go">Cobj     :    6.5 : complex128</span>
-<span class="go">S00      :    6.5 :        1*638*632 :   1.30*1.30e-05 :   8.29*8.21e-03 :   114</span>
+<span class="go">S00      :    6.5 :    1 * 638 * 640 :      1.3*1.3e-5 :      8.3*8.3e-3 :   116</span>
 </pre></div>
 </div>
 <p>At last we fill the object Storage <code class="docutils literal"><span class="pre">S00</span></code> with a complex transmission.
 Again there is a convenience transmission function in the resources</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.resources</span> <span class="kn">import</span> <span class="n">flower_obj</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">storage</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">storages</span><span class="p">[</span><span class="s">&#39;S00&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">storage</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">storages</span><span class="p">[</span><span class="s1">&#39;S00&#39;</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">storage</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">flower_obj</span><span class="p">(</span><span class="n">storage</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">storage</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 </pre></div>
@@ -783,6 +816,10 @@ an instance of the <a class="reference internal" href="ptypy.core.html#ptypy.cor
 <span class="go">        ptycho : Ptycho</span>
 <span class="go">            The instance of Ptycho associated with this pod.</span>
 
+<span class="go">        model : ~ptypy.core.manager.ScanModel</span>
+<span class="go">            The instance of ScanModel (or it subclasses) which describes</span>
+<span class="go">            this pod.</span>
+
 <span class="go">        ID : str or int</span>
 <span class="go">            The pod ID, If None it is managed by the ptycho.</span>
 
@@ -798,9 +835,9 @@ an instance of the <a class="reference internal" href="ptypy.core.html#ptypy.cor
 <em>exit</em> wave and <em>diff</em>raction containers as well as the <a class="reference internal" href="ptypy.core.html#ptypy.core.geometry.Geo" title="ptypy.core.geometry.Geo"><code class="xref any py py-class docutils literal"><span class="pre">Geo</span></code></a>
 class instance which represents the experimental setup.</p>
 <p>First we create the missing <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><code class="xref py py-class docutils literal"><span class="pre">Container</span></code></a>&#8216;s.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">exit</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s">&#39;Cexit&#39;</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s">&#39;complex&#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">diff</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s">&#39;Cdiff&#39;</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s">&#39;real&#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s">&#39;Cmask&#39;</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s">&#39;real&#39;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">exit</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s1">&#39;Cexit&#39;</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;complex&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">diff</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s1">&#39;Cdiff&#39;</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;real&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s1">&#39;Cmask&#39;</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;real&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>We start with one POD and its views.</p>
@@ -839,7 +876,7 @@ essentially using the same access as for the diffraction data.</p>
 </div>
 <p>Now we can create the POD.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">pods</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">views</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;probe&#39;</span><span class="p">:</span> <span class="n">prview</span><span class="p">,</span> <span class="s">&#39;obj&#39;</span><span class="p">:</span> <span class="n">obview</span><span class="p">,</span> <span class="s">&#39;exit&#39;</span><span class="p">:</span> <span class="n">exview</span><span class="p">,</span> <span class="s">&#39;diff&#39;</span><span class="p">:</span> <span class="n">diview</span><span class="p">,</span> <span class="s">&#39;mask&#39;</span><span class="p">:</span> <span class="n">maview</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">views</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;probe&#39;</span><span class="p">:</span> <span class="n">prview</span><span class="p">,</span> <span class="s1">&#39;obj&#39;</span><span class="p">:</span> <span class="n">obview</span><span class="p">,</span> <span class="s1">&#39;exit&#39;</span><span class="p">:</span> <span class="n">exview</span><span class="p">,</span> <span class="s1">&#39;diff&#39;</span><span class="p">:</span> <span class="n">diview</span><span class="p">,</span> <span class="s1">&#39;mask&#39;</span><span class="p">:</span> <span class="n">maview</span><span class="p">}</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pod</span> <span class="o">=</span> <span class="n">POD</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">views</span><span class="o">=</span><span class="n">views</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="n">G</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pods</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pod</span><span class="p">)</span>
 </pre></div>
@@ -869,7 +906,7 @@ Therefore we can use this command to plot the result.</p>
 </div>
 <p>The result is stored in the diffraction container.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">diff_storage</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">diff</span><span class="o">.</span><span class="n">storages</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">diff_storage</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="n">modulus</span><span class="o">=</span><span class="s">&#39;log&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">diff_storage</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="n">modulus</span><span class="o">=</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-07"><span>Fig. 12</span></a> for the plotted image.</p>
@@ -879,37 +916,41 @@ Therefore we can use this command to plot the result.</p>
 <p>Creating the rest of the pods is now straight-forward
 since the data accesses are similar.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">obview</span> <span class="ow">in</span> <span class="n">objviews</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># we keep the same probe access</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># we keep the same probe access</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">prview</span> <span class="o">=</span> <span class="n">View</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">probe_ar</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># For diffraction and exit wave we need to increase the</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># layer index as there is a new exit wave and diffraction pattern for each</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># scan position</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># For diffraction and exit wave we need to increase the</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># layer index as there is a new exit wave and diffraction pattern for each</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># scan position</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">exit_ar</span><span class="o">.</span><span class="n">layer</span> <span class="o">+=</span> <span class="mi">1</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">diff_ar</span><span class="o">.</span><span class="n">layer</span> <span class="o">+=</span> <span class="mi">1</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">exview</span> <span class="o">=</span> <span class="n">View</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">exit</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">exit_ar</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">maview</span> <span class="o">=</span> <span class="n">View</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">mask</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">mask_ar</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">diview</span> <span class="o">=</span> <span class="n">View</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">diff</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">diff_ar</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">views</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;probe&#39;</span><span class="p">:</span> <span class="n">prview</span><span class="p">,</span> <span class="s">&#39;obj&#39;</span><span class="p">:</span> <span class="n">obview</span><span class="p">,</span> <span class="s">&#39;exit&#39;</span><span class="p">:</span> <span class="n">exview</span><span class="p">,</span> <span class="s">&#39;diff&#39;</span><span class="p">:</span> <span class="n">diview</span><span class="p">,</span> <span class="s">&#39;mask&#39;</span><span class="p">:</span> <span class="n">maview</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">views</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;probe&#39;</span><span class="p">:</span> <span class="n">prview</span><span class="p">,</span> <span class="s1">&#39;obj&#39;</span><span class="p">:</span> <span class="n">obview</span><span class="p">,</span> <span class="s1">&#39;exit&#39;</span><span class="p">:</span> <span class="n">exview</span><span class="p">,</span> <span class="s1">&#39;diff&#39;</span><span class="p">:</span> <span class="n">diview</span><span class="p">,</span> <span class="s1">&#39;mask&#39;</span><span class="p">:</span> <span class="n">maview</span><span class="p">}</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">pod</span> <span class="o">=</span> <span class="n">POD</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">views</span><span class="o">=</span><span class="n">views</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="n">G</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">pods</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pod</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <p>We let the storage arrays adapt to the new Views.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">C</span> <span class="ow">in</span> <span class="p">[</span><span class="n">P</span><span class="o">.</span><span class="n">mask</span><span class="p">,</span> <span class="n">P</span><span class="o">.</span><span class="n">exit</span><span class="p">,</span> <span class="n">P</span><span class="o">.</span><span class="n">diff</span><span class="p">,</span> <span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="p">]:</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">C</span><span class="o">.</span><span class="n">reformat</span><span class="p">()</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <p>And the rest of the simulation fits in three lines of code!</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">pod</span> <span class="ow">in</span> <span class="n">pods</span><span class="p">:</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">pod</span><span class="o">.</span><span class="n">exit</span> <span class="o">=</span> <span class="n">pod</span><span class="o">.</span><span class="n">probe</span> <span class="o">*</span> <span class="n">pod</span><span class="o">.</span><span class="n">object</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># we use Poisson statistics for a tiny bit of realism in the</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># diffraction images</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># we use Poisson statistics for a tiny bit of realism in the</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># diffraction images</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">pod</span><span class="o">.</span><span class="n">diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">pod</span><span class="o">.</span><span class="n">fw</span><span class="p">(</span><span class="n">pod</span><span class="o">.</span><span class="n">exit</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">pod</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">pod</span><span class="o">.</span><span class="n">diff</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <p>We make a quick check on the diffraction patterns</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">diff_storage</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="s">&#39;:2,:,:&#39;</span><span class="p">,</span> <span class="n">modulus</span><span class="o">=</span><span class="s">&#39;log&#39;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">diff_storage</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="s1">&#39;:2,:,:&#39;</span><span class="p">,</span> <span class="n">modulus</span><span class="o">=</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-08"><span>Fig. 13</span></a> for the plotted image.</p>
@@ -925,35 +966,38 @@ or store the generated diffraction patterns as in the next section.</p>
 <div class="section" id="storing-the-simulation">
 <span id="store"></span><h3>Storing the simulation<a class="headerlink" href="#storing-the-simulation" title="Permalink to this headline">¶</a></h3>
 <p>On unix system we choose the <code class="docutils literal"><span class="pre">/tmp</span></code> folder</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">save_path</span> <span class="o">=</span> <span class="s">&#39;/tmp/ptypy/sim/&#39;</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">save_path</span> <span class="o">=</span> <span class="s1">&#39;/tmp/ptypy/sim/&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">os</span>
 </pre></div>
 </div>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">save_path</span><span class="p">):</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">save_path</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <p>First, we save the geometric info in a text file.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">save_path</span><span class="o">+</span><span class="s">&#39;geometry.txt&#39;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;distance </span><span class="si">%.4e</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">G</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">distance</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;energy </span><span class="si">%.4e</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">G</span><span class="o">.</span><span class="n">energy</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;psize </span><span class="si">%.4e</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">G</span><span class="o">.</span><span class="n">psize</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;shape </span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">G</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">save_path</span><span class="o">+</span><span class="s1">&#39;geometry.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;distance </span><span class="si">%.4e</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">G</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">distance</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;energy </span><span class="si">%.4e</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">G</span><span class="o">.</span><span class="n">energy</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;psize </span><span class="si">%.4e</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">G</span><span class="o">.</span><span class="n">psize</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;shape </span><span class="si">%d</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">G</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <p>Next, we save positions and the diffraction images. We don&#8217;t burden
 ourselves for now with converting to an image file format such as .tiff
 or a data format like .hdf5 but instead we use numpy&#8217;s binary storage
 format.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">save_path</span><span class="o">+</span><span class="s">&#39;positions.txt&#39;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">save_path</span><span class="o">+</span><span class="s">&#39;ccd/&#39;</span><span class="p">):</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">save_path</span><span class="o">+</span><span class="s">&#39;ccd/&#39;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">save_path</span><span class="o">+</span><span class="s1">&#39;positions.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">save_path</span><span class="o">+</span><span class="s1">&#39;ccd/&#39;</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">save_path</span><span class="o">+</span><span class="s1">&#39;ccd/&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="k">for</span> <span class="n">pod</span> <span class="ow">in</span> <span class="n">pods</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="n">diff_frame</span> <span class="o">=</span> <span class="s">&#39;ccd/diffraction_</span><span class="si">%04d</span><span class="s">.npy&#39;</span> <span class="o">%</span> <span class="n">pod</span><span class="o">.</span><span class="n">di_view</span><span class="o">.</span><span class="n">layer</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">diff_frame</span><span class="o">+</span><span class="s">&#39; </span><span class="si">%.4e</span><span class="s"> </span><span class="si">%.4e</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">pod</span><span class="o">.</span><span class="n">ob_view</span><span class="o">.</span><span class="n">coord</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">diff_frame</span> <span class="o">=</span> <span class="s1">&#39;ccd/diffraction_</span><span class="si">%04d</span><span class="s1">.npy&#39;</span> <span class="o">%</span> <span class="n">pod</span><span class="o">.</span><span class="n">di_view</span><span class="o">.</span><span class="n">layer</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">diff_frame</span><span class="o">+</span><span class="s1">&#39; </span><span class="si">%.4e</span><span class="s1"> </span><span class="si">%.4e</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">pod</span><span class="o">.</span><span class="n">ob_view</span><span class="o">.</span><span class="n">coord</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">frame</span> <span class="o">=</span> <span class="n">pod</span><span class="o">.</span><span class="n">diff</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">save_path</span><span class="o">+</span><span class="n">diff_frame</span><span class="p">,</span> <span class="n">frame</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <p>If you want to learn how to convert this &#8220;experiment&#8221; into ptypy data
@@ -973,7 +1017,7 @@ You are encouraged to modify the parameters and rerun the tutorial with:</p>
 </div>
 <p>In this tutorial, we want to provide the information
 needed to create an engine compatible with the state mixture
-expansion of ptychogrpahy as described in Thibault et. al 2013 <a class="reference internal" href="#thi2013" id="id1">[Thi2013]</a> .</p>
+expansion of ptychogrpahy as described in Thibault et. al 2013 <a class="footnote-reference" href="#modes" id="id1">[1]</a> .</p>
 <p>First we import ptypy and the utility module</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ptypy</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
@@ -989,19 +1033,20 @@ are many default values, but we specify manually only a more verbose
 output and single precision for the data type.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="mi">3</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">data_type</span> <span class="o">=</span> <span class="s">&quot;single&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">data_type</span> <span class="o">=</span> <span class="s2">&quot;single&quot;</span>
 </pre></div>
 </div>
 <p>Now, we need to create a set of scans that we wish to reconstruct
 in the reconstruction run. We will use a single scan that we call &#8216;MF&#8217; and
 mark the data source as &#8216;test&#8217; to use the PtyPy internal
-<a class="reference internal" href="ptypy.core.html#ptypy.core.data.MoonFlowerScan" title="ptypy.core.data.MoonFlowerScan"><code class="xref any py py-class docutils literal"><span class="pre">MoonFlowerScan</span></code></a></p>
+<code class="xref py py-class docutils literal"><span class="pre">MoonFlowerScan</span></code></p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Full&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="s">&#39;test&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;MoonFlowerScan&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="mi">128</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">num_frames</span> <span class="o">=</span> <span class="mi">600</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">num_frames</span> <span class="o">=</span> <span class="mi">400</span>
 </pre></div>
 </div>
 <p>This bare parameter tree will be the input for the <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal"><span class="pre">Ptycho</span></code></a>
@@ -1010,72 +1055,79 @@ all necessary basic <a class="reference internal" href="ptypy.core.html#ptypy.co
 <em>diff</em> , etc. It also loads the first chunk of data and creates all
 <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.View" title="ptypy.core.classes.View"><code class="xref any py py-class docutils literal"><span class="pre">View</span></code></a> and <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.POD" title="ptypy.core.classes.POD"><code class="xref any py py-class docutils literal"><span class="pre">POD</span></code></a> instances, as the verbose output will tell.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span> <span class="o">=</span> <span class="n">ptypy</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">WARNING root - Failed registering instance of &lt;class &#39;ptypy.core.ptycho.Ptycho&#39;&gt; with ID Ptycho to object None</span>
 <span class="go">Verbosity set to 3</span>
 <span class="go">Data type:               single</span>
 
 <span class="go">---- Ptycho init level 1 -------------------------------------------------------</span>
-<span class="go">Model: sharing probe between scans (one new probe every 1 scan)</span>
-<span class="go">Model: sharing probe between scans (one new probe every 1 scan)</span>
+<span class="go">Scan will be prepared with the PtyScan subclass &quot;MoonFlowerScan&quot;</span>
+<span class="go">WARNING root - Failed registering instance of &lt;class &#39;ptypy.core.geometry.Geo&#39;&gt; with ID None to object None</span>
+<span class="go">Prepared 310 positions</span>
 
 <span class="go">---- Ptycho init level 2 -------------------------------------------------------</span>
-<span class="go">Prepared 433 positions</span>
 <span class="go">Processing new data.</span>
-<span class="go">---- Enter PtyScan.initialixe() ------------------------------------------------</span>
+<span class="go">---- Enter MoonFlowerScan.initialize() -----------------------------------------</span>
 <span class="go">             Common weight : True</span>
-<span class="go">                    shape = (128, 128)</span>
+<span class="go">                     shape = (128, 128)</span>
 <span class="go">All experimental positions : True</span>
-<span class="go">                    shape = (433, 2)</span>
-<span class="go">Scanning positions (433) are fewer than the desired number of scan points (600).</span>
-<span class="go">Resetting `num_frames` to lower value</span>
-<span class="go">---- Leaving PtyScan.initialixe() ----------------------------------------------</span>
-<span class="go">ROI center is [ 64.  64.], automatic guess is [ 63.52886836  63.52655889].</span>
-<span class="go">Feeding data chunk</span>
-<span class="go">Importing data from MF as scan MF.</span>
-<span class="go">End of scan reached</span>
-<span class="go">End of scan reached</span>
+<span class="go">                     shape = (310, 2)</span>
+<span class="go">Scanning positions (310) are fewer than the desired number of scan points (400).</span>
+<span class="go">Resetting `num_frames` to lower value.</span>
+<span class="go">---- Leaving PtyScan.initialize() ----------------------------------------------</span>
+<span class="go">Time 0.00</span>
+<span class="go">Importing data from scan MF.</span>
+<span class="go">Generating data with poisson noise.</span>
+<span class="go">ROI center is [ 64.  64.], automatic guess is [ 64.03374521  64.05018907].</span>
+<span class="go">Time 1.80</span>
+<span class="go">Creating views and storages.</span>
+<span class="go">Time 0.19</span>
+<span class="go">Inserting data in diff and mask storages</span>
+<span class="go">Time 0.01</span>
+<span class="go">Data organization complete, updating stats</span>
 
 <span class="go">--- Scan MF photon report ---</span>
-<span class="go">Total photons   : 1.51e+10</span>
-<span class="go">Average photons : 3.49e+07</span>
-<span class="go">Maximum photons : 7.95e+07</span>
+<span class="go">Total photons   : 1.15e+10</span>
+<span class="go">Average photons : 3.72e+07</span>
+<span class="go">Maximum photons : 7.87e+07</span>
 <span class="go">-----------------------------</span>
 
 <span class="go">---- Creating PODS -------------------------------------------------------------</span>
 <span class="go">Found these probes :</span>
 <span class="go">Found these objects:</span>
-<span class="go">Process 0 created 433 new PODs, 1 new probes and 1 new objects.</span>
+<span class="go">Process 0 created 310 new PODs, 1 new probes and 1 new objects.</span>
+<span class="go">Time 0.20</span>
 
 <span class="go">---- Probe initialization ------------------------------------------------------</span>
-<span class="go">Initializing probe storage S00G00 using scan MF</span>
+<span class="go">Initializing probe storage SMFG00 using scan MF.</span>
 <span class="go">Found no photon count for probe in parameters.</span>
-<span class="go">Using photon count 7.95e+07 from photon report</span>
+<span class="go">Using photon count 7.87e+07 from photon report</span>
 
 <span class="go">---- Object initialization -----------------------------------------------------</span>
-<span class="go">Initializing object storage S00G00 using scan MF</span>
-<span class="go">Simulation resource is object transmission</span>
+<span class="go">Initializing object storage SMFG00 using scan MF.</span>
+<span class="go">[Object SMFG00] Simulation resource is integrated refractive index</span>
 
 <span class="go">---- Creating exit waves -------------------------------------------------------</span>
 
-<span class="go">Process #0 ---- Total Pods 433 (433 active) ----</span>
+<span class="go">Process #0 ---- Total Pods 310 (310 active) ----</span>
 <span class="go">--------------------------------------------------------------------------------</span>
 <span class="go">(C)ontnr : Memory : Shape            : Pixel size      : Dimensions      : Views</span>
 <span class="go">(S)torgs : (MB)   : (Pixel)          : (meters)        : (meters)        : act.</span>
 <span class="go">--------------------------------------------------------------------------------</span>
 <span class="go">Cprobe   :    0.1 : complex64</span>
-<span class="go">S00G00   :    0.1 :        1*128*128 :   6.36*6.36e-08 :   8.14*8.14e-06 :   433</span>
-<span class="go">Cmask    :    7.1 :   bool</span>
-<span class="go">S0000    :    7.1 :      433*128*128 :   1.72*1.72e-04 :   2.20*2.20e-02 :   433</span>
-<span class="go">Cexit    :   56.8 : complex64</span>
-<span class="go">S0000G00 :   56.8 :      433*128*128 :   6.36*6.36e-08 :   8.14*8.14e-06 :   433</span>
-<span class="go">Cobj     :    4.6 : complex64</span>
-<span class="go">S00G00   :    4.6 :        1*762*761 :   6.36*6.36e-08 :   4.85*4.84e-05 :   433</span>
-<span class="go">Cdiff    :   28.4 : float32</span>
-<span class="go">S0000    :   28.4 :      433*128*128 :   1.72*1.72e-04 :   2.20*2.20e-02 :   433</span>
+<span class="go">SMFG00   :    0.1 :    1 * 128 * 128 :      5.6*5.6e-8 :      7.2*7.2e-6 :   310</span>
+<span class="go">Cobj     :    3.5 : complex64</span>
+<span class="go">SMFG00   :    3.5 :    1 * 664 * 652 :      5.6*5.6e-8 :      3.7*3.7e-5 :   310</span>
+<span class="go">Cexit    :   40.6 : complex64</span>
+<span class="go">S0000G00 :   40.6 :  310 * 128 * 128 :      5.6*5.6e-8 :      7.2*7.2e-6 :   310</span>
+<span class="go">Cdiff    :   20.3 : float32</span>
+<span class="go">S0000    :   20.3 :  310 * 128 * 128 :      1.7*1.7e-4 :      2.2*2.2e-2 :   310</span>
+<span class="go">Cmask    :    5.1 :   bool</span>
+<span class="go">S0000    :    5.1 :  310 * 128 * 128 :      1.7*1.7e-4 :      2.2*2.2e-2 :   310</span>
 </pre></div>
 </div>
 <p>A quick look at the diffraction data</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">diff_storage</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">diff</span><span class="o">.</span><span class="n">storages</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">diff_storage</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="nb">slice</span><span class="p">(</span><span class="bp">None</span><span class="p">),</span> <span class="nb">slice</span><span class="p">(</span><span class="bp">None</span><span class="p">)),</span> <span class="n">modulus</span><span class="o">=</span><span class="s">&#39;log&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">diff_storage</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="nb">slice</span><span class="p">(</span><span class="bp">None</span><span class="p">),</span> <span class="nb">slice</span><span class="p">(</span><span class="bp">None</span><span class="p">)),</span> <span class="n">modulus</span><span class="o">=</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ownengine-00"><span>Fig. 14</span></a> for the plotted image.</p>
@@ -1089,7 +1141,7 @@ point. The structure <code class="docutils literal"><span class="pre">P</span></
 <p>Probe and object are not so exciting to look at for now. As default,
 probes are initialized with an aperture like support.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">probe_storage</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">storages</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">S</span><span class="p">[</span><span class="s">&#39;S00G00&#39;</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">S</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ownengine-01"><span>Fig. 15</span></a> for the plotted image.</p>
@@ -1108,26 +1160,27 @@ modulus constraint.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">fourier_update</span><span class="p">(</span><span class="n">pods</span><span class="p">):</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">pod</span> <span class="o">=</span> <span class="n">pods</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># Get Magnitude and Mask</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># Get Magnitude and Mask</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">mask</span> <span class="o">=</span> <span class="n">pod</span><span class="o">.</span><span class="n">mask</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">modulus</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">pod</span><span class="o">.</span><span class="n">diff</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># Create temporary buffers</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># Create temporary buffers</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">Imodel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">pod</span><span class="o">.</span><span class="n">diff</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">err</span> <span class="o">=</span> <span class="mf">0.</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">Dphi</span> <span class="o">=</span> <span class="p">{}</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># Propagate the exit waves</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># Propagate the exit waves</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="k">for</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">pod</span> <span class="ow">in</span> <span class="n">pods</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">Dphi</span><span class="p">[</span><span class="n">gamma</span><span class="p">]</span> <span class="o">=</span> <span class="n">pod</span><span class="o">.</span><span class="n">fw</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">pod</span><span class="o">.</span><span class="n">probe</span><span class="o">*</span><span class="n">pod</span><span class="o">.</span><span class="n">object</span> <span class="o">-</span> <span class="n">pod</span><span class="o">.</span><span class="n">exit</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="n">Imodel</span> <span class="o">+=</span> <span class="n">Dphi</span><span class="p">[</span><span class="n">gamma</span><span class="p">]</span> <span class="o">*</span> <span class="n">Dphi</span><span class="p">[</span><span class="n">gamma</span><span class="p">]</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># Calculate common correction factor</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">Imodel</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Dphi</span><span class="p">[</span><span class="n">gamma</span><span class="p">]</span> <span class="o">*</span> <span class="n">Dphi</span><span class="p">[</span><span class="n">gamma</span><span class="p">]</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># Calculate common correction factor</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">factor</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">mask</span><span class="p">)</span> <span class="o">+</span> <span class="n">mask</span> <span class="o">*</span> <span class="n">modulus</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">Imodel</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-10</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># Apply correction and propagate back</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># Apply correction and propagate back</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="k">for</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">pod</span> <span class="ow">in</span> <span class="n">pods</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">df</span> <span class="o">=</span> <span class="n">pod</span><span class="o">.</span><span class="n">bw</span><span class="p">(</span><span class="n">factor</span><span class="o">*</span><span class="n">Dphi</span><span class="p">[</span><span class="n">gamma</span><span class="p">])</span> <span class="o">-</span> <span class="n">pod</span><span class="o">.</span><span class="n">probe</span><span class="o">*</span><span class="n">pod</span><span class="o">.</span><span class="n">object</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">pod</span><span class="o">.</span><span class="n">exit</span> <span class="o">+=</span> <span class="n">df</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">err</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">df</span><span class="o">*</span><span class="n">df</span><span class="o">.</span><span class="n">conj</span><span class="p">()))</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># Return difference map error on exit waves</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># Return difference map error on exit waves</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">err</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">probe_update</span><span class="p">(</span><span class="n">probe</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span> <span class="n">pods</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
@@ -1141,10 +1194,11 @@ modulus constraint.</p>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="k">if</span> <span class="ow">not</span> <span class="n">pod</span><span class="o">.</span><span class="n">active</span><span class="p">:</span> <span class="k">continue</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">probe</span><span class="p">[</span><span class="n">pod</span><span class="o">.</span><span class="n">pr_view</span><span class="p">]</span> <span class="o">+=</span> <span class="n">pod</span><span class="o">.</span><span class="n">object</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">*</span> <span class="n">pod</span><span class="o">.</span><span class="n">exit</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">norm</span><span class="p">[</span><span class="n">pod</span><span class="o">.</span><span class="n">pr_view</span><span class="p">]</span> <span class="o">+=</span> <span class="n">pod</span><span class="o">.</span><span class="n">object</span> <span class="o">*</span> <span class="n">pod</span><span class="o">.</span><span class="n">object</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># For parallel usage (MPI) we have to communicate the buffer arrays</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># For parallel usage (MPI) we have to communicate the buffer arrays</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">probe</span><span class="o">.</span><span class="n">allreduce</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">norm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">probe</span> <span class="o">/=</span> <span class="n">norm</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">object_update</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span> <span class="n">pods</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
@@ -1161,44 +1215,46 @@ modulus constraint.</p>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">obj</span><span class="o">.</span><span class="n">allreduce</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">norm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">obj</span> <span class="o">/=</span> <span class="n">norm</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">iterate</span><span class="p">(</span><span class="n">Ptycho</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># generate container copies</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># generate container copies</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">obj_norm</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">fill</span><span class="o">=</span><span class="mf">0.</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">probe_norm</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">fill</span><span class="o">=</span><span class="mf">0.</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">err</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="c"># fourier update</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="c1"># fourier update</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="k">for</span> <span class="n">di_view</span> <span class="ow">in</span> <span class="n">Ptycho</span><span class="o">.</span><span class="n">diff</span><span class="o">.</span><span class="n">V</span><span class="o">.</span><span class="n">itervalues</span><span class="p">():</span>
 <span class="gp">&gt;&gt;&gt; </span>            <span class="k">if</span> <span class="ow">not</span> <span class="n">di_view</span><span class="o">.</span><span class="n">active</span><span class="p">:</span> <span class="k">continue</span>
 <span class="gp">&gt;&gt;&gt; </span>            <span class="n">err</span> <span class="o">+=</span> <span class="n">fourier_update</span><span class="p">(</span><span class="n">di_view</span><span class="o">.</span><span class="n">pods</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="c"># probe update</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="c1"># probe update</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">probe_update</span><span class="p">(</span><span class="n">Ptycho</span><span class="o">.</span><span class="n">probe</span><span class="p">,</span> <span class="n">probe_norm</span><span class="p">,</span> <span class="n">Ptycho</span><span class="o">.</span><span class="n">pods</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="c"># object update</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="c1"># object update</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">object_update</span><span class="p">(</span><span class="n">Ptycho</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="n">obj_norm</span><span class="p">,</span> <span class="n">Ptycho</span><span class="o">.</span><span class="n">pods</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="c"># print error</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="c1"># print error</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">3</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span> <span class="k">print</span> <span class="n">err</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c"># cleanup</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># cleanup</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">delete_copy</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">delete_copy</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="c">#return error</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1">#return error</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">errors</span>
+<span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 <p>We start off with a small number of iterations.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">iterate</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
-<span class="go">654487.5068</span>
-<span class="go">402504.203106</span>
-<span class="go">310208.171329</span>
+<span class="go">438227.677834</span>
+<span class="go">315467.062377</span>
+<span class="go">238023.406448</span>
 </pre></div>
 </div>
 <p>We note that the error (here only displayed for 3 iterations) is
 already declining. That is a good sign.
 Let us have a look how the probe has developed.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">S</span><span class="p">[</span><span class="s">&#39;S00G00&#39;</span><span class="p">],</span> <span class="mi">2</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">S</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">2</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ownengine-02"><span>Fig. 16</span></a> for the plotted image.</p>
@@ -1209,7 +1265,7 @@ the actaul illumination of the sample must be larger than the initial
 guess.</span><a class="headerlink" href="#ownengine-02" title="Permalink to this image">¶</a></p>
 </div>
 <p>Looks like the probe is on a good way. How about the object?</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">S</span><span class="p">[</span><span class="s">&#39;S00G00&#39;</span><span class="p">],</span> <span class="mi">3</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="s">&#39;0,100:-100,100:-100&#39;</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="mi">150</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">S</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">3</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="s1">&#39;0,120:-120,120:-120&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ownengine-03"><span>Fig. 17</span></a> for the plotted image.</p>
@@ -1220,23 +1276,23 @@ clear what object is reconstructed</span><a class="headerlink" href="#ownengine-
 </div>
 <p>Ok, let us do some more iterations. 36 will do.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">iterate</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="mi">36</span><span class="p">)</span>
-<span class="go">214034.748076</span>
-<span class="go">134467.004503</span>
-<span class="go">96999.4902739</span>
-<span class="go">76652.0036214</span>
-<span class="go">57138.8288743</span>
-<span class="go">37419.3737076</span>
-<span class="go">27540.0084388</span>
-<span class="go">25271.4170264</span>
-<span class="go">25298.0185254</span>
-<span class="go">25702.5043972</span>
-<span class="go">25502.5819497</span>
-<span class="go">24432.8977358</span>
+<span class="go">159416.187324</span>
+<span class="go">91808.8892442</span>
+<span class="go">61057.4025764</span>
+<span class="go">47052.9603625</span>
+<span class="go">38234.5595294</span>
+<span class="go">28485.1869933</span>
+<span class="go">22263.5465332</span>
+<span class="go">20169.5892295</span>
+<span class="go">18278.6582426</span>
+<span class="go">17842.8330137</span>
+<span class="go">18068.4634726</span>
+<span class="go">17702.7923393</span>
 </pre></div>
 </div>
 <p>Error is still on a steady descent. Let us look at the final
 reconstructed probe and object.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">S</span><span class="p">[</span><span class="s">&#39;S00G00&#39;</span><span class="p">],</span> <span class="mi">4</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">S</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">4</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ownengine-04"><span>Fig. 18</span></a> for the plotted image.</p>
@@ -1245,7 +1301,7 @@ reconstructed probe and object.</p>
 <p class="caption"><span class="caption-number">Fig. 18 </span><span class="caption-text">Plot of the reconstructed probe after a total of 45 iterations.
 It&#8217;s a moon !</span><a class="headerlink" href="#ownengine-04" title="Permalink to this image">¶</a></p>
 <div class="legend">
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">S</span><span class="p">[</span><span class="s">&#39;S00G00&#39;</span><span class="p">],</span> <span class="mi">5</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="s">&#39;0,100:-100,100:-100&#39;</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="mi">150</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">S</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">5</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="s1">&#39;0,120:-120,120:-120&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1256,10 +1312,10 @@ It&#8217;s a moon !</span><a class="headerlink" href="#ownengine-04" title="Perm
 <p class="caption"><span class="caption-number">Fig. 19 </span><span class="caption-text">Plot of the reconstructed object after a total of 45 iterations.
 It&#8217;s a bunch of flowers !</span><a class="headerlink" href="#ownengine-05" title="Permalink to this image">¶</a></p>
 </div>
-<table class="docutils citation" frame="void" id="thi2013" rules="none">
+<table class="docutils footnote" frame="void" id="modes" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id1">[Thi2013]</a></td><td><ol class="first last upperalpha simple" start="16">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td><ol class="first last upperalpha simple" start="16">
 <li>Thibault and A. Menzel, <strong>Nature</strong> 494, 68 (2013)</li>
 </ol>
 </td></tr>
@@ -1290,12 +1346,12 @@ It&#8217;s a bunch of flowers !</span><a class="headerlink" href="#ownengine-05"
         <li class="right" >
           <a href="getting_started.html" title="Getting started with Ptypy"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.6.
     </div>
   </body>
 </html>

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>ptypy.core package &mdash; ptypy 0.2.0 documentation</title>
+    <title>ptypy.core package &mdash; ptypy 0.3.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/header.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.2.0',
+        VERSION:     '0.3.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
-    <link rel="top" title="ptypy 0.2.0 documentation" href="../content.html" />
+    <link rel="top" title="ptypy 0.3.0 documentation" href="../content.html" />
     <link rel="up" title="ptypy package" href="ptypy.html" />
     <link rel="next" title="ptypy.engines package" href="ptypy.engines.html" />
     <link rel="prev" title="ptypy package" href="ptypy.html" />
@@ -33,6 +33,9 @@
 
   </head>
   <body role="document">
+
+
+
 <div class="pageheader">
   <ul>
     <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
@@ -62,7 +65,7 @@
         <li class="right" >
           <a href="ptypy.html" title="ptypy package"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &raquo;</li> 
       </ul>
     </div>
@@ -86,6 +89,7 @@
 <li class="toctree-l3"><a class="reference internal" href="ptypy.resources.html">ptypy.resources package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.simulations.html">ptypy.simulations package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.utils.html">ptypy.utils package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.debug.html">ptypy.debug package</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="ptypy.html#module-ptypy">Module contents</a></li>
@@ -143,8 +147,8 @@ for ptychographic reconstructions.</p>
 and Views onto them. A container can copy itself to produce a buffer
 needed for calculations. Some basic Mathematical operations are
 implemented at this level as in place operations.
-In General, operations on arrays should be done using the Views, which
-simply return numpyarrays.</dd>
+In general, operations on arrays should be done using the Views, which
+simply return numpy arrays.</dd>
 <dt><strong>Storage class</strong></dt>
 <dd>The sub-container, wrapping a numpy array buffer. A Storage defines a
 system of coordinate (for now only a scaled translation of the pixel
@@ -172,7 +176,7 @@ one is not bothered by memory/array addresses when accessing data.</dd>
 </div></blockquote>
 <dl class="class">
 <dt id="ptypy.core.classes.Container">
-<em class="property">class </em><code class="descclassname">ptypy.core.classes.</code><code class="descname">Container</code><span class="sig-paren">(</span><em>ptycho=None</em>, <em>ID=None</em>, <em>data_type='complex'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">ptypy.core.classes.</code><code class="descname">Container</code><span class="sig-paren">(</span><em>owner=None</em>, <em>ID=None</em>, <em>data_type='complex'</em>, <em>data_dims=2</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ptypy.core.classes.Base" title="ptypy.core.classes.Base"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.classes.Base</span></code></a></p>
 <p>High-level container class.</p>
 <p>Container can be seen as a &#8220;super-numpy-array&#8221; which can contain multiple
@@ -187,7 +191,7 @@ reconstruction instance:</p>
 <li><cite>Cobj</cite>, Storages for the sample transmission, i.e. <strong>object</strong>,</li>
 <li><cite>Cexit</cite>, Storages for the <strong>exit waves</strong>,</li>
 <li><cite>Cdiff</cite>, Storages for <strong>diffraction data</strong>, usually one per scan,</li>
-<li><cite>Cmask</cite>, Strorages for <strong>masks</strong> (and weights), usually one per scan,</li>
+<li><cite>Cmask</cite>, Storages for <strong>masks</strong> (and weights), usually one per scan,</li>
 </ul>
 </div></blockquote>
 <p>A container can conveniently duplicate all its internal <a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a>
@@ -205,13 +209,13 @@ do not hold views and use instead the Views held by the original container</p>
 <tr class="field-odd field"><th class="field-name">Variables:</th><td class="field-body"><ul class="first simple">
 <li><strong>original</strong> (<a class="reference internal" href="#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><em>Container</em></a>) &#8211; If self is copy of a Container, this attribute refers to the original
 Container. Otherwise it is None.</li>
-<li><a class="reference internal" href="parameters.html#.data_type" title=".data_type"><strong>data_type</strong></a> (<em>str</em>) &#8211; Either &#8220;single&#8221; or &#8220;double&#8221;</li>
+<li><a class="reference internal" href="parameters.html#ptycho.data_type" title="ptycho.data_type"><strong>data_type</strong></a> (<em>str</em>) &#8211; Either &#8220;single&#8221; or &#8220;double&#8221;</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>ID</strong> (<em>str or int</em>) &#8211; A unique ID, managed by the parent</li>
-<li><strong>ptycho</strong> (<a class="reference internal" href="#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><em>Ptycho</em></a>) &#8211; The instance of Ptycho associated with this pod.</li>
+<li><strong>ID</strong> (<em>str or int</em>) &#8211; A unique ID, managed by the parent.</li>
+<li><strong>owner</strong> (<a class="reference internal" href="#ptypy.core.classes.Base" title="ptypy.core.classes.Base"><em>Base</em></a>) &#8211; A possible subclass of <a class="reference internal" href="#ptypy.core.classes.Base" title="ptypy.core.classes.Base"><code class="xref any py py-class docutils literal"><span class="pre">Base</span></code></a> that holds this Container.</li>
 <li><strong>data_type</strong> (<em>str or numpy.dtype</em>) &#8211; data type - either a numpy.dtype object or &#8216;complex&#8217; or
 &#8216;real&#8217; (precision is taken from ptycho.FType or ptycho.CType)</li>
 </ul>
@@ -316,15 +320,21 @@ for all <a class="reference internal" href="#ptypy.core.classes.Storage" title="
 
 <dl class="method">
 <dt id="ptypy.core.classes.Container.copy">
-<code class="descname">copy</code><span class="sig-paren">(</span><em>ID=None</em>, <em>fill=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container.copy" title="Permalink to this definition">¶</a></dt>
+<code class="descname">copy</code><span class="sig-paren">(</span><em>ID=None</em>, <em>fill=None</em>, <em>dtype=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container.copy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a new <a class="reference internal" href="#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><code class="xref any py py-class docutils literal"><span class="pre">Container</span></code></a> matching self.</p>
 <p>The copy does not manage views.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>fill</strong> (<em>scalar or None</em>) &#8211; If None (default), copy content. If scalar, initializes
-to this value</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fill</strong> (<em>scalar or None</em>) &#8211; If None (default), copy content. If scalar, initializes
+to this value</li>
+<li><strong>dtype</strong> (<em>valid data type or None</em>) &#8211; If None, the copy will have the same data type as the
+original, is specified the returned instance will contain
+empty buffers.</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
@@ -332,13 +342,13 @@ to this value</td>
 
 <dl class="method">
 <dt id="ptypy.core.classes.Container.delete_copy">
-<code class="descname">delete_copy</code><span class="sig-paren">(</span><em>copyIDs=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container.delete_copy" title="Permalink to this definition">¶</a></dt>
-<dd><p>Delet a copy or all copies of this container from owner instance.</p>
+<code class="descname">delete_copy</code><span class="sig-paren">(</span><em>copy_IDs=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container.delete_copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a copy or all copies of this container from owner instance.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>copyIDS</strong> (<em>str</em>) &#8211; ID of copy to be deleted. If None, deletes <em>all</em> copies</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>copy_IDs</strong> (<em>str</em>) &#8211; ID of copy to be deleted. If None, deletes <em>all</em> copies</td>
 </tr>
 </tbody>
 </table>
@@ -365,7 +375,7 @@ to this value</td>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>table_format</strong> (<em>list</em>) &#8211; <p>List of (<em>item</em>,*length*) pairs where item is name of the info
+<li><strong>table_format</strong> (<em>list</em>) &#8211; <p>List of (<em>item</em>, <em>length</em>) pairs where item is name of the info
 to be listed in the report and length is the column width.
 The following items are allowed:</p>
 <ul>
@@ -404,7 +414,7 @@ in <cite>table_format</cite></li>
 <dl class="method">
 <dt id="ptypy.core.classes.Container.info">
 <code class="descname">info</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container.info" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the total buffer space for this container in bytes and storage info</p>
+<dd><p>Returns the container&#8217;s total buffer space in bytes and storage info.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -434,8 +444,14 @@ Formatted string</li>
 <code class="descname">nbytes</code><a class="headerlink" href="#ptypy.core.classes.Container.nbytes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return total number of bytes used by numpy array buffers
 in this container. This is not the actual size in memory of the
-whole contianer, as it does not include the views nor dictionary
+whole container, as it does not include the views or dictionary
 overhead.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.core.classes.Container.ndim">
+<code class="descname">ndim</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.core.classes.Container.ndim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default data dimensionality for Views and Storages.</p>
 </dd></dl>
 
 <dl class="method">
@@ -460,13 +476,13 @@ error will be raised if the ID already exists.</li>
 
 <dl class="method">
 <dt id="ptypy.core.classes.Container.reformat">
-<code class="descname">reformat</code><span class="sig-paren">(</span><em>AlsoInCopies=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container.reformat" title="Permalink to this definition">¶</a></dt>
+<code class="descname">reformat</code><span class="sig-paren">(</span><em>also_in_copies=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container.reformat" title="Permalink to this definition">¶</a></dt>
 <dd><p>Reformats all storages in this container.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>AlsoInCopies</strong> (<em>bool</em>) &#8211; If True, also reformat associated copies of this container</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>also_in_copies</strong> (<em>bool</em>) &#8211; If True, also reformat associated copies of this container</td>
 </tr>
 </tbody>
 </table>
@@ -475,7 +491,7 @@ error will be raised if the ID already exists.</li>
 <dl class="method">
 <dt id="ptypy.core.classes.Container.report">
 <code class="descname">report</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container.report" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a formatted string giving a report on all storages in this container.</p>
+<dd><p>Returns a formatted report string on all storages in this container.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -500,7 +516,7 @@ error will be raised if the ID already exists.</li>
 
 <dl class="method">
 <dt id="ptypy.core.classes.Container.views_in_storage">
-<code class="descname">views_in_storage</code><span class="sig-paren">(</span><em>s</em>, <em>active=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container.views_in_storage" title="Permalink to this definition">¶</a></dt>
+<code class="descname">views_in_storage</code><span class="sig-paren">(</span><em>s</em>, <em>active_only=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Container.views_in_storage" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a list of views on <a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a> <cite>s</cite>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -508,7 +524,7 @@ error will be raised if the ID already exists.</li>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>s</strong> (<a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><em>Storage</em></a>) &#8211; The storage to look for.</li>
-<li><strong>active</strong> (<em>True or False</em>) &#8211; If True (default), return only active views.</li>
+<li><strong>active_only</strong> (<em>True or False</em>) &#8211; If True (default), return only active views.</li>
 </ul>
 </td>
 </tr>
@@ -520,9 +536,9 @@ error will be raised if the ID already exists.</li>
 
 <dl class="class">
 <dt id="ptypy.core.classes.Storage">
-<em class="property">class </em><code class="descclassname">ptypy.core.classes.</code><code class="descname">Storage</code><span class="sig-paren">(</span><em>container</em>, <em>ID=None</em>, <em>data=None</em>, <em>shape=(1</em>, <em>1</em>, <em>1)</em>, <em>fill=0.0</em>, <em>psize=None</em>, <em>origin=None</em>, <em>layermap=None</em>, <em>padonly=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Storage" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">ptypy.core.classes.</code><code class="descname">Storage</code><span class="sig-paren">(</span><em>container</em>, <em>ID=None</em>, <em>data=None</em>, <em>shape=(1</em>, <em>1</em>, <em>1)</em>, <em>fill=0.0</em>, <em>psize=1.0</em>, <em>origin=None</em>, <em>layermap=None</em>, <em>padonly=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Storage" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ptypy.core.classes.Base" title="ptypy.core.classes.Base"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.classes.Base</span></code></a></p>
-<p>Inner container handling acces to data arrays.</p>
+<p>Inner container handling access to data arrays.</p>
 <p>This class essentially manages access to an internal numpy array
 buffer called <a class="reference internal" href="#ptypy.core.classes.Storage.data" title="ptypy.core.classes.Storage.data"><code class="xref py py-attr docutils literal"><span class="pre">data</span></code></a></p>
 <ul class="simple">
@@ -535,10 +551,12 @@ buffer called <a class="reference internal" href="#ptypy.core.classes.Storage.da
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>container</strong> (<a class="reference internal" href="#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><em>Container</em></a>) &#8211; The container instance</li>
-<li><strong>ID</strong> (<em>None,str or int</em>) &#8211; A unique ID, managed by the parent, if None ID is generated
+<li><strong>ID</strong> (<em>None, str or int</em>) &#8211; A unique ID, managed by the parent, if None ID is generated
 by parent.</li>
-<li><strong>data</strong> (<em>ndarray or None</em>) &#8211; A numpy array to use as initial buffer.</li>
-<li><strong>shape</strong> (<em>3-tuple</em>) &#8211; The shape of the buffer</li>
+<li><strong>data</strong> (<em>ndarray or None</em>) &#8211; A numpy array to use as initial buffer.
+<em>Deprecated</em> in v0.3, use fill method instead.</li>
+<li><strong>shape</strong> (<em>tuple, int, or None</em>) &#8211; The shape of the buffer. If None or int, the dimensionality
+is found from the owning Container instance.</li>
 <li><strong>fill</strong> (<em>float or complex</em>) &#8211; The default value to fill storage with, will be converted to
 data type of owner.</li>
 <li><strong>psize</strong> (<em>float or 2-tuple of float</em>) &#8211; The physical pixel size.</li>
@@ -546,7 +564,7 @@ data type of owner.</li>
 corner of the storage buffer).</li>
 <li><strong>layermap</strong> (<em>list or None</em>) &#8211; A list (or 1D numpy array) mapping input layer indices
 to the internal buffer. This may be useful if the buffer
-contains only a portion of a larger dataset (as when using
+contains only a portion of a larger data set (as when using
 distributed data with MPI). If None, provide direct access.
 to the 3d internal data.</li>
 <li><strong>padonly</strong> (<em>bool</em>) &#8211; If True, reformat() will enlarge the internal buffer if needed,
@@ -564,7 +582,7 @@ but will not shrink it.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The view to internal data buffe correspondieng to View <cite>v</cite></td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The view to internal data buffer corresponding to View or layer <cite>v</cite></td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">ndarray</td>
 </tr>
@@ -595,16 +613,14 @@ but will not shrink it.</li>
 <dt id="ptypy.core.classes.Storage.allreduce">
 <code class="descname">allreduce</code><span class="sig-paren">(</span><em>op=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Storage.allreduce" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs MPI parallel <code class="docutils literal"><span class="pre">allreduce</span></code> with a default sum as
-reduction operation for internal data buffer <code class="docutils literal"><span class="pre">self.data</span></code></p>
+reduction operation for internal data buffer <code class="docutils literal"><span class="pre">self.data</span></code>.
+This method does nothing if the storage is distributed across
+nodes.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>c</strong> (<a class="reference internal" href="#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><em>Container</em></a>) &#8211; Input</li>
-<li><strong>op</strong> &#8211; Reduction operation. If <code class="docutils literal"><span class="pre">None</span></code> uses sum.</li>
-</ul>
-</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>op</strong> &#8211; Reduction operation. If <code class="docutils literal"><span class="pre">None</span></code> uses sum.</td>
 </tr>
 </tbody>
 </table>
@@ -644,7 +660,7 @@ current content.</li>
 <dl class="attribute">
 <dt id="ptypy.core.classes.Storage.data">
 <code class="descname">data</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.core.classes.Storage.data" title="Permalink to this definition">¶</a></dt>
-<dd><p>Three dimensional array as data buffer</p>
+<dd><p>Three/four or potentially N-dimensional array as data buffer</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -750,6 +766,12 @@ grids in the shape of internal buffer</td>
 </dd></dl>
 
 <dl class="attribute">
+<dt id="ptypy.core.classes.Storage.ndim">
+<code class="descname">ndim</code><a class="headerlink" href="#ptypy.core.classes.Storage.ndim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of dimensions for <a class="reference internal" href="#ptypy.core.classes.View" title="ptypy.core.classes.View"><code class="xref any py py-class docutils literal"><span class="pre">View</span></code></a> access</p>
+</dd></dl>
+
+<dl class="attribute">
 <dt id="ptypy.core.classes.Storage.origin">
 <code class="descname">origin</code><a class="headerlink" href="#ptypy.core.classes.Storage.origin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the physical position of the upper-left corner of the storage.</p>
@@ -758,32 +780,33 @@ grids in the shape of internal buffer</td>
 <dl class="attribute">
 <dt id="ptypy.core.classes.Storage.psize">
 <code class="descname">psize</code><a class="headerlink" href="#ptypy.core.classes.Storage.psize" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The pixel size.</td>
-</tr>
-</tbody>
-</table>
+<dd><p>The pixel size.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.core.classes.Storage.reformat">
-<code class="descname">reformat</code><span class="sig-paren">(</span><em>newID=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Storage.reformat" title="Permalink to this definition">¶</a></dt>
+<code class="descname">reformat</code><span class="sig-paren">(</span><em>newID=None</em>, <em>update=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Storage.reformat" title="Permalink to this definition">¶</a></dt>
 <dd><p>Crop or pad if required.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>newID</strong> (<em>str or int</em>) &#8211; If None (default) act on self. Otherwise create a copy
-of self before doing the cropping and padding.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>newID</strong> (<em>str or int</em>) &#8211; If None (default) act on self. Otherwise create a copy
+of self before doing the cropping and padding.</li>
+<li><strong>update</strong> (<em>bool</em>) &#8211; If True, updates all Views before reformatting. Not necessarily
+needed, if Views have been recently instantiated. Roughly doubles
+execution time.</li>
+</ul>
+</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>s</strong> &#8211;
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>s</strong> &#8211;
 returns new Storage instance in same <a class="reference internal" href="#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><code class="xref any py py-class docutils literal"><span class="pre">Container</span></code></a> if
-<cite>newId</cite> is not None.</td>
+<cite>newId</cite> is not None.</p>
+</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage">Storage</a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage">Storage</a></p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -837,7 +860,7 @@ the view is actually on self. Use cautiously.</td>
 <dt id="ptypy.core.classes.Storage.zoom_to_psize">
 <code class="descname">zoom_to_psize</code><span class="sig-paren">(</span><em>new_psize</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Storage.zoom_to_psize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Changes pixel size and zooms the data buffer along last two axis
-accordingly, updates all attached views and reformats if neccessary.
+accordingly, updates all attached views and reformats if necessary.
 <strong>untested!!</strong></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -855,14 +878,14 @@ accordingly, updates all attached views and reformats if neccessary.
 <dt id="ptypy.core.classes.View">
 <em class="property">class </em><code class="descclassname">ptypy.core.classes.</code><code class="descname">View</code><span class="sig-paren">(</span><em>container</em>, <em>ID=None</em>, <em>accessrule=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.View" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ptypy.core.classes.Base" title="ptypy.core.classes.Base"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.classes.Base</span></code></a></p>
-<p>A &#8220;window&#8221; on a Container.</p>
+<p>A &#8216;window&#8217; on a Container.</p>
 <p>A view stores all the slicing information to extract a 2D piece
 of Container.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">The final structure of this class is yet up to debate
 and the constructor signature may change. Especially since
-&#8220;DEFAULT_ACCESSRULE&#8221; is yet so small, its contents could be
+&#8216;DEFAULT_ACCESSRULE&#8217; is yet so small, its contents could be
 incorporated in the constructor call.</p>
 </div>
 <table class="docutils field-list" frame="void" rules="none">
@@ -887,10 +910,9 @@ it will be created! (<em>default</em> is <code class="docutils literal"><span cl
 <li><strong>shape</strong> (<em>int or tuple of int</em>) &#8211;
 Shape of the view in pixels (<em>default</em> is <code class="docutils literal"><span class="pre">None</span></code>)</li>
 <li><strong>coord</strong> (<em>2-tuple of float,</em>) &#8211;
-Physical coordinates [meter] of the center of the view.</li>
+Physical coordinates <em>(meter)</em> of the center of the view.</li>
 <li><strong>psize</strong> (<em>float or tuple of float</em>) &#8211;
-Pixel size [meters]. Required for storage initialization,
-See <code class="xref py py-data docutils literal"><span class="pre">DEFAULT_PSIZE</span></code></li>
+Pixel size in <em>(meter)</em> . Required for storage initialization.</li>
 <li><strong>layer</strong> (<em>int</em>) &#8211;
 Index of the third dimension if applicable.
 (<em>default</em> is <code class="docutils literal"><span class="pre">0</span></code>)</li>
@@ -907,8 +929,13 @@ Whether this view is active (<em>default</em> is <code class="docutils literal">
 <dd></dd></dl>
 
 <dl class="attribute">
+<dt id="ptypy.core.classes.View.ID">
+<code class="descname">ID</code><a class="headerlink" href="#ptypy.core.classes.View.ID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
 <dt id="ptypy.core.classes.View.active">
-<code class="descname">active</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.core.classes.View.active" title="Permalink to this definition">¶</a></dt>
+<code class="descname">active</code><a class="headerlink" href="#ptypy.core.classes.View.active" title="Permalink to this definition">¶</a></dt>
 <dd><p>Active state. If False this view will be ignored when
 resizing the data buffer of the associated <a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a>.</p>
 </dd></dl>
@@ -939,7 +966,7 @@ resizing the data buffer of the associated <a class="reference internal" href="#
 
 <dl class="attribute">
 <dt id="ptypy.core.classes.View.dlayer">
-<code class="descname">dlayer</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.core.classes.View.dlayer" title="Permalink to this definition">¶</a></dt>
+<code class="descname">dlayer</code><a class="headerlink" href="#ptypy.core.classes.View.dlayer" title="Permalink to this definition">¶</a></dt>
 <dd><p>The &#8220;layer&#8221; i.e. first axis index in Storage data buffer</p>
 </dd></dl>
 
@@ -947,6 +974,37 @@ resizing the data buffer of the associated <a class="reference internal" href="#
 <dt id="ptypy.core.classes.View.dlow">
 <code class="descname">dlow</code><a class="headerlink" href="#ptypy.core.classes.View.dlow" title="Permalink to this definition">¶</a></dt>
 <dd><p>Low side of the View&#8217;s data range.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.core.classes.View.error">
+<code class="descname">error</code><a class="headerlink" href="#ptypy.core.classes.View.error" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.core.classes.View.layer">
+<code class="descname">layer</code><a class="headerlink" href="#ptypy.core.classes.View.layer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.core.classes.View.ndim">
+<code class="descname">ndim</code><a class="headerlink" href="#ptypy.core.classes.View.ndim" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.core.classes.View.numID">
+<code class="descname">numID</code><a class="headerlink" href="#ptypy.core.classes.View.numID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.core.classes.View.owner">
+<code class="descname">owner</code><a class="headerlink" href="#ptypy.core.classes.View.owner" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.core.classes.View.pcoord">
+<code class="descname">pcoord</code><a class="headerlink" href="#ptypy.core.classes.View.pcoord" title="Permalink to this definition">¶</a></dt>
+<dd><p>The physical coordinate in pixel space</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -959,9 +1017,8 @@ its way here. May return <code class="docutils literal"><span class="pre">None</
 
 <dl class="attribute">
 <dt id="ptypy.core.classes.View.pods">
-<code class="descname">pods</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.core.classes.View.pods" title="Permalink to this definition">¶</a></dt>
-<dd><p>Volatile dictionary for all <a class="reference internal" href="#ptypy.core.classes.POD" title="ptypy.core.classes.POD"><code class="xref any py py-class docutils literal"><span class="pre">POD</span></code></a>s that connect to
-this view</p>
+<code class="descname">pods</code><a class="headerlink" href="#ptypy.core.classes.View.pods" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all :any:<a href="#id1"><span class="problematic" id="id2">`</span></a>POD`s still connected to this view as a dict.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -993,13 +1050,13 @@ and data coordinate.</p>
 
 <dl class="attribute">
 <dt id="ptypy.core.classes.View.storage">
-<code class="descname">storage</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.core.classes.View.storage" title="Permalink to this definition">¶</a></dt>
-<dd><p>The <a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a> instance that this view applies to by default.</p>
+<code class="descname">storage</code><a class="headerlink" href="#ptypy.core.classes.View.storage" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref py py-class docutils literal"><span class="pre">Storage</span></code></a> instance that this view applies to by default.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="ptypy.core.classes.View.storageID">
-<code class="descname">storageID</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.core.classes.View.storageID" title="Permalink to this definition">¶</a></dt>
+<code class="descname">storageID</code><a class="headerlink" href="#ptypy.core.classes.View.storageID" title="Permalink to this definition">¶</a></dt>
 <dd><p>The storage ID that this view will be forward to if applied
 to a <a class="reference internal" href="#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><code class="xref any py py-class docutils literal"><span class="pre">Container</span></code></a>.</p>
 </dd></dl>
@@ -1008,7 +1065,7 @@ to a <a class="reference internal" href="#ptypy.core.classes.Container" title="p
 
 <dl class="class">
 <dt id="ptypy.core.classes.POD">
-<em class="property">class </em><code class="descclassname">ptypy.core.classes.</code><code class="descname">POD</code><span class="sig-paren">(</span><em>ptycho=None</em>, <em>ID=None</em>, <em>views=None</em>, <em>geometry=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.POD" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">ptypy.core.classes.</code><code class="descname">POD</code><span class="sig-paren">(</span><em>ptycho=None</em>, <em>model=None</em>, <em>ID=None</em>, <em>views=None</em>, <em>geometry=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.POD" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ptypy.core.classes.Base" title="ptypy.core.classes.Base"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.classes.Base</span></code></a></p>
 <p>POD : Ptychographic Object Descriptor</p>
 <p>A POD brings together probe view, object view and diff view. It also
@@ -1020,6 +1077,8 @@ objects to go from exit to diff space.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>ptycho</strong> (<a class="reference internal" href="#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><em>Ptycho</em></a>) &#8211; The instance of Ptycho associated with this pod.</li>
+<li><strong>model</strong> (<a class="reference internal" href="#ptypy.core.manager.ScanModel" title="ptypy.core.manager.ScanModel"><em>ScanModel</em></a>) &#8211; The instance of ScanModel (or it subclasses) which describes
+this pod.</li>
 <li><strong>ID</strong> (<em>str or int</em>) &#8211; The pod ID, If None it is managed by the ptycho.</li>
 <li><strong>views</strong> (<em>dict or Param</em>) &#8211; The views. See <a class="reference internal" href="#ptypy.core.classes.POD.DEFAULT_VIEWS" title="ptypy.core.classes.POD.DEFAULT_VIEWS"><code class="xref py py-attr docutils literal"><span class="pre">DEFAULT_VIEWS</span></code></a>.</li>
 <li><strong>geometry</strong> (<a class="reference internal" href="#ptypy.core.geometry.Geo" title="ptypy.core.geometry.Geo"><em>Geo</em></a>) &#8211; Geometry class instance and attached propagator</li>
@@ -1110,17 +1169,17 @@ Equivalent to <code class="docutils literal"><span class="pre">self.pr_view.data
 <em class="property">class </em><code class="descclassname">ptypy.core.classes.</code><code class="descname">Base</code><span class="sig-paren">(</span><em>owner=None</em>, <em>ID=None</em>, <em>BeOwner=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Base" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>Ptypy Base class to support some kind of hierarchy,
-conversion to and from dictionarys as well as a &#8216;cross-node&#8217; ID
-managament of python objects</p>
+conversion to and from dictionaries as well as a &#8216;cross-node&#8217; ID
+management of python objects</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>owner</strong> (<em>Other subclass of Base or Base</em>) &#8211; Owner gives IDs to other ptypy objects that refer to him
+<li><strong>owner</strong> (<em>Other subclass of Base or Base</em>) &#8211; Owner gives IDs to other ptypy objects that refer to it
 as owner. Owner also keeps a reference to these objects in
 its internal _pool where objects are key-sorted according
-to their ID prfix</li>
+to their ID prefix</li>
 <li><strong>ID</strong> (<em>None, str or int</em>) &#8211; </li>
 <li><strong>BeOwner</strong> (<em>bool</em>) &#8211; Set to <cite>False</cite> if this instance is not intended to own other
 ptypy objects.</li>
@@ -1129,9 +1188,24 @@ ptypy objects.</li>
 </tr>
 </tbody>
 </table>
+<dl class="attribute">
+<dt id="ptypy.core.classes.Base.ID">
+<code class="descname">ID</code><a class="headerlink" href="#ptypy.core.classes.Base.ID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="method">
 <dt id="ptypy.core.classes.Base.calc_mem_usage">
 <code class="descname">calc_mem_usage</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.classes.Base.calc_mem_usage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.core.classes.Base.numID">
+<code class="descname">numID</code><a class="headerlink" href="#ptypy.core.classes.Base.numID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.core.classes.Base.owner">
+<code class="descname">owner</code><a class="headerlink" href="#ptypy.core.classes.Base.owner" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -1139,7 +1213,7 @@ ptypy objects.</li>
 </div>
 <div class="section" id="module-ptypy.core.data">
 <span id="ptypy-core-data-module"></span><h2>ptypy.core.data module<a class="headerlink" href="#module-ptypy.core.data" title="Permalink to this headline">¶</a></h2>
-<p>data - Diffraction data access</p>
+<p>data - Diffraction data access.</p>
 <p>This module defines a PtyScan, a container to hold the experimental
 data of a ptychography scan. Instrument-specific reduction routines should
 inherit PtyScan to prepare data for the Ptycho Instance in a uniform format.</p>
@@ -1161,33 +1235,6 @@ holds a collection of datascans and feeds the data as required.</p>
 </tbody>
 </table>
 </div></blockquote>
-<dl class="data">
-<dt id="ptypy.core.data.GENERIC">
-<code class="descclassname">ptypy.core.data.</code><code class="descname">GENERIC</code><em class="property"> = Param({'positions_theory': None, 'auto_center': None, 'chunk_format': '.chunk%02d', 'min_frames': 1, 'orientation': None, 'num_frames': None, 'energy': None, 'center': None, 'recipe': {}, 'label': None, 'psize': None, 'load_parallel': 'data', 'shape': None, 'rebin': None, 'experimentID': None, 'version': '0.1', 'save': None, 'dfile': None, 'distance': None})</em><a class="headerlink" href="#ptypy.core.data.GENERIC" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default data parameters. See <a class="reference internal" href="parameters.html#.scan.data" title=".scan.data"><code class="xref py py-data docutils literal"><span class="pre">scan.data</span></code></a> and a short listing below</p>
-<ul class="simple">
-<li><em>positions_theory</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.positions_theory" title=".scan.data.positions_theory"><code class="xref py py-data docutils literal"><span class="pre">positions_theory</span></code></a></li>
-<li><em>auto_center</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.auto_center" title=".scan.data.auto_center"><code class="xref py py-data docutils literal"><span class="pre">auto_center</span></code></a></li>
-<li><em>chunk_format</em> = <code class="docutils literal"><span class="pre">&quot;.chunk%02d&quot;</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.chunk_format" title=".scan.data.chunk_format"><code class="xref py py-data docutils literal"><span class="pre">chunk_format</span></code></a></li>
-<li><em>min_frames</em> = <code class="docutils literal"><span class="pre">1</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.min_frames" title=".scan.data.min_frames"><code class="xref py py-data docutils literal"><span class="pre">min_frames</span></code></a></li>
-<li><em>orientation</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.orientation" title=".scan.data.orientation"><code class="xref py py-data docutils literal"><span class="pre">orientation</span></code></a></li>
-<li><em>num_frames</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.num_frames" title=".scan.data.num_frames"><code class="xref py py-data docutils literal"><span class="pre">num_frames</span></code></a></li>
-<li><em>energy</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.energy" title=".scan.data.energy"><code class="xref py py-data docutils literal"><span class="pre">energy</span></code></a></li>
-<li><em>center</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.center" title=".scan.data.center"><code class="xref py py-data docutils literal"><span class="pre">center</span></code></a></li>
-<li><em>recipe</em> = <code class="docutils literal"><span class="pre">dict</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.recipe" title=".scan.data.recipe"><code class="xref py py-data docutils literal"><span class="pre">recipe</span></code></a></li>
-<li><em>label</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.label" title=".scan.data.label"><code class="xref py py-data docutils literal"><span class="pre">label</span></code></a></li>
-<li><em>psize</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.psize" title=".scan.data.psize"><code class="xref py py-data docutils literal"><span class="pre">psize</span></code></a></li>
-<li><em>load_parallel</em> = <code class="docutils literal"><span class="pre">&quot;data&quot;</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.load_parallel" title=".scan.data.load_parallel"><code class="xref py py-data docutils literal"><span class="pre">load_parallel</span></code></a></li>
-<li><em>shape</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.shape" title=".scan.data.shape"><code class="xref py py-data docutils literal"><span class="pre">shape</span></code></a></li>
-<li><em>rebin</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.rebin" title=".scan.data.rebin"><code class="xref py py-data docutils literal"><span class="pre">rebin</span></code></a></li>
-<li><em>experimentID</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.experimentID" title=".scan.data.experimentID"><code class="xref py py-data docutils literal"><span class="pre">experimentID</span></code></a></li>
-<li><em>version</em> = <code class="docutils literal"><span class="pre">&quot;0.1&quot;</span></code></li>
-<li><em>save</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.save" title=".scan.data.save"><code class="xref py py-data docutils literal"><span class="pre">save</span></code></a></li>
-<li><em>dfile</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.dfile" title=".scan.data.dfile"><code class="xref py py-data docutils literal"><span class="pre">dfile</span></code></a></li>
-<li><em>distance</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.data.distance" title=".scan.data.distance"><code class="xref py py-data docutils literal"><span class="pre">distance</span></code></a></li>
-</ul>
-</dd></dl>
-
 <dl class="class">
 <dt id="ptypy.core.data.PtyScan">
 <em class="property">class </em><code class="descclassname">ptypy.core.data.</code><code class="descname">PtyScan</code><span class="sig-paren">(</span><em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtyScan" title="Permalink to this definition">¶</a></dt>
@@ -1205,7 +1252,8 @@ holds a collection of datascans and feeds the data as required.</p>
 </ul>
 </dd>
 </dl>
-<p>Class creation with minimum set of parameters, see <a class="reference internal" href="#ptypy.core.data.GENERIC" title="ptypy.core.data.GENERIC"><code class="xref py py-data docutils literal"><span class="pre">GENERIC</span></code></a>
+<p>Default data parameters. See <code class="xref py py-data docutils literal"><span class="pre">scan.data</span></code></p>
+<p>Class creation with minimum set of parameters, see <a class="reference internal" href="#ptypy.core.data.PtyScan.DEFAULT" title="ptypy.core.data.PtyScan.DEFAULT"><code class="xref py py-data docutils literal"><span class="pre">PtyScan.DEFAULT</span></code></a>
 Please note that class creation is not meant to load data.</p>
 <p>Call <a class="reference internal" href="#ptypy.core.data.PtyScan.initialize" title="ptypy.core.data.PtyScan.initialize"><code class="xref py py-data docutils literal"><span class="pre">initialize</span></code></a> to begin loading and data file creation.</p>
 <dl class="attribute">
@@ -1215,13 +1263,19 @@ Please note that class creation is not meant to load data.</p>
 
 <dl class="attribute">
 <dt id="ptypy.core.data.PtyScan.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'positions_theory': None, 'auto_center': None, 'min_frames': 1, 'orientation': None, 'num_frames': None, 'dfile': None, 'energy': None, 'recipe': {}, 'psize': None, 'label': None, 'load_parallel': 'data', 'shape': None, 'rebin': None, 'experimentID': None, 'version': '0.1', 'save': None, 'chunk_format': '.chunk%02d', 'distance': None, 'center': None})</em><a class="headerlink" href="#ptypy.core.data.PtyScan.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<code class="descname">DEFAULT</code><em class="property"> = Param({'auto_center': None, 'positions_theory': None, 'dfile': None, 'name': 'PtyScan', 'num_frames': None, 'min_frames': 1, 'center': 'fftshift', 'chunk_format': '.chunk%02d', 'label': None, 'experimentID': None, 'load_parallel': 'data', 'shape': 256, 'rebin': None, 'psize': 0.000172, 'version': 0.1, 'add_poisson_noise': True, 'save': None, 'distance': 7.19, 'energy': 7.2, 'orientation': None})</em><a class="headerlink" href="#ptypy.core.data.PtyScan.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="attribute">
 <dt id="ptypy.core.data.PtyScan.EOS">
 <code class="descname">EOS</code><em class="property"> = 'msgEOS'</em><a class="headerlink" href="#ptypy.core.data.PtyScan.EOS" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ptypy.core.data.PtyScan.METAKEYS">
+<code class="descname">METAKEYS</code><em class="property"> = ['version', 'num_frames', 'label', 'shape', 'psize', 'energy', 'center', 'distance']</em><a class="headerlink" href="#ptypy.core.data.PtyScan.METAKEYS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Keys to store in meta param</p>
+</dd></dl>
 
 <dl class="attribute">
 <dt id="ptypy.core.data.PtyScan.WAIT">
@@ -1235,8 +1289,8 @@ Please note that class creation is not meant to load data.</p>
 
 <dl class="method">
 <dt id="ptypy.core.data.PtyScan.auto">
-<code class="descname">auto</code><span class="sig-paren">(</span><em>frames</em>, <em>chunk_form='dp'</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtyScan.auto" title="Permalink to this definition">¶</a></dt>
-<dd><p>Repeated calls to this function will process the data</p>
+<code class="descname">auto</code><span class="sig-paren">(</span><em>frames</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtyScan.auto" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repeated calls to this function will process the data.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1244,9 +1298,13 @@ Please note that class creation is not meant to load data.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>frames</strong> (<em>int</em>) &#8211; Number of frames to process.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">one of the following
-- None, if scan&#8217;s end is not reached, but no data could be prepared yet
-- False, if scan&#8217;s end is reached
-- a data package otherwise</td>
+- WAIT, if scan&#8217;s end is not reached,<blockquote>
+<div>but no data could be prepared yet</div></blockquote>
+<ul class="simple">
+<li>EOS, if scan&#8217;s end is reached</li>
+<li>a data package otherwise</li>
+</ul>
+</td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">variable</td>
 </tr>
@@ -1261,15 +1319,15 @@ Please note that class creation is not meant to load data.</p>
 <p>This method checks how many frames the preparation routine may
 process, starting from frame <cite>start</cite> at a request of <cite>frames</cite>.</p>
 <p>This method is supposed to return the number of accessible frames
-for preparation and should determine if data acquistion for this
+for preparation and should determine if data acquisition for this
 scan is finished. Its main purpose is to allow for a data
 acquisition scheme, where the number of frames is not known
-when <a class="reference internal" href="#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a> is constructed, i.e. a data stream or an
+when <a class="reference internal" href="#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref py py-class docutils literal"><span class="pre">PtyScan</span></code></a> is constructed, i.e. a data stream or an
 on-the-fly reconstructions.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">If <a class="reference internal" href="#ptypy.core.data.PtyScan.num_frames" title="ptypy.core.data.PtyScan.num_frames"><code class="xref py py-data docutils literal"><span class="pre">num_frames</span></code></a> is set on <code class="docutils literal"><span class="pre">__init__()</span></code> of the subclass,
-this method can be left as is.</p>
+this method can be left as it is.</p>
 </div>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1303,13 +1361,13 @@ is one of the following,
 <dd><p><strong>Override in subclass for custom implementation</strong></p>
 <p>Place holder for dark and flatfield correction. If <a class="reference internal" href="#ptypy.core.data.PtyScan.load" title="ptypy.core.data.PtyScan.load"><code class="xref any py py-meth docutils literal"><span class="pre">load</span></code></a>
 already provides data in the form of photon counts, and no frame
-specific weight is needed, this method may be left as is</p>
+specific weight is needed, this method may be left as it is.</p>
 <p>May get <em>merged</em> with <a class="reference internal" href="#ptypy.core.data.PtyScan.load" title="ptypy.core.data.PtyScan.load"><code class="xref any py py-meth docutils literal"><span class="pre">load</span></code></a> in future.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>data,weights</strong> &#8211;
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>data, weights</strong> &#8211;
 Flat and dark-corrected data dictionaries. These dictionaries
 must have the same keys as the input <cite>raw</cite> and contain
 corrected frames (<cite>data</cite>) and statistical weights (<cite>weights</cite>)
@@ -1335,21 +1393,21 @@ of detector counts that correspond to one photon count</td>
 <dl class="method">
 <dt id="ptypy.core.data.PtyScan.get_data_chunk">
 <code class="descname">get_data_chunk</code><span class="sig-paren">(</span><em>chunksize</em>, <em>start=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtyScan.get_data_chunk" title="Permalink to this definition">¶</a></dt>
-<dd><p>This function prepares a container that is compatible to data package
-This function is called from the auto() function.</p>
+<dd><p>This function prepares a container that is compatible to data package.</p>
+<p>This function is called from the auto() function.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="ptypy.core.data.PtyScan.info">
 <code class="descname">info</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.core.data.PtyScan.info" title="Permalink to this definition">¶</a></dt>
-<dd><p><a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><code class="xref any py py-class docutils literal"><span class="pre">Param</span></code></a> container that stores all input parameters.</p>
+<dd><p><code class="xref py py-class docutils literal"><span class="pre">Param</span></code> container that stores all input parameters.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.core.data.PtyScan.initialize">
 <code class="descname">initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtyScan.initialize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Begins the Data preparation and intended as the first method
-that does read-write acces on (large) data. Does the following:</p>
+that does read-write access on (large) data. Does the following:</p>
 <ul class="simple">
 <li>Creates a *.ptyd data file at location specified by
 <code class="xref py py-data docutils literal"><span class="pre">dfile</span></code> (master node only)</li>
@@ -1365,8 +1423,8 @@ that does read-write acces on (large) data. Does the following:</p>
 <dt id="ptypy.core.data.PtyScan.load">
 <code class="descname">load</code><span class="sig-paren">(</span><em>indices</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtyScan.load" title="Permalink to this definition">¶</a></dt>
 <dd><p><strong>Override in subclass for custom implementation</strong></p>
-<p>Loads data according to node specific scanpoint indeces that have
-been determined by <code class="xref py py-class docutils literal"><span class="pre">LoadManager</span></code> or otherwise</p>
+<p>Loads data according to node specific scanpoint indices that have
+been determined by <code class="xref py py-class docutils literal"><span class="pre">LoadManager</span></code> or otherwise.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1383,8 +1441,8 @@ to the scan point index. <cite>weight</cite> and <cite>positions</cite> may be e
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">This is the <em>most</em> important method to change when subclassing
-<a class="reference internal" href="#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref any py py-class docutils literal"><span class="pre">PtyScan</span></code></a>. Most often it suffices to override the constructor
-and this method to createa subclass of suited for a specific
+<a class="reference internal" href="#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref py py-class docutils literal"><span class="pre">PtyScan</span></code></a>. Most often it suffices to override the constructor
+and this method to create a subclass suited for a specific
 experiment.</p>
 </div>
 </dd></dl>
@@ -1403,7 +1461,7 @@ of <code class="xref py py-attr docutils literal"><span class="pre">common</span
 the processing other than the user specifies it in py:meth:<cite>load</cite></p>
 <p>If <cite>load_parallel</cite> is set to <cite>all</cite> or common`, this function is
 executed by all nodes, otherwise the master node executes this
-function and braodcasts the results to other nodes.</p>
+function and broadcasts the results to other nodes.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1428,7 +1486,7 @@ on a per frame basis in <a class="reference internal" href="#ptypy.core.data.Pty
 effect.</p>
 <p>If theoretical positions <code class="xref py py-data docutils literal"><span class="pre">positions_theory</span></code> are
 provided in the initial parameter set <a class="reference internal" href="#ptypy.core.data.PtyScan.DEFAULT" title="ptypy.core.data.PtyScan.DEFAULT"><code class="xref py py-data docutils literal"><span class="pre">DEFAULT</span></code></a>,
-specifyiing positions here has NO effect and will be ignored.</p>
+specifying positions here has NO effect and will be ignored.</p>
 <p>The purpose of this function is to avoid reloading and parallel
 reads on files that may require intense parsing to retrieve the
 information, e.g. long SPEC log files. If parallel reads or
@@ -1438,7 +1496,7 @@ and it is recommended to only reimplement the <a class="reference internal" href
 method.</p>
 <p>If <cite>load_parallel</cite> is set to <cite>all</cite> or common`, this function is
 executed by all nodes, otherwise the master node executes this
-function and braodcasts the results to other nodes.</p>
+function and broadcasts the results to other nodes.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1476,13 +1534,13 @@ reads. If that is not critical to the implementation,
 reimplementing this function in a subclass can be ignored.</p>
 <p>If <cite>load_parallel</cite> is set to <cite>all</cite> or common`, this function is
 executed by all nodes, otherwise the master node executes this
-function and braodcasts the results to other nodes.</p>
+function and broadcasts the results to other nodes.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>weight2d</strong> &#8211;
-A twodimensional array with a shape compatible to the raw
+A two-dimensional array with a shape compatible to the raw
 diffraction data frames</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">ndarray</td>
@@ -1501,20 +1559,15 @@ releases.</p>
 <dl class="attribute">
 <dt id="ptypy.core.data.PtyScan.min_frames">
 <code class="descname">min_frames</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.core.data.PtyScan.min_frames" title="Permalink to this definition">¶</a></dt>
-<dd><p>Minimum number of frames to prepare / load with call of <a class="reference internal" href="#ptypy.core.data.PtyScan.auto" title="ptypy.core.data.PtyScan.auto"><code class="xref py py-meth docutils literal"><span class="pre">auto()</span></code></a></p>
+<dd><p>Minimum number of frames to prepare / load
+with call of <a class="reference internal" href="#ptypy.core.data.PtyScan.auto" title="ptypy.core.data.PtyScan.auto"><code class="xref py py-meth docutils literal"><span class="pre">auto()</span></code></a></p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="ptypy.core.data.PtyScan.num_frames">
 <code class="descname">num_frames</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.core.data.PtyScan.num_frames" title="Permalink to this definition">¶</a></dt>
-<dd><p>Total number of frames to prepare / load. Set by <a class="reference internal" href="parameters.html#.scan.data.num_frames" title=".scan.data.num_frames"><code class="xref py py-data docutils literal"><span class="pre">num_frames</span></code></a></p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.core.data.PtyScan.post_init">
-<code class="descname">post_init</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtyScan.post_init" title="Permalink to this definition">¶</a></dt>
-<dd><p>Placeholder. Called at the end of construction by all
-processes.</p>
+<dd><p>Total number of frames to prepare / load.
+Set by <code class="xref py py-data docutils literal"><span class="pre">num_frames</span></code></p>
 </dd></dl>
 
 <dl class="method">
@@ -1529,14 +1582,7 @@ information after initialize.</p>
 <dl class="method">
 <dt id="ptypy.core.data.PtyScan.report">
 <code class="descname">report</code><span class="sig-paren">(</span><em>what=None</em>, <em>shout=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtyScan.report" title="Permalink to this definition">¶</a></dt>
-<dd><p>Make a report on internal structure</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.core.data.PtyScan.return_chunk_as">
-<code class="descname">return_chunk_as</code><span class="sig-paren">(</span><em>chunk</em>, <em>kind='dp'</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtyScan.return_chunk_as" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the loaded data chunk <cite>chunk</cite> in the format <cite>kind</cite>
-For now only kind==&#8217;dp&#8217; (data package) is valid.</p>
+<dd><p>Make a report on internal structure.</p>
 </dd></dl>
 
 </dd></dl>
@@ -1549,32 +1595,19 @@ For now only kind==&#8217;dp&#8217; (data package) is valid.</p>
 
 <dl class="class">
 <dt id="ptypy.core.data.PtydScan">
-<em class="property">class </em><code class="descclassname">ptypy.core.data.</code><code class="descname">PtydScan</code><span class="sig-paren">(</span><em>pars=None</em>, <em>source=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtydScan" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">ptypy.core.data.</code><code class="descname">PtydScan</code><span class="sig-paren">(</span><em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtydScan" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.data.PtyScan</span></code></a></p>
 <p>PtyScan provided by native &#8220;ptyd&#8221; file format.</p>
 <p>PtyScan provided by native &#8220;ptyd&#8221; file format.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>source</strong> &#8211; Explicit source file. If not None or &#8216;file&#8217;,
-the data may get processed depending on user input</li>
-<li><strong>pars</strong> &#8211; Input like PtyScan</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
 <dl class="attribute">
 <dt id="ptypy.core.data.PtydScan.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'positions_theory': None, 'auto_center': None, 'min_frames': 1, 'orientation': None, 'num_frames': None, 'dfile': None, 'energy': None, 'recipe': {}, 'psize': None, 'label': None, 'load_parallel': 'data', 'shape': None, 'rebin': None, 'experimentID': None, 'version': '0.1', 'save': None, 'chunk_format': '.chunk%02d', 'distance': None, 'center': None})</em><a class="headerlink" href="#ptypy.core.data.PtydScan.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<code class="descname">DEFAULT</code><em class="property"> = Param({'auto_center': None, 'positions_theory': None, 'dfile': None, 'name': 'PtydScan', 'num_frames': None, 'min_frames': 1, 'center': 'fftshift', 'chunk_format': '.chunk%02d', 'label': None, 'experimentID': None, 'load_parallel': 'data', 'source': 'file', 'shape': 256, 'rebin': None, 'psize': 0.000172, 'version': 0.1, 'add_poisson_noise': True, 'save': None, 'distance': 7.19, 'energy': 7.2, 'orientation': None})</em><a class="headerlink" href="#ptypy.core.data.PtydScan.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="ptypy.core.data.PtydScan.check">
 <code class="descname">check</code><span class="sig-paren">(</span><em>frames=None</em>, <em>start=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtydScan.check" title="Permalink to this definition">¶</a></dt>
-<dd><p>Implementation of the check routine for a .ptyd file format</p>
+<dd><p>Implementation of the check routine for a .ptyd file format.</p>
 <div class="admonition seealso">
 <p class="first admonition-title">See also</p>
 <p class="last"><a class="reference internal" href="#ptypy.core.data.PtyScan.check" title="ptypy.core.data.PtyScan.check"><code class="xref py py-meth docutils literal"><span class="pre">PtyScan.check()</span></code></a></p>
@@ -1584,8 +1617,8 @@ the data may get processed depending on user input</li>
 <dl class="method">
 <dt id="ptypy.core.data.PtydScan.load">
 <code class="descname">load</code><span class="sig-paren">(</span><em>indices</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.PtydScan.load" title="Permalink to this definition">¶</a></dt>
-<dd><p>Load from ptyd. Due to possible chunked data, slicing frames is
-non-trivial</p>
+<dd><p>Load from ptyd.</p>
+<p>Due to possible chunked data, slicing frames is non-trivial.</p>
 </dd></dl>
 
 <dl class="method">
@@ -1604,17 +1637,13 @@ non-trivial</p>
 <dt id="ptypy.core.data.MoonFlowerScan">
 <em class="property">class </em><code class="descclassname">ptypy.core.data.</code><code class="descname">MoonFlowerScan</code><span class="sig-paren">(</span><em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.data.MoonFlowerScan" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.data.PtyScan</span></code></a></p>
-<p>Test Ptyscan class producing a romantic ptychographic dataset of a moon
+<p>Test PtyScan class producing a romantic ptychographic data set of a moon
 illuminating flowers.</p>
+<p>Override parent class default:</p>
 <p>Parent pars are for the</p>
 <dl class="attribute">
 <dt id="ptypy.core.data.MoonFlowerScan.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'positions_theory': None, 'auto_center': None, 'min_frames': 1, 'orientation': None, 'precedence': None, 'num_frames': None, 'energy': 6.2, 'recipe': {}, 'shape': 256, 'chunk_format': '.chunk%02d', 'rebin': None, 'experimentID': None, 'label': None, 'version': '0.1', 'dfile': None, 'lam': None, 'psize': 0.000172, 'load_parallel': 'data', 'misfit': 0, 'origin': 'fftshift', 'distance': 7.0, 'save': None, 'center': 'fftshift', 'propagation': 'farfield', 'resolution': None})</em><a class="headerlink" href="#ptypy.core.data.MoonFlowerScan.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="ptypy.core.data.MoonFlowerScan.RECIPE">
-<code class="descname">RECIPE</code><em class="property"> = Param({'photons': 100000000.0, 'psf': 0.0, 'density': 0.2})</em><a class="headerlink" href="#ptypy.core.data.MoonFlowerScan.RECIPE" title="Permalink to this definition">¶</a></dt>
+<code class="descname">DEFAULT</code><em class="property"> = Param({'auto_center': None, 'positions_theory': None, 'min_frames': 1, 'orientation': None, 'num_frames': 100, 'energy': 7.2, 'shape': 128, 'chunk_format': '.chunk%02d', 'rebin': None, 'density': 0.2, 'photons': 100000000.0, 'experimentID': None, 'label': None, 'version': 0.1, 'dfile': None, 'psf': 0.0, 'psize': 0.000172, 'load_parallel': 'data', 'center': 'fftshift', 'distance': 7.19, 'save': None, 'name': 'MoonFlowerScan', 'add_poisson_noise': True, 'model': 'round'})</em><a class="headerlink" href="#ptypy.core.data.MoonFlowerScan.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -1637,7 +1666,7 @@ illuminating flowers.</p>
 </div>
 <div class="section" id="module-ptypy.core.geometry">
 <span id="ptypy-core-geometry-module"></span><h2>ptypy.core.geometry module<a class="headerlink" href="#module-ptypy.core.geometry" title="Permalink to this headline">¶</a></h2>
-<p>Geometry manager</p>
+<p>Geometry manager.</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
 <div><table class="docutils field-list" frame="void" rules="none">
@@ -1651,30 +1680,11 @@ illuminating flowers.</p>
 </tbody>
 </table>
 </div></blockquote>
-<dl class="data">
-<dt id="ptypy.core.geometry.DEFAULT">
-<code class="descclassname">ptypy.core.geometry.</code><code class="descname">DEFAULT</code><em class="property"> = Param({'origin': 'fftshift', 'distance': 7.0, 'center': 'fftshift', 'precedence': None, 'lam': None, 'energy': 6.2, 'psize': 0.000172, 'propagation': 'farfield', 'shape': 256, 'misfit': 0, 'resolution': None})</em><a class="headerlink" href="#ptypy.core.geometry.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default geometry parameters. See also <a class="reference internal" href="parameters.html#.scan.geometry" title=".scan.geometry"><code class="xref py py-data docutils literal"><span class="pre">scan.geometry</span></code></a> and an unflattened representation below</p>
-<ul class="simple">
-<li><em>origin</em> = <code class="docutils literal"><span class="pre">&quot;fftshift&quot;</span></code></li>
-<li><em>distance</em> = <code class="docutils literal"><span class="pre">7.0</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.distance" title=".scan.geometry.distance"><code class="xref py py-data docutils literal"><span class="pre">distance</span></code></a></li>
-<li><em>center</em> = <code class="docutils literal"><span class="pre">&quot;fftshift&quot;</span></code></li>
-<li><em>precedence</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.precedence" title=".scan.geometry.precedence"><code class="xref py py-data docutils literal"><span class="pre">precedence</span></code></a></li>
-<li><em>lam</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.lam" title=".scan.geometry.lam"><code class="xref py py-data docutils literal"><span class="pre">lam</span></code></a></li>
-<li><em>energy</em> = <code class="docutils literal"><span class="pre">6.2</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.energy" title=".scan.geometry.energy"><code class="xref py py-data docutils literal"><span class="pre">energy</span></code></a></li>
-<li><em>psize</em> = <code class="docutils literal"><span class="pre">0.000172</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.psize" title=".scan.geometry.psize"><code class="xref py py-data docutils literal"><span class="pre">psize</span></code></a></li>
-<li><em>propagation</em> = <code class="docutils literal"><span class="pre">&quot;farfield&quot;</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.propagation" title=".scan.geometry.propagation"><code class="xref py py-data docutils literal"><span class="pre">propagation</span></code></a></li>
-<li><em>shape</em> = <code class="docutils literal"><span class="pre">256</span></code></li>
-<li><em>misfit</em> = <code class="docutils literal"><span class="pre">0</span></code></li>
-<li><em>resolution</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.resolution" title=".scan.geometry.resolution"><code class="xref py py-data docutils literal"><span class="pre">resolution</span></code></a></li>
-</ul>
-</dd></dl>
-
 <dl class="class">
 <dt id="ptypy.core.geometry.Geo">
 <em class="property">class </em><code class="descclassname">ptypy.core.geometry.</code><code class="descname">Geo</code><span class="sig-paren">(</span><em>owner=None</em>, <em>ID=None</em>, <em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.geometry.Geo" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ptypy.core.classes.Base" title="ptypy.core.classes.Base"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.classes.Base</span></code></a></p>
-<p>Hold and keep consistant the information about experimental parameters.</p>
+<p>Hold and keep consistent the information about experimental parameters.</p>
 <p>Keeps also reference to the Propagator and updates this reference
 when resolution, pixel size, etc. is changed in <cite>Geo</cite>. Reference to
 <code class="xref py py-data docutils literal"><span class="pre">io.paths.recons</span></code>.</p>
@@ -1682,12 +1692,18 @@ when resolution, pixel size, etc. is changed in <cite>Geo</cite>. Reference to
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Variables:</th><td class="field-body"><p class="first"><strong>interact</strong> (<em>bool (True)</em>) &#8211; If set to True, changes to properties like <a class="reference internal" href="#ptypy.core.geometry.Geo.energy" title="ptypy.core.geometry.Geo.energy"><code class="xref py py-meth docutils literal"><span class="pre">energy()</span></code></a>,
+<tr class="field-odd field"><th class="field-name">Variables:</th><td class="field-body"><strong>interact</strong> (<em>bool (True)</em>) &#8211; If set to True, changes to properties like <a class="reference internal" href="#ptypy.core.geometry.Geo.energy" title="ptypy.core.geometry.Geo.energy"><code class="xref py py-meth docutils literal"><span class="pre">energy()</span></code></a>,
 <a class="reference internal" href="#ptypy.core.geometry.Geo.lam" title="ptypy.core.geometry.Geo.lam"><code class="xref py py-meth docutils literal"><span class="pre">lam()</span></code></a>, <a class="reference internal" href="#ptypy.core.geometry.Geo.shape" title="ptypy.core.geometry.Geo.shape"><code class="xref py py-meth docutils literal"><span class="pre">shape()</span></code></a> or <a class="reference internal" href="#ptypy.core.geometry.Geo.psize" title="ptypy.core.geometry.Geo.psize"><code class="xref py py-meth docutils literal"><span class="pre">psize()</span></code></a> will cause
-a call to <a class="reference internal" href="#ptypy.core.geometry.Geo.update" title="ptypy.core.geometry.Geo.update"><code class="xref py py-meth docutils literal"><span class="pre">update()</span></code></a></p>
-</td>
+a call to <a class="reference internal" href="#ptypy.core.geometry.Geo.update" title="ptypy.core.geometry.Geo.update"><code class="xref py py-meth docutils literal"><span class="pre">update()</span></code></a>.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+</tbody>
+</table>
+<p>Default geometry parameters. See also <code class="xref py py-data docutils literal"><span class="pre">scan.geometry</span></code></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>owner</strong> (<em>Base or subclass</em>) &#8211; Instance of a subclass of <a class="reference internal" href="#ptypy.core.classes.Base" title="ptypy.core.classes.Base"><code class="xref any py py-class docutils literal"><span class="pre">Base</span></code></a> or None. That is usually
 <a class="reference internal" href="#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal"><span class="pre">Ptycho</span></code></a> for a Geo instance.</li>
 <li><strong>ID</strong> (<em>str or int</em>) &#8211; Identifier. Use <code class="docutils literal"><span class="pre">ID=None</span></code> for automatic ID assignment.</li>
@@ -1701,7 +1717,7 @@ if the key exists in <cite>Geo.DEFAULT</cite>.</li>
 </table>
 <dl class="attribute">
 <dt id="ptypy.core.geometry.Geo.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'origin': 'fftshift', 'distance': 7.0, 'center': 'fftshift', 'precedence': None, 'lam': None, 'energy': 6.2, 'psize': 0.000172, 'propagation': 'farfield', 'shape': 256, 'misfit': 0, 'resolution': None})</em><a class="headerlink" href="#ptypy.core.geometry.Geo.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<code class="descname">DEFAULT</code><em class="property"> = Param({'origin': 'fftshift', 'lam': None, 'center': 'fftshift', 'distance': 7.19, 'energy': 6.2, 'psize': 0.000172, 'propagation': 'farfield', 'shape': 256, 'misfit': 0.0, 'resolution': None})</em><a class="headerlink" href="#ptypy.core.geometry.Geo.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="attribute">
@@ -1731,7 +1747,7 @@ if the key exists in <cite>Geo.DEFAULT</cite>.</li>
 <dl class="attribute">
 <dt id="ptypy.core.geometry.Geo.propagator">
 <code class="descname">propagator</code><a class="headerlink" href="#ptypy.core.geometry.Geo.propagator" title="Permalink to this definition">¶</a></dt>
-<dd><p>Retrieves propagator, createas propagator instance if necessary.</p>
+<dd><p>Retrieves propagator, creates propagator instance if necessary.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -1763,7 +1779,7 @@ pixel size (resolution) if self.psize_is_fixed is True.</p>
 
 <dl class="class">
 <dt id="ptypy.core.geometry.BasicNearfieldPropagator">
-<em class="property">class </em><code class="descclassname">ptypy.core.geometry.</code><code class="descname">BasicNearfieldPropagator</code><span class="sig-paren">(</span><em>geo_dct=None</em>, <em>ffttype='scipy'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.geometry.BasicNearfieldPropagator" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">ptypy.core.geometry.</code><code class="descname">BasicNearfieldPropagator</code><span class="sig-paren">(</span><em>geo_pars=None</em>, <em>ffttype='fftw'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.geometry.BasicNearfieldPropagator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>Basic two step (i.e. two ffts) Nearfield Propagator.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1771,12 +1787,13 @@ pixel size (resolution) if self.psize_is_fixed is True.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>geo_pars</strong> (<em>Param or dict</em>) &#8211; Parameter dictionary as in <a class="reference internal" href="#ptypy.core.geometry.DEFAULT" title="ptypy.core.geometry.DEFAULT"><code class="xref py py-data docutils literal"><span class="pre">DEFAULT</span></code></a>.</li>
-<li><strong>ffttype</strong> (<em>str or other</em>) &#8211; <p>Type of CPU-based FFT implementation. One of</p>
+<li><strong>geo_pars</strong> (<em>Param or dict</em>) &#8211; Parameter dictionary as in <code class="xref py py-data docutils literal"><span class="pre">DEFAULT</span></code>.</li>
+<li><strong>ffttype</strong> (<em>str or tuple</em>) &#8211; <p>Type of FFT implementation. One of:</p>
 <ul>
+<li>&#8216;fftw&#8217; for pyFFTW</li>
 <li>&#8216;numpy&#8217; for numpy.fft.fft2</li>
 <li>&#8216;scipy&#8217; for scipy.fft.fft2</li>
-<li>2 or 4-tupel of (forward_fft2(),invese_fft2(),
+<li>2 or 4-tuple of (forward_fft2(),inverse_fft2(),
 [scaling,inverse_scaling])</li>
 </ul>
 </li>
@@ -1785,51 +1802,47 @@ pixel size (resolution) if self.psize_is_fixed is True.</p>
 </tr>
 </tbody>
 </table>
-<dl class="attribute">
-<dt id="ptypy.core.geometry.BasicNearfieldPropagator.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'origin': 'fftshift', 'distance': 7.0, 'center': 'fftshift', 'precedence': None, 'lam': None, 'energy': 6.2, 'psize': 0.000172, 'propagation': 'farfield', 'shape': 256, 'misfit': 0, 'resolution': None})</em><a class="headerlink" href="#ptypy.core.geometry.BasicNearfieldPropagator.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 <dl class="method">
 <dt id="ptypy.core.geometry.BasicNearfieldPropagator.bw">
 <code class="descname">bw</code><span class="sig-paren">(</span><em>W</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.geometry.BasicNearfieldPropagator.bw" title="Permalink to this definition">¶</a></dt>
-<dd><p>computes backward propagated wavefront of input wavefront W</p>
+<dd><p>Computes backward propagated wavefront of input wavefront W.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.core.geometry.BasicNearfieldPropagator.fw">
 <code class="descname">fw</code><span class="sig-paren">(</span><em>W</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.geometry.BasicNearfieldPropagator.fw" title="Permalink to this definition">¶</a></dt>
-<dd><p>computes forward propagated wavefront of input wavefront W</p>
+<dd><p>Computes forward propagated wavefront of input wavefront W.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.core.geometry.BasicNearfieldPropagator.update">
 <code class="descname">update</code><span class="sig-paren">(</span><em>geo_pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.geometry.BasicNearfieldPropagator.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>update internal p dictionary. Recompute all internal array buffers</p>
+<dd><p>Update internal p dictionary. Recompute all internal array buffers.</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="class">
 <dt id="ptypy.core.geometry.BasicFarfieldPropagator">
-<em class="property">class </em><code class="descclassname">ptypy.core.geometry.</code><code class="descname">BasicFarfieldPropagator</code><span class="sig-paren">(</span><em>geo_pars=None</em>, <em>ffttype='numpy'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.geometry.BasicFarfieldPropagator" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">ptypy.core.geometry.</code><code class="descname">BasicFarfieldPropagator</code><span class="sig-paren">(</span><em>geo_pars=None</em>, <em>ffttype='fftw'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.geometry.BasicFarfieldPropagator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>Basic single step Farfield Propagator.</p>
 <p>Includes quadratic phase factors and arbitrary origin in array.</p>
 <p>Be aware though, that if the origin is not in the center of the frame,
-coordinates are rolled peridically, just like in the conventional fft case.</p>
+coordinates are rolled periodically, just like in the conventional fft case.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>geo_pars</strong> (<em>Param or dict</em>) &#8211; Parameter dictionary as in <a class="reference internal" href="#ptypy.core.geometry.DEFAULT" title="ptypy.core.geometry.DEFAULT"><code class="xref py py-attr docutils literal"><span class="pre">DEFAULT</span></code></a>.</li>
-<li><strong>ffttype</strong> (<em>str or other</em>) &#8211; <p>Type of CPU-based FFT implementation. One of</p>
+<li><strong>geo_pars</strong> (<em>Param or dict</em>) &#8211; Parameter dictionary as in <code class="xref py py-attr docutils literal"><span class="pre">DEFAULT</span></code>.</li>
+<li><strong>ffttype</strong> (<em>str or tuple</em>) &#8211; <p>Type of FFT implementation. One of:</p>
 <ul>
+<li>&#8216;fftw&#8217; for pyFFTW</li>
 <li>&#8216;numpy&#8217; for numpy.fft.fft2</li>
 <li>&#8216;scipy&#8217; for scipy.fft.fft2</li>
-<li>2 or 4-tupel of (forward_fft2(),invese_fft2(),
-[scaling,inverse_scaling])</li>
+<li>2 or 4-tuple of (forward_fft2(), inverse_fft2(),
+[scaling, inverse_scaling])</li>
 </ul>
 </li>
 </ul>
@@ -1837,27 +1850,22 @@ coordinates are rolled peridically, just like in the conventional fft case.</p>
 </tr>
 </tbody>
 </table>
-<dl class="attribute">
-<dt id="ptypy.core.geometry.BasicFarfieldPropagator.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'origin': 'fftshift', 'distance': 7.0, 'center': 'fftshift', 'precedence': None, 'lam': None, 'energy': 6.2, 'psize': 0.000172, 'propagation': 'farfield', 'shape': 256, 'misfit': 0, 'resolution': None})</em><a class="headerlink" href="#ptypy.core.geometry.BasicFarfieldPropagator.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 <dl class="method">
 <dt id="ptypy.core.geometry.BasicFarfieldPropagator.bw">
 <code class="descname">bw</code><span class="sig-paren">(</span><em>W</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.geometry.BasicFarfieldPropagator.bw" title="Permalink to this definition">¶</a></dt>
-<dd><p>computes backward propagated wavefront of input wavefront W</p>
+<dd><p>Computes backward propagated wavefront of input wavefront W.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.core.geometry.BasicFarfieldPropagator.fw">
 <code class="descname">fw</code><span class="sig-paren">(</span><em>W</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.geometry.BasicFarfieldPropagator.fw" title="Permalink to this definition">¶</a></dt>
-<dd><p>computes forward propagated wavefront of input wavefront W</p>
+<dd><p>Computes forward propagated wavefront of input wavefront W.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.core.geometry.BasicFarfieldPropagator.update">
 <code class="descname">update</code><span class="sig-paren">(</span><em>geo_pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.geometry.BasicFarfieldPropagator.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>update internal p dictionary. Recompute all internal array buffers</p>
+<dd><p>Update internal p dictionary. Recompute all internal array buffers.</p>
 </dd></dl>
 
 </dd></dl>
@@ -1865,7 +1873,7 @@ coordinates are rolled peridically, just like in the conventional fft case.</p>
 </div>
 <div class="section" id="module-ptypy.core.illumination">
 <span id="ptypy-core-illumination-module"></span><h2>ptypy.core.illumination module<a class="headerlink" href="#module-ptypy.core.illumination" title="Permalink to this headline">¶</a></h2>
-<p>This module generates the probe</p>
+<p>This module generates the probe.</p>
 <p>&#64;author: Bjoern Enders</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
@@ -1880,50 +1888,6 @@ coordinates are rolled peridically, just like in the conventional fft case.</p>
 </tbody>
 </table>
 </div></blockquote>
-<dl class="data">
-<dt id="ptypy.core.illumination.DEFAULT">
-<code class="descclassname">ptypy.core.illumination.</code><code class="descname">DEFAULT</code><em class="property"> = Param({'diversity': Param({'shift': None, 'noise': None, 'power': 1.0}), 'recon': Param({'layer': None, 'ID': None, 'rfile': '*.ptyr'}), 'photons': None, 'propagation': Param({'antialiasing': None, 'focussed': None, 'spot_size': None, 'parallel': None}), 'stxm': Param({'label': None}), 'ovveride': None, 'aperture': Param({'rotate': 0.0, 'form': 'circ', 'central_stop': None, 'edge': 2, 'diffuser': None, 'offset': 0.0, 'size': None}), 'model': None})</em><a class="headerlink" href="#ptypy.core.illumination.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default illumination parameters. See <a class="reference internal" href="parameters.html#.scan.illumination" title=".scan.illumination"><code class="xref py py-data docutils literal"><span class="pre">scan.illumination</span></code></a> and a short listing below</p>
-<ul class="simple">
-<li><em>diversity</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.diversity" title=".scan.illumination.diversity"><code class="xref py py-data docutils literal"><span class="pre">diversity</span></code></a><ul>
-<li><em>shift</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.diversity.shift" title=".scan.illumination.diversity.shift"><code class="xref py py-data docutils literal"><span class="pre">shift</span></code></a></li>
-<li><em>noise</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.diversity.noise" title=".scan.illumination.diversity.noise"><code class="xref py py-data docutils literal"><span class="pre">noise</span></code></a></li>
-<li><em>power</em> = <code class="docutils literal"><span class="pre">1.0</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.diversity.power" title=".scan.illumination.diversity.power"><code class="xref py py-data docutils literal"><span class="pre">power</span></code></a></li>
-</ul>
-</li>
-<li><em>recon</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.recon" title=".scan.illumination.recon"><code class="xref py py-data docutils literal"><span class="pre">recon</span></code></a><ul>
-<li><em>layer</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.recon.layer" title=".scan.illumination.recon.layer"><code class="xref py py-data docutils literal"><span class="pre">layer</span></code></a></li>
-<li><em>ID</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.recon.ID" title=".scan.illumination.recon.ID"><code class="xref py py-data docutils literal"><span class="pre">ID</span></code></a></li>
-<li><em>rfile</em> = <code class="docutils literal"><span class="pre">&quot;*.ptyr&quot;</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.recon.rfile" title=".scan.illumination.recon.rfile"><code class="xref py py-data docutils literal"><span class="pre">rfile</span></code></a></li>
-</ul>
-</li>
-<li><em>photons</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.photons" title=".scan.illumination.photons"><code class="xref py py-data docutils literal"><span class="pre">photons</span></code></a></li>
-<li><em>propagation</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.propagation" title=".scan.illumination.propagation"><code class="xref py py-data docutils literal"><span class="pre">propagation</span></code></a><ul>
-<li><em>antialiasing</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.propagation.antialiasing" title=".scan.illumination.propagation.antialiasing"><code class="xref py py-data docutils literal"><span class="pre">antialiasing</span></code></a></li>
-<li><em>focussed</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.propagation.focussed" title=".scan.illumination.propagation.focussed"><code class="xref py py-data docutils literal"><span class="pre">focussed</span></code></a></li>
-<li><em>spot_size</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.propagation.spot_size" title=".scan.illumination.propagation.spot_size"><code class="xref py py-data docutils literal"><span class="pre">spot_size</span></code></a></li>
-<li><em>parallel</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.propagation.parallel" title=".scan.illumination.propagation.parallel"><code class="xref py py-data docutils literal"><span class="pre">parallel</span></code></a></li>
-</ul>
-</li>
-<li><em>stxm</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.stxm" title=".scan.illumination.stxm"><code class="xref py py-data docutils literal"><span class="pre">stxm</span></code></a><ul>
-<li><em>label</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.stxm.label" title=".scan.illumination.stxm.label"><code class="xref py py-data docutils literal"><span class="pre">label</span></code></a></li>
-</ul>
-</li>
-<li><em>ovveride</em> = <code class="docutils literal"><span class="pre">None</span></code></li>
-<li><em>aperture</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.aperture" title=".scan.illumination.aperture"><code class="xref py py-data docutils literal"><span class="pre">aperture</span></code></a><ul>
-<li><em>rotate</em> = <code class="docutils literal"><span class="pre">0.0</span></code></li>
-<li><em>form</em> = <code class="docutils literal"><span class="pre">&quot;circ&quot;</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.aperture.form" title=".scan.illumination.aperture.form"><code class="xref py py-data docutils literal"><span class="pre">form</span></code></a></li>
-<li><em>central_stop</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.aperture.central_stop" title=".scan.illumination.aperture.central_stop"><code class="xref py py-data docutils literal"><span class="pre">central_stop</span></code></a></li>
-<li><em>edge</em> = <code class="docutils literal"><span class="pre">2</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.aperture.edge" title=".scan.illumination.aperture.edge"><code class="xref py py-data docutils literal"><span class="pre">edge</span></code></a></li>
-<li><em>diffuser</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.aperture.diffuser" title=".scan.illumination.aperture.diffuser"><code class="xref py py-data docutils literal"><span class="pre">diffuser</span></code></a></li>
-<li><em>offset</em> = <code class="docutils literal"><span class="pre">0.0</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.aperture.offset" title=".scan.illumination.aperture.offset"><code class="xref py py-data docutils literal"><span class="pre">offset</span></code></a></li>
-<li><em>size</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.aperture.size" title=".scan.illumination.aperture.size"><code class="xref py py-data docutils literal"><span class="pre">size</span></code></a></li>
-</ul>
-</li>
-<li><em>model</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination.model" title=".scan.illumination.model"><code class="xref py py-data docutils literal"><span class="pre">model</span></code></a></li>
-</ul>
-</dd></dl>
-
 <dl class="function">
 <dt id="ptypy.core.illumination.init_storage">
 <code class="descclassname">ptypy.core.illumination.</code><code class="descname">init_storage</code><span class="sig-paren">(</span><em>storage</em>, <em>pars</em>, <em>energy=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.illumination.init_storage" title="Permalink to this definition">¶</a></dt>
@@ -1933,9 +1897,20 @@ coordinates are rolled peridically, just like in the conventional fft case.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>storage</strong> (<em>ptypy.core.Storage</em>) &#8211; A <a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a> instance in the <em>probe</em> container of <a class="reference internal" href="#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal"><span class="pre">Ptycho</span></code></a></li>
-<li><strong>pars</strong> (<a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; Parameter structure for creating a probe / illumination.
-See <a class="reference internal" href="#ptypy.core.illumination.DEFAULT" title="ptypy.core.illumination.DEFAULT"><code class="xref any py py-data docutils literal"><span class="pre">DEFAULT</span></code></a></li>
+<li><strong>storage</strong> (<a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><em>Storage</em></a>) &#8211; A <a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a> instance in the <em>probe</em> container of <a class="reference internal" href="#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal"><span class="pre">Ptycho</span></code></a></li>
+<li><strong>pars</strong> (<a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; <p>Parameter structure for creating a probe / illumination.
+See <code class="xref py py-data docutils literal"><span class="pre">DEFAULT</span></code>
+Also accepted as argument:</p>
+<blockquote>
+<div><ul>
+<li>string giving the filename of a previous reconstruction to
+extract storage from.</li>
+<li>string giving the name of an available TEMPLATE</li>
+<li>FIXME: document other string cases.</li>
+<li>numpy array: interpreted as initial illumination.</li>
+</ul>
+</div></blockquote>
+</li>
 <li><strong>energy</strong> (<em>float, optional</em>) &#8211; Energy associated with this storage. If None, tries to retrieve
 the energy from the already initialized ptypy network.</li>
 </ul>
@@ -1950,16 +1925,16 @@ the energy from the already initialized ptypy network.</li>
 <code class="descclassname">ptypy.core.illumination.</code><code class="descname">aperture</code><span class="sig-paren">(</span><em>A</em>, <em>grids=None</em>, <em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.illumination.aperture" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates an aperture in the shape and dtype of <cite>A</cite> according
 to x,y-grids <cite>grids</cite>. Keyword Arguments may be any of
-<a class="reference internal" href="#ptypy.core.illumination.DEFAULT" title="ptypy.core.illumination.DEFAULT"><code class="xref any py py-data docutils literal"><span class="pre">DEFAULT</span></code></a>.aperture.</p>
+(<em>FIXME</em> link to kwargs)</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>A</strong> (<em>ndarray</em>) &#8211; Model array (at least 2-dimensional) to place aperture on top.</li>
-<li><strong>pars</strong> (<em>dict or ptypy.utils.Param</em>) &#8211; Parameters, see <a class="reference internal" href="#ptypy.core.illumination.DEFAULT" title="ptypy.core.illumination.DEFAULT"><code class="xref any py py-data docutils literal"><span class="pre">DEFAULT</span></code></a>.aperture</li>
-<li><strong>grids</strong> (<em>ndarray</em>) &#8211; Cartesion coordinate grids, if None, they will be created with
-<code class="docutils literal"><span class="pre">grids</span> <span class="pre">=</span> <span class="pre">u.grids(sh[-2:],psize=(1.0,1.0))</span></code></li>
+<li><strong>pars</strong> (<em>dict or ~ptypy.utils.Param</em>) &#8211; Parameters, <em>FIXME</em> link to parameters</li>
+<li><strong>grids</strong> (<em>ndarray</em>) &#8211; Cartesian coordinate grids, if None, they will be created with
+<code class="docutils literal"><span class="pre">grids</span> <span class="pre">=</span> <span class="pre">u.grids(sh[-2:],</span> <span class="pre">psize=(1.0,</span> <span class="pre">1.0))</span></code></li>
 </ul>
 </td>
 </tr>
@@ -1977,13 +1952,12 @@ Aperture array (complex) in shape of A</p>
 </div>
 <div class="section" id="module-ptypy.core.manager">
 <span id="ptypy-core-manager-module"></span><h2>ptypy.core.manager module<a class="headerlink" href="#module-ptypy.core.manager" title="Permalink to this headline">¶</a></h2>
-<p>Scan management</p>
+<p>Scan management.</p>
 <p>The main task of this module is to prepare the data structure for
 reconstruction, taking a data feed and connecting individual diffraction
 measurements to the other containers. The way this connection is done
-is defined by the user through a model definition. The connections are
-described by the POD objects. This module also takes care of initializing
-containers according to user-defined rules.</p>
+is defined by ScanModel and its subclasses. The connections are
+described by the POD objects.</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
 <div><table class="docutils field-list" frame="void" rules="none">
@@ -1999,115 +1973,26 @@ containers according to user-defined rules.</p>
 </div></blockquote>
 <dl class="class">
 <dt id="ptypy.core.manager.ModelManager">
-<em class="property">class </em><code class="descclassname">ptypy.core.manager.</code><code class="descname">ModelManager</code><span class="sig-paren">(</span><em>ptycho</em>, <em>pars=None</em>, <em>scans=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.manager.ModelManager" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">ptypy.core.manager.</code><code class="descname">ModelManager</code><span class="sig-paren">(</span><em>ptycho</em>, <em>pars</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.manager.ModelManager" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
-<p>Manage ptypy objects creation and update.</p>
-<p>The main task of ModelManager is to follow the rules for a given
-reconstruction model and create:</p>
-<blockquote>
-<div><ul class="simple">
-<li>the probe, object, exit, diff and mask containers</li>
-<li>the views</li>
-<li>the PODs</li>
-</ul>
-</div></blockquote>
-<p>A ptychographic problem is defined by the combination of one or
-multiple scans. ModelManager uses encapsulate
-scan-specific elements in .scans und .scans_pars</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">This class is densely connected to <a class="reference internal" href="#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal"><span class="pre">Ptycho</span></code></a> the seperation
-in two classes is more history than reason and these classes may get
-merged in future reeases</p>
-</div>
+<p>Thin wrapper class which now just interfaces Ptycho with ScanModel.
+This should probably all be done directly in Ptycho.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>ptycho</strong> (<a class="reference internal" href="#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><em>Ptycho</em></a>) &#8211; The parent Ptycho object</li>
-<li><strong>pars</strong> (<em>dict or Param</em>) &#8211; Input parameters (see <a class="reference internal" href="#ptypy.core.manager.ModelManager.DEFAULT" title="ptypy.core.manager.ModelManager.DEFAULT"><code class="xref py py-attr docutils literal"><span class="pre">DEFAULT</span></code></a>)
-If None uses defaults</li>
-<li><strong>scans</strong> (<em>dict or Param</em>) &#8211; Scan-specific parameters, Values should be dict Param that
-follow the structure of <cite>pars</cite>.
-If None, tries in ptycho.p.scans else becomes empty dict</li>
+<li><strong>pars</strong> (<em>dict or Param</em>) &#8211; The .scans tree of the <a class="reference internal" href="#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal"><span class="pre">Ptycho</span></code></a> parameters.</li>
 </ul>
 </td>
 </tr>
 </tbody>
 </table>
 <dl class="attribute">
-<dt id="ptypy.core.manager.ModelManager.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'sharing': Param({'probe_share_with': None, 'probe_share_power': 1, 'object_share_power': 1, 'object_share_with': None}), 'tags': '', 'geometry': Param({'origin': 'fftshift', 'distance': 7.0, 'center': 'fftshift', 'precedence': None, 'lam': None, 'energy': 6.2, 'psize': 0.000172, 'propagation': 'farfield', 'shape': 256, 'misfit': 0, 'resolution': None}), 'coherence': Param({'object_dispersion': None, 'energies': [1.0], 'spectrum': [1.0], 'num_object_modes': 1, 'num_probe_modes': 1, 'probe_dispersion': None}), 'sample': Param({}), 'xy': Param({}), 'illumination': Param({})})</em><a class="headerlink" href="#ptypy.core.manager.ModelManager.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default scan parameters. See <a class="reference internal" href="parameters.html#.scan" title=".scan"><code class="xref py py-data docutils literal"><span class="pre">scan</span></code></a> and a short listing below</p>
-<ul class="simple">
-<li><em>sharing</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.sharing" title=".scan.sharing"><code class="xref py py-data docutils literal"><span class="pre">sharing</span></code></a><ul>
-<li><em>probe_share_with</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sharing.probe_share_with" title=".scan.sharing.probe_share_with"><code class="xref py py-data docutils literal"><span class="pre">probe_share_with</span></code></a></li>
-<li><em>probe_share_power</em> = <code class="docutils literal"><span class="pre">1</span></code>, see <a class="reference internal" href="parameters.html#.scan.sharing.probe_share_power" title=".scan.sharing.probe_share_power"><code class="xref py py-data docutils literal"><span class="pre">probe_share_power</span></code></a></li>
-<li><em>object_share_power</em> = <code class="docutils literal"><span class="pre">1</span></code>, see <a class="reference internal" href="parameters.html#.scan.sharing.object_share_power" title=".scan.sharing.object_share_power"><code class="xref py py-data docutils literal"><span class="pre">object_share_power</span></code></a></li>
-<li><em>object_share_with</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sharing.object_share_with" title=".scan.sharing.object_share_with"><code class="xref py py-data docutils literal"><span class="pre">object_share_with</span></code></a></li>
-</ul>
-</li>
-<li><em>tags</em> = <code class="docutils literal"><span class="pre">&quot;&quot;</span></code>, see <a class="reference internal" href="parameters.html#.scan.tags" title=".scan.tags"><code class="xref py py-data docutils literal"><span class="pre">tags</span></code></a></li>
-<li><em>geometry</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry" title=".scan.geometry"><code class="xref py py-data docutils literal"><span class="pre">geometry</span></code></a><ul>
-<li><em>origin</em> = <code class="docutils literal"><span class="pre">&quot;fftshift&quot;</span></code></li>
-<li><em>distance</em> = <code class="docutils literal"><span class="pre">7.0</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.distance" title=".scan.geometry.distance"><code class="xref py py-data docutils literal"><span class="pre">distance</span></code></a></li>
-<li><em>center</em> = <code class="docutils literal"><span class="pre">&quot;fftshift&quot;</span></code></li>
-<li><em>precedence</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.precedence" title=".scan.geometry.precedence"><code class="xref py py-data docutils literal"><span class="pre">precedence</span></code></a></li>
-<li><em>lam</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.lam" title=".scan.geometry.lam"><code class="xref py py-data docutils literal"><span class="pre">lam</span></code></a></li>
-<li><em>energy</em> = <code class="docutils literal"><span class="pre">6.2</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.energy" title=".scan.geometry.energy"><code class="xref py py-data docutils literal"><span class="pre">energy</span></code></a></li>
-<li><em>psize</em> = <code class="docutils literal"><span class="pre">0.000172</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.psize" title=".scan.geometry.psize"><code class="xref py py-data docutils literal"><span class="pre">psize</span></code></a></li>
-<li><em>propagation</em> = <code class="docutils literal"><span class="pre">&quot;farfield&quot;</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.propagation" title=".scan.geometry.propagation"><code class="xref py py-data docutils literal"><span class="pre">propagation</span></code></a></li>
-<li><em>shape</em> = <code class="docutils literal"><span class="pre">256</span></code></li>
-<li><em>misfit</em> = <code class="docutils literal"><span class="pre">0</span></code></li>
-<li><em>resolution</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.geometry.resolution" title=".scan.geometry.resolution"><code class="xref py py-data docutils literal"><span class="pre">resolution</span></code></a></li>
-</ul>
-</li>
-<li><em>coherence</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.coherence" title=".scan.coherence"><code class="xref py py-data docutils literal"><span class="pre">coherence</span></code></a><ul>
-<li><em>object_dispersion</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.coherence.object_dispersion" title=".scan.coherence.object_dispersion"><code class="xref py py-data docutils literal"><span class="pre">object_dispersion</span></code></a></li>
-<li><em>energies</em> = <code class="docutils literal"><span class="pre">[1.0]</span></code></li>
-<li><em>spectrum</em> = <code class="docutils literal"><span class="pre">[1.0]</span></code>, see <a class="reference internal" href="parameters.html#.scan.coherence.spectrum" title=".scan.coherence.spectrum"><code class="xref py py-data docutils literal"><span class="pre">spectrum</span></code></a></li>
-<li><em>num_object_modes</em> = <code class="docutils literal"><span class="pre">1</span></code>, see <a class="reference internal" href="parameters.html#.scan.coherence.num_object_modes" title=".scan.coherence.num_object_modes"><code class="xref py py-data docutils literal"><span class="pre">num_object_modes</span></code></a></li>
-<li><em>num_probe_modes</em> = <code class="docutils literal"><span class="pre">1</span></code>, see <a class="reference internal" href="parameters.html#.scan.coherence.num_probe_modes" title=".scan.coherence.num_probe_modes"><code class="xref py py-data docutils literal"><span class="pre">num_probe_modes</span></code></a></li>
-<li><em>probe_dispersion</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.coherence.probe_dispersion" title=".scan.coherence.probe_dispersion"><code class="xref py py-data docutils literal"><span class="pre">probe_dispersion</span></code></a></li>
-</ul>
-</li>
-<li><em>sample</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample" title=".scan.sample"><code class="xref py py-data docutils literal"><span class="pre">sample</span></code></a></li>
-<li><em>xy</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.xy" title=".scan.xy"><code class="xref py py-data docutils literal"><span class="pre">xy</span></code></a></li>
-<li><em>illumination</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.illumination" title=".scan.illumination"><code class="xref py py-data docutils literal"><span class="pre">illumination</span></code></a></li>
-</ul>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.core.manager.ModelManager.collect_diff_mask_meta">
-<code class="descname">collect_diff_mask_meta</code><span class="sig-paren">(</span><em>label=None</em>, <em>filename=None</em>, <em>save=False</em>, <em>dtype=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.manager.ModelManager.collect_diff_mask_meta" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>DEPRECATED</em>
-attempt to save diffraction data</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>label</strong> (<em>str</em>) &#8211; ptypy label of the scan to save
-if None, tries to save ALL diffraction data</li>
-<li><strong>filename</strong> (<em>str</em>) &#8211; override the file path to write to
-will change <cite>data_filename</cite> in <cite>scan_info</cite> dict</li>
-<li><strong>other kwargs are added to 'scan_info' key in the '.h5' file</strong> (<em>all</em>) &#8211; </li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.core.manager.ModelManager.make_datasource">
-<code class="descname">make_datasource</code><span class="sig-paren">(</span><em>data_pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.manager.ModelManager.make_datasource" title="Permalink to this definition">¶</a></dt>
-<dd><p>This function will make a static datasource from
-parameters in the self.scans dict.
-For any additional file in data.filelist it will create a new entry in
-self.scans with generic parameters given by the current model.</p>
-</dd></dl>
+<dt id="ptypy.core.manager.ModelManager.data_available">
+<code class="descname">data_available</code><a class="headerlink" href="#ptypy.core.manager.ModelManager.data_available" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="method">
 <dt id="ptypy.core.manager.ModelManager.new_data">
@@ -2116,43 +2001,136 @@ self.scans with generic parameters given by the current model.</p>
 accordingly.</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="ptypy.core.manager.ModelManager.prepare_scan">
-<code class="descname">prepare_scan</code><span class="sig-paren">(</span><em>label=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.manager.ModelManager.prepare_scan" title="Permalink to this definition">¶</a></dt>
-<dd><p>Prepare scan specific parameters and create a label if necessary</p>
 </dd></dl>
 
-</dd></dl>
-
-</div>
-<div class="section" id="module-ptypy.core.model">
-<span id="ptypy-core-model-module"></span><h2>ptypy.core.model module<a class="headerlink" href="#module-ptypy.core.model" title="Permalink to this headline">¶</a></h2>
-<p>Data sharing models.</p>
-<p>This file is part of the PTYPY package.</p>
-<blockquote>
-<div><table class="docutils field-list" frame="void" rules="none">
+<dl class="class">
+<dt id="ptypy.core.manager.ScanModel">
+<em class="property">class </em><code class="descclassname">ptypy.core.manager.</code><code class="descname">ScanModel</code><span class="sig-paren">(</span><em>ptycho=None</em>, <em>pars=None</em>, <em>label=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.manager.ScanModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Abstract base class for models. Override at least these methods:
+_create_pods(self)
+_initialize_geo(self, common)
+_initialize_probe(self, probe_ids)
+_initialize_object(self, object_ids)</p>
+<p>Create scan model object.</p>
+<table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>pars</strong> (<em>dict or Param</em>) &#8211; Input parameter tree.</li>
+<li><strong>ptycho</strong> (<em>Ptycho instance</em>) &#8211; Ptycho instance to which this scan belongs</li>
+<li><strong>label</strong> (<em>str</em>) &#8211; Unique label</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
-</div></blockquote>
-<dl class="function">
-<dt id="ptypy.core.model.parse_model">
-<code class="descclassname">ptypy.core.model.</code><code class="descname">parse_model</code><span class="sig-paren">(</span><em>pars</em>, <em>sharing_dct</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.model.parse_model" title="Permalink to this definition">¶</a></dt>
-<dd><p>This factory function takes a model description in the input parameters
-and return an object that can be called with a scan_label (or index) and
-a diffraction pattern index, and returns probe and object ids.</p>
+<dl class="attribute">
+<dt id="ptypy.core.manager.ScanModel.DEFAULT">
+<code class="descname">DEFAULT</code><em class="property"> = Param({'sample': Param({}), 'propagation': 'farfield', 'illumination': Param({}), 'tags': ['dummy']})</em><a class="headerlink" href="#ptypy.core.manager.ScanModel.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="ptypy.core.manager.ScanModel.makePtyScan">
+<em class="property">classmethod </em><code class="descname">makePtyScan</code><span class="sig-paren">(</span><em>pars</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.manager.ScanModel.makePtyScan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Factory for PtyScan object. Return an instance of the appropriate PtyScan
+subclass based on the input parameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>pars</strong> (<em>dict or Param</em>) &#8211; Input parameters according to <code class="xref py py-data docutils literal"><span class="pre">scan.data</span></code>.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.core.manager.ScanModel.new_data">
+<code class="descname">new_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.manager.ScanModel.new_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Feed data from ptyscan object.
+:return: None if no data is available, True otherwise.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ptypy.core.manager.Full">
+<em class="property">class </em><code class="descclassname">ptypy.core.manager.</code><code class="descname">Full</code><span class="sig-paren">(</span><em>ptycho=None</em>, <em>pars=None</em>, <em>label=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.manager.Full" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ptypy.core.manager.ScanModel" title="ptypy.core.manager.ScanModel"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.manager.ScanModel</span></code></a></p>
+<p>Manage a single scan model (sharing, coherence, propagation, ...)</p>
+<p>Create scan model object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>pars</strong> (<em>dict or Param</em>) &#8211; Input parameter tree.</li>
+<li><strong>ptycho</strong> (<em>Ptycho instance</em>) &#8211; Ptycho instance to which this scan belongs</li>
+<li><strong>label</strong> (<em>str</em>) &#8211; Unique label</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="ptypy.core.manager.Full.DEFAULT">
+<code class="descname">DEFAULT</code><em class="property"> = Param({'name': 'Full', 'tags': ['dummy'], 'coherence': Param({'object_dispersion': None, 'energies': [1.0], 'spectrum': [1.0], 'num_object_modes': 1, 'num_probe_modes': 1, 'probe_dispersion': None}), 'sample': Param({'diversity': Param({'shift': None, 'noise': None, 'power': 0.1}), 'recon': Param({'rfile': '\\*.ptyr'}), 'process': Param({'density': 1, 'offset': (0, 0), 'zoom': None, 'thickness': 1e-06, 'ref_index': (0.5, 0.0), 'formula': None, 'smoothing': 2}), 'stxm': Param({'label': None}), 'model': None, 'fill': 1}), 'propagation': 'farfield', 'illumination': Param({'diversity': Param({'shift': None, 'noise': (0.5, 1.0), 'power': 0.1}), 'recon': Param({'rfile': '\\*.ptyr', 'label': None}), 'photons': None, 'propagation': Param({'antialiasing': 1, 'focussed': None, 'parallel': None, 'spot_size': None}), 'aperture': Param({'rotate': 0.0, 'form': 'circ', 'central_stop': None, 'edge': 2.0, 'diffuser': None, 'offset': 0.0, 'size': None}), 'model': None})})</em><a class="headerlink" href="#ptypy.core.manager.Full.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ptypy.core.manager.Vanilla">
+<em class="property">class </em><code class="descclassname">ptypy.core.manager.</code><code class="descname">Vanilla</code><span class="sig-paren">(</span><em>ptycho=None</em>, <em>pars=None</em>, <em>label=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.manager.Vanilla" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ptypy.core.manager.ScanModel" title="ptypy.core.manager.ScanModel"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.manager.ScanModel</span></code></a></p>
+<p>Dummy for testing, there must be more than one for validate to react
+to invalid names.</p>
+<p>Create scan model object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>pars</strong> (<em>dict or Param</em>) &#8211; Input parameter tree.</li>
+<li><strong>ptycho</strong> (<em>Ptycho instance</em>) &#8211; Ptycho instance to which this scan belongs</li>
+<li><strong>label</strong> (<em>str</em>) &#8211; Unique label</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="ptypy.core.manager.Vanilla.DEFAULT">
+<code class="descname">DEFAULT</code><em class="property"> = Param({'sample': Param({'fill': 1}), 'propagation': 'farfield', 'illumination': Param({'size': None}), 'name': 'Vanilla', 'tags': ['dummy']})</em><a class="headerlink" href="#ptypy.core.manager.Vanilla.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ptypy.core.manager.Bragg3dModel">
+<em class="property">class </em><code class="descclassname">ptypy.core.manager.</code><code class="descname">Bragg3dModel</code><span class="sig-paren">(</span><em>ptycho=None</em>, <em>pars=None</em>, <em>label=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.manager.Bragg3dModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ptypy.core.manager.Vanilla" title="ptypy.core.manager.Vanilla"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.manager.Vanilla</span></code></a></p>
+<p>Model for 3D Bragg ptycho data, where a set of rocking angles are
+measured for each scanning position. The result is pods carrying
+3D diffraction patterns and 3D Views into a 3D object.</p>
+<p>Inherits from Vanilla because _create_pods and the object init
+is identical.</p>
+<p>Frames for each position are assembled according to the actual
+xyz data, so it will not work if two acquisitions are done at the
+same position.</p>
+<dl class="attribute">
+<dt id="ptypy.core.manager.Bragg3dModel.DEFAULT">
+<code class="descname">DEFAULT</code><em class="property"> = Param({'sample': Param({'fill': 1}), 'illumination': Param({'recon': Param({'rfile': '\\*.ptyr', 'label': None}), 'photons': None, 'propagation': Param({'antialiasing': 1, 'focussed': None, 'parallel': None, 'spot_size': None}), 'aperture': Param({'rotate': 0.0, 'form': 'circ', 'central_stop': None, 'edge': 2.0, 'diffuser': None, 'offset': 0.0, 'size': None}), 'model': None, 'size': None}), 'propagation': 'farfield', 'name': 'Bragg3dModel', 'tags': ['dummy']})</em><a class="headerlink" href="#ptypy.core.manager.Bragg3dModel.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </dd></dl>
 
 </div>
 <div class="section" id="module-ptypy.core.paths">
 <span id="ptypy-core-paths-module"></span><h2>ptypy.core.paths module<a class="headerlink" href="#module-ptypy.core.paths" title="Permalink to this headline">¶</a></h2>
-<p>Path manager</p>
+<p>Path manager.</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
 <div><table class="docutils field-list" frame="void" rules="none">
@@ -2169,7 +2147,8 @@ a diffraction pattern index, and returns probe and object ids.</p>
 <dl class="data">
 <dt id="ptypy.core.paths.DEFAULT">
 <code class="descclassname">ptypy.core.paths.</code><code class="descname">DEFAULT</code><em class="property"> = Param({'recon': 'recons/%(run)s/%(run)s_%(engine)s.ptyr', 'autoplot': 'plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png', 'autosave': 'dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr', 'home': './'})</em><a class="headerlink" href="#ptypy.core.paths.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default path parameters. See <code class="xref py py-data docutils literal"><span class="pre">io.paths</span></code> and a short listing below</p>
+<dd><p>Default path parameters. See <code class="xref py py-data docutils literal"><span class="pre">io.paths</span></code>
+and a short listing below</p>
 </dd></dl>
 
 <dl class="class">
@@ -2181,7 +2160,7 @@ a diffraction pattern index, and returns probe and object ids.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>io</strong> (<em>Param or dict</em>) &#8211; Parameter set to pick path info from. See <a class="reference internal" href="parameters.html#.io" title=".io"><code class="xref py py-data docutils literal"><span class="pre">io</span></code></a></td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>io</strong> (<em>Param or dict</em>) &#8211; Parameter set to pick path info from. See <a class="reference internal" href="parameters.html#ptycho.io" title="ptycho.io"><code class="xref py py-data docutils literal"><span class="pre">io</span></code></a></td>
 </tr>
 </tbody>
 </table>
@@ -2247,7 +2226,7 @@ a diffraction pattern index, and returns probe and object ids.</p>
 manages the reconstruction engines, and interacts with the outside world.</p>
 <p>If MPI is enabled, this class acts both as a manager (rank = 0) and
 a worker (any rank), and most information exists on all processes.
-In principle the only part that is divided between processes is the
+In its original design, the only part that is divided between processes is the
 diffraction data.</p>
 <p>By default Ptycho is instantiated once per process, but it can also
 be used as a managed container to load past runs.</p>
@@ -2261,9 +2240,9 @@ arrays, <cite>CType</cite> is for complex-valued arrays</li>
 <li><strong>interactor</strong> (<a class="reference internal" href="ptypy.io.html#ptypy.io.interaction.Server" title="ptypy.io.interaction.Server"><em>ptypy.io.interaction.Server</em></a>) &#8211; ZeroMQ interaction server for communication with e.g. plotting
 clients</li>
 <li><strong>runtime</strong> (<a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; Runtime information, e.g. errors, iteration etc.</li>
-<li><strong>modelm</strong> (<a class="reference internal" href="#ptypy.core.manager.ModelManager" title="ptypy.core.manager.ModelManager"><em>ModelManager</em></a>) &#8211; THE managing instance for <a class="reference internal" href="#ptypy.core.classes.POD" title="ptypy.core.classes.POD"><code class="xref any py py-class docutils literal"><span class="pre">POD</span></code></a>, <a class="reference internal" href="#ptypy.core.classes.View" title="ptypy.core.classes.View"><code class="xref any py py-class docutils literal"><span class="pre">View</span></code></a> and
+<li><strong>model</strong> (<a class="reference internal" href="#ptypy.core.manager.ModelManager" title="ptypy.core.manager.ModelManager"><em>ModelManager</em></a>) &#8211; THE managing instance for <a class="reference internal" href="#ptypy.core.classes.POD" title="ptypy.core.classes.POD"><code class="xref any py py-class docutils literal"><span class="pre">POD</span></code></a>, <a class="reference internal" href="#ptypy.core.classes.View" title="ptypy.core.classes.View"><code class="xref any py py-class docutils literal"><span class="pre">View</span></code></a> and
 <a class="reference internal" href="#ptypy.core.geometry.Geo" title="ptypy.core.geometry.Geo"><code class="xref any py py-class docutils literal"><span class="pre">Geo</span></code></a> instances</li>
-<li><strong>probe,obj,exit,diff,mask</strong> (<a class="reference internal" href="#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><em>Container</em></a>) &#8211; Container instances for illuminations, samples, exit waves,
+<li><strong>mask</strong> (<em>probe,</em>) &#8211; Container instances for illuminations, samples, exit waves,
 diffraction data and detector masks / weights</li>
 </ul>
 </td>
@@ -2273,20 +2252,20 @@ diffraction data and detector masks / weights</li>
 <a class="reference internal" href="parameters.html#parameters"><span>ptypy parameter tree</span></a></li>
 <li><strong>level</strong> (<em>int</em>) &#8211; <p>Determines how much is initialized.</p>
 <ul>
-<li>&lt;=0 : empty ptypy structure</li>
+<li>&lt;= 0 : empty ptypy structure</li>
 <li><dl class="first docutils">
 <dt>1 <span class="classifier-delimiter">:</span> <span class="classifier">reads parameters, configures interaction server,</span></dt>
 <dd>see <a class="reference internal" href="#ptypy.core.ptycho.Ptycho.init_structures" title="ptypy.core.ptycho.Ptycho.init_structures"><code class="xref py py-meth docutils literal"><span class="pre">init_structures()</span></code></a></dd>
 </dl>
 </li>
 <li><dl class="first docutils">
-<dt>2 <span class="classifier-delimiter">:</span> <span class="classifier">also configures Containers, initializes Modelmanager</span></dt>
+<dt>2 <span class="classifier-delimiter">:</span> <span class="classifier">also configures Containers, initializes ModelManager</span></dt>
 <dd>see <a class="reference internal" href="#ptypy.core.ptycho.Ptycho.init_data" title="ptypy.core.ptycho.Ptycho.init_data"><code class="xref py py-meth docutils literal"><span class="pre">init_data()</span></code></a></dd>
 </dl>
 </li>
 <li><dl class="first docutils">
 <dt>3 <span class="classifier-delimiter">:</span> <span class="classifier">also initializes ZeroMQ-communication</span></dt>
-<dd><a class="reference internal" href="#ptypy.core.ptycho.Ptycho.init_communication" title="ptypy.core.ptycho.Ptycho.init_communication"><code class="xref py py-meth docutils literal"><span class="pre">init_communication()</span></code></a></dd>
+<dd>see <a class="reference internal" href="#ptypy.core.ptycho.Ptycho.init_communication" title="ptypy.core.ptycho.Ptycho.init_communication"><code class="xref py py-meth docutils literal"><span class="pre">init_communication()</span></code></a></dd>
 </dl>
 </li>
 <li><dl class="first docutils">
@@ -2295,7 +2274,7 @@ diffraction data and detector masks / weights</li>
 </dl>
 </li>
 <li><dl class="first docutils">
-<dt>&gt;=4 <span class="classifier-delimiter">:</span> <span class="classifier">also and starts reconstruction</span></dt>
+<dt>&gt;= 4 <span class="classifier-delimiter">:</span> <span class="classifier">also and starts reconstruction</span></dt>
 <dd>see <a class="reference internal" href="#ptypy.core.ptycho.Ptycho.run" title="ptypy.core.ptycho.Ptycho.run"><code class="xref py py-meth docutils literal"><span class="pre">run()</span></code></a></dd>
 </dl>
 </li>
@@ -2308,10 +2287,8 @@ diffraction data and detector masks / weights</li>
 </table>
 <dl class="attribute">
 <dt id="ptypy.core.ptycho.Ptycho.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'engine': Param({'Dummy': Param({'itertime': 2.0}), 'DM': Param({'overlap_max_iterations': 10, 'fourier_relax_factor': 0.05, 'overlap_converge_factor': 0.1, 'update_object_first': True, 'obj_smooth_std': None, 'alpha': 1, 'clip_object': None}), 'ML': Param({'floating_intensities': False, 'reg_del2_amplitude': 0.01, 'smooth_gradient': 0, 'intensity_renormalization': 1.0, 'scale_probe_object': 1.0, 'ML_type': 'gaussian', 'reg_del2': False, 'scale_precond': False}), 'common': Param({'probe_support': 0.8, 'numiter_contiguous': 1, 'probe_update_start': 0, 'probe_inertia': 0.001, 'obj_smooth_std': 20, 'subpix': 'linear', 'subpix_start': 0, 'clip_object': None, 'object_inertia': 0.1, 'numiter': 10}), 'DM_minimal': Param({'fourier_relax_factor': 0.01, 'probe_inertia': 0.001, 'alpha': 1.0, 'numiter_contiguous': 1, 'object_inertia': 0.1, 'numiter': 100}), 'DM_simple': Param({'alpha': 1.0, 'fourier_relax_factor': 0.01})}), 'run': None, 'engines': {}, 'data_type': 'single', 'scan': Param({}), 'dry_run': False, 'io': Param({'autoplot': Param({'threaded': True, 'layout': 'default', 'dump': True, 'imfile': 'plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png', 'interval': 1, 'make_movie': False}), 'home': './', 'interaction': Param({'pinginterval': 2, 'connections': 10, 'pingtimeout': 10, 'poll_timeout': 10, 'port': 5560, 'address': 'tcp://127.0.0.1'}), 'rfile': 'recons/%(run)s/%(run)s_%(engine)s.ptyr', 'autosave': Param({'objects': None, 'rfile': 'dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr', 'probes': None, 'interval': 10})}), 'verbose_level': 3, 'scans': Param({})})</em><a class="headerlink" href="#ptypy.core.ptycho.Ptycho.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default ptycho parameters which is the trunk of the
-default <a class="reference internal" href="parameters.html#parameters"><span>ptypy parameter tree</span></a></p>
-</dd></dl>
+<code class="descname">DEFAULT</code><em class="property"> = Param({'engines': Param({}), 'run': None, 'data_type': 'single', 'dry_run': False, 'io': Param({'autoplot': Param({'threaded': True, 'layout': 'default', 'dump': False, 'imfile': 'plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png', 'interval': 1, 'make_movie': False, 'active': True}), 'home': './', 'interaction': Param({'active': True, 'client': Param({'connection_timeout': 3600000.0, 'poll_timeout': 100.0, 'pinginterval': 1, 'port': 5560, 'address': 'tcp://127.0.0.1'}), 'server': Param({'pinginterval': 2, 'connections': 10, 'pingtimeout': 10, 'poll_timeout': 10.0, 'active': True, 'port': 5560, 'address': 'tcp://127.0.0.1'})}), 'rfile': 'recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr', 'autosave': Param({'active': True, 'interval': 10, 'rfile': 'dumps/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr'})}), 'verbose_level': 1, 'ipython_kernel': False, 'scans': Param({})})</em><a class="headerlink" href="#ptypy.core.ptycho.Ptycho.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="attribute">
 <dt id="ptypy.core.ptycho.Ptycho.containers">
@@ -2328,7 +2305,7 @@ default <a class="reference internal" href="parameters.html#parameters"><span>pt
 <dl class="method">
 <dt id="ptypy.core.ptycho.Ptycho.init_communication">
 <code class="descname">init_communication</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.ptycho.Ptycho.init_communication" title="Permalink to this definition">¶</a></dt>
-<dd><p>Called on __init__ if <code class="docutils literal"><span class="pre">level&gt;=3</span></code>.</p>
+<dd><p>Called on __init__ if <code class="docutils literal"><span class="pre">level</span> <span class="pre">&gt;=</span> <span class="pre">3</span></code>.</p>
 <p>Initializes ZeroMQ communication on the master node and
 spawns an optional plotting client.</p>
 </dd></dl>
@@ -2336,17 +2313,17 @@ spawns an optional plotting client.</p>
 <dl class="method">
 <dt id="ptypy.core.ptycho.Ptycho.init_data">
 <code class="descname">init_data</code><span class="sig-paren">(</span><em>print_stats=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.ptycho.Ptycho.init_data" title="Permalink to this definition">¶</a></dt>
-<dd><p>Called on __init__ if <code class="docutils literal"><span class="pre">level&gt;=2</span></code>.</p>
-<p>Creates a datasource and calls for <code class="xref py py-meth docutils literal"><span class="pre">ModelManager.new_data()</span></code>
+<dd><p>Called on __init__ if <code class="docutils literal"><span class="pre">level</span> <span class="pre">&gt;=</span> <span class="pre">2</span></code>.</p>
+<p>Call <code class="xref py py-meth docutils literal"><span class="pre">ModelManager.new_data()</span></code>
 Prints statistics on the ptypy structure if <code class="docutils literal"><span class="pre">print_stats=True</span></code></p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.core.ptycho.Ptycho.init_engine">
 <code class="descname">init_engine</code><span class="sig-paren">(</span><em>label=None</em>, <em>epars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.ptycho.Ptycho.init_engine" title="Permalink to this definition">¶</a></dt>
-<dd><p>Called on __init__ if <code class="docutils literal"><span class="pre">level&gt;=4</span></code>.</p>
-<p>Initializes engine with label <cite>label</cite> from paramaters and lists
-it internally in <code class="docutils literal"><span class="pre">self.engines</span></code> which is an ordered dictinoary.</p>
+<dd><p>Called on __init__ if <code class="docutils literal"><span class="pre">level</span> <span class="pre">&gt;=</span> <span class="pre">4</span></code>.</p>
+<p>Initializes engine with label <cite>label</cite> from parameters and lists
+it internally in <code class="docutils literal"><span class="pre">self.engines</span></code> which is an ordered dictionary.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -2368,12 +2345,12 @@ tree sorted by label.</li>
 <dl class="method">
 <dt id="ptypy.core.ptycho.Ptycho.init_structures">
 <code class="descname">init_structures</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.ptycho.Ptycho.init_structures" title="Permalink to this definition">¶</a></dt>
-<dd><p>Called on __init__ if <code class="docutils literal"><span class="pre">level&gt;=1</span></code>.</p>
+<dd><p>Called on __init__ if <code class="docutils literal"><span class="pre">level</span> <span class="pre">&gt;=</span> <span class="pre">1</span></code>.</p>
 <p>Prepare everything for reconstruction. Creates attributes
-<code class="xref py py-attr docutils literal"><span class="pre">modelm</span></code> and the containers <code class="xref py py-attr docutils literal"><span class="pre">probe</span></code> for
+<code class="xref py py-attr docutils literal"><span class="pre">model</span></code> and the containers <code class="xref py py-attr docutils literal"><span class="pre">probe</span></code> for
 illumination, <code class="xref py py-attr docutils literal"><span class="pre">obj</span></code> for the samples, <code class="xref py py-attr docutils literal"><span class="pre">exit</span></code> for
 the exit waves, <code class="xref py py-attr docutils literal"><span class="pre">diff</span></code> for diffraction data and
-<code class="xref py py-attr docutils literal"><span class="pre">mask</span></code> for detectors masks</p>
+<code class="xref py py-attr docutils literal"><span class="pre">Ptycho.mask</span></code> for detectors masks</p>
 </dd></dl>
 
 <dl class="classmethod">
@@ -2392,7 +2369,7 @@ for &#8216;minimal&#8217; dump</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>P</strong> &#8211;
-Ptycho instance with <code class="docutils literal"><span class="pre">level==2</span></code></p>
+Ptycho instance with <code class="docutils literal"><span class="pre">level</span> <span class="pre">==</span> <span class="pre">2</span></code></p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho">Ptycho</a></p>
@@ -2402,17 +2379,11 @@ Ptycho instance with <code class="docutils literal"><span class="pre">level==2</
 </table>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="ptypy.core.ptycho.Ptycho.p">
-<code class="descname">p</code><em class="property"> = None</em><a class="headerlink" href="#ptypy.core.ptycho.Ptycho.p" title="Permalink to this definition">¶</a></dt>
-<dd><p>Reference for parameter tree, with which
-this instance was constructed.</p>
-</dd></dl>
-
 <dl class="method">
 <dt id="ptypy.core.ptycho.Ptycho.plot_overview">
 <code class="descname">plot_overview</code><span class="sig-paren">(</span><em>fignum=100</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.ptycho.Ptycho.plot_overview" title="Permalink to this definition">¶</a></dt>
-<dd><p>plots whole the first four layers of every storage in probe, object % diff</p>
+<dd><p>plots whole the first four layers of every storage in probe, object
+% diff</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -2424,13 +2395,13 @@ this instance was constructed.</p>
 <dl class="method">
 <dt id="ptypy.core.ptycho.Ptycho.print_stats">
 <code class="descname">print_stats</code><span class="sig-paren">(</span><em>table_format=None</em>, <em>detail='summary'</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.ptycho.Ptycho.print_stats" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculates the memrory usage and other info of ptycho instance</p>
+<dd><p>Calculates the memory usage and other info of ptycho instance</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.core.ptycho.Ptycho.run">
 <code class="descname">run</code><span class="sig-paren">(</span><em>label=None</em>, <em>epars=None</em>, <em>engine=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.ptycho.Ptycho.run" title="Permalink to this definition">¶</a></dt>
-<dd><p>Called on __init__ if <code class="docutils literal"><span class="pre">level&gt;=5</span></code>.</p>
+<dd><p>Called on __init__ if <code class="docutils literal"><span class="pre">level</span> <span class="pre">&gt;=</span> <span class="pre">5</span></code>.</p>
 <p>Start the reconstruction with at least one engine.
 As a consequence, <code class="docutils literal"><span class="pre">self.runtime</span></code> will be filled with content.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -2444,7 +2415,7 @@ engines are run in the order they were stored in
 <a class="reference internal" href="#ptypy.core.ptycho.Ptycho.init_engine" title="ptypy.core.ptycho.Ptycho.init_engine"><code class="xref py py-meth docutils literal"><span class="pre">init_engine()</span></code></a> is called for that label.</li>
 <li><strong>epars</strong> (<em>dict or Param, optional</em>) &#8211; Engine parameter set. An engine is created from this set,
 using <a class="reference internal" href="#ptypy.core.ptycho.Ptycho.init_engine" title="ptypy.core.ptycho.Ptycho.init_engine"><code class="xref py py-meth docutils literal"><span class="pre">init_engine()</span></code></a> and run immediately afterwards.
-For parameters see <a class="reference internal" href="parameters.html#.engine" title=".engine"><code class="xref py py-data docutils literal"><span class="pre">engine</span></code></a></li>
+For parameters see <code class="xref py py-data docutils literal"><span class="pre">engine</span></code></li>
 <li><strong>engine</strong> (<em>BaseEngine, optional</em>) &#8211; An engine instance that should be a subclass of
 <code class="xref py py-class docutils literal"><span class="pre">BaseEngine</span></code> or have the same methods.</li>
 </ul>
@@ -2481,45 +2452,10 @@ storages and runtime information is saved.</li>
 
 </dd></dl>
 
-<dl class="data">
-<dt id="ptypy.core.ptycho.DEFAULT_io">
-<code class="descclassname">ptypy.core.ptycho.</code><code class="descname">DEFAULT_io</code><em class="property"> = Param({'autoplot': Param({'threaded': True, 'layout': 'default', 'dump': True, 'imfile': 'plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png', 'interval': 1, 'make_movie': False}), 'home': './', 'interaction': Param({'address': 'tcp://127.0.0.1', 'poll_timeout': 10, 'connections': 10, 'pingtimeout': 10, 'pinginterval': 2, 'port': 5560}), 'rfile': 'recons/%(run)s/%(run)s_%(engine)s.ptyr', 'autosave': Param({'objects': None, 'rfile': 'dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr', 'interval': 10, 'probes': None})})</em><a class="headerlink" href="#ptypy.core.ptycho.DEFAULT_io" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default io parameters. See <a class="reference internal" href="parameters.html#.io" title=".io"><code class="xref py py-data docutils literal"><span class="pre">io</span></code></a> and a short listing below</p>
-<ul class="simple">
-<li><em>autoplot</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.io.autoplot" title=".io.autoplot"><code class="xref py py-data docutils literal"><span class="pre">autoplot</span></code></a><ul>
-<li><em>threaded</em> = <code class="docutils literal"><span class="pre">True</span></code>, see <a class="reference internal" href="parameters.html#.io.autoplot.threaded" title=".io.autoplot.threaded"><code class="xref py py-data docutils literal"><span class="pre">threaded</span></code></a></li>
-<li><em>layout</em> = <code class="docutils literal"><span class="pre">&quot;default&quot;</span></code>, see <a class="reference internal" href="parameters.html#.io.autoplot.layout" title=".io.autoplot.layout"><code class="xref py py-data docutils literal"><span class="pre">layout</span></code></a></li>
-<li><em>dump</em> = <code class="docutils literal"><span class="pre">True</span></code>, see <a class="reference internal" href="parameters.html#.io.autoplot.dump" title=".io.autoplot.dump"><code class="xref py py-data docutils literal"><span class="pre">dump</span></code></a></li>
-<li><em>imfile</em> = <code class="docutils literal"><span class="pre">&quot;plots/%(run)s/%(run)s_%(engine)s_%(iteration)04d.png&quot;</span></code>, see <a class="reference internal" href="parameters.html#.io.autoplot.imfile" title=".io.autoplot.imfile"><code class="xref py py-data docutils literal"><span class="pre">imfile</span></code></a></li>
-<li><em>interval</em> = <code class="docutils literal"><span class="pre">1</span></code>, see <a class="reference internal" href="parameters.html#.io.autoplot.interval" title=".io.autoplot.interval"><code class="xref py py-data docutils literal"><span class="pre">interval</span></code></a></li>
-<li><em>make_movie</em> = <code class="docutils literal"><span class="pre">False</span></code>, see <a class="reference internal" href="parameters.html#.io.autoplot.make_movie" title=".io.autoplot.make_movie"><code class="xref py py-data docutils literal"><span class="pre">make_movie</span></code></a></li>
-</ul>
-</li>
-<li><em>home</em> = <code class="docutils literal"><span class="pre">&quot;./&quot;</span></code>, see <a class="reference internal" href="parameters.html#.io.home" title=".io.home"><code class="xref py py-data docutils literal"><span class="pre">home</span></code></a></li>
-<li><em>interaction</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction" title=".io.interaction"><code class="xref py py-data docutils literal"><span class="pre">interaction</span></code></a><ul>
-<li><em>address</em> = <code class="docutils literal"><span class="pre">&quot;tcp://127.0.0.1&quot;</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.address" title=".io.interaction.address"><code class="xref py py-data docutils literal"><span class="pre">address</span></code></a></li>
-<li><em>poll_timeout</em> = <code class="docutils literal"><span class="pre">10</span></code></li>
-<li><em>connections</em> = <code class="docutils literal"><span class="pre">10</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.connections" title=".io.interaction.connections"><code class="xref py py-data docutils literal"><span class="pre">connections</span></code></a></li>
-<li><em>pingtimeout</em> = <code class="docutils literal"><span class="pre">10</span></code></li>
-<li><em>pinginterval</em> = <code class="docutils literal"><span class="pre">2</span></code></li>
-<li><em>port</em> = <code class="docutils literal"><span class="pre">5560</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.port" title=".io.interaction.port"><code class="xref py py-data docutils literal"><span class="pre">port</span></code></a></li>
-</ul>
-</li>
-<li><em>rfile</em> = <code class="docutils literal"><span class="pre">&quot;recons/%(run)s/%(run)s_%(engine)s.ptyr&quot;</span></code>, see <a class="reference internal" href="parameters.html#.io.rfile" title=".io.rfile"><code class="xref py py-data docutils literal"><span class="pre">rfile</span></code></a></li>
-<li><em>autosave</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.io.autosave" title=".io.autosave"><code class="xref py py-data docutils literal"><span class="pre">autosave</span></code></a><ul>
-<li><em>objects</em> = <code class="docutils literal"><span class="pre">None</span></code></li>
-<li><em>rfile</em> = <code class="docutils literal"><span class="pre">&quot;dumps/%(run)s/%(run)s_%(engine)s_%(iteration)04d.ptyr&quot;</span></code>, see <a class="reference internal" href="parameters.html#.io.autosave.rfile" title=".io.autosave.rfile"><code class="xref py py-data docutils literal"><span class="pre">rfile</span></code></a></li>
-<li><em>interval</em> = <code class="docutils literal"><span class="pre">10</span></code>, see <a class="reference internal" href="parameters.html#.io.autosave.interval" title=".io.autosave.interval"><code class="xref py py-data docutils literal"><span class="pre">interval</span></code></a></li>
-<li><em>probes</em> = <code class="docutils literal"><span class="pre">None</span></code></li>
-</ul>
-</li>
-</ul>
-</dd></dl>
-
 </div>
 <div class="section" id="module-ptypy.core.sample">
 <span id="ptypy-core-sample-module"></span><h2>ptypy.core.sample module<a class="headerlink" href="#module-ptypy.core.sample" title="Permalink to this headline">¶</a></h2>
-<p>This module generates a sample</p>
+<p>This module generates a sample.</p>
 <p>&#64;author: Bjoern Enders</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
@@ -2534,41 +2470,10 @@ storages and runtime information is saved.</li>
 </tbody>
 </table>
 </div></blockquote>
-<dl class="data">
-<dt id="ptypy.core.sample.DEFAULT">
-<code class="descclassname">ptypy.core.sample.</code><code class="descname">DEFAULT</code><em class="property"> = Param({'diversity': Param({'shift': None, 'noise': None, 'power': 1.0}), 'process': Param({'density': None, 'offset': 0, 'zoom': None, 'thickness': None, 'ref_index': (0.5+0j), 'formula': None, 'smoothing': 2}), 'recon': Param({'layer': None, 'rfile': '*.ptyr', 'ID': None}), 'stxm': Param({'label': None}), 'override': None, 'model': None, 'fill': 1.0})</em><a class="headerlink" href="#ptypy.core.sample.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default sample parameters. See <a class="reference internal" href="parameters.html#.scan.sample" title=".scan.sample"><code class="xref py py-data docutils literal"><span class="pre">scan.sample</span></code></a> and a short listing below</p>
-<ul class="simple">
-<li><em>diversity</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.diversity" title=".scan.sample.diversity"><code class="xref py py-data docutils literal"><span class="pre">diversity</span></code></a><ul>
-<li><em>shift</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.diversity.shift" title=".scan.sample.diversity.shift"><code class="xref py py-data docutils literal"><span class="pre">shift</span></code></a></li>
-<li><em>noise</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.diversity.noise" title=".scan.sample.diversity.noise"><code class="xref py py-data docutils literal"><span class="pre">noise</span></code></a></li>
-<li><em>power</em> = <code class="docutils literal"><span class="pre">1.0</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.diversity.power" title=".scan.sample.diversity.power"><code class="xref py py-data docutils literal"><span class="pre">power</span></code></a></li>
-</ul>
-</li>
-<li><em>process</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.process" title=".scan.sample.process"><code class="xref py py-data docutils literal"><span class="pre">process</span></code></a><ul>
-<li><em>density</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.process.density" title=".scan.sample.process.density"><code class="xref py py-data docutils literal"><span class="pre">density</span></code></a></li>
-<li><em>offset</em> = <code class="docutils literal"><span class="pre">0</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.process.offset" title=".scan.sample.process.offset"><code class="xref py py-data docutils literal"><span class="pre">offset</span></code></a></li>
-<li><em>zoom</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.process.zoom" title=".scan.sample.process.zoom"><code class="xref py py-data docutils literal"><span class="pre">zoom</span></code></a></li>
-<li><em>thickness</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.process.thickness" title=".scan.sample.process.thickness"><code class="xref py py-data docutils literal"><span class="pre">thickness</span></code></a></li>
-<li><em>ref_index</em> = <code class="docutils literal"><span class="pre">(0.5+0j)</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.process.ref_index" title=".scan.sample.process.ref_index"><code class="xref py py-data docutils literal"><span class="pre">ref_index</span></code></a></li>
-<li><em>formula</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.process.formula" title=".scan.sample.process.formula"><code class="xref py py-data docutils literal"><span class="pre">formula</span></code></a></li>
-<li><em>smoothing</em> = <code class="docutils literal"><span class="pre">2</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.process.smoothing" title=".scan.sample.process.smoothing"><code class="xref py py-data docutils literal"><span class="pre">smoothing</span></code></a></li>
-</ul>
-</li>
-<li><em>recon</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.recon" title=".scan.sample.recon"><code class="xref py py-data docutils literal"><span class="pre">recon</span></code></a><ul>
-<li><em>layer</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.recon.layer" title=".scan.sample.recon.layer"><code class="xref py py-data docutils literal"><span class="pre">layer</span></code></a></li>
-<li><em>rfile</em> = <code class="docutils literal"><span class="pre">&quot;*.ptyr&quot;</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.recon.rfile" title=".scan.sample.recon.rfile"><code class="xref py py-data docutils literal"><span class="pre">rfile</span></code></a></li>
-<li><em>ID</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.recon.ID" title=".scan.sample.recon.ID"><code class="xref py py-data docutils literal"><span class="pre">ID</span></code></a></li>
-</ul>
-</li>
-<li><em>stxm</em> = <code class="docutils literal"><span class="pre">Param</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.stxm" title=".scan.sample.stxm"><code class="xref py py-data docutils literal"><span class="pre">stxm</span></code></a><ul>
-<li><em>label</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.stxm.label" title=".scan.sample.stxm.label"><code class="xref py py-data docutils literal"><span class="pre">label</span></code></a></li>
-</ul>
-</li>
-<li><em>override</em> = <code class="docutils literal"><span class="pre">None</span></code></li>
-<li><em>model</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.model" title=".scan.sample.model"><code class="xref py py-data docutils literal"><span class="pre">model</span></code></a></li>
-<li><em>fill</em> = <code class="docutils literal"><span class="pre">1.0</span></code>, see <a class="reference internal" href="parameters.html#.scan.sample.fill" title=".scan.sample.fill"><code class="xref py py-data docutils literal"><span class="pre">fill</span></code></a></li>
-</ul>
+<dl class="function">
+<dt id="ptypy.core.sample.from_pars_old">
+<code class="descclassname">ptypy.core.sample.</code><code class="descname">from_pars_old</code><span class="sig-paren">(</span><em>shape</em>, <em>lam</em>, <em>pars=None</em>, <em>dtype=&lt;type 'complex'&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.sample.from_pars_old" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>DEPRECATED</em></p>
 </dd></dl>
 
 <dl class="function">
@@ -2582,10 +2487,10 @@ storages and runtime information is saved.</li>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>storage</strong> (<a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><em>Storage</em></a>) &#8211; The object <a class="reference internal" href="#ptypy.core.classes.Storage" title="ptypy.core.classes.Storage"><code class="xref any py py-class docutils literal"><span class="pre">Storage</span></code></a> to initialize</li>
 <li><strong>sample_pars</strong> (<a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; Parameter structure that defines how the sample is created.
-See <a class="reference internal" href="#ptypy.core.sample.DEFAULT" title="ptypy.core.sample.DEFAULT"><code class="xref any py py-data docutils literal"><span class="pre">DEFAULT</span></code></a> for the parameters.</li>
+<em>FIXME</em> Link to parameters</li>
 <li><strong>energy</strong> (<em>float, optional</em>) &#8211; Energy associated in the experiment for this sample object.
 If None, the ptypy structure is searched for the appropriate
-<a class="reference internal" href="#ptypy.core.geometry.Geo" title="ptypy.core.geometry.Geo"><code class="xref any py py-class docutils literal"><span class="pre">Geo</span></code></a> instance:  <code class="docutils literal"><span class="pre">storage.views[0].pod.geometry.energy</span></code></li>
+<code class="xref py py-class docutils literal"><span class="pre">Geo</span></code> instance:  <code class="docutils literal"><span class="pre">storage.views[0].pod.geometry.energy</span></code></li>
 </ul>
 </td>
 </tr>
@@ -2595,15 +2500,15 @@ If None, the ptypy structure is searched for the appropriate
 
 <dl class="function">
 <dt id="ptypy.core.sample.simulate">
-<code class="descclassname">ptypy.core.sample.</code><code class="descname">simulate</code><span class="sig-paren">(</span><em>A</em>, <em>pars</em>, <em>energy</em>, <em>fill=1.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.sample.simulate" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">ptypy.core.sample.</code><code class="descname">simulate</code><span class="sig-paren">(</span><em>A</em>, <em>pars</em>, <em>energy</em>, <em>fill=1.0</em>, <em>prefix=''</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.sample.simulate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Simulates a sample object into model numpy array <cite>A</cite></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>A</strong> (<em>ndarray</em>) &#8211; Numpy array as buffer. Must be at least twodimensional</li>
-<li><strong>pars</strong> (<a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; Simulation parameters. See <a class="reference internal" href="#ptypy.core.sample.DEFAULT" title="ptypy.core.sample.DEFAULT"><code class="xref any py py-data docutils literal"><span class="pre">DEFAULT</span></code></a> .simulate</li>
+<li><strong>A</strong> (<em>ndarray</em>) &#8211; Numpy array as buffer. Must be at least two-dimensional</li>
+<li><strong>pars</strong> (<a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; Simulation parameters. <em>FIXME</em> link to paramaters.</li>
 </ul>
 </td>
 </tr>
@@ -2626,7 +2531,7 @@ If None, the ptypy structure is searched for the appropriate
 <dd><p>Looks into all references of obj. Places references in a pool with
 string labels resembling their python ID plus an object dependent prefix.
 Reduces all objects and dicts to dictionaries.
-Reduces all tupels to list.
+Reduces all tuples to list.
 All references are replaced by the labels in the pool.</p>
 <p>Original references in &#8216;obj&#8217; are preserved</p>
 </dd></dl>
@@ -2658,34 +2563,19 @@ All references are replaced by the labels in the pool.</p>
 </tbody>
 </table>
 </div></blockquote>
-<dl class="data">
-<dt id="ptypy.core.xy.DEFAULT">
-<code class="descclassname">ptypy.core.xy.</code><code class="descname">DEFAULT</code><em class="property"> = Param({'count': None, 'jitter': None, 'spacing': 1.5e-06, 'steps': 10, 'extent': 1.5e-05, 'offset': 0, 'override': None, 'model': None})</em><a class="headerlink" href="#ptypy.core.xy.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default pattern parameters. See <a class="reference internal" href="parameters.html#.scan.xy" title=".scan.xy"><code class="xref py py-data docutils literal"><span class="pre">scan.xy</span></code></a> and a short listing below</p>
-<ul class="simple">
-<li><em>count</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.xy.count" title=".scan.xy.count"><code class="xref py py-data docutils literal"><span class="pre">count</span></code></a></li>
-<li><em>jitter</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.xy.jitter" title=".scan.xy.jitter"><code class="xref py py-data docutils literal"><span class="pre">jitter</span></code></a></li>
-<li><em>spacing</em> = <code class="docutils literal"><span class="pre">1.5e-06</span></code>, see <a class="reference internal" href="parameters.html#.scan.xy.spacing" title=".scan.xy.spacing"><code class="xref py py-data docutils literal"><span class="pre">spacing</span></code></a></li>
-<li><em>steps</em> = <code class="docutils literal"><span class="pre">10</span></code>, see <a class="reference internal" href="parameters.html#.scan.xy.steps" title=".scan.xy.steps"><code class="xref py py-data docutils literal"><span class="pre">steps</span></code></a></li>
-<li><em>extent</em> = <code class="docutils literal"><span class="pre">1.5e-05</span></code>, see <a class="reference internal" href="parameters.html#.scan.xy.extent" title=".scan.xy.extent"><code class="xref py py-data docutils literal"><span class="pre">extent</span></code></a></li>
-<li><em>offset</em> = <code class="docutils literal"><span class="pre">0</span></code>, see <a class="reference internal" href="parameters.html#.scan.xy.offset" title=".scan.xy.offset"><code class="xref py py-data docutils literal"><span class="pre">offset</span></code></a></li>
-<li><em>override</em> = <code class="docutils literal"><span class="pre">None</span></code></li>
-<li><em>model</em> = <code class="docutils literal"><span class="pre">None</span></code>, see <a class="reference internal" href="parameters.html#.scan.xy.model" title=".scan.xy.model"><code class="xref py py-data docutils literal"><span class="pre">model</span></code></a></li>
-</ul>
-</dd></dl>
-
 <dl class="function">
 <dt id="ptypy.core.xy.from_pars">
 <code class="descclassname">ptypy.core.xy.</code><code class="descname">from_pars</code><span class="sig-paren">(</span><em>xypars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.xy.from_pars" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates position array from parameter tree <cite>pars</cite>. See <a class="reference internal" href="#ptypy.core.xy.DEFAULT" title="ptypy.core.xy.DEFAULT"><code class="xref py py-data docutils literal"><span class="pre">DEFAULT</span></code></a></p>
+<dd><p>Creates position array from parameter tree <cite>pars</cite>. See <code class="xref py py-data docutils literal"><span class="pre">DEFAULT</span></code></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>pars</strong> (<a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; Input parameters</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>xypars</strong> &#8211; TreeDict
+Input parameters</td>
 </tr>
-<tr class="field-even field"><th class="field-name" colspan="2">Returns ndarray pos:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body">A numpy.ndarray of shape <code class="docutils literal"><span class="pre">(N,2)</span></code> for <em>N</em> positios</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">ndarray pos
+A numpy.ndarray of shape <code class="docutils literal"><span class="pre">(N,2)</span></code> for <em>N</em> positions</td>
 </tr>
 </tbody>
 </table>
@@ -2703,6 +2593,7 @@ All references are replaced by the labels in the pool.</p>
 <li><strong>nr</strong> (<em>int</em>) &#8211; Number of radial steps from center, <code class="docutils literal"><span class="pre">nr</span> <span class="pre">+</span> <span class="pre">1</span></code> shells will be made</li>
 <li><strong>dr</strong> (<em>float</em>) &#8211; Step size (shell spacing)</li>
 <li><strong>nth</strong> (<em>int, optional</em>) &#8211; Number of points in first shell</li>
+<li><strong>bullseye</strong> (<em>bool</em>) &#8211; If set false, point of origin will be ignored</li>
 </ul>
 </td>
 </tr>
@@ -2719,14 +2610,14 @@ A (N,2)-array of positions.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">xy</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span> <span class="o">=</span> <span class="n">xy</span><span class="o">.</span><span class="n">round_scan</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">pos</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span><span class="n">pos</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span><span class="s">&#39;o-&#39;</span><span class="p">);</span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">pos</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span> <span class="n">pos</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;o-&#39;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </dd></dl>
 
 <dl class="function">
 <dt id="ptypy.core.xy.raster_scan">
-<code class="descclassname">ptypy.core.xy.</code><code class="descname">raster_scan</code><span class="sig-paren">(</span><em>ny=10</em>, <em>nx=10</em>, <em>dy=1.5e-06</em>, <em>dx=1.5e-06</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.xy.raster_scan" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">ptypy.core.xy.</code><code class="descname">raster_scan</code><span class="sig-paren">(</span><em>dy=1.5e-06</em>, <em>dx=1.5e-06</em>, <em>ny=10</em>, <em>nx=10</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.core.xy.raster_scan" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a raster scan.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2735,7 +2626,7 @@ A (N,2)-array of positions.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>nx</strong> (<em>ny,</em>) &#8211; Number of steps in <em>y</em> (vertical) and <em>x</em> (horizontal) direction
 <em>x</em> is the fast axis</li>
-<li><strong>dx</strong> (<em>dy,</em>) &#8211; Step size (grid spacinf) in <em>y</em> and <em>x</em></li>
+<li><strong>dx</strong> (<em>dy,</em>) &#8211; Step size (grid spacing) in <em>y</em> and <em>x</em></li>
 </ul>
 </td>
 </tr>
@@ -2752,7 +2643,7 @@ A (N,2)-array of positions. It is <code class="docutils literal"><span class="pr
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">xy</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span> <span class="o">=</span> <span class="n">xy</span><span class="o">.</span><span class="n">raster_scan</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">pos</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span><span class="n">pos</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span><span class="s">&#39;o-&#39;</span><span class="p">);</span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">pos</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">pos</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;o-&#39;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -2785,7 +2676,7 @@ A (N,2)-array of positions. It is</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">xy</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span> <span class="o">=</span> <span class="n">xy</span><span class="o">.</span><span class="n">spiral_scan</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">pos</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span><span class="n">pos</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span><span class="s">&#39;o-&#39;</span><span class="p">);</span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">pos</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">pos</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;o-&#39;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -2831,13 +2722,13 @@ A (N,2)-array of positions. It is</p>
         <li class="right" >
           <a href="ptypy.html" title="ptypy package"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.6.
     </div>
   </body>
 </html>

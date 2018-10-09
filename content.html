@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Quicklinks &mdash; ptypy 0.2.0 documentation</title>
+    <title>Quicklinks &mdash; ptypy 0.3.0 documentation</title>
     
     <link rel="stylesheet" href="_static/header.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.2.0',
+        VERSION:     '0.3.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,12 +25,15 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="_static/ptypyicon.ico"/>
-    <link rel="top" title="ptypy 0.2.0 documentation" href="#" />
+    <link rel="top" title="ptypy 0.3.0 documentation" href="#" />
     <link rel="next" title="Getting started with Ptypy" href="rst/getting_started.html" />
 <link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
 
   </head>
   <body role="document">
+
+
+
 <div class="pageheader">
   <ul>
     <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
@@ -57,7 +60,7 @@
         <li class="right" >
           <a href="rst/getting_started.html" title="Getting started with Ptypy"
              accesskey="N">next</a> |</li>
-        <li class="nav-item nav-item-0"><a href="#">ptypy 0.2.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="#">ptypy 0.3.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -193,42 +196,37 @@ having to browse the source code?</div>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="rst/parameters.html">Parameter tree structure</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#verbose-level">.verbose_level</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#data-type">.data_type</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#run">.run</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#dry-run">.dry_run</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#io">.io</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#io-home">.io.home</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#io-rfile">.io.rfile</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#io-autosave">.io.autosave</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#io-interaction">.io.interaction</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#io-autoplot">.io.autoplot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#io">io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#io-interaction">io.interaction</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#scan">.scan</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-tags">.scan.tags</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-if-conflict-use-meta">.scan.if_conflict_use_meta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-data">.scan.data</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-sharing">.scan.sharing</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-geometry">.scan.geometry</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-xy">.scan.xy</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-illumination">.scan.illumination</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-sample">.scan.sample</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-coherence">.scan.coherence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#scandata">scandata</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scandata-ptyscan">scandata.PtyScan</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scandata-ptydscan">scandata.PtydScan</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scandata-moonflowerscan">scandata.MoonFlowerScan</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scandata-quickscan">scandata.QuickScan</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scandata-simscan">scandata.SimScan</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#scans">.scans</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scans-scan-00">.scans.scan_00</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#scan">scan</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-scanmodel">scan.ScanModel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-vanilla">scan.Vanilla</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-full">scan.Full</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#scan-bragg3dmodel">scan.Bragg3dModel</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#engine">.engine</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#engine-common">.engine.common</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#engine-dm">.engine.DM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#engine-ml">.engine.ML</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#engine">engine</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#engine-dm">engine.DM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#engine-dm-simple">engine.DM_simple</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#engine-ml">engine.ML</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#engine-dummy">engine.Dummy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#engine-epie">engine.ePIE</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#engines">.engines</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#engines-engine-00">.engines.engine_00</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rst/parameters.html#ptycho">ptycho</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#ptycho-io">ptycho.io</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#ptycho-scans">ptycho.scans</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/parameters.html#ptycho-engines">ptycho.engines</a></li>
 </ul>
 </li>
 </ul>
@@ -242,6 +240,7 @@ having to browse the source code?</div>
 <li class="toctree-l3"><a class="reference internal" href="rst/ptypy.resources.html">ptypy.resources package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="rst/ptypy.simulations.html">ptypy.simulations package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="rst/ptypy.utils.html">ptypy.utils package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rst/ptypy.debug.html">ptypy.debug package</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="rst/ptypy.html#module-ptypy">Module contents</a></li>
@@ -277,12 +276,12 @@ having to browse the source code?</div>
         <li class="right" >
           <a href="rst/getting_started.html" title="Getting started with Ptypy"
              >next</a> |</li>
-        <li class="nav-item nav-item-0"><a href="#">ptypy 0.2.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="#">ptypy 0.3.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.6.
     </div>
   </body>
 </html>

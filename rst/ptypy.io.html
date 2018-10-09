@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>ptypy.io package &mdash; ptypy 0.2.0 documentation</title>
+    <title>ptypy.io package &mdash; ptypy 0.3.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/header.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.2.0',
+        VERSION:     '0.3.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
-    <link rel="top" title="ptypy 0.2.0 documentation" href="../content.html" />
+    <link rel="top" title="ptypy 0.3.0 documentation" href="../content.html" />
     <link rel="up" title="ptypy package" href="ptypy.html" />
     <link rel="next" title="ptypy.resources package" href="ptypy.resources.html" />
     <link rel="prev" title="ptypy.experiment package" href="ptypy.experiment.html" />
@@ -33,6 +33,9 @@
 
   </head>
   <body role="document">
+
+
+
 <div class="pageheader">
   <ul>
     <li><a href="http://ptycho.github.io/ptypy">Home</a></li>
@@ -62,7 +65,7 @@
         <li class="right" >
           <a href="ptypy.experiment.html" title="ptypy.experiment package"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &raquo;</li> 
       </ul>
     </div>
@@ -86,6 +89,7 @@
 <li class="toctree-l3"><a class="reference internal" href="ptypy.resources.html">ptypy.resources package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.simulations.html">ptypy.simulations package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.utils.html">ptypy.utils package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.debug.html">ptypy.debug package</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="ptypy.html#module-ptypy">Module contents</a></li>
@@ -274,7 +278,19 @@ while doglob=True always returns a list, even if there is only one match.</dd>
 <dl class="function">
 <dt id="ptypy.io.image_read.image_read">
 <code class="descclassname">ptypy.io.image_read.</code><code class="descname">image_read</code><span class="sig-paren">(</span><em>filename</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.image_read.image_read" title="Permalink to this definition">¶</a></dt>
-<dd><p>Attempts to import image data from any file.</p>
+<dd><p>Try to load image data from any file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>filename</strong> (<em>str</em>) &#8211; Name of the file. If filename contains a wildcard, load all files that match the pattern.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">(image, metadict) or (list of images, list of metadicts)</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </div>
@@ -299,7 +315,7 @@ while doglob=True always returns a list, even if there is only one match.</dd>
 <dt id="ptypy.io.interaction.Server">
 <em class="property">class </em><code class="descclassname">ptypy.io.interaction.</code><code class="descname">Server</code><span class="sig-paren">(</span><em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
-<p>Main server class.</p>
+<p>Main ZMQ server class.</p>
 <p>Interaction server, meant to run asynchronously with process 0 to manage client requests.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -329,23 +345,20 @@ Ping time out: client disconnected after this period (in seconds).</li>
 </table>
 <dl class="attribute">
 <dt id="ptypy.io.interaction.Server.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'poll_timeout': 10, 'connections': 10, 'pingtimeout': 10, 'pinginterval': 2, 'port': 5560, 'address': 'tcp://127.0.0.1'})</em><a class="headerlink" href="#ptypy.io.interaction.Server.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default parameters, see also <a class="reference internal" href="parameters.html#.io.interaction" title=".io.interaction"><code class="xref py py-data docutils literal"><span class="pre">io.interaction</span></code></a></p>
-<ul class="simple">
-<li><em>poll_timeout</em> = <code class="docutils literal"><span class="pre">10</span></code></li>
-<li><em>connections</em> = <code class="docutils literal"><span class="pre">10</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.connections" title=".io.interaction.connections"><code class="xref py py-data docutils literal"><span class="pre">connections</span></code></a></li>
-<li><em>pingtimeout</em> = <code class="docutils literal"><span class="pre">10</span></code></li>
-<li><em>pinginterval</em> = <code class="docutils literal"><span class="pre">2</span></code></li>
-<li><em>port</em> = <code class="docutils literal"><span class="pre">5560</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.port" title=".io.interaction.port"><code class="xref py py-data docutils literal"><span class="pre">port</span></code></a></li>
-<li><em>address</em> = <code class="docutils literal"><span class="pre">&quot;tcp://127.0.0.1&quot;</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.address" title=".io.interaction.address"><code class="xref py py-data docutils literal"><span class="pre">address</span></code></a></li>
-</ul>
-</dd></dl>
+<code class="descname">DEFAULT</code><em class="property"> = Param({'pinginterval': 2, 'connections': 10, 'pingtimeout': 10, 'poll_timeout': 10.0, 'active': True, 'port': 5560, 'address': 'tcp://127.0.0.1'})</em><a class="headerlink" href="#ptypy.io.interaction.Server.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="method">
 <dt id="ptypy.io.interaction.Server.activate">
 <code class="descname">activate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.activate" title="Permalink to this definition">¶</a></dt>
-<dd><p>This needs to be run for the thread to initialize.</p>
+<dd><p>This needs to be run for the thread to initialize.
+Returns port where the server listens or None if Server failed</p>
 </dd></dl>
+
+<dl class="method">
+<dt id="ptypy.io.interaction.Server.make_ID_pool">
+<code class="descname">make_ID_pool</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.make_ID_pool" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="method">
 <dt id="ptypy.io.interaction.Server.process_requests">
@@ -410,16 +423,8 @@ Interval to check pings (in seconds).</li>
 </table>
 <dl class="attribute">
 <dt id="ptypy.io.interaction.Client.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'connections': 10, 'poll_timeout': 100, 'pinginterval': 1, 'port': 5560, 'address': 'tcp://127.0.0.1'})</em><a class="headerlink" href="#ptypy.io.interaction.Client.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default parameters, see also <a class="reference internal" href="parameters.html#.io.interaction" title=".io.interaction"><code class="xref py py-data docutils literal"><span class="pre">io.interaction</span></code></a></p>
-<ul class="simple">
-<li><em>connections</em> = <code class="docutils literal"><span class="pre">10</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.connections" title=".io.interaction.connections"><code class="xref py py-data docutils literal"><span class="pre">connections</span></code></a></li>
-<li><em>poll_timeout</em> = <code class="docutils literal"><span class="pre">100</span></code></li>
-<li><em>pinginterval</em> = <code class="docutils literal"><span class="pre">1</span></code></li>
-<li><em>port</em> = <code class="docutils literal"><span class="pre">5560</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.port" title=".io.interaction.port"><code class="xref py py-data docutils literal"><span class="pre">port</span></code></a></li>
-<li><em>address</em> = <code class="docutils literal"><span class="pre">&quot;tcp://127.0.0.1&quot;</span></code>, see <a class="reference internal" href="parameters.html#.io.interaction.address" title=".io.interaction.address"><code class="xref py py-data docutils literal"><span class="pre">address</span></code></a></li>
-</ul>
-</dd></dl>
+<code class="descname">DEFAULT</code><em class="property"> = Param({'connection_timeout': 3600000.0, 'poll_timeout': 100.0, 'pinginterval': 1, 'port': 5560, 'address': 'tcp://127.0.0.1'})</em><a class="headerlink" href="#ptypy.io.interaction.Client.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="method">
 <dt id="ptypy.io.interaction.Client.activate">
@@ -641,13 +646,13 @@ while doglob=True always returns a list, even if there is only one match.</dd>
         <li class="right" >
           <a href="ptypy.experiment.html" title="ptypy.experiment package"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.2.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.6.
     </div>
   </body>
 </html>
