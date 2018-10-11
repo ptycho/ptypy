@@ -62,6 +62,8 @@ class Fourier_update_kernel(BaseKernel):
     def npy_fourier_error(self,f, fmag, fdev, ferr, fmask, mask_sum, offset = 0):
         # reference shape (write-to shape)
         sh = self.fshape
+        # read from slice for global arrays
+        sl = slice(offset,offset+sh[0])
         
         # build model from complex fourier magnitudes, summing up 
         # all modes incoherently
@@ -69,25 +71,26 @@ class Fourier_update_kernel(BaseKernel):
         af = np.sqrt((np.abs(tf)**2).sum(1))
         
         # calculate difference to real data (fmag)
-        fdev[:] = af - fmag
+        fdev[:] = af - fmag[sl]
         
         # Calculate error on fourier magnitudes on a per-pixel basis
-        ferr[:] = fmask * np.abs(fdev)**2 / mask_sum.reshape((mask_sum.shape[0],1,1)) 
+        ferr[:] = fmask[sl] * np.abs(fdev)**2 / mask_sum[sl].reshape((sh[0],1,1)) 
         
     def npy_error_reduce(self, ferr, err_fmag, offset = 0):
         sh = self.fshape
-        
+        sl = slice(offset,offset+sh)
         # Reduceses the Fourier error along the last 2 dimensions.fd
-        err_fmag[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
+        err_fmag[sl] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
         
     def npy_fmag_all_update(self,f,fmask, fmag, fdev, err_fmag, offset = 0):
         
         # reference shape (write-to shape)
         sh = self.ishape
+        sl = slice(offset,offset+sh[0])
         
         # local values
-        fm = np.ones_like(fmask)
-        renorm = np.ones_like(err_fmag)
+        fm = np.ones(self.fshape, np.float32)
+        renorm = np.ones(self.fshape, np.float32)
         
         ## As opposed to DM we use renorm to differentiate the cases.
         
@@ -99,12 +102,12 @@ class Fourier_update_kernel(BaseKernel):
         # pbound == 0.0 
         # fm = (1 - fmask) + fmask * fmag / (af + 1e-10) (as renorm=0)
         
-        ind = err_fmag > self.pbound
-        renorm[ind] = np.sqrt(self.pbound / err_fmag[ind])
+        ind = err_fmag[sl] > self.pbound
+        renorm[ind] = np.sqrt(self.pbound / err_fmag[sl][ind])
         renorm = renorm.reshape((renorm.shape[0],1,1))
         
-        af = fdev + fmag
-        fm[:] = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
+        af = fdev + fmag[sl]
+        fm[:] = (1 - fmask[sl]) + fmask[sl] * (fmag[sl] + fdev * renorm) / (af + 1e-10)
 
         # upcasting
         f[:] = f.reshape(sh[0]/self.nmodes,self.nmodes,sh[1],sh[2]) * fm[:,newaxis,:,:]
