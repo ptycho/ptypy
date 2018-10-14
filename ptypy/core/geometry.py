@@ -189,7 +189,7 @@ class Geo(Base):
             raise ValueError(
                 'Frame size (geometry.shape) must not be None or 0')
         else:
-            self.p.shape = u.expect2(p.shape)
+            self.p.shape = self.expectN(p.shape)
 
         # Set energy and wavelength
         if p.energy is None:
@@ -207,7 +207,7 @@ class Geo(Base):
             self.energy = p.energy
 
         # Set initial geometrical misfit to 0
-        self.p.misfit = u.expect2(0.)
+        self.p.misfit = self.expectN(0.)
 
         # Pixel size
         self.p.psize_is_fix = p.psize is not None
@@ -220,14 +220,14 @@ class Geo(Base):
 
         # Fill pixel sizes
         if self.p.resolution_is_fix:
-            self.p.resolution = u.expect2(p.resolution)
+            self.p.resolution = self.expectN(p.resolution)
         else:
-            self.p.resolution = u.expect2(1.0)
+            self.p.resolution = self.expectN(1.0)
 
         if self.p.psize_is_fix:
-            self.p.psize = u.expect2(p.psize)
+            self.p.psize = self.expectN(p.psize)
         else:
-            self.p.psize = u.expect2(1.0)
+            self.p.psize = self.expectN(1.0)
 
         # Update other values
         self.update(False)
@@ -235,6 +235,10 @@ class Geo(Base):
         # Attach propagator
         self._propagator = self._get_propagator()
         self.interact = True
+
+    @staticmethod
+    def expectN(v):
+        return u.expect2(v)
 
     def update(self, update_propagator=True):
         """
@@ -317,7 +321,7 @@ class Geo(Base):
         """
         changing source space pixel size
         """
-        self.p.resolution[:] = u.expect2(v)
+        self.p.resolution[:] = self.expectN(v)
         if self.interact:
             self.update()
 
@@ -330,7 +334,7 @@ class Geo(Base):
 
     @psize.setter
     def psize(self, v):
-        self.p.psize[:] = u.expect2(v)
+        self.p.psize[:] = self.expectN(v)
         if self.interact:
             self.update()
 
@@ -350,7 +354,7 @@ class Geo(Base):
 
     @shape.setter
     def shape(self, v):
-        self.p.shape[:] = u.expect2(v).astype(int)
+        self.p.shape[:] = self.expectN(v).astype(int)
         if self.interact:
             self.update()
 

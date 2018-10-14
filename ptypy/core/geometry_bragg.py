@@ -56,66 +56,9 @@ class Geo_Bragg(_Geo):
     doc = Refers to the conjugate (natural) coordinate system as (r3, r1, r2).
     """
 
-    def _initialize(self, p):
-        """
-        Parse input parameters, fill missing parameters and set up a
-        propagator.
-        """
-        self.interact = False
-
-        # Set distance
-        if self.p.distance is None or self.p.distance == 0:
-            raise ValueError(
-                'Distance (geometry.distance) must not be None or 0')
-
-        # Set frame shape
-        if self.p.shape is None or (np.array(self.p.shape) == 0).any():
-            raise ValueError(
-                'Frame size (geometry.shape) must not be None or 0')
-        else:
-            self.p.shape = u.expect3(p.shape)
-
-        # Set energy and wavelength
-        if p.energy is None:
-            if p.lam is None:
-                raise ValueError(
-                    'Wavelength (geometry.lam) and energy (geometry.energy)\n'
-                    'must not both be None')
-            else:
-                self.lam = p.lam  # also sets energy through a property
-        else:
-            if p.lam is not None:
-                logger.debug('Energy and wavelength both specified. '
-                             'Energy takes precedence over wavelength')
-
-            self.energy = p.energy  # also sets lam through a property
-
-        # Pixel size
-        self.p.psize_is_fix = p.psize is not None
-        self.p.resolution_is_fix = p.resolution is not None
-
-        if not self.p.psize_is_fix and not self.p.resolution_is_fix:
-            raise ValueError(
-                'Pixel size in sample plane (geometry.resolution) and '
-                'detector plane \n(geometry.psize) must not both be None')
-
-        # Fill pixel sizes
-        if self.p.resolution_is_fix:
-            self.p.resolution = u.expect3(p.resolution)
-        else:
-            self.p.resolution = u.expect3(1.0)
-
-        if self.p.psize_is_fix:
-            self.p.psize = u.expect3(p.psize)
-        else:
-            self.p.psize = u.expect3(1.0)
-
-        # Update other values
-        self.update(False)
-
-        # Attach propagator
-        self._propagator = self._get_propagator()
-        self.interact = True
+    @staticmethod
+    def expectN(v):
+        return u.expect3(v)
 
     def update(self, update_propagator=True):
         """
@@ -197,36 +140,6 @@ class Geo_Bragg(_Geo):
     @property
     def tantheta(self):
         return np.tan(np.deg2rad(self.theta_bragg))
-
-    @property
-    def resolution(self):
-        return self.p.resolution
-
-    @resolution.setter
-    def resolution(self, v):
-        self.p.resolution[:] = u.expect3(v)
-        if self.interact:
-            self.update()
-
-    @property
-    def psize(self):
-        return self.p.psize
-
-    @psize.setter
-    def psize(self, v):
-        self.p.psize[:] = u.expect3(v)
-        if self.interact:
-            self.update()
-
-    @property
-    def shape(self):
-        return self.p.shape
-
-    @shape.setter
-    def shape(self, v):
-        self.p.shape[:] = u.expect3(v).astype(int)
-        if self.interact:
-            self.update()
 
     def _get_propagator(self):
         """
