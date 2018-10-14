@@ -8,7 +8,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .DM import DM
-from .. import defaults_tree
+from . import register
 from ..core.manager import Bragg3dModel
 from ..utils import parallel
 from ..utils.verbose import logger
@@ -17,7 +17,7 @@ import numpy as np
 
 __all__ = ['DM_3dBragg']
 
-@defaults_tree.parse_doc('engine.DM_3dBragg')
+@register()
 class DM_3dBragg(DM):
     """
     DM engine adapted to 3d Bragg reconstruction. Specifically, sample

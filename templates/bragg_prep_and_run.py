@@ -1,3 +1,7 @@
+"""
+Simulates and then inverts 3d Bragg ptycho data.
+"""
+
 from ptypy.core import Ptycho
 from ptypy import utils as u
 
