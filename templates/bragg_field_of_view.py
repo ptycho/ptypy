@@ -1,3 +1,8 @@
+"""
+Example script which uses the 3d Bragg ptycho code to calculate and
+plot the 3d field of view as compared to the incoming probe.
+"""
+
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import matplotlib.pyplot as plt
@@ -33,7 +38,7 @@ p.scans.scan01.data.dry_run = True              # Don't actually calculate diff 
 P = Ptycho(p,level=2)
 
 # This particular PtyScan also exports the object used for simulation as an attribute
-S_true = P.modelm.scans['scan01'].ptyscan.simulated_object
+S_true = P.model.scans['scan01'].ptyscan.simulated_object
 
 # We can grab the object storage from the Ptycho instance
 S = P.obj.storages.values()[0]
