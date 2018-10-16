@@ -104,7 +104,7 @@ else:
 if args.output_folder is not None:
     parameters.io.home = get_file_name(args)
     parameters.io.rfile = "%s.ptyr" % get_file_name(args)
-    parameters.io.autosave = u.Param(active=True)
+    parameters.io.autosave = u.Param(active=True, interval=100)
     log(3, "Autosave is on, with io going in {}, and the final reconstruction into {}".format(parameters.io.home,
                                                                                               parameters.io.rfile))
 else:
