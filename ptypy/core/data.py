@@ -784,7 +784,7 @@ class PtyScan(object):
             # with wrong size in warning
 
             cmp_data_shape_and_mask_shape = dsh == np.array(w[0].shape)
-            same_shape = cmp_data_shape_and_mask_shape.all() if isinstance(cmp_data_shape_and_mask_shape, (list, np.array)) else cmp_data_shape_and_mask_shape
+            same_shape = cmp_data_shape_and_mask_shape.all() if isinstance(cmp_data_shape_and_mask_shape, (list, np.ndarray)) else cmp_data_shape_and_mask_shape
             if same_shape:
                 w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
             else:
