@@ -414,7 +414,7 @@ class FFTchooser(object):
     Chooses the desired FFT algo, and assigns scaling.
     If pyFFTW is not available, falls back to scipy.
     """
-    def __init__(self, ffttype='std'):
+    def __init__(self, ffttype='fftw'):
         """
         Parameters
         ----------
@@ -481,7 +481,7 @@ class BasicFarfieldPropagator(object):
     coordinates are rolled periodically, just like in the conventional fft case.
     """
 
-    def __init__(self, geo_pars=None, ffttype='numpy', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='fftw', **kwargs):
         """
         Parameters
         ----------

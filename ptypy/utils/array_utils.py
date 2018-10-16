@@ -138,7 +138,7 @@ def crop_pad_symmetric_2d(A, newshape, center=None):
 
     """
     osh = np.array(A.shape[-2:])
-    c = np.round(center) if center is not None else osh // 2
+    c = np.round(center[-2:]) if center is not None else osh // 2
     sh = np.array(newshape[-2:])
     low = -c + sh // 2
     high = -osh + c + (sh + 1) // 2

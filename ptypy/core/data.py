@@ -783,7 +783,9 @@ class PtyScan(object):
             # NOTE: Maybe distinguish between no mask provided and mask
             # with wrong size in warning
 
-            if (dsh == np.array(w[0].shape)).all():
+            cmp_data_shape_and_mask_shape = dsh == np.array(w[0].shape)
+            same_shape = cmp_data_shape_and_mask_shape.all() if isinstance(cmp_data_shape_and_mask_shape, list) else cmp_data_shape_and_mask_shape
+            if same_shape:
                 w, cen = u.crop_pad_symmetric_2d(w, sh, cen)
             else:
                 logger.warning('Mask does not have the same shape as data. '

@@ -110,16 +110,18 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     f = {}
 
     # Buffer for accumulated photons
-    af2 = np.zeros_like(diff_view.data)
-    # Get measured data
     I = diff_view.data
+
+    af2 = np.zeros_like(I)
+    # Get measured data
+
 
     # Get the mask
     fmask = diff_view.pod.mask
 
     # For log likelihood error
     if LL_error is True:
-        LL = np.zeros_like(diff_view.data)
+        LL = np.zeros_like(I)
         for name, pod in diff_view.pods.iteritems():
             LL += u.abs2(pod.fw(pod.probe * pod.object))
         err_phot = (np.sum(fmask * (LL - I)**2 / (I + 1.))

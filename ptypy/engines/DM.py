@@ -240,7 +240,8 @@ class DM(BaseEngine):
             pbound = self.pbound[di_view.storage.ID]
             error_dct[name] = basic_fourier_update(di_view,
                                                    pbound=pbound,
-                                                   alpha=self.p.alpha)
+                                                   alpha=self.p.alpha,
+                                                   LL_error=False)
         return error_dct
 
     def overlap_update(self):

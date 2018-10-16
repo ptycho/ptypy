@@ -327,19 +327,42 @@ class Ptycho(Base):
         self._configure()
         if level >= 1:
             logger.info('\n' + headerline('Ptycho init level 1', 'l'))
+            tic = time.time()
             self.init_structures()
+            toc = time.time()
+            logger.info('init_structures took %s' % (toc-tic))
+
         if level >= 2:
             logger.info('\n' + headerline('Ptycho init level 2', 'l'))
+            tic = time.time()
             self.init_data()
+            toc = time.time()
+            logger.info('init_data took %s' % (toc - tic))
+
         if level >= 3:
             logger.info('\n' + headerline('Ptycho init level 3', 'l'))
+            tic = time.time()
             self.init_communication()
+            toc = time.time()
+            logger.info('init_communication took %s' % (toc - tic))
+
         if level >= 4:
             logger.info('\n' + headerline('Ptycho init level 4', 'l'))
+            tic = time.time()
             self.init_engine()
+            toc = time.time()
+            logger.info('init_engine took %s' % (toc - tic))
+
         if level >= 5:
+            tic = time.time()
             self.run()
+            toc = time.time()
+            logger.info('run took %s' % (toc - tic))
+
+            tic = time.time()
             self.finalize()
+            toc = time.time()
+            logger.info('finalise took %s' % (toc - tic))
 
     def _configure(self):
         """
@@ -599,15 +622,23 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                self.model.new_data()
+                if self.model.data_available:
+                    tic = time.time()
+                    self.model.new_data()
+                    toc = time.time()
+                    logger.info('new_data took %s' % (toc - tic))
 
-                # Last minute preparation before a contiguous block of
-                # iterations
-                engine.prepare()
+
+                    # Last minute preparation before a contiguous block of
+                    # iterations
+                    tic = time.time()
+                    engine.prepare()
+                    toc = time.time()
+                    logger.info('prepare took %s' % (toc - tic))
 
                 auto_save = self.p.io.autosave
                 if auto_save.active and auto_save.interval > 0:
-                    if engine.curiter % auto_save.interval == 0:
+                    if (engine.curiter % auto_save.interval == 0) and (engine.curiter>0):
                         auto = self.paths.auto_file(self.runtime)
                         logger.info(headerline('Autosaving'))
                         self.save_run(auto, 'dump')
@@ -615,7 +646,10 @@ class Ptycho(Base):
                         logger.info(headerline())
 
                 # One iteration
+                tic = time.time()
                 engine.iterate()
+                toc = time.time()
+                logger.info('iterate took %s' % (toc - tic))
 
                 # Display runtime information and do saving
                 if parallel.master:
@@ -631,7 +665,10 @@ class Ptycho(Base):
                 parallel.barrier()
 
             # Done. Let the engine finish up
+            tic = time.time()
             engine.finalize()
+            toc = time.time()
+            logger.info('new_data took %s' % (toc - tic))
 
             # Save
             if self.p.io.rfile and auto_save.active:
