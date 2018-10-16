@@ -870,7 +870,7 @@ class Ptycho(Base):
                 dump.obj = {ID: S._to_dict()
                             for ID, S in self.obj.storages.items()}
                 try:
-                    defaults_tree.validate(self.p) # check the parameters are actually able to be read back in
+                    defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
                     logger.warn("The parameters we are saving won't pass a validator check!")
                 dump.pars = self.p.copy()  # _to_dict(Recursive=True)
@@ -892,7 +892,7 @@ class Ptycho(Base):
                 minimal.obj = {ID: S._to_dict()
                                for ID, S in self.obj.storages.items()}
                 try:
-                    defaults_tree.validate(self.p) # check the parameters are actually able to be read back in
+                    defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
                     logger.warn("The parameters we are saving won't pass a validator check!")
                 minimal.pars = self.p.copy()  # _to_dict(Recursive=True)
