@@ -59,7 +59,7 @@ class Fourier_update_kernel(BaseKernel):
             'fmag_all_update'        
         ]
         
-    def npy_fourier_error(self,f, fmag, fdev, ferr, fmask, mask_sum, offset = 0):
+    def npy_fourier_error(self,f, fdev, ferr, g_mag, g_mask, g_mask_sum, offset = 0):
         # reference shape (write-to shape)
         sh = self.fshape
         # read from slice for global arrays
@@ -70,19 +70,19 @@ class Fourier_update_kernel(BaseKernel):
         tf = f.reshape(sh[0],self.nmodes,sh[1],sh[2])
         af = np.sqrt((np.abs(tf)**2).sum(1))
         
-        # calculate difference to real data (fmag)
-        fdev[:] = af - fmag[sl]
+        # calculate difference to real data (g_mag)
+        fdev[:] = af - g_mag[sl]
         
         # Calculate error on fourier magnitudes on a per-pixel basis
-        ferr[:] = fmask[sl] * np.abs(fdev)**2 / mask_sum[sl].reshape((sh[0],1,1)) 
+        ferr[:] = g_mask[sl] * np.abs(fdev)**2 / g_mask_sum[sl].reshape((sh[0],1,1)) 
         
-    def npy_error_reduce(self, ferr, err_fmag, offset = 0):
+    def npy_error_reduce(self, ferr, g_err_sum, offset = 0):
         sh = self.fshape
         sl = slice(offset,offset+sh)
         # Reduceses the Fourier error along the last 2 dimensions.fd
-        err_fmag[sl] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
+        g_err_sum[sl] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
         
-    def npy_fmag_all_update(self,f,fmask, fmag, fdev, err_fmag, offset = 0):
+    def npy_fmag_all_update(self,f, fdev, g_mag, g_mask, g_err_sum, offset = 0):
         
         # reference shape (write-to shape)
         sh = self.ishape
@@ -94,20 +94,20 @@ class Fourier_update_kernel(BaseKernel):
         
         ## As opposed to DM we use renorm to differentiate the cases.
         
-        # pbound >= err_fmag  
+        # pbound >= g_err_sum  
         # fm = 1.0 (as renorm = 1, i.e. renorm[~ind])
-        # pbound < err_fmag :
-        # fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10) 
+        # pbound < g_err_sum :
+        # fm = (1 - g_mask) + g_mask * (g_mag + fdev * renorm) / (af + 1e-10) 
         # (as renorm in [0,1])
         # pbound == 0.0 
-        # fm = (1 - fmask) + fmask * fmag / (af + 1e-10) (as renorm=0)
+        # fm = (1 - g_mask) + g_mask * g_mag / (af + 1e-10) (as renorm=0)
         
-        ind = err_fmag[sl] > self.pbound
-        renorm[ind] = np.sqrt(self.pbound / err_fmag[sl][ind])
+        ind = g_err_sum[sl] > self.pbound
+        renorm[ind] = np.sqrt(self.pbound / g_err_sum[sl][ind])
         renorm = renorm.reshape((renorm.shape[0],1,1))
         
-        af = fdev + fmag[sl]
-        fm[:] = (1 - fmask[sl]) + fmask[sl] * (fmag[sl] + fdev * renorm) / (af + 1e-10)
+        af = fdev + g_mag[sl]
+        fm[:] = (1 - g_mask[sl]) + g_mask[sl] * (g_mag[sl] + fdev * renorm) / (af + 1e-10)
 
         # upcasting
         f[:] = f.reshape(sh[0]/self.nmodes,self.nmodes,sh[1],sh[2]) * fm[:,newaxis,:,:]
@@ -117,13 +117,13 @@ class Fourier_update_kernel(BaseKernel):
 
 
         self.npy.f = f
-        self.npy.fmask = mask
-        self.npy.mask_sum = mask.sum(-1).sum(-1)
+        self.npy.g_mask = mask
+        self.npy.g_mask_sum = mask.sum(-1).sum(-1)
         d = I.copy()
         d[d<0.] = 0.0 # just in case
         d[np.isnan(d)] = 0.0
-        self.npy.fmag = np.sqrt(d)
-        self.npy.err_fmag = np.zeros((self.fshape[0],),dtype=np.float32)
+        self.npy.g_mag = np.sqrt(d)
+        self.npy.g_err_sum = np.zeros((self.fshape[0],),dtype=np.float32)
         
         
         L,M,N = shape
@@ -162,75 +162,8 @@ class Auxiliary_wave_kernel(BaseKernel):
     
     def __init__(self, queue_thread=None):
             
-        super(Auxiliary_wave_kernel, self).__init__(queue_thread)        
+        super(Auxiliary_wave_kernel, self).__init__()        
 
-        self.prg = cl.Program(self.queue.context,"""
-        #include <pyopencl-complex.h>
-        
-        // Define usable names for buffer access
-        
-        
-        #define pr_dlayer(k) addr[k*15]
-        #define ex_dlayer(k) addr[k*15 + 6]
-        
-        #define obj_dlayer(k) addr[k*15 + 3]
-        #define obj_roi_row(k) addr[k*15 + 4]
-        #define obj_roi_column(k) addr[k*15 + 5]
-        
-        // calculates: 
-        // aux =  (1+alpha)*pod.probe*pod.object - alpha* pod.exit
-        __kernel void build_aux(float alpha,
-                            int ob_sh_row,
-                            int ob_sh_col,
-                            int batch_offset,
-                            __global cfloat_t *aux,  
-                            __global cfloat_t *ob,
-                            __global cfloat_t *pr,
-                            __global cfloat_t *ex,
-                            __global int *addr)
-        {
-            size_t x = get_global_id(2);
-            size_t dx = get_global_size(2);
-            size_t y = get_global_id(1);
-            size_t z = get_global_id(0) + batch_offset;
-            size_t zb = get_global_id(0);
-            
-            size_t obj_idx = obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x;
-
-            cfloat_t ex0 = cfloat_rmul(alpha,ex[ex_dlayer(z)*dx*dx + y*dx + x]);
-            cfloat_t ex1 = cfloat_mul(ob[obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x],pr[pr_dlayer(z)*dx*dx + y*dx+x]);
-            //loc_sub[3] = cfloat_fromreal(1. + loc_sub[0].real);
-            
-            //cfloat_t ex2 = cfloat_sub(cfloat_rmul(1.+alpha,ex1),ex0);
-            aux[zb*dx*dx + y*dx + x] = cfloat_sub(cfloat_rmul(1.+alpha,ex1),ex0);            
-        }
-        
-        __kernel void build_exit(float alpha,
-                            int ob_sh_row,
-                            int ob_sh_col,
-                            int batch_offset,
-                            __global cfloat_t *f,
-                            __global cfloat_t *ob,
-                            __global cfloat_t *pr,
-                            __global cfloat_t *ex,
-                            __global int *addr)
-        {
-            size_t x = get_global_id(2);
-            size_t dx = get_global_size(2);
-            size_t y = get_global_id(1);
-            size_t z = get_global_id(0) + batch_offset;
-            size_t zb = get_global_id(0); 
-            
-            size_t obj_idx = obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x;
-            
-            cfloat_t ex1 = cfloat_mul(ob[obj_idx],pr[pr_dlayer(z)*dx*dx + y*dx+x]);
-            cfloat_t df = cfloat_sub(f[zb*dx*dx + y*dx + x] , ex1); 
-            f[zb*dx*dx + y*dx + x] = df ; // t.b. removed later
-            ex[ex_dlayer(z)*dx*dx + y*dx + x] = cfloat_add(ex[ex_dlayer(z)*dx*dx + y*dx + x] , df);
-        }
-
-        """).build()
-        
         self.kernels = [
             'build_aux',
             'build_exit',    
