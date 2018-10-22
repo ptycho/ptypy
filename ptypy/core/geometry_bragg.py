@@ -476,3 +476,240 @@ class BasicBragg3dPropagator(object):
 
     def bw(self, a):
         return self.ifft(np.fft.ifftshift(a))
+
+
+local_tree = EvalDescriptor('')
+@local_tree.parse_doc()
+class Geo_BraggProjection(Geo_Bragg):
+    """
+    Class which presents a Geo analog valid for the 3d Bragg projection
+    case.
+
+    This class follows the naming convention of:
+    Berenguer et al., Phys. Rev. B 88 (2013) 144101,
+
+    but uses the physics and computational methods described in:
+    Hruszkewycz et al., Nat. Mater., 16 (2017) 244.
+
+
+    Indexing into all real space arrays and storages follows (r3, r1, r2),
+    in the so-called natural coordinate system. These coordinates are
+    transformed to (x, z, y) as described below. q space is indexed
+    simply as (q1, q2)
+
+    Defaults:
+
+    [psize]
+    type = float
+    default = 0.000172
+    help = Pixel size in the detector plane (in meters)
+    doc =
+    userlevel = 1
+    lowlim = 0
+
+    [propagation]
+    doc = Only "farfield" is valid for Bragg
+
+    [shape]
+    type = int, tuple
+    default = (16, 256, 256)
+    help = Number of pixels in detector frame
+    doc = Can be a 2-tuple of int (Nx, Ny) or an int N, in which case it is interpreted as (N, N).
+    userlevel = 1
+
+    [theta_bragg]
+    type = float
+    default = 6.89
+    help = Diffraction angle (theta, not two theta) in degrees
+
+    [bragg_offset]
+    type = float
+    default = 0.0
+    help = Rocking angle relative to theta_bragg
+
+    [resolution]
+    type = tuple
+    default = None
+    help = 3D sample pixel size (in meters)
+    doc = Refers to the conjugate (natural) coordinate system as (r3, r1, r2).
+
+    [r3_spacing]
+    type = tuple
+    default = 10e-9
+    help = Voxel size along the propagation direction r3.
+    doc = Only used it resolution is not specified, and is needed because in 3dBPP the third direction does not correspond to an experimental q space sampling.
+    """
+
+    def __init__(self, owner=None, ID=None, pars=None, **kwargs):
+        super(Geo_Bragg, self).__init__(owner=owner, ID=ID, pars=pars, **kwargs)
+        self.psize = self.p.psize
+        try:
+            self.owner.citations.add_article(
+                title='High-resolution three-dimensional structural microscopy by single-angle Bragg ptychography',
+                author='Hruszkewycz et al.',
+                journal='Nature Materials',
+                volume=16,
+                year=2017,
+                page=244,
+                doi='10.1038/nmat4798',
+                comment='Bragg projection ptycho in 3d.',
+            )
+        except AttributeError:
+            pass
+
+    @property
+    def psize(self):
+        """
+        Overriding this property as 2d.
+        """
+        return self.p.psize
+
+    @psize.setter
+    def psize(self, v):
+        self.p.psize = u.expect2(v)
+        if self.interact:
+            self.update()
+
+    def update(self, update_propagator=True):
+        """
+        Update things which need a little computation
+        """
+
+        # Update the internal pixel sizes: 4 cases
+        if not self.p.resolution_is_fix and not self.p.psize_is_fix:
+            raise ValueError(
+                'Neither pixel size nor sample resolution specified.')
+        elif not self.p.resolution_is_fix and self.p.psize_is_fix:
+            dq1 = self.psize[0] * 2 * np.pi / self.distance / self.lam
+            dq2 = self.psize[1] * 2 * np.pi / self.distance / self.lam
+            self.p.resolution[1] = 2 * np.pi / \
+                (self.shape[1] * dq1 * self.costheta)
+            self.p.resolution[2] = 2 * np.pi / (self.shape[2] * dq2)
+            self.p.resolution[0] = self.p.r3_spacing
+        elif self.p.resolution_is_fix and not self.p.psize_is_fix:
+            dq1 = 2 * np.pi / \
+                (self.shape[1] * self.resolution[1] * self.costheta)
+            dq2 = 2 * np.pi / (self.shape[2] * self.resolution[2])
+            self.p.psize[0] = dq1 * self.distance * self.lam / (2 * np.pi)
+            self.p.psize[1] = dq2 * self.distance * self.lam / (2 * np.pi)
+        else:
+            raise ValueError(
+                'Both pixel size and sample resolution specified.')
+
+        # These are useful to have on hand
+        self.dq1 = dq1
+        self.dq2 = dq2
+
+        # Establish transforms between coordinate systems
+        # ...from {x z y} to {r3 r1 r2}
+        self.A_r3r1r2 = [[1 / self.costheta, 0, 0],
+                         [-self.sintheta / self.costheta, 1, 0],
+                         [0, 0, 1]]
+        # ...from {r3 r1 r2} to {x z y}
+        self.A_xzy = [[self.costheta, 0, 0],
+                      [self.sintheta, 1, 0],
+                      [0, 0, 1]]
+
+        # Update the propagator too
+        if update_propagator:
+            self.propagator.update()
+
+    def _q3q1q2(self, p):
+        """
+        Not used for 2d q space
+        """
+        return None
+
+    def _qzqyqx(self, p):
+        """
+        Not used for 2d q space
+        """
+        return None
+
+    def transformed_grid(self, grids, input_system='natural'):
+        """
+
+        Transforms a coordinate grid between the cartesian and natural
+        coordinate systems in real space.
+
+        Parameters
+        ----------
+        grids : 3-tuple of 3-dimensional arrays: (x, z, y),
+                (r3, r1, r2), or a 3-dimensional Storage instance.
+
+        input_system: `cartesian` or `natural`
+
+        """
+        return super(Geo_BraggProjection, self).transformed_grid(grids,
+            input_system, input_space='real')
+
+    def coordinate_shift(self, input_storage, input_system='natural',
+                         keep_dims=True, layer=0):
+        """
+        Transforms a 3D storage between the cartesian and natural
+        coordinate systems in real space by simply rolling the axes.
+        It tries to do this symmetrically so that the center
+        is maintained.
+
+        Note that this transform can be done in any way, and always
+        involves the choice of a new grid. This method (arbitrarily)
+        chooses the grid which results from skewing the along the
+        z direction.
+
+        The shifting is identical to doing a nearest neighbor
+        interpolation, and it would not be difficult to use other
+        interpolation orders by instead shifting an index array and
+        using scipy.ndimage.interpolation.map_coordinates(). But then
+        you have to decide how to interpolate complex numbers.
+
+        Parameters
+        ----------
+        input_storage : The storage to operate on
+
+        input_system: `cartesian` or `natural`
+
+        keep_dims : If True, maintain pixel size and number of pixels.
+        If False, keeps all the data of the input storage, which means
+        that the shape of the output storage will be larger than the
+        input.
+
+        """
+        return super(Geo_BraggProjection, self).coordinate_shift(
+            input_storage, input_system, keep_dims, layer,
+            input_space='real')
+
+    def _get_propagator(self):
+        prop = Bragg3dProjectionPropagator(self, )
+        return prop
+
+class Bragg3dProjectionPropagator(BasicBragg3dPropagator):
+    """
+    Implements the project-and-transform propagator of 3dBPP.
+
+    This propagator needs more info than just an array!
+    """
+    def __init__(self, geo, ffttype='numpy'):
+        super(Bragg3dProjectionPropagator, self).__init__(
+                geo=geo, ffttype=ffttype)
+
+    def update(self):
+        g = self.geo
+        # a vector of relative r3 values along the projection
+        r3 = np.arange(g.shape[0]) * g.resolution[0]
+        # the same thing as a coordinate matrix
+        r3 = np.tile(r3.reshape((len(r3), 1, 1)),
+                     reps=(1, g.shape[1], g.shape[2]))
+        # the offset along q3
+        dq3 = np.deg2rad(g.p.bragg_offset) * 4 * np.pi / g.lam * g.sintheta
+        # ...which gives the 3d phase ramp
+        self.phaseramp = np.exp(-1j * dq3 * r3)
+
+    def fw(self, a):
+        a *= self.phaseramp
+        proj = np.sum(a, axis=0)
+        return np.fft.fftshift(self.fft(proj))
+
+    def bw(self, a):
+        proj = self.ifft(np.fft.ifftshift(a))
+        backproj = np.tile(proj, reps=(self.geo.shape[0], 1, 1))
+        return backproj / self.phaseramp
