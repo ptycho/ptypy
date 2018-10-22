@@ -56,6 +56,22 @@ class Geo_Bragg(_Geo):
     doc = Refers to the conjugate (natural) coordinate system as (r3, r1, r2).
     """
 
+    def __init__(self, owner=None, ID=None, pars=None, **kwargs):
+        super(Geo_Bragg, self).__init__(owner=owner, ID=ID, pars=pars, **kwargs)
+        try:
+            self.owner.citations.add_article(
+                title='X-ray lensless microscopy from undersampled diffraction intensities',
+                author='Berenguer et al.',
+                journal='Phys. Rev. B',
+                volume=88,
+                year=2013,
+                page=144101,
+                doi='10.1103/PhysRevB.88.144101',
+                comment='The description of sampling in 3d Bragg ptycho.',
+            )
+        except AttributeError:
+            pass
+
     @staticmethod
     def expectN(v):
         return u.expect3(v)
