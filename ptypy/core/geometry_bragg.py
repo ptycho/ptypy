@@ -403,7 +403,7 @@ class Geo_Bragg(_Geo):
         if system == 'natural':
             r3, r1, r2 = S_3d.grids()
             r3, r1, r2 = r3[0], r1[0], r2[0]  # layer 0
-            x, z, y = self.transformed_grid((r3, r1, r2), input_space='real', input_system='natural')
+            x, z, y = self.transformed_grid((r3, r1, r2), input_system='natural')
             zi = x * self.sintheta + z * (1/self.costheta - self.sintheta * self.tantheta)
             yi = y
         elif system == 'cartesian':
@@ -570,6 +570,16 @@ class Geo_BraggProjection(Geo_Bragg):
         if self.interact:
             self.update()
 
+    @property
+    def r3_spacing(self):
+        return self.p.r3_spacing
+
+    @r3_spacing.setter
+    def r3_spacing(self, v):
+        self.p.r3_spacing = v
+        if self.interact:
+            self.update()
+
     def update(self, update_propagator=True):
         """
         Update things which need a little computation
@@ -641,7 +651,7 @@ class Geo_BraggProjection(Geo_Bragg):
 
         """
         return super(Geo_BraggProjection, self).transformed_grid(grids,
-            input_system, input_space='real')
+            input_system=input_system, input_space='real')
 
     def coordinate_shift(self, input_storage, input_system='natural',
                          keep_dims=True, layer=0):
@@ -675,8 +685,8 @@ class Geo_BraggProjection(Geo_Bragg):
 
         """
         return super(Geo_BraggProjection, self).coordinate_shift(
-            input_storage, input_system, keep_dims, layer,
-            input_space='real')
+            input_storage, input_system=input_system,
+            keep_dims=keep_dims, layer=layer, input_space='real')
 
     def _get_propagator(self):
         prop = Bragg3dProjectionPropagator(self, )
