@@ -152,7 +152,7 @@ class SimScan(PtyScan):
         # Now we let Ptycho sort out things
         logger.info('Generating simulating Ptycho instance for scan `%s`.' % str(self.info.get('label')))
         P=Ptycho(pp,level=2)
-        P.modelm.new_data()
+        P.model.new_data()
         u.parallel.barrier()
 
         # Be now as verbose as before
@@ -191,7 +191,7 @@ class SimScan(PtyScan):
             ind = view.layer
             dat, mask = acquire(view.data)
             view.data = dat
-            view.mask = mask
+            #view.mask = mask
             pos = view.pod.ob_view.coord
             dat = dat.astype(save_dtype) if save_dtype is not None else dat
             self.diff[ind] = dat
