@@ -192,7 +192,7 @@ class SimScan(PtyScan):
             dat, mask = acquire(view.data)
             view.data = dat
             #view.mask = mask
-            pos = view.pod.ob_view.coord
+            pos = np.array(view.pod.ob_view.coord)
             dat = dat.astype(save_dtype) if save_dtype is not None else dat
             self.diff[ind] = dat
             self.mask[ind] = mask
