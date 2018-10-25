@@ -282,6 +282,220 @@ defaults_tree['scandata.Bragg3dSimScan'].add_child(illumination.illumination_des
 defaults_tree['scandata.Bragg3dSimScan.illumination'].prune_child('diversity')
 
 
+@register()
+class Bragg3dProjectionSimScan(PtyScan):
+    """
+    Provides simulated 3D Bragg data based on the numerical 
+    experiment in Hruszkewycz et al., Nat. Mater., 16 (2017) 244.
+    The unitless lengths of that paper are substituted for physical
+    units here, one of their "pixels" is 10 nm here.
+
+    Defaults:
+
+    [name]
+    default = Bragg3dProjectionSimScan
+    type = str
+    help = PtyScan subclass identifier
+
+    [shape]
+    default = 256
+
+    [distance]
+    default = 1
+
+    [psize]
+    default = 55e-6
+
+    [energy]
+    default = 9.3
+
+    [theta_bragg]
+    default = 30.0
+    type = float
+    help = Bragg angle in degrees
+
+    [illumination.aperture.form]
+    default = 'circ'
+    type = str
+    help = default override, see :any:`scan.Full.illumination`
+    doc =
+
+    [illumination.aperture.size]
+    default = 40e-9
+    type = float, tuple
+    help = default override, see :any:`scan.Full.illumination`
+    doc =
+
+    [stepsize]
+    default = 20e-9
+    type = float
+    help = Step size of the spiral scan
+
+    """
+
+    def __init__(self, pars=None, **kwargs):
+        self.p = self.DEFAULT.copy(99)
+        self.p.update(pars)
+        self.p.update(kwargs)
+        super(Bragg3dProjectionSimScan, self).__init__(self.p)
+
+        # do the simulation
+        self.simulate()
+
+    def simulate(self):
+        ### Set up a 3D projection geometry
+        shape = tuple(u.expect3(self.p.shape))
+        g = ptypy.core.geometry_bragg.Geo_BraggProjection(
+            psize=self.p.psize, 
+            shape=shape,
+            energy=self.p.energy, 
+            distance=self.p.distance, 
+            theta_bragg=self.p.theta_bragg)
+        g.r3_spacing = g.resolution[1]
+        self.g = g
+
+        logger.info('Data will be simulated with these geometric parameters:')
+        logger.info(g)
+
+        ### Set up scan positions in the xy plane
+        pos = u.Param()
+        pos.model = 'raster'
+        pos.spacing = self.p.stepsize
+        pos.extent = None # has to be explicit
+        pos.steps = (61, 5) # (x, y)
+        pos = xy.from_pars(pos)
+        Npos = pos.shape[0]
+        positions = np.zeros((Npos, 3)) # x, z, y
+        positions[:, 0] = pos[:, 0]
+        positions[:, 2] = pos[:, 1]
+
+        ### Set up the object and its views
+
+        # Create a container for the object array, which will represent
+        # the object in the non-orthogonal coordinate system conjugate
+        # to the q-space measurement frame.
+        C = ptypy.core.Container(data_type=np.complex128, data_dims=3)
+
+        # For each scan position in the orthogonal coordinate system,
+        # find the natural coordinates and create a View instance there.
+        views = []
+        for pos in positions:
+            pos_ = g._r3r1r2(pos)
+            views.append(ptypy.core.View(C, storageID='Sobj', 
+                psize=g.resolution, coord=pos_, shape=g.shape))
+        S = C.storages['Sobj']
+        C.reformat()
+
+        # Define the test sample based on the orthogonal position of
+        # each voxel. First, the cartesian grid is obtained from the
+        # geometry object, then this grid is used as a condition for the
+        # sample's magnitude.
+        xx, zz, yy = g.transformed_grid(S, input_system='natural')
+        S.fill(0.0)
+        S.data[(zz >= -200e-9) & (zz < 200e-9) &
+        	   (yy >= -150e-9) &  (yy < 150e-9) &
+        	   (xx >= -950e-9) & (xx < 950e-9)] = 1
+       	S.data[(zz >= -150e-9) & (zz < 20e-9) &
+        	   (yy >= -85e-9) &  (yy < 85e-9) &
+        	   (xx >= -170e-9) & (xx < 0e-9)] = 0
+       	S.data[(zz >= 65e-9) & (zz < 135e-9) &
+        	   (yy >= -35e-9) &  (yy < 35e-9) &
+        	   (xx >= 100e-9) & (xx < 170e-9)] = 0
+
+        # save this for possible export
+        self.simulated_object = S
+
+        ### Set up the probe and calculate diffraction patterns
+
+        # First set up a two-dimensional representation of the incoming
+        # probe, with arbitrary pixel spacing.
+        extent = max(g.probe_extent_vs_fov())
+        psize = g.resolution.min() / 5
+        shape = int(np.ceil(extent / psize))
+        logger.info('Generating incoming probe %d x %d (%.3e x %.3e) with psize %.3e...'
+            % (shape, shape, extent, extent, psize))
+        t0 = time.time()
+
+        Cprobe = ptypy.core.Container(data_dims=2, data_type='float')
+        Sprobe = Cprobe.new_storage(psize=psize, shape=shape)
+
+        # fill the incoming probe
+        illumination.init_storage(Sprobe, self.p.illumination, energy=g.energy)
+        logger.info('...done in %.3f seconds' % (time.time() - t0))
+
+        # The Bragg geometry has a method to prepare a 3d Storage by extruding
+        # the 2d probe and interpolating to the right grid. The returned storage
+        # contains a single view compatible with the object views.
+        Sprobe_3d = g.prepare_3d_probe(Sprobe, system='natural')
+        probeView = Sprobe_3d.views[0]
+
+        # Calculate diffraction patterns by using the geometry's propagator.
+        diff = []
+        for v in views:
+            diff.append(np.abs(g.propagator.fw(
+                v.data * probeView.data))**2)
+        self.diff = diff
+
+
+
+        ### GOT TO HERE. DIFF PATTERNS LOOK WRONG. CHECK AN INTERESTING POSITION MANUALLY.
+
+
+
+
+        # convert the positions from (x, z, y) to (angle, x, z, y) and
+        # save, we need the angle and in future we won't know in which
+        # plane the scan was done (although here it is in xy). these xyz
+        # axis still follow Berenguer et al PRB 2013.
+        self.positions = np.empty((g.shape[0] * Npos, 4), dtype=float)
+        angles = (np.arange(g.shape[0]) - g.shape[0] / 2.0 + 1.0/2) * g.psize[0]
+        for i in range(Npos):
+            for j in range(g.shape[0]):
+                self.positions[i * g.shape[0] + j, 1:] = positions[i, :]
+                self.positions[i * g.shape[0] + j, 0] = angles[j]
+
+    def load_common(self):
+        """
+        We have to communicate the number of rocking positions that the
+        model should expect, otherwise it never knows when there is data
+        for a complete POD.
+        """
+        return {
+            'rocking_step': self.p.rocking_step,
+            'n_rocking_positions': self.p.n_rocking_positions,
+            'theta_bragg': self.p.theta_bragg,
+            }
+
+    def load_positions(self):
+        """
+        For the 3d Bragg model, load_positions returns N-by-4 positions,
+        (angle, x, z, y). The angle can be relative or absolute, the
+        model doesn't care, but it does have to be uniformly spaced for
+        the analysis to make any sense.
+        """
+        return self.positions
+
+    def load(self, indices):
+        """
+        This function returns diffraction image indexed from top left as
+        viewed along the beam, i e they have (-q1, q2) indexing. PtyScan
+        can always flip/rotate images.
+        """
+        raw, positions, weights = {}, {}, {}
+
+        # pick out the requested indices
+        for i in indices:
+            raw[i] = self.diff[i][::-1,:]
+
+        return raw, positions, weights
+
+    def load_weight(self):
+        return np.ones_like(self.diff[0])
+
+defaults_tree['scandata.Bragg3dSimScan'].add_child(illumination.illumination_desc, copy=True)
+defaults_tree['scandata.Bragg3dSimScan.illumination'].prune_child('diversity')
+
+
 if __name__ == '__main__':
     u.verbose.set_level(3)
     ps = Bragg3dSimScan()
