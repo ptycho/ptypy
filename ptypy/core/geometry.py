@@ -414,7 +414,7 @@ class FFTchooser(object):
     Chooses the desired FFT algo, and assigns scaling.
     If pyFFTW is not available, falls back to scipy.
     """
-    def __init__(self, ffttype='numpy'):
+    def __init__(self, ffttype='fftw'):
         """
         Parameters
         ----------
