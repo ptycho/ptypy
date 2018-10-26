@@ -2,6 +2,7 @@
 
 import distutils
 import setuptools
+import subprocess
 from distutils.core import setup, Extension
 from distutils.version import LooseVersion
 from Cython.Build import cythonize
