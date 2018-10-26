@@ -21,7 +21,7 @@ from copy import deepcopy
 from .parameters import Param
 
 
-__all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor', 'defaults_tree']
+__all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
 
 
 class CODES:

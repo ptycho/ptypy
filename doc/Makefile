@@ -3,8 +3,13 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-#SPHINXBUILD   = ~/.local/bin/sphinx-build
-SPHINXBUILD   = /usr/bin/sphinx-build
+
+ifeq ($(SPHINXBUILD),"")
+    SPHINXBUILD   = ~/.local/bin/sphinx-build
+endif
+
+#SPHINXBUILD   = /usr/bin/sphinx-build
+
 PAPER         =
 BUILDDIR      = build
 

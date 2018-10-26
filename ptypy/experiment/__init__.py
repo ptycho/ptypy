@@ -59,6 +59,7 @@ try:
     from nanomax import NanomaxStepscanMay2017, NanomaxStepscanNov2016, NanomaxFlyscanJune2017
     from ALS_5321 import ALS5321Scan
     from hdf5_loader import Hdf5Loader
+    from Bragg3dSim import Bragg3dSimScan
 except:
     pass
 #from I13_ffp import I13ScanFFP
