@@ -59,6 +59,19 @@ def get_ptycho_instance(label=None, num_modes=1, frame_size=64, scan_length=8):
     p.scans.MF.illumination.aperture.edge = 10
     p.scans.MF.coherence = u.Param()
     p.scans.MF.coherence.num_probe_modes = num_modes
+    p.engines = u.Param()
+    p.engines.DM = u.Param()
+    p.engines.DM.name = 'DM'
+    p.engines.DM.numiter = 5
+    p.engines.DM.alpha = 1
+    p.engines.DM.probe_update_start = 2
+    p.engines.DM.overlap_converge_factor = 0.05
+    p.engines.DM.overlap_max_iterations = 10
+    p.engines.DM.probe_inertia = 1e-3
+    p.engines.DM.object_inertia = 0.1
+    p.engines.DM.fourier_relax_factor = 0.01
+    p.engines.DM.obj_smooth_std = 20
+
     P = Ptycho(p, level=4)
     P.di = P.diff
     P.ma = P.mask

@@ -36,7 +36,7 @@ class EngineIterateUnityTest(unittest.TestCase):
                                                        scan_length=num_points)  # this one we run with GPU
             vectorised_scan = du.pod_to_arrays(PtychoInstanceVec, 'S0000')
             diffraction_storage = PtychoInstanceVec.di.storages['S0000']
-            pbound = (0.25 * PtychoInstanceVec.p.engine.DM.fourier_relax_factor ** 2 * diffraction_storage.pbound_stub)
+            pbound = (0.25 * PtychoInstanceVec.p.engines.DM.fourier_relax_factor ** 2 * diffraction_storage.pbound_stub)
             mean_power = diffraction_storage.tot_power / np.prod(diffraction_storage.shape)
 
             print("pbound:%s" % pbound)
@@ -59,9 +59,9 @@ class EngineIterateUnityTest(unittest.TestCase):
 
             prefilter = propagator.pre_fft
             postfilter = propagator.post_fft
-            cfact_object = PtychoInstanceVec.p.engine.DM.object_inertia * mean_power * \
+            cfact_object = PtychoInstanceVec.p.engines.DM.object_inertia * mean_power * \
                            (vectorised_scan['object viewcover'] + 1.)
-            cfact_probe = (PtychoInstanceVec.p.engine.DM.probe_inertia * len(addr_info) /
+            cfact_probe = (PtychoInstanceVec.p.engines.DM.probe_inertia * len(addr_info) /
                            vectorised_scan['probe'].shape[0]) * np.ones_like(vectorised_scan['probe'])
 
             probe_support = np.zeros_like(probe)
