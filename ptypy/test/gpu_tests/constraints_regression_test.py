@@ -8,11 +8,16 @@ import numpy as np
 from copy import deepcopy
 from ptypy.array_based import constraints as con, FLOAT_TYPE, COMPLEX_TYPE
 from ptypy.gpu import constraints as gcon
+from ptypy.gpu.config import init_gpus, reset_function_cache
+init_gpus(0)
 
 class ConstraintsRegressionTest(unittest.TestCase):
     '''
     a module to holds the constraints
     '''
+
+    def tearDown(self):
+        reset_function_cache()
 
     def test_renormalise_fourier_magnitudes_pbound_none(self):
         num_object_modes = 1 # for example
