@@ -7,13 +7,16 @@ from ptypy.core.data import PtyScan
 import ptypy.utils as u
 from ptypy import defaults_tree
 
+from ptypy.experiment import register
+from ptypy.utils.descriptor import EvalDescriptor
 import h5py
 import numpy as np
 import time
 
 logger = u.verbose.logger
 
-@defaults_tree.parse_doc('scandata.NanomaxBraggJune2017')
+@register()
+#@defaults_tree.parse_doc('scandata.NanomaxBraggJune2017')
 class NanomaxBraggJune2017(PtyScan):
     """
     Reads an early Bragg 3d ptycho format from Nanomax, multiple fly

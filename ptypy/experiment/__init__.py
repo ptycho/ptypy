@@ -19,6 +19,7 @@ This file is part of the PTYPY package.
 from .. import defaults_tree
 from ..core.data import MoonFlowerScan, PtydScan, PtyScan, QuickScan
 from ..simulations import SimScan
+from ..utils.verbose import log
 
 __all__ = ['MoonFlowerScan', 'PtydScan', 'PtyScan', 'QuickScan', 'SimScan']
 PTYSCANS = {'MoonFlowerScan': MoonFlowerScan,
@@ -47,22 +48,27 @@ def _register_PtyScan_class(cls, name=None):
     return cls
 
 
-# Import instrument-specific modules
-try:
-    from cSAXS import cSAXSScan
-    from savu import Savu
-    from plugin import makeScanPlugin
-    from ID16Anfp import ID16AScan
-    from AMO_LCLS import AMOScan
-    from DiProI_FERMI import DiProIFERMIScan
-    from optiklabor import FliSpecScanMultexp
-    from UCL import UCLLaserScan
-    from nanomax import NanomaxStepscanMay2017, NanomaxStepscanNov2016, NanomaxFlyscanJune2017
-    from ALS_5321 import ALS5321Scan
-except:
-    pass
-#from I13_ffp import I13ScanFFP
-#from I13_nfp import I13ScanNFP
-#from DLS import DlsScan
-#from I08 import I08Scan
+ptyscan_modules = [('hdf5_loader', 'Hdf5Loader'),
+                   ('cSAXS', 'cSAXSScan'),
+                   ('savu', 'Savu'),
+                   ('plugin', 'makeScanPlugin'),
+                   ('ID16Anfp', 'ID16AScan'),
+                   ('DiProI_FERMI', 'DiProIFERMIScan'),
+                   ('optiklabor', 'FliSpecScanMultexp'),
+                   ('UCL', 'UCLLaserScan'),
+                   ('nanomax', 'NanomaxStepscanMay2017'),
+                   ('nanomax', 'NanomaxStepscanNov2016'),
+                   ('nanomax', 'NanomaxFlyscanJune2017'),
+                   ('ALS_5321', 'ALS5321Scan'),
+                   ('Bragg3dSim', 'Bragg3dSimScan')]
+
+for module, obj in ptyscan_modules:
+    try:
+        lib = __import__(module, globals(), locals())
+    except ImportError as exception:
+        log(2, 'Could not import experiment %s from %s, Reason: %s' % (obj, module, exception))
+        pass
+    else:
+        globals()[obj] = lib.__dict__[obj]
+
 

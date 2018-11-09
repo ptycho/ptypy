@@ -17,17 +17,18 @@ Topic :: Software Development
 Operating System :: Unix
 """
 
-MAJOR = 0
-MINOR = 2
-MICRO = 0
-ISRELEASED = False
-VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 
-DEBUG = False
+MAJOR               = 0
+MINOR               = 3
+MICRO               = 0
+ISRELEASED          = True
+VERSION             = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
+
 
 # import os
 # if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
+DEBUG = False
 
 def write_version_py(filename='ptypy/version.py'):
     cnt = """
