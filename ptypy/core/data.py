@@ -75,10 +75,7 @@ class PtyScan(object):
     [dfile]
     type = file
     default = None
-    help = Prepared data file path
-    doc = If source was ``None`` or ``'file'``, data will be loaded from this file and processing as
-      well as saving is deactivated. If source is the name of an experiment recipe or path to a
-      file, data will be saved to this file
+    help = File path where prepared data will be saved in the ``ptyd`` format.
     userlevel = 0
 
     [chunk_format]
@@ -1226,6 +1223,14 @@ class PtydScan(PtyScan):
     type = str
     help =
     doc =
+
+    [dfile]
+    type = file
+    default = None
+    help = Prepared data file path
+    doc = If source is ``None`` or ``'file'``, data will be loaded from this file and processing as
+      well as saving is deactivated. If source is the path to a file, data will be saved to this file.
+    userlevel = 0
 
     [source]
     default = 'file'
