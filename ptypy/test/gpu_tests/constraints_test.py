@@ -309,7 +309,7 @@ class ConstraintsTest(unittest.TestCase):
         print("Errors max errors: rel={}, abs={}".format(max_relerr, max_abserr))
         print("Errors mean errors: rel={}, abs={}".format(mean_relerr, mean_abserr))
 
-        np.testing.assert_allclose(exit_wave, gexit_wave, rtol=3e-1, atol=18)
+        np.testing.assert_allclose(exit_wave, gexit_wave, rtol=3e-1, atol=20)
         np.testing.assert_allclose(errors, gerrors, rtol=3e-4)
 
     def test_difference_map_fourier_constraint_pbound_UNITY(self):
@@ -367,7 +367,7 @@ class ConstraintsTest(unittest.TestCase):
         print("Errors max errors: rel={}, abs={}".format(max_relerr, max_abserr))
         print("Errors mean errors: rel={}, abs={}".format(mean_relerr, mean_abserr))
 
-        np.testing.assert_allclose(exit_wave, gexit_wave, rtol=4e-1, atol=16)
+        np.testing.assert_allclose(exit_wave, gexit_wave, rtol=4e-1, atol=22)
         np.testing.assert_allclose(errors, gerrors, rtol=4e-4)
 
     def test_difference_map_fourier_constraint_no_update_UNITY(self):
@@ -425,15 +425,15 @@ class ConstraintsTest(unittest.TestCase):
         print("Errors max errors: rel={}, abs={}".format(max_relerr, max_abserr))
         print("Errors mean errors: rel={}, abs={}".format(mean_relerr, mean_abserr))
 
-        np.testing.assert_allclose(exit_wave, gexit_wave, rtol=5e-1, atol=10)
+        np.testing.assert_allclose(exit_wave, gexit_wave, rtol=5e-1, atol=15)
         np.testing.assert_allclose(errors, gerrors, rtol=3e-4)
 
     def test_difference_map_fourier_constraint_pbound_is_none_with_realspace_error_and_LL_error(self):
 
-        alpha = 1.0 # feedback constant
+        alpha = 1.0  # feedback constant
         pbound = None  # the power bound
-        num_object_modes = 1 # for example
-        num_probe_modes = 2 # for example
+        num_object_modes = 1  # for example
+        num_probe_modes = 2  # for example
 
         N = 4 # number of measured points
         M = N * num_object_modes * num_probe_modes # exit wave length

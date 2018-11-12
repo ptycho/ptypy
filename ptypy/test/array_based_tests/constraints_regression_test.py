@@ -360,10 +360,12 @@ class ConstraintsRegressionTest(unittest.TestCase):
         out = con.difference_map_fourier_constraint(mask, Idata, obj, probe, exit_wave, addr_info, prefilter, postfilter, pbound=pbound, alpha=alpha, LL_error=True, do_realspace_error=True)
         np.testing.assert_allclose(out,
                                    expected_out,
+                                   rtol=1e-6,
                                    err_msg="The returned errors are not consistent.")
 
         np.testing.assert_allclose(exit_wave,
                                    expected_ew,
+                                   rtol=1e-6,
                                    err_msg="The expected in-place update of the exit wave didn't work properly.")
 
     def test_difference_map_fourier_constraint_pbound_is_none_no_error(self):
@@ -491,6 +493,7 @@ class ConstraintsRegressionTest(unittest.TestCase):
 
         np.testing.assert_allclose(exit_wave,
                                    expected_ew,
+                                   rtol=1e-6,
                                    err_msg="The expected in-place update of the exit wave didn't work properly.")
 
 
@@ -606,13 +609,14 @@ class ConstraintsRegressionTest(unittest.TestCase):
 
         np.testing.assert_allclose(exit_wave,
                                    expected_ew,
+                                   rtol=1e-6,
                                    err_msg="The expected in-place update of the exit wave didn't work properly.")
 
 
     def test_difference_map_iterator_with_probe_update(self):
         '''
-        This test, assumes the logic below this function works fine, and just does some iterations of difference map on 
-        some spoof data to check that the combination works.         
+        This test, assumes the logic below this function works fine, and just does some iterations of difference map on
+        some spoof data to check that the combination works.
         '''
         num_iter = 2
 
@@ -713,42 +717,35 @@ class ConstraintsRegressionTest(unittest.TestCase):
         for idx in range(D):
             cfact_probe[idx] = np.ones((B, C)) * 5 * (idx + 1)
 
-        expected_probe = np.array([[[-361.18814087-1000.74768066j, -148.70419312 +206.73210144j,
-                                     -91.97548676   -9.23460865j,   16.05268097  -41.11487198j],
-                                    [-152.72857666 +109.68946838j,  -62.70831680  -58.41201782j,
-                                     37.14255524  -17.69169426j,   -4.25983000   -6.36473894j]],
+        expected_probe = np.array([[[ -860.1809-570.38934j, -202.80106 -137.596j,
+                                      -72.80425+10.7664175j, 12.419967-34.69746j  ],
+                                    [ -148.54953-152.71317j, -48.65628-13.12042j,
+                                      32.860252-1.8613337j, -5.8427405-6.1318207j]],
 
-                                   [[-749.64007568-2050.26147461j, -401.52606201 +451.15054321j,
-                                     -218.26188660  -36.93523788j,   41.09194946  -91.68986511j],
-                                    [-350.60354614 +226.57118225j, -109.65759277 -124.06006622j,
-                                     68.98976898  -24.72795677j,   -5.64832449  -11.25561905j]]], dtype=COMPLEX_TYPE)
+                                   [[-1727.4819-1512.7577j, -541.7226-455.2622j,
+                                     -192.61275+11.947175j, 39.59012-85.24362j],
+                                    [ -340.8425-381.87097j, -93.670876-39.411556j,
+                                      57.85892+2.1100929j, -8.461726-11.363685j ]]], dtype=COMPLEX_TYPE)
 
-        expected_obj = np.array([[[ -0.00000000e+00 -0.00000000e+00j,  -1.27605135e-02 -1.07031791e-02j,
-                                    1.80982396e-01 -1.77402645e-01j,  -2.30214819e-01 -1.09420657e+00j,
-                                    -5.07897234e+00 -9.75304246e-01j,   5.00000000e+00 +2.50000000e+01j],
-                                  [ -1.48292825e-01 -4.61030722e-01j,  -5.86787999e-01 +3.41154838e+00j,
-                                    -1.08777246e+01 -8.06874752e+00j,  -3.86462593e+01 +1.36726942e+01j,
-                                    6.36259308e+01 +8.40691147e+01j,   1.10000000e+01 +1.21000000e+02j],
-                                  [  1.10468502e+01 -5.40999889e+00j,  -2.75495262e+01 -7.16127729e+00j,
-                                     -3.61000290e+01 +9.38624268e+01j,   2.70963776e+02 -2.03708401e+01j,
-                                     2.82062347e+02 +2.01701343e+03j,   1.70000000e+01 +2.89000000e+02j],
-                                  [  1.80000000e+01 +3.24000000e+02j,   1.90000000e+01 +3.61000000e+02j,
-                                     2.00000000e+01 +4.00000000e+02j,   2.10000000e+01 +4.41000000e+02j,
-                                     2.20000000e+01 +4.84000000e+02j,   2.30000000e+01 +5.29000000e+02j]]], dtype=COMPLEX_TYPE)
+        expected_obj = np.array([[[-0.0000000e+00-0.00000000e+00j, -1.4863947e-02-1.68384593e-02j,
+                                   -4.2063385e-02-2.25187913e-01j, -4.7738101e-02-1.14042866e+00j,
+                                   -5.5105104e+00-1.07466626e+00j,  5.0000000e+00+2.50000000e+01j],
+                                  [-8.0949530e-02-5.78748345e-01j, -2.0427320e+00+2.49671769e+00j,
+                                   -7.5466714e+00+9.36869144e+00j, -4.5752422e+01+9.71376038e+00j,
+                                   7.2665924e+01+8.32232895e+01j,  1.1000000e+01+1.21000000e+02j],
+                                  [-1.3149530e+00-1.05163813e+01j, -8.9455814e+00+2.24326000e+01j,
+                                   -1.0440583e+02+1.23062546e+02j,  2.8016443e+02-1.72135864e+02j,
+                                   -4.0327190e+01+1.83536755e+03j,  1.7000000e+01+2.89000000e+02j],
+                                  [ 1.8000000e+01+3.24000000e+02j,  1.9000000e+01+3.61000000e+02j,
+                                    2.0000000e+01+4.00000000e+02j,  2.1000000e+01+4.41000000e+02j,
+                                    2.2000000e+01+4.84000000e+02j,  2.3000000e+01+5.29000000e+02j]]], dtype=COMPLEX_TYPE)
 
-        expected_errors = np.array([[[  1.30852982e-01+0.j,   7.86592126e-01+0.j,   2.91434258e-01+0.j,
-                                        1.26918125e+00+0.j],
-                                     [  2.88552762e+24+0.j,   6.12232725e+25+0.j,  6.29929433e+23+0.j,
-                                        4.21546840e+25+0.j],
-                                     [  1.75457960e+07+0.j,   7.23184240e+07+0.j,   4.43651240e+07+0.j,
-                                        3.27585548e+19+0.j]],
-
-                                    [[  1.28861861e-02+0.j,   1.27825022e-01+0.j,   2.06416398e-02+0.j,
-                                        1.36703640e+11+0.j],
-                                     [  2.88552762e+24+0.j,   6.12232725e+25+0.j,   6.29929433e+23+0.j,
-                                        4.21546840e+25+0.j],
-                                     [  0.00000000e+00+0.j,   0.00000000e+00+0.j,   0.00000000e+00+0.j,
-                                        3.27586977e+19+0.j]]], dtype=COMPLEX_TYPE)
+        expected_errors = np.array([[[1.3085298e-01, 7.8659213e-01, 2.9143426e-01, 1.2691813e+00],
+                                     [2.8855276e+24, 6.1223272e+25, 6.2992943e+23, 4.2154684e+25],
+                                     [1.7545796e+07, 7.2318424e+07, 4.4365124e+07, 3.2758557e+19]],
+                                    [[1.2886186e-02, 1.2782502e-01, 2.0641640e-02, 1.3670367e+11],
+                                     [2.8855276e+24, 6.1223272e+25, 6.2992943e+23, 4.2154684e+25],
+                                     [0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 3.2758696e+19]]], dtype=COMPLEX_TYPE)
 
 
 
@@ -778,8 +775,6 @@ class ConstraintsRegressionTest(unittest.TestCase):
                                              LL_error=True,
                                              num_iterations=num_iter)
 
-
-
         np.testing.assert_array_equal(expected_probe,
                                       probe,
                                       err_msg="The probe has not behaved as expected.")
@@ -794,8 +789,8 @@ class ConstraintsRegressionTest(unittest.TestCase):
 
     def test_difference_map_iterator_with_no_probe_update_and_object_update(self):
         '''
-        This test, assumes the logic below this function works fine, and just does some iterations of difference map on 
-        some spoof data to check that the combination works.         
+        This test, assumes the logic below this function works fine, and just does some iterations of difference map on
+        some spoof data to check that the combination works.
         '''
         num_iter = 1
 
@@ -898,37 +893,22 @@ class ConstraintsRegressionTest(unittest.TestCase):
 
         expected_probe = deepcopy(probe)
 
-        expected_obj = np.array([[[ -0.00000000e+00 -0.00000000e+00j,
-                                    1.00000000e+00 +1.00000000e+00j,
-                                    2.00000000e+00 +4.00000000e+00j,
-                                    3.00000000e+00 +9.00000000e+00j,
-                                    4.00000000e+00 +1.60000000e+01j,
-                                    5.00000000e+00 +2.50000000e+01j],
-                                  [  6.00000000e+00 +3.60000000e+01j,
-                                     -7.95981900e+06 +1.43803590e+07j,
-                                     -7.64522750e+06 +1.61365070e+07j,
-                                     -7.34606000e+06 +1.82074500e+07j,
-                                     -1.48699840e+07 +4.33746560e+07j,
-                                     1.10000000e+01 +1.21000000e+02j],
-                                  [  1.20000000e+01 +1.44000000e+02j,
-                                     -1.60912900e+07 +7.23797920e+07j,
-                                     -1.52878190e+07 +8.04868400e+07j,
-                                     -1.45362140e+07 +8.92972240e+07j,
-                                     -2.90441140e+07 +2.07500928e+08j,
-                                     1.70000000e+01 +2.89000000e+02j],
-                                  [  1.80000000e+01 +3.24000000e+02j,
-                                     1.90000000e+01 +3.61000000e+02j,
-                                     2.00000000e+01 +4.00000000e+02j,
-                                     2.10000000e+01 +4.41000000e+02j,
-                                     2.20000000e+01 +4.84000000e+02j,
-                                     2.30000000e+01 +5.29000000e+02j]]], dtype=COMPLEX_TYPE)
+        expected_obj = np.array([[[-0.0000000e+00-0.0000000e+00j,  1.0000000e+00+1.0000000e+00j,
+                                   2.0000000e+00+4.0000000e+00j,  3.0000000e+00+9.0000000e+00j,
+                                   4.0000000e+00+1.6000000e+01j,  5.0000000e+00+2.5000000e+01j],
+                                  [ 6.0000000e+00+3.6000000e+01j, -7.9598205e+06+1.4380359e+07j,
+                                    -7.6452275e+06+1.6136507e+07j, -7.3460585e+06+1.8207448e+07j,
+                                    -1.4869984e+07+4.3374656e+07j, 1.1000000e+01+1.2100000e+02j],
+                                  [ 1.2000000e+01+1.4400000e+02j, -1.6091290e+07+7.2379792e+07j,
+                                    -1.5287817e+07+8.0486848e+07j, -1.4536214e+07+8.9297224e+07j,
+                                    -2.9044114e+07+2.0750093e+08j,  1.7000000e+01+2.8900000e+02j],
+                                  [ 1.8000000e+01+3.2400000e+02j,  1.9000000e+01+3.6100000e+02j,
+                                    2.0000000e+01+4.0000000e+02j,  2.1000000e+01+4.4100000e+02j,
+                                    2.2000000e+01+4.8400000e+02j,  2.3000000e+01+5.2900000e+02j]]], dtype=COMPLEX_TYPE)
 
-        expected_errors = np.array([[[  1.30852982e-01+0.j,   7.86592126e-01+0.j,   2.91434258e-01+0.j,
-                                              1.26918125e+00+0.j],
-                                           [  2.88552762e+24+0.j,   6.12232725e+25+0.j,   6.29929433e+23+0.j,
-                                              4.21546840e+25+0.j],
-                                           [  1.75457960e+07+0.j,   7.23184240e+07+0.j,   4.43651240e+07+0.j,
-                                              3.27585548e+19+0.j]]], dtype=COMPLEX_TYPE)
+        expected_errors = np.array([[[1.3085298e-01, 7.8659213e-01, 2.9143426e-01, 1.2691813e+00],
+                                     [2.8855276e+24, 6.1223272e+25, 6.2992943e+23, 4.2154684e+25],
+                                     [1.7545796e+07, 7.2318424e+07, 4.4365124e+07, 3.2758557e+19]]], dtype=COMPLEX_TYPE)
 
 
         errors = con.difference_map_iterator(diffraction=diffraction,
@@ -959,6 +939,7 @@ class ConstraintsRegressionTest(unittest.TestCase):
         np.testing.assert_array_equal(expected_probe,
                                       probe,
                                       err_msg="The probe has not behaved as expected.")
+
 
         np.testing.assert_array_equal(expected_obj,
                                       obj,

@@ -48,6 +48,7 @@ from . import DM_simple
 from . import ML
 from . import dummy
 from . import ePIE
+from . import Bragg3d_engines
 
 # dynamic load, maybe discarded in future
 dynamic_load('./', ['BaseEngine'] + ENGINES.keys(), True)
