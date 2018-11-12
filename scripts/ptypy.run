@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 from ptypy.core import Ptycho
 from ptypy.utils.verbose import log
 from ptypy import utils as u
@@ -70,13 +71,13 @@ def get_parameters(args):
     return parameters_to_run
 
 
-def get_file_name(args):
+def get_folder_name(args):
     from datetime import datetime
     now = datetime.now()
     if args.identifier is not None:
-        output_path = "{}scan_{}_{}".format(args.output_folder, args.identifier, now.strftime("%Y%m%d%H%M%S"))
+        output_path = os.path.join(args.output_folder, "scan_{}".format(args.identifier))
     else:
-        output_path = "{}scan_{}".format(args.output_folder, now.strftime("%Y%m%d%H%M%S"))
+        output_path = os.path.join(args.output_folder, "scan_{}".format(now.strftime("%Y%m%d%H%M%S")))
     log(3, "Output is going in: {}".format(output_path))
     return output_path
 
@@ -102,8 +103,8 @@ else:
     parameters.io.autoplot = u.Param(active=False)
 # make sure we aren't randomly writing somewhere if this isn't set.
 if args.output_folder is not None:
-    parameters.io.home = get_file_name(args)
-    parameters.io.rfile = "%s.ptyr" % get_file_name(args)
+    parameters.io.home = get_folder_name(args)
+    parameters.io.rfile = "%s/scan_%s.ptyr" % (get_folder_name(args), str(parameters.run))
     parameters.io.autosave = u.Param(active=True, interval=100)
     log(3, "Autosave is on, with io going in {}, and the final reconstruction into {}".format(parameters.io.home,
                                                                                               parameters.io.rfile))
