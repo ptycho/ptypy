@@ -302,7 +302,7 @@ class PtyScan(object):
         self.weight2d = None
         self.has_positions = None
         self.dfile = None
-        self.save = self.info.save
+        self.save = self.info.save if self.dfile is not None else None
 
         # Construct meta
         self.meta = u.Param({k: self.info[k] for k in self.METAKEYS})
@@ -331,7 +331,7 @@ class PtyScan(object):
                                % self.__class__.__name__, 'l'))
 
         # Prepare writing to file
-        if self.info.save is not None:
+        if self.save is not None:
             # We will create a .ptyd
             self.dfile = self.info.dfile
             if parallel.master:
@@ -437,7 +437,7 @@ class PtyScan(object):
         logger.info(headerline('Analysis done',' l') + '\n')
         """
 
-        if self.info.save is not None and parallel.master:
+        if self.save is not None and parallel.master:
             logger.info('Appending info dict to file %s\n' % self.info.dfile)
             io.h5append(self.info.dfile, info=dict(self.info))
         # Wait for master
@@ -452,7 +452,7 @@ class PtyScan(object):
         Last actions when Eon-of-Scan is reached
         """
         # Maybe do this at end of everything
-        if self.info.save is not None and parallel.master:
+        if self.save is not None and parallel.master:
             io.h5append(self.info.dfile, info=dict(self.info))
 
     def load_weight(self):
@@ -870,7 +870,7 @@ class PtyScan(object):
 
         # With first chunk we update info
         if self.chunknum < 1:
-            if self.info.save is not None and parallel.master:
+            if self.save is not None and parallel.master:
                 io.h5append(self.dfile, meta=dict(self.meta))
 
             parallel.barrier()
@@ -911,8 +911,8 @@ class PtyScan(object):
         else:
             out = self._make_data_package(msg)
             # save chunk
-            if self.info.save is not None:
-                self._mpi_save_chunk(self.info.save, msg)
+            if self.save is not None:
+                self._mpi_save_chunk(self.save, msg)
             # delete chunk
             del self.chunk
             return out
