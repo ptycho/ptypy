@@ -131,7 +131,7 @@ class DM(BaseEngine):
 
         self.ob_buf = None
         self.ob_nrm = None
-        self.ob_viewcover = None
+        #self.ob_viewcover = None
 
         self.pr_buf = None
         self.pr_nrm = None
@@ -163,29 +163,30 @@ class DM(BaseEngine):
         # Generate container copies
         self.ob_buf = self.ob.copy(self.ob.ID + '_alt', fill=0.)
         self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
-        self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
+        #self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
 
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
 
-    def engine_prepare(self):
+    def engine_prepare(self, new_data = None):
         """
         Last minute initialization.
 
         Everything that needs to be recalculated when new data arrives.
         """
-
+        
+        self.new_data = new_data if new_data is not None else self.di.storages.values()
         self.pbound = {}
         mean_power = 0.
-        for name, s in self.di.storages.iteritems():
-            self.pbound[name] = (
+        for s in self.new_data:
+            self.pbound[s.ID] = (
                 .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
             mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
 
         # Fill object with coverage of views
-        for name, s in self.ob_viewcover.storages.iteritems():
-            s.fill(s.get_view_coverage())
+        #for name, s in self.ob_viewcover.storages.iteritems():
+        #    s.fill(s.get_view_coverage())
 
     def engine_iterate(self, num=1):
         """

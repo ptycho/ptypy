@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import setuptools
+import setuptools, setuptools.command.build_ext
 from distutils.core import setup
 from Cython.Build import cythonize
 import sys
@@ -120,7 +120,7 @@ class BuildExtAcceleration(setuptools.command.build_ext.build_ext):
 extensions = [ext.getExtension() for ext in acceleration_build_steps]
 
 package_list = setuptools.find_packages(exclude=exclude_packages)
-
+print package_list
 setup(
     name='Python Ptychography toolbox',
     version=VERSION,

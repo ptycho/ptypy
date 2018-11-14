@@ -42,8 +42,9 @@ from base import BaseEngine
 
 # These imports should be executable separately
 from . import DM
-from . import DM_gpu
-from . import DM_npy
+#from . import DM_gpu
+from . import DM_serial
+#from . import DM_npy
 from . import DM_simple
 from . import ML
 from . import dummy
