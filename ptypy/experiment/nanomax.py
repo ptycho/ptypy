@@ -422,3 +422,82 @@ class NanomaxFlyscanJune2017(NanomaxStepscanMay2017):
                         (mask.shape + (np.sum(mask),)))
 
         return mask
+
+@register()
+class NanomaxFlyscanNov2018(NanomaxFlyscanJune2017):
+    """
+    Loads Nanomax fly scan data in the format of November 2018.
+
+    Defaults:
+
+    [name]
+    default = NanomaxFlyscanNov2018
+    type = str
+    help =
+
+    [xMotor]
+    default = 'samx_buff'
+    type = str
+    help = samx_buff, samy_buff or samz_buff
+
+    [yMotor]
+    default = 'samy_buff'
+    type = str
+    help = samx_buff, samy_buff or samz_buff
+
+    [yMotorAngle]
+    default = 0.0
+    type = float
+    help = Angle of the motor y axis relative to the lab y axis
+    doc = Use this if the stage is mounted at an angle.
+
+    """
+
+    def load_positions(self):
+        fileName = self.p.dataPath + self.p.datafile
+        entry = 'entry%d' % self.p.scannr
+
+        x, y = None, None
+        with h5py.File(fileName, 'r') as hf:
+            # get x positions
+            xdataset = hf.get(entry + '/measurement/%s' % self.p.xMotor)
+            xall = np.array(xdataset)
+            # manually find shape by looking for zeros
+            Nlines = self.p.nMaxLines if self.p.nMaxLines > 0 else xall.shape[0]
+            for i in range(xall.shape[1]):
+                if xall[0, i] == 0:
+                    Nsteps = i
+                    break
+            x = xall[:Nlines, :Nsteps].flatten()
+
+            # get x positions
+            ydataset = hf.get(entry + '/measurement/%s' % self.p.yMotor)
+            yall = np.array(ydataset)
+            # manually find shape by looking for zeros
+            for i in range(yall.shape[1]):
+                if yall[0, i] == 0:
+                    Nsteps = i
+                    break
+            y = yall[:Nlines, :Nsteps].flatten()
+
+        if self.p.xMotorFlipped:
+            x *= -1
+            logger.warning("note: x motor is specified as flipped")
+        if self.p.yMotorFlipped:
+            y *= -1
+            logger.warning("note: y motor is specified as flipped")
+
+        # if the x axis is tilted, take that into account.
+        xCosFactor = np.cos(self.p.xMotorAngle / 180.0 * np.pi)
+        x *= xCosFactor
+        logger.info(
+            "x motor angle results in multiplication by %.2f" % xCosFactor)
+
+        # if the y axis is tilted, take that into account.
+        yCosFactor = np.cos(self.p.yMotorAngle / 180.0 * np.pi)
+        y *= yCosFactor
+        logger.info(
+            "y motor angle results in multiplication by %.2f" % yCosFactor)
+
+        positions = - np.vstack((y, x)).T * 1e-6
+        return positions
