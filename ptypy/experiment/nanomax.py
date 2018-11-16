@@ -281,6 +281,11 @@ class NanomaxFlyscanJune2017(NanomaxStepscanMay2017):
     type = str
     help = Indices over which to normalize
 
+    [nMaxLines]
+    type = int
+    default = 0
+    help = If positive, limit the number of lines to this value
+
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -299,15 +304,17 @@ class NanomaxFlyscanJune2017(NanomaxStepscanMay2017):
             xall = np.array(xdataset)
             # manually find shape by looking for zeros
             Ny = xall.shape[0]
+            if self.p.nMaxLines > 0:
+                Ny = self.p.nMaxLines
             for i in range(xall.shape[1]):
                 if xall[0, i] == 0:
                     Nx = i
                     break
-            x = xall[:, :Nx].flatten()
+            x = xall[:Ny, :Nx].flatten()
 
             # get slow y positions
             ydataset = hf.get(entry + '/measurement/samy')
-            yall = np.array(ydataset)
+            yall = np.array(ydataset)[:Ny+1]
             if not (len(yall) == Ny):
                 raise Exception('Something''s wrong with the positions')
             y = np.repeat(yall, Nx)
@@ -332,8 +339,8 @@ class NanomaxFlyscanJune2017(NanomaxStepscanMay2017):
 
         raw, weights, positions = {}, {}, {}
         scannr = self.p.scannr
-        path = self.p.detFilePath
-        pattern = self.p.detFilePattern
+        path = self.p.pilatusPath
+        pattern = self.p.pilatusPattern
         normfile = self.p.detNormalizationFilePattern
         normind = self.p.detNormalizationIndices
 
@@ -371,6 +378,8 @@ class NanomaxFlyscanJune2017(NanomaxStepscanMay2017):
 
                 data.append(linedata)
                 line += 1
+                if line == self.p.nMaxLines:
+                    done = True
             except IOError:
                 done = True
         logger.info("loaded %d lines of Pilatus data" % len(data))
@@ -389,8 +398,8 @@ class NanomaxFlyscanJune2017(NanomaxStepscanMay2017):
         """
 
         scannr = self.p.scannr
-        path = self.p.detFilePath
-        pattern = self.p.detFilePattern
+        path = self.p.pilatusPath
+        pattern = self.p.pilatusPattern
         if not (path[-1] == '/'):
             path += '/'
 
