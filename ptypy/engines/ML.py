@@ -339,6 +339,7 @@ class ML(BaseEngine):
         del self.pr_grad
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
+        del self.ML_model
 
 
 class ML_Gaussian(object):
