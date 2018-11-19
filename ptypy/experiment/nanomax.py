@@ -424,14 +424,14 @@ class NanomaxFlyscanJune2017(NanomaxStepscanMay2017):
         return mask
 
 @register()
-class NanomaxFlyscanNov2018(NanomaxFlyscanJune2017):
+class NanomaxFlyscanOct2018(NanomaxFlyscanJune2017):
     """
-    Loads Nanomax fly scan data in the format of November 2018.
+    Loads Nanomax fly scan data in the format of October 2018.
 
     Defaults:
 
     [name]
-    default = NanomaxFlyscanNov2018
+    default = NanomaxFlyscanOct2018
     type = str
     help =
 
@@ -501,3 +501,78 @@ class NanomaxFlyscanNov2018(NanomaxFlyscanJune2017):
 
         positions = - np.vstack((y, x)).T * 1e-6
         return positions
+
+@register()
+class NanomaxStepscanNov2018(NanomaxStepscanMay2017):
+    """
+    [name]
+    default = NanomaxStepscanNov2018
+    type = str
+    help =
+
+    [hdfPath]
+    default = 'entry_%04d/measurement/Pilatus/data'
+    type = str
+    help = Path to image array within detector hdf5 file, an integer field takes the image number.
+    doc =
+
+    [pilatusPattern]
+    default = None
+    type = str
+    help = Format string for detector image files
+    doc = A format string with an integer field for the scan number.
+    """
+
+    def load(self, indices):
+        raw, weights, positions = {}, {}, {}
+        scannr = self.p.scannr
+        path = self.p.pilatusPath
+        filepattern = self.p.pilatusPattern
+        if not (path[-1] == '/'):
+            path += '/'
+
+        data = []
+        with h5py.File(path + filepattern % scannr, 'r') as hf:
+            for im in range(self.info.positions_scan.shape[0]):
+                dataset = hf.get(self.p.hdfPath%im)
+                data.append(np.array(dataset)[0])
+
+        # pick out the requested indices
+        for i in indices:
+            raw[i] = data[i]
+
+        return raw, positions, weights
+
+    def load_weight(self):
+        """
+        Provides the mask for the whole scan, the shape of the first 
+        frame.
+
+        Method overridden just because of a tiny detail in the format strings.
+        """
+
+        scannr = self.p.scannr
+        path = self.p.pilatusPath
+        pattern = self.p.pilatusPattern
+        if not (path[-1] == '/'):
+            path += '/'
+
+        filename = self.p.dataPath + self.p.datafile
+        with h5py.File(path + pattern % scannr, 'r') as hf:
+            data = hf.get(self.p.hdfPath%0)
+            shape = np.asarray(data[0]).shape
+            mask = np.ones(shape)
+            mask[np.where(data[0] == -2)] = 0
+        logger.info("took account of the pilatus mask, %u x %u, sum %u" %
+                    (mask.shape + (np.sum(mask),)))
+
+        if self.p.maskfile:
+            with h5py.File(self.p.maskfile, 'r') as hf:
+                mask2 = np.array(hf.get('mask'))
+            logger.info("loaded additional mask, %u x %u, sum %u" %
+                        (mask2.shape + (np.sum(mask2),)))
+            mask = mask * mask2
+            logger.info("total mask, %u x %u, sum %u" %
+                        (mask.shape + (np.sum(mask),)))
+
+        return mask
