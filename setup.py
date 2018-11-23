@@ -106,6 +106,7 @@ class BuildExtCudaCommand(setuptools.command.build_ext.build_ext):
         self.cudadir = ''
         self.cudaflags = '-gencode arch=compute_35,\\"code=sm_35\\" ' + \
                          '-gencode arch=compute_37,\\"code=sm_37\\" ' + \
+                         '-gencode arch=compute_52,\\"code=sm_52\\" ' + \
                          '-gencode arch=compute_60,\\"code=sm_60\\" ' + \
                          '-gencode arch=compute_70,\\"code=sm_70\\" ' + \
                          '-gencode arch=compute_70,\\"code=compute_70\\"'
