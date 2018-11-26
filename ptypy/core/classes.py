@@ -1140,8 +1140,7 @@ class View(Base):
                 ('dcoord', '(5,)i8'),
                 ('psize', '(5,)f8'),
                 ('coord', '(5,)f8'),
-                ('sp', '(5,)f8'),
-                ('float_intens_coeff', '<f8')]
+                ('sp', '(5,)f8')]
     __slots__ = Base.__slots__ + ['_ndim', 'storage', 'storageID', '_pod', '_pods', 'error']
     ########
     # TODO #
@@ -1276,14 +1275,6 @@ class View(Base):
             return first + '\n INACTIVE : slice = ...  '
         else:
             return first + '\n ACTIVE : slice = %s' % str(self.slice)
-
-    @property
-    def float_intens_coeff(self):
-        return self._record['float_intens_coeff']
-
-    @float_intens_coeff.setter
-    def float_intens_coeff(self, val):
-       self._record['float_intens_coeff'] = val
 
     @property
     def active(self):
