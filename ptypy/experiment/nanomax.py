@@ -451,6 +451,11 @@ class NanomaxFlyscanOct2018(NanomaxFlyscanJune2017):
     help = Angle of the motor y axis relative to the lab y axis
     doc = Use this if the stage is mounted at an angle.
 
+    [firstLine]
+    default = 0
+    type = int
+    help = The first line to be read
+
     """
 
     def load_positions(self):
@@ -463,14 +468,15 @@ class NanomaxFlyscanOct2018(NanomaxFlyscanJune2017):
             xdataset = hf.get(entry + '/measurement/%s' % self.p.xMotor)
             xall = np.array(xdataset)
             # manually find shape by looking for zeros
-            Nlines = self.p.nMaxLines if self.p.nMaxLines > 0 else xall.shape[0]
+            self.firstLine = self.p.firstLine
+            self.lastLine = self.firstLine+self.p.nMaxLines-1 if self.p.nMaxLines > 0 else xall.shape[0]-1
             for i in range(xall.shape[1]):
                 if xall[0, i] == 0:
                     Nsteps = i
                     break
-            x = xall[:Nlines, :Nsteps].flatten()
+            x = xall[self.firstLine:self.lastLine+1, :Nsteps].flatten()
 
-            # get x positions
+            # get y positions
             ydataset = hf.get(entry + '/measurement/%s' % self.p.yMotor)
             yall = np.array(ydataset)
             # manually find shape by looking for zeros
@@ -478,7 +484,9 @@ class NanomaxFlyscanOct2018(NanomaxFlyscanJune2017):
                 if yall[0, i] == 0:
                     Nsteps = i
                     break
-            y = yall[:Nlines, :Nsteps].flatten()
+            y = yall[self.firstLine:self.lastLine+1, :Nsteps].flatten()
+
+            self.images_per_line = Nsteps
 
         if self.p.xMotorFlipped:
             x *= -1
@@ -501,6 +509,24 @@ class NanomaxFlyscanOct2018(NanomaxFlyscanJune2017):
 
         positions = - np.vstack((y, x)).T * 1e-6
         return positions
+
+    def load(self, indices):
+
+        raw, weights, positions = {}, {}, {}
+        scannr = self.p.scannr
+        path = self.p.pilatusPath
+        pattern = self.p.pilatusPattern
+
+        # read the entire dataset
+        for ind in indices:
+            line = self.firstLine + ind // self.images_per_line
+            image = ind % self.images_per_line
+            with h5py.File(path + pattern % (scannr, line), 'r') as hf:
+                data = hf[self.p.hdfPath][image]
+            raw[ind] = data
+
+        print 'loaded %d images' % len(raw)
+        return raw, positions, weights
 
 @register()
 class NanomaxStepscanNov2018(NanomaxStepscanMay2017):
