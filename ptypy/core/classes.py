@@ -2122,7 +2122,7 @@ class POD(Base):
 
         if self.ex_view is None:
             self.use_exit_container = False
-            self._exit = np.ones_like(self.geometry.shape,
+            self._exit = np.ones_like(self.pr_view.shape,
                                       dtype=self.owner.CType)
         else:
             self.use_exit_container = True
@@ -2168,7 +2168,7 @@ class POD(Base):
             return self.ob_view.data
         else:
             # Empty probe means no object (perfect transmission)
-            return np.ones(self.geometry.shape, dtype=self.owner.CType)
+            return np.ones(self.ob_view.shape, dtype=self.owner.CType)
 
     @object.setter
     def object(self, v):
