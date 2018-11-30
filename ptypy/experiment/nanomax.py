@@ -600,6 +600,12 @@ class NanomaxStepscanNov2018(PtyScan):
     help = Arbitrary mask file
     doc = Hdf5 file containing an array called 'mask' at the root level.
 
+    [I0]
+    default = None
+    type = str
+    help = Normalization channel, like counter1 for example
+    doc =
+
     """
 
     def load_positions(self):
@@ -607,6 +613,13 @@ class NanomaxStepscanNov2018(PtyScan):
         filename = self.info.path.strip('/').split('/')[-1] + '.h5'
         fullfilename = os.path.join(self.info.path, filename)
         entry = 'entry%d' % self.info.scanNumber
+
+        # may as well get normalization data here too
+        if self.info.I0 is not None:
+            with h5py.File(fullfilename, 'r') as hf:
+                self.normdata = np.array(hf['%s/measurement/%s' % (entry, self.info.I0)], dtype=float)
+            self.normdata /= np.mean(self.normdata)
+            print '*** going to normalize by channel %s, shape %s' % (self.info.I0, self.normdata.shape)
 
         xFlipper, yFlipper = 1, 1
         if self.info.xMotorFlipped:
@@ -643,6 +656,8 @@ class NanomaxStepscanNov2018(PtyScan):
         with h5py.File(fullfilename, 'r') as fp:
             for ind in indices:
                 raw[ind] = fp[hdfpath % ind][0]
+                if self.info.I0:
+                    raw[ind] = raw[ind] / self.normdata[ind]
 
         return raw, positions, weights
 
