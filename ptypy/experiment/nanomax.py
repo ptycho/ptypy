@@ -5,6 +5,7 @@
 
 import numpy as np
 import h5py
+import os.path
 
 from ..core.data import PtyScan
 from .. import utils as u
@@ -529,43 +530,119 @@ class NanomaxFlyscanOct2018(NanomaxFlyscanJune2017):
         return raw, positions, weights
 
 @register()
-class NanomaxStepscanNov2018(NanomaxStepscanMay2017):
+class NanomaxStepscanNov2018(PtyScan):
     """
+    Starting a fresh class here.
+
+    Defaults:
+
     [name]
     default = NanomaxStepscanNov2018
     type = str
     help =
 
-    [hdfPath]
-    default = 'entry_%04d/measurement/Pilatus/data'
-    type = str
-    help = Path to image array within detector hdf5 file, an integer field takes the image number.
-    doc =
-
-    [pilatusPattern]
+    [path]
     default = None
     type = str
-    help = Format string for detector image files
-    doc = A format string with an integer field for the scan number.
+    help = Path to where the data is at
+    doc =
+
+    [scanNumber]
+    default = None
+    type = int
+    help = Scan number
+    doc =
+
+    [xMotor]
+    default = samx
+    type = str
+    help = Which x motor to use
+    doc =
+
+    [yMotor]
+    default = samy
+    type = str
+    help = Which y motor to use
+    doc =
+
+    [xMotorFlipped]
+    default = False
+    type = bool
+    help = Flip detector x positions
+    doc =
+
+    [yMotorFlipped]
+    default = False
+    type = bool
+    help = Flip detector y positions
+    doc =
+
+    [xMotorAngle]
+    default = 0.0
+    type = float
+    help = Angle of the motor x axis relative to the lab x axis
+    doc =
+
+    [yMotorAngle]
+    default = 0.0
+    type = float
+    help = Angle of the motor y axis relative to the lab y axis
+    doc =
+
+    [detector]
+    default = 'pil100k'
+    type = str
+    help = Which detector to use, can be pil100k or merlin
+
+    [maskfile]
+    default = None
+    type = str
+    help = Arbitrary mask file
+    doc = Hdf5 file containing an array called 'mask' at the root level.
+
     """
+
+    def load_positions(self):
+
+        filename = self.info.path.strip('/').split('/')[-1] + '.h5'
+        fullfilename = os.path.join(self.info.path, filename)
+        entry = 'entry%d' % self.info.scanNumber
+
+        xFlipper, yFlipper = 1, 1
+        if self.info.xMotorFlipped:
+            xFlipper = -1
+            logger.warning("note: x motor is specified as flipped")
+        if self.info.yMotorFlipped:
+            yFlipper = -1
+            logger.warning("note: y motor is specified as flipped")
+
+        # if the x axis is tilted, take that into account.
+        xCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
+        yCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
+        logger.info(
+            "x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
+
+        with h5py.File(fullfilename, 'r') as hf:
+            x = (xFlipper * xCosFactor
+                 * np.array(hf['%s/measurement/%s' % (entry, self.info.xMotor)]))
+            y = (yFlipper * yCosFactor
+                 * np.array(hf['%s/measurement/%s' % (entry, self.info.yMotor)]))
+
+        positions = -np.vstack((y, x)).T * 1e-6
+        return positions
+
 
     def load(self, indices):
         raw, weights, positions = {}, {}, {}
-        scannr = self.p.scannr
-        path = self.p.pilatusPath
-        filepattern = self.p.pilatusPattern
-        if not (path[-1] == '/'):
-            path += '/'
 
-        data = []
-        with h5py.File(path + filepattern % scannr, 'r') as hf:
-            for im in range(self.info.positions_scan.shape[0]):
-                dataset = hf.get(self.p.hdfPath%im)
-                data.append(np.array(dataset)[0])
+        filename = 'scan_%04u_%s_0000.hdf5' % (
+                    self.info.scanNumber, {'pil100k': 'pil100k', 'merlin': 'merlin'}[self.info.detector])
+        fullfilename = os.path.join(self.info.path, filename)
+        hdfpath = 'entry_%%04u/measurement/%s/data' % {'pil100k': 'Pilatus', 'merlin': 'Merlin'}[self.info.detector]
 
-        # pick out the requested indices
-        for i in indices:
-            raw[i] = data[i]
+        with h5py.File(fullfilename, 'r') as fp:
+            for ind in indices:
+                raw[ind] = fp[hdfpath % ind][0]
 
         return raw, positions, weights
 
@@ -573,27 +650,17 @@ class NanomaxStepscanNov2018(NanomaxStepscanMay2017):
         """
         Provides the mask for the whole scan, the shape of the first 
         frame.
-
-        Method overridden just because of a tiny detail in the format strings.
         """
 
-        scannr = self.p.scannr
-        path = self.p.pilatusPath
-        pattern = self.p.pilatusPattern
-        if not (path[-1] == '/'):
-            path += '/'
-
-        filename = self.p.dataPath + self.p.datafile
-        with h5py.File(path + pattern % scannr, 'r') as hf:
-            data = hf.get(self.p.hdfPath%0)
-            shape = np.asarray(data[0]).shape
-            mask = np.ones(shape)
-            mask[np.where(data[0] == -2)] = 0
+        r, w, p = self.load(indices=(0,))
+        data = r[0]
+        mask = np.ones_like(data)
+        mask[np.where(data == -2)] = 0
         logger.info("took account of the pilatus mask, %u x %u, sum %u" %
                     (mask.shape + (np.sum(mask),)))
 
-        if self.p.maskfile:
-            with h5py.File(self.p.maskfile, 'r') as hf:
+        if self.info.maskfile:
+            with h5py.File(self.info.maskfile, 'r') as hf:
                 mask2 = np.array(hf.get('mask'))
             logger.info("loaded additional mask, %u x %u, sum %u" %
                         (mask2.shape + (np.sum(mask2),)))
