@@ -95,7 +95,7 @@ class DM(BaseEngine):
 
     [obj_smooth_std]
     default = None
-    type = int
+    type = float
     lowlim = 0
     help = Gaussian smoothing (pixel) of the current object prior to update
     doc = If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
