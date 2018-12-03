@@ -549,8 +549,8 @@ class NanomaxStepscanNov2018(PtyScan):
 
     [scanNumber]
     default = None
-    type = int
-    help = Scan number
+    type = int, list, tuple
+    help = Scan number or list of scan numbers
     doc =
 
     [xMotor]
@@ -612,14 +612,7 @@ class NanomaxStepscanNov2018(PtyScan):
 
         filename = self.info.path.strip('/').split('/')[-1] + '.h5'
         fullfilename = os.path.join(self.info.path, filename)
-        entry = 'entry%d' % self.info.scanNumber
-
-        # may as well get normalization data here too
-        if self.info.I0 is not None:
-            with h5py.File(fullfilename, 'r') as hf:
-                self.normdata = np.array(hf['%s/measurement/%s' % (entry, self.info.I0)], dtype=float)
-            self.normdata /= np.mean(self.normdata)
-            print '*** going to normalize by channel %s, shape %s' % (self.info.I0, self.normdata.shape)
+        self.frames_per_scan = {}
 
         xFlipper, yFlipper = 1, 1
         if self.info.xMotorFlipped:
@@ -635,12 +628,35 @@ class NanomaxStepscanNov2018(PtyScan):
         logger.info(
             "x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
 
-        with h5py.File(fullfilename, 'r') as hf:
-            x = (xFlipper * xCosFactor
-                 * np.array(hf['%s/measurement/%s' % (entry, self.info.xMotor)]))
-            y = (yFlipper * yCosFactor
-                 * np.array(hf['%s/measurement/%s' % (entry, self.info.yMotor)]))
+        try:
+            self.info.scanNumber = tuple(self.info.scanNumber)
+        except TypeError:
+            self.info.scanNumber = (self.info.scanNumber,)
 
+        normdata, x, y = [], [], []
+        for scan in self.info.scanNumber:
+            entry = 'entry%d' % scan
+
+            # may as well get normalization data here too
+            if self.info.I0 is not None:
+                with h5py.File(fullfilename, 'r') as hf:
+                    normdata.append(np.array(hf['%s/measurement/%s' % (entry, self.info.I0)], dtype=float))
+                print '*** going to normalize by channel %s' % self.info.I0
+
+            with h5py.File(fullfilename, 'r') as hf:
+                x.append(xFlipper * xCosFactor
+                     * np.array(hf['%s/measurement/%s' % (entry, self.info.xMotor)]))
+                y.append(yFlipper * yCosFactor
+                     * np.array(hf['%s/measurement/%s' % (entry, self.info.yMotor)]))
+                self.frames_per_scan[scan] = x[-1].shape[0]
+        
+        first_frames = [sum(self.frames_per_scan.values()[:i]) for i in range(len(self.frames_per_scan))]
+        self.first_frame_of_scan = {scan:first_frames[i] for i, scan in enumerate(self.info.scanNumber)}
+        if normdata:
+            normdata = np.concatenate(normdata)
+            self.normdata = normdata / np.mean(normdata)
+        x = np.concatenate(x)
+        y = np.concatenate(y)      
         positions = -np.vstack((y, x)).T * 1e-6
         return positions
 
@@ -648,14 +664,20 @@ class NanomaxStepscanNov2018(PtyScan):
     def load(self, indices):
         raw, weights, positions = {}, {}, {}
 
-        filename = 'scan_%04u_%s_0000.hdf5' % (
-                    self.info.scanNumber, {'pil100k': 'pil100k', 'merlin': 'merlin'}[self.info.detector])
-        fullfilename = os.path.join(self.info.path, filename)
         hdfpath = 'entry_%%04u/measurement/%s/data' % {'pil100k': 'Pilatus', 'merlin': 'Merlin'}[self.info.detector]
 
-        with h5py.File(fullfilename, 'r') as fp:
-            for ind in indices:
-                raw[ind] = fp[hdfpath % ind][0]
+        for ind in indices:
+            # work out in which scan to find this index
+            for i in range(len(self.info.scanNumber)-1, -1, -1):
+                scan = self.info.scanNumber[i]
+                if ind >= self.first_frame_of_scan[scan]:
+                    break
+            frame = ind - self.first_frame_of_scan[scan]
+            filename = 'scan_%04u_%s_0000.hdf5' % (
+                    scan, {'pil100k': 'pil100k', 'merlin': 'merlin'}[self.info.detector])
+            fullfilename = os.path.join(self.info.path, filename)
+            with h5py.File(fullfilename, 'r') as fp:
+                raw[ind] = fp[hdfpath % frame][0]
                 if self.info.I0:
                     raw[ind] = raw[ind] / self.normdata[ind]
 
