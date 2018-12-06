@@ -329,7 +329,7 @@ class Bragg3dProjectionSimScan(PtyScan):
     [stepsize]
     default = 20e-9
     type = float
-    help = Step size of the spiral scan
+    help = Step size of the raster scan
 
     """
 
@@ -362,7 +362,9 @@ class Bragg3dProjectionSimScan(PtyScan):
         pos.model = 'raster'
         pos.spacing = self.p.stepsize
         pos.extent = None # has to be explicit
-        pos.steps = (61, 5) # (x, y)
+        pos.steps = (5, 61) # (y, x)
+        pos.offset = [-(pos.steps[1]-1) / 2.0 * pos.spacing,
+                      -(pos.steps[0]-1) / 2.0 * pos.spacing, ]
         pos = xy.from_pars(pos)
         Npos = pos.shape[0]
         positions = np.zeros((Npos, 3)) # x, z, y
@@ -430,41 +432,33 @@ class Bragg3dProjectionSimScan(PtyScan):
         probeView = Sprobe_3d.views[0]
 
         # Calculate diffraction patterns by using the geometry's propagator.
-        diff = []
+        self.diff = []
         for v in views:
-            diff.append(np.abs(g.propagator.fw(
+            self.diff.append(np.abs(g.propagator.fw(
                 v.data * probeView.data))**2)
-        self.diff = diff
 
-
-
-        ### GOT TO HERE. DIFF PATTERNS LOOK WRONG. CHECK AN INTERESTING POSITION MANUALLY.
-
-
-
+        if False:
+            DEBUG_INDEX = 227
+            import matplotlib.pyplot as plt
+            plt.ion()
+            fig, ax = plt.subplots(ncols=2)
+            v = views[DEBUG_INDEX]
+            proj = g.propagator.exit(v.data * probeView.data)
+            ax[0].imshow(np.real(proj))
+            ax[1].imshow(self.diff[0], vmax=self.diff[0].max()/100)
+            v.data += probeView.data
+            fig, ax = plt.subplots(ncols=2)
+            ax[0].imshow(np.flipud(np.sum(np.abs(v.data), axis=-1).T))
+            ax[1].imshow(np.flipud(np.sum(np.abs(v.data), axis=1).T))
 
         # convert the positions from (x, z, y) to (angle, x, z, y) and
         # save, we need the angle and in future we won't know in which
         # plane the scan was done (although here it is in xy). these xyz
         # axis still follow Berenguer et al PRB 2013.
-        self.positions = np.empty((g.shape[0] * Npos, 4), dtype=float)
-        angles = (np.arange(g.shape[0]) - g.shape[0] / 2.0 + 1.0/2) * g.psize[0]
-        for i in range(Npos):
-            for j in range(g.shape[0]):
-                self.positions[i * g.shape[0] + j, 1:] = positions[i, :]
-                self.positions[i * g.shape[0] + j, 0] = angles[j]
-
-    def load_common(self):
-        """
-        We have to communicate the number of rocking positions that the
-        model should expect, otherwise it never knows when there is data
-        for a complete POD.
-        """
-        return {
-            'rocking_step': self.p.rocking_step,
-            'n_rocking_positions': self.p.n_rocking_positions,
-            'theta_bragg': self.p.theta_bragg,
-            }
+        #
+        # This is just a single angle of course.
+        self.positions = np.zeros((Npos, 4), dtype=float)
+        self.positions[:, 1:] = positions
 
     def load_positions(self):
         """
@@ -492,9 +486,8 @@ class Bragg3dProjectionSimScan(PtyScan):
     def load_weight(self):
         return np.ones_like(self.diff[0])
 
-defaults_tree['scandata.Bragg3dSimScan'].add_child(illumination.illumination_desc, copy=True)
-defaults_tree['scandata.Bragg3dSimScan.illumination'].prune_child('diversity')
-
+defaults_tree['scandata.Bragg3dProjectionSimScan'].add_child(illumination.illumination_desc, copy=True)
+defaults_tree['scandata.Bragg3dProjectionSimScan.illumination'].prune_child('diversity')
 
 if __name__ == '__main__':
     u.verbose.set_level(3)

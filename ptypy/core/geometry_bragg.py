@@ -715,11 +715,18 @@ class Bragg3dProjectionPropagator(BasicBragg3dPropagator):
         self.phaseramp = np.exp(-1j * dq3 * r3)
 
     def fw(self, a):
-        a *= self.phaseramp
-        proj = np.sum(a, axis=0)
+        a_ = a * self.phaseramp
+        proj = np.sum(a_, axis=0)
         return np.fft.fftshift(self.fft(proj))
 
     def bw(self, a):
         proj = self.ifft(np.fft.ifftshift(a))
         backproj = np.tile(proj, reps=(self.geo.shape[0], 1, 1))
         return backproj / self.phaseramp
+
+    def exit(self, a):
+        """
+        Pedagogical method for visualizing the projected exit wave.
+        """
+        a_ = a * self.phaseramp
+        return np.sum(a_, axis=0)
