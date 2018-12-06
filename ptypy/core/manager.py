@@ -1247,6 +1247,27 @@ class Bragg3dModel(Vanilla):
 
         s.model_initialized = True
 
+class Bragg3dProjectionModel(Vanilla):
+    """
+    Model for 3dBPP data, where scanning is done at arbitrary angles.
+
+    Defaults:
+
+    [name]
+    default = Bragg3dProjectionModel
+    type = str
+    help =
+
+    """
+
+    # remember: each pod needs its own Geo instance, because each scanning
+    # position can be associated with its own arbitrary angle.
+
+    # data packets from the PtyScan class should be the same as for 2d
+    # except that positions are 4 dimensional (angle, x, z, y)
+
+    # now study the Vanilla class and see how it needs to be modified
+
 
 class ModelManager(object):
     """
