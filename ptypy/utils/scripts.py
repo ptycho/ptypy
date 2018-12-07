@@ -45,8 +45,12 @@ def diversify(A, noise=None, shift=None, power=1.0):
     --------
     ptypy.utils.parallel.MPInoise2d
     """
+
+    num_modes = A.shape[0]
+
     # Nothing to do if only one mode
-    if A.shape[0] == 1:
+
+    if num_modes == 1:
         return
 
     if noise is not None:
@@ -62,13 +66,13 @@ def diversify(A, noise=None, shift=None, power=1.0):
     # Expand power to length
     p = (power,) if np.isscalar(power) else tuple(power)
     # Check
-    append = A.shape[0] - 1 - len(p)
+    append = num_modes - 1 - len(p)
     if append >= 1:
         p += (p[-1],) * append
     else:
-        p = p[:A.shape[0] - 1]
+        p = p[:num_modes - 1]
     power = np.array((1.0,) + p).reshape(
-        (A.shape[0],) + (1,) * (len(A.shape) - 1))
+        (num_modes,) + (1,) * (len(A.shape) - 1))
     power /= power.sum()
     A *= np.sqrt(power)
 
