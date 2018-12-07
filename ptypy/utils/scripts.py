@@ -10,7 +10,6 @@ import numpy as np
 import parallel
 import urllib2 # TODO: make compatible with python 3.5
 from scipy import ndimage as ndi
-
 from . import array_utils as au
 from .misc import expect2
 # from .. import io # FIXME: SC: when moved here, io fails
@@ -23,34 +22,48 @@ __all__ = ['hdr_image', 'diversify', 'cxro_iref', 'xradia_star', 'png2mpg',
 def diversify(A, noise=None, shift=None, power=1.0):
     """
     Add diversity to 3d numpy array `A`, *acts in-place*.
+    If the array only has one layer then nothing will be done.
 
     Parameters
     ----------
     A : np.array
-        Input numpy array.
+        Input numpy array. Indices: (layer, x, y)
 
     noise : 2-tuple or 4-tuple
         For detailed description see :any:`ptypy.utils.parallel.MPInoise2d`
+        The first layer will have no noise
 
     power : float, tuple
         Relative power of layers with respect to the first (0) layer.
         Can be scalar or tuple / array
 
-    shift : float, tuple
+    shift : tuple
         Relative shift of layers with respect to the first (0) layer.
-        Can be scalar or tuple / array
-        **not implemented yet**
+        Can be a single tuple (x, y) in which case layers will be
+        distributed at integer multiples of this vector centred around the initial
+        layer's positions with the first (0) layer having no shift.
+        Note the number of layers must be odd in this case.
+        Alternatively a tuple of tuples ((x1, y1), (x2, y2), ...) where
+        each (xi, yi) is the direct shift for a layer starting with the
+        second (1) layer. For N layered array require N-1 tuples.
+
 
     See also
     --------
     ptypy.utils.parallel.MPInoise2d
     """
 
+    if A.ndim != 3:
+        raise ValueError('Diversify called with a non-3d array')
+
     num_modes = A.shape[0]
 
     # Nothing to do if only one mode
 
     if num_modes == 1:
+        if noise is not None or shift is not None or power != 1.0:
+            print("WARN: Array has one layer but diversity parameters have been set - these will not apply!")
+            # FIXME check if this should be a proper warning
         return
 
     if noise is not None:
@@ -60,8 +73,28 @@ def diversify(A, noise=None, shift=None, power=1.0):
         A *= noise
 
     if shift is not None:
-        raise NotImplementedError(
-            'Diversity introduced by lateral shifts is not yet implemented.')
+        shift_vector = np.array(shift, dtype='int')  # TODO do we definitely want to ensure int here?
+
+        if np.ndim(shift_vector) == 1:
+            if num_modes % 2 == 0:
+                raise ValueError("Shifts specified by single 1D tuple can only apply to odd number of modes")
+            max_vector_multiplier = (num_modes - 1) / 2
+            spread_integers = np.arange(-max_vector_multiplier, max_vector_multiplier + 1)
+            spread_integers = spread_integers[spread_integers != 0]
+            shift_vector = np.resize(shift_vector, (spread_integers.shape[0], 2)) * np.repeat(spread_integers, 2).reshape(spread_integers.shape[0], 2)
+
+        # else if not 1 dim or 2 dim # TODO do we still want this?
+        #     raise TypeError("shift tuple must be single or two dimensional") # TODO should this be ValueError (or something else)
+
+        # Append zero shift for the first mode
+        shift_vector = np.insert(shift_vector, 0, (0, 0), axis=0)
+
+        # Check that there is a tuple for each layer
+        if shift_vector.shape[0] != num_modes:
+            raise ValueError("Number of shift tuples provided does not match the number of layers in array (require N-1)")
+
+        for idx in range(num_modes):
+            A[idx] = au.shift_zoom(A[0], (1.0, 1.0), (0.0, 0.0), shift_vector[idx])
 
     # Create power tuple with an element for each mode
     power_tuple = (power,) if np.isscalar(power) else tuple(power)
