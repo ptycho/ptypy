@@ -77,7 +77,7 @@ sample_desc.from_string(r"""
     default = None
     help = Model processing parameters
     doc = Can be ``None``, i.e. no processing
-    type = Param
+    type = Param, None
     userlevel = 
 
     [process.offset]

@@ -196,6 +196,10 @@ illumination_desc.from_string(r"""
     userlevel = 0
     """)
 
+# Strings are also supported as input parameters
+illumination_desc.options['type'] = 'Param, str'
+illumination_desc.options['help'] = 'Illumination parameters'
+
 DEFAULT = illumination_desc.make_default(99)
 DEFAULT_aperture = DEFAULT.aperture
 

@@ -74,7 +74,7 @@ class ScanModel(object):
     help = Name of the PtyScan subclass to use
 
     [illumination]
-    type = Param
+    type = Param, str
     default =
     help = Container for probe initialization model
 
@@ -869,23 +869,25 @@ class Full(ScanModel):
                 logger.info('Initializing probe storage %s using scan %s.'
                             % (pid, self.label))
 
+            # Bypass additional tests if input is a string (previous reconstruction)
+            if illu_pars != str(illu_pars):
 
-            # if photon count is None, assign a number from the stats.
-            phot = illu_pars.get('photons')
-            phot_max = self.diff.max_power
+                # if photon count is None, assign a number from the stats.
+                phot = illu_pars.get('photons')
+                phot_max = self.diff.max_power
 
-            if phot is None:
-                logger.info('Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' % phot_max)
-                illu_pars['photons'] = phot_max
-            elif np.abs(np.log10(phot)-np.log10(phot_max)) > 1:
-                logger.warn('Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' % (phot, phot_max))
+                if phot is None:
+                    logger.info('Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' % phot_max)
+                    illu_pars['photons'] = phot_max
+                elif np.abs(np.log10(phot)-np.log10(phot_max)) > 1:
+                    logger.warn('Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' % (phot, phot_max))
 
-            if (self.p.coherence.num_probe_modes>1) and (type(illu_pars) is not np.ndarray):
+                if (self.p.coherence.num_probe_modes>1) and (type(illu_pars) is not np.ndarray):
 
-                if (illu_pars.diversity is None) or (None in [illu_pars.diversity.noise, illu_pars.diversity.power]):
-                    log(2, "You are doing a multimodal reconstruction with none/ not much diversity between the modes! \n"
-                           "This will likely not reconstruct. You should set .scan.illumination.diversity.power and "
-                           ".scan.illumination.diversity.noise to something for the best results.")
+                    if (illu_pars.diversity is None) or (None in [illu_pars.diversity.noise, illu_pars.diversity.power]):
+                        log(2, "You are doing a multimodal reconstruction with none/ not much diversity between the modes! \n"
+                               "This will likely not reconstruct. You should set .scan.illumination.diversity.power and "
+                               ".scan.illumination.diversity.noise to something for the best results.")
 
             illumination.init_storage(s, illu_pars)
 
