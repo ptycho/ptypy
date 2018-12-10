@@ -120,6 +120,7 @@ class Bragg3dSimScan(PtyScan):
             energy=self.p.energy, 
             distance=self.p.distance, 
             theta_bragg=self.p.theta_bragg)
+        self.g = g
 
         logger.info('Data will be simulated with these geometric parameters:')
         logger.info(g)
@@ -159,16 +160,8 @@ class Bragg3dSimScan(PtyScan):
         C.reformat()
 
         # Define the test sample based on the orthogonal position of
-        # each voxel. First, the cartesian grid is obtained from the
-        # geometry object, then this grid is used as a condition for the
-        # sample's magnitude.
-        xx, zz, yy = g.transformed_grid(S, input_space='real',
-            input_system='natural')
-        S.fill(0.0)
-        S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= 1e-6) &
-            (yy - .3*zz< 2e-6) & (xx < 1e-6)] = 1
-        S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= -2e-6) &
-            (yy - .3*zz < -1e-6)] = 1
+        # each voxel.
+        self._initialize_object(S)
 
         # save this for possible export
         self.simulated_object = S
@@ -239,6 +232,18 @@ class Bragg3dSimScan(PtyScan):
             for i in range(len(new_pos)):
                 new_pos[i] = self.positions[order[i]]
             self.positions = new_pos
+
+    def _initialize_object(self, S):
+        # First, the cartesian grid is obtained from the
+        # geometry object, then this grid is used as a condition for the
+        # sample's magnitude.
+        xx, zz, yy = self.g.transformed_grid(S, input_space='real',
+            input_system='natural')
+        S.fill(0.0)
+        S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= 1e-6) &
+            (yy - .3*zz< 2e-6) & (xx < 1e-6)] = 1
+        S.data[(zz >= -90e-9) & (zz < 90e-9) & (yy + .3*zz >= -2e-6) &
+            (yy - .3*zz < -1e-6)] = 1
 
     def load_common(self):
         """
