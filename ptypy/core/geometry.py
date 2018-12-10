@@ -375,6 +375,18 @@ class Geo(Base):
 
         return self._propagator
 
+    def overlap2exit(self, a):
+        """
+        Function converting probe-object overlap product to exit wave.
+        """
+        return a
+
+    def exit2overlap(self, a):
+        """
+        Function converting exit wave to probe-object overlap product.
+        """
+        return a
+
     def __str__(self):
         keys = self.p.keys()
         keys.sort()

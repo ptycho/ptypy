@@ -339,7 +339,7 @@ class DM(BaseEngine):
         for name, pod in self.pods.iteritems():
             if not pod.active:
                 continue
-            pod.object += pod.probe.conj() * pod.exit * pod.object_weight
+            pod.object += pod.probe.conj() * pod.geometry.exit2overlap(pod.exit) * pod.object_weight
             ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
 
         # Distribute result with MPI
@@ -392,7 +392,7 @@ class DM(BaseEngine):
         for name, pod in self.pods.iteritems():
             if not pod.active:
                 continue
-            pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
+            pod.probe += pod.object.conj() * pod.geometry.exit2overlap(pod.exit) * pod.probe_weight
             pr_nrm[pod.pr_view] += u.cabs2(pod.object) * pod.probe_weight
 
         change = 0.

@@ -2205,7 +2205,6 @@ class POD(Base):
     def mask(self, v):
         self.ma_view.data = v
 
-
 class _Freport(object):
     """
     Class for creating headers for formatted reports.

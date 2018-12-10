@@ -122,7 +122,8 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     if LL_error is True:
         LL = np.zeros_like(diff_view.data)
         for name, pod in diff_view.pods.iteritems():
-            LL += u.abs2(pod.fw(pod.probe * pod.object))
+            old_exit = pod.geometry.overlap2exit(pod.probe * pod.object)
+            LL += u.abs2(pod.fw(old_exit))
         err_phot = (np.sum(fmask * (LL - I)**2 / (I + 1.))
                     / np.prod(LL.shape))
     else:
@@ -132,8 +133,8 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     for name, pod in diff_view.pods.iteritems():
         if not pod.active:
             continue
-        f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
-                         - alpha * pod.exit)
+        old_exit = pod.geometry.overlap2exit(pod.probe * pod.object)
+        f[name] = pod.fw((1 + alpha) * old_exit - alpha * pod.exit)
 
         af2 += u.abs2(f[name])
 
@@ -151,7 +152,8 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.iteritems():
             if not pod.active:
                 continue
-            df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            old_exit = pod.geometry.overlap2exit(pod.probe * pod.object)
+            df = pod.bw(fm * f[name]) - old_exit
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     elif err_fmag > pbound:
@@ -161,7 +163,9 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.iteritems():
             if not pod.active:
                 continue
-            df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            old_exit = pod.geometry.overlap2exit(pod.probe * pod.object)
+            df = pod.bw(fm * f[name]) - old_exit
+            print pod.exit.shape, df.shape, old_exit.shape
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     else:
@@ -169,7 +173,8 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.iteritems():
             if not pod.active:
                 continue
-            df = alpha * (pod.probe * pod.object - pod.exit)
+            old_exit = pod.geometry.overlap2exit(pod.probe * pod.object)
+            df = alpha * (old_exit - pod.exit)
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
 
