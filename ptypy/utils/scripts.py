@@ -63,15 +63,17 @@ def diversify(A, noise=None, shift=None, power=1.0):
         raise NotImplementedError(
             'Diversity introduced by lateral shifts is not yet implemented.')
 
-    # Expand power to length
-    p = (power,) if np.isscalar(power) else tuple(power)
-    # Check
-    append = num_modes - 1 - len(p)
-    if append >= 1:
-        p += (p[-1],) * append
+    # Create power tuple with an element for each mode
+    power_tuple = (power,) if np.isscalar(power) else tuple(power)
+    # Check how many elements
+    missing_elements = num_modes - 1 - len(power_tuple)
+    if missing_elements >= 1:
+        # Replicate final element to extend tuple
+        power_tuple += (power_tuple[-1],) * missing_elements
     else:
-        p = p[:num_modes - 1]
-    power = np.array((1.0,) + p).reshape(
+        # Remove any extra elements
+        power_tuple = power_tuple[:num_modes - 1]
+    power = np.array((1.0,) + power_tuple).reshape(
         (num_modes,) + (1,) * (len(A.shape) - 1))
     power /= power.sum()
     A *= np.sqrt(power)
