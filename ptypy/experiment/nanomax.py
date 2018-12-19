@@ -16,6 +16,8 @@ logger = u.verbose.logger
 
 class NanomaxBase(PtyScan):
     """
+    Obsolete base class.
+
     Defaults:
 
     [dataPath]
@@ -706,3 +708,70 @@ class NanomaxStepscanNov2018(PtyScan):
                         (mask.shape + (np.sum(mask),)))
 
         return mask
+
+@register()
+class NanomaxFlyscanNov2018(NanomaxFlyscanOct2018):
+    """
+    Should clean this up as well. The parameters are awkward and 
+    the inheritance is too complicated.
+
+    Defaults:
+    
+    [hdfPath]
+    default = 'entry_%04u/measurement/Pilatus/data'
+    type = str
+    help = Path to image array within detector hdf5 file
+    doc =
+
+    """
+
+    def load(self, indices):
+
+        raw, weights, positions = {}, {}, {}
+        scannr = self.p.scannr
+        path = self.p.pilatusPath
+        pattern = self.p.pilatusPattern
+
+        # read the entire dataset
+        for ind in indices:
+            line = self.firstLine + ind // self.images_per_line
+            image = ind % self.images_per_line
+            with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
+                data = hf[self.p.hdfPath % line][image]
+            raw[ind] = data
+
+        print 'loaded %d images' % len(raw)
+        return raw, positions, weights
+
+    def load_weight(self):
+        """
+        Provides the mask for the whole scan, the shape of the first 
+        frame.
+        """
+
+        scannr = self.p.scannr
+        path = self.p.pilatusPath
+        pattern = self.p.pilatusPattern
+        if not (path[-1] == '/'):
+            path += '/'
+
+        filename = self.p.dataPath + self.p.datafile
+        with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
+            data = hf.get(self.p.hdfPath % 0)
+            shape = np.asarray(data[0]).shape
+            mask = np.ones(shape)
+            mask[np.where(data[0] == -2)] = 0
+        logger.info("took account of the pilatus mask, %u x %u, sum %u" %
+                    (mask.shape + (np.sum(mask),)))
+
+        if self.p.maskfile:
+            with h5py.File(self.p.maskfile, 'r') as hf:
+                mask2 = np.array(hf.get('mask'))
+            logger.info("loaded additional mask, %u x %u, sum %u" %
+                        (mask2.shape + (np.sum(mask2),)))
+            mask = mask * mask2
+            logger.info("total mask, %u x %u, sum %u" %
+                        (mask.shape + (np.sum(mask),)))
+
+        return mask
+
