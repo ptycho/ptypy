@@ -34,7 +34,8 @@ from .. import defaults_tree
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel']
+__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel',
+           'Bragg3dProjectionModel',]
 
 
 @defaults_tree.parse_doc('scan.ScanModel')
@@ -376,7 +377,7 @@ class ScanModel(object):
         for pod in pods:
             if not pod.active:
                 continue
-            pod.exit = pod.probe * pod.object
+            pod.exit = pod.geometry.overlap2exit(pod.probe * pod.object)
 
     def _update_stats(self):
         """
@@ -1249,7 +1250,12 @@ class Bragg3dModel(Vanilla):
 
         s.model_initialized = True
 
-class Bragg3dProjectionModel(Vanilla):
+
+defaults_tree['scan'].add_child(EvalDescriptor('Bragg3dProjectionModel'))
+defaults_tree['scan.Bragg3dModel'].add_child(illumination.illumination_desc, copy=True)
+defaults_tree['scan.Bragg3dModel.illumination'].prune_child('diversity')
+@defaults_tree.parse_doc('scan.Bragg3dProjectionModel')
+class Bragg3dProjectionModel(ScanModel):
     """
     Model for 3dBPP data, where scanning is done at arbitrary angles.
 
@@ -1260,6 +1266,16 @@ class Bragg3dProjectionModel(Vanilla):
     type = str
     help =
 
+    [r3_spacing]
+    default = 30e-9
+    type = float
+    help = Spacing along the third dimension
+
+    [r3_shape]
+    default = 20
+    type = int
+    help = Number of voxels along the third dimension
+
     """
 
     # remember: each pod needs its own Geo instance, because each scanning
@@ -1268,7 +1284,183 @@ class Bragg3dProjectionModel(Vanilla):
     # data packets from the PtyScan class should be the same as for 2d
     # except that positions are 4 dimensional (angle, x, z, y)
 
-    # now study the Vanilla class and see how it needs to be modified
+    # PROBLEM: ptypy assumes things about the exit wave. For example
+    # that it is exit=probe*obj, which is a problem for 3dBPP where
+    # the exit wave is two dimensional but probe*obj is three dimensional.
+    #
+    # This needs more thinking. How's it done in normal Bragg? 3d exit
+    # waves supposedly. So either mess with the engines or change
+    # the way the pod generates the exit wave.
+
+    # tiling and summing (in overlap2exit and vice versa) seems to take
+    # a lot of time. work with broadcasting to avoid at lest tiling.
+
+    # is the projection upside down? think about this 
+
+    # then maybe implement OS/PIE
+
+    # there are some sort of voids in the reconstruction, but the scale looks
+    # wrong. look into this, maybe plot cross sections as well. the slab itself
+    # extends too far along r3. is this a result of the projection? or does it
+    # reflect some bad positions somewhere?
+
+
+    def _make_geo(self, bragg_offset):
+        get_keys = ['distance', 'center', 'energy', 'psize']
+        geo_pars = u.Param({key: self.common[key] for key in get_keys})
+        geo_pars.propagation = self.p.propagation
+        geo = geometry_bragg.Geo_BraggProjection(owner=self.ptycho,
+                                                      pars=geo_pars,
+                                                      bragg_offset=bragg_offset,
+                                                      theta_bragg=self.ptyscan.p.theta_bragg,
+                                                      r3_spacing=self.p.r3_spacing,
+                                                      shape=(self.p.r3_shape,) + tuple(self.common.shape),
+                                                      )
+        geo.p.resolution_is_fix = True
+        return geo
+
+    def _create_pods(self):
+        """
+        Create all new pods as specified in the new_positions,
+        new_diff_views and new_mask_views object attributes.
+        """
+        logger.info('\n' + headerline('Creating PODS', 'l'))
+        new_pods = []
+        new_probe_ids = {}
+        new_object_ids = {}
+
+        # One probe / object storage per scan.
+        ID ='S'+self.label
+
+        # We need to return info on what storages are created
+        if not ID in self.ptycho.probe.storages.keys():
+            new_probe_ids[ID] = True
+        if not ID in self.ptycho.obj.storages.keys():
+            new_object_ids[ID] = True
+
+        # Loop through diffraction patterns
+        for i in range(len(self.new_diff_views)):
+            geo = self._make_geo(bragg_offset=self.new_positions[i][0])
+            dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
+
+            # Create views
+            pv = View(container=self.ptycho.probe,
+                      accessrule={'shape': geo.shape,
+                                  'psize': geo.resolution,
+                                  'coord': u.expect3(0.0),
+                                  'storageID': ID,
+                                  'layer': 0,
+                                  'active': True})
+
+            ov = View(container=self.ptycho.obj,
+                      accessrule={'shape': geo.shape,
+                                  'psize': geo.resolution,
+                                  'coord': self.new_positions[i][1:],
+                                  'storageID': ID,
+                                  'layer': 0,
+                                  'active': True})
+
+            ev = View(container=self.ptycho.exit,
+                      accessrule={'shape': geo.shape[1:],
+                                  'psize': geo.resolution[1:],
+                                  'coord': u.expect2(0.0),
+                                  'storageID': dv.storageID,
+                                  'layer': dv.layer,
+                                  'active': dv.active})
+
+            views = {'probe': pv,
+                     'obj': ov,
+                     'diff': dv,
+                     'mask': mv,
+                     'exit': ev}
+
+            pod = POD(ptycho=self.ptycho,
+                      ID=None,
+                      views=views,
+                      geometry=geo)
+            pod.probe_weight = 1
+            pod.object_weight = 1
+
+            new_pods.append(pod)
+
+        return new_pods, new_probe_ids, new_object_ids
+
+    def _initialize_geo(self, common):
+        """
+        Don't actually create any geometry objects. For 3dBPP,
+        POD can represent an arbitrary rocking angle and PODs
+        therefore have their own geometry objects.
+        """
+        self.common = common
+        self.shape = common.shape
+        self.psize = common.psize
+
+    def _initialize_containers(self):
+        """
+        Override to get combination of 2D and 3D containers.
+        """
+        self.ptycho._pool['C'].pop('Cprobe')
+        self.ptycho.probe = Container(self.ptycho, ID='Cprobe', data_type='complex', data_dims=3)
+        self.ptycho._pool['C'].pop('Cobj')
+        self.ptycho.obj = Container(self.ptycho, ID='Cobj', data_type='complex', data_dims=3)
+        self.ptycho._pool['C'].pop('Cexit')
+        self.ptycho.exit = Container(self.ptycho, ID='Cexit', data_type='complex', data_dims=2)
+        self.ptycho._pool['C'].pop('Cdiff')
+        self.ptycho.diff = Container(self.ptycho, ID='Cdiff', data_type='real', data_dims=2)
+        self.ptycho._pool['C'].pop('Cmask')
+        self.ptycho.mask = Container(self.ptycho, ID='Cmask', data_type='bool', data_dims=2)
+        self.Cdiff = self.ptycho.diff
+        self.Cmask = self.ptycho.mask
+        self.containers_initialized = True
+
+    def _initialize_probe(self, probe_ids):
+        """
+        Initialize the probe storage referred to by probe_ids.keys()[0]
+        """
+        logger.info('\n'+headerline('Probe initialization', 'l'))
+
+        # pick storage from container, there's only one probe
+        pid = probe_ids.keys()[0]
+        s = self.ptycho.probe.S.get(pid)
+        logger.info('Initializing probe storage %s' % pid)
+
+        # create an oversampled probe perpendicular to its incoming
+        # direction, using the illumination module as a utility.
+        geo = self._make_geo(bragg_offset=0.0)
+        extent = max(geo.probe_extent_vs_fov())
+        psize = min(geo.resolution) / 5
+        shape = int(np.ceil(extent / psize))
+        logger.info('Generating incoming probe %d x %d (%.3e x %.3e) with psize %.3e...'
+            % (shape, shape, extent, extent, psize))
+        t0 = time.time()
+
+        Cprobe = Container(data_dims=2, data_type='float')
+        Sprobe = Cprobe.new_storage(psize=psize, shape=shape)
+
+        # fill the incoming probe
+        illumination.init_storage(Sprobe, self.p.illumination, energy=geo.energy)
+        logger.info('...done in %.3f seconds' % (time.time() - t0))
+
+        # Extrude the incoming probe in the right direction and frame
+        s.data[:] = geo.prepare_3d_probe(Sprobe, system='natural').data
+
+        s.model_initialized = True
+
+    def _initialize_object(self, object_ids):
+        """
+        Initializes the probe storage referred to by object_ids.keys()[0]
+        """
+        logger.info('\n'+headerline('Object initialization', 'l'))
+
+        # pick storage from container, there's only one object
+        oid = object_ids.keys()[0]
+        s = self.ptycho.obj.S.get(oid)
+        logger.info('Initializing probe storage %s' % oid)
+
+        # simple fill, no need to use the sample module for this
+        s.fill(self.p.sample.fill)
+
+        s.model_initialized = True
 
 
 class ModelManager(object):

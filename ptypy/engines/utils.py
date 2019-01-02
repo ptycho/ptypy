@@ -165,7 +165,6 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
                 continue
             old_exit = pod.geometry.overlap2exit(pod.probe * pod.object)
             df = pod.bw(fm * f[name]) - old_exit
-            print pod.exit.shape, df.shape, old_exit.shape
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     else:

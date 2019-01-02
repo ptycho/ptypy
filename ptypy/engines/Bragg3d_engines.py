@@ -9,7 +9,7 @@ This file is part of the PTYPY package.
 """
 from .DM import DM
 from . import register
-from ..core.manager import Bragg3dModel
+from ..core.manager import Bragg3dModel, Bragg3dProjectionModel
 from ..utils import parallel
 from ..utils.verbose import logger
 import time
@@ -101,7 +101,7 @@ class DM_3dBragg(DM):
 
     """
 
-    SUPPORTED_MODELS = [Bragg3dModel, ]
+    SUPPORTED_MODELS = [Bragg3dModel, Bragg3dProjectionModel, ]
 
     def __init__(self, ptycho_parent, pars):
         """

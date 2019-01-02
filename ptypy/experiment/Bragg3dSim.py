@@ -297,9 +297,6 @@ class Bragg3dProjectionSimScan(PtyScan):
     type = str
     help = PtyScan subclass identifier
 
-    [shape]
-    default = 256
-
     [distance]
     default = 1
 
@@ -321,7 +318,7 @@ class Bragg3dProjectionSimScan(PtyScan):
     doc =
 
     [illumination.aperture.size]
-    default = 40e-9
+    default = 100e-9
     type = float, tuple
     help = default override, see :any:`scan.Full.illumination`
     doc =
@@ -330,6 +327,28 @@ class Bragg3dProjectionSimScan(PtyScan):
     default = 20e-9
     type = float
     help = Step size of the raster scan
+
+    [dry_run]
+    default = False
+    type = bool
+    help = Don't calculate diffraction patterns
+    doc = Skips the heavy FFT and just returns empty diff patterns.
+
+    [r3_spacing]
+    default = 30e-9
+    type = float
+    help = Spacing along the third dimension
+
+    [r3_shape]
+    default = 20
+    type = int
+    help = Number of voxels along the third dimension
+
+    [debug_index]
+    type = int
+    default = None
+    help = Plot object, scan pattern and diffraction pattern for specific position.
+
 
     """
 
@@ -344,14 +363,14 @@ class Bragg3dProjectionSimScan(PtyScan):
 
     def simulate(self):
         ### Set up a 3D projection geometry
-        shape = tuple(u.expect3(self.p.shape))
+        shape = (self.p.r3_shape,) + tuple(u.expect2(self.p.shape))
         g = ptypy.core.geometry_bragg.Geo_BraggProjection(
             psize=self.p.psize, 
-            shape=shape,
             energy=self.p.energy, 
             distance=self.p.distance, 
-            theta_bragg=self.p.theta_bragg)
-        g.r3_spacing = g.resolution[1]
+            theta_bragg=self.p.theta_bragg,
+            shape=shape,
+            r3_spacing=self.p.r3_spacing)
         self.g = g
 
         logger.info('Data will be simulated with these geometric parameters:')
@@ -396,7 +415,8 @@ class Bragg3dProjectionSimScan(PtyScan):
         S.fill(0.0)
         S.data[(zz >= -200e-9) & (zz < 200e-9) &
         	   (yy >= -150e-9) &  (yy < 150e-9) &
-        	   (xx >= -950e-9) & (xx < 950e-9)] = 1
+        	   #(xx >= -950e-9) & (xx < 950e-9)] = 1
+               (xx >= -250e-9) & (xx < 250e-9)] = 1
        	S.data[(zz >= -150e-9) & (zz < 20e-9) &
         	   (yy >= -85e-9) &  (yy < 85e-9) &
         	   (xx >= -170e-9) & (xx < 0e-9)] = 0
@@ -433,23 +453,50 @@ class Bragg3dProjectionSimScan(PtyScan):
 
         # Calculate diffraction patterns by using the geometry's propagator.
         self.diff = []
+        t0 = time.time()
+        logger.info('Calculating simulated diffraction patterns...')
         for v in views:
-            self.diff.append(np.abs(g.propagator.fw(
-                v.data * probeView.data))**2)
+            if not self.p.dry_run:
+                self.diff.append(np.abs(g.propagator.fw(
+                    g.overlap2exit(v.data * probeView.data)))**2)
+            else:
+                self.diff.append(np.ones(g.shape[1:]))
+        logger.info('...done in %.3f seconds' % (time.time() - t0))
 
-        if False:
-            DEBUG_INDEX = 227
+        if self.p.debug_index is not None:
+            INDEX = self.p.debug_index
             import matplotlib.pyplot as plt
             plt.ion()
             fig, ax = plt.subplots(ncols=2)
-            v = views[DEBUG_INDEX]
-            proj = g.propagator.exit(v.data * probeView.data)
+            v = views[INDEX]
+            proj = g.overlap2exit(v.data * probeView.data)
             ax[0].imshow(np.real(proj))
-            ax[1].imshow(self.diff[0], vmax=self.diff[0].max()/100)
+            ax[1].imshow(self.diff[INDEX], vmax=self.diff[INDEX].max()/100)
             v.data += probeView.data
             fig, ax = plt.subplots(ncols=2)
-            ax[0].imshow(np.flipud(np.sum(np.abs(v.data), axis=-1).T))
-            ax[1].imshow(np.flipud(np.sum(np.abs(v.data), axis=1).T))
+            # some limits and positions
+            pos_r = np.zeros_like(positions)
+            for i in range(positions.shape[0]):
+                pos_r[i, :] = g._r3r1r2(positions[i, :])
+            r3, r1, r2 = S.grids()
+            r3lims = np.array((r3.min(), r3.max()))
+            r2lims = np.array((r2.min(), r2.max()))
+            r1lims = np.array((r1.min(), r1.max()))
+            # # first axis
+            xx, zz, yy = g.transformed_grid(S, input_system='natural')
+            ax[0].imshow(np.flipud(np.sum(np.abs(S.data[0]), axis=-1).T),
+                         extent=[r3lims[0], r3lims[1], r1lims[0], r1lims[1]])
+            plt.setp(ax[0], 'xlabel', 'r3', 'ylabel', 'r1')
+            ax[0].plot(pos_r[:, 0], pos_r[:, 1], 'r.')
+            ax[0].plot(pos_r[INDEX, 0], pos_r[INDEX, 1], 'wo', ms=8)
+            ax[0].plot(r3lims, -200e-9 - r3lims * g.sintheta, 'r')
+            ax[0].plot(r3lims, 200e-9 - r3lims * g.sintheta, 'r')
+            # second axis
+            ax[1].imshow(np.flipud(np.sum(np.abs(S.data[0]), axis=1).T),
+                         extent=[r3lims[0], r3lims[1], r2lims[0], r2lims[1]])
+            plt.setp(ax[1], 'xlabel', 'r3', 'ylabel', 'r2')
+            ax[1].plot(pos_r[:, 0], pos_r[:, 2], 'r.')
+            ax[1].plot(pos_r[INDEX, 0], pos_r[INDEX, 2], 'wo', ms=8)
 
         # convert the positions from (x, z, y) to (angle, x, z, y) and
         # save, we need the angle and in future we won't know in which
@@ -479,7 +526,7 @@ class Bragg3dProjectionSimScan(PtyScan):
 
         # pick out the requested indices
         for i in indices:
-            raw[i] = self.diff[i][::-1,:]
+            raw[i] = self.diff[i]
 
         return raw, positions, weights
 

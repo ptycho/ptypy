@@ -15,7 +15,7 @@ from ..utils import parallel
 from .utils import basic_fourier_update
 from . import BaseEngine, register
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel
+from ..core.manager import Full, Vanilla, Bragg3dModel, Bragg3dProjectionModel
 
 __all__ = ['DM']
 
@@ -113,7 +113,7 @@ class DM(BaseEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, Bragg3dProjectionModel]
 
     def __init__(self, ptycho_parent, pars=None):
         """

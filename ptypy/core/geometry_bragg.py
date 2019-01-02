@@ -512,7 +512,7 @@ class Geo_BraggProjection(Geo_Bragg):
 
     [shape]
     type = int, tuple
-    default = (16, 256, 256)
+    default = (64, 128, 128)
     help = Number of pixels in detector frame
     doc = Can be a 2-tuple of int (Nx, Ny) or an int N, in which case it is interpreted as (N, N).
     userlevel = 1
@@ -530,14 +530,14 @@ class Geo_BraggProjection(Geo_Bragg):
     [resolution]
     type = tuple
     default = None
-    help = 3D sample pixel size (in meters)
+    help = 2D sample pixel size (in meters)
     doc = Refers to the conjugate (natural) coordinate system as (r3, r1, r2).
 
     [r3_spacing]
     type = tuple
-    default = 10e-9
+    default = 25e-9
     help = Voxel size along the propagation direction r3.
-    doc = Only used it resolution is not specified, and is needed because in 3dBPP the third direction does not correspond to an experimental q space sampling.
+    doc = Only used if resolution is not specified, and is needed because in 3dBPP the third direction does not correspond to an experimental q space sampling.
     """
 
     def __init__(self, owner=None, ID=None, pars=None, **kwargs):
@@ -580,12 +580,23 @@ class Geo_BraggProjection(Geo_Bragg):
         if self.interact:
             self.update()
 
+    @property
+    def bragg_offset(self):
+        return self.p.bragg_offset
+
+    @bragg_offset.setter
+    def bragg_offset(self, v):
+        self.p.bragg_offset = v
+        if self.interact:
+            self.update()
+
     def update(self, update_propagator=True):
         """
         Update things which need a little computation
         """
 
         # Update the internal pixel sizes: 4 cases
+
         if not self.p.resolution_is_fix and not self.p.psize_is_fix:
             raise ValueError(
                 'Neither pixel size nor sample resolution specified.')
@@ -620,6 +631,14 @@ class Geo_BraggProjection(Geo_Bragg):
                       [self.sintheta, 1, 0],
                       [0, 0, 1]]
 
+        # Update the phase ramp used for selecting Bragg peak slices
+        r3 = np.arange(self.shape[0]) * self.resolution[0]
+        r3 = r3.reshape((r3.shape[0], 1, 1))
+        # the offset along q3
+        dq3 = np.deg2rad(self.p.bragg_offset) * 4 * np.pi / self.lam * self.sintheta
+        # ...which gives the 3d phase ramp
+        self.phaseramp = np.exp(-1j * dq3 * r3)
+
         # Update the propagator too
         if update_propagator:
             self.propagator.update()
@@ -636,61 +655,24 @@ class Geo_BraggProjection(Geo_Bragg):
         """
         return None
 
-    def transformed_grid(self, grids, input_system='natural'):
-        """
-
-        Transforms a coordinate grid between the cartesian and natural
-        coordinate systems in real space.
-
-        Parameters
-        ----------
-        grids : 3-tuple of 3-dimensional arrays: (x, z, y),
-                (r3, r1, r2), or a 3-dimensional Storage instance.
-
-        input_system: `cartesian` or `natural`
-
-        """
-        return super(Geo_BraggProjection, self).transformed_grid(grids,
-            input_system=input_system, input_space='real')
-
-    def coordinate_shift(self, input_storage, input_system='natural',
-                         keep_dims=True, layer=0):
-        """
-        Transforms a 3D storage between the cartesian and natural
-        coordinate systems in real space by simply rolling the axes.
-        It tries to do this symmetrically so that the center
-        is maintained.
-
-        Note that this transform can be done in any way, and always
-        involves the choice of a new grid. This method (arbitrarily)
-        chooses the grid which results from skewing the along the
-        z direction.
-
-        The shifting is identical to doing a nearest neighbor
-        interpolation, and it would not be difficult to use other
-        interpolation orders by instead shifting an index array and
-        using scipy.ndimage.interpolation.map_coordinates(). But then
-        you have to decide how to interpolate complex numbers.
-
-        Parameters
-        ----------
-        input_storage : The storage to operate on
-
-        input_system: `cartesian` or `natural`
-
-        keep_dims : If True, maintain pixel size and number of pixels.
-        If False, keeps all the data of the input storage, which means
-        that the shape of the output storage will be larger than the
-        input.
-
-        """
-        return super(Geo_BraggProjection, self).coordinate_shift(
-            input_storage, input_system=input_system,
-            keep_dims=keep_dims, layer=layer, input_space='real')
-
     def _get_propagator(self):
         prop = Bragg3dProjectionPropagator(self, )
         return prop
+
+    def overlap2exit(self, a):
+        """
+        Go from probe-object 3d overlap to 2d exit wave.
+        """
+        a_ = a * self.phaseramp
+        return np.sum(a_, axis=0)
+
+    def exit2overlap(self, a):
+        """
+        Go from 2d exit wave to probe-object 3d overlap.
+        """
+        backproj = np.tile(a, reps=(self.shape[0], 1, 1))
+        return backproj / self.phaseramp
+
 
 class Bragg3dProjectionPropagator(BasicBragg3dPropagator):
     """
@@ -703,30 +685,17 @@ class Bragg3dProjectionPropagator(BasicBragg3dPropagator):
                 geo=geo, ffttype=ffttype)
 
     def update(self):
-        g = self.geo
-        # a vector of relative r3 values along the projection
-        r3 = np.arange(g.shape[0]) * g.resolution[0]
-        # the same thing as a coordinate matrix
-        r3 = np.tile(r3.reshape((len(r3), 1, 1)),
-                     reps=(1, g.shape[1], g.shape[2]))
-        # the offset along q3
-        dq3 = np.deg2rad(g.p.bragg_offset) * 4 * np.pi / g.lam * g.sintheta
-        # ...which gives the 3d phase ramp
-        self.phaseramp = np.exp(-1j * dq3 * r3)
+        pass
 
     def fw(self, a):
-        a_ = a * self.phaseramp
-        proj = np.sum(a_, axis=0)
+        if len(a.shape) == 3:
+            proj = self.geo.overlap2exit(a)
+        elif len(a.shape) == 2:
+            proj = a
+        else:
+            raise ValueError('What the hell?')
         return np.fft.fftshift(self.fft(proj))
 
     def bw(self, a):
         proj = self.ifft(np.fft.ifftshift(a))
-        backproj = np.tile(proj, reps=(self.geo.shape[0], 1, 1))
-        return backproj / self.phaseramp
-
-    def exit(self, a):
-        """
-        Pedagogical method for visualizing the projected exit wave.
-        """
-        a_ = a * self.phaseramp
-        return np.sum(a_, axis=0)
+        return proj
