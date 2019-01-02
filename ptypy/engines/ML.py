@@ -2,8 +2,9 @@
 """
 Maximum Likelihood reconstruction engine.
 
-TODO:
- * Implement other regularizers
+TODO.
+
+  * Implement other regularizers
 
 This file is part of the PTYPY package.
 
@@ -12,39 +13,106 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
+
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
-from utils import Cnorm2, Cdot
-from . import BaseEngine
+from .utils import Cnorm2, Cdot
+from . import BaseEngine, register
+from .. import defaults_tree
+from ..core.manager import Full, Vanilla
 
 __all__ = ['ML']
 
-DEFAULT = u.Param(
-    ML_type='gaussian',
-    floating_intensities=False,
-    intensity_renormalization=1.,
-    reg_del2=False,
-    reg_del2_amplitude=.01,
-    smooth_gradient=0,
-    smooth_gradient_decay=0,
-    scale_precond=False,
-    scale_probe_object=1.
-)
 
-
+@register()
 class ML(BaseEngine):
+    """
+    Maximum likelihood reconstruction engine.
 
-    DEFAULT = DEFAULT
+
+    Defaults:
+
+    [name]
+    default = ML
+    type = str
+    help =
+    doc =
+
+    [ML_type]
+    default = 'gaussian'
+    type = str
+    help = Likelihood model
+    choices = ['gaussian','poisson','euclid']
+    doc = One of ‘gaussian’, poisson’ or ‘euclid’. Only 'gaussian' is implemented.
+
+    [floating_intensities]
+    default = False
+    type = bool
+    help = Adaptive diffraction pattern rescaling
+    doc = If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).
+
+    [intensity_renormalization]
+    default = 1.
+    type = float
+    lowlim = 0.0
+    help = Rescales the intensities so they can be interpreted as Poisson counts.
+
+    [reg_del2]
+    default = False
+    type = bool
+    help = Whether to use a Gaussian prior (smoothing) regularizer
+
+    [reg_del2_amplitude]
+    default = .01
+    type = float
+    lowlim = 0.0
+    help = Amplitude of the Gaussian prior if used
+
+    [smooth_gradient]
+    default = 0.0
+    type = float
+    help = Smoothing preconditioner
+    doc = Sigma for gaussian filter (turned off if 0.)
+
+    [smooth_gradient_decay]
+    default = 0.
+    type = float
+    help = Decay rate for smoothing preconditioner
+    doc = Sigma for gaussian filter will reduce exponentially at this rate
+
+    [scale_precond]
+    default = False
+    type = bool
+    help = Whether to use the object/probe scaling preconditioner
+    doc = This parameter can give faster convergence for weakly scattering samples.
+
+    [scale_probe_object]
+    default = 1.
+    type = float
+    lowlim = 0.0
+    help = Relative scale of probe to object
+
+    [probe_update_start]
+    default = 2
+    type = int
+    lowlim = 0
+    help = Number of iterations before probe update starts
+
+    """
+
+    SUPPORTED_MODELS = [Full, Vanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Maximum likelihood reconstruction engine.
         """
-        if pars is None:
-            pars = DEFAULT.copy()
-
         super(ML, self).__init__(ptycho_parent, pars)
+
+        p = self.DEFAULT.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
 
         # Instance attributes
 
@@ -66,6 +134,17 @@ class ML(BaseEngine):
         self.smooth_gradient = None
         self.scale_p_o = None
         self.scale_p_o_memory = .9
+
+        self.ptycho.citations.add_article(
+            title='Maximum-likelihood refinement for coherent diffractive imaging',
+            author='Thibault P. and Guizar-Sicairos M.',
+            journal='New Journal of Physics',
+            volume=14,
+            year=2012,
+            page=63004,
+            doi='10.1088/1367-2630/14/6/063004',
+            comment='The maximum likelihood reconstruction algorithm',
+        )
 
     def engine_initialize(self):
         """
@@ -260,6 +339,7 @@ class ML(BaseEngine):
         del self.pr_grad
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
+        del self.ML_model
 
 
 class ML_Gaussian(object):

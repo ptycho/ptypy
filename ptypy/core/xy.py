@@ -7,33 +7,66 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from .. import utils as u
-from ..utils.verbose import logger
 import numpy as np
 import warnings
+
+from .. import utils as u
+from ..utils.verbose import logger
+from ..utils.descriptor import EvalDescriptor
+
 warnings.simplefilter('always', DeprecationWarning)
-__all__ = ['DEFAULT', 'from_pars', 'round_scan', 'raster_scan', 'spiral_scan']
+
+__all__ = ['xy_desc', 'from_pars', 'round_scan', 'raster_scan', 'spiral_scan']
 
 TEMPLATES = u.Param()
 
-DEFAULT = u.Param(
-    # Parameters for popular scan methods
-    override=None,
-    # Model: [None, 'round', 'raster', 'spiral' or array-like]
-    model=None,
-    # round_roi: Width of ROI
-    extent=15e-6,
-    # raster scan: step size (grid spacing)
-    spacing=1.5e-6,
-    steps=10,
-    # raster scan: step size (grid spacing)
-    offset=0,
-    jitter=None,
-    count=None,
-)
-""" Default pattern parameters. See :py:data:`.scan.xy`
-    and a short listing below """
 
+# Local, module-level defaults. These can be appended to the defaults of
+# other classes.
+xy_desc = EvalDescriptor('xy')
+xy_desc.from_string(r"""
+    [override]
+    default =
+    type = array
+    help =
+
+    [model]
+    default =
+    type = str
+    help = None, 'round', 'raster', 'spiral' or array-like
+
+    [extent]
+    default = 15e-6
+    type = float, tuple
+    help =
+
+    [spacing]
+    default = 1.5e-6
+    type = float
+    help = Step size (grid spacing)
+
+    [steps]
+    default = 10
+    type = int
+    help =
+
+    [offset]
+    default = 0.
+    type = float
+    help =
+
+    [jitter]
+    default =
+    type = float
+    help =
+
+    [count]
+    default =
+    type = int
+    help =
+    """)
+
+DEFAULT = xy_desc.make_default(99)
 
 def from_pars(xypars=None):
     """
@@ -152,7 +185,7 @@ def augment_to_coordlist(a, Npos):
     return b[:Npos, :2]
 
 
-def raster_scan(ny=10, nx=10, dy=1.5e-6, dx=1.5e-6):
+def raster_scan(dy=1.5e-6, dx=1.5e-6, ny=10, nx=10):
     """
     Generates a raster scan.
 
@@ -177,7 +210,7 @@ def raster_scan(ny=10, nx=10, dy=1.5e-6, dx=1.5e-6):
     >>> pos = xy.raster_scan()
     >>> plt.plot(pos[:, 1], pos[:, 0], 'o-'); plt.show()
     """
-    iix, iiy = np.indices((nx+1, ny+1))
+    iix, iiy = np.indices((nx, ny))
     positions = [(dx*i, dy*j) for i, j in zip(iix.ravel(), iiy.ravel())]
     return np.asarray(positions)
 
@@ -268,105 +301,3 @@ def spiral_scan(dr=1.5e-6, r=7.5e-6, maxpts=None):
     return np.asarray(positions)
 
 
-def raster_scan_legacy(nx, ny, dx, dy):# pragma: no cover
-    """
-    Generates a raster scan.
-
-    Legacy function. May get deprecated in future.
-    """
-
-    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
-    iix, iiy = np.indices((nx+1, ny+1))
-    positions = [(dx*i, dy*j) for i, j in zip(iix.ravel(), iiy.ravel())]
-    return positions
-
-
-def round_scan_legacy(r_in, r_out, nr, nth):# pragma: no cover
-    """
-    Generates a round scan,
-
-    Legacy function. May get deprecated in future.
-    """
-    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
-    dr = (r_out - r_in) / nr
-    positions = []
-    for ir in range(1, nr+2):
-        rr = r_in + ir*dr
-        dth = 2*np.pi / (nth*ir)
-        positions.extend([(rr * np.sin(ith*dth), rr * np.cos(ith*dth))
-                          for ith in range(nth*ir)])
-    return positions
-
-
-def round_scan_roi_legacy(dr, lx, ly, nth):# pragma: no cover
-    """
-    Round scan positions with ROI, defined as in spec and matlab.
-
-    Legacy function. May get deprecated in future.
-    """
-    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
-    rmax = np.sqrt((lx/2)**2 + (ly/2)**2)
-    nr = np.floor(rmax/dr) + 1
-    positions = []
-    for ir in range(1, int(nr+2)):
-        rr = ir * dr
-        dth = 2 * np.pi / (nth*ir)
-        th = 2 * np.pi * np.arange(nth*ir) / (nth*ir)
-        x1 = rr * np.sin(th)
-        x2 = rr * np.cos(th)
-        positions.extend([(xx1, xx2) for xx1, xx2 in zip(x1, x2)
-                          if (np.abs(xx1) <= ly/2) and (np.abs(xx2) <= lx/2)])
-    return positions
-
-
-def spiral_scan_legacy(dr, r_out=None, maxpts=None):# pragma: no cover
-    """
-    Spiral scan positions.
-
-    Legacy function. May get deprecated in future.
-    """
-    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
-
-    alpha = np.sqrt(4 * np.pi)
-    beta = dr / (2*np.pi)
-
-    if maxpts is None:
-        assert r_out is not None
-        maxpts = 100000000
-
-    if r_out is None:
-        r_out = np.inf
-
-    positions = []
-    for k in xrange(maxpts):
-        theta = alpha * np.sqrt(k)
-        r = beta * theta
-        if r > r_out:
-            break
-        positions.append((r * np.sin(theta), r * np.cos(theta)))
-    return positions
-
-
-def spiral_scan_roi_legacy(dr, lx, ly):# pragma: no cover
-    """\
-    Spiral scan positions. ROI
-
-    Legacy function. May get deprecated in future.
-    """
-    warnings.warn('This function is deprecated and will be removed from the package on 30/11/16',DeprecationWarning)
-    alpha = np.sqrt(4 * np.pi)
-    beta = dr / (2*np.pi)
-    rmax = .5 * np.sqrt(lx**2 + ly**2)
-    positions = []
-    for k in xrange(1000000000):
-        theta = alpha * np.sqrt(k)
-        r = beta * theta
-        if r > rmax:
-            break
-        x, y = r * np.sin(theta), r * np.cos(theta)
-        if abs(x) > lx/2:
-            continue
-        if abs(y) > ly/2:
-            continue
-        positions.append((x, y))
-    return positions

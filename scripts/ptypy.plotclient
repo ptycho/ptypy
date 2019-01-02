@@ -2,39 +2,25 @@
 
 import sys
 import argparse
-from ptypy import utils as u
+from ptypy import defaults_tree
+from ptypy.utils.plot_client import MPLClient
 
 parser = argparse.ArgumentParser(description='Create a ZeroMQ plotting client.')
-excludes =['active','threaded','connections','interval']
-u.validator._add2argparser(parser, entry_point = '.io.autoplot',excludes= excludes)
-parser = u.validator._add2argparser(parser, entry_point = '.io.interaction',excludes= excludes)
+plot_desc = defaults_tree['io.autoplot']
+excludes = ['active']
+parser = plot_desc.add2argparser(parser, excludes=excludes)
 
-parser.add_argument('-d','--dir', dest='directory', type=str,default='./' ,
-                   help='image dump directory' )
+excludes = ['active', 'threaded', 'connections', 'interval']
+client_desc = defaults_tree['io.interaction']
+parser = client_desc.add2argparser(parser, excludes=excludes)
+parser.add_argument('-d', '--dir', dest='directory', type=str, default='./',
+                    help='image dump directory')
+
+# Parse command line arguments. This will update defaults in the defaults_tree
 args = parser.parse_args()
-for key,pd in parser._ptypy_translator.items():
-    pd.set_default(getattr(args,key,pd.default))
 
-plot_pars = u.validator.make_sub_default('.io.autoplot')
-plot_pars['home'] = getattr(args,'directory',pd.value)
-client_pars = u.validator.make_sub_default('.io.interaction')
-"""
-parser = argparse.ArgumentParser(description='Create a ZeroMQ plotting client.')
-parser.add_argument('-l', dest='layout', type=str,
-                   help='layout of the plotter')
-parser.add_argument('--dump', dest='dump', action='store_true',
-                   help='dump .png images')
-parser.add_argument('--movie', dest='dump', action='store_false',
-                   help='create movie when reconstruction is finished')
-parser.add_argument('-i', dest='interval', type=int,
-                   help='minimum plotting interval')
-parser.add_argument('-d', dest='directory', type=str,
-                   help='image dump directory')
-parser.add_argument('-a', dest='address', type=str,
-                   help='address of reconstruction server')
-"""
-#args = parser.parse_args()
-from ptypy import io
-u.verbose.set_level(3)
-plotter=u.MPLClient(client_pars=client_pars, autoplot_pars=plot_pars)
+plot_pars = plot_desc.make_default(depth=5)
+client_pars = client_desc.make_default(depth=5)
+
+plotter = MPLClient(client_pars=client_pars, autoplot_pars=plot_pars)
 plotter.loop_plot()

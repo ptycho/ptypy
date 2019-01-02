@@ -8,13 +8,15 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-import scipy.ndimage as ndi
 import numpy as np
-from misc import *
+from .misc import *
+from .math_utils import smooth_step
 
-__all__ = ['grids','switch_orientation','mirror',\
-           'crop_pad_symmetric_2d','crop_pad_axis','crop_pad','pad_lr',\
-           'zoom','shift_zoom','c_zoom','c_affine_transform','rebin','rebin_2d']
+__all__ = ['grids', 'switch_orientation', 'mirror',
+           'crop_pad_symmetric_2d', 'crop_pad_axis', 'crop_pad',
+           'pad_lr', 'zoom', 'shift_zoom', 'c_zoom',
+           'rebin', 'rebin_2d', 'rectangle', 'ellipsis']
+
 
 def switch_orientation(A, orientation, center=None):
     """
@@ -26,16 +28,17 @@ def switch_orientation(A, orientation, center=None):
         input array, must be at least twodimensional
 
     orientation : tuple or int
-        3-tuple of booleans (transpose,flipud,fliplr)
-        if int: converted according to binary representation:
-            0: [False, False, False]
-            1: [False, False, True]
-            2: [False, True, False]
-            3: [False, True, True]
-            4: [True, False, False]
-            5: [True, False, True]
-            6: [True, True, False]
-            7: [True, True, True]
+        3-tuple of booleans (transpose,flipud,fliplr).
+        If integer, value is converted according to binary representation:
+
+        0: [False, False, False]
+        1: [False, False, True]
+        2: [False, True, False]
+        3: [False, True, True]
+        4: [True, False, False]
+        5: [True, False, True]
+        6: [True, True, False]
+        7: [True, True, True]
 
     center : tuple, optional
         move this coordinate alomg with the transformations
@@ -205,15 +208,16 @@ def _translate_to_pix(sh,center):
     Take arbitrary input and translate it to a pixel position with respect to sh.
     """
     sh=np.array(sh)
-    if center=='fftshift':
+    if not isstr(center):
+        cen = np.asarray(center) % sh
+    elif center=='fftshift':
         cen=sh//2.0
     elif center=='geometric':
         cen=sh/2.0-0.5
     elif center=='fft':
         cen=sh*0.0
-    elif center is not None:
-        #cen=sh*np.asarray(center) % sh - 0.5
-        cen = np.asarray(center) % sh
+    else:
+        raise TypeError('Input %s not understood for center' % str(center))
 
     return cen
 """
@@ -273,39 +277,71 @@ def grids(sh,psize=None,center='geometric',FFTlike=True):
         psize = np.asarray(psize).reshape( (len(sh),) + len(sh)*(1,))
         return grid * psize
 
+def rectangle(grids, dims=None, ew=2):
+    if dims is None:
+        dims = (grids.shape[-2] / 2., grids.shape[-1] / 2.)
+    v, h = dims
+    V, H = grids
+    return (smooth_step(-np.abs(V) + v/2, ew)
+            * smooth_step(-np.abs(H) + h/2, ew))
+
+
+def ellipsis(grids, dims=None, ew=2):
+    if dims is None:
+        dims = (grids.shape[-2] / 2., grids.shape[-1] / 2.)
+    v, h = dims
+    V, H = grids
+    return smooth_step(
+        0.5 - np.sqrt(V**2/v**2 + H**2/h**2), ew/np.sqrt(v * h))
+
 def zoom(c,*arg,**kwargs):
     """
-    Wrapper to dynamically decide whether to use the complex overloaded
-    zoom function or the original one. For parameters see :any:`c_zoom`.
-    Use this function instead of the aforementioned to profit from a faster
-    execution in case of float arrays.
+    Wrapper `scipy.ndimage.zoom <https://docs.scipy.org/doc/scipy/reference/
+    generated/scipy.ndimage.zoom.html>`_ function and shares 
+    the same input arguments. 
+    
+    It performs a complex overlaod if the input is complex. 
+    
+    Parameters
+    ----------
+    c : numpy.ndarray
+        Array to shiftzoom. Can be float or complex
 
-    See also
-    --------
-    c_zoom
+    Returns
+    -------
+    numpy.ndarray
+        Zoomed array
     """
+    
+    from scipy.ndimage import zoom as _zoom
+
     if np.iscomplexobj(c):
-        return c_zoom(c,*arg,**kwargs)
+        return complex_overload(_zoom)(c,*arg,**kwargs)
     else:
-        return ndi.zoom(c,*arg,**kwargs)
+        return _zoom(c,*arg,**kwargs)
 
-c_zoom = complex_overload(ndi.zoom)
-c_zoom.__doc__='*complex input*\n\n'+c_zoom.__doc__
+c_zoom = zoom
+c_zoom.__doc__='*Deprecated*, kept for backward compatibility only.\n\n' + zoom.__doc__
 
+"""
 c_affine_transform=complex_overload(ndi.affine_transform)
 c_affine_transform.__doc__='*complex input*\n\n'+c_affine_transform.__doc__
+"""
 
 def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
     """\
     Move array from center `cen_old` to `cen_new` and perform a zoom `zoom`.
+    
+    This function wraps `scipy.ndimage.affine_transform <https://docs.scipy.org/
+    doc/scipy/reference/generated/scipy.ndimage.affine_transform.html>`_ and 
+    uses the same keyword arguments.
 
-    This function wraps scipy.ndimage.affine_transfrom or the complex
-    overloaded version :any:`c_affine_transform`, which the user is
-    refered to for keyword args.
+    Addiionally, it allows for complex input and out by complex overloading, see
+    :any:`complex_overload`\ . 
 
     Parameters
     ----------
-    c : ndarray
+    c : numpy.ndarray
         Array to shiftzoom. Can be float or complex
 
     zoom : float
@@ -317,20 +353,19 @@ def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
     cen_new : array_like
         Desired new center position in shiftzoomed array
 
-    See also
-    --------
-    c_affine_transform
-
     Returns
     -------
-    Shifted and zoomed array
+    numpy.ndarray
+        Shifted and zoomed array
     """
+    
+    from scipy.ndimage import affine_transform as at
     zoom = np.diag(zoom)
     offset=np.asarray(cen_old)-np.asarray(cen_new).dot(zoom)
     if np.iscomplexobj(c):
-        return c_affine_transform(c,zoom,offset,**kwargs)
+        return complex_overload(at)(c,zoom,offset,**kwargs)
     else:
-        return ndi.affine_transform(c,zoom,offset,**kwargs)
+        return at(c,zoom,offset,**kwargs)
 
 
 def fill3D(A,B,offset=[0,0,0]):

@@ -44,7 +44,7 @@ Highlights
   overcoming partial coherence or related phenomena.
   
 * **On-the-fly** reconstructions (while data is being acquired) using the
-  the :any:`PtyScan` class in the linking mode :ref:`linking mode<case_flyscan>` 
+  the :py:class:`PtyScan` class in the linking mode :ref:`linking mode<case_flyscan>` 
 
 
 Quicklinks
@@ -68,10 +68,10 @@ Quicklinks
 
 .. rubric:: Footnotes
 
-.. [#Enders2016] B.Enders and P.Thibault, **Proc. R. Soc. A** 472, 20160640 (2016), `doi <http://dx.doi.org/10.1098/rspa.2016.0640>`_
+.. [#Enders2016] B.Enders and P.Thibault, **Proc. R. Soc. A** 472, 20160640 (2016), `doi <http://dx.doi.org/10.1098/rspa.2016.0640>`__
 
-.. [#Thi2013] P.Thibault and A.Menzel, **Nature** 494, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`_
+.. [#Thi2013] P.Thibault and A.Menzel, **Nature** 494, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`__
 
-.. [#ml] P.Thibault and M.Guizar-Sicairos, **New J. of Phys.** 14, 6 (2012), `doi <http://dx.doi.org/10.1126/science.1158573>`_
+.. [#ml] P.Thibault and M.Guizar-Sicairos, **New J. of Phys.** 14, 6 (2012), `doi <http://dx.doi.org/10.1126/science.1158573>`__
 
-.. [#dm] P.Thibault, M.Dierolf *et al.*, **New J. of Phys. 14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`_
+.. [#dm] P.Thibault, M.Dierolf *et al.*, **New J. of Phys. 14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`__

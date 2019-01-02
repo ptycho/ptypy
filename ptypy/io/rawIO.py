@@ -5,12 +5,8 @@ Created in Nov 2013
 TODO: add masking function to mask out hot/dead pixels of detector
 @author: Bjoern Enders
 """
-import os
 import glob
-#from pyE17 import utils
-#from pyE17 import verbose
 import numpy as np
-#import cbf_uncompress as c
 from ptypy.utils.verbose import log
 
 __all__ = ['rawread']

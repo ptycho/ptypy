@@ -6,7 +6,7 @@ test Scan `ptypy.core.data.MoonFlowerScan`
 from ptypy import utils as u
 from ptypy import io
 from ptypy.core.data import MoonFlowerScan
-from ptypy.test import test_utils as tu
+from ptypy.test import utils as tu
 import unittest
 global DATA
 DATA = u.Param(
@@ -26,19 +26,19 @@ class PtyscanTest(unittest.TestCase):
         '''
         just check it runs
         '''
-        tu.PtyscanTestRunner(MoonFlowerScan,data=DATA)
+        tu.PtyscanTestRunner(MoonFlowerScan,data_params=DATA)
 
     def test_moonflower_with_three_calls(self):
         '''
         check it runs with multiple calls to auto
         '''
-        tu.PtyscanTestRunner(MoonFlowerScan, data=DATA, auto_frames=30, ncalls=3)
+        tu.PtyscanTestRunner(MoonFlowerScan, data_params=DATA, auto_frames=30, ncalls=3)
 
     def test_moonflower_with_three_calls_REGRESSION(self):
         '''
         Same as above, but makes sure the output is sensible
         '''
-        out = tu.PtyscanTestRunner(MoonFlowerScan, data=DATA, auto_frames=30, ncalls=3)
+        out = tu.PtyscanTestRunner(MoonFlowerScan, data_params=DATA, auto_frames=30, ncalls=3)
 
         self.assertEqual(30,len(out['msgs'][0]['iterable']),
             "Scan did not prepare 30 frames as expected")
@@ -54,26 +54,26 @@ class PtyscanTest(unittest.TestCase):
         '''
         technically all of these tests do this, but this is explicit
         '''
-        tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='append')
+        tu.PtyscanTestRunner(MoonFlowerScan,data_params=DATA, save_type='append')
 
     def test_appended_ptyd_REGRESSION(self):
         '''
         check that we can actually read the result!
         '''
-        out = tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='append', cleanup=False)
+        out = tu.PtyscanTestRunner(MoonFlowerScan,data_params=DATA, save_type='append', cleanup=False)
         d = io.h5read(out['output_file'])
 
     def test_linked_ptyd(self):
         '''
         test the linking mechanism works
         '''
-        tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='link', cleanup=False)
+        tu.PtyscanTestRunner(MoonFlowerScan,data_params=DATA, save_type='link', cleanup=False)
 
     def test_linked_ptyd_REGRESSION(self):
         '''
         again, can we read it?
         '''
-        out = tu.PtyscanTestRunner(MoonFlowerScan,data=DATA, save_type='link', cleanup=False)
+        out = tu.PtyscanTestRunner(MoonFlowerScan,data_params=DATA, save_type='link', cleanup=False)
         d = io.h5read(out['output_file'])
 
 

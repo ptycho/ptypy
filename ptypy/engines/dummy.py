@@ -11,32 +11,47 @@ This file is part of the PTYPY package.
 import time
 import numpy as np
 
-import ptypy
-from .. import utils as u
 from ..utils import parallel
-from . import BaseEngine
-
-#import utils
+from . import BaseEngine, register
+from .. import defaults_tree
+from ..core.manager import Full, Vanilla
 
 __all__ = ['Dummy']
 
-DEFAULT = u.Param(
-    itertime = 2.,    # Sleep time for a single iteration (in seconds)
-)
-
+@register()
 class Dummy(BaseEngine):
+    """
+    Dummy reconstruction engine.
+
+
+    Defaults:
+
+    [name]
+    default = Dummy
+    type = str
+    help =
+    doc =
+
+    [itertime]
+    default = .2
+    type = float
+    help = Sleep time for a single iteration (in seconds)
 
     """
-    Minimum implementation of BaseEngine
-    """
 
-    DEFAULT = DEFAULT
-
+    SUPPORTED_MODELS = [Full, Vanilla]
+    
     def __init__(self, ptycho_parent, pars=None):
         """
         Dummy reconstruction engine.
         """
-        super(Dummy,self).__init__(ptycho_parent,pars)
+        super(Dummy,self).__init__(ptycho_parent, pars)
+
+        p = self.DEFAULT.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
+
         self.ntimescalled  = 0
 
     def engine_initialize(self):
@@ -73,8 +88,3 @@ class Dummy(BaseEngine):
         Clean up after iterations are done
         """
         pass
-
-
-
-
-

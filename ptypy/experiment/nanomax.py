@@ -3,42 +3,82 @@
      and user experiments rely on different classes depending on
      measurement campaign. """
 
-
-import ptypy
-from ptypy.core.data import PtyScan
-import ptypy.utils as u
-
-import h5py
 import numpy as np
-import time
+import h5py
+
+from ..core.data import PtyScan
+from .. import utils as u
+from . import register
 
 logger = u.verbose.logger
 
-# new recipe for this one
-RECIPE = u.Param()
-RECIPE.dataPath = None
-RECIPE.datafile = None
-RECIPE.maskfile = None
-RECIPE.pilatusPath = None
-RECIPE.pilatusPattern = None
-RECIPE.scannr = None
+
+class NanomaxBase(PtyScan):
+    """
+    Defaults:
+
+    [dataPath]
+    default = None
+    type = str
+    help = Path to folder containing the Sardana master file
+    doc =
+
+    [datafile]
+    default = None
+    type = str
+    help = Sardana master file
+    doc =
+
+    [maskfile]
+    default = None
+    type = str
+    help = Arbitrary mask file
+    doc = Hdf5 file containing an array called 'mask' at the root level.
+
+    [pilatusPath]
+    default = None
+    type = str
+    help = Path to folder containing detector image files
+    doc =
+
+    [pilatusPattern]
+    default = None
+    type = str
+    help = Format string for detector image files
+    doc = A format string with two integer fields, the first holds the scan number while the second holds the image number.
+
+    [scannr]
+    default = None
+    type = int
+    help = Scan number
+    doc =
+    """
+    pass
 
 
-class NanomaxStepscanNov2016(PtyScan):
+@register()
+class NanomaxStepscanNov2016(NanomaxBase):
     """
     Loads Nanomax step scan data in the format of week Nov/Dec 2016
+
+    Defaults:
+
+    [name]
+    default = NanomaxStepscanNov2016
+    type = str
+    help =
+    doc =
+
     """
 
     def __init__(self, pars=None, **kwargs):
-
-        p = PtyScan.DEFAULT.copy(depth=10)
-        p.recipe = RECIPE.copy()
-        p.update(pars, in_place_depth=10)
-        super(NanomaxStepscanNov2016, self).__init__(p)
+        self.p = self.DEFAULT.copy(99)
+        self.p.update(pars)
+        super(NanomaxStepscanNov2016, self).__init__(self.p)
 
     def load_positions(self):
-        fileName = self.info.recipe.dataPath + self.info.recipe.datafile
-        entry = 'entry%d' % self.info.recipe.scannr
+        fileName = self.p.dataPath + self.p.datafile
+        entry = 'entry%d' % self.p.scannr
 
         with h5py.File(fileName, 'r') as hf:
             x = np.array(hf.get(entry + '/measurement/samx'))
@@ -50,9 +90,9 @@ class NanomaxStepscanNov2016(PtyScan):
     def load(self, indices):
 
         raw, weights, positions = {}, {}, {}
-        scannr = self.info.recipe.scannr
-        path = self.info.recipe.pilatusPath
-        filepattern = self.info.recipe.pilatusPattern
+        scannr = self.p.scannr
+        path = self.p.pilatusPath
+        filepattern = self.p.pilatusPattern
         if not (path[-1] == '/'):
             path += '/'
 
@@ -74,19 +114,19 @@ class NanomaxStepscanNov2016(PtyScan):
         frame.
         """
 
-        scannr = self.info.recipe.scannr
-        path = self.info.recipe.pilatusPath
-        pattern = self.info.recipe.pilatusPattern
+        scannr = self.p.scannr
+        path = self.p.pilatusPath
+        pattern = self.p.pilatusPattern
         if not (path[-1] == '/'):
             path += '/'
 
-        if self.info.recipe.maskfile:
-            with h5py.File(self.info.recipe.maskfile, 'r') as hf:
+        if self.p.maskfile:
+            with h5py.File(self.p.maskfile, 'r') as hf:
                 mask = np.array(hf.get('mask'))
             logger.info("loaded mask, %u x %u, sum %u" %
                         (mask.shape + (np.sum(mask),)))
         else:
-            filename = self.info.recipe.dataPath + self.info.recipe.datafile
+            filename = self.p.dataPath + self.p.datafile
             with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
                 data = hf.get('entry_0000/measurement/Pilatus/data')
                 shape = np.asarray(data[0]).shape
@@ -95,46 +135,65 @@ class NanomaxStepscanNov2016(PtyScan):
                         (mask.shape + (np.sum(mask),)))
         return mask
 
-# new recipe for this one too
-RECIPE = u.Param()
-RECIPE.dataPath = None
-RECIPE.datafile = None
-RECIPE.maskfile = None
-RECIPE.pilatusPath = None
-RECIPE.pilatusPattern = None
-RECIPE.hdfPath = 'entry_0000/measurement/Pilatus/data'
-RECIPE.scannr = None
-RECIPE.xMotorFlipped = None
-RECIPE.yMotorFlipped = None
-RECIPE.xMotorAngle = 0.0
 
-
-class NanomaxStepscanMay2017(PtyScan):
+@register()
+class NanomaxStepscanMay2017(NanomaxBase):
     """
     Loads Nanomax step scan data in the format of May 2017.
+
+    Defaults:
+
+    [name]
+    default = NanomaxStepscanMay2017
+    type = str
+    help =
+    doc =
+
+    [hdfPath]
+    default = 'entry_0000/measurement/Pilatus/data'
+    type = str
+    help = Path to image array within detector hdf5 file
+    doc =
+
+    [xMotorFlipped]
+    default = False
+    type = bool
+    help = Flip detector x positions
+    doc =
+
+    [yMotorFlipped]
+    default = False
+    type = bool
+    help = Flip detector y positions
+    doc =
+
+    [xMotorAngle]
+    default = 0.0
+    type = float
+    help = Angle of the motor x axis relative to the lab x axis
+    doc = Use this if the stage is mounted at an angle around the y axis, the sign doesn't matter as a cos factor is added.
+
     """
 
     def __init__(self, pars=None, **kwargs):
-
-        p = PtyScan.DEFAULT.copy(depth=10)
-        p.recipe = RECIPE.copy()
-        p.update(pars, in_place_depth=10)
-        super(NanomaxStepscanMay2017, self).__init__(p)
+        self.p = self.DEFAULT.copy(99)
+        self.p.update(pars)
+        super(NanomaxStepscanMay2017, self).__init__(self.p)
 
     def load_positions(self):
-        fileName = self.info.recipe.dataPath + self.info.recipe.datafile
-        entry = 'entry%d' % self.info.recipe.scannr
+        fileName = self.p.dataPath + self.p.datafile
+        entry = 'entry%d' % self.p.scannr
 
         xFlipper, yFlipper = 1, 1
-        if self.info.recipe.xMotorFlipped:
+        if self.p.xMotorFlipped:
             xFlipper = -1
             logger.warning("note: x motor is specified as flipped")
-        if self.info.recipe.yMotorFlipped:
+        if self.p.yMotorFlipped:
             yFlipper = -1
             logger.warning("note: y motor is specified as flipped")
 
         # if the x axis is tilted, take that into account.
-        xCosFactor = np.cos(self.info.recipe.xMotorAngle / 180.0 * np.pi)
+        xCosFactor = np.cos(self.p.xMotorAngle / 180.0 * np.pi)
         logger.info(
             "x motor angle results in multiplication by %.2f" % xCosFactor)
 
@@ -149,16 +208,16 @@ class NanomaxStepscanMay2017(PtyScan):
     def load(self, indices):
 
         raw, weights, positions = {}, {}, {}
-        scannr = self.info.recipe.scannr
-        path = self.info.recipe.pilatusPath
-        filepattern = self.info.recipe.pilatusPattern
+        scannr = self.p.scannr
+        path = self.p.pilatusPath
+        filepattern = self.p.pilatusPattern
         if not (path[-1] == '/'):
             path += '/'
 
         data = []
         for im in range(self.info.positions_scan.shape[0]):
             with h5py.File(path + filepattern % (scannr, im), 'r') as hf:
-                dataset = hf.get(self.info.recipe.hdfPath)
+                dataset = hf.get(self.p.hdfPath)
                 data.append(np.array(dataset)[0])
 
         # pick out the requested indices
@@ -173,23 +232,23 @@ class NanomaxStepscanMay2017(PtyScan):
         frame.
         """
 
-        scannr = self.info.recipe.scannr
-        path = self.info.recipe.pilatusPath
-        pattern = self.info.recipe.pilatusPattern
+        scannr = self.p.scannr
+        path = self.p.pilatusPath
+        pattern = self.p.pilatusPattern
         if not (path[-1] == '/'):
             path += '/'
 
-        filename = self.info.recipe.dataPath + self.info.recipe.datafile
+        filename = self.p.dataPath + self.p.datafile
         with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
-            data = hf.get(self.info.recipe.hdfPath)
+            data = hf.get(self.p.hdfPath)
             shape = np.asarray(data[0]).shape
             mask = np.ones(shape)
             mask[np.where(data[0] == -2)] = 0
         logger.info("took account of the pilatus mask, %u x %u, sum %u" %
                     (mask.shape + (np.sum(mask),)))
 
-        if self.info.recipe.maskfile:
-            with h5py.File(self.info.recipe.maskfile, 'r') as hf:
+        if self.p.maskfile:
+            with h5py.File(self.p.maskfile, 'r') as hf:
                 mask2 = np.array(hf.get('mask'))
             logger.info("loaded additional mask, %u x %u, sum %u" %
                         (mask2.shape + (np.sum(mask2),)))
@@ -199,36 +258,39 @@ class NanomaxStepscanMay2017(PtyScan):
 
         return mask
 
-# new recipe for this one too
-RECIPE = u.Param()
-RECIPE.dataPath = None
-RECIPE.datafile = None
-RECIPE.maskfile = None
-RECIPE.detFilePath = None
-RECIPE.detFilePattern = None
-RECIPE.detNormalizationFilePattern = None
-RECIPE.detNormalizationIndices = None
-RECIPE.hdfPath = 'entry_0000/measurement/Pilatus/data'
-RECIPE.scannr = None
-RECIPE.xMotorFlipped = None
-RECIPE.yMotorFlipped = None
-RECIPE.xMotorAngle = 0.0
 
-
-class NanomaxFlyscanJune2017(PtyScan):
+@register()
+class NanomaxFlyscanJune2017(NanomaxStepscanMay2017):
     """
     Loads Nanomax fly scan data in the format of June 2017.
+
+    Defaults:
+
+    [name]
+    default = NanomaxFlyscanJune2017
+    type = str
+    help =
+
+    [detNormalizationFilePattern]
+    default = None
+    type = str
+    help = Format string for detector file containing data over which to normalize
+    
+    [detNormalizationIndices]
+    default = None
+    type = str
+    help = Indices over which to normalize
+
     """
 
     def __init__(self, pars=None, **kwargs):
-        p = PtyScan.DEFAULT.copy(depth=10)
-        p.recipe = RECIPE.copy()
-        p.update(pars, in_place_depth=10)
-        super(NanomaxFlyscanJune2017, self).__init__(p)
+        self.p = self.DEFAULT.copy(99)
+        self.p.update(pars)
+        super(NanomaxFlyscanJune2017, self).__init__(self.p)
 
     def load_positions(self):
-        fileName = self.info.recipe.dataPath + self.info.recipe.datafile
-        entry = 'entry%d' % self.info.recipe.scannr
+        fileName = self.p.dataPath + self.p.datafile
+        entry = 'entry%d' % self.p.scannr
 
         x, y = None, None
         with h5py.File(fileName, 'r') as hf:
@@ -250,15 +312,15 @@ class NanomaxFlyscanJune2017(PtyScan):
                 raise Exception('Something''s wrong with the positions')
             y = np.repeat(yall, Nx)
 
-        if self.info.recipe.xMotorFlipped:
+        if self.p.xMotorFlipped:
             x *= -1
             logger.warning("note: x motor is specified as flipped")
-        if self.info.recipe.yMotorFlipped:
+        if self.p.yMotorFlipped:
             y *= -1
             logger.warning("note: y motor is specified as flipped")
 
         # if the x axis is tilted, take that into account.
-        xCosFactor = np.cos(self.info.recipe.xMotorAngle / 180.0 * np.pi)
+        xCosFactor = np.cos(self.p.xMotorAngle / 180.0 * np.pi)
         x *= xCosFactor
         logger.info(
             "x motor angle results in multiplication by %.2f" % xCosFactor)
@@ -269,11 +331,11 @@ class NanomaxFlyscanJune2017(PtyScan):
     def load(self, indices):
 
         raw, weights, positions = {}, {}, {}
-        scannr = self.info.recipe.scannr
-        path = self.info.recipe.detFilePath
-        pattern = self.info.recipe.detFilePattern
-        normfile = self.info.recipe.detNormalizationFilePattern
-        normind = self.info.recipe.detNormalizationIndices
+        scannr = self.p.scannr
+        path = self.p.detFilePath
+        pattern = self.p.detFilePattern
+        normfile = self.p.detNormalizationFilePattern
+        normind = self.p.detNormalizationIndices
 
         # read the entire dataset
         done = False
@@ -283,7 +345,7 @@ class NanomaxFlyscanJune2017(PtyScan):
             try:
                 with h5py.File(path + pattern % (scannr, line), 'r') as hf:
                     logger.info('loading data: ' + pattern % (scannr, line))
-                    dataset = hf.get(self.info.recipe.hdfPath)
+                    dataset = hf.get(self.p.hdfPath)
                     linedata = np.array(dataset)
                 if normfile:
                     dtype = linedata.dtype
@@ -292,7 +354,7 @@ class NanomaxFlyscanJune2017(PtyScan):
                         logger.info('loading normalization data: ' +
                                     normfile % (scannr, line))
                         dataset = hf.get(
-                            self.info.recipe.detNormalizationHdfPath)
+                            self.p.detNormalizationHdfPath)
                         normdata = np.array(dataset)
                         if not normind:
                             shape = linedata[0].shape
@@ -326,23 +388,23 @@ class NanomaxFlyscanJune2017(PtyScan):
         frame.
         """
 
-        scannr = self.info.recipe.scannr
-        path = self.info.recipe.detFilePath
-        pattern = self.info.recipe.detFilePattern
+        scannr = self.p.scannr
+        path = self.p.detFilePath
+        pattern = self.p.detFilePattern
         if not (path[-1] == '/'):
             path += '/'
 
-        filename = self.info.recipe.dataPath + self.info.recipe.datafile
+        filename = self.p.dataPath + self.p.datafile
         with h5py.File(path + pattern % (scannr, 0), 'r') as hf:
-            data = hf.get(self.info.recipe.hdfPath)
+            data = hf.get(self.p.hdfPath)
             shape = np.asarray(data[0]).shape
             mask = np.ones(shape)
             mask[np.where(data[0] == -2)] = 0
         logger.info("took account of the pilatus mask, %u x %u, sum %u" %
                     (mask.shape + (np.sum(mask),)))
 
-        if self.info.recipe.maskfile:
-            with h5py.File(self.info.recipe.maskfile, 'r') as hf:
+        if self.p.maskfile:
+            with h5py.File(self.p.maskfile, 'r') as hf:
                 mask2 = np.array(hf.get('mask'))
             logger.info("loaded additional mask, %u x %u, sum %u" %
                         (mask2.shape + (np.sum(mask2),)))

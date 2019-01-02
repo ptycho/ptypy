@@ -13,20 +13,19 @@ import os
 from PIL import Image
 import matplotlib as mpl
 import matplotlib.cm
-from .verbose import logger
-from .array_utils import grids
-
-__all__ = ['pause', 'rmphaseramp', 'plot_storage', 'imsave', 'imload',
-           'complex2hsv', 'complex2rgb', 'hsv2rgb', 'rgb2complex', 'rgb2hsv',
-           'hsv2complex', 'franzmap']
 
 # importing pyplot may fail when no display is available.
 NODISPLAY = (os.getenv("DISPLAY") is None)
 if NODISPLAY:
     matplotlib.use('agg')
-
-
 import matplotlib.pyplot as plt
+
+from .verbose import logger
+from .array_utils import grids
+
+__all__ = ['pause', 'rmphaseramp', 'plot_storage', 'imsave', 'imload',
+           'complex2hsv', 'complex2rgb', 'hsv2rgb', 'rgb2complex', 'rgb2hsv',
+           'hsv2complex', 'franzmap','PtyAxis']
 
 # Improved interactive behavior for old versions of matplotlib
 try:
@@ -473,7 +472,7 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
     """\
     Quickly display the data buffer of a :any:`Storage` instance.
 
-    Keyword arguments are those of :any:`PtyAxis`
+    Keyword arguments are the same as :any:`PtyAxis`
 
     Parameters
     ----------
@@ -567,8 +566,50 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
 
 
 class PtyAxis(object):
+    """
+    Plot environment for matplotlib to allow for a Image plot with color axis,
+    potentially of a potentially complex array.
+    
+    Please note that this class may undergo changes or become obsolete altogether.
+    """
     def __init__(self, ax=None, data=None, channel='r', cmap=None, fontsize=8, **kwargs):
-
+        """
+        
+        Parameters
+        ----------
+        
+        ax : pyplot.axis
+            An axis in matplotlib figure. If ``None`` a figure with a single
+            axis will be created.
+            
+        data : numpy.ndarray
+            The (complex) twodimensional data to be displayed. 
+            
+        channel : str
+            Choose
+            
+            - ``'a'`` to plot absolute/modulus value of the data,
+            - ``'p'`` to plot phase value of the data,
+            - ``'a'`` to plot real value of the data,
+            - ``'a'`` to plot imaginary value of the data,
+            - ``'a'`` to plot a composite image where phase channel maps to hue and 
+              modulus channel maps to brightness of the color.
+              
+        cmap : str 
+            String representation of one of matplotlibs colormaps.
+            
+        fontsize : int
+            Base font size of labels, etc.
+            
+        Keyword Arguments
+        -----------------
+        vmin, vmax : float
+            Minimum and maximum value for colormap scaling
+            
+        rmramp : bool
+            Remove phase ramp if ``True``, default is ``False``
+            
+        """
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -636,8 +677,6 @@ class PtyAxis(object):
                 self.mask = mask
                 if self.shape is None:
                     self.shape = self.mask.shape
-                else:
-                    assert self.shape == self.mask.shape
         else:
             self.mask = None
         if update:
@@ -703,10 +742,10 @@ class PtyAxis(object):
             plt.setp(self.ax.get_yticklabels(), fontsize=self.fontsize)
             # determine number of points.
             v, h = self.shape
-            steps = [1, 2, 5, 10, 20, 50, 100, 200, 500]
-            Nindex = steps[max([v/s <= 4 for s in steps].index(True)-1, 0)]
+            steps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 1500, 2000]
+            Nindex = steps[max([v / s <= 4 for s in steps].index(True) - 1, 0)]
             self.ax.yaxis.set_major_locator(mpl.ticker.IndexLocator(Nindex, 0.5))
-            Nindex = steps[max([h/s <= 4 for s in steps].index(True)-1, 0)]
+            Nindex = steps[max([h / s <= 4 for s in steps].index(True) - 1, 0)]
             self.ax.xaxis.set_major_locator(mpl.ticker.IndexLocator(Nindex, 0.5))
         else:
             self.ax.images[0].set_data(pilim)

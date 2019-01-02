@@ -12,12 +12,15 @@ scripts = ['minimal_script.py',
 
 if len(sys.argv) == 1:
     import pkg_resources
+    import subprocess
+
     for script in scripts:
         scr = pkg_resources.resource_filename('ptypy', tutorial_dir+script)
         if not os.path.exists(scr):
             print('Using backup tutorial for %s' % script)
             scr = '../tutorial/'+script
-        os.system('python '+sys.argv[0]+' '+scr)
+        #subprocess.call(['python',sys.argv[0]+' '+scr]) # doesn't work
+        os.system('python ' + sys.argv[0]+' '+scr)
     sys.exit()
 
 indent_keys = ['for', 'if', 'with', 'def', 'class']
@@ -126,12 +129,17 @@ while True:
             frst.write('   ' + line2)
         continue
     
+    decorator = False
     indent = False
     for key in indent_keys:
         if line.startswith(key): 
             indent = True
             break
-            
+
+    if line.startswith('@'):
+        indent = True
+        decorator = True
+
     if indent:
         frst.write('\n::\n\n   >>> '+line)
         func = line
@@ -139,9 +147,12 @@ while True:
         while True:
             line2 = fpy.readline()
             if line2.strip() and not line2.startswith('    '):
-                frst.write('\n')
-                fpy.seek(pt)
-                break
+                if decorator:
+                    decorator = False
+                else:
+                    frst.write('\n')
+                    fpy.seek(pt)
+                    break
             func += line2
             frst.write('   >>> '+line2)
             pt = fpy.tell()

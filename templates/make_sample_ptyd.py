@@ -6,31 +6,27 @@ import sys
 import time
 import ptypy
 from ptypy import utils as u
-
+from ptypy.core.data import MoonFlowerScan
 # for verbose output
 u.verbose.set_level(3)
 
 # create data parameter branch
 data = u.Param()
 data.dfile = 'sample.ptyd'
-data.shape = 128
-data.num_frames = 100
+data.num_frames = 200
 data.save = 'append'
-data.label=None
-data.psize=172e-6
-data.energy=6.2
-data.center='fftshift'
-data.distance =7
+data.label = None
 data.auto_center = None
 data.rebin = None
 data.orientation = None
 
 # create PtyScan instance
-MF = ptypy.core.data.MoonFlowerScan(data)
+MF = MoonFlowerScan(data)
+
 MF.initialize()
 for i in range(2):
     # autoprocess data
-    msg = MF.auto(100)
+    msg = MF.auto(200)
     time.sleep(2)
     # logs the out put of .auto() to terminal prompt
     u.verbose.logger.info(u.verbose.report(msg), extra={'allprocesses': True})

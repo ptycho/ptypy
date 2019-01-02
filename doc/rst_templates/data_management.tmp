@@ -42,9 +42,9 @@ prior to a successful image reconstruction.
 reconstruction software naturally **cannot** provide actual experimental 
 data. Nevertheless, the treatment of raw data is usually very similar for
 every experiment. Consequently, |ptypy| provides an abstract base class,
-called :any:`PtyScan`, which aims to help with steps (B) and (C). In order
+called :py:class:`PtyScan`, which aims to help with steps (B) and (C). In order
 to adapt |ptypy| for a specific experimental setup, we simply
-subclass :any:`PtyScan` and reimplement only that subset of its methods which are 
+subclass :py:class:`PtyScan` and reimplement only that subset of its methods which are 
 affected by the specifics of the experiemental setup
 (see :ref:`subclassptyscan`). 
 
@@ -53,7 +53,7 @@ affected by the specifics of the experiemental setup
 The PtyScan class
 =================
 
-:any:`PtyScan` is the abstract base class in |ptypy| that manages raw input
+:py:class:`PtyScan` is the abstract base class in |ptypy| that manages raw input
 data.
 
 A PtyScan instance is constructed from a set of generic parameters,
@@ -67,7 +67,7 @@ It provides the following features:
   process only loads the data it will later use in the reconstruction.
   Hence, the load on the network is not affected by the number of
   processes.
-  The parallel behavior of :any:`PtyScan`, is controlled by the parameter 
+  The parallel behavior of :py:class:`PtyScan`, is controlled by the parameter 
   :py:data:`.scan.data.load_parallel`. It uses the :py:class:`~ptypy.utils.parallel.LoadManager`
 
 **Preparation**
@@ -135,7 +135,7 @@ The PtyScan class of |ptypy| provides support for three use cases.
   
   In this use case, the researcher has integrated |ptypy| into the beamline 
   end-station or experimental setup
-  with the help of a custom subclass of :any:`PtyScan` that we call
+  with the help of a custom subclass of :py:class:`PtyScan` that we call
   ``UserScan``. This subclass has its own methods to extract many of the 
   of the generic parameters of :py:data:`.scan.data` and also defaults
   for specific custom parameters, for instance file paths or file name
@@ -149,7 +149,7 @@ The PtyScan class of |ptypy| provides support for three use cases.
      :figclass: highlights
      :name: case_integrated
 
-     Intergrated use case of :any:`PtyScan`.
+     Integrated use case of :py:class:`PtyScan`.
      
      A custom subclass ``UserScan``
      serves as a translator between |ptypy|'s generic parameters and 
@@ -189,11 +189,11 @@ The PtyScan class of |ptypy| provides support for three use cases.
      :figclass: highlights
      :name: case_prepared
      
-     Standard supported use case of :any:`PtyScan`.
+     Standard supported use case of :py:class:`PtyScan`.
      
      If a structure-compatible (see :ref:`ptyd_file`) ``*.hdf5``-file is 
      available, |ptypy| can be used without customizing a subclass of 
-     :any:`PtyScan`. It will use the shipped subclass :any:`PtydScan`
+     :py:class:`PtyScan`. It will use the shipped subclass :py:class:`PtydScan`
      to read in the (prepared) raw data. 
      
 **Preparation and reconstruction on-the-fly with data acquisition.**
@@ -218,7 +218,7 @@ The PtyScan class of |ptypy| provides support for three use cases.
      :figclass: highlights
      :name: case_flyscan
 
-     On-the-fly or demon-like use case of :any:`PtyScan`.
+     On-the-fly or demon-like use case of :py:class:`PtyScan`.
      
      A separate process prepares the data *chunks* and saves them 
      in separate files which are
@@ -299,7 +299,7 @@ are general (optional) parameters.
     expected in the dataset (see :py:data:`~.scan.data.num_frames`)
     It is important to set this parameter when the data acquisition is not
     finished but the reconstruction has already started. If the dataset
-    is complete, the loading class :any:`PtydScan` retrieves the 
+    is complete, the loading class :py:class:`PtydScan` retrieves the 
     total number of frames from the payload ``chunks/``
     
 The next set of optional parameters are

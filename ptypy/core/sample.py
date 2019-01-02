@@ -10,69 +10,166 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-# import os
-# from matplotlib import pyplot as plt
 
-if __name__ == '__main__':
-    from ptypy import utils as u
-    from ptypy import resources
-else:
-    from .. import utils as u
-    from .. import resources
+from .. import utils as u
+from .. import resources
+from ..utils.descriptor import EvalDescriptor
 
 logger = u.verbose.logger
 
 TEMPLATES = dict()
 
-DEFAULT_process = u.Param(
-    # Offset between center of object array and scan pattern (in pixel);
-    #  (float, tuple).
-    offset=0,
-    # Zoom value for object simulation; (float, tuple).
-    zoom=None,
-    # Chemical formula; (str).
-    formula=None,
-    # Density in [g/ccm]; (None, float).
-    density=None,
-    # Maximum thickness of sample in meter; (float).
-    thickness=None,
-    # Assigned refractive index (maximum) relative to air; (complex float)
-    ref_index=0.5 + 0.j,
-    # Gaussian filter smoothing with this FWHM (pixel); (float, tuple)
-    smoothing=2,
-)
+# Local, module-level defaults. These can be appended to the defaults of
+# other classes.
+sample_desc = EvalDescriptor('sample')
+sample_desc.from_string(r"""
+    [model]
+    default = None
+    help = Type of initial object model
+    doc = One of:
+       - ``None`` : model initialitziation defaults to flat array filled `fill`
+       - ``'recon'`` : load model from STXM analysis of diffraction data
+       - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
+       - *<resource>* : one of ptypys internal model resource strings
+       - *<template>* : one of the templates in sample module
+      In script, you may pass a numpy.array here directly as the model. This array will be
+      processed according to `process` in order to *simulate* a sample from e.g. a thickness
+      profile.
+    type = str, array
+    userlevel = 0
 
-DEFAULT_diversity = u.Param(
-    noise=None,
-    shift=None,
-    power=1.0,
-)
+    [fill]
+    default = 1
+    help = Default fill value
+    doc = 
+    type = float, complex
+    userlevel = 
 
-DEFAULT = u.Param(
-    # 'scripting option to override'
-    override=None,
-    # Type of object model; (None, 'sim', 'stxm', 'recon')
-    model=None,
-    fill=1.0,
-    recon=u.Param(
-        ID=None,
-        layer=None,
-        rfile='*.ptyr',
-    ),
-    # STXM analysis parameters
-    stxm=u.Param(
-        # Label of the scan of whose diffraction data to initialize stxm.
-        # If None, use own scan_label
-        label=None,
-    ),
-    process=DEFAULT_process,
-    # See other for noise
-    diversity=DEFAULT_diversity,
-)
-""" Default sample parameters. See :py:data:`.scan.sample`
-    and a short listing below """
+    [recon]
+    default = 
+    help = Parameters to load from previous reconstruction
+    doc = 
+    type = Param
+    userlevel = 
 
-__all__ = ['DEFAULT', 'init_storage', 'simulate']
+    [recon.rfile]
+    default = \*.ptyr
+    help = Path to a ``.ptyr`` compatible file
+    doc = 
+    type = file
+    userlevel = 0
+
+    [stxm]
+    default = 
+    help = STXM analysis parameters
+    doc = 
+    type = Param
+    userlevel = 1
+
+    [stxm.label]
+    default = None
+    help = Scan label of diffraction that is to be used for probe estimate
+    doc = ``None``, own scan label is used
+    type = str
+    userlevel = 1
+
+    [process]
+    default = None
+    help = Model processing parameters
+    doc = Can be ``None``, i.e. no processing
+    type = Param, None
+    userlevel = 
+
+    [process.offset]
+    default = (0, 0)
+    help = Offset between center of object array and scan pattern
+    doc = 
+    type = tuple, list
+    userlevel = 2
+    lowlim = 0
+
+    [process.zoom]
+    default = None
+    help = Zoom value for object simulation.
+    doc = If ``None``, leave the array untouched. Otherwise the modeled or loaded image will be
+      resized using :py:func:`zoom`.
+    type = list, tuple, float
+    userlevel = 2
+    lowlim = 0
+
+    [process.formula]
+    default = None
+    help = Chemical formula
+    doc = A Formula compatible with a cxro database query,e.g. ``'Au'`` or ``'NaCl'`` or ``'H2O'``
+    type = str
+    userlevel = 2
+
+    [process.density]
+    default = 1
+    help = Density in [g/ccm]
+    doc = Only used if `formula` is not None
+    type = float
+    userlevel = 2
+
+    [process.thickness]
+    default = 1.00E-06
+    help = Maximum thickness of sample
+    doc = If ``None``, the absolute values of loaded source array will be used
+    type = float
+    userlevel = 2
+
+    [process.ref_index]
+    default = (0.5, 0.0)
+    help = Assigned refractive index, tuple of format (real, complex)
+    doc = If ``None``, treat source array as projection of refractive index a+bj for (a, b). If a refractive index
+      is provided the array's absolute value will be used to scale the refractive index.
+    type = list, tuple
+    userlevel = 2
+    lowlim = 0
+
+    [process.smoothing]
+    default = 2
+    help = Smoothing scale
+    doc = Smooth the projection with gaussian kernel of width given by `smoothing_mfs`
+    type = int
+    userlevel = 2
+    lowlim = 0
+
+    [diversity]
+    default = 
+    help = Probe mode(s) diversity parameters
+    doc = Can be ``None`` i.e. no diversity
+    type = Param
+    userlevel = 
+
+    [diversity.noise]
+    default = None
+    help = Noise in the generated modes of the illumination
+    doc = Can be either:
+       - ``None`` : no noise
+       - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+       - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+    type = tuple
+    userlevel = 1
+
+    [diversity.power]
+    default = 0.1
+    help = Power of modes relative to main mode (zero-layer)
+    doc = 
+    type = tuple, float
+    userlevel = 1
+
+    [diversity.shift]
+    default = None
+    help = Lateral shift of modes relative to main mode
+    doc = **[not implemented]**
+    type = float
+    userlevel = 2
+    """)
+
+DEFAULT = sample_desc.make_default(99)
+
+DEFAULT_process = DEFAULT.process
 
 
 def init_storage(storage, sample_pars=None, energy=None):
@@ -86,12 +183,12 @@ def init_storage(storage, sample_pars=None, energy=None):
 
     sample_pars : Param
         Parameter structure that defines how the sample is created.
-        See :any:`DEFAULT` for the parameters.
+        *FIXME* Link to parameters
 
     energy : float, optional
         Energy associated in the experiment for this sample object.
         If None, the ptypy structure is searched for the appropriate
-        :any:`Geo` instance:  ``storage.views[0].pod.geometry.energy``
+        :py:class:`Geo` instance:  ``storage.views[0].pod.geometry.energy``
     """
     s = storage
     prefix = "[Object %s] " % s.ID
@@ -202,7 +299,7 @@ def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
         Numpy array as buffer. Must be at least two-dimensional
 
     pars : Param
-        Simulation parameters. See :any:`DEFAULT` .simulate
+        Simulation parameters. *FIXME* link to paramaters.
     """
     lam = u.keV2m(energy)
     p = DEFAULT_process.copy()

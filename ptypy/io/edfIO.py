@@ -10,8 +10,8 @@ Among other, contains the functions
     writeData WHICH IS NOT YET IMPLEMENTED
 """
 import numpy as np
-import os
 import glob
+
 from .. import utils
 
 logger = utils.verbose.logger

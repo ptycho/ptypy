@@ -1,8 +1,8 @@
 
 # THIS FILE IS GENERATED FROM ptypy/setup.py
-short_version='0.2.1'
-version='0.2.1'
-release=True
+short_version='0.3.0'
+version='0.3.0'
+release=False
 
 if not release:
     version += '.dev'

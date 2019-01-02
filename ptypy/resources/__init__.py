@@ -8,7 +8,7 @@ def flower_obj(shape=None):
     from ptypy import utils as u
     import numpy as np
     from matplotlib.image import imread
-
+    
     im = u.rgb2complex(imread(flowerfile))
     if shape is not None:
         sh = u.expect2(shape)
@@ -36,7 +36,7 @@ def moon_pr(shape=None):
     from ptypy import utils as u
     import numpy as np
     from matplotlib.image import imread
-
+    
     im = u.rgb2complex(imread(moonfile))
     if shape is not None:
         sh = u.expect2(shape)

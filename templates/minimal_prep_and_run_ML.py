@@ -22,8 +22,9 @@ p.io.autosave = None
 # max 100 frames (128x128px) of diffraction data
 p.scans = u.Param()
 p.scans.MF = u.Param()
+p.scans.MF.name = 'Full'
 p.scans.MF.data= u.Param()
-p.scans.MF.data.source = 'test'
+p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
 p.scans.MF.data.num_frames = 100
 p.scans.MF.data.save = None

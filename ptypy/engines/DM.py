@@ -12,49 +12,119 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
-from utils import basic_fourier_update
-from . import BaseEngine
+from .utils import basic_fourier_update
+from . import BaseEngine, register
+from .. import defaults_tree
+from ..core.manager import Full, Vanilla, Bragg3dModel
 
 __all__ = ['DM']
 
-DEFAULT = u.Param(
-    # Difference map parameter
-    alpha=1,
-    # Number of iterations before probe update starts
-    probe_update_start=2,
-    # If True update object before probe
-    update_object_first=True,
-    # Threshold for interruption of the inner overlap loop
-    overlap_converge_factor=0.05,
-    # Maximum of iterations for the overlap constraint inner loop
-    overlap_max_iterations=10,
-    # Weight of the current probe estimate in the update, formally cfact
-    probe_inertia=1e-9,
-    # Weight of the current object in the update, formally DM_smooth_amplitude
-    object_inertia=1e-4,
-    # If rms error of model vs diffraction data is smaller than this fraction,
-    # Fourier constraint is met
-    fourier_relax_factor=0.05,
-    # Gaussian smoothing (pixel) of the current object prior to update
-    obj_smooth_std=None,
-    # None or tuple(min, max) of desired limits of the object modulus,
-    # currently in under common in documentation
-    clip_object=None,
-)
-
-
+@register()
 class DM(BaseEngine):
+    """
+    A full-fledged Difference Map engine.
 
-    DEFAULT = DEFAULT
+
+    Defaults:
+
+    [name]
+    default = DM
+    type = str
+    help =
+    doc =
+
+    [alpha]
+    default = 1
+    type = float
+    lowlim = 0.0
+    help = Difference map parameter
+
+    [probe_update_start]
+    default = 2
+    type = int
+    lowlim = 0
+    help = Number of iterations before probe update starts
+
+    [subpix_start]
+    default = 0
+    type = int
+    lowlim = 0
+    help = Number of iterations before starting subpixel interpolation
+
+    [subpix]
+    default = 'linear'
+    type = str
+    help = Subpixel interpolation; 'fourier','linear' or None for no interpolation
+
+    [update_object_first]
+    default = True
+    type = bool
+    help = If True update object before probe
+
+    [overlap_converge_factor]
+    default = 0.05
+    type = float
+    lowlim = 0.0
+    help = Threshold for interruption of the inner overlap loop
+    doc = The inner overlap loop refines the probe and the object simultaneously. This loop is escaped as soon as the overall change in probe, relative to the first iteration, is less than this value.
+
+    [overlap_max_iterations]
+    default = 10
+    type = int
+    lowlim = 1
+    help = Maximum of iterations for the overlap constraint inner loop
+
+    [probe_inertia]
+    default = 1e-9
+    type = float
+    lowlim = 0.0
+    help = Weight of the current probe estimate in the update
+
+    [object_inertia]
+    default = 1e-4
+    type = float
+    lowlim = 0.0
+    help = Weight of the current object in the update
+
+    [fourier_relax_factor]
+    default = 0.05
+    type = float
+    lowlim = 0.0
+    help = If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
+    doc = Set this value higher for noisy data.
+
+    [obj_smooth_std]
+    default = None
+    type = float
+    lowlim = 0
+    help = Gaussian smoothing (pixel) of the current object prior to update
+    doc = If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
+
+    [clip_object]
+    default = None
+    type = tuple
+    help = Clip object amplitude into this interval
+
+    [probe_center_tol]
+    default = None
+    type = float
+    lowlim = 0.0
+    help = Pixel radius around optical axes that the probe mass center must reside in
+
+    """
+
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel]
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Difference map reconstruction engine.
         """
-        if pars is None:
-            pars = DEFAULT.copy()
-
         super(DM, self).__init__(ptycho_parent, pars)
+
+        p = self.DEFAULT.copy()
+        if pars is not None:
+            p.update(pars)
+        self.p = p
 
         # Instance attributes
         self.error = None
@@ -72,6 +142,17 @@ class DM(BaseEngine):
         # The actual value is computed in engine_prepare
         # Another possibility would be to use the maximum value of all probe storages.
         self.mean_power = None
+
+        self.ptycho.citations.add_article(
+            title='Probe retrieval in ptychographic coherent diffractive imaging',
+            author='Thibault et al.',
+            journal='Ultramicroscopy',
+            volume=109,
+            year=2009,
+            page=338,
+            doi='10.1016/j.ultramic.2008.12.011',
+            comment='The difference map reconstruction algorithm',
+        )
 
     def engine_initialize(self):
         """
@@ -99,7 +180,7 @@ class DM(BaseEngine):
         for name, s in self.di.storages.iteritems():
             self.pbound[name] = (
                 .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
-            mean_power += s.tot_power/np.prod(s.shape)
+            mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
 
         # Fill object with coverage of views
@@ -184,9 +265,9 @@ class DM(BaseEngine):
             pre_str = 'Iteration (Overlap) #%02d:  ' % inner
 
             # Update object first
-            if self.p.update_object_first or (inner > 0):
+            if self.p.update_object_first or (inner > 0) or not do_update_probe:
                 # Update object
-                log(4,pre_str + '----- object update -----')
+                log(4, pre_str + '----- object update -----')
                 self.object_update()
 
             # Exit if probe should not be updated yet
@@ -194,9 +275,9 @@ class DM(BaseEngine):
                 break
 
             # Update probe
-            log(4,pre_str + '----- probe update -----')
+            log(4, pre_str + '----- probe update -----')
             change = self.probe_update()
-            log(4,pre_str + 'change in probe is %.3f' % change)
+            log(4, pre_str + 'change in probe is %.3f' % change)
 
             # Recenter the probe
             self.center_probe()
@@ -239,8 +320,7 @@ class DM(BaseEngine):
                 # power of the probe (which is estimated from the power in diffraction patterns).
                 # This estimate assumes that the probe power is uniformly distributed through the
                 # array and therefore underestimate the strength of the probe terms.
-                cfact = self.p.object_inertia * self.mean_power *\
-                    (self.ob_viewcover.storages[name].data + 1.)
+                cfact = self.p.object_inertia * self.mean_power
 
                 if self.p.obj_smooth_std is not None:
                     logger.info(

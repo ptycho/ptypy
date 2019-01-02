@@ -43,50 +43,60 @@ p = u.Param()
 p.verbose_level = 3
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.autosave = None
+p.io.autosave = None
 
 p.scans = u.Param()
+
 p.scans.MF_01 = u.Param()
+p.scans.MF_01.name= "Vanilla"
 p.scans.MF_01.data= u.Param()
+p.scans.MF_01.data.name = 'PtydScan'
 p.scans.MF_01.data.label = 'MF_01'
 p.scans.MF_01.data.source ='file'
 p.scans.MF_01.data.dfile = tmp % 'scan1.ptyd'
 
 p.scans.MF_02 = u.Param()
+p.scans.MF_02.name= "Vanilla"
 p.scans.MF_02.data= u.Param()
+p.scans.MF_02.data.name = 'PtydScan'
 p.scans.MF_02.data.label = 'MF_02'
 p.scans.MF_02.data.source = 'file'
 p.scans.MF_02.data.dfile = tmp % 'scan2.ptyd'
-p.scans.MF_02.sharing = u.Param()
-p.scans.MF_02.sharing.probe_share_with = 'MF_01'
 
-p.engine = u.Param()
-p.engine.common = u.Param()
-p.engine.common.numiter = 100
-p.engine.common.numiter_contiguous = 1
-p.engine.common.probe_support = None
-p.engine.common.probe_update_start = 2
-p.engine.common.clip_object = None   # [0,1]
-
-p.engine.DM = u.Param()
-p.engine.DM.name = "DM"
-p.engine.DM.alpha = 1
-p.engine.DM.probe_inertia = 0.01
-p.engine.DM.object_inertia = 0.1
-p.engine.DM.update_object_first = True
-p.engine.DM.obj_smooth_std = 10
-p.engine.DM.overlap_converge_factor = 0.5
-p.engine.DM.overlap_max_iterations = 100
-p.engine.DM.fourier_relax_factor = 0.05
 
 p.engines = u.Param()
-p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter = 30
+p.engines.DM = u.Param()
+p.engines.DM.name = "DM"
+p.engines.DM.alpha = 1
+p.engines.DM.probe_inertia = 0.01
+p.engines.DM.object_inertia = 0.1
+p.engines.DM.update_object_first = True
+p.engines.DM.obj_smooth_std = 10
+p.engines.DM.overlap_converge_factor = 0.5
+p.engines.DM.overlap_max_iterations = 5
+p.engines.DM.fourier_relax_factor = 0.05
+p.engines.DM.numiter = 60
 
 
-P = Ptycho(p,level=5)
 
+P = Ptycho(p,level=3)
+
+s1, s2 = P.probe.storages.values()
+# Transfer views
+for v in s2.views:
+    v.storage = s1
+    v.storageID = s1.ID
+P.probe.reformat()
+
+# Unforunately we need to delete the storage here due to DM being unable 
+# to ignore unused storages. This is due to the /=nrm division in the
+# probe update 
+P.probe.storages.pop(s2.ID)
+
+P.print_stats()
+P.init_engine()
+P.run()
+P.finalize()
 
 
 

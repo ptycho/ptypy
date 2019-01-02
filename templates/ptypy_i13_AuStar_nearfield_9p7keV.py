@@ -3,33 +3,26 @@ import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import numpy as np
-p = u.Param()
 
 ### PTYCHO PARAMETERS
+p = u.Param()
 p.verbose_level = 3
+p.run = None
 
 p.data_type = "single"
 p.run = None
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.run = None
 
 p.io.autoplot =  u.Param()
 p.io.autoplot.layout ='nearfield'
 
-p.scan = u.Param()
-p.scan.source = None
-p.scan.geometry = u.Param()
-p.scan.geometry.energy = 9.7
-p.scan.geometry.lam = None
-p.scan.geometry.distance = 8.46e-2
-p.scan.geometry.psize = 100e-9
-p.scan.geometry.shape = 1024
-p.scan.geometry.propagation = "nearfield"
-
-p.scan.geometry.precedence = 'meta'
-
+# Simulation parameters
 sim = u.Param()
+sim.energy = 9.7
+sim.distance = 8.46e-2
+sim.psize = 100e-9
+sim.shape = 1024
 sim.xy = u.Param()
 sim.xy.override = u.parallel.MPIrand_uniform(0.0,10e-6,(20,2))
 #sim.xy.positions = np.random.normal(0.0,3e-6,(20,2))
@@ -63,64 +56,50 @@ sim.sample.fill = 1.0+0.j
 sim.detector = 'GenericCCD32bit'
 sim.plot = False
 
-p.scan.update(sim.copy(depth=4))
-p.scan.coherence = u.Param()
-p.scan.coherence.Nprobe_modes = 1
-p.scan.coherence.Nobject_modes = 1
-p.scan.coherence.energies = [1.0]
-
-# p.scan.sharing = u.Param()
-# p.scan.sharing.EP_sharing = False
-# p.scan.sharing.object_shared_with = None
-# p.scan.sharing.object_share_power = 1
-# p.scan.sharing.probe_shared_with = None
-# p.scan.sharing.probe_share_power = 1
-
-p.scan.sample = u.Param()
-#p.scan.sample.model = 'stxm'
-#p.scan.sample.process = None
-#p.scan.sample.diversity = None
-p.scan.xy = u.Param()
-p.scan.xy.model=None
-#p.scan.illumination = sim.illumination.copy()
-p.scan.illumination.model = 'stxm'
-
+# Scan model and initial value parameters
 p.scans = u.Param()
-p.scans.sim = u.Param()
-p.scans.sim.data=u.Param()
-p.scans.sim.data.source = 'sim'
-p.scans.sim.data.recipe = sim.copy(depth=4)
-p.scans.sim.data.save = None #'append'
-p.scans.sim.data.shape = None
-p.scans.sim.data.num_frames = None
+p.scans.scan00 = u.Param()
+p.scans.scan00.name = 'Full'
 
-p.engine = u.Param()
-p.engine.common = u.Param()
-p.engine.common.numiter = 100
-p.engine.common.numiter_contiguous = 1
-p.engine.common.probe_support = None
-p.engine.common.probe_inertia = 0.001
-p.engine.common.object_inertia = 0.1
-p.engine.common.obj_smooth_std = 10
-p.engine.common.clip_object = None
+p.scans.scan00.coherence = u.Param()
+p.scans.scan00.coherence.num_probe_modes = 1
+p.scans.scan00.coherence.num_object_modes = 1
+p.scans.scan00.coherence.energies = [1.0]
 
-p.engine.DM = u.Param()
-p.engine.DM.name = "DM"
-p.engine.DM.alpha = 1
-p.engine.DM.probe_update_start = 2
-p.engine.DM.update_object_first = True
-p.engine.DM.overlap_converge_factor = 0.5
-p.engine.DM.overlap_max_iterations = 100
-p.engine.DM.fourier_relax_factor = 0.05
+p.scans.scan00.sample = u.Param()
 
-p.engine.ML = u.Param()
+# (copy simulation illumination and modify some things)
+p.scans.scan00.illumination = sim.illumination.copy(99)
+p.scans.scan00.illumination.aperture.size = 105e-6
+p.scans.scan00.illumination.aperture.central_stop = None
 
+# Scan data (simulation) parameters
+p.scans.scan00.data=u.Param()
+p.scans.scan00.data.name = 'SimScan'
+p.scans.scan00.data.propagation = 'nearfield'
+p.scans.scan00.data.save = None #'append'
+p.scans.scan00.data.shape = None
+p.scans.scan00.data.num_frames = None
+p.scans.scan00.data.update(sim)
+
+# Reconstruction parameters
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
 p.engines.engine00.numiter = 100
 p.engines.engine00.object_inertia = 1.
-p.engines.engine00.fourier_relax_factor = 0.1
+p.engines.engine00.numiter_contiguous = 1
+p.engines.engine00.probe_support = None
+p.engines.engine00.probe_inertia = 0.001
+p.engines.engine00.obj_smooth_std = 10
+p.engines.engine00.clip_object = None
+p.engines.engine00.alpha = 1
+p.engines.engine00.probe_update_start = 2
+p.engines.engine00.update_object_first = True
+p.engines.engine00.overlap_converge_factor = 0.5
+p.engines.engine00.overlap_max_iterations = 100
+p.engines.engine00.fourier_relax_factor = 0.05
+
 #p.engines.engine01 = u.Param()
 #p.engines.engine01.name = 'ML'
 #p.engines.engine01.numiter = 50

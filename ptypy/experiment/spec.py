@@ -14,6 +14,7 @@ import dateutil.parser
 global lastSpecInfo
 lastSpecInfo = None
 
+
 def verbose(n,s):
     """
     This function should be replaced by the real verbose class after import.

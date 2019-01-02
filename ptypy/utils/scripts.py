@@ -8,16 +8,17 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import parallel
-import urllib
 import urllib2 # TODO: make compatible with python 3.5
-import array_utils as au
 from scipy import ndimage as ndi
-from misc import expect2
+
+from . import array_utils as au
+from .misc import expect2
 # from .. import io # FIXME: SC: when moved here, io fails
 
 __all__ = ['hdr_image', 'diversify', 'cxro_iref', 'xradia_star', 'png2mpg',
            'mass_center', 'phase_from_dpc', 'radial_distribution',
-           'stxm_analysis','stxm_init', 'load_from_ptyr', 'remove_hot_pixels']
+           'stxm_analysis', 'stxm_init', 'load_from_ptyr', 'remove_hot_pixels']
+
 
 def diversify(A, noise=None, shift=None, power=1.0):
     """
@@ -44,6 +45,10 @@ def diversify(A, noise=None, shift=None, power=1.0):
     --------
     ptypy.utils.parallel.MPInoise2d
     """
+    # Nothing to do if only one mode
+    if A.shape[0] == 1:
+        return
+
     if noise is not None:
         noise = parallel.MPInoise2d(A.shape, *noise)
         # No noise where the main mode is
@@ -496,7 +501,7 @@ def xradia_star(sh, spokes=48, std=0.5, minfeature=5, ringfact=2, rings=4,
     else:
         return spokes
 
-def mass_center(A, axes=None):
+def mass_center(A, axes=None, mask=None):
     """
     Calculates mass center of n-dimensional array `A`
     along tuple of axis `axes`.
@@ -510,6 +515,9 @@ def mass_center(A, axes=None):
         Sequence of axes that contribute to distributed mass. If
         ``axes==None``, all axes are considered.
 
+    mask: ndarray, None
+        If not None, an array the same shape as A acting as mask
+
     Returns
     -------
     mass : 1d array
@@ -522,7 +530,11 @@ def mass_center(A, axes=None):
     else:
         axes = tuple(np.array(axes) + 1)
 
-    return np.sum(A * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A, dtype=np.float)
+    if mask is None:
+        return np.sum(A * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A, dtype=np.float)
+    else:
+        return np.sum(A * mask * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A * mask, dtype=np.float)
+
 
 def radial_distribution(A, radii=None):
     """
