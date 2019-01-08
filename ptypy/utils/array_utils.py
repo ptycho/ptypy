@@ -328,7 +328,8 @@ c_affine_transform=complex_overload(ndi.affine_transform)
 c_affine_transform.__doc__='*complex input*\n\n'+c_affine_transform.__doc__
 """
 
-def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
+
+def shift_zoom(c, zoom, cen_old, cen_new, **kwargs):
     """\
     Move array from center `cen_old` to `cen_new` and perform a zoom `zoom`.
     
@@ -336,22 +337,22 @@ def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
     doc/scipy/reference/generated/scipy.ndimage.affine_transform.html>`_ and 
     uses the same keyword arguments.
 
-    Addiionally, it allows for complex input and out by complex overloading, see
+    Additionally, it allows for complex input and out by complex overloading, see
     :any:`complex_overload`\ . 
 
     Parameters
     ----------
     c : numpy.ndarray
-        Array to shiftzoom. Can be float or complex
+        Array to shift-zoom. Can be float or complex
 
-    zoom : float
-        Zoom factor
+    zoom : array_like
+        Zoom factor, 1d or 2d array
 
     cen_old : array_like
         Center in input array `c`
 
     cen_new : array_like
-        Desired new center position in shiftzoomed array
+        Desired new center position in shift-zoomed array
 
     Returns
     -------
@@ -361,11 +362,11 @@ def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
     
     from scipy.ndimage import affine_transform as at
     zoom = np.diag(zoom)
-    offset=np.asarray(cen_old)-np.asarray(cen_new).dot(zoom)
+    offset = np.asarray(cen_old) - np.asarray(cen_new).dot(zoom)
     if np.iscomplexobj(c):
-        return complex_overload(at)(c,zoom,offset,**kwargs)
+        return complex_overload(at)(c, zoom, offset, **kwargs)
     else:
-        return at(c,zoom,offset,**kwargs)
+        return at(c, zoom, offset, **kwargs)
 
 
 def fill3D(A,B,offset=[0,0,0]):
