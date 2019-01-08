@@ -162,8 +162,8 @@ sample_desc.from_string(r"""
     [diversity.shift]
     default = None
     help = Lateral shift of modes relative to main mode
-    doc = **[not implemented]**
-    type = float
+    doc =
+    type = tuple
     userlevel = 2
     """)
 

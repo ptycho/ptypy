@@ -113,9 +113,9 @@ illumination_desc.from_string(r"""
 
     [diversity.shift]
     default = None
-    type = float
+    type = tuple
     help = Lateral shift of modes relative to main mode
-    doc = **[not implemented]**
+    doc =
     userlevel = 2
 
     [model] 
