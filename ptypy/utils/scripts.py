@@ -79,27 +79,24 @@ def diversify(A, noise=None, shift=None, power=1.0):
         if np.ndim(shift) == 2:
             missing_elements = num_modes - 1 - len(shift)
             if missing_elements >= 1:
-                # Replicate final element to extend tuple #TODO is this what we want? or do we want no shift for these
-                shift += (shift[-1],) * missing_elements
-            else:
-                # Remove any extra elements
-                shift_vector = np.array(shift[:num_modes - 1])
+                # Non specified layers will get no shift
+                shift += ([0, 0],) * missing_elements
+            # Remove any extra elements
+            shift_vector = np.array(shift[:num_modes - 1])
+        else:
+            # max_multiple is the largest integer multiple that is taken of the shift vector
+            max_multiple = np.ceil((float(num_modes) - 1) / 2).astype(int)
+            integer_multiples = range(-max_multiple, max_multiple + 1)
+            integer_multiples.remove(0)
+            shift_vector = np.array([shift] * len(integer_multiples)) * np.array([[x, x] for x in integer_multiples])
 
-        if np.ndim(shift) == 1:
-            max_vector_multiplier = np.ceil((float(num_modes) - 1) / 2).astype(int)
-            spread_integers = range(-max_vector_multiplier, max_vector_multiplier + 1)
-            spread_integers.remove(0)
-            spread_integers = [[x, x] for x in spread_integers]
-            shift_copies = [shift] * len(spread_integers)
-            shift_vector = np.array(shift_copies) * np.array(spread_integers)
-
-        # Append zero shift for the first mode
+        # Prepend zero shift (for the first mode)
         shift_vector = np.insert(shift_vector, 0, (0, 0), axis=0)
 
         for idx in range(num_modes):
             A[idx] = au.shift_zoom(A[0], (1.0, 1.0), (0.0, 0.0), shift_vector[idx])
 
-    # Create power tuple with an element for each mode #FIXME This comment makes it look like it related to the next line only but it's actually the next block that it referrs to
+    # This block creates power tuple with an element for each mode and then applies it to A
     power_tuple = (power,) if np.isscalar(power) else tuple(power)
     # Check how many elements
     missing_elements = num_modes - 1 - len(power_tuple)
