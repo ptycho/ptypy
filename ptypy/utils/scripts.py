@@ -11,6 +11,7 @@ import parallel
 import urllib2 # TODO: make compatible with python 3.5
 from scipy import ndimage as ndi
 from . import array_utils as au
+from verbose import logger
 from .misc import expect2
 # from .. import io # FIXME: SC: when moved here, io fails
 
@@ -42,7 +43,7 @@ def diversify(A, noise=None, shift=None, power=1.0):
         Can be a single tuple (x, y) in which case layers will be
         distributed at integer multiples of this vector centred around the initial
         layer's positions with the first (0) layer having no shift.
-        Note the number of layers must be odd in this case.
+        Note if the number of layers is even then the layers will be skewed.
         Alternatively a tuple of tuples ((x1, y1), (x2, y2), ...) where
         each (xi, yi) is the direct shift for a layer starting with the
         second (1) layer. For N layered array require N-1 tuples.
@@ -62,8 +63,7 @@ def diversify(A, noise=None, shift=None, power=1.0):
 
     if num_modes == 1:
         if noise is not None or shift is not None or power != 1.0:
-            print("WARN: Array has one layer but diversity parameters have been set - these will not apply!")
-            # FIXME check if this should be a proper warning
+            logger.warn('Array has one layer but diversity parameters have been set - these will not apply')
         return
 
     if noise is not None:
@@ -73,30 +73,33 @@ def diversify(A, noise=None, shift=None, power=1.0):
         A *= noise
 
     if shift is not None:
-        shift_vector = np.array(shift, dtype='int')  # TODO do we definitely want to ensure int here?
+        shift = list(shift)
+        if np.ndim(shift) not in [1, 2]:
+            raise ValueError('Bad dimensions for shift, must be 1d or 2d tuple')
+        if np.ndim(shift) == 2:
+            missing_elements = num_modes - 1 - len(shift)
+            if missing_elements >= 1:
+                # Replicate final element to extend tuple #TODO is this what we want? or do we want no shift for these
+                shift += (shift[-1],) * missing_elements
+            else:
+                # Remove any extra elements
+                shift_vector = np.array(shift[:num_modes - 1])
 
-        if np.ndim(shift_vector) == 1:
-            if num_modes % 2 == 0:
-                raise ValueError("Shifts specified by single 1D tuple can only apply to odd number of modes")
-            max_vector_multiplier = (num_modes - 1) / 2
-            spread_integers = np.arange(-max_vector_multiplier, max_vector_multiplier + 1)
-            spread_integers = spread_integers[spread_integers != 0]
-            shift_vector = np.resize(shift_vector, (spread_integers.shape[0], 2)) * np.repeat(spread_integers, 2).reshape(spread_integers.shape[0], 2)
-
-        # else if not 1 dim or 2 dim # TODO do we still want this?
-        #     raise TypeError("shift tuple must be single or two dimensional") # TODO should this be ValueError (or something else)
+        if np.ndim(shift) == 1:
+            max_vector_multiplier = np.ceil((float(num_modes) - 1) / 2).astype(int)
+            spread_integers = range(-max_vector_multiplier, max_vector_multiplier + 1)
+            spread_integers.remove(0)
+            spread_integers = [[x, x] for x in spread_integers]
+            shift_copies = [shift] * len(spread_integers)
+            shift_vector = np.array(shift_copies) * np.array(spread_integers)
 
         # Append zero shift for the first mode
         shift_vector = np.insert(shift_vector, 0, (0, 0), axis=0)
 
-        # Check that there is a tuple for each layer
-        if shift_vector.shape[0] != num_modes:
-            raise ValueError("Number of shift tuples provided does not match the number of layers in array (require N-1)")
-
         for idx in range(num_modes):
             A[idx] = au.shift_zoom(A[0], (1.0, 1.0), (0.0, 0.0), shift_vector[idx])
 
-    # Create power tuple with an element for each mode
+    # Create power tuple with an element for each mode #FIXME This comment makes it look like it related to the next line only but it's actually the next block that it referrs to
     power_tuple = (power,) if np.isscalar(power) else tuple(power)
     # Check how many elements
     missing_elements = num_modes - 1 - len(power_tuple)
