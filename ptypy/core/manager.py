@@ -884,10 +884,11 @@ class Full(ScanModel):
 
                 if (self.p.coherence.num_probe_modes>1) and (type(illu_pars) is not np.ndarray):
 
-                    if (illu_pars.diversity is None) or (None in [illu_pars.diversity.noise, illu_pars.diversity.power]):
-                        log(2, "You are doing a multimodal reconstruction with none/ not much diversity between the modes! \n"
-                               "This will likely not reconstruct. You should set .scan.illumination.diversity.power and "
-                               ".scan.illumination.diversity.noise to something for the best results.")
+                    if None in [illu_pars.diversity.noise, illu_pars.diversity.power]:
+                        if illu_pars.diversity is None:
+                            log(2, "You are doing a multimodal reconstruction with none/ not much diversity between the modes! \n"
+                                   "This will likely not reconstruct. You should set .scan.illumination.diversity.power and "
+                                   ".scan.illumination.diversity.noise to something for the best results.")
 
             illumination.init_storage(s, illu_pars)
 
