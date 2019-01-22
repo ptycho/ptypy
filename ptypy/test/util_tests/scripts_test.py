@@ -49,9 +49,6 @@ class DiversifyTest(unittest.TestCase):
             np.testing.assert_array_almost_equal(first_mode_initial_pwr_correction, array[0], decimal=5) # FIXME are we happy with this chosen precision
 
 
-    # TODO test that we're not losing intensity due to shifting too much
-    # This may just be left up to the user to ensure that there is not too much of a shift, as long as the documentation is clear
-
     def test_array_atributes(self):
         """
         Test that some of the attributes of the array are preserved
@@ -66,16 +63,6 @@ class DiversifyTest(unittest.TestCase):
             diversify(array)
             self.assertEqual(array.dtype, initial_dtype)
             self.assertEqual(array.shape, initial_shape)
-
-    def test_underspecify(self):
-        """
-        Test what happens when we don't provide enough tuples
-        """
-        test_name = 'test_underspecify'
-        test_arrays = ['array3dfloat5layers', 'array3dcomplex', 'array3dfloat4layers']
-        for array_name in test_arrays:
-            print('Testing {} in {}'.format(array_name, test_name))
-            array = self.avail_arrays[array_name]
 
 
 if __name__ == "__main__":
