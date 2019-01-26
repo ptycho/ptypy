@@ -624,7 +624,7 @@ class NanomaxStepscanNov2018(PtyScan):
 
         # if the x axis is tilted, take that into account.
         xCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
-        yCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
+        yCosFactor = np.cos(self.info.yMotorAngle / 180.0 * np.pi)
         logger.info(
             "x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
 
