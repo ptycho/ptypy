@@ -794,7 +794,7 @@ class Ptycho(Base):
             Type of saving, one of:
 
                 - *'minimal'*, only initial parameters, probe and object
-                  storages and runtime information is saved.
+                  storages, positions and runtime information is saved.
                 - *'full_flat'*, (almost) complete environment
 
         """
@@ -891,6 +891,9 @@ class Ptycho(Base):
                                  for ID, S in self.probe.storages.items()}
                 minimal.obj = {ID: S._to_dict()
                                for ID, S in self.obj.storages.items()}
+                minimal.positions = {}
+                for ID, S in self.obj.storages.items():
+                    minimal.positions[ID] = np.array([v.coord for v in S.views])
                 try:
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
