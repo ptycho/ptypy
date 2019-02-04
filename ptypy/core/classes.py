@@ -34,7 +34,11 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import weakref
+import scipy.ndimage.interpolation
+import scipy.signal as scisig
 from collections import OrderedDict
+from scipy.fftpack import fft2, ifft2, fftshift, ifftshift
+from scipy.ndimage import fourier_shift as ishift, measurements
 
 try:
     from pympler.asizeof import asizeof
@@ -1046,9 +1050,14 @@ class Storage(Base):
         #             v.roi[0, 1]:v.roi[1, 1]], v.sp)
         if isinstance(v, View):
             if self.ndim == 2:
-                return shift(self.data[
+                if np.any(v.sp != 0.0):
+                    return shift_fourier(self.data[
                              v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
-                             v.sp)
+                                     v.sp)
+                else:
+                    return shift(self.data[
+                             v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
+                                     v.sp)
             elif self.ndim == 3:
                 return shift(self.data[
                              v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1],
@@ -1084,7 +1093,12 @@ class Storage(Base):
             # there must be a nicer way to do this, numpy.take is nearly
             # right, but returns copies and not views.
             if self.ndim == 2:
-                self.data[v.dlayer,
+                if np.any(v.sp != 0.0):
+                    self.data[v.dlayer,
+                          v.dlow[0]:v.dhigh[0],
+                          v.dlow[1]:v.dhigh[1]] = (shift_fourier(newdata, -v.sp))
+                else:
+                    self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
                           v.dlow[1]:v.dhigh[1]] = (shift(newdata, -v.sp))
             elif self.ndim == 3:
@@ -1126,6 +1140,43 @@ def shift(v, sp):
     """
     return v
 
+
+def shift_fourier(v, sp, antialiasing_factor=1, hanning_filter=True, report=False):
+    """
+    Fourier shift
+    Note that v should be complex since a complex array will be returned
+    """
+    # view = np.pad(v, pad_width=100, mode='edge')
+    old_shape = np.array(v.shape)
+    new_shape = old_shape * antialiasing_factor
+    view, _center = u.crop_pad_symmetric_2d(v, new_shape)
+    fourier_transform_of_view = fft2(view)
+    shifted_fourier_transform = fftshift(ishift(fourier_transform_of_view, (-sp[-1], -sp[-2])))
+    if hanning_filter:
+        xfilter = scisig.windows.hann(fourier_transform_of_view.shape[0], sym=True)
+        xfilter /= np.max(xfilter)
+        ft_filter = np.outer(xfilter.T, xfilter)
+        shifted_view = ifft2(ifftshift(ft_filter * shifted_fourier_transform))
+    else:
+        shifted_view = ifft2(ifftshift(shifted_fourier_transform))
+    shifted_view, _center = u.crop_pad_symmetric_2d(shifted_view, old_shape)
+    if report:
+        before_mass_center = np.array(measurements.center_of_mass(np.abs(v)))
+        after_mass_center = np.array(measurements.center_of_mass(np.abs(shifted_view)))
+        final_shift = before_mass_center - after_mass_center
+        print("Expected shift is: %s , final_shift is: %s" % (sp, final_shift))
+    return shifted_view
+
+
+def shift_interp(v, sp, order=3, pre_filter=True, report=False):
+    interp_shift = u.complex_overload(scipy.ndimage.interpolation.shift)
+    shifted_view = interp_shift(v, (-sp[-1], -sp[-2]), order=order, prefilter=pre_filter, mode='nearest')
+    if report:
+        before_mass_center = np.array(measurements.center_of_mass(np.abs(v)))
+        after_mass_center = np.array(measurements.center_of_mass(np.abs(shifted_view)))
+        final_shift = before_mass_center - after_mass_center
+        print("Expected shift is: %s , final_shift is: %s" % (sp, final_shift))
+    return shifted_view
 
 class View(Base):
     """
