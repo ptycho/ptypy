@@ -17,12 +17,13 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .. import defaults_tree
-from ..core.data import MoonFlowerScan, PtydScan, PtyScan, QuickScan
+from ..core.data import MoonFlowerScan, PtydScan, PtyScan, QuickScan, MoonFlowerMultisliceScan
 from ..simulations import SimScan
 from ..utils.verbose import log
 
 __all__ = ['MoonFlowerScan', 'PtydScan', 'PtyScan', 'QuickScan', 'SimScan']
 PTYSCANS = {'MoonFlowerScan': MoonFlowerScan,
+            'MoonFlowerMultisliceScan': MoonFlowerMultisliceScan,
             'PtydScan': PtydScan,
             'PtyScan': PtyScan,
             'QuickScan': QuickScan,

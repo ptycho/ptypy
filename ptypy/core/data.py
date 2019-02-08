@@ -1440,6 +1440,174 @@ class PtydScan(PtyScan):
         return (out.get(key, {}) for key in ['data', 'positions', 'weights'])
 
 
+@defaults_tree.parse_doc('scandata.MoonFlowerMultisliceScan')
+class MoonFlowerMultisliceScan(PtyScan):
+    """
+    Test PtyScan class producing a romantic ptychographic data set of a moon
+    illuminating flowers. It will generate multiple slices, with the data being
+    the propagated coherent sum in the exit wave plane of the scattering from the different slices.
+    The object at each slice is alternately the flowers or the tree object
+
+    Override parent class default:
+
+    Defaults:
+
+    [name]
+    default = MoonFlowerScan
+    type = str
+    help =
+    doc =
+
+    [num_frames]
+    default = 100
+    type = int
+    help = Number of frames to simulate
+    doc =
+
+    [shape]
+    type = int, tuple
+    default = 128
+    help = Shape of the region of interest cropped from the raw data.
+    doc = Cropping dimension of the diffraction frame
+      Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
+    userlevel = 1
+
+    [density]
+    default = 0.2
+    type = float
+    help = Position distance in fraction of illumination frame
+
+    [model]
+    default = 'round'
+    type = str
+    help = The scan pattern
+
+    [photons]
+    default = 1e8
+    type = float
+    help = Total number of photons for Poisson noise
+
+    [psf]
+    default = 0.
+    type = float
+    help = Point spread function of the detector
+
+    [number_object_slices]
+    default = 1
+    type = int
+    help = Number of object slices to allow in the data
+
+    [slice_separation]
+    default = 1e-6
+    type = float
+    help = The separation between the slices.
+    """
+
+    def __init__(self, pars=None, **kwargs):
+        """
+        Parent pars are for the
+        """
+
+        p = self.DEFAULT.copy(depth=99)
+        p.update(pars)
+
+        # Initialize parent class
+        super(MoonFlowerMultisliceScan, self).__init__(p, **kwargs)
+
+        # Derive geometry from input
+        self.geo_main = geometry.Geo(pars=self.meta)
+        slice_parameters = self.meta.copy(99)
+        slice_parameters.distance = p.slice_separation
+        slice_parameters.propagation = 'nearfield'
+        self.geo_slice = geometry.Geo(pars=slice_parameters)
+        # Derive scan pattern
+        if p.model is 'raster':
+            pos = u.Param()
+            pos.spacing = self.geo_main.resolution * self.geo_main.shape * p.density
+            pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+            pos.extent = pos.steps * pos.spacing
+            pos.model = p.model
+            self.num_frames = pos.steps ** 2
+            pos.count = self.num_frames
+            self.pos = xy.raster_scan(pos.spacing[0], pos.spacing[1], pos.steps, pos.steps)
+        else:
+            pos = u.Param()
+            pos.spacing = self.geo_main.resolution * self.geo_main.shape * p.density
+            pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+            pos.extent = pos.steps * pos.spacing
+            pos.model = p.model
+            pos.count = self.num_frames
+            self.pos = xy.from_pars(pos)
+
+        # Calculate pixel positions
+        pixel = self.pos / self.geo_main.resolution
+        pixel -= pixel.min(0)
+        self.pixel = np.round(pixel).astype(int) + 10
+        frame = self.pixel.max(0) + 10 + self.geo_main.shape
+
+
+        try:
+            self.obj1 = resources.flower_obj(frame)
+            trees = resources.tree_obj(frame)
+            self.obj2 = trees * np.exp(1j* (trees-0.5) *np.pi/4)
+
+        except:
+            # matplotlib failsafe
+            self.obj1 = u.gf_2d(u.parallel.MPInoise2d(frame), 1.)
+            self.obj2 = u.gf_2d(u.parallel.MPInoise2d(frame), 1.)
+
+        self.obj_slice_stack = np.array([self.obj1 if (idx % 2 == 0.0) else self.obj2 for idx in range(p.number_object_slices)])
+        # Get probe
+        try:
+            moon = resources.moon_pr(self.geo_main.shape)
+        except:
+            # matplotlib failsafe
+            moon = u.ellipsis(u.grids(self.geo_main.shape)).astype(complex)
+
+        moon /= np.sqrt(u.abs2(moon).sum() / p.photons)
+        self.pr = moon
+        self.load_common_in_parallel = True
+
+        self.p = p
+
+    def load_positions(self):
+        return self.pos
+
+    def load_weight(self):
+        return np.ones(self.pr.shape)
+
+    def load(self, indices):
+        p = self.pixel
+        s = self.geo_main.shape
+        raw = {}
+        if self.p.add_poisson_noise:
+            logger.info("Generating data with poisson noise.")
+        else:
+            logger.info("Generating data without poisson noise.")
+
+        for k in indices:
+
+            #exit_wave = self.pr * self.obj[p[k][0]:p[k][0] + s[0], p[k][1]:p[k][1] + s[1]]
+
+            exit_wave = self.pr
+            if self.p.number_object_slices>1:
+                for idx in range(self.p.number_object_slices):
+                    log(3, "Propagating slice %s" % idx)
+                    exit_wave = self.geo_slice.propagator.fw(exit_wave *self.obj_slice_stack[idx, p[k][0]:p[k][0] + s[0], p[k][1]:p[k][1] + s[1]])
+
+            log(3, "Now propagating to the detector")
+            intensity_j = u.abs2(self.geo_main.propagator.fw(exit_wave *self.obj_slice_stack[-1, p[k][0]:p[k][0] + s[0], p[k][1]:p[k][1] + s[1]]))
+
+            if self.p.psf > 0.:
+                intensity_j = u.gf(intensity_j, self.p.psf)
+
+            if self.p.add_poisson_noise:
+                raw[k] = np.random.poisson(intensity_j).astype(np.int32)
+            else:
+                raw[k] = intensity_j.astype(np.int32)
+
+        return raw, {}, {}
+
 @defaults_tree.parse_doc('scandata.MoonFlowerScan')
 class MoonFlowerScan(PtyScan):
     """
