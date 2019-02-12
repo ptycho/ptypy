@@ -193,6 +193,7 @@ class DM(BaseEngine):
         """
         to = 0.
         tf = 0.
+        tp = 0.
         for it in range(num):
             t1 = time.time()
 
@@ -208,11 +209,18 @@ class DM(BaseEngine):
             t3 = time.time()
             to += t3 - t2
 
+            # Position update
+            self.position_update()
+
+            t4 = time.time()
+            tp += t4 - t3
+
             # count up
             self.curiter +=1
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
+        logger.info('Time spent in Position update: %.2f' % tp)
         error = parallel.gather_dict(error_dct)
         return error
 
