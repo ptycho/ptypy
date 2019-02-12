@@ -42,7 +42,7 @@ class PositionRefine(object):
             self.initial_pos[i, 1] = di_view.pod.ob_view.coord[1]
 
         # Shape and pixelsize 
-        self.shape = self.engine.di.views[di_view_order[0]].shape
+        self.shape = self.engine.pr.S.values()[0].data[0].shape
         self.psize = self.engine.ob.S.values()[0].psize[0]
 
         # Maximum shift
