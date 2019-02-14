@@ -20,14 +20,21 @@ p.io.interaction = u.Param()
 p.scans = u.Param()
 p.scans.MF = u.Param()
 p.scans.MF.name = 'Full'
-p.scans.MF.coherence = u.Param(num_object_modes=2)
+p.scans.MF.coherence = u.Param()
+p.scans.MF.coherence.num_object_modes=1
 p.scans.MF.propagation = 'farfield'
+p.scans.MF.thickness = u.Param()
+p.scans.MF.thickness.number_of_layers = 2
+p.scans.MF.thickness.layer_separation = 5e-6
+
 
 # this next bit is generating simulated data
 p.scans.MF.data = u.Param()
 p.scans.MF.data.name = 'MoonFlowerMultisliceScan'
 p.scans.MF.data.number_object_slices = 2
+
 p.scans.MF.data.slice_separation = 0.1e-6
+
 p.scans.MF.data.positions_theory = None
 p.scans.MF.data.auto_center = None
 p.scans.MF.data.min_frames = 1

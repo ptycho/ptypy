@@ -230,7 +230,8 @@ def basic_fourier_update_multislice(diff_view, pbound=None, alpha=1., LL_error=T
         if not pod.active:
             continue
         
-        f[name] = pod.fw((1 + alpha) * pod.probe * pod.object- alpha * pod.exit)
+        f[name] = pod.fw((1 + alpha) * pod.probe * pod.object - alpha * pod.exit)
+
 
         af2 += u.abs2(f[name])
 
@@ -248,6 +249,7 @@ def basic_fourier_update_multislice(diff_view, pbound=None, alpha=1., LL_error=T
         for name, pod in diff_view.pods.iteritems():
             if not pod.active:
                 continue
+
             df = pod.bw(fm * f[name]) - pod.probe * pod.object
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
