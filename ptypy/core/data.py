@@ -301,7 +301,7 @@ class PtyScan(object):
         self.has_weight2d = None
         self.weight2d = None
         self.has_positions = None
-        self.dfile = None
+        self.dfile = self.info.dfile
         self.save = self.info.save if self.dfile is not None else None
 
         # Construct meta
