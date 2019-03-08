@@ -666,7 +666,7 @@ class NanomaxStepscanNov2018(PtyScan):
     def load(self, indices):
         raw, weights, positions = {}, {}, {}
 
-        hdfpath = 'entry_%%04u/measurement/%s/data' % {'pil100k': 'Pilatus', 'merlin': 'Merlin'}[self.info.detector]
+        hdfpath = 'entry_%%04u/measurement/%s/data' % {'pil100k': 'Pilatus', 'merlin': 'Merlin', 'pil1m': 'Pilatus'}[self.info.detector]
 
         for ind in indices:
             # work out in which scan to find this index
@@ -676,7 +676,7 @@ class NanomaxStepscanNov2018(PtyScan):
                     break
             frame = ind - self.first_frame_of_scan[scan]
             filename = 'scan_%04u_%s_0000.hdf5' % (
-                    scan, {'pil100k': 'pil100k', 'merlin': 'merlin'}[self.info.detector])
+                    scan, {'pil100k': 'pil100k', 'merlin': 'merlin', 'pil1m':'pil1m'}[self.info.detector])
             fullfilename = os.path.join(self.info.path, filename)
             with h5py.File(fullfilename, 'r') as fp:
                 raw[ind] = fp[hdfpath % frame][0]
