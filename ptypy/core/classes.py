@@ -685,8 +685,8 @@ class Storage(Base):
 
             megapixels = np.array(new_shape).astype(float).prod() / 1e6
             if megapixels > MEGAPIXEL_LIMIT:
-                raise RuntimeError('Arrays larger than 50M not supported. You '
-                                   'requested %.2fM pixels.' % megapixels)
+                raise RuntimeError('Arrays larger than %dM not supported. You '
+                                   'requested %.2fM pixels.' % (MEGAPIXEL_LIMIT, megapixels))
 
             # Apply Nd misfit
             if self.data is not None:
