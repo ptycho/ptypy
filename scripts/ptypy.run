@@ -5,6 +5,7 @@ import json
 import os
 from ptypy.core import Ptycho
 from ptypy.utils.verbose import log
+from ptypy.utils import parallel
 from ptypy import utils as u
 
 u.verbose.set_level(3)
@@ -29,7 +30,14 @@ parser.add_argument('--identifier', '-I',
                     dest="identifier",
                     help="This is the same as p.run.",
                     default=None,
+                    nargs="+",
                     type=str)
+
+parser.add_argument('--share-probe', '-S',
+                    dest="share_probe",
+                    action='store_true',
+                    help="You can pass a list of scan identifiers and they will share the probe. "
+                         "Assumes identical geometries for now since this is the dominant use case.")
 
 parser.add_argument('--plot', '-P',
                     dest="plotting",
@@ -40,7 +48,11 @@ parser.add_argument('--plot', '-P',
 args = parser.parse_args()
 
 
-def _byteify(data, ignore_dicts = False):
+if len(args.identifier)<2:
+    args.identifier = args.identifier[0]
+
+
+def _byteify(data, ignore_dicts=False):
     # if this is a unicode string, return its string representation
     if isinstance(data, unicode):
         return data.encode('utf-8')
@@ -74,8 +86,9 @@ def get_parameters(args):
 def get_folder_name(args):
     from datetime import datetime
     now = datetime.now()
+    id = args.identifier[0] if isinstance(args.identifier, list) else args.identifier
     if args.identifier is not None:
-        output_path = os.path.join(args.output_folder, "scan_{}".format(args.identifier))
+        output_path = os.path.join(args.output_folder, "scan_{}".format(id))
     else:
         output_path = os.path.join(args.output_folder, "scan_{}".format(now.strftime("%Y%m%d%H%M%S")))
     log(3, "Output is going in: {}".format(output_path))
@@ -93,8 +106,17 @@ def parse_data_paths_with_parameters(parameters):
             elif isinstance(sub_entry, str):
                 data_entry[sub_entry_key] = sub_entry % parameters
 
+
+if isinstance(args.identifier, list) and not args.share_probe:
+    log(3, "%s" % args.identifier)
+    log(3, 'RuntimeError: If you pass a list of arguments you must share the probe between them. Set -S option.')
+    raise RuntimeError('If you pass a list of arguments you must share the probe between them. Set -S option.')
+
+
 parameters = get_parameters(args)
-parameters.run = args.identifier
+parameters.run = args.identifier[0] if isinstance(args.identifier, list) else args.identifier
+
+
 if args.plotting:
     log(3, "Turning the plotting on.")
     parameters.io.autoplot = u.Param(active=True)
@@ -104,7 +126,8 @@ else:
 # make sure we aren't randomly writing somewhere if this isn't set.
 if args.output_folder is not None:
     parameters.io.home = get_folder_name(args)
-    parameters.io.rfile = "%s/scan_%s.ptyr" % (get_folder_name(args), str(parameters.run))
+    run_name = parameters.run[0] if isinstance(parameters.run, list) else parameters.run
+    parameters.io.rfile = "%s/scan_%s.ptyr" % (get_folder_name(args), str(run_name))
     parameters.io.autosave = u.Param(active=True, interval=100)
     log(3, "Autosave is on, with io going in {}, and the final reconstruction into {}".format(parameters.io.home,
                                                                                               parameters.io.rfile))
@@ -115,11 +138,49 @@ else:
 
 
 
+if args.share_probe:
+    log(3, "Sharing the probe across scans: %s" % args.identifier)
+    # need to duplicate the scans here but parse with different identifiers.
+    if len(parameters.scans.keys())>1:
+        log(3, "RuntimeError:For linked scans we should only have one scan listed in the json file.")
+        raise RuntimeError("For linked scans we should only have one scan listed in the json file.")
 
+    master_scan = parameters.scans[parameters.scans.keys()[0]]
+    del parameters.scans[parameters.scans.keys()[0]]  # delete it for now, we will add it back in with a different name
+    for identifier in args.identifier:
+        parameters.run = identifier
+        parameters.scans[str(identifier)] = master_scan.copy(99)
+        data_entry = parameters.scans[str(identifier)].data
+        for sub_entry_key, sub_entry in data_entry.iteritems():
+            if isinstance(sub_entry, dict):
+                for dict_entry_key, dict_entry in sub_entry.iteritems():
+                    if isinstance(dict_entry, str):
+                        sub_entry[dict_entry_key] = dict_entry % parameters
+            elif isinstance(sub_entry, str):
+                data_entry[sub_entry_key] = sub_entry % parameters
 
-# have to get the identifier into scan.data somehow.
-parse_data_paths_with_parameters(parameters)
+    # now run to level 3 to get the containers sorted
+    P = Ptycho(parameters, level=3)
+    probe_storages = P.probe.storages.values()
+    master_storage = probe_storages[0]
+    for sname, storage in P.probe.storages.iteritems():
+        for v in storage.views:
+            v.storage = master_storage
+            v.storageID = master_storage.ID
+        if sname is not master_storage.ID:
+            P.probe.storages.pop(sname) # delete it's originally created storage
+    parallel.barrier()
+    P.probe.reformat()  # deal with it!
+    P.print_stats()
+    parallel.barrier()
+    P.init_engine()
+    parallel.barrier()
+    P.run()
+    parallel.barrier()
+    P.finalize()
+else:
+    # have to get the identifier into scan.data somehow.
+    parse_data_paths_with_parameters(parameters)
+    P = Ptycho(parameters, level=args.ptypy_level)
 
-
-P = Ptycho(parameters, level=args.ptypy_level)
 
