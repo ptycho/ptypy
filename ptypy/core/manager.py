@@ -762,6 +762,7 @@ class _Vanilla(object):
         self.pad = self.p.pad
         probe_shape = common['shape']
         center = common['center']
+        psize = common['psize']        
 
         if self.pad is not None:
             probe_shape = tuple(np.array(probe_shape) + self.pad)
@@ -770,6 +771,7 @@ class _Vanilla(object):
         if self.resample is not None:
             probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
             center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
+            psize = np.array(psize) / self.resample
         
         # Collect geometry parameters
         get_keys = ['distance', 'center', 'energy', 'psize']
@@ -777,7 +779,7 @@ class _Vanilla(object):
         geo_pars.shape = probe_shape
         geo_pars.center = center
         geo_pars.propagation = self.p.propagation
-
+        geo_pars.psize = psize
 
         # make a Geo instance and fix resolution
         g = geometry.Geo(owner=self.ptycho, pars=geo_pars)
