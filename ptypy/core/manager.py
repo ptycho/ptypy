@@ -1312,33 +1312,7 @@ class OPRModel(Full):
         return new_pods, new_probe_ids, new_object_ids
 
 
-    def probe_consistency_update(self):
-        """
-        DM probe consistency update for orthogonal probe relaxation.
 
-        Here what we do is compute a singular value decomposition on
-        the ensemble of probes.
-        """
-
-        if self.p.subspace_dim == 0:
-            # Boring case equivalent to normal DM - do not implement
-            raise NotImplementedError('0 dim case is not implemented.')
-
-        for sID, prS in self.ptycho.probe.S.iteritems():
-            # pr_input = np.array([2 * self.pr[v] - self.pr_old[v]
-            # for v in self.pr.views.values() if v.active])
-            pr_input = np.array([prS[l] for i, l
-                                            in self.local_layers[sID]])
-
-            new_pr, modes, coeffs = reduce_dimension(a=pr_input,
-                dim=self.p.subspace_dim, local_indices=self.local_indices[sID])
-
-            self.OPR_modes[sID] = modes
-            self.OPR_coeffs[sID] = coeffs
-
-            # Update probes
-            for k, il in enumerate(self.local_layers[sID]):
-                prS[il[1]] = new_pr[k]
 
 
 # Append illumination and sample defaults
