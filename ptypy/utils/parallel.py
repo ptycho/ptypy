@@ -25,10 +25,9 @@ del hmpi
 MPIenabled = not (size == 1)
 master = (rank == 0)
 
-__all__ = ['MPIenabled', 'comm', 'MPI', 'master', 'barrier',
-           'LoadManager', 'loadmanager', 'allreduce', 'send', 'receive',
-           'bcast', 'bcast_dict', 'gather_dict', 'MPIrand_normal',
-           'MPIrand_uniform', 'MPInoise2d']
+__all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
+           'LoadManager', 'loadmanager','allreduce','send','receive','bcast',
+           'bcast_dict', 'gather_dict','MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
 
 
 def useMPI(do=None):
@@ -197,7 +196,6 @@ def allreduce(a, op=None):
     else:
         return a
 
-
 def allreduceC(c):
     """
     Performs MPI parallel ``allreduce`` with a sum as reduction
@@ -211,7 +209,6 @@ def allreduceC(c):
     """
     for s in c.S.itervalues():
         allreduce(s.data)
-
 
 def _MPIop(a, op, axis=None):
     """
@@ -337,6 +334,8 @@ def send(data, dest=0, tag=0):
         comm.send(data, dest=dest, tag=1)
 
 
+
+
 def receive(source=None, tag=0):
     """
     Wrapper for `comm.Recv`. Probes first with `comm.recv`. If the
@@ -383,7 +382,6 @@ def receive(source=None, tag=0):
         return thing
     else:
         return thing
-
 
 def bcast(data, source=0):
     """
@@ -449,7 +447,6 @@ def bcast(data, source=0):
             thing = comm.bcast(None, source)
 
         return thing
-
 
 def bcast_dict(dct, keys='all', source=0):
     """
@@ -518,7 +515,6 @@ def bcast_dict(dct, keys='all', source=0):
 
         return dct
 
-
 def allgather_dict(dct):
     """
     Allgather dict in place.
@@ -526,7 +522,6 @@ def allgather_dict(dct):
     gdict = gather_dict(dct)
     bcast_dict(gdict)
     dct.update(gdict)
-
 
 def gather_dict(dct, target=0):
     """
@@ -567,26 +562,25 @@ def gather_dict(dct, target=0):
             continue
 
         if rank == target:
-            l = comm.recv(source=r, tag=9999)
+            l = comm.recv(source=r,tag=9999)
             for i in range(l):
                 #k = receive(r)
-                k = comm.recv(source=r, tag=9999)
+                k = comm.recv(source=r,tag=9999)
                 v = receive(r)
                 #print rank,str(k),v
                 out[k] = v
         elif r == rank:
             # your turn to send
             l = len(dct)
-            comm.send(l, dest=target, tag=9999)
+            comm.send(l, dest=target,tag=9999)
             for k,v in dct.iteritems():
                 #print rank,str(k),v
                 #send(k, dest=target)
-                comm.send(k, dest=target, tag=9999)
+                comm.send(k, dest=target,tag=9999)
                 send(v, dest=target)
         barrier()
 
     return out
-
 
 def _send(data, dest=0, tag=0):
     """
@@ -706,7 +700,7 @@ def _check(data):
             data = np.ascontiguousarray(data)
     elif type(data) is tuple:
         key = data[0]
-        data = data[1]  # check(data[1])[1]
+        data = data[1] #_check(data[1])[1]
     else:
         raise TypeError("Input data %s incompatible for broadcast" % str(type(data)))
     return key, data
@@ -724,9 +718,7 @@ def MPIrand_normal(loc=0.0, scale=1.0, size=(1)):
     allreduce(sample)
     return sample
 
-
-MPIrand_normal.__doc__ += np.random.normal.__doc__
-
+MPIrand_normal.__doc__+=np.random.normal.__doc__
 
 def MPIrand_uniform(low=0.0, high=1.0, size=(1)):
     """
@@ -740,10 +732,9 @@ def MPIrand_uniform(low=0.0, high=1.0, size=(1)):
     allreduce(sample)
     return sample
 
-MPIrand_uniform.__doc__ += np.random.uniform.__doc__
+MPIrand_uniform.__doc__+=np.random.uniform.__doc__
 
-
-def MPInoise2d(sh, rms=1.0, mfs=2, rms_mod=None, mfs_mod=2):
+def MPInoise2d(sh,rms=1.0, mfs=2,rms_mod=None, mfs_mod=2):
     """
     Creates complex-valued statistical noise in the shape of `sh`
     consistent across all nodes.
@@ -778,16 +769,16 @@ def MPInoise2d(sh, rms=1.0, mfs=2, rms_mod=None, mfs_mod=2):
     """
     from ..utils import gf_2d
     sh = tuple(sh)
-    A = np.ones(sh, dtype=complex)
-    if rms is not None and float(rms) != 0.:
+    A=np.ones(sh,dtype=complex)
+    if rms is not None and float(rms)!=0.:
         mfs /= 2.35
-        phnoise = MPIrand_normal(0.0, rms, sh)
-        phnoise[:] = gf_2d(phnoise, mfs)
+        phnoise = MPIrand_normal(0.0,rms,sh)
+        phnoise[:] = gf_2d(phnoise,mfs)
         A *= np.exp(1j*phnoise)
-    if rms_mod is not None and float(rms_mod) != 0.:
-        ampnoise = MPIrand_normal(1.0, rms_mod, sh)
-        mfs_mod /= 2.35
-        ampnoise[:] = gf_2d(ampnoise, mfs_mod)
+    if rms_mod is not None and float(rms_mod)!=0.:
+        ampnoise = MPIrand_normal(1.0,rms_mod,sh)
+        mfs_mod /=2.35
+        ampnoise[:] = gf_2d(ampnoise,mfs_mod)
         A *= ampnoise
     return A
 
