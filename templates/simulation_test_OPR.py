@@ -14,7 +14,6 @@ p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
 p.io.autosave = u.Param()
 p.io.autosave.interval = 20
-#p.io.autosave.store_OPR_iter = None
 p.io.autoplot = u.Param()
 p.io.autoplot.active = False
 p.io.interaction = u.Param()
@@ -76,7 +75,7 @@ p.engines.engine01.subspace_dim = 10
 
 p.engines.engine02 = u.Param()
 p.engines.engine02.name = 'MLOPR'
-p.engines.engine02.numiter = 1000
+p.engines.engine02.numiter = 100
 p.engines.engine02.numiter_contiguous = 5
 p.engines.engine02.reg_del2 = True
 p.engines.engine02.reg_del2_amplitude = 1.0
