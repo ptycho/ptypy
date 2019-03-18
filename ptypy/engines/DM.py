@@ -15,7 +15,7 @@ from ..utils import parallel
 from .utils import basic_fourier_update
 from . import BaseEngine, register
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel
+from ..core.manager import Full, Vanilla, Bragg3dModel, OPRModel
 
 __all__ = ['DM']
 
@@ -113,7 +113,7 @@ class DM(BaseEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, OPRModel]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -167,6 +167,9 @@ class DM(BaseEngine):
 
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
+        if isinstance(self.pods[self.pods.keys()[0]].model, OPRModel):# this sucks at the moment.
+            self.model = 'OPRModel'
+            self.pr_old = self.pr.copy(self.pr.ID + '_old') # can we make do without this?
 
     def engine_prepare(self):
         """
@@ -410,6 +413,8 @@ class DM(BaseEngine):
             if support is not None:
                 s.data *= self.probe_support[name]
 
+            if self.model is 'OPRModel':
+                self.pods[self.pods.keys()[0]].model.probe_consistency_update()  # euch
             # Compute relative change in probe
             buf = pr_buf.storages[name].data
             change += u.norm2(s.data - buf) / u.norm2(s.data)
@@ -418,3 +423,4 @@ class DM(BaseEngine):
             buf[:] = s.data
 
         return np.sqrt(change / len(pr.storages))
+
