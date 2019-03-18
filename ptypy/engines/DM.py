@@ -16,7 +16,7 @@ from .utils import basic_fourier_update
 from . import register
 from .base import PositionCorrectionEngine
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, OPRModel
 
 __all__ = ['DM']
 
@@ -120,7 +120,7 @@ class DM(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, OPRModel]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -171,7 +171,12 @@ class DM(PositionCorrectionEngine):
 
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
-        
+
+        if isinstance(self.pods[self.pods.keys()[0]].model, OPRModel):# this sucks at the moment.
+            self.model = 'OPRModel'
+            self.pr_old = self.pr.copy(self.pr.ID + '_old') # can we make do without this?
+
+
     def engine_prepare(self):
         """
         Last minute initialization.
@@ -420,6 +425,8 @@ class DM(PositionCorrectionEngine):
             # Apply probe support if requested
             self.support_constraint(s)
 
+            if self.model is 'OPRModel':
+                self.pods[self.pods.keys()[0]].model.probe_consistency_update()  # euch
             # Compute relative change in probe
             buf = pr_buf.storages[name].data
             change += u.norm2(s.data - buf) / u.norm2(s.data)
@@ -428,3 +435,4 @@ class DM(PositionCorrectionEngine):
             buf[:] = s.data
 
         return np.sqrt(change / len(pr.storages))
+

@@ -29,12 +29,13 @@ from .classes import MODEL_PREFIX
 from ..utils import parallel
 from ..utils.descriptor import EvalDescriptor
 from .. import defaults_tree
+from .. engines.utils import reduce_dimension
 
 # Please set these globally later
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'BlockScanModel', 'BlockVanilla', 'BlockFull']
+__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'BlockScanModel', 'BlockVanilla', 'BlockFull', 'OPRModel']
 
 class _LogTime(object):
     
@@ -1176,6 +1177,169 @@ class Full(_Full, ScanModel):
 @defaults_tree.parse_doc('scan.BlockFull')
 class BlockFull(_Full, BlockScanModel):
     pass
+
+@defaults_tree.parse_doc('scan.OPRModel')
+class OPRModel(Full):
+    """
+    Manage a single scan model (sharing, coherence, propagation, ...)
+
+    Defaults:
+
+    # note: this class also imports the module-level defaults for sample
+    # and illumination, below.
+
+    [name]
+    default = OPRModel
+    type = str
+    help =
+    doc =
+
+    [coherence]
+    default =
+    help = Coherence parameters
+    doc =
+    type = Param
+    userlevel =
+    lowlim = 0
+
+    [coherence.num_probe_modes]
+    default = 1
+    help = Number of probe modes
+    doc =
+    type = int
+    userlevel = 0
+    lowlim = 0
+
+    [coherence.num_object_modes]
+    default = 1
+    help = Number of object modes
+    doc =
+    type = int
+    userlevel = 0
+    lowlim = 0
+
+    [coherence.energies]
+    default = [1.0]
+    type = list
+    help = ?
+    doc = ?
+
+    [coherence.spectrum]
+    default = [1.0]
+    help = Amplitude of relative energy bins if the probe modes have a different energy
+    doc =
+    type = list
+    userlevel = 2
+    lowlim = 0
+
+    [coherence.object_dispersion]
+    default = None
+    help = Energy dispersive response of the object
+    doc = One of:
+       - ``None`` or ``'achromatic'``: no dispersion
+       - ``'linear'``: linear response model
+       - ``'irregular'``: no assumption
+      **[not implemented]**
+    type = str
+    userlevel = 2
+
+    [coherence.probe_dispersion]
+    default = None
+    help = Energy dispersive response of the probe
+    doc = One of:
+       - ``None`` or ``'achromatic'``: no dispersion
+       - ``'linear'``: linear response model
+       - ``'irregular'``: no assumption
+      **[not implemented]**
+    type = str
+    userlevel = 2
+
+    [subspace_dim]
+    default = 1
+    type = int
+    help = The dimension of the subspace spanned by the probe ensemble
+    """
+
+    _PREFIX = MODEL_PREFIX
+
+
+
+    def _create_pods(self):
+        new_pods, new_probe_ids, new_object_ids = super(OPRModel, self)._create_pods()
+
+        prviewdata = {}
+        nmodes = max([ix.layer for _iy, ix in self.ptycho.probe.views.iteritems()]) + 1
+        for vID, v in self.ptycho.probe.views.iteritems():
+            # Get the associated diffraction frame
+            di_view = v.pod.di_view
+            # Reformat the layer
+            v.layer = di_view.layer*nmodes + v.layer#np.array((di_view.layer, v.layer))
+            # Deactivate if the associate di_view is inactive (to spread the probe across nodes consistently with diff)
+            v.active = di_view.active
+            # Store the current view data so we can restore it after reformat
+            if v.active:
+                prviewdata[vID] = v.data.copy()
+
+        # Let all probe storages reshape themselves
+        self.ptycho.probe.reformat()
+
+        # Store probe data back
+        for vID, v in self.ptycho.probe.views.iteritems():
+            if v.active:
+                self.ptycho.probe[v] = prviewdata[vID]
+        del prviewdata
+
+        # Create array to store OPR modes
+        dim = self.p.subspace_dim if self.p.subspace_dim > 0 else 1
+        self.OPR_modes = {}
+        self.OPR_coeffs = {}
+        self.local_layers = {}
+        self.local_indices = {}
+        for sID, s in self.ptycho.probe.S.iteritems():
+            shape = (dim,) + s.data.shape[1:]
+            dtype = s.data.dtype
+            self.OPR_modes[sID] = np.zeros(shape=shape, dtype=dtype)
+
+            # Prepare a sorted list (with index) of all layers
+            # (which are locally available through views)
+            unique_layers = sorted(set([v.layer for v in
+                s.owner.views_in_storage(s=s, active_only=False)]))
+            layers = list(enumerate(unique_layers))
+
+            # Then make a list of layers held locally by the node
+            self.local_layers[sID] = [x for x in layers if x[1] in s.layermap]
+            self.local_indices[sID] = [i for i, l in self.local_layers[sID]]
+        return new_pods, new_probe_ids, new_object_ids
+
+
+    def probe_consistency_update(self):
+        """
+        DM probe consistency update for orthogonal probe relaxation.
+
+        Here what we do is compute a singular value decomposition on
+        the ensemble of probes.
+        """
+
+        if self.p.subspace_dim == 0:
+            # Boring case equivalent to normal DM - do not implement
+            raise NotImplementedError('0 dim case is not implemented.')
+
+        for sID, prS in self.ptycho.probe.S.iteritems():
+            # pr_input = np.array([2 * self.pr[v] - self.pr_old[v]
+            # for v in self.pr.views.values() if v.active])
+            pr_input = np.array([prS[l] for i, l
+                                            in self.local_layers[sID]])
+
+            new_pr, modes, coeffs = reduce_dimension(a=pr_input,
+                dim=self.p.subspace_dim, local_indices=self.local_indices[sID])
+
+            self.OPR_modes[sID] = modes
+            self.OPR_coeffs[sID] = coeffs
+
+            # Update probes
+            for k, il in enumerate(self.local_layers[sID]):
+                prS[il[1]] = new_pr[k]
+
 
 # Append illumination and sample defaults
 defaults_tree['scan.Full'].add_child(illumination.illumination_desc)

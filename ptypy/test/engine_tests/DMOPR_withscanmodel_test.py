@@ -9,7 +9,7 @@ This file is part of the PTYPY package.
 import unittest
 from ptypy.test import utils as tu
 from ptypy import utils as u
-from ..core import Ptycho
+from ptypy.core import Ptycho
 
 
 class DMOPRTest(unittest.TestCase):
@@ -26,7 +26,7 @@ class DMOPRTest(unittest.TestCase):
         p.ipython_kernel = False
         p.scans = u.Param()
         p.scans.MF = u.Param()
-        p.scans.MF.name = 'OPR'
+        p.scans.MF.name = 'OPRModel'
         p.scans.MF.propagation = 'farfield'
         p.scans.MF.subspace_dim = 10
 
@@ -54,11 +54,11 @@ class DMOPRTest(unittest.TestCase):
         p.scans.MF.data.photons = 100000000.0
         p.scans.MF.data.psf = 0.0
         p.scans.MF.data.density = 0.2
-        p.engines = u.Param()
 
+        p.engines = u.Param()
         p.engines.engine00 = u.Param()
         p.engines.engine00.name = "DM"
-        p.engines.engine00.IP_metric = 1.
+        #p.engines.engine00.IP_metric = 1.
         P = Ptycho(p, level=5)
 
 if __name__ == "__main__":
