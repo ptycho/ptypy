@@ -685,8 +685,8 @@ class Storage(Base):
 
             megapixels = np.array(new_shape).astype(float).prod() / 1e6
             if megapixels > MEGAPIXEL_LIMIT:
-                raise RuntimeError('Arrays larger than 50M not supported. You '
-                                   'requested %.2fM pixels.' % megapixels)
+                raise RuntimeError('Arrays larger than %dM not supported. You '
+                                   'requested %.2fM pixels.' % (MEGAPIXEL_LIMIT, megapixels))
 
             # Apply Nd misfit
             if self.data is not None:
@@ -1132,16 +1132,16 @@ class View(Base):
     """
     _fields = Base._fields + \
                [('active', 'b1'),
-                ('dlayer','<i8'),
+                ('dlayer', '<i8'),
                 ('layer', '<i8'), 
-                ('dhigh','(5,)i8'),
-                ('dlow','(5,)i8'),
-                ('shape','(5,)i8'),
-                ('dcoord','(5,)i8'),
+                ('dhigh', '(5,)i8'),
+                ('dlow', '(5,)i8'),
+                ('shape', '(5,)i8'),
+                ('dcoord', '(5,)i8'),
                 ('psize', '(5,)f8'),
                 ('coord', '(5,)f8'),
                 ('sp', '(5,)f8')]
-    __slots__ = Base.__slots__ + ['_ndim', 'storage', 'storageID','_pod','_pods','error']
+    __slots__ = Base.__slots__ + ['_ndim', 'storage', 'storageID', '_pod', '_pods', 'error']
     ########
     # TODO #
     ########
@@ -1281,7 +1281,7 @@ class View(Base):
         return self._record['active'] 
         
     @active.setter
-    def active(self,v):
+    def active(self, v):
         self._record['active'] = v
         
     @property
@@ -1289,9 +1289,8 @@ class View(Base):
         return self._record['dlayer']
         
     @dlayer.setter
-    def dlayer(self,v):
+    def dlayer(self, v):
         self._record['dlayer'] = v
-        
         
     @property
     def layer(self):

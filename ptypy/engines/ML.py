@@ -356,6 +356,7 @@ class ML_Gaussian(object):
         self.p = self.engine.p
         self.ob = self.engine.ob
         self.pr = self.engine.pr
+        self.float_intens_coeff = {}
 
         if self.p.intensity_renormalization is None:
             self.Irenorm = 1.
@@ -416,7 +417,6 @@ class ML_Gaussian(object):
             if not diff_view.active:
                 continue
             try:
-                del diff_view.float_intens_coeff
                 del diff_view.error
             except:
                 pass
@@ -456,9 +456,9 @@ class ML_Gaussian(object):
 
             # Floating intensity option
             if self.p.floating_intensities:
-                diff_view.float_intens_coeff = ((w * Imodel * I).sum()
+                self.float_intens_coeff[dname] = ((w * Imodel * I).sum()
                                                 / (w * Imodel**2).sum())
-                Imodel *= diff_view.float_intens_coeff
+                Imodel *= self.float_intens_coeff[dname]
 
             DI = Imodel - I
 
@@ -542,9 +542,9 @@ class ML_Gaussian(object):
                     A2 += 2 * np.real(f * b.conj()) + u.abs2(a)
 
             if self.p.floating_intensities:
-                A0 *= diff_view.float_intens_coeff
-                A1 *= diff_view.float_intens_coeff
-                A2 *= diff_view.float_intens_coeff
+                A0 *= self.float_intens_coeff[dname]
+                A1 *= self.float_intens_coeff[dname]
+                A2 *= self.float_intens_coeff[dname]
             A0 -= I
 
             B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm

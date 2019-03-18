@@ -38,7 +38,7 @@ def by_name(name):
         raise RuntimeError('Unknown engine: %s' % name)
     return ENGINES[name]
 
-from base import BaseEngine
+from base import BaseEngine, DEFAULT_iter_info
 
 # These imports should be executable separately
 from . import DM
@@ -53,7 +53,4 @@ from . import Bragg3d_engines
 # dynamic load, maybe discarded in future
 dynamic_load('./', ['BaseEngine'] + ENGINES.keys(), True)
 dynamic_load('~/.ptypy/', ['BaseEngine'] + ENGINES.keys(), True)
-
-    
-
 

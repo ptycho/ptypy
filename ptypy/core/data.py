@@ -75,10 +75,7 @@ class PtyScan(object):
     [dfile]
     type = file
     default = None
-    help = Prepared data file path
-    doc = If source was ``None`` or ``'file'``, data will be loaded from this file and processing as
-      well as saving is deactivated. If source is the name of an experiment recipe or path to a
-      file, data will be saved to this file
+    help = File path where prepared data will be saved in the ``ptyd`` format.
     userlevel = 0
 
     [chunk_format]
@@ -1229,6 +1226,14 @@ class PtydScan(PtyScan):
     help =
     doc =
 
+    [dfile]
+    type = file
+    default = None
+    help = Prepared data file path
+    doc = If source is ``None`` or ``'file'``, data will be loaded from this file and processing as
+      well as saving is deactivated. If source is the path to a file, data will be saved to this file.
+    userlevel = 0
+
     [source]
     default = 'file'
     type = str, None
@@ -1249,8 +1254,8 @@ class PtydScan(PtyScan):
 
         if source is None or str(source) == 'file':
             # This is the case of absolutely no additional work
-            logger.info('No explicit source file was given. '
-                        'Will continue read only.')
+            logger.info('No source file was given. '
+                        'Using dfile as read-only source.')
             source = pars['dfile']
             manipulate = False
         elif pars is None or len(pars) == 0:
@@ -1260,7 +1265,7 @@ class PtydScan(PtyScan):
         else:
             logger.info('Explicit source file given. '
                         'Modification is possible.\n')
-            dfile = pars['dfile']
+            dfile = pars.get('dfile')
 
             # Check for conflict
             if dfile and (str(u.unique_path(source)) == str(u.unique_path(dfile))):
@@ -1314,20 +1319,14 @@ class PtydScan(PtyScan):
             logger.warning('There should be meta information in '
                            '%s. Something is odd here.' % source)
 
-        # Update given parameters when they are None
-        if not manipulate:
-            p.update(meta)
-        else:
-            # Replace only None entries in p
-            # FIXME:
-            # BE: This was the former right way when the defaults
-            # were mostly None, now this no longer applies, unless
-            # defaults are overwritten to None. I guess t would be
-            # canonical now to overwrite the defaults in the
-            # docstring. But since reprocessing is rare
-            for k, v in meta.items():
-                if p.get(k) is None:
-                    p[k] = v
+        # Apply parameters from ptyd file.
+        p.update(meta)
+
+        if manipulate:
+            # Override parameters that are explicitly passed as input arguments
+            for k in self.METAKEYS:
+                if k in pars:
+                    p[k] = pars[k]
 
         super(PtydScan, self).__init__(p)
 
@@ -1441,6 +1440,7 @@ class PtydScan(PtyScan):
             out[k] = dict(zip(indices, v))
 
         return (out.get(key, {}) for key in ['data', 'positions', 'weights'])
+
 
 @defaults_tree.parse_doc('scandata.MoonFlowerScan')
 class MoonFlowerScan(PtyScan):
@@ -1590,6 +1590,7 @@ class MoonFlowerScan(PtyScan):
 
         return raw, {}, {}
 
+
 @defaults_tree.parse_doc('scandata.QuickScan')
 class QuickScan(PtyScan):
     """
@@ -1666,7 +1667,8 @@ class QuickScan(PtyScan):
         for k in indices:
             raw[k] = self.diff.copy().astype(np.int32)
         return raw, {}, {}
-        
+
+
 if __name__ == "__main__":
     u.verbose.set_level(3)
     MS = MoonFlowerScan(num_frames=100)

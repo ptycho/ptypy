@@ -95,7 +95,7 @@ class DM(BaseEngine):
 
     [obj_smooth_std]
     default = None
-    type = int
+    type = float
     lowlim = 0
     help = Gaussian smoothing (pixel) of the current object prior to update
     doc = If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
@@ -266,9 +266,9 @@ class DM(BaseEngine):
             pre_str = 'Iteration (Overlap) #%02d:  ' % inner
 
             # Update object first
-            if self.p.update_object_first or (inner > 0):
+            if self.p.update_object_first or (inner > 0) or not do_update_probe:
                 # Update object
-                log(4,pre_str + '----- object update -----')
+                log(4, pre_str + '----- object update -----')
                 self.object_update()
 
             # Exit if probe should not be updated yet
@@ -276,9 +276,9 @@ class DM(BaseEngine):
                 break
 
             # Update probe
-            log(4,pre_str + '----- probe update -----')
+            log(4, pre_str + '----- probe update -----')
             change = self.probe_update()
-            log(4,pre_str + 'change in probe is %.3f' % change)
+            log(4, pre_str + 'change in probe is %.3f' % change)
 
             # Recenter the probe
             self.center_probe()
