@@ -455,11 +455,6 @@ class DMOPR(BaseEngine):
             self.OPR_modes[sID] = modes
             self.OPR_coeffs[sID] = coeffs
 
-            ### Storing OPR modes and coeffs in dumps
-            if self.ptycho.p.io.autosave.store_OPR_iter:
-                self.ptycho.runtime['OPR_modes'] = self.OPR_modes
-                self.ptycho.runtime['OPR_coeffs'] = self.OPR_coeffs
-
             # Update probes
             for k, il in enumerate(self.local_layers[sID]):
                 prS[il[1]] = new_pr[k]

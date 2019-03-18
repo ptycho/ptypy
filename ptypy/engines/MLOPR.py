@@ -455,11 +455,6 @@ class MLOPR(BaseEngine):
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
 
-        ### Storing OPR modes and coeffs in dumps
-        if self.ptycho.p.io.autosave.store_OPR_iter:
-            self.ptycho.runtime['OPR_modes'] = self.OPR_modes
-            self.ptycho.runtime['OPR_coeffs'] = self.OPR_coeffs
-
         return error_dct  #np.array([[self.ML_model.LL[0]] * 3])
 
     def engine_finalize(self):
