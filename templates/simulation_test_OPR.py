@@ -59,14 +59,14 @@ p.scans.MF.illumination.aperture.edge = 10
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter = 30
+p.engines.engine00.numiter = 3
 p.engines.engine00.numiter_contiguous = 5
 p.engines.engine00.overlap_max_iterations = 2
 p.engines.engine00.fourier_relax_factor = 0.01
 
 p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'DMOPR'
-p.engines.engine01.numiter = 100
+p.engines.engine01.numiter = 1
 p.engines.engine01.numiter_contiguous = 5
 p.engines.engine01.overlap_max_iterations = 2
 p.engines.engine01.fourier_relax_factor = 0.01
