@@ -20,8 +20,8 @@ p.io.interaction = u.Param()
 
 p.scans = u.Param()
 p.scans.MF = u.Param()
-p.scans.MF.name = 'OPRModel'
-p.scans.MF.subspace_dim = 10
+p.scans.MF.name = 'Full'
+# p.scans.MF.subspace_dim = 10
 # p.scans.MF.name = 'Full'
 # p.scans.MF.subspace_dim = 10
 p.scans.MF.propagation = 'farfield'
@@ -81,11 +81,11 @@ P = Ptycho(p, level=4)
 
 # Mess up the positions in a predictible way (for MPI)
 a = 0.
-for pname, pod in P.pods.iteritems():
-    pod.ob_view.coord += 3e-7 * np.array([np.sin(a), np.cos(a)])
-    #pod.diff *= np.random.uniform(0.1,1)
-    a += 4.
-P.obj.reformat()
+# for pname, pod in P.pods.iteritems():
+#     pod.ob_view.coord += 3e-7 * np.array([np.sin(a), np.cos(a)])
+#     #pod.diff *= np.random.uniform(0.1,1)
+#     a += 4.
+# P.obj.reformat()
 
 # Run
 P.run()

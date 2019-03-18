@@ -169,11 +169,8 @@ class DM(BaseEngine):
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
         self.model=self.pods[self.pods.keys()[0]].model
 
-        if self.model.p.name=='OPRModel':
-            self.pr_old = self.pr.copy(self.pr.ID + '_old') # can we make do without this?
-            self.probe_update = self.OPR_compatible_probe_update
-        else:
-            self.probe_update = self.original_DM_probe_update
+
+        self.pr_old = self.pr.copy(self.pr.ID + '_old') # can we make do without this?
 
     def engine_prepare(self):
         """
@@ -376,64 +373,64 @@ class DM(BaseEngine):
 
 
 
-    def original_DM_probe_update(self):
-        """
-        DM probe update.
-        """
-        pr = self.pr
-        pr_nrm = self.pr_nrm
-        pr_buf = self.pr_buf
+    # def probe_update(self):
+    #     """
+    #     DM probe update.
+    #     """
+    #     pr = self.pr
+    #     pr_nrm = self.pr_nrm
+    #     pr_buf = self.pr_buf
+    #
+    #     # Fill container
+    #     # "cfact" fill
+    #     # BE: was this asymmetric in original code
+    #     # only because of the number of MPI nodes ?
+    #     if parallel.master:
+    #         for name, s in pr.storages.iteritems():
+    #             # Instead of Npts_scan, the number of views should be considered
+    #             # Please note that a call to s.views may be
+    #             # slow for many views in the probe.
+    #             cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
+    #             s.data[:] = cfact * s.data
+    #             pr_nrm.storages[name].fill(cfact)
+    #     else:
+    #         pr.fill(0.0)
+    #         pr_nrm.fill(0.0)
+    #
+    #     # DM update per node
+    #     for name, pod in self.pods.iteritems():
+    #         if not pod.active:
+    #             continue
+    #         pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
+    #         pr_nrm[pod.pr_view] += (u.cabs2(pod.object) * pod.probe_weight)
+    #
+    #     change = 0.
+    #
+    #     # Distribute result with MPI
+    #     for name, s in pr.storages.iteritems():
+    #         # MPI reduction of results
+    #         nrm = pr_nrm.storages[name].data
+    #         parallel.allreduce(s.data)
+    #         parallel.allreduce(nrm)
+    #         s.data /= nrm
+    #
+    #         # Apply probe support if requested
+    #         support = self.probe_support.get(name)
+    #         if support is not None:
+    #             s.data *= self.probe_support[name]
+    #
+    #
+    #         # Compute relative change in probe
+    #         buf = pr_buf.storages[name].data
+    #         change += u.norm2(s.data - buf) / u.norm2(s.data)
+    #
+    #             # Fill buffer with new probe
+    #         buf[:] = s.data
+    #
+    #     return np.sqrt(change / pr.S.values()[0].nlayers)
 
-        # Fill container
-        # "cfact" fill
-        # BE: was this asymmetric in original code
-        # only because of the number of MPI nodes ?
-        if parallel.master:
-            for name, s in pr.storages.iteritems():
-                # Instead of Npts_scan, the number of views should be considered
-                # Please note that a call to s.views may be
-                # slow for many views in the probe.
-                cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
-                s.data[:] = cfact * s.data
-                pr_nrm.storages[name].fill(cfact)
-        else:
-            pr.fill(0.0)
-            pr_nrm.fill(0.0)
 
-        # DM update per node
-        for name, pod in self.pods.iteritems():
-            if not pod.active:
-                continue
-            pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
-            pr_nrm[pod.pr_view] += (u.cabs2(pod.object) * pod.probe_weight)
-
-        change = 0.
-
-        # Distribute result with MPI
-        for name, s in pr.storages.iteritems():
-            # MPI reduction of results
-            nrm = pr_nrm.storages[name].data
-            parallel.allreduce(s.data)
-            parallel.allreduce(nrm)
-            s.data /= nrm
-
-            # Apply probe support if requested
-            support = self.probe_support.get(name)
-            if support is not None:
-                s.data *= self.probe_support[name]
-
-
-            # Compute relative change in probe
-            buf = pr_buf.storages[name].data
-            change += u.norm2(s.data - buf) / u.norm2(s.data)
-
-                # Fill buffer with new probe
-            buf[:] = s.data
-
-        return np.sqrt(change / pr.S.values()[0].nlayers)
-
-
-    def OPR_compatible_probe_update(self):
+    def probe_update(self):
         """
         DM probe update - independent probe version
         """
