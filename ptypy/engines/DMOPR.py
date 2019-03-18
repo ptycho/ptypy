@@ -185,28 +185,6 @@ class DMOPR(BaseEngine):
             self.local_layers[sID] = [x for x in layers if x[1] in s.layermap]
             self.local_indices[sID] = [i for i, l in self.local_layers[sID]]
 
-            # SS: hack to forcibly introduce desired modes as initial guess
-            if self.p.feed_mode:
-                modes = io.h5read(self.p.feed_mode_file,
-                                  'content.runtime.OPR_modes.%s' % sID)[sID]
-                coeffs = io.h5read(self.p.feed_mode_file,
-                                   'content.runtime.OPR_coeffs.%s' % sID)[sID]
-                m_sh = modes.shape
-                c_sh = coeffs.shape
-                probes = np.dot(coeffs, modes.reshape(m_sh[0], m_sh[1] * m_sh[2])
-                                ).reshape(c_sh[0], m_sh[1], m_sh[2])
-                if len(self.OPR_modes[sID]) > len(modes):
-                    raise RuntimeError("The requested number of modes (%d)"
-                                       % len(self.OPR_modes[sID]) + " and the fed one "
-                                       + "(%d) are not compatible." % m_sh[0])
-                # probes_norm = [u.norm(pr) for pr in probes]
-                # for i in range(len(self.OPR_modes[sID])):
-                #   self.OPR_modes[sID][i] = probes[i]/probes_norm[i]
-                self.OPR_modes[sID] = modes
-                self.OPR_coeffs[sID] = coeffs
-                for k, il in enumerate(self.local_layers[sID]):
-                    s[il[1]] = probes[k]
-
         # Create a copy of probe Container for DM iterations
         self.pr_old = self.pr.copy(self.pr.ID + '_old')
 
