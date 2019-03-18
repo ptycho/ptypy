@@ -12,7 +12,7 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
-from .utils import basic_fourier_update
+from .utils import basic_fourier_update, reduce_dimension
 from . import BaseEngine, register
 from .. import defaults_tree
 from ..core.manager import Full, Vanilla, Bragg3dModel, OPRModel
@@ -167,9 +167,11 @@ class DM(BaseEngine):
 
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
-        if isinstance(self.pods[self.pods.keys()[0]].model, OPRModel):# this sucks at the moment.
-            self.model = 'OPRModel'
+        self.model=self.pods[self.pods.keys()[0]].model
+
+        if self.model.p.name=='OPRModel':
             self.pr_old = self.pr.copy(self.pr.ID + '_old') # can we make do without this?
+
 
     def engine_prepare(self):
         """
@@ -189,6 +191,8 @@ class DM(BaseEngine):
         # Fill object with coverage of views
         for name, s in self.ob_viewcover.storages.iteritems():
             s.fill(s.get_view_coverage())
+
+
 
     def engine_iterate(self, num=1):
         """
@@ -367,60 +371,124 @@ class DM(BaseEngine):
                 s.data[too_high] = clip_max * phase_obj[too_high]
                 s.data[too_low] = clip_min * phase_obj[too_low]
 
+    # def probe_update(self):
+    #     """
+    #     DM probe update.
+    #     """
+    #     pr = self.pr
+    #     pr_nrm = self.pr_nrm
+    #     pr_buf = self.pr_buf
+    #
+    #     # Fill container
+    #     # "cfact" fill
+    #     # BE: was this asymmetric in original code
+    #     # only because of the number of MPI nodes ?
+    #     if parallel.master:
+    #         for name, s in pr.storages.iteritems():
+    #             # Instead of Npts_scan, the number of views should be considered
+    #             # Please note that a call to s.views may be
+    #             # slow for many views in the probe.
+    #             cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
+    #             s.data[:] = cfact * s.data
+    #             pr_nrm.storages[name].fill(cfact)
+    #     else:
+    #         pr.fill(0.0)
+    #         pr_nrm.fill(0.0)
+    #
+    #     # DM update per node
+    #     for name, pod in self.pods.iteritems():
+    #         if not pod.active:
+    #             continue
+    #         pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
+    #         pr_nrm[pod.pr_view] += u.cabs2(pod.object) * pod.probe_weight
+    #
+    #     change = 0.
+    #
+    #     # Distribute result with MPI
+    #     for name, s in pr.storages.iteritems():
+    #         # MPI reduction of results
+    #         nrm = pr_nrm.storages[name].data
+    #         parallel.allreduce(s.data)
+    #         parallel.allreduce(nrm)
+    #         s.data /= nrm
+    #
+    #         # Apply probe support if requested
+    #         support = self.probe_support.get(name)
+    #         if support is not None:
+    #             s.data *= self.probe_support[name]
+    #
+    #
+    #         # Compute relative change in probe
+    #         buf = pr_buf.storages[name].data
+    #         change += u.norm2(s.data - buf) / u.norm2(s.data)
+    #
+    #         # Fill buffer with new probe
+    #         buf[:] = s.data
+    #
+    #     return np.sqrt(change / len(pr.storages))
+
+
     def probe_update(self):
         """
-        DM probe update.
+        DM probe update - independent probe version
         """
         pr = self.pr
-        pr_nrm = self.pr_nrm
-        pr_buf = self.pr_buf
+        pr_old = self.pr_old
 
-        # Fill container
-        # "cfact" fill
-        # BE: was this asymmetric in original code
-        # only because of the number of MPI nodes ?
-        if parallel.master:
-            for name, s in pr.storages.iteritems():
-                # Instead of Npts_scan, the number of views should be considered
-                # Please note that a call to s.views may be
-                # slow for many views in the probe.
-                cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
-                s.data[:] = cfact * s.data
-                pr_nrm.storages[name].fill(cfact)
-        else:
-            pr.fill(0.0)
-            pr_nrm.fill(0.0)
-
-        # DM update per node
+        # DM update
         for name, pod in self.pods.iteritems():
             if not pod.active:
                 continue
-            pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
-            pr_nrm[pod.pr_view] += u.cabs2(pod.object) * pod.probe_weight
+            # Save previous probe version
+            pr_old[pod.pr_view] = pod.probe
 
-        change = 0.
-
-        # Distribute result with MPI
-        for name, s in pr.storages.iteritems():
-            # MPI reduction of results
-            nrm = pr_nrm.storages[name].data
-            parallel.allreduce(s.data)
-            parallel.allreduce(nrm)
-            s.data /= nrm
+            # Update probe
+            pod.probe = (pr_old[pod.pr_view] + pod.object.conj() * pod.exit)
+            pod.probe /= u.cabs2(pod.object) + 1.
 
             # Apply probe support if requested
             support = self.probe_support.get(name)
             if support is not None:
-                s.data *= self.probe_support[name]
+                pod.probe *= self.probe_support[name]
 
-            if self.model is 'OPRModel':
-                self.pods[self.pods.keys()[0]].model.probe_consistency_update()  # euch
-            # Compute relative change in probe
-            buf = pr_buf.storages[name].data
-            change += u.norm2(s.data - buf) / u.norm2(s.data)
+        # ADD Fourier space probe support here,
+        # e.g. enforcing probe within aperture's FT
 
-            # Fill buffer with new probe
-            buf[:] = s.data
+        # OPR step applied on probe
+        if self.model.p.name is 'OPRModel':
+            self.probe_consistency_update()
 
-        return np.sqrt(change / len(pr.storages))
+        change = u.norm2(pr.S.values()[0].data - pr_old.S.values()[0].data)
+        change = parallel.allreduce(change)
 
+        return np.sqrt(change / pr.S.values()[0].nlayers)
+
+
+    def probe_consistency_update(self):
+        """
+        DM probe consistency update for orthogonal probe relaxation.
+
+        Here what we do is compute a singular value decomposition on
+        the ensemble of probes.
+        """
+
+
+        if self.model.p.subspace_dim == 0:
+            # Boring case equivalent to normal DM - do not implement
+            raise NotImplementedError('0 dim case is not implemented.')
+
+        for sID, prS in self.ptycho.probe.S.iteritems():
+            # pr_input = np.array([2 * self.pr[v] - self.pr_old[v]
+            # for v in self.pr.views.values() if v.active])
+            pr_input = np.array([prS[l] for i, l
+                                            in self.model.local_layers[sID]])
+
+            new_pr, modes, coeffs = reduce_dimension(a=pr_input,
+                dim=self.model.p.subspace_dim, local_indices=self.model.local_indices[sID])
+
+            self.model.OPR_modes[sID] = modes
+            self.model.OPR_coeffs[sID] = coeffs
+
+            # Update probes
+            for k, il in enumerate(self.model.local_layers[sID]):
+                prS[il[1]] = new_pr[k]
