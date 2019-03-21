@@ -962,11 +962,6 @@ class PtyScan(object):
             # All nodes load raw_data and slice according to indices
             raw, pos, weights = self.load(indices=indices.node)
 
-            # ISSUE #202 This does not work
-            # pos = {k: pos[k].copy() for k in pos.keys()}
-            # but this does
-            pos = {k: pos[k].astype(np.float) for k in pos.keys()}
-
             # Gather position information as every node needs it later
             pos = parallel.gather_dict(pos)
         else:
