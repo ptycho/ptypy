@@ -5,17 +5,17 @@ test Scan `ptypy.core.data.MoonFlowerScan`
 import ptypy
 from ptypy import utils as u
 import tempfile
-import sys
+import shutil
 import unittest
 
-u.verbose.set_level(3)
+u.verbose.set_level(1)
 
-TEMPDIR = tempfile.gettempdir()+'/.'+sys.argv[0].replace('.py', '')
+TEMPDIR = tempfile.mkdtemp()
 
 # I should refactor this at some point -adp
 
 
-class MakeSamplePtydTest(unittest.TestCase):
+class OnTheFlyPtydTest(unittest.TestCase):
     DATA = u.Param(
         dfile=TEMPDIR + '/sample.ptyd',
         shape=128,
@@ -33,11 +33,8 @@ class MakeSamplePtydTest(unittest.TestCase):
 
     def setUp(self):
         # for verbose output
-        u.verbose.set_level(3)
-
         data = self.DATA.copy()
         data.save = 'link'
-
         # This scan prepares the data and fills a '.ptyd' container
         if u.parallel.master:
             self.S1 = ptypy.core.data.MoonFlowerScan(data)
@@ -49,10 +46,7 @@ class MakeSamplePtydTest(unittest.TestCase):
         u.parallel.barrier()
 
     def tearDown(self):
-        import os
-        for entry in os.listdir(TEMPDIR):
-            os.remove(TEMPDIR + '/' + entry)
-        os.rmdir(TEMPDIR)
+        shutil.rmtree(TEMPDIR)
 
     def _create_PtydScan(self, save='append', **kwargs):
         # the second process will aggregate the linked container to a
@@ -62,15 +56,14 @@ class MakeSamplePtydTest(unittest.TestCase):
         dfile = str(data.dfile)
 
         # Base parameters
-        from ptypy.core.data import PtydScan
-        data = PtydScan.DEFAULT.copy()
+        data = u.Param()
         data.dfile = dfile.replace('.ptyd', '_aggregated.ptyd')
         data.save = save # maybe replace with merge in future
         data.update(**kwargs)
 
         return ptypy.core.data.PtydScan(data, source=dfile)
 
-    def test_non_exisiting_chunk(self):
+    def test_non_existing_chunk(self):
         try:
             S2 = self._create_PtydScan(save=None)
         except IOError:
