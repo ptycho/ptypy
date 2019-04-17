@@ -234,18 +234,21 @@ class ScanModel(object):
             return None
 
         # Prepare for View generation
-        AR_diff_base = DEFAULT_ACCESSRULE.copy()
-        AR_diff_base.shape = self.shape
-        AR_diff_base.coord = 0.0
-        AR_diff_base.psize = self.psize
-        AR_mask_base = AR_diff_base.copy()
-        AR_diff_base.storageID = self.diff.ID
-        AR_mask_base.storageID = self.mask.ID
+        AR_diff = DEFAULT_ACCESSRULE.copy()
+        AR_diff.shape = self.shape
+        AR_diff.coord = 0.0
+        AR_diff.psize = self.psize
+        AR_mask = AR_diff.copy()
+        AR_diff.storageID = self.diff.ID
+        AR_mask.storageID = self.mask.ID
 
         diff_views = []
         mask_views = []
         positions = []
-
+        
+        dv = None
+        mv = None
+        
         # First pass: create or update views and reformat corresponding storage
         for dct in dp['iterable']:
 
@@ -257,8 +260,6 @@ class ScanModel(object):
             if pos is None:
                 logger.warning('No position set to scan point %d of scan %s' % (index, label))
 
-            AR_diff = AR_diff_base
-            AR_mask = AR_mask_base
             AR_diff.layer = index
             AR_mask.layer = index
             AR_diff.active = active
@@ -507,37 +508,56 @@ class Vanilla(ScanModel):
             new_object_ids[ID] = True
 
         geometry = self.geometries[0]
-
+        
+        pv = None
+        ev = None
+        ov = None
+        ndim = self.Cdiff.ndim
+        
         # Loop through diffraction patterns
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
 
             # Create views
-            ndim = self.Cdiff.ndim
-            pv = View(container=self.ptycho.probe,
+            if pv is None:
+                pv = View(container=self.ptycho.probe,
                       accessrule={'shape': geometry.shape,
                                   'psize': geometry.resolution,
                                   'coord': u.expectN(0.0, ndim),
                                   'storageID': ID,
                                   'layer': 0,
                                   'active': True})
-
-            ov = View(container=self.ptycho.obj,
+            else:
+                pv = pv.copy()
+                pv.coord = 0.0
+            
+            if ov is None:
+                ov = View(container=self.ptycho.obj,
                       accessrule={'shape': geometry.shape,
                                   'psize': geometry.resolution,
                                   'coord': self.new_positions[i],
                                   'storageID': ID,
                                   'layer': 0,
                                   'active': True})
-
-            ev = View(container=self.ptycho.exit,
+            else:
+                ov = ov.copy()
+                ov.coord = self.new_positions[i]
+                
+            if ev is None:
+                ev = View(container=self.ptycho.exit,
                       accessrule={'shape': geometry.shape,
                                   'psize': geometry.resolution,
                                   'coord': u.expectN(0.0, ndim),
                                   'storageID': dv.storageID,
                                   'layer': dv.layer,
                                   'active': dv.active})
-
+            else: 
+                ev = ev.copy()
+                ev.storageID = dv.storageID
+                ev.layer = dv.layer
+                ev.active= dv.active
+                ev.coord = 0.0
+                
             views = {'probe': pv,
                      'obj': ov,
                      'diff': dv,
