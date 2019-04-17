@@ -920,6 +920,9 @@ class PtyScan(object):
         # The "common" part
         out = {'common': self.meta}
 
+        # The "raw" part. Might replace the iterable in future.
+        out['raw'] = chunk
+        
         # The "iterable" part
         iterables = []
         for pos, index in zip(chunk.positions, chunk.indices):
