@@ -34,8 +34,16 @@ from .. import defaults_tree
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel']
+__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'BlockScanModel']
 
+class _LogTime(object):
+    
+    def __init__(self):
+        self._t = time.time()
+    
+    def __call__(self):
+        logger.info('Duration %.2f' % (time.time()-self._t ))
+        self._t  = time.time()
 
 @defaults_tree.parse_doc('scan.ScanModel')
 class ScanModel(object):
@@ -165,22 +173,18 @@ class ScanModel(object):
         Feed data from ptyscan object.
         :return: None if no data is available, True otherwise.
         """
+        report_time =_LogTime()
+        report_time()
 
-        import time
-        self._t = time.time()
-        def report_time():
-            logger.info('Time %.2f' % (time.time()-self._t ))
-            self._t  = time.time()
-            
         # Initialize if that has not been done yet
         if not self.ptyscan.is_initialized:
             self.ptyscan.initialize()
         
         report_time()
+        
         # Get data
         logger.info('Importing data from scan %s.' % self.label)
         dp = self.ptyscan.auto(self.frames_per_call)
-        
         
         self.data_available = (dp != data.EOS)
         logger.debug(u.verbose.report(dp))
@@ -245,9 +249,6 @@ class ScanModel(object):
         diff_views = []
         mask_views = []
         positions = []
-        
-        dv = None
-        mv = None
         
         # First pass: create or update views and reformat corresponding storage
         for dct in dp['iterable']:
@@ -366,6 +367,7 @@ class ScanModel(object):
             # Use with a Ptycho instance
             self.Cdiff = self.ptycho.diff
             self.Cmask = self.ptycho.mask
+
         self.containers_initialized = True
 
     @staticmethod
@@ -395,7 +397,7 @@ class ScanModel(object):
 
         # Reinitialize containers
         Itotal = []
-        max_frame = np.zeros(self.diff_views[0].shape)
+        max_frame = np.zeros(diff_views[0].shape)
         min_frame = np.zeros_like(max_frame)
         mean_frame = np.zeros_like(max_frame)
         norm = np.zeros_like(max_frame)
@@ -459,6 +461,157 @@ class ScanModel(object):
 
     def _initialize_object(self, object_ids):
         raise NotImplementedError
+
+    def _get_data(self):
+        # Get data
+        logger.info('Importing data from scan %s.' % self.label)
+        dp = self.ptyscan.auto(self.frames_per_call)
+        
+        self.data_available = (dp != data.EOS)
+        logger.debug(u.verbose.report(dp))
+
+        if dp == data.WAIT or not self.data_available:
+            return None
+        else:
+            return dp 
+            
+class BlockScanModel(ScanModel):
+    
+    def new_data(self):
+        """
+        Feed data from ptyscan object.
+        :return: None if no data is available, True otherwise.
+        """
+        report_time =_LogTime()
+        report_time()
+            
+        # Initialize if that has not been done yet
+        if not self.ptyscan.is_initialized:
+            self.ptyscan.initialize()
+        
+        report_time()
+
+        dp = self._get_data()
+        
+        report_time()
+        
+        logger.info('Creating views and storages.' )
+        # Prepare the scan geometry if not already done.
+        if not self.geometries:
+            self._initialize_geo(dp['common'])
+
+        # Create containers if not already done
+        if not self.containers_initialized:
+            self._initialize_containers()
+
+        sh = (1,) + tuple(self.shape)
+
+        # this is a hack for now
+        dp = self._new_data_extra_analysis(dp)
+        if dp is None:
+            return None
+        else:
+            common = dp['common']
+            chunk = dp['chunk']
+
+        # Generalized shape which works for 2d and 3d cases
+        sh = (max(len(chunk.indices_node),1),) + tuple(self.shape)
+        
+        diff = self.Cdiff.new_storage(shape=sh, psize=self.psize, padonly=True,
+                                      fill=0.0, layermap=chunk['indices_node'])
+        mask = self.Cmask.new_storage(shape=sh, psize=self.psize, padonly=True,
+                                      fill=1.0, layermap=chunk['indices_node'])
+        # Prepare for View generation
+        AR_diff = DEFAULT_ACCESSRULE.copy()
+        AR_diff.shape = self.shape # this is None due to init
+        AR_diff.coord = 0.0
+        AR_diff.psize = self.psize
+        AR_mask = AR_diff.copy()
+        AR_diff.storageID = diff.ID
+        AR_mask.storageID = mask.ID
+
+        diff_views = []
+        mask_views = []
+        positions = []
+        
+        dv = None
+        mv = None
+        
+        data = chunk['data']
+        mask = chunk['mask']
+        mask2d = common.get('weight2d')
+               
+        # First pass: create or update views and reformat corresponding storage
+        for index in zip(chunk.indices):
+            
+            if dv is None:
+                dv = View(self.Cdiff, accessrule=AR_diff) # maybe use index here
+                mv = View(self.Cmask, accessrule=AR_mask)
+            else:
+                dv = dv.copy()
+                mv = mv.copy()
+                
+            maybe_data = data.get(index)
+            active = maybe_data is not None
+            
+            dv.active = active
+            mv.active = active
+            dv.layer = index
+            mv.layer = index
+            
+            
+            diff_views.append(dv)
+            mask_views.append(mv)
+            
+            if active:
+                dv.data[:] = maybe_data
+                dv.mask[:] = mask.get(index, mask2d) 
+                
+        # positions
+        positions = chunk.positions
+        
+        ## warning message for empty postions?
+        
+        # this is not absolutely necessary
+        #diff.update_views()
+        #mask.update_views()
+        report_time()
+
+        diff.nlayers = parallel.MPImax(self.diff.layermap) + 1
+        mask.nlayers = parallel.MPImax(self.mask.layermap) + 1
+
+        self.new_positions = positions
+        self.new_diff_views = diff_views
+        self.new_mask_views = mask_views
+        self.positions += positions
+        self.diff_views += diff_views
+        self.mask_views += mask_views
+        report_time()
+        logger.info('Data organization complete, updating stats')
+        
+        self._update_stats()
+
+        # Create new views on object, probe, and exit wave, and connect
+        # these through new pods.
+        new_pods, new_probe_ids, new_object_ids = self._create_pods()
+        for pod_ in new_pods:
+            if pod_.model is not None:
+                continue
+            pod_.model = self
+        logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
+            parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
+        
+        report_time()
+        # Adjust storages
+        self.ptycho.probe.reformat(True)
+        self.ptycho.obj.reformat(True)
+        self.ptycho.exit.reformat()
+
+        self._initialize_probe(new_probe_ids)
+        self._initialize_object(new_object_ids)
+        self._initialize_exit(new_pods)
+
+        return True
 
 
 @defaults_tree.parse_doc('scan.Vanilla')
@@ -1332,3 +1485,7 @@ class ModelManager(object):
         # Attempt to get new data
         for label, scan in self.scans.iteritems():
             new_data = scan.new_data()
+
+
+
+

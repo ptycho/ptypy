@@ -921,7 +921,7 @@ class PtyScan(object):
         out = {'common': self.meta}
 
         # The "raw" part. Might replace the iterable in future.
-        out['raw'] = chunk
+        out['chunk'] = chunk
         
         # The "iterable" part
         iterables = []
