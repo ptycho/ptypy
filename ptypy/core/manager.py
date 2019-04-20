@@ -34,15 +34,15 @@ from .. import defaults_tree
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'BlockScanModel']
+__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'BlockScanModel', 'BlockVanilla']
 
 class _LogTime(object):
     
     def __init__(self):
         self._t = time.time()
     
-    def __call__(self):
-        logger.info('Duration %.2f' % (time.time()-self._t ))
+    def __call__(self, msg=None):
+        logger.warn('Duration %.2f for ' % (time.time()-self._t )+str(msg))
         self._t  = time.time()
 
 @defaults_tree.parse_doc('scan.ScanModel')
@@ -180,7 +180,7 @@ class ScanModel(object):
         if not self.ptyscan.is_initialized:
             self.ptyscan.initialize()
         
-        report_time()
+        report_time('ptyscan init')
         
         # Get data
         logger.info('Importing data from scan %s.' % self.label)
@@ -193,7 +193,7 @@ class ScanModel(object):
             return None
 
         label = self.label
-        report_time()
+        report_time('read data')
         logger.info('Creating views and storages.' )
         # Prepare the scan geometry if not already done.
         if not self.geometries:
@@ -295,7 +295,7 @@ class ScanModel(object):
         # that will create the right sizes and the datalist access
         self.diff.reformat()
         self.mask.reformat()
-        report_time()
+        report_time('creating views and storages')
         logger.info('Inserting data in diff and mask storages')
         
         # Second pass: copy the data 
@@ -319,7 +319,7 @@ class ScanModel(object):
         self.positions += positions
         self.diff_views += diff_views
         self.mask_views += mask_views
-        report_time()
+        report_time('inserting data')
         logger.info('Data organization complete, updating stats')
         
         self._update_stats()
@@ -334,16 +334,17 @@ class ScanModel(object):
         logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
             parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
         
-        report_time()
+        u.parallel.barrier()
+        report_time('creating pods')
         # Adjust storages
-        self.ptycho.probe.reformat(True)
-        self.ptycho.obj.reformat(True)
+        self.ptycho.probe.reformat()
+        self.ptycho.obj.reformat()
         self.ptycho.exit.reformat()
-
+        report_time('reformating')
         self._initialize_probe(new_probe_ids)
         self._initialize_object(new_object_ids)
         self._initialize_exit(new_pods)
-
+        logger.info('Process %d completed new_data.' % parallel.rank, extra={'allprocesses': True})
         return True
 
     def _new_data_extra_analysis(self, dp):
@@ -475,6 +476,7 @@ class ScanModel(object):
         else:
             return dp 
             
+@defaults_tree.parse_doc('scan.BlockScanModel')
 class BlockScanModel(ScanModel):
     
     def new_data(self):
@@ -493,7 +495,7 @@ class BlockScanModel(ScanModel):
 
         dp = self._get_data()
         
-        report_time()
+        report_time('read data')
         
         logger.info('Creating views and storages.' )
         # Prepare the scan geometry if not already done.
@@ -538,11 +540,11 @@ class BlockScanModel(ScanModel):
         mv = None
         
         data = chunk['data']
-        mask = chunk['mask']
+        weights = chunk['weights']
         mask2d = common.get('weight2d')
                
         # First pass: create or update views and reformat corresponding storage
-        for index in zip(chunk.indices):
+        for index in chunk.indices:
             
             if dv is None:
                 dv = View(self.Cdiff, accessrule=AR_diff) # maybe use index here
@@ -565,7 +567,7 @@ class BlockScanModel(ScanModel):
             
             if active:
                 dv.data[:] = maybe_data
-                dv.mask[:] = mask.get(index, mask2d) 
+                mv.data[:] = weights.get(index, mask2d) 
                 
         # positions
         positions = chunk.positions
@@ -575,18 +577,16 @@ class BlockScanModel(ScanModel):
         # this is not absolutely necessary
         #diff.update_views()
         #mask.update_views()
-        report_time()
-
-        diff.nlayers = parallel.MPImax(self.diff.layermap) + 1
-        mask.nlayers = parallel.MPImax(self.mask.layermap) + 1
+        diff.nlayers = parallel.MPImax(diff.layermap) + 1
+        mask.nlayers = parallel.MPImax(mask.layermap) + 1
 
         self.new_positions = positions
         self.new_diff_views = diff_views
         self.new_mask_views = mask_views
-        self.positions += positions
+        self.positions += list(positions)
         self.diff_views += diff_views
         self.mask_views += mask_views
-        report_time()
+        report_time('creating views and storages')
         logger.info('Data organization complete, updating stats')
         
         self._update_stats()
@@ -601,11 +601,12 @@ class BlockScanModel(ScanModel):
         logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
             parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
         
-        report_time()
+        report_time('creating pods')
         # Adjust storages
-        self.ptycho.probe.reformat(True)
-        self.ptycho.obj.reformat(True)
+        self.ptycho.probe.reformat()
+        self.ptycho.obj.reformat()
         self.ptycho.exit.reformat()
+        report_time('reformating')
 
         self._initialize_probe(new_probe_ids)
         self._initialize_object(new_object_ids)
@@ -614,8 +615,7 @@ class BlockScanModel(ScanModel):
         return True
 
 
-@defaults_tree.parse_doc('scan.Vanilla')
-class Vanilla(ScanModel):
+class _Vanilla(object):
     """
     Dummy for testing, there must be more than one for validate to react
     to invalid names.
@@ -672,6 +672,7 @@ class Vanilla(ScanModel):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
 
             # Create views
+            #if True:
             if pv is None:
                 pv = View(container=self.ptycho.probe,
                       accessrule={'shape': geometry.shape,
@@ -681,9 +682,10 @@ class Vanilla(ScanModel):
                                   'layer': 0,
                                   'active': True})
             else:
-                pv = pv.copy()
+                pv = pv.copy(update=False)
                 pv.coord = 0.0
             
+            #if True:
             if ov is None:
                 ov = View(container=self.ptycho.obj,
                       accessrule={'shape': geometry.shape,
@@ -693,9 +695,10 @@ class Vanilla(ScanModel):
                                   'layer': 0,
                                   'active': True})
             else:
-                ov = ov.copy()
+                ov = ov.copy(update=False)
                 ov.coord = self.new_positions[i]
                 
+            #if True:
             if ev is None:
                 ev = View(container=self.ptycho.exit,
                       accessrule={'shape': geometry.shape,
@@ -705,7 +708,7 @@ class Vanilla(ScanModel):
                                   'layer': dv.layer,
                                   'active': dv.active})
             else: 
-                ev = ev.copy()
+                ev = ev.copy(update=False)
                 ev.storageID = dv.storageID
                 ev.layer = dv.layer
                 ev.active= dv.active
@@ -749,7 +752,6 @@ class Vanilla(ScanModel):
         # Store frame shape
         self.shape = np.array(common.get('shape', g.shape))
         self.psize = g.psize
-
         return
 
     def _initialize_probe(self, probe_ids):
@@ -787,6 +789,13 @@ class Vanilla(ScanModel):
 
         s.model_initialized = True
 
+@defaults_tree.parse_doc('scan.Vanilla')
+class Vanilla(_Vanilla,ScanModel):
+    pass
+
+@defaults_tree.parse_doc('scan.BlockVanilla')
+class BlockVanilla(_Vanilla,BlockScanModel):
+    pass
 
 @defaults_tree.parse_doc('scan.Full')
 class Full(ScanModel):

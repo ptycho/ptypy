@@ -1279,7 +1279,7 @@ class View(Base):
 
     def copy(self,ID=None, update = True):
         nView = View(self.owner, ID)
-        nView._record = self._record
+        nView._record = self._record.copy()
         nView._ndim = self._ndim
         nView.storage = self.storage
         nView.storageID = self.storageID
