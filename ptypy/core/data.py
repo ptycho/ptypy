@@ -833,14 +833,17 @@ class PtyScan(object):
         chunk.indices_node = indices.node
         chunk.num = self.chunknum
         chunk.data = data
-
+        
+        # chunk now always has weights
+        chunk.weights = weights
+        
         # If there are weights we add them to chunk,
         # otherwise we push it into meta
-        if has_weights:
-            chunk.weights = weights
-        elif has_data:
-            chunk.weights = {}
-            self.weight2d = weights.values()[0]
+        #if has_weights:
+        #    chunk.weights = weights
+        #elif has_data:
+        #    chunk.weights = {}
+        #    self.weight2d = weights.values()[0]
 
         # Slice positions from common if they are empty too
         if positions is None or len(positions) == 0:

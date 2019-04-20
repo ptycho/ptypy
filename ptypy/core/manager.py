@@ -518,11 +518,12 @@ class BlockScanModel(ScanModel):
 
         # Generalized shape which works for 2d and 3d cases
         sh = (max(len(chunk.indices_node),1),) + tuple(self.shape)
+        indices_node = chunk['indices_node']
         
         diff = self.Cdiff.new_storage(shape=sh, psize=self.psize, padonly=True,
-                                      fill=0.0, layermap=chunk['indices_node'])
+                                      fill=0.0, layermap=indices_node)
         mask = self.Cmask.new_storage(shape=sh, psize=self.psize, padonly=True,
-                                      fill=1.0, layermap=chunk['indices_node'])
+                                      fill=1.0, layermap=indices_node)
         # Prepare for View generation
         AR_diff = DEFAULT_ACCESSRULE.copy()
         AR_diff.shape = self.shape # this is None due to init
@@ -541,10 +542,9 @@ class BlockScanModel(ScanModel):
         
         data = chunk['data']
         weights = chunk['weights']
-        mask2d = common.get('weight2d')
-               
+        
         # First pass: create or update views and reformat corresponding storage
-        for index in chunk.indices:
+        for index in chunk['indices']:
             
             if dv is None:
                 dv = View(self.Cdiff, accessrule=AR_diff) # maybe use index here
@@ -566,8 +566,11 @@ class BlockScanModel(ScanModel):
             mask_views.append(mv)
             
             if active:
+                l = indices_node.index(index)
+                dv.dlayer = l
+                mv.dlayer = l
                 dv.data[:] = maybe_data
-                mv.data[:] = weights.get(index, mask2d) 
+                mv.data[:] = weights.get(index, np.ones_like(maybe_data)) 
                 
         # positions
         positions = chunk.positions
@@ -579,7 +582,10 @@ class BlockScanModel(ScanModel):
         #mask.update_views()
         diff.nlayers = parallel.MPImax(diff.layermap) + 1
         mask.nlayers = parallel.MPImax(mask.layermap) + 1
-
+        
+        # save state / could be replaced by handing of arguments to methods
+        self.diff = diff
+        self.mask = mask
         self.new_positions = positions
         self.new_diff_views = diff_views
         self.new_mask_views = mask_views
