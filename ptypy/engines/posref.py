@@ -66,7 +66,7 @@ class PositionRefine(object):
         for name, pod in di_view.pods.iteritems():
             af2 += u.abs2(pod.fw(pod.probe*obj))
         af = np.sqrt(af2)
-        fmag = np.sqrt(di_view.data)
+        fmag = np.sqrt(np.abs(di_view.data))
         error = np.sum(di_view.pod.mask * (af - fmag)**2)
         del af2
         del af
