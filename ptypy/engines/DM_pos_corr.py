@@ -8,123 +8,64 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
+import os
+import sys
 import time
 from .. import utils as u
+# This is needed for parallesiation and position correction
+import utils_pos_corr as pos_corr
+import gc
+# new imports end
 from ..utils.verbose import logger, log
 from ..utils import parallel
-from .utils import basic_fourier_update
-from . import BaseEngine, register
-from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel
+from utils import basic_fourier_update
+from . import BaseEngine
+
+# debugging
+import matplotlib.pyplot as plt
+plt.switch_backend("Qt5Agg")
+# end
 
 __all__ = ['DM']
 
-@register()
-class DM(BaseEngine):
-    """
-    A full-fledged Difference Map engine.
+DEFAULT = u.Param(
+    # Difference map parameter
+    alpha=1,
+    # Number of iterations before probe update starts
+    probe_update_start=2,
+    # If True update object before probe
+    update_object_first=True,
+    # Threshold for interruption of the inner overlap loop
+    overlap_converge_factor=0.05,
+    # Maximum of iterations for the overlap constraint inner loop
+    overlap_max_iterations=10,
+    # Weight of the current probe estimate in the update, formally cfact
+    probe_inertia=1e-9,
+    # Weight of the current object in the update, formally DM_smooth_amplitude
+    object_inertia=1e-4,
+    # If rms error of model vs diffraction data is smaller than this fraction,
+    # Fourier constraint is met
+    fourier_relax_factor=0.05,
+    # Gaussian smoothing (pixel) of the current object prior to update
+    obj_smooth_std=None,
+    # None or tuple(min, max) of desired limits of the object modulus,
+    # currently in under common in documentation
+    clip_object=None,
+)
 
 
-    Defaults:
+class DM_pos_corr(BaseEngine):
 
-    [name]
-    default = DM
-    type = str
-    help =
-    doc =
-
-    [alpha]
-    default = 1
-    type = float
-    lowlim = 0.0
-    help = Difference map parameter
-
-    [probe_update_start]
-    default = 2
-    type = int
-    lowlim = 0
-    help = Number of iterations before probe update starts
-
-    [subpix_start]
-    default = 0
-    type = int
-    lowlim = 0
-    help = Number of iterations before starting subpixel interpolation
-
-    [subpix]
-    default = 'linear'
-    type = str
-    help = Subpixel interpolation; 'fourier','linear' or None for no interpolation
-
-    [update_object_first]
-    default = True
-    type = bool
-    help = If True update object before probe
-
-    [overlap_converge_factor]
-    default = 0.05
-    type = float
-    lowlim = 0.0
-    help = Threshold for interruption of the inner overlap loop
-    doc = The inner overlap loop refines the probe and the object simultaneously. This loop is escaped as soon as the overall change in probe, relative to the first iteration, is less than this value.
-
-    [overlap_max_iterations]
-    default = 10
-    type = int
-    lowlim = 1
-    help = Maximum of iterations for the overlap constraint inner loop
-
-    [probe_inertia]
-    default = 1e-9
-    type = float
-    lowlim = 0.0
-    help = Weight of the current probe estimate in the update
-
-    [object_inertia]
-    default = 1e-4
-    type = float
-    lowlim = 0.0
-    help = Weight of the current object in the update
-
-    [fourier_relax_factor]
-    default = 0.05
-    type = float
-    lowlim = 0.0
-    help = If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
-    doc = Set this value higher for noisy data.
-
-    [obj_smooth_std]
-    default = None
-    type = float
-    lowlim = 0
-    help = Gaussian smoothing (pixel) of the current object prior to update
-    doc = If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
-
-    [clip_object]
-    default = None
-    type = tuple
-    help = Clip object amplitude into this interval
-
-    [probe_center_tol]
-    default = None
-    type = float
-    lowlim = 0.0
-    help = Pixel radius around optical axes that the probe mass center must reside in
-
-    """
-
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel]
+    DEFAULT = DEFAULT
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Difference map reconstruction engine.
         """
-        super(DM, self).__init__(ptycho_parent, pars)
+        if pars is None:
+            pars = DEFAULT.copy()
 
-        p = self.DEFAULT.copy()
-        if pars is not None:
-            p.update(pars)
-        self.p = p
+        super(DM_pos_corr, self).__init__(ptycho_parent, pars)
 
         # Instance attributes
         self.error = None
@@ -143,17 +84,6 @@ class DM(BaseEngine):
         # Another possibility would be to use the maximum value of all probe storages.
         self.mean_power = None
 
-        self.ptycho.citations.add_article(
-            title='Probe retrieval in ptychographic coherent diffractive imaging',
-            author='Thibault et al.',
-            journal='Ultramicroscopy',
-            volume=109,
-            year=2009,
-            page=338,
-            doi='10.1016/j.ultramic.2008.12.011',
-            comment='The difference map reconstruction algorithm',
-        )
-
     def engine_initialize(self):
         """
         Prepare for reconstruction.
@@ -168,6 +98,9 @@ class DM(BaseEngine):
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
 
+        # Generate storages for every node, will be saved in a dict
+        # self.ob.new_storage()
+
     def engine_prepare(self):
         """
         Last minute initialization.
@@ -180,12 +113,20 @@ class DM(BaseEngine):
         for name, s in self.di.storages.iteritems():
             self.pbound[name] = (
                 .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
-            mean_power += s.mean_power
+            mean_power += s.tot_power/np.prod(s.shape)
         self.mean_power = mean_power / len(self.di.storages)
 
-        # Fill object with coverage of views
-        for name, s in self.ob_viewcover.storages.iteritems():
-            s.fill(s.get_view_coverage())
+        if self.p.pos_ref_stop > self.curiter >= self.p.pos_ref_start and self.curiter % self.p.pos_ref_cycle == 0 \
+                and self.p.pos_ref:
+
+            # collect the garbage
+            gc.collect()
+
+            # The size of the object might have been changed
+            self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
+            self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
+            for name, s in self.ob_viewcover.storages.iteritems():
+                s.fill(s.get_view_coverage())
 
     def engine_iterate(self, num=1):
         """
@@ -193,7 +134,7 @@ class DM(BaseEngine):
         """
         to = 0.
         tf = 0.
-        tp = 0.
+
         for it in range(num):
             t1 = time.time()
 
@@ -209,19 +150,37 @@ class DM(BaseEngine):
             t3 = time.time()
             to += t3 - t2
 
-            # Position update
-            self.position_update()
-
-            t4 = time.time()
-            tp += t4 - t3
-
             # count up
-            self.curiter +=1
+            self.curiter += 1
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
-        logger.info('Time spent in Position update: %.2f' % tp)
         error = parallel.gather_dict(error_dct)
+
+        # Start position refinement
+        if self.curiter == 1 and self.p.pos_ref:
+            length = len(self.di.views)
+            self.initial_pos = np.zeros((length, 2))
+            pos_corr.save_pos(self)
+
+            # Save the initial position
+            di_view_order = self.di.views.keys()
+            di_view_order.sort()
+
+            self.shape = self.di.views[di_view_order[0]].shape
+
+            for i, name in enumerate(di_view_order):
+                di_view = self.di.views[name]
+                self.initial_pos[i, 0] = di_view.pod.ob_view.coord[0]
+                self.initial_pos[i, 1] = di_view.pod.ob_view.coord[1]
+
+        if self.p.pos_ref_stop > self.curiter >= self.p.pos_ref_start and self.curiter % self.p.pos_ref_cycle == 0 \
+                and self.p.pos_ref:
+            pos_corr.pos_ref(self)
+            pos_corr.save_pos(self)
+
+        # End position refinement
+
         return error
 
     def engine_finalize(self):
@@ -273,7 +232,7 @@ class DM(BaseEngine):
             pre_str = 'Iteration (Overlap) #%02d:  ' % inner
 
             # Update object first
-            if self.p.update_object_first or (inner > 0) or not do_update_probe:
+            if self.p.update_object_first or (inner > 0):
                 # Update object
                 log(4, pre_str + '----- object update -----')
                 self.object_update()
@@ -328,7 +287,10 @@ class DM(BaseEngine):
                 # power of the probe (which is estimated from the power in diffraction patterns).
                 # This estimate assumes that the probe power is uniformly distributed through the
                 # array and therefore underestimate the strength of the probe terms.
-                cfact = self.p.object_inertia * self.mean_power
+                # print(self.ob_viewcover.storages[name].data.shape)
+
+                cfact = self.p.object_inertia * self.mean_power *\
+                    (self.ob_viewcover.storages[name].data + 1.)
 
                 if self.p.obj_smooth_std is not None:
                     logger.info(
@@ -340,7 +302,6 @@ class DM(BaseEngine):
                     s.data[:] = cfact * u.c_gf(s.data, smooth_mfs)
                 else:
                     s.data[:] = s.data * cfact
-
                 ob_nrm.storages[name].fill(cfact)
 
         # DM update per node
@@ -426,3 +387,26 @@ class DM(BaseEngine):
             buf[:] = s.data
 
         return np.sqrt(change / len(pr.storages))
+
+    def save_pos(self):
+        """
+        Debugging purpose, to see if the reconstructed coordinates match the real coordinates.
+        """
+        pod_names = self.pods.keys()
+        pod_names.sort()
+        coords = []
+
+        for name in pod_names:
+            # print(name)
+            pod = self.pods[name]
+            coords.append(pod.ob_view.coord)
+
+        coords = np.asarray(coords)
+        coords = coords
+
+        directory = "positions_" + sys.argv[0][:-3] + "\\"
+
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        np.savetxt(directory + "pos_" + str(self.p.name) + "_" + str(self.curiter).zfill(4) + ".txt", coords)

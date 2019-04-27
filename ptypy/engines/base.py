@@ -14,6 +14,7 @@ from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline
 from ..utils.descriptor import EvalDescriptor
+from .posref import PositionRefine
 
 __all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info']
 
@@ -61,6 +62,42 @@ class BaseEngine(object):
     lowlim = 0.0
     help = Valid probe area as fraction of the probe frame
     doc = Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
+
+    [posref]
+    default = False
+    type = bool
+    help = If True refine scan positions
+
+    [posref_start]
+    default = 0
+    type = int
+    help = Number of iterations until position refinement starts
+
+    [posref_stop]
+    default = None
+    type = int
+    help = Number of iterations after which positon refinement stops
+    doc = If None, position refinement stops after last iteration
+
+    [posref_cycle]
+    default = 1
+    type = int
+    help = Frequency of position refinement cycle
+
+    [posref_nshifts]
+    default = 4
+    type = int
+    help = Number of random shifts calculated in each position refinement step (has to be multiple of 4)
+
+    [posref_amplitude]
+    default = 0.001
+    type = float
+    help = Distance from original position per random shift [m]
+
+    [posref_max_shift]
+    default = 0.002
+    type = float
+    help = Maximum distance from original position [m]
 
     """
 
@@ -111,6 +148,8 @@ class BaseEngine(object):
         """
         Prepare for reconstruction.
         """
+        if self.p.posref_stop is None:
+            self.p.posref_stop = self.p.numiter
         logger.info('\n' +
                     headerline('Starting %s-algorithm.'
                                % str(type(self).__name__), 'l', '=') + '\n')
@@ -281,6 +320,24 @@ class BaseEngine(object):
         """
         raise NotImplementedError()
 
+    def position_update(self):
+        """
+        Position refinement update.
+        """
+        do_update_pos =  self.p.posref and (self.p.posref_stop > self.curiter >= self.p.posref_start)
+        do_update_pos &= (self.curiter % self.p.posref_cycle) == 0
+
+        # Start position refinement
+        if (self.p.posref and self.curiter == self.p.posref_start):
+            self.posref = PositionRefine(self)
+
+        # Update positions
+        if do_update_pos:
+            self.posref.update()
+
+        # End of position refinement
+        if (self.p.posref and self.curiter+1 == self.p.posref_stop):
+            self.posref.save_pos()
 
 class Base3dBraggEngine(BaseEngine):
     """
