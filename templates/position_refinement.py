@@ -44,9 +44,9 @@ p.engines.engine00.numiter = 200
 p.engines.engine00.posref = True
 p.engines.engine00.posref_start = 50
 p.engines.engine00.posref_stop = 190
-p.engines.engine00.posref_cycle = 5
+p.engines.engine00.posref_cycle = 2
 p.engines.engine00.posref_nshifts = 8
-p.engines.engine00.posref_amplitude = 3e-7
+p.engines.engine00.posref_amplitude = 5e-7
 p.engines.engine00.posref_max_shift = 5e-7
 
 # prepare and run
@@ -61,14 +61,9 @@ for pname, pod in P.pods.iteritems():
     coords.append(np.copy(pod.ob_view.coord))
     before = pod.ob_view.coord
     new_coord = before + 3e-7 * np.array([np.sin(a), np.cos(a)])
-    print("original:  " + str(before))
-    print("coruppted: " + str(new_coord))
-
     pod.ob_view.coord = new_coord
-    after = pod.ob_view.coord
-    print("set " + str(after))
 
-    #pod.diff *= np.random.uniform(0.1,1)
+    #pod.diff *= np.random.uniform(0.1,1)y
     a += 4.
 
 np.savetxt("positions_theory.txt", coords)
