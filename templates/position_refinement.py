@@ -15,7 +15,7 @@ p.verbose_level = 3
 # set home path
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.autosave = None
+p.io.autosave = u.Param()
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
@@ -40,25 +40,40 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter = 80
+p.engines.engine00.numiter = 200
 p.engines.engine00.posref = True
-p.engines.engine00.posref_start = 10
-p.engines.engine00.posref_stop = 80
+p.engines.engine00.posref_start = 50
+p.engines.engine00.posref_stop = 190
 p.engines.engine00.posref_cycle = 5
-p.engines.engine00.posref_nshifts = 4
-p.engines.engine00.posref_amplitude = 1e-7
+p.engines.engine00.posref_nshifts = 8
+p.engines.engine00.posref_amplitude = 3e-7
 p.engines.engine00.posref_max_shift = 5e-7
 
 # prepare and run
-P = Ptycho(p,level=4)
+P = Ptycho(p, level=4)
 
 # Mess up the positions in a predictible way (for MPI)
 a = 0.
+
+coords = []
 for pname, pod in P.pods.iteritems():
-    pod.ob_view.coord += 3e-7 * np.array([np.sin(a), np.cos(a)])
+    # Save real position
+    coords.append(np.copy(pod.ob_view.coord))
+    before = pod.ob_view.coord
+    new_coord = before + 3e-7 * np.array([np.sin(a), np.cos(a)])
+    print("original:  " + str(before))
+    print("coruppted: " + str(new_coord))
+
+    pod.ob_view.coord = new_coord
+    after = pod.ob_view.coord
+    print("set " + str(after))
+
     #pod.diff *= np.random.uniform(0.1,1)
     a += 4.
+
+np.savetxt("positions_theory.txt", coords)
 P.obj.reformat()
+
 
 # Run
 P.run()

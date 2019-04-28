@@ -334,6 +334,7 @@ class BaseEngine(object):
         # Update positions
         if do_update_pos:
             self.posref.update()
+            self.posref.save_pos()
 
         # End of position refinement
         if (self.p.posref and self.curiter+1 == self.p.posref_stop):
