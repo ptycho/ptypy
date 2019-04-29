@@ -306,7 +306,7 @@ if do_recon:
     update_probe = True
     alpha = 1.0
     fourier_relax_factor = 0.05
-    overlap_max_iterations = 1
+    overlap_max_iterations = 10
     object_inertia = 1e-4
     probe_inertia = 1e-9
     P.error = []
