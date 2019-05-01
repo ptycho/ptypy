@@ -637,6 +637,8 @@ class Ptycho(Base):
 
                 # Check for new data
                 if self.model.data_available:
+                    # this is the problem! If we don't have any new data, but the engine isn't prepared then we don't pick up things like pbound
+                    # It's correct for pbound to be calculated here. It just needs the engine to run prepare over the previous data
                     tic = time.time()
                     self.model.new_data()
                     toc = time.time()
@@ -645,6 +647,11 @@ class Ptycho(Base):
 
                     # Last minute preparation before a contiguous block of
                     # iterations
+                    tic = time.time()
+                    engine.prepare()
+                    toc = time.time()
+                    logger.info('prepare took %s' % (toc - tic))
+                if (engine.curiter==0):
                     tic = time.time()
                     engine.prepare()
                     toc = time.time()
