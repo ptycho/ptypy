@@ -9,7 +9,8 @@ if __name__ == "__main__":
     pardir = os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
 
     # Office pc versions
-    base = "D:\Github\ptypy\\templates\positions_position_refinement\\"
+    #base = "D:\Github\ptypy\\templates\positions_position_refinement\\"
+    base = "./positions_position_refinement/"
 
     engine = "DM"
 
@@ -22,7 +23,7 @@ if __name__ == "__main__":
 
     show_original = True
     simulation = True
-    path_original = base + "positions_theory.txt"
+    path_original = "./positions_theory.txt"
 
     # show trajectory of recovered positions
     for i, path in enumerate(filepaths):
