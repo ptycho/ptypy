@@ -315,6 +315,7 @@ class PositionCorrectionEngine(BaseEngine):
         Prepare for reconstruction.
         """
         super(PositionCorrectionEngine, self).initialize()
+
         if self.p.position_refinement.stop is None:
             self.p.position_refinement.stop = self.p.numiter
 
@@ -322,11 +323,10 @@ class PositionCorrectionEngine(BaseEngine):
         """
         Position refinement update.
         """
-        do_update_pos = self.p.position_refinement and (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.cycle) == 0
 
         shape = self.pr.S.values()[0].data[0].shape
-        psize = self.ob.S.values()[0].psize[0]
         # Only used for calculating the shifted pos
         temp_ob = self.ob.copy()
         # Start position refinement

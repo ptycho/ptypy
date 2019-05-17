@@ -30,7 +30,7 @@ class PositionRefine(object):
         # Shape and pixelsize
         self.shape = shape
         self.psize = temp_ob.S.values()[0].psize[0]
-
+        self.ar = self.reset_access_rule()
         # Maximum shift
         start, end = self.p.start, self.p.stop
         self.max_shift_dist_rule = lambda it: self.p.amplitude * (end - it) / (end - start) + self.psize/2.
