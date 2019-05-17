@@ -12,9 +12,11 @@ import numpy as np
 import time
 from .. import utils as u
 from ..utils import parallel
-from ..utils.verbose import logger, headerline
+from ..utils.verbose import logger, headerline, log
 from ..utils.descriptor import EvalDescriptor
 from .posref import PositionRefine
+from ..core.classes import DEFAULT_ACCESSRULE
+import gc
 
 __all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info', 'PositionCorrectionEngine']
 
@@ -321,16 +323,77 @@ class PositionCorrectionEngine(BaseEngine):
         """
         Position refinement update.
         """
+        shape = self.pr.S.values()[0].data[0].shape
+        psize = self.ob.S.values()[0].psize[0]
         do_update_pos = self.p.position_refinement and (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.cycle) == 0
 
         # Start position refinement
         if (self.p.position_refinement and self.curiter == self.p.position_refinement.start):
-            self.position_refinement = PositionRefine(self, self.p.position_refinement)
+            self.position_refinement = PositionRefine(self, self.p.position_refinement, self.di.views, shape, psize)
 
         # Update positions
         if do_update_pos:
-            self.position_refinement.update(self.engine.curiter)
+            """
+            Iterates trough all positions and refines them by a given algorithm. 
+            Right now the following algorithm is implemented:
+
+            A.M. Maiden, M.J. Humphry, M.C. Sarahan, B. Kraus, J.M. Rodenburg,
+            An annealing algorithm to correct positioning errors in ptychography,
+            Ultramicroscopy, Volume 120, 2012, Pages 64-72
+            """
+            log(4, "----------- START POS REF -------------")
+            di_view_names = self.di.views.keys()
+
+            # List of refined coordinates which will be used to reformat the object
+            new_coords = np.zeros((len(di_view_names), 2))
+
+            # Only used for calculating the shifted pos
+            self.temp_ob = self.ob.copy()
+
+            # Maximum shift
+            self.position_refinement.max_shift_dist = self.position_refinement.max_shift_dist_rule(self.curiter)
+
+            # Iterate through all diffraction views
+            for i, di_view_name in enumerate(self.di.views):
+                di_view = self.di.views[di_view_name]
+                pos_num = int(di_view.ID[1:])
+
+                # create accessrule
+                if i == 0:
+                    self.position_refinement.ar = DEFAULT_ACCESSRULE.copy()
+                    self.position_refinement.ar.psize = self.temp_ob.storages.values()[0].psize
+                    self.position_refinement.ar.shape = self.position_refinement.shape
+
+                # Check for new coordinates
+                if di_view.active:
+                    new_coords[pos_num, :] = self.position_refinement.single_pos_ref(di_view)
+
+            # MPI reduce and update new coordinates
+            new_coords = parallel.allreduce(new_coords)
+            for di_view_name in self.di.views:
+                di_view = self.di.views[di_view_name]
+                pos_num = int(di_view.ID[1:])
+                if new_coords[pos_num, 0] != 0 and new_coords[pos_num, 1] != 0:
+                    log(4, "Old coordinate (%d): " % (pos_num) + str(di_view.pod.ob_view.coord))
+                    log(4, "New coordinate (%d): " % (pos_num) + str(new_coords[pos_num, :]))
+                    di_view.pod.ob_view.coord = new_coords[pos_num, :]
+
+            # Update object based on new position coordinates
+            self.ob.reformat()
+
+            # The size of the object might have been changed
+            del self.ptycho.containers[self.ob.ID + '_vcover']
+            del self.ptycho.containers[self.ob.ID + '_nrm']
+            self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
+            self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
+            for name, s in self.ob_viewcover.storages.iteritems():
+                s.fill(s.get_view_coverage())
+
+            # clean up
+            del self.ptycho.containers[self.temp_ob.ID]
+            del self.temp_ob
+            gc.collect()
 
 
 

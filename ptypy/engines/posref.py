@@ -26,22 +26,19 @@ class PositionRefine(object):
     An annealing algorithm to correct positioning errors in ptychography,
     Ultramicroscopy, Volume 120, 2012, Pages 64-72
     """
-    def __init__(self, engine, position_refinement_parameters):
+    def __init__(self, engine, position_refinement_parameters, di_views, shape, psize):
         self.p = position_refinement_parameters
         self.engine = engine
 
         # Keep track of the initial positions
-        self.initial_pos = np.zeros((len(self.engine.di.views), 2))
-        di_view_order = self.engine.di.views.keys()
-        di_view_order.sort()
-        for i, name in enumerate(di_view_order):
-            di_view = self.engine.di.views[name]
-            self.initial_pos[i, 0] = di_view.pod.ob_view.coord[0]
-            self.initial_pos[i, 1] = di_view.pod.ob_view.coord[1]
+        self.initial_pos = {}
+        for dname, di_view in di_views.iteritems():
+            self.initial_pos[dname] = di_view.pod.ob_view.coord
+
 
         # Shape and pixelsize 
-        self.shape = self.engine.pr.S.values()[0].data[0].shape
-        self.psize = self.engine.ob.S.values()[0].psize[0]
+        self.shape = shape
+        self.psize = psize
 
         # Maximum shift
         start, end = engine.p.position_refinement.start, engine.p.position_refinement.stop
@@ -69,67 +66,6 @@ class PositionRefine(object):
         del fmag
         return error
 
-    def update(self, iteration):
-        """
-        Iterates trough all positions and refines them by a given algorithm. 
-        Right now the following algorithm is implemented:
-        
-        A.M. Maiden, M.J. Humphry, M.C. Sarahan, B. Kraus, J.M. Rodenburg,
-        An annealing algorithm to correct positioning errors in ptychography,
-        Ultramicroscopy, Volume 120, 2012, Pages 64-72
-        """
-        log(4, "----------- START POS REF -------------")        
-        di_view_names = self.engine.di.views.keys()
-        
-        # List of refined coordinates which will be used to reformat the object
-        new_coords = np.zeros((len(di_view_names), 2))
-
-        # Only used for calculating the shifted pos
-        self.engine.temp_ob = self.engine.ob.copy()
-
-        # Maximum shift
-        self.max_shift_dist = self.max_shift_dist_rule(iteration)
-
-        # Iterate through all diffraction views
-        for i, di_view_name in enumerate(self.engine.di.views):
-            di_view = self.engine.di.views[di_view_name]
-            pos_num = int(di_view.ID[1:])
-            
-            # create accessrule
-            if i == 0:
-                self.engine.ar = DEFAULT_ACCESSRULE.copy()
-                self.engine.ar.psize = self.engine.temp_ob.storages.values()[0].psize
-                self.engine.ar.shape = self.shape
-            
-            # Check for new coordinates
-            if di_view.active:
-                new_coords[pos_num, :] = self.single_pos_ref(di_view)
-
-        # MPI reduce and update new coordinates
-        new_coords = parallel.allreduce(new_coords)
-        for di_view_name in self.engine.di.views:
-            di_view = self.engine.di.views[di_view_name]
-            pos_num = int(di_view.ID[1:])
-            if new_coords[pos_num, 0] != 0 and new_coords[pos_num, 1] != 0:
-                log(4, "Old coordinate (%d): " %(pos_num) + str(di_view.pod.ob_view.coord))
-                log(4, "New coordinate (%d): " %(pos_num) + str(new_coords[pos_num, :]))
-                di_view.pod.ob_view.coord = new_coords[pos_num, :]
-
-        # Update object based on new position coordinates
-        self.engine.ob.reformat()
-        
-        # The size of the object might have been changed
-        del self.engine.ptycho.containers[self.engine.ob.ID + '_vcover']
-        del self.engine.ptycho.containers[self.engine.ob.ID + '_nrm']
-        self.engine.ob_viewcover = self.engine.ob.copy(self.engine.ob.ID + '_vcover', fill=0.)
-        self.engine.ob_nrm = self.engine.ob.copy(self.engine.ob.ID + '_nrm', fill=0.)
-        for name, s in self.engine.ob_viewcover.storages.iteritems():
-            s.fill(s.get_view_coverage())
-
-        # clean up
-        del self.engine.ptycho.containers[self.engine.temp_ob.ID]
-        del self.engine.temp_ob
-        gc.collect()
 
     def single_pos_ref(self, di_view):
         """
@@ -153,11 +89,11 @@ class PositionRefine(object):
         errors = np.zeros(self.p.nshifts)                   # calculated error for the shifted position
         coord = np.copy(di_view.pod.ob_view.coord)
         
-        self.engine.ar.coord = coord
-        self.engine.ar.storageID = self.engine.temp_ob.storages.values()[0].ID
+        self.ar.coord = coord
+        self.ar.storageID = self.engine.temp_ob.storages.values()[0].ID
 
         # Create temporal object view that can be shifted without reformatting
-        ob_view_temp = View(self.engine.temp_ob, accessrule=self.engine.ar)
+        ob_view_temp = View(self.engine.temp_ob, accessrule=self.ar)
         dcoords[0, :] = ob_view_temp.dcoord
 
         # This can be optimized by saving existing iteration fourier error...
@@ -179,7 +115,7 @@ class PositionRefine(object):
             delta[i, 1] = delta_x
 
             rand_coord = [coord[0] + delta_y, coord[1] + delta_x]
-            norm = np.linalg.norm(rand_coord - self.initial_pos[int(di_view.ID[1:]), :])
+            norm = np.linalg.norm(rand_coord - self.initial_pos[di_view.ID])
 
             if norm > self.p.max_shift:
                 # Positions drifted too far, skip this position
@@ -187,8 +123,8 @@ class PositionRefine(object):
                 errors[i] = error_inital + 1.
                 continue
 
-            self.engine.ar.coord = rand_coord
-            ob_view_temp = View(self.engine.temp_ob, accessrule=self.engine.ar)
+            self.ar.coord = rand_coord
+            ob_view_temp = View(self.engine.temp_ob, accessrule=self.ar)
             dcoord = ob_view_temp.dcoord  # coordinate in pixel
 
             # check if new coordinate is on a different pixel since there is no subpixel shift, if there is no shift
