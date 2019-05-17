@@ -320,8 +320,8 @@ class PositionCorrectionEngine(BaseEngine):
         else:
             self.do_position_refinement = True
 
-        if self.p.position_refinement.stop is None:
-            self.p.position_refinement.stop = self.p.numiter
+            if self.p.position_refinement.stop is None:
+                self.p.position_refinement.stop = self.p.numiter
 
     def position_update(self):
         """
