@@ -278,7 +278,7 @@ class PositionCorrectionEngine(BaseEngine):
     help = If True refine scan positions
 
     [position_refinement.start]
-    default = 0
+    default = None
     type = int
     help = Number of iterations until position refinement starts
 
@@ -315,6 +315,10 @@ class PositionCorrectionEngine(BaseEngine):
         Prepare for reconstruction.
         """
         super(PositionCorrectionEngine, self).initialize()
+        if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
+            self.do_position_refinement = False
+        else:
+            self.do_position_refinement = True
 
         if self.p.position_refinement.stop is None:
             self.p.position_refinement.stop = self.p.numiter
@@ -323,6 +327,9 @@ class PositionCorrectionEngine(BaseEngine):
         """
         Position refinement update.
         """
+        if self.do_position_refinement is False:
+            return
+
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.cycle) == 0
 
