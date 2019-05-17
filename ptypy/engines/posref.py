@@ -8,15 +8,9 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from ..core import View
-from ..core.classes import DEFAULT_ACCESSRULE
 from .. import utils as u
-from ..utils import parallel
-from ..utils.verbose import log, logger
+from ..utils.verbose import log
 import numpy as np
-import os
-import sys
-import time
-import gc
 
 class PositionRefine(object):
     """
@@ -26,25 +20,23 @@ class PositionRefine(object):
     An annealing algorithm to correct positioning errors in ptychography,
     Ultramicroscopy, Volume 120, 2012, Pages 64-72
     """
-    def __init__(self, engine, position_refinement_parameters, di_views, shape, psize):
+    def __init__(self, position_refinement_parameters, di_views, shape, psize, temp_ob):
         self.p = position_refinement_parameters
-        self.engine = engine
-
+        self.temp_ob = temp_ob
         # Keep track of the initial positions
         self.initial_pos = {}
         for dname, di_view in di_views.iteritems():
             self.initial_pos[dname] = di_view.pod.ob_view.coord
-
 
         # Shape and pixelsize 
         self.shape = shape
         self.psize = psize
 
         # Maximum shift
-        start, end = engine.p.position_refinement.start, engine.p.position_refinement.stop
+        start, end = self.p.start, self.p.stop
         self.max_shift_dist_rule = lambda it: self.p.amplitude * (end - it) / (end - start) + self.psize/2.
 
-        logger.info("Position refinement initialized")
+        log(3, "Position refinement initialized")
 
 
     def fourier_error(self, di_view, obj):
@@ -90,10 +82,10 @@ class PositionRefine(object):
         coord = np.copy(di_view.pod.ob_view.coord)
         
         self.ar.coord = coord
-        self.ar.storageID = self.engine.temp_ob.storages.values()[0].ID
+        self.ar.storageID = self.temp_ob.storages.values()[0].ID
 
         # Create temporal object view that can be shifted without reformatting
-        ob_view_temp = View(self.engine.temp_ob, accessrule=self.ar)
+        ob_view_temp = View(self.temp_ob, accessrule=self.ar)
         dcoords[0, :] = ob_view_temp.dcoord
 
         # This can be optimized by saving existing iteration fourier error...
@@ -124,7 +116,7 @@ class PositionRefine(object):
                 continue
 
             self.ar.coord = rand_coord
-            ob_view_temp = View(self.engine.temp_ob, accessrule=self.ar)
+            ob_view_temp = View(self.temp_ob, accessrule=self.ar)
             dcoord = ob_view_temp.dcoord  # coordinate in pixel
 
             # check if new coordinate is on a different pixel since there is no subpixel shift, if there is no shift
@@ -145,7 +137,7 @@ class PositionRefine(object):
                 # if the data of the view has the wrong shape, zero-pad the data
                 # new data for calculating the fourier transform
                 # calculate limits of the grid
-                object_grids = self.engine.ob.storages.values()[0].grids()
+                object_grids = self.temp_ob.storages.values()[0].grids()
                 ymin = object_grids[0][0, 0, 0]
                 ymax = object_grids[0][0, -1, -1]
                 xmin = object_grids[1][0, 0, 0]

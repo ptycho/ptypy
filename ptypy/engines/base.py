@@ -327,10 +327,11 @@ class PositionCorrectionEngine(BaseEngine):
         psize = self.ob.S.values()[0].psize[0]
         do_update_pos = self.p.position_refinement and (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.cycle) == 0
-
+        # Only used for calculating the shifted pos
+        temp_ob = self.ob.copy()
         # Start position refinement
-        if (self.p.position_refinement and self.curiter == self.p.position_refinement.start):
-            self.position_refinement = PositionRefine(self, self.p.position_refinement, self.di.views, shape, psize)
+        if self.curiter == self.p.position_refinement.start:
+            self.position_refinement = PositionRefine(self.p.position_refinement, self.di.views, shape, psize, temp_ob)
 
         # Update positions
         if do_update_pos:
@@ -346,38 +347,28 @@ class PositionCorrectionEngine(BaseEngine):
             di_view_names = self.di.views.keys()
 
             # List of refined coordinates which will be used to reformat the object
-            new_coords = np.zeros((len(di_view_names), 2))
-
-            # Only used for calculating the shifted pos
-            self.temp_ob = self.ob.copy()
+            new_coords = {}
 
             # Maximum shift
             self.position_refinement.max_shift_dist = self.position_refinement.max_shift_dist_rule(self.curiter)
-
+            self.position_refinement.ar = DEFAULT_ACCESSRULE.copy()
+            self.position_refinement.ar.psize = temp_ob.storages.values()[0].psize
+            self.position_refinement.ar.shape = self.position_refinement.shape
             # Iterate through all diffraction views
-            for i, di_view_name in enumerate(self.di.views):
-                di_view = self.di.views[di_view_name]
+            for dname, di_view in self.di.views.iteritems():
                 pos_num = int(di_view.ID[1:])
-
-                # create accessrule
-                if i == 0:
-                    self.position_refinement.ar = DEFAULT_ACCESSRULE.copy()
-                    self.position_refinement.ar.psize = self.temp_ob.storages.values()[0].psize
-                    self.position_refinement.ar.shape = self.position_refinement.shape
-
                 # Check for new coordinates
                 if di_view.active:
-                    new_coords[pos_num, :] = self.position_refinement.single_pos_ref(di_view)
+                    new_coords[dname] = self.position_refinement.single_pos_ref(di_view)
 
             # MPI reduce and update new coordinates
             new_coords = parallel.allreduce(new_coords)
-            for di_view_name in self.di.views:
-                di_view = self.di.views[di_view_name]
+            for dname, di_view in self.di.views.iteritems():
                 pos_num = int(di_view.ID[1:])
-                if new_coords[pos_num, 0] != 0 and new_coords[pos_num, 1] != 0:
-                    log(4, "Old coordinate (%d): " % (pos_num) + str(di_view.pod.ob_view.coord))
-                    log(4, "New coordinate (%d): " % (pos_num) + str(new_coords[pos_num, :]))
-                    di_view.pod.ob_view.coord = new_coords[pos_num, :]
+                if new_coords[dname][0] != 0 and new_coords[dname][1] != 0:
+                    log(4, "Old coordinate (%s): " % (dname) + str(di_view.pod.ob_view.coord))
+                    log(4, "New coordinate (%s): " % (dname) + str(new_coords[dname]))
+                    di_view.pod.ob_view.coord = new_coords[dname]
 
             # Update object based on new position coordinates
             self.ob.reformat()
@@ -391,8 +382,8 @@ class PositionCorrectionEngine(BaseEngine):
                 s.fill(s.get_view_coverage())
 
             # clean up
-            del self.ptycho.containers[self.temp_ob.ID]
-            del self.temp_ob
+            del self.ptycho.containers[temp_ob.ID]
+            del temp_ob
             gc.collect()
 
 
