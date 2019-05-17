@@ -26,14 +26,12 @@ class PositionRefine(object):
     An annealing algorithm to correct positioning errors in ptychography,
     Ultramicroscopy, Volume 120, 2012, Pages 64-72
     """
-    def __init__(self, engine):
+    def __init__(self, engine, position_refinement_parameters):
+        self.p = position_refinement_parameters
         self.engine = engine
-        self.number_rand_shifts = engine.p.position_refinement.nshifts # should be a multiple of 4
-        self.amplitude = engine.p.position_refinement.amplitude        # still has to be replaced by parameter value
-        self.max_shift_allowed = engine.p.position_refinement.max_shift
 
         # Keep track of the initial positions
-        self.initial_pos = np.zeros((len(self.engine.di.views),2))
+        self.initial_pos = np.zeros((len(self.engine.di.views), 2))
         di_view_order = self.engine.di.views.keys()
         di_view_order.sort()
         for i, name in enumerate(di_view_order):
@@ -47,10 +45,8 @@ class PositionRefine(object):
 
         # Maximum shift
         start, end = engine.p.position_refinement.start, engine.p.position_refinement.stop
-        self.max_shift_dist_rule = lambda it: self.amplitude * (end - it) / (end - start) + self.psize/2.
+        self.max_shift_dist_rule = lambda it: self.p.amplitude * (end - it) / (end - start) + self.psize/2.
 
-        # Save initial positions to file
-        self.save_pos()
         logger.info("Position refinement initialized")
 
 
@@ -73,7 +69,7 @@ class PositionRefine(object):
         del fmag
         return error
 
-    def update(self):
+    def update(self, iteration):
         """
         Iterates trough all positions and refines them by a given algorithm. 
         Right now the following algorithm is implemented:
@@ -92,7 +88,7 @@ class PositionRefine(object):
         self.engine.temp_ob = self.engine.ob.copy()
 
         # Maximum shift
-        self.max_shift_dist = self.max_shift_dist_rule(self.engine.curiter)
+        self.max_shift_dist = self.max_shift_dist_rule(iteration)
 
         # Iterate through all diffraction views
         for i, di_view_name in enumerate(self.engine.di.views):
@@ -152,9 +148,9 @@ class PositionRefine(object):
         :return: If a better coordinate (smaller fourier error) is found for a position, the new coordinate (meters)
         will be returned. Otherwise (0, 0) will be returned.
         """
-        dcoords = np.zeros((self.number_rand_shifts + 1, 2)) - 1.
-        delta = np.zeros((self.number_rand_shifts, 2))               # coordinate shift
-        errors = np.zeros(self.number_rand_shifts)                   # calculated error for the shifted position
+        dcoords = np.zeros((self.p.nshifts + 1, 2)) - 1.
+        delta = np.zeros((self.p.nshifts, 2))               # coordinate shift
+        errors = np.zeros(self.p.nshifts)                   # calculated error for the shifted position
         coord = np.copy(di_view.pod.ob_view.coord)
         
         self.engine.ar.coord = coord
@@ -167,7 +163,7 @@ class PositionRefine(object):
         # This can be optimized by saving existing iteration fourier error...
         error_inital = self.fourier_error(di_view, ob_view_temp.data)
 
-        for i in range(self.number_rand_shifts):
+        for i in range(self.p.nshifts):
             delta_y = np.random.uniform(0, self.max_shift_dist)
             delta_x = np.random.uniform(0, self.max_shift_dist)
 
@@ -185,7 +181,7 @@ class PositionRefine(object):
             rand_coord = [coord[0] + delta_y, coord[1] + delta_x]
             norm = np.linalg.norm(rand_coord - self.initial_pos[int(di_view.ID[1:]), :])
 
-            if norm > self.max_shift_allowed:
+            if norm > self.p.max_shift:
                 # Positions drifted too far, skip this position
                 #log(4, "New position is too far away!!!", parallel=True)
                 errors[i] = error_inital + 1.
@@ -213,10 +209,11 @@ class PositionRefine(object):
                 # if the data of the view has the wrong shape, zero-pad the data
                 # new data for calculating the fourier transform
                 # calculate limits of the grid
-                ymin = self.engine.ob.storages.values()[0].grids()[0][0, 0, 0]
-                ymax = self.engine.ob.storages.values()[0].grids()[0][0, -1, -1]
-                xmin = self.engine.ob.storages.values()[0].grids()[1][0, 0, 0]
-                xmax = self.engine.ob.storages.values()[0].grids()[1][0, -1, -1]
+                object_grids = self.engine.ob.storages.values()[0].grids()
+                ymin = object_grids[0][0, 0, 0]
+                ymax = object_grids[0][0, -1, -1]
+                xmin = object_grids[1][0, 0, 0]
+                xmax = object_grids[1][0, -1, -1]
 
                 # check if the new array would be bigger
                 new_xmin = rand_coord[1] - (self.psize * self.shape[1] / 2.)
@@ -259,23 +256,3 @@ class PositionRefine(object):
         del di_view
         
         return new_coordinate
-
-    def save_pos(self):
-        """
-        Saves the current positions in a .txt file.
-        """
-        if parallel.master:
-            coords = []
-
-            di_view_names = self.engine.di.views.keys()
-            di_view_names.sort()
-            for di_view_name in di_view_names:
-                di_view = self.engine.di.views[di_view_name]
-                coord = np.copy(di_view.pod.ob_view.coord)
-                coords.append(coord)
-            coords = np.asarray(coords)
-
-            directory = "positions_" + sys.argv[0][:-3] + "/"
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-            np.savetxt(directory + "pos_" + str(self.engine.p.name) + "_" + str(self.engine.curiter).zfill(4) + ".txt", coords)

@@ -326,16 +326,14 @@ class PositionCorrectionEngine(BaseEngine):
 
         # Start position refinement
         if (self.p.position_refinement and self.curiter == self.p.position_refinement.start):
-            self.position_refinement = PositionRefine(self)
+            self.position_refinement = PositionRefine(self, self.p.position_refinement)
 
         # Update positions
         if do_update_pos:
-            self.position_refinement.update()
-            self.position_refinement.save_pos()
+            self.position_refinement.update(self.engine.curiter)
 
-        # End of position refinement
-        if (self.p.position_refinement and self.curiter+1 == self.p.position_refinement.stop):
-            self.position_refinement.save_pos()
+
+
 
 class Base3dBraggEngine(BaseEngine):
     """
