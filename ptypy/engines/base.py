@@ -15,7 +15,6 @@ from ..utils import parallel
 from ..utils.verbose import logger, headerline, log
 from ..utils.descriptor import EvalDescriptor
 from .posref import PositionRefine
-from ..core.classes import DEFAULT_ACCESSRULE
 import gc
 
 __all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info', 'PositionCorrectionEngine']
@@ -323,15 +322,19 @@ class PositionCorrectionEngine(BaseEngine):
         """
         Position refinement update.
         """
-        shape = self.pr.S.values()[0].data[0].shape
-        psize = self.ob.S.values()[0].psize[0]
         do_update_pos = self.p.position_refinement and (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.cycle) == 0
+
+        shape = self.pr.S.values()[0].data[0].shape
+        psize = self.ob.S.values()[0].psize[0]
         # Only used for calculating the shifted pos
         temp_ob = self.ob.copy()
         # Start position refinement
         if self.curiter == self.p.position_refinement.start:
-            self.position_refinement = PositionRefine(self.p.position_refinement, self.di.views, shape, psize, temp_ob)
+            initial_positions = {}
+            for dname, di_view in self.di.views.iteritems():
+                initial_positions[dname] = di_view.pod.ob_view.coord
+            self.position_refinement = PositionRefine(self.p.position_refinement, initial_positions, shape, psize, temp_ob)
 
         # Update positions
         if do_update_pos:
@@ -344,19 +347,16 @@ class PositionCorrectionEngine(BaseEngine):
             Ultramicroscopy, Volume 120, 2012, Pages 64-72
             """
             log(4, "----------- START POS REF -------------")
-            di_view_names = self.di.views.keys()
 
             # List of refined coordinates which will be used to reformat the object
             new_coords = {}
 
             # Maximum shift
             self.position_refinement.max_shift_dist = self.position_refinement.max_shift_dist_rule(self.curiter)
-            self.position_refinement.ar = DEFAULT_ACCESSRULE.copy()
-            self.position_refinement.ar.psize = temp_ob.storages.values()[0].psize
-            self.position_refinement.ar.shape = self.position_refinement.shape
+            self.position_refinement.reset_access_rule()
+
             # Iterate through all diffraction views
             for dname, di_view in self.di.views.iteritems():
-                pos_num = int(di_view.ID[1:])
                 # Check for new coordinates
                 if di_view.active:
                     new_coords[dname] = self.position_refinement.single_pos_ref(di_view)
@@ -364,7 +364,6 @@ class PositionCorrectionEngine(BaseEngine):
             # MPI reduce and update new coordinates
             new_coords = parallel.allreduce(new_coords)
             for dname, di_view in self.di.views.iteritems():
-                pos_num = int(di_view.ID[1:])
                 if new_coords[dname][0] != 0 and new_coords[dname][1] != 0:
                     log(4, "Old coordinate (%s): " % (dname) + str(di_view.pod.ob_view.coord))
                     log(4, "New coordinate (%s): " % (dname) + str(new_coords[dname]))

@@ -11,6 +11,7 @@ from ..core import View
 from .. import utils as u
 from ..utils.verbose import log
 import numpy as np
+from ..core.classes import DEFAULT_ACCESSRULE
 
 class PositionRefine(object):
     """
@@ -20,15 +21,12 @@ class PositionRefine(object):
     An annealing algorithm to correct positioning errors in ptychography,
     Ultramicroscopy, Volume 120, 2012, Pages 64-72
     """
-    def __init__(self, position_refinement_parameters, di_views, shape, psize, temp_ob):
+    def __init__(self, position_refinement_parameters, initial_positions, shape, psize, temp_ob):
         self.p = position_refinement_parameters
         self.temp_ob = temp_ob
         # Keep track of the initial positions
-        self.initial_pos = {}
-        for dname, di_view in di_views.iteritems():
-            self.initial_pos[dname] = di_view.pod.ob_view.coord
-
-        # Shape and pixelsize 
+        self.initial_pos = initial_positions
+        # Shape and pixelsize
         self.shape = shape
         self.psize = psize
 
@@ -184,3 +182,8 @@ class PositionRefine(object):
         del di_view
         
         return new_coordinate
+
+    def reset_access_rule(self):
+        self.ar = DEFAULT_ACCESSRULE.copy()
+        self.ar.psize = self.psize
+        self.ar.shape = self.shape
