@@ -132,7 +132,7 @@ class PositionRefine(object):
                 di_view.pod.ob_view.dlow[1] = 0
 
             new_obj = np.zeros(self.shape, dtype=np.complex128)
-            if ob_view_temp.data.shape[0] != self.shape[0] or ob_view_temp.data.shape[1] != self.shape[1]:
+            if not np.allclose(ob_view_temp.data.shape, self.shape):
                 # if the data of the view has the wrong shape, zero-pad the data
                 # new data for calculating the fourier transform
                 # calculate limits of the grid
