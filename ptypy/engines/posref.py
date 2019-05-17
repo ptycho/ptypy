@@ -21,14 +21,15 @@ class PositionRefine(object):
     An annealing algorithm to correct positioning errors in ptychography,
     Ultramicroscopy, Volume 120, 2012, Pages 64-72
     """
-    def __init__(self, position_refinement_parameters, initial_positions, shape, psize, temp_ob):
+    def __init__(self, position_refinement_parameters, initial_positions, shape, temp_ob):
         self.p = position_refinement_parameters
+        # copy of the original object buffer to give space to play in
         self.temp_ob = temp_ob
-        # Keep track of the initial positions
+        # A dictionary of the initial positions
         self.initial_pos = initial_positions
         # Shape and pixelsize
         self.shape = shape
-        self.psize = psize
+        self.psize = temp_ob.S.values()[0].psize[0]
 
         # Maximum shift
         start, end = self.p.start, self.p.stop
@@ -109,7 +110,7 @@ class PositionRefine(object):
 
             if norm > self.p.max_shift:
                 # Positions drifted too far, skip this position
-                #log(4, "New position is too far away!!!", parallel=True)
+                log(4, "New position is too far away!!!", parallel=True)
                 errors[i] = error_inital + 1.
                 continue
 

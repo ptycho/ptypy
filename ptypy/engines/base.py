@@ -334,7 +334,7 @@ class PositionCorrectionEngine(BaseEngine):
             initial_positions = {}
             for dname, di_view in self.di.views.iteritems():
                 initial_positions[dname] = di_view.pod.ob_view.coord
-            self.position_refinement = PositionRefine(self.p.position_refinement, initial_positions, shape, psize, temp_ob)
+            self.position_refinement = PositionRefine(self.p.position_refinement, initial_positions, shape, temp_ob)
 
         # Update positions
         if do_update_pos:
