@@ -41,13 +41,13 @@ p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
 p.engines.engine00.numiter = 200
-p.engines.engine00.posref = True
-p.engines.engine00.posref_start = 50
-p.engines.engine00.posref_stop = 190
-p.engines.engine00.posref_cycle = 2
-p.engines.engine00.posref_nshifts = 8
-p.engines.engine00.posref_amplitude = 5e-7
-p.engines.engine00.posref_max_shift = 5e-7
+p.engines.engine00.position_refinement = u.Param()
+p.engines.engine00.position_refinement.start = 50
+p.engines.engine00.position_refinement.stop = 190
+p.engines.engine00.position_refinement.cycle = 2
+p.engines.engine00.position_refinement.nshifts = 8
+p.engines.engine00.position_refinement.amplitude = 5e-7
+p.engines.engine00.position_refinement.max_shift = 5e-7
 
 # prepare and run
 P = Ptycho(p, level=4)

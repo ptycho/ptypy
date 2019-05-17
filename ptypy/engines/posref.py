@@ -28,9 +28,9 @@ class PositionRefine(object):
     """
     def __init__(self, engine):
         self.engine = engine
-        self.number_rand_shifts = engine.p.posref_nshifts # should be a multiple of 4
-        self.amplitude = engine.p.posref_amplitude        # still has to be replaced by parameter value
-        self.max_shift_allowed = engine.p.posref_max_shift
+        self.number_rand_shifts = engine.p.position_refinement.nshifts # should be a multiple of 4
+        self.amplitude = engine.p.position_refinement.amplitude        # still has to be replaced by parameter value
+        self.max_shift_allowed = engine.p.position_refinement.max_shift
 
         # Keep track of the initial positions
         self.initial_pos = np.zeros((len(self.engine.di.views),2))
@@ -46,7 +46,7 @@ class PositionRefine(object):
         self.psize = self.engine.ob.S.values()[0].psize[0]
 
         # Maximum shift
-        start, end = engine.p.posref_start, engine.p.posref_stop
+        start, end = engine.p.position_refinement.start, engine.p.position_refinement.stop
         self.max_shift_dist_rule = lambda it: self.amplitude * (end - it) / (end - start) + self.psize/2.
 
         # Save initial positions to file
