@@ -385,7 +385,7 @@ class Storage(Base):
         ndim = container.ndim if container.ndim is not None else 2
 
         if shape is None:
-            shape = (1,) + (2*padding,) * ndim
+            shape = (1,) + (1 + 2*padding,) * ndim
         elif np.isscalar(shape):
             shape = (1,) + (int(shape+2*padding),) * ndim
         else:
