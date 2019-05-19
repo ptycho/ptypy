@@ -44,7 +44,7 @@ class StorageTest(unittest.TestCase):
         S = C.new_storage(psize=psize, padding=padding)
         V = View(container=C, storageID=S.ID, coord=(0., 0.), shape=shape)
         S.reformat()
-        assert S.shape == (shape[0]+2*padding, shape[1] + 2*padding)
+        assert S.shape == (1, shape[0]+2*padding, shape[1] + 2*padding)
 
         # Check view access stability upon padding change
         S[V] = 1.
