@@ -1041,16 +1041,12 @@ class Storage(Base):
         if isinstance(v, View):
             if self.ndim == 2:
                 return shift(self.data[
-                             v.dlayer,
-                             (v.dlow[0]+self.padding):(v.dhigh[0]+self.padding),
-                             (v.dlow[1]+self.padding):(v.dhigh[1]+self.padding)],
+                             v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
                              v.sp)
             elif self.ndim == 3:
                 return shift(self.data[
-                             v.dlayer,
-                             (v.dlow[0]+self.padding):(v.dhigh[0]+self.padding),
-                             (v.dlow[1]+self.padding):(v.dhigh[1]+self.padding),
-                             (v.dlow[2]+self.padding):(v.dhigh[2]+self.padding)], v.sp)
+                             v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1],
+                             v.dlow[2]:v.dhigh[2]], v.sp)
         elif v in self.layermap:
             return self.data[self.layermap.index(v)]
         else:
@@ -1083,26 +1079,26 @@ class Storage(Base):
             # right, but returns copies and not views.
             if self.ndim == 2:
                 self.data[v.dlayer,
-                          (v.dlow[0]+self.padding):(v.dhigh[0]+self.padding),
-                          (v.dlow[1]+self.padding):(v.dhigh[1]+self.padding)] = (shift(newdata, -v.sp))
+                          v.dlow[0]:v.dhigh[0],
+                          v.dlow[1]:v.dhigh[1]] = (shift(newdata, -v.sp))
             elif self.ndim == 3:
                 self.data[v.dlayer,
-                          (v.dlow[0] + self.padding):(v.dhigh[0] + self.padding),
-                          (v.dlow[1] + self.padding):(v.dhigh[1] + self.padding),
-                          (v.dlow[2] + self.padding):(v.dhigh[2] + self.padding)] = (shift(newdata, -v.sp))
+                          v.dlow[0]:v.dhigh[0],
+                          v.dlow[1]:v.dhigh[1],
+                          v.dlow[2]:v.dhigh[2]] = (shift(newdata, -v.sp))
             elif self.ndim == 4:
                 self.data[v.dlayer,
-                          (v.dlow[0] + self.padding):(v.dhigh[0] + self.padding),
-                          (v.dlow[1] + self.padding):(v.dhigh[1] + self.padding),
-                          (v.dlow[2] + self.padding):(v.dhigh[2] + self.padding),
-                          (v.dlow[3] + self.padding):(v.dhigh[3] + self.padding)] = (shift(newdata, -v.sp))
+                          v.dlow[0]:v.dhigh[0],
+                          v.dlow[1]:v.dhigh[1],
+                          v.dlow[2]:v.dhigh[2],
+                          v.dlow[3]:v.dhigh[3]] = (shift(newdata, -v.sp))
             elif self.ndim == 5:
                 self.data[v.dlayer,
-                          (v.dlow[0] + self.padding):(v.dhigh[0] + self.padding),
-                          (v.dlow[1] + self.padding):(v.dhigh[1] + self.padding),
-                          (v.dlow[2] + self.padding):(v.dhigh[2] + self.padding),
-                          (v.dlow[3] + self.padding):(v.dhigh[3] + self.padding),
-                          (v.dlow[4] + self.padding):(v.dhigh[4] + self.padding)] = (shift(newdata, -v.sp))
+                          v.dlow[0]:v.dhigh[0],
+                          v.dlow[1]:v.dhigh[1],
+                          v.dlow[2]:v.dhigh[2],
+                          v.dlow[3]:v.dhigh[3],
+                          v.dlow[4]:v.dhigh[4]] = (shift(newdata, -v.sp))
         elif v in self.layermap:
             self.data[self.layermap.index(v)] = newdata
         else:
