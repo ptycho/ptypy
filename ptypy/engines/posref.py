@@ -40,7 +40,7 @@ class PositionRefine(object):
 
     def fourier_error(self, di_view, obj):
         """
-        Calculates the fourier error based on a given diffraction and ohject.
+        Calculates the fourier error based on a given diffraction and object.
 
         :param di_view: View to the diffraction pattern of the given position.
         :param object: Numpy array which contains the needed object.
