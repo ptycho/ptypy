@@ -364,8 +364,13 @@ class PositionCorrectionEngine(BaseEngine):
             new_coords = {}
 
             # Maximum shift
+
             self.position_refinement.max_shift_dist = self.position_refinement.max_shift_dist_rule(self.curiter)
-            self.position_refinement.reset_access_rule()
+            for sname, storage in self.position_refinement.temp_ob.storages.iteritems():
+                print("Old storage shape is: %s" % str(storage.shape))
+                storage.padding = int(np.round(self.position_refinement.max_shift_dist + 1))
+                storage.reformat()
+                print("new storage shape is: %s" % str(storage.shape))
 
             # Iterate through all diffraction views
             for dname, di_view in self.di.views.iteritems():

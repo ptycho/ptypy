@@ -30,11 +30,13 @@ class PositionRefine(object):
         # Shape and pixelsize
         self.shape = shape
         self.psize = temp_ob.S.values()[0].psize[0]
-        self.ar = self.reset_access_rule()
         # Maximum shift
         start, end = self.p.start, self.p.stop
         self.max_shift_dist_rule = lambda it: self.p.amplitude * (end - it) / (end - start) + self.psize/2.
 
+        self.ar = DEFAULT_ACCESSRULE.copy()
+        self.ar.psize = self.psize
+        self.ar.shape = self.shape
         log(3, "Position refinement initialized")
 
 
@@ -124,51 +126,20 @@ class PositionRefine(object):
                 errors[i] = error_inital + 1.
                 continue
             dcoords[i + 1, :] = dcoord
-
+            #
             # Check if these are really necessary
             if di_view.pod.ob_view.dlow[0] < 0:
+                print("The 0 co-ordinate was less than 0")
                 di_view.pod.ob_view.dlow[0] = 0
             if di_view.pod.ob_view.dlow[1] < 0:
+                print("The 1 co-ordinate was less than 0")
                 di_view.pod.ob_view.dlow[1] = 0
 
-            new_obj = np.zeros(self.shape, dtype=np.complex128)
             if not np.allclose(ob_view_temp.data.shape, self.shape):
-                # if the data of the view has the wrong shape, zero-pad the data
-                # new data for calculating the fourier transform
-                # calculate limits of the grid
-                object_grids = self.temp_ob.storages.values()[0].grids()
-                ymin = object_grids[0][0, 0, 0]
-                ymax = object_grids[0][0, -1, -1]
-                xmin = object_grids[1][0, 0, 0]
-                xmax = object_grids[1][0, -1, -1]
+                print("I went in here tempshape:%s, self.shape:%s, dx:%s, xy:%s, maxdist:%s" % (ob_view_temp.data.shape, self.shape, delta_x, delta_y, self.max_shift_dist))
 
-                # check if the new array would be bigger
-                new_xmin = rand_coord[1] - (self.psize * self.shape[1] / 2.)
-                new_xmax = rand_coord[1] + self.psize * self.shape[1] / 2.
-                new_ymin = rand_coord[0] - (self.psize * self.shape[0] / 2.)
-                new_ymax = rand_coord[0] + self.psize * self.shape[0] / 2.
-        
-                idx_x_low = 0
-                idx_x_high = self.shape[1]
-                idx_y_low = 0
-                idx_y_high = self.shape[0]
 
-                if new_ymin < ymin:
-                    idx_y_low = self.shape[0] - ob_view_temp.data.shape[0]
-                elif new_ymax > ymax:
-                    idx_y_high = ob_view_temp.data.shape[0]
-
-                if new_xmin < xmin:
-                    idx_x_low = self.shape[1] - ob_view_temp.data.shape[1]
-                elif new_xmax > xmax:
-                    idx_x_high = ob_view_temp.data.shape[1]
-
-                new_obj[idx_y_low: idx_y_high, idx_x_low: idx_x_high] = ob_view_temp.data
-            else:
-                new_obj = ob_view_temp.data
-
-            errors[i] = self.fourier_error(di_view, new_obj)
-            del new_obj
+            errors[i] = self.fourier_error(di_view, ob_view_temp.data)
 
         if np.min(errors) < error_inital:
             # if a better coordinate is found
@@ -184,7 +155,4 @@ class PositionRefine(object):
         
         return new_coordinate
 
-    def reset_access_rule(self):
-        self.ar = DEFAULT_ACCESSRULE.copy()
-        self.ar.psize = self.psize
-        self.ar.shape = self.shape
+
