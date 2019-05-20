@@ -13,7 +13,21 @@ from ..utils.verbose import log
 import numpy as np
 from ..core.classes import DEFAULT_ACCESSRULE
 
+
 class PositionRefine(object):
+    def __init__(self, p):
+        self.p = p
+
+    def update_view_position(di_view):
+        '''
+        takes a single diffraction view and updates it's co-ordinate
+        '''
+
+        raise NotImplementedError('This method needs to be overridden in order to position correct')
+
+
+
+class AnnealingRefine(PositionRefine):
     """
     Refines the positions by the following algorithm:
     
@@ -22,7 +36,7 @@ class PositionRefine(object):
     Ultramicroscopy, Volume 120, 2012, Pages 64-72
     """
     def __init__(self, position_refinement_parameters, initial_positions, shape, temp_ob):
-        self.p = position_refinement_parameters
+        super(AnnealingRefine, self).__init__(position_refinement_parameters)
         # copy of the original object buffer to give space to play in
         self.temp_ob = temp_ob
         # A dictionary of the initial positions
@@ -60,7 +74,7 @@ class PositionRefine(object):
         return error
 
 
-    def single_pos_ref(self, di_view):
+    def update_view_position(self, di_view):
         """
         Refines the positions by the following algorithm:
 

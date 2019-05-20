@@ -14,7 +14,7 @@ from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline, log
 from ..utils.descriptor import EvalDescriptor
-from .posref import PositionRefine
+from .posref import AnnealingRefine
 import gc
 
 __all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info', 'PositionCorrectionEngine']
@@ -351,7 +351,7 @@ class PositionCorrectionEngine(BaseEngine):
             initial_positions = {}
             for dname, di_view in self.di.views.iteritems():
                 initial_positions[dname] = di_view.pod.ob_view.coord
-            self.position_refinement = PositionRefine(self.p.position_refinement, initial_positions, shape, temp_ob)
+            self.position_refinement = AnnealingRefine(self.p.position_refinement, initial_positions, shape, temp_ob)
 
         # Update positions
         if do_update_pos:
@@ -376,7 +376,7 @@ class PositionCorrectionEngine(BaseEngine):
             for dname, di_view in self.di.views.iteritems():
                 # Check for new coordinates
                 if di_view.active:
-                    new_coords[dname] = self.position_refinement.single_pos_ref(di_view)
+                    new_coords[dname] = self.position_refinement.update_view_position(di_view)
 
             # MPI reduce and update new coordinates
             new_coords = parallel.allreduce(new_coords)
