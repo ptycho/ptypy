@@ -319,7 +319,16 @@ class PositionCorrectionEngine(BaseEngine):
             self.do_position_refinement = False
         else:
             self.do_position_refinement = True
-
+            self.ptycho.citations.add_article(
+                title='An annealing algorithm to correct positioning errors in ptychography',
+                author='Maiden et al.',
+                journal='Ultramicroscopy',
+                volume=120,
+                year=2012,
+                page=64,
+                doi='10.1016/j.ultramic.2012.06.001',
+                comment='Position Refinement using annealing algorithm',
+            )
             if self.p.position_refinement.stop is None:
                 self.p.position_refinement.stop = self.p.numiter
 
@@ -329,6 +338,7 @@ class PositionCorrectionEngine(BaseEngine):
         """
         if self.do_position_refinement is False:
             return
+
 
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.cycle) == 0
@@ -347,11 +357,6 @@ class PositionCorrectionEngine(BaseEngine):
         if do_update_pos:
             """
             Iterates trough all positions and refines them by a given algorithm. 
-            Right now the following algorithm is implemented:
-
-            A.M. Maiden, M.J. Humphry, M.C. Sarahan, B. Kraus, J.M. Rodenburg,
-            An annealing algorithm to correct positioning errors in ptychography,
-            Ultramicroscopy, Volume 120, 2012, Pages 64-72
             """
             log(4, "----------- START POS REF -------------")
 
