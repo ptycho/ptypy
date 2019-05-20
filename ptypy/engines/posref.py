@@ -44,43 +44,47 @@ class AnnealingRefine(PositionRefine):
     Ultramicroscopy, Volume 120, 2012, Pages 64-72
     """
     def __init__(self, position_refinement_parameters, Cobj):
+        """
+        Annealing Positon Refinement.
+
+        :param position_refinement_parameters: See parameters defined in PositionCorrectionEngine
+        :param Cobj: Object Container
+        """
         super(AnnealingRefine, self).__init__(position_refinement_parameters)
-        # copy of the original object buffer to give space to play in
+
         self.Cobj = Cobj  # take a reference here. It would be cool if we could make this read-only or something
-        # A dictionary of the initial positions, do we need this?
+
+        # Store initial positions to check if things have drifted too far
         self.initial_positions = {}
         for oname, ob_view in Cobj.views.iteritems():
             self.initial_positions[oname] = ob_view.coord
 
-        # Shape and pixelsize
+        # Shape and pixel size
         self.shape = ob_view.shape
         self.psize = ob_view.psize[0]
 
+        # Initialise access rules for View instantiations
         self.ar = DEFAULT_ACCESSRULE.copy()
         self.ar.psize = self.psize
         self.ar.shape = self.shape
-        self.max_shift_dist = None  # updated per iteration
-        self.temp_ob = None  # updated per interation
+
+        # Updated before each iteration by self.update_constraints
+        self.max_shift_dist = None
+        self.temp_ob = None
         log(3, "Position refinement initialized")
 
     def fourier_error(self, di_view, obj):
         """
-        Calculates the fourier error based on a given diffraction and object.
+        Calculate the Fourier error based on a given diffraction and object.
 
         :param di_view: View to the diffraction pattern of the given position.
-        :param object: Numpy array which contains the needed object.
-        :return: Tuple of Fourier Errors
+        :param obj: Numpy array which contains the needed object.
+        :return: Fourier Error
         """
         af2 = np.zeros_like(di_view.data)
         for name, pod in di_view.pods.iteritems():
             af2 += u.abs2(pod.fw(pod.probe*obj))
-        af = np.sqrt(af2)
-        fmag = np.sqrt(np.abs(di_view.data))
-        error = np.sum(di_view.pod.mask * (af - fmag)**2)
-        del af2
-        del af
-        del fmag
-        return error
+        return np.sum(di_view.pod.mask * (np.sqrt(af2) - np.sqrt(np.abs(di_view.data)))**2)
 
     def update_view_position(self, di_view):
         """
@@ -96,77 +100,77 @@ class AnnealingRefine(PositionRefine):
     
         :param di_view: Diffraction view for which a better position is searched for.
 
-        :return: If a better coordinate (smaller fourier error) is found for a position, the new coordinate (meters)
-        will be returned. Otherwise (0, 0) will be returned.
+        :return The best shift found (for eventual statistics)
         """
-        dcoords = np.zeros((self.p.nshifts + 1, 2)) - 1.
-        delta = np.zeros((self.p.nshifts, 2))               # coordinate shift
-        errors = np.zeros(self.p.nshifts)                   # calculated error for the shifted position
-        coord = np.copy(di_view.pod.ob_view.coord)
+        dcoords = np.zeros((self.p.nshifts + 1, 2)) - 1.    # Coordinates (including the original)
+        delta = np.zeros((self.p.nshifts, 2))               # Coordinate shifts
+        errors = np.zeros(self.p.nshifts)                   # Calculated errors for the shifted positions
+
+        coord = di_view.pod.ob_view.coord.copy()
         
         self.ar.coord = coord
         self.ar.storageID = di_view.pod.ob_view.storageID
 
-        # Create temporal object view that can be shifted without reformatting
+        # Create temporary object view that can be shifted without reformatting
         ob_view_temp = View(self.temp_ob, accessrule=self.ar)
         dcoords[0, :] = ob_view_temp.dcoord
 
         # This can be optimized by saving existing iteration fourier error...
-        error_inital = self.fourier_error(di_view, ob_view_temp.data)
+        error_initial = self.fourier_error(di_view, ob_view_temp.data)
 
         for i in range(self.p.nshifts):
-            delta_y = np.random.uniform(0, self.max_shift_dist)
-            delta_x = np.random.uniform(0, self.max_shift_dist)
+            # Generate coordinate shift in one of the 4 cartesian quadrants
+            delta[i, 0] = (-1)**i * np.random.uniform(0, self.max_shift_dist)
+            delta[i, 1] = (-1)**(i//2) * np.random.uniform(0, self.max_shift_dist)
 
-            if i % 4 == 1:
-                delta_y *= -1
-                delta_x *= -1
-            elif i % 4 == 2:
-                delta_x *= -1
-            elif i % 4 == 3:
-                delta_y *= -1
+            rand_coord = coord + delta[i]
 
-            delta[i, 0] = delta_y
-            delta[i, 1] = delta_x
-
-            rand_coord = [coord[0] + delta_y, coord[1] + delta_x]
             norm = np.linalg.norm(rand_coord - self.initial_positions[di_view.ID])
-
             if norm > self.p.max_shift:
                 # Positions drifted too far, skip this position
-                errors[i] = error_inital + 1.
+                errors[i] = error_initial + 1.
                 continue
 
+            # Create new view on new position
             self.ar.coord = rand_coord
             ob_view_temp = View(self.temp_ob, accessrule=self.ar)
             dcoord = ob_view_temp.dcoord  # coordinate in pixel
 
-            # check if new coordinate is on a different pixel since there is no subpixel shift, if there is no shift
-            # skip the calculation of the fourier error
+            # Skip if this pixel has already been explored
             if any((dcoord == x).all() for x in dcoords):
-                errors[i] = error_inital + 1.
+                errors[i] = error_initial + 1.
                 continue
-            dcoords[i + 1, :] = dcoord
 
+            # Store new coordinate and Fourier error
+            dcoords[i + 1, :] = dcoord
             errors[i] = self.fourier_error(di_view, ob_view_temp.data)
 
-        if np.min(errors) < error_inital:
+        # Identify lowest error and update position
+        if np.min(errors) < error_initial:
             arg = np.argmin(errors)
-            new_coordinate = np.array([coord[0] + delta[arg, 0], coord[1] + delta[arg, 1]])
-            di_view.pod.ob_view.coord = new_coordinate
-
-        # Clean up
-        del ob_view_temp
+            di_view.pod.ob_view.coord = coord + delta[arg]
+            return delta[arg]
+        else:
+            return np.zeros((2,))
 
     def update_constraints(self, iteration):
-        self.temp_ob = self.Cobj.copy()
+        """
+        Update information required prior to position refinement.
+        :param iteration: current iteration number.
+        """
+
         start, end = self.p.start, self.p.stop
+
+        # Compute the maximum shift allowed at this iteration
         self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start) + self.psize/2.
+
+        # Create a copy of the object container and expand it to avoid any run off.
+        self.temp_ob = self.Cobj.copy()
         for sname, storage in self.temp_ob.storages.iteritems():
             log(4, "Old storage shape is: %s" % str(storage.shape))
             storage.padding = int(np.round(self.max_shift_dist / self.psize)) + 1
             storage.reformat()
-            log(4, "new storage shape is: %s" % str(storage.shape))
+            log(4, "New storage shape is: %s" % str(storage.shape))
 
     @property
     def citation_dictionary(self):
