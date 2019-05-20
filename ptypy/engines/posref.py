@@ -18,7 +18,7 @@ class PositionRefine(object):
     def __init__(self, p):
         self.p = p
 
-    def update_view_position(di_view):
+    def update_view_position(self, di_view):
         '''
         takes a single diffraction view and updates it's co-ordinate
         '''
