@@ -385,12 +385,12 @@ class Storage(Base):
         ndim = container.ndim if container.ndim is not None else 2
 
         if shape is None:
-            shape = (1,) + (1 + 2*padding,) * ndim
+            shape = (1,) + (1 + 2*self.padding,) * ndim
         elif np.isscalar(shape):
-            shape = (1,) + (int(shape+2*padding),) * ndim
+            shape = (1,) + (int(shape+2*self.padding),) * ndim
         else:
             shape = tuple(shape)
-            shape = (shape[0],) + tuple(x+2*padding for x in shape[1:])
+            shape = (shape[0],) + tuple(x+2*self.padding for x in shape[1:])
 
         if len(shape) not in [3, 4]:
             logger.warn('Storage view access dimension %d is not in regular '
