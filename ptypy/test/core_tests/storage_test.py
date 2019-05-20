@@ -3,6 +3,7 @@ A test for the Storage class
 '''
 
 import unittest
+import numpy as np
 from ptypy.core import Storage, Container, View
 
 class StorageTest(unittest.TestCase):
@@ -31,6 +32,26 @@ class StorageTest(unittest.TestCase):
             S.reformat()
             assert S[V].shape == shape
             assert S.data.shape == (1,) + shape
+
+    def test_storage_padding(self):
+        """
+        Test padding in storages
+        """
+        psize = 1.
+        shape = (10, 10)
+        padding = 5
+        C = Container(data_dims=2)
+        S = C.new_storage(psize=psize, padding=padding)
+        V = View(container=C, storageID=S.ID, coord=(0., 0.), shape=shape)
+        S.reformat()
+        assert S.shape == (1, shape[0]+2*padding, shape[1] + 2*padding)
+
+        # Check view access stability upon padding change
+        S[V] = 1.
+        S.padding = 10
+        S.reformat()
+        assert np.allclose(S[V], 1.)
+
 
 if __name__ == '__main__':
     unittest.main()

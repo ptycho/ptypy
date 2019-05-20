@@ -324,7 +324,7 @@ class Storage(Base):
 
     def __init__(self, container, ID=None, data=None, shape=DEFAULT_SHAPE, 
                  fill=0., psize=1., origin=None, layermap=None, padonly=False,
-                 **kwargs):
+                 padding=0, **kwargs):
         """
         Parameters
         ----------
@@ -365,6 +365,9 @@ class Storage(Base):
             If True, reformat() will enlarge the internal buffer if needed,
             but will not shrink it.
 
+        padding: int
+            Number of pixels (voxels) to add as padding around the area defined
+            by the views.
         """
         super(Storage, self).__init__(container, ID)
 
@@ -375,15 +378,19 @@ class Storage(Base):
         #: Three/four or potentially N-dimensional array as data buffer
         self.data = None
 
+        # Additional padding around tight field of view
+        self.padding = padding
+
         # dimensionality suggestion from container
         ndim = container.ndim if container.ndim is not None else 2
 
         if shape is None:
-            shape = (1,) + (1,) * ndim
+            shape = (1,) + (1 + 2*self.padding,) * ndim
         elif np.isscalar(shape):
-            shape = (1,) + (int(shape),) * ndim
+            shape = (1,) + (int(shape+2*self.padding),) * ndim
         else:
             shape = tuple(shape)
+            shape = (shape[0],) + tuple(x+2*self.padding for x in shape[1:])
 
         if len(shape) not in [3, 4]:
             logger.warn('Storage view access dimension %d is not in regular '
@@ -492,7 +499,8 @@ class Storage(Base):
                                  shape=self.shape,
                                  psize=self.psize,
                                  origin=self.origin,
-                                 layermap=self.layermap)
+                                 layermap=self.layermap,
+                                 padding=self.padding)
         if fill is not None:
             new_storage.fill(fill)
         else:
@@ -575,7 +583,7 @@ class Storage(Base):
         v.dlow = v.dcoord - v.shape / 2
         v.dhigh = v.dcoord + (v.shape + 1) / 2
 
-        # v.roi = np.array([pix - v.shape/2, pix + (v.shape + 1)/2])
+        # Subpixel offset
         v.sp = pcoord - v.dcoord
         # if self.layermap is None:
         #     v.slayer = 0
@@ -611,7 +619,8 @@ class Storage(Base):
 
         # Make sure all views are up to date
         # This call takes roughly half the time of .reformat()
-        self.update()
+        if update:
+            self.update()
 
         # List of views on this storage
         views = self.views
@@ -624,10 +633,8 @@ class Storage(Base):
         sh = self.data.shape
         
         # Loop through all active views to get individual boundaries
-        #axes = [[]] * self.ndim
-        
-        mn = [np.inf] * self.ndim
-        mx = [-np.inf] * self.ndim
+        dlow_fov = [np.inf] * self.ndim
+        dhigh_fov = [-np.inf] * self.ndim
         layers = []
         dims = range(self.ndim)
         for v in views:
@@ -637,9 +644,8 @@ class Storage(Base):
             # Accumulate the regions of interest to
             # compute the full field of view
             for d in dims:
-                #axes[d] += [v.dlow[d], v.dhigh[d]]
-                mn[d] = min(mn[d],v.dlow[d])
-                mx[d] = max(mx[d],v.dhigh[d])
+                dlow_fov[d] = min(dlow_fov[d], v.dlow[d])
+                dhigh_fov[d] = max(dhigh_fov[d], v.dhigh[d])
                 
             # Gather a (unique) list of layers
             if v.layer not in layers:
@@ -649,7 +655,7 @@ class Storage(Base):
 
         # Compute Nd misfit (distance between the buffer boundaries and the
         # region required to fit all the views)
-        misfit = np.array([[-mn[d], mx[d] - sh[d+1]] for d in dims])
+        misfit = self.padding + np.array([[-dlow_fov[d], dhigh_fov[d] - sh[d+1]] for d in dims])
         
         _misfit_str = ', '.join(['%s' % m for m in misfit])
         logger.debug('%s[%s] :: misfit = [%s]'
