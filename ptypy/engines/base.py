@@ -336,16 +336,13 @@ class PositionCorrectionEngine(BaseEngine):
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.cycle) == 0
 
-        # Only used for calculating the shifted pos
-        # Start position refinement
-        if self.curiter == self.p.position_refinement.start:
-            self.position_refinement.update_constraints(self.curiter) # this stays here
         # Update positions
         if do_update_pos:
             """
             Iterates trough all positions and refines them by a given algorithm. 
             """
             log(4, "----------- START POS REF -------------")
+            self.position_refinement.update_constraints(self.curiter) # this stays here
 
             # Iterate through all diffraction views
             for dname, di_view in self.di.views.iteritems():
