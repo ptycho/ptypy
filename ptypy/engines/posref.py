@@ -126,18 +126,6 @@ class PositionRefine(object):
                 errors[i] = error_inital + 1.
                 continue
             dcoords[i + 1, :] = dcoord
-            #
-            # Check if these are really necessary
-            if di_view.pod.ob_view.dlow[0] < 0:
-                print("The 0 co-ordinate was less than 0")
-                di_view.pod.ob_view.dlow[0] = 0
-            if di_view.pod.ob_view.dlow[1] < 0:
-                print("The 1 co-ordinate was less than 0")
-                di_view.pod.ob_view.dlow[1] = 0
-
-            if not np.allclose(ob_view_temp.data.shape, self.shape):
-                print("I went in here tempshape:%s, self.shape:%s, dx:%s, xy:%s, maxdist:%s" % (ob_view_temp.data.shape, self.shape, delta_x, delta_y, self.max_shift_dist))
-
 
             errors[i] = self.fourier_error(di_view, ob_view_temp.data)
 

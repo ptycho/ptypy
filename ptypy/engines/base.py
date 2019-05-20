@@ -367,10 +367,10 @@ class PositionCorrectionEngine(BaseEngine):
 
             self.position_refinement.max_shift_dist = self.position_refinement.max_shift_dist_rule(self.curiter)
             for sname, storage in self.position_refinement.temp_ob.storages.iteritems():
-                print("Old storage shape is: %s" % str(storage.shape))
-                storage.padding = int(np.round(self.position_refinement.max_shift_dist + 1))
+                log(4, "Old storage shape is: %s" % str(storage.shape))
+                storage.padding = int(np.round(self.position_refinement.max_shift_dist/ self.position_refinement.psize)) + 1
                 storage.reformat()
-                print("new storage shape is: %s" % str(storage.shape))
+                log(4, "new storage shape is: %s" % str(storage.shape))
 
             # Iterate through all diffraction views
             for dname, di_view in self.di.views.iteritems():
