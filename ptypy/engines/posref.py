@@ -51,6 +51,7 @@ class AnnealingRefine(PositionRefine):
         self.initial_positions = {}
         for oname, ob_view in Cobj.views.iteritems():
             self.initial_positions[oname] = ob_view.coord
+
         # Shape and pixelsize
         self.shape = ob_view.shape
         self.psize = ob_view.psize[0]
@@ -59,6 +60,7 @@ class AnnealingRefine(PositionRefine):
         self.ar.psize = self.psize
         self.ar.shape = self.shape
         self.max_shift_dist = None  # updated per iteration
+        self.temp_ob = None  # updated per interation
         log(3, "Position refinement initialized")
 
     def fourier_error(self, di_view, obj):
@@ -103,7 +105,7 @@ class AnnealingRefine(PositionRefine):
         coord = np.copy(di_view.pod.ob_view.coord)
         
         self.ar.coord = coord
-        self.ar.storageID = self.temp_ob.storages.values()[0].ID # this bit worries me. Shouldn't it get the ID from the di_view?
+        self.ar.storageID = di_view.pod.ob_view.storageID
 
         # Create temporal object view that can be shifted without reformatting
         ob_view_temp = View(self.temp_ob, accessrule=self.ar)
