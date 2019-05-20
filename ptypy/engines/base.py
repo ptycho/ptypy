@@ -319,16 +319,11 @@ class PositionCorrectionEngine(BaseEngine):
             self.do_position_refinement = False
         else:
             self.do_position_refinement = True
-            self.ptycho.citations.add_article(
-                title='An annealing algorithm to correct positioning errors in ptychography',
-                author='Maiden et al.',
-                journal='Ultramicroscopy',
-                volume=120,
-                year=2012,
-                page=64,
-                doi='10.1016/j.ultramic.2012.06.001',
-                comment='Position Refinement using annealing algorithm',
-            )
+            log(3, "Initialising position refinement")
+            # this could be some kind of dictionary lookup if we want to add more
+            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob)
+            log(3, "Position refinement initialised")
+            self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
             if self.p.position_refinement.stop is None:
                 self.p.position_refinement.stop = self.p.numiter
 
@@ -338,21 +333,13 @@ class PositionCorrectionEngine(BaseEngine):
         """
         if self.do_position_refinement is False:
             return
-
-
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.cycle) == 0
 
-        shape = self.pr.S.values()[0].data[0].shape
         # Only used for calculating the shifted pos
-        temp_ob = self.ob.copy()
         # Start position refinement
         if self.curiter == self.p.position_refinement.start:
-            initial_positions = {}
-            for dname, di_view in self.di.views.iteritems():
-                initial_positions[dname] = di_view.pod.ob_view.coord
-            self.position_refinement = AnnealingRefine(self.p.position_refinement, initial_positions, shape, temp_ob)
-
+            self.position_refinement.update_constraints(self.curiter) # this stays here
         # Update positions
         if do_update_pos:
             """
@@ -360,25 +347,11 @@ class PositionCorrectionEngine(BaseEngine):
             """
             log(4, "----------- START POS REF -------------")
 
-            # List of refined coordinates which will be used to reformat the object
-            new_coords = {}
-
-            # Maximum shift
-
-            self.position_refinement.max_shift_dist = self.position_refinement.max_shift_dist_rule(self.curiter)
-            for sname, storage in self.position_refinement.temp_ob.storages.iteritems():
-                log(4, "Old storage shape is: %s" % str(storage.shape))
-                storage.padding = int(np.round(self.position_refinement.max_shift_dist/ self.position_refinement.psize)) + 1
-                storage.reformat()
-                log(4, "new storage shape is: %s" % str(storage.shape))
-
             # Iterate through all diffraction views
             for dname, di_view in self.di.views.iteritems():
                 # Check for new coordinates
                 if di_view.active:
                     self.position_refinement.update_view_position(di_view)
-
-
             # Update object based on new position coordinates
             self.ob.reformat()
 
@@ -389,13 +362,7 @@ class PositionCorrectionEngine(BaseEngine):
             self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
             for name, s in self.ob_viewcover.storages.iteritems():
                 s.fill(s.get_view_coverage())
-
-            # clean up
-            del self.ptycho.containers[temp_ob.ID]
-            del temp_ob
             gc.collect()
-
-
 
 
 class Base3dBraggEngine(BaseEngine):

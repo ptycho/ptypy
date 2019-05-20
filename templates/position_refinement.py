@@ -10,7 +10,7 @@ from ptypy import utils as u
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 3
+p.verbose_level = 4
 
 # set home path
 p.io = u.Param()
@@ -40,14 +40,14 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter = 20
+p.engines.engine00.numiter =100
 p.engines.engine00.position_refinement = u.Param()
-p.engines.engine00.position_refinement.start = 3
-p.engines.engine00.position_refinement.stop = 19
+p.engines.engine00.position_refinement.start = 20
+p.engines.engine00.position_refinement.stop = 99
 p.engines.engine00.position_refinement.cycle = 2
 p.engines.engine00.position_refinement.nshifts = 8
-p.engines.engine00.position_refinement.amplitude = 5e-7
-p.engines.engine00.position_refinement.max_shift = 5e-7
+p.engines.engine00.position_refinement.amplitude = 6e-7
+p.engines.engine00.position_refinement.max_shift = 6e-7
 
 # prepare and run
 P = Ptycho(p, level=4)

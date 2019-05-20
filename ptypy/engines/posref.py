@@ -25,6 +25,14 @@ class PositionRefine(object):
 
         raise NotImplementedError('This method needs to be overridden in order to position correct')
 
+    def update_constraints(self, iteration):
+        '''
+        :param iteration:
+        :return:
+        updates this object based on the convergence criteria
+        '''
+
+        raise NotImplementedError('This method needs to be overridden in order to position correct')
 
 
 class AnnealingRefine(PositionRefine):
@@ -35,24 +43,23 @@ class AnnealingRefine(PositionRefine):
     An annealing algorithm to correct positioning errors in ptychography,
     Ultramicroscopy, Volume 120, 2012, Pages 64-72
     """
-    def __init__(self, position_refinement_parameters, initial_positions, shape, temp_ob):
+    def __init__(self, position_refinement_parameters, Cobj):
         super(AnnealingRefine, self).__init__(position_refinement_parameters)
         # copy of the original object buffer to give space to play in
-        self.temp_ob = temp_ob
-        # A dictionary of the initial positions
-        self.initial_pos = initial_positions
+        self.Cobj = Cobj  # take a reference here. It would be cool if we could make this read-only or something
+        # A dictionary of the initial positions, do we need this?
+        self.initial_positions = {}
+        for oname, ob_view in Cobj.views.iteritems():
+            self.initial_positions[oname] = ob_view.coord
         # Shape and pixelsize
-        self.shape = shape
-        self.psize = temp_ob.S.values()[0].psize[0]
-        # Maximum shift
-        start, end = self.p.start, self.p.stop
-        self.max_shift_dist_rule = lambda it: self.p.amplitude * (end - it) / (end - start) + self.psize/2.
+        self.shape = ob_view.shape
+        self.psize = ob_view.psize[0]
 
         self.ar = DEFAULT_ACCESSRULE.copy()
         self.ar.psize = self.psize
         self.ar.shape = self.shape
+        self.max_shift_dist = None  # updated per iteration
         log(3, "Position refinement initialized")
-
 
     def fourier_error(self, di_view, obj):
         """
@@ -72,7 +79,6 @@ class AnnealingRefine(PositionRefine):
         del af
         del fmag
         return error
-
 
     def update_view_position(self, di_view):
         """
@@ -97,7 +103,7 @@ class AnnealingRefine(PositionRefine):
         coord = np.copy(di_view.pod.ob_view.coord)
         
         self.ar.coord = coord
-        self.ar.storageID = self.temp_ob.storages.values()[0].ID
+        self.ar.storageID = self.temp_ob.storages.values()[0].ID # this bit worries me. Shouldn't it get the ID from the di_view?
 
         # Create temporal object view that can be shifted without reformatting
         ob_view_temp = View(self.temp_ob, accessrule=self.ar)
@@ -122,11 +128,10 @@ class AnnealingRefine(PositionRefine):
             delta[i, 1] = delta_x
 
             rand_coord = [coord[0] + delta_y, coord[1] + delta_x]
-            norm = np.linalg.norm(rand_coord - self.initial_pos[di_view.ID])
+            norm = np.linalg.norm(rand_coord - self.initial_positions[di_view.ID])
 
             if norm > self.p.max_shift:
                 # Positions drifted too far, skip this position
-                log(4, "New position is too far away!!!", parallel=True)
                 errors[i] = error_inital + 1.
                 continue
 
@@ -144,17 +149,32 @@ class AnnealingRefine(PositionRefine):
             errors[i] = self.fourier_error(di_view, ob_view_temp.data)
 
         if np.min(errors) < error_inital:
-            # if a better coordinate is found
-            #log(4, "New coordinate with smaller Fourier Error found!", parallel=True)
             arg = np.argmin(errors)
             new_coordinate = np.array([coord[0] + delta[arg, 0], coord[1] + delta[arg, 1]])
             di_view.pod.ob_view.coord = new_coordinate
 
-
         # Clean up
         del ob_view_temp
         del di_view
-        
 
+    def update_constraints(self, iteration):
+        self.temp_ob = self.Cobj.copy()
+        start, end = self.p.start, self.p.stop
+        self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start) + self.psize/2.
+        for sname, storage in self.temp_ob.storages.iteritems():
+            log(4, "Old storage shape is: %s" % str(storage.shape))
+            storage.padding = int(np.round(self.max_shift_dist / self.psize)) + 1
+            storage.reformat()
+            log(4, "new storage shape is: %s" % str(storage.shape))
 
-
+    @property
+    def citation_dictionary(self):
+        return {
+            "title" : 'An annealing algorithm to correct positioning errors in ptychography',
+            "author" : 'Maiden et al.',
+            "journal" : 'Ultramicroscopy',
+            "volume" : 120,
+            "year" : 2012,
+            "page" : 64,
+            "doi" : '10.1016/j.ultramic.2012.06.001',
+            "comment" : 'Position Refinement using annealing algorithm'}
