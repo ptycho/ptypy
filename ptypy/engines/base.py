@@ -376,15 +376,8 @@ class PositionCorrectionEngine(BaseEngine):
             for dname, di_view in self.di.views.iteritems():
                 # Check for new coordinates
                 if di_view.active:
-                    new_coords[dname] = self.position_refinement.update_view_position(di_view)
+                    self.position_refinement.update_view_position(di_view)
 
-            # MPI reduce and update new coordinates
-            new_coords = parallel.allreduce(new_coords)
-            for dname, di_view in self.di.views.iteritems():
-                if new_coords[dname][0] != 0 and new_coords[dname][1] != 0:
-                    log(4, "Old coordinate (%s): " % (dname) + str(di_view.pod.ob_view.coord))
-                    log(4, "New coordinate (%s): " % (dname) + str(new_coords[dname]))
-                    di_view.pod.ob_view.coord = new_coords[dname]
 
             # Update object based on new position coordinates
             self.ob.reformat()

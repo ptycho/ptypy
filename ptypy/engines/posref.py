@@ -148,13 +148,13 @@ class AnnealingRefine(PositionRefine):
             #log(4, "New coordinate with smaller Fourier Error found!", parallel=True)
             arg = np.argmin(errors)
             new_coordinate = np.array([coord[0] + delta[arg, 0], coord[1] + delta[arg, 1]])
-        else:
-            new_coordinate = (0, 0)
+            di_view.pod.ob_view.coord = new_coordinate
+
 
         # Clean up
         del ob_view_temp
         del di_view
         
-        return new_coordinate
+
 
 
