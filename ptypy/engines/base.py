@@ -288,10 +288,10 @@ class PositionCorrectionEngine(BaseEngine):
     help = Number of iterations after which positon refinement stops
     doc = If None, position refinement stops after last iteration
 
-    [position_refinement.cycle]
+    [position_refinement.interval]
     default = 1
     type = int
-    help = Frequency of position refinement cycle
+    help = Frequency of position refinement
 
     [position_refinement.nshifts]
     default = 4
@@ -334,7 +334,7 @@ class PositionCorrectionEngine(BaseEngine):
         if self.do_position_refinement is False:
             return
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
-        do_update_pos &= (self.curiter % self.p.position_refinement.cycle) == 0
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
 
         # Update positions
         if do_update_pos:
