@@ -155,7 +155,6 @@ class AnnealingRefine(PositionRefine):
 
         # Clean up
         del ob_view_temp
-        del di_view
 
     def update_constraints(self, iteration):
         self.temp_ob = self.Cobj.copy()
