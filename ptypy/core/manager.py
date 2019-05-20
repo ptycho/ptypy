@@ -582,7 +582,6 @@ class BlockScanModel(ScanModel):
         #mask.update_views()
         diff.nlayers = parallel.MPImax(diff.layermap) + 1
         mask.nlayers = parallel.MPImax(mask.layermap) + 1
-        
         # save state / could be replaced by handing of arguments to methods
         self.diff = diff
         self.mask = mask
