@@ -132,8 +132,8 @@ class AnnealingRefine(PositionRefine):
                 continue
 
             # Create new view on new position
-            self.ar.coord = rand_coord
-            ob_view_temp = View(self.temp_ob, accessrule=self.ar)
+            ob_view_temp.coord = rand_coord
+            ob_view_temp.storage.update_views(ob_view_temp)
             dcoord = ob_view_temp.dcoord  # coordinate in pixel
 
             # Skip if this pixel has already been explored
