@@ -361,6 +361,9 @@ class PositionCorrectionEngine(BaseEngine):
                 s.fill(s.get_view_coverage())
             gc.collect()
 
+            for cname in self.position_refinement.container_cleanup_list:
+                del self.ptycho.containers[cname]
+
 
 class Base3dBraggEngine(BaseEngine):
     """

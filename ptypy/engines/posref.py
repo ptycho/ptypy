@@ -154,10 +154,15 @@ class AnnealingRefine(PositionRefine):
             return np.zeros((2,))
 
     def update_constraints(self, iteration):
-        """
-        Update information required prior to position refinement.
-        :param iteration: current iteration number.
-        """
+        '''
+
+        Parameters
+        ----------
+        [iteration]
+        help = The current iteration of the engine.
+        type = int
+
+        '''
 
         start, end = self.p.start, self.p.stop
 
@@ -165,12 +170,25 @@ class AnnealingRefine(PositionRefine):
         self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start) + self.psize/2.
 
         # Create a copy of the object container and expand it to avoid any run off.
-        self.temp_ob = self.Cobj.copy()
+        self.temp_ob = self.Cobj.copy('temp_ob')
         for sname, storage in self.temp_ob.storages.iteritems():
             log(4, "Old storage shape is: %s" % str(storage.shape))
             storage.padding = int(np.round(self.max_shift_dist / self.psize)) + 1
             storage.reformat()
             log(4, "New storage shape is: %s" % str(storage.shape))
+
+    @property
+    def container_cleanup_list(self):
+        '''
+        Returns
+        -------
+        List of container names to cleanup.
+        '''
+        container_names = []
+        self.temp_ob.original = self.temp_ob  # unlink from original
+        container_names.append(self.temp_ob.ID)
+        return container_names
+
 
     @property
     def citation_dictionary(self):
