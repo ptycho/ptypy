@@ -20,19 +20,35 @@ class PositionRefine(object):
 
     def update_view_position(self, di_view):
         '''
-        takes a single diffraction view and updates it's co-ordinate
+        Refines the position of a single diffraction view
+        Parameters
+        ----------
+        di_view : ptypy.core.classes.View
+            A diffraction view that we wish to refine.
+
+        Returns
+        -------
+        numpy.ndarray
+            A length 2 numpy array with the position increments for x and y co-ordinates respectively
         '''
 
         raise NotImplementedError('This method needs to be overridden in order to position correct')
 
     def update_constraints(self, iteration):
         '''
-        :param iteration:
-        :return:
-        updates this object based on the convergence criteria
+
+        Parameters
+        ----------
+        iteration : int
+            The current iteration of the engine.
         '''
 
         raise NotImplementedError('This method needs to be overridden in order to position correct')
+
+    def cleanup(self):
+        '''
+        Cleans up every iteration
+        '''
 
 
 class AnnealingRefine(PositionRefine):
@@ -186,7 +202,7 @@ class AnnealingRefine(PositionRefine):
         self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start) + self.psize/2.
 
         # Create a copy of the object container and expand it to avoid any run off.
-        self.temp_ob = self.Cobj.copy('temp_ob')
+        self.temp_ob = self.Cobj.copy(ID=self.Cobj.ID+'temp_ob')
         for sname, storage in self.temp_ob.storages.iteritems():
             log(4, "Old storage shape is: %s" % str(storage.shape))
             storage.padding = int(np.round(self.max_shift_dist / self.psize)) + 1
@@ -198,14 +214,11 @@ class AnnealingRefine(PositionRefine):
         '''
         Returns
         -------
-        List
-            List of container names to cleanup.
+        List of container names to cleanup.
         '''
         container_names = []
-        self.temp_ob.original = self.temp_ob  # unlink from original
         container_names.append(self.temp_ob.ID)
         return container_names
-
 
     @property
     def citation_dictionary(self):

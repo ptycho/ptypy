@@ -312,7 +312,7 @@ class PositionCorrectionEngine(BaseEngine):
 
     def initialize(self):
         """
-        Prepare for reconstruction.
+        Prepare the position refinement object for use further down the line.
         """
         super(PositionCorrectionEngine, self).initialize()
         if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
@@ -339,7 +339,7 @@ class PositionCorrectionEngine(BaseEngine):
         # Update positions
         if do_update_pos:
             """
-            Iterates trough all positions and refines them by a given algorithm. 
+            Iterates through all positions and refines them by a given algorithm. 
             """
             log(4, "----------- START POS REF -------------")
             self.position_refinement.update_constraints(self.curiter) # this stays here
@@ -359,10 +359,9 @@ class PositionCorrectionEngine(BaseEngine):
             self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
             for name, s in self.ob_viewcover.storages.iteritems():
                 s.fill(s.get_view_coverage())
+            for c in self.position_refinement.container_cleanup_list:
+                del self.ptycho.containers[c]
             gc.collect()
-
-            for cname in self.position_refinement.container_cleanup_list:
-                del self.ptycho.containers[cname]
 
 
 class Base3dBraggEngine(BaseEngine):
