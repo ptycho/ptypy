@@ -450,7 +450,7 @@ class Storage(Base):
         self.model_initialized = False
 
         # MPI flag: is the storage distributed across nodes or are all nodes holding the same copy?
-        self._update_distributed()
+        self._update_distributed(self.layermap,[0],[0])
 
         # Instance attributes
         # self._psize = None
@@ -651,6 +651,12 @@ class Storage(Base):
             if v.layer not in layers:
                 layers.append(v.layer)
 
+        # Check if storage is distributed
+        # A storage is "distributed" if and only if layer maps are different across nodes.
+        new_layermap = sorted(layers)
+
+        self._update_distributed(new_layermap, dlow_fov, dhigh_fov)
+
         sh = self.data.shape
 
         # Compute Nd misfit (distance between the buffer boundaries and the
@@ -710,8 +716,6 @@ class Storage(Base):
             new_center = self.center
         
         # Deal with layermap
-        new_layermap = sorted(layers)
-
         if self.layermap != new_layermap:
             relaid_data = []
             for i in new_layermap:
@@ -740,19 +744,21 @@ class Storage(Base):
         self.shape = new_shape
         self.center = new_center
 
-        # Check if storage is distributed
-        # A storage is "distributed" if and only if layer maps are different across nodes.
-        self._update_distributed()
-
-    def _update_distributed(self):
+    def _update_distributed(self, layermap, mn, mx):
         self.distributed = False
         if u.parallel.MPIenabled:
-            all_layers = u.parallel.comm.gather(self.layermap, root=0)
+            all_layers = u.parallel.comm.gather(layermap, root=0)
             if u.parallel.master:
                 for other_layers in all_layers[1:]:
-                    self.distributed |= (other_layers != self.layermap)
+                    self.distributed |= (other_layers != layermap)
             self.distributed = u.parallel.comm.bcast(self.distributed, root=0)
-
+            # synchronize if not distributed, this ensures the data is of the
+            # same shape across the nodes
+            # We could always consider to synchronize
+            if not self.distributed:
+                mn[:] = u.parallel.comm.allreduce(mn, u.parallel.MPI.MIN)
+                mx[:] = u.parallel.comm.allreduce(mx, u.parallel.MPI.MAX)
+                
     def _to_pix(self, coord):
         """
         Transforms physical coordinates `coord` to pixel coordinates.
