@@ -349,11 +349,17 @@ class PositionCorrectionEngine(BaseEngine):
                 # Check for new coordinates
                 if di_view.active:
                     self.position_refinement.update_view_position(di_view)
-            # Update object based on new position coordinates
+
+            # Update object based on new position coordinates#
+            parallel.barrier()
+            self.position_refinement.corrected_positions = parallel.allreduce(self.position_refinement.corrected_positions)
+
+            for dname, di_view in self.di.views.iteritems():
+                # Check for new coordinates
+                di_view.pod.ob_view.coord = self.position_refinement.corrected_positions[self.position_refinement.view_index_lookup[di_view.ID]]
 
             parallel.barrier()
             self.ob.reformat()
-
             # The size of the object might have been changed
             del self.ptycho.containers[self.ob.ID + '_vcover']
             del self.ptycho.containers[self.ob.ID + '_nrm']
@@ -361,7 +367,6 @@ class PositionCorrectionEngine(BaseEngine):
             self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
             for name, s in self.ob_viewcover.storages.iteritems():
                 s.fill(s.get_view_coverage())
-
 
             parallel.barrier()
             for c in self.position_refinement.container_cleanup_list:

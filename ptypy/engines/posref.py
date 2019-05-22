@@ -75,9 +75,14 @@ class AnnealingRefine(PositionRefine):
         self.Cobj = Cobj  # take a reference here. It would be cool if we could make this read-only or something
 
         # Store initial positions to check if things have drifted too far
-        self.initial_positions = {}
-        for oname, ob_view in Cobj.views.iteritems():
-            self.initial_positions[oname] = ob_view.coord
+        self.initial_positions = np.zeros((len(Cobj.views), 2))
+        self.corrected_positions = np.zeros((len(Cobj.views), 2))
+        self.view_index_lookup = {}
+        for idx, ob_view in enumerate(Cobj.views.keys()):
+            self.view_index_lookup[ob_view] = idx
+        for vname, ob_view in Cobj.views.iteritems():
+            self.initial_positions[self.view_index_lookup[vname]] = ob_view.coord
+
 
         # Shape and pixel size
         self.shape = ob_view.shape
@@ -141,7 +146,8 @@ class AnnealingRefine(PositionRefine):
         errors = np.zeros(self.p.nshifts)                   # Calculated errors for the shifted positions
 
         coord = di_view.pod.ob_view.coord.copy()
-        
+
+
         self.ar.coord = coord
         self.ar.storageID = di_view.pod.ob_view.storageID
 
@@ -151,7 +157,8 @@ class AnnealingRefine(PositionRefine):
 
         # This can be optimized by saving existing iteration fourier error...
         error_initial = self.fourier_error(di_view, ob_view_temp.data)
-
+        view_idx = self.view_index_lookup[di_view.ID]
+        self.corrected_positions[view_idx] = di_view.pod.ob_view.coord
         for i in range(self.p.nshifts):
             # Generate coordinate shift in one of the 4 cartesian quadrants
             delta[i, 0] = (-1)**i * np.random.uniform(0, self.max_shift_dist)
@@ -159,7 +166,7 @@ class AnnealingRefine(PositionRefine):
 
             rand_coord = coord + delta[i]
 
-            norm = np.linalg.norm(rand_coord - self.initial_positions[di_view.ID])
+            norm = np.linalg.norm(rand_coord - self.initial_positions[view_idx])
             if norm > self.p.max_shift:
                 # Positions drifted too far, skip this position
                 errors[i] = error_initial + 1.
@@ -183,6 +190,8 @@ class AnnealingRefine(PositionRefine):
         if np.min(errors) < error_initial:
             arg = np.argmin(errors)
             di_view.pod.ob_view.coord = coord + delta[arg]
+            self.corrected_positions[view_idx] = di_view.pod.ob_view.coord
+            log(4, "view:%s,coord:%s" % (di_view.ID, di_view.pod.ob_view.coord))
             return delta[arg]
         else:
             return np.zeros((2,))
@@ -200,7 +209,7 @@ class AnnealingRefine(PositionRefine):
 
         # Compute the maximum shift allowed at this iteration
         self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start) + self.psize/2.
-
+        self.corrected_positions = np.zeros((len(self.Cobj.views), 2))
         # Create a copy of the object container and expand it to avoid any run off.
         self.temp_ob = self.Cobj.copy(ID=self.Cobj.ID+'temp_ob')
         for sname, storage in self.temp_ob.storages.iteritems():
