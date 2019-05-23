@@ -1144,6 +1144,8 @@ class Storage(Base):
             self._subpixel_shift = shift
         elif self._shift_type is 'fourier':
             self._subpixel_shift = shift_fourier
+        elif self._shift_type is 'interp':
+            self._subpixel_shift = shift_interp
         else:
             raise RuntimeError('%s is is supported for subpixel_shifting' % val)
 

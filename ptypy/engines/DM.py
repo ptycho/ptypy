@@ -169,9 +169,6 @@ class DM(PositionCorrectionEngine):
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
 
-        for sname, s in self.ob.storages.iteritems():
-            s.shift_type = self.p.subpix  # this should set the method to be used for interpolation
-
     def engine_prepare(self):
         """
         Last minute initialization.
@@ -200,7 +197,7 @@ class DM(PositionCorrectionEngine):
         tp = 0.
         if self.p.subpix_start == self.curiter:
             for sname, s in self.ob.storages.iteritems():
-                s.shift_type = 'fourier'#self.p.subpix  # this should set the method to be used for interpolation
+                s.shift_type = 'interp'#self.p.subpix  # this should set the method to be used for interpolation
 
 
         for it in range(num):
