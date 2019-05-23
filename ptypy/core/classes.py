@@ -1141,7 +1141,7 @@ def shift(v, sp):
     return v
 
 
-def shift_fourier(v, sp, antialiasing_factor=1, hanning_filter=True, report=False):
+def shift_fourier(v, sp, antialiasing_factor=1, report=False):
     """
     Fourier shift
     Note that v should be complex since a complex array will be returned
@@ -1152,13 +1152,7 @@ def shift_fourier(v, sp, antialiasing_factor=1, hanning_filter=True, report=Fals
     view, _center = u.crop_pad_symmetric_2d(v, new_shape)
     fourier_transform_of_view = fft2(view)
     shifted_fourier_transform = fftshift(ishift(fourier_transform_of_view, (-sp[-1], -sp[-2])))
-    if hanning_filter:
-        xfilter = scisig.windows.hann(fourier_transform_of_view.shape[0], sym=True)
-        xfilter /= np.max(xfilter)
-        ft_filter = np.outer(xfilter.T, xfilter)
-        shifted_view = ifft2(ifftshift(ft_filter * shifted_fourier_transform))
-    else:
-        shifted_view = ifft2(ifftshift(shifted_fourier_transform))
+    shifted_view = ifft2(ifftshift(shifted_fourier_transform))
     shifted_view, _center = u.crop_pad_symmetric_2d(shifted_view, old_shape)
     if report:
         before_mass_center = np.array(measurements.center_of_mass(np.abs(v)))
