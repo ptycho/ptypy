@@ -53,8 +53,8 @@ class DM(PositionCorrectionEngine):
     help = Number of iterations before starting subpixel interpolation
 
     [subpix]
-    default = 'linear'
-    type = str
+    default = None
+    type = None, str
     help = Subpixel interpolation; 'fourier','linear' or None for no interpolation
 
     [update_object_first]
@@ -198,10 +198,9 @@ class DM(PositionCorrectionEngine):
         to = 0.
         tf = 0.
         tp = 0.
-        if p.subpixel_start==self.curiter:
+        if self.p.subpix_start == self.curiter:
             for sname, s in self.ob.storages.iteritems():
-                s.subpixel_shift = True  # this should turn on sub pixel shifting
-
+                s.shift_type = self.p.subpix  # this should set the method to be used for interpolation
 
 
         for it in range(num):
