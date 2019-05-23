@@ -169,6 +169,9 @@ class DM(PositionCorrectionEngine):
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
 
+        for sname, s in self.ob.storages.iteritems():
+            s.shift_type = self.p.subpix  # this should set the method to be used for interpolation
+
     def engine_prepare(self):
         """
         Last minute initialization.
@@ -195,6 +198,12 @@ class DM(PositionCorrectionEngine):
         to = 0.
         tf = 0.
         tp = 0.
+        if p.subpixel_start==self.curiter:
+            for sname, s in self.ob.storages.iteritems():
+                s.subpixel_shift = True  # this should turn on sub pixel shifting
+
+
+
         for it in range(num):
             t1 = time.time()
 
