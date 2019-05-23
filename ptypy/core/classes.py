@@ -374,6 +374,7 @@ class Storage(Base):
             by the views.
         """
         super(Storage, self).__init__(container, ID)
+        self.shift_type = None
 
         #: Default fill value
         self.fill_value = fill if fill is not None else 0.
@@ -384,7 +385,6 @@ class Storage(Base):
 
         # Additional padding around tight field of view
         self.padding = padding
-
         # dimensionality suggestion from container
         ndim = container.ndim if container.ndim is not None else 2
 
@@ -1051,7 +1051,7 @@ class Storage(Base):
         if isinstance(v, View):
             if self.ndim == 2:
                 if np.any(v.sp != 0.0):
-                    return shift_fourier(self.data[
+                    return self._subpixel_shift(self.data[
                              v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
                                      v.sp)
                 else:
@@ -1096,7 +1096,7 @@ class Storage(Base):
                 if np.any(v.sp != 0.0):
                     self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
-                          v.dlow[1]:v.dhigh[1]] = (shift_fourier(newdata, -v.sp))
+                          v.dlow[1]:v.dhigh[1]] = (self._subpixel_shift(newdata, -v.sp))
                 else:
                     self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
@@ -1132,6 +1132,20 @@ class Storage(Base):
         else:
             info += 'empty=%s @%s' % (self.shape, self.dtype)
         return info + ' psize=%(_psize)s center=%(_center)s' % self.__dict__
+
+    @property
+    def shift_type(self):
+        return self._shift_type
+
+    @shift_type.setter
+    def shift_type(self, val):
+        self._shift_type = val
+        if self._shift_type is None:
+            self._subpixel_shift = shift
+        elif self._shift_type is 'fourier':
+            self._subpixel_shift = shift_fourier
+        else:
+            raise RuntimeError('%s is is supported for subpixel_shifting' % val)
 
 
 def shift(v, sp):

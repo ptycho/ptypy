@@ -200,7 +200,7 @@ class DM(PositionCorrectionEngine):
         tp = 0.
         if self.p.subpix_start == self.curiter:
             for sname, s in self.ob.storages.iteritems():
-                s.shift_type = self.p.subpix  # this should set the method to be used for interpolation
+                s.shift_type = 'fourier'#self.p.subpix  # this should set the method to be used for interpolation
 
 
         for it in range(num):
