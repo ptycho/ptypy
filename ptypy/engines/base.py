@@ -12,10 +12,12 @@ import numpy as np
 import time
 from .. import utils as u
 from ..utils import parallel
-from ..utils.verbose import logger, headerline
+from ..utils.verbose import logger, headerline, log
 from ..utils.descriptor import EvalDescriptor
+from .posref import AnnealingRefine
+import gc
 
-__all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info']
+__all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info', 'PositionCorrectionEngine']
 
 DEFAULT_iter_info = u.Param(
     iteration=0,
@@ -25,43 +27,32 @@ DEFAULT_iter_info = u.Param(
     error=np.zeros((3,))
 )
 
-
-#local_tree = EvalDescriptor('')
-#@local_tree.parse_doc('engine.common')
 class BaseEngine(object):
     """
     Base reconstruction engine.
-
     In child classes, overwrite the following methods for custom behavior :
-
     engine_initialize
     engine_prepare
     engine_iterate
     engine_finalize
-
-
     Defaults:
-
     [numiter]
     default = 20
     type = int
     lowlim = 1
     help = Total number of iterations
-
     [numiter_contiguous]
     default = 1
     type = int
     lowlim = 1
     help = Number of iterations without interruption
     doc = The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...).
-
     [probe_support]
     default = 0.7
     type = float
     lowlim = 0.0
     help = Valid probe area as fraction of the probe frame
     doc = Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
-
     """
 
     # Define with which models this engine can work.
@@ -70,12 +61,10 @@ class BaseEngine(object):
     def __init__(self, ptycho, pars=None):
         """
         Base reconstruction engine.
-
         Parameters
         ----------
         ptycho : Ptycho
             The parent :any:`Ptycho` object.
-
         pars: Param or dict
             Initialization parameters
         """
@@ -86,11 +75,8 @@ class BaseEngine(object):
             p.update(pars)
         self.p = p
 
-        # self.itermeta = []
-        # self.meta = u.Param()
         self.finished = False
         self.numiter = self.p.numiter
-        # self.initialize()
 
         # Instance attributes
         self.curiter = None
@@ -163,7 +149,6 @@ class BaseEngine(object):
     def iterate(self, num=None):
         """
         Compute one or several iterations.
-
         num : None, int number of iterations.
             If None or num<1, a single iteration is performed.
         """
@@ -249,7 +234,6 @@ class BaseEngine(object):
     def engine_initialize(self):
         """
         Engine-specific initialization.
-
         Called at the end of self.initialize().
         """
         raise NotImplementedError()
@@ -257,7 +241,6 @@ class BaseEngine(object):
     def engine_prepare(self):
         """
         Engine-specific preparation.
-
         Last-minute initialization providing up-to-date information for
         reconstruction. Called at the end of self.prepare()
         """
@@ -266,7 +249,6 @@ class BaseEngine(object):
     def engine_iterate(self, num):
         """
         Engine single-step iteration.
-
         All book-keeping is done in self.iterate(), so this routine only needs
         to implement the "core" actions.
         """
@@ -275,11 +257,121 @@ class BaseEngine(object):
     def engine_finalize(self):
         """
         Engine-specific finalization.
-
         Used to wrap-up engine-specific stuff. Called at the end of
         self.finalize()
         """
         raise NotImplementedError()
+
+
+
+#local_tree = EvalDescriptor('')
+#@local_tree.parse_doc('engine.common')
+class PositionCorrectionEngine(BaseEngine):
+    """
+    A sub class engine that supports position correction
+
+    Defaults:
+
+    [position_refinement]
+    default = False
+    type = Param, bool
+    help = If True refine scan positions
+
+    [position_refinement.start]
+    default = None
+    type = int
+    help = Number of iterations until position refinement starts
+
+    [position_refinement.stop]
+    default = None
+    type = int
+    help = Number of iterations after which positon refinement stops
+    doc = If None, position refinement stops after last iteration
+
+    [position_refinement.interval]
+    default = 1
+    type = int
+    help = Frequency of position refinement
+
+    [position_refinement.nshifts]
+    default = 4
+    type = int
+    help = Number of random shifts calculated in each position refinement step (has to be multiple of 4)
+
+    [position_refinement.amplitude]
+    default = 0.001
+    type = float
+    help = Distance from original position per random shift [m]
+
+    [position_refinement.max_shift]
+    default = 0.002
+    type = float
+    help = Maximum distance from original position [m]
+
+    """
+
+    def initialize(self):
+        """
+        Prepare the position refinement object for use further down the line.
+        """
+        super(PositionCorrectionEngine, self).initialize()
+        if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
+            self.do_position_refinement = False
+        else:
+            self.do_position_refinement = True
+            log(3, "Initialising position refinement")
+            # this could be some kind of dictionary lookup if we want to add more
+            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob)
+            log(3, "Position refinement initialised")
+            self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
+            if self.p.position_refinement.stop is None:
+                self.p.position_refinement.stop = self.p.numiter
+
+    def position_update(self):
+        """
+        Position refinement update.
+        """
+        if self.do_position_refinement is False:
+            return
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+
+        # Update positions
+        if do_update_pos:
+            """
+            Iterates through all positions and refines them by a given algorithm. 
+            """
+            log(4, "----------- START POS REF -------------")
+            self.position_refinement.update_constraints(self.curiter) # this stays here
+
+            # Iterate through all diffraction views
+            for dname, di_view in self.di.views.iteritems():
+                # Check for new coordinates
+                if di_view.active:
+                    self.position_refinement.update_view_position(di_view)
+
+            # Update object based on new position coordinates#
+            parallel.barrier()
+            self.position_refinement.corrected_positions = parallel.allreduce(self.position_refinement.corrected_positions)
+
+            for dname, di_view in self.di.views.iteritems():
+                # Check for new coordinates
+                di_view.pod.ob_view.coord = self.position_refinement.corrected_positions[self.position_refinement.view_index_lookup[di_view.ID]]
+
+            parallel.barrier()
+            self.ob.reformat()
+            # The size of the object might have been changed
+            del self.ptycho.containers[self.ob.ID + '_vcover']
+            del self.ptycho.containers[self.ob.ID + '_nrm']
+            self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
+            self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
+            for name, s in self.ob_viewcover.storages.iteritems():
+                s.fill(s.get_view_coverage())
+
+            parallel.barrier()
+            for c in self.position_refinement.container_cleanup_list:
+                del self.ptycho.containers[c]
+            gc.collect()
 
 
 class Base3dBraggEngine(BaseEngine):
