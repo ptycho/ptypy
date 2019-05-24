@@ -35,18 +35,22 @@ class BaseEngine(object):
     engine_prepare
     engine_iterate
     engine_finalize
+
     Defaults:
+
     [numiter]
     default = 20
     type = int
     lowlim = 1
     help = Total number of iterations
+
     [numiter_contiguous]
     default = 1
     type = int
     lowlim = 1
     help = Number of iterations without interruption
     doc = The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...).
+
     [probe_support]
     default = 0.7
     type = float
@@ -120,6 +124,7 @@ class BaseEngine(object):
 
         self.probe_support = {}
         # Call engine specific initialization
+        # TODO: Maybe child classes should be calling this?
         self.engine_initialize()
 
     def prepare(self):
@@ -307,19 +312,29 @@ class PositionCorrectionEngine(BaseEngine):
     default = 0.002
     type = float
     help = Maximum distance from original position [m]
+    
+    [position_refinement.record]
+    default = False
+    type = bool
+    help = record movement of positions
 
     """
 
-    def initialize(self):
+    def engine_initialize(self):
         """
         Prepare the position refinement object for use further down the line.
         """
-        super(PositionCorrectionEngine, self).initialize()
         if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
             self.do_position_refinement = False
         else:
             self.do_position_refinement = True
             log(3, "Initialising position refinement")
+            
+            # Enlarge object arrays, this could be skipped though if the boundary is less important
+            for name, s in self.ob.storages.items():
+                s.padding = int(self.p.position_refinement.max_shift / np.max(s.psize))
+                s.reformat()
+
             # this could be some kind of dictionary lookup if we want to add more
             self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob)
             log(3, "Position refinement initialised")
@@ -342,14 +357,17 @@ class PositionCorrectionEngine(BaseEngine):
             Iterates through all positions and refines them by a given algorithm. 
             """
             log(4, "----------- START POS REF -------------")
-            self.position_refinement.update_constraints(self.curiter) # this stays here
+            #self.position_refinement.update_constraints(self.curiter) # this stays here
+            self.position_refinement.update_constraints_simple(self.curiter) # this stays here
 
             # Iterate through all diffraction views
             for dname, di_view in self.di.views.iteritems():
                 # Check for new coordinates
                 if di_view.active:
-                    self.position_refinement.update_view_position(di_view)
+                    #self.position_refinement.update_view_position(di_view)
+                    self.position_refinement.update_view_position_simple(di_view)
 
+            """
             # Update object based on new position coordinates#
             parallel.barrier()
             self.position_refinement.corrected_positions = parallel.allreduce(self.position_refinement.corrected_positions)
@@ -357,22 +375,16 @@ class PositionCorrectionEngine(BaseEngine):
             for dname, di_view in self.di.views.iteritems():
                 # Check for new coordinates
                 di_view.pod.ob_view.coord = self.position_refinement.corrected_positions[self.position_refinement.view_index_lookup[di_view.ID]]
-
+            """
+            
+            """
             parallel.barrier()
-            self.ob.reformat()
+            self.ob.reformat(also_in_copies=True)
             # The size of the object might have been changed
-            del self.ptycho.containers[self.ob.ID + '_vcover']
-            del self.ptycho.containers[self.ob.ID + '_nrm']
-            self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
-            self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
-            for name, s in self.ob_viewcover.storages.iteritems():
-                s.fill(s.get_view_coverage())
-
-            parallel.barrier()
             for c in self.position_refinement.container_cleanup_list:
                 del self.ptycho.containers[c]
             gc.collect()
-
+            """
 
 class Base3dBraggEngine(BaseEngine):
     """

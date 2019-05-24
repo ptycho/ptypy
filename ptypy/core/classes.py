@@ -341,17 +341,18 @@ class Storage(Base):
 
         shape : tuple, int, or None
             The shape of the buffer. If None or int, the dimensionality
-            is found from the owning Container instance.
+            is found from the owning Container instance. Otherwise the
+            dimensionality is `len(shape)-1`.
 
         fill : float or complex
             The default value to fill storage with, will be converted to
             data type of owner.
 
-        psize : float or 2-tuple of float
+        psize : float or (ndim)-tuple of float
             The physical pixel size.
 
-        origin : 2-tuple of int
-            The physical coordinates of the [0,0] pixel (upper-left
+        origin : (ndim)-tuple of int
+            The physical coordinates of the [0,..,0] pixel (upper-left
             corner of the storage buffer).
 
         layermap : list or None

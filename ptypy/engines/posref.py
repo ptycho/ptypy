@@ -78,6 +78,7 @@ class AnnealingRefine(PositionRefine):
         self.initial_positions = np.zeros((len(Cobj.views), 2))
         self.corrected_positions = np.zeros((len(Cobj.views), 2))
         self.view_index_lookup = {}
+
         for idx, ob_view in enumerate(Cobj.views.keys()):
             self.view_index_lookup[ob_view] = idx
         for vname, ob_view in Cobj.views.iteritems():
@@ -96,7 +97,6 @@ class AnnealingRefine(PositionRefine):
         # Updated before each iteration by self.update_constraints
         self.max_shift_dist = None
         self.temp_ob = None
-        log(3, "Position refinement initialized")
 
     def fourier_error(self, di_view, obj):
         '''
@@ -196,6 +196,87 @@ class AnnealingRefine(PositionRefine):
         else:
             return np.zeros((2,))
 
+    def update_view_position_simple(self, di_view):
+        '''
+        Refines the positions by the following algorithm:
+
+        A.M. Maiden, M.J. Humphry, M.C. Sarahan, B. Kraus, J.M. Rodenburg,
+        An annealing algorithm to correct positioning errors in ptychography,
+        Ultramicroscopy, Volume 120, 2012, Pages 64-72
+
+        Algorithm Description:
+        Calculates random shifts around the original position and calculates the fourier error. If the fourier error
+        decreased the randomly calculated postion will be used as new position.
+
+        Parameters
+        ----------
+        di_view : ptypy.core.classes.View
+            A diffraction view that we wish to refine.
+
+        Returns
+        -------
+        numpy.ndarray
+            A length 2 numpy array with the position increments for x and y co-ordinates respectively
+        '''        
+        # there might be more than one object view
+        ob_view = di_view.pod.ob_view
+
+        initial_coord = ob_view.coord.copy()
+        coord = initial_coord
+        psize = ob_view.psize.copy()
+
+        # if you cannot move far, do nothing
+        if np.max(psize) >= self.max_shift_dist:
+            return np.zeros((2,))
+            
+        # This can be optimized by saving existing iteration fourier error...
+        error = self.fourier_error(di_view, ob_view.data)
+        
+        for i in range(self.p.nshifts):
+            # Generate coordinate shift in one of the 4 cartesian quadrants
+            a, b = np.random.uniform(np.max(psize), self.max_shift_dist, 2)
+            delta = np.array([(-1)**i * a, (-1)**(i//2) *b])
+
+            if np.linalg.norm(delta) > self.p.max_shift:
+                # Positions drifted too far, skip this position
+                continue
+
+            # Move view to new position
+            new_coord = initial_coord + delta 
+            ob_view.coord = new_coord
+            ob_view.storage.update_views(ob_view)
+            data = ob_view.data
+            
+            # catch bad slicing
+            if not np.allclose(data.shape, ob_view.shape):
+                continue 
+                
+            new_error = self.fourier_error(di_view, data)
+            
+            if new_error < error:
+                # keep
+                error = new_error
+                coord = new_coord
+                log(4, "Position correction: %s, coord: %s" % (di_view.ID, coord))
+                
+        ob_view.coord = coord
+        ob_view.storage.update_views(ob_view)        
+        return coord - initial_coord
+
+    def update_constraints_simple(self, iteration):
+        '''
+
+        Parameters
+        ----------
+        iteration : int
+            The current iteration of the engine.
+        '''
+
+        start, end = self.p.start, self.p.stop
+
+        # Compute the maximum shift allowed at this iteration
+        self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start) + self.psize/2.
+            
     def update_constraints(self, iteration):
         '''
 
