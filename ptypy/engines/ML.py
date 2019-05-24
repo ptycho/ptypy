@@ -151,7 +151,8 @@ class ML(PositionCorrectionEngine):
         """
         Prepare for ML reconstruction.
         """
-
+        super(ML, self).engine_initialize()
+        
         # Object gradient and minimization direction
         self.ob_grad = self.ob.copy(self.ob.ID + '_grad', fill=0.)
         self.ob_h = self.ob.copy(self.ob.ID + '_h', fill=0.)

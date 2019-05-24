@@ -159,6 +159,8 @@ class DM(PositionCorrectionEngine):
         """
         Prepare for reconstruction.
         """
+        super(DM, self).engine_initialize()
+
         self.error = []
 
         # Generate container copies
@@ -168,14 +170,13 @@ class DM(PositionCorrectionEngine):
 
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
-
+        
     def engine_prepare(self):
         """
         Last minute initialization.
 
         Everything that needs to be recalculated when new data arrives.
         """
-
         self.pbound = {}
         mean_power = 0.
         for name, s in self.di.storages.iteritems():

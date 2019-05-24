@@ -341,17 +341,18 @@ class Storage(Base):
 
         shape : tuple, int, or None
             The shape of the buffer. If None or int, the dimensionality
-            is found from the owning Container instance.
+            is found from the owning Container instance. Otherwise the
+            dimensionality is `len(shape)-1`.
 
         fill : float or complex
             The default value to fill storage with, will be converted to
             data type of owner.
 
-        psize : float or 2-tuple of float
+        psize : float or (ndim)-tuple of float
             The physical pixel size.
 
-        origin : 2-tuple of int
-            The physical coordinates of the [0,0] pixel (upper-left
+        origin : (ndim)-tuple of int
+            The physical coordinates of the [0,..,0] pixel (upper-left
             corner of the storage buffer).
 
         layermap : list or None
@@ -385,12 +386,14 @@ class Storage(Base):
         ndim = container.ndim if container.ndim is not None else 2
 
         if shape is None:
-            shape = (1,) + (1 + 2*self.padding,) * ndim
+            shape = (1,) + (1,) * ndim
+            #shape = (1,) + (1 + 2*self.padding,) * ndim
         elif np.isscalar(shape):
-            shape = (1,) + (int(shape+2*self.padding),) * ndim
+            shape = (1,) + (int(shape),) * ndim
+            #shape = (1,) + (int(shape+2*self.padding),) * ndim
         else:
             shape = tuple(shape)
-            shape = (shape[0],) + tuple(x+2*self.padding for x in shape[1:])
+            #shape = (shape[0],) + tuple(x+2*self.padding for x in shape[1:])
 
         if len(shape) not in [3, 4]:
             logger.warn('Storage view access dimension %d is not in regular '
