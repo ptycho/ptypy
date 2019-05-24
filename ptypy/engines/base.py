@@ -317,7 +317,6 @@ class PositionCorrectionEngine(BaseEngine):
     default = False
     type = bool
     help = record movement of positions
-
     """
 
     def engine_initialize(self):
@@ -330,7 +329,8 @@ class PositionCorrectionEngine(BaseEngine):
             self.do_position_refinement = True
             log(3, "Initialising position refinement")
             
-            # Enlarge object arrays, this could be skipped though if the boundary is less important
+            # Enlarge object arrays, 
+            # This can be skipped though if the boundary is less important
             for name, s in self.ob.storages.items():
                 s.padding = int(self.p.position_refinement.max_shift / np.max(s.psize))
                 s.reformat()
@@ -341,6 +341,8 @@ class PositionCorrectionEngine(BaseEngine):
             self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
             if self.p.position_refinement.stop is None:
                 self.p.position_refinement.stop = self.p.numiter
+            if self.p.position_refinement.start is None:
+                self.p.position_refinement.start = 0
 
     def position_update(self):
         """
@@ -367,24 +369,9 @@ class PositionCorrectionEngine(BaseEngine):
                     #self.position_refinement.update_view_position(di_view)
                     self.position_refinement.update_view_position_simple(di_view)
 
-            """
-            # Update object based on new position coordinates#
-            parallel.barrier()
-            self.position_refinement.corrected_positions = parallel.allreduce(self.position_refinement.corrected_positions)
-
-            for dname, di_view in self.di.views.iteritems():
-                # Check for new coordinates
-                di_view.pod.ob_view.coord = self.position_refinement.corrected_positions[self.position_refinement.view_index_lookup[di_view.ID]]
-            """
-            
-            """
-            parallel.barrier()
-            self.ob.reformat(also_in_copies=True)
-            # The size of the object might have been changed
-            for c in self.position_refinement.container_cleanup_list:
-                del self.ptycho.containers[c]
-            gc.collect()
-            """
+            # We may not need this
+            #parallel.barrier()
+            #self.ob.reformat(True)
 
 class Base3dBraggEngine(BaseEngine):
     """

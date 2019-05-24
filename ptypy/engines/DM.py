@@ -177,7 +177,6 @@ class DM(PositionCorrectionEngine):
 
         Everything that needs to be recalculated when new data arrives.
         """
-
         self.pbound = {}
         mean_power = 0.
         for name, s in self.di.storages.iteritems():
