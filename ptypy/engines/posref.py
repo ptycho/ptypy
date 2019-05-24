@@ -176,7 +176,7 @@ class AnnealingRefine(PositionRefine):
         start, end = self.p.start, self.p.stop
 
         # Compute the maximum shift allowed at this iteration
-        self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start) + self.psize/2.
+        self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start)
 
     @property
     def citation_dictionary(self):

@@ -360,14 +360,14 @@ class PositionCorrectionEngine(BaseEngine):
             """
             log(4, "----------- START POS REF -------------")
             #self.position_refinement.update_constraints(self.curiter) # this stays here
-            self.position_refinement.update_constraints_simple(self.curiter) # this stays here
+            self.position_refinement.update_constraints(self.curiter) # this stays here
 
             # Iterate through all diffraction views
             for dname, di_view in self.di.views.iteritems():
                 # Check for new coordinates
                 if di_view.active:
                     #self.position_refinement.update_view_position(di_view)
-                    self.position_refinement.update_view_position_simple(di_view)
+                    self.position_refinement.update_view_position(di_view)
 
             # We may not need this
             #parallel.barrier()
