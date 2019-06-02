@@ -941,7 +941,10 @@ class Ptycho(Base):
             for ID, C in self.containers.iteritems():
                 info.append(C.report())
 
-        logger.info(''.join(info), extra={'allprocesses': True})
+        if parallel.size <= 5:
+            logger.info(''.join(info), extra={'allprocesses': True})
+        else:
+            logger.info(''.join(info))
         # logger.debug(info, extra={'allprocesses': True})
 
     def plot_overview(self, fignum=100):
