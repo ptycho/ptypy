@@ -57,10 +57,17 @@ class BaseEngine(object):
 
     [probe_support]
     default = 0.7
-    type = float
+    type = float, None
     lowlim = 0.0
     help = Valid probe area as fraction of the probe frame
     doc = Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
+
+    [probe_fourier_support]
+    default = None
+    type = float, None
+    lowlim = 0.0
+    help = Valid probe area in frequency domain as fraction of the probe frame
+    doc = Defines a circular area centered on the probe frame (in frequency domain), in which the probe is allowed to be nonzero.
 
     """
 
@@ -132,7 +139,8 @@ class BaseEngine(object):
         self.ex = self.ptycho.exit
         self.pods = self.ptycho.pods
 
-        self.probe_support = {}
+        self._probe_support = {}
+        self._probe_fourier_support = {}
         # Call engine specific initialization
         self.engine_initialize()
 
@@ -141,24 +149,51 @@ class BaseEngine(object):
         Last-minute preparation before iterating.
         """
         self.finished = False
-        # Calculate probe support
-        # an individual support for each storage is calculated in saved
-        # in the dict self.probe_support
-        supp = self.p.probe_support
-        if supp is not None:
-            for name, s in self.pr.storages.iteritems():
-                sh = s.data.shape
-                ll, xx, yy = u.grids(sh, FFTlike=False)
-                support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
-                self.probe_support[name] = support
 
         # Make sure all the pods are supported
         for label_, pod_ in self.pods.iteritems():
             if not pod_.model.__class__ in self.SUPPORTED_MODELS:
                 raise Exception('Model %s not supported by engine' % pod_.model.__class__)
 
+        # Calculate probe support
+        # an individual support for each storage is calculated in saved
+        # in the dict self.probe_support
+        supp = self.p.probe_support
+        if supp is not None:
+            for s in self.pr.storages.itervalues():
+                sh = s.data.shape
+                ll, xx, yy = u.grids(sh, FFTlike=False)
+                support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
+                self._probe_support[s.ID] = support
+
+        supp = self.p.probe_fourier_support
+        if supp is not None:
+            for s in self.pr.storages.itervalues():
+                sh = s.data.shape
+                ll, xx, yy = u.grids(sh, center='fft',FFTlike=True)
+                support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
+                self._probe_fourier_support[s.ID] = support
+
         # Call engine specific preparation
         self.engine_prepare()
+
+    def support_constraint(self, storage=None):
+        """
+        Enforces 2D support contraint on probe.
+        """
+        if storage is None:
+            for s in self.pr.storages.values():
+                self.support_contraint(s)
+
+        # Real space
+        support = self._probe_support.get(storage.ID)
+        if support is not None:
+            storage.data *= support
+
+        # Fourier space
+        support = self._probe_fourier_support.get(storage.ID)
+        if support is not None:
+            storage.data[:] = np.fft.ifft2(support * np.fft.fft2(storage.data))
 
     def iterate(self, num=None):
         """

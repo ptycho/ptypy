@@ -406,9 +406,7 @@ class DM(BaseEngine):
             s.data /= nrm
 
             # Apply probe support if requested
-            support = self.probe_support.get(name)
-            if support is not None:
-                s.data *= self.probe_support[name]
+            self.support_constraint(s)
 
             # Compute relative change in probe
             buf = pr_buf.storages[name].data
