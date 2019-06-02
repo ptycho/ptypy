@@ -337,9 +337,9 @@ class ScanModel(object):
         u.parallel.barrier()
         report_time('creating pods')
         # Adjust storages
-        self.ptycho.probe.reformat()
-        self.ptycho.obj.reformat()
-        self.ptycho.exit.reformat()
+        self.ptycho.probe.reformat(True)
+        self.ptycho.obj.reformat(True)
+        self.ptycho.exit.reformat(True)
         report_time('reformating')
         self._initialize_probe(new_probe_ids)
         self._initialize_object(new_object_ids)
@@ -608,9 +608,9 @@ class BlockScanModel(ScanModel):
         
         report_time('creating pods')
         # Adjust storages
-        self.ptycho.probe.reformat()
-        self.ptycho.obj.reformat()
-        self.ptycho.exit.reformat()
+        self.ptycho.probe.reformat(True)
+        self.ptycho.obj.reformat(True)
+        self.ptycho.exit.reformat(True)
         report_time('reformating')
 
         self._initialize_probe(new_probe_ids)
@@ -763,6 +763,9 @@ class _Vanilla(object):
         """
         Initialize the probe storage referred to by probe_ids.keys()[0]
         """
+        if not probe_ids:
+            return
+            
         logger.info('\n'+headerline('Probe initialization', 'l'))
 
         # pick storage from container, there's only one probe
@@ -782,6 +785,9 @@ class _Vanilla(object):
         """
         Initializes the probe storage referred to by object_ids.keys()[0]
         """
+        if not object_ids:
+            return
+            
         logger.info('\n'+headerline('Object initialization', 'l'))
 
         # pick storage from container, there's only one object
