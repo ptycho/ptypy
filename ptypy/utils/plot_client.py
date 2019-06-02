@@ -506,10 +506,11 @@ class MPLplotter(object):
                 err_fmag = error[:, 0]
                 err_phot = error[:, 1]
                 err_exit = error[:, 2]
-                axis.hold(False)
+                axis.cla()
+                #axis.hold(False)
                 fmag = err_fmag/np.max(err_fmag)
                 axis.plot(fmag, label='err_fmag %2.2f%% of %.2e' % (fmag[-1]*100, np.max(err_fmag)))
-                axis.hold(True)
+                #axis.hold(True)
                 phot = err_phot/np.max(err_phot)
                 axis.plot(phot, label='err_phot %2.2f%% of %.2e' % (phot[-1]*100, np.max(err_phot)))
                 ex = err_exit/np.max(err_exit)
