@@ -1,4 +1,4 @@
-name: full_dependencies
+name: ptypy_full_dependencies
 channels:
   - conda-forge
 dependencies:
