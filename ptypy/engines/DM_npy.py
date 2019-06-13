@@ -125,6 +125,8 @@ class DMNpy(DM):
         Difference map reconstruction engine.
         """
         super(DMNpy, self).__init__(ptycho_parent, pars)
+        if self.p.position_refinement.start is not None:
+            raise NotImplementedError('Position refinement is not supported on the GPU yet.')
 
     def engine_initialize(self):
         self.error = []

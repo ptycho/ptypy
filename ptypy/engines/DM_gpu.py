@@ -119,6 +119,54 @@ class DMGpu(DMNpy):
     type = int
     help = The device number for the gpu that we will use
 
+    [position_refinement]
+    default = False
+    type = Param, bool
+    help = If True refine scan positions
+    doc = **[not implemented]**
+
+    [position_refinement.start]
+    default = None
+    type = int
+    help = Number of iterations until position refinement starts
+    doc = **[not implemented]**
+
+    [position_refinement.stop]
+    default = None
+    type = int
+    help = Number of iterations after which positon refinement stops
+    doc = If None, position refinement stops after last iteration **[not implemented]**
+
+    [position_refinement.interval]
+    default = 1
+    type = int
+    help = Frequency of position refinement
+    doc = **[not implemented]**
+
+    [position_refinement.nshifts]
+    default = 4
+    type = int
+    help = Number of random shifts calculated in each position refinement step (has to be multiple of 4)
+    doc = **[not implemented]**
+
+    [position_refinement.amplitude]
+    default = 0.001
+    type = float
+    help = Distance from original position per random shift [m]
+    doc = **[not implemented]**
+
+    [position_refinement.max_shift]
+    default = 0.002
+    type = float
+    help = Maximum distance from original position [m]
+    doc = **[not implemented]**
+
+    [position_refinement.record]
+    default = False
+    type = bool
+    help = record movement of positions
+    doc = **[not implemented]**
+
     """
 
     SUPPORTED_MODELS = [Vanilla, Full]
