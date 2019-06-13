@@ -10,36 +10,36 @@ option(GPU_TIMING "Run timing for the GPU code" OFF)
 
 ############################################################################
 # Download and unpack googletest at configure time
-configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-if(result)
-  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-if(result)
-  message(FATAL_ERROR "Build step for googletest failed: ${result}")
-endif()
+#configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
+#execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+#  RESULT_VARIABLE result
+#  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
+#if(result)
+#  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+#endif()
+#execute_process(COMMAND ${CMAKE_COMMAND} --build .
+#  RESULT_VARIABLE result
+#  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
+#if(result)
+#  message(FATAL_ERROR "Build step for googletest failed: ${result}")
+#endif()
 
 # Prevent overriding the parent project's compiler/linker
 # settings on Windows
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+#set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 # Add googletest directly to our build. This defines
 # the gtest and gtest_main targets.
-add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
-                 ${CMAKE_BINARY_DIR}/googletest-build
-                 EXCLUDE_FROM_ALL)
+#add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
+#                 ${CMAKE_BINARY_DIR}/googletest-build
+#                 EXCLUDE_FROM_ALL)
 
 # The gtest/gtest_main targets carry header search path
 # dependencies automatically when using CMake 2.8.11 or
 # later. Otherwise we have to add them here ourselves.
-if (CMAKE_VERSION VERSION_LESS 2.8.11)
-  include_directories("${gtest_SOURCE_DIR}/include")
-endif()
+#if (CMAKE_VERSION VERSION_LESS 2.8.11)
+#  include_directories("${gtest_SOURCE_DIR}/include")
+#endif()
 ############################################################################
 
 
@@ -122,14 +122,14 @@ endif()
 
 ########### tests ###########
 
-enable_testing()
+#enable_testing()
 
-macro(buildtest name)
-  add_executable(${name} tests/${name}.cpp)
-  target_link_libraries(${name} gtest_main)
-  add_test(NAME ${name} COMMAND ${name})
-endmacro()
+#macro(buildtest name)
+#  add_executable(${name} tests/${name}.cpp)
+#  target_link_libraries(${name} gtest_main)
+#  add_test(NAME ${name} COMMAND ${name})
+#endmacro()
 
-buildtest(indexing_test)
-buildtest(gaussian_weights_test)
+#buildtest(indexing_test)
+#buildtest(gaussian_weights_test)
 
