@@ -239,6 +239,13 @@ class Ptycho(Base):
     doc = Switch to request the production of a movie from the dumped plots at the end of the
       reconstruction.
 
+    [scan]
+    default = None
+    type = Param
+    help = Container for common scan parameters
+    doc = Acts as a default template when there is more than one scan. Scan-specific
+      parameters have to be placed in :py:data:`scans`.
+
     [scans]
     default = None
     type = Param
