@@ -114,6 +114,21 @@ class Hdf5Loader(PtyScan):
     type = float
     help = This is a scaling factor to get the motor position into metres.
 
+    [positions.bounding_box]
+    default =
+    type = Param
+    help = Defines a bounding box (in array indices) to reconstruct a restricted area
+
+    [positions.bounding_box.fast_axis_bounds]
+    default = None
+    type = None, int, tuple, list
+    help = If an int, this is the lower bound only, if a tuple is (min, max)
+
+    [positions.bounding_box.slow_axis_bounds]
+    default =
+    type = None, int, tuple, list
+    help = If an int, this is the lower bound only, if a tuple is (min, max)
+
     [mask]
     default =
     type = Param
@@ -273,6 +288,7 @@ class Hdf5Loader(PtyScan):
         self.darkfield_laid_out_like_data = None
         self.flatfield_field_laid_out_like_data = None
         self.mask_laid_out_like_data = None
+        self.preview_indices = None
 
         # lets raise some exceptions here for the essentials
         if None in [self.p.intensities.file,
@@ -290,12 +306,18 @@ class Hdf5Loader(PtyScan):
 
         self.intensities = h5.File(self.p.intensities.file, 'r')[self.p.intensities.key]
         data_shape = self.intensities.shape
-        slow_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.slow_key][...]
-        self.slow_axis = np.squeeze(slow_axis) if slow_axis.ndim>2 else slow_axis
-        positions_slow_shape = self.slow_axis.shape
+
         fast_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.fast_key][...]
-        self.fast_axis = np.squeeze(fast_axis) if fast_axis.ndim>2 else fast_axis
+        self.fast_axis = np.squeeze(fast_axis) if fast_axis.ndim > 2 else fast_axis
         positions_fast_shape = self.fast_axis.shape
+
+
+        slow_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.slow_key][...]
+        self.slow_axis = np.squeeze(slow_axis) if slow_axis.ndim > 2 else slow_axis
+        positions_slow_shape = self.slow_axis.shape
+
+
+
         log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(data_shape,
                                                                                                                        positions_slow_shape,
                                                                                                                       positions_fast_shape))
@@ -407,10 +429,13 @@ class Hdf5Loader(PtyScan):
         positions = {}
         weights = {}
         sh = self.slow_axis.shape
-        for jj in indices:
-            weights[jj], intensities[jj] = self.get_corrected_intensities(jj)
-            positions[jj] = np.array([self.slow_axis[jj % sh[0], jj // sh[1]] * self.p.positions.slow_multiplier,
-                                      self.fast_axis[jj % sh[0], jj // sh[1]] * self.p.positions.fast_multiplier])
+        for ii in indices:
+            slow_idx, fast_idx = self.preview_indices[:, ii]
+            print slow_idx, fast_idx
+            intensity_index = slow_idx * sh[1] + fast_idx
+            weights[ii], intensities[ii] = self.get_corrected_intensities(intensity_index)
+            positions[ii] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
         log(3, 'Data loaded successfully.')
         return intensities, positions, weights
 
@@ -420,8 +445,7 @@ class Hdf5Loader(PtyScan):
         weights = {}
         sh = self.slow_axis.shape
         for jj in indices:
-            fast_idx = jj % sh[1]
-            slow_idx = jj // sh[1]
+            slow_idx, fast_idx = self.preview_indices[:, jj]
             weights[jj], intensities[jj] = self.get_corrected_intensities((slow_idx, fast_idx))  # or the other way round???
             positions[jj] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
                                       self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
@@ -432,12 +456,14 @@ class Hdf5Loader(PtyScan):
         intensities = {}
         positions = {}
         weights = {}
-        for jj in indices:
-            weights[jj], intensities[jj] = self.get_corrected_intensities(jj)
-            positions[jj] = np.array([self.slow_axis[jj] * self.p.positions.slow_multiplier,
+        for ii in indices:
+            jj = self.preview_indices[ii]
+            weights[ii], intensities[jj] = self.get_corrected_intensities(jj)
+            positions[ii] = np.array([self.slow_axis[jj] * self.p.positions.slow_multiplier,
                                       self.fast_axis[jj] * self.p.positions.fast_multiplier])
 
         log(3, 'Data loaded successfully.')
+
         return intensities, positions, weights
 
     def get_corrected_intensities(self, index):
@@ -480,6 +506,8 @@ class Hdf5Loader(PtyScan):
             mask = np.ones_like(intensity, dtype=np.int)
         return mask, intensity
 
+
+
     def compute_scan_mapping_and_trajectory(self, data_shape, positions_fast_shape, positions_slow_shape):
         '''
         This horrendous block of logic is all to do with making a semi-intelligent guess at what the data looks like.
@@ -491,12 +519,44 @@ class Hdf5Loader(PtyScan):
             axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n)
             '''
             log(3, "Everything is wonderful, each diffraction point has a co-ordinate.")
-            self.num_frames = np.prod(positions_fast_shape)
+
             self._ismapped = True
+            print self.slow_axis.shape
+            slow_axis_bounds = [0, self.slow_axis.shape[0]]
+            fast_axis_bounds = [0, self.fast_axis.shape[-1]]
+
+            set_slow_axis_bounds = self.p.positions.bounding_box.slow_axis_bounds
+            set_fast_axis_bounds = self.p.positions.bounding_box.fast_axis_bounds
+
             if len(data_shape) == 4:
                 self._scantype = "raster"
+
+                if set_slow_axis_bounds is not None:
+                    if isinstance(set_slow_axis_bounds, int):
+                        slow_axis_bounds[0] = set_slow_axis_bounds
+                    elif isinstance(slow_axis_bounds, (tuple, list)):
+                        slow_axis_bounds = set_slow_axis_bounds
+                if set_fast_axis_bounds is not None:
+                    if isinstance(set_fast_axis_bounds, int):
+                        fast_axis_bounds[0] = set_fast_axis_bounds
+                    elif isinstance(fast_axis_bounds, (tuple, list)):
+                        fast_axis_bounds = set_fast_axis_bounds
+
+                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()])
+                self.num_frames = len(self.preview_indices[0])
             else:
+                if (set_slow_axis_bounds is not None) and (set_fast_axis_bounds is not None):
+                    log(3, "Setting slow axis bounds for an arbitrary mapped scan doesn't make sense. "
+                           "We will just use the fast axis bounds.")
+                if set_fast_axis_bounds is not None:
+                    if isinstance(set_fast_axis_bounds, int):
+                        fast_axis_bounds[0] = set_fast_axis_bounds
+                    elif isinstance(fast_axis_bounds, (tuple, list)):
+                        fast_axis_bounds = set_fast_axis_bounds
                 self._scantype = "arb"
+                self.preview_indices = range(*fast_axis_bounds)
+                self.num_frames = len(self.preview_indices)
 
         elif data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
             '''
@@ -504,7 +564,25 @@ class Hdf5Loader(PtyScan):
             axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
             '''
             log(3, "Positions are raster, but data is a list of frames. Unpacking the data to match the positions...")
-            self.num_frames = np.prod(positions_fast_shape)
+            slow_axis_bounds = [0, self.slow_axis.shape[1]]
+            fast_axis_bounds = [0, self.fast_axis.shape[1]]
+
+            set_slow_axis_bounds = self.p.positions.bounding_box.slow_axis_bounds
+            set_fast_axis_bounds = self.p.positions.bounding_box.fast_axis_bounds
+            if set_slow_axis_bounds is not None:
+                if isinstance(set_slow_axis_bounds, int):
+                    slow_axis_bounds[0] = set_slow_axis_bounds
+                elif isinstance(slow_axis_bounds, (tuple, list)):
+                    slow_axis_bounds = set_slow_axis_bounds
+            if set_fast_axis_bounds is not None:
+                if isinstance(set_fast_axis_bounds, int):
+                    fast_axis_bounds[0] = set_fast_axis_bounds
+                elif isinstance(fast_axis_bounds, (tuple, list)):
+                    fast_axis_bounds = set_fast_axis_bounds
+
+            indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+            self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()])
+            self.num_frames = len(self.preview_indices[0])
             self._ismapped = False
             self._scantype = 'raster'
 
@@ -515,8 +593,28 @@ class Hdf5Loader(PtyScan):
                 axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the size of the other axis,
                 '''
                 log(3, "Assuming the axes are 1D and need to be meshed to match the raster style data")
-                self.num_frames = np.prod(data_shape[:-2])
+                slow_axis_bounds = [0, self.slow_axis.shape[0]]
+                fast_axis_bounds = [0, self.fast_axis.shape[0]]
+
+                set_slow_axis_bounds = self.p.positions.bounding_box.slow_axis_bounds
+                set_fast_axis_bounds = self.p.positions.bounding_box.fast_axis_bounds
+                if set_slow_axis_bounds is not None:
+                    if isinstance(set_slow_axis_bounds, int):
+                        slow_axis_bounds[0] = set_slow_axis_bounds
+                    elif isinstance(slow_axis_bounds, (tuple, list)):
+                        slow_axis_bounds = set_slow_axis_bounds
+                if set_fast_axis_bounds is not None:
+                    if isinstance(set_fast_axis_bounds, int):
+                        fast_axis_bounds[0] = set_fast_axis_bounds
+                    elif isinstance(fast_axis_bounds, (tuple, list)):
+                        fast_axis_bounds = set_fast_axis_bounds
+
                 self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
+
+                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()])
+                self.num_frames = np.prod(indices[0].shape)
+
                 self._ismapped = True
                 self._scantype = 'raster'
             elif data_shape[0] == (positions_slow_shape[0] * positions_fast_shape[0]):
@@ -524,8 +622,30 @@ class Hdf5Loader(PtyScan):
                 cases covered:
                 axis_data.shape (C,) for data.shape (C*D, frame_size_m, frame_size_n) where D is the size of the other axis.
                 '''
-                self.num_frames = data_shape[0]
+                slow_axis_bounds = [0,self.slow_axis.shape[0]]
+                fast_axis_bounds = [0, self.fast_axis.shape[0]]
+
+                set_slow_axis_bounds = self.p.positions.bounding_box.slow_axis_bounds
+                set_fast_axis_bounds = self.p.positions.bounding_box.fast_axis_bounds
+                if set_slow_axis_bounds is not None:
+                    if isinstance(set_slow_axis_bounds, int):
+                        slow_axis_bounds[0] = set_slow_axis_bounds
+                    elif isinstance(slow_axis_bounds, (tuple, list)):
+                        slow_axis_bounds = set_slow_axis_bounds
+                if set_fast_axis_bounds is not None:
+                    if isinstance(set_fast_axis_bounds, int):
+                        fast_axis_bounds[0] = set_fast_axis_bounds
+                    elif isinstance(fast_axis_bounds, (tuple, list)):
+                        fast_axis_bounds = set_fast_axis_bounds
+
                 self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
+
+                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+
+                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()])
+                self.num_frames = np.prod(indices[0].shape)
+
+
                 self._ismapped = False
                 self._scantype = 'raster'
             else:
