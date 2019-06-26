@@ -405,7 +405,7 @@ class Hdf5Loader(PtyScan):
             pshape = u.expect2(self.p.shape)
             low_pix = center - pshape // 2
             high_pix = low_pix + pshape
-            self.frame_slices = (slice(low_pix[0], high_pix[0], 1), slice(low_pix[1], high_pix[1], 1))
+            self.frame_slices = (slice(int(low_pix[0]), int(high_pix[0]), 1), slice(int(low_pix[1]), int(high_pix[1]), 1))
             self.p.center = pshape // 2 #the  new center going forward
             self.info.center = self.p.center
             self.p.shape = pshape
@@ -431,7 +431,6 @@ class Hdf5Loader(PtyScan):
         sh = self.slow_axis.shape
         for ii in indices:
             slow_idx, fast_idx = self.preview_indices[:, ii]
-            print slow_idx, fast_idx
             intensity_index = slow_idx * sh[1] + fast_idx
             weights[ii], intensities[ii] = self.get_corrected_intensities(intensity_index)
             positions[ii] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
@@ -440,12 +439,14 @@ class Hdf5Loader(PtyScan):
         return intensities, positions, weights
 
     def loaded_mapped_and_raster_scan(self, indices):
+        print "INSIDE LOADED_MAPPED_AND_RASTER_SCAN"
         intensities = {}
         positions = {}
         weights = {}
-        sh = self.slow_axis.shape
         for jj in indices:
+            print jj
             slow_idx, fast_idx = self.preview_indices[:, jj]
+            print slow_idx, fast_idx, type(slow_idx), type(fast_idx)
             weights[jj], intensities[jj] = self.get_corrected_intensities((slow_idx, fast_idx))  # or the other way round???
             positions[jj] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
                                       self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
@@ -476,6 +477,8 @@ class Hdf5Loader(PtyScan):
             index = (index,)
         indexed_frame_slices = tuple([slice(ix, ix+1, 1) for ix in index])
         indexed_frame_slices += self.frame_slices
+
+        print "indexed_frame_slices_are", indexed_frame_slices
 
         intensity = self.intensities[indexed_frame_slices]
         # TODO: Remove these logic blocks into something a bit more sensible.
@@ -521,7 +524,6 @@ class Hdf5Loader(PtyScan):
             log(3, "Everything is wonderful, each diffraction point has a co-ordinate.")
 
             self._ismapped = True
-            print self.slow_axis.shape
             slow_axis_bounds = [0, self.slow_axis.shape[0]]
             fast_axis_bounds = [0, self.fast_axis.shape[-1]]
 
@@ -543,7 +545,7 @@ class Hdf5Loader(PtyScan):
                         fast_axis_bounds = set_fast_axis_bounds
 
                 indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
-                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()])
+                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
                 self.num_frames = len(self.preview_indices[0])
             else:
                 if (set_slow_axis_bounds is not None) and (set_fast_axis_bounds is not None):
@@ -612,7 +614,7 @@ class Hdf5Loader(PtyScan):
                 self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
 
                 indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
-                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()])
+                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
                 self.num_frames = np.prod(indices[0].shape)
 
                 self._ismapped = True
@@ -642,7 +644,7 @@ class Hdf5Loader(PtyScan):
 
                 indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
 
-                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()])
+                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
                 self.num_frames = np.prod(indices[0].shape)
 
 
