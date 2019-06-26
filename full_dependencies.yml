@@ -12,6 +12,7 @@ dependencies:
   - mpi4py
   - pil
   - pyfftw
+  - pip
   - pip:
     - pytest-cov
     - coveralls
