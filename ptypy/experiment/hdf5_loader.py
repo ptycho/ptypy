@@ -401,7 +401,8 @@ class Hdf5Loader(PtyScan):
         if self.p.shape is None:
             self.frame_slices = (slice(None, None, 1), slice(None, None, 1))
             self.p.shape = frame_shape
-        else:
+            log(3, "Loading full shape frame.")
+        elif self.p.shape is not None and not self.p.auto_center:
             pshape = u.expect2(self.p.shape)
             low_pix = center - pshape // 2
             high_pix = low_pix + pshape
@@ -409,6 +410,15 @@ class Hdf5Loader(PtyScan):
             self.p.center = pshape // 2 #the  new center going forward
             self.info.center = self.p.center
             self.p.shape = pshape
+            log(3, "Loading in frame based on a center in:%i, %i" % tuple(center))
+        else:
+            self.frame_slices = (slice(None, None, 1), slice(None, None, 1))
+            self.info.center = None
+            self.info.auto_center = self.p.auto_center
+            log(3, "center is %s, auto_center: %s" % (self.info.center, self.info.auto_center))
+
+            log(3, "The loader will not do any cropping.")
+
 
         # it's much better to have this logic here than in load!
         if (self._ismapped and (self._scantype is 'arb')):
@@ -439,14 +449,11 @@ class Hdf5Loader(PtyScan):
         return intensities, positions, weights
 
     def loaded_mapped_and_raster_scan(self, indices):
-        print "INSIDE LOADED_MAPPED_AND_RASTER_SCAN"
         intensities = {}
         positions = {}
         weights = {}
         for jj in indices:
-            print jj
             slow_idx, fast_idx = self.preview_indices[:, jj]
-            print slow_idx, fast_idx, type(slow_idx), type(fast_idx)
             weights[jj], intensities[jj] = self.get_corrected_intensities((slow_idx, fast_idx))  # or the other way round???
             positions[jj] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
                                       self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
@@ -478,21 +485,21 @@ class Hdf5Loader(PtyScan):
         indexed_frame_slices = tuple([slice(ix, ix+1, 1) for ix in index])
         indexed_frame_slices += self.frame_slices
 
-        print "indexed_frame_slices_are", indexed_frame_slices
 
-        intensity = self.intensities[indexed_frame_slices]
+        intensity = self.intensities[indexed_frame_slices].squeeze()
+
         # TODO: Remove these logic blocks into something a bit more sensible.
         if self.darkfield is not None:
             if self.darkfield_laid_out_like_data:
-                intensity -= self.darkfield[indexed_frame_slices]
+                intensity -= self.darkfield[indexed_frame_slices].squeeze()
             else:
-                intensity -= self.darkfield[self.frame_slices]
+                intensity -= self.darkfield[self.frame_slices].squeeze()
 
         if self.flatfield is not None:
             if self.flatfield_laid_out_like_data:
-                intensity /= self.flatfield[indexed_frame_slices]
+                intensity /= self.flatfield[indexed_frame_slices].squeeze()
             else:
-                intensity /= self.flatfield[self.frame_slices]
+                intensity /= self.flatfield[self.frame_slices].squeeze()
 
         if self.normalisation is not None:
             if self.normalisation_laid_out_like_positions:
@@ -502,9 +509,9 @@ class Hdf5Loader(PtyScan):
 
         if self.mask is not None:
             if self.mask_laid_out_like_data:
-                mask = self.mask[indexed_frame_slices]
+                mask = self.mask[indexed_frame_slices].squeeze()
             else:
-                mask = self.mask[self.frame_slices]
+                mask = self.mask[self.frame_slices].squeeze()
         else:
             mask = np.ones_like(intensity, dtype=np.int)
         return mask, intensity
