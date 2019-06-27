@@ -1,6 +1,7 @@
 name: full_dependencies
 channels:
   - conda-forge
+  - anaconda
 dependencies:
   - python=2.7
   - numpy
