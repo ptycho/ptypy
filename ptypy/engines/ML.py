@@ -18,7 +18,8 @@ from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
 from .utils import Cnorm2, Cdot
-from . import BaseEngine, register
+from . import register
+from .base import PositionCorrectionEngine
 from .. import defaults_tree
 from ..core.manager import Full, Vanilla
 
@@ -26,7 +27,7 @@ __all__ = ['ML']
 
 
 @register()
-class ML(BaseEngine):
+class ML(PositionCorrectionEngine):
     """
     Maximum likelihood reconstruction engine.
 
@@ -150,7 +151,8 @@ class ML(BaseEngine):
         """
         Prepare for ML reconstruction.
         """
-
+        super(ML, self).engine_initialize()
+        
         # Object gradient and minimization direction
         self.ob_grad = self.ob.copy(self.ob.ID + '_grad', fill=0.)
         self.ob_h = self.ob.copy(self.ob.ID + '_h', fill=0.)

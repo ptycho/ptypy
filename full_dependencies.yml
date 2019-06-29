@@ -1,6 +1,7 @@
 name: full_dependencies
 channels:
   - conda-forge
+  - anaconda
 dependencies:
   - python=2.7
   - numpy
@@ -12,6 +13,7 @@ dependencies:
   - mpi4py
   - pil
   - pyfftw
+  - pip
   - pip:
     - pytest-cov
     - coveralls
