@@ -1231,7 +1231,7 @@ class View(Base):
         self.dlayer = 0
 
         # The messy stuff
-        if accessrule is not None: #or not kwargs:
+        if accessrule is not None or len(kwargs)>0:
             self._set(accessrule, **kwargs)
 
     def _set(self, accessrule, **kwargs):
