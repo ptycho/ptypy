@@ -179,7 +179,7 @@ class FliSpecScanMultexp(PtyScan):
         weights = {}
         expos = common['exposures']
         darks = common['darks']
-        for j,rr in raw.iteritems():
+        for j,rr in list(raw.items()):
             data_hdr,lmask=u.hdr_image(rr, expos, thresholds=self.hdr_thresholds, dark_list=darks, avg_type='highest')
             data[j] = data_hdr
             weights[j] = lmask[-1]
@@ -191,7 +191,7 @@ if __name__ == '__main__':
     RS = RawScan(p,num_frames=50,roi=512 )
     RS.initialize()
     RS.report()
-    print 'loading data'
+    print('loading data')
     msg = True
     for i in range(200):
         if msg is False:

@@ -25,7 +25,7 @@ import subprocess
 subprocess.check_call(['python', 'script2rst.py'])  # We need this to have a clean sys.argv
 subprocess.check_call(['python','parameters2rst.py'])
 subprocess.check_call(['python','tmp2rst.py'])
-execfile('version.py')
+exec(compile(open('version.py').read(), 'version.py', 'exec'))
 
 # -- General configuration ------------------------------------------------
 
@@ -64,8 +64,8 @@ def remove_mod_docstring(app, what, name, obj, options, lines):
         if depth < 0:
             return
         
-        for k, value in dct.iteritems():
-            ref = ', see :py:data:`~%s`' % pd.children[k].entry_point if pd.children.has_key(k) else ''
+        for k, value in list(dct.items()):
+            ref = ', see :py:data:`~%s`' % pd.children[k].entry_point if k in pd.children else ''
             if hasattr(value, 'items'):
                 v = str(value.__class__.__name__)
             elif str(value) == value:
@@ -120,8 +120,8 @@ source_suffix = '.rst'
 master_doc = 'content'
 
 # General information about the project.
-project = u'ptypy'
-copyright = u'2015, Pierre Thibault, Bjoern Enders and others'
+project = 'ptypy'
+copyright = '2015, Pierre Thibault, Bjoern Enders and others'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -283,8 +283,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('content', 'content.tex', u'ptypy Documentation',
-   u'Pierre Thibault, Bjoern Enders and others', 'manual'),
+  ('content', 'content.tex', 'ptypy Documentation',
+   'Pierre Thibault, Bjoern Enders and others', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -314,8 +314,8 @@ latex_use_parts = False
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'ptypy', u'ptypy Documentation',
-     [u'Pierre Thibault, Bjoern Enders and others'], 1)
+    ('index', 'ptypy', 'ptypy Documentation',
+     ['Pierre Thibault, Bjoern Enders and others'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -328,8 +328,8 @@ man_show_urls = True
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'ptypy', u'ptypy Documentation',
-   u'Pierre Thibault, Bjoern Enders and others', 'ptypy', 'One line description of project.',
+  ('index', 'ptypy', 'ptypy Documentation',
+   'Pierre Thibault, Bjoern Enders and others', 'ptypy', 'One line description of project.',
    'Miscellaneous'),
 ]
 

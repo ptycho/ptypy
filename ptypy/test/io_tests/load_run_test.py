@@ -93,16 +93,16 @@ class LoadRunTest(unittest.TestCase):
 
         b = Ptycho.load_run(file_path)
         np.testing.assert_equal(type(b), type(Pcomp))
-        for name, st in b.mask.storages.iteritems():
+        for name, st in list(b.mask.storages.items()):
             np.testing.assert_equal(st.data, P.mask.storages[name].data)
 
-        for name, st in b.diff.storages.iteritems():
+        for name, st in list(b.diff.storages.items()):
             np.testing.assert_equal(st.data, P.diff.storages[name].data)
 
-        for name, st in b.probe.storages.iteritems():
+        for name, st in list(b.probe.storages.items()):
             np.testing.assert_equal(st.data, P.probe.storages[name].data)
 
-        for name, st in b.obj.storages.iteritems():
+        for name, st in list(b.obj.storages.items()):
             np.testing.assert_equal(st.data, P.obj.storages[name].data)
 
 

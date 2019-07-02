@@ -56,7 +56,7 @@ P = Ptycho(p, level=4)
 a = 0.
 
 coords = []
-for pname, pod in P.pods.iteritems():
+for pname, pod in list(P.pods.items()):
     # Save real position
     coords.append(np.copy(pod.ob_view.coord))
     before = pod.ob_view.coord

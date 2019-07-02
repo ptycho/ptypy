@@ -147,6 +147,16 @@ class ID16AScan(PtyScan):
 
     [orientation]
     default = (False, True, False)
+
+    [recipe]
+    default = u.Param()
+    help =
+
+    [det_flat_field]
+    default = None
+    type = str
+    help = 
+    
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -190,18 +200,23 @@ class ID16AScan(PtyScan):
 
     def load_weight(self):
         """
-        Function description see parent class. For now, this function will be
-        used to load the mask.
+        Function description see parent class. For now, this function
+        will be used to load the mask.
+        :return: weight2d
+            - np.array: Mask or weight if provided from file
         """
         # FIXME: do something better here. (detector-dependent)
         # Load mask as weight
         if self.info.mask_file is not None:
-            return io.h5read(self.info.mask_file, 'mask')['mask'].astype(
-                np.float32)
+            print('Loading detector mask')
+            return io.h5read(self.info.mask_file, 'mask')['mask'].astype(np.float32)
 
     def load_positions(self):
         """
-        Load the positions and return as an (N, 2) array.
+        Load the positions and return as an (N,2) array.
+
+        :return: positions
+            - np.array: contains scan positions.
         """
         positions = []
         mmult = u.expect2(self.info.motors_multiplier)
@@ -217,15 +232,15 @@ class ID16AScan(PtyScan):
             # From .edf files
             pos_files = []
             # Count available images given through scan_label
-            for i in os.listdir(self.info.base_path +
-                                self.info.scan_label):
-                if i.startswith(self.info.scan_label):
+            #print(os.listdir(self.info.base_path))# + self.info.label))
+            for i in os.listdir(self.info.base_path):# + self.info.scan_label):
+                if i.startswith(self.info.sample_name):#(self.info.scan_label):
                     pos_files.append(i)
 
             for i in np.arange(1, len(pos_files) + 1, 1):
-                data, meta = io.edfread(self.info.base_path +
-                                        self.info.scan_label + '/' +
-                                        self.info.scan_label +
+                print((self.info.base_path +self.info.sample_name + '/' +self.info.sample_name))
+                data, meta = io.edfread(self.info.base_path + '/' +
+                                        self.info.sample_name +
                                         '_%04d.edf' % i)
 
                 positions.append((meta['motor'][self.info.motors[0]],
@@ -235,7 +250,11 @@ class ID16AScan(PtyScan):
 
     def load_common(self):
         """
+        Loads anything that is common to all frames and stores it in dict.
         Load scanning positions, dark, white field and distortion files.
+
+        :return: common
+            - dict: contains information common to all frames.
         """
         common = u.Param()
 
@@ -267,6 +286,13 @@ class ID16AScan(PtyScan):
         #dv = io.edfread(self.rinfo.distortion_v_file)[0]
 
         #common.distortion = (dh, dv)
+        if self.info.det_flat_field is not None:
+            # read flat-field file
+            print('Reading flat-field file of the detector')
+            flat_field,header = io.edfread(self.det_flat_field)
+            flat_field = flat_field.astype(np.float32)/flat_field.mean()
+            flat_field[np.where(flat_field==0)]=1 # put 1 where values are 0 for the division
+            common.flat_field = flat_field
 
         #return common._to_dict()
 
@@ -279,15 +305,13 @@ class ID16AScan(PtyScan):
             # From .edf files
             dark_files = []
             # Count available dark given through scan_label
-            for i in os.listdir(self.info.base_path +
-                                self.info.scan_label):
+            for i in os.listdir(self.info.base_path): #+self.info.scan_label):
                 if i.startswith('dark'):
                     dark_files.append(i)
 
             dark = []
             for i in np.arange(1, len(dark_files) + 1, 1):
-                data, meta = io.edfread(self.info.base_path +
-                                        self.info.scan_label + '/' +
+                data, meta = io.edfread(self.info.base_path + '/' +
                                         'dark_%04d.edf' % i)
                 dark.append(data.astype(np.float32))
 
@@ -304,15 +328,13 @@ class ID16AScan(PtyScan):
             # From .edf files
             flat_files = []
             # Count available dark given through scan_label
-            for i in os.listdir(self.info.base_path +
-                                self.info.scan_label):
-                if i.startswith('flat'):
+            for i in os.listdir(self.info.base_path):# + self.info.scan_label):
+                if i.startswith('ref'):
                     flat_files.append(i)
 
             flat = []
             for i in np.arange(1, len(flat_files) + 1, 1):
-                data, meta = io.edfread(self.info.base_path +
-                                        self.info.scan_label + '/' +
+                data, meta = io.edfread(self.info.base_path + '/' +
                                         'ref_%04d.edf' % i)
                 flat.append(data.astype(np.float32))
 
@@ -327,14 +349,14 @@ class ID16AScan(PtyScan):
         Returns the number of frames available from starting index `start`, and
         whether the end of the scan was reached.
 
-        :param frames: Number of frames to load
-        :param start: starting point
+        :param frames: int
+            - Number of frames to load
+        :param start: int
+            - Starting point
         :return: (frames_available, end_of_scan)
-
-        - the number of frames available from a starting point `start`
-        - bool if the end of scan was reached
-          (None if this routine doesn't know)
-
+            - int: the number of frames available from a starting point `start`
+            - bool if the end of scan was reached
+                    (None if this routine doesn't know)
         """
         npos = self.num_frames
         frames_accessible = min((frames, npos - start))
@@ -345,8 +367,18 @@ class ID16AScan(PtyScan):
         """
         Load frames given by the indices.
 
-        :param indices:
-        :return:
+        :param indices: list
+            Frame indices available per node.
+        :return: raw, pos, weight
+            - dict: index matched data frames (np.array).
+            - dict: new positions.
+            - dict: new weights.
+        # returns three dicts: raw, positions, weights, whose keys are the
+        # scan pont indices. If one weight (mask) is to be used for the whole
+        # scan, it should be loaded with load_weights(). The same goes for the
+        # positions. We don't really need a mask here, but it must be
+        # provided, otherwise it's given the shape of self.info.shape, and
+        # then there's a shape mismatch in some multiplication.
         """
         raw = {}
         pos = {}
@@ -367,9 +399,8 @@ class ID16AScan(PtyScan):
             # From .edf files
             for j in indices:
                 i = j + 1
-                data, meta = io.edfread(self.info.base_path +
-                                        self.info.scan_label + '/' +
-                                        self.info.scan_label +
+                data, meta = io.edfread(self.info.base_path + '/' +
+                                        self.info.sample_name +
                                         '_%04d.edf' % i)
                 raw[j] = data.astype(np.float32)
 
@@ -379,10 +410,15 @@ class ID16AScan(PtyScan):
         """
         Apply (eventual) corrections to the raw frames. Convert from "raw"
         frames to usable data.
-        :param raw:
-        :param weights:
-        :param common:
-        :return:
+        :param raw: dict
+            - dict containing index matched data frames (np.array).
+        :param weights: dict
+            - dict containing possible weights.
+        :param common: dict
+            - dict containing possible dark and flat frames.
+        :return: data, weights
+            - dict: contains index matched corrected data frames (np.array).
+            - dict: contains modified weights.
         """
         # Sanity check
         #assert (raw.shape == (2048,2048)), (
@@ -406,12 +442,28 @@ class ID16AScan(PtyScan):
         if self.info.flat_division and self.info.dark_subtraction:
             for j in raw:
                 raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
-                raw[j][raw[j] < 0] = 0
+                raw[j][raw[j] < 0] = 0 # put negative values to 0
             data = raw
         elif self.info.dark_subtraction:
             for j in raw:
                 raw[j] = raw[j] - common.dark
-                raw[j][raw[j] < 0] = 0
+                raw[j][raw[j] < 0] = 0 # put negative values to 0
+            data = raw
+        else:
+            data = raw
+
+        if self.info.det_flat_field is not None:
+            print('Applying flat-field of the detector')
+            ff, header_ff = io.image_read(self.info.det_flat_field)
+            ff/=ff.mean()
+            ff[np.where(ff==0)]=1 # put 1 where values are 0 for the division
+            for j in raw:
+                #print(j)
+                raw[j] = raw[j] / common.flat_field #/=ff
+                raw[j][raw[j] < 0] = 0 # put negative values to 0
+                if self.pad_crop is not None:
+                    newdim = (self.pad_crop,self.pad_crop)
+                    raw[j],_ = u.crop_pad_symmetric_2d(raw[j],newdim)
             data = raw
         else:
             data = raw

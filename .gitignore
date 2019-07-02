@@ -14,3 +14,4 @@ ghostdriver*
 ptypy/version.py
 .idea/
 .cache/
+__pycache__/

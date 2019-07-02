@@ -179,7 +179,7 @@ class AMOScan(PtyScan):
         """
         # Apply corrections to frames
         data = raw
-        for k in data.keys():
+        for k in list(data.keys()):
             data[k][data[k] < self.info.threshold_correct] = 0
         weights = weights
         return data, weights

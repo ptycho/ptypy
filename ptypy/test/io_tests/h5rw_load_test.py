@@ -11,7 +11,7 @@ import h5py as h5
 import ptypy.io as io
 import ptypy.utils as u
 import numpy as np
-import cPickle
+import pickle
 import collections
 
 
@@ -35,7 +35,7 @@ class H5rwLoadTest(unittest.TestCase):
         np.testing.assert_equal(content["string data"], out["string data"], err_msg="Can't read back in a string that we saved.")
 
     def test_load_unicode(self):
-        data = u'test_string \xe1'
+        data = 'test_string \xe1'
         content = {'unicode data': data}
         io.h5write(self.filepath % "load_unicode_test", content=content)
         out = io.h5read(self.filepath % "load_unicode_test", "content")["content"]
@@ -81,7 +81,7 @@ class H5rwLoadTest(unittest.TestCase):
                                 err_msg="Can't read back in a list that we saved.")
 
     def test_load_tuple(self):
-        data = ('monkey', 'apple', (1.0, u'moon'))
+        data = ('monkey', 'apple', (1.0, 'moon'))
         content = {'tuple data': data}
         io.h5write(self.filepath % "load_tuple_test", content=content)
         out = io.h5read(self.filepath % "load_tuple_test", "content")["content"]

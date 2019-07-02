@@ -30,10 +30,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 # Modules
 import unittest
@@ -182,7 +178,7 @@ class TestBase(unittest.TestCase):
     def test_to_dict(self):
         """Extract information from container object and store in a dict"""
         self.assertListEqual(
-            self.basic_base._to_dict().keys(),
+            list(self.basic_base._to_dict().keys()),
             self.basic_base.__slots__,
             'Converting container object information to dictionary failed.'
         )

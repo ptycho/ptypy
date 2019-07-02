@@ -161,7 +161,7 @@ def jread(filename, *args, **kwargs):
     try:
         f = open(filename, 'r')
     except:
-        print('Error when opening file %s.' % filename)
+        print(('Error when opening file %s.' % filename))
         raise
     else:
         with f:
@@ -174,7 +174,7 @@ def jread(filename, *args, **kwargs):
                 print('Warning: this file does not seem to follow json_rw format.')
             ctime = meta.get('ctime', None)
             if ctime is not None:
-                print('File created : ' + ctime)
+                print(('File created : ' + ctime))
 
             if len(args) == 0:
                 # The simplest case: no input argument.

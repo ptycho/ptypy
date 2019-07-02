@@ -246,9 +246,9 @@ class UCLLaserScan(PtyScan):
         # Extract detector name if not set or wrong
         if (self.info.detector_name is None
                 or self.info.detector_name
-                not in self.instrument.keys()):
+                not in list(self.instrument.keys())):
             detector_name = None
-            for k in self.instrument.keys():
+            for k in list(self.instrument.keys()):
                 if 'data' in self.instrument[k]:
                     detector_name = k
                     break
@@ -471,7 +471,7 @@ class UCLLaserScan(PtyScan):
             else:
                 gau_sum = 0
                 for k in (
-                        self.info.rl_deconvolution.gaussians.iteritems()):
+                        iter(list(self.info.rl_deconvolution.gaussians.items()))):
                     gau_sum += u.gaussian2D(raw[0].shape[0],
                                             k[1].std_x,
                                             k[1].std_y,

@@ -10,14 +10,14 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-from __future__ import print_function
+
 import zmq
 import time
 import string
 import random
 import sys
 from threading import Thread, Event
-import Queue
+import queue
 import numpy as np
 import re
 import json
@@ -37,7 +37,7 @@ def ID_generator(size=6, chars=string.ascii_uppercase + string.digits):
     Generate a random ID string made of capital letters and digits.
     size [default=6] is the length of the string.
     """
-    return ''.join(random.choice(chars) for _ in range(size))
+    return ''.join(random.choice(chars) for _ in list(range(size)))
 
 
 def is_str(s):
@@ -76,7 +76,7 @@ class NumpyEncoder(json.JSONEncoder):
             self.npy_arrays.append(obj)
 
             # Replace obj by a key string giving the index of obj in the list
-            return u'NPYARRAY[%03d]' % (len(self.npy_arrays)-1)
+            return 'NPYARRAY[%03d]' % (len(self.npy_arrays)-1)
 
         return json.JSONEncoder.default(self, obj)
 
@@ -99,7 +99,7 @@ def numpy_replace(obj, arraylist):
         return obj
     elif isinstance(obj, dict):
         newobj = {}
-        for k, v in obj.iteritems():
+        for k, v in list(obj.items()):
             newobj[k] = numpy_replace(v, arraylist)
         return newobj
     elif isinstance(obj, list):
@@ -279,7 +279,7 @@ class Server(object):
         self.pingtime = time.time()
 
         # Command queue
-        self.queue = Queue.Queue()
+        self.queue = queue.Queue()
 
         # Initialize flags to communicate state between threads.
         self._need_process = False
@@ -304,7 +304,7 @@ class Server(object):
 
     def make_ID_pool(self):
 
-        port_range = range(self.port+1,self.port+self.p.connections+1)
+        port_range = list(range(self.port+1,self.port+self.p.connections+1))
         # Initial ID pool
         IDlist = []
         # This loop ensures all IDs are unique
@@ -312,7 +312,7 @@ class Server(object):
             newID = ID_generator()
             if newID not in IDlist:
                 IDlist.append(newID)
-        self.ID_pool = zip(IDlist, port_range)
+        self.ID_pool = list(zip(IDlist, port_range))
 
     def activate(self):
         """
@@ -339,7 +339,7 @@ class Server(object):
         Queue a warning message for all connected clients.
         """
         DEBUG('Queuing a WARN command')
-        for ID in self.names.keys():
+        for ID in list(self.names.keys()):
             self.queue.put({'ID': ID, 'cmd': 'WARN', 'ticket': 'WARN', 'str': warning_message})
         self._need_process = True
         return {'status': 'ok'}
@@ -349,7 +349,7 @@ class Server(object):
         Queue an ERROR message for all connected clients.
         """
         DEBUG('Queuing a ERROR command')
-        for ID in self.names.keys():
+        for ID in list(self.names.keys()):
             self.queue.put({'ID': ID, 'cmd': 'ERROR', 'ticket': 'ERROR', 'str': error_message})
         self._need_process = True
         return {'status': 'ok'}
@@ -371,7 +371,7 @@ class Server(object):
                 self.in_socket.bind(fulladdress)
                 success = True
             except zmq.ZMQError:
-                print("Port %d used, increase port by 20" % self.port)
+                print(("Port %d used, increase port by 20" % self.port))
                 continue
             if success:
                 break
@@ -381,7 +381,7 @@ class Server(object):
             self.port = port
             self.make_ID_pool()
 
-        print("Server listens on %s, port %s" % (str(self.address), str(self.port)))
+        print(("Server listens on %s, port %s" % (str(self.address), str(self.port))))
 
         # Initialize list of requests
         self.out_sockets = {}
@@ -397,7 +397,7 @@ class Server(object):
         try:
             self._listen()
         finally:
-            print("stop listening on %s, port %s" % (str(self.address), str(self.port)))
+            print(("stop listening on %s, port %s" % (str(self.address), str(self.port))))
             self.in_socket.unbind(fulladdress)
             self.in_socket.close()
 
@@ -449,7 +449,7 @@ class Server(object):
         if now - self.pingtime > self.pinginterval:
             # Time to check
             todisconnect = []
-            for ID, lastping in self.pings.iteritems():
+            for ID, lastping in list(self.pings.items()):
                 if now - lastping > self.pingtimeout:
                     # Timeout! Force disconnection
                     todisconnect.append(ID)
@@ -518,7 +518,7 @@ class Server(object):
         Send available objects.
         """
         DEBUG('Processing an AVAIL command')
-        return {'status': 'ok', 'avail': self.objects.keys()}
+        return {'status': 'ok', 'avail': list(self.objects.keys())}
 
     def _cmd_ping(self, ID, args):
         """\
@@ -578,7 +578,7 @@ class Server(object):
         try:
             numpy_zmq_send(out_socket, obj)
         except:
-            print('Problem sending object %s' % repr(obj))
+            print(('Problem sending object %s' % repr(obj)))
             raise
 
     def _recv(self, in_socket):
@@ -599,7 +599,7 @@ class Server(object):
         while True:
             try:
                 q = self.queue.get_nowait()
-            except Queue.Empty:
+            except queue.Empty:
                 break
 
             # Keep track of ticket number
@@ -607,7 +607,7 @@ class Server(object):
             logger.debug('Processing ticket %s from client %s' % (str(ticket), str(q['ID'])))
 
             # Nothing to do if the client is not connected anymore
-            if q['ID'] not in self.names.keys():
+            if q['ID'] not in list(self.names.keys()):
                 self.queue.task_done()
                 logger.debug('Client %s disconnected. Skipping.' % q['ID'])
                 continue
@@ -666,7 +666,7 @@ class Server(object):
         For now this is equivalent to Interactor.object[name] = obj, but maybe
         use weakref in the future?
         """
-        if self.objects.has_key(name):
+        if name in self.objects:
             logger.debug('Warning an object called %s already there.' % name)
         self.objects[name] = obj
 

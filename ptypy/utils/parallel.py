@@ -207,7 +207,7 @@ def allreduceC(c):
     --------
     ptypy.utils.parallel.allreduce
     """
-    for s in c.S.itervalues():
+    for s in list(c.S.values()):
         allreduce(s.data)
 
 def _MPIop(a, op, axis=None):
@@ -501,7 +501,7 @@ def bcast_dict(dct, keys='all', source=0):
     if rank == source:
         out = {}
         length = comm.bcast(len(dct), source)
-        for k, v in dct.items():
+        for k, v in list(dct.items()):
             comm.bcast(k,source)
             bcast(v,source)
             if str(keys) == 'all' or k in keys:
@@ -578,7 +578,7 @@ def gather_dict(dct, target=0):
             # your turn to send
             l = len(dct)
             comm.send(l, dest=target,tag=9999)
-            for k,v in dct.iteritems():
+            for k,v in list(dct.items()):
                 #print rank,str(k),v
                 #send(k, dest=target)
                 comm.send(k, dest=target,tag=9999)
@@ -899,7 +899,7 @@ def _gather_dict(dct, target=0):
             # your turn to send
             l = len(dct)
             comm.send(l, dest=target)
-            for item in dct.iteritems():
+            for item in list(dct.items()):
                 send(item, dest=target)
         barrier()
 
@@ -927,7 +927,7 @@ def _bcast_dict(dct, keys_accepted='all', source=0):
     if rank == source:
         out = {}
         length = comm.bcast(len(dct), source)
-        for k, v in dct.items():
+        for k, v in list(dct.items()):
             bcast((k, v))
             if str(keys_accepted) == 'all' or k in keys_accepted:
                 out[k] = v

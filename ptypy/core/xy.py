@@ -85,7 +85,7 @@ def from_pars(xypars=None):
     elif xypars is None:
         return None
     elif str(xypars) == xypars:
-        if xypars in TEMPLATES.keys():
+        if xypars in list(TEMPLATES.keys()):
             return from_pars(TEMPLATES[sam])
         else:
             raise RuntimeError(
@@ -292,7 +292,7 @@ def spiral_scan(dr=1.5e-6, r=7.5e-6, maxpts=None):
         maxpts = 100000
 
     positions = []
-    for k in xrange(maxpts):
+    for k in range(maxpts):
         theta = alpha * np.sqrt(k)
         rr = beta * theta
         if rr > r:

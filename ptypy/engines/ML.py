@@ -204,7 +204,7 @@ class ML(PositionCorrectionEngine):
 
             if self.p.probe_update_start <= self.curiter:
                 # Apply probe support if needed
-                for name, s in new_pr_grad.storages.iteritems():
+                for name, s in list(new_pr_grad.storages.items()):
                     support = self.probe_support.get(name)
                     if support is not None:
                         s.data *= support
@@ -214,7 +214,7 @@ class ML(PositionCorrectionEngine):
             # Smoothing preconditioner
             if self.smooth_gradient:
                 self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
-                for name, s in new_ob_grad.storages.iteritems():
+                for name, s in list(new_ob_grad.storages.items()):
                     s.data[:] = self.smooth_gradient(s.data)
 
             # probe/object rescaling
@@ -265,7 +265,7 @@ class ML(PositionCorrectionEngine):
 
             # Smoothing preconditioner
             if self.smooth_gradient:
-                for name, s in self.ob_h.storages.iteritems():
+                for name, s in list(self.ob_h.storages.items()):
                     s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             else:
                 self.ob_h -= self.ob_grad
@@ -377,7 +377,7 @@ class ML_Gaussian(object):
         self.weights = self.engine.di.copy(self.engine.di.ID + '_weights')
         # FIXME: This part needs to be updated once statistical weights are properly
         # supported in the data preparation.
-        for name, di_view in self.di.views.iteritems():
+        for name, di_view in list(self.di.views.items()):
             if not di_view.active:
                 continue
             self.weights[di_view] = (self.Irenorm * di_view.pod.ma_view.data
@@ -385,9 +385,9 @@ class ML_Gaussian(object):
 
         # Useful quantities
         self.tot_measpts = sum(s.data.size
-                               for s in self.di.storages.values())
+                               for s in list(self.di.storages.values()))
         self.tot_power = self.Irenorm * sum(s.tot_power
-                                            for s in self.di.storages.values())
+                                            for s in list(self.di.storages.values()))
         # Prepare regularizer
         if self.p.reg_del2:
             obj_Npix = self.ob.size
@@ -415,7 +415,7 @@ class ML_Gaussian(object):
         del self.pr_grad
 
         # Remove working attributes
-        for name, diff_view in self.di.views.iteritems():
+        for name, diff_view in list(self.di.views.items()):
             if not diff_view.active:
                 continue
             try:
@@ -438,7 +438,7 @@ class ML_Gaussian(object):
         error_dct = {}
 
         # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
+        for dname, diff_view in list(self.di.views.items()):
             if not diff_view.active:
                 continue
 
@@ -450,7 +450,7 @@ class ML_Gaussian(object):
             f = {}
 
             # First pod loop: compute total intensity
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in list(diff_view.pods.items()):
                 if not pod.active:
                     continue
                 f[name] = pod.fw(pod.probe * pod.object)
@@ -466,7 +466,7 @@ class ML_Gaussian(object):
 
             # Second pod loop: gradients computation
             LLL = np.sum((w * DI**2).astype(np.float64))
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in list(diff_view.pods.items()):
                 if not pod.active:
                     continue
                 xi = pod.bw(w * DI * f[name])
@@ -494,7 +494,7 @@ class ML_Gaussian(object):
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in list(self.ob.storages.items()):
                 self.ob_grad.storages[name].data += self.regularizer.grad(
                     s.data)
                 LL += self.regularizer.LL
@@ -513,7 +513,7 @@ class ML_Gaussian(object):
         Brenorm = 1. / self.LL[0]**2
 
         # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
+        for dname, diff_view in list(self.di.views.items()):
             if not diff_view.active:
                 continue
 
@@ -525,7 +525,7 @@ class ML_Gaussian(object):
             A1 = None
             A2 = None
 
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in list(diff_view.pods.items()):
                 if not pod.active:
                     continue
                 f = pod.fw(pod.probe * pod.object)
@@ -557,7 +557,7 @@ class ML_Gaussian(object):
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in list(self.ob.storages.items()):
                 B += Brenorm * self.regularizer.poly_line_coeffs(
                     ob_h.storages[name].data, s.data)
 

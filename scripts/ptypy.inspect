@@ -15,6 +15,6 @@ from ptypy import utils as u
 from ptypy import io
 
 if args.report:
-    print u.verbose.report(io.h5read(args.h5file,args.path,depth=args.depth).values()[0],noheader=True)
+    print((u.verbose.report(list(io.h5read(args.h5file,args.path,depth=args.depth).values())[0],noheader=True)))
 else:
     io.h5info(args.h5file,args.path, depth=args.depth)

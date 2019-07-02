@@ -14,5 +14,5 @@ from .edfIO import edfread
 
 from .. import __has_zmq__ as hzmq
 if hzmq:
-    import interaction
+    from . import interaction
 del hzmq

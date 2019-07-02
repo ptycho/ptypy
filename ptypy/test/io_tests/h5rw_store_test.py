@@ -11,7 +11,7 @@ import h5py as h5
 import ptypy.io as io
 import ptypy.utils as u
 import numpy as np
-import cPickle
+import pickle
 import collections
 
 
@@ -34,7 +34,7 @@ class H5rwStoreTest(unittest.TestCase):
             self.fail(msg="Couldn't store a string type")
 
     def test_store_unicode(self):
-        data = u'test_string \xe1'
+        data = 'test_string \xe1'
         content = {'unicode data': data}
         try:
             io.h5write(self.filepath % "store_unicode_test", content=content)
@@ -56,7 +56,7 @@ class H5rwStoreTest(unittest.TestCase):
         data["flower"] =  2.0
         data['an array'] = np.ones((3,3))
         content = {'ordered dict data': data}
-        print self.filepath % "store_ordered_dict_test"
+        print(self.filepath % "store_ordered_dict_test")
         try:
             io.h5write(self.filepath % "store_ordered_dict_test", content=content)
         except:
@@ -75,7 +75,7 @@ class H5rwStoreTest(unittest.TestCase):
             self.fail(msg="Couldn't store a param type")
 
     def test_store_list(self):
-        data = ['monkey', 'apple', 1.0, u'mo\xe1on']
+        data = ['monkey', 'apple', 1.0, 'mo\xe1on']
 
 
         content = {'list data': data}
@@ -85,7 +85,7 @@ class H5rwStoreTest(unittest.TestCase):
             self.fail(msg="Couldn't store a list type")
 
     def test_store_tuple(self):
-        data = ('monkey', 'apple', (1.0, u'mo\xe1on'))
+        data = ('monkey', 'apple', (1.0, 'mo\xe1on'))
 
         content = {'tuple data': data}
         try:

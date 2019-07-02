@@ -1,5 +1,5 @@
 import sys
-import StringIO
+import io
 import contextlib
 import os
 
@@ -17,7 +17,7 @@ if len(sys.argv) == 1:
     for script in scripts:
         scr = pkg_resources.resource_filename('ptypy', tutorial_dir+script)
         if not os.path.exists(scr):
-            print('Using backup tutorial for %s' % script)
+            print(('Using backup tutorial for %s' % script))
             scr = '../tutorial/'+script
         #subprocess.call(['python',sys.argv[0]+' '+scr]) # doesn't work
         os.system('python ' + sys.argv[0]+' '+scr)
@@ -25,7 +25,7 @@ if len(sys.argv) == 1:
 
 indent_keys = ['for', 'if', 'with', 'def', 'class']
 
-sout = StringIO.StringIO()
+sout = io.StringIO()
 
 
 @contextlib.contextmanager
@@ -43,7 +43,7 @@ def stdoutIO(stdout=None):
 def exec2str(statement):
     with stdoutIO() as s:
         exec(statement)
-    print(s.getvalue())
+    print((s.getvalue()))
 
 script_name = sys.argv[1]
 fpy = open(script_name, 'r')
@@ -156,7 +156,7 @@ while True:
             func += line2
             frst.write('   >>> '+line2)
             pt = fpy.tell()
-        exec func+'\n'
+        exec(func+'\n')
         continue
         
     wline = line.strip()
@@ -165,7 +165,7 @@ while True:
         continue
     
     with stdoutIO() as sout:
-        exec wline
+        exec(wline)
         out = sout.getvalue()
         sout.buf = ''
     if len(wline) > 0:

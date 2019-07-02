@@ -7,8 +7,8 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-import parallel
-import urllib2 # TODO: make compatible with python 3.5
+from . import parallel
+import urllib.request, urllib.error, urllib.parse # TODO: make compatible with python 3.5
 from scipy import ndimage as ndi
 
 from . import array_utils as au
@@ -295,8 +295,8 @@ def png2mpg(listoffiles, framefile='frames.txt', fps=5, bitrate=2000,
                         elif os.path.isfile(head + os.sep+content):
                             framelist.append(head + os.sep+content)
                         else:
-                            print('File reference %s not found, continuing..'
-                                  % content)
+                            print(('File reference %s not found, continuing..'
+                                  % content))
                             continue
                     temp.close()
                 else:
@@ -359,21 +359,21 @@ def png2mpg(listoffiles, framefile='frames.txt', fps=5, bitrate=2000,
             line = 'haha'
             while line != '':
                 line = nff.readline().strip()
-                print('Removing %s' % line)
+                print(('Removing %s' % line))
                 #os.remove(line)
                 try:
                     os.remove(line)
                 except OSError:
-                    print OSError
-                    print('Removing %s failed .. continuing' % line)
+                    print(OSError)
+                    print(('Removing %s failed .. continuing' % line))
                     continue
             nff.close()
             if line == '':
                 try:
-                    print('Removing %s' % ff)
+                    print(('Removing %s' % ff))
                     os.remove(ff)
                 except OSError:
-                    print('Removing %s failed' % ff)
+                    print(('Removing %s failed' % ff))
     else:
         return encoderstring
 
@@ -557,7 +557,7 @@ def radial_distribution(A, radii=None):
 
     """
     if radii is None:
-        radii = range(1, np.min(A.shape) / 2)
+        radii = list(range(1, np.min(A.shape) / 2))
 
     coords = np.indices(A.shape) - np.reshape(mass_center(A),
                                               (A.ndim,) + A.ndim * (1,))
@@ -607,7 +607,7 @@ def stxm_analysis(storage, probe=None):
     t2 = 0.
     # Pick a single probe view for preparation purpose:
     v = s.views[0]
-    pp = v.pods.values()[0].pr_view
+    pp = list(v.pods.values())[0].pr_view
     if probe is None:
         pr = np.abs(pp.data) # .sum(0)
     elif np.isscalar(probe):
@@ -618,7 +618,7 @@ def stxm_analysis(storage, probe=None):
         assert (pr.shape == pp.shape[-2:]), 'stxm probe has not the same shape as a view to this storage'
 
     for v in s.views:
-        pod = v.pods.values()[0]
+        pod = list(v.pods.values())[0]
         if not pod.active:
             continue
         t = pod.diff.sum()
@@ -697,7 +697,7 @@ def load_from_ptyr(filename, what='probe', ID=None, layer=None):
         else:
             address = 'content/' + str(what)
             conti = io.h5read(filename, address)[address]
-            storage = conti.values()[0]
+            storage = list(conti.values())[0]
         if layer is None:
             return storage['data']
         else:
@@ -794,14 +794,14 @@ def cxro_iref(formula, energy, density=-1, npts=100):
 
     url = cxro_iref.cxro_server + '/cgi-bin/getdb.pl'
     #u.logger.info('Querying CRXO database...')
-    req = urllib2.Request(url, data)
-    response = urllib2.urlopen(req)
+    req = urllib.request.Request(url, data)
+    response = urllib.request.urlopen(req)
     t = response.read()
     datafile = t[t.find('/tmp/'):].split('"')[0]
 
     url = cxro_iref.cxro_server + datafile
-    req = urllib2.Request(url)
-    response = urllib2.urlopen(req)
+    req = urllib.request.Request(url)
+    response = urllib.request.urlopen(req)
     data = response.read()
 
     d = data.split('\n')

@@ -26,7 +26,7 @@ try:
                 embed_kernel(local_ns=self.ns)
 
     def start_ipython_kernel(ns):
-        print("ipython console --existing kernel-%d.json" % os.getpid())
+        print(("ipython console --existing kernel-%d.json" % os.getpid()))
         IPythonKernelThread(ns).start()
 
 except:

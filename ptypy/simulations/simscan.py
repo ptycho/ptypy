@@ -13,7 +13,7 @@ import time
 
 if __name__ == "__main__":
     from ptypy import utils as u
-    from detector import Detector, conv
+    from .detector import Detector, conv
     from ptypy.core.data import PtyScan
     from ptypy.core.ptycho import Ptycho
     from ptypy.core.manager import Full as ScanModel
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     from ptypy import defaults_tree
 else:
     from .. import utils as u
-    from detector import Detector, conv
+    from .detector import Detector, conv
     from ..core.data import PtyScan
     from ..core.ptycho import Ptycho
     from ..core.manager import Full as ScanModel
@@ -166,7 +166,7 @@ class SimScan(PtyScan):
 
         # Simulate diffraction signal
         logger.info('Propagating exit waves.')
-        for name,pod in P.pods.iteritems():
+        for name,pod in list(P.pods.items()):
             if not pod.active: continue
             pod.diff += conv(u.abs2(pod.fw(pod.exit)), self.info.psf)
 
@@ -185,7 +185,7 @@ class SimScan(PtyScan):
         self.pos = {}
 
 
-        ID,Sdiff = P.diff.S.items()[0]
+        ID,Sdiff = list(P.diff.S.items())[0]
         logger.info('Collecting simulated `raw` data.')
         for view in Sdiff.views:
             ind = view.layer

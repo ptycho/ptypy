@@ -20,7 +20,7 @@ def verbose(n,s):
     This function should be replaced by the real verbose class after import.
     It is here for convenience since this module has no other external dependencies.
     """
-    print s
+    print(s)
 
 class SpecScan(object):
     pass
@@ -51,7 +51,7 @@ class SpecInfo(object):
         continue_reading = True
         while continue_reading:
             try:
-                line = f.next(); lnum += 1
+                line = next(f); lnum += 1
             except StopIteration:
                 break
             if line.startswith('#O0'):
@@ -59,7 +59,7 @@ class SpecInfo(object):
                 mlist = line.split(' ',1)[1].strip().split()
                 motordefs.append(lnum)
                 while True:
-                    line = f.next(); lnum += 1
+                    line = next(f); lnum += 1
                     if not line.startswith('#O'): break
                     mlist.extend( line.split(' ',1)[1].strip().split() )
                 # This updates the current list of motor names
@@ -69,7 +69,7 @@ class SpecInfo(object):
                 _,scannr,scancmd = line.split(' ', 2)
                 scannr = int(scannr)
                 scancmd = scancmd.strip()
-                if (not rehash) and self.scans.has_key(scannr):
+                if (not rehash) and scannr in self.scans:
                     #print('Skipping known scan #S %d' % scannr)
                     continue
                 #print line.strip()
@@ -89,12 +89,12 @@ class SpecInfo(object):
                     # Get a new line, exit everything if we are
                     # at the end of a file
                     try:
-                        line = f.next(); lnum += 1
+                        line = next(f); lnum += 1
                     except StopIteration:
                         continue_reading = False
                         break
                     if line.startswith('#START_TIME'):
-                        line = f.next(); lnum += 1
+                        line = next(f); lnum += 1
                     if line.startswith('#'):
                         # We have the beginning of a new section
                         label = line[1]
@@ -138,7 +138,7 @@ class SpecInfo(object):
                 try:
                     motorlines = scanstr['P']
                     motorvalues = [float(x) for mline in motorlines for x in mline.split()]
-                    scan.motors = dict(zip(motors, motorvalues))
+                    scan.motors = dict(list(zip(motors, motorvalues)))
                 except Exception as e:
                     good_scan = False
                     verbose(1, 'Error extracting motor values for scan number %d.' % scannr)
@@ -155,8 +155,8 @@ class SpecInfo(object):
 
                 # Data
                 try:
-                    data = zip(*[[float(x) for x in Lline.split()] for Lline in scanstr['L'][1:]])
-                    scan.data = dict(zip(scan.counternames, data))
+                    data = list(zip(*[[float(x) for x in Lline.split()] for Lline in scanstr['L'][1:]]))
+                    scan.data = dict(list(zip(scan.counternames, data)))
                 except Exception as e:
                     good_scan = False
                     verbose(1, 'Error extracting counter values for scan number %d.' % scannr)
