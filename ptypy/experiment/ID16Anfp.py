@@ -239,7 +239,7 @@ class ID16AScan(PtyScan):
         # Load positions
         if self.ext == '.h5':
             for ii in xrange(self.num_frames):
-                projobj = io.h5read(self.frame_format.format(ii),self.h5_path)[self.h5_path]
+                projobj = io.h5read(self.filelist[ii],self.h5_path)[self.h5_path]
                 metadata = projobj['parameters']
                 motor_mne = str(metadata['motor_mne ']).split() # motor names
                 motor_pos = [eval(ii) for ii in str(metadata['motor_pos ']).split()] # motor pos
