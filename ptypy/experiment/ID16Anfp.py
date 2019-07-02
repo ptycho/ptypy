@@ -9,7 +9,7 @@ This file is part of the PTYPY package.
 """
 
 import numpy as np
-import os
+import os, re, glob
 
 from .. import utils as u
 from .. import io
@@ -52,7 +52,7 @@ class ID16AScan(PtyScan):
     [name]
     default = 'ID16AScan'
     type = str
-    help = 
+    help =
 
     [experimentID]
     default = None
@@ -115,17 +115,17 @@ class ID16AScan(PtyScan):
     [data_file_pattern]
     default = '{[base_path]}/{[sample_name]}/{[scan_label]}_data.h5'
     type = str
-    help = 
+    help =
 
     [flat_file_pattern]
     default = '{[base_path]}/{[sample_name]}/{[flat_label]}_flat.h5'
     type = str
-    help = 
+    help =
 
     [dark_file_pattern]
     default = '{[base_path]}/{[sample_name]}/{[dark_label]}_dark.h5'
     type = str
-    help = 
+    help =
 
     [distortion_h_file]
     default = '/data/id16a/inhouse1/instrument/img1/optique_peter_distortion/detector_distortion2d_v.edf'
@@ -140,13 +140,23 @@ class ID16AScan(PtyScan):
     [whitefield_file]
     default = '/data/id16a/inhouse1/instrument/whitefield/white.edf'
     type = str
-    help = 
+    help =
 
     [auto_center]
     default = False
 
     [orientation]
     default = (False, True, False)
+
+    [recipe]
+    default = u.Param()
+    help =
+
+    [det_flat_field]
+    default = None
+    type = str
+    help =
+
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -179,6 +189,21 @@ class ID16AScan(PtyScan):
             else:
                 self.info.base_path = base_path
 
+        # get the scan name
+        self.scan_name = self.info.sample_name
+
+        # filename analysis
+        self.frame_wcard = os.path.join(self.info.base_path,self.info.sample_name+'*')
+        self.filelist = sorted(glob.glob(self.frame_wcard))
+        self.firstframe,self.ext = os.path.splitext(self.filelist[0])
+
+        # count the number of available frames
+        self.num_frames = len(self.filelist)
+
+        # h5 path
+        if self.ext == '.h5':
+            self.h5_path = 'entry_0000/measurement/{}'.format(self.info.recipe.detector)
+
         # Create the ptyd file name if not specified
         if self.info.dfile is None:
             home = Paths(IO_par).home
@@ -190,42 +215,49 @@ class ID16AScan(PtyScan):
 
     def load_weight(self):
         """
-        Function description see parent class. For now, this function will be
-        used to load the mask.
+        Function description see parent class. For now, this function
+        will be used to load the mask.
+        :return: weight2d
+            - np.array: Mask or weight if provided from file
         """
         # FIXME: do something better here. (detector-dependent)
         # Load mask as weight
         if self.info.mask_file is not None:
-            return io.h5read(self.info.mask_file, 'mask')['mask'].astype(
-                np.float32)
+            print('Loading detector mask')
+            return io.h5read(self.info.mask_file, 'mask')['mask'].astype(np.float32)
 
     def load_positions(self):
         """
-        Load the positions and return as an (N, 2) array.
+        Load the positions and return as an (N,2) array.
+
+        :return: positions
+            - np.array: contains scan positions.
         """
         positions = []
         mmult = u.expect2(self.info.motors_multiplier)
 
         # Load positions
-        if self.info.use_h5:
-            # From prepared .h5 file
-            data = io.h5read(self.info.base_path + '/raw/data.h5')
-            for i in np.arange(1, len(data) + 1, 1):
-                positions.append((data['data_%04d' % i]['positions'][0, 0],
-                                  data['data_%04d' % i]['positions'][0, 1]))
+        if self.ext == '.h5':
+            for ii in xrange(self.num_frames):
+                projobj = io.h5read(self.frame_format.format(ii),self.h5_path)[self.h5_path]
+                metadata = projobj['parameters']
+                motor_mne = str(metadata['motor_mne ']).split() # motor names
+                motor_pos = [eval(ii) for ii in str(metadata['motor_pos ']).split()] # motor pos
+                motor_idx = (motor_mne.index('spy'), motor_mne.index('spz')) # index motors
+                positions.append((motor_pos[motor_idx[0]], \
+                                  motor_pos[motor_idx[1]]))# translation motor positions
         else:
             # From .edf files
             pos_files = []
             # Count available images given through scan_label
-            for i in os.listdir(self.info.base_path +
-                                self.info.scan_label):
-                if i.startswith(self.info.scan_label):
+            for i in os.listdir(self.info.base_path):
+                if i.startswith(self.info.sample_name):
                     pos_files.append(i)
 
             for i in np.arange(1, len(pos_files) + 1, 1):
-                data, meta = io.edfread(self.info.base_path +
-                                        self.info.scan_label + '/' +
-                                        self.info.scan_label +
+                #print(self.info.base_path +self.info.sample_name + '/' +self.info.sample_name)
+                data, meta = io.edfread(self.info.base_path + '/' +
+                                        self.info.sample_name +
                                         '_%04d.edf' % i)
 
                 positions.append((meta['motor'][self.info.motors[0]],
@@ -235,9 +267,103 @@ class ID16AScan(PtyScan):
 
     def load_common(self):
         """
+        Loads anything that is common to all frames and stores it in dict.
         Load scanning positions, dark, white field and distortion files.
+
+        :return: common
+            - dict: contains information common to all frames.
         """
         common = u.Param()
+
+        # Load dark files
+        if self.info.dark_subtraction:
+            print('Loading the dark files...')
+            dark = []
+            if self.ext == '.h5':
+                # From HDF5 files
+                dark_files = sorted(glob.glob(os.path.join(self.info.base_path,'dark*.h5')))
+                for ff in dark_files:
+                    dobj = io.h5read(ff,self.h5_path)[self.h5_path]
+                    d = dobj['data'].astype(np.float32)
+                    dark.append(d)
+            else:
+                # From .edf files
+                dark_files = sorted(glob.glob(os.path.join(self.info.base_path,'dark*.edf')))
+                for ff in dark_files:
+                    data, meta = io.edfread(ff)
+                    dark.append(data.astype(np.float32))
+            print('Averaging the dark files...')
+            common.dark = np.array(dark).mean(axis=0)
+
+            log(3, 'Dark loaded successfully.')
+
+        # Load flat files
+        if self.info.flat_division:
+            print('Loading the flat files...')
+            flat = []
+            if self.ext == '.h5':
+                # From HDF5 file
+                flat_files = sorted(glob.glob(os.path.join(self.info.base_path,'ref*.h5')))
+                for ff in flat_files:
+                    flobj = io.h5read(ff,self.h5_path)[self.h5_path]
+                    fl = flobj['data'].astype(np.float32)
+                    flat.append(fl)
+            else:
+                # From .edf files
+                flat_files = sorted(glob.glob(os.path.join(self.info.base_path,'ref*.edf')))
+                for ff in flat_files:
+                    data, meta = io.edfread(ff)
+                    flat.append(data.astype(np.float32))
+            print('Averaging the flat files...')
+            common.flat = np.array(flat).mean(axis=0)
+
+            log(3, 'Flat loaded successfully.')
+
+        # Load detector flat field
+        if self.info.det_flat_field is not None:
+            # read flat-field file
+            print('Reading flat-field file of the detector')
+            flat_field,header = io.edfread(self.det_flat_field)
+            flat_field = flat_field.astype(np.float32)/flat_field.mean()
+            flat_field[np.where(flat_field==0)]=1 # put 1 where values are 0 for the division
+            common.flat_field = flat_field
+
+            log(3, 'Detector flat field loaded successfully.')
+
+        # read the BPM5 ct values
+        if self.info.recipe.use_bpm5_ct:
+            print('Reading the values of the bpm5 ct')
+            bpm5_ct_val = np.zeros(self.num_frames)
+            for ii in xrange(self.num_frames):
+                projobj = io.h5read(self.frame_format.format(ii),self.h5_path)[self.h5_path]
+                #projobj = io.h5read(self._index_to_frame(ii),self.h5_path)[self.h5_path]
+                # metadata
+                metadata = projobj['parameters']
+                counter_mne = str(metadata['counter_mne ']).split() # counter names
+                counter_pos = [eval(kk) for kk in str(metadata['counter_pos ']).split()] # counter pos
+                bpm5_ct_idx = counter_mne.index('bpm5_ct')  # index bpm5_ct
+                bpm5_ct_val[ii] = (counter_pos[bpm5_ct_idx])  # value bpm5_ct
+
+            # Check for spikes in bpm5_ct values and correct them if needed
+            below_zero_values = np.where(bpm5_ct_val<0)
+            spikes_pos = [ii for ii in below_zero_values[0]]
+            below_mean_values = np.where(bpm5_ct_val<bpm5_ct_val.mean())
+            if len(below_mean_values[0])==1:
+                spikes_pos.append(below_mean_values[0][0])
+            if len(spikes_pos)!=0:#below_zero_values[0].shape[0]!=0:
+                # check for spikes in bpm5
+                for ii in spikes_pos:#below_zero_values[0]:
+                    if ii!=0 or ii!=len(bpm5_ct_val):
+                        bpm5_ct_val[ii] = (bpm5_ct_val[ii-1] + bpm5_ct_val[ii+1])/2.
+                    elif ii == 0:
+                        bpm5_ct_val[ii] = bpm5_ct_val[ii+1]
+                    elif ii == len(bpm5_ct_val):
+                        bpm5_ct_val[ii] = bpm5_ct_val[ii-1]
+            # normalization
+            print('Normalizing the values of the bpm5 ct by the average')
+            common.bpm5_ct_val = bpm5_ct_val/bpm5_ct_val.mean() # normalize by the mean value
+
+            log(3, 'Values of bpm5_ct loaded successfully.')
 
         #h = io.h5read(self.rinfo.data_file)
         #entry = h.keys()[0]
@@ -270,56 +396,6 @@ class ID16AScan(PtyScan):
 
         #return common._to_dict()
 
-        # Load dark
-        if self.info.use_h5:
-            # From prepared .h5 file
-            dark = io.h5read(self.info.base_path + '/raw/dark.h5')
-            common.dark = dark['dark_avg']['avgdata'].astype(np.float32)
-        else:
-            # From .edf files
-            dark_files = []
-            # Count available dark given through scan_label
-            for i in os.listdir(self.info.base_path +
-                                self.info.scan_label):
-                if i.startswith('dark'):
-                    dark_files.append(i)
-
-            dark = []
-            for i in np.arange(1, len(dark_files) + 1, 1):
-                data, meta = io.edfread(self.info.base_path +
-                                        self.info.scan_label + '/' +
-                                        'dark_%04d.edf' % i)
-                dark.append(data.astype(np.float32))
-
-            common.dark = np.array(dark).mean(0)
-
-        log(3, 'Dark loaded successfully.')
-
-        # Load flat
-        if self.info.use_h5:
-            # From prepared .h5 file
-            flat = io.h5read(self.info.base_path + '/raw/ref.h5')
-            common.flat = flat['ref_avg']['avgdata'].astype(np.float32)
-        else:
-            # From .edf files
-            flat_files = []
-            # Count available dark given through scan_label
-            for i in os.listdir(self.info.base_path +
-                                self.info.scan_label):
-                if i.startswith('flat'):
-                    flat_files.append(i)
-
-            flat = []
-            for i in np.arange(1, len(flat_files) + 1, 1):
-                data, meta = io.edfread(self.info.base_path +
-                                        self.info.scan_label + '/' +
-                                        'ref_%04d.edf' % i)
-                flat.append(data.astype(np.float32))
-
-            common.flat = np.array(flat).mean(0)
-
-        log(3, 'Flat loaded successfully.')
-
         return common
 
     def check(self, frames, start=0):
@@ -327,14 +403,14 @@ class ID16AScan(PtyScan):
         Returns the number of frames available from starting index `start`, and
         whether the end of the scan was reached.
 
-        :param frames: Number of frames to load
-        :param start: starting point
+        :param frames: int
+            - Number of frames to load
+        :param start: int
+            - Starting point
         :return: (frames_available, end_of_scan)
-
-        - the number of frames available from a starting point `start`
-        - bool if the end of scan was reached
-          (None if this routine doesn't know)
-
+            - int: the number of frames available from a starting point `start`
+            - bool if the end of scan was reached
+                    (None if this routine doesn't know)
         """
         npos = self.num_frames
         frames_accessible = min((frames, npos - start))
@@ -345,33 +421,36 @@ class ID16AScan(PtyScan):
         """
         Load frames given by the indices.
 
-        :param indices:
-        :return:
+        :param indices: list
+            Frame indices available per node.
+        :return: raw, pos, weight
+            - dict: index matched data frames (np.array).
+            - dict: new positions.
+            - dict: new weights.
+        # returns three dicts: raw, positions, weights, whose keys are the
+        # scan pont indices. If one weight (mask) is to be used for the whole
+        # scan, it should be loaded with load_weights(). The same goes for the
+        # positions. We don't really need a mask here, but it must be
+        # provided, otherwise it's given the shape of self.info.shape, and
+        # then there's a shape mismatch in some multiplication.
         """
         raw = {}
         pos = {}
         weights = {}
-        #for j in indices:
-        #    key = H5_PATHS.frame_pattern % self.rinfo
-        #    raw[j] = io.h5read(self.rinfo.data_file, H5_PATHS.frame_pattern %
-        #                       self.rinfo, slice=j)[key].astype(np.float32)
 
         # Load data
-        if self.info.use_h5:
-            # From prepared .h5 file
-            data = io.h5read(self.info.base_path + '/raw/data.h5')
-            for j in indices:
-                i = j + 1
-                raw[j] = data['data_%04d' % i]['data'].astype(np.float32)
+        if self.ext == '.h5':
+            # From HDF5 file
+            for idx in indices:
+                #print('Loading {}'.format(self.filelist[idx]))
+                projobj = io.h5read(self.filelist[idx],self.h5_path)[self.h5_path]
+                raw[idx] = projobj['data'][0].astype(np.float32) # needs the index [0] to squeeze (faster thant np.squeeze)
         else:
             # From .edf files
-            for j in indices:
-                i = j + 1
-                data, meta = io.edfread(self.info.base_path +
-                                        self.info.scan_label + '/' +
-                                        self.info.scan_label +
-                                        '_%04d.edf' % i)
-                raw[j] = data.astype(np.float32)
+            for idx in indices:
+                #print('Loading {}'.format(self.filelist[idx]))
+                data, meta = io.edfread(self.filelist[idx])
+                raw[idx] = data.astype(np.float32)
 
         return raw, pos, weights
 
@@ -379,10 +458,15 @@ class ID16AScan(PtyScan):
         """
         Apply (eventual) corrections to the raw frames. Convert from "raw"
         frames to usable data.
-        :param raw:
-        :param weights:
-        :param common:
-        :return:
+        :param raw: dict
+            - dict containing index matched data frames (np.array).
+        :param weights: dict
+            - dict containing possible weights.
+        :param common: dict
+            - dict containing possible dark and flat frames.
+        :return: data, weights
+            - dict: contains index matched corrected data frames (np.array).
+            - dict: contains modified weights.
         """
         # Sanity check
         #assert (raw.shape == (2048,2048)), (
@@ -406,12 +490,37 @@ class ID16AScan(PtyScan):
         if self.info.flat_division and self.info.dark_subtraction:
             for j in raw:
                 raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
-                raw[j][raw[j] < 0] = 0
+                raw[j][raw[j] < 0] = 0 # put negative values to 0
             data = raw
         elif self.info.dark_subtraction:
             for j in raw:
                 raw[j] = raw[j] - common.dark
-                raw[j][raw[j] < 0] = 0
+                raw[j][raw[j] < 0] = 0 # put negative values to 0
+            data = raw
+        else:
+            data = raw
+
+        if self.info.det_flat_field is not None:
+            for j in raw:
+                print("Correcting detector flat-field: {}".format(self._index_to_frame(j)))
+                raw[j] = raw[j] / common.flat_field
+                raw[j][raw[j] < 0] = 0 # put negative values to 0
+            data = raw
+        else:
+            data = raw
+
+        if self.info.recipe.pad_crop is not None:
+            newdim = (self.info.recipe.pad_crop,self.info.recipe.pad_crop)
+            for j in raw:
+                print('Reshaping projection {} to {}'.format(self._index_to_frame(j),newdim))
+                raw[j],_ = u.crop_pad_symmetric_2d(raw[j],newdim)
+        else:
+            data = raw
+
+        if self.info.recipe.use_bpm5_ct:
+            for j in raw:
+                print("Correcting for the bpm5_ct values for {}".format(self.frame_format.format(j)))
+                raw[j] = raw[j] / common.bpm5_ct_val[j]
             data = raw
         else:
             data = raw
@@ -488,118 +597,3 @@ def undistort(frame, delta):
     #outf = (wa*fa + wb*fb + wc*fc + wd*fd).astype(outf.dtype)
 
     return outf.reshape(sh)
-
-# ID16A original subclassing of PtyScan
-# *Deprecated*
-#
-# import numpy as np
-# import re, glob, os
-# from ptypy.core import data
-# from ptypy import utils as u
-# from ptypy import io
-#
-# try:
-#     from Tkinter import Tk
-#     from tkFileDialog import askopenfilename, askopenfilenames
-#
-#     print("Please, load the first frame of the ptychography experiment...")
-#     Tk().withdraw()
-#     pathfilename = askopenfilename(initialdir='.',
-#                                    title='Please, load the first frame of the ptychography experiment...')
-# except ImportError:
-#     print(
-#     'Please, give the full path for the first frame of the ptychography experiment')
-#     pathfilename = raw_input('Path:')
-#
-# filename = pathfilename.rsplit('/')[-1]
-# path = pathfilename[:pathfilename.find(pathfilename.rsplit('/')[-1])]
-#
-# default_recipe = u.Param(
-#     first_frame=filename,
-#     base_path=path,
-# )
-#
-#
-# class ID16Scan(data.PtyScan):
-#     """
-#     Class ID16Scan
-#     Data preparation for far-field ptychography experiments at ID16A beamline - ESRF using FReLoN camera
-#     First version by B. Enders (12/05/2015)
-#     Modifications by J. C. da Silva (30/05/2015)
-#     """
-#
-#     def __init__(self, pars=None):
-#         super(ID16Scan, self).__init__(pars)
-#         r = self.info
-#         # filename analysis
-#         body, ext = os.path.splitext(
-#             os.path.expanduser(r.base_path + r.first_frame))
-#         sbody = re.sub('\d+$', '', body)
-#         num = re.sub(sbody, '', body)
-#         # search string for glob
-#         self.frame_wcard = re.sub('\d+$', '*', body) + ext
-#         # format string for load
-#         self.frame_format = sbody + '%0' + str(len(num)) + 'd' + ext
-#         # count the number of available frames
-#         self.num_frames = len(glob.glob(self.frame_wcard))
-#
-#     def _frame_to_index(self, fname):
-#         body, ext = os.path.splitext(os.path.split(fname)[-1])
-#         return int(re.sub(re.sub('\d+$', '', body), '', body)) - 1
-#
-#     def _index_to_frame(self, index):
-#         return self.frame_format % (index + 1)
-#
-#     def _load_dark(self):
-#         r = self.info
-#         print('Loading the dark files...')
-#         darklist = []
-#         for ff in sorted(glob.glob(r.base_path + 'dark*.edf')):
-#             d, dheader = io.image_read(ff)
-#             darklist.append(d)
-#         print('Averaging the dark files...')
-#         darkavg = np.array(np.squeeze(darklist)).mean(axis=0)
-#         return darkavg
-#
-#     def load(self, indices):
-#         raw = {}
-#         pos = {}
-#         weights = {}
-#         darkavg = self._load_dark()
-#         for idx in indices:
-#             r, header = io.image_read(self._index_to_frame(idx))
-#             img1 = r - darkavg
-#             raw[idx] = img1
-#             pos[idx] = (
-#             header['motor']['spy'] * 1e-6, header['motor']['spz'] * 1e-6)
-#         return raw, pos, {}
-#
-#
-# pars = dict(
-#     label=None,  # label will be set internally
-#     version='0.2',
-#     shape=(700, 700),
-#     psize=9.552e-6,
-#     energy=17.05,
-#     center=None,
-#     distance=1.2,
-#     dfile=filename[:filename.find('.')][:-4].lower() + '.ptyd',
-#     # 'siemensstar30s.ptyd',  # filename (e.g. 'foo.ptyd')
-#     chunk_format='.chunk%02d',  # Format for chunk file appendix.
-#     save='append',  # None, 'merge', 'append', 'extlink'
-#     auto_center=None,
-#     # False: no automatic center,None only  if center is None, True it will be enforced
-#     load_parallel='data',  # None, 'data', 'common', 'all'
-#     rebin=2,  # None,  # rebin diffraction data
-#     orientation=(True, True, False),
-#     # None,int or 3-tuple switch, actions are (transpose, invert rows, invert cols)
-#     min_frames=1,  # minimum number of frames of one chunk if not at end of scan
-#     positions_theory=None,
-#     # Theoretical position list (This input parameter may get deprecated)
-#     num_frames=None,  # Total number of frames to be prepared
-#     recipe=default_recipe,
-# )
-# u.verbose.set_level(3)
-# IS = ID16Scan(pars)
-# IS.initialize()
-# IS.auto(400)
