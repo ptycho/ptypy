@@ -96,7 +96,8 @@ def _h5write(filename, mode, *args, **kwargs):
     ids = []
 
     # This is needed to store strings
-    dt = h5py.new_vlen(str)
+    #dt = h5py.new_vlen(str) # deprecated
+    dt = h5py.special_dtype(vlen = str)
 
     def check_id(id):
         if id in ids:
@@ -453,16 +454,20 @@ def h5read(filename, *args, **kwargs):
         return d
 
     def _load_numpy_record_array(dset):
-        return cPickle.loads(dset.value.encode('utf-8'))
+        #return cPickle.loads(dset.value.encode('utf-8'))
+        return cPickle.loads(dset[()].encode('utf-8'))
 
     def _load_str(dset):
-        return str(dset.value)
+        #return str(dset.value)
+        return str(dset[()])
 
     def _load_unicode(dset):
-        return dset.value.decode('utf-8')
+        #return dset.value.decode('utf-8')
+        return dset[()].decode('utf-8')
 
     def _load_pickle(dset):
-        return cPickle.loads(dset.value)
+        #return cPickle.loads(dset.value)
+        return cPickle.loads(dset[()])
 
     def _load(dset, depth, sl=None):
         dset_type = dset.attrs.get('type', None)
