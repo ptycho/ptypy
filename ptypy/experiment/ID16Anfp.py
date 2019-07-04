@@ -47,6 +47,8 @@ class ID16AScan(PtyScan):
     Subclass of PtyScan for ID16A beamline (specifically for near-field
     ptychography).
 
+    Default data parameters. See :py:data:`.scan.data`
+
     Defaults:
 
     [name]
@@ -55,7 +57,17 @@ class ID16AScan(PtyScan):
     help =
 
     [experimentID]
+    type = str
     default = None
+    help = Name of the experiment
+    doc = If None, a default value will be provided by the recipe. **unused**
+    userlevel = 2
+
+    [dfile]
+    type = file
+    default = None
+    help = File path where prepared data will be saved in the ``ptyd`` format.
+    userlevel = 0
 
     [motors]
     default = ['spy', 'spz']
@@ -65,42 +77,29 @@ class ID16AScan(PtyScan):
     [motors_multiplier]
     default = 1e-6
     type = float
-    help = Motor conversion factor to meters
+    help = Motor conversion factor to meters at ID16A beamline
 
     [base_path]
     default = None
     type = str
-    help = Base path to read and write data - can be guessed
+    help = Base path to read and write data
 
     [sample_name]
     default = None
     type = str
     help = Sample name - will be read from h5
 
-    [scan_label]
+    [label]
+    type = str
     default = None
-    type = int
-    help = Scan label - will be read from h5
-
-    [flat_label]
-    default = None
-    type = int
-    help = Flat label - equal to scan_label by default
-
-    [dark_label]
-    default = None
-    type = int
-    help = Dark label - equal to scan_label by default
+    help = The scan label
+    doc = Unique string identifying the scan
+    userlevel = 1
 
     [mask_file]
     default = None
     type = str
     help = Mask file name
-
-    [use_h5]
-    default = False
-    type = bool
-    help = Load data from prepared h5 file
 
     [flat_division]
     default = False
@@ -111,21 +110,6 @@ class ID16AScan(PtyScan):
     default = False
     type = bool
     help = Switch for dark subtraction
-
-    [data_file_pattern]
-    default = '{[base_path]}/{[sample_name]}/{[scan_label]}_data.h5'
-    type = str
-    help =
-
-    [flat_file_pattern]
-    default = '{[base_path]}/{[sample_name]}/{[flat_label]}_flat.h5'
-    type = str
-    help =
-
-    [dark_file_pattern]
-    default = '{[base_path]}/{[sample_name]}/{[dark_label]}_dark.h5'
-    type = str
-    help =
 
     [distortion_h_file]
     default = '/data/id16a/inhouse1/instrument/img1/optique_peter_distortion/detector_distortion2d_v.edf'
@@ -142,29 +126,47 @@ class ID16AScan(PtyScan):
     type = str
     help =
 
-    [auto_center]
-    default = False
-
-    [orientation]
-    default = (False, True, False)
-
-    [recipe]
-    default = u.Param()
-    help =
-
     [det_flat_field]
     default = None
     type = str
-    help =
+    help = path to detector flat field 
+
+    [auto_center]
+    type = bool
+    default = False
+    help = Determine if center in data is calculated automatically
+    doc =
+       - ``False``, no automatic centering
+       - ``None``, only if :py:data:`center` is ``None``
+       - ``True``, it will be enforced
+    userlevel = 0
+
+    [orientation]
+    type = int, tuple, list
+    default = (False, True, False)
+    help = Data frame orientation
+    doc = Choose
+       <newline>
+       - ``None`` or ``0``: correct orientation
+       - ``1``: invert columns (numpy.flip_lr)
+       - ``2``: invert rows  (numpy.flip_ud)
+       - ``3``: invert columns, invert rows
+       - ``4``: transpose (numpy.transpose)
+       - ``4+i``: tranpose + other operations from above
+       <newline>
+       Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
+       do_flipud, do_fliplr)``
+    userlevel = 1
+
+    [recipe]
+    default = u.Param()
+    help = Specific additional parameters of ID16A
 
     """
 
     def __init__(self, pars=None, **kwargs):
         """
         Create a PtyScan object that will load ID16A data.
-
-        :param pars: preparation parameters
-        :param kwargs: Additive parameters
         """
 
         p = self.DEFAULT.copy(99)
@@ -172,6 +174,7 @@ class ID16AScan(PtyScan):
 
         # Initialise parent class
         super(ID16AScan, self).__init__(p, **kwargs)
+        print(type(p.recipe))
 
         # Try to extract base_path to access data files
         if self.info.base_path is None:
@@ -208,7 +211,7 @@ class ID16AScan(PtyScan):
         if self.info.dfile is None:
             home = Paths(IO_par).home
             self.info.dfile = '%s/prepdata/data_%d.ptyd' % (
-                home, self.info.scan_label)
+                home, self.info.label)
             log(3, 'Save file is %s' % self.info.dfile)
 
         log(4, u.verbose.report(self.info))
@@ -217,8 +220,12 @@ class ID16AScan(PtyScan):
         """
         Function description see parent class. For now, this function
         will be used to load the mask.
-        :return: weight2d
-            - np.array: Mask or weight if provided from file
+
+        Returns
+        -------
+         weight2d : ndarray
+            A two-dimensional array with a shape compatible to the raw
+            diffraction data frames if provided from file
         """
         # FIXME: do something better here. (detector-dependent)
         # Load mask as weight
@@ -228,38 +235,31 @@ class ID16AScan(PtyScan):
 
     def load_positions(self):
         """
-        Load the positions and return as an (N,2) array.
+        Loads all positions for all diffraction patterns in this scan.
 
-        :return: positions
-            - np.array: contains scan positions.
+        Returns
+        -------
+        Positions : ndarray
+            A (N,2)-array where *N* is the number of positions.
         """
         positions = []
         mmult = u.expect2(self.info.motors_multiplier)
 
         # Load positions
         if self.ext == '.h5':
-            for ii in xrange(self.num_frames):
-                projobj = io.h5read(self.filelist[ii],self.h5_path)[self.h5_path]
+            # From .h5 files
+            for ii in self.filelist:
+                projobj = io.h5read(ii,self.h5_path)[self.h5_path]
                 metadata = projobj['parameters']
                 motor_mne = str(metadata['motor_mne ']).split() # motor names
-                motor_pos = [eval(ii) for ii in str(metadata['motor_pos ']).split()] # motor pos
+                motor_pos = [eval(kk) for kk in str(metadata['motor_pos ']).split()] # motor pos
                 motor_idx = (motor_mne.index('spy'), motor_mne.index('spz')) # index motors
                 positions.append((motor_pos[motor_idx[0]], \
                                   motor_pos[motor_idx[1]]))# translation motor positions
         else:
             # From .edf files
-            pos_files = []
-            # Count available images given through scan_label
-            for i in os.listdir(self.info.base_path):
-                if i.startswith(self.info.sample_name):
-                    pos_files.append(i)
-
-            for i in np.arange(1, len(pos_files) + 1, 1):
-                #print(self.info.base_path +self.info.sample_name + '/' +self.info.sample_name)
-                data, meta = io.edfread(self.info.base_path + '/' +
-                                        self.info.sample_name +
-                                        '_%04d.edf' % i)
-
+            for ii in self.filelist:
+                data, meta = io.edfread(ii)
                 positions.append((meta['motor'][self.info.motors[0]],
                                   meta['motor'][self.info.motors[1]]))
 
@@ -268,10 +268,13 @@ class ID16AScan(PtyScan):
     def load_common(self):
         """
         Loads anything that is common to all frames and stores it in dict.
-        Load scanning positions, dark, white field and distortion files.
 
-        :return: common
-            - dict: contains information common to all frames.
+        Returns
+        -------
+        common : dict
+            contains information common to all frames such as dark,
+            flat-field, detector flat-field, normalization couter,
+            and distortion files
         """
         common = u.Param()
 
@@ -365,26 +368,6 @@ class ID16AScan(PtyScan):
 
             log(3, 'Values of bpm5_ct loaded successfully.')
 
-        #h = io.h5read(self.rinfo.data_file)
-        #entry = h.keys()[0]
-
-        # Get positions
-        #motor_positions = io.h5read(self.rinfo.data_file,
-        #                            H5_PATHS.motors)[H5_PATHS.motors]
-        #mmult = u.expect2(self.rinfo.motors_multiplier)
-        #pos_list = [mmult[i] * np.array(motor_positions[motor_name])
-        #            for i, motor_name in enumerate(self.rinfo.motors)]
-        #common.positions_scan = np.array(pos_list).T
-
-        # Load dark
-        #h = io.h5read(self.rinfo.dark_file)
-        #entry_name = h.keys()[0]
-        #darks = h[entry_name]['ptycho']['data']
-        #if darks.ndim == 2:
-        #    common.dark = darks
-        #else:
-        #    common.dark = darks.median(axis=0)
-
         # Load white field
         #common.white = io.edfread(self.rinfo.whitefield_file)[0]
 
@@ -400,17 +383,25 @@ class ID16AScan(PtyScan):
 
     def check(self, frames, start=0):
         """
+        This method checks how many frames the preparation routine may
+        process, starting from frame `start` at a request of `frames`.
         Returns the number of frames available from starting index `start`, and
         whether the end of the scan was reached.
 
-        :param frames: int
-            - Number of frames to load
-        :param start: int
-            - Starting point
-        :return: (frames_available, end_of_scan)
-            - int: the number of frames available from a starting point `start`
-            - bool if the end of scan was reached
-                    (None if this routine doesn't know)
+        Parameters
+        ----------
+        frames : int or None
+            Number of frames requested
+        start : int or None
+            Scanpoint index to start checking from
+
+        Returns
+        -------
+        frame_accessible : int 
+            Number of frames readable from a starting point `start`
+        end_of_scan : bool or None
+            Check if the end of scan was reached, otherwise None if this
+            routine doesn't know
         """
         npos = self.num_frames
         frames_accessible = min((frames, npos - start))
@@ -419,20 +410,21 @@ class ID16AScan(PtyScan):
 
     def load(self, indices):
         """
-        Load frames given by the indices.
+        Loads data according to node specific scanpoint indices that have
+        been determined by :py:class:`LoadManager` or otherwise.
 
-        :param indices: list
-            Frame indices available per node.
-        :return: raw, pos, weight
-            - dict: index matched data frames (np.array).
-            - dict: new positions.
-            - dict: new weights.
-        # returns three dicts: raw, positions, weights, whose keys are the
-        # scan pont indices. If one weight (mask) is to be used for the whole
-        # scan, it should be loaded with load_weights(). The same goes for the
-        # positions. We don't really need a mask here, but it must be
-        # provided, otherwise it's given the shape of self.info.shape, and
-        # then there's a shape mismatch in some multiplication.
+        Returns
+        -------
+        raw, pos, weight : dict
+            Dictionaries whose keys are the given scan point `indices`
+            and whose values are the respective frame / position according
+            to the scan point index. `weight` and `positions` may be empty
+        
+        Note
+        ----
+        If one weight (mask) is to be used for the whole scan, it should
+        be loaded with load_weights(). The same goes for the positions, 
+        which sould be loade with load_positions().
         """
         raw = {}
         pos = {}
@@ -456,18 +448,61 @@ class ID16AScan(PtyScan):
 
     def correct(self, raw, weights, common):
         """
-        Apply (eventual) corrections to the raw frames. Convert from "raw"
-        frames to usable data.
-        :param raw: dict
-            - dict containing index matched data frames (np.array).
-        :param weights: dict
-            - dict containing possible weights.
-        :param common: dict
-            - dict containing possible dark and flat frames.
-        :return: data, weights
-            - dict: contains index matched corrected data frames (np.array).
-            - dict: contains modified weights.
+        Place holder for dark and flatfield correction. Apply (eventual)
+        corrections to the raw frames. Convert from "raw" frames to 
+        usable data.
+        
+        Parameters
+        ----------
+        raw : dict
+            Dict containing index matched data frames (np.array).
+        weights : dict
+            Dict containing possible weights.
+        common : dict
+            Dict containing possible dark and flat frames.
+        
+        Returns
+        -------
+        data, weights : dict
+            Flat and dark-corrected data dictionaries. These dictionaries
+            must have the same keys as the input `raw` and contain
+            corrected frames (`data`) and statistical weights (`weights`)
+
+        Note
+        ----
+        If the negative values results from the calculation, they will
+        be forced to be equal to 0.
         """
+
+        # Apply flat and dark, only dark, or no correction
+        if self.info.flat_division and self.info.dark_subtraction:
+            for j in raw:
+                raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
+                raw[j][raw[j] < 0] = 0 # put negative values to 0
+        elif self.info.dark_subtraction:
+            for j in raw:
+                raw[j] = raw[j] - common.dark
+                raw[j][raw[j] < 0] = 0 # put negative values to 0
+
+        if self.info.det_flat_field is not None:
+            for j in raw:
+                print("Correcting detector flat-field: {}".format(self._index_to_frame(j)))
+                raw[j] = raw[j] / common.flat_field
+                raw[j][raw[j] < 0] = 0 # put negative values to 0
+
+        if self.info.recipe.pad_crop is not None:
+            newdim = (self.info.recipe.pad_crop,self.info.recipe.pad_crop)
+            for j in raw:
+                print('Reshaping projection {} to {}'.format(self._index_to_frame(j),newdim))
+                raw[j],_ = u.crop_pad_symmetric_2d(raw[j],newdim)
+
+        if self.info.recipe.use_bpm5_ct:
+            for j in raw:
+                print("Correcting for the bpm5_ct values for {}".format(self.frame_format.format(j)))
+                raw[j] = raw[j] / common.bpm5_ct_val[j]
+        
+        data = raw
+
         # Sanity check
         #assert (raw.shape == (2048,2048)), (
         #    'Wrong frame dimension! Is this a Frelon camera?')
@@ -486,49 +521,6 @@ class ID16AScan(PtyScan):
 
         #data = raw_wl_ml_ud
 
-        # Apply flat and dark, only dark, or no correction
-        if self.info.flat_division and self.info.dark_subtraction:
-            for j in raw:
-                raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
-                raw[j][raw[j] < 0] = 0 # put negative values to 0
-            data = raw
-        elif self.info.dark_subtraction:
-            for j in raw:
-                raw[j] = raw[j] - common.dark
-                raw[j][raw[j] < 0] = 0 # put negative values to 0
-            data = raw
-        else:
-            data = raw
-
-        if self.info.det_flat_field is not None:
-            for j in raw:
-                print("Correcting detector flat-field: {}".format(self._index_to_frame(j)))
-                raw[j] = raw[j] / common.flat_field
-                raw[j][raw[j] < 0] = 0 # put negative values to 0
-            data = raw
-        else:
-            data = raw
-
-        if self.info.recipe.pad_crop is not None:
-            newdim = (self.info.recipe.pad_crop,self.info.recipe.pad_crop)
-            for j in raw:
-                print('Reshaping projection {} to {}'.format(self._index_to_frame(j),newdim))
-                raw[j],_ = u.crop_pad_symmetric_2d(raw[j],newdim)
-        else:
-            data = raw
-
-        if self.info.recipe.use_bpm5_ct:
-            for j in raw:
-                print("Correcting for the bpm5_ct values for {}".format(self.frame_format.format(j)))
-                raw[j] = raw[j] / common.bpm5_ct_val[j]
-            data = raw
-        else:
-            data = raw
-
-        # FIXME: this will depend on the detector type used.
-
-        weights = weights
-
         return data, weights
 
 def undistort(frame, delta):
@@ -539,14 +531,14 @@ def undistort(frame, delta):
 
     Parameters
     ----------
-    frame: ndarray
-        the input frame data
-    delta: 2-tuple
-        containing the horizontal and vertical displacements respectively.
+    frame : ndarray
+        The input frame data
+    delta : 2-tuple
+        Containing the horizontal and vertical displacements respectively.
 
     Returns
     -------
-    ndarray
+    outf : ndarray
         The corrected frame of same dimension and type as frame.
 
     """
