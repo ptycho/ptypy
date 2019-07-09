@@ -48,7 +48,7 @@ def unlink(obj):
             return obj
         # Assign a label
         ID = prefix + str(hex(id(obj)))
-        if ID in list(pool.keys()):
+        if ID in pool.keys():
             # This object has been labeled already. No further action required
             return ID
         else:
@@ -64,7 +64,7 @@ def unlink(obj):
                 # pool[ID] = {}
                 nobj = {}
                 pool[ID] = nobj
-                for k, v in list(obj.items()):
+                for k, v in obj.items():
                     # pool[ID][k] = _pool(v)
                     nobj[k] = _pool(v)
 
@@ -82,7 +82,7 @@ def unlink(obj):
                     nobj = obj.__dict__.copy()
                 pool[ID] = nobj
                 # nobj = pool[ID]
-                for k, v in list(nobj.items()):
+                for k, v in nobj.items():
                     nobj[k] = _pool(v)
 
             else:
@@ -111,7 +111,7 @@ def link(pool, replace_objects_only=False, preserve_input_pool=True):
     pool = pool.copy()
     # First replace all occurrences of object dictionaries with their
     # respective objects. Since all objects appear only once, this is a safe.
-    for k, v in list(pool.items()):
+    for k, v in pool.items():
         # At this point we can make copies of objects,
         # since they are uniquely referenced here
         if preserve_input_pool:
@@ -138,7 +138,7 @@ def link(pool, replace_objects_only=False, preserve_input_pool=True):
         return pool
 
     calls = []
-    keys = list(pool.keys())
+    keys = pool.keys()
     def _unpool(obj):
         calls.append(None)
         # for k,v in pool.iteritems():
@@ -148,7 +148,7 @@ def link(pool, replace_objects_only=False, preserve_input_pool=True):
             obj = pool[obj]
             if type(obj) in _dict_like and id(obj) not in used:
                 used.append(id(obj))
-                for k, v in list(obj.items()):
+                for k, v in obj.items():
                     obj[k] = _unpool(v)
             elif type(obj) in _list_like and id(obj) not in used:
                 used.append(id(obj))
@@ -156,7 +156,7 @@ def link(pool, replace_objects_only=False, preserve_input_pool=True):
                     obj[k] = _unpool(v)
             elif type(obj) in _ptypy and id(obj) not in used:
                 used.append(id(obj))
-                for k, v in list(obj.__dict__.items()):
+                for k, v in obj.__dict__.items():
                     obj.__dict__[k]= _unpool(v)
 
             return obj

@@ -265,7 +265,7 @@ class PlotClient(object):
         """
         Request all data to the server (asynchronous).
         """
-        for cmd, item in list(self.cmd_dct.items()):
+        for cmd, item in self.cmd_dct.items():
             item[0] = self.client.get(cmd)
 
     def _store_data(self):
@@ -273,7 +273,7 @@ class PlotClient(object):
         Transfer all data from the client to local attributes.
         """
         with self._lock:
-            for cmd, item in list(self.cmd_dct.items()):
+            for cmd, item in self.cmd_dct.items():
                 item[1][item[2]] = self.client.data[item[0]]
             # An extra step for the error. This should be handled differently at some point.
             # self.error = np.array([info['error'].sum(0) for info in self.runtime.iter_info])
@@ -361,7 +361,7 @@ class MPLplotter(object):
             if layers is None:
                 layers = cont.data.shape[0]
             if np.isscalar(layers):
-                layers = list(range(layers))
+                layers = range(layers)
             plot.layers = layers
             plot.axes_index = len(num_shape_list)
             num_shape = [len(layers)*len(plot.auto_display)+int(plot.local_error), sh]
@@ -390,7 +390,7 @@ class MPLplotter(object):
             if layers is None:
                 layers = cont.data.shape[0]
             if np.isscalar(layers):
-                layers = list(range(layers))
+                layers = range(layers)
             plot.layers = layers
             plot.axes_index = len(num_shape_list)
             num_shape = [len(layers)*len(plot.auto_display), sh]
@@ -597,11 +597,11 @@ class MPLplotter(object):
             f.close()
 
     def plot_all(self, blocking = False):
-        for key, storage in list(self.pr.items()):
+        for key, storage in self.pr.items():
             #print key
             pp = self.pr_plot[key]
             self.plot_storage(storage,pp, str(key), 'pr')
-        for key, storage in list(self.ob.items()):
+        for key, storage in self.ob.items():
             #print key
             pp = self.ob_plot[key]
             self.plot_storage(storage,pp, str(key), 'obj')
@@ -730,7 +730,7 @@ class Bragg3dClient(object):
         self.plot_object()
         self.plot_probe()
 
-        if 'shrinkwrap' in list(self.runtime.iter_info[-1].keys()):
+        if 'shrinkwrap' in self.runtime.iter_info[-1].keys():
             self.plot_shrinkwrap()
 
     def plot_shrinkwrap(self):
@@ -749,9 +749,9 @@ class Bragg3dClient(object):
 
     def plot_object(self):
 
-        data = list(self.ob.values())[0]['data'][0]
-        center = list(self.ob.values())[0]['center']
-        psize = list(self.ob.values())[0]['psize']
+        data = self.ob.values()[0]['data'][0]
+        center = self.ob.values()[0]['center']
+        psize = self.ob.values()[0]['psize']
         lims_r3 = (-center[0] * psize[0], (data.shape[0] - center[0]) * psize[0])
         lims_r1 = (-center[1] * psize[1], (data.shape[1] - center[1]) * psize[1])
         lims_r2 = (-center[2] * psize[2], (data.shape[2] - center[2]) * psize[2])

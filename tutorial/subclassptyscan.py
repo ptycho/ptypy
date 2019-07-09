@@ -18,7 +18,7 @@ save_path = '/tmp/ptypy/sim/'
 geofilepath = save_path + 'geometry.txt'
 print(geofilepath)
 # and has contents of the following form
-print((''.join([line for line in open(geofilepath, 'r')])))
+print(''.join([line for line in open(geofilepath, 'r')]))
 
 # The scanning positions are in
 positionpath = save_path + 'positions.txt'
@@ -26,7 +26,7 @@ print(positionpath)
 
 # with a list of positions for vertical and horizontanl movement and the
 # image frame from the "camera"
-print((''.join([line for line in open(positionpath, 'r')][:6])+'....'))
+print(''.join([line for line in open(positionpath, 'r')][:6])+'....')
 
 # Writing a subclass
 # ------------------
@@ -64,13 +64,13 @@ class NumpyScan(PtyScan):
 # parent classes about the expected input parameters. Currently the docstring
 # of `NumpyScan` does not contain anything special, thus the only parameters
 # registered are those of the parent class, `PtyScan`:
-print((defaults_tree['scandata.numpyscan'].to_string()))
+print(defaults_tree['scandata.numpyscan'].to_string())
 
 # As you can see, there are already many parameters documented in `PtyScan`'s
 # class. For each parameter, most important are the *type*, *default* value and
 # *help* string. The decorator does more than collect this information: it also
 # generates from it a class variable called `DEFAULT`, which stores all defaults:
-print((u.verbose.report(NumpyScan.DEFAULT, noheader=True)))
+print(u.verbose.report(NumpyScan.DEFAULT, noheader=True))
 
 # Now we are ready to add functionality to our subclass.
 # A first step of initialisation would be to retrieve
@@ -87,7 +87,7 @@ def extract_geo(base_path):
     return out
 
 # We test it.
-print((extract_geo(save_path)))
+print(extract_geo(save_path))
 
 # That seems to work. We can integrate this parser into
 # the initialisation as we assume that this small access can be
@@ -126,7 +126,7 @@ class NumpyScan(PtyScan):
 
 # We now need a new input parameter called `base_path`, so we documented it
 # in the docstring after the section header "Defaults:".
-print((defaults_tree['scandata.numpyscan.base_path']))
+print(defaults_tree['scandata.numpyscan.base_path'])
 
 # As you can see, the first step in `__init__` is to build a default
 # parameter structure to ensure that all input parameters are available.
@@ -137,7 +137,7 @@ print((defaults_tree['scandata.numpyscan.base_path']))
 # the positions in the scan. The method
 # :py:meth:`~ptypy.core.data.PtyScan.load_positions` can be used
 # for this purpose.
-print((PtyScan.load_positions.__doc__))
+print(PtyScan.load_positions.__doc__)
 
 # The parser for the positions file would look like this.
 def extract_pos(base_path):
@@ -152,8 +152,8 @@ def extract_pos(base_path):
 
 # And the test:
 files, pos = extract_pos(save_path)
-print((files[:2]))
-print((pos[:2]))
+print(files[:2])
+print(pos[:2])
 
 @defaults_tree.parse_doc('scandata.numpyscan')
 class NumpyScan(PtyScan):
@@ -204,7 +204,7 @@ class NumpyScan(PtyScan):
 # The last step is to overwrite the actual loading of data.
 # Loading happens (MPI-compatible) in
 # :py:meth:`~ptypy.core.data.PtyScan.load`
-print((PtyScan.load.__doc__))
+print(PtyScan.load.__doc__))
 
 # Load seems a bit more complex than ``self.load_positions`` for its
 # return values. However, we can opt-out of providing weights (masks)
@@ -281,8 +281,8 @@ NPS.initialize()
 # with :py:func:`ptypy.utils.verbose.report`. The information is
 # concatenated, but the length of iterables or dicts is always indicated
 # in parantheses.
-print((u.verbose.report(NPS.auto(80), noheader=True)))
-print((u.verbose.report(NPS.auto(80), noheader=True)))
+print(u.verbose.report(NPS.auto(80), noheader=True))
+print(u.verbose.report(NPS.auto(80), noheader=True))
 
 # We observe the second chunk was not 80 frames deep but 34
 # as we only had 114 frames of data.
@@ -302,5 +302,5 @@ for i in range(50):
 # We can analyse the saved ``npy.ptyd`` with
 # :py:func:`~ptypy.io.h5IO.h5info`
 from ptypy.io import h5info
-print((h5info(NPS.info.dfile)))
+print(h5info(NPS.info.dfile))
 

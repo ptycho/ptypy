@@ -31,7 +31,7 @@ p.scans.MF.data.num_frames = 200
 p.scans.MF.data.save = None
 p.scans.MF.illumination = u.Param()
 p.scans.MF.illumination.model = np.random.rand(*u.expect2(p.scans.MF.data.shape))
-print((type(p.scans.MF.illumination.model)))
+print(type(p.scans.MF.illumination.model))
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2
 # total number of photon in empty beam

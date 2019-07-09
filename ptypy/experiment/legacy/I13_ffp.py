@@ -156,9 +156,9 @@ class I13ScanFFP(PtyScan):
         # Extract detector name if not set or wrong
         if (self.info.detector_name is None
                 or self.info.detector_name
-                not in list(self.instrument.keys())):
+                not in self.instrument.keys()):
                 detector_name = None
-                for k in list(self.instrument.keys()):
+                for k in self.instrument.keys():
                     if 'data' in self.instrument[k]:
                         detector_name = k
                         break

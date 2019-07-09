@@ -40,7 +40,7 @@ p.scans.MF.data.num_frames = 400
 P = ptypy.core.Ptycho(p, level=2)
 
 # A quick look at the diffraction data
-diff_storage = list(P.diff.storages.values())[0]
+diff_storage = P.diff.storages.values()[0]
 fig = u.plot_storage(diff_storage, 0, slices=(slice(2), slice(None), slice(None)), modulus='log')
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of simulated diffraction data for the first two positions.
@@ -51,8 +51,8 @@ fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 
 # Probe and object are not so exciting to look at for now. As default,
 # probes are initialized with an aperture like support.
-probe_storage = list(P.probe.storages.values())[0]
-fig = u.plot_storage(list(P.probe.S.values())[0], 1)
+probe_storage = P.probe.storages.values()[0]
+fig = u.plot_storage(P.probe.S.values()[0], 1)
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the starting guess for the probe.
 
@@ -70,7 +70,7 @@ fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 
 def fourier_update(pods):
     import numpy as np
-    pod = list(pods.values())[0]
+    pod = pods.values()[0]
     # Get Magnitude and Mask
     mask = pod.mask
     modulus = np.sqrt(np.abs(pod.diff))
@@ -79,13 +79,13 @@ def fourier_update(pods):
     err = 0.
     Dphi = {}
     # Propagate the exit waves
-    for gamma, pod in list(pods.items()):
+    for gamma, pod in pods.items():
         Dphi[gamma] = pod.fw(2*pod.probe*pod.object - pod.exit)
         Imodel += np.abs(Dphi[gamma] * Dphi[gamma].conj())
     # Calculate common correction factor
     factor = (1-mask) + mask * modulus / (np.sqrt(Imodel) + 1e-10)
     # Apply correction and propagate back
-    for gamma, pod in list(pods.items()):
+    for gamma, pod in pods.items():
         df = pod.bw(factor*Dphi[gamma]) - pod.probe*pod.object
         pod.exit += df
         err += np.mean(np.abs(df*df.conj()))
@@ -99,7 +99,7 @@ def probe_update(probe, norm, pods, fill=0.):
     """
     probe *= fill
     norm << fill + 1e-10
-    for name, pod in list(pods.items()):
+    for name, pod in pods.items():
         if not pod.active: continue
         probe[pod.pr_view] += pod.object.conj() * pod.exit
         norm[pod.pr_view] += pod.object * pod.object.conj()
@@ -115,7 +115,7 @@ def object_update(obj, norm, pods, fill=0.):
     """
     obj *= fill
     norm << fill + 1e-10
-    for pod in list(pods.values()):
+    for pod in pods.values():
         if not pod.active: continue
         pod.object += pod.probe.conj() * pod.exit
         norm[pod.ob_view] += pod.probe * pod.probe.conj()
@@ -131,7 +131,7 @@ def iterate(Ptycho, num):
     for i in range(num):
         err = 0
         # fourier update
-        for di_view in list(Ptycho.diff.V.values()):
+        for di_view in Ptycho.diff.V.values():
             if not di_view.active: continue
             err += fourier_update(di_view.pods)
         # probe update
@@ -153,14 +153,14 @@ iterate(P, 9)
 # We note that the error (here only displayed for 3 iterations) is
 # already declining. That is a good sign.
 # Let us have a look how the probe has developed.
-fig = u.plot_storage(list(P.probe.S.values())[0], 2)
+fig = u.plot_storage(P.probe.S.values()[0], 2)
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the reconstructed probe after 9 iterations. We observe that
 # the actaul illumination of the sample must be larger than the initial
 # guess.
 
 # Looks like the probe is on a good way. How about the object?
-fig = u.plot_storage(list(P.obj.S.values())[0], 3, slices='0,120:-120,120:-120')
+fig = u.plot_storage(P.obj.S.values()[0], 3, slices='0,120:-120,120:-120')
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the reconstructed object after 9 iterations. It is not quite
 # clear what object is reconstructed
@@ -170,13 +170,13 @@ iterate(P, 36)
 
 # Error is still on a steady descent. Let us look at the final
 # reconstructed probe and object.
-fig = u.plot_storage(list(P.probe.S.values())[0], 4)
+fig = u.plot_storage(P.probe.S.values()[0], 4)
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the reconstructed probe after a total of 45 iterations.
 # It's a moon !
 
 
-fig = u.plot_storage(list(P.obj.S.values())[0], 5, slices='0,120:-120,120:-120')
+fig = u.plot_storage(P.obj.S.values()[0], 5, slices='0,120:-120,120:-120')
 fig.savefig('ownengine_%d.png' % fig.number, dpi=300)
 # Plot of the reconstructed object after a total of 45 iterations.
 # It's a bunch of flowers !

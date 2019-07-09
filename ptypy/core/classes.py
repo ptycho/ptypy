@@ -242,14 +242,14 @@ class Base(object):
         if hasattr(self, '_pool'):
             if use_asizeof:
                 space += asizeof(self._pool, limit=0)
-            for k, v in list(self._pool.items()):
+            for k, v in self._pool.items():
                 if use_asizeof:
                     space += asizeof(v, limit=0)
-                for kk, vv in list(v.items()):
+                for kk, vv in v.items():
                     pool_space += vv.calc_mem_usage()[0]
         
         if hasattr(self, '__dict__'):
-            for k, v in list(self.__dict__.items()):
+            for k, v in self.__dict__.items():
                 if issubclass(type(v), Base):
                     continue
                 elif str(k) == '_pool' or str(k) == 'pods':
@@ -426,7 +426,7 @@ class Storage(Base):
         """
 
         if layermap is None:
-            layermap = list(range(len(self.data)))
+            layermap = range(len(self.data))
         self.layermap = layermap
 
         # This is most often not accurate. Set this quantity from the outside
@@ -639,7 +639,7 @@ class Storage(Base):
         dlow_fov = [np.inf] * self.ndim
         dhigh_fov = [-np.inf] * self.ndim
         layers = []
-        dims = list(range(self.ndim))
+        dims = range(self.ndim)
         for v in views:
             if not v.active:
                 continue
@@ -1578,7 +1578,7 @@ class Container(Base):
         """
         Property that returns list of all copies of this :any:`Container`
         """
-        return [c for c in list(self.owner._pool[CONTAINER_PREFIX].values())
+        return [c for c in self.owner._pool[CONTAINER_PREFIX].values()
                 if c.original is self and c is not self]
 
     def delete_copy(self, copy_IDs=None):
@@ -1665,7 +1665,7 @@ class Container(Base):
         Return total number of pixels in this container.
         """
         sz = 0
-        for ID, s in list(self.storages.items()):
+        for ID, s in self.storages.items():
             if s.data is not None:
                 sz += s.data.size
         return sz
@@ -1679,7 +1679,7 @@ class Container(Base):
         overhead.
         """
         sz = 0
-        for ID, s in list(self.storages.items()):
+        for ID, s in self.storages.items():
             if s.data is not None:
                 sz += s.data.nbytes
         return sz
@@ -1696,10 +1696,10 @@ class Container(Base):
                  If True (default), return only active views.
         """
         if active_only:
-            return [v for v in list(self.original.V.values())
+            return [v for v in self.original.V.values()
                     if v.active and (v.storageID == s.ID)]
         else:
-            return [v for v in list(self.original.V.values())
+            return [v for v in self.original.V.values()
                     if (v.storage.ID == s.ID)]
 
     def copy(self, ID=None, fill=None, dtype=None):
@@ -1733,7 +1733,7 @@ class Container(Base):
                 fill = 0
 
         # Copy storage objects
-        for storageID, s in list(self.storages.items()):
+        for storageID, s in self.storages.items():
             news = s.copy(new_cont, storageID, fill)
 
         # We are done! Return the new container
@@ -1746,7 +1746,7 @@ class Container(Base):
         if type(fill) is Container:
             self.fill(0.)
             self += fill
-        for s in list(self.storages.values()):
+        for s in self.storages.values():
             s.fill(fill)
 
     def allreduce(self, op=None):
@@ -1762,14 +1762,14 @@ class Container(Base):
         ptypy.utils.parallel.allreduce
         Storage.allreduce
         """
-        for s in list(self.storages.values()):
+        for s in self.storages.values():
             s.allreduce(op=op)
 
     def clear(self):
         """
         Reduce / delete all data in attached storages
         """
-        for s in list(self.storages.values()):
+        for s in self.storages.values():
             s.data = np.empty((s.data.shape[0], 1, 1), dtype=self.dtype)
             # s.datalist = [None]
 
@@ -1807,7 +1807,7 @@ class Container(Base):
         also_in_copies : bool
             If True, also reformat associated copies of this container
         """
-        for ID, s in list(self.storages.items()):
+        for ID, s in self.storages.items():
             s.reformat()
             if also_in_copies:
                 for c in self.copies:
@@ -1818,7 +1818,7 @@ class Container(Base):
         Returns a formatted report string on all storages in this container.
         """
         info = ["Containers ID: %s\n" % str(self.ID)]
-        for ID, s in list(self.storages.items()):
+        for ID, s in self.storages.items():
             info.extend(["Storage %s\n" % ID, s.report()])
         return ''.join(info)
 
@@ -1877,7 +1877,7 @@ class Container(Base):
         dct = {}
         mem = 0
         info = []
-        for ID, s in list(self.storages.items()):
+        for ID, s in self.storages.items():
             fstring, stats = s.formatted_report(fr.table,
                                                 fr.offset,
                                                 align,
@@ -1964,7 +1964,7 @@ class Container(Base):
         """
         self.space = 0
         info_str = []
-        for ID, s in list(self.storages.items()):
+        for ID, s in self.storages.items():
             if s.data is not None:
                 self.space += s.data.nbytes
             info_str.append(str(s) + '\n')
@@ -1973,54 +1973,54 @@ class Container(Base):
 
     def __iadd__(self, other):
         if isinstance(other, Container):
-            for ID, s in list(self.storages.items()):
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data += s2.data
         else:
-            for ID, s in list(self.storages.items()):
+            for ID, s in self.storages.items():
                 s.data += other
 
         return self
 
     def __isub__(self, other):
         if isinstance(other, Container):
-            for ID, s in list(self.storages.items()):
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data -= s2.data
         else:
-            for ID, s in list(self.storages.items()):
+            for ID, s in self.storages.items():
                 s.data -= other
 
         return self
 
     def __imul__(self, other):
         if isinstance(other, Container):
-            for ID, s in list(self.storages.items()):
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data *= s2.data
         else:
-            for ID, s in list(self.storages.items()):
+            for ID, s in self.storages.items():
                 s.data *= other
 
         return self
 
     def __idiv__(self, other):
         if isinstance(other, Container):
-            for ID, s in list(self.storages.items()):
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data /= s2.data
         else:
-            for ID, s in list(self.storages.items()):
+            for ID, s in self.storages.items():
                 s.data /= other
         return self
 
     def __lshift__(self, other):
         if isinstance(other, Container):
-            for ID, s in list(self.storages.items()):
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data[:] = s2.data
@@ -2081,7 +2081,7 @@ class POD(Base):
         self.V = u.Param(self.DEFAULT_VIEWS)
         if views is not None:
             self.V.update(views)
-        for v in list(self.V.values()):
+        for v in self.V.values():
             if v is None:
                 continue
             if v._pod is None:

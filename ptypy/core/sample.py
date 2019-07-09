@@ -213,7 +213,7 @@ def init_storage(storage, sample_pars=None, energy=None):
             p.model = 'recon'
             p.process = None
             init_storage(s, p)
-        elif sam in list(TEMPLATES.keys()):
+        elif sam in TEMPLATES.keys():
             init_storage(s, TEMPLATES[sam])
         elif sam in resources.objects or sam == 'stxm':
             p.model = sam

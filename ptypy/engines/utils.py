@@ -58,7 +58,7 @@ def dynamic_load(path, baselist, fail_silently = True):
                                   % (classname, filename))
     
         # Load engines that have been found
-        for classname, mf in list(engine_path.items()):
+        for classname, mf in engine_path.items():
     
             # Import module
             modname, filename = mf

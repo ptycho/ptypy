@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # show trajectory of recovered positions
     for i, path in enumerate(filepaths):
         # iterate through all iterations of the reconstruction
-        print(("Load: " + path))
+        print("Load: " + path)
         data = np.loadtxt(path)
         if i == 0:
             # [number of iteration, positions, (y, x)]
@@ -39,7 +39,7 @@ if __name__ == "__main__":
             pos_trajec[i, j, 0] = data[j, 0]
             pos_trajec[i, j, 1] = data[j, 1]
 
-    print((pos_trajec.shape))
+    print(pos_trajec.shape)
     # show reconstructed trajectories and cycle trough all positions
     for i in range(pos_trajec.shape[1]):
         if i == 0:
@@ -55,8 +55,8 @@ if __name__ == "__main__":
         data_original = np.loadtxt(path_original) * 1e6
         offset = pos_trajec[-1, 0, :] - data_original[0, :]
 
-        print((data_original[0, :]))
-        print((pos_trajec[-1, 0, :]))
+        print(data_original[0, :])
+        print(pos_trajec[-1, 0, :])
 
         data_original += offset
         for i in range(data_original.shape[0]):
@@ -101,8 +101,8 @@ if __name__ == "__main__":
         plt.xlabel("Position")
         plt.ylabel("Distance in px")
 
-        print(("Mean distance to original position before pos corr: " + str(np.mean(norm_dis_before/psize*1e-6))))
-        print(("Mean distance to original position after pos corr: " + str(np.mean(norm_dis_after/psize*1e-6))))
+        print("Mean distance to original position before pos corr: " + str(np.mean(norm_dis_before/psize*1e-6)))
+        print("Mean distance to original position after pos corr: " + str(np.mean(norm_dis_after/psize*1e-6)))
 
         # calculate error by relativ positions
         # Contains the relative shift of the position to every other position for the positions that were used to calculate
@@ -188,8 +188,8 @@ if __name__ == "__main__":
         plt.colorbar()
 
         tot_dist_uncorr = np.sqrt((relativ_shifts_uncorrected[:, :, 1] - relativ_shifts_original[:, :, 1])**2 + (relativ_shifts_uncorrected[:, :, 0] - relativ_shifts_original[:, :, 0])**2)/psize*1e-6
-        print(("Mean distance error to all other positions corrected: " + str(np.mean(np.mean(tot_dist, axis=0)))))
-        print(("Mean distance error to all other positions uncorrected: " + str(np.mean(np.mean(tot_dist_uncorr, axis=0)))))
+        print("Mean distance error to all other positions corrected: " + str(np.mean(np.mean(tot_dist, axis=0))))
+        print("Mean distance error to all other positions uncorrected: " + str(np.mean(np.mean(tot_dist_uncorr, axis=0))))
         plt.legend()
 
     plt.show()

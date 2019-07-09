@@ -129,7 +129,7 @@ class DM_3dBragg(DM):
             return
 
         # access object storage and geometry through any active pod
-        for name, pod in list(self.pods.items()):
+        for name, pod in self.pods.items():
             if pod.active:
                 break
         geo = pod.geometry
@@ -200,7 +200,7 @@ class DM_3dBragg(DM):
             shigh = s[len(sprofile) - 1]
             for i in range(1, len(sprofile)-icenter-1):
                 if parallel.master:
-                    print((sprofile[icenter+i] / sprofile[icenter]))
+                    print(sprofile[icenter+i] / sprofile[icenter])
                 if (sprofile[icenter+i] / sprofile[icenter] < cutoff
                     or (self.p.sample_support.shrinkwrap.monotonic and
                         sprofile[icenter+i] > sprofile[icenter+i-1])):

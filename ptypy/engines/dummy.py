@@ -78,7 +78,7 @@ class Dummy(BaseEngine):
         time.sleep(self.itertime)
         # virtual error reduces 10%
         error_dct = error = {}
-        for dname, diff_view in list(self.di.views.items()):
+        for dname, diff_view in self.di.views.items():
             error_dct[dname] = [0., 0.9**self.ntimescalled, 0.]
         self.ntimescalled+=1
         return error_dct

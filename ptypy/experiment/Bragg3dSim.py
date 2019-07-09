@@ -210,7 +210,7 @@ class Bragg3dSimScan(PtyScan):
         # dump the 3d arrays for testing
         if self.p.dump is not None:
             np.savez(self.p.dump, 
-                **{'diff%02d'%i : diff[i] for i in list(range(len(diff)))})
+                **{'diff%02d'%i : diff[i] for i in range(len(diff))})
 
         # stack the 2d diffraction patterns and save
         self.diff = []
@@ -231,7 +231,7 @@ class Bragg3dSimScan(PtyScan):
 
         # shuffle everything as a test
         if self.p.shuffle:
-            order = list(range(len(self.diff)))
+            order = range(len(self.diff))
             from random import shuffle
             shuffle(order)
             self.diff = [self.diff[i] for i in order]

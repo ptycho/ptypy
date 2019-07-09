@@ -37,7 +37,7 @@ def ID_generator(size=6, chars=string.ascii_uppercase + string.digits):
     Generate a random ID string made of capital letters and digits.
     size [default=6] is the length of the string.
     """
-    return ''.join(random.choice(chars) for _ in list(range(size)))
+    return ''.join(random.choice(chars) for _ in range(size))
 
 
 def is_str(s):
@@ -99,7 +99,7 @@ def numpy_replace(obj, arraylist):
         return obj
     elif isinstance(obj, dict):
         newobj = {}
-        for k, v in list(obj.items()):
+        for k, v in obj.items():
             newobj[k] = numpy_replace(v, arraylist)
         return newobj
     elif isinstance(obj, list):
@@ -304,7 +304,7 @@ class Server(object):
 
     def make_ID_pool(self):
 
-        port_range = list(range(self.port+1,self.port+self.p.connections+1))
+        port_range = range(self.port+1,self.port+self.p.connections+1)
         # Initial ID pool
         IDlist = []
         # This loop ensures all IDs are unique
@@ -312,7 +312,7 @@ class Server(object):
             newID = ID_generator()
             if newID not in IDlist:
                 IDlist.append(newID)
-        self.ID_pool = list(zip(IDlist, port_range))
+        self.ID_pool = zip(IDlist, port_range)
 
     def activate(self):
         """
@@ -339,7 +339,7 @@ class Server(object):
         Queue a warning message for all connected clients.
         """
         DEBUG('Queuing a WARN command')
-        for ID in list(self.names.keys()):
+        for ID in self.names.keys():
             self.queue.put({'ID': ID, 'cmd': 'WARN', 'ticket': 'WARN', 'str': warning_message})
         self._need_process = True
         return {'status': 'ok'}
@@ -349,7 +349,7 @@ class Server(object):
         Queue an ERROR message for all connected clients.
         """
         DEBUG('Queuing a ERROR command')
-        for ID in list(self.names.keys()):
+        for ID in self.names.keys():
             self.queue.put({'ID': ID, 'cmd': 'ERROR', 'ticket': 'ERROR', 'str': error_message})
         self._need_process = True
         return {'status': 'ok'}
@@ -371,7 +371,7 @@ class Server(object):
                 self.in_socket.bind(fulladdress)
                 success = True
             except zmq.ZMQError:
-                print(("Port %d used, increase port by 20" % self.port))
+                print("Port %d used, increase port by 20" % self.port)
                 continue
             if success:
                 break
@@ -381,7 +381,7 @@ class Server(object):
             self.port = port
             self.make_ID_pool()
 
-        print(("Server listens on %s, port %s" % (str(self.address), str(self.port))))
+        print("Server listens on %s, port %s" % (str(self.address), str(self.port)))
 
         # Initialize list of requests
         self.out_sockets = {}
@@ -397,7 +397,7 @@ class Server(object):
         try:
             self._listen()
         finally:
-            print(("stop listening on %s, port %s" % (str(self.address), str(self.port))))
+            print("stop listening on %s, port %s" % (str(self.address), str(self.port)))
             self.in_socket.unbind(fulladdress)
             self.in_socket.close()
 
@@ -449,7 +449,7 @@ class Server(object):
         if now - self.pingtime > self.pinginterval:
             # Time to check
             todisconnect = []
-            for ID, lastping in list(self.pings.items()):
+            for ID, lastping in self.pings.items():
                 if now - lastping > self.pingtimeout:
                     # Timeout! Force disconnection
                     todisconnect.append(ID)
@@ -518,7 +518,7 @@ class Server(object):
         Send available objects.
         """
         DEBUG('Processing an AVAIL command')
-        return {'status': 'ok', 'avail': list(self.objects.keys())}
+        return {'status': 'ok', 'avail': self.objects.keys()}
 
     def _cmd_ping(self, ID, args):
         """\
@@ -578,7 +578,7 @@ class Server(object):
         try:
             numpy_zmq_send(out_socket, obj)
         except:
-            print(('Problem sending object %s' % repr(obj)))
+            print('Problem sending object %s' % repr(obj))
             raise
 
     def _recv(self, in_socket):
@@ -607,7 +607,7 @@ class Server(object):
             logger.debug('Processing ticket %s from client %s' % (str(ticket), str(q['ID'])))
 
             # Nothing to do if the client is not connected anymore
-            if q['ID'] not in list(self.names.keys()):
+            if q['ID'] not in self.names.keys():
                 self.queue.task_done()
                 logger.debug('Client %s disconnected. Skipping.' % q['ID'])
                 continue

@@ -117,7 +117,7 @@ class NanomaxBraggJune2017(PtyScan):
                     for i in range(tmp.shape[1]):
                         if np.allclose(tmp[:, i:], 0.0):
                             cutoff = i
-                            print(('using %i samx values' % cutoff))
+                            print('using %i samx values' % cutoff)
                             break
                 x.append(np.array(fp[entry + '/measurement/AdLinkAI_buff'][:, :cutoff]))
                 y.append(np.array(fp[entry + '/measurement/samy']))
@@ -127,7 +127,7 @@ class NanomaxBraggJune2017(PtyScan):
         Ny = x_mean.shape[0]
         Nxy = Nx * Ny
         assert Ny == y_mean.shape[0]
-        print(('Scan positions are Nx=%d, Ny=%d, Nxy=%d' % (Nx, Ny, Nxy)))
+        print('Scan positions are Nx=%d, Ny=%d, Nxy=%d' % (Nx, Ny, Nxy))
 
         # save these numbers for the diff image loader
         self.Nx = Nx

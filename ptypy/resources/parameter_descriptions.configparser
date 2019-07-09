@@ -51,7 +51,7 @@ type = dir
 userlevel = 1
 
 [io.rfile]
-default = recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr
+default = recons/%%(run)s/%%(run)s_%%(engine)s_%%(iterations)04d.ptyr
 help = Reconstruction file name (or format string)
 doc = Reconstruction file name or format string (constructed against runtime dictionary)
 type = str
@@ -81,7 +81,7 @@ userlevel = 1
 lowlim = -1
 
 [io.autosave.rfile]
-default = dumps/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr
+default = dumps/%%(run)s/%%(run)s_%%(engine)s_%%(iterations)04d.ptyr
 help = Auto-save file name (or format string)
 doc = Auto-save file name or format string (constructed against runtime dictionary)
 type = str
@@ -132,7 +132,7 @@ type = Param
 userlevel = 
 
 [io.autoplot.imfile]
-default = plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png
+default = plots/%%(run)s/%%(run)s_%%(engine)s_%%(iterations)04d.png
 help = Plot images file name (or format string)
 doc = 
 type = str
@@ -333,7 +333,7 @@ type = int
 userlevel = 1
 
 [scan.data.chunk_format]
-default = .chunk%02d
+default = .chunk%%02d
 help = Appendix to saved files if save == 'link'
 doc = 
 type = str

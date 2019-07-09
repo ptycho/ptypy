@@ -86,7 +86,7 @@ def readHeader(im):
     """
 
     # start with info field
-    meta = dict(list(im.info.items()))
+    meta = dict(im.info.items())
     meta['format'] = im.format
     meta['format_description'] = im.format_description
     meta['mode'] = im.mode

@@ -32,7 +32,7 @@ class CODES:
     INVALID = 4
 
 # ! Inverse message codes
-CODE_LABEL = dict((v, k) for k, v in list(CODES.__dict__.items()))
+CODE_LABEL = dict((v, k) for k, v in CODES.__dict__.items())
 
 
 class Descriptor(object):
@@ -97,7 +97,7 @@ class Descriptor(object):
 
     @property
     def option_keys(self):
-        return list(self._all_options.keys())
+        return self._all_options.keys()
 
     @property
     def is_child(self):
@@ -114,7 +114,7 @@ class Descriptor(object):
             r = []
             o = []
 
-            for option, text in list(self.OPTIONS_DEF.items()):
+            for option, text in self.OPTIONS_DEF.items():
                 if 'required' in text or 'mandatory' in text:
                     r += [option]
                 else:
@@ -154,7 +154,7 @@ class Descriptor(object):
             child = subparent.new_child(next_name, options, implicit)
             self._all_options.update(subparent.options)
         else:
-            if name in list(self.children.keys()):
+            if name in self.children.keys():
                 # The child already exists
                 child = self.children[name]
                 if child.implicit and not implicit:
@@ -163,8 +163,8 @@ class Descriptor(object):
                     self.children.pop(name)
                     child.implicit = False
 
-                    explicit = [(k, v) for k, v in list(self.children.items()) if not v.implicit]
-                    implicit = [(k, v) for k, v in list(self.children.items()) if v.implicit]
+                    explicit = [(k, v) for k, v in self.children.items() if not v.implicit]
+                    implicit = [(k, v) for k, v in self.children.items() if v.implicit]
                     self.children = OrderedDict(explicit + [(name, child)] + implicit)
             else:
                 child = self.__class__(name=name, parent=self, separator=self.separator)
@@ -182,7 +182,7 @@ class Descriptor(object):
         """
 
         if self.required is not None and type(self.required) is list:
-            missing = [r for r in self.required if r not in list(dct.keys())]
+            missing = [r for r in self.required if r not in dct.keys()]
             if missing:
                 raise ValueError('Missing required option(s) <%s> for parameter %s.' % (', '.join(missing), self.name))
 
@@ -305,7 +305,7 @@ class Descriptor(object):
         """
         Iterator over all descendants as a pair (path name, object).
         """
-        for k, v in list(self.children.items()):
+        for k, v in self.children.items():
             yield (k, v)
             for d, v1 in v.descendants:
                 yield (k + self.separator + d, v1)
@@ -355,7 +355,7 @@ class Descriptor(object):
         from csv import DictWriter
 
         fieldnames = self.required + self.optional
-        fieldnames += [k for k in list(self._all_options.keys()) if k not in fieldnames]
+        fieldnames += [k for k in self._all_options.keys() if k not in fieldnames]
 
         DW = DictWriter(fbuffer, ['path'] + fieldnames)
         DW.writeheader()
@@ -381,9 +381,11 @@ class Descriptor(object):
         
         Keyword arguments are forwarded to `ConfigParser.RawConfigParser`
         """
-        from configparser import RawConfigParser as Parser
+        #from configparser import RawConfigParser as Parser
+        from configparser import ConfigParser as Parser
         #kwargs['empty_lines_in_values'] = True # This will only work in Python3
         ###### FIXME ######
+	## 09/07/2019 : julio
         # RawConfigParser is deprecated, should use ConfigParser or 
         # SafeConfigParser instead
         # For example:
@@ -391,9 +393,15 @@ class Descriptor(object):
         # or
         # from configparser import ConfigParser as Parser
         # readfp is also deprecated and we should use read_file instead
+        # If what you want is to simply merge identically named sections
+        # (latest one wins), simply pass the strict=False option to the
+        # constructor (added in Python 3.2). You effectively
+        # get dict.update() behavior as the duplicate sections are merged in.
         ###################
-        parser = Parser(**kwargs)
-        parser.readfp(fbuffer)
+        # parser = Parser(interpolation=None, strict=False,**kwargs)
+        parser = Parser(strict=False,**kwargs)
+        #parser.readfp(fbuffer)
+        parser.read_file(fbuffer)
         for num, sec in enumerate(parser.sections()):
             desc = self.new_child(name=sec, options=dict(parser.items(sec)))
 
@@ -423,7 +431,7 @@ class Descriptor(object):
         parser = Parser()
         for name, desc in self.descendants:
             parser.add_section(name)
-            for k, v in list(desc.options.items()):
+            for k, v in desc.options.items():
                 if (v or print_optional) or (k in self.required):
                     parser.set(name, k, v)
 
@@ -447,7 +455,7 @@ class Descriptor(object):
         import io
         parser = Parser()
         parser.add_section(self.name)
-        for k, v in list(self.options.items()):
+        for k, v in self.options.items():
             parser.set(self.name, k, v)
         s = io.StringIO()
         parser.write(s)
@@ -553,7 +561,7 @@ class ArgParseDescriptor(Descriptor):
 
         # Identify argument groups (first level children)
         groups = {}
-        for argname, desc in list(ndesc.items()):
+        for argname, desc in ndesc.items():
             if desc.name in excludes:
                 continue
             if desc.children:
@@ -579,7 +587,7 @@ class ArgParseDescriptor(Descriptor):
             return CustomAction
 
         # Add all arguments
-        for argname, desc in list(ndesc.items()):
+        for argname, desc in ndesc.items():
 
             if desc.name in excludes or argname in groups:
                 continue
@@ -741,7 +749,7 @@ class EvalDescriptor(ArgParseDescriptor):
                 # wildcard in symlink: needed to grab dynamically added entries
                 if types[0].endswith('.*'):
                     parent = self.get(types[0][1:-2])
-                    types = [c for n, c in list(parent.children.items())]
+                    types = [c for n, c in parent.children.items()]
                 else:
                     types = [self.get(t[1:]) for t in types]
         return types
@@ -838,7 +846,7 @@ class EvalDescriptor(ArgParseDescriptor):
             return
 
         # Detect wildcard
-        wildcard = (list(self.children.keys()) == ['*'])
+        wildcard = (self.children.keys() == ['*'])
 
         # Grab or check children
         if wildcard:
@@ -851,7 +859,7 @@ class EvalDescriptor(ArgParseDescriptor):
                     children = {self.name[:-1] + '_00': self.children['*']}
                 else:
                     # Grab all names from pars
-                    children = {k: self.children['*'] for k in list(pars.keys())}
+                    children = {k: self.children['*'] for k in pars.keys()}
         else:
             children = self.children
 
@@ -874,12 +882,12 @@ class EvalDescriptor(ArgParseDescriptor):
         
         # Look for unrecognised entries in pars
         if pars:
-            for k, v in list(pars.items()):
+            for k, v in pars.items():
                 if k not in children:
                     yield {'d': self, 'path': path, 'status': 'nochild', 'info': k}
 
         # Loop through children
-        for cname, c in list(children.items()):
+        for cname, c in children.items():
             new_path = '.'.join([path, cname]) if path else cname
             if pars:
                 if cname not in pars or pars[cname] is None:
@@ -911,7 +919,7 @@ class EvalDescriptor(ArgParseDescriptor):
         out = OrderedDict()
         for res in self._walk(depth=depth, pars=pars):
             path = res['path']
-            if not path in list(out.keys()):
+            if not path in out.keys():
                 out[path] = {}
             # Switch through all possible statuses
             if res['status'] == 'ok':
@@ -978,8 +986,8 @@ class EvalDescriptor(ArgParseDescriptor):
         d = self.check(pars)
         do_raise = False
         raise_reasons = []
-        for ep, v in list(d.items()):
-            for tocheck, outcome in list(v.items()):
+        for ep, v in d.items():
+            for tocheck, outcome in v.items():
                 logger.log(_logging_levels[CODE_LABEL[outcome]], '%-50s %-20s %7s' % (ep, tocheck, CODE_LABEL[outcome]))
                 if outcome in raisecodes:
                     do_raise = True

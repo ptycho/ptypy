@@ -107,7 +107,7 @@ class DM_simple(BaseEngine):
 
             # fourier update
             error_dct = {}
-            for name, di_view in list(self.di.V.items()):
+            for name, di_view in self.di.V.items():
                 if not di_view.active:
                     continue
                 error_dct[name] = basic_fourier_update(
@@ -165,14 +165,14 @@ class DM_simple(BaseEngine):
         self.ob_nrm.fill(0.)
 
         # DM update per node: sum over all the positions
-        for name, pod in list(self.pods.items()):
+        for name, pod in self.pods.items():
             if not pod.active:
                 continue
             pod.object += pod.probe.conj() * pod.exit
             self.ob_nrm[pod.ob_view] += u.cabs2(pod.probe)
 
         # Distribute result with MPI
-        for name, s in list(self.ob.S.items()):
+        for name, s in self.ob.S.items():
             nrm = self.ob_nrm.S[name].data
             parallel.allreduce(s.data)
             parallel.allreduce(nrm)
@@ -188,7 +188,7 @@ class DM_simple(BaseEngine):
         self.pr_nrm.fill(0.0)
 
         # DM update per node: sum over all the positions
-        for name, pod in list(self.pods.items()):
+        for name, pod in self.pods.items():
             if not pod.active:
                 continue
             pod.probe += pod.object.conj() * pod.exit
@@ -196,7 +196,7 @@ class DM_simple(BaseEngine):
 
         # Distribute result with MPI and keep track of the overlap convergence.
         change = 0.
-        for name, s in list(self.pr.S.items()):
+        for name, s in self.pr.S.items():
             # MPI reduction of results
             nrm = self.pr_nrm.S[name].data
             parallel.allreduce(s.data)

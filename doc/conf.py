@@ -64,7 +64,7 @@ def remove_mod_docstring(app, what, name, obj, options, lines):
         if depth < 0:
             return
         
-        for k, value in list(dct.items()):
+        for k, value in dct.items():
             ref = ', see :py:data:`~%s`' % pd.children[k].entry_point if k in pd.children else ''
             if hasattr(value, 'items'):
                 v = str(value.__class__.__name__)

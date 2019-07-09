@@ -337,7 +337,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
                 p.recon.ID = None
                 init_storage(s, p, energy=1.0)
             return
-        elif pars in list(TEMPLATES.keys()):
+        elif pars in TEMPLATES.keys():
             init_storage(s, TEMPLATES[pars])
             return
         elif pars in resources.probes or pars == 'stxm':

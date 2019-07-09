@@ -33,7 +33,7 @@ header = io.h5read(filename,'header')['header']
 if str(header['kind']) == 'fullflat':
     raise NotImplementedError('Loading specific data from flattened dump not yet supported')
 else: 
-    content = list(io.h5read(filename,'content').values())[0]#['content']
+    content = io.h5read(filename,'content').values()[0]#['content']
     runtime = content['runtime']
     probes = u.Param()
     probes.update(content['probe'], Convert = True)

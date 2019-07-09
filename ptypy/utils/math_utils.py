@@ -25,7 +25,7 @@ def cabs2(A):
     If `A` is complex, the returned value is complex as well, with the
     imaginary part of zero.
     """
-    return A * A.conj()
+    return A * A.conjugate()
 
 def abs2(A):
     """
@@ -158,7 +158,7 @@ def delxf(a, axis=-1, out=None):
         Derived array.
     """
     nd = a.ndim
-    axis = list(range(nd))[axis]
+    axis = range(nd)[axis]
 
     slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
     slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
@@ -199,7 +199,7 @@ def delxb(a, axis=-1):
     """
 
     nd = a.ndim
-    axis = list(range(nd))[axis]
+    axis = range(nd)[axis]
     slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
     slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
     b = np.zeros_like(a)
@@ -229,7 +229,7 @@ def delxc(a,axis=-1):
         Derived array.
     """
     nd = a.ndim
-    axis = list(range(nd))[axis]
+    axis = range(nd)[axis]
     slice_middle = [slice(1,-1) if i==axis else slice(None) for i in range(nd)]
     b = delxf(a, axis) + delxb(a, axis)
     b[slice_middle] *= 0.5
@@ -257,7 +257,7 @@ def ortho(modes):
     A = np.array([[np.vdot(p2,p1) for p1 in modes] for p2 in modes])
     e, v = eig(A)
     ei = (-e).argsort()
-    nplist = [sum(modes[i] * v[i,j] for i in list(range(N))) for j in ei]
+    nplist = [sum(modes[i] * v[i,j] for i in range(N)) for j in ei]
     amp = np.array([norm2(npi) for npi in nplist])
     amp /= amp.sum()
     return amp, nplist
@@ -320,7 +320,7 @@ def rl_deconvolution(data, mtf, numiter):
     Assumes that mtf is symmetric and that data is real and positive.
     mtf is non fft shifted that means that the dc component is on mtf[0,0].
     Todo:
-    non symmetric mtf: mtf.conj()[-q] somewhere
+    non symmetric mtf: mtf.conjugate()[-q] somewhere
     optimisation: FFTW? scipy fft? error metric cancel iter?
     Original code provided by M. Stockmar
     """

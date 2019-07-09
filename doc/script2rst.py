@@ -17,7 +17,7 @@ if len(sys.argv) == 1:
     for script in scripts:
         scr = pkg_resources.resource_filename('ptypy', tutorial_dir+script)
         if not os.path.exists(scr):
-            print(('Using backup tutorial for %s' % script))
+            print('Using backup tutorial for %s' % script)
             scr = '../tutorial/'+script
         #subprocess.call(['python',sys.argv[0]+' '+scr]) # doesn't work
         os.system('python ' + sys.argv[0]+' '+scr)
@@ -43,7 +43,7 @@ def stdoutIO(stdout=None):
 def exec2str(statement):
     with stdoutIO() as s:
         exec(statement)
-    print((s.getvalue()))
+    print(s.getvalue())
 
 script_name = sys.argv[1]
 fpy = open(script_name, 'r')

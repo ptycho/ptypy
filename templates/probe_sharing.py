@@ -81,7 +81,7 @@ p.engines.DM.numiter = 60
 
 P = Ptycho(p,level=3)
 
-s1, s2 = list(P.probe.storages.values())
+s1, s2 = P.probe.storages.values()
 # Transfer views
 for v in s2.views:
     v.storage = s1

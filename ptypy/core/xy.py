@@ -85,7 +85,7 @@ def from_pars(xypars=None):
     elif xypars is None:
         return None
     elif str(xypars) == xypars:
-        if xypars in list(TEMPLATES.keys()):
+        if xypars in TEMPLATES.keys():
             return from_pars(TEMPLATES[sam])
         else:
             raise RuntimeError(

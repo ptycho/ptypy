@@ -191,7 +191,7 @@ def rebin(a, *args,**kwargs):
              [')'] + ['.sum(%d)'%(i+1) for i in range(lenShape)] + \
              ['*( 1.'] + ['/factor[%d]'%i for i in range(lenShape)] + [')']
     if kwargs.get('verbose',False):
-        print((''.join(evList)))
+        print(''.join(evList))
     return eval(''.join(evList))
 
 def _confine(A):
@@ -381,7 +381,7 @@ def fill3D(A,B,offset=[0,0,0]):
     Ao[Ao<0]=0
     Bo = -off.copy()
     Bo[Bo<0]=0
-    print((Ao,Bo))
+    print(Ao,Bo)
     if (Bo > Blim).any() or (Ao > Alim).any():
         print("misfit")
         pass

@@ -11,11 +11,11 @@ level,name,default,type,static,lowlim,uplim,choices,shortdoc,longdoc,userlevel,v
 **NOT IMPLEMENTED**",2,
 0,io,,Param,yes,,,,Global parameters for I/O,,,
 1,home,./,dir,yes,,,,Base directory for all I/O,home is the root directory for all input/output operations. All other path parameters that are relative paths will be relative to this directory.,1,
-1,rfile,recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr,str,yes,,,,Reconstruction file name (or format string),Reconstruction file name or format string (constructed against runtime dictionary),1,
+1,rfile,recons/%%(run)s/%%(run)s_%%(engine)s_%%(iterations)04d.ptyr,str,yes,,,,Reconstruction file name (or format string),Reconstruction file name or format string (constructed against runtime dictionary),1,
 1,autosave,,Param,yes,,,,Auto-save options,,,
 2,active,TRUE,bool,yes,,,,Activation switch,If ``True`` the current reconstruction will be saved at regular intervals. **unused**,1,
 2,interval,10,int,yes,-1,,,Auto-save interval,If ``>0`` the current reconstruction will be saved at regular intervals according to the pattern in :py:data:`paths.autosave` . If ``<=0`` not automatic saving,1,
-2,rfile,dumps/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr,str,yes,,,,Auto-save file name (or format string),Auto-save file name or format string (constructed against runtime dictionary),1,
+2,rfile,dumps/%%(run)s/%%(run)s_%%(engine)s_%%(iterations)04d.ptyr,str,yes,,,,Auto-save file name (or format string),Auto-save file name or format string (constructed against runtime dictionary),1,
 1,interaction,,Param,yes,,,,Server / Client parameters,"If ``None`` or ``False`` is passed here in script instead of a Param, it translates to  ``active=False`` i.e. no ZeroMQ interaction server. ",,
 2,active,TRUE,bool,yes,,,,Activation switch,"Set to ``False`` for no  ZeroMQ interaction server
 ",,
@@ -24,7 +24,7 @@ level,name,default,type,static,lowlim,uplim,choices,shortdoc,longdoc,userlevel,v
 2,connections,10,int,yes,,,,Number of concurrent connections on the server,A range ``[port : port+connections]`` of ports adjacent :py:data:`~.io.interaction.port` will be opened on demand for connecting clients.,2,
 1,autoplot,,Param,yes,,,,Plotting client parameters,"In script you may set this parameter to ``None`` or ``False`` for no automatic plotting.
 ",,
-2,imfile,plots/%(run)s/%(run)s_%(engine)s_%(iterations)04d.png,str,yes,,,,Plot images file name (or format string),,1,
+2,imfile,plots/%%(run)s/%%(run)s_%%(engine)s_%%(iterations)04d.png,str,yes,,,,Plot images file name (or format string),,1,
 2,interval,1,int,yes,-1,,,Number of iterations between plot updates,"Requests to the server will happen with this iteration intervals. Note that this will work only if interaction.polling_interval is smaller or equal to this number. If ``interval =0`` plotting is disabled which should be used, when ptypy is run on a cluster.",1,
 2,threaded,TRUE,bool,yes,,,,Live plotting switch,"If ``True``, a plotting client will be spawned in a new thread and connected at initialization. If ``False``, the master node will carry out the plotting, pausing the reconstruction. This option should be set to ``True`` when ptypy is run on an isolated workstation.",1,
 2,layout,None,"str, Param",yes,,,,Options for default plotter or template name,"Flexible layout for default plotter is not implemented yet. Please choose one of the templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``",2,
@@ -64,7 +64,7 @@ Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, do_flipud,
 2,energy,None,float,yes,0,,,Photon energy of the incident radiation,,0,
 2,min_frames,1,int,yes,,,,Minimum number of frames loaded by each node,,2,
 2,num_frames,None,int,yes,,,,Maximum number of frames to be prepared,"If `positions_theory` are provided, num_frames will be ovverriden with the number of positions available",1,
-2,chunk_format,.chunk%02d,str,yes,,,,Appendix to saved files if save == 'link',,2,
+2,chunk_format,.chunk%%02d,str,yes,,,,Appendix to saved files if save == 'link',,2,
 2,auto_center,None,bool,yes,,,,Determine if center in data is calculated automatically," - ``False``, no automatic centering 
  - ``None``, only if :py:data:`center` is ``None`` 
  - ``True``, it will be enforced",0,

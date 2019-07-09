@@ -41,10 +41,10 @@ P = Ptycho(p,level=2)
 S_true = P.model.scans['scan01'].ptyscan.simulated_object
 
 # We can grab the object storage from the Ptycho instance
-S = list(P.obj.storages.values())[0]
+S = P.obj.storages.values()[0]
 
 # Similarly, we can find a view of the probe
-probeView = list(P.probe.views.values())[0]
+probeView = P.probe.views.values()[0]
 
 # Let's define an object view to study
 objView = S.views[1]
@@ -64,7 +64,7 @@ S_display.data[np.where(S_true.data)] = 3
 # coordinate system, which is good but hard to understand. We can
 # convert to orthogonal (z, x, y) space by using a method on the
 # geometry object, found from any of the pods.
-geo = list(P.pods.values())[0].geometry
+geo = P.pods.values()[0].geometry
 S_display_cart = geo.coordinate_shift(S_display, input_system='natural', input_space='real', keep_dims=True)
 
 # Plot some slices

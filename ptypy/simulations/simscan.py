@@ -166,7 +166,7 @@ class SimScan(PtyScan):
 
         # Simulate diffraction signal
         logger.info('Propagating exit waves.')
-        for name,pod in list(P.pods.items()):
+        for name,pod in P.pods.items():
             if not pod.active: continue
             pod.diff += conv(u.abs2(pod.fw(pod.exit)), self.info.psf)
 
@@ -185,7 +185,7 @@ class SimScan(PtyScan):
         self.pos = {}
 
 
-        ID,Sdiff = list(P.diff.S.items())[0]
+        ID,Sdiff = P.diff.S.items()[0]
         logger.info('Collecting simulated `raw` data.')
         for view in Sdiff.views:
             ind = view.layer

@@ -42,13 +42,13 @@ class Table(object):
         self._record_factory_from_dict(dct)
         
     def _record_factory_from_dict(self,dct,suffix='_record'):
-        self._record_factory = namedtuple(self._table_name+suffix,list(dct.keys()))
-        self._record_default = self._record_factory._make(list(dct.values()))
+        self._record_factory = namedtuple(self._table_name+suffix,dct.keys())
+        self._record_default = self._record_factory._make(dct.values())
         self._record_dtype = [np.array(v).dtype for v in self._record_default]
     
     def new_table(self, records = 0):
         r = self._record_default
-        dtype = list(zip(r._fields,self._record_dtype))
+        dtype = zip(r._fields,self._record_dtype)
         self._table = np.array([tuple(self._record_default)] * records,dtype)
         
     def new_fields(self,**kwargs):
@@ -69,15 +69,15 @@ class Table(object):
         
     def pull_records(self,record_ids=None):
         if record_ids is None:
-            return list(map(self._record_factory._make, self._table))
+            return map(self._record_factory._make, self._table)
         else:
-            return list(map(self._record_factory._make, self._table[record_ids]))
+            return map(self._record_factory._make, self._table[record_ids])
             
     def add_records(self,records):
         """ Add records at the end of the table. """
         start = len(self._table)
         stop = len(records)+start
-        record_ids = list(range(start,stop))
+        record_ids = range(start,stop)
         self._table.resize((len(self._table)+len(records),))
         self._table[start:stop]=records
         
@@ -93,7 +93,7 @@ class Table(object):
         Arguments to the function are selected by `fields`. 
         The search function will always receive the record_id as first argument. 
         """
-        a = list(range(len(self._table)))
+        a = range(len(self._table))
         if fields is None:
             res = [n for n in a if func(a)]
         else:
@@ -134,14 +134,7 @@ def isstr(s):
     """
     This function should be used for checking if an object is of string type
     """
-    import sys
-
-    if sys.version_info[0] == 3:
-        string_types = str,
-    else:
-        string_types = str,
-    
-    return isinstance(s, string_types)
+    return isinstance(s, str)
     
     
 def str2index(s):
@@ -178,7 +171,7 @@ def str2range(s):
     elif len(il)==3:
         start, stop, step = il
 
-    return list(range(start,stop,step))
+    return range(start,stop,step)
 
 def str2int(A):
     """

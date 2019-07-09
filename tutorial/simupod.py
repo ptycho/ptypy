@@ -58,11 +58,11 @@ G = geometry.Geo(owner=P, pars=g)
 # example, we find forward and backward propagators at ``G.propagator.fw``
 # and ``G.propagator.bw``. It has also calculated the appropriate
 # pixel size in the sample plane (aka resolution),
-print((G.resolution))
+print(G.resolution)
 
 # which sets the shifting frame to be of the following size:
 fsize = G.shape * G.resolution
-print(("%.2fx%.2fmm" % tuple(fsize*1e3)))
+print("%.2fx%.2fmm" % tuple(fsize*1e3))
 
 # Create probing illumination
 # ---------------------------
@@ -111,7 +111,7 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # photons to 1 billion
 for pp in [pr, pr2, pr3]:
     pp.data *= np.sqrt(1e9/np.sum(pp.data*pp.data.conj()))
-print((u.norm2(pr.data)))
+print(u.norm2(pr.data))
 
 # and we quickly check if the propagation works.
 ill = pr.data[0]
@@ -164,7 +164,7 @@ for pos in positions:
 # include all Views. Conveniently, this can be initiated from the top
 # with Container.\ :py:meth:`~ptypy.core.classes.Container.reformat`
 P.obj.reformat()
-print((P.obj.formatted_report()))
+print(P.obj.formatted_report())
 
 # At last we fill the object Storage ``S00`` with a complex transmission.
 # Again there is a convenience transmission function in the resources
@@ -179,8 +179,8 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 
 # A single coherent propagation in |ptypy| is represented by
 # an instance of the :py:class:`~ptypy.core.classes.POD` class.
-print((POD.__doc__))
-print((POD.__init__.__doc__))
+print(POD.__doc__)
+print(POD.__init__.__doc__)
 
 # For creating a single POD we need a
 # :py:class:`~ptypy.core.classes.View` to *probe*, *object*,
@@ -193,7 +193,7 @@ P.diff = Container(P, 'Cdiff', data_type='real')
 P.mask = Container(P, 'Cmask', data_type='real')
 
 # We start with one POD and its views.
-objviews = list(P.obj.views.values())
+objviews = P.obj.views.values()
 obview = objviews[0]
 
 # We construct the probe View.
@@ -237,7 +237,7 @@ pod.exit = pod.probe * pod.object
 # The result of the calculation above is stored in the appropriate
 # storage of ``P.exit``.
 # Therefore we can use this command to plot the result.
-exit_storage = list(P.exit.storages.values())[0]
+exit_storage = P.exit.storages.values()[0]
 fig = u.plot_storage(exit_storage, 6)
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # Simulated exit wave using a pod
@@ -246,7 +246,7 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 pod.diff = np.abs(pod.fw(pod.exit))**2
 
 # The result is stored in the diffraction container.
-diff_storage = list(P.diff.storages.values())[0]
+diff_storage = P.diff.storages.values()[0]
 fig = u.plot_storage(diff_storage, 7, modulus='log')
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 

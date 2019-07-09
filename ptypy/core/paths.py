@@ -113,6 +113,6 @@ class Paths(object):
 
 if __name__ == "__main__":
     pa = Paths()
-    print((pa.auto_file()))
-    print((pa.plot_file()))
-    print((pa.recon_file()))
+    print(pa.auto_file())
+    print(pa.plot_file())
+    print(pa.recon_file())

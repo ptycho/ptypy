@@ -42,7 +42,7 @@ def make_sim_datasource(model_inst,drift=0.0,scale= 0.0,noise=0.0):
     labels=[]
     sources =[]
     pars =[]
-    for label,scan in list(model_inst.scans.items()):
+    for label,scan in model_inst.scans.items():
         source = scan.pars.source
         if source is None:
             source = model_inst.ptycho.paths.get_data_file(label=label)

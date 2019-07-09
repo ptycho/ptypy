@@ -72,7 +72,7 @@ except ImportError:
                     eval(input(self.message))
                 else:
                     if self.message is not None:
-                        print((self.message))
+                        print(self.message)
                     time.sleep(self.timeout)
                 self.ct = False
 
