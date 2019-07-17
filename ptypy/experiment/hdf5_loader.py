@@ -380,16 +380,19 @@ class Hdf5Loader(PtyScan):
             log(3, "No normalisation will be applied.")
 
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            self.p.energy = h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][0]
+            self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()] * self.p.recorded_energy.multiplier)
+            self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
 
 
         if None not in [self.p.recorded_distance.file, self.p.recorded_distance.key]:
-            self.p.distance = h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][0]
+            self.p.distance = h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][()]
+            self.meta.distance = self.p.distance
             log(3, "loading distance={} from file".format(self.p.distance))
         
         if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
-            self.p.psize = h5.File(self.p.recorded_psize.file, 'r')[self.p.recorded_psize.key][0]
+            self.p.psize = h5.File(self.p.recorded_psize.file, 'r')[self.p.recorded_psize.key][()]
+            self.meta.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
 
 
