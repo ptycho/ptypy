@@ -226,7 +226,7 @@ class PtyScan(object):
     lowlim = 0
 
     [add_poisson_noise]
-    default = True
+    default = False
     type = bool
     help = Decides whether the scan should have poisson noise or not
     """
