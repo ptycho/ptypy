@@ -567,7 +567,7 @@ class Hdf5Loader(PtyScan):
                 self.preview_indices = range(*fast_axis_bounds)
                 self.num_frames = len(self.preview_indices)
 
-        elif data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
+        elif ((len(positions_fast_shape)>1) and (len(positions_slow_shape)>1)) and data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
             '''
             cases covered:
             axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
