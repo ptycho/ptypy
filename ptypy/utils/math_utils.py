@@ -166,13 +166,13 @@ def delxf(a, axis=-1, out=None):
     if out == None:
         out = np.zeros_like(a)
 
-    out[slice2] = a[slice1] - a[slice2]
+    out[tuple(slice2)] = a[tuple(slice1)] - a[tuple(slice2)]
 
     if out is a:
         # required for in-place operation
         slice3 = [slice(-2, None) if i == axis else slice(None)
                   for i in range(nd)]
-        out[slice3] = 0.0
+        out[tuple(slice3)] = 0.0
 
     return out
 
@@ -203,7 +203,7 @@ def delxb(a, axis=-1):
     slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
     slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
     b = np.zeros_like(a)
-    b[slice1] = a[slice1] - a[slice2]
+    b[tuple(slice1)] = a[tuple(slice1)] - a[tuple(slice2)]
     return b
 
 def delxc(a,axis=-1):
