@@ -944,6 +944,284 @@ defaults_tree['scan.Full'].add_child(sample.sample_desc)
 Full.DEFAULT = defaults_tree['scan.Full'].make_default(99)
 
 
+@defaults_tree.parse_doc('scan.ReferenceEnergy')
+class ReferenceEnergy(ScanModel):
+    """
+    Manage a single scan model (sharing, coherence, propagation, ...)
+
+    Defaults:
+
+    # note: this class also imports the module-level defaults for sample
+    # and illumination, below.
+
+    [name]
+    default = ReferenceEnergy
+    type = str
+    help =
+    doc =
+
+    [coherence]
+    default =
+    help = Coherence parameters
+    doc =
+    type = Param
+    userlevel =
+    lowlim = 0
+
+    [coherence.num_probe_modes]
+    default = 1
+    help = Number of probe modes
+    doc =
+    type = int
+    userlevel = 0
+    lowlim = 0
+
+    [coherence.num_object_modes]
+    default = 1
+    help = Number of object modes
+    doc =
+    type = int
+    userlevel = 0
+    lowlim = 0
+
+    [reference_energy]
+    default = None
+    help = Will force the reconstruction to adapt the detector pixels to keep the reconstruction resolution the same as if at this energy.
+    doc =
+    type = None, float
+    userlevel = 0
+    lowlim = 0
+
+
+    """
+
+    _PREFIX = MODEL_PREFIX
+
+    def _create_pods(self):
+        """
+        Create all new pods as specified in the new_positions,
+        new_diff_views and new_mask_views object attributes.
+        """
+        logger.info('\n' + headerline('Creating PODS', 'l'))
+        new_pods = []
+        new_probe_ids = {}
+        new_object_ids = {}
+
+        label = self.label
+
+        # Get a list of probe and object that already exist
+        existing_probes = self.ptycho.probe.storages.keys()
+        existing_objects = self.ptycho.obj.storages.keys()
+        logger.info('Found these probes : ' + ', '.join(existing_probes))
+        logger.info('Found these objects: ' + ', '.join(existing_objects))
+
+        object_id = 'S' + self.label
+        probe_id = 'S' + self.label
+
+        positions = self.new_positions
+        di_views = self.new_diff_views
+        ma_views = self.new_mask_views
+
+        # Loop through diffraction patterns
+        for i in range(len(di_views)):
+            dv, mv = di_views.pop(0), ma_views.pop(0)
+
+            index = dv.layer
+
+            # Object and probe position
+            pos_pr = u.expect2(0.0)
+            pos_obj = positions[i] if 'empty' not in self.p.tags else 0.0
+
+            # For multiwavelength reconstructions: loop here over
+            # geometries, and modify probe_id and object_id.
+
+            probe_id_suf = probe_id + 'G00'
+            if (probe_id_suf not in new_probe_ids.keys()
+                    and probe_id_suf not in existing_probes):
+                new_probe_ids[probe_id_suf] = True
+
+            object_id_suf = object_id + 'G00'
+            if (object_id_suf not in new_object_ids.keys()
+                    and object_id_suf not in existing_objects):
+                new_object_ids[object_id_suf] = True
+            geometry = self.geometry
+            # Loop through modes
+            for pm in range(self.p.coherence.num_probe_modes):
+                for om in range(self.p.coherence.num_object_modes):
+                    # Make a unique layer index for exit view
+                    # The actual number does not matter due to the
+                    # layermap access
+                    exit_index = index * 10000 + pm * 100 + om
+
+                    # Create views
+                    # Please note that mostly references are passed,
+                    # i.e. the views do mostly not own the accessrule
+                    # contents
+                    pv = View(container=self.ptycho.probe,
+                              accessrule={'shape': geometry.shape,
+                                          'psize': geometry.resolution,
+                                          'coord': pos_pr,
+                                          'storageID': probe_id_suf,
+                                          'layer': pm,
+                                          'active': True})
+
+                    ov = View(container=self.ptycho.obj,
+                              accessrule={'shape': geometry.shape,
+                                          'psize': geometry.resolution,
+                                          'coord': pos_obj,
+                                          'storageID': object_id_suf,
+                                          'layer': om,
+                                          'active': True})
+
+                    ev = View(container=self.ptycho.exit,
+                              accessrule={'shape': geometry.shape,
+                                          'psize': geometry.resolution,
+                                          'coord': pos_pr,
+                                          'storageID': (dv.storageID +
+                                                        'G%02d' % 0),
+                                          'layer': exit_index,
+                                          'active': dv.active})
+
+                    views = {'probe': pv,
+                             'obj': ov,
+                             'diff': dv,
+                             'mask': mv,
+                             'exit': ev}
+
+                    pod = POD(ptycho=self.ptycho,
+                              ID=None,
+                              views=views,
+                              geometry=geometry)  # , meta=meta)
+
+                    new_pods.append(pod)
+
+                    pod.probe_weight = 1
+                    pod.object_weight = 1
+
+        return new_pods, new_probe_ids, new_object_ids
+
+    def _initialize_geo(self, common):
+        """
+        Initialize the geometry/geometries.
+        """
+        # Extract necessary info from the received data package
+        get_keys = ['distance', 'center', 'psize', 'shape']
+        geo_pars = u.Param({key: common[key] for key in get_keys})
+        geo_pars.energy = self.p.reference_energy
+        # Add propagation info from this scan model
+        geo_pars.propagation = self.p.propagation
+
+        # The multispectral case will have multiple geometries
+
+        geoID = geometry.Geo._PREFIX + self.label
+        g = geometry.Geo(self.ptycho, geoID, pars=geo_pars)
+        # now we fix the sample pixel size, This will make the frame size adapt
+        g.p.resolution_is_fix = True
+        g.p.psize_is_fix = False
+        g.energy = common['energy'] # automatically update the object
+        # append the geometry
+        self.geometry = g
+
+        # Store frame shape
+        self.shape = np.array(common.get('shape', self.geometry.shape))
+        self.psize = self.geometry.psize
+
+        return
+
+    def _initialize_probe(self, probe_ids):
+        """
+        Initialize the probe storages referred to by the probe_ids.
+
+        For this case the parameter interface of the illumination module
+        matches the illumination parameters of this class, so they are
+        just fed in directly.
+        """
+        logger.info('\n' + headerline('Probe initialization', 'l'))
+
+        # Loop through probe ids
+        for pid, labels in probe_ids.items():
+
+            illu_pars = self.p.illumination
+
+            # pick storage from container
+            s = self.ptycho.probe.S.get(pid)
+
+            if s is None:
+                continue
+            else:
+                logger.info('Initializing probe storage %s using scan %s.'
+                            % (pid, self.label))
+
+            # Bypass additional tests if input is a string (previous reconstruction)
+            if illu_pars != str(illu_pars):
+
+                # if photon count is None, assign a number from the stats.
+                phot = illu_pars.get('photons')
+                phot_max = self.diff.max_power
+
+                if phot is None:
+                    logger.info(
+                        'Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' % phot_max)
+                    illu_pars['photons'] = phot_max
+                elif np.abs(np.log10(phot) - np.log10(phot_max)) > 1:
+                    logger.warn(
+                        'Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' % (
+                        phot, phot_max))
+
+                if (self.p.coherence.num_probe_modes > 1) and (type(illu_pars) is not np.ndarray):
+
+                    if (illu_pars.diversity is None) or (
+                            None in [illu_pars.diversity.noise, illu_pars.diversity.power]):
+                        log(2,
+                            "You are doing a multimodal reconstruction with none/ not much diversity between the modes! \n"
+                            "This will likely not reconstruct. You should set .scan.illumination.diversity.power and "
+                            ".scan.illumination.diversity.noise to something for the best results.")
+
+            illumination.init_storage(s, illu_pars)
+
+            s.reformat()  # Maybe not needed
+            s.model_initialized = True
+
+    def _initialize_object(self, object_ids):
+        """
+        Initializes the probe storages referred to by the object_ids.
+        """
+
+        logger.info('\n' + headerline('Object initialization', 'l'))
+
+        # Loop through object IDs
+        for oid, labels in object_ids.items():
+
+            sample_pars = self.p.sample
+
+            # pick storage from container
+            s = self.ptycho.obj.S.get(oid)
+
+            if s is None or s.model_initialized:
+                continue
+            else:
+                logger.info('Initializing object storage %s using scan %s.'
+                            % (oid, self.label))
+
+            sample_pars = self.p.sample
+
+            if type(sample_pars) is u.Param:
+                # Deep copy
+                sample_pars = sample_pars.copy(depth=10)
+
+            sample.init_storage(s, sample_pars)
+            s.reformat()  # maybe not needed
+
+            s.model_initialized = True
+
+
+# Append illumination and sample defaults
+defaults_tree['scan.ReferenceEnergy'].add_child(illumination.illumination_desc)
+defaults_tree['scan.ReferenceEnergy'].add_child(sample.sample_desc)
+
+# Update defaults
+ReferenceEnergy.DEFAULT = defaults_tree['scan.ReferenceEnergy'].make_default(99)
+
 import geometry_bragg
 defaults_tree['scan'].add_child(EvalDescriptor('Bragg3dModel'))
 defaults_tree['scan.Bragg3dModel'].add_child(illumination.illumination_desc, copy=True)
