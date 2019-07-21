@@ -14,7 +14,8 @@ p.verbose_level = 4
 # set home path
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.autosave = None
+p.io.autosave = u.Param()
+p.io.autosave.active = False
 p.io.autoplot = u.Param()
 p.io.autoplot.active = True
 p.io.autoplot.dump = False
