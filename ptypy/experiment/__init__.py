@@ -17,7 +17,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from .. import defaults_tree
-from ..core.data import MoonFlowerScan, PtydScan, PtyScan, QuickScan
+from ..core.data import MoonFlowerScan, PtydScan, PtyScan, QuickScan, NullScan
 from ..simulations import SimScan
 from ..utils.verbose import log
 
@@ -26,7 +26,8 @@ PTYSCANS = {'MoonFlowerScan': MoonFlowerScan,
             'PtydScan': PtydScan,
             'PtyScan': PtyScan,
             'QuickScan': QuickScan,
-            'SimScan': SimScan}
+            'SimScan': SimScan,
+            'NullScan': NullScan}
 
 
 def register(name=None):

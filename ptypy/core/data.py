@@ -46,7 +46,7 @@ CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
          EOS: 'End of scan reached'}
 
 __all__ = ['PtyScan', 'PTYD', 'PtydScan',
-           'MoonFlowerScan']
+           'MoonFlowerScan', 'NullScan']
 
 
 @defaults_tree.parse_doc('scandata.PtyScan')
@@ -1580,6 +1580,107 @@ class MoonFlowerScan(PtyScan):
             else:
                 raw[k] = intensity_j.astype(np.int32)
 
+        return raw, {}, {}
+
+
+@defaults_tree.parse_doc('scandata.NullScan')
+class NullScan(PtyScan):
+    """
+    Test PtyScan class producing zero frames. Meant for testing.
+
+    Override parent class default:
+
+    Defaults:
+
+    [name]
+    default = NullScan
+    type = str
+    help =
+    doc =
+
+    [num_frames]
+    default = 100
+    type = int
+    help = Number of frames
+    doc =
+
+    [shape]
+    type = int, tuple
+    default = 128
+    help = Shape of the region of interest cropped from the raw data.
+    doc = Cropping dimension of the diffraction frame
+      Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
+    userlevel = 1
+
+    [density]
+    default = 0.2
+    type = float
+    help = Position distance in fraction of illumination frame
+
+    [model]
+    default = 'round'
+    type = str
+    help = The scan pattern
+    """
+
+    def __init__(self, pars=None, **kwargs):
+        """
+        Parent pars are for the
+        """
+
+        p = self.DEFAULT.copy(depth=99)
+        p.update(pars)
+
+        # Initialize parent class
+        super(NullScan, self).__init__(p, **kwargs)
+
+        # Derive geometry from input
+        geo = geometry.Geo(pars=self.meta)
+
+        # Derive scan pattern
+        if p.model is 'raster':
+            pos = u.Param()
+            pos.spacing = geo.resolution * geo.shape * p.density
+            pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+            pos.extent = pos.steps * pos.spacing
+            pos.model = p.model
+            self.num_frames = pos.steps ** 2
+            pos.count = self.num_frames
+            self.pos = xy.raster_scan(pos.spacing[0], pos.spacing[1], pos.steps, pos.steps)
+        else:
+            pos = u.Param()
+            pos.spacing = geo.resolution * geo.shape * p.density
+            pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+            pos.extent = pos.steps * pos.spacing
+            pos.model = p.model
+            pos.count = self.num_frames
+            self.pos = xy.from_pars(pos)
+
+        # Calculate pixel positions
+        pixel = self.pos / geo.resolution
+        pixel -= pixel.min(0)
+        self.pixel = np.round(pixel).astype(int) + 10
+        frame = self.pixel.max(0) + 10 + geo.shape
+        self.geo = geo
+
+        self.obj = np.ones_like(frame, dtype=complex)
+
+        self.pr = np.zeros(self.geo.shape, dtype=complex)
+
+        self.load_common_in_parallel = True
+
+        self.p = p
+
+    def load_positions(self):
+        return self.pos
+
+    def load_weight(self):
+        return np.ones(self.pr.shape)
+
+    def load(self, indices):
+        p = self.pixel
+        s = self.geo.shape
+        raw = {k: np.zeros(self.geo.shape) for k in indices}
         return raw, {}, {}
 
 
