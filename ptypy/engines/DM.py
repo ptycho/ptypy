@@ -374,6 +374,8 @@ class DM(PositionCorrectionEngine):
                 s.data[too_high] = clip_max * phase_obj[too_high]
                 s.data[too_low] = clip_min * phase_obj[too_low]
 
+        self.hook_post_object_update()
+
     def probe_update(self):
         """
         DM probe update.
@@ -428,3 +430,6 @@ class DM(PositionCorrectionEngine):
             buf[:] = s.data
 
         return np.sqrt(change / len(pr.storages))
+
+    def hook_post_object_update(self):
+        return
