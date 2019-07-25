@@ -34,7 +34,7 @@ p.scans.MF.data.save = None
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
-p.scans.MF.data.photons = 1e6
+p.scans.MF.data.photons = 1e5
 # Gaussian FWHM of possible detector blurring
 p.scans.MF.data.psf = 0.
 
@@ -46,6 +46,8 @@ p.engines.engine00.numiter = 50
 p.engines.engine00.probe_center_tol = 1
 p.engines.engine00.probe_support = 0.6
 p.engines.engine00.fourier_relax_factor = .2
+p.engines.engine00.obj_smooth_std = 20.
+p.engines.engine00.object_inertia = 0.1
 
 p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'ML'
@@ -53,9 +55,9 @@ p.engines.engine01.ML_type = 'Poisson'
 p.engines.engine01.reg_del2 = True                      # Whether to use a Gaussian prior (smoothing) regularizer
 p.engines.engine01.reg_del2_amplitude = 0.1             # Amplitude of the Gaussian prior if used
 p.engines.engine01.scale_precond = True
-#p.engines.engine00.scale_probe_object = 1.
-#p.engines.engine00.smooth_gradient = 20.
-#p.engines.engine00.smooth_gradient_decay = 1/50.
+p.engines.engine01.scale_probe_object = 1.
+p.engines.engine01.smooth_gradient = 20.
+p.engines.engine01.smooth_gradient_decay = 1/50.
 p.engines.engine01.floating_intensities = False
 p.engines.engine01.numiter = 300
 # prepare and run
