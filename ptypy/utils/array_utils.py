@@ -15,7 +15,8 @@ from .math_utils import smooth_step
 __all__ = ['grids', 'switch_orientation', 'mirror',
            'crop_pad_symmetric_2d', 'crop_pad_axis', 'crop_pad',
            'pad_lr', 'zoom', 'shift_zoom', 'c_zoom',
-           'rebin', 'rebin_2d', 'rectangle', 'ellipsis']
+           'rebin', 'rebin_2d', 'rectangle', 'ellipsis',
+           'shift_interp', 'shift_fourier']
 
 
 def switch_orientation(A, orientation, center=None):
@@ -366,6 +367,55 @@ def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
         return complex_overload(at)(c,zoom,offset,**kwargs)
     else:
         return at(c,zoom,offset,**kwargs)
+
+
+def shift_fourier(a, sp, antialiasing_factor=1):
+    """
+    Shift an array using phase ramp in Fourier space.
+
+    Parameters
+    ----------
+    a: array to shift (complex datatype)
+    sp: subpixel shift
+    antialiasing_factor: padding factor to reduce aliasing effects.
+
+    Returns
+    -------
+    shifted array same shape as a.
+    """
+    from scipy.ndimage import fourier_shift
+
+    # Apply padding for antialiasing
+    if antialiasing_factor > 1:
+        old_shape = np.array(a.shape)
+        new_shape = old_shape * antialiasing_factor
+        a, _ = crop_pad_symmetric_2d(a, new_shape)
+
+    # Shift
+    fa = np.fft.fftn(a)
+    sfa = np.fft.fftshift(fourier_shift(fa, -np.asarray(sp)))
+    sa = np.fft.ifftn(np.fft.ifftshift(sfa))
+
+    # Crop result
+    if antialiasing_factor > 1:
+        sa, _ = crop_pad_symmetric_2d(sa, old_shape)
+    return sa
+
+
+def shift_interp(a, sp, order=3, pre_filter=True):
+    """
+    Shift array a by subpixel quantity sp using spline interpolation of given order.
+
+    See scipy.ndimage.interpolation.shift for more information.
+
+    Returns
+    -------
+    Shifte array same shape as a
+    """
+    from scipy.ndimage.interpolation import shift
+    interp_shift = complex_overload(shift)
+    sa = interp_shift(a, -np.asarray(sp), order=order, prefilter=pre_filter, mode='nearest')
+    return sa
 
 
 def fill3D(A,B,offset=[0,0,0]):

@@ -34,11 +34,7 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import weakref
-import scipy.ndimage.interpolation
-import scipy.signal as scisig
 from collections import OrderedDict
-from scipy.fftpack import fft2, ifft2, fftshift, ifftshift
-from scipy.ndimage import fourier_shift as ishift, measurements
 
 try:
     from pympler.asizeof import asizeof
@@ -1031,6 +1027,23 @@ class Storage(Base):
 
         return ''.join(fstring), dct
 
+    def hook_subpixel_shift(self, data, sp):
+        """
+        HOOK - to be implemented and replaced.
+        Apply subpixel shift sp to data.
+
+
+        Parameters
+        ----------
+        data: numpy array
+        sp: tuple representing subpixel shift
+
+        Returns
+        -------
+        shifted array the same shape and type as data
+        """
+        return data
+
     def __getitem__(self, v):
         """
         Storage[v]
@@ -1051,17 +1064,16 @@ class Storage(Base):
         if isinstance(v, View):
             if self.ndim == 2:
                 if np.any(v.sp != 0.0):
-                    return self._subpixel_shift(self.data[
+                    return self.hook_subpixel_shift(self.data[
                              v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
-                                     v.sp)
+                                                    v.sp)
                 else:
-                    return shift(self.data[
-                             v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
-                                     v.sp)
+                    return self.data[
+                             v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]]
             elif self.ndim == 3:
-                return shift(self.data[
+                return self.data[
                              v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1],
-                             v.dlow[2]:v.dhigh[2]], v.sp)
+                             v.dlow[2]:v.dhigh[2]]
         elif v in self.layermap:
             return self.data[self.layermap.index(v)]
         else:
@@ -1093,32 +1105,29 @@ class Storage(Base):
             # there must be a nicer way to do this, numpy.take is nearly
             # right, but returns copies and not views.
             if self.ndim == 2:
-                if np.any(v.sp != 0.0):
-                    self.data[v.dlayer,
-                          v.dlow[0]:v.dhigh[0],
-                          v.dlow[1]:v.dhigh[1]] = (self._subpixel_shift(newdata, -v.sp))
-                else:
-                    self.data[v.dlayer,
-                          v.dlow[0]:v.dhigh[0],
-                          v.dlow[1]:v.dhigh[1]] = (shift(newdata, -v.sp))
+                self.data[v.dlayer,
+                      v.dlow[0]:v.dhigh[0],
+                      v.dlow[1]:v.dhigh[1]] = self.hook_subpixel_shift(newdata, -v.sp)
+
             elif self.ndim == 3:
                 self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
                           v.dlow[1]:v.dhigh[1],
-                          v.dlow[2]:v.dhigh[2]] = (shift(newdata, -v.sp))
+                          v.dlow[2]:v.dhigh[2]] = self.hook_subpixel_shift(newdata, -v.sp)
+
             elif self.ndim == 4:
                 self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
                           v.dlow[1]:v.dhigh[1],
                           v.dlow[2]:v.dhigh[2],
-                          v.dlow[3]:v.dhigh[3]] = (shift(newdata, -v.sp))
+                          v.dlow[3]:v.dhigh[3]] = self.hook_subpixel_shift(newdata, -v.sp)
             elif self.ndim == 5:
                 self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
                           v.dlow[1]:v.dhigh[1],
                           v.dlow[2]:v.dhigh[2],
                           v.dlow[3]:v.dhigh[3],
-                          v.dlow[4]:v.dhigh[4]] = (shift(newdata, -v.sp))
+                          v.dlow[4]:v.dhigh[4]] = self.hook_subpixel_shift(newdata, -v.sp)
         elif v in self.layermap:
             self.data[self.layermap.index(v)] = newdata
         else:
@@ -1133,60 +1142,6 @@ class Storage(Base):
             info += 'empty=%s @%s' % (self.shape, self.dtype)
         return info + ' psize=%(_psize)s center=%(_center)s' % self.__dict__
 
-    @property
-    def shift_type(self):
-        return self._shift_type
-
-    @shift_type.setter
-    def shift_type(self, val):
-        self._shift_type = val
-        if self._shift_type is None:
-            self._subpixel_shift = shift
-        elif self._shift_type is 'fourier':
-            self._subpixel_shift = shift_fourier
-        elif self._shift_type is 'interp':
-            self._subpixel_shift = shift_interp
-        else:
-            raise RuntimeError('%s is is supported for subpixel_shifting' % val)
-
-
-def shift(v, sp):
-    """
-    Placeholder for future subpixel shifting method.
-    """
-    return v
-
-
-def shift_fourier(v, sp, antialiasing_factor=1, report=False):
-    """
-    Fourier shift
-    Note that v should be complex since a complex array will be returned
-    """
-    # view = np.pad(v, pad_width=100, mode='edge')
-    old_shape = np.array(v.shape)
-    new_shape = old_shape * antialiasing_factor
-    view, _center = u.crop_pad_symmetric_2d(v, new_shape)
-    fourier_transform_of_view = fft2(view)
-    shifted_fourier_transform = fftshift(ishift(fourier_transform_of_view, (-sp[-1], -sp[-2])))
-    shifted_view = ifft2(ifftshift(shifted_fourier_transform))
-    shifted_view, _center = u.crop_pad_symmetric_2d(shifted_view, old_shape)
-    if report:
-        before_mass_center = np.array(measurements.center_of_mass(np.abs(v)))
-        after_mass_center = np.array(measurements.center_of_mass(np.abs(shifted_view)))
-        final_shift = before_mass_center - after_mass_center
-        print("Expected shift is: %s , final_shift is: %s" % (sp, final_shift))
-    return shifted_view
-
-
-def shift_interp(v, sp, order=3, pre_filter=True, report=False):
-    interp_shift = u.complex_overload(scipy.ndimage.interpolation.shift)
-    shifted_view = interp_shift(v, (-sp[-1], -sp[-2]), order=order, prefilter=pre_filter, mode='nearest')
-    if report:
-        before_mass_center = np.array(measurements.center_of_mass(np.abs(v)))
-        after_mass_center = np.array(measurements.center_of_mass(np.abs(shifted_view)))
-        final_shift = before_mass_center - after_mass_center
-        print("Expected shift is: %s , final_shift is: %s" % (sp, final_shift))
-    return shifted_view
 
 class View(Base):
     """

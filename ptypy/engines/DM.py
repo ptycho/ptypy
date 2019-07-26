@@ -12,6 +12,7 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
+from . import utils as eu
 from .utils import basic_fourier_update
 from . import register
 from .base import PositionCorrectionEngine
@@ -55,7 +56,8 @@ class DM(PositionCorrectionEngine):
     [subpix]
     default = None
     type = None, str
-    help = Subpixel interpolation; 'fourier','linear' or None for no interpolation
+    choices = ['fourier', 'linear', 'interp', None]
+    help = Subpixel interpolation; 'fourier','linear', 'interp' or None
 
     [update_object_first]
     default = True
@@ -195,10 +197,16 @@ class DM(PositionCorrectionEngine):
         to = 0.
         tf = 0.
         tp = 0.
-        if self.p.subpix_start == self.curiter:
-            for sname, s in self.ob.storages.iteritems():
-                s.shift_type = 'interp'#self.p.subpix  # this should set the method to be used for interpolation
-
+        if (self.p.subpix_start == self.curiter) and (self.p.subpix is not None):
+            logger.info('Subpixel shifts')
+            from ..core import Storage
+            if self.p.subpix == 'fourier':
+                Storage.hook_subpixel_shift = eu.hook_subpixel_shift_fourier
+            elif self.p.subpix == 'linear':
+                Storage.hook_subpixel_shift = eu.hook_subpixel_shift_linear
+            elif self.p.subpix == 'interp':
+                Storage.hook_subpixel_shift = eu.hook_subpixel_shift_interp
+            logger.info('Subpixel shifts of type "%s" now being used' % self.p.subpix)
 
         for it in range(num):
             t1 = time.time()
@@ -221,7 +229,7 @@ class DM(PositionCorrectionEngine):
             t4 = time.time()
             tp += t4 - t3
 
-            # count up
+            # count up'
             self.curiter +=1
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
@@ -432,3 +440,4 @@ class DM(PositionCorrectionEngine):
             buf[:] = s.data
 
         return np.sqrt(change / len(pr.storages))
+
