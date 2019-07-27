@@ -285,6 +285,7 @@ class ML(PositionCorrectionEngine):
             self.pr_h *= self.tmin
             self.ob += self.ob_h
             self.pr += self.pr_h
+
             # Newton-Raphson loop would end here
 
             # increase iteration counter
@@ -441,7 +442,7 @@ class GaussianModel(BaseModel):
         self.pr_grad.fill(0.)
 
         # We need an array for MPI
-        LL = np.array([0.])
+        LL = np.array([0.], dtype=np.float128)
         error_dct = {}
 
         # Outer loop: through diffraction patterns
@@ -472,7 +473,7 @@ class GaussianModel(BaseModel):
             DI = Imodel - I
 
             # Second pod loop: gradients computation
-            LLL = np.sum((w * DI**2).astype(np.float64))
+            LLL = np.sum((w * DI**2).astype(np.float128))
             for name, pod in diff_view.pods.iteritems():
                 if not pod.active:
                     continue
@@ -622,7 +623,7 @@ class PoissonModel(BaseModel):
             DI = m * (1. - I / Imodel)
 
             # Second pod loop: gradients computation
-            LLL = self.LLbase[dname] + (m * (Imodel - I * np.log(Imodel))).sum().astype(np.float64)
+            LLL = self.LLbase[dname] + (m * (Imodel - I * np.log(Imodel))).sum().astype(np.float128)
             for name, pod in diff_view.pods.iteritems():
                 if not pod.active:
                     continue
@@ -697,7 +698,7 @@ class PoissonModel(BaseModel):
             A0 += 1e-6
             DI = 1. - I/A0
 
-            B[0] += (self.LLbase[dname] + (m * (A0 - I * np.log(A0))).sum().astype(np.float64)) * Brenorm
+            B[0] += (self.LLbase[dname] + (m * (A0 - I * np.log(A0))).sum().astype(np.float128)) * Brenorm
             B[1] += np.dot(m.flat, (A1*DI).flat) * Brenorm
             B[2] += (np.dot(m.flat, (A2*DI).flat) + .5*np.dot(m.flat, (I*(A1/A0)**2.).flat)) * Brenorm
 
