@@ -73,14 +73,14 @@ illumination_desc.from_string(r"""
 
     [aperture.offset]
     default = 0.
-    type = float, tuple
+    type = float, tuple, list
     help = Offset between center of aperture and optical axes
     doc = May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset
     userlevel = 2
 
     [aperture.size]
     default = None
-    type = float, tuple
+    type = float, tuple, list
     help = Aperture width or diameter
     doc = May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture
     lowlim = 0.
@@ -95,7 +95,7 @@ illumination_desc.from_string(r"""
 
     [diversity.noise]
     default = (0.5,1.0)
-    type = tuple
+    type = tuple, list
     help = Noise in each non-primary mode of the illumination.
     doc = Can be either:
     	 - ``None`` : no noise
@@ -105,7 +105,7 @@ illumination_desc.from_string(r"""
 
     [diversity.power]
     default = 0.1
-    type = tuple, float
+    type = tuple, float, list
     help = Power of modes relative to main mode (zero-layer)
     uplim = 1.0
     lowlim = 0.0
