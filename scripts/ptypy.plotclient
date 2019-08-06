@@ -6,7 +6,7 @@ from ptypy import defaults_tree
 from ptypy.utils.plot_client import MPLClient
 
 parser = argparse.ArgumentParser(description='Create a ZeroMQ plotting client.')
-plot_desc = defaults_tree['io.autoplot']
+plot_desc = defaults_tree['ptycho.io.autoplot']
 excludes = ['active']
 parser = plot_desc.add2argparser(parser, excludes=excludes)
 
