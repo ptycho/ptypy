@@ -79,7 +79,7 @@ def from_pars(xypars=None):
     """
     p = DEFAULT.copy(depth=3)
     model = None
-    if hasattr(xypars, 'items') or hasattr(xypars, 'iteritems'):
+    if hasattr(xypars, 'items'):
         # This is a dict
         p.update(xypars, in_place_depth=3)
     elif xypars is None:

@@ -60,7 +60,7 @@ def unlink(obj):
             #    nobj = pool[ID]
             #    for k, v in nobj.iteritems():
             #        nobj[k] = _pool(v)
-            if hasattr(obj, 'iteritems'):
+            if hasattr(obj, 'items'):
                 # pool[ID] = {}
                 nobj = {}
                 pool[ID] = nobj

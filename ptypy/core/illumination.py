@@ -310,7 +310,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
 
     p = DEFAULT.copy(depth=3)
     model = None
-    if hasattr(pars, 'items') or hasattr(pars, 'iteritems'):
+    if hasattr(pars, 'items'):
         # This is a dict
         p.update(pars, in_place_depth=3)
 

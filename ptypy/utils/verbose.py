@@ -236,11 +236,11 @@ def report(thing,depth=4,noheader=False):
         return _(key, level, obj)[0] + ' None\n'
 
     def _format(key,level, obj):
-        if hasattr(obj,'iteritems'):
+        if hasattr(obj,'items'):
             stringout = _format_dict(key,level, obj)
         elif type(obj) is np.ndarray:
             stringout = _format_numpy(key,level, obj)
-        elif str(obj)==obj:
+        elif isinstance(obj, str):
             stringout = _format_other(key,level, obj)
         elif obj is None:
             stringout = _format_None(key,level, obj)

@@ -196,7 +196,7 @@ def init_storage(storage, sample_pars=None, energy=None):
     sam = sample_pars
     p = DEFAULT.copy(depth=3)
     model = None
-    if hasattr(sam, 'items') or hasattr(sam, 'iteritems'):
+    if hasattr(sam, 'items'):
         # This is a dict
         p.update(sam, in_place_depth=3)
 
