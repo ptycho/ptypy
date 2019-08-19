@@ -35,15 +35,15 @@ def add_views(nviews):
 for k in range(int(steps)):
     add_views(nviews)
     gc.collect()
-    print k 
-    print C1._recs.values()[0].nbytes / 1e6
+    print(k)
+    print(C1._recs.values()[0].nbytes / 1e6)
 
-print C1.formatted_report()
+print(C1.formatted_report())
 u.pause(1)
 gc.collect()
 u.pause(4)
 u.pause(4)
-print C1.formatted_report()
+print(C1.formatted_report())
 add_views(nviews)
 u.pause(4)
 
