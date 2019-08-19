@@ -388,7 +388,7 @@ class Hdf5Loader(PtyScan):
             log(3, "No normalisation will be applied.")
 
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            print self.p.recorded_energy.multiplier
+            print(self.p.recorded_energy.multiplier)
             self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()] * self.p.recorded_energy.multiplier)
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
