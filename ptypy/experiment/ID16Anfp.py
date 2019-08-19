@@ -174,6 +174,7 @@ class ID16AScan(PtyScan):
 
         # Initialise parent class
         super(ID16AScan, self).__init__(p, **kwargs)
+        print(type(p.recipe))
 
         # Try to extract base_path to access data files
         if self.info.base_path is None:

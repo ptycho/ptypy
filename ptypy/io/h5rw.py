@@ -96,7 +96,8 @@ def _h5write(filename, mode, *args, **kwargs):
     ids = []
 
     # This is needed to store strings
-    dt = h5py.new_vlen(str)
+    #dt = h5py.new_vlen(str) # deprecated
+    dt = h5py.special_dtype(vlen = str)
 
     def check_id(id):
         if id in ids:
