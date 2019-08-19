@@ -142,7 +142,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True, float_
         af2 += u.abs2(f[name])
 
     if float_intens:
-        fmag = np.sqrt(af2.sum() * np.abs(I) / I.sum())
+        fmag = np.sqrt((af2*fmask).sum() * np.abs(I) / (I*fmask).sum())
     else:
         fmag = np.sqrt(np.abs(I))
     af = np.sqrt(af2)
