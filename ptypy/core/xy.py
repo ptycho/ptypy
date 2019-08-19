@@ -250,7 +250,7 @@ def round_scan(dr=1.5e-6, nr=5, nth=5, bullseye=True):
     else:
         positions = []
 
-    for ir in range(1, nr+2):
+    for ir in range(1, int(nr)+2):
         rr = ir * dr
         dth = 2 * np.pi / (nth * ir)
         positions.extend([(rr * np.sin(ith*dth), rr * np.cos(ith*dth))
