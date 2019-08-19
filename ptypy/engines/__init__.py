@@ -47,7 +47,7 @@ from . import dummy
 from . import ePIE
 from . import Bragg3d_engines
 
-# dynamic load, maybe discarded in future
-dynamic_load('./', ['BaseEngine'] + ENGINES.keys(), True)
-dynamic_load('~/.ptypy/', ['BaseEngine'] + ENGINES.keys(), True)
 
+# dynamic load, maybe discarded in future
+dynamic_load('./', ['BaseEngine', 'PositionCorrectionEngine'] + ENGINES.keys(), True)
+dynamic_load('~/.ptypy/', ['BaseEngine', 'PositionCorrectionEngine'] + ENGINES.keys(), True)
