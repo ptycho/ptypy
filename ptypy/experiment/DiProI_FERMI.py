@@ -75,12 +75,12 @@ class DiProIFERMIScan(PtyScan):
     help = 
 
     [h5_file_pattern]
-    default = '%(base_path)s/imported/%(run_ID)s/%(scan_name)s/rawdata/'
+    default = '%%(base_path)s/imported/%%(run_ID)s/%%(scan_name)s/rawdata/'
     type = str
     help = 
 
     [dark_h5_file_pattern]
-    default = '%(base_path)s/imported/%(run_ID)s/%(dark_name)s/rawdata/'
+    default = '%%(base_path)s/imported/%%(run_ID)s/%%(dark_name)s/rawdata/'
     type = str
     help = 
 
@@ -110,7 +110,7 @@ class DiProIFERMIScan(PtyScan):
     help = 
 
     [refined_positions_pattern]
-    default = '%(base_path)s/imported/%(run_ID)s/%(scan_name)s/'
+    default = '%%(base_path)s/imported/%%(run_ID)s/%%(scan_name)s/'
     type = str
     help = 
 

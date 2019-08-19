@@ -90,17 +90,17 @@ class UCLLaserScan(PtyScan):
     help = 
 
     [data_file_path]
-    default = '%(base_path)s' + 'raw/%(scan_number)06d'
+    default = '%%(base_path)s' + 'raw/%%(scan_number)06d'
     type = str
     help = 
 
     [dark_file_path]
-    default = '%(base_path)s' + 'raw/%(dark_number)06d'
+    default = '%%(base_path)s' + 'raw/%%(dark_number)06d'
     type = str
     help =
 
     [flat_file_path]
-    default = '%(base_path)s' + 'raw/%(flat_number)06d'
+    default = '%%(base_path)s' + 'raw/%%(flat_number)06d'
     type = str
     help =
 

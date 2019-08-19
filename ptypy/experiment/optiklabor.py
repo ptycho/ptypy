@@ -91,17 +91,17 @@ class FliSpecScanMultexp(PtyScan):
     help =
 
     [log_file_pattern]
-    default = '%(base_path)sspec/dat-files/spec_started_2013_11_21_1659.dat'
+    default = '%%(base_path)sspec/dat-files/spec_started_2013_11_21_1659.dat'
     type = str
     help =
 
     [data_dir_pattern]
-    default = '%(base_path)s%(scan_dir)sS%(scan_number)05d/'
+    default = '%%(base_path)s%%(scan_dir)sS%%(scan_number)05d/'
     type = str
     help =
 
     [dark_dir_pattern]
-    default = '%(base_path)s%(scan_dir)sS%(dark_number)05d/'
+    default = '%%(base_path)s%%(scan_dir)sS%%(dark_number)05d/'
     type = str
     help =
 
