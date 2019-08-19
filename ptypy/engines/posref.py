@@ -77,7 +77,7 @@ class AnnealingRefine(PositionRefine):
         self.max_shift_dist = None
 
 
-    def fourier_error(self, di_view, obj):
+    def fourier_error(self, di_view, obj, metric="fourier"):
         '''
         Parameters
         ----------
@@ -86,18 +86,25 @@ class AnnealingRefine(PositionRefine):
 
         obj : numpy.ndarray
             The current calculated object for which we wish to evaluate the error against.
+        metric : str
+            "fourier" or "photon"
         Returns
         -------
         np.float
             The calculated fourier error
         '''
-
         af2 = np.zeros_like(di_view.data)
         for name, pod in di_view.pods.items():
             af2 += u.abs2(pod.fw(pod.probe*obj))
-        return np.sum(di_view.pod.mask * (np.sqrt(af2) - np.sqrt(np.abs(di_view.data)))**2)
+        if metric == "fourier":
+            return np.sum(di_view.pod.mask * (np.sqrt(af2) - np.sqrt(np.abs(di_view.data)))**2)
+        elif metric == "photon":
+            return (np.sum(di_view.pod.mask * (af2 - di_view.data)**2 / (di_view.data + 1.)) / np.prod(af2.shape))
+        else:
+            raise NotImplementedError("Metric %s is currently not implemented" %metric)
 
-    def update_view_position(self, di_view):
+
+    def update_view_position(self, di_view, metric):
         '''
         Refines the positions by the following algorithm:
 
@@ -131,7 +138,7 @@ class AnnealingRefine(PositionRefine):
             return np.zeros((2,))
             
         # This can be optimized by saving existing iteration fourier error...
-        error = self.fourier_error(di_view, ob_view.data)
+        error = self.fourier_error(di_view, ob_view.data, metric)
         
         for i in range(self.p.nshifts):
             # Generate coordinate shift in one of the 4 cartesian quadrants
@@ -152,7 +159,7 @@ class AnnealingRefine(PositionRefine):
             if not np.allclose(data.shape, ob_view.shape):
                 continue 
                 
-            new_error = self.fourier_error(di_view, data)
+            new_error = self.fourier_error(di_view, data, metric)
             
             if new_error < error:
                 # keep
