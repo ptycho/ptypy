@@ -11,7 +11,7 @@ p.verbose_level = 4
 p.data_type = "single"
 p.run = 'test_indep_probes'
 p.io = u.Param()
-p.io.home = "/tmp/ptypy/"
+p.io.home = "~/tmp/ptypy/"
 p.io.autosave = u.Param()
 p.io.autosave.interval = 20
 p.io.autoplot = u.Param()
@@ -20,10 +20,9 @@ p.io.interaction = u.Param()
 
 p.scans = u.Param()
 p.scans.MF = u.Param()
-p.scans.MF.name = 'Full'
-# p.scans.MF.subspace_dim = 10
-# p.scans.MF.name = 'Full'
-# p.scans.MF.subspace_dim = 10
+#p.scans.MF.name = 'Full'
+p.scans.MF.name = 'OPRModel'
+p.scans.MF.subspace_dim = 1
 p.scans.MF.propagation = 'farfield'
 p.scans.MF.data = u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
@@ -49,24 +48,20 @@ p.scans.MF.data.photons = 100000000.0
 p.scans.MF.data.psf = 0.0
 p.scans.MF.data.density = 0.2
 
-
-
-
 p.engines = u.Param()
-# p.engines.engine00 = u.Param()
-# p.engines.engine00.name = 'DM'
-# p.engines.engine00.numiter = 3
-# p.engines.engine00.numiter_contiguous = 5
-# p.engines.engine00.overlap_max_iterations = 2
-# p.engines.engine00.fourier_relax_factor = 0.01
+#p.engines.engine00 = u.Param()
+#p.engines.engine00.name = 'DM'
+#p.engines.engine00.numiter = 30
+#p.engines.engine00.numiter_contiguous = 5
+#p.engines.engine00.overlap_max_iterations = 2
+#p.engines.engine00.fourier_relax_factor = 0.01
 
 p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'DM'
-p.engines.engine01.numiter = 100
-p.engines.engine01.numiter_contiguous = 1
+p.engines.engine01.numiter = 200
+p.engines.engine01.numiter_contiguous = 5
 p.engines.engine01.overlap_max_iterations = 2
 p.engines.engine01.fourier_relax_factor = 0.01
-
 
 # p.engines.engine02 = u.Param()
 # p.engines.engine02.name = 'MLOPR'
@@ -81,11 +76,11 @@ P = Ptycho(p, level=4)
 
 # Mess up the positions in a predictible way (for MPI)
 a = 0.
-# for pname, pod in P.pods.iteritems():
-#     pod.ob_view.coord += 3e-7 * np.array([np.sin(a), np.cos(a)])
-#     #pod.diff *= np.random.uniform(0.1,1)
-#     a += 4.
-# P.obj.reformat()
+for pname, pod in P.pods.iteritems():
+    pod.ob_view.coord += 3e-7 * np.array([np.sin(a), np.cos(a)])
+    #pod.diff *= np.random.uniform(0.1,1)
+    a += 4.
+P.obj.reformat()
 
 # Run
 P.run()
