@@ -453,6 +453,7 @@ class GaussianModel(BaseModel):
             # Weights and intensities for this view
             w = self.weights[diff_view]
             I = diff_view.data
+            m = diff_view.pod.ma_view.data
 
             Imodel = np.zeros_like(I)
             f = {}
@@ -466,8 +467,8 @@ class GaussianModel(BaseModel):
 
             # Floating intensity option
             if self.p.floating_intensities:
-                self.float_intens_coeff[dname] = ((w * Imodel * I).sum()
-                                                / (w * Imodel**2).sum())
+                self.float_intens_coeff[dname] = ((m * w * Imodel * I).sum()
+                                                / (m* w * Imodel**2).sum())
                 Imodel *= self.float_intens_coeff[dname]
 
             DI = Imodel - I
@@ -616,7 +617,7 @@ class PoissonModel(BaseModel):
 
             # Floating intensity option
             if self.p.floating_intensities:
-                self.float_intens_coeff[dname] = I.sum() / Imodel.sum()
+                self.float_intens_coeff[dname] = (I*m).sum() / (Imodel*m).sum()
                 Imodel *= self.float_intens_coeff[dname]
 
             Imodel += 1e-6
