@@ -7,7 +7,9 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import division
 
+from past.utils import old_div
 import time
 import numpy as np
 
@@ -58,7 +60,7 @@ class Dummy(BaseEngine):
         """
         Prepare for reconstruction.
         """
-        self.itertime = self.p.itertime / parallel.size
+        self.itertime = old_div(self.p.itertime, parallel.size)
         self.error = np.ones((100,3))*1e6
 
     def engine_prepare(self):
@@ -78,7 +80,7 @@ class Dummy(BaseEngine):
         time.sleep(self.itertime)
         # virtual error reduces 10%
         error_dct = error = {}
-        for dname, diff_view in self.di.views.iteritems():
+        for dname, diff_view in self.di.views.items():
             error_dct[dname] = [0., 0.9**self.ntimescalled, 0.]
         self.ntimescalled+=1
         return error_dct

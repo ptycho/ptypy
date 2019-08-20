@@ -1,5 +1,7 @@
+from future import standard_library
+standard_library.install_aliases()
 import sys
-import StringIO
+import io
 import contextlib
 """
 @contextlib.contextmanager

@@ -7,6 +7,13 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import division
+from builtins import map
+from builtins import zip
+from builtins import range
+from past.builtins import basestring
+from past.utils import old_div
+from builtins import object
 import os
 import numpy as np
 from functools import wraps
@@ -42,13 +49,13 @@ class Table(object):
         self._record_factory_from_dict(dct)
         
     def _record_factory_from_dict(self,dct,suffix='_record'):
-        self._record_factory = namedtuple(self._table_name+suffix,dct.keys())
-        self._record_default = self._record_factory._make(dct.values())
+        self._record_factory = namedtuple(self._table_name+suffix,list(dct.keys()))
+        self._record_default = self._record_factory._make(list(dct.values()))
         self._record_dtype = [np.array(v).dtype for v in self._record_default]
     
     def new_table(self, records = 0):
         r = self._record_default
-        dtype = zip(r._fields,self._record_dtype)
+        dtype = list(zip(r._fields,self._record_dtype))
         self._table = np.array([tuple(self._record_default)] * records,dtype)
         
     def new_fields(self,**kwargs):
@@ -69,15 +76,15 @@ class Table(object):
         
     def pull_records(self,record_ids=None):
         if record_ids is None:
-            return map(self._record_factory._make, self._table)
+            return list(map(self._record_factory._make, self._table))
         else:
-            return map(self._record_factory._make, self._table[record_ids])
+            return list(map(self._record_factory._make, self._table[record_ids]))
             
     def add_records(self,records):
         """ Add records at the end of the table. """
         start = len(self._table)
         stop = len(records)+start
-        record_ids = range(start,stop)
+        record_ids = list(range(start,stop))
         self._table.resize((len(self._table)+len(records),))
         self._table[start:stop]=records
         
@@ -93,7 +100,7 @@ class Table(object):
         Arguments to the function are selected by `fields`. 
         The search function will always receive the record_id as first argument. 
         """
-        a = range(len(self._table))
+        a = list(range(len(self._table)))
         if fields is None:
             res = [n for n in a if func(a)]
         else:
@@ -178,7 +185,7 @@ def str2range(s):
     elif len(il)==3:
         start, stop, step = il
 
-    return range(start,stop,step)
+    return list(range(start,stop,step))
 
 def str2int(A):
     """
@@ -228,7 +235,7 @@ def nm2keV(nm):
     """\
     Convert wavelength in nanometers to photon energy in keV.
     """
-    keV = keV2nm(1.)/nm
+    keV = old_div(keV2nm(1.),nm)
 
     return keV
 

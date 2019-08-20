@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from past.builtins import execfile
+from builtins import str
 from distutils.core import setup, Extension
 
 CLASSIFIERS = """\

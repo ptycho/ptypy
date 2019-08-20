@@ -8,6 +8,8 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import absolute_import
+from builtins import str
+from builtins import input
 import numpy as np
 import time
 from . import paths
@@ -673,7 +675,7 @@ class Ptycho(Base):
             self.init_engine()
             self.runtime.allstart = time.asctime()
             self.runtime.allstop = None
-            for engine in self.engines.values():
+            for engine in list(self.engines.values()):
                 self.run(engine=engine)
 
     def finalize(self):
@@ -749,11 +751,11 @@ class Ptycho(Base):
             P = Ptycho(content.pars, level=1)
 
             logger.info('Attaching probe and object storages')
-            for ID, s in content['probe'].items():
+            for ID, s in list(content['probe'].items()):
                 s['owner'] = P.probe
                 S = Storage._from_dict(s)
                 P.probe._new_ptypy_object(S)
-            for ID, s in content['obj'].items():
+            for ID, s in list(content['obj'].items()):
                 s['owner'] = P.obj
                 S = Storage._from_dict(s)
                 P.obj._new_ptypy_object(S)
@@ -773,7 +775,7 @@ class Ptycho(Base):
 
             logger.info('Regenerating exit waves')
             P.exit.reformat()
-            P.model._initialize_exit(P.pods.values())
+            P.model._initialize_exit(list(P.pods.values()))
 
         if load_data:
             logger.info('Loading data')
@@ -823,7 +825,7 @@ class Ptycho(Base):
                     raise RuntimeError('File %s exists! Operation cancelled.'
                                        % dest_file)
                 elif force_overwrite is None:
-                    ans = raw_input('File %s exists! Overwrite? [Y]/N'
+                    ans = input('File %s exists! Overwrite? [Y]/N'
                                     % dest_file)
                     if ans and ans.upper() != 'Y':
                         raise RuntimeError('Operation cancelled by user.')
@@ -846,7 +848,7 @@ class Ptycho(Base):
                 # self.exit.clear()
 
                 try:
-                    for pod in self.pods.values():
+                    for pod in list(self.pods.values()):
                         del pod.exit
                 except AttributeError:
                     self.exit.clear()
@@ -864,14 +866,14 @@ class Ptycho(Base):
                             'and runtime')
                 dump = u.Param()
                 dump.probe = {ID: S._to_dict()
-                              for ID, S in self.probe.storages.items()}
-                for ID, S in self.probe.storages.items():
+                              for ID, S in list(self.probe.storages.items())}
+                for ID, S in list(self.probe.storages.items()):
                     dump.probe[ID]['grids'] = S.grids()
 
                 dump.obj = {ID: S._to_dict()
-                            for ID, S in self.obj.storages.items()}
+                            for ID, S in list(self.obj.storages.items())}
 
-                for ID, S in self.obj.storages.items():
+                for ID, S in list(self.obj.storages.items()):
                     dump.obj[ID]['grids'] = S.grids()
 
                 try:
@@ -893,15 +895,15 @@ class Ptycho(Base):
                             'parameters and runtime')
                 minimal = u.Param()
                 minimal.probe = {ID: S._to_dict()
-                                 for ID, S in self.probe.storages.items()}
-                for ID, S in self.probe.storages.items():
+                                 for ID, S in list(self.probe.storages.items())}
+                for ID, S in list(self.probe.storages.items()):
                     minimal.probe[ID]['grids'] = S.grids()
 
                 minimal.obj = {ID: S._to_dict()
-                               for ID, S in self.obj.storages.items()}
+                               for ID, S in list(self.obj.storages.items())}
 
                 minimal.positions = {}
-                for ID, S in self.obj.storages.items():
+                for ID, S in list(self.obj.storages.items()):
                     minimal.obj[ID]['grids'] = S.grids()
                     minimal.positions[ID] = np.array([v.coord for v in S.views])
 
@@ -931,15 +933,15 @@ class Ptycho(Base):
         Calculates the memory usage and other info of ptycho instance
         """
         offset = 8
-        active_pods = sum(1 for pod in self.pods.values() if pod.active)
-        all_pods = len(self.pods.values())
+        active_pods = sum(1 for pod in list(self.pods.values()) if pod.active)
+        all_pods = len(list(self.pods.values()))
         info = ['\n',
                 "Process #%d ---- Total Pods %d (%d active) ----"
                 % (parallel.rank, all_pods, active_pods) + '\n',
                 '-' * 80 + '\n']
 
         header = True
-        for ID, C in self.containers.iteritems():
+        for ID, C in self.containers.items():
             info.append(C.formatted_report(table_format,
                                            offset,
                                            include_header=header))
@@ -948,7 +950,7 @@ class Ptycho(Base):
 
         info.append('\n')
         if str(detail) != 'summary':
-            for ID, C in self.containers.iteritems():
+            for ID, C in self.containers.items():
                 info.append(C.report())
 
         logger.info(''.join(info), extra={'allprocesses': True})
@@ -961,26 +963,26 @@ class Ptycho(Base):
         """
         from matplotlib import pyplot as plt
         plt.ion()
-        for s in self.obj.storages.values():
+        for s in list(self.obj.storages.values()):
             u.plot_storage(s,
                            fignum,
                            'linear',
                            (slice(0, 4), slice(None), slice(None)))
             fignum += 1
-        for s in self.probe.storages.values():
+        for s in list(self.probe.storages.values()):
             u.plot_storage(s,
                            fignum,
                            'linear',
                            (slice(0, 4), slice(None), slice(None)))
             fignum += 1
-        for s in self.diff.storages.values():
+        for s in list(self.diff.storages.values()):
             u.plot_storage(s,
                            fignum,
                            'log',
                            (slice(0, 4), slice(None), slice(None)),
                            cmap='CMRmap')
             fignum += 1
-        for s in self.mask.storages.values():
+        for s in list(self.mask.storages.values()):
             u.plot_storage(s,
                            fignum,
                            'log',

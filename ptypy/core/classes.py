@@ -33,6 +33,11 @@ This file is part of the PTYPY package.
 
 """
 from __future__ import absolute_import
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
+from builtins import object
 import numpy as np
 import weakref
 from collections import OrderedDict
@@ -243,14 +248,14 @@ class Base(object):
         if hasattr(self, '_pool'):
             if use_asizeof:
                 space += asizeof(self._pool, limit=0)
-            for k, v in self._pool.iteritems():
+            for k, v in self._pool.items():
                 if use_asizeof:
                     space += asizeof(v, limit=0)
-                for kk, vv in v.iteritems():
+                for kk, vv in v.items():
                     pool_space += vv.calc_mem_usage()[0]
         
         if hasattr(self, '__dict__'):
-            for k, v in self.__dict__.iteritems():
+            for k, v in self.__dict__.items():
                 if issubclass(type(v), Base):
                     continue
                 elif str(k) == '_pool' or str(k) == 'pods':
@@ -427,7 +432,7 @@ class Storage(Base):
         """
 
         if layermap is None:
-            layermap = range(len(self.data))
+            layermap = list(range(len(self.data)))
         self.layermap = layermap
 
         # This is most often not accurate. Set this quantity from the outside
@@ -584,8 +589,8 @@ class Storage(Base):
         v.dcoord = np.round(pcoord + 0.00001).astype(int)
 
         # These are the important attributes used when accessing the data
-        v.dlow = v.dcoord - v.shape / 2
-        v.dhigh = v.dcoord + (v.shape + 1) / 2
+        v.dlow = v.dcoord - old_div(v.shape, 2)
+        v.dhigh = v.dcoord + old_div((v.shape + 1), 2)
 
         # Subpixel offset
         v.sp = pcoord - v.dcoord
@@ -640,7 +645,7 @@ class Storage(Base):
         dlow_fov = [np.inf] * self.ndim
         dhigh_fov = [-np.inf] * self.ndim
         layers = []
-        dims = range(self.ndim)
+        dims = list(range(self.ndim))
         for v in views:
             if not v.active:
                 continue
@@ -699,7 +704,7 @@ class Storage(Base):
             # logger.debug('%s[%s] :: shape: %s -> %s'
             #              % (self.owner.ID, self.ID, str(sh), str(new_shape)))
 
-            megapixels = np.array(new_shape).astype(float).prod() / 1e6
+            megapixels = old_div(np.array(new_shape).astype(float).prod(), 1e6)
             if megapixels > MEGAPIXEL_LIMIT:
                 raise RuntimeError('Arrays larger than %dM not supported. You '
                                    'requested %.2fM pixels.' % (MEGAPIXEL_LIMIT, megapixels))
@@ -772,7 +777,7 @@ class Storage(Base):
         coord : tuple or array-like
             A ``(N,2)``-array of the coordinates to be transformed
         """
-        return (coord - self.origin) / self.psize
+        return old_div((coord - self.origin), self.psize)
 
     def _to_phys(self, pix):
         """
@@ -814,7 +819,7 @@ class Storage(Base):
         Set the origin and update all the internal variables.
         """
         self._origin = u.expectN(v, self.ndim)
-        self._center = - self._origin / self._psize
+        self._center = old_div(- self._origin, self._psize)
         self.update()
 
     @property
@@ -875,8 +880,8 @@ class Storage(Base):
         new_psize = u.expectN(new_psize, self.ndim)
         sh = np.asarray(self.shape[1:])
         # psize is quantized
-        new_sh = np.round(self.psize / new_psize * sh)
-        new_psize = self.psize / new_sh * sh
+        new_sh = np.round(old_div(self.psize, new_psize * sh))
+        new_psize = old_div(self.psize, new_sh * sh)
 
         if (new_sh != sh).any():
             logger.info('Zooming from %s , %s to %s , %s'
@@ -884,7 +889,7 @@ class Storage(Base):
 
             # Zoom data buffer.
             # Could be that it is faster and cleaner to loop over first axis
-            zoom = new_sh / sh
+            zoom = old_div(new_sh, sh)
             self.fill(u.zoom(self.data, [1.0] + [z for z in zoom], **kwargs))
 
         self._psize = new_psize
@@ -1116,7 +1121,7 @@ class Storage(Base):
                              % (v, self.ID))
 
     def __str__(self):
-        info = '%15s : %7.2f MB :: ' % (self.ID, self.data.nbytes / 1e6)
+        info = '%15s : %7.2f MB :: ' % (self.ID, old_div(self.data.nbytes, 1e6))
         if self.data is not None:
             info += 'data=%s @%s' % (self.data.shape, self.data.dtype)
         else:
@@ -1579,7 +1584,7 @@ class Container(Base):
         """
         Property that returns list of all copies of this :any:`Container`
         """
-        return [c for c in self.owner._pool[CONTAINER_PREFIX].itervalues()
+        return [c for c in self.owner._pool[CONTAINER_PREFIX].values()
                 if c.original is self and c is not self]
 
     def delete_copy(self, copy_IDs=None):
@@ -1666,7 +1671,7 @@ class Container(Base):
         Return total number of pixels in this container.
         """
         sz = 0
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             if s.data is not None:
                 sz += s.data.size
         return sz
@@ -1680,7 +1685,7 @@ class Container(Base):
         overhead.
         """
         sz = 0
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             if s.data is not None:
                 sz += s.data.nbytes
         return sz
@@ -1697,10 +1702,10 @@ class Container(Base):
                  If True (default), return only active views.
         """
         if active_only:
-            return [v for v in self.original.V.values()
+            return [v for v in list(self.original.V.values())
                     if v.active and (v.storageID == s.ID)]
         else:
-            return [v for v in self.original.V.values()
+            return [v for v in list(self.original.V.values())
                     if (v.storage.ID == s.ID)]
 
     def copy(self, ID=None, fill=None, dtype=None):
@@ -1734,7 +1739,7 @@ class Container(Base):
                 fill = 0
 
         # Copy storage objects
-        for storageID, s in self.storages.iteritems():
+        for storageID, s in self.storages.items():
             news = s.copy(new_cont, storageID, fill)
 
         # We are done! Return the new container
@@ -1747,7 +1752,7 @@ class Container(Base):
         if type(fill) is Container:
             self.fill(0.)
             self += fill
-        for s in self.storages.itervalues():
+        for s in self.storages.values():
             s.fill(fill)
 
     def allreduce(self, op=None):
@@ -1763,14 +1768,14 @@ class Container(Base):
         ptypy.utils.parallel.allreduce
         Storage.allreduce
         """
-        for s in self.storages.itervalues():
+        for s in self.storages.values():
             s.allreduce(op=op)
 
     def clear(self):
         """
         Reduce / delete all data in attached storages
         """
-        for s in self.storages.itervalues():
+        for s in self.storages.values():
             s.data = np.empty((s.data.shape[0], 1, 1), dtype=self.dtype)
             # s.datalist = [None]
 
@@ -1808,7 +1813,7 @@ class Container(Base):
         also_in_copies : bool
             If True, also reformat associated copies of this container
         """
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             s.reformat()
             if also_in_copies:
                 for c in self.copies:
@@ -1819,7 +1824,7 @@ class Container(Base):
         Returns a formatted report string on all storages in this container.
         """
         info = ["Containers ID: %s\n" % str(self.ID)]
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             info.extend(["Storage %s\n" % ID, s.report()])
         return ''.join(info)
 
@@ -1878,7 +1883,7 @@ class Container(Base):
         dct = {}
         mem = 0
         info = []
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             fstring, stats = s.formatted_report(fr.table,
                                                 fr.offset,
                                                 align,
@@ -1965,7 +1970,7 @@ class Container(Base):
         """
         self.space = 0
         info_str = []
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             if s.data is not None:
                 self.space += s.data.nbytes
             info_str.append(str(s) + '\n')
@@ -1974,54 +1979,54 @@ class Container(Base):
 
     def __iadd__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data += s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data += other
 
         return self
 
     def __isub__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data -= s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data -= other
 
         return self
 
     def __imul__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data *= s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data *= other
 
         return self
 
     def __idiv__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data /= s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data /= other
         return self
 
     def __lshift__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data[:] = s2.data
@@ -2082,7 +2087,7 @@ class POD(Base):
         self.V = u.Param(self.DEFAULT_VIEWS)
         if views is not None:
             self.V.update(views)
-        for v in self.V.values():
+        for v in list(self.V.values()):
             if v is None:
                 continue
             if v._pod is None:

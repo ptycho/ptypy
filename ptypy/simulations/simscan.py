@@ -8,6 +8,8 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import absolute_import
+from builtins import str
+from builtins import range
 import numpy as np
 import os
 import time
@@ -167,7 +169,7 @@ class SimScan(PtyScan):
 
         # Simulate diffraction signal
         logger.info('Propagating exit waves.')
-        for name,pod in P.pods.iteritems():
+        for name,pod in P.pods.items():
             if not pod.active: continue
             pod.diff += conv(u.abs2(pod.fw(pod.exit)), self.info.psf)
 
@@ -186,7 +188,7 @@ class SimScan(PtyScan):
         self.pos = {}
 
 
-        ID,Sdiff = P.diff.S.items()[0]
+        ID,Sdiff = list(P.diff.S.items())[0]
         logger.info('Collecting simulated `raw` data.')
         for view in Sdiff.views:
             ind = view.layer

@@ -8,7 +8,12 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
+from __future__ import division
 
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import numpy as np
 from .misc import *
 from .math_utils import smooth_step
@@ -100,7 +105,7 @@ def rebin_2d(A, rebin=1):
     rebin
     """
     sh = np.asarray(A.shape[-2:])
-    newdim = sh / rebin
+    newdim = old_div(sh, rebin)
     if not (sh % rebin == 0).all():
         raise ValueError('Last two axes %s of input array `A` cannot be binned by %s' % (str(tuple(sh)),str(rebin)))
     else:
@@ -186,7 +191,7 @@ def rebin(a, *args,**kwargs):
     """
     shape = a.shape
     lenShape = a.ndim
-    factor = np.asarray(shape)/np.asarray(args)
+    factor = old_div(np.asarray(shape),np.asarray(args))
     evList = ['a.reshape('] + \
              ['args[%d],factor[%d],'%(i,i) for i in range(lenShape)] + \
              [')'] + ['.sum(%d)'%(i+1) for i in range(lenShape)] + \
@@ -283,8 +288,8 @@ def rectangle(grids, dims=None, ew=2):
         dims = (grids.shape[-2] / 2., grids.shape[-1] / 2.)
     v, h = dims
     V, H = grids
-    return (smooth_step(-np.abs(V) + v/2, ew)
-            * smooth_step(-np.abs(H) + h/2, ew))
+    return (smooth_step(-np.abs(V) + old_div(v,2), ew)
+            * smooth_step(-np.abs(H) + old_div(h,2), ew))
 
 
 def ellipsis(grids, dims=None, ew=2):
@@ -293,7 +298,7 @@ def ellipsis(grids, dims=None, ew=2):
     v, h = dims
     V, H = grids
     return smooth_step(
-        0.5 - np.sqrt(V**2/v**2 + H**2/h**2), ew/np.sqrt(v * h))
+        0.5 - np.sqrt(old_div(V**2,v**2) + old_div(H**2,h**2)), old_div(ew,np.sqrt(v * h)))
 
 def zoom(c,*arg,**kwargs):
     """
@@ -574,7 +579,7 @@ def crop_pad_axis(A,hplanes,axis=-1,roll=0,fillpar=0.0, filltype='scalar'):
     """
     if np.isscalar(hplanes):
         hplanes=int(hplanes)
-        r=np.abs(hplanes) / 2 * np.sign(hplanes)
+        r=old_div(np.abs(hplanes), 2 * np.sign(hplanes))
         l=hplanes - r
     elif len(hplanes)==2:
         l=int(hplanes[0])

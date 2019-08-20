@@ -7,6 +7,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import division
+from builtins import range
+from past.utils import old_div
+from builtins import object
 from ..core import View
 from .. import utils as u
 from ..utils.verbose import log
@@ -93,7 +97,7 @@ class AnnealingRefine(PositionRefine):
         '''
 
         af2 = np.zeros_like(di_view.data)
-        for name, pod in di_view.pods.iteritems():
+        for name, pod in di_view.pods.items():
             af2 += u.abs2(pod.fw(pod.probe*obj))
         return np.sum(di_view.pod.mask * (np.sqrt(af2) - np.sqrt(np.abs(di_view.data)))**2)
 
@@ -176,7 +180,7 @@ class AnnealingRefine(PositionRefine):
         start, end = self.p.start, self.p.stop
 
         # Compute the maximum shift allowed at this iteration
-        self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start)
+        self.max_shift_dist = old_div(self.p.amplitude * (end - iteration), (end - start))
 
     @property
     def citation_dictionary(self):

@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __future__ import division
 # In the :ref:`ptypyclasses` we have learned to deal with the
 # basic storage-and-access classes on small toy arrays.
 
@@ -14,6 +15,7 @@ from __future__ import print_function
 # physical quantities only simulate an experimental setup.
 
 # We start again with importing some modules.
+from past.utils import old_div
 import matplotlib as mpl
 import numpy as np
 import ptypy
@@ -92,7 +94,7 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # Of course, we could have also used the coordinate grids
 # from the propagator to model a probe,
 y, x = G.propagator.grids_sam
-apert = u.smooth_step(fsize[0]/5-np.sqrt(x**2+y**2), 1e-6)
+apert = u.smooth_step(old_div(fsize[0],5)-np.sqrt(x**2+y**2), 1e-6)
 pr2 = P.probe.new_storage(shape=pr_shape, psize=G.resolution)
 pr2.fill(apert)
 fig = u.plot_storage(pr2, 1, channel='c')
@@ -102,7 +104,7 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # or the coordinate grids from the Storage itself.
 pr3 = P.probe.new_storage(shape=pr_shape, psize=G.resolution)
 y, x = pr3.grids()
-apert = u.smooth_step(fsize[0]/5-np.abs(x), 3e-5)*u.smooth_step(fsize[1]/5-np.abs(y), 3e-5)
+apert = u.smooth_step(old_div(fsize[0],5)-np.abs(x), 3e-5)*u.smooth_step(old_div(fsize[1],5)-np.abs(y), 3e-5)
 pr3.fill(apert)
 fig = u.plot_storage(pr3, 2)
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
@@ -111,7 +113,7 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # In order to put some physics in the illumination we set the number of
 # photons to 1 billion
 for pp in [pr, pr2, pr3]:
-    pp.data *= np.sqrt(1e9/np.sum(pp.data*pp.data.conj()))
+    pp.data *= np.sqrt(old_div(1e9,np.sum(pp.data*pp.data.conj())))
 print(u.norm2(pr.data))
 
 # and we quickly check if the propagation works.
@@ -130,7 +132,7 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # We use the :py:mod:`ptypy.core.xy` module to create a scan pattern.
 pos = u.Param()
 pos.model = "round"
-pos.spacing = fsize[0]/8
+pos.spacing = old_div(fsize[0],8)
 pos.steps = None
 pos.extent = fsize*1.5
 from ptypy.core import xy
@@ -194,7 +196,7 @@ P.diff = Container(P, 'Cdiff', data_type='real')
 P.mask = Container(P, 'Cmask', data_type='real')
 
 # We start with one POD and its views.
-objviews = P.obj.views.values()
+objviews = list(P.obj.views.values())
 obview = objviews[0]
 
 # We construct the probe View.
@@ -238,7 +240,7 @@ pod.exit = pod.probe * pod.object
 # The result of the calculation above is stored in the appropriate
 # storage of ``P.exit``.
 # Therefore we can use this command to plot the result.
-exit_storage = P.exit.storages.values()[0]
+exit_storage = list(P.exit.storages.values())[0]
 fig = u.plot_storage(exit_storage, 6)
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # Simulated exit wave using a pod
@@ -247,7 +249,7 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 pod.diff = np.abs(pod.fw(pod.exit))**2
 
 # The result is stored in the diffraction container.
-diff_storage = P.diff.storages.values()[0]
+diff_storage = list(P.diff.storages.values())[0]
 fig = u.plot_storage(diff_storage, 7, modulus='log')
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 

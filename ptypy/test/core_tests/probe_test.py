@@ -1,7 +1,9 @@
 '''
 A test for the Base
 '''
+from __future__ import division
 
+from past.utils import old_div
 import unittest
 import ptypy.utils as u
 import numpy as np
@@ -34,7 +36,7 @@ def set_up_probes(P,G):
     fsize = G.shape * G.resolution
     P.probe = Container(get_P(), 'Cprobe', data_type='complex')
     y, x = G.propagator.grids_sam
-    apert = u.smooth_step(fsize[0]/5-np.sqrt(x**2+y**2), 1e-6)
+    apert = u.smooth_step(old_div(fsize[0],5)-np.sqrt(x**2+y**2), 1e-6)
     sh = (1,) + tuple(G.shape)
     #pr = P.probe.new_storage(shape=sh, psize=G.resolution)
     #pr.fill(-moon_pr(G.shape))
@@ -42,7 +44,7 @@ def set_up_probes(P,G):
     pr2.fill(apert)
     pr3 = P.probe.new_storage(shape=sh, psize=G.resolution)
     y, x = pr3.grids()
-    apert = u.smooth_step(fsize[0]/5-np.abs(x), 3e-5)*u.smooth_step(fsize[1]/5-np.abs(y), 3e-5)
+    apert = u.smooth_step(old_div(fsize[0],5)-np.abs(x), 3e-5)*u.smooth_step(old_div(fsize[1],5)-np.abs(y), 3e-5)
     pr3.fill(apert)
     #return [pr, pr2, pr3]
     return [pr2, pr3]
@@ -50,7 +52,7 @@ def set_up_probes(P,G):
 def propagate_probes(G, probes):
     propagated_ill = []
     for pp in probes:
-        pp.data *= np.sqrt(1e9/np.sum(pp.data*pp.data.conj()))
+        pp.data *= np.sqrt(old_div(1e9,np.sum(pp.data*pp.data.conj())))
         propagated_ill.append(G.propagator.fw(pp.data[0]))
     return propagated_ill
 

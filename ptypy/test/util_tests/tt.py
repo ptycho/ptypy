@@ -1,3 +1,4 @@
+from builtins import object
 from ptypy.utils.descriptor import EvalDescriptor
 
 root = EvalDescriptor('')

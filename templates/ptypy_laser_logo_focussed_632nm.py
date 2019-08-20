@@ -1,3 +1,5 @@
+from __future__ import division
+from past.utils import old_div
 import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
@@ -18,7 +20,7 @@ p.io.autoplot.layout='minimal'
 
 # Simulation parameters
 sim = u.Param()
-sim.energy = u.keV2m(1.0)/6.32e-7
+sim.energy = old_div(u.keV2m(1.0),6.32e-7)
 sim.distance = 15e-2
 sim.psize = 24e-6
 sim.shape = 256

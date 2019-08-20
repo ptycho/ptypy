@@ -14,6 +14,12 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import absolute_import
+from __future__ import division
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import numpy as np
 import time
 from collections import OrderedDict
@@ -422,8 +428,8 @@ class ScanModel(object):
         self.diff.norm = norm
         self.diff.max_power = parallel.MPImax(Itotal)
         self.diff.tot_power = parallel.MPIsum(Itotal)
-        self.diff.mean_power = self.diff.tot_power / (len(diff_views) * mean_frame.shape[-1]**2)
-        self.diff.pbound_stub = self.diff.max_power / mean_frame.shape[-1]**2
+        self.diff.mean_power = old_div(self.diff.tot_power, (len(diff_views) * mean_frame.shape[-1]**2))
+        self.diff.pbound_stub = old_div(self.diff.max_power, mean_frame.shape[-1]**2)
         self.diff.mean = mean_frame
         self.diff.max = max_frame
         self.diff.min = min_frame
@@ -502,9 +508,9 @@ class Vanilla(ScanModel):
         ID ='S'+self.label
 
         # We need to return info on what storages are created
-        if not ID in self.ptycho.probe.storages.keys():
+        if not ID in list(self.ptycho.probe.storages.keys()):
             new_probe_ids[ID] = True
-        if not ID in self.ptycho.obj.storages.keys():
+        if not ID in list(self.ptycho.obj.storages.keys()):
             new_object_ids[ID] = True
 
         geometry = self.geometries[0]
@@ -587,7 +593,7 @@ class Vanilla(ScanModel):
         logger.info('\n'+headerline('Probe initialization', 'l'))
 
         # pick storage from container, there's only one probe
-        pid = probe_ids.keys()[0]
+        pid = list(probe_ids.keys())[0]
         s = self.ptycho.probe.S.get(pid)
         logger.info('Initializing probe storage %s' % pid)
 
@@ -606,7 +612,7 @@ class Vanilla(ScanModel):
         logger.info('\n'+headerline('Object initialization', 'l'))
 
         # pick storage from container, there's only one object
-        oid = object_ids.keys()[0]
+        oid = list(object_ids.keys())[0]
         s = self.ptycho.obj.S.get(oid)
         logger.info('Initializing probe storage %s' % oid)
 
@@ -709,8 +715,8 @@ class Full(ScanModel):
         label = self.label
 
         # Get a list of probe and object that already exist
-        existing_probes = self.ptycho.probe.storages.keys()
-        existing_objects = self.ptycho.obj.storages.keys()
+        existing_probes = list(self.ptycho.probe.storages.keys())
+        existing_objects = list(self.ptycho.obj.storages.keys())
         logger.info('Found these probes : ' + ', '.join(existing_probes))
         logger.info('Found these objects: ' + ', '.join(existing_objects))
 
@@ -745,7 +751,7 @@ class Full(ScanModel):
                     gind = ii
 
                 probe_id_suf = probe_id + 'G%02d' % gind
-                if (probe_id_suf not in new_probe_ids.keys()
+                if (probe_id_suf not in list(new_probe_ids.keys())
                         and probe_id_suf not in existing_probes):
                     new_probe_ids[probe_id_suf] = True
 
@@ -757,7 +763,7 @@ class Full(ScanModel):
                     gind = ii
 
                 object_id_suf = object_id + 'G%02d' % gind
-                if (object_id_suf not in new_object_ids.keys()
+                if (object_id_suf not in list(new_object_ids.keys())
                         and object_id_suf not in existing_objects):
                     new_object_ids[object_id_suf] = True
 
@@ -857,7 +863,7 @@ class Full(ScanModel):
         logger.info('\n'+headerline('Probe initialization', 'l'))
 
         # Loop through probe ids
-        for pid, labels in probe_ids.items():
+        for pid, labels in list(probe_ids.items()):
 
             illu_pars = self.p.illumination
 
@@ -903,7 +909,7 @@ class Full(ScanModel):
         logger.info('\n'+headerline('Object initialization', 'l'))
 
         # Loop through object IDs
-        for oid, labels in object_ids.items():
+        for oid, labels in list(object_ids.items()):
 
             sample_pars = self.p.sample
 
@@ -1043,11 +1049,11 @@ class Bragg3dModel(Vanilla):
         # pick the relevant limits and expand slightly to avoid edge effects
         lims = {0: [xmin, xmax], 1: [zmin, zmax], 2: [ymin, ymax]}[axis]
         lims = np.array(lims) + np.array([-1, 1]) * np.diff(lims) * .01
-        domain_width = np.diff(lims) / parallel.size
+        domain_width = old_div(np.diff(lims), parallel.size)
 
         # now we can work out which node should own a certain position
         def __node(pos):
-            return int((pos - lims[0]) / domain_width)
+            return int(old_div((pos - lims[0]), domain_width))
 
         # work out which node should have each of my buffered frames
         N = parallel.size
@@ -1067,7 +1073,7 @@ class Bragg3dModel(Vanilla):
                     if receiver == parallel.rank:
                         continue
                     lst = []
-                    for idx, rec in senditems.iteritems():
+                    for idx, rec in senditems.items():
                         if rec == receiver:
                             lst.append(dp['iterable'][idx])
                     parallel.send(lst, dest=receiver)
@@ -1079,7 +1085,7 @@ class Bragg3dModel(Vanilla):
 
         # mark sent frames disabled, would be nice to do in the loop but
         # you can't trust communication will be blocking.
-        for idx in senditems.keys():
+        for idx in list(senditems.keys()):
             dp['iterable'][idx]['data'] = None
             dp['iterable'][idx]['mask'] = None
 
@@ -1121,7 +1127,7 @@ class Bragg3dModel(Vanilla):
         complete 3d positions.
         """
         dp_new = {'iterable': []}
-        for idx, dct in self.buffered_frames.iteritems():
+        for idx, dct in self.buffered_frames.items():
             if len(dct['angles']) == self.geometries[0].shape[0]:
                 # this one is ready to go
                 logger.debug('3d diffraction data for position %d ready, will create POD' % idx)
@@ -1224,7 +1230,7 @@ class Bragg3dModel(Vanilla):
         logger.info('\n'+headerline('Probe initialization', 'l'))
 
         # pick storage from container, there's only one probe
-        pid = probe_ids.keys()[0]
+        pid = list(probe_ids.keys())[0]
         s = self.ptycho.probe.S.get(pid)
         logger.info('Initializing probe storage %s' % pid)
 
@@ -1232,8 +1238,8 @@ class Bragg3dModel(Vanilla):
         # direction, using the illumination module as a utility.
         geo = self.geometries[0]
         extent = max(geo.probe_extent_vs_fov())
-        psize = min(geo.resolution) / 5
-        shape = int(np.ceil(extent / psize))
+        psize = old_div(min(geo.resolution), 5)
+        shape = int(np.ceil(old_div(extent, psize)))
         logger.info('Generating incoming probe %d x %d (%.3e x %.3e) with psize %.3e...'
             % (shape, shape, extent, extent, psize))
         t0 = time.time()
@@ -1273,7 +1279,7 @@ class ModelManager(object):
 
         # Create scan model objects
         self.scans = OrderedDict()
-        for label, scan_pars in pars.iteritems():
+        for label, scan_pars in pars.items():
             # find out which scan model class to instantiate
             if scan_pars.name in u.all_subclasses(ScanModel, names=True):
                 cls = eval(scan_pars.name)
@@ -1295,7 +1301,7 @@ class ModelManager(object):
 
     @property
     def data_available(self):
-        return any(s.data_available for s in self.scans.values())
+        return any(s.data_available for s in list(self.scans.values()))
 
     def new_data(self):
         """
@@ -1311,5 +1317,5 @@ class ModelManager(object):
         logger.info('Processing new data.')
 
         # Attempt to get new data
-        for label, scan in self.scans.iteritems():
+        for label, scan in self.scans.items():
             new_data = scan.new_data()

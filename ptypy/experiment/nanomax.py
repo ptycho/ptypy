@@ -2,7 +2,11 @@
      beamline is developing, as is the data format. Thus, commissioning
      and user experiments rely on different classes depending on
      measurement campaign. """
+from __future__ import division
 
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import h5py
 
@@ -366,7 +370,7 @@ class NanomaxFlyscanJune2017(NanomaxStepscanMay2017):
                         norm /= norm0  # to avoid dividing integers by huge numbers
                         logger.debug("normalizing line by: %s" % str(norm))
                         for i in range(len(norm)):
-                            linedata[i, :, :] = linedata[i] / norm[i]
+                            linedata[i, :, :] = old_div(linedata[i], norm[i])
                     linedata = np.array(np.round(linedata), dtype=dtype)
 
                 data.append(linedata)

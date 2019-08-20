@@ -12,6 +12,11 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import division
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import numpy as np
 from scipy import ndimage as ndi
 
@@ -101,7 +106,7 @@ class Detector(object):
         self.shape = expect2(self.shape)
         self._make_mask()
         if self.center is None:
-            self.center = expect2(self._mask.shape)/2
+            self.center = old_div(expect2(self._mask.shape),2)
 
     def _update(self,pars=None):
         if pars is not None:
@@ -188,7 +193,7 @@ def shot(I,exp=0.1,flux=1e5,sensitivity=1.0,dark_c=None,io_noise=0.,full_well=2*
     I=np.asarray(I).astype(float)
 
     if I.sum() != 0. :
-        I=I/I.sum()
+        I=old_div(I,I.sum())
 
     photo_el = np.floor(sensitivity*np.random.poisson(exp*flux*I))
     if dark_c is not None:
@@ -198,7 +203,7 @@ def shot(I,exp=0.1,flux=1e5,sensitivity=1.0,dark_c=None,io_noise=0.,full_well=2*
 
     el = photo_el + therm_el
     el[el > full_well] = full_well
-    out = offset + io_noise*np.random.standard_normal(I.shape)+ el / el_per_ADU
+    out = offset + io_noise*np.random.standard_normal(I.shape)+ old_div(el, el_per_ADU)
     out[out<0.]=0.
     return out.astype(int)
 
@@ -241,7 +246,7 @@ def expect2(a):
     return b
 
 def smooth_step(x,mfs):
-    return 0.5*erf(x*2.35/mfs) +0.5
+    return 0.5*erf(old_div(x*2.35,mfs)) +0.5
 
 if __name__ == "__main__":
     import sys

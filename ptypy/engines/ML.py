@@ -11,6 +11,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import division
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import numpy as np
 import time
 
@@ -204,7 +208,7 @@ class ML(PositionCorrectionEngine):
 
             if self.p.probe_update_start <= self.curiter:
                 # Apply probe support if needed
-                for name, s in new_pr_grad.storages.iteritems():
+                for name, s in new_pr_grad.storages.items():
                     support = self.probe_support.get(name)
                     if support is not None:
                         s.data *= support
@@ -214,15 +218,14 @@ class ML(PositionCorrectionEngine):
             # Smoothing preconditioner
             if self.smooth_gradient:
                 self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
-                for name, s in new_ob_grad.storages.iteritems():
+                for name, s in new_ob_grad.storages.items():
                     s.data[:] = self.smooth_gradient(s.data)
 
             # probe/object rescaling
             if self.p.scale_precond:
                 cn2_new_pr_grad = Cnorm2(new_pr_grad)
                 if cn2_new_pr_grad > 1e-5:
-                    scale_p_o = (self.p.scale_probe_object * Cnorm2(new_ob_grad)
-                                 / Cnorm2(new_pr_grad))
+                    scale_p_o = (old_div(self.p.scale_probe_object * Cnorm2(new_ob_grad), Cnorm2(new_pr_grad)))
                 else:
                     scale_p_o = self.p.scale_probe_object
                 if self.scale_p_o is None:
@@ -248,7 +251,7 @@ class ML(PositionCorrectionEngine):
 
                 bt_denom = self.scale_p_o*Cnorm2(self.pr_grad) + Cnorm2(self.ob_grad)
 
-                bt = max(0, bt_num/bt_denom)
+                bt = max(0, old_div(bt_num,bt_denom))
 
             # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
 
@@ -256,15 +259,15 @@ class ML(PositionCorrectionEngine):
             self.pr_grad << new_pr_grad
 
             # 3. Next conjugate
-            self.ob_h *= bt / self.tmin
+            self.ob_h *= old_div(bt, self.tmin)
 
             # Smoothing preconditioner
             if self.smooth_gradient:
-                for name, s in self.ob_h.storages.iteritems():
+                for name, s in self.ob_h.storages.items():
                     s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             else:
                 self.ob_h -= self.ob_grad
-            self.pr_h *= bt / self.tmin
+            self.pr_h *= old_div(bt, self.tmin)
             self.pr_grad *= self.scale_p_o
             self.pr_h -= self.pr_grad
 
@@ -280,7 +283,7 @@ class ML(PositionCorrectionEngine):
                 B[np.isinf(B)] = 0.
                 B[np.isnan(B)] = 0.
 
-            self.tmin = -.5 * B[1] / B[2]
+            self.tmin = old_div(-.5 * B[1], B[2])
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
             self.ob += self.ob_h
@@ -340,9 +343,9 @@ class BaseModel(object):
 
         # Useful quantities
         self.tot_measpts = sum(s.data.size
-                               for s in self.di.storages.values())
+                               for s in list(self.di.storages.values()))
         self.tot_power = self.Irenorm * sum(s.tot_power
-                                            for s in self.di.storages.values())
+                                            for s in list(self.di.storages.values()))
 
         self.regularizer = None
         self.prepare_regularizer()
@@ -354,8 +357,8 @@ class BaseModel(object):
         # Prepare regularizer
         if self.p.reg_del2:
             obj_Npix = self.ob.size
-            expected_obj_var = obj_Npix / self.tot_power  # Poisson
-            reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
+            expected_obj_var = old_div(obj_Npix, self.tot_power)  # Poisson
+            reg_rescale = old_div(self.tot_measpts, (8. * obj_Npix * expected_obj_var))
             logger.debug(
                 'Rescaling regularization amplitude using '
                 'the Poisson distribution assumption.')
@@ -374,7 +377,7 @@ class BaseModel(object):
         del self.pr_grad
 
         # Remove working attributes
-        for name, diff_view in self.di.views.iteritems():
+        for name, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
             try:
@@ -416,11 +419,10 @@ class GaussianModel(BaseModel):
         self.weights = self.engine.di.copy(self.engine.di.ID + '_weights')
         # FIXME: This part needs to be updated once statistical weights are properly
         # supported in the data preparation.
-        for name, di_view in self.di.views.iteritems():
+        for name, di_view in self.di.views.items():
             if not di_view.active:
                 continue
-            self.weights[di_view] = (self.Irenorm * di_view.pod.ma_view.data
-                                     / (1./self.Irenorm + di_view.data))
+            self.weights[di_view] = (old_div(self.Irenorm * di_view.pod.ma_view.data, (1./self.Irenorm + di_view.data)))
 
     def __del__(self):
         """
@@ -445,7 +447,7 @@ class GaussianModel(BaseModel):
         error_dct = {}
 
         # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
+        for dname, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
 
@@ -457,7 +459,7 @@ class GaussianModel(BaseModel):
             f = {}
 
             # First pod loop: compute total intensity
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 f[name] = pod.fw(pod.probe * pod.object)
@@ -465,15 +467,14 @@ class GaussianModel(BaseModel):
 
             # Floating intensity option
             if self.p.floating_intensities:
-                self.float_intens_coeff[dname] = ((w * Imodel * I).sum()
-                                                / (w * Imodel**2).sum())
+                self.float_intens_coeff[dname] = (old_div((w * Imodel * I).sum(), (w * Imodel**2).sum()))
                 Imodel *= self.float_intens_coeff[dname]
 
             DI = Imodel - I
 
             # Second pod loop: gradients computation
             LLL = np.sum((w * DI**2).astype(np.float64))
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 xi = pod.bw(w * DI * f[name])
@@ -481,7 +482,7 @@ class GaussianModel(BaseModel):
                 self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
             diff_view.error = LLL
-            error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
+            error_dct[dname] = np.array([0, old_div(LLL, np.prod(DI.shape)), 0])
             LL += LLL
 
         # MPI reduction of gradients
@@ -491,12 +492,12 @@ class GaussianModel(BaseModel):
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in self.ob.storages.items():
                 self.ob_grad.storages[name].data += self.regularizer.grad(
                     s.data)
                 LL += self.regularizer.LL
 
-        self.LL = LL / self.tot_measpts
+        self.LL = old_div(LL, self.tot_measpts)
 
         return self.ob_grad, self.pr_grad, error_dct
 
@@ -510,7 +511,7 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
+        for dname, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
 
@@ -522,7 +523,7 @@ class GaussianModel(BaseModel):
             A1 = None
             A2 = None
 
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 f = pod.fw(pod.probe * pod.object)
@@ -554,7 +555,7 @@ class GaussianModel(BaseModel):
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in self.ob.storages.items():
                 B += Brenorm * self.regularizer.poly_line_coeffs(
                     ob_h.storages[name].data, s.data)
 
@@ -575,7 +576,7 @@ class PoissonModel(BaseModel):
         BaseModel.__init__(self, MLengine)
         from scipy import special
         self.LLbase = {}
-        for name, di_view in self.di.views.iteritems():
+        for name, di_view in self.di.views.items():
             if not di_view.active:
                 continue
             self.LLbase[name] = special.gammaln(di_view.data+1).sum()
@@ -595,7 +596,7 @@ class PoissonModel(BaseModel):
         error_dct = {}
 
         # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
+        for dname, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
 
@@ -607,7 +608,7 @@ class PoissonModel(BaseModel):
             f = {}
 
             # First pod loop: compute total intensity
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 f[name] = pod.fw(pod.probe * pod.object)
@@ -615,15 +616,15 @@ class PoissonModel(BaseModel):
 
             # Floating intensity option
             if self.p.floating_intensities:
-                self.float_intens_coeff[dname] = I.sum() / Imodel.sum()
+                self.float_intens_coeff[dname] = old_div(I.sum(), Imodel.sum())
                 Imodel *= self.float_intens_coeff[dname]
 
             Imodel += 1e-6
-            DI = m * (1. - I / Imodel)
+            DI = m * (1. - old_div(I, Imodel))
 
             # Second pod loop: gradients computation
             LLL = self.LLbase[dname] + (m * (Imodel - I * np.log(Imodel))).sum().astype(np.float64)
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 xi = pod.bw(DI * f[name])
@@ -631,7 +632,7 @@ class PoissonModel(BaseModel):
                 self.pr_grad[pod.pr_view] += 2 * xi * pod.object.conj()
 
             diff_view.error = LLL
-            error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
+            error_dct[dname] = np.array([0, old_div(LLL, np.prod(DI.shape)), 0])
             LL += LLL
 
         # MPI reduction of gradients
@@ -641,12 +642,12 @@ class PoissonModel(BaseModel):
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in self.ob.storages.items():
                 self.ob_grad.storages[name].data += self.regularizer.grad(
                     s.data)
                 LL += self.regularizer.LL
 
-        self.LL = LL / self.tot_measpts
+        self.LL = old_div(LL, self.tot_measpts)
 
         return self.ob_grad, self.pr_grad, error_dct
 
@@ -656,10 +657,10 @@ class PoissonModel(BaseModel):
         in direction h
         """
         B = np.zeros((3,), dtype=np.longdouble)
-        Brenorm = 1/(self.tot_measpts * self.LL[0])**2
+        Brenorm = old_div(1,(self.tot_measpts * self.LL[0])**2)
 
         # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
+        for dname, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
 
@@ -671,7 +672,7 @@ class PoissonModel(BaseModel):
             A1 = None
             A2 = None
 
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 f = pod.fw(pod.probe * pod.object)
@@ -695,17 +696,17 @@ class PoissonModel(BaseModel):
                 A2 *= self.float_intens_coeff[dname]
 
             A0 += 1e-6
-            DI = 1. - I/A0
+            DI = 1. - old_div(I,A0)
 
             B[0] += (self.LLbase[dname] + (m * (A0 - I * np.log(A0))).sum().astype(np.float64)) * Brenorm
             B[1] += np.dot(m.flat, (A1*DI).flat) * Brenorm
-            B[2] += (np.dot(m.flat, (A2*DI).flat) + .5*np.dot(m.flat, (I*(A1/A0)**2.).flat)) * Brenorm
+            B[2] += (np.dot(m.flat, (A2*DI).flat) + .5*np.dot(m.flat, (I*(old_div(A1,A0))**2.).flat)) * Brenorm
 
         parallel.allreduce(B)
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in self.ob.storages.items():
                 B += Brenorm * self.regularizer.poly_line_coeffs(
                     ob_h.storages[name].data, s.data)
 
@@ -789,7 +790,7 @@ def prepare_smoothing_preconditioner(amplitude):
     if amplitude == 0.:
         return None
 
-    class GaussFilt:
+    class GaussFilt(object):
         def __init__(self, sigma):
             self.sigma = sigma
 

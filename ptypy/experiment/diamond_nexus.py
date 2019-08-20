@@ -8,6 +8,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
+from builtins import range
 import h5py as h5
 import numpy as np
 
@@ -128,7 +129,7 @@ class DiamondNexus(PtyScan):
         MASK_FILE = self.p.mask.file
         MASK_KEY = self.p.mask.key
         PIXEL_SIZE_KEY = 'entry_1/instrument_1/detector_1/x_pixel_size'
-        NORMALISATION_KEY = 'entry_1/instrument_1/monitor/data' if 'monitor' in f['entry_1/instrument_1'].keys() else None
+        NORMALISATION_KEY = 'entry_1/instrument_1/monitor/data' if 'monitor' in list(f['entry_1/instrument_1'].keys()) else None
         self.ENERGY_MULTIPLIER = self.p.recorded_energy_multiplier
         self.POSITIONS_FAST_MULTIPLIER = self.p.positions.fast_multiplier
         self.POSITIONS_SLOW_MULTIPLIER = self.p.positions.slow_multiplier
@@ -387,7 +388,7 @@ class DiamondNexus(PtyScan):
                     elif isinstance(fast_axis_bounds, (tuple, list)):
                         fast_axis_bounds = set_fast_axis_bounds
 
-                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
                 self.num_frames = len(self.preview_indices[0])
             else:
@@ -400,7 +401,7 @@ class DiamondNexus(PtyScan):
                     elif isinstance(fast_axis_bounds, (tuple, list)):
                         fast_axis_bounds = set_fast_axis_bounds
                 self._scantype = "arb"
-                self.preview_indices = range(*fast_axis_bounds)
+                self.preview_indices = list(range(*fast_axis_bounds))
                 self.num_frames = len(self.preview_indices)
 
         elif ((len(positions_fast_shape)>1) and (len(positions_slow_shape)>1)) and data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
@@ -425,7 +426,7 @@ class DiamondNexus(PtyScan):
                 elif isinstance(fast_axis_bounds, (tuple, list)):
                     fast_axis_bounds = set_fast_axis_bounds
 
-            indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+            indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
             self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()])
             self.num_frames = len(self.preview_indices[0])
             self._ismapped = False
@@ -456,7 +457,7 @@ class DiamondNexus(PtyScan):
 
                 self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
 
-                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
                 self.num_frames = np.prod(indices[0].shape)
 
@@ -485,7 +486,7 @@ class DiamondNexus(PtyScan):
 
                 self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
 
-                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
 
                 self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
                 self.num_frames = np.prod(indices[0].shape)

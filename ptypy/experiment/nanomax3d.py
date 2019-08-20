@@ -3,6 +3,7 @@ This module provides simulated 3D Bragg data.
 """
 from __future__ import print_function
 
+from builtins import range
 import ptypy
 from ptypy.core.data import PtyScan
 import ptypy.utils as u

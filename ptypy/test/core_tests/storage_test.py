@@ -2,6 +2,7 @@
 A test for the Storage class
 '''
 
+from builtins import range
 import unittest
 import numpy as np
 from ptypy.core import Storage, Container, View

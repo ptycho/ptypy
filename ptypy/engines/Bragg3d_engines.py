@@ -8,6 +8,9 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 from .DM import DM
 from . import register
 from ..core.manager import Bragg3dModel
@@ -130,7 +133,7 @@ class DM_3dBragg(DM):
             return
 
         # access object storage and geometry through any active pod
-        for name, pod in self.pods.iteritems():
+        for name, pod in self.pods.items():
             if pod.active:
                 break
         geo = pod.geometry
@@ -172,7 +175,7 @@ class DM_3dBragg(DM):
                 tbin = np.bincount(r.ravel(), arr.ravel())
                 nr = np.bincount(r.ravel())
                 s = np.arange(len(tbin)) * scaling
-                sprofile = tbin / nr
+                sprofile = old_div(tbin, nr)
                 icenter = 0
 
             # gaussian smooth
@@ -191,7 +194,7 @@ class DM_3dBragg(DM):
             # walk negative
             slow = s[0]
             for i in range(1, icenter):
-                if (sprofile[icenter-i] / sprofile[icenter] < cutoff
+                if (old_div(sprofile[icenter-i], sprofile[icenter]) < cutoff
                     or (self.p.sample_support.shrinkwrap.monotonic and
                         sprofile[icenter-i] > sprofile[icenter-i+1])):
                     slow = s[icenter-i]
@@ -201,8 +204,8 @@ class DM_3dBragg(DM):
             shigh = s[len(sprofile) - 1]
             for i in range(1, len(sprofile)-icenter-1):
                 if parallel.master:
-                    print(sprofile[icenter+i] / sprofile[icenter])
-                if (sprofile[icenter+i] / sprofile[icenter] < cutoff
+                    print(old_div(sprofile[icenter+i], sprofile[icenter]))
+                if (old_div(sprofile[icenter+i], sprofile[icenter]) < cutoff
                     or (self.p.sample_support.shrinkwrap.monotonic and
                         sprofile[icenter+i] > sprofile[icenter+i-1])):
                     shigh = s[icenter+i]

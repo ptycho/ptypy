@@ -32,7 +32,7 @@ def _register_engine_class(cls, name=None):
 
 
 def by_name(name):
-    if name not in ENGINES.keys():
+    if name not in list(ENGINES.keys()):
         raise RuntimeError('Unknown engine: %s' % name)
     return ENGINES[name]
 
@@ -48,5 +48,5 @@ from . import Bragg3d_engines
 
 
 # dynamic load, maybe discarded in future
-dynamic_load('./', ['BaseEngine', 'PositionCorrectionEngine'] + ENGINES.keys(), True)
-dynamic_load('~/.ptypy/', ['BaseEngine', 'PositionCorrectionEngine'] + ENGINES.keys(), True)
+dynamic_load('./', ['BaseEngine', 'PositionCorrectionEngine'] + list(ENGINES.keys()), True)
+dynamic_load('~/.ptypy/', ['BaseEngine', 'PositionCorrectionEngine'] + list(ENGINES.keys()), True)

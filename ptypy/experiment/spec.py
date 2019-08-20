@@ -9,6 +9,9 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
+from builtins import next
+from builtins import zip
+from builtins import object
 import dateutil
 import dateutil.parser
 
@@ -139,7 +142,7 @@ class SpecInfo(object):
                 try:
                     motorlines = scanstr['P']
                     motorvalues = [float(x) for mline in motorlines for x in mline.split()]
-                    scan.motors = dict(zip(motors, motorvalues))
+                    scan.motors = dict(list(zip(motors, motorvalues)))
                 except Exception as e:
                     good_scan = False
                     verbose(1, 'Error extracting motor values for scan number %d.' % scannr)
@@ -156,8 +159,8 @@ class SpecInfo(object):
 
                 # Data
                 try:
-                    data = zip(*[[float(x) for x in Lline.split()] for Lline in scanstr['L'][1:]])
-                    scan.data = dict(zip(scan.counternames, data))
+                    data = list(zip(*[[float(x) for x in Lline.split()] for Lline in scanstr['L'][1:]]))
+                    scan.data = dict(list(zip(scan.counternames, data)))
                 except Exception as e:
                     good_scan = False
                     verbose(1, 'Error extracting counter values for scan number %d.' % scannr)

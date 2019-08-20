@@ -8,6 +8,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import division
+from builtins import str
+from past.utils import old_div
+from builtins import object
 import numpy as np
 import time
 from .. import utils as u
@@ -137,14 +141,14 @@ class BaseEngine(object):
         # in the dict self.probe_support
         supp = self.p.probe_support
         if supp is not None:
-            for name, s in self.pr.storages.iteritems():
+            for name, s in self.pr.storages.items():
                 sh = s.data.shape
                 ll, xx, yy = u.grids(sh, FFTlike=False)
                 support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
                 self.probe_support[name] = support
 
         # Make sure all the pods are supported
-        for label_, pod_ in self.pods.iteritems():
+        for label_, pod_ in self.pods.items():
             if not pod_.model.__class__ in self.SUPPORTED_MODELS:
                 raise Exception('Model %s not supported by engine' % pod_.model.__class__)
 
@@ -215,7 +219,7 @@ class BaseEngine(object):
     def _fill_runtime(self):
         local_error = u.parallel.gather_dict(self.error)
         if local_error:
-            error = np.array(local_error.values()).mean(0)
+            error = np.array(list(local_error.values())).mean(0)
         else:
             error = np.zeros((1,))
         info = dict(
@@ -331,8 +335,8 @@ class PositionCorrectionEngine(BaseEngine):
             
             # Enlarge object arrays, 
             # This can be skipped though if the boundary is less important
-            for name, s in self.ob.storages.items():
-                s.padding = int(self.p.position_refinement.max_shift / np.max(s.psize))
+            for name, s in list(self.ob.storages.items()):
+                s.padding = int(old_div(self.p.position_refinement.max_shift, np.max(s.psize)))
                 s.reformat()
 
             # this could be some kind of dictionary lookup if we want to add more
@@ -363,7 +367,7 @@ class PositionCorrectionEngine(BaseEngine):
             self.position_refinement.update_constraints(self.curiter) # this stays here
 
             # Iterate through all diffraction views
-            for dname, di_view in self.di.views.iteritems():
+            for dname, di_view in self.di.views.items():
                 # Check for new coordinates
                 if di_view.active:
                     #self.position_refinement.update_view_position(di_view)
@@ -395,7 +399,7 @@ class Base3dBraggEngine(BaseEngine):
             raise NotImplementedError
 
         # Make sure all the pods are supported
-        for label_, pod_ in self.pods.iteritems():
+        for label_, pod_ in self.pods.items():
             if not pod_.model.__class__ in self.SUPPORTED_MODELS:
                 raise Exception('Model %s not supported by engine' % pod_.model.__class__)
 

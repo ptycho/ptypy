@@ -1,4 +1,5 @@
 
+from builtins import str
 from ptypy import defaults_tree
 
 prst = open('rst/parameters.rst','w')

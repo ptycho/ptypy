@@ -8,7 +8,11 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
+from __future__ import division
 
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import os, re, glob
 
@@ -328,7 +332,7 @@ class ID16AScan(PtyScan):
             # read flat-field file
             print('Reading flat-field file of the detector')
             flat_field,header = io.edfread(self.det_flat_field)
-            flat_field = flat_field.astype(np.float32)/flat_field.mean()
+            flat_field = old_div(flat_field.astype(np.float32),flat_field.mean())
             flat_field[np.where(flat_field==0)]=1 # put 1 where values are 0 for the division
             common.flat_field = flat_field
 
@@ -338,7 +342,7 @@ class ID16AScan(PtyScan):
         if self.info.recipe.use_bpm5_ct:
             print('Reading the values of the bpm5 ct')
             bpm5_ct_val = np.zeros(self.num_frames)
-            for ii in xrange(self.num_frames):
+            for ii in range(self.num_frames):
                 projobj = io.h5read(self.frame_format.format(ii),self.h5_path)[self.h5_path]
                 #projobj = io.h5read(self._index_to_frame(ii),self.h5_path)[self.h5_path]
                 # metadata
@@ -365,7 +369,7 @@ class ID16AScan(PtyScan):
                         bpm5_ct_val[ii] = bpm5_ct_val[ii-1]
             # normalization
             print('Normalizing the values of the bpm5 ct by the average')
-            common.bpm5_ct_val = bpm5_ct_val/bpm5_ct_val.mean() # normalize by the mean value
+            common.bpm5_ct_val = old_div(bpm5_ct_val,bpm5_ct_val.mean()) # normalize by the mean value
 
             log(3, 'Values of bpm5_ct loaded successfully.')
 
@@ -478,7 +482,7 @@ class ID16AScan(PtyScan):
         # Apply flat and dark, only dark, or no correction
         if self.info.flat_division and self.info.dark_subtraction:
             for j in raw:
-                raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
+                raw[j] = old_div((raw[j] - common.dark), (common.flat - common.dark))
                 raw[j][raw[j] < 0] = 0 # put negative values to 0
         elif self.info.dark_subtraction:
             for j in raw:
@@ -488,7 +492,7 @@ class ID16AScan(PtyScan):
         if self.info.det_flat_field is not None:
             for j in raw:
                 print("Correcting detector flat-field: {}".format(self._index_to_frame(j)))
-                raw[j] = raw[j] / common.flat_field
+                raw[j] = old_div(raw[j], common.flat_field)
                 raw[j][raw[j] < 0] = 0 # put negative values to 0
 
         if self.info.recipe.pad_crop is not None:
@@ -500,7 +504,7 @@ class ID16AScan(PtyScan):
         if self.info.recipe.use_bpm5_ct:
             for j in raw:
                 print("Correcting for the bpm5_ct values for {}".format(self.frame_format.format(j)))
-                raw[j] = raw[j] / common.bpm5_ct_val[j]
+                raw[j] = old_div(raw[j], common.bpm5_ct_val[j])
         
         data = raw
 

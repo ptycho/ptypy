@@ -9,6 +9,8 @@ This file is part of the PTYPY package.
 """
 from __future__ import print_function
 
+from builtins import str
+from builtins import object
 import json
 import numpy as np
 import time

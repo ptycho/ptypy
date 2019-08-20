@@ -7,6 +7,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import time
 from .. import utils as u
@@ -179,14 +183,14 @@ class DM(PositionCorrectionEngine):
         """
         self.pbound = {}
         mean_power = 0.
-        for name, s in self.di.storages.iteritems():
+        for name, s in self.di.storages.items():
             self.pbound[name] = (
                 .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
             mean_power += s.mean_power
-        self.mean_power = mean_power / len(self.di.storages)
+        self.mean_power = old_div(mean_power, len(self.di.storages))
 
         # Fill object with coverage of views
-        for name, s in self.ob_viewcover.storages.iteritems():
+        for name, s in self.ob_viewcover.storages.items():
             s.fill(s.get_view_coverage())
 
     def engine_iterate(self, num=1):
@@ -255,7 +259,7 @@ class DM(PositionCorrectionEngine):
         DM Fourier constraint update (including DM step).
         """
         error_dct = {}
-        for name, di_view in self.di.views.iteritems():
+        for name, di_view in self.di.views.items():
             if not di_view.active:
                 continue
             pbound = self.pbound[di_view.storage.ID]
@@ -298,7 +302,7 @@ class DM(PositionCorrectionEngine):
 
     def center_probe(self):
         if self.p.probe_center_tol is not None:
-            for name, s in self.pr.storages.iteritems():
+            for name, s in self.pr.storages.items():
                 c1 = u.mass_center(u.abs2(s.data).sum(0))
                 c2 = np.asarray(s.shape[-2:]) // 2
                 # fft convention should however use geometry instead
@@ -325,7 +329,7 @@ class DM(PositionCorrectionEngine):
             ob.fill(0.0)
             ob_nrm.fill(0.)
         else:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in self.ob.storages.items():
                 # The amplitude of the regularization term has to be scaled with the
                 # power of the probe (which is estimated from the power in diffraction patterns).
                 # This estimate assumes that the probe power is uniformly distributed through the
@@ -346,14 +350,14 @@ class DM(PositionCorrectionEngine):
                 ob_nrm.storages[name].fill(cfact)
 
         # DM update per node
-        for name, pod in self.pods.iteritems():
+        for name, pod in self.pods.items():
             if not pod.active:
                 continue
             pod.object += pod.probe.conj() * pod.exit * pod.object_weight
             ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
 
         # Distribute result with MPI
-        for name, s in self.ob.storages.iteritems():
+        for name, s in self.ob.storages.items():
             # Get the np arrays
             nrm = ob_nrm.storages[name].data
             parallel.allreduce(s.data)
@@ -387,11 +391,11 @@ class DM(PositionCorrectionEngine):
         # BE: was this asymmetric in original code
         # only because of the number of MPI nodes ?
         if parallel.master:
-            for name, s in pr.storages.iteritems():
+            for name, s in pr.storages.items():
                 # Instead of Npts_scan, the number of views should be considered
                 # Please note that a call to s.views may be
                 # slow for many views in the probe.
-                cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
+                cfact = old_div(self.p.probe_inertia * len(s.views), s.data.shape[0])
                 s.data[:] = cfact * s.data
                 pr_nrm.storages[name].fill(cfact)
         else:
@@ -399,7 +403,7 @@ class DM(PositionCorrectionEngine):
             pr_nrm.fill(0.0)
 
         # DM update per node
-        for name, pod in self.pods.iteritems():
+        for name, pod in self.pods.items():
             if not pod.active:
                 continue
             pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
@@ -408,7 +412,7 @@ class DM(PositionCorrectionEngine):
         change = 0.
 
         # Distribute result with MPI
-        for name, s in pr.storages.iteritems():
+        for name, s in pr.storages.items():
             # MPI reduction of results
             nrm = pr_nrm.storages[name].data
             parallel.allreduce(s.data)
@@ -422,9 +426,9 @@ class DM(PositionCorrectionEngine):
 
             # Compute relative change in probe
             buf = pr_buf.storages[name].data
-            change += u.norm2(s.data - buf) / u.norm2(s.data)
+            change += old_div(u.norm2(s.data - buf), u.norm2(s.data))
 
             # Fill buffer with new probe
             buf[:] = s.data
 
-        return np.sqrt(change / len(pr.storages))
+        return np.sqrt(old_div(change, len(pr.storages)))

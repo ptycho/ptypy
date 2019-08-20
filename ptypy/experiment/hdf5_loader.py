@@ -9,6 +9,7 @@ This file is part of the PTYPY package.
 """
 from __future__ import print_function
 
+from builtins import range
 import h5py as h5
 import numpy as np
 
@@ -564,7 +565,7 @@ class Hdf5Loader(PtyScan):
                     elif isinstance(fast_axis_bounds, (tuple, list)):
                         fast_axis_bounds = set_fast_axis_bounds
 
-                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
                 self.num_frames = len(self.preview_indices[0])
             else:
@@ -577,7 +578,7 @@ class Hdf5Loader(PtyScan):
                     elif isinstance(fast_axis_bounds, (tuple, list)):
                         fast_axis_bounds = set_fast_axis_bounds
                 self._scantype = "arb"
-                self.preview_indices = range(*fast_axis_bounds)
+                self.preview_indices = list(range(*fast_axis_bounds))
                 self.num_frames = len(self.preview_indices)
 
         elif ((len(positions_fast_shape)>1) and (len(positions_slow_shape)>1)) and data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
@@ -602,7 +603,7 @@ class Hdf5Loader(PtyScan):
                 elif isinstance(fast_axis_bounds, (tuple, list)):
                     fast_axis_bounds = set_fast_axis_bounds
 
-            indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+            indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
             self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()])
             self.num_frames = len(self.preview_indices[0])
             self._ismapped = False
@@ -633,7 +634,7 @@ class Hdf5Loader(PtyScan):
 
                 self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
 
-                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
                 self.num_frames = np.prod(indices[0].shape)
 
@@ -662,7 +663,7 @@ class Hdf5Loader(PtyScan):
 
                 self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
 
-                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
 
                 self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
                 self.num_frames = np.prod(indices[0].shape)

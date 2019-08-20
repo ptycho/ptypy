@@ -7,6 +7,9 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import numpy as np
 from scipy.special import erf
 from scipy.linalg import eig
@@ -50,7 +53,7 @@ def smooth_step(x, mfs):
     Smoothed step function with fwhm `mfs`
     Evaluates the error function `scipy.special.erf`.
     """
-    return 0.5 * erf(x * 2.35 / mfs) + 0.5
+    return 0.5 * erf(old_div(x * 2.35, mfs)) + 0.5
 
 def gaussian(x, std=1.0, off=0.0):
     """
@@ -76,7 +79,7 @@ def gaussian(x, std=1.0, off=0.0):
     gauss_fwhm
     smooth_step
     """
-    return np.exp(-(x - off)**2 / (2 * std**2)) / (std * np.sqrt(2 * np.pi))
+    return old_div(np.exp(old_div(-(x - off)**2, (2 * std**2))), (std * np.sqrt(2 * np.pi)))
 
 def gauss_fwhm(x, fwhm=1.0, off=0.0):
     """
@@ -98,7 +101,7 @@ def gauss_fwhm(x, fwhm=1.0, off=0.0):
     gaussian
 
     """
-    return gaussian(x, fwhm / 2 / np.sqrt(2 * np.log(2)), off)
+    return gaussian(x, old_div(fwhm, 2 / np.sqrt(2 * np.log(2))), off)
 
 def gaussian2D(size, std_x=1.0, std_y=1.0, off_x=0.0, off_y=0.0):
     """
@@ -127,11 +130,11 @@ def gaussian2D(size, std_x=1.0, std_y=1.0, off_x=0.0, off_y=0.0):
         raise RuntimeError('Input size has to be integer.')
 
     y, x = np.mgrid[0:size, 0:size]
-    x = x - size / 2
-    y = y - size / 2
-    xpart = (x - off_x)**2 / (2 * std_x**2)
-    ypart = (y - off_y)**2 / (2 * std_y**2)
-    return np.exp(-(xpart + ypart)) / (2 * np.pi * std_x * std_y)
+    x = x - old_div(size, 2)
+    y = y - old_div(size, 2)
+    xpart = old_div((x - off_x)**2, (2 * std_x**2))
+    ypart = old_div((y - off_y)**2, (2 * std_y**2))
+    return old_div(np.exp(-(xpart + ypart)), (2 * np.pi * std_x * std_y))
 
 def delxf(a, axis=-1, out=None):
     """\
@@ -158,7 +161,7 @@ def delxf(a, axis=-1, out=None):
         Derived array.
     """
     nd = a.ndim
-    axis = range(nd)[axis]
+    axis = list(range(nd))[axis]
 
     slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
     slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
@@ -199,7 +202,7 @@ def delxb(a, axis=-1):
     """
 
     nd = a.ndim
-    axis = range(nd)[axis]
+    axis = list(range(nd))[axis]
     slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
     slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
     b = np.zeros_like(a)
@@ -229,7 +232,7 @@ def delxc(a,axis=-1):
         Derived array.
     """
     nd = a.ndim
-    axis = range(nd)[axis]
+    axis = list(range(nd))[axis]
     slice_middle = [slice(1,-1) if i==axis else slice(None) for i in range(nd)]
     b = delxf(a, axis) + delxb(a, axis)
     b[slice_middle] *= 0.5
@@ -327,5 +330,5 @@ def rl_deconvolution(data, mtf, numiter):
     convolve = lambda x: np.abs(np.fft.ifft2(np.fft.fft2(x)*mtf)).astype(x.dtype)
     u = data.copy()
     for n in range(numiter):
-        u *= convolve(data / (convolve(u) + 1e-6))
+        u *= convolve(old_div(data, (convolve(u) + 1e-6)))
     return u

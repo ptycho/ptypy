@@ -7,6 +7,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import os
 
@@ -266,9 +270,9 @@ class I13ScanNFP(PtyScan):
         # Extract detector name if not set or wrong
         if (self.info.detector_name is None
                 or self.info.detector_name
-                not in self.instrument.keys()):
+                not in list(self.instrument.keys())):
                 detector_name = None
-                for k in self.instrument.keys():
+                for k in list(self.instrument.keys()):
                     if 'data' in self.instrument[k]:
                         detector_name = k
                         break
@@ -407,9 +411,9 @@ class I13ScanNFP(PtyScan):
         # Load dark.
         if self.info.dark_number is not None:
             key = NEXUS_PATHS.frame_pattern % self.info
-            dark_indices = range(len(
+            dark_indices = list(range(len(
                 io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern
-                          % self.info)[key]))
+                          % self.info)[key])))
 
             dark = [io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern
                               % self.info, slice=j)[key][
@@ -425,9 +429,9 @@ class I13ScanNFP(PtyScan):
         # Load flat.
         if self.info.flat_number is not None:
             key = NEXUS_PATHS.frame_pattern % self.info
-            flat_indices = range(len(
+            flat_indices = list(range(len(
                 io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern
-                          % self.info)[key]))
+                          % self.info)[key])))
 
             flat = [io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern
                               % self.info, slice=j)[key][
@@ -545,7 +549,7 @@ class I13ScanNFP(PtyScan):
             else:
                 gau_sum = 0
                 for k in (
-                        self.info.rl_deconvolution.gaussians.iteritems()):
+                        iter(self.info.rl_deconvolution.gaussians.items())):
                     gau_sum += u.gaussian2D(raw[0].shape[0],
                                             k[1].std_x,
                                             k[1].std_y,
@@ -567,7 +571,7 @@ class I13ScanNFP(PtyScan):
         if (self.info.flat_number is not None
                 and self.info.dark_number is not None):
             for j in raw:
-                raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
+                raw[j] = old_div((raw[j] - common.dark), (common.flat - common.dark))
                 raw[j][raw[j] < 0] = 0
             data = raw
         elif self.info.dark_number is not None:

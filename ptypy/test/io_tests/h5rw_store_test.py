@@ -5,6 +5,9 @@ This tests the functionality of h5rw and can be broken to include new types
 '''
 from __future__ import print_function
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 import unittest
 import tempfile
 import shutil
@@ -12,7 +15,7 @@ import h5py as h5
 import ptypy.io as io
 import ptypy.utils as u
 import numpy as np
-import cPickle
+import pickle
 import collections
 
 
@@ -139,7 +142,7 @@ class H5rwStoreTest(unittest.TestCase):
         pass
 
     def test_fail_unsupported(self):
-        class owntype:
+        class owntype(object):
             pass
 
         def test_func():
@@ -153,7 +156,7 @@ class H5rwStoreTest(unittest.TestCase):
     def test_ignore_unsupported(self):
         io.h5options['UNSUPPORTED'] = 'ignore'
 
-        class owntype:
+        class owntype(object):
             pass
 
         def test_func():
@@ -169,7 +172,7 @@ class H5rwStoreTest(unittest.TestCase):
     def test_pickle_unsupported(self):
         io.h5options['UNSUPPORTED'] = 'pickle'
 
-        class owntype:
+        class owntype(object):
             pass
 
         def test_func():

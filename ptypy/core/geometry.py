@@ -6,6 +6,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import division
+from builtins import str
+from builtins import object
+from past.utils import old_div
 import numpy as np
 from scipy import fftpack
 
@@ -162,10 +166,10 @@ class Geo(Base):
         p = self.DEFAULT.copy(99)
         if pars is not None:
             p.update(pars)
-            for k, v in p.items():
-                if k in _old2new.keys():
+            for k, v in list(p.items()):
+                if k in list(_old2new.keys()):
                     p[_old2new[k]] = v
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k in p:
                 p[k] = v
 
@@ -251,19 +255,19 @@ class Geo(Base):
             return
         elif not self.p.resolution_is_fix and self.p.psize_is_fix:
             if self.p.propagation == 'farfield':
-                self.p.resolution[:] = self.lz / self.p.psize / self.p.shape
+                self.p.resolution[:] = old_div(self.lz, self.p.psize / self.p.shape)
             else:
                 self.p.resolution[:] = self.p.psize
         elif self.p.resolution_is_fix and not self.p.psize_is_fix:
             if self.p.propagation == 'farfield':
-                self.p.psize[:] = self.lz / self.p.resolution / self.p.shape
+                self.p.psize[:] = old_div(self.lz, self.p.resolution / self.p.shape)
             else:
                 self.p.psize[:] = self.p.resolution
         else:
             # Both psizes are fix
             if self.p.propagation == 'farfield':
                 # Frame misfit that would make it work
-                self.p.misfit[:] = (self.lz / self.p.resolution / self.p.psize
+                self.p.misfit[:] = (old_div(self.lz, self.p.resolution / self.p.psize)
                                     - self.p.shape)
             else:
                 self.p.misfit[:] = self.p.resolution - self.p.psize
@@ -285,7 +289,7 @@ class Geo(Base):
     def energy(self, v):
         self.p.energy = v
         # actively change inner variables
-        self.p.lam = self._keV2m / v
+        self.p.lam = old_div(self._keV2m, v)
         if self.interact:
             self.update()
 
@@ -301,7 +305,7 @@ class Geo(Base):
         # changing wavelengths never changes N, only psize
         # for changing N, please do so manually
         self.p.lam = v
-        self.p.energy = self._keV2m / v
+        self.p.energy = old_div(self._keV2m, v)
         if self.interact:
             self.update()
 
@@ -372,7 +376,7 @@ class Geo(Base):
         return self._propagator
 
     def __str__(self):
-        keys = self.p.keys()
+        keys = list(self.p.keys())
         keys.sort()
         start = ""
         for key in keys:
@@ -527,7 +531,7 @@ class BasicFarfieldPropagator(object):
         p = self.p
         if geo_pars is not None:
             p.update(geo_pars)
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k in p:
                 p[k] = v
 
@@ -538,7 +542,7 @@ class BasicFarfieldPropagator(object):
         if p.resolution is not None:
             resolution = p.resolution
         else:
-            resolution = lz / p.shape / p.psize
+            resolution = old_div(lz, p.shape / p.psize)
 
         # Calculate array shape from misfit
         mis = u.expect2(p.misfit)
@@ -546,7 +550,7 @@ class BasicFarfieldPropagator(object):
         self.sh = p.shape + self.crop_pad
 
         # Undo rounding error
-        lz /= (self.sh[0] + mis[0] - self.crop_pad[0]) / self.sh[0]
+        lz /= old_div((self.sh[0] + mis[0] - self.crop_pad[0]), self.sh[0])
 
         # Calculate the grids
         if u.isstr(p.origin):
@@ -568,7 +572,7 @@ class BasicFarfieldPropagator(object):
 
         # Quadratic phase + shift factor before fft
         self.pre_curve = np.exp(
-            1j * np.pi * (X**2 + Y**2) / lz).astype(self.dtype)
+            old_div(1j * np.pi * (X**2 + Y**2), lz)).astype(self.dtype)
 
         # self.pre_check = np.exp(
         #     -2.0 * np.pi * 1j * ((X-X[0, 0]) * V[0, 0] +
@@ -576,20 +580,20 @@ class BasicFarfieldPropagator(object):
         # ).astype(self.dtype)
 
         self.pre_fft = self.pre_curve * np.exp(
-            -2.0 * np.pi * 1j * ((X-X[0, 0]) * V[0, 0] +
-                                 (Y-Y[0, 0]) * W[0, 0]) / lz
+            old_div(-2.0 * np.pi * 1j * ((X-X[0, 0]) * V[0, 0] +
+                                 (Y-Y[0, 0]) * W[0, 0]), lz)
         ).astype(self.dtype)
 
         # Quadratic phase + shift factor before fft
         self.post_curve = np.exp(
-            1j * np.pi * (V**2 + W**2) / lz).astype(self.dtype)
+            old_div(1j * np.pi * (V**2 + W**2), lz)).astype(self.dtype)
 
         # self.post_check = np.exp(
         #     -2.0 * np.pi * 1j * (X[0, 0]*V + Y[0, 0]*W) / lz
         # ).astype(self.dtype)
 
         self.post_fft = self.post_curve * np.exp(
-            -2.0 * np.pi * 1j * (X[0, 0]*V + Y[0, 0]*W) / lz
+            old_div(-2.0 * np.pi * 1j * (X[0, 0]*V + Y[0, 0]*W), lz)
         ).astype(self.dtype)
 
         # Factors for inverse operation
@@ -697,7 +701,7 @@ class BasicNearfieldPropagator(object):
         p = self.p
         if geo_pars is not None:
             p.update(geo_pars)
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k in p:
                 p[k] = v
 
@@ -715,12 +719,12 @@ class BasicNearfieldPropagator(object):
         # [V, W] = u.grids(self.sh, psize_fspace, 'fft')
         # a2 = (V**2 + W**2) / p.distance**2
 
-        psize_fspace = p.lam / p.shape / p.resolution
+        psize_fspace = old_div(p.lam, p.shape / p.resolution)
         [V, W] = u.grids(self.sh, psize_fspace, 'fft')
         a2 = (V**2 + W**2)
 
         self.kernel = np.exp(
-            2j * np.pi * (p.distance / p.lam) * (np.sqrt(1-a2) - 1))
+            2j * np.pi * (old_div(p.distance, p.lam)) * (np.sqrt(1-a2) - 1))
         # self.kernel = np.fft.fftshift(self.kernel)
         self.ikernel = self.kernel.conj()
 

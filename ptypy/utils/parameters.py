@@ -8,6 +8,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
+from builtins import str
 import os
 
 __all__ = ['Param', 'asParam']  # 'load',]
@@ -49,7 +50,7 @@ class Param(dict):
         self.update(kwargs)
 
     def __getstate__(self):
-        return self.__dict__.items()
+        return list(self.__dict__.items())
 
     def __setstate__(self, items):
         for key, val in items:
@@ -112,7 +113,7 @@ class Param(dict):
         """
         d = Param(self)
         if depth > 0:
-            for k, v in d.iteritems():
+            for k, v in d.items():
                 if isinstance(v, self.__class__): d[k] = v.copy(depth - 1)
         return d
 
@@ -126,7 +127,7 @@ class Param(dict):
         True.
         """
         if self._display_items_as_attributes:
-            return self.keys()
+            return list(self.keys())
             # return [item.__dict__.get('name',str(key)) for key,item in self.iteritems()]
         else:
             return []
@@ -170,7 +171,7 @@ class Param(dict):
             # If an element is itself a dict, convert it to Param
             if Convert and hasattr(v, 'keys') and not isinstance(v, self.__class__):
                 v = Param(v)
-                v.update(v.items(), in_place_depth - 1, Convert)
+                v.update(list(v.items()), in_place_depth - 1, Convert)
 
             # new key
             if k not in self:
@@ -196,7 +197,7 @@ class Param(dict):
         if __d__ is not None:
             if hasattr(__d__, 'keys'):
                 # Iterate through dict-like argument
-                for k, v in __d__.iteritems():
+                for k, v in __d__.items():
                     _k_v_update(k, v)
 
             else:
@@ -204,7 +205,7 @@ class Param(dict):
                 for (k, v) in __d__:
                     _k_v_update(k, v)
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             _k_v_update(k, v)
 
         return None
@@ -217,7 +218,7 @@ class Param(dict):
             return dict(self)
         else:
             d = dict(self)
-            for k, v in d.iteritems():
+            for k, v in d.items():
                 if isinstance(v, self.__class__): d[k] = v._to_dict(Recursive)
         return d
 
@@ -241,7 +242,7 @@ def validate_standard_param(sp, p=None, prefix=None):
     """
     if p is None:
         good = True
-        for k, v in sp.iteritems():
+        for k, v in sp.items():
             if k.startswith('_'): continue
             if type(v) == type(sp):
                 pref = k if prefix is None else '.'.join([prefix, k])
@@ -273,7 +274,7 @@ def format_standard_param(p):
     lines = []
     if not validate_standard_param(p):
         print('Standard parameter does not')
-    for k, v in p.iteritems():
+    for k, v in p.items():
         if k.startswith('_'): continue
         if type(v) == type(p):
             sublines = format_standard_param(v)

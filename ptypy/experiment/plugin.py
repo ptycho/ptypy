@@ -11,6 +11,7 @@ This file is part of the PTYPY package.
 
 """
 
+from builtins import str
 import os
 import imp
 import inspect
@@ -52,15 +53,15 @@ def makeScanPlugin(pars=None):
     if rinfo.classname is None:
         # We try to find the class
         ptyscan_objects = {}
-        for name, obj in plugin.__dict__.iteritems():
+        for name, obj in plugin.__dict__.items():
             if inspect.isclass(obj) and issubclass(obj, PtyScan) and obj is not PtyScan:
                 ptyscan_objects[name] = obj
         if not ptyscan_objects:
             raise RuntimeError('Failed to find a PtyScan subclass in plugin %s' % plugin_name)
         elif len(ptyscan_objects) > 1:
-            raise RuntimeError('Multiple PtyScan subclasses in plugin %s: %s' % (plugin_name, str(ptyscan_objects.keys())))
+            raise RuntimeError('Multiple PtyScan subclasses in plugin %s: %s' % (plugin_name, str(list(ptyscan_objects.keys()))))
         # Class found
-        ptyscan_obj_name = ptyscan_objects.keys()[0]
+        ptyscan_obj_name = list(ptyscan_objects.keys())[0]
         ptyscan_obj = ptyscan_objects[ptyscan_obj_name]
     else:
         ptyscan_obj_name = rinfo.classname

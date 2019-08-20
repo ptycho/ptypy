@@ -7,6 +7,11 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import division
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import warnings
 
@@ -85,7 +90,7 @@ def from_pars(xypars=None):
     elif xypars is None:
         return None
     elif str(xypars) == xypars:
-        if xypars in TEMPLATES.keys():
+        if xypars in list(TEMPLATES.keys()):
             return from_pars(TEMPLATES[sam])
         else:
             raise RuntimeError(
@@ -109,10 +114,10 @@ def from_pars(xypars=None):
             pos = np.asarray(p.model)
         elif p.model == 'round':
             e, l, s = _complete(p.extent, p.steps, p.spacing)
-            pos = round_scan(s[0], l[0]/2)
+            pos = round_scan(s[0], old_div(l[0],2))
         elif p.model == 'spiral':
             e, l, s = _complete(p.extent, p.steps, p.spacing)
-            pos = spiral_scan(s[0], e[0]/2)
+            pos = spiral_scan(s[0], old_div(e[0],2))
         elif p.model == 'raster':
             e, l, s = _complete(p.extent, p.steps, p.spacing)
             pos = raster_scan(s[0], s[1], l[0], l[1])
@@ -152,11 +157,11 @@ def _complete(extent, steps, spacing):
     elif steps is None:
         e = u.expect2(extent)
         s = u.expect2(spacing)
-        l = (e / s).astype(np.int)
+        l = (old_div(e, s)).astype(np.int)
     elif spacing is None:
         e = u.expect2(extent)
         l = u.expect2(steps)
-        s = e / l
+        s = old_div(e, l)
     else:
         l = u.expect2(steps)
         s = u.expect2(spacing)
@@ -252,7 +257,7 @@ def round_scan(dr=1.5e-6, nr=5, nth=5, bullseye=True):
 
     for ir in range(1, nr+2):
         rr = ir * dr
-        dth = 2 * np.pi / (nth * ir)
+        dth = old_div(2 * np.pi, (nth * ir))
         positions.extend([(rr * np.sin(ith*dth), rr * np.cos(ith*dth))
                           for ith in range(nth*ir)])
     return np.asarray(positions)
@@ -286,13 +291,13 @@ def spiral_scan(dr=1.5e-6, r=7.5e-6, maxpts=None):
     >>> plt.plot(pos[:, 1], pos[:, 0], 'o-'); plt.show()
     """
     alpha = np.sqrt(4 * np.pi)
-    beta = dr / (2*np.pi)
+    beta = old_div(dr, (2*np.pi))
 
     if maxpts is None:
         maxpts = 100000
 
     positions = []
-    for k in xrange(maxpts):
+    for k in range(maxpts):
         theta = alpha * np.sqrt(k)
         rr = beta * theta
         if rr > r:

@@ -7,7 +7,13 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
+from __future__ import division
 
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
+from builtins import object
 import time
 import numpy as np
 from threading import Thread, Lock
@@ -266,7 +272,7 @@ class PlotClient(object):
         """
         Request all data to the server (asynchronous).
         """
-        for cmd, item in self.cmd_dct.iteritems():
+        for cmd, item in self.cmd_dct.items():
             item[0] = self.client.get(cmd)
 
     def _store_data(self):
@@ -274,7 +280,7 @@ class PlotClient(object):
         Transfer all data from the client to local attributes.
         """
         with self._lock:
-            for cmd, item in self.cmd_dct.iteritems():
+            for cmd, item in self.cmd_dct.items():
                 item[1][item[2]] = self.client.data[item[0]]
             # An extra step for the error. This should be handled differently at some point.
             # self.error = np.array([info['error'].sum(0) for info in self.runtime.iter_info])
@@ -362,7 +368,7 @@ class MPLplotter(object):
             if layers is None:
                 layers = cont.data.shape[0]
             if np.isscalar(layers):
-                layers = range(layers)
+                layers = list(range(layers))
             plot.layers = layers
             plot.axes_index = len(num_shape_list)
             num_shape = [len(layers)*len(plot.auto_display)+int(plot.local_error), sh]
@@ -391,7 +397,7 @@ class MPLplotter(object):
             if layers is None:
                 layers = cont.data.shape[0]
             if np.isscalar(layers):
-                layers = range(layers)
+                layers = list(range(layers))
             plot.layers = layers
             plot.axes_index = len(num_shape_list)
             num_shape = [len(layers)*len(plot.auto_display), sh]
@@ -508,12 +514,12 @@ class MPLplotter(object):
                 err_phot = error[:, 1]
                 err_exit = error[:, 2]
                 axis.hold(False)
-                fmag = err_fmag/np.max(err_fmag)
+                fmag = old_div(err_fmag,np.max(err_fmag))
                 axis.plot(fmag, label='err_fmag %2.2f%% of %.2e' % (fmag[-1]*100, np.max(err_fmag)))
                 axis.hold(True)
-                phot = err_phot/np.max(err_phot)
+                phot = old_div(err_phot,np.max(err_phot))
                 axis.plot(phot, label='err_phot %2.2f%% of %.2e' % (phot[-1]*100, np.max(err_phot)))
-                ex = err_exit/np.max(err_exit)
+                ex = old_div(err_exit,np.max(err_exit))
                 axis.plot(ex, label='err_exit %2.2f%% of %.2e' % (ex[-1]*100, np.max(err_exit)))
                 axis.legend(loc=1, fontsize=10) #('err_fmag %.2e' % np.max(err_fmag),'err_phot %.2e' % np.max(err_phot),'err_exit %.2e' % np.max(err_exit)),
                 plt.setp(axis.get_xticklabels(), fontsize=10)
@@ -598,11 +604,11 @@ class MPLplotter(object):
             f.close()
 
     def plot_all(self, blocking = False):
-        for key, storage in self.pr.items():
+        for key, storage in list(self.pr.items()):
             #print key
             pp = self.pr_plot[key]
             self.plot_storage(storage,pp, str(key), 'pr')
-        for key, storage in self.ob.items():
+        for key, storage in list(self.ob.items()):
             #print key
             pp = self.ob_plot[key]
             self.plot_storage(storage,pp, str(key), 'obj')
@@ -731,7 +737,7 @@ class Bragg3dClient(object):
         self.plot_object()
         self.plot_probe()
 
-        if 'shrinkwrap' in self.runtime.iter_info[-1].keys():
+        if 'shrinkwrap' in list(self.runtime.iter_info[-1].keys()):
             self.plot_shrinkwrap()
 
     def plot_shrinkwrap(self):
@@ -750,9 +756,9 @@ class Bragg3dClient(object):
 
     def plot_object(self):
 
-        data = self.ob.values()[0]['data'][0]
-        center = self.ob.values()[0]['center']
-        psize = self.ob.values()[0]['psize']
+        data = list(self.ob.values())[0]['data'][0]
+        center = list(self.ob.values())[0]['center']
+        psize = list(self.ob.values())[0]['psize']
         lims_r3 = (-center[0] * psize[0], (data.shape[0] - center[0]) * psize[0])
         lims_r1 = (-center[1] * psize[1], (data.shape[1] - center[1]) * psize[1])
         lims_r2 = (-center[2] * psize[2], (data.shape[2] - center[2]) * psize[2])
@@ -796,9 +802,9 @@ class Bragg3dClient(object):
     def plot_error(self):
         # error
         error = np.array([info['error'] for info in self.runtime.iter_info])
-        err_fmag = error[:, 0] / np.max(error[:, 0])
-        err_phot = error[:, 1] / np.max(error[:, 1])
-        err_exit = error[:, 2] / np.max(error[:, 2])
+        err_fmag = old_div(error[:, 0], np.max(error[:, 0]))
+        err_phot = old_div(error[:, 1], np.max(error[:, 1]))
+        err_exit = old_div(error[:, 2], np.max(error[:, 2]))
 
         self.ax_err.clear()
         self.ax_err.plot(err_fmag, label='err_fmag')

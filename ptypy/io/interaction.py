@@ -11,13 +11,19 @@ This file is part of the PTYPY package.
 """
 
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
 import zmq
 import time
 import string
 import random
 import sys
 from threading import Thread, Event
-import Queue
+import queue
 import numpy as np
 import re
 import json
@@ -99,7 +105,7 @@ def numpy_replace(obj, arraylist):
         return obj
     elif isinstance(obj, dict):
         newobj = {}
-        for k, v in obj.iteritems():
+        for k, v in obj.items():
             newobj[k] = numpy_replace(v, arraylist)
         return newobj
     elif isinstance(obj, list):
@@ -279,7 +285,7 @@ class Server(object):
         self.pingtime = time.time()
 
         # Command queue
-        self.queue = Queue.Queue()
+        self.queue = queue.Queue()
 
         # Initialize flags to communicate state between threads.
         self._need_process = False
@@ -304,7 +310,7 @@ class Server(object):
 
     def make_ID_pool(self):
 
-        port_range = range(self.port+1,self.port+self.p.connections+1)
+        port_range = list(range(self.port+1,self.port+self.p.connections+1))
         # Initial ID pool
         IDlist = []
         # This loop ensures all IDs are unique
@@ -312,7 +318,7 @@ class Server(object):
             newID = ID_generator()
             if newID not in IDlist:
                 IDlist.append(newID)
-        self.ID_pool = zip(IDlist, port_range)
+        self.ID_pool = list(zip(IDlist, port_range))
 
     def activate(self):
         """
@@ -339,7 +345,7 @@ class Server(object):
         Queue a warning message for all connected clients.
         """
         DEBUG('Queuing a WARN command')
-        for ID in self.names.keys():
+        for ID in list(self.names.keys()):
             self.queue.put({'ID': ID, 'cmd': 'WARN', 'ticket': 'WARN', 'str': warning_message})
         self._need_process = True
         return {'status': 'ok'}
@@ -349,7 +355,7 @@ class Server(object):
         Queue an ERROR message for all connected clients.
         """
         DEBUG('Queuing a ERROR command')
-        for ID in self.names.keys():
+        for ID in list(self.names.keys()):
             self.queue.put({'ID': ID, 'cmd': 'ERROR', 'ticket': 'ERROR', 'str': error_message})
         self._need_process = True
         return {'status': 'ok'}
@@ -449,7 +455,7 @@ class Server(object):
         if now - self.pingtime > self.pinginterval:
             # Time to check
             todisconnect = []
-            for ID, lastping in self.pings.iteritems():
+            for ID, lastping in self.pings.items():
                 if now - lastping > self.pingtimeout:
                     # Timeout! Force disconnection
                     todisconnect.append(ID)
@@ -518,7 +524,7 @@ class Server(object):
         Send available objects.
         """
         DEBUG('Processing an AVAIL command')
-        return {'status': 'ok', 'avail': self.objects.keys()}
+        return {'status': 'ok', 'avail': list(self.objects.keys())}
 
     def _cmd_ping(self, ID, args):
         """\
@@ -599,7 +605,7 @@ class Server(object):
         while True:
             try:
                 q = self.queue.get_nowait()
-            except Queue.Empty:
+            except queue.Empty:
                 break
 
             # Keep track of ticket number
@@ -607,7 +613,7 @@ class Server(object):
             logger.debug('Processing ticket %s from client %s' % (str(ticket), str(q['ID'])))
 
             # Nothing to do if the client is not connected anymore
-            if q['ID'] not in self.names.keys():
+            if q['ID'] not in list(self.names.keys()):
                 self.queue.task_done()
                 logger.debug('Client %s disconnected. Skipping.' % q['ID'])
                 continue

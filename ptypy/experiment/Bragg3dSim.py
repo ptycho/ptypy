@@ -1,7 +1,10 @@
 """   
 This module provides simulated 3D Bragg data. 
 """
+from __future__ import division
 
+from builtins import range
+from past.utils import old_div
 import ptypy
 from ptypy.core.data import PtyScan
 import ptypy.utils as u
@@ -178,8 +181,8 @@ class Bragg3dSimScan(PtyScan):
         # First set up a two-dimensional representation of the incoming
         # probe, with arbitrary pixel spacing.
         extent = max(g.probe_extent_vs_fov())
-        psize = g.resolution.min() / 5
-        shape = int(np.ceil(extent / psize))
+        psize = old_div(g.resolution.min(), 5)
+        shape = int(np.ceil(old_div(extent, psize)))
         logger.info('Generating incoming probe %d x %d (%.3e x %.3e) with psize %.3e...'
             % (shape, shape, extent, extent, psize))
         t0 = time.time()
@@ -231,7 +234,7 @@ class Bragg3dSimScan(PtyScan):
 
         # shuffle everything as a test
         if self.p.shuffle:
-            order = range(len(self.diff))
+            order = list(range(len(self.diff)))
             from random import shuffle
             shuffle(order)
             self.diff = [self.diff[i] for i in order]

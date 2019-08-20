@@ -3,6 +3,7 @@ This script creates a sample *.ptyd data file using the built-in
 test Scan `ptypy.core.data.MoonFlowerScan`
 """
 from __future__ import print_function
+from builtins import str
 import ptypy
 from ptypy import utils as u
 import tempfile

@@ -2,7 +2,11 @@
 Geometry management and propagation for Bragg geometry.
 """
 from __future__ import absolute_import
+from __future__ import division
 
+from builtins import range
+from builtins import object
+from past.utils import old_div
 from .. import utils as u
 from ..utils.verbose import logger
 from .geometry import Geo as _Geo
@@ -128,24 +132,24 @@ class Geo_Bragg(_Geo):
             raise ValueError(
                 'Neither pixel size nor sample resolution specified.')
         elif not self.p.resolution_is_fix and self.p.psize_is_fix:
-            dq1 = self.psize[1] * 2 * np.pi / self.distance / self.lam
-            dq2 = self.psize[2] * 2 * np.pi / self.distance / self.lam
-            dq3 = np.deg2rad(self.psize[0]) * 4 * np.pi / self.lam * self.sintheta
-            self.p.resolution[1] = 2 * np.pi / \
-                (self.shape[1] * dq1 * self.costheta)
-            self.p.resolution[2] = 2 * np.pi / (self.shape[2] * dq2)
-            self.p.resolution[0] = 2 * np.pi / \
-                (self.shape[0] * dq3 * self.costheta)
+            dq1 = old_div(self.psize[1] * 2 * np.pi, self.distance / self.lam)
+            dq2 = old_div(self.psize[2] * 2 * np.pi, self.distance / self.lam)
+            dq3 = old_div(np.deg2rad(self.psize[0]) * 4 * np.pi, self.lam * self.sintheta)
+            self.p.resolution[1] = old_div(2 * np.pi, \
+                (self.shape[1] * dq1 * self.costheta))
+            self.p.resolution[2] = old_div(2 * np.pi, (self.shape[2] * dq2))
+            self.p.resolution[0] = old_div(2 * np.pi, \
+                (self.shape[0] * dq3 * self.costheta))
         elif self.p.resolution_is_fix and not self.p.psize_is_fix:
-            dq1 = 2 * np.pi / \
-                (self.shape[1] * self.resolution[1] * self.costheta)
-            dq2 = 2 * np.pi / (self.shape[2] * self.resolution[2])
-            dq3 = 2 * np.pi / \
-                (self.shape[0] * self.resolution[0] * self.costheta)
-            self.p.psize[1] = dq1 * self.distance * self.lam / (2 * np.pi)
-            self.p.psize[2] = dq2 * self.distance * self.lam / (2 * np.pi)
+            dq1 = old_div(2 * np.pi, \
+                (self.shape[1] * self.resolution[1] * self.costheta))
+            dq2 = old_div(2 * np.pi, (self.shape[2] * self.resolution[2]))
+            dq3 = old_div(2 * np.pi, \
+                (self.shape[0] * self.resolution[0] * self.costheta))
+            self.p.psize[1] = old_div(dq1 * self.distance * self.lam, (2 * np.pi))
+            self.p.psize[2] = old_div(dq2 * self.distance * self.lam, (2 * np.pi))
             self.p.psize[0] = np.rad2deg(
-                dq3 * self.lam / (4 * np.pi * self.sintheta))
+                old_div(dq3 * self.lam, (4 * np.pi * self.sintheta)))
         else:
             raise ValueError(
                 'Both pixel size and sample resolution specified.')
@@ -157,16 +161,16 @@ class Geo_Bragg(_Geo):
 
         # Establish transforms between coordinate systems
         # ...from {x z y} to {r3 r1 r2}
-        self.A_r3r1r2 = [[1 / self.costheta, 0, 0],
-                         [-self.sintheta / self.costheta, 1, 0],
+        self.A_r3r1r2 = [[old_div(1, self.costheta), 0, 0],
+                         [old_div(-self.sintheta, self.costheta), 1, 0],
                          [0, 0, 1]]
         # ...from {r3 r1 r2} to {x z y}
         self.A_xzy = [[self.costheta, 0, 0],
                       [self.sintheta, 1, 0],
                       [0, 0, 1]]
         # ...from {qx qz qy} to {q3 q1 q2}
-        self.A_q3q1q2 = [[1, self.sintheta / self.costheta, 0],
-                         [0, 1 / self.costheta,             0],
+        self.A_q3q1q2 = [[1, old_div(self.sintheta, self.costheta), 0],
+                         [0, old_div(1, self.costheta),             0],
                          [0, 0,                             1]]
         # ...from {q3 q1 q2} to {qx qz qy}
         self.A_qxqzqy = [[1, -self.sintheta, 0],
@@ -290,9 +294,9 @@ class Geo_Bragg(_Geo):
             return x, z, y
         elif input_space == 'real' and input_system == 'cartesian':
             x, z, y = grids
-            r1 = z - self.sintheta / self.costheta * x
+            r1 = z - old_div(self.sintheta, self.costheta * x)
             r2 = y
-            r3 = 1 / self.costheta * x
+            r3 = old_div(1, self.costheta * x)
             return r3, r1, r2
         elif input_space == 'reciprocal' and input_system == 'natural':
             q3, q1, q2 = grids
@@ -302,9 +306,9 @@ class Geo_Bragg(_Geo):
             return qx, qz, qy
         elif input_space == 'reciprocal' and input_system == 'cartesian':
             qx, qz, qy = grids
-            q1 = 1 / self.costheta * qz
+            q1 = old_div(1, self.costheta * qz)
             q2 = qy
-            q3 = qx + self.sintheta / self.costheta * qz
+            q3 = qx + old_div(self.sintheta, self.costheta * qz)
             return q3, q1, q2
         else:
             raise ValueError('invalid options')
@@ -355,8 +359,8 @@ class Geo_Bragg(_Geo):
         if input_space == 'real':
             # create a padded copy of the data array
             shape = S.shape[1:]
-            pad = int(np.ceil(self.sintheta *
-                              shape[0] * S.psize[0] / S.psize[1]))
+            pad = int(np.ceil(old_div(self.sintheta *
+                              shape[0] * S.psize[0], S.psize[1])))
             d = np.pad(S.data[layer], pad_width=(
                 (0, 0), (0, pad), (0, 0)), mode='constant')
             # walk along the r3/x axis and roll the r1/z axis. the
@@ -367,24 +371,24 @@ class Geo_Bragg(_Geo):
                     # roll the z axis in the negative direction for more
                     # positive x
                     shift = int(
-                        round((shape[0] - i) * S.psize[0] * self.sintheta / S.psize[1]))
+                        round(old_div((shape[0] - i) * S.psize[0] * self.sintheta, S.psize[1])))
                 elif input_system == 'natural':
                     # roll the r1 axis in the positive direction for more
                     # positive r3
                     shift = int(
-                        round(i * S.psize[0] * self.sintheta / S.psize[1]))
+                        round(old_div(i * S.psize[0] * self.sintheta, S.psize[1])))
                 d_old = np.copy(d)
                 d[i, :, :] = np.roll(d[i, :, :], shift, axis=0)
 
             # optionally crop the new array
             if keep_dims:
-                d = d[:, pad / 2:shape[1] + pad / 2, :]
+                d = d[:, old_div(pad, 2):shape[1] + old_div(pad, 2), :]
             # construct a new Storage
             if input_system == 'cartesian':
-                new_psize = S.psize * np.array([1 / self.costheta, 1, 1])
+                new_psize = S.psize * np.array([old_div(1, self.costheta), 1, 1])
             elif input_system == 'natural':
                 new_psize = S.psize * np.array([self.costheta, 1, 1])
-            old_center = S.origin + S.psize * shape / 2
+            old_center = S.origin + old_div(S.psize * shape, 2)
             S_out = C_.new_storage(ID='S0', psize=new_psize,
                                    padonly=False, shape=None)
             V = View(container=C_, storageID='S0', coord=old_center,
@@ -414,13 +418,13 @@ class Geo_Bragg(_Geo):
                 d[:, i, :] = np.roll(d[:, i, :], shift, axis=0)
             # optionally crop the new array
             if keep_dims:
-                d = d[pad / 2:shape[0] + pad / 2, :, :]
+                d = d[old_div(pad, 2):shape[0] + old_div(pad, 2), :, :]
             # construct a new Storage
             if input_system == 'cartesian':
-                new_psize = S.psize * np.array([1, 1 / self.costheta, 1])
+                new_psize = S.psize * np.array([1, old_div(1, self.costheta), 1])
             elif input_system == 'natural':
                 new_psize = S.psize * np.array([1, self.costheta, 1])
-            old_center = S.origin + S.psize * shape / 2
+            old_center = S.origin + old_div(S.psize * shape, 2)
             S_out = C_.new_storage(ID='S0', psize=new_psize,
                                    padonly=False, shape=None)
             V = View(container=C_, storageID='S0', coord=old_center,
@@ -468,25 +472,25 @@ class Geo_Bragg(_Geo):
 
         # center both storages (meaning that the central pixel is the
         # physical origin)
-        S_3d.center = np.array(S_3d.shape[1:]) / 2
-        S_2d.center = np.array(S_2d.shape[1:]) / 2
+        S_3d.center = old_div(np.array(S_3d.shape[1:]), 2)
+        S_2d.center = old_div(np.array(S_2d.shape[1:]), 2)
 
         # find the physical coordinates (zi, yi) of each point in the 3d probe
         if system == 'natural':
             r3, r1, r2 = S_3d.grids()
             r3, r1, r2 = r3[0], r1[0], r2[0]  # layer 0
             x, z, y = self.transformed_grid((r3, r1, r2), input_space='real', input_system='natural')
-            zi = x * self.sintheta + z * (1/self.costheta - self.sintheta * self.tantheta)
+            zi = x * self.sintheta + z * (old_div(1,self.costheta) - self.sintheta * self.tantheta)
             yi = y
         elif system == 'cartesian':
             x, z, y = S_3d.grids()
             x, z, y = x[0], z[0], y[0]
-            zi = x * self.sintheta + z * (1/self.costheta - self.sintheta * self.tantheta)
+            zi = x * self.sintheta + z * (old_div(1,self.costheta) - self.sintheta * self.tantheta)
             yi = y
 
         # find the corresponding indices into S.data[layer]
-        zi[:] = zi / S_2d.psize[1] + S_2d.center[1]
-        yi[:] = yi / S_2d.psize[1] + S_2d.center[1]
+        zi[:] = old_div(zi, S_2d.psize[1]) + S_2d.center[1]
+        yi[:] = old_div(yi, S_2d.psize[1]) + S_2d.center[1]
 
         # interpolate
         if np.iscomplexobj(S_2d.data):
@@ -513,8 +517,8 @@ class Geo_Bragg(_Geo):
         ap = a + b * g.sintheta
         bp = b * g.costheta
         y = np.sqrt(ap**2 + bp**2)
-        gamma = np.arcsin(ap / y)
-        phi = (np.pi / 2 - gamma - np.deg2rad(g.theta_bragg))
+        gamma = np.arcsin(old_div(ap, y))
+        phi = (old_div(np.pi, 2) - gamma - np.deg2rad(g.theta_bragg))
         zi_extent = np.cos(phi) * y
         yi_extent = c
 
