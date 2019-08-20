@@ -215,7 +215,7 @@ class BaseEngine(object):
     def _fill_runtime(self):
         local_error = u.parallel.gather_dict(self.error)
         if local_error:
-            error = np.array(local_error.values()).mean(0)
+            error = np.array(list(local_error.values())).mean(0)
         else:
             error = np.zeros((1,))
         info = dict(

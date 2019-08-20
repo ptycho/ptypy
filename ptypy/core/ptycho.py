@@ -633,7 +633,6 @@ class Ptycho(Base):
                 if parallel.master:
                     info = self.runtime.iter_info[-1]
                     # Calculate error:
-                    # err = np.array(info['error'].values()).mean(0)
                     err = info['error']
                     logger.info('Iteration #%(iteration)d of %(engine)s :: '
                                 'Time %(duration).2f' % info)
