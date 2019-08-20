@@ -846,7 +846,7 @@ class EvalDescriptor(ArgParseDescriptor):
             return
 
         # Detect wildcard
-        wildcard = (self.children.keys() == ['*'])
+        wildcard = (list(self.children.keys()) == ['*'])
 
         # Grab or check children
         if wildcard:
