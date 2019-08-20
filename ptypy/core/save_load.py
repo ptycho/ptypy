@@ -55,12 +55,7 @@ def unlink(obj):
             # If object contains references, make shallow copy and
             # recursively iterate over the copy
 
-            # if type(obj) in _dict_like:
-            #    pool[ID] = dict(obj)
-            #    nobj = pool[ID]
-            #    for k, v in nobj.iteritems():
-            #        nobj[k] = _pool(v)
-            if hasattr(obj, 'iteritems'):
+            if hasattr(obj, 'items'):
                 # pool[ID] = {}
                 nobj = {}
                 pool[ID] = nobj
@@ -141,7 +136,6 @@ def link(pool, replace_objects_only=False, preserve_input_pool=True):
     keys = list(pool.keys())
     def _unpool(obj):
         calls.append(None)
-        # for k,v in pool.iteritems():
         if str(obj) in keys:
             # Replace key by object. As these keys ALWAYS refer to objects
             # and not to other keys, no further checking is needed

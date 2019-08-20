@@ -1178,7 +1178,7 @@ class PtyScan(object):
 
         for k in ['data', 'weights']:
             if k in c.keys():
-                if hasattr(c[k], 'iteritems'):
+                if hasattr(c[k], 'items'):
                     v = c[k]
                 else:
                     v = dict(zip(ind, np.asarray(c[k])))

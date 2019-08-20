@@ -127,7 +127,6 @@ class Param(dict):
         """
         if self._display_items_as_attributes:
             return list(self.keys())
-            # return [item.__dict__.get('name',str(key)) for key,item in self.iteritems()]
         else:
             return []
 

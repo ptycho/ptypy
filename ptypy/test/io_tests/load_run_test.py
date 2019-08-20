@@ -86,7 +86,7 @@ class LoadRunTest(unittest.TestCase):
         # set_vals = P.p._to_dict(Recursive=True)
         # print set_vals
         # file_vals = content.pars._to_dict(Recursive=True)
-        # for name, val in file_vals.iteritems():
+        # for name, val in file_vals.items():
         #     self.assertEqual(file_vals[name], set_vals[name])
         # self.assertDictEqual(content.pars._to_dict(Recursive=True), set_vals)
         np.random.seed(1)

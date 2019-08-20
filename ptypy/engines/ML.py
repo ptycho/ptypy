@@ -183,7 +183,7 @@ class ML(PositionCorrectionEngine):
         when new data arrives.
         """
         # - # fill object with coverage of views
-        # - for name,s in self.ob_viewcover.S.iteritems():
+        # - for name,s in self.ob_viewcover.S.items():
         # -    s.fill(s.get_view_coverage())
         pass
 
