@@ -3,7 +3,6 @@
 This tests the functionality of h5rw and can be broken to include new types
 
 '''
-from __future__ import print_function
 
 import unittest
 import tempfile

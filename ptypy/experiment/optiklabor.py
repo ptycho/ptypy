@@ -4,7 +4,6 @@ Created on Nov 22 2013
 
 @author: Bjeorn Enders
 """
-from __future__ import print_function
 import numpy as np
 import time
 import glob

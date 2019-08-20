@@ -1,7 +1,6 @@
 """
 Geometry management and propagation for Bragg geometry.
 """
-from __future__ import absolute_import
 
 from .. import utils as u
 from ..utils.verbose import logger

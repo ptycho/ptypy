@@ -1,4 +1,3 @@
-from __future__ import print_function
 # In this tutorial, we learn how to subclass :py:class:`PtyScan` to make
 # ptypy work with any experimental setup.
 

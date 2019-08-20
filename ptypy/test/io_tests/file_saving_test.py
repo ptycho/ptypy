@@ -1,7 +1,6 @@
 '''
 Tests whether the framework saves the output files
 '''
-from __future__ import print_function
 
 import unittest
 import tempfile

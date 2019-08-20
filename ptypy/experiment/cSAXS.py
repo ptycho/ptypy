@@ -4,7 +4,6 @@ Data preparation class for cSAXS at the SLS
 This scan file was correct as of the end of 2017. It's not yet maintained by cSAXS,
  but if you raise a ticket if you notice any oddities, we will try to fix it up.
 """
-from __future__ import print_function
 
 import numpy as np
 import os

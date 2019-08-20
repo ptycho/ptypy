@@ -10,7 +10,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-from __future__ import print_function
 import zmq
 import time
 import string

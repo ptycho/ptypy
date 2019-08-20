@@ -3,7 +3,6 @@ This script is a test for ptychographic reconstruction in the absence
 of actual data. It uses the test Scan class
 `ptypy.core.data.MoonFlowerScan` to provide "data".
 """
-from __future__ import print_function
 
 from ptypy.core import Ptycho
 from ptypy import utils as u

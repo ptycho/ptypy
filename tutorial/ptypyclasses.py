@@ -30,7 +30,6 @@
     access is controlled by a physical position and its frame, such that
     one is not bothered by memory/array addresses when accessing data.
 """
-from __future__ import print_function
 
 # Import some modules
 import matplotlib as mpl

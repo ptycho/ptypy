@@ -32,7 +32,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 
 """
-from __future__ import absolute_import
 import numpy as np
 import weakref
 from collections import OrderedDict
