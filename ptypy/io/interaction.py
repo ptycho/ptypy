@@ -843,7 +843,7 @@ class Client(object):
         fulladdress = self.bind_address + ':' + str(self.bind_port)
         self.bind_socket = self.context.socket(zmq.SUB)
         self.bind_socket.connect(fulladdress)
-        self.bind_socket.setsockopt(zmq.SUBSCRIBE, "")
+        self.bind_socket.setsockopt_string(zmq.SUBSCRIBE, "")
 
         # Initialize poller
         self.poller = zmq.Poller()
