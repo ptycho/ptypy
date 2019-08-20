@@ -384,7 +384,7 @@ class Descriptor(object):
         from configparser import RawConfigParser as Parser
         #kwargs['empty_lines_in_values'] = True # This will only work in Python3
         parser = Parser(**kwargs)
-        parser.readfp(fbuffer)
+        parser.read_file(fbuffer)
         for num, sec in enumerate(parser.sections()):
             desc = self.new_child(name=sec, options=dict(parser.items(sec)))
 
@@ -1117,7 +1117,7 @@ class EvalDescriptor(ArgParseDescriptor):
             desc.default = typ
 
         # Parse parameter section and store in desc
-        desc.from_string(parameter_string)
+        desc.from_string(parameter_string, strict=False)
 
         # Attach the Parameter group to cls
         from weakref import ref
