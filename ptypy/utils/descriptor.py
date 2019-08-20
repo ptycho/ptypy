@@ -390,7 +390,7 @@ class Descriptor(object):
 
         return parser
 
-    def from_string(self, s, **kwargs):
+    def from_string(self, s, strict=False, **kwargs):
         """
         Load Parameter from string using Python's ConfigParser
 
@@ -401,7 +401,7 @@ class Descriptor(object):
         """
         from io import StringIO
         s = textwrap.dedent(s)
-        return self.load_conf_parser(StringIO(s), **kwargs)
+        return self.load_conf_parser(StringIO(s), strict=strict, **kwargs)
 
     def save_conf_parser(self, fbuffer, print_optional=True):
         """
@@ -1117,7 +1117,7 @@ class EvalDescriptor(ArgParseDescriptor):
             desc.default = typ
 
         # Parse parameter section and store in desc
-        desc.from_string(parameter_string, strict=False)
+        desc.from_string(parameter_string)
 
         # Attach the Parameter group to cls
         from weakref import ref
