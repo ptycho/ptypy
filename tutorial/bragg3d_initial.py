@@ -1,5 +1,3 @@
-from __future__ import print_function
-from __future__ import division
 # This script is a demonstration of how the new container and geometry
 # classes can be used to do 3d Bragg ptychography. Everything is done
 # manually on the View and Geo_Bragg instances, no PtyScan objects or
@@ -11,8 +9,6 @@ from __future__ import division
 
 # The imports. I've found it useful to visualize 3d data in mayavi, but
 # here we just look at projections with matplotlib.
-from builtins import range
-from past.utils import old_div
 import ptypy
 import numpy as np
 import matplotlib.pyplot as plt
@@ -76,7 +72,7 @@ zi, yi = Sprobe.grids()
 # square probe
 Sprobe.data[(zi > -.75e-6) & (zi < .75e-6) & (yi > -1.5e-6) & (yi < 1.5e-6)] = 1
 # gaussian probe
-Sprobe.data = np.exp(old_div(-zi**2, (2 * (.75e-6)**2)) - old_div(yi**2, (2 * (1.0e-6)**2)))
+Sprobe.data = np.exp(-zi**2 / (2 * (.75e-6)**2) - yi**2 / (2 * (1.0e-6)**2))
 
 # The Bragg geometry has a method to prepare a 3d Storage by extruding
 # the 2d probe and interpolating to the right grid. The returned storage
@@ -171,7 +167,7 @@ if algorithm == 'OS':
     scaling.fill(alpha)
     for v in views:
         scaling[v] += np.abs(probeView.data)**2
-    scaling.data[:] = old_div(1, scaling.data)
+    scaling.data[:] = 1 / scaling.data
     # then iterate with the appropriate update rule
     for i in range(100):
         print(i)
@@ -188,7 +184,7 @@ if algorithm == 'OS':
 
         if not (i % 5):
             ax[0].clear()
-            ax[0].plot(old_div(errors,errors[0]))
+            ax[0].plot(errors/errors[0])
             #ax[0].plot(criterion/criterion[0])
             ax[1].clear()
             S_cart = g.coordinate_shift(S, input_space='real', input_system='natural', keep_dims=False)
@@ -221,14 +217,14 @@ if algorithm == 'PIE':
             # ePIE scaling (Maiden2009)
             #views[j].data += beta * np.conj(probeView.data) / (np.abs(probeView.data).max())**2 * (exit - exit_)
             # PIE and cPIE scaling (Rodenburg2004 and Godard2011b)
-            views[j].data += old_div(beta * np.abs(probeView.data), np.abs(probeView.data).max() * np.conj(probeView.data) / (np.abs(probeView.data)**2 + eps) * (exit - exit_))
+            views[j].data += beta * np.abs(probeView.data) / np.abs(probeView.data).max() * np.conj(probeView.data) / (np.abs(probeView.data)**2 + eps) * (exit - exit_)
         errors.append(np.abs(S.data - S_true.data).sum())
         ferrors.append(np.mean(ferrors_))
 
         if not (i % 5):
             ax[0].clear()
-            ax[0].plot(old_div(errors,errors[0]))
-            ax[0].plot(old_div(ferrors,ferrors[0]))
+            ax[0].plot(errors/errors[0])
+            ax[0].plot(ferrors/ferrors[0])
             #ax[0].plot(criterion/criterion[0])
             ax[1].clear()
             S_cart = g.coordinate_shift(S, input_space='real', input_system='natural', keep_dims=False)
@@ -277,7 +273,7 @@ if algorithm == 'DM':
 
         if not (i % 5):
             ax[0].clear()
-            ax[0].plot(old_div(errors,errors[0]))
+            ax[0].plot(errors/errors[0])
             #ax[0].plot(criterion/criterion[0])
             ax[1].clear()
             S_cart = g.coordinate_shift(S, input_space='real', input_system='natural', keep_dims=False)

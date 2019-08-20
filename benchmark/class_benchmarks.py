@@ -1,7 +1,4 @@
 from __future__ import print_function
-from __future__ import division
-from builtins import range
-from past.utils import old_div
 import numpy as np
 import ptypy
 from ptypy import utils as u
@@ -40,7 +37,7 @@ for k in range(int(steps)):
     add_views(nviews)
     gc.collect()
     print(k) 
-    print(old_div(list(C1._recs.values())[0].nbytes, 1e6))
+    print(C1._recs.values()[0].nbytes / 1e6)
 
 print(C1.formatted_report())
 u.pause(1)

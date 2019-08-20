@@ -8,7 +8,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-from builtins import range
 import h5py as h5
 import numpy as np
 
@@ -129,7 +128,7 @@ class DiamondNexus(PtyScan):
         MASK_FILE = self.p.mask.file
         MASK_KEY = self.p.mask.key
         PIXEL_SIZE_KEY = 'entry_1/instrument_1/detector_1/x_pixel_size'
-        NORMALISATION_KEY = 'entry_1/instrument_1/monitor/data' if 'monitor' in list(f['entry_1/instrument_1'].keys()) else None
+        NORMALISATION_KEY = 'entry_1/instrument_1/monitor/data' if 'monitor' in f['entry_1/instrument_1'].keys() else None
         self.ENERGY_MULTIPLIER = self.p.recorded_energy_multiplier
         self.POSITIONS_FAST_MULTIPLIER = self.p.positions.fast_multiplier
         self.POSITIONS_SLOW_MULTIPLIER = self.p.positions.slow_multiplier

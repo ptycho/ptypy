@@ -1,5 +1,3 @@
-from __future__ import division
-from past.utils import old_div
 import pkg_resources
 
 flowerfile = pkg_resources.resource_filename(__name__,'flowers.png')
@@ -43,7 +41,7 @@ def moon_pr(shape=None):
     if shape is not None:
         sh = u.expect2(shape)
         ish = np.array(im.shape[:2]).astype(float)
-        im = u.zoom(im,old_div(sh,ish))
+        im = u.zoom(im,sh/ish)
 
     return im
 

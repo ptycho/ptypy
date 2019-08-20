@@ -11,10 +11,6 @@ This file is part of the PTYPY package.
 
 """
 from __future__ import print_function
-from __future__ import division
-from builtins import str
-from builtins import range
-from past.utils import old_div
 import numpy as np
 import time
 import os
@@ -245,7 +241,7 @@ class I08Scan(PtyScan):
         for i in range(len(indices)):
             ix[i] = int(np.mod(indices[i], self.common.scan_dimensions[1]))  # find the remainder - works out the column
             iy[i] = int(indices[i]//self.common.scan_dimensions[0])  # works out the row
-            raw[i] = old_div((io.h5read(self.nxs_filename, key, slice=(ix[i], iy[i]))[key].astype(np.float32)-self.common.dark), (self.common.flat))  #-self.common.dark) # load in the data and convert type
+            raw[i] = (io.h5read(self.nxs_filename, key, slice=(ix[i], iy[i]))[key].astype(np.float32)-self.common.dark)/ (self.common.flat)  #-self.common.dark) # load in the data and convert type
             # TODO: update this line when the statistical weights are implemented in ptypy
             # For now, this is just a mask
             #weights[i] = (raw[i] >= 0.)

@@ -17,12 +17,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import division
-from builtins import str
-from builtins import zip
-from builtins import range
-from builtins import object
-from past.utils import old_div
 import numpy as np
 import os
 import h5py
@@ -673,7 +667,7 @@ class PtyScan(object):
         # Fill weights dictionary with references to the weights in common
 
         has_data = (len(data) > 0)
-        has_weights = (len(weights) > 0) and len(list(weights.values())[0]) > 0
+        has_weights = (len(weights) > 0) and len(weights.values()[0]) > 0
 
         if has_data:
             dsh = np.array(list(data.values())[0].shape[-2:])
@@ -693,7 +687,7 @@ class PtyScan(object):
                     altweight = self.info.weight2d
                 except:
                     altweight = np.ones(dsh)
-            weights = dict.fromkeys(list(data.keys()), altweight)
+            weights = dict.fromkeys(data.keys(), altweight)
 
         assert len(weights) == len(data), (
             'Data and Weight frames unbalanced %d vs %d'
@@ -823,12 +817,12 @@ class PtyScan(object):
 
             if has_data:
                 # Translate back to dictionaries
-                data = dict(list(zip(indices.node, d)))
-                weights = dict(list(zip(indices.node, w)))
+                data = dict(zip(indices.node, d))
+                weights = dict(zip(indices.node, w))
 
         # Adapt geometric info
         self.meta.center = cen / float(self.rebin)
-        self.meta.shape = old_div(u.expect2(sh), self.rebin)
+        self.meta.shape = u.expect2(sh) // self.rebin
 
         if self.info.psize is not None:
             self.meta.psize = u.expect2(self.info.psize) * self.rebin
@@ -1183,11 +1177,11 @@ class PtyScan(object):
         ind = todisk.pop('indices_node')
 
         for k in ['data', 'weights']:
-            if k in list(c.keys()):
+            if k in c.keys():
                 if hasattr(c[k], 'iteritems'):
                     v = c[k]
                 else:
-                    v = dict(list(zip(ind, np.asarray(c[k]))))
+                    v = dict(zip(ind, np.asarray(c[k])))
 
                 parallel.barrier()
                 # Gather the content
@@ -1376,7 +1370,7 @@ class PtydScan(PtyScan):
 
             ch_items = sorted(ch_items, key=lambda t: t[0])
 
-            for ch_key in list(ch_items[0][1].keys()):
+            for ch_key in ch_items[0][1].keys():
                 d[ch_key] = np.array([(int(k),) + v[ch_key].shape
                                       for k, v in ch_items if v is not None])
 
@@ -1424,7 +1418,7 @@ class PtydScan(PtyScan):
         coords = self._ch_frame_ind[indices]
         calls = {}
 
-        for key in list(self._checked.keys()):
+        for key in self._checked.keys():
             calls[key] = [self._coord_to_h5_calls(key, c) for c in coords]
 
         # Get our data from the ptyd file
@@ -1441,7 +1435,7 @@ class PtydScan(PtyScan):
 
         # Wrap in a dict
         for k, v in out.items():
-            out[k] = dict(list(zip(indices, v)))
+            out[k] = dict(zip(indices, v))
 
         return (out.get(key, {}) for key in ['data', 'positions', 'weights'])
 
@@ -1532,7 +1526,7 @@ class MoonFlowerScan(PtyScan):
             self.pos = xy.from_pars(pos)
 
         # Calculate pixel positions
-        pixel = old_div(self.pos, geo.resolution)
+        pixel = self.pos / geo.resolution
         pixel -= pixel.min(0)
         self.pixel = np.round(pixel).astype(int) + 10
         frame = self.pixel.max(0) + 10 + geo.shape
@@ -1551,7 +1545,7 @@ class MoonFlowerScan(PtyScan):
             # matplotlib failsafe
             moon = u.ellipsis(u.grids(self.geo.shape)).astype(complex)
         
-        moon /= np.sqrt(old_div(u.abs2(moon).sum(), p.photons))
+        moon /= np.sqrt(u.abs2(moon).sum() / p.photons)
         self.pr = moon
         self.load_common_in_parallel = True
         

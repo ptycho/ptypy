@@ -7,10 +7,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import division
-from builtins import range
-from past.utils import old_div
-from builtins import object
 from ..core import View
 from .. import utils as u
 from ..utils.verbose import log
@@ -180,7 +176,7 @@ class AnnealingRefine(PositionRefine):
         start, end = self.p.start, self.p.stop
 
         # Compute the maximum shift allowed at this iteration
-        self.max_shift_dist = old_div(self.p.amplitude * (end - iteration), (end - start))
+        self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start)
 
     @property
     def citation_dictionary(self):

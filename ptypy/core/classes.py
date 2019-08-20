@@ -33,11 +33,6 @@ This file is part of the PTYPY package.
 
 """
 from __future__ import absolute_import
-from __future__ import division
-from builtins import str
-from builtins import range
-from past.utils import old_div
-from builtins import object
 import numpy as np
 import weakref
 from collections import OrderedDict
@@ -589,8 +584,8 @@ class Storage(Base):
         v.dcoord = np.round(pcoord + 0.00001).astype(int)
 
         # These are the important attributes used when accessing the data
-        v.dlow = v.dcoord - old_div(v.shape, 2)
-        v.dhigh = v.dcoord + old_div((v.shape + 1), 2)
+        v.dlow = v.dcoord - v.shape // 2
+        v.dhigh = v.dcoord + (v.shape + 1) // 2
 
         # Subpixel offset
         v.sp = pcoord - v.dcoord
@@ -704,7 +699,7 @@ class Storage(Base):
             # logger.debug('%s[%s] :: shape: %s -> %s'
             #              % (self.owner.ID, self.ID, str(sh), str(new_shape)))
 
-            megapixels = old_div(np.array(new_shape).astype(float).prod(), 1e6)
+            megapixels = np.array(new_shape).astype(float).prod() / 1e6
             if megapixels > MEGAPIXEL_LIMIT:
                 raise RuntimeError('Arrays larger than %dM not supported. You '
                                    'requested %.2fM pixels.' % (MEGAPIXEL_LIMIT, megapixels))
@@ -777,7 +772,7 @@ class Storage(Base):
         coord : tuple or array-like
             A ``(N,2)``-array of the coordinates to be transformed
         """
-        return old_div((coord - self.origin), self.psize)
+        return (coord - self.origin) / self.psize
 
     def _to_phys(self, pix):
         """
@@ -819,7 +814,7 @@ class Storage(Base):
         Set the origin and update all the internal variables.
         """
         self._origin = u.expectN(v, self.ndim)
-        self._center = old_div(- self._origin, self._psize)
+        self._center = - self._origin / self._psize
         self.update()
 
     @property
@@ -880,8 +875,8 @@ class Storage(Base):
         new_psize = u.expectN(new_psize, self.ndim)
         sh = np.asarray(self.shape[1:])
         # psize is quantized
-        new_sh = np.round(old_div(self.psize, new_psize * sh))
-        new_psize = old_div(self.psize, new_sh * sh)
+        new_sh = np.round(self.psize / new_psize * sh)
+        new_psize = self.psize / new_sh * sh
 
         if (new_sh != sh).any():
             logger.info('Zooming from %s , %s to %s , %s'
@@ -889,7 +884,7 @@ class Storage(Base):
 
             # Zoom data buffer.
             # Could be that it is faster and cleaner to loop over first axis
-            zoom = old_div(new_sh, sh)
+            zoom = new_sh / sh
             self.fill(u.zoom(self.data, [1.0] + [z for z in zoom], **kwargs))
 
         self._psize = new_psize
@@ -1121,7 +1116,7 @@ class Storage(Base):
                              % (v, self.ID))
 
     def __str__(self):
-        info = '%15s : %7.2f MB :: ' % (self.ID, old_div(self.data.nbytes, 1e6))
+        info = '%15s : %7.2f MB :: ' % (self.ID, self.data.nbytes / 1e6)
         if self.data is not None:
             info += 'data=%s @%s' % (self.data.shape, self.data.dtype)
         else:
@@ -1702,10 +1697,10 @@ class Container(Base):
                  If True (default), return only active views.
         """
         if active_only:
-            return [v for v in list(self.original.V.values())
+            return [v for v in self.original.V.values()
                     if v.active and (v.storageID == s.ID)]
         else:
-            return [v for v in list(self.original.V.values())
+            return [v for v in self.original.V.values()
                     if (v.storage.ID == s.ID)]
 
     def copy(self, ID=None, fill=None, dtype=None):
@@ -2087,7 +2082,7 @@ class POD(Base):
         self.V = u.Param(self.DEFAULT_VIEWS)
         if views is not None:
             self.V.update(views)
-        for v in list(self.V.values()):
+        for v in self.V.values():
             if v is None:
                 continue
             if v._pod is None:

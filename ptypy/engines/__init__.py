@@ -32,7 +32,7 @@ def _register_engine_class(cls, name=None):
 
 
 def by_name(name):
-    if name not in list(ENGINES.keys()):
+    if name not in ENGINES.keys():
         raise RuntimeError('Unknown engine: %s' % name)
     return ENGINES[name]
 

@@ -8,7 +8,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
-from builtins import object
 import os, threading
 
 __all__ = ['IPythonKernelThread', 'start_ipython_kernel']

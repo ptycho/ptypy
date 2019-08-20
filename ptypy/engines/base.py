@@ -8,10 +8,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import division
-from builtins import str
-from past.utils import old_div
-from builtins import object
 import numpy as np
 import time
 from .. import utils as u
@@ -335,8 +331,8 @@ class PositionCorrectionEngine(BaseEngine):
             
             # Enlarge object arrays, 
             # This can be skipped though if the boundary is less important
-            for name, s in list(self.ob.storages.items()):
-                s.padding = int(old_div(self.p.position_refinement.max_shift, np.max(s.psize)))
+            for name, s in self.ob.storages.items():
+                s.padding = self.p.position_refinement.max_shift // np.max(s.psize)
                 s.reformat()
 
             # this could be some kind of dictionary lookup if we want to add more

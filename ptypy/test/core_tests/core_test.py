@@ -3,7 +3,6 @@ A test for the Base
 '''
 from __future__ import print_function
 
-from builtins import range
 import unittest
 import numpy as np
 import ptypy

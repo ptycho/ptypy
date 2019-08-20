@@ -12,8 +12,6 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-from past.builtins import execfile
-from builtins import str
 import sys
 import os
 
@@ -27,7 +25,7 @@ import subprocess
 subprocess.check_call(['python', 'script2rst.py'])  # We need this to have a clean sys.argv
 subprocess.check_call(['python','parameters2rst.py'])
 subprocess.check_call(['python','tmp2rst.py'])
-execfile('version.py')
+exec(open('version.py').read())
 
 # -- General configuration ------------------------------------------------
 

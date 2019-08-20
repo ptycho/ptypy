@@ -7,8 +7,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-from builtins import str
-from builtins import object
 class JournalArticle(object):
     def __init__(self, title, author, journal, volume, year, page=None, doi=None):
         self.title = title

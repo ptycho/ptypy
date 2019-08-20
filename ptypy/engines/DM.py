@@ -7,10 +7,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import division
-from builtins import str
-from builtins import range
-from past.utils import old_div
 import numpy as np
 import time
 from .. import utils as u
@@ -187,7 +183,7 @@ class DM(PositionCorrectionEngine):
             self.pbound[name] = (
                 .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
             mean_power += s.mean_power
-        self.mean_power = old_div(mean_power, len(self.di.storages))
+        self.mean_power = mean_power / len(self.di.storages)
 
         # Fill object with coverage of views
         for name, s in self.ob_viewcover.storages.items():
@@ -395,7 +391,7 @@ class DM(PositionCorrectionEngine):
                 # Instead of Npts_scan, the number of views should be considered
                 # Please note that a call to s.views may be
                 # slow for many views in the probe.
-                cfact = old_div(self.p.probe_inertia * len(s.views), s.data.shape[0])
+                cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
                 s.data[:] = cfact * s.data
                 pr_nrm.storages[name].fill(cfact)
         else:
@@ -426,9 +422,9 @@ class DM(PositionCorrectionEngine):
 
             # Compute relative change in probe
             buf = pr_buf.storages[name].data
-            change += old_div(u.norm2(s.data - buf), u.norm2(s.data))
+            change += u.norm2(s.data - buf) / u.norm2(s.data)
 
             # Fill buffer with new probe
             buf[:] = s.data
 
-        return np.sqrt(old_div(change, len(pr.storages)))
+        return np.sqrt(change / len(pr.storages))

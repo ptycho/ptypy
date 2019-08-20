@@ -3,7 +3,6 @@ Tests that the assembly of frames into 3d pods gives the original
 3d diffraction patterns.
 """
 
-from builtins import range
 import unittest
 from ptypy.core import Ptycho
 from ptypy import utils as u
@@ -32,9 +31,9 @@ class Bragg3dModelTest(unittest.TestCase):
         diff = np.load(p.scans.scan01.data.dump)
 
         # check that the pods reflect the raw data
-        assert len(list(diff.keys())) == len(P.pods)
+        assert len(diff.keys()) == len(P.pods)
         checked_pods = []
-        for i in range(len(list(diff.keys()))):
+        for i in range(len(diff.keys())):
             diff_raw = diff['diff%02d'%i]
             ok = False
             for j in range(len(P.pods)):

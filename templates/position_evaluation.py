@@ -1,8 +1,4 @@
 from __future__ import print_function
-from __future__ import division
-from builtins import str
-from builtins import range
-from past.utils import old_div
 import glob
 import matplotlib.pyplot as plt
 import numpy as np
@@ -101,13 +97,13 @@ if __name__ == "__main__":
         norm_dis_after = np.linalg.norm(distance_after, axis=1)
 
         plt.figure("Norm distance")
-        plt.plot(old_div(norm_dis_before,psize*1e-6), label="Distance before pos corr")
-        plt.plot(old_div(norm_dis_after,psize*1e-6), label="Distance after pos corr")
+        plt.plot(norm_dis_before/psize*1e-6, label="Distance before pos corr")
+        plt.plot(norm_dis_after/psize*1e-6, label="Distance after pos corr")
         plt.xlabel("Position")
         plt.ylabel("Distance in px")
 
-        print("Mean distance to original position before pos corr: " + str(np.mean(old_div(norm_dis_before,psize*1e-6))))
-        print("Mean distance to original position after pos corr: " + str(np.mean(old_div(norm_dis_after,psize*1e-6))))
+        print("Mean distance to original position before pos corr: " + str(np.mean(norm_dis_before/psize*1e-6)))
+        print("Mean distance to original position after pos corr: " + str(np.mean(norm_dis_after/psize*1e-6)))
 
         # calculate error by relativ positions
         # Contains the relative shift of the position to every other position for the positions that were used to calculate
@@ -148,7 +144,7 @@ if __name__ == "__main__":
         plt.colorbar()
 
         plt.figure("Relative y-shifts uncorrected difference")
-        plt.imshow(old_div(np.abs(relativ_shifts_uncorrected[:, :, 0] - relativ_shifts_original[:, :, 0]),psize*1e-6))
+        plt.imshow(np.abs(relativ_shifts_uncorrected[:, :, 0] - relativ_shifts_original[:, :, 0])/psize*1e-6)
         plt.xlabel("Position number")
         plt.ylabel("Position number")
         plt.colorbar()
@@ -174,25 +170,25 @@ if __name__ == "__main__":
         plt.colorbar()
 
         plt.figure("y relative Difference")
-        plt.imshow(old_div(np.abs(relativ_shifts_corrected[:, :, 0] - relativ_shifts_original[:, :, 0]),psize*1e-6), interpolation="none")
+        plt.imshow(np.abs(relativ_shifts_corrected[:, :, 0] - relativ_shifts_original[:, :, 0])/psize*1e-6, interpolation="none")
         plt.xlabel("Position number")
         plt.ylabel("Position number")
         plt.colorbar()
 
         plt.figure("x relative Difference")
-        plt.imshow(old_div(np.abs(relativ_shifts_corrected[:, :, 1] - relativ_shifts_original[:, :, 1]),psize*1e-6), interpolation="none")
+        plt.imshow(np.abs(relativ_shifts_corrected[:, :, 1] - relativ_shifts_original[:, :, 1])/psize*1e-6, interpolation="none")
         plt.xlabel("Position number")
         plt.ylabel("Position number")
         plt.colorbar()
 
-        tot_dist = old_div(np.sqrt((relativ_shifts_corrected[:, :, 1] - relativ_shifts_original[:, :, 1])**2 + (relativ_shifts_corrected[:, :, 0] - relativ_shifts_original[:, :, 0])**2),psize*1e-6)
+        tot_dist = np.sqrt((relativ_shifts_corrected[:, :, 1] - relativ_shifts_original[:, :, 1])**2 + (relativ_shifts_corrected[:, :, 0] - relativ_shifts_original[:, :, 0])**2)/psize*1e-6
         plt.figure("Total distance in px")
         plt.imshow(tot_dist, interpolation="none")
         plt.xlabel("Position number")
         plt.ylabel("Position number")
         plt.colorbar()
 
-        tot_dist_uncorr = old_div(np.sqrt((relativ_shifts_uncorrected[:, :, 1] - relativ_shifts_original[:, :, 1])**2 + (relativ_shifts_uncorrected[:, :, 0] - relativ_shifts_original[:, :, 0])**2),psize*1e-6)
+        tot_dist_uncorr = np.sqrt((relativ_shifts_uncorrected[:, :, 1] - relativ_shifts_original[:, :, 1])**2 + (relativ_shifts_uncorrected[:, :, 0] - relativ_shifts_original[:, :, 0])**2)/psize*1e-6
         print("Mean distance error to all other positions corrected: " + str(np.mean(np.mean(tot_dist, axis=0))))
         print("Mean distance error to all other positions uncorrected: " + str(np.mean(np.mean(tot_dist_uncorr, axis=0))))
         plt.legend()

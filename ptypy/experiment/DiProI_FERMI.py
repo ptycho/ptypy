@@ -10,10 +10,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 
 """
-from __future__ import division
 
-from builtins import range
-from past.utils import old_div
 import numpy as np
 import os
 
@@ -265,7 +262,7 @@ class DiProIFERMIScan(PtyScan):
         # Apply flat and dark, only dark, or no correction
         if self.info.flat_division and self.info.dark_subtraction:
             for j in raw:
-                raw[j] = old_div((raw[j] - common.dark), (common.flat - common.dark))
+                raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
                 raw[j][raw[j] < 0] = 0
             data = raw
         elif self.info.dark_subtraction:

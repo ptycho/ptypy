@@ -7,13 +7,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import division
-from builtins import map
-from builtins import zip
-from builtins import range
-from past.builtins import basestring
-from past.utils import old_div
-from builtins import object
 import os
 import numpy as np
 from functools import wraps
@@ -235,7 +228,7 @@ def nm2keV(nm):
     """\
     Convert wavelength in nanometers to photon energy in keV.
     """
-    keV = old_div(keV2nm(1.),nm)
+    keV = keV2nm(1.)/nm
 
     return keV
 

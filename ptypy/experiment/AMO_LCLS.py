@@ -8,7 +8,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-from builtins import range
 import numpy as np
 
 from .. import utils as u
@@ -180,7 +179,7 @@ class AMOScan(PtyScan):
         """
         # Apply corrections to frames
         data = raw
-        for k in list(data.keys()):
+        for k in data.keys():
             data[k][data[k] < self.info.threshold_correct] = 0
         weights = weights
         return data, weights

@@ -7,9 +7,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import division
-from builtins import range
-from past.utils import old_div
 import time
 import numpy as np
 
@@ -208,9 +205,9 @@ class DM_simple(BaseEngine):
 
             # Compute relative change in probe
             buf = self.pr_buf.S[name].data
-            change += old_div(u.norm2(s.data - buf), u.norm2(s.data))
+            change += u.norm2(s.data - buf) / u.norm2(s.data)
 
             # Fill buffer with new probe
             buf[:] = s.data
 
-        return np.sqrt(old_div(change, len(self.pr.S)))
+        return np.sqrt(change / len(self.pr.S))

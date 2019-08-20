@@ -8,16 +8,9 @@ This file is part of the PTYPY package.
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from __future__ import division
-from future import standard_library
-standard_library.install_aliases()
-from builtins import zip
-from builtins import str
-from builtins import range
-from past.utils import old_div
 import numpy as np
 from . import parallel
-import urllib.request, urllib.error, urllib.parse # TODO: make compatible with python 3.5
+import urllib.request, urllib.error, urllib.parse
 from scipy import ndimage as ndi
 
 from . import array_utils as au
@@ -164,9 +157,9 @@ def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],
         #figure(); imshow(img); colorbar()
         maskhigh = ndi.binary_erosion(img < thresholds[1])
         masklow = ndi.binary_dilation(img > thresholds[0])
-        if old_div(abs(exp - min_exp), exp) < 0.01 and not ClipShortestExposure:
+        if abs(exp - min_exp) / exp < 0.01 and not ClipShortestExposure:
             mask *= masklow
-        elif old_div(abs(exp - max_exp), exp) < 0.01 and not ClipLongestExposure:
+        elif abs(exp - max_exp) / exp < 0.01 and not ClipLongestExposure:
             mask *= maskhigh
         else:
             mask *= masklow*maskhigh
@@ -176,24 +169,24 @@ def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],
         ix.reverse()
         mask_sum = mask_list[ix[0]]
         #print ix, img_list
-        img_hdr = old_div(np.array(img_list[ix[0]]) * max_exp, exp_list[ix[0]])
+        img_hdr = np.array(img_list[ix[0]]) * max_exp / exp_list[ix[0]]
         for j in range(1, len(ix)):
             themask = (1 - mask_sum) * mask_list[ix[j]]
             #figure(); imshow(mask_sum);
             #figure(); imshow(themask);
             mask_sum[themask.astype(bool)] = 1
-            img_hdr[themask.astype(bool)] = (old_div(img_list[
+            img_hdr[themask.astype(bool)] = (img_list[
                                                  ix[j]][themask.astype(bool)]
-                                             * max_exp,exp_list[ix[j]]))
+                                             * max_exp/exp_list[ix[j]])
     else:
         mask_sum = np.zeros_like(mask_list[0]).astype(np.int)
         img_hdr = np.zeros_like(img_list[0])
         for img, exp, mask in zip(img_list,exp_list,mask_list):
-            img = old_div(img * max_exp,exp)
+            img = img * max_exp/exp
             img_hdr += img * mask
             mask_sum += mask
         mask_sum[mask_sum == 0] = 1
-        img_hdr = old_div(img_hdr, (mask_sum*1.))
+        img_hdr = img_hdr / (mask_sum*1.)
 
     return img_hdr,mask_list
 
@@ -455,7 +448,7 @@ def xradia_star(sh, spokes=48, std=0.5, minfeature=5, ringfact=2, rings=4,
 
     def step(x, a, std=0.5):
         if not Fast:
-            return 0.5 * erf(old_div((x - a), (std*2))) + 0.5
+            return 0.5 * erf((x - a) / (std*2)) + 0.5
         else:
             return (x > a).astype(float)
 
@@ -472,17 +465,17 @@ def xradia_star(sh, spokes=48, std=0.5, minfeature=5, ringfact=2, rings=4,
     z = ind[1] + 1j*ind[0]
     spokeint, spokestep = np.linspace(0.0 * np.pi,
                                       1.0 * np.pi,
-                                      old_div(spokes, 2),
+                                      spokes // 2,
                                       False,
                                       True)
-    spokeint += old_div(spokestep, 2)
+    spokeint += spokestep / 2
 
     r = np.abs(z)
-    r0 = old_div((minfeature / 2.0), np.sin(spokestep / 4.))
+    r0 = (minfeature / 2.0) / np.sin(spokestep / 4.)
     rlist = []
     rin = r0
     for ii in range(rings):
-        if rin > old_div(max(sh), np.sqrt(2.)):
+        if rin > max(sh) / np.sqrt(2.):
             break
         rin *= ringfact
         rlist.append((rin * (1 - 2 * np.sin(spokestep / 4.)), rin))
@@ -493,9 +486,9 @@ def xradia_star(sh, spokes=48, std=0.5, minfeature=5, ringfact=2, rings=4,
     mn = min(spokeint)
     mx = max(spokeint)
     for a in spokeint:
-        color = 0.5 - np.abs(old_div((a - mn), (mx - mn)) - 0.5)
-        spoke = (step(np.real(z * np.exp(-1j*(a + old_div(spokestep, 4)))), 0)
-                 - step(np.real(z * np.exp(-1j*(a - old_div(spokestep, 4)))), 0))
+        color = 0.5 - np.abs((a - mn) / (mx - mn) - 0.5)
+        spoke = (step(np.real(z * np.exp(-1j*(a + spokestep / 4))), 0)
+                 - step(np.real(z * np.exp(-1j*(a - spokestep / 4))), 0))
         spokes += ((spoke * color + 0.5 * np.abs(spoke)) * (1 - contrast)
                    + contrast * np.abs(spoke))
 
@@ -540,9 +533,9 @@ def mass_center(A, axes=None, mask=None):
         axes = tuple(np.array(axes) + 1)
 
     if mask is None:
-        return old_div(np.sum(A * np.indices(A.shape), axis=axes, dtype=np.float), np.sum(A, dtype=np.float))
+        return np.sum(A * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A, dtype=np.float)
     else:
-        return old_div(np.sum(A * mask * np.indices(A.shape), axis=axes, dtype=np.float), np.sum(A * mask, dtype=np.float))
+        return np.sum(A * mask * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A * mask, dtype=np.float)
 
 
 def radial_distribution(A, radii=None):
@@ -566,7 +559,7 @@ def radial_distribution(A, radii=None):
 
     """
     if radii is None:
-        radii = list(range(1, old_div(np.min(A.shape), 2)))
+        radii = list(range(1, np.min(A.shape) // 2))
 
     coords = np.indices(A.shape) - np.reshape(mass_center(A),
                                               (A.ndim,) + A.ndim * (1,))
@@ -621,7 +614,7 @@ def stxm_analysis(storage, probe=None):
         pr = np.abs(pp.data) # .sum(0)
     elif np.isscalar(probe):
         x, y = au.grids(pp.shape[-2:])
-        pr = np.exp(old_div(-(x**2 + y**2), probe**2))
+        pr = np.exp(-(x**2 + y**2) / probe**2)
     else:
         pr = np.asarray(probe)
         assert (pr.shape == pp.shape[-2:]), 'stxm probe has not the same shape as a view to this storage'
@@ -640,8 +633,8 @@ def stxm_analysis(storage, probe=None):
         # bufview = buf[ss]
         m = mass_center(pod.diff) # + 1.
         q = pod.di_view.storage._to_phys(m)
-        dpc_row[ss] += old_div(q[0] * v.psize[0] * pr * 2 * np.pi, pod.geometry.lz)
-        dpc_col[ss] += old_div(q[1] * v.psize[1] * pr * 2 * np.pi,pod.geometry.lz)
+        dpc_row[ss] += q[0] * v.psize[0] * pr * 2 * np.pi / pod.geometry.lz
+        dpc_col[ss] += q[1] * v.psize[1] * pr * 2 * np.pi / pod.geometry.lz
         trans[ss] += np.sqrt(t) * pr
         nrm[ss] += pr
 
@@ -744,7 +737,7 @@ def phase_from_dpc(dpc_row, dpc_col):
     f[..., sh[-2]:, :sh[-1]] = c[...,::-1, :]
     f[..., sh[-2]:, sh[-1]:] = c[...,::-1, ::-1]
     # fft conform grids in the boundaries of [-pi:pi]
-    g = au.grids(f.shape, psize=old_div(np.pi, np.asarray(f.shape)), center='fft')
+    g = au.grids(f.shape, psize=np.pi / np.asarray(f.shape), center='fft')
     g[..., 0, 0] = 1e-6
     qx = g[-2]
     qy = g[-1]

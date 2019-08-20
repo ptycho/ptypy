@@ -1,7 +1,6 @@
 """
 Test descriptor submodule
 """
-from builtins import object
 import unittest
 
 from ptypy import defaults_tree

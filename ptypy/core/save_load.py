@@ -1,6 +1,4 @@
 
-from builtins import str
-from builtins import hex
 import numpy as np
 import time
 from weakref import WeakValueDictionary as WVD
@@ -50,7 +48,7 @@ def unlink(obj):
             return obj
         # Assign a label
         ID = prefix + str(hex(id(obj)))
-        if ID in list(pool.keys()):
+        if ID in pool.keys():
             # This object has been labeled already. No further action required
             return ID
         else:
@@ -84,7 +82,7 @@ def unlink(obj):
                     nobj = obj.__dict__.copy()
                 pool[ID] = nobj
                 # nobj = pool[ID]
-                for k, v in list(nobj.items()):
+                for k, v in nobj.items():
                     nobj[k] = _pool(v)
 
             else:

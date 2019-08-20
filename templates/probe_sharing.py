@@ -3,7 +3,6 @@ An example showing how to share a probe across two scans
 '''
 
 
-from builtins import range
 import sys
 import time
 import ptypy

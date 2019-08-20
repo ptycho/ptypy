@@ -7,13 +7,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
-from __future__ import division
 
-from builtins import zip
-from builtins import str
-from builtins import range
-from past.utils import old_div
-from builtins import object
 import time
 import numpy as np
 from threading import Thread, Lock
@@ -514,12 +508,12 @@ class MPLplotter(object):
                 err_phot = error[:, 1]
                 err_exit = error[:, 2]
                 axis.hold(False)
-                fmag = old_div(err_fmag,np.max(err_fmag))
+                fmag = err_fmag/np.max(err_fmag)
                 axis.plot(fmag, label='err_fmag %2.2f%% of %.2e' % (fmag[-1]*100, np.max(err_fmag)))
                 axis.hold(True)
-                phot = old_div(err_phot,np.max(err_phot))
+                phot = err_phot/np.max(err_phot)
                 axis.plot(phot, label='err_phot %2.2f%% of %.2e' % (phot[-1]*100, np.max(err_phot)))
-                ex = old_div(err_exit,np.max(err_exit))
+                ex = err_exit/np.max(err_exit)
                 axis.plot(ex, label='err_exit %2.2f%% of %.2e' % (ex[-1]*100, np.max(err_exit)))
                 axis.legend(loc=1, fontsize=10) #('err_fmag %.2e' % np.max(err_fmag),'err_phot %.2e' % np.max(err_phot),'err_exit %.2e' % np.max(err_exit)),
                 plt.setp(axis.get_xticklabels(), fontsize=10)
@@ -604,11 +598,11 @@ class MPLplotter(object):
             f.close()
 
     def plot_all(self, blocking = False):
-        for key, storage in list(self.pr.items()):
+        for key, storage in self.pr.items():
             #print key
             pp = self.pr_plot[key]
             self.plot_storage(storage,pp, str(key), 'pr')
-        for key, storage in list(self.ob.items()):
+        for key, storage in self.ob.items():
             #print key
             pp = self.ob_plot[key]
             self.plot_storage(storage,pp, str(key), 'obj')
@@ -737,7 +731,7 @@ class Bragg3dClient(object):
         self.plot_object()
         self.plot_probe()
 
-        if 'shrinkwrap' in list(self.runtime.iter_info[-1].keys()):
+        if 'shrinkwrap' in self.runtime.iter_info[-1].keys():
             self.plot_shrinkwrap()
 
     def plot_shrinkwrap(self):
@@ -802,9 +796,9 @@ class Bragg3dClient(object):
     def plot_error(self):
         # error
         error = np.array([info['error'] for info in self.runtime.iter_info])
-        err_fmag = old_div(error[:, 0], np.max(error[:, 0]))
-        err_phot = old_div(error[:, 1], np.max(error[:, 1]))
-        err_exit = old_div(error[:, 2], np.max(error[:, 2]))
+        err_fmag = error[:, 0] / np.max(error[:, 0])
+        err_phot = error[:, 1] / np.max(error[:, 1])
+        err_exit = error[:, 2] / np.max(error[:, 2])
 
         self.ax_err.clear()
         self.ax_err.plot(err_fmag, label='err_fmag')

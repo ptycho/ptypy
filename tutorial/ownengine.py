@@ -1,5 +1,3 @@
-from __future__ import print_function
-from __future__ import division
 # In this tutorial, we want to provide the information
 # needed to create an engine compatible with the state mixture
 # expansion of ptychogrpahy as described in Thibault et. al 2013 [#modes]_ .
@@ -87,7 +85,7 @@ def fourier_update(pods):
         Dphi[gamma] = pod.fw(2*pod.probe*pod.object - pod.exit)
         Imodel += np.abs(Dphi[gamma] * Dphi[gamma].conj())
     # Calculate common correction factor
-    factor = (1-mask) + old_div(mask * modulus, (np.sqrt(Imodel) + 1e-10))
+    factor = (1-mask) + mask * modulus / (np.sqrt(Imodel) + 1e-10)
     # Apply correction and propagate back
     for gamma, pod in pods.items():
         df = pod.bw(factor*Dphi[gamma]) - pod.probe*pod.object

@@ -7,10 +7,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from builtins import zip
-from builtins import str
-from builtins import range
-from builtins import object
 import numpy as np
 
 from .. import __has_mpi4py__ as hmpi
@@ -505,7 +501,7 @@ def bcast_dict(dct, keys='all', source=0):
     if rank == source:
         out = {}
         length = comm.bcast(len(dct), source)
-        for k, v in list(dct.items()):
+        for k, v in dct.items():
             comm.bcast(k,source)
             bcast(v,source)
             if str(keys) == 'all' or k in keys:
@@ -931,7 +927,7 @@ def _bcast_dict(dct, keys_accepted='all', source=0):
     if rank == source:
         out = {}
         length = comm.bcast(len(dct), source)
-        for k, v in list(dct.items()):
+        for k, v in dct.items():
             bcast((k, v))
             if str(keys_accepted) == 'all' or k in keys_accepted:
                 out[k] = v

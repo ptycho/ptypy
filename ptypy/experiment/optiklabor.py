@@ -5,7 +5,6 @@ Created on Nov 22 2013
 @author: Bjeorn Enders
 """
 from __future__ import print_function
-from builtins import range
 import numpy as np
 import time
 import glob
@@ -181,7 +180,7 @@ class FliSpecScanMultexp(PtyScan):
         weights = {}
         expos = common['exposures']
         darks = common['darks']
-        for j,rr in raw.items():
+        for j, rr in raw.items():
             data_hdr,lmask=u.hdr_image(rr, expos, thresholds=self.hdr_thresholds, dark_list=darks, avg_type='highest')
             data[j] = data_hdr
             weights[j] = lmask[-1]

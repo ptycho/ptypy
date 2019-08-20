@@ -10,9 +10,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 
 """
-from __future__ import division
-from builtins import str
-from past.utils import old_div
 import numpy as np
 
 from .. import utils as u
@@ -258,8 +255,8 @@ def aperture(A, grids=None, pars=None, **kwargs):
         cgrid = grids[0].astype(complex) + 1j*grids[1]
         cgrid -= np.complex(off[0], off[1])
         cgrid *= np.exp(1j * p.rotate)
-        grids[0] = old_div(cgrid.real, psize[0])
-        grids[1] = old_div(cgrid.imag, psize[1])
+        grids[0] = cgrid.real / psize[0]
+        grids[1] = cgrid.imag / psize[1]
 
         if str(p.form) == 'circ':
             apert = lambda x: u.ellipsis(grids, x, p.edge)
@@ -271,7 +268,7 @@ def aperture(A, grids=None, pars=None, **kwargs):
                 'supported for now.')
 
         if p.size is not None:
-            dims = old_div(u.expect2(p.size), psize)
+            dims = u.expect2(p.size) / psize
         else:
             dims = np.array(cgrid.shape) / 3.
 
@@ -340,7 +337,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
                 p.recon.ID = None
                 init_storage(s, p, energy=1.0)
             return
-        elif pars in list(TEMPLATES.keys()):
+        elif pars in TEMPLATES.keys():
             init_storage(s, TEMPLATES[pars])
             return
         elif pars in resources.probes or pars == 'stxm':
@@ -365,7 +362,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
     if p.model is None:
         model = np.ones(s.shape, s.dtype)
         if p.photons is not None:
-            model *= old_div(np.sqrt(p.photons), np.prod(s.shape))
+            model *= np.sqrt(p.photons) / np.prod(s.shape)
     elif type(p.model) is np.ndarray:
         model = p.model
     elif p.model in resources.probes:
@@ -477,7 +474,7 @@ def _process(model, aperture_pars=None, prop_pars=None, photons=1e7,
 
     # apply photon count
     if photons is not None:
-        model *= np.sqrt(old_div(photons, u.norm2(model)))
+        model *= np.sqrt(photons / u.norm2(model))
 
     return model
 
@@ -512,13 +509,13 @@ def _propagation(prop_pars, shape=None, resolution=None, energy=None,
             # ffGeo._initialize(geodct)
 
             if p.spot_size is not None:
-                ap_size = (old_div(ffGeo.lam * fdist, np.array(p.spot_size)
-                           * 2 * np.sqrt(np.sqrt(2))))
+                ap_size = (ffGeo.lam * fdist / np.array(p.spot_size)
+                           * 2 * np.sqrt(np.sqrt(2)))
             else:
                 ap_size = None
             grids = ffGeo.propagator.grids_sam
             phase = np.exp(
-                old_div(-1j * np.pi, ffGeo.lam / fdist * (grids[0]**2 + grids[1]**2)))
+                -1j * np.pi / ffGeo.lam / fdist * (grids[0]**2 + grids[1]**2))
             logger.info(
                 prefix +
                 'Model illumination is focussed over a distance %3.3g m.'

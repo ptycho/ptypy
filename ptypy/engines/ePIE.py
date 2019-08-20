@@ -22,10 +22,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import division
-from builtins import str
-from builtins import range
-from past.utils import old_div
 import numpy as np
 import time
 import random
@@ -231,7 +227,8 @@ class EPIE(BaseEngine):
                 image = pod.fw(exit_)
                 fmag = np.sqrt(np.abs(pod.diff))
                 error_fmag = (
-                    old_div(np.sum(pod.mask * (np.abs(image) - fmag)**2), pod.mask.sum())
+                    np.sum(pod.mask * (np.abs(image) - fmag)**2)
+                    / pod.mask.sum()
                 )
                 image = (
                     pod.mask * fmag * np.exp(1j * np.angle(image))
@@ -246,9 +243,10 @@ class EPIE(BaseEngine):
 
                 # Object update:
                 logger.debug(pre_str + '----- ePIE object update -----')
-                pod.object += (old_div(self.p.alpha
-                               * np.conj(pod.probe), np.max(np.abs(pod.probe) ** 2)
-                               * (pod.exit - exit_)))
+                pod.object += (self.p.alpha
+                               * np.conj(pod.probe)
+                               / np.max(np.abs(pod.probe) ** 2)
+                               * (pod.exit - exit_))
 
                 # Probe update: The ePIE paper (and the parallel ePIE
                 # paper) are unclear as to what maximum value should be
@@ -258,10 +256,10 @@ class EPIE(BaseEngine):
                 if do_update_probe:
                     logger.debug(pre_str + '----- ePIE probe update -----')
                     object_max = np.max(
-                        np.abs(list(self.ob.S.values())[0].data.max())**2)
-                    pod.probe += (old_div(self.p.beta
-                                  * np.conj(pod.object), object_max
-                                  * (pod.exit - exit_)))
+                        np.abs(self.ob.S.values()[0].data.max())**2)
+                    pod.probe += (self.p.beta
+                                  * np.conj(pod.object) / object_max
+                                  * (pod.exit - exit_))
                     # Apply the probe support
                     pod.probe *= self.probe_support[pod.pr_view.storageID][0]
                 t2 = time.time()
@@ -360,13 +358,13 @@ class EPIE(BaseEngine):
         xlims = np.array(xlims) + np.array([-1, 1]) * np.diff(xlims) * .001
         ylims = np.array(ylims) + np.array([-1, 1]) * np.diff(ylims) * .001
         # the domains sizes
-        dx = old_div(np.diff(xlims), layout[1])
-        dy = old_div(np.diff(ylims), layout[0])
+        dx = np.diff(xlims) / layout[1]
+        dy = np.diff(ylims) / layout[0]
 
         # now, the node number corresponding to a coordinate (x, y) is
         def __node(x, y):
-            return (int(old_div((x - xlims[0]), dx))
-                    + layout[1] * int(old_div((y - ylims[0]), dy)))
+            return ((x - xlims[0]) // dx
+                    + layout[1] * (y - ylims[0]) // dy)
 
         # now, each node works out which of its own pods to send off,
         # and the result is communicated to all other nodes as a dict.
@@ -379,7 +377,7 @@ class EPIE(BaseEngine):
                 destinations[name] = __node(x, y)
         destinations = parallel.gather_dict(destinations)
         destinations = parallel.bcast_dict(destinations)
-        if len(list(destinations.keys())) == 0:
+        if len(destinations.keys()) == 0:
             return 0
 
         # prepare (enlarge) the storages on the receiving nodes
@@ -433,8 +431,8 @@ class EPIE(BaseEngine):
             if N % i == 0:
                 solutions.append(i)
         i = max(solutions)
-        assert (i * (old_div(N, i)) == N)
-        return [i, old_div(N, i)]
+        assert (i * (N // i) == N)
+        return [i, N // i]
 
     def center_probe(self):
         """

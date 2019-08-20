@@ -6,7 +6,6 @@ from __future__ import print_function
 # if section :ref:`store` was completed
 
 # Again, the imports first.
-from builtins import range
 import numpy as np
 from ptypy.core.data import PtyScan
 from ptypy import utils as u

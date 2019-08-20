@@ -33,7 +33,6 @@
 from __future__ import print_function
 
 # Import some modules
-from builtins import range
 import matplotlib as mpl
 import numpy as np
 import ptypy
@@ -167,7 +166,7 @@ print(np.allclose(data, V1.data))
 # and the second acces method worked because it uses the View's
 # :py:attr:`~ptypy.core.classes.View.storage` attribute.
 print(V1.storage is S1)
-print(V1.storageID in list(C1.S.keys()))
+print(V1.storageID in C1.S.keys())
 
 # We observe that the coordinate [0.0,0.0] is not part of the grid
 # in S1 anymore. Consequently, the View was put as close to [0.0,0.0]

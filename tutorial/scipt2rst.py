@@ -1,5 +1,3 @@
-from future import standard_library
-standard_library.install_aliases()
 import sys
 import io
 import contextlib
@@ -8,7 +6,7 @@ import contextlib
 def stdoutIO(stdout=None):
     old = sys.stdout
     if stdout is None:
-        stdout = StringIO.StringIO()
+        stdout = io.StringIO()
     sys.stdout = stdout
     yield stdout
     sys.stdout = old

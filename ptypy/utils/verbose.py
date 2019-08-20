@@ -17,10 +17,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import division
-from builtins import str
-from past.utils import old_div
-from builtins import object
 import time
 import sys
 import inspect
@@ -119,8 +115,8 @@ logger.addFilter(consolefilter)
 
 level_from_verbosity = {0:logging.CRITICAL, 1:logging.ERROR, 2:logging.WARN, 3:logging.INFO, 4: INSPECT, 5:logging.DEBUG}
 level_from_string = {'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 'INFO':logging.INFO, 'INSPECT': INSPECT, 'DEBUG':logging.DEBUG}
-vlevel_from_logging = dict([(v,k) for k,v in list(level_from_verbosity.items())])
-slevel_from_logging = dict([(v,k) for k,v in list(level_from_string.items())])
+vlevel_from_logging = dict([(v,k) for k,v in level_from_verbosity.items()])
+slevel_from_logging = dict([(v,k) for k,v in level_from_string.items()])
 
 def log(level,msg,parallel=False):
     if not parallel:
@@ -155,7 +151,7 @@ def _(label, value):
 def headerline(info='',align = 'c',fill='-'):
     li = len(info)
     if li>=60:
-        return headerline(info[old_div(li,2):],align,fill)+'\n'+headerline(info[:old_div(li,2)],align,fill)
+        return headerline(info[li//2:],align,fill)+'\n'+headerline(info[:li//2],align,fill)
     else:
         if li != 0:
             li+=2

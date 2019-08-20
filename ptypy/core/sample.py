@@ -9,9 +9,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import division
-from builtins import str
-from past.utils import old_div
 import numpy as np
 
 from .. import utils as u
@@ -216,7 +213,7 @@ def init_storage(storage, sample_pars=None, energy=None):
             p.model = 'recon'
             p.process = None
             init_storage(s, p)
-        elif sam in list(TEMPLATES.keys()):
+        elif sam in TEMPLATES.keys():
             init_storage(s, TEMPLATES[sam])
         elif sam in resources.objects or sam == 'stxm':
             p.model = sam
@@ -344,7 +341,7 @@ def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
         obj = u.gf_2d(obj, p.smoothing / 2.35)
 
     off = u.expect2(p.offset)
-    k = old_div(2 * np.pi, lam)
+    k = 2 * np.pi / lam
     ri = p.ref_index
     d = p.thickness
     # Check what we got for an array
@@ -363,12 +360,12 @@ def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
         ob -= ob.min()
         if d is not None:
             logger.info(prefix + "Rescaling to maximum thickness")
-            ob /= old_div(ob.max(), d)
+            ob /= ob.max() / d
 
         if p.formula is not None or ri is not None:
             # Use only magnitude of obj and scale to [0 1]
             if ri is None:
-                en = old_div(u.keV2m(1e-3), lam)
+                en = u.keV2m(1e-3) / lam
                 if u.parallel.master:
                     logger.info(
                         prefix +
@@ -467,12 +464,12 @@ def from_pars_old(shape, lam, pars=None, dtype=np.complex):
         if p.smoothing_mfs is not None:
             obj = u.gf(obj, p.smoothing_mfs / 2.35)
 
-        k = old_div(2 * np.pi, lam)
+        k = 2 * np.pi / lam
         ri = p.ref_index
         if p.formula is not None or ri is not None:
             # use only magnitude of obj and scale to [0 1]
             if ri is None:
-                en = old_div(u.keV2m(1e-3),lam)
+                en = u.keV2m(1e-3)/lam
                 if u.parallel.master:
                     logger.info(
                         'Queuing cxro database for refractive index in object '
@@ -491,7 +488,7 @@ def from_pars_old(shape, lam, pars=None, dtype=np.complex):
             ob = np.abs(obj).astype(np.float)
             ob -= ob.min()
             if p.thickness is not None:
-                ob /= old_div(ob.max(), p.thickness)
+                ob /= ob.max() / p.thickness
 
             obj = np.exp(1.j * ob * k * ri)
 

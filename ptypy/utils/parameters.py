@@ -8,7 +8,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
-from builtins import str
 import os
 
 __all__ = ['Param', 'asParam']  # 'load',]

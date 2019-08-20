@@ -9,7 +9,6 @@ This file is part of the PTYPY package.
 """
 from __future__ import print_function
 
-from builtins import range
 import h5py as h5
 import numpy as np
 

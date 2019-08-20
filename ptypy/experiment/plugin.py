@@ -11,7 +11,6 @@ This file is part of the PTYPY package.
 
 """
 
-from builtins import str
 import os
 import imp
 import inspect

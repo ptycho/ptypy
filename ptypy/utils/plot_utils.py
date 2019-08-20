@@ -7,12 +7,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
-from __future__ import division
-from builtins import str
-from builtins import input
-from builtins import range
-from builtins import object
-from past.utils import old_div
 import numpy as np
 import time
 import sys
@@ -182,7 +176,7 @@ def complex2hsv(cin, vmin=0., vmax=None):
         v = v.clip(0.0, 1.0)
     else:
         assert vmin < vmax
-        v = old_div((v.clip(vmin, vmax)-vmin),(vmax-vmin))
+        v = (v.clip(vmin, vmax)-vmin)/(vmax-vmin)
     
     return np.asarray((h, s, v))
 
@@ -254,11 +248,11 @@ def rgb2hsv(rgb):
     maxc = rgb.max(axis=-1)
     minc = rgb.min(axis=-1)
     v = maxc
-    s = old_div((maxc-minc), (maxc+eps))
+    s = (maxc-minc) / (maxc+eps)
     s[maxc <= eps] = 0.0
-    rc = old_div((maxc-rgb[:, :, 0]), (maxc-minc+eps))
-    gc = old_div((maxc-rgb[:, :, 1]), (maxc-minc+eps))
-    bc = old_div((maxc-rgb[:, :, 2]), (maxc-minc+eps))
+    rc = (maxc-rgb[:, :, 0]) / (maxc-minc+eps)
+    gc = (maxc-rgb[:, :, 1]) / (maxc-minc+eps)
+    bc = (maxc-rgb[:, :, 2]) / (maxc-minc+eps)
 
     h = 4.0+gc-rc
     maxgreen = (rgb[:, :, 1] == maxc)
@@ -276,7 +270,7 @@ def hsv2complex(cin):
     Reverse to :any:`complex2hsv`
     """
     h, s, v = cin
-    return old_div(v * np.exp(np.pi*2j*(h-.5)), v.max())
+    return v * np.exp(np.pi*2j*(h-.5)) / v.max()
 
 
 def rgb2complex(rgb):
@@ -360,7 +354,7 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
             vmin = a.min()
         if vmax is None:
             vmax = a.max()
-        im = Image.fromarray((old_div(255*(a.clip(vmin,vmax)-vmin),(vmax-vmin))).astype('uint8'))
+        im = Image.fromarray((255*(a.clip(vmin,vmax)-vmin)/(vmax-vmin)).astype('uint8'))
         if cmap is not None:
             r = im.point(lambda x: cmap(x/255.0)[0] * 255)
             g = im.point(lambda x: cmap(x/255.0)[1] * 255)
@@ -448,13 +442,13 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
 
     ph = np.exp(1j*np.angle(a))
     [gx, gy] = np.gradient(ph)
-    gx = -np.real(old_div(1j*gx,ph))
-    gy = -np.real(old_div(1j*gy,ph))
+    gx = -np.real(1j*gx/ph)
+    gy = -np.real(1j*gy/ph)
 
     if useweight:
         nrm = weight.sum()
-        agx = old_div((gx*weight).sum(), nrm)
-        agy = old_div((gy*weight).sum(), nrm)
+        agx = (gx*weight).sum() / nrm
+        agy = (gy*weight).sum() / nrm
     else:
         agx = gx.mean()
         agy = gy.mean()
@@ -750,9 +744,9 @@ class PtyAxis(object):
             # determine number of points.
             v, h = self.shape
             steps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 1500, 2000, 3000]
-            Nindex = steps[max([old_div(v, s) <= 4 for s in steps].index(True) - 1, 0)]
+            Nindex = steps[max([v // s <= 4 for s in steps].index(True) - 1, 0)]
             self.ax.yaxis.set_major_locator(mpl.ticker.IndexLocator(Nindex, 0.5))
-            Nindex = steps[max([old_div(h, s) <= 4 for s in steps].index(True) - 1, 0)]
+            Nindex = steps[max([h // s <= 4 for s in steps].index(True) - 1, 0)]
             self.ax.xaxis.set_major_locator(mpl.ticker.IndexLocator(Nindex, 0.5))
         else:
             self.ax.images[0].set_data(pilim)
@@ -762,7 +756,7 @@ class PtyAxis(object):
     def _update_colorscale(self, resolution=256):
         if self.cax is None:
             return
-        sh = (resolution, int(old_div(resolution,self.cax_aspect)))
+        sh = (resolution, int(resolution/self.cax_aspect))
         psize = (1./sh[0], 1./sh[1])
         cax = self.cax
         cax.cla()

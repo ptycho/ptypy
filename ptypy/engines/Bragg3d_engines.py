@@ -8,9 +8,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
-from __future__ import division
-from builtins import range
-from past.utils import old_div
 from .DM import DM
 from . import register
 from ..core.manager import Bragg3dModel
@@ -175,7 +172,7 @@ class DM_3dBragg(DM):
                 tbin = np.bincount(r.ravel(), arr.ravel())
                 nr = np.bincount(r.ravel())
                 s = np.arange(len(tbin)) * scaling
-                sprofile = old_div(tbin, nr)
+                sprofile = tbin / nr
                 icenter = 0
 
             # gaussian smooth
@@ -194,7 +191,7 @@ class DM_3dBragg(DM):
             # walk negative
             slow = s[0]
             for i in range(1, icenter):
-                if (old_div(sprofile[icenter-i], sprofile[icenter]) < cutoff
+                if (sprofile[icenter-i] / sprofile[icenter] < cutoff
                     or (self.p.sample_support.shrinkwrap.monotonic and
                         sprofile[icenter-i] > sprofile[icenter-i+1])):
                     slow = s[icenter-i]
@@ -204,8 +201,8 @@ class DM_3dBragg(DM):
             shigh = s[len(sprofile) - 1]
             for i in range(1, len(sprofile)-icenter-1):
                 if parallel.master:
-                    print(old_div(sprofile[icenter+i], sprofile[icenter]))
-                if (old_div(sprofile[icenter+i], sprofile[icenter]) < cutoff
+                    print(sprofile[icenter+i] / sprofile[icenter])
+                if (sprofile[icenter+i] / sprofile[icenter] < cutoff
                     or (self.p.sample_support.shrinkwrap.monotonic and
                         sprofile[icenter+i] > sprofile[icenter+i-1])):
                     shigh = s[icenter+i]

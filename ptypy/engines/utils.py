@@ -8,9 +8,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import division
-from builtins import str
-from past.utils import old_div
 import numpy as np
 from .. import utils as u
 
@@ -126,7 +123,8 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         LL = np.zeros_like(diff_view.data)
         for name, pod in diff_view.pods.items():
             LL += u.abs2(pod.fw(pod.probe * pod.object))
-        err_phot = (old_div(np.sum(old_div(fmask * (LL - I)**2, (I + 1.))), np.prod(LL.shape)))
+        err_phot = (np.sum(fmask * (LL - I)**2 / (I + 1.))
+                    / np.prod(LL.shape))
     else:
         err_phot = 0.
 
@@ -144,12 +142,12 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
 
     # Fourier magnitudes deviations
     fdev = af - fmag
-    err_fmag = old_div(np.sum(fmask * fdev**2), fmask.sum())
+    err_fmag = np.sum(fmask * fdev**2) / fmask.sum()
     err_exit = 0.
 
     if pbound is None:
         # No power bound
-        fm = (1 - fmask) + old_div(fmask * fmag, (af + 1e-10))
+        fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
@@ -158,8 +156,8 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
             err_exit += np.mean(u.abs2(df))
     elif err_fmag > pbound:
         # Power bound is applied
-        renorm = np.sqrt(old_div(pbound, err_fmag))
-        fm = (1 - fmask) + old_div(fmask * (fmag + fdev * renorm), (af + 1e-10))
+        renorm = np.sqrt(pbound / err_fmag)
+        fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue

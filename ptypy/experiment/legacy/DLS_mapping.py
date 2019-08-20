@@ -8,9 +8,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
-from __future__ import division
 
-from past.utils import old_div
 import numpy as np
 import h5py as h5
 
@@ -194,7 +192,7 @@ class DlsScan(PtyScan):
 #                         log(2, 'No ion chamber found')
                         ic= np.ones((dset.shape[0]))
                     #print dset.shape
-                    raw[j] = old_div(dset[j] * ic[j],ic[0])
+                    raw[j] = dset[j] * ic[j]/ic[0]
                     dset.file.close()
         else:
             if not self.info.recipe.is_swmr:

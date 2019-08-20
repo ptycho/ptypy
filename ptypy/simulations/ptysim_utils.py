@@ -7,8 +7,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from __future__ import division
-from past.utils import old_div
 import numpy as np
 import os
 import time
@@ -44,7 +42,7 @@ def make_sim_datasource(model_inst,drift=0.0,scale= 0.0,noise=0.0):
     labels=[]
     sources =[]
     pars =[]
-    for label,scan in list(model_inst.scans.items()):
+    for label,scan in model_inst.scans.items():
         source = scan.pars.source
         if source is None:
             source = model_inst.ptycho.paths.get_data_file(label=label)
@@ -70,7 +68,7 @@ def framepositions(pos_pixel,probe_shape,frame_overhead=(10,10)):
     pos_pixel -= pos_pixel.min(axis=0)
     pos_pixel = np.round(pos_pixel)
     shape = pos_pixel.max(axis=0)+w.expect2(probe_shape)+w.expect2(frame_overhead)
-    pos_pixel += np.round(old_div(w.expect2(frame_overhead),2))
+    pos_pixel += np.round(w.expect2(frame_overhead) /2)
     positions = [(p[0],p[0]+probe_shape[0],p[1],p[1]+probe_shape[1]) for p in pos_pixel]
 
     return shape,positions

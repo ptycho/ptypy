@@ -8,10 +8,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-from builtins import str
-from builtins import object
 import h5py
 import numpy as np
 import pickle
@@ -124,14 +120,8 @@ def _h5write(filename, mode, *args, **kwargs):
 
     # @sdebug
     def _store_string(group, s, name):
-        dset = group.create_dataset(name, data=np.asarray(s), dtype=dt)
-        dset.attrs['type'] = 'string'
-        return dset
-
-    # @sdebug
-    def _store_unicode(group, s, name):
         dset = group.create_dataset(name, data=np.asarray(s.encode('utf8')), dtype=dt)
-        dset.attrs['type'] = 'unicode'
+        dset.attrs['type'] = 'string'
         return dset
 
     # @sdebug
@@ -168,7 +158,7 @@ def _h5write(filename, mode, *args, **kwargs):
     # @sdebug
     def _store_dict(group, d, name):
         check_id(id(d))
-        if any([type(k) not in [str, str] for k in list(d.keys())]):
+        if any([type(k) not in [str,] for k in d.keys()]):
             raise RuntimeError('Only dictionaries with string keys are supported.')
         dset = group.create_group(name)
         dset.attrs['type'] = 'dict'
@@ -186,7 +176,7 @@ def _h5write(filename, mode, *args, **kwargs):
     # @sdebug
     def _store_ordered_dict(group, d, name):
         check_id(id(d))
-        if any([type(k) not in [str, str] for k in list(d.keys())]):
+        if any([type(k) not in [str,] for k in d.keys()]):
             raise RuntimeError('Only dictionaries with string keys are supported.')
         dset = group.create_group(name)
         dset.attrs['type'] = 'ordered_dict'
@@ -241,8 +231,6 @@ def _h5write(filename, mode, *args, **kwargs):
     def _store(group, a, name):
         if type(a) is str:
             dset = _store_string(group, a, name)
-        elif type(a) is str:
-            dset = _store_unicode(group, a, name)
         elif type(a) is dict:
             dset = _store_dict(group, a, name)
         elif type(a) is OrderedDict:
@@ -288,7 +276,7 @@ def _h5write(filename, mode, *args, **kwargs):
             # into an existing file, where a key is already occupied,
             # i.e. a replace operation. On the other hand we are violating
             # the pure 'appending' nature of h5append
-            if k in list(f.keys()):
+            if k in f.keys():
                 del f[k]
             _store(f, v, k)
     return
@@ -422,7 +410,7 @@ def h5read(filename, *args, **kwargs):
     def _load_dict(dset, depth):
         d = {}
         if depth > 0:
-            for k, v in list(dset.items()):
+            for k, v in dset.items():
                 if v.attrs.get('escaped', None) is not None:
                     k = k.replace(h5options['SLASH_ESCAPE'], '/')
                 d[str(k)] = _load(v, depth - 1)
@@ -452,7 +440,7 @@ def h5read(filename, *args, **kwargs):
     def _load_ordered_dict(dset, depth):
         d = OrderedDict()
         if depth > 0:
-            for k, v in list(dset.items()):
+            for k, v in dset.items():
                 if v.attrs.get('escaped', None) is not None:
                     k = k.replace(h5options['SLASH_ESCAPE'], '/')
                 d[k] = _load(v, depth - 1)
@@ -606,7 +594,7 @@ def h5info(filename, path='', output=None, depth=8):
         ss = 'Param' if isParam else 'dict'
         stringout = ' ' * key[0] + ' * %s [%s %d]:\n' % (key[1], ss, len(dset))
         if d > 0:
-            for k, v in list(dset.items()):
+            for k, v in dset.items():
                 if v is not None and v.attrs.get('escaped', None) is not None:
                     k = k.replace(h5options['SLASH_ESCAPE'], '/')
                 stringout += _format(d - 1, (key[0] + indent, k), v)

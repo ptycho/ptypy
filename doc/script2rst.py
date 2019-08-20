@@ -1,8 +1,4 @@
 from __future__ import print_function
-from __future__ import division
-from future import standard_library
-standard_library.install_aliases()
-from past.utils import old_div
 import sys
 import io
 import contextlib
@@ -111,7 +107,7 @@ while True:
         fig.savefig(fname, dpi=300)
         frst.write('\nSee :numref:`%s` for the plotted image.\n\n' % fig_name)
         frst.write('.. figure:: '+'..'+os.sep+fname+'\n')
-        ratio = old_div(fig.get_figwidth(),fig.get_figheight())
+        ratio = fig.get_figwidth()/fig.get_figheight()
         frst.write('   :width: %d ' % min(int(ratio * 60), 100)+'%\n')
         frst.write('   :figclass: highlights\n')
         frst.write('   :name: ' + fig_name+'\n\n')

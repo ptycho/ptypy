@@ -9,10 +9,6 @@ Among other, contains the functions
     readData
     writeData WHICH IS NOT YET IMPLEMENTED
 """
-from __future__ import division
-from builtins import zip
-from builtins import range
-from past.utils import old_div
 import numpy as np
 import glob
 
@@ -156,7 +152,7 @@ def readData(filenameprefix,imgstart=0,imgnumber = 1,xi = 0, xf = 0, bin_fact = 
                 datm.append(dat[rowFrom:rowTo,xi:xf].copy())
             else:
                 import scipy
-                xdim = np.floor(old_div(np.size(dat,0),bin_fact)); ydim = np.floor(old_div(np.size(dat,1),bin_fact))
+                xdim = np.floor(np.size(dat,0)/bin_fact); ydim = np.floor(np.size(dat,1)/bin_fact)
                 datm.append(scipy.misc.pilutil.imresize(dat,(xdim, ydim)))
     else:
         headerlength=1024
@@ -182,7 +178,7 @@ def readData(filenameprefix,imgstart=0,imgnumber = 1,xi = 0, xf = 0, bin_fact = 
             datm.append(dat)
         else:
             import scipy
-            xdim = np.floor(old_div(np.size(dat,0),bin)); ydim = np.floor(old_div(np.size(dat,1),bin))
+            xdim = np.floor(np.size(dat,0)/bin); ydim = np.floor(np.size(dat,1)/bin)
             datm.append(scipy.misc.pilutil.imresize(dat,(xdim, ydim)))
 
     return (datm,meta)
@@ -223,9 +219,9 @@ def readHeader(filename, headerlength=None):
     hdict = dict(hlist[0:-1])
     # convert counter and motor settings in separate dictionaries inside hdict
     if 'counter_mne' in hdict:
-        hdict["counter"] = dict(list(zip(hdict["counter_mne"].split(" "),[convertStr(elem) for elem in hdict["counter_pos"].split(" ")])))
+        hdict["counter"] = dict(zip(hdict["counter_mne"].split(" "),[convertStr(elem) for elem in hdict["counter_pos"].split(" ")]))
     if 'motor_mne' in hdict:
-        hdict["motor"] = dict(list(zip(hdict["motor_mne"].split(" "),[convertStr(elem) for elem in hdict["motor_pos"].split(" ")])))
+        hdict["motor"] = dict(zip(hdict["motor_mne"].split(" "),[convertStr(elem) for elem in hdict["motor_pos"].split(" ")]))
     # add header length in meta-data
     hdict["headerlength"] = headerlength
     # add local filename in meta-data

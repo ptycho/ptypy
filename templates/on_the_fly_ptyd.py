@@ -8,7 +8,6 @@ corresponds to a 0.3 seconds dwell time.
 
 Tested only as single process.
 """
-from builtins import range
 import sys
 import time
 import ptypy

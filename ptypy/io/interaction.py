@@ -11,12 +11,6 @@ This file is part of the PTYPY package.
 """
 
 from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-from builtins import zip
-from builtins import str
-from builtins import range
-from builtins import object
 import zmq
 import time
 import string
@@ -345,7 +339,7 @@ class Server(object):
         Queue a warning message for all connected clients.
         """
         DEBUG('Queuing a WARN command')
-        for ID in list(self.names.keys()):
+        for ID in self.names.keys():
             self.queue.put({'ID': ID, 'cmd': 'WARN', 'ticket': 'WARN', 'str': warning_message})
         self._need_process = True
         return {'status': 'ok'}
@@ -355,7 +349,7 @@ class Server(object):
         Queue an ERROR message for all connected clients.
         """
         DEBUG('Queuing a ERROR command')
-        for ID in list(self.names.keys()):
+        for ID in self.names.keys():
             self.queue.put({'ID': ID, 'cmd': 'ERROR', 'ticket': 'ERROR', 'str': error_message})
         self._need_process = True
         return {'status': 'ok'}
@@ -613,7 +607,7 @@ class Server(object):
             logger.debug('Processing ticket %s from client %s' % (str(ticket), str(q['ID'])))
 
             # Nothing to do if the client is not connected anymore
-            if q['ID'] not in list(self.names.keys()):
+            if q['ID'] not in self.names.keys():
                 self.queue.task_done()
                 logger.debug('Client %s disconnected. Skipping.' % q['ID'])
                 continue

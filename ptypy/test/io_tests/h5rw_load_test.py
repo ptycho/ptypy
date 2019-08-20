@@ -4,8 +4,6 @@ This tests the functionality of h5rw reading it's own data back in and can be br
 Since it's primary purpose is to read back it's own types, we create the test files using h5write. Lazy, but covers the use case.
 '''
 
-from future import standard_library
-standard_library.install_aliases()
 import unittest
 import tempfile
 import shutil
@@ -13,7 +11,6 @@ import h5py as h5
 import ptypy.io as io
 import ptypy.utils as u
 import numpy as np
-import pickle
 import collections
 
 
