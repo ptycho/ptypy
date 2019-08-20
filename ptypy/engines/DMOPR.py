@@ -67,6 +67,12 @@ class DMOPR(BaseEngine):
     lowlim = 1
     help = Maximum of iterations for the overlap constraint inner loop
 
+    [probe_inertia]
+    default = 1e-9
+    type = float
+    lowlim = 0.0
+    help = Weight of the current probe estimate in the update
+
     [object_inertia]
     default = 1e-4
     type = float
@@ -247,8 +253,8 @@ class DMOPR(BaseEngine):
         containers = [
             self.ob_buf,
             self.ob_nrm,
-            self.ob_viewcover,
-            self.pr_old]
+            self.ob_viewcover]
+            #self.pr_old]
 
         for c in containers:
             logger.debug('Attempt to remove container %s' % c.ID)
@@ -258,7 +264,7 @@ class DMOPR(BaseEngine):
         del self.ob_buf
         del self.ob_nrm 
         del self.ob_viewcover 
-        del self.pr_old
+        #del self.pr_old
 
         del containers
 
@@ -373,7 +379,7 @@ class DMOPR(BaseEngine):
                 too_low = (ampl_obj < clip_min)
                 s.data[too_high] = clip_max * phase_obj[too_high]
                 s.data[too_low] = clip_min * phase_obj[too_low]
-    
+                
     def probe_update(self):
         """
         DM probe update - independent probe version
@@ -403,10 +409,10 @@ class DMOPR(BaseEngine):
 
         # OPR step applied on probe
         self.probe_consistency_update()
-
+        
         change = u.norm2(pr.S.values()[0].data - pr_old.S.values()[0].data)
         change = parallel.allreduce(change)
-
+        
         return np.sqrt(change / pr.S.values()[0].nlayers)
 
     def probe_consistency_update(self):

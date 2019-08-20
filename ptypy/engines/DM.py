@@ -117,6 +117,10 @@ class DM(PositionCorrectionEngine):
     type = bool
     help = A switch for computing the log-likelihood error (this can impact the performance of the engine) 
 
+    [ortho_probe_relax_start]
+    default = 0
+    type = int
+    help = Number of iterations before orthogonal probe relaxation (OPR) starts, only applies of scan model is set to 'OPRModel'
 
     """
 
@@ -341,7 +345,7 @@ class DM(PositionCorrectionEngine):
                 cfact = self.p.object_inertia * self.mean_power
                 if self.p.obj_smooth_std is not None:
                     logger.info(
-                        'Smoothing object, average cfact is %.2f'    # def probe_update(self):
+                        'Smoothing object, average cfact is %.2f'
                         % np.mean(cfact).real)
                     smooth_mfs = [0,
                                   self.p.obj_smooth_std,
@@ -382,7 +386,7 @@ class DM(PositionCorrectionEngine):
                 s.data[too_low] = clip_min * phase_obj[too_low]
 
 
-    def probe_update(self):
+    def probe_update2(self):
         """
         DM probe update.
         """
@@ -441,33 +445,10 @@ class DM(PositionCorrectionEngine):
             
         return np.sqrt(change / len(pr.storages))
 
-    def probe_consistency_update(self, s, name):
-        """
-        DM probe consistency update for orthogonal probe relaxation.
-        """
-        #HACK
-        if self.curiter >= 30:
-            self.model.p.subspace_dim = 10
-            
-        pr_input = np.array([s[l] for i,l in self.model.local_layers[name]])
-        subdim = self.model.p.subspace_dim
-        ind = self.model.local_indices[name]
-        new_pr, modes, coeffs = reduce_dimension(a=pr_input,
-                                                 dim=subdim, 
-                                                 local_indices=ind)
-
-        self.model.OPR_modes[name] = modes
-        self.model.OPR_coeffs[name] = coeffs
-
-        # Update probes
-        for k, il in enumerate(self.model.local_layers[name]):
-            s[il[1]] = new_pr[k]
-
-    def probe_update_indep(self):
+    def probe_update(self):
         """
         DM probe update - independent probe version
         """
-
         pr = self.pr
         pr_nrm = self.pr_nrm
         pr_buf = self.pr_buf
@@ -496,54 +477,43 @@ class DM(PositionCorrectionEngine):
             pr_old[pod.pr_view] = pod.probe
 
             # Update probe
-            pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
-            pod.probe /= (u.cabs2(pod.object) * pod.probe_weight + 1)
+            pod.probe = (1 * pr_old[pod.pr_view]
+                                      + pod.object.conj() * pod.exit)
+            pod.probe /= u.cabs2(pod.object) + 1
 
             # Apply probe support if requested
             support = self.probe_support.get(name)
-            if support is not None:
-                pod.probe *= self.probe_support[name] # have to do this on a per-probe basis since there are now lots of them!
+            if support is not None: 
+                pod.probe *= self.probe_support[name]
 
-
-        # OPR step applied on probe
+        # Orthogonal probe relaxation (OPR) update step
         if self.model.p.name is 'OPRModel':
-            self.probe_consistency_update()
-
+            for name,s in self.pr.S.iteritems():
+                self.probe_consistency_update(s,name)
+        
         change = u.norm2(pr.S.values()[0].data - pr_old.S.values()[0].data)
         change = parallel.allreduce(change)
-
+        
         return np.sqrt(change / pr.S.values()[0].nlayers)
 
 
-    def probe_consistency_update_old(self):
+    def probe_consistency_update(self, s, name):
         """
         DM probe consistency update for orthogonal probe relaxation.
+        """ 
+        if self.curiter <= self.p.ortho_probe_relax_start:
+            subdim = 1
+        else:
+            subdim = self.model.p.subspace_dim
+        ind = self.model.local_indices[name]
+        pr_input = np.array([s[l] for i,l in self.model.local_layers[name]])
+        new_pr, modes, coeffs = reduce_dimension(a=pr_input,
+                                                 dim=subdim, 
+                                                 local_indices=ind)
 
-        Here what we do is compute a singular value decomposition on
-        the ensemble of probes.
-        """
+        self.model.OPR_modes[name] = modes
+        self.model.OPR_coeffs[name] = coeffs
 
-        #HACK
-        if self.curiter >= 30:
-            self.model.p.subspace_dim = 10
-        
-        if self.model.p.subspace_dim == 0:
-            # Boring case equivalent to normal DM - do not implement
-            raise NotImplementedError('0 dim case is not implemented.')
-
-        for sID, prS in self.ptycho.probe.S.iteritems():
-            print("OPR", sID, prS)
-            # pr_input = np.array([2 * self.pr[v] - self.pr_old[v]
-            # for v in self.pr.views.values() if v.active])
-            pr_input = np.array([prS[l] for i, l
-                                            in self.model.local_layers[sID]])
-
-            new_pr, modes, coeffs = reduce_dimension(a=pr_input,
-                dim=self.model.p.subspace_dim, local_indices=self.model.local_indices[sID])
-
-            self.model.OPR_modes[sID] = modes
-            self.model.OPR_coeffs[sID] = coeffs
-
-            # Update probes
-            for k, il in enumerate(self.model.local_layers[sID]):
-                prS[il[1]] = new_pr[k]
+        # Update probes
+        for k, il in enumerate(self.model.local_layers[name]):
+            s[il[1]] = new_pr[k]

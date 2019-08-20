@@ -15,8 +15,9 @@ p.io.home = "~/tmp/ptypy/"
 p.io.autosave = u.Param()
 p.io.autosave.interval = 20
 p.io.autoplot = u.Param()
-p.io.autoplot.active = True
+p.io.autoplot.active = False
 p.io.interaction = u.Param()
+p.io.interaction.active = False
 
 p.scans = u.Param()
 p.scans.MF = u.Param()
@@ -46,7 +47,6 @@ p.scans.MF.data.photons = 100000000.0
 p.scans.MF.data.psf = 0.0
 p.scans.MF.data.density = 0.2
 
-
 p.scans.MF.illumination = u.Param()
 p.scans.MF.illumination.model = None
 p.scans.MF.illumination.aperture = u.Param()
@@ -63,13 +63,15 @@ p.engines.engine00.numiter = 30
 p.engines.engine00.numiter_contiguous = 5
 p.engines.engine00.overlap_max_iterations = 2
 p.engines.engine00.fourier_relax_factor = 0.01
+p.engines.engine00.probe_support = None
 
 p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'DMOPR'
-p.engines.engine01.numiter = 100
+p.engines.engine01.numiter = 270
 p.engines.engine01.numiter_contiguous = 5
 p.engines.engine01.overlap_max_iterations = 2
 p.engines.engine01.fourier_relax_factor = 0.01
+p.engines.engine01.probe_support = None
 p.engines.engine01.IP_metric = 1.
 p.engines.engine01.subspace_dim = 10
 #

@@ -206,6 +206,8 @@ def reduce_dimension(a, dim, local_indices=None):
          (aka singular vectors)
       - coefficients: 2D matrix representing the decomposition of a.
     """
+    #if dim <= 1:
+    #    return a.mean(axis=0), None, None
 
     if local_indices is None:  # No MPI - generate a list of indices
         Nl = len(a)
@@ -274,7 +276,7 @@ def reduce_dimension(a, dim, local_indices=None):
     parallel.allreduce(M)
 
     # Diagonalise the matrix
-    eigval, eigvec = eigsh(M, k=dim + 2, which='LM')
+    eigval, eigvec = eigsh(M, k=dim + 0, which='LM')
 
     # Generate the modes
     modes = np.array([sum(a[l] * eigvec[i, k]
@@ -283,7 +285,7 @@ def reduce_dimension(a, dim, local_indices=None):
     parallel.allreduce(modes)
 
     # Reconstruct the array
-    eigvecc = eigvec.conj()[:,:-2]
+    eigvecc = eigvec.conj()#[:,:-2]
     output = np.zeros_like(a)
     for l, i in enumerate(local_indices):
         output[l] = sum(modes[k] * eigvecc[i, k] for k in range(dim))

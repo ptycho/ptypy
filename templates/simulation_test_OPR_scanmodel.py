@@ -15,14 +15,14 @@ p.io.home = "~/tmp/ptypy/"
 p.io.autosave = u.Param()
 p.io.autosave.interval = 20
 p.io.autoplot = u.Param()
-p.io.autoplot.active = True
+p.io.autoplot.active = False
 p.io.interaction = u.Param()
+p.io.interaction.active = False
 
 p.scans = u.Param()
 p.scans.MF = u.Param()
-#p.scans.MF.name = 'Full'
 p.scans.MF.name = 'OPRModel'
-p.scans.MF.subspace_dim = 1
+p.scans.MF.subspace_dim = 10
 p.scans.MF.propagation = 'farfield'
 p.scans.MF.data = u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
@@ -49,19 +49,14 @@ p.scans.MF.data.psf = 0.0
 p.scans.MF.data.density = 0.2
 
 p.engines = u.Param()
-#p.engines.engine00 = u.Param()
-#p.engines.engine00.name = 'DM'
-#p.engines.engine00.numiter = 30
-#p.engines.engine00.numiter_contiguous = 5
-#p.engines.engine00.overlap_max_iterations = 2
-#p.engines.engine00.fourier_relax_factor = 0.01
-
 p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'DM'
-p.engines.engine01.numiter = 200
+p.engines.engine01.numiter = 500
 p.engines.engine01.numiter_contiguous = 5
 p.engines.engine01.overlap_max_iterations = 2
 p.engines.engine01.fourier_relax_factor = 0.01
+p.engines.engine01.probe_support = None
+p.engines.engine01.ortho_probe_relax_start = 30
 
 # p.engines.engine02 = u.Param()
 # p.engines.engine02.name = 'MLOPR'
