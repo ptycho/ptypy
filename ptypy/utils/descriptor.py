@@ -489,7 +489,7 @@ class ArgParseDescriptor(Descriptor):
         """
         try:
             return ast.literal_eval(val)
-        except ValueError or SyntaxError as e:
+        except (ValueError, SyntaxError) as e:
             msg = e.args[0] + ". could not read %s for parameter %s" % (val, self.path)
             raise ValueError(msg)
         except SyntaxError as e:

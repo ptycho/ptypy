@@ -244,7 +244,7 @@ class DM_3dBragg(DM):
 
         try:
             assert self.p.sample_support.shrinkwrap.plot
-        except AttributeError as AssertionError:
+        except (AttributeError, AssertionError):
             return
 
         try:
