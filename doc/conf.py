@@ -65,7 +65,7 @@ def remove_mod_docstring(app, what, name, obj, options, lines):
             return
         
         for k, value in dct.iteritems():
-            ref = ', see :py:data:`~%s`' % pd.children[k].entry_point if pd.children.has_key(k) else ''
+            ref = ', see :py:data:`~%s`' % pd.children[k].entry_point if k in pd.children else ''
             if hasattr(value, 'items'):
                 v = str(value.__class__.__name__)
             elif str(value) == value:

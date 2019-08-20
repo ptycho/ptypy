@@ -4,6 +4,7 @@ Data preparation class for cSAXS at the SLS
 This scan file was correct as of the end of 2017. It's not yet maintained by cSAXS,
  but if you raise a ticket if you notice any oddities, we will try to fix it up.
 """
+from __future__ import print_function
 
 import numpy as np
 import os
@@ -113,7 +114,7 @@ def get_position_path(inargs):
     positions_path = file_path + 'scan_%(scan_number)05d.dat' % pathargs
     # check that it exists
     if not os.path.isfile(positions_path):
-        print "File:%s does not exist." % positions_path
+        print("File:%s does not exist." % positions_path)
         exists = False
     else:
         exists = True
@@ -166,7 +167,7 @@ def get_data_path(inargs):
     num_frames = len([name for name in os.listdir(file_path) if os.path.isfile(file_path + name)])
     # check that it exists
     if not os.path.isfile(frame_path):
-        print "File:%s does not exist." % frame_path
+        print("File:%s does not exist." % frame_path)
         exists = False
     else:
         exists = True

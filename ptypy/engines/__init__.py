@@ -10,6 +10,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import absolute_import
 from .. import utils as u
 from .. import defaults_tree
 from .utils import *
@@ -35,7 +36,7 @@ def by_name(name):
         raise RuntimeError('Unknown engine: %s' % name)
     return ENGINES[name]
 
-from base import BaseEngine, DEFAULT_iter_info
+from .base import BaseEngine, DEFAULT_iter_info
 
 # These imports should be executable separately
 from . import DM

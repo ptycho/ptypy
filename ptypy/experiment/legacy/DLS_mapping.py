@@ -7,6 +7,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import print_function
 
 import numpy as np
 import h5py as h5
@@ -111,7 +112,7 @@ class DlsScan(PtyScan):
         # Load positions from file if possible.
 #         print self.info.recipe
         stage_path = NEXUS_PATHS.instrument % self.info.recipe
-        print stage_path
+        print(stage_path)
         instrument = h5.File(self.data_file, 'r', libver='latest', swmr=True)[stage_path]
         if self.info.recipe.israster:
             self.position_shape = instrument[0].shape
@@ -169,7 +170,7 @@ class DlsScan(PtyScan):
         key = NEXUS_PATHS.frame_pattern % self.info.recipe
         if not self.info.recipe.israster:
             for j in indices:
-                print j
+                print(j)
                 if not self.info.recipe.is_swmr:
                     dataset = h5.File(self.data_file)[key]
                     try:

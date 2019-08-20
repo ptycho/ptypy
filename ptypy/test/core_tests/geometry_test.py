@@ -1,6 +1,7 @@
 '''
 A test for the Base
 '''
+from __future__ import print_function
 
 import unittest
 import ptypy.utils as u
@@ -29,11 +30,11 @@ class GeometryTest(unittest.TestCase):
 
     def test_geometry_farfield_init(self):
         G = self.set_up_farfield()
-        print G.resolution
+        print(G.resolution)
 
     def test_geometry_farfield_resolution(self):
         G = self.set_up_farfield()
-        print G.resolution
+        print(G.resolution)
         assert (np.round(G.resolution*1e5,2) ==  np.array([1.30, 1.30])).all(), "geometry resolution incorrect for the far-field"
 
     def set_up_nearfield(self):

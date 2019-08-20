@@ -7,6 +7,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import print_function
 import sys
 import os
 
@@ -113,6 +114,6 @@ class Paths(object):
 
 if __name__ == "__main__":
     pa = Paths()
-    print pa.auto_file()
-    print pa.plot_file()
-    print pa.recon_file()
+    print(pa.auto_file())
+    print(pa.plot_file())
+    print(pa.recon_file())

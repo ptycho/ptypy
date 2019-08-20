@@ -7,6 +7,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import print_function
 
 import numpy as np
 import h5py as h5
@@ -246,7 +247,7 @@ class DlsScan(PtyScan):
             frames_accessible = min((frames, num_avail))
             stop = f[NEXUS_PATHS.finished_pattern][0] and (self.num_frames == start)
             f.close()
-            print "HERE",frames_accessible, stop
+            print("HERE",frames_accessible, stop)
             return frames_accessible,stop
 
     def load(self, indices):

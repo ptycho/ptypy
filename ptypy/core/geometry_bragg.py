@@ -1,12 +1,13 @@
 """
 Geometry management and propagation for Bragg geometry.
 """
+from __future__ import absolute_import
 
 from .. import utils as u
 from ..utils.verbose import logger
-from geometry import Geo as _Geo
+from .geometry import Geo as _Geo
 from ..utils.descriptor import EvalDescriptor
-from classes import Container, Storage, View
+from .classes import Container, Storage, View
 import numpy as np
 from scipy.ndimage.interpolation import map_coordinates
 

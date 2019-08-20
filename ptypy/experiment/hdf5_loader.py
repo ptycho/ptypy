@@ -7,6 +7,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import print_function
 
 import h5py as h5
 import numpy as np
@@ -388,7 +389,7 @@ class Hdf5Loader(PtyScan):
             log(3, "No normalisation will be applied.")
 
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            print self.p.recorded_energy.multiplier
+            print(self.p.recorded_energy.multiplier)
             self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()] * self.p.recorded_energy.multiplier)
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))

@@ -7,13 +7,14 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import absolute_import
 from .misc import *
 from .math_utils import *
 from .array_utils import *
 from .scripts import *
 from .parameters import Param, asParam
 from .verbose import *
-from citations import *
+from .citations import *
 from . import descriptor
 from . import parallel
 from .. import __has_matplotlib__ as hmpl

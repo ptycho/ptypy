@@ -7,6 +7,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import print_function
 import h5py
 import numpy as np
 import cPickle
@@ -36,7 +37,7 @@ def sdebug(f):
     """
 
     def newf(*args, **kwds):
-        print '{0:20} {1:20}'.format(f.func_name, args[2])
+        print('{0:20} {1:20}'.format(f.__name__, args[2]))
         return f(*args, **kwds)
 
     newf.__doc__ = f.__doc__
@@ -537,7 +538,7 @@ def h5read(filename, *args, **kwargs):
     try:
         f = h5py.File(filename, 'r')
     except:
-        print 'Error when opening file %s.' % filename
+        print('Error when opening file %s.' % filename)
         raise
     else:
         with f:
@@ -740,7 +741,7 @@ def h5info(filename, path='', output=None, depth=8):
         for k in key_list:
             outstring += _format(depth, (0, k), f[path + k])
 
-    print outstring
+    print(outstring)
 
     # return string if output variable passed as option
     if output != None:

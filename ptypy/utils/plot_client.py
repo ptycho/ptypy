@@ -6,6 +6,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import print_function
 
 import time
 import numpy as np
@@ -842,7 +843,7 @@ def spawn_MPLClient(client_pars, autoplot_pars, home=None):
     except KeyboardInterrupt:
         pass
     finally:
-        print 'Stopping plot client...'
+        print('Stopping plot client...')
         mplc.pc.stop()
 
 if __name__ =='__main__':

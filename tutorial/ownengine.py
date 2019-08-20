@@ -1,3 +1,4 @@
+from __future__ import print_function
 # In this tutorial, we want to provide the information
 # needed to create an engine compatible with the state mixture
 # expansion of ptychogrpahy as described in Thibault et. al 2013 [#modes]_ .
@@ -140,7 +141,7 @@ def iterate(Ptycho, num):
         object_update(Ptycho.obj, obj_norm, Ptycho.pods)
         # print error
         errors.append(err)
-        if i % 3==0: print err
+        if i % 3==0: print(err)
     # cleanup
     P.obj.delete_copy()
     P.probe.delete_copy()

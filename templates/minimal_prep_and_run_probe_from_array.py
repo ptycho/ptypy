@@ -3,6 +3,7 @@ This script is a test for ptychographic reconstruction in the absence
 of actual data. It uses the test Scan class
 `ptypy.core.data.MoonFlowerScan` to provide "data".
 """
+from __future__ import print_function
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
@@ -31,7 +32,7 @@ p.scans.MF.data.num_frames = 200
 p.scans.MF.data.save = None
 p.scans.MF.illumination = u.Param()
 p.scans.MF.illumination.model = np.random.rand(*u.expect2(p.scans.MF.data.shape))
-print type(p.scans.MF.illumination.model)
+print(type(p.scans.MF.illumination.model))
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2
 # total number of photon in empty beam

@@ -3,6 +3,7 @@
 This tests the functionality of h5rw and can be broken to include new types
 
 '''
+from __future__ import print_function
 
 import unittest
 import tempfile
@@ -56,7 +57,7 @@ class H5rwStoreTest(unittest.TestCase):
         data["flower"] =  2.0
         data['an array'] = np.ones((3,3))
         content = {'ordered dict data': data}
-        print self.filepath % "store_ordered_dict_test"
+        print(self.filepath % "store_ordered_dict_test")
         try:
             io.h5write(self.filepath % "store_ordered_dict_test", content=content)
         except:

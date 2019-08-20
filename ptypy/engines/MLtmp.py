@@ -10,12 +10,13 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import absolute_import
 import numpy as np
 import time
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
-from utils import Cnorm2, Cdot
+from .utils import Cnorm2, Cdot
 from . import BaseEngine
 from .. import defaults_tree
 

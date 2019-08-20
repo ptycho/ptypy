@@ -1,6 +1,7 @@
 """
 This module provides simulated 3D Bragg data.
 """
+from __future__ import print_function
 
 import ptypy
 from ptypy.core.data import PtyScan
@@ -78,14 +79,14 @@ class NanomaxBraggJune2017(PtyScan):
         for a complete POD. We also have to specify a single number for
         the rocking step size.
         """
-        print '*** load_common'
+        print('*** load_common')
         angles = []
         for scannr in self.p.scans:
             with h5py.File(self.p.datapath + self.p.datafile) as fp:
                 angles.append(float(fp.get('entry%d'%scannr + '/measurement/gonphi').value))
-        print angles
+        print(angles)
         step = np.mean(np.diff(sorted(angles)))
-        print step
+        print(step)
         return {
             'rocking_step': step,
             'n_rocking_positions': len(angles),
@@ -103,7 +104,7 @@ class NanomaxBraggJune2017(PtyScan):
         acquired: x fastest, then y, then scan number in the order
         provided.
         """
-        print '*** load_positions'
+        print('*** load_positions')
 
         # first, calculate mean x and y positions for all scans, they
         # have to match anyway so may as well average them.
@@ -117,7 +118,7 @@ class NanomaxBraggJune2017(PtyScan):
                     for i in range(tmp.shape[1]):
                         if np.allclose(tmp[:, i:], 0.0):
                             cutoff = i
-                            print 'using %i samx values' % cutoff
+                            print('using %i samx values' % cutoff)
                             break
                 x.append(np.array(fp[entry + '/measurement/AdLinkAI_buff'][:, :cutoff]))
                 y.append(np.array(fp[entry + '/measurement/samy']))
@@ -127,7 +128,7 @@ class NanomaxBraggJune2017(PtyScan):
         Ny = x_mean.shape[0]
         Nxy = Nx * Ny
         assert Ny == y_mean.shape[0]
-        print 'Scan positions are Nx=%d, Ny=%d, Nxy=%d' % (Nx, Ny, Nxy)
+        print('Scan positions are Nx=%d, Ny=%d, Nxy=%d' % (Nx, Ny, Nxy))
 
         # save these numbers for the diff image loader
         self.Nx = Nx
@@ -161,7 +162,7 @@ class NanomaxBraggJune2017(PtyScan):
         viewed along the beam, i e they have (-q1, q2) indexing. PtyScan
         can always flip/rotate images.
         """
-        print '*** load'
+        print('*** load')
         raw, positions, weights = {}, {}, {}
 
         for ind in indices:
@@ -175,7 +176,7 @@ class NanomaxBraggJune2017(PtyScan):
         return raw, positions, weights
 
     def load_weight(self):
-        print '*** load_weight'
+        print('*** load_weight')
         with h5py.File(self.p.maskfile) as fp:
             mask = np.array(fp['mask'])
         return mask

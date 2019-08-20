@@ -10,6 +10,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 
 """
+from __future__ import print_function
 import numpy as np
 import time
 import os
@@ -209,7 +210,7 @@ class I08Scan(PtyScan):
         mmult = u.expect2(self.info.motors_multiplier)
         keyx = STXM_PATHS.motors+str(self.info.motors[0])
         keyy=STXM_PATHS.motors+str(self.info.motors[1])
-        print "file name is:%s" % self.stxm_filename
+        print("file name is:%s" % self.stxm_filename)
         x1 = io.h5read(self.stxm_filename,keyx)
         y1 = io.h5read(self.stxm_filename,keyy)
         x ,y = np.meshgrid(x1[keyx],y1[keyy]) # grab out the positions- they are the demand positions rather than readback and are not a list of co-ords. Meshgrid to get almost the thing we need.

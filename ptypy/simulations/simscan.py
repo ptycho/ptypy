@@ -7,13 +7,14 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import absolute_import
 import numpy as np
 import os
 import time
 
 if __name__ == "__main__":
     from ptypy import utils as u
-    from detector import Detector, conv
+    from .detector import Detector, conv
     from ptypy.core.data import PtyScan
     from ptypy.core.ptycho import Ptycho
     from ptypy.core.manager import Full as ScanModel
@@ -23,7 +24,7 @@ if __name__ == "__main__":
     from ptypy import defaults_tree
 else:
     from .. import utils as u
-    from detector import Detector, conv
+    from .detector import Detector, conv
     from ..core.data import PtyScan
     from ..core.ptycho import Ptycho
     from ..core.manager import Full as ScanModel

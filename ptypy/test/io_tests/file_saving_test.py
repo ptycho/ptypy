@@ -1,6 +1,7 @@
 '''
 Tests whether the framework saves the output files
 '''
+from __future__ import print_function
 
 import unittest
 import tempfile
@@ -145,7 +146,7 @@ class FileSavingTest(unittest.TestCase):
         PtychoOutput = tu.EngineTestRunner(engine_params,propagator='farfield', output_path=outpath, output_file=None)
         file_path = outpath + 'reconstruction.h5'
 
-        print "now I am saving with save_run"
+        print("now I am saving with save_run")
         PtychoOutput.save_run(file_path, kind='minimal')
 
 

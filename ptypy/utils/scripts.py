@@ -6,8 +6,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import numpy as np
-import parallel
+from . import parallel
 import urllib2 # TODO: make compatible with python 3.5
 from scipy import ndimage as ndi
 
@@ -364,7 +366,7 @@ def png2mpg(listoffiles, framefile='frames.txt', fps=5, bitrate=2000,
                 try:
                     os.remove(line)
                 except OSError:
-                    print OSError
+                    print(OSError)
                     print('Removing %s failed .. continuing' % line)
                     continue
             nff.close()

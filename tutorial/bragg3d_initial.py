@@ -1,3 +1,4 @@
+from __future__ import print_function
 # This script is a demonstration of how the new container and geometry
 # classes can be used to do 3d Bragg ptychography. Everything is done
 # manually on the View and Geo_Bragg instances, no PtyScan objects or
@@ -25,7 +26,7 @@ g = ptypy.core.geometry_bragg.Geo_Bragg(psize=(0.01/4, 13e-6, 13e-6), shape=(9*4
 # three dimensions. The first element of the shape is the number of
 # rocking curve positions, the first element of the psize denotes theta
 # step in degrees. 
-print g
+print(g)
 
 # Set up scan positions along y, perpendicular to the incoming beam and
 # to the thin layer stripes.
@@ -170,7 +171,7 @@ if algorithm == 'OS':
     scaling.data[:] = 1 / scaling.data
     # then iterate with the appropriate update rule
     for i in range(100):
-        print i
+        print(i)
         criterion_ = 0.0
         obj_error_ = 0.0
         for j in range(len(views)):
@@ -206,7 +207,7 @@ if algorithm == 'PIE':
     errors = []
     ferrors = []
     for i in range(10):
-        print i
+        print(i)
         ferrors_ = []
         for j in range(len(views)):
             exit_ = views[j].data * probeView.data
@@ -255,7 +256,7 @@ if algorithm == 'DM':
 
     # iterate
     for i in range(100):
-        print i
+        print(i)
         ferrors_ = []
         # fourier update, updates all the exit waves
         for j in range(len(views)):

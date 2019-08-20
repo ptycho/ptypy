@@ -666,7 +666,7 @@ class Server(object):
         For now this is equivalent to Interactor.object[name] = obj, but maybe
         use weakref in the future?
         """
-        if self.objects.has_key(name):
+        if name in self.objects:
             logger.debug('Warning an object called %s already there.' % name)
         self.objects[name] = obj
 

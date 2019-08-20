@@ -1,3 +1,4 @@
+from __future__ import print_function
 # In the :ref:`ptypyclasses` we have learned to deal with the
 # basic storage-and-access classes on small toy arrays.
 
@@ -58,11 +59,11 @@ G = geometry.Geo(owner=P, pars=g)
 # example, we find forward and backward propagators at ``G.propagator.fw``
 # and ``G.propagator.bw``. It has also calculated the appropriate
 # pixel size in the sample plane (aka resolution),
-print G.resolution
+print(G.resolution)
 
 # which sets the shifting frame to be of the following size:
 fsize = G.shape * G.resolution
-print "%.2fx%.2fmm" % tuple(fsize*1e3)
+print("%.2fx%.2fmm" % tuple(fsize*1e3))
 
 # Create probing illumination
 # ---------------------------
@@ -111,7 +112,7 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # photons to 1 billion
 for pp in [pr, pr2, pr3]:
     pp.data *= np.sqrt(1e9/np.sum(pp.data*pp.data.conj()))
-print u.norm2(pr.data)
+print(u.norm2(pr.data))
 
 # and we quickly check if the propagation works.
 ill = pr.data[0]
@@ -164,7 +165,7 @@ for pos in positions:
 # include all Views. Conveniently, this can be initiated from the top
 # with Container.\ :py:meth:`~ptypy.core.classes.Container.reformat`
 P.obj.reformat()
-print P.obj.formatted_report()
+print(P.obj.formatted_report())
 
 # At last we fill the object Storage ``S00`` with a complex transmission.
 # Again there is a convenience transmission function in the resources
@@ -179,8 +180,8 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 
 # A single coherent propagation in |ptypy| is represented by
 # an instance of the :py:class:`~ptypy.core.classes.POD` class.
-print POD.__doc__
-print POD.__init__.__doc__
+print(POD.__doc__)
+print(POD.__init__.__doc__)
 
 # For creating a single POD we need a
 # :py:class:`~ptypy.core.classes.View` to *probe*, *object*,

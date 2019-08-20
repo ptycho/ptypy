@@ -6,6 +6,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import print_function
 import numpy as np
 import time
 import sys
@@ -72,7 +73,7 @@ except ImportError:
                     raw_input(self.message)
                 else:
                     if self.message is not None:
-                        print self.message
+                        print(self.message)
                     time.sleep(self.timeout)
                 self.ct = False
 
@@ -125,7 +126,7 @@ except ImportError:
                 raw_input(message)
             else:
                 if message is not None:
-                    print message
+                    print(message)
                 time.sleep(timeout)
 
 # FIXME: Is this still needed?

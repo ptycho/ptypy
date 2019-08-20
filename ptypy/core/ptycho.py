@@ -7,9 +7,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import absolute_import
 import numpy as np
 import time
-import paths
+from . import paths
 from collections import OrderedDict
 
 from .. import utils as u
@@ -727,7 +728,7 @@ class Ptycho(Base):
         P : Ptycho
             Ptycho instance with ``level == 2``
         """
-        import save_load
+        from . import save_load
         from .. import io
 
         # Determine if this is a .pty file
@@ -798,7 +799,7 @@ class Ptycho(Base):
                 - *'full_flat'*, (almost) complete environment
 
         """
-        import save_load
+        from . import save_load
         from .. import io
 
         dest_file = None

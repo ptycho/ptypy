@@ -13,6 +13,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import absolute_import
 import numpy as np
 import time
 from collections import OrderedDict
@@ -944,7 +945,7 @@ defaults_tree['scan.Full'].add_child(sample.sample_desc)
 Full.DEFAULT = defaults_tree['scan.Full'].make_default(99)
 
 
-import geometry_bragg
+from . import geometry_bragg
 defaults_tree['scan'].add_child(EvalDescriptor('Bragg3dModel'))
 defaults_tree['scan.Bragg3dModel'].add_child(illumination.illumination_desc, copy=True)
 defaults_tree['scan.Bragg3dModel.illumination'].prune_child('diversity')

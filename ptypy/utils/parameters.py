@@ -7,6 +7,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from __future__ import print_function
 import os
 
 __all__ = ['Param', 'asParam']  # 'load',]
@@ -250,15 +251,15 @@ def validate_standard_param(sp, p=None, prefix=None):
                 try:
                     a, b, c = v
                     if prefix is not None:
-                        print '    %s.%s = %s' % (prefix, k, str(v))
+                        print('    %s.%s = %s' % (prefix, k, str(v)))
                     else:
-                        print '    %s = %s' % (k, str(v))
+                        print('    %s = %s' % (k, str(v)))
                 except:
                     good = False
                     if prefix is not None:
-                        print '!!! %s.%s = %s <--- Incorrect' % (prefix, k, str(v))
+                        print('!!! %s.%s = %s <--- Incorrect' % (prefix, k, str(v)))
                     else:
-                        print '!!! %s = %s <--- Incorrect' % (k, str(v))
+                        print('!!! %s = %s <--- Incorrect' % (k, str(v)))
 
         return good
     else:
@@ -271,7 +272,7 @@ def format_standard_param(p):
     """
     lines = []
     if not validate_standard_param(p):
-        print 'Standard parameter does not'
+        print('Standard parameter does not')
     for k, v in p.iteritems():
         if k.startswith('_'): continue
         if type(v) == type(p):

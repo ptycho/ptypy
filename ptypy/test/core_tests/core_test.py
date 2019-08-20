@@ -1,6 +1,7 @@
 '''
 A test for the Base
 '''
+from __future__ import print_function
 
 import unittest
 import numpy as np
@@ -29,7 +30,7 @@ class CoreTest(unittest.TestCase):
     data = S1[V1]
     V1.coord = (0.28, 0.28)
     S1.update_views(V1)
-    print V1.storageID
+    print(V1.storageID)
     mn = S1[V1].mean()
     S1.fill_value = mn
     S1.reformat()

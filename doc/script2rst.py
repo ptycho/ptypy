@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import StringIO
 import contextlib
@@ -156,7 +157,7 @@ while True:
             func += line2
             frst.write('   >>> '+line2)
             pt = fpy.tell()
-        exec func+'\n'
+        exec(func+'\n')
         continue
         
     wline = line.strip()
@@ -165,7 +166,7 @@ while True:
         continue
     
     with stdoutIO() as sout:
-        exec wline
+        exec(wline)
         out = sout.getvalue()
         sout.buf = ''
     if len(wline) > 0:

@@ -4,6 +4,7 @@ Created on Nov 22 2013
 
 @author: Bjeorn Enders
 """
+from __future__ import print_function
 import numpy as np
 import time
 import glob
@@ -191,7 +192,7 @@ if __name__ == '__main__':
     RS = RawScan(p,num_frames=50,roi=512 )
     RS.initialize()
     RS.report()
-    print 'loading data'
+    print('loading data')
     msg = True
     for i in range(200):
         if msg is False:

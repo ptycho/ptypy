@@ -32,6 +32,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 
 """
+from __future__ import absolute_import
 import numpy as np
 import weakref
 from collections import OrderedDict
@@ -272,7 +273,7 @@ def get_class(ID):
     if ID.startswith(VIEW_PREFIX):
         return View
     elif ID.startswith(PTYCHO_PREFIX):
-        from ptycho import Ptycho
+        from .ptycho import Ptycho
         return Ptycho
     elif ID.startswith(STORAGE_PREFIX):
         return Storage
@@ -285,10 +286,10 @@ def get_class(ID):
     elif ID.startswith(PARAM_PREFIX):
         return u.Param
     elif ID.startswith(MODEL_PREFIX):
-        from manager import ModelManager
+        from .manager import ModelManager
         return ModelManager
     elif ID.startswith(GEO_PREFIX):
-        from geometry import Geo
+        from .geometry import Geo
         return Geo
     else:
         return None
