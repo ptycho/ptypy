@@ -163,7 +163,7 @@ class SpecInfo(object):
                     verbose(1, 'Error extracting counter values for scan number %d.' % scannr)
                     verbose(1, e.message)
 
-		scan.valid = good_scan
+                scan.valid = good_scan
                 scans[scannr] = scan
         self.scans = scans
 

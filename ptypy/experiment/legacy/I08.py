@@ -203,7 +203,7 @@ class I08Scan(PtyScan):
         return common._to_dict()
 
     def load_positions(self):
-     	"""
+        """
         Load the positions and return as an (N,2) array
         """
         base_path = self.info.base_path
