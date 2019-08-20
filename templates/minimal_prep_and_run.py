@@ -9,7 +9,7 @@ from ptypy import utils as u
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 5
+p.verbose_level = 3
 
 # set home path
 p.io = u.Param()

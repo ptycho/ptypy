@@ -48,7 +48,7 @@ class Table(object):
     
     def new_table(self, records = 0):
         r = self._record_default
-        dtype = zip(r._fields,self._record_dtype)
+        dtype = list(zip(r._fields,self._record_dtype))
         self._table = np.array([tuple(self._record_default)] * records,dtype)
         
     def new_fields(self,**kwargs):

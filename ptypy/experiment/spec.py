@@ -155,7 +155,7 @@ class SpecInfo(object):
 
                 # Data
                 try:
-                    data = zip(*[[float(x) for x in Lline.split()] for Lline in scanstr['L'][1:]])
+                    data = list(zip(*[[float(x) for x in Lline.split()] for Lline in scanstr['L'][1:]]))
                     scan.data = dict(zip(scan.counternames, data))
                 except Exception as e:
                     good_scan = False

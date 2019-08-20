@@ -312,7 +312,7 @@ class Server(object):
             newID = ID_generator()
             if newID not in IDlist:
                 IDlist.append(newID)
-        self.ID_pool = zip(IDlist, port_range)
+        self.ID_pool = list(zip(IDlist, port_range))
 
     def activate(self):
         """
