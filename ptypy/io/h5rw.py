@@ -117,15 +117,8 @@ def _h5write(filename, mode, *args, **kwargs):
         dset.attrs['type'] = 'array'
         return dset
 
-    ## 09/07/2019 : strings are unicode in Python 3
     # @sdebug
-    #def _store_string(group, s, name):
-    #    dset = group.create_dataset(name, data=np.asarray(s), dtype=dt)
-    #    dset.attrs['type'] = 'string'
-    #    return dset
-
-    # @sdebug
-    def _store_unicode(group, s, name):
+    def _store_string(group, s, name):
         dset = group.create_dataset(name, data=np.asarray(s.encode('utf8')), dtype=dt)
         dset.attrs['type'] = 'unicode'
         return dset
@@ -237,8 +230,6 @@ def _h5write(filename, mode, *args, **kwargs):
     def _store(group, a, name):
         if type(a) is str:
             dset = _store_string(group, a, name)
-        #elif type(a) is str: 	## 09/07/2019 : strings are unicode in Python 3
-        #    dset = _store_unicode(group, a, name)
         elif type(a) is dict:
             dset = _store_dict(group, a, name)
         elif type(a) is OrderedDict:
