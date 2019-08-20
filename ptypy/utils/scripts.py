@@ -607,7 +607,7 @@ def stxm_analysis(storage, probe=None):
     t2 = 0.
     # Pick a single probe view for preparation purpose:
     v = s.views[0]
-    pp = v.pods.values()[0].pr_view
+    pp = next(iter(v.pods.values())).pr_view
     if probe is None:
         pr = np.abs(pp.data) # .sum(0)
     elif np.isscalar(probe):
@@ -618,7 +618,7 @@ def stxm_analysis(storage, probe=None):
         assert (pr.shape == pp.shape[-2:]), 'stxm probe has not the same shape as a view to this storage'
 
     for v in s.views:
-        pod = v.pods.values()[0]
+        pod = next(iter(v.pods.values()))
         if not pod.active:
             continue
         t = pod.diff.sum()
@@ -697,7 +697,7 @@ def load_from_ptyr(filename, what='probe', ID=None, layer=None):
         else:
             address = 'content/' + str(what)
             conti = io.h5read(filename, address)[address]
-            storage = conti.values()[0]
+            storage = next(iter(conti.values()))
         if layer is None:
             return storage['data']
         else:

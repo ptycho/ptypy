@@ -749,9 +749,9 @@ class Bragg3dClient(object):
 
     def plot_object(self):
 
-        data = self.ob.values()[0]['data'][0]
-        center = self.ob.values()[0]['center']
-        psize = self.ob.values()[0]['psize']
+        data = next(iter(self.ob.values()))['data'][0]
+        center = next(iter(self.ob.values()))['center']
+        psize = next(iter(self.ob.values()))['psize']
         lims_r3 = (-center[0] * psize[0], (data.shape[0] - center[0]) * psize[0])
         lims_r1 = (-center[1] * psize[1], (data.shape[1] - center[1]) * psize[1])
         lims_r2 = (-center[2] * psize[2], (data.shape[2] - center[2]) * psize[2])

@@ -60,7 +60,7 @@ def makeScanPlugin(pars=None):
         elif len(ptyscan_objects) > 1:
             raise RuntimeError('Multiple PtyScan subclasses in plugin %s: %s' % (plugin_name, str(ptyscan_objects.keys())))
         # Class found
-        ptyscan_obj_name = ptyscan_objects.keys()[0]
+        ptyscan_obj_name = next(iter(ptyscan_objects))
         ptyscan_obj = ptyscan_objects[ptyscan_obj_name]
     else:
         ptyscan_obj_name = rinfo.classname

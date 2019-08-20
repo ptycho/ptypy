@@ -173,7 +173,7 @@ class EPIE(BaseEngine):
         for name, pod in self.pods.items():
             if pod.active:
                 self.ob_nodecover[pod.ob_view] = 1
-        self.nodemask = np.array(self.ob_nodecover.S.values()[0].data[0],
+        self.nodemask = np.array(next(iter(self.ob_nodecover.S.values())).data[0],
                                  dtype=np.bool)
 
         # communicate this over MPI
@@ -187,7 +187,7 @@ class EPIE(BaseEngine):
         #     plt.show()
         #     if parallel.master:
         #         import matplotlib.pyplot as plt
-        #         plt.imshow(self.ob_nodecover.S.values()[0].data[0].real)
+        #         plt.imshow(next(iter(self.ob_nodecover.S.values())).data[0].real)
         #         plt.colorbar()
         #         plt.show()
 
@@ -255,7 +255,7 @@ class EPIE(BaseEngine):
                 if do_update_probe:
                     logger.debug(pre_str + '----- ePIE probe update -----')
                     object_max = np.max(
-                        np.abs(self.ob.S.values()[0].data.max())**2)
+                        np.abs(next(iter(self.ob.S.values())).data.max())**2)
                     pod.probe += (self.p.beta
                                   * np.conj(pod.object) / object_max
                                   * (pod.exit - exit_))
@@ -289,7 +289,7 @@ class EPIE(BaseEngine):
                 # only share the part of the object which whis node has
                 # contributed to, and zero the rest to avoid weird
                 # feedback.
-                self.ob.S.values()[0].data[0] *= self.nodemask
+                next(iter(self.ob.S.values())).data[0] *= self.nodemask
                 parallel.allreduceC(self.ob)
 
                 # the reduced sum should be an average, and the
@@ -345,7 +345,7 @@ class EPIE(BaseEngine):
         t0 = time.time()
 
         # get the range of positions and define the size of each node's domain
-        pod = self.pods.values()[0]
+        pod = next(iter(self.pods.values()))
         xlims = [pod.ob_view.coord[1], ] * 2  # min, max
         ylims = [pod.ob_view.coord[0], ] * 2  # min, max
         for name, pod in self.pods.items():

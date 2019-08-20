@@ -667,10 +667,10 @@ class PtyScan(object):
         # Fill weights dictionary with references to the weights in common
 
         has_data = (len(data) > 0)
-        has_weights = (len(weights) > 0) and len(weights.values()[0]) > 0
+        has_weights = (len(weights) > 0) and len(weights.values()) > 0
 
         if has_data:
-            dsh = np.array(data.values()[0].shape[-2:])
+            dsh = np.array(next(iter(data.values())).shape[-2:])
         else:
             dsh = np.array([0, 0])
 
@@ -840,7 +840,7 @@ class PtyScan(object):
             chunk.weights = weights
         elif has_data:
             chunk.weights = {}
-            self.weight2d = weights.values()[0]
+            self.weight2d = next(iter(weights.values()))
 
         # Slice positions from common if they are empty too
         if positions is None or len(positions) == 0:

@@ -237,7 +237,7 @@ pod.exit = pod.probe * pod.object
 # The result of the calculation above is stored in the appropriate
 # storage of ``P.exit``.
 # Therefore we can use this command to plot the result.
-exit_storage = P.exit.storages.values()[0]
+exit_storage = next(iter(P.exit.storages.values()))
 fig = u.plot_storage(exit_storage, 6)
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 # Simulated exit wave using a pod
@@ -246,7 +246,7 @@ fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 pod.diff = np.abs(pod.fw(pod.exit))**2
 
 # The result is stored in the diffraction container.
-diff_storage = P.diff.storages.values()[0]
+diff_storage = next(iter(P.diff.storages.values()))
 fig = u.plot_storage(diff_storage, 7, modulus='log')
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
 

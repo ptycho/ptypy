@@ -581,12 +581,12 @@ class Vanilla(ScanModel):
 
     def _initialize_probe(self, probe_ids):
         """
-        Initialize the probe storage referred to by probe_ids.keys()[0]
+        Initialize the probe storage referred to by the first element of probe_ids.keys()
         """
         logger.info('\n'+headerline('Probe initialization', 'l'))
 
         # pick storage from container, there's only one probe
-        pid = probe_ids.keys()[0]
+        pid = next(iter(probe_ids))
         s = self.ptycho.probe.S.get(pid)
         logger.info('Initializing probe storage %s' % pid)
 
@@ -600,12 +600,12 @@ class Vanilla(ScanModel):
 
     def _initialize_object(self, object_ids):
         """
-        Initializes the probe storage referred to by object_ids.keys()[0]
+        Initializes the probe storage referred to by the first element of object_ids.keys()
         """
         logger.info('\n'+headerline('Object initialization', 'l'))
 
         # pick storage from container, there's only one object
-        oid = object_ids.keys()[0]
+        oid = next(iter(object_ids))
         s = self.ptycho.obj.S.get(oid)
         logger.info('Initializing probe storage %s' % oid)
 
@@ -1218,12 +1218,12 @@ class Bragg3dModel(Vanilla):
 
     def _initialize_probe(self, probe_ids):
         """
-        Initialize the probe storage referred to by probe_ids.keys()[0]
+        Initialize the probe storage referred to by the first element of probe_ids.keys()
         """
         logger.info('\n'+headerline('Probe initialization', 'l'))
 
         # pick storage from container, there's only one probe
-        pid = probe_ids.keys()[0]
+        pid = next(iter(probe_ids))
         s = self.ptycho.probe.S.get(pid)
         logger.info('Initializing probe storage %s' % pid)
 
