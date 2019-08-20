@@ -821,8 +821,8 @@ class PtyScan(object):
                 weights = dict(zip(indices.node, w))
 
         # Adapt geometric info
-        self.meta.center = cen / float(self.rebin)
-        self.meta.shape = u.expect2(sh) / self.rebin
+        self.meta.center = cen / self.rebin
+        self.meta.shape = u.expect2(sh) // self.rebin
 
         if self.info.psize is not None:
             self.meta.psize = u.expect2(self.info.psize) * self.rebin
