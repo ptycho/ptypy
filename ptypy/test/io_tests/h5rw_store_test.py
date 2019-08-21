@@ -110,7 +110,6 @@ class H5rwStoreTest(unittest.TestCase):
         try:
             io.h5write(self.filepath % "store_record_array_test", content=content)
         except:
-            raise
             self.fail(msg="Couldn't store a record array type")
 
     def test_store_scalar(self):
@@ -172,6 +171,5 @@ class H5rwStoreTest(unittest.TestCase):
         try:
             test_func()
         except:
-            raise
             self.fail(msg="This should not have produced an exception!")
 

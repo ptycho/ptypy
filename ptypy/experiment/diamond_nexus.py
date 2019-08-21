@@ -316,7 +316,7 @@ class DiamondNexus(PtyScan):
         There is a lot of logic here, I wonder if there is a better way to get rid of it.
         Limited a bit by the MPI, adn thinking about extension to large data size.
         '''
-        if isinstance(index, int):
+        if not hasattr(index, '__iter__'):
             index = (index,)
         indexed_frame_slices = tuple([slice(ix, ix+1, 1) for ix in index])
         indexed_frame_slices += self.frame_slices
@@ -333,15 +333,15 @@ class DiamondNexus(PtyScan):
 
         if self.flatfield is not None:
             if self.flatfield_laid_out_like_data:
-                intensity /= self.flatfield[indexed_frame_slices].squeeze()
+                intensity[:] = intensity / self.flatfield[indexed_frame_slices].squeeze()
             else:
-                intensity /= self.flatfield[self.frame_slices].squeeze()
+                intensity[:] = intensity / self.flatfield[self.frame_slices].squeeze()
 
         if self.normalisation is not None:
             if self.normalisation_laid_out_like_positions:
-                intensity /= self.normalisation[index]
+                intensity[:] = intensity / self.normalisation[index]
             else:
-                intensity /= self.normalisation
+                intensity[:] = intensity / self.normalisation
 
         if self.mask is not None:
             if self.mask_laid_out_like_data:
@@ -351,7 +351,6 @@ class DiamondNexus(PtyScan):
         else:
             mask = np.ones_like(intensity, dtype=np.int)
         return mask, intensity
-
 
 
     def compute_scan_mapping_and_trajectory(self, data_shape, positions_fast_shape, positions_slow_shape):
