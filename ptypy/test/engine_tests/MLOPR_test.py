@@ -55,7 +55,7 @@ class MLOPRTest(unittest.TestCase):
         p.engines = u.Param()
 
         p.engines.engine00 = u.Param()
-        p.engines.engine00.name = "ML"
+        p.engines.engine00.name = "MLOPR"
         P = Ptycho(p, level=5)
 
 
