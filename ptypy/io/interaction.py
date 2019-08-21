@@ -151,7 +151,7 @@ def numpy_zmq_recv(in_socket):
         arraylist = []
         for arrayinfo in numpy_container['arraylist']:
             msg = in_socket.recv()
-            buf = buffer(msg)
+            buf = memoryview(msg)
             arraylist.append(np.frombuffer(buf, dtype=arrayinfo['dtype']).reshape(arrayinfo['shape']))
         return numpy_replace(message, arraylist)
     else:
