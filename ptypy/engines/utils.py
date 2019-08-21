@@ -206,9 +206,6 @@ def reduce_dimension(a, dim, local_indices=None):
          (aka singular vectors)
       - coefficients: 2D matrix representing the decomposition of a.
     """
-    #if dim <= 1:
-    #    return a.mean(axis=0), None, None
-
     if local_indices is None:  # No MPI - generate a list of indices
         Nl = len(a)
         local_indices = range(Nl)

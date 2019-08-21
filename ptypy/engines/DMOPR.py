@@ -15,16 +15,14 @@ from ..utils import parallel
 from .utils import reduce_dimension
 from . import register
 from .DM import DM
-from .. import defaults_tree
 from ..core.manager import OPRModel
 
 __all__ = ['DMOPR']
 
-
 @register()
 class DMOPR(DM):
     """
-    Subclass Difference Map engine for independent probes.
+    Subclass of Difference Map engine for independent probes.
 
     Defaults:
 
@@ -112,9 +110,9 @@ class DMOPR(DM):
 
     def probe_consistency_update(self, s, name):
         """
-        DM probe consistency update for orthogonal probe relaxation.
+        Probe consistency update for orthogonal probe relaxation.
         """ 
-        if self.curiter <= self.p.subspace_start:
+        if self.curiter < self.p.subspace_start:
             subdim = 1
         else:
             subdim = self.p.subspace_dim
