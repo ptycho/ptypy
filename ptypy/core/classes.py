@@ -1347,7 +1347,6 @@ class View(Base):
             return self._pod()  # weak reference
         else:
             return self._pod
-        # return self.pods.values()[0]
         
     @property
     def pods(self):

@@ -187,7 +187,7 @@ class EPIE(BaseEngine):
         #     plt.show()
         #     if parallel.master:
         #         import matplotlib.pyplot as plt
-        #         plt.imshow(self.ob_nodecover.S.values()[0].data[0].real)
+        #         plt.imshow(list(self.ob_nodecover.S.values())[0].data[0].real)
         #         plt.colorbar()
         #         plt.show()
 
@@ -256,7 +256,7 @@ class EPIE(BaseEngine):
                 if do_update_probe:
                     logger.debug(pre_str + '----- ePIE probe update -----')
                     object_max = np.max(
-                        np.abs(self.ob.S.values()[0].data.max())**2)
+                        np.abs(list(self.ob.S.values())[0].data.max())**2)
                     pod.probe += (self.p.beta
                                   * np.conj(pod.object) / object_max
                                   * (pod.exit - exit_))

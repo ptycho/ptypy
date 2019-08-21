@@ -667,7 +667,7 @@ class PtyScan(object):
         # Fill weights dictionary with references to the weights in common
 
         has_data = (len(data) > 0)
-        has_weights = (len(weights) > 0) and len(weights.values()[0]) > 0
+        has_weights = (len(weights) > 0) and len(list(weights.values())[0]) > 0
 
         if has_data:
             dsh = np.array(list(data.values())[0].shape[-2:])

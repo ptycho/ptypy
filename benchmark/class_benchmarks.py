@@ -36,7 +36,7 @@ for k in range(int(steps)):
     add_views(nviews)
     gc.collect()
     print(k) 
-    print(C1._recs.values()[0].nbytes / 1e6)
+    print(list(C1._recs.values())[0].nbytes / 1e6)
 
 print(C1.formatted_report())
 u.pause(1)
