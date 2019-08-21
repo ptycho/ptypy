@@ -235,7 +235,7 @@ class DM(PositionCorrectionEngine):
 
     def engine_finalize(self):
         """
-        Try deleting ever helper container.
+        Try deleting every helper container.
         """
         super(DM, self).engine_finalize()
 

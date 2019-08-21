@@ -27,7 +27,7 @@ master = (rank == 0)
 
 __all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
            'LoadManager', 'loadmanager','allreduce','send','receive','bcast',
-           'bcast_dict', 'gather_dict','MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
+           'bcast_dict', 'gather_dict', 'gather_list', 'MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
 
 
 def useMPI(do=None):
@@ -788,7 +788,7 @@ def MPInoise2d(sh,rms=1.0, mfs=2,rms_mod=None, mfs_mod=2):
     return A
 
 
-def _gather_list(lst, length, indices):
+def gather_list(lst, length, indices):
     """
     gathers list `lst` of all processes to a list of length `length`
     according to order given by `indices`. definitely not foolproof

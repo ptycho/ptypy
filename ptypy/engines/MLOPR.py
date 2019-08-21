@@ -66,6 +66,14 @@ class MLOPR(ML):
         super(MLOPR, self).engine_initialize()
         self.model  = self.pods[self.pods.keys()[0]].model
 
+        # Make sure that probe storage only contains local probes
+        # BD: This is a consequence of gathering all probes for saving to file
+        #     at some point before this engine is initialized
+        for name, s in self.pr.storages.iteritems():
+            ind = self.model.local_indices[name]
+            if (s.data.shape != s.shape) & (len(ind) == s.shape[0]):
+                s.data = s.data[ind]
+
     def hook_post_iterate_update(self):
         """
         Orthogonal Probe Relaxation (OPR) update.
