@@ -9,20 +9,62 @@ This file is part of the PTYPY package.
 import unittest
 from ptypy.test import utils as tu
 from ptypy import utils as u
+from ptypy.core import Ptycho
+
 
 class DMOPRTest(unittest.TestCase):
     def test_DMOPR(self):
-        engine_params = u.Param()
-        engine_params.name = 'DMOPR'
-        engine_params.numiter = 5
-        engine_params.numiter_contiguous = 5
-        engine_params.overlap_converge_factor = 0.05
-        engine_params.overlap_max_iterations = 2
-        engine_params.fourier_relax_factor = 0.01
-        engine_params.IP_metric = 1.
-        engine_params.subspace_dim = 10
-        engine_params.subspace_start = 2
-        tu.EngineTestRunner(engine_params)
+        p = u.Param()
+        p.verbose_level = 3
+        p.io = u.Param()
+        p.io.interaction = u.Param()
+        p.io.interaction.active = False
+        p.io.home = './'
+        p.io.rfile = "./DMOPRTest.ptyr"
+        p.io.autosave = u.Param(active=False)
+        p.io.autoplot = u.Param(active=False)
+        p.ipython_kernel = False
+        p.scans = u.Param()
+        p.scans.MF = u.Param()
+        p.scans.MF.name = 'OPRModel'
+        p.scans.MF.propagation = 'farfield'
+        p.scans.MF.data = u.Param()
+        p.scans.MF.data.name = 'MoonFlowerScan'
+        p.scans.MF.data.positions_theory = None
+        p.scans.MF.data.auto_center = None
+        p.scans.MF.data.min_frames = 1
+        p.scans.MF.data.orientation = None
+        p.scans.MF.data.num_frames = 100
+        p.scans.MF.data.energy = 6.2
+        p.scans.MF.data.shape = 64
+        p.scans.MF.data.chunk_format = '.chunk%02d'
+        p.scans.MF.data.rebin = None
+        p.scans.MF.data.experimentID = None
+        p.scans.MF.data.label = None
+        p.scans.MF.data.version = 0.1
+        p.scans.MF.data.dfile = "./DMOPRTest.ptyd"
+        p.scans.MF.data.psize = 0.000172
+        p.scans.MF.data.load_parallel = None
+        p.scans.MF.data.distance = 7.0
+        p.scans.MF.data.save = None
+        p.scans.MF.data.center = 'fftshift'
+        p.scans.MF.data.photons = 100000000.0
+        p.scans.MF.data.psf = 0.0
+        p.scans.MF.data.density = 0.2
+
+        p.engines = u.Param()
+        p.engines.engine00 = u.Param()
+        p.engines.engine00.name = "DMOPR"
+        p.engines.engine00.numiter = 5
+        p.engines.engine00.numiter_contiguous = 5
+        p.engines.engine00.overlap_converge_factor = 0.05
+        p.engines.engine00.overlap_max_iterations = 2
+        p.engines.engine00.fourier_relax_factor = 0.01
+        p.engines.engine00.IP_metric = 1.
+        p.engines.engine00.subspace_dim = 10
+        p.engines.engine00.subspace_start = 2
+
+        P = Ptycho(p, level=5)
 
 if __name__ == "__main__":
     unittest.main()
