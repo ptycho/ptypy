@@ -64,9 +64,31 @@ class DMOPR(DM):
     def engine_initialize(self):
         """
         Prepare for reconstruction.
+        Obtain a reference to the OPR scan model
         """
         super(DMOPR, self).engine_initialize()
         self.model  = self.pods[self.pods.keys()[0]].model
+
+        # Make sure that probe storage only contains local probes
+        # BD: This is a consequence of gathering all probes for saving to file
+        #     at some point before this engine is initialized
+        for name, s in self.pr.storages.iteritems():
+            ind = self.model.local_indices[name]
+            if (s.data.shape != s.shape) & (len(ind) == s.shape[0]):
+                s.data = s.data[ind]
+
+    def engine_finalize(self):
+        """
+        Try deleting every helper container.
+        Gather independent probes for saving.
+        """
+        super(DMOPR, self).engine_finalize()
+        for name, s in self.pr.storages.iteritems():
+            ind = self.model.local_indices[name]
+            N = parallel.allreduce(len(ind))
+            pr = parallel.gather_list(list(s.data), N, ind)
+            if parallel.master:
+                s.data = np.array(pr)
 
     def probe_update(self):
         """
