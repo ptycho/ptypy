@@ -79,7 +79,7 @@ class MLOPR(ML):
         Try deleting every helper container.
         Gather independent probes for saving.
         """
-        super(DMOPR, self).engine_finalize()
+        super(MLOPR, self).engine_finalize()
         for name, s in self.pr.storages.iteritems():
             ind = self.model.local_indices[name]
             N = parallel.allreduce(len(ind))
