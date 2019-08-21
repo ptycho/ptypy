@@ -74,6 +74,19 @@ class MLOPR(ML):
             if (s.data.shape != s.shape) & (len(ind) == s.shape[0]):
                 s.data = s.data[ind]
 
+    def engine_finalize(self):
+        """
+        Try deleting every helper container.
+        Gather independent probes for saving.
+        """
+        super(DMOPR, self).engine_finalize()
+        for name, s in self.pr.storages.iteritems():
+            ind = self.model.local_indices[name]
+            N = parallel.allreduce(len(ind))
+            pr = parallel.gather_list(list(s.data), N, ind)
+            if parallel.master:
+                s.data = np.array(pr)
+
     def hook_post_iterate_update(self):
         """
         Orthogonal Probe Relaxation (OPR) update.
