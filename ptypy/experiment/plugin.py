@@ -12,7 +12,7 @@ This file is part of the PTYPY package.
 """
 
 import os
-import imp
+from importlib.machinery import SourceFileLoader
 import inspect
 from .. import utils as u
 from ..core.data import PtyScan
@@ -46,7 +46,7 @@ def makeScanPlugin(pars=None):
         raise IOError('Plugin file %s is not a python file.' % str(filename))
 
     # Load plugin
-    plugin = imp.load_source(plugin_name, filename)
+    plugin = SourceFileLoader(plugin_name, filename).load_module()
 
     # Find the PtyScan class
     if rinfo.classname is None:

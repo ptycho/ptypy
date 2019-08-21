@@ -22,7 +22,7 @@ def dynamic_load(path, baselist, fail_silently = True):
     import os
     import glob
     import re
-    import imp
+    from importlib.machinery import SourceFileLoader
 
     # Loop through paths
     engine_path = {}
@@ -62,7 +62,8 @@ def dynamic_load(path, baselist, fail_silently = True):
     
             # Import module
             modname, filename = mf
-            engine_module = imp.load_source(modname, filename)
+            print(modname, filename)
+            engine_module = SourceFileLoader(modname, filename).load_module()
 
     except Exception as e:
         if not fail_silently:
