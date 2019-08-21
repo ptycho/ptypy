@@ -425,7 +425,7 @@ class Ptycho(Base):
             port = self.interactor.activate()
 
             if port is None:
-                logger.warn('Interaction server initialization failed. '
+                logger.warning('Interaction server initialization failed. '
                             'Continuing without server.')
                 self.interactor = None
                 self.plotter = None
@@ -700,7 +700,7 @@ class Ptycho(Base):
         citation_info = '\n'.join([headerline('This reconstruction relied on the following work', 'l', '='),
         str(self.citations),
         headerline('', 'l', '=')])
-        logger.warn(citation_info)
+        logger.warning(citation_info)
 
     @classmethod
     def _from_dict(cls, dct):
@@ -816,7 +816,7 @@ class Ptycho(Base):
             import os
             if os.path.exists(dest_file):
                 if force_overwrite:
-                    logger.warn('Save file exists but will be overwritten '
+                    logger.warning('Save file exists but will be overwritten '
                                 '(force_overwrite is True)')
                 elif not force_overwrite:
                     raise RuntimeError('File %s exists! Operation cancelled.'
@@ -876,7 +876,7 @@ class Ptycho(Base):
                 try:
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
-                    logger.warn("The parameters we are saving won't pass a validator check!")
+                    logger.warning("The parameters we are saving won't pass a validator check!")
                 dump.pars = self.p.copy()  # _to_dict(Recursive=True)
                 dump.runtime = self.runtime.copy()
                 # Discard some bits of runtime to save space
@@ -907,7 +907,7 @@ class Ptycho(Base):
                 try:
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
-                    logger.warn("The parameters we are saving won't pass a validator check!")
+                    logger.warning("The parameters we are saving won't pass a validator check!")
                 minimal.pars = self.p.copy()  # _to_dict(Recursive=True)
                 minimal.runtime = self.runtime.copy()
 

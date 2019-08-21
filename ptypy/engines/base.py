@@ -186,7 +186,7 @@ class BaseEngine(object):
         # Check if engine did things right.
         if it >= self.curiter:
 
-            logger.warn("""Engine %s did not increase iteration counter
+            logger.warning("""Engine %s did not increase iteration counter
             `self.curiter` internally. Accessing this attribute in that
             engine is inaccurate""" % self.__class__.__name__)
 

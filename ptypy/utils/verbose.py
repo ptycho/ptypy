@@ -4,7 +4,7 @@ Verbose package, based on the standard logging library.
 
 Use as:
 from verbose import logger
-logger.warn('This is a warning')
+logger.warning('This is a warning')
 logger.info('This is an information')
 ...
 

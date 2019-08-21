@@ -121,7 +121,7 @@ class Base(object):
             owner._new_ptypy_object(obj=self)
         else:
             self._record = None
-            logger.warn(
+            logger.warning(
                 'Failed registering instance of %s with ID %s to object %s'
                 % (type(self), self.ID, owner))
         
@@ -396,7 +396,7 @@ class Storage(Base):
             #shape = (shape[0],) + tuple(x+2*self.padding for x in shape[1:])
 
         if len(shape) not in [3, 4]:
-            logger.warn('Storage view access dimension %d is not in regular '
+            logger.warning('Storage view access dimension %d is not in regular '
                         'scope (2,3). Behavior is untested.' % len(shape[1:]))
 
         self.shape = shape
@@ -1269,7 +1269,7 @@ class View(Base):
 
         if (self.psize is not None
                 and not np.allclose(self.storage.psize, self.psize)):
-            logger.warn(
+            logger.warning(
                 'Inconsistent pixel size when creating view.\n (%s vs %s)'
                 % (str(self.storage.psize), str(self.psize)))
 
@@ -1566,7 +1566,7 @@ class Container(Base):
         #: Default data dimensionality for Views and Storages.
         self.ndim = data_dims
         if self.ndim not in (2, 3):
-            logger.warn('Container untested for `data_dim` other than 2 or 3')
+            logger.warning('Container untested for `data_dim` other than 2 or 3')
 
         # Prepare for copy
         # self.original = original if original is not None else self
