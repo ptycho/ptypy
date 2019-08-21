@@ -1254,10 +1254,6 @@ class OPRModel(Full):
     type = str
     userlevel = 2
 
-    [subspace_dim]
-    default = 1
-    type = int
-    help = The dimension of the subspace spanned by the probe ensemble
     """
 
     _PREFIX = MODEL_PREFIX
@@ -1289,16 +1285,16 @@ class OPRModel(Full):
                 self.ptycho.probe[v] = prviewdata[vID]
         del prviewdata
 
-        # Create array to store OPR modes
-        dim = self.p.subspace_dim if self.p.subspace_dim > 0 else 1
+        # Create dictionaries to store OPR modes
+        #dim = self.p.subspace_dim if self.p.subspace_dim > 0 else 1
         self.OPR_modes = {}
         self.OPR_coeffs = {}
         self.local_layers = {}
         self.local_indices = {}
         for sID, s in self.ptycho.probe.S.iteritems():
-            shape = (dim,) + s.data.shape[1:]
-            dtype = s.data.dtype
-            self.OPR_modes[sID] = np.zeros(shape=shape, dtype=dtype)
+            #shape = (dim,) + s.data.shape[1:]
+            #dtype = s.data.dtype
+            #self.OPR_modes[sID] = np.zeros(shape=shape, dtype=dtype)
 
             # Prepare a sorted list (with index) of all layers
             # (which are locally available through views)
