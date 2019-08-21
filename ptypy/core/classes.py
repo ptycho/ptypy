@@ -121,7 +121,7 @@ class Base(object):
             owner._new_ptypy_object(obj=self)
         else:
             self._record = None
-            logger.warning(
+            logger.debug(
                 'Failed registering instance of %s with ID %s to object %s'
                 % (type(self), self.ID, owner))
         
