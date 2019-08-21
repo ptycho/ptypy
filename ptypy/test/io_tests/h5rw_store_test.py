@@ -13,6 +13,8 @@ import ptypy.utils as u
 import numpy as np
 import collections
 
+class owntype(object):
+    pass
 
 class H5rwStoreTest(unittest.TestCase):
 
@@ -137,8 +139,6 @@ class H5rwStoreTest(unittest.TestCase):
         pass
 
     def test_fail_unsupported(self):
-        class owntype(object):
-            pass
 
         def test_func():
 
@@ -150,9 +150,6 @@ class H5rwStoreTest(unittest.TestCase):
 
     def test_ignore_unsupported(self):
         io.h5options['UNSUPPORTED'] = 'ignore'
-
-        class owntype(object):
-            pass
 
         def test_func():
             data = owntype()
@@ -167,9 +164,6 @@ class H5rwStoreTest(unittest.TestCase):
     def test_pickle_unsupported(self):
         io.h5options['UNSUPPORTED'] = 'pickle'
 
-        class owntype(object):
-            pass
-
         def test_func():
             data = owntype()
             content = {'pickle data': data}
@@ -178,5 +172,6 @@ class H5rwStoreTest(unittest.TestCase):
         try:
             test_func()
         except:
+            raise
             self.fail(msg="This should not have produced an exception!")
 
