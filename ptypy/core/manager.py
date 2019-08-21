@@ -1115,6 +1115,9 @@ class _Full(object):
                                "This will likely not reconstruct. You should set .scan.illumination.diversity.power and "
                                ".scan.illumination.diversity.noise to something for the best results.")
 
+                if (self.p.name == "OPRModel"):
+                    illu_pars['diversity'] = None
+
             illumination.init_storage(s, illu_pars)
 
             s.reformat()  # Maybe not needed
