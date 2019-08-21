@@ -12,11 +12,11 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
-from .utils import basic_fourier_update, reduce_dimension
-from . import BaseEngine, register
+from .utils import basic_fourier_update
+from . import register
 from .base import PositionCorrectionEngine
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel, OPRModel
+from ..core.manager import Full, Vanilla, Bragg3dModel
 
 __all__ = ['DM']
 
@@ -112,14 +112,9 @@ class DM(PositionCorrectionEngine):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
-    [ortho_probe_relax_start]
-    default = 0
-    type = int
-    help = Number of iterations before orthogonal probe relaxation (OPR) starts, only applies of scan model is set to 'OPRModel'
-
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, OPRModel]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -175,8 +170,7 @@ class DM(PositionCorrectionEngine):
 
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
-        self.model  = self.pods[self.pods.keys()[0]].model
-
+        
     def engine_prepare(self):
         """
         Last minute initialization.
@@ -194,8 +188,6 @@ class DM(PositionCorrectionEngine):
         # Fill object with coverage of views
         for name, s in self.ob_viewcover.storages.iteritems():
             s.fill(s.get_view_coverage())
-
-
 
     def engine_iterate(self, num=1):
         """
@@ -382,7 +374,6 @@ class DM(PositionCorrectionEngine):
                 s.data[too_high] = clip_max * phase_obj[too_high]
                 s.data[too_low] = clip_min * phase_obj[too_low]
 
-
     def probe_update(self):
         """
         DM probe update.
@@ -395,81 +386,45 @@ class DM(PositionCorrectionEngine):
         # "cfact" fill
         # BE: was this asymmetric in original code
         # only because of the number of MPI nodes ?
-        if not self.model.p.name is 'OPRModel':
-            if parallel.master:
-                for name, s in pr.storages.iteritems():
-                    # Instead of Npts_scan, the number of views should be considered
-                    # Please note that a call to s.views may be
-                    # slow for many views in the probe.
-                    cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
-                    s.data[:] = cfact * s.data
-                    pr_nrm.storages[name].fill(cfact)
-                else:
-                    pr.fill(0.0)
-                    pr_nrm.fill(0.0)
+        if parallel.master:
+            for name, s in pr.storages.iteritems():
+                # Instead of Npts_scan, the number of views should be considered
+                # Please note that a call to s.views may be
+                # slow for many views in the probe.
+                cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
+                s.data[:] = cfact * s.data
+                pr_nrm.storages[name].fill(cfact)
+        else:
+            pr.fill(0.0)
+            pr_nrm.fill(0.0)
 
         # DM update per node
         for name, pod in self.pods.iteritems():
             if not pod.active:
                 continue
             pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
-            podnrm = (u.cabs2(pod.object) * pod.probe_weight + 1.)
-            if self.model.p.name is 'OPRModel':
-                pod.probe /= podnrm
-            else:
-                pr_nrm[pod.pr_view] += podnrm
+            pr_nrm[pod.pr_view] += u.cabs2(pod.object) * pod.probe_weight
 
         change = 0.
-    
+
         # Distribute result with MPI
         for name, s in pr.storages.iteritems():
             # MPI reduction of results
-            if not self.model.p.name is 'OPRModel':
-                nrm = pr_nrm.storages[name].data
-                parallel.allreduce(s.data)
-                parallel.allreduce(nrm)
-                s.data /= nrm
-
-            # Orthogonal probe relaxation (OPR) update step
-            if self.model.p.name is 'OPRModel':
-                self.probe_consistency_update(s,name)
+            nrm = pr_nrm.storages[name].data
+            parallel.allreduce(s.data)
+            parallel.allreduce(nrm)
+            s.data /= nrm
 
             # Apply probe support if requested
             support = self.probe_support.get(name)
-            if support is not None: 
+            if support is not None:
                 s.data *= self.probe_support[name]
-        
+
             # Compute relative change in probe
             buf = pr_buf.storages[name].data
-            change += u.norm2(s.data - buf) #/ u.norm2(s.data)
+            change += u.norm2(s.data - buf) / u.norm2(s.data)
 
             # Fill buffer with new probe
             buf[:] = s.data
-        
-        # In case we do OPR, we need to distribute the change
-        if self.model.p.name is 'OPRModel':
-            change = parallel.allreduce(change)
 
         return np.sqrt(change / len(pr.storages))
-
-
-    def probe_consistency_update(self, s, name):
-        """
-        DM probe consistency update for orthogonal probe relaxation.
-        """ 
-        if self.curiter <= self.p.ortho_probe_relax_start:
-            subdim = 1
-        else:
-            subdim = self.model.p.subspace_dim
-        ind = self.model.local_indices[name]
-        pr_input = np.array([s[l] for i,l in self.model.local_layers[name]])
-        new_pr, modes, coeffs = reduce_dimension(a=pr_input,
-                                                 dim=subdim, 
-                                                 local_indices=ind)
-
-        self.model.OPR_modes[name] = modes
-        self.model.OPR_coeffs[name] = coeffs
-
-        # Update probes
-        for k, il in enumerate(self.model.local_layers[name]):
-            s[il[1]] = new_pr[k]

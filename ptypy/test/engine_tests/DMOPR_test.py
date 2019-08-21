@@ -21,6 +21,7 @@ class DMOPRTest(unittest.TestCase):
         engine_params.fourier_relax_factor = 0.01
         engine_params.IP_metric = 1.
         engine_params.subspace_dim = 10
+        engine_params.subspace_start = 2
         tu.EngineTestRunner(engine_params)
 
 if __name__ == "__main__":

@@ -28,9 +28,6 @@ class DMOPRTest(unittest.TestCase):
         p.scans.MF = u.Param()
         p.scans.MF.name = 'OPRModel'
         p.scans.MF.propagation = 'farfield'
-        p.scans.MF.subspace_dim = 10
-
-
         p.scans.MF.data = u.Param()
         p.scans.MF.data.name = 'MoonFlowerScan'
         p.scans.MF.data.positions_theory = None
@@ -57,8 +54,11 @@ class DMOPRTest(unittest.TestCase):
 
         p.engines = u.Param()
         p.engines.engine00 = u.Param()
-        p.engines.engine00.name = "DM"
-        #p.engines.engine00.IP_metric = 1.
+        p.engines.engine00.name = "DMOPR"
+        p.engines.engine00.IP_metric = 1.
+        p.engines.engine00.subspace_dim = 10
+        p.engines.engine00.subspace_start = 2
+
         P = Ptycho(p, level=5)
 
 if __name__ == "__main__":

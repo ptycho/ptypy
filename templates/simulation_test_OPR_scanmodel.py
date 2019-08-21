@@ -22,7 +22,6 @@ p.io.interaction.active = False
 p.scans = u.Param()
 p.scans.MF = u.Param()
 p.scans.MF.name = 'OPRModel'
-p.scans.MF.subspace_dim = 10
 p.scans.MF.propagation = 'farfield'
 p.scans.MF.data = u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
@@ -50,13 +49,15 @@ p.scans.MF.data.density = 0.2
 
 p.engines = u.Param()
 p.engines.engine01 = u.Param()
-p.engines.engine01.name = 'DM'
+p.engines.engine01.name = 'DMOPR'
 p.engines.engine01.numiter = 500
 p.engines.engine01.numiter_contiguous = 5
 p.engines.engine01.overlap_max_iterations = 2
 p.engines.engine01.fourier_relax_factor = 0.01
 p.engines.engine01.probe_support = None
-p.engines.engine01.ortho_probe_relax_start = 30
+p.engines.engine01.subspace_dim = 10
+p.engines.engine01.subspace_start = 30
+p.engines.engine01.IP_metric = 1
 
 # p.engines.engine02 = u.Param()
 # p.engines.engine02.name = 'MLOPR'
