@@ -158,7 +158,7 @@ def headerline(info='',align = 'c',fill='-'):
             info = ' '+info+' '
         empty = LINEMAX-li
         if align=='c':
-            left = old_div(empty,2)
+            left = empty // 2
             right = empty-left
         elif align=='l':
             left = 4

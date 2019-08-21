@@ -3,8 +3,6 @@
 # expansion of ptychogrpahy as described in Thibault et. al 2013 [#modes]_ .
 
 # First we import ptypy and the utility module
-from builtins import range
-from past.utils import old_div
 import ptypy
 from ptypy import utils as u
 import numpy as np
