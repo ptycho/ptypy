@@ -249,7 +249,6 @@ class DM(PositionCorrectionEngine):
         for c in containers:
             logger.debug('Attempt to remove container %s' % c.ID)
             del self.ptycho.containers[c.ID]
-        #    IDM.used.remove(c.ID)
 
         del self.ob_buf
         del self.ob_nrm
