@@ -103,15 +103,6 @@ class H5rwStoreTest(unittest.TestCase):
         except:
             self.fail(msg="Couldn't store a array type")
 
-    def test_store_numpy_record_array(self):
-        data = np.recarray((8,), dtype=[('ID','<U16')])
-
-        content = {'record array data': data}
-        try:
-            io.h5write(self.filepath % "store_record_array_test", content=content)
-        except:
-            self.fail(msg="Couldn't store a record array type")
-
     def test_store_scalar(self):
         data = 1.0
 
@@ -140,7 +131,6 @@ class H5rwStoreTest(unittest.TestCase):
     def test_fail_unsupported(self):
 
         def test_func():
-
             data = owntype()
             content = {'Owntype data': data}
             io.h5write(self.filepath % "store_dummytype_test", content=content)
@@ -159,17 +149,12 @@ class H5rwStoreTest(unittest.TestCase):
         except:
             self.fail(msg="This should not have produced an exception!")
 
-
-    def test_pickle_unsupported(self):
+    def test_unclear_unsupported(self):
         io.h5options['UNSUPPORTED'] = 'pickle'
 
         def test_func():
             data = owntype()
-            content = {'pickle data': data}
-            io.h5write(self.filepath % "store_pickle_test", content=content)
-
-        try:
-            test_func()
-        except:
-            self.fail(msg="This should not have produced an exception!")
+            content = {'Owntype data': data}
+            io.h5write(self.filepath % "store_dummytype_test", content=content)
+        self.assertRaises(ValueError, test_func)
 

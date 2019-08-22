@@ -9,7 +9,6 @@ This file is part of the PTYPY package.
 """
 import h5py
 import numpy as np
-import pickle
 import time
 import os
 import glob
@@ -23,8 +22,7 @@ __all__ = ['h5write', 'h5append', 'h5read', 'h5info', 'h5options']
 h5options = dict(
     H5RW_VERSION='0.1',
     H5PY_VERSION=h5py.version.version,
-    # UNSUPPORTED = 'pickle'
-    # UNSUPPORTED = 'ignore'
+    # UNSUPPORTED = 'ignore',
     UNSUPPORTED='fail',
     SLASH_ESCAPE='_SLASH_')
 STR_CONVERT = [type]
@@ -63,7 +61,7 @@ def _h5write(filename, mode, *args, **kwargs):
 
     Writes variables var1, var2, ... to file filename. The file mode
     can be chosen according to the h5py documentation. The key-value
-    arguments have precedence on the provided dictionnary.
+    arguments have precedence on the provided dictionary.
 
     supported variable types are:
     * scalars
@@ -72,8 +70,7 @@ def _h5write(filename, mode, *args, **kwargs):
     * lists
     * dictionaries
 
-    (if the option UNSUPPORTED is equal to 'pickle', any other type
-    is pickled and saved. UNSUPPORTED = 'ignore' silently eliminates
+    (Setting the option UNSUPPORTED equal to 'ignore' eliminates
     unsupported types. Default is 'fail', which raises an error.)
 
     The file mode can be chosen according to the h5py documentation.
@@ -85,7 +82,7 @@ def _h5write(filename, mode, *args, **kwargs):
     ctime = time.asctime()
     mtime = ctime
 
-    # Update input dictionnary
+    # Update input dictionary
     if args:
         d = args[0].copy()  # shallow copy
     else:
@@ -197,6 +194,14 @@ def _h5write(filename, mode, *args, **kwargs):
         dset.attrs['type'] = 'param'
         return dset
 
+    def _handle_unsupported(group, d, name):
+        if h5options['UNSUPPORTED'] == 'ignore':
+            return None
+        elif h5options['UNSUPPORTED'] == 'fail':
+            raise RuntimeError('Unsupported data type : %s' % type(d))
+        else:
+            raise ValueError('Invalid h5options')
+
     def _store_dict_new(group, d, name):
         check_id(id(d))
         dset = group.create_group(name)
@@ -210,20 +215,6 @@ def _h5write(filename, mode, *args, **kwargs):
     def _store_None(group, a, name):
         dset = group.create_dataset(name, data=np.zeros((1,)))
         dset.attrs['type'] = 'None'
-        return dset
-
-    # @sdebug
-    def _store_pickle(group, a, name):
-        apic = pickle.dumps(a)
-        dset = group.create_dataset(name, data=np.asarray(apic), dtype=dt)
-        dset.attrs['type'] = 'pickle'
-        return dset
-
-    # @sdebug
-    def _store_numpy_record_array(group, a, name):
-        apic = pickle.dumps(a)
-        dset = group.create_dataset(name, data=np.asarray(apic), dtype=h5py.special_dtype(vlen=str))
-        dset.attrs['type'] = 'record_array'
         return dset
 
     # @sdebug
@@ -243,7 +234,7 @@ def _h5write(filename, mode, *args, **kwargs):
         elif type(a) is np.ndarray:
             dset = _store_numpy(group, a, name)
         elif isinstance(a, (np.record, np.recarray)): # h5py can't handle this.
-            dset = _store_numpy_record_array(group, a, name)
+            dset = _handle_unsupported(group, a, name)
         elif np.isscalar(a):
             dset = _store_numpy(group, np.asarray(a), name, compress=False)
             dset.attrs['type'] = 'scalar'
@@ -252,12 +243,7 @@ def _h5write(filename, mode, *args, **kwargs):
         elif type(a) in STR_CONVERT:
             dset = _store_string(group, str(a), name)
         else:
-            if h5options['UNSUPPORTED'] == 'fail':
-                raise RuntimeError('Unsupported data type : %s' % type(a))
-            elif h5options['UNSUPPORTED'] == 'pickle':
-                dset = _store_pickle(group, a, name)
-            else:
-                dset = None
+            dset = _handle_unsupported(group, a, name)
         return dset
 
     # generate all parent directories
@@ -288,7 +274,7 @@ def h5write(filename, *args, **kwargs):
     h5write(filename, dict, var1=..., var2=...)
 
     Writes variables var1, var2, ... to file filename. The key-value
-    arguments have precedence on the provided dictionnary.
+    arguments have precedence on the provided dictionary.
 
     supported variable types are:
     * scalars
@@ -297,8 +283,7 @@ def h5write(filename, *args, **kwargs):
     * lists
     * dictionaries
 
-    (if the option UNSUPPORTED is equal to 'pickle', any other type
-    is pickled and saved. UNSUPPORTED = 'ignore' silently eliminates
+    (Setting the option UNSUPPORTED equal to 'ignore' eliminates
     unsupported types. Default is 'fail', which raises an error.)
 
     The file mode can be chosen according to the h5py documentation.
@@ -316,7 +301,7 @@ def h5append(filename, *args, **kwargs):
     h5append(filename, dict, var1=..., var2=...)
 
     Appends variables var1, var2, ... to file filename. The
-    key-value arguments have precedence on the provided dictionnary.
+    key-value arguments have precedence on the provided dictionary.
 
     supported variable types are:
     * scalars
@@ -325,8 +310,7 @@ def h5append(filename, *args, **kwargs):
     * lists
     * dictionaries
 
-    (if the option UNSUPPORTED is equal to 'pickle', any other type
-    is pickled and saved. UNSUPPORTED = 'ignore' silently eliminates
+    (Setting the option UNSUPPORTED equal to 'ignore' eliminates
     unsupported types. Default is 'fail', which raises an error.)
 
     The file mode can be chosen according to the h5py documentation.
@@ -445,10 +429,6 @@ def h5read(filename, *args, **kwargs):
                 d[k] = _load(v, depth - 1)
         return d
 
-    def _load_numpy_record_array(dset):
-        #return cPickle.loads(dset.value.encode('utf-8'))
-        return pickle.loads(dset[()].encode('utf-8'))
-
     def _load_str(dset):
         #return str(dset.value)
         return str(dset[()])
@@ -456,10 +436,6 @@ def h5read(filename, *args, **kwargs):
     def _load_unicode(dset):
         #return dset.value.decode('utf-8')
         return dset[()].decode('utf-8')
-
-    def _load_pickle(dset):
-        #return cPickle.loads(dset.value)
-        return pickle.loads(dset[()])
 
     def _load(dset, depth, sl=None):
         dset_type = dset.attrs.get('type', None)
@@ -480,8 +456,6 @@ def h5read(filename, *args, **kwargs):
                 val = val[sl]
         elif dset_type == 'ordered_dict':
             val = _load_ordered_dict(dset, depth)
-        elif dset_type == 'record_array':
-            val = _load_numpy_record_array(dset)
         elif dset_type == 'array':
             val = _load_numpy(dset, sl)
         elif dset_type == 'arraylist':
@@ -513,8 +487,6 @@ def h5read(filename, *args, **kwargs):
             # except:
             #    val = None
             val = None
-        elif dset_type == 'pickle':
-            val = _load_pickle(dset)
         elif dset_type is None:
             val = _load_numpy(dset, sl)
         else:
@@ -670,10 +642,6 @@ def h5info(filename, path='', output=None, depth=8):
         stringout = ' ' * key[0] + ' * ' + key[1] + ' [unicode = "' + s + '"]\n'
         return stringout
 
-    def _format_pickle(key, dset):
-        stringout = ' ' * key[0] + ' * ' + key[1] + ' [pickled object]\n'
-        return stringout
-
     def _format_None(key, dset):
         stringout = ' ' * key[0] + ' * ' + key[1] + ' [None]\n'
         return stringout
@@ -711,8 +679,6 @@ def h5info(filename, path='', output=None, depth=8):
             stringout = _format_scalar(key, dset)
         elif dset_type == 'None':
             stringout = _format_None(key, dset)
-        elif dset_type == 'pickle':
-            stringout = _format_pickle(dset)
         elif dset_type is None:
             stringout = _format_numpy(key, dset)
         else:
