@@ -104,8 +104,8 @@ class DMOPR(DM):
             pod.probe += pod.object.conj() * pod.exit * pod.probe_weight * self.p.IP_metric
             pod.probe /= (u.cabs2(pod.object) * pod.probe_weight + self.p.IP_metric)
 
-        change = 0.
-    
+        change, nrm = 0., 0.
+
         # Distribute result with MPI
         for name, s in pr.storages.iteritems():
 
@@ -119,13 +119,14 @@ class DMOPR(DM):
         
             # Compute relative change in probe
             buf = pr_buf.storages[name].data
-            change += u.norm2(s.data - buf) / u.norm2(s.data)
+            change += u.norm2(s.data - buf) 
+            nrm += u.norm2(s.data)
 
             # Fill buffer with new probe
             buf[:] = s.data
         
-        # MPI reduction
-        change = parallel.allreduce(change)
+        # Normalized MPI reduction of probe change
+        change = parallel.allreduce(change) / parallel.allreduce(nrm)
 
         return np.sqrt(change / len(pr.storages))
 
