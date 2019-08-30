@@ -236,6 +236,8 @@ class DM(PositionCorrectionEngine):
         """
         Try deleting ever helper container.
         """
+        super(DM, self).engine_finalize()
+
         containers = [
             self.ob_buf,
             self.ob_nrm,
