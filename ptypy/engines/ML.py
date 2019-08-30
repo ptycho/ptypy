@@ -298,6 +298,7 @@ class ML(PositionCorrectionEngine):
         """
         Delete temporary containers.
         """
+        super(ML, self).engine_finalize()
         del self.ptycho.containers[self.ob_grad.ID]
         del self.ob_grad
         del self.ptycho.containers[self.ob_h.ID]
