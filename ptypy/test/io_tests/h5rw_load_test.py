@@ -125,3 +125,14 @@ class H5rwLoadTest(unittest.TestCase):
         What does this do?
         '''
         pass
+
+    def test_pickle_unsupported(self):
+        io.h5options['UNSUPPORTED'] = 'pickle'
+        from ptypy.core.data import PtyScan
+
+        data = PtyScan()
+        content = {'pickle data': data}
+        io.h5write(self.filepath % "load_pickle_test", content=content)
+        out = io.h5read(self.filepath % "load_pickle_test", "content")["content"]
+        np.testing.assert_equal(type(out['pickle data']), type(content['pickle data']))
+        np.testing.assert_equal(out['pickle data'].__dict__, content['pickle data'].__dict__)

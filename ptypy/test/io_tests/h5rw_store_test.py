@@ -158,14 +158,18 @@ class H5rwStoreTest(unittest.TestCase):
         except:
             self.fail(msg="This should not have produced an exception!")
 
-    def test_unclear_unsupported(self):
+    def test_pickle_unsupported(self):
         io.h5options['UNSUPPORTED'] = 'pickle'
 
         def test_func():
             data = owntype()
-            content = {'Owntype data': data}
-            io.h5write(self.filepath % "store_dummytype_test", content=content)
-        self.assertRaises(ValueError, test_func)
+            content = {'pickle data': data}
+            io.h5write(self.filepath % "store_pickle_test", content=content)
+
+        try:
+            test_func()
+        except:
+            self.fail(msg="This should not have produced an exception!")
 
 if __name__=='__main__':
     unittest.main()

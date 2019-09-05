@@ -194,14 +194,6 @@ def _h5write(filename, mode, *args, **kwargs):
         dset.attrs['type'] = 'param'
         return dset
 
-    def _handle_unsupported(group, d, name):
-        if h5options['UNSUPPORTED'] == 'ignore':
-            return None
-        elif h5options['UNSUPPORTED'] == 'fail':
-            raise RuntimeError('Unsupported data type : %s' % type(d))
-        else:
-            raise ValueError('Invalid h5options')
-
     def _store_dict_new(group, d, name):
         check_id(id(d))
         dset = group.create_group(name)
@@ -210,6 +202,14 @@ def _h5write(filename, mode, *args, **kwargs):
             _store(dset, kv, '%05d' % i)
         pop_id(id(d))
         return dset
+
+        # @sdebug
+
+    def _store_pickle(group, a, name):
+        apic = pickle.dumps(a)
+        group[name] = np.string_(apic)
+        group[name].attrs['type'] = 'pickle'
+        return group[name]
 
     # @sdebug
     def _store_None(group, a, name):
@@ -250,7 +250,12 @@ def _h5write(filename, mode, *args, **kwargs):
         elif type(a) in STR_CONVERT:
             dset = _store_string(group, str(a), name)
         else:
-            dset = _handle_unsupported(group, a, name)
+            if h5options['UNSUPPORTED'] == 'fail':
+                raise RuntimeError('Unsupported data type : %s' % type(a))
+            elif h5options['UNSUPPORTED'] == 'pickle':
+                dset = _store_pickle(group, a, name)
+            else:
+                dset = None
         return dset
 
     # generate all parent directories
@@ -442,6 +447,10 @@ def h5read(filename, *args, **kwargs):
     def _load_unicode(dset):
         return dset[()].decode('utf-8')
 
+    def _load_pickle(dset):
+        #return cPickle.loads(dset.value)
+        return pickle.loads(dset[()])
+
     def _load_numpy_record_array(dset):
         return pickle.loads(dset[()])
 
@@ -497,6 +506,8 @@ def h5read(filename, *args, **kwargs):
             # except:
             #    val = None
             val = None
+        elif dset_type == 'pickle':
+            val = _load_pickle(dset)
         elif dset_type is None:
             val = _load_numpy(dset, sl)
         else:
