@@ -95,6 +95,14 @@ class H5rwLoadTest(unittest.TestCase):
         np.testing.assert_array_equal(content["array data"], out["array data"],
                                 err_msg="Can't read back in an array that we saved.")
 
+    def test_load_numpy_record_array(self):
+        data = np.recarray((8,), dtype=[('ID','<U16')])
+        content = {'record array data': data}
+        io.h5write(self.filepath % "load_record_array_test", content=content)
+        out = io.h5read(self.filepath % "load_record_array_test", "content")["content"]
+        np.testing.assert_array_equal(content["record array data"], out["record array data"],
+                                err_msg="Can't read back in a record array that we saved.")
+
     def test_load_scalar(self):
         data = 1.0
         content = {'scalar data': data}

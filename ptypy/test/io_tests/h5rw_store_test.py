@@ -103,6 +103,15 @@ class H5rwStoreTest(unittest.TestCase):
         except:
             self.fail(msg="Couldn't store a array type")
 
+    def test_store_numpy_record_array(self):
+        data = np.recarray((8,), dtype=[('ID','<U16')])
+
+        content = {'record array data': data}
+        try:
+            io.h5write(self.filepath % "store_record_array_test", content=content)
+        except:
+            self.fail(msg="Couldn't store a record array type")
+
     def test_store_scalar(self):
         data = 1.0
 
@@ -158,3 +167,5 @@ class H5rwStoreTest(unittest.TestCase):
             io.h5write(self.filepath % "store_dummytype_test", content=content)
         self.assertRaises(ValueError, test_func)
 
+if __name__=='__main__':
+    unittest.main()

@@ -13,7 +13,7 @@ import time
 import os
 import glob
 from collections import OrderedDict
-
+import pickle
 from ..utils import Param
 from ..utils.verbose import logger
 
@@ -218,6 +218,13 @@ def _h5write(filename, mode, *args, **kwargs):
         return dset
 
     # @sdebug
+    def _store_numpy_record_array(group, a, name):
+        dumped_array = a.dumps()
+        group[name] =np.string_(dumped_array)
+        group[name].attrs['type'] = 'record_array'
+        return group[name]
+
+    # @sdebug
     def _store(group, a, name):
         if type(a) is str:
             dset = _store_string(group, a, name)
@@ -234,7 +241,7 @@ def _h5write(filename, mode, *args, **kwargs):
         elif type(a) is np.ndarray:
             dset = _store_numpy(group, a, name)
         elif isinstance(a, (np.record, np.recarray)): # h5py can't handle this.
-            dset = _handle_unsupported(group, a, name)
+            dset = _store_numpy_record_array(group, a, name)
         elif np.isscalar(a):
             dset = _store_numpy(group, np.asarray(a), name, compress=False)
             dset.attrs['type'] = 'scalar'
@@ -430,12 +437,13 @@ def h5read(filename, *args, **kwargs):
         return d
 
     def _load_str(dset):
-        #return str(dset.value)
         return str(dset[()])
 
     def _load_unicode(dset):
-        #return dset.value.decode('utf-8')
         return dset[()].decode('utf-8')
+
+    def _load_numpy_record_array(dset):
+        return pickle.loads(dset[()])
 
     def _load(dset, depth, sl=None):
         dset_type = dset.attrs.get('type', None)
@@ -474,6 +482,8 @@ def h5read(filename, *args, **kwargs):
             val = _load_str(dset)
             if sl is not None:
                 val = val[sl]
+        elif dset_type == 'record_array':
+            val = _load_numpy_record_array(dset)
         elif dset_type == 'unicode':
             val = _load_unicode(dset)
             if sl is not None:
