@@ -914,11 +914,17 @@ class EvalDescriptor(ArgParseDescriptor):
                     if (lowlim is None) or (path not in pars) or (pars[path] is None):
                         out[path]['lowlim'] = CODES.PASS
                     else:
-                        out[path]['lowlim'] = CODES.PASS if (pars[path] >= lowlim) else CODES.FAIL
+                        if hasattr(pars[path], "__iter__"):
+                            out[path]['lowlim'] = CODES.PASS if all([(ix>= lowlim) for ix in pars[path]]) else CODES.FAIL
+                        else:
+                            out[path]['lowlim'] = CODES.PASS if (pars[path] >= lowlim) else CODES.FAIL
                     if uplim is None or pars[path] is None:
                         out[path]['uplim'] = CODES.PASS
                     else:
-                        out[path]['uplim'] = CODES.PASS if (pars[path] <= uplim) else CODES.FAIL
+                        if hasattr(pars[path], "__iter__"):
+                            out[path]['uplim'] = CODES.PASS if all([(ix <= uplim) for ix in pars[path]]) else CODES.FAIL
+                        else:
+                            out[path]['uplim'] = CODES.PASS if (pars[path] <= uplim) else CODES.FAIL
             elif res['status'] == 'wrongtype':
                 # Wrong type
                 out[path]['type'] = CODES.INVALID
