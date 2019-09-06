@@ -333,7 +333,7 @@ class PositionCorrectionEngine(BaseEngine):
             # Enlarge object arrays, 
             # This can be skipped though if the boundary is less important
             for name, s in self.ob.storages.items():
-                s.padding = self.p.position_refinement.max_shift // np.max(s.psize)
+                s.padding = int(self.p.position_refinement.max_shift // np.max(s.psize))
                 s.reformat()
 
             # this could be some kind of dictionary lookup if we want to add more
