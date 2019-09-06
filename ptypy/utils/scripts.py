@@ -794,15 +794,16 @@ def cxro_iref(formula, energy, density=-1, npts=100):
 
     url = cxro_iref.cxro_server + '/cgi-bin/getdb.pl'
     #u.logger.info('Querying CRXO database...')
-    req = urllib.request.Request(url, data)
-    response = urllib.request.urlopen(req)
-    t = response.read()
+    data = data.encode("utf-8")
+    req = urllib.request.Request(url)
+    response = urllib.request.urlopen(req, data=data)
+    t = response.read().decode()
     datafile = t[t.find('/tmp/'):].split('"')[0]
 
     url = cxro_iref.cxro_server + datafile
     req = urllib.request.Request(url)
     response = urllib.request.urlopen(req)
-    data = response.read()
+    data = response.read().decode()
 
     d = data.split('\n')
     dt = np.array([[float(x) for x in dd.split()] for dd in d[2:] if dd])
