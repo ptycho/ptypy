@@ -19,7 +19,7 @@ p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
 p.io.autosave = None
 p.io.autoplot = u.Param()
-p.io.autoplot.active = False
+p.io.autoplot.active = True
 
 # max 100 frames (128x128px) of diffraction data
 p.scans = u.Param()
