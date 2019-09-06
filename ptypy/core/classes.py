@@ -1351,7 +1351,7 @@ class View(Base):
     @property
     def pods(self):
         """
-        Returns all :any:`POD`s still connected to this view as a dict.
+        Returns all :any:`POD`\ s still connected to this view as a dict.
         """
         if self._pods is not None:
             return self._pods
