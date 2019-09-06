@@ -10,7 +10,7 @@ from ptypy import utils as u
 
 ### Ptypy parameter tree ###
 
-p = Param()
+p = u.Param()
 
 
 # Verbosity level
