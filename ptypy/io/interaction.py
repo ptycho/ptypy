@@ -693,7 +693,6 @@ class Client(object):
     """
     Basic but complete client to interact with the server.
 
-
     Defaults:
 
     [address]
@@ -723,7 +722,7 @@ class Client(object):
     doc = Interval with which to check pings, in seconds.
 
     [connection_timeout]
-    default = 3600000.
+    default = 3600000.0
     type = float
     help = Timeout for dead server
     doc = Timeout for dead server, in milliseconds.
@@ -731,27 +730,6 @@ class Client(object):
     """
 
     def __init__(self, pars=None, **kwargs):
-        """
-        Parameters
-        ----------
-        pars : dict or Param
-            Parameter set for the client, see :py:attr:`DEFAULT`
-
-        Keyword Arguments
-        -----------------
-        address : str
-            Primary address of the remote server.
-
-        port : int
-            Primary port of the remote server.
-
-        poll_timeout : float
-            Network polling interval (in milliseconds!).
-
-        pinginterval : float
-            Interval to check pings (in seconds).
-
-        """
 
         p = self.DEFAULT.copy()
         p.update(pars)
