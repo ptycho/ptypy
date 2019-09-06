@@ -154,6 +154,7 @@ class BaseEngine(object):
     def iterate(self, num=None):
         """
         Compute one or several iterations.
+
         num : None, int number of iterations.
             If None or num<1, a single iteration is performed.
         """
