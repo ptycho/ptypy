@@ -194,12 +194,8 @@ class UCLLaserScan(PtyScan):
     def __init__(self, pars=None, **kwargs):
         """
         Initializes parent class.
-
-        :param pars: dict
-            - contains parameter tree.
-        :param kwargs: key-value pair
-            - additional parameters.
         """
+
         p = self.DEFAULT.copy(99)
         p.update(pars)
         pars = p
@@ -309,8 +305,6 @@ class UCLLaserScan(PtyScan):
 
         Function description see parent class.
 
-        :return: weight2d
-            - np.array: Mask or weight if provided from file
         """
         # FIXME: do something better here. (detector-dependent)
         # Load mask as weight
@@ -322,8 +316,6 @@ class UCLLaserScan(PtyScan):
         """
         Load the positions and return as an (N,2) array.
 
-        :return: positions
-            - np.array: contains scan positions.
         """
         # Load positions from file if possible.
         motor_positions = io.h5read(
@@ -345,8 +337,6 @@ class UCLLaserScan(PtyScan):
         """
         Load dark and flat.
 
-        :return: common
-            - dict: contains averaged dark and flat (np.array).
         """
         common = u.Param()
 
@@ -385,13 +375,6 @@ class UCLLaserScan(PtyScan):
     def load(self, indices):
         """
         Load frames given by the indices.
-
-        :param indices: list
-            Frame indices available per node.
-        :return: raw, pos, weight
-            - dict: index matched data frames (np.array).
-            - dict: new positions.
-            - dict: new weights.
         """
         raw = {}
         pos = {}
@@ -411,29 +394,7 @@ class UCLLaserScan(PtyScan):
         return raw, pos, weights
 
     def correct(self, raw, weights, common):
-        """
-        Apply corrections to frames. See below for possible options.
 
-        Options for corrections:
-        - Hot pixel removal:
-            Replace outlier pixels in frames by median.
-        - Richardson–Lucy deconvolution:
-            Deconvolve frames from detector psf.
-        - Dark subtraction:
-            Subtract dark from frames.
-        - Flat division:
-            Divide frames by flat.
-
-        :param raw: dict
-            - dict containing index matched data frames (np.array).
-        :param weights: dict
-            - dict containing possible weights.
-        :param common: dict
-            - dict containing possible dark and flat frames.
-        :return: data, weights
-            - dict: contains index matched corrected data frames (np.array).
-            - dict: contains modified weights.
-        """
         # Apply hot pixel removal
         if self.info.remove_hot_pixels.apply:
             u.log(3, 'Applying hot pixel removal...')
