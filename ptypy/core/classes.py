@@ -2006,7 +2006,7 @@ class Container(Base):
 
         return self
 
-    def __idiv__(self, other):
+    def __truediv__(self, other):
         if isinstance(other, Container):
             for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
