@@ -12,7 +12,6 @@ scripts = ['minimal_script.py',
 
 if len(sys.argv) == 1:
     import pkg_resources
-    import subprocess
 
     for script in scripts:
         scr = pkg_resources.resource_filename('ptypy', tutorial_dir+script)
@@ -25,11 +24,11 @@ if len(sys.argv) == 1:
 
 indent_keys = ['for', 'if', 'with', 'def', 'class']
 
-sout = io.StringIO()
 
 
 @contextlib.contextmanager
 def stdoutIO(stdout=None):
+    sout = io.StringIO()
     old = sys.stdout
     if stdout is None:
         stdout = sout
@@ -38,12 +37,7 @@ def stdoutIO(stdout=None):
         yield stdout
     finally:
         sys.stdout = old
-    
 
-def exec2str(statement):
-    with stdoutIO() as s:
-        exec(statement)
-    print(s.getvalue())
 
 script_name = sys.argv[1]
 fpy = open(script_name, 'r')
@@ -64,37 +58,10 @@ frst.write("""
 """ % {'fname': os.path.split(script_name)[-1], 'this': sys.argv[0]})
  
 was_comment = True
-def debug(x):
-    print(x)
-
-def check_for_fig(wline):
-    if 'savefig' in wline:
-        print('found fig')
-        from matplotlib import pyplot as plt
-        fig = plt.gcf()
-        fig_name = name + '_%02d' % fig.number
-        fname = fig_path + fig_name + '.png'
-        plt.tight_layout()
-        fig.savefig(fname, dpi=300)
-
-        frst.write('.. figure:: '+'..'+os.sep+fname+'\n')
-        frst.write('   :width: 70 %\n')
-        frst.write('   :figclass: highlights\n')
-        other = [s.strip() for s in wline.split(';')]
-        print(other)
-        if len(other) > 1:
-            frst.write('   :name: '+other[1]+'\n\n')
-        if len(other) > 2:
-            frst.write('   '+other[2]+'\n\n')
-        frst.write('\n')
-        wline == ''
-        return True
-    else:
-        return False
 
 while True:
     line = fpy.readline()
-    if line == '':
+    if not line:
         break
     print(line)
     if 'savefig' in line:
@@ -160,7 +127,7 @@ while True:
         continue
         
     wline = line.strip()
-    if wline == '':
+    if not wline:
         frst.write('\n')
         continue
     
@@ -168,10 +135,10 @@ while True:
         exec(wline)
         out = sout.getvalue()
         sout.buf = ''
+
     if len(wline) > 0:
         if line.startswith('# '):
             wline = line[2:]
-            #isfig = check_for_fig(wline)
             was_comment = True
             frst.write(wline)
         else:
@@ -183,17 +150,11 @@ while True:
             frst.write(wline+'\n')
         
         #print out
-        if out.strip() != '':
-            #frst.write('\n')
+        if out.strip():
+            print(out)
             for l in out.split('\n'):
                 frst.write(' '*3+l+'\n')
             out = ''
-    """
-    frst.write(wline+'\n')
-    if out.strip()!='':
-        frst.write('\n:Out:\n   ::\n\n')
-        for l in out.split('\n'):
-            frst.write(' '*6+l+'\n')
-    """
+
     
 
