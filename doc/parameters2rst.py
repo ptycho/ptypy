@@ -40,7 +40,8 @@ for path, desc in defaults_tree.descendants:
     if is_wildcard:
         prst.write('   *Wildcard*: multiple entries with arbitrary names are accepted.\n\n')
 
-    prst.write('   '+desc.help+'\n\n')
+    # prst.write('   '+desc.help+'\n\n')
+    prst.write('   ' + desc.help.replace('<newline>', '\n').replace('\n', '\n   ') + '\n\n')
     prst.write('   '+desc.doc.replace('<newline>','\n').replace('\n', '\n   ')+'\n\n')
 
     if desc.is_symlink:
