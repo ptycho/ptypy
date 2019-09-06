@@ -981,3 +981,41 @@ class NanomaxFlyscanMay2019(PtyScan):
                         (mask.shape + (np.sum(mask),)))
 
         return mask
+
+@register()
+class NanomaxHwStepscanJun2019(NanomaxStepscanNov2018):
+    """
+    Starting a fresh class here.
+
+    Defaults:
+
+    [name]
+    default = NanomaxHwStepscanJun2019
+    type = str
+    help =
+
+    [scanNumber]
+    default = None
+    type = int
+    help = Scan number
+    doc =
+
+
+    """
+
+    def load(self, indices):
+        raw, weights, positions = {}, {}, {}
+
+        hdfpath = 'entry_0000/measurement/%s/data' % {'pil100k': 'Pilatus', 'merlin': 'Merlin', 'pil1m': 'Pilatus'}[self.info.detector]
+
+        filename = 'scan_%04u_%s_0000.hdf5' % (
+                self.info.scanNumber[0], {'pil100k': 'pil100k', 'merlin': 'merlin', 'pil1m':'pil1m'}[self.info.detector])
+        fullfilename = os.path.join(self.info.path, filename)
+        with h5py.File(fullfilename, 'r') as fp:
+            for ind in indices:
+                raw[ind] = fp[hdfpath][ind]
+                if self.info.I0:
+                    raw[ind] = raw[ind] / self.normdata[ind]
+        return raw, positions, weights
+
+
