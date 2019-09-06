@@ -709,32 +709,32 @@ class TestContainer(unittest.TestCase):
             'Testing __imul__ function failed.'
         )
 
-    def test__idiv__(self):
-        """Testing __idiv__ function"""
+    def test__truediv__(self):
+        """Testing __truediv__ function"""
         # Test container case
         # Not ideal, as value needs to be added first for reasonable check
         self.basic_container_ifte.__iadd__(24)
-        self.basic_container_ifte.__idiv__(self.basic_container_iftf)
+        self.basic_container_ifte.__truediv__(self.basic_container_iftf)
 
         self.assertTrue(
             np.array_equal(
                 self.basic_container_ifte.storages['S0000'].data,
                 np.array([[[1. + 0.j]]])
             ),
-            'Testing __idiv__ function failed.'
+            'Testing __truediv__ function failed.'
         )
 
         # Test scalar case
         # Not ideal, as value needs to be added first for reasonable check
         self.basic_container_dpt.__iadd__(25)
-        self.basic_container_dpt.__idiv__(25)
+        self.basic_container_dpt.__truediv__(25)
 
         self.assertTrue(
             np.array_equal(
                 self.basic_container_dpt.storages['S0000'].data,
                 np.array([[[1. + 0.j]]])
             ),
-            'Testing __idiv__ function failed.'
+            'Testing __truediv__ function failed.'
         )
 
     def test__lshift__(self):
