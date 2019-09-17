@@ -48,6 +48,7 @@ def _register_PtyScan_class(cls, name=None):
 
 
 ptyscan_modules = [('hdf5_loader', 'Hdf5Loader'),
+                   ('diamond_nexus', 'DiamondNexus'),
                    ('cSAXS', 'cSAXSScan'),
                    ('savu', 'Savu'),
                    ('plugin', 'makeScanPlugin'),

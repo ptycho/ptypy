@@ -118,6 +118,7 @@ class PlotClient(object):
         self.pr = Param()  # Probe
         self.ob = Param()  # Object
         self.runtime = Param()  # Runtime information (contains reconstruction metrics)
+        self.runtime.iter_info = []
         self._new_data = False
 
         # The thread that will manage incoming data in the background
@@ -238,6 +239,7 @@ class PlotClient(object):
             self.cmd_dct["Ptycho.obj.S['%s'].data" % str(ID)] = [None, S, 'data']
             self.cmd_dct["Ptycho.obj.S['%s'].psize" % str(ID)] = [None, S, 'psize']
             self.cmd_dct["Ptycho.obj.S['%s'].center" % str(ID)] = [None, S, 'center']
+            self.cmd_dct["Ptycho.obj.S['%s'].grids()" % str(ID)] = [None, S, 'grids']
 
         # Get the list of probe IDs
         pr_IDs = self.client.get_now("Ptycho.probe.S.keys()")
@@ -250,6 +252,7 @@ class PlotClient(object):
             self.cmd_dct["Ptycho.probe.S['%s'].data" % str(ID)] = [None, S, 'data']
             self.cmd_dct["Ptycho.probe.S['%s'].psize" % str(ID)] = [None, S, 'psize']
             self.cmd_dct["Ptycho.probe.S['%s'].center" % str(ID)] = [None, S, 'center']
+            self.cmd_dct["Ptycho.probe.S['%s'].grids()" % str(ID)] = [None, S, 'grids']
 
         # Data request for the error.
         self.cmd_dct["Ptycho.runtime['iter_info'][-1]"] = [None, self.runtime, 'last_info']
