@@ -34,90 +34,90 @@ class Hdf5Loader(PtyScan):
     [intensities]
     default =
     type = Param
-    help = Parameters for the diffraction data.
-    doc = Data shapes can be either (A, B, frame_size_m, frame_size_n) or (C, frame_size_m, frame_size_n).
-          It is assumed in this latter case that the fast axis in the scan corresponds
-          the fast axis on disc (i.e. C-ordered layout).
+    help = This parameter contains the diffraction data. Data shapes can be either (A, B, frame_size_m, frame_size_n) or
+            (C, frame_size_m, frame_size_n). It's assumed in this latter case that the fast axis in the scan corresponds
+            the fast axis on disc (i.e. C-ordered layout).
 
     [intensities.is_swmr]
     default = False
     type = bool
-    help = If True, then intensities are assumed to be a swmr dataset that is being written as processing
-           is taking place.
+    help = If this is set to be true, then intensities are assumed to be a swmr dataset that is being written as processing
+            is taking place
 
     [intensities.live_key]
     default = None
     type = str
-    help = Key to live keys inside the intensities.file (used only if is_swmr is True)
-    doc = Live_keys indicate where the data collection has progressed to. They are zero at the 
-          scan start, but non-zero when the position is complete.
+    help = If intensities.is_swmr is true then we need a live_key to know where the data collection has progressed to.
+            This is the key to these live keys inside the intensities.file. They are zero at the scan start, but non-zero
+            when the position is complete.
 
     [intensities.file]
     default = None
     type = str
-    help = Path to the file containing the diffraction intensities.
+    help = This is the path to the file containing the diffraction intensities.
 
     [intensities.key]
     default = None
     type = str
-    help = Key to the intensities entry in the hdf5 file.
+    help = This is the key to the intensities entry in the hdf5 file.
 
     [positions]
     default =
     type = Param
-    help = Parameters for the position information data. 
-    doc = Shapes for each axis that are currently covered and tested corresponding 
-          to the intensity shapes are:
-            * axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
-            * axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n),
-            * axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
-            * axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the
-              size of the other axis, and 
-            * axis_data.shape (C,) for data.shape (C*D, frame_size_m, frame_size_n) where D is the
-              size of the other axis.
+    help = This parameter contains the position information data. Shapes for each axis that are currently covered and
+            tested corresponding to the intensity shapes are:
+                                 axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
+                                 axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n),
+                                 axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
+                                 axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the
+                                 size of the other axis,
+                            and  axis_data.shape (C,) for data.shape (C*D, frame_size_m, frame_size_n) where D is the
+                            size of the other axis.
 
     [positions.is_swmr]
     default = False
     type = bool
-    help = If True, positions are assumed to be a swmr dataset that is being written as processing
-           is taking place.
+    help = If this is set to be true, then positions are assumed to be swmr datasets that are being written as processing
+            is taking place.
 
     [positions.live_key]
     default = None
     type = str
-    help = Live_keys indicate where the data collection has progressed to. They are zero at the 
-           scan start, but non-zero when the position is complete. If None whilst positions.is_swmr 
-           is True, use "intensities.live_key".
+    help = If positions.is_swmr is true then we need a live_key to know where the data collection has progressed to.
+            This is the key to these live keys inside the positions.file. If None, whilst positions.is_swmr is True,
+            then we just assume the same keys work for both positions and intensities. They are zero at the scan start,
+            but non-zero when the position is complete.
 
     [positions.file]
     default = None
     type = str
-    help = Path to the file containing the position information. If None use "intensities.file".
+    help = This is the path to the file containing the  position information. If None then we try to find the information
+            in the "intensities.file" location.
 
     [positions.slow_key]
     default = None
     type = str
-    help = Key to the slow-axis positions entry in the hdf5 file.
+    help = This is the key to the slow-axis positions entry in the hdf5 file.
 
     [positions.slow_multiplier]
     default = 1.0
     type = float
-    help = Multiplicative factor that converts motor positions to metres.
+    help = This is a scaling factor to get the motor position into metres.
 
     [positions.fast_key]
     default = None
     type = str
-    help = Key to the fast-axis positions entry in the hdf5 file.
+    help = This is the key to the fast-axis positions entry in the hdf5 file.
 
     [positions.fast_multiplier]
     default = 1.0
     type = float
-    help = Multiplicative factor that converts motor positions to metres.
+    help = This is a scaling factor to get the motor position into metres.
 
     [positions.bounding_box]
     default =
     type = Param
-    help = Bounding box (in array indices) to reconstruct a restricted area
+    help = Defines a bounding box (in array indices) to reconstruct a restricted area
 
     [positions.bounding_box.fast_axis_bounds]
     default = None
@@ -132,59 +132,56 @@ class Hdf5Loader(PtyScan):
     [mask]
     default =
     type = Param
-    help = Parameters for mask data. 
-    doc = The shape of the loaded data is assumed to be (frame_size_m, frame_size_n) or the same
-          shape of the full intensities data.
+    help = This parameter contains the mask data. The  shape is assumed to be (frame_size_m, frame_size_n) or the same
+            shape of the full intensities data.
 
     [mask.file]
     default = None
     type = str
-    help = Path to the file containing the diffraction mask.
+    help = This is the path to the file containing the diffraction mask.
 
     [mask.key]
     default = None
     type = str
-    help = Key to the mask entry in the hdf5 file.
+    help = This is the key to the mask entry in the hdf5 file.
 
     [flatfield]
     default =
     type = Param
-    help = Parameters for flatfield data.
-    doc = The shape of the loaded data is assumed to be (frame_size_m, frame_size_n) or the same
+    help = This parameter contains the flatfield data. The shape is assumed to be (frame_size_m, frame_size_n) or the same
             shape of the full intensities data.
 
     [flatfield.file]
     default = None
     type = str
-    help = Path to the file containing the diffraction flatfield.
+    help = This is the path to the file containing the diffraction flatfield.
 
     [flatfield.key]
     default = None
     type = str
-    help = Key to the flatfield entry in the hdf5 file.
+    help = This is the key to the flatfield entry in the hdf5 file.
 
     [darkfield]
     default =
     type = Param
-    help = Parameters for darkfield data. 
-    doc = The shape is assumed to be (frame_size_m, frame_size_n) or the same
-          shape of the full intensities data.
+    help = This parameter contains the darkfield data.The shape is assumed to be (frame_size_m, frame_size_n) or the same
+            shape of the full intensities data.
 
     [darkfield.file]
     default = None
     type = str
-    help = Path to the file containing the diffraction darkfield.
+    help = This is the path to the file containing the diffraction darkfield.
 
     [darkfield.key]
     default = None
     type = str
-    help = Key to the darkfield entry in the hdf5 file.
+    help = This is the key to the darkfield entry in the hdf5 file.
 
     [normalisation]
     default =
     type = Param
-    help = Parameters for per-point normalisation (i.e. ion chamber reading).
-    doc = The shape of loaded data is assumed to have the same dimensionality as data.shape[:-2]
+    help = This parameter contains information about the per-point normalisation (i.e. ion chamber reading).
+            It is assumed to have the same dimensionality as data.shape[:-2]
 
     [normalisation.is_swmr]
     default = False
@@ -226,11 +223,6 @@ class Hdf5Loader(PtyScan):
     default = None
     type = str
     help = This is the key to the recorded_energy entry in the hdf5 file.
-
-    [recorded_energy.multiplier]
-    default = 1.0
-    type = float
-    help = This is the multiplier for the recorded energy.
 
     [recorded_distance]
     default =
@@ -388,20 +380,16 @@ class Hdf5Loader(PtyScan):
             log(3, "No normalisation will be applied.")
 
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            print self.p.recorded_energy.multiplier
-            self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()] * self.p.recorded_energy.multiplier)
-            self.meta.energy  = self.p.energy
+            self.p.energy = h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][0]
             log(3, "loading energy={} from file".format(self.p.energy))
 
 
         if None not in [self.p.recorded_distance.file, self.p.recorded_distance.key]:
-            self.p.distance = h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][()]
-            self.meta.distance = self.p.distance
+            self.p.distance = h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][0]
             log(3, "loading distance={} from file".format(self.p.distance))
         
         if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
-            self.p.psize = h5.File(self.p.recorded_psize.file, 'r')[self.p.recorded_psize.key][()]
-            self.meta.psize = self.p.psize
+            self.p.psize = h5.File(self.p.recorded_psize.file, 'r')[self.p.recorded_psize.key][0]
             log(3, "loading psize={} from file".format(self.p.psize))
 
 

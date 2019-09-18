@@ -14,11 +14,10 @@ p.verbose_level = 4
 # set home path
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.autosave = u.Param()
-p.io.autosave.active = False
-p.io.autoplot = u.Param()
-p.io.autoplot.active = True
-p.io.autoplot.dump = False
+p.io.autosave = None
+#p.io.autoplot = u.Param()
+#p.io.autoplot.dump = True
+#p.io.autoplot = False
 
 # max 100 frames (128x128px) of diffraction data
 p.scans = u.Param()
@@ -41,7 +40,6 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'ML'
-p.engines.engine00.ML_type = 'Gaussian'
 p.engines.engine00.reg_del2 = True                      # Whether to use a Gaussian prior (smoothing) regularizer
 p.engines.engine00.reg_del2_amplitude = 1.             # Amplitude of the Gaussian prior if used
 p.engines.engine00.scale_precond = True
