@@ -981,3 +981,173 @@ class NanomaxFlyscanMay2019(PtyScan):
                         (mask.shape + (np.sum(mask),)))
 
         return mask
+
+@register()
+class NanomaxStepscanSep2019(PtyScan):
+    """
+	This class loads data written with the nanomax pirate system
+
+    Defaults:
+
+    [name]
+    default = NanomaxStepscanSep2019
+    type = str
+    help =
+
+    [path]
+    default = None
+    type = str
+    help = Path to where the data is at
+    doc =
+
+    [scanNumber]
+    default = None
+    type = int, list, tuple
+    help = Scan number or list of scan numbers
+    doc =
+
+    [xMotor]
+    default = sx
+    type = str
+    help = Which x motor to use
+    doc =
+
+    [yMotor]
+    default = sy
+    type = str
+    help = Which y motor to use
+    doc =
+
+    [xMotorFlipped]
+    default = False
+    type = bool
+    help = Flip detector x positions
+    doc =
+
+    [yMotorFlipped]
+    default = False
+    type = bool
+    help = Flip detector y positions
+    doc =
+
+    [xMotorAngle]
+    default = 0.0
+    type = float
+    help = Angle of the motor x axis relative to the lab x axis
+    doc =
+
+    [yMotorAngle]
+    default = 0.0
+    type = float
+    help = Angle of the motor y axis relative to the lab y axis
+    doc =
+
+    [detector]
+    default = 'pilatus'
+    type = str
+    help = Which detector to use, can be pilatus or merlin
+
+    [maskfile]
+    default = None
+    type = str
+    help = Arbitrary mask file
+    doc = Hdf5 file containing an array called 'mask' at the root level.
+
+    [I0]
+    default = None
+    type = str
+    help = Normalization channel, like ni/counter1 for example
+    doc =
+
+    """
+
+    def load_positions(self):
+
+        filename = '%06u.h5' % self.info.scanNumber
+        fullfilename = os.path.join(self.info.path, filename)
+        self.frames_per_scan = {}
+
+        xFlipper, yFlipper = 1, 1
+        if self.info.xMotorFlipped:
+            xFlipper = -1
+            logger.warning("note: x motor is specified as flipped")
+        if self.info.yMotorFlipped:
+            yFlipper = -1
+            logger.warning("note: y motor is specified as flipped")
+
+        # if the x axis is tilted, take that into account.
+        xCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
+        yCosFactor = np.cos(self.info.yMotorAngle / 180.0 * np.pi)
+        logger.info(
+            "x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
+
+        try:
+            self.info.scanNumber = tuple(self.info.scanNumber)
+        except TypeError:
+            self.info.scanNumber = (self.info.scanNumber,)
+
+        normdata, x, y = [], [], []
+        for scan in self.info.scanNumber:
+
+            # may as well get normalization data here too
+            if self.info.I0 is not None:
+                with h5py.File(fullfilename, 'r') as hf:
+                    normdata.append(np.array(hf['entry/measurement/%s' % (self.info.I0)], dtype=float))
+                print '*** going to normalize by channel %s' % self.info.I0
+
+            with h5py.File(fullfilename, 'r') as hf:
+                x.append(xFlipper * xCosFactor
+                     * np.array(hf['entry/measurement/%s' % (self.info.xMotor)]))
+                y.append(yFlipper * yCosFactor
+                     * np.array(hf['entry/measurement/%s' % (self.info.yMotor)]))
+                self.frames_per_scan[scan] = x[-1].shape[0]
+        
+        first_frames = [sum(self.frames_per_scan.values()[:i]) for i in range(len(self.frames_per_scan))]
+        self.first_frame_of_scan = {scan:first_frames[i] for i, scan in enumerate(self.info.scanNumber)}
+        if normdata:
+            normdata = np.concatenate(normdata)
+            self.normdata = normdata / np.mean(normdata)
+        x = np.concatenate(x)
+        y = np.concatenate(y)      
+        positions = -np.vstack((y, x)).T * 1e-6
+        return positions
+
+
+    def load(self, indices):
+        raw, weights, positions = {}, {}, {}
+
+        hdfpath = 'entry/measurement/%s/%%06u' % self.info.detector
+        filename = '%06u.h5' % self.info.scanNumber
+        fullfilename = os.path.join(self.info.path, filename)
+
+        with h5py.File(fullfilename, 'r') as fp:
+            for ind in indices:
+                raw[ind] = fp[hdfpath % ind][0]
+                if self.info.I0:
+                    raw[ind] = raw[ind] / self.normdata[ind]
+
+        return raw, positions, weights
+
+    def load_weight(self):
+        """
+        Provides the mask for the whole scan, the shape of the first 
+        frame.
+        """
+
+        r, w, p = self.load(indices=(0,))
+        data = r[0]
+        mask = np.ones_like(data)
+        mask[np.where(data == -2)] = 0
+        logger.info("took account of the pilatus mask, %u x %u, sum %u" %
+                    (mask.shape + (np.sum(mask),)))
+
+        if self.info.maskfile:
+            with h5py.File(self.info.maskfile, 'r') as hf:
+                mask2 = np.array(hf.get('mask'))
+            logger.info("loaded additional mask, %u x %u, sum %u" %
+                        (mask2.shape + (np.sum(mask2),)))
+            mask = mask * mask2
+            logger.info("total mask, %u x %u, sum %u" %
+                        (mask.shape + (np.sum(mask),)))
+
+        return mask

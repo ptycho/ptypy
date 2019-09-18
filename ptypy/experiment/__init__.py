@@ -62,6 +62,7 @@ ptyscan_modules = [('hdf5_loader', 'Hdf5Loader'),
                    ('nanomax', 'NanomaxFlyscanJune2017'),
                    ('nanomax', 'NanomaxFlyscanOct2018'),
                    ('nanomax', 'NanomaxStepscanNov2018'),
+                   ('nanomax', 'NanomaxStepscanSep2019'),
                    ('ALS_5321', 'ALS5321Scan'),
                    ('Bragg3dSim', 'Bragg3dSimScan')]
 
