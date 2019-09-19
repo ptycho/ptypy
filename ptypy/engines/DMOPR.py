@@ -89,6 +89,11 @@ class DMOPR(DM):
             pr = parallel.gather_list(list(s.data), N, ind)
             if parallel.master:
                 s.data = np.array(pr)
+        # Add modes to runtime
+        if parallel.master:
+            self.ptycho.runtime['OPR_modes'] = self.model.OPR_modes
+            self.ptycho.runtime['OPR_coeffs'] = self.model.OPR_coeffs
+
 
     def probe_update(self):
         """
