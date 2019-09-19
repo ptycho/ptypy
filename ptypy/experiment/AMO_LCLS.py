@@ -166,6 +166,11 @@ class AMOScan(PtyScan):
         for j in indices:
             raw[j] = io.h5read(self.data_file, 'data.photons')[
                 'photons'][j].astype(np.float32)
+            try:
+                norm = io.h5read(self.data_file, 'data.nperpos')['nperpos'][j]
+            except:
+                norm = 1
+            raw[j] /= norm
         log(3, 'Data loaded successfully.')
         return raw, pos, weights
 
