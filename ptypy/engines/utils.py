@@ -73,7 +73,7 @@ def dynamic_load(path, baselist, fail_silently = True):
             u.logger.warning(traceback.format_exc(tb))
 
 
-def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
+def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True, float_intens=False):
     """\
     Fourier update a single view using its associated pods.
     Updates on all pods' exit waves.
@@ -94,6 +94,9 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     LL_error : bool
         If ``True``, calculates log-likelihood and puts it in the last entry
         of the returned error vector, else puts in ``0.0``
+
+    float_intens: bool
+        If ``True``, rescale dynamically diffraction patterns. 
 
     Returns
     -------
@@ -137,7 +140,10 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
 
         af2 += u.abs2(f[name])
 
-    fmag = np.sqrt(np.abs(I))
+    if float_intens:
+        fmag = np.sqrt((af2*fmask).sum() * np.abs(I) / (I*fmask).sum())
+    else:
+        fmag = np.sqrt(np.abs(I))
     af = np.sqrt(af2)
 
     # Fourier magnitudes deviations

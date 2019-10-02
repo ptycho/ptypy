@@ -312,6 +312,11 @@ class PositionCorrectionEngine(BaseEngine):
     default = 0.002
     type = float
     help = Maximum distance from original position [m]
+
+    [position_refinement.metric]
+    default = "fourier"
+    type = str
+    help = Error metric, can choose between "fourier" and "photon"
     
     [position_refinement.record]
     default = False
@@ -359,19 +364,35 @@ class PositionCorrectionEngine(BaseEngine):
             Iterates through all positions and refines them by a given algorithm. 
             """
             log(4, "----------- START POS REF -------------")
-            #self.position_refinement.update_constraints(self.curiter) # this stays here
             self.position_refinement.update_constraints(self.curiter) # this stays here
 
             # Iterate through all diffraction views
             for dname, di_view in self.di.views.iteritems():
                 # Check for new coordinates
                 if di_view.active:
-                    #self.position_refinement.update_view_position(di_view)
-                    self.position_refinement.update_view_position(di_view)
+                    self.position_refinement.update_view_position(di_view, metric=self.p.position_refinement.metric)
 
             # We may not need this
             #parallel.barrier()
             #self.ob.reformat(True)
+
+    def engine_finalize(self):
+        """
+        Synchronize positions
+        """
+        # Gather all new positions from each node
+        coords = {}
+        for ID, v in self.di.views.iteritems():
+            if v.active:
+                coords[ID] = v.pod.ob_view.coord
+        coords = parallel.gather_dict(coords)
+
+        # Update storage
+        if parallel.master:
+            for ID, S in self.ob.storages.items():
+                for v in S.views:
+                    if v.ID in coords:
+                        v.coord = coords[v.ID]
 
 class Base3dBraggEngine(BaseEngine):
     """
