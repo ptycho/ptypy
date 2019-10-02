@@ -391,7 +391,8 @@ class PositionCorrectionEngine(BaseEngine):
         if parallel.master:
             for ID, S in self.ob.storages.items():
                 for v in S.views:
-                    v.coord = coords[v.ID]
+                    if v.ID in coords:
+                        v.coord = coords[v.ID]
 
 class Base3dBraggEngine(BaseEngine):
     """
