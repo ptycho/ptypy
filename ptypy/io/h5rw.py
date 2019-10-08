@@ -452,10 +452,15 @@ def h5read(filename, *args, **kwargs):
         return pickle.loads(dset[()])
 
     def _load_numpy_record_array(dset):
-        return pickle.loads(dset[()])
+        d = dset[()]
+        if isinstance(d, str):
+            d = d.encode()
+        return pickle.loads(d)
 
     def _load(dset, depth, sl=None):
         dset_type = dset.attrs.get('type', None)
+        if isinstance(dset_type, bytes):
+            dset_type = dset_type.decode()
 
         # Treat groups as dicts
         if (dset_type is None) and (type(dset) is h5py.Group):
@@ -531,7 +536,7 @@ def h5read(filename, *args, **kwargs):
             #     print('Warning: this file does not seem to follow h5read format.')
             ctime = f.attrs.get('ctime', None)
             if ctime is not None:
-                logger.debug('File created : ' + ctime)
+                logger.debug('File created : ' + str(ctime))
             if len(args) == 0:
                 # no input arguments - load everything
                 if slice is not None:
