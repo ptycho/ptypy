@@ -301,6 +301,10 @@ class ML(PositionCorrectionEngine):
 
             # Newton-Raphson loop would end here
 
+            
+            # Allow for further modifications
+            self.hook_post_iterate_update()
+
             # Probe smoothing
             with h5py.File("/scratch/loh/benedikt/LCLS/amok3415/preproc/mask.h5", "r") as f:
                 fmask = f['mask'][:]
@@ -316,6 +320,12 @@ class ML(PositionCorrectionEngine):
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
+
+    def hook_post_iterate_update(self):
+        """
+        Enables modification at the end of each ML iteration.
+        """
+        pass
 
     def engine_finalize(self):
         """
