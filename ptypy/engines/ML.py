@@ -13,7 +13,7 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
-
+import h5py
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
@@ -81,6 +81,18 @@ class ML(PositionCorrectionEngine):
     type = float
     help = Decay rate for smoothing preconditioner
     doc = Sigma for gaussian filter will reduce exponentially at this rate
+
+    [smooth_gradient_decay_start]
+    default = 1
+    type = int
+    help = Decay start for smoothing preconditioner
+    doc = Iteration for when to start the decay
+
+    [smooth_gradient_decay_stop]
+    default = -1
+    type = int
+    help = Decay stop for smoothing preconditioner
+    doc = Iteration for when to stop the decay
 
     [scale_precond]
     default = False
@@ -213,7 +225,8 @@ class ML(PositionCorrectionEngine):
 
             # Smoothing preconditioner
             if self.smooth_gradient:
-                self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
+                if (self.curiter >= self.p.smooth_gradient_decay_start) & (self.curiter <self.p.smooth_gradient_decay_stop):
+                    self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
                 for name, s in new_ob_grad.storages.iteritems():
                     s.data[:] = self.smooth_gradient(s.data)
 
@@ -287,6 +300,15 @@ class ML(PositionCorrectionEngine):
             self.pr += self.pr_h
 
             # Newton-Raphson loop would end here
+
+            # Probe smoothing
+            with h5py.File("/scratch/loh/benedikt/LCLS/amok3415/preproc/mask.h5", "r") as f:
+                fmask = f['mask'][:]
+            for dname, diff_view in self.di.views.iteritems():
+                if not diff_view.active:
+                    continue
+                for name, pod in diff_view.pods.iteritems():
+                    pod.probe = pod.bw(pod.fw(pod.probe) * fmask)
 
             # increase iteration counter
             self.curiter +=1
