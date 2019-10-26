@@ -35,7 +35,7 @@ p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
 p.engines.engine00.numiter = 300
-p.engines.engine00.numiter_contiguous = 10
+p.engines.engine00.numiter_contiguous = 2
 
 # prepare and run
 P = Ptycho(p,level=5)
