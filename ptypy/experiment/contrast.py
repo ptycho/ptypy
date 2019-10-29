@@ -70,6 +70,12 @@ class ContrastZmqScan(PtyScan):
     help = Take images from a separate stream - port
     doc =
 
+    [motorMultiplier]
+    default = 1.0
+    type = float
+    help = Scaling factor for motor positions.
+    doc =
+
     """
 
     def __init__(self, *args, **kwargs):
@@ -148,7 +154,6 @@ class ContrastZmqScan(PtyScan):
         print self.incoming.keys()
         print self.incoming_det.keys()
         print '-------------------------------------'
-        if self.stream_images:
         ind = self.latest_pos_index_received
         if self.stream_images:
             ind = min(ind, self.latest_det_index_received)
@@ -170,7 +175,8 @@ class ContrastZmqScan(PtyScan):
                 parallel.send(dct, dest=node)
                 for i in node_inds:
                     del self.incoming[i]
-                    del self.incoming_det[i]
+                    if self.stream_images:
+                        del self.incoming_det[i]
 
             # take data for this node
             dct = {i: self.incoming[i] for i in indices}
@@ -180,7 +186,8 @@ class ContrastZmqScan(PtyScan):
                     dct[i][self.info.detector] = self.incoming_det[i]
             for i in indices:
                 del self.incoming[i]
-                del self.incoming_det[i]
+                if self.stream_images:
+                    del self.incoming_det[i]
         else:
             # receive data from the master node
             parallel.send(indices, dest=0)
@@ -193,6 +200,7 @@ class ContrastZmqScan(PtyScan):
                         dct[i][self.info.xMotor],
                         dct[i][self.info.yMotor],
                         ]) * 1e-6
+            pos[i] = pos[i] * self.info.motorMultiplier
             weight[i] = np.ones_like(raw[i])
 
         return raw, pos, weight
