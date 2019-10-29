@@ -91,10 +91,9 @@ class ContrastZmqScan(PtyScan):
         # separate detector socket
         self.stream_images = None not in (self.info.detector_host,
                                           self.info.detector_port)
-        if self.stream_images:
-            det_socket = self.context.socket(zmq.SUB)
+        if self.stream_images and parallel.master:
+            det_socket = self.context.socket(zmq.PULL)
             det_socket.connect("tcp://%s:%u" % (self.info.detector_host, self.info.detector_port))
-            det_socket.setsockopt(zmq.SUBSCRIBE, b"")
             self.det_socket = det_socket
 
         self.latest_pos_index_received = -1
@@ -103,6 +102,9 @@ class ContrastZmqScan(PtyScan):
         self.incoming_det = {}
 
     def check(self, frames=None, start=None):
+        """
+        Only called on the master node.
+        """
         end_of_scan, end_of_det_stream = False, False
 
         # get all frames from the main socket
