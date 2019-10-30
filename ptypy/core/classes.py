@@ -90,7 +90,7 @@ class Base(object):
     _PREFIX = BASE_PREFIX
     
     __slots__ = ['ID','numID','owner','_pool','_recs','_record']
-    _fields = [('ID','<U16')]
+    _fields = [('ID','<S16')]
     
     def __init__(self, owner=None, ID=None, BeOwner=True):
         """
@@ -145,7 +145,7 @@ class Base(object):
 
         if self._pool.get(prefix) is None:
             self._pool[prefix] = OrderedDict()
-            self._recs[prefix] = np.recarray((8,),dtype=obj.__class__._fields)
+            self._recs[prefix] = np.zeros((8,),dtype=obj.__class__._fields)
             
         d = self._pool[prefix]
         # Check if ID is already taken and assign a new one
