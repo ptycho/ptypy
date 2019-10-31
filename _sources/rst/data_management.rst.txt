@@ -372,6 +372,11 @@ Again, the imports first.
 
    >>> import numpy as np
    >>> from ptypy.core.data import PtyScan
+   Message Passaging for Python (mpi4py) not found.
+       CPU-parallelization disabled.
+       Install python-mpi4py via the package repositories or with `pip install --user mpi4py`
+   Could not import experiment cSAXSScan from .cSAXS, Reason: No module named 'fabio'
+   
    >>> from ptypy import utils as u
 
 For this tutorial we assume that the data and meta information is
@@ -478,29 +483,27 @@ registered are those of the parent class, `PtyScan`:
 
    >>> print(defaults_tree['scandata.numpyscan'].to_string())
    [name]
-   help = 
    default = PtyScan
+   help = 
    type = str
    
    [dfile]
-   help = Prepared data file path
    default = None
-   doc = If source was ``None`` or ``'file'``, data will be loaded from this file and processing as
-   	well as saving is deactivated. If source is the name of an experiment recipe or path to a
-   	file, data will be saved to this file
-   userlevel = 0
+   help = File path where prepared data will be saved in the ``ptyd`` format.
    type = file
+   userlevel = 0
    
    [chunk_format]
-   help = Appendix to saved files if save == 'link'
    default = .chunk%02d
+   help = Appendix to saved files if save == 'link'
+   type = str
    doc = 
    userlevel = 2
-   type = str
    
    [save]
-   help = Saving mode
    default = None
+   help = Saving mode
+   type = str
    doc = Mode to use to save data to file.
    	<newline>
    	- ``None``: No saving
@@ -510,36 +513,36 @@ registered are those of the parent class, `PtyScan`:
    	<newline>
    	in the path given by the link. Links file paths are relative to master file.
    userlevel = 1
-   type = str
    
    [auto_center]
-   help = Determine if center in data is calculated automatically
    default = None
+   help = Determine if center in data is calculated automatically
+   type = bool
    doc = 
    	- ``False``, no automatic centering
    	- ``None``, only if :py:data:`center` is ``None``
    	- ``True``, it will be enforced
    userlevel = 0
-   type = bool
    
    [load_parallel]
-   help = Determines what will be loaded in parallel
    default = data
-   doc = Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
+   help = Determines what will be loaded in parallel
    type = str
+   doc = Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
    
    [rebin]
-   lowlim = 1
-   help = Rebinning factor
    default = None
-   doc = Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-   uplim = 8
-   userlevel = 1
+   help = Rebinning factor
    type = int
+   doc = Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
+   userlevel = 1
+   lowlim = 1
+   uplim = 8
    
    [orientation]
-   help = Data frame orientation
    default = None
+   help = Data frame orientation
+   type = int, tuple, list
    doc = Choose
    	<newline>
    	- ``None`` or ``0``: correct orientation
@@ -552,95 +555,94 @@ registered are those of the parent class, `PtyScan`:
    	Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
    	do_flipud, do_fliplr)``
    userlevel = 1
-   type = int, tuple, list
    
    [min_frames]
-   help = Minimum number of frames loaded by each node
    default = 1
+   help = Minimum number of frames loaded by each node
+   type = int
    doc = 
    userlevel = 2
-   type = int
    
    [positions_theory]
-   help = Theoretical positions for this scan
    default = None
+   help = Theoretical positions for this scan
+   type = ndarray
    doc = If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
    	preparation is called from Ptycho instance, the calculated positions from the
    	:py:func:`ptypy.core.xy.from_pars` dict will be inserted here
    userlevel = 2
-   type = ndarray
    
    [num_frames]
-   help = Maximum number of frames to be prepared
    default = None
+   help = Maximum number of frames to be prepared
+   type = int
    doc = If `positions_theory` are provided, num_frames will be ovverriden with the number of
    	positions available
    userlevel = 1
-   type = int
    
    [label]
-   help = The scan label
    default = None
+   help = The scan label
+   type = str
    doc = Unique string identifying the scan
    userlevel = 1
-   type = str
    
    [experimentID]
-   help = Name of the experiment
    default = None
+   help = Name of the experiment
+   type = str
    doc = If None, a default value will be provided by the recipe. **unused**
    userlevel = 2
-   type = str
    
    [version]
-   help = TODO: Explain this and decide if it is a user parameter.
    default = 0.1
+   help = TODO: Explain this and decide if it is a user parameter.
+   type = float
    doc = 
    userlevel = 2
-   type = float
    
    [shape]
-   help = Shape of the region of interest cropped from the raw data.
    default = 256
+   help = Shape of the region of interest cropped from the raw data.
+   type = int, tuple
    doc = Cropping dimension of the diffraction frame
    	Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
    userlevel = 1
-   type = int, tuple
    
    [center]
-   help = Center (pixel) of the optical axes in raw data
    default = 'fftshift'
+   help = Center (pixel) of the optical axes in raw data
+   type = list, tuple, str
    doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
    userlevel = 1
-   type = tuple, str
    
    [psize]
-   lowlim = 0
-   help = Detector pixel size
    default = 0.000172
+   help = Detector pixel size
+   type = float, tuple
    doc = Dimensions of the detector pixels (in meters)
    userlevel = 0
-   type = float, tuple
+   lowlim = 0
    
    [distance]
-   lowlim = 0
-   help = Sample to detector distance
    default = 7.19
+   help = Sample to detector distance
+   type = float
    doc = In meters.
    userlevel = 0
-   type = float
+   lowlim = 0
    
    [energy]
-   lowlim = 0
-   help = Photon energy of the incident radiation in keV
    default = 7.2
+   help = Photon energy of the incident radiation in keV
+   type = float
    doc = 
    userlevel = 0
-   type = float
+   lowlim = 0
    
    [add_poisson_noise]
+   default = False
    help = Decides whether the scan should have poisson noise or not
-   default = True
    type = bool
    
 
@@ -652,27 +654,27 @@ generates from it a class variable called `DEFAULT`, which stores all defaults:
 ::
 
    >>> print(u.verbose.report(NumpyScan.DEFAULT, noheader=True))
-   * id3VRD9IGECG           : ptypy.utils.parameters.Param(20)
-     * auto_center          : None
-     * positions_theory     : None
-     * dfile                : None
+   * id3VFJNGLJTG           : ptypy.utils.parameters.Param(20)
      * name                 : PtyScan
-     * num_frames           : None
-     * min_frames           : 1
-     * center               : fftshift
+     * dfile                : None
      * chunk_format         : .chunk%02d
+     * save                 : None
+     * auto_center          : None
+     * load_parallel        : data
+     * rebin                : None
+     * orientation          : None
+     * min_frames           : 1
+     * positions_theory     : None
+     * num_frames           : None
      * label                : None
      * experimentID         : None
-     * load_parallel        : data
-     * shape                : 256
-     * rebin                : None
-     * psize                : 0.000172
      * version              : 0.1
-     * add_poisson_noise    : True
-     * save                 : None
+     * shape                : 256
+     * center               : fftshift
+     * psize                : 0.000172
      * distance             : 7.19
      * energy               : 7.2
-     * orientation          : None
+     * add_poisson_noise    : False
    
    
 
@@ -699,7 +701,7 @@ We test it.
 ::
 
    >>> print(extract_geo(save_path))
-   {'distance': 0.15, 'energy': 0.0023305, 'shape': 256, 'psize': 2.4e-05}
+   {'distance': 0.15, 'energy': 0.0023305, 'psize': 2.4e-05, 'shape': 256}
    
 
 That seems to work. We can integrate this parser into
@@ -748,8 +750,8 @@ in the docstring after the section header "Defaults:".
 
    >>> print(defaults_tree['scandata.numpyscan.base_path'])
    [base_path]
-   help = Base path to extract data files from.
    default = './'
+   help = Base path to extract data files from.
    type = str
    
 
@@ -893,7 +895,7 @@ Loading happens (MPI-compatible) in
 
 ::
 
-   >>> print PtyScan.load.__doc__
+   >>> print(PtyScan.load.__doc__)
    
            **Override in subclass for custom implementation**
    
@@ -1001,83 +1003,83 @@ in parantheses.
 
 ::
 
-   >>> print u.verbose.report(NPS.auto(80), noheader=True)
-   * id3VRD9IG7K8           : dict(2)
+   >>> print(u.verbose.report(NPS.auto(80), noheader=True))
+   * id3VFJNE7930           : dict(2)
      * common               : ptypy.utils.parameters.Param(8)
-       * distance           : 7.19
-       * center             : [array = [ 128.  128.]]
+       * version            : 0.1
        * num_frames         : 116
-       * energy             : 7.2
-       * psize              : [array = [ 0.000172  0.000172]]
        * label              : None
        * shape              : [array = [256 256]]
-       * version            : 0.1
+       * psize              : [array = [0.000172 0.000172]]
+       * energy             : 7.2
+       * center             : [array = [128. 128.]]
+       * distance           : 7.19
      * iterable             : list(80)
-       * id3VRD9I5KB8       : dict(4)
+       * id3VFJNEMEQ0       : dict(4)
          * index            : 0
          * data             : [256x256 int32 array]
+         * position         : [array = [0. 0.]]
          * mask             : [256x256 bool array]
-         * position         : [array = [ 0.  0.]]
-       * id3VRD9JL4K0       : dict(4)
+       * id3VFJNEMCU0       : dict(4)
          * index            : 1
          * data             : [256x256 int32 array]
+         * position         : [array = [0.         0.00041562]]
          * mask             : [256x256 bool array]
-         * position         : [array = [ 0.          0.00041562]]
-       * id3VRD9IIK2G       : dict(4)
+       * id3VFJNE7AIG       : dict(4)
          * index            : 2
          * data             : [256x256 int32 array]
+         * position         : [array = [0.00039528 0.00012844]]
          * mask             : [256x256 bool array]
-         * position         : [array = [ 0.00039528  0.00012844]]
-       * id3VRD9K83BG       : dict(4)
+       * id3VFJNE7ANG       : dict(4)
          * index            : 3
          * data             : [256x256 int32 array]
-         * mask             : [256x256 bool array]
          * position         : [array = [ 0.0002443  -0.00033625]]
-       * id3VRD9IJ82G       : dict(4)
+         * mask             : [256x256 bool array]
+       * id3VFJNE7980       : dict(4)
          * index            : 4
          * data             : [256x256 int32 array]
-         * mask             : [256x256 bool array]
          * position         : [array = [-0.0002443  -0.00033625]]
+         * mask             : [256x256 bool array]
        * ...                : ....
    
    
-   >>> print u.verbose.report(NPS.auto(80), noheader=True)
-   * id3VRD9I568G           : dict(2)
+   >>> print(u.verbose.report(NPS.auto(80), noheader=True))
+   * id3VFJNE7930           : dict(2)
      * common               : ptypy.utils.parameters.Param(8)
-       * distance           : 7.19
-       * center             : [array = [ 128.  128.]]
+       * version            : 0.1
        * num_frames         : 116
-       * energy             : 7.2
-       * psize              : [array = [ 0.000172  0.000172]]
        * label              : None
        * shape              : [array = [256 256]]
-       * version            : 0.1
+       * psize              : [array = [0.000172 0.000172]]
+       * energy             : 7.2
+       * center             : [array = [128. 128.]]
+       * distance           : 7.19
      * iterable             : list(36)
-       * id3VRD9IJ9VO       : dict(4)
+       * id3VFJNE7D0G       : dict(4)
          * index            : 80
          * data             : [256x256 int32 array]
+         * position         : [array = [0.0018532 0.0016686]]
          * mask             : [256x256 bool array]
-         * position         : [array = [ 0.0018532  0.0016686]]
-       * id3VRD9IJ9N0       : dict(4)
+       * id3VFJNF78RG       : dict(4)
          * index            : 81
          * data             : [256x256 int32 array]
+         * position         : [array = [0.0021597 0.0012469]]
          * mask             : [256x256 bool array]
-         * position         : [array = [ 0.0021597  0.0012469]]
-       * id3VRD9KIEH8       : dict(4)
+       * id3VFJNE7D80       : dict(4)
          * index            : 82
          * data             : [256x256 int32 array]
+         * position         : [array = [0.0023717  0.00077061]]
          * mask             : [256x256 bool array]
-         * position         : [array = [ 0.0023717   0.00077061]]
-       * id3VRD9IG5VO       : dict(4)
+       * id3VFJNF61PG       : dict(4)
          * index            : 83
          * data             : [256x256 int32 array]
+         * position         : [array = [0.0024801  0.00026067]]
          * mask             : [256x256 bool array]
-         * position         : [array = [ 0.0024801   0.00026067]]
-       * id3VRD9IIFBG       : dict(4)
+       * id3VFJNE7DFG       : dict(4)
          * index            : 84
          * data             : [256x256 int32 array]
-         * mask             : [256x256 bool array]
          * position         : [array = [ 0.0024801  -0.00026067]]
+         * mask             : [256x256 bool array]
        * ...                : ....
    
    
@@ -1095,8 +1097,6 @@ input paramaters.
    >>> data.save = 'append'
    >>> NPS = NumpyScan(pars=data)
    >>> NPS.initialize()
-   WARNING root - File /tmp/ptypy/sim/npy.ptyd already exist. Renamed to /tmp/ptypy/sim/npy.ptyd.old.
-   
 
 ::
 
@@ -1112,8 +1112,8 @@ We can analyse the saved ``npy.ptyd`` with
 ::
 
    >>> from ptypy.io import h5info
-   >>> print h5info(NPS.info.dfile)
-   File created : Mon Oct  8 18:48:37 2018
+   >>> print(h5info(NPS.info.dfile))
+   File created : Thu Oct 31 21:21:20 2019
     * chunks [dict 6]:
         * 0 [dict 4]:
             * data [20x256x256 int32 array]
@@ -1146,10 +1146,10 @@ We can analyse the saved ``npy.ptyd`` with
             * positions [16x2 float64 array]
             * weights [array = []]
     * info [dict 23]:
-        * add_poisson_noise [scalar = True]
+        * add_poisson_noise [scalar = False]
         * auto_center [scalar = False]
         * base_path [string = "/tmp/ptypy/sim/"]
-        * center [array = [ 128.  128.]]
+        * center [array = [128. 128.]]
         * chunk_format [string = ".chunk%02d"]
         * dfile [string = "/tmp/ptypy/sim/npy.ptyd"]
         * distance [scalar = 7.19]
@@ -1170,12 +1170,12 @@ We can analyse the saved ``npy.ptyd`` with
         * version [scalar = 0.1]
         * weight2d [scalar = True]
     * meta [dict 8]:
-        * center [array = [ 128.  128.]]
+        * center [array = [128. 128.]]
         * distance [scalar = 7.19]
         * energy [scalar = 7.2]
         * label [None]
         * num_frames [scalar = 116]
-        * psize [array = [ 0.000172  0.000172]]
+        * psize [array = [0.000172 0.000172]]
         * shape [array = [256 256]]
         * version [scalar = 0.1]
    

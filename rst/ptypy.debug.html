@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>ptypy.resources package &#8212; ptypy 0.4.0 documentation</title>
+    <title>ptypy.debug package &#8212; ptypy 0.4.0 documentation</title>
     <link rel="stylesheet" href="../_static/header.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
@@ -16,8 +16,7 @@
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="ptypy.simulations package" href="ptypy.simulations.html" />
-    <link rel="prev" title="ptypy.io package" href="ptypy.io.html" />
+    <link rel="prev" title="ptypy.utils package" href="ptypy.utils.html" />
 <link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
 
   </head><body>
@@ -48,10 +47,7 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="ptypy.simulations.html" title="ptypy.simulations package"
-             accesskey="N">next</a> |</li>
-        <li class="right" >
-          <a href="ptypy.io.html" title="ptypy.io package"
+          <a href="ptypy.utils.html" title="ptypy.utils package"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &#187;</li> 
@@ -74,10 +70,10 @@
 <li class="toctree-l3"><a class="reference internal" href="ptypy.engines.html">ptypy.engines package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.experiment.html">ptypy.experiment package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.io.html">ptypy.io package</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">ptypy.resources package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ptypy.resources.html">ptypy.resources package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.simulations.html">ptypy.simulations package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.utils.html">ptypy.utils package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ptypy.debug.html">ptypy.debug package</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">ptypy.debug package</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="ptypy.html#module-ptypy">Module contents</a></li>
@@ -86,15 +82,12 @@
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="ptypy.io.html"
-                        title="previous chapter">ptypy.io package</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="ptypy.simulations.html"
-                        title="next chapter">ptypy.simulations package</a></p>
+  <p class="topless"><a href="ptypy.utils.html"
+                        title="previous chapter">ptypy.utils package</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="../_sources/rst/ptypy.resources.rst.txt"
+      <li><a href="../_sources/rst/ptypy.debug.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -116,25 +109,91 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="ptypy-resources-package">
-<h1>ptypy.resources package<a class="headerlink" href="#ptypy-resources-package" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="module-ptypy.resources">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ptypy.resources" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="ptypy.resources.flower_obj">
-<code class="sig-prename descclassname">ptypy.resources.</code><code class="sig-name descname">flower_obj</code><span class="sig-paren">(</span><em class="sig-param">shape=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.resources.flower_obj" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+  <div class="section" id="ptypy-debug-package">
+<h1>ptypy.debug package<a class="headerlink" href="#ptypy-debug-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-ptypy.debug.embedded_shell">
+<span id="ptypy-debug-embedded-shell-module"></span><h2>ptypy.debug.embedded_shell module<a class="headerlink" href="#module-ptypy.debug.embedded_shell" title="Permalink to this headline">¶</a></h2>
+<p>Tool to embed an ipython shell for debugging.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
+</div></blockquote>
+</div>
+<div class="section" id="module-ptypy.debug.ipython_kernel">
+<span id="ptypy-debug-ipython-kernel-module"></span><h2>ptypy.debug.ipython_kernel module<a class="headerlink" href="#module-ptypy.debug.ipython_kernel" title="Permalink to this headline">¶</a></h2>
+<p>Tool to embed an ipython kernel for debugging.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="class">
+<dt id="ptypy.debug.ipython_kernel.IPythonKernelThread">
+<em class="property">class </em><code class="sig-prename descclassname">ptypy.debug.ipython_kernel.</code><code class="sig-name descname">IPythonKernelThread</code><span class="sig-paren">(</span><em class="sig-param">ns</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.debug.ipython_kernel.IPythonKernelThread" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">threading.Thread</span></code></p>
+<p>This constructor should always be called with keyword arguments. Arguments are:</p>
+<p><em>group</em> should be None; reserved for future extension when a ThreadGroup
+class is implemented.</p>
+<p><em>target</em> is the callable object to be invoked by the run()
+method. Defaults to None, meaning nothing is called.</p>
+<p><em>name</em> is the thread name. By default, a unique name is constructed of
+the form “Thread-N” where N is a small decimal number.</p>
+<p><em>args</em> is the argument tuple for the target invocation. Defaults to ().</p>
+<p><em>kwargs</em> is a dictionary of keyword arguments for the target
+invocation. Defaults to {}.</p>
+<p>If a subclass overrides the constructor, it must make sure to invoke
+the base class constructor (Thread.__init__()) before doing anything
+else to the thread.</p>
+<dl class="method">
+<dt id="ptypy.debug.ipython_kernel.IPythonKernelThread.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.debug.ipython_kernel.IPythonKernelThread.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method representing the thread’s activity.</p>
+<p>You may override this method in a subclass. The standard run() method
+invokes the callable object passed to the object’s constructor as the
+target argument, if any, with sequential and keyword arguments taken
+from the args and kwargs arguments, respectively.</p>
+</dd></dl>
+
+</dd></dl>
 
 <dl class="function">
-<dt id="ptypy.resources.moon_pr">
-<code class="sig-prename descclassname">ptypy.resources.</code><code class="sig-name descname">moon_pr</code><span class="sig-paren">(</span><em class="sig-param">shape=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.resources.moon_pr" title="Permalink to this definition">¶</a></dt>
+<dt id="ptypy.debug.ipython_kernel.start_ipython_kernel">
+<code class="sig-prename descclassname">ptypy.debug.ipython_kernel.</code><code class="sig-name descname">start_ipython_kernel</code><span class="sig-paren">(</span><em class="sig-param">ns</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.debug.ipython_kernel.start_ipython_kernel" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="function">
-<dt id="ptypy.resources.tree_obj">
-<code class="sig-prename descclassname">ptypy.resources.</code><code class="sig-name descname">tree_obj</code><span class="sig-paren">(</span><em class="sig-param">shape=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.resources.tree_obj" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
+</div>
+<div class="section" id="module-ptypy.debug">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ptypy.debug" title="Permalink to this headline">¶</a></h2>
+<p>Debug sub-package.</p>
+<p>A separate module because all this IPython mingling repeatedly caused
+trouble. Should not have any dependence on other submodules</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
+</div></blockquote>
 </div>
 </div>
 
@@ -154,10 +213,7 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="ptypy.simulations.html" title="ptypy.simulations package"
-             >next</a> |</li>
-        <li class="right" >
-          <a href="ptypy.io.html" title="ptypy.io package"
+          <a href="ptypy.utils.html" title="ptypy.utils package"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &#187;</li> 

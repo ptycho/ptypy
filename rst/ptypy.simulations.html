@@ -1,38 +1,26 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+<!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>ptypy.simulations package &mdash; ptypy 0.3.0 documentation</title>
-    
+    <meta charset="utf-8" />
+    <title>ptypy.simulations package &#8212; ptypy 0.4.0 documentation</title>
     <link rel="stylesheet" href="../_static/header.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '0.3.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
-    <link rel="top" title="ptypy 0.3.0 documentation" href="../content.html" />
-    <link rel="up" title="ptypy package" href="ptypy.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="ptypy.utils package" href="ptypy.utils.html" />
     <link rel="prev" title="ptypy.resources package" href="ptypy.resources.html" />
 <link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
 
-  </head>
-  <body role="document">
+  </head><body>
 
 
 
@@ -65,8 +53,8 @@
         <li class="right" >
           <a href="ptypy.resources.html" title="ptypy.resources package"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &#187;</li> 
       </ul>
     </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -74,7 +62,7 @@
             <p class="logo"><a href="../content.html">
               <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
             </a></p>
-<h3><a href="../content.html">Table Of Contents</a></h3>
+<h3><a href="../content.html">Table of Contents</a></h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
@@ -87,7 +75,7 @@
 <li class="toctree-l3"><a class="reference internal" href="ptypy.experiment.html">ptypy.experiment package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.io.html">ptypy.io package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.resources.html">ptypy.resources package</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="">ptypy.simulations package</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">ptypy.simulations package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.utils.html">ptypy.utils package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.debug.html">ptypy.debug package</a></li>
 </ul>
@@ -106,21 +94,18 @@
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="../_sources/rst/ptypy.simulations.txt"
+      <li><a href="../_sources/rst/ptypy.simulations.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -139,26 +124,24 @@
 <div class="section" id="module-ptypy.simulations.detector">
 <span id="ptypy-simulations-detector-module"></span><h2>ptypy.simulations.detector module<a class="headerlink" href="#module-ptypy.simulations.detector" title="Permalink to this headline">¶</a></h2>
 <p>Detector module</p>
-<p>Note that &#8220;dark current&#8221; and consequently exposure time is not used.
+<p>Note that “dark current” and consequently exposure time is not used.
 Modern detectors are insensitive to dark current.
 Scale the incoming Intensity accordingly to match the number of photons
 in your acquisition.</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
-<div><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
-</tr>
-</tbody>
-</table>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
 </div></blockquote>
 <dl class="function">
 <dt id="ptypy.simulations.detector.shot">
-<code class="descclassname">ptypy.simulations.detector.</code><code class="descname">shot</code><span class="sig-paren">(</span><em>I</em>, <em>exp=0.1</em>, <em>flux=100000.0</em>, <em>sensitivity=1.0</em>, <em>dark_c=None</em>, <em>io_noise=0.0</em>, <em>full_well=1023</em>, <em>el_per_ADU=1.0</em>, <em>offset=50.0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.detector.shot" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">ptypy.simulations.detector.</code><code class="sig-name descname">shot</code><span class="sig-paren">(</span><em class="sig-param">I</em>, <em class="sig-param">exp=0.1</em>, <em class="sig-param">flux=100000.0</em>, <em class="sig-param">sensitivity=1.0</em>, <em class="sig-param">dark_c=None</em>, <em class="sig-param">io_noise=0.0</em>, <em class="sig-param">full_well=1023</em>, <em class="sig-param">el_per_ADU=1.0</em>, <em class="sig-param">offset=50.0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.detector.shot" title="Permalink to this definition">¶</a></dt>
 <dd><p>I : intensity distribution
 flux : overall photon photons per seconds coming in
 exp : exposition time in sec
@@ -170,23 +153,23 @@ dark_curr : electrons per second per pixel on average</p>
 
 <dl class="class">
 <dt id="ptypy.simulations.detector.Detector">
-<em class="property">class </em><code class="descclassname">ptypy.simulations.detector.</code><code class="descname">Detector</code><span class="sig-paren">(</span><em>pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.detector.Detector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<em class="property">class </em><code class="sig-prename descclassname">ptypy.simulations.detector.</code><code class="sig-name descname">Detector</code><span class="sig-paren">(</span><em class="sig-param">pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.detector.Detector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="method">
 <dt id="ptypy.simulations.detector.Detector.filter">
-<code class="descname">filter</code><span class="sig-paren">(</span><em>intensity_stack</em>, <em>convert_dtype=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.detector.Detector.filter" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">filter</code><span class="sig-paren">(</span><em class="sig-param">intensity_stack</em>, <em class="sig-param">convert_dtype=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.detector.Detector.filter" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="function">
 <dt id="ptypy.simulations.detector.conv">
-<code class="descclassname">ptypy.simulations.detector.</code><code class="descname">conv</code><span class="sig-paren">(</span><em>A</em>, <em>inp</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.detector.conv" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">ptypy.simulations.detector.</code><code class="sig-name descname">conv</code><span class="sig-paren">(</span><em class="sig-param">A</em>, <em class="sig-param">inp</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.detector.conv" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="function">
 <dt id="ptypy.simulations.detector.fill2D">
-<code class="descclassname">ptypy.simulations.detector.</code><code class="descname">fill2D</code><span class="sig-paren">(</span><em>imA</em>, <em>imB</em>, <em>offset</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.detector.fill2D" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">ptypy.simulations.detector.</code><code class="sig-name descname">fill2D</code><span class="sig-paren">(</span><em class="sig-param">imA</em>, <em class="sig-param">imB</em>, <em class="sig-param">offset</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.detector.fill2D" title="Permalink to this definition">¶</a></dt>
 <dd><p>fill array imA with imB</p>
 </dd></dl>
 
@@ -196,20 +179,18 @@ dark_curr : electrons per second per pixel on average</p>
 <p>Utilities for the simulation package.</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
-<div><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
-</tr>
-</tbody>
-</table>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
 </div></blockquote>
 <dl class="function">
 <dt id="ptypy.simulations.ptysim_utils.exp_positions">
-<code class="descclassname">ptypy.simulations.ptysim_utils.</code><code class="descname">exp_positions</code><span class="sig-paren">(</span><em>positions</em>, <em>drift=0.0</em>, <em>scale=0.0</em>, <em>noise=0.0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.ptysim_utils.exp_positions" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">ptypy.simulations.ptysim_utils.</code><code class="sig-name descname">exp_positions</code><span class="sig-paren">(</span><em class="sig-param">positions</em>, <em class="sig-param">drift=0.0</em>, <em class="sig-param">scale=0.0</em>, <em class="sig-param">noise=0.0</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.ptysim_utils.exp_positions" title="Permalink to this definition">¶</a></dt>
 <dd><p>Takes postion array and messes around with it</p>
 </dd></dl>
 
@@ -219,44 +200,39 @@ dark_curr : electrons per second per pixel on average</p>
 <p>Simulation of ptychographic datasets.</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
-<div><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
-</tr>
-</tbody>
-</table>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
 </div></blockquote>
 <dl class="class">
 <dt id="ptypy.simulations.simscan.SimScan">
-<em class="property">class </em><code class="descclassname">ptypy.simulations.simscan.</code><code class="descname">SimScan</code><span class="sig-paren">(</span><em>pars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.simscan.SimScan" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref py py-class docutils literal"><span class="pre">ptypy.core.data.PtyScan</span></code></a></p>
+<em class="property">class </em><code class="sig-prename descclassname">ptypy.simulations.simscan.</code><code class="sig-name descname">SimScan</code><span class="sig-paren">(</span><em class="sig-param">pars=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.simscan.SimScan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ptypy.core.html#ptypy.core.data.PtyScan" title="ptypy.core.data.PtyScan"><code class="xref py py-class docutils literal notranslate"><span class="pre">ptypy.core.data.PtyScan</span></code></a></p>
 <p>Simulates a ptychographic scan and acts as Virtual data source.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>pars</strong> (<a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) &#8211; PtyScan parameters. See <a class="reference internal" href="parameters.html#scandata.SimScan" title="scandata.SimScan"><code class="xref py py-data docutils literal"><span class="pre">scandata.SimScan</span></code></a>.</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>pars</strong> (<a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) – PtyScan parameters. See <a class="reference internal" href="parameters.html#scandata.SimScan" title="scandata.SimScan"><code class="xref py py-data docutils literal notranslate"><span class="pre">scandata.SimScan</span></code></a>.</p>
+</dd>
+</dl>
 <dl class="attribute">
 <dt id="ptypy.simulations.simscan.SimScan.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'auto_center': None, 'positions_theory': None, 'min_frames': 1, 'orientation': None, 'num_frames': None, 'energy': 7.2, 'sample': Param({'diversity': Param({'shift': None, 'noise': None, 'power': 0.1}), 'recon': Param({'rfile': '\\*.ptyr'}), 'process': Param({'density': 1, 'offset': (0, 0), 'zoom': None, 'thickness': 1e-06, 'ref_index': (0.5, 0.0), 'formula': None, 'smoothing': 2}), 'stxm': Param({'label': None}), 'model': None, 'fill': 1}), 'shape': 256, 'xy': Param({'count': None, 'jitter': None, 'spacing': 1.5e-06, 'steps': 10, 'extent': 1.5e-05, 'offset': 0.0, 'override': None, 'model': None}), 'illumination': Param({'diversity': Param({'shift': None, 'noise': (0.5, 1.0), 'power': 0.1}), 'recon': Param({'rfile': '\\*.ptyr', 'label': None}), 'photons': None, 'propagation': Param({'antialiasing': 1, 'focussed': None, 'parallel': None, 'spot_size': None}), 'aperture': Param({'rotate': 0.0, 'form': 'circ', 'central_stop': None, 'edge': 2.0, 'diffuser': None, 'offset': 0.0, 'size': None}), 'model': None}), 'chunk_format': '.chunk%02d', 'plot': True, 'rebin': None, 'experimentID': None, 'label': None, 'version': 0.1, 'detector': Param({}), 'save': None, 'pos_noise': 1e-10, 'verbose_level': 1, 'psf': None, 'psize': 0.000172, 'load_parallel': 'data', 'frame_size': None, 'pos_scale': 0.0, 'pos_drift': 0.0, 'center': 'fftshift', 'distance': 7.19, 'dfile': None, 'name': 'SimScan', 'propagation': 'farfield', 'add_poisson_noise': True})</em><a class="headerlink" href="#ptypy.simulations.simscan.SimScan.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">DEFAULT</code><em class="property"> = {'add_poisson_noise': False, 'auto_center': None, 'center': 'fftshift', 'chunk_format': '.chunk%02d', 'detector': {}, 'dfile': None, 'distance': 7.19, 'energy': 7.2, 'experimentID': None, 'frame_size': None, 'illumination': {'aperture': {'central_stop': None, 'diffuser': None, 'edge': 2.0, 'form': 'circ', 'offset': 0.0, 'rotate': 0.0, 'size': None}, 'diversity': {'noise': (0.5, 1.0), 'power': 0.1, 'shift': None}, 'model': None, 'photons': None, 'propagation': {'antialiasing': 1, 'focussed': None, 'parallel': None, 'spot_size': None}, 'recon': {'label': None, 'rfile': '\\*.ptyr'}}, 'label': None, 'load_parallel': 'data', 'min_frames': 1, 'name': 'SimScan', 'num_frames': None, 'orientation': None, 'plot': True, 'pos_drift': 0.0, 'pos_noise': 1e-10, 'pos_scale': 0.0, 'positions_theory': None, 'propagation': 'farfield', 'psf': None, 'psize': 0.000172, 'rebin': None, 'sample': {'diversity': {'noise': None, 'power': 0.1, 'shift': None}, 'fill': 1, 'model': None, 'process': {'density': 1, 'formula': None, 'offset': (0, 0), 'ref_index': (0.5, 0.0), 'smoothing': 2, 'thickness': 1e-06, 'zoom': None}, 'recon': {'rfile': '\\*.ptyr'}, 'stxm': {'label': None}}, 'save': None, 'shape': 256, 'verbose_level': 1, 'version': 0.1, 'xy': {'count': None, 'extent': 1.5e-05, 'jitter': None, 'model': None, 'offset': 0.0, 'override': None, 'spacing': 1.5e-06, 'steps': 10}}</em><a class="headerlink" href="#ptypy.simulations.simscan.SimScan.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="ptypy.simulations.simscan.SimScan.load">
-<code class="descname">load</code><span class="sig-paren">(</span><em>indices</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.simscan.SimScan.load" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">indices</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.simscan.SimScan.load" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load data, weights and positions from internal dictionarys</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.simulations.simscan.SimScan.manipulate_ptycho">
-<code class="descname">manipulate_ptycho</code><span class="sig-paren">(</span><em>ptycho</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.simscan.SimScan.manipulate_ptycho" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">manipulate_ptycho</code><span class="sig-paren">(</span><em class="sig-param">ptycho</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.simulations.simscan.SimScan.manipulate_ptycho" title="Permalink to this definition">¶</a></dt>
 <dd><p>Overwrite in child class for inline manipulation
 of the ptycho instance that is created by the Simulation</p>
 </dd></dl>
@@ -269,16 +245,14 @@ of the ptycho instance that is created by the Simulation</p>
 <p>Ptychographic simulation module.</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
-<div><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
-</tr>
-</tbody>
-</table>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
 </div></blockquote>
 </div>
 </div>
@@ -304,13 +278,13 @@ of the ptycho instance that is created by the Simulation</p>
         <li class="right" >
           <a href="ptypy.resources.html" title="ptypy.resources package"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.6.
+        &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
     </div>
   </body>
 </html>

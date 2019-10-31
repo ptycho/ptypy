@@ -1,38 +1,26 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+<!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>ptypy.engines package &mdash; ptypy 0.3.0 documentation</title>
-    
+    <meta charset="utf-8" />
+    <title>ptypy.engines package &#8212; ptypy 0.4.0 documentation</title>
     <link rel="stylesheet" href="../_static/header.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '0.3.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
-    <link rel="top" title="ptypy 0.3.0 documentation" href="../content.html" />
-    <link rel="up" title="ptypy package" href="ptypy.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="ptypy.experiment package" href="ptypy.experiment.html" />
     <link rel="prev" title="ptypy.core package" href="ptypy.core.html" />
 <link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
 
-  </head>
-  <body role="document">
+  </head><body>
 
 
 
@@ -65,8 +53,8 @@
         <li class="right" >
           <a href="ptypy.core.html" title="ptypy.core package"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &#187;</li> 
       </ul>
     </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -74,7 +62,7 @@
             <p class="logo"><a href="../content.html">
               <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
             </a></p>
-<h3><a href="../content.html">Table Of Contents</a></h3>
+<h3><a href="../content.html">Table of Contents</a></h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
@@ -83,7 +71,7 @@
 <li class="toctree-l1 current"><a class="reference internal" href="ptypy.html">ptypy package</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="ptypy.html#subpackages">Subpackages</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="ptypy.core.html">ptypy.core package</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="">ptypy.engines package</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">ptypy.engines package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.experiment.html">ptypy.experiment package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.io.html">ptypy.io package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.resources.html">ptypy.resources package</a></li>
@@ -106,21 +94,18 @@
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="../_sources/rst/ptypy.engines.txt"
+      <li><a href="../_sources/rst/ptypy.engines.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -141,84 +126,82 @@
 <p>Difference Map reconstruction engine.</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
-<div><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
-</tr>
-</tbody>
-</table>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
 </div></blockquote>
 <dl class="class">
 <dt id="ptypy.engines.DM.DM">
-<em class="property">class </em><code class="descclassname">ptypy.engines.DM.</code><code class="descname">DM</code><span class="sig-paren">(</span><em>ptycho_parent</em>, <em>pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#ptypy.engines.base.BaseEngine" title="ptypy.engines.base.BaseEngine"><code class="xref py py-class docutils literal"><span class="pre">ptypy.engines.base.BaseEngine</span></code></a></p>
+<em class="property">class </em><code class="sig-prename descclassname">ptypy.engines.DM.</code><code class="sig-name descname">DM</code><span class="sig-paren">(</span><em class="sig-param">ptycho_parent</em>, <em class="sig-param">pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ptypy.engines.base.PositionCorrectionEngine" title="ptypy.engines.base.PositionCorrectionEngine"><code class="xref py py-class docutils literal notranslate"><span class="pre">ptypy.engines.base.PositionCorrectionEngine</span></code></a></p>
 <p>A full-fledged Difference Map engine.</p>
 <p>Difference map reconstruction engine.</p>
 <dl class="attribute">
 <dt id="ptypy.engines.DM.DM.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'obj_smooth_std': None, 'probe_support': 0.7, 'name': 'DM', 'overlap_converge_factor': 0.05, 'probe_update_start': 2, 'update_object_first': True, 'probe_center_tol': None, 'clip_object': None, 'probe_inertia': 1e-09, 'subpix': 'linear', 'overlap_max_iterations': 10, 'subpix_start': 0, 'alpha': 1, 'fourier_relax_factor': 0.05, 'numiter_contiguous': 1, 'object_inertia': 0.0001, 'numiter': 20})</em><a class="headerlink" href="#ptypy.engines.DM.DM.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">DEFAULT</code><em class="property"> = {'alpha': 1, 'clip_object': None, 'fourier_relax_factor': 0.05, 'name': 'DM', 'numiter': 20, 'numiter_contiguous': 1, 'obj_smooth_std': None, 'object_inertia': 0.0001, 'overlap_converge_factor': 0.05, 'overlap_max_iterations': 10, 'position_refinement': {'amplitude': 0.001, 'interval': 1, 'max_shift': 0.002, 'nshifts': 4, 'record': False, 'start': None, 'stop': None}, 'probe_center_tol': None, 'probe_inertia': 1e-09, 'probe_support': 0.7, 'probe_update_start': 2, 'subpix': 'linear', 'subpix_start': 0, 'update_object_first': True}</em><a class="headerlink" href="#ptypy.engines.DM.DM.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="attribute">
 <dt id="ptypy.engines.DM.DM.SUPPORTED_MODELS">
-<code class="descname">SUPPORTED_MODELS</code><em class="property"> = [&lt;class 'ptypy.core.manager.Full'&gt;, &lt;class 'ptypy.core.manager.Vanilla'&gt;, &lt;class 'ptypy.core.manager.Bragg3dModel'&gt;]</em><a class="headerlink" href="#ptypy.engines.DM.DM.SUPPORTED_MODELS" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">SUPPORTED_MODELS</code><em class="property"> = [&lt;class 'ptypy.core.manager.Full'&gt;, &lt;class 'ptypy.core.manager.Vanilla'&gt;, &lt;class 'ptypy.core.manager.Bragg3dModel'&gt;]</em><a class="headerlink" href="#ptypy.engines.DM.DM.SUPPORTED_MODELS" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.DM.DM.center_probe">
-<code class="descname">center_probe</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.center_probe" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">center_probe</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.center_probe" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.DM.DM.engine_finalize">
-<code class="descname">engine_finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.engine_finalize" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">engine_finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.engine_finalize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Try deleting ever helper container.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.DM.DM.engine_initialize">
-<code class="descname">engine_initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.engine_initialize" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">engine_initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.engine_initialize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Prepare for reconstruction.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.DM.DM.engine_iterate">
-<code class="descname">engine_iterate</code><span class="sig-paren">(</span><em>num=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.engine_iterate" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">engine_iterate</code><span class="sig-paren">(</span><em class="sig-param">num=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.engine_iterate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute <cite>num</cite> iterations.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.DM.DM.engine_prepare">
-<code class="descname">engine_prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.engine_prepare" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">engine_prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.engine_prepare" title="Permalink to this definition">¶</a></dt>
 <dd><p>Last minute initialization.</p>
 <p>Everything that needs to be recalculated when new data arrives.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.DM.DM.fourier_update">
-<code class="descname">fourier_update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.fourier_update" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">fourier_update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.fourier_update" title="Permalink to this definition">¶</a></dt>
 <dd><p>DM Fourier constraint update (including DM step).</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.DM.DM.object_update">
-<code class="descname">object_update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.object_update" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">object_update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.object_update" title="Permalink to this definition">¶</a></dt>
 <dd><p>DM object update.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.DM.DM.overlap_update">
-<code class="descname">overlap_update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.overlap_update" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">overlap_update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.overlap_update" title="Permalink to this definition">¶</a></dt>
 <dd><p>DM overlap constraint update.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.DM.DM.probe_update">
-<code class="descname">probe_update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.probe_update" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">probe_update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.DM.DM.probe_update" title="Permalink to this definition">¶</a></dt>
 <dd><p>DM probe update.</p>
 </dd></dl>
 
@@ -231,59 +214,57 @@
 <p>TODO.</p>
 <blockquote>
 <div><ul class="simple">
-<li>Implement other regularizers</li>
+<li><p>Implement other regularizers</p></li>
 </ul>
 </div></blockquote>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
-<div><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
-</tr>
-</tbody>
-</table>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
 </div></blockquote>
 <dl class="class">
 <dt id="ptypy.engines.ML.ML">
-<em class="property">class </em><code class="descclassname">ptypy.engines.ML.</code><code class="descname">ML</code><span class="sig-paren">(</span><em>ptycho_parent</em>, <em>pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.ML.ML" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#ptypy.engines.base.BaseEngine" title="ptypy.engines.base.BaseEngine"><code class="xref py py-class docutils literal"><span class="pre">ptypy.engines.base.BaseEngine</span></code></a></p>
+<em class="property">class </em><code class="sig-prename descclassname">ptypy.engines.ML.</code><code class="sig-name descname">ML</code><span class="sig-paren">(</span><em class="sig-param">ptycho_parent</em>, <em class="sig-param">pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.ML.ML" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ptypy.engines.base.PositionCorrectionEngine" title="ptypy.engines.base.PositionCorrectionEngine"><code class="xref py py-class docutils literal notranslate"><span class="pre">ptypy.engines.base.PositionCorrectionEngine</span></code></a></p>
 <p>Maximum likelihood reconstruction engine.</p>
 <p>Maximum likelihood reconstruction engine.</p>
 <dl class="attribute">
 <dt id="ptypy.engines.ML.ML.DEFAULT">
-<code class="descname">DEFAULT</code><em class="property"> = Param({'floating_intensities': False, 'probe_support': 0.7, 'name': 'ML', 'reg_del2_amplitude': 0.01, 'smooth_gradient_decay': 0.0, 'probe_update_start': 2, 'smooth_gradient': 0.0, 'scale_precond': False, 'intensity_renormalization': 1.0, 'scale_probe_object': 1.0, 'ML_type': 'gaussian', 'reg_del2': False, 'numiter_contiguous': 1, 'numiter': 20})</em><a class="headerlink" href="#ptypy.engines.ML.ML.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">DEFAULT</code><em class="property"> = {'ML_type': 'gaussian', 'floating_intensities': False, 'intensity_renormalization': 1.0, 'name': 'ML', 'numiter': 20, 'numiter_contiguous': 1, 'position_refinement': {'amplitude': 0.001, 'interval': 1, 'max_shift': 0.002, 'nshifts': 4, 'record': False, 'start': None, 'stop': None}, 'probe_support': 0.7, 'probe_update_start': 2, 'reg_del2': False, 'reg_del2_amplitude': 0.01, 'scale_precond': False, 'scale_probe_object': 1.0, 'smooth_gradient': 0.0, 'smooth_gradient_decay': 0.0}</em><a class="headerlink" href="#ptypy.engines.ML.ML.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="attribute">
 <dt id="ptypy.engines.ML.ML.SUPPORTED_MODELS">
-<code class="descname">SUPPORTED_MODELS</code><em class="property"> = [&lt;class 'ptypy.core.manager.Full'&gt;, &lt;class 'ptypy.core.manager.Vanilla'&gt;]</em><a class="headerlink" href="#ptypy.engines.ML.ML.SUPPORTED_MODELS" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">SUPPORTED_MODELS</code><em class="property"> = [&lt;class 'ptypy.core.manager.Full'&gt;, &lt;class 'ptypy.core.manager.Vanilla'&gt;]</em><a class="headerlink" href="#ptypy.engines.ML.ML.SUPPORTED_MODELS" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.ML.ML.engine_finalize">
-<code class="descname">engine_finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.ML.ML.engine_finalize" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">engine_finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.ML.ML.engine_finalize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete temporary containers.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.ML.ML.engine_initialize">
-<code class="descname">engine_initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.ML.ML.engine_initialize" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">engine_initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.ML.ML.engine_initialize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Prepare for ML reconstruction.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.ML.ML.engine_iterate">
-<code class="descname">engine_iterate</code><span class="sig-paren">(</span><em>num=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.ML.ML.engine_iterate" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">engine_iterate</code><span class="sig-paren">(</span><em class="sig-param">num=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.ML.ML.engine_iterate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute <cite>num</cite> iterations.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.ML.ML.engine_prepare">
-<code class="descname">engine_prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.ML.ML.engine_prepare" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">engine_prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.ML.ML.engine_prepare" title="Permalink to this definition">¶</a></dt>
 <dd><p>Last minute initialization, everything, that needs to be recalculated,
 when new data arrives.</p>
 </dd></dl>
@@ -297,24 +278,22 @@ when new data arrives.</p>
 by all engines.</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
-<div><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
-</tr>
-</tbody>
-</table>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
 </div></blockquote>
 <dl class="class">
 <dt id="ptypy.engines.base.BaseEngine">
-<em class="property">class </em><code class="descclassname">ptypy.engines.base.</code><code class="descname">BaseEngine</code><span class="sig-paren">(</span><em>ptycho</em>, <em>pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
-<p>Base reconstruction engine.</p>
-<p>In child classes, overwrite the following methods for custom behavior :</p>
-<p>engine_initialize
+<em class="property">class </em><code class="sig-prename descclassname">ptypy.engines.base.</code><code class="sig-name descname">BaseEngine</code><span class="sig-paren">(</span><em class="sig-param">ptycho</em>, <em class="sig-param">pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Base reconstruction engine.
+In child classes, overwrite the following methods for custom behavior :
+engine_initialize
 engine_prepare
 engine_iterate
 engine_finalize</p>
@@ -329,87 +308,79 @@ default = 1
 type = int
 lowlim = 1
 help = Number of iterations without interruption
-doc = The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...).</p>
+doc = The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, …).</p>
 <p>[probe_support]
 default = 0.7
 type = float
 lowlim = 0.0
 help = Valid probe area as fraction of the probe frame
 doc = Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.</p>
-<p>Base reconstruction engine.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>ptycho</strong> (<a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><em>Ptycho</em></a>) &#8211; The parent <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal"><span class="pre">Ptycho</span></code></a> object.</li>
-<li><strong>pars</strong> (<em>Param or dict</em>) &#8211; Initialization parameters</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
+<p>Base reconstruction engine.
+:param ptycho: The parent <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Ptycho</span></code></a> object.
+:type ptycho: Ptycho
+:param pars: Initialization parameters
+:type pars: Param or dict</p>
 <dl class="attribute">
 <dt id="ptypy.engines.base.BaseEngine.COMPATIBLE_MODELS">
-<code class="descname">COMPATIBLE_MODELS</code><em class="property"> = []</em><a class="headerlink" href="#ptypy.engines.base.BaseEngine.COMPATIBLE_MODELS" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">COMPATIBLE_MODELS</code><em class="property"> = []</em><a class="headerlink" href="#ptypy.engines.base.BaseEngine.COMPATIBLE_MODELS" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.base.BaseEngine.engine_finalize">
-<code class="descname">engine_finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.engine_finalize" title="Permalink to this definition">¶</a></dt>
-<dd><p>Engine-specific finalization.</p>
-<p>Used to wrap-up engine-specific stuff. Called at the end of
+<code class="sig-name descname">engine_finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.engine_finalize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Engine-specific finalization.
+Used to wrap-up engine-specific stuff. Called at the end of
 self.finalize()</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.base.BaseEngine.engine_initialize">
-<code class="descname">engine_initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.engine_initialize" title="Permalink to this definition">¶</a></dt>
-<dd><p>Engine-specific initialization.</p>
-<p>Called at the end of self.initialize().</p>
+<code class="sig-name descname">engine_initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.engine_initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Engine-specific initialization.
+Called at the end of self.initialize().</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.base.BaseEngine.engine_iterate">
-<code class="descname">engine_iterate</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.engine_iterate" title="Permalink to this definition">¶</a></dt>
-<dd><p>Engine single-step iteration.</p>
-<p>All book-keeping is done in self.iterate(), so this routine only needs
-to implement the &#8220;core&#8221; actions.</p>
+<code class="sig-name descname">engine_iterate</code><span class="sig-paren">(</span><em class="sig-param">num</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.engine_iterate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Engine single-step iteration.
+All book-keeping is done in self.iterate(), so this routine only needs
+to implement the “core” actions.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.base.BaseEngine.engine_prepare">
-<code class="descname">engine_prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.engine_prepare" title="Permalink to this definition">¶</a></dt>
-<dd><p>Engine-specific preparation.</p>
-<p>Last-minute initialization providing up-to-date information for
+<code class="sig-name descname">engine_prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.engine_prepare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Engine-specific preparation.
+Last-minute initialization providing up-to-date information for
 reconstruction. Called at the end of self.prepare()</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.base.BaseEngine.finalize">
-<code class="descname">finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.finalize" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.finalize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Clean up after iterations are done.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.base.BaseEngine.initialize">
-<code class="descname">initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.initialize" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.initialize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Prepare for reconstruction.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.base.BaseEngine.iterate">
-<code class="descname">iterate</code><span class="sig-paren">(</span><em>num=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.iterate" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">iterate</code><span class="sig-paren">(</span><em class="sig-param">num=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.iterate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute one or several iterations.</p>
-<dl class="docutils">
-<dt>num <span class="classifier-delimiter">:</span> <span class="classifier">None, int number of iterations.</span></dt>
-<dd>If None or num&lt;1, a single iteration is performed.</dd>
+<dl class="simple">
+<dt>num<span class="classifier">None, int number of iterations.</span></dt><dd><p>If None or num&lt;1, a single iteration is performed.</p>
+</dd>
 </dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="ptypy.engines.base.BaseEngine.prepare">
-<code class="descname">prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.prepare" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.BaseEngine.prepare" title="Permalink to this definition">¶</a></dt>
 <dd><p>Last-minute preparation before iterating.</p>
 </dd></dl>
 
@@ -417,30 +388,80 @@ reconstruction. Called at the end of self.prepare()</p>
 
 <dl class="class">
 <dt id="ptypy.engines.base.Base3dBraggEngine">
-<em class="property">class </em><code class="descclassname">ptypy.engines.base.</code><code class="descname">Base3dBraggEngine</code><span class="sig-paren">(</span><em>ptycho</em>, <em>pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.Base3dBraggEngine" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#ptypy.engines.base.BaseEngine" title="ptypy.engines.base.BaseEngine"><code class="xref py py-class docutils literal"><span class="pre">ptypy.engines.base.BaseEngine</span></code></a></p>
+<em class="property">class </em><code class="sig-prename descclassname">ptypy.engines.base.</code><code class="sig-name descname">Base3dBraggEngine</code><span class="sig-paren">(</span><em class="sig-param">ptycho</em>, <em class="sig-param">pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.Base3dBraggEngine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ptypy.engines.base.BaseEngine" title="ptypy.engines.base.BaseEngine"><code class="xref py py-class docutils literal notranslate"><span class="pre">ptypy.engines.base.BaseEngine</span></code></a></p>
 <p>3d Bragg engines need a slightly different prepare() method, because
-a 2d probe support makes no sense (at least not yet...)</p>
+a 2d probe support makes no sense (at least not yet…)</p>
 <p>Defaults:</p>
 <p>[probe_support]
 default = None</p>
-<p>Base reconstruction engine.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>ptycho</strong> (<a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><em>Ptycho</em></a>) &#8211; The parent <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal"><span class="pre">Ptycho</span></code></a> object.</li>
-<li><strong>pars</strong> (<em>Param or dict</em>) &#8211; Initialization parameters</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
+<p>Base reconstruction engine.
+:param ptycho: The parent <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Ptycho</span></code></a> object.
+:type ptycho: Ptycho
+:param pars: Initialization parameters
+:type pars: Param or dict</p>
 <dl class="method">
 <dt id="ptypy.engines.base.Base3dBraggEngine.prepare">
-<code class="descname">prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.Base3dBraggEngine.prepare" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.Base3dBraggEngine.prepare" title="Permalink to this definition">¶</a></dt>
 <dd><p>Last-minute preparation before iterating.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ptypy.engines.base.PositionCorrectionEngine">
+<em class="property">class </em><code class="sig-prename descclassname">ptypy.engines.base.</code><code class="sig-name descname">PositionCorrectionEngine</code><span class="sig-paren">(</span><em class="sig-param">ptycho</em>, <em class="sig-param">pars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.PositionCorrectionEngine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ptypy.engines.base.BaseEngine" title="ptypy.engines.base.BaseEngine"><code class="xref py py-class docutils literal notranslate"><span class="pre">ptypy.engines.base.BaseEngine</span></code></a></p>
+<p>A sub class engine that supports position correction</p>
+<p>Defaults:</p>
+<p>[position_refinement]
+default = False
+type = Param, bool
+help = If True refine scan positions</p>
+<p>[position_refinement.start]
+default = None
+type = int
+help = Number of iterations until position refinement starts</p>
+<p>[position_refinement.stop]
+default = None
+type = int
+help = Number of iterations after which positon refinement stops
+doc = If None, position refinement stops after last iteration</p>
+<p>[position_refinement.interval]
+default = 1
+type = int
+help = Frequency of position refinement</p>
+<p>[position_refinement.nshifts]
+default = 4
+type = int
+help = Number of random shifts calculated in each position refinement step (has to be multiple of 4)</p>
+<p>[position_refinement.amplitude]
+default = 0.001
+type = float
+help = Distance from original position per random shift [m]</p>
+<p>[position_refinement.max_shift]
+default = 0.002
+type = float
+help = Maximum distance from original position [m]</p>
+<p>[position_refinement.record]
+default = False
+type = bool
+help = record movement of positions</p>
+<p>Base reconstruction engine.
+:param ptycho: The parent <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Ptycho</span></code></a> object.
+:type ptycho: Ptycho
+:param pars: Initialization parameters
+:type pars: Param or dict</p>
+<dl class="method">
+<dt id="ptypy.engines.base.PositionCorrectionEngine.engine_initialize">
+<code class="sig-name descname">engine_initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.PositionCorrectionEngine.engine_initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare the position refinement object for use further down the line.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ptypy.engines.base.PositionCorrectionEngine.position_update">
+<code class="sig-name descname">position_update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.base.PositionCorrectionEngine.position_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Position refinement update.</p>
 </dd></dl>
 
 </dd></dl>
@@ -452,105 +473,91 @@ default = None</p>
 This could be compiled, or GPU accelerated.</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
-<div><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
-</tr>
-</tbody>
-</table>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
 </div></blockquote>
 <dl class="function">
 <dt id="ptypy.engines.utils.Cdot">
-<code class="descclassname">ptypy.engines.utils.</code><code class="descname">Cdot</code><span class="sig-paren">(</span><em>c1</em>, <em>c2</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.utils.Cdot" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">ptypy.engines.utils.</code><code class="sig-name descname">Cdot</code><span class="sig-paren">(</span><em class="sig-param">c1</em>, <em class="sig-param">c2</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.utils.Cdot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the dot product on two containers <cite>c1</cite> and <cite>c2</cite>.
 No check is made to ensure they are of the same kind.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>c1, c2</strong> (<a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><em>Container</em></a>) &#8211; Input</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The dot product (<em>scalar</em>)</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>c1</strong><strong>, </strong><strong>c2</strong> (<a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><em>Container</em></a>) – Input</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The dot product (<em>scalar</em>)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="function">
 <dt id="ptypy.engines.utils.Cnorm2">
-<code class="descclassname">ptypy.engines.utils.</code><code class="descname">Cnorm2</code><span class="sig-paren">(</span><em>c</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.utils.Cnorm2" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">ptypy.engines.utils.</code><code class="sig-name descname">Cnorm2</code><span class="sig-paren">(</span><em class="sig-param">c</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.utils.Cnorm2" title="Permalink to this definition">¶</a></dt>
 <dd><p>Computes a norm2 on whole container <cite>c</cite>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>c</strong> (<a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><em>Container</em></a>) &#8211; Input</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The norm2 (<em>scalar</em>)</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>c</strong> (<a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><em>Container</em></a>) – Input</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The norm2 (<em>scalar</em>)</p>
+</dd>
+</dl>
 <div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="ptypy.utils.html#ptypy.utils.math_utils.norm2" title="ptypy.utils.math_utils.norm2"><code class="xref py py-func docutils literal"><span class="pre">ptypy.utils.math_utils.norm2()</span></code></a></p>
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="ptypy.utils.html#ptypy.utils.math_utils.norm2" title="ptypy.utils.math_utils.norm2"><code class="xref py py-func docutils literal notranslate"><span class="pre">ptypy.utils.math_utils.norm2()</span></code></a></p>
 </div>
 </dd></dl>
 
 <dl class="function">
 <dt id="ptypy.engines.utils.basic_fourier_update">
-<code class="descclassname">ptypy.engines.utils.</code><code class="descname">basic_fourier_update</code><span class="sig-paren">(</span><em>diff_view</em>, <em>pbound=None</em>, <em>alpha=1.0</em>, <em>LL_error=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.utils.basic_fourier_update" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">ptypy.engines.utils.</code><code class="sig-name descname">basic_fourier_update</code><span class="sig-paren">(</span><em class="sig-param">diff_view</em>, <em class="sig-param">pbound=None</em>, <em class="sig-param">alpha=1.0</em>, <em class="sig-param">LL_error=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.utils.basic_fourier_update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fourier update a single view using its associated pods.
-Updates on all pods&#8217; exit waves.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>diff_view</strong> (<a class="reference internal" href="ptypy.core.html#ptypy.core.classes.View" title="ptypy.core.classes.View"><em>View</em></a>) &#8211; View to diffraction data</li>
-<li><strong>alpha</strong> (<em>float, optional</em>) &#8211; Mixing between old and new exit wave. Valid interval <code class="docutils literal"><span class="pre">[0,</span> <span class="pre">1]</span></code></li>
-<li><strong>pbound</strong> (<em>float, optional</em>) &#8211; Power bound. Fourier update is bypassed if the quadratic deviation
+Updates on all pods’ exit waves.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>diff_view</strong> (<a class="reference internal" href="ptypy.core.html#ptypy.core.classes.View" title="ptypy.core.classes.View"><em>View</em></a>) – View to diffraction data</p></li>
+<li><p><strong>alpha</strong> (<em>float</em><em>, </em><em>optional</em>) – Mixing between old and new exit wave. Valid interval <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code></p></li>
+<li><p><strong>pbound</strong> (<em>float</em><em>, </em><em>optional</em>) – Power bound. Fourier update is bypassed if the quadratic deviation
 between diffraction data and <cite>diff_view</cite> is below this value.
-If <code class="docutils literal"><span class="pre">None</span></code>, fourier update always happens.</li>
-<li><strong>LL_error</strong> (<em>bool</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, calculates log-likelihood and puts it in the last entry
-of the returned error vector, else puts in <code class="docutils literal"><span class="pre">0.0</span></code></li>
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, fourier update always happens.</p></li>
+<li><p><strong>LL_error</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, calculates log-likelihood and puts it in the last entry
+of the returned error vector, else puts in <code class="docutils literal notranslate"><span class="pre">0.0</span></code></p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>error</strong> &#8211;
-1d array, <code class="docutils literal"><span class="pre">error</span> <span class="pre">=</span> <span class="pre">np.array([err_fmag,</span> <span class="pre">err_phot,</span> <span class="pre">err_exit])</span></code>.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>error</strong> – 1d array, <code class="docutils literal notranslate"><span class="pre">error</span> <span class="pre">=</span> <span class="pre">np.array([err_fmag,</span> <span class="pre">err_phot,</span> <span class="pre">err_exit])</span></code>.</p>
 <ul class="simple">
-<li><cite>err_fmag</cite>, Fourier magnitude error; quadratic deviation from
-root of experimental data</li>
-<li><cite>err_phot</cite>, quadratic deviation from experimental data (photons)</li>
-<li><cite>err_exit</cite>, quadratic deviation of exit waves before and after
-Fourier iteration</li>
+<li><p><cite>err_fmag</cite>, Fourier magnitude error; quadratic deviation from
+root of experimental data</p></li>
+<li><p><cite>err_phot</cite>, quadratic deviation from experimental data (photons)</p></li>
+<li><p><cite>err_exit</cite>, quadratic deviation of exit waves before and after
+Fourier iteration</p></li>
 </ul>
 </p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="function">
 <dt id="ptypy.engines.utils.dynamic_load">
-<code class="descclassname">ptypy.engines.utils.</code><code class="descname">dynamic_load</code><span class="sig-paren">(</span><em>path</em>, <em>baselist</em>, <em>fail_silently=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.utils.dynamic_load" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">ptypy.engines.utils.</code><code class="sig-name descname">dynamic_load</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">baselist</em>, <em class="sig-param">fail_silently=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.utils.dynamic_load" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load an derivatives <cite>of baselist</cite> dynamically from .py files in the given path.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> &#8211; Path to Python files.</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> – Path to Python files.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </div>
@@ -561,25 +568,23 @@ Fourier iteration</li>
 algorithms for ptychography.</p>
 <p>This file is part of the PTYPY package.</p>
 <blockquote>
-<div><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2014 by the PTYPY team, see AUTHORS.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
-</tr>
-</tbody>
-</table>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
 </div></blockquote>
 <dl class="function">
 <dt id="ptypy.engines.by_name">
-<code class="descclassname">ptypy.engines.</code><code class="descname">by_name</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.by_name" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">ptypy.engines.</code><code class="sig-name descname">by_name</code><span class="sig-paren">(</span><em class="sig-param">name</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.by_name" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="function">
 <dt id="ptypy.engines.register">
-<code class="descclassname">ptypy.engines.</code><code class="descname">register</code><span class="sig-paren">(</span><em>name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.register" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">ptypy.engines.</code><code class="sig-name descname">register</code><span class="sig-paren">(</span><em class="sig-param">name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.engines.register" title="Permalink to this definition">¶</a></dt>
 <dd><p>Engine registration decorator</p>
 </dd></dl>
 
@@ -607,13 +612,13 @@ algorithms for ptychography.</p>
         <li class="right" >
           <a href="ptypy.core.html" title="ptypy.core package"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.6.
+        &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
     </div>
   </body>
 </html>

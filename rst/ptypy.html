@@ -1,37 +1,26 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+<!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>ptypy package &mdash; ptypy 0.3.0 documentation</title>
-    
+    <meta charset="utf-8" />
+    <title>ptypy package &#8212; ptypy 0.4.0 documentation</title>
     <link rel="stylesheet" href="../_static/header.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '0.3.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
-    <link rel="top" title="ptypy 0.3.0 documentation" href="../content.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="ptypy.core package" href="ptypy.core.html" />
     <link rel="prev" title="Parameter tree structure" href="parameters.html" />
 <link href='http://fonts.googleapis.com/css?family=PT+Sans|Ubuntu|Cuprum' rel='stylesheet' type='text/css'>
 
-  </head>
-  <body role="document">
+  </head><body>
 
 
 
@@ -64,7 +53,7 @@
         <li class="right" >
           <a href="parameters.html" title="Parameter tree structure"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li> 
       </ul>
     </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -72,13 +61,13 @@
             <p class="logo"><a href="../content.html">
               <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
             </a></p>
-<h3><a href="../content.html">Table Of Contents</a></h3>
+<h3><a href="../content.html">Table of Contents</a></h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data_management.html">Data management</a></li>
 <li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">ptypy package</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ptypy package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.core.html">ptypy.core package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ptypy.engines.html">ptypy.engines package</a></li>
@@ -104,21 +93,18 @@
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="../_sources/rst/ptypy.txt"
+      <li><a href="../_sources/rst/ptypy.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -219,25 +205,24 @@
 </div>
 <div class="section" id="module-ptypy">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ptypy" title="Permalink to this headline">¶</a></h2>
-<p>PTYPY(v0.2.0): A ptychography reconstruction package.</p>
-<dl class="docutils">
-<dt>To cite PTYPY in publications, use</dt>
-<dd><p class="first">&#64;article{ ... }</p>
-<blockquote class="last">
-<div><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">copyright:</th><td class="field-body">Copyright 2018 by the PTYPY team, see AUTHORS.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">license:</th><td class="field-body">GPLv2, see LICENSE for details.</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">version:</th><td class="field-body">0.2.0.dev</td>
-</tr>
-<tr class="field-even field"><th class="field-name">status:</th><td class="field-body">development</td>
-</tr>
-</tbody>
-</table>
+<p>PTYPY(v0.4.0): A ptychography reconstruction package.</p>
+<dl>
+<dt>To cite PTYPY in publications, use</dt><dd><p>&#64;article{ … }</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2018 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+<dt class="field-odd">version</dt>
+<dd class="field-odd"><p>0.4.0</p>
+</dd>
+<dt class="field-even">status</dt>
+<dd class="field-even"><p>release</p>
+</dd>
+</dl>
 </div></blockquote>
 </dd>
 </dl>
@@ -265,12 +250,12 @@
         <li class="right" >
           <a href="parameters.html" title="Parameter tree structure"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.3.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.6.
+        &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
     </div>
   </body>
 </html>

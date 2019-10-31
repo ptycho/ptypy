@@ -231,6 +231,11 @@ class attributes, making the scripts and code much more readable.
 ::
 
    >>> from ptypy import utils as u
+   Message Passaging for Python (mpi4py) not found.
+       CPU-parallelization disabled.
+       Install python-mpi4py via the package repositories or with `pip install --user mpi4py`
+   Could not import experiment cSAXSScan from .cSAXS, Reason: No module named 'fabio'
+   
    >>> p = u.Param()  # root level
 
 We set the verbosity to a high level, in order to have information on the
@@ -297,17 +302,6 @@ Now we have to insert actual parameters associated with a
 ptychographic scan.
 
 PtyPy is designed to support reconstruction from mutliple scans.
-The ``scan`` branch of the tree holds all *common* parameters for scans
-and acts as a default template when there are more than one scan.
-Scan-specific parameters have to be placed in another branch called ``scans``.
-If there is only one scan, parameters can be given in either branch.
-In this tutorial we do not bother to enter parameters here so we leave the branch empty
-(It will be filled with the defaults of :py:data:`.scan` ) .
-
-::
-
-   >>> p.scan = u.Param()
-
 Each individual scan is represented by a branch in ``scans``. The parameters
 in these branches are those that differ from the *defaults* in the ``scan``
 branch mentioned above.
@@ -371,6 +365,10 @@ using all reconstruction engines in ``p.engines`` immediately upon construction.
 ::
 
    >>> from ptypy.core import Ptycho
+   >>> P = Ptycho(p, level=5)
+
+From the terminal log, we note that there was an autosave every 20
+iterations and the error reduced from iteration to iteration.
 
 
 .. _morescripts:
