@@ -207,7 +207,7 @@ def allreduceC(c):
     --------
     ptypy.utils.parallel.allreduce
     """
-    for s in c.S.itervalues():
+    for s in c.S.values():
         allreduce(s.data)
 
 def _MPIop(a, op, axis=None):
@@ -578,7 +578,7 @@ def gather_dict(dct, target=0):
             # your turn to send
             l = len(dct)
             comm.send(l, dest=target,tag=9999)
-            for k,v in dct.iteritems():
+            for k,v in dct.items():
                 #print rank,str(k),v
                 #send(k, dest=target)
                 comm.send(k, dest=target,tag=9999)
@@ -899,7 +899,7 @@ def _gather_dict(dct, target=0):
             # your turn to send
             l = len(dct)
             comm.send(l, dest=target)
-            for item in dct.iteritems():
+            for item in dct.items():
                 send(item, dest=target)
         barrier()
 

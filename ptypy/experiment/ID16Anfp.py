@@ -337,7 +337,7 @@ class ID16AScan(PtyScan):
         if self.info.recipe.use_bpm5_ct:
             print('Reading the values of the bpm5 ct')
             bpm5_ct_val = np.zeros(self.num_frames)
-            for ii in xrange(self.num_frames):
+            for ii in range(self.num_frames):
                 projobj = io.h5read(self.frame_format.format(ii),self.h5_path)[self.h5_path]
                 #projobj = io.h5read(self._index_to_frame(ii),self.h5_path)[self.h5_path]
                 # metadata

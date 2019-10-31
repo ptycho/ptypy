@@ -170,10 +170,10 @@ class EPIE(BaseEngine):
 
         # mark the pixels covered per node
         self.ob_nodecover.fill(0.0)
-        for name, pod in self.pods.iteritems():
+        for name, pod in self.pods.items():
             if pod.active:
                 self.ob_nodecover[pod.ob_view] = 1
-        self.nodemask = np.array(self.ob_nodecover.S.values()[0].data[0],
+        self.nodemask = np.array(list(self.ob_nodecover.S.values())[0].data[0],
                                  dtype=np.bool)
 
         # communicate this over MPI
@@ -187,7 +187,7 @@ class EPIE(BaseEngine):
         #     plt.show()
         #     if parallel.master:
         #         import matplotlib.pyplot as plt
-        #         plt.imshow(self.ob_nodecover.S.values()[0].data[0].real)
+        #         plt.imshow(list(self.ob_nodecover.S.values())[0].data[0].real)
         #         plt.colorbar()
         #         plt.show()
 
@@ -195,7 +195,7 @@ class EPIE(BaseEngine):
         """
         Compute `num` iterations.
         """
-        pod_order = self.pods.keys()
+        pod_order = list(self.pods.keys())
         pod_order.sort()
         to = 0.0
         tf = 0.0
@@ -209,7 +209,7 @@ class EPIE(BaseEngine):
 
             # object smooting prior to update, if requested
             if self.p.obj_smooth_std is not None:
-                for name, s in self.ob.S.iteritems():
+                for name, s in self.ob.S.items():
                     # u.c_gf is a complex wrapper around
                     # scipy.ndimage.gaussian_filter()
                     std = self.p.obj_smooth_std
@@ -256,7 +256,7 @@ class EPIE(BaseEngine):
                 if do_update_probe:
                     logger.debug(pre_str + '----- ePIE probe update -----')
                     object_max = np.max(
-                        np.abs(self.ob.S.values()[0].data.max())**2)
+                        np.abs(list(self.ob.S.values())[0].data.max())**2)
                     pod.probe += (self.p.beta
                                   * np.conj(pod.object) / object_max
                                   * (pod.exit - exit_))
@@ -271,7 +271,7 @@ class EPIE(BaseEngine):
             # clip the object, if requested
             if self.p.clip_object is not None:
                 low, high = self.p.clip_object
-                for name, s in self.ob.S.iteritems():
+                for name, s in self.ob.S.items():
                     phase = np.angle(s.data)
                     ampl = np.abs(s.data)
                     under = (ampl < low)
@@ -290,18 +290,18 @@ class EPIE(BaseEngine):
                 # only share the part of the object which whis node has
                 # contributed to, and zero the rest to avoid weird
                 # feedback.
-                self.ob.S.values()[0].data[0] *= self.nodemask
+                list(self.ob.S.values())[0].data[0] *= self.nodemask
                 parallel.allreduceC(self.ob)
 
                 # the reduced sum should be an average, and the
                 # denominator (the number of contributing nodes) varies
                 # across the object.
-                for name, s in self.ob.S.iteritems():
+                for name, s in self.ob.S.items():
                     s.data /= (np.abs(self.ob_nodecover.S[name].data) + 1e-5)
 
                 # average the probe across nodes, if requested
                 if self.p.average_probe and do_update_probe:
-                    for name, s in self.pr.S.iteritems():
+                    for name, s in self.pr.S.items():
                         parallel.allreduce(s.data)
                         s.data /= parallel.size
                 t3 = time.time()
@@ -346,10 +346,10 @@ class EPIE(BaseEngine):
         t0 = time.time()
 
         # get the range of positions and define the size of each node's domain
-        pod = self.pods.values()[0]
+        pod = list(self.pods.values())[0]
         xlims = [pod.ob_view.coord[1], ] * 2  # min, max
         ylims = [pod.ob_view.coord[0], ] * 2  # min, max
-        for name, pod in self.pods.iteritems():
+        for name, pod in self.pods.items():
             xlims = [min(xlims[0], pod.ob_view.coord[1]),
                      max(xlims[1], pod.ob_view.coord[1])]
             ylims = [min(ylims[0], pod.ob_view.coord[0]),
@@ -363,13 +363,13 @@ class EPIE(BaseEngine):
 
         # now, the node number corresponding to a coordinate (x, y) is
         def __node(x, y):
-            return (int((x - xlims[0]) / dx)
-                    + layout[1] * int((y - ylims[0]) / dy))
+            return ((x - xlims[0]) // dx
+                    + layout[1] * (y - ylims[0]) // dy)
 
         # now, each node works out which of its own pods to send off,
         # and the result is communicated to all other nodes as a dict.
         destinations = {}
-        for name, pod in self.pods.iteritems():
+        for name, pod in self.pods.items():
             if not pod.active:
                 continue
             y, x = pod.ob_view.coord
@@ -382,7 +382,7 @@ class EPIE(BaseEngine):
 
         # prepare (enlarge) the storages on the receiving nodes
         sendpods = []
-        for name, dest in destinations.iteritems():
+        for name, dest in destinations.items():
             if self.pods[name].active:
                 # sending this pod, so add it to a temporary list
                 sendpods.append(name)
@@ -396,7 +396,7 @@ class EPIE(BaseEngine):
 
         # transfer data
         transferred = 0
-        for name, dest in destinations.iteritems():
+        for name, dest in destinations.items():
             if name in sendpods:
                 # your turn to send
                 parallel.send(self.pods[name].diff, dest=dest)
@@ -431,15 +431,15 @@ class EPIE(BaseEngine):
             if N % i == 0:
                 solutions.append(i)
         i = max(solutions)
-        assert (i * (N / i) == N)
-        return [i, N / i]
+        assert (i * (N // i) == N)
+        return [i, N // i]
 
     def center_probe(self):
         """
         Stolen in its entirety from the DM engine.
         """
         if self.p.probe_center_tol is not None:
-            for name, s in self.pr.S.iteritems():
+            for name, s in self.pr.S.items():
                 c1 = u.mass_center(u.abs2(s.data).sum(0))
                 # fft convention should however use geometry instead
                 c2 = np.asarray(s.shape[-2:]) // 2

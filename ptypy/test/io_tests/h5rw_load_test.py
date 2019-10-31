@@ -11,7 +11,6 @@ import h5py as h5
 import ptypy.io as io
 import ptypy.utils as u
 import numpy as np
-import cPickle
 import collections
 
 
@@ -137,4 +136,3 @@ class H5rwLoadTest(unittest.TestCase):
         out = io.h5read(self.filepath % "load_pickle_test", "content")["content"]
         np.testing.assert_equal(type(out['pickle data']), type(content['pickle data']))
         np.testing.assert_equal(out['pickle data'].__dict__, content['pickle data'].__dict__)
-

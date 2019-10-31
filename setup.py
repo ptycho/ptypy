@@ -13,8 +13,8 @@ Operating System :: Unix
 """
 
 MAJOR               = 0
-MINOR               = 3
-MICRO               = 1
+MINOR               = 4
+MICRO               = 0
 ISRELEASED          = True
 VERSION             = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 
@@ -50,6 +50,7 @@ if not release:
 
 if __name__ == '__main__':
     write_version_py()
+    write_version_py('doc/version.py')
     try:
         execfile('ptypy/version.py')
         vers = version
@@ -61,7 +62,7 @@ setup(
     version=VERSION,
     author='Pierre Thibault, Bjoern Enders, Martin Dierolf and others',
     description='Ptychographic reconstruction toolbox',
-    long_description=file('README.rst', 'r').read(),
+    long_description=open('README.rst', 'r').read(),
     #install_requires = ['numpy>=1.8',\
                         #'h5py>=2.2',\
                         #'matplotlib>=1.3',\

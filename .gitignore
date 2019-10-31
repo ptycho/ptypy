@@ -11,6 +11,7 @@ doc/rst/data_management.rst
 doc/_img/*.png
 tutorial/*.png
 ghostdriver*
+doc/version.py
 ptypy/version.py
 .idea/
 .cache/

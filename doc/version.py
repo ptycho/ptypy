@@ -12,5 +12,5 @@ if not release:
     except:
         pass
     else:
-        version += git_commit.strip()
+        version += git_commit.strip().decode()
 
