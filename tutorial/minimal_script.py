@@ -65,14 +65,6 @@ p.io.interaction.active = False
 # ptychographic scan.
 
 # PtyPy is designed to support reconstruction from mutliple scans.
-# The ``scan`` branch of the tree holds all *common* parameters for scans
-# and acts as a default template when there are more than one scan.
-# Scan-specific parameters have to be placed in another branch called ``scans``.
-# If there is only one scan, parameters can be given in either branch.
-# In this tutorial we do not bother to enter parameters here so we leave the branch empty
-# (It will be filled with the defaults of :py:data:`.scan` ) .
-p.scan = u.Param()
-
 # Each individual scan is represented by a branch in ``scans``. The parameters
 # in these branches are those that differ from the *defaults* in the ``scan``
 # branch mentioned above.

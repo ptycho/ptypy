@@ -11,7 +11,6 @@ from ..core import View
 from .. import utils as u
 from ..utils.verbose import log
 import numpy as np
-from ..core.classes import DEFAULT_ACCESSRULE
 
 
 class PositionRefine(object):
@@ -74,29 +73,9 @@ class AnnealingRefine(PositionRefine):
 
         self.Cobj = Cobj  # take a reference here. It would be cool if we could make this read-only or something
 
-        # Store initial positions to check if things have drifted too far
-        self.initial_positions = np.zeros((len(Cobj.views), 2))
-        self.corrected_positions = np.zeros((len(Cobj.views), 2))
-        self.view_index_lookup = {}
-        for idx, ob_view in enumerate(Cobj.views.keys()):
-            self.view_index_lookup[ob_view] = idx
-        for vname, ob_view in Cobj.views.iteritems():
-            self.initial_positions[self.view_index_lookup[vname]] = ob_view.coord
-
-
-        # Shape and pixel size
-        self.shape = ob_view.shape
-        self.psize = ob_view.psize[0]
-
-        # Initialise access rules for View instantiations
-        self.ar = DEFAULT_ACCESSRULE.copy()
-        self.ar.psize = self.psize
-        self.ar.shape = self.shape
-
         # Updated before each iteration by self.update_constraints
         self.max_shift_dist = None
-        self.temp_ob = None
-        log(3, "Position refinement initialized")
+
 
     def fourier_error(self, di_view, obj):
         '''
@@ -114,7 +93,7 @@ class AnnealingRefine(PositionRefine):
         '''
 
         af2 = np.zeros_like(di_view.data)
-        for name, pod in di_view.pods.iteritems():
+        for name, pod in di_view.pods.items():
             af2 += u.abs2(pod.fw(pod.probe*obj))
         return np.sum(di_view.pod.mask * (np.sqrt(af2) - np.sqrt(np.abs(di_view.data)))**2)
 
@@ -139,62 +118,51 @@ class AnnealingRefine(PositionRefine):
         -------
         numpy.ndarray
             A length 2 numpy array with the position increments for x and y co-ordinates respectively
-        '''
+        '''        
+        # there might be more than one object view
+        ob_view = di_view.pod.ob_view
 
-        dcoords = np.zeros((self.p.nshifts + 1, 2)) - 1.    # Coordinates (including the original)
-        delta = np.zeros((self.p.nshifts, 2))               # Coordinate shifts
-        errors = np.zeros(self.p.nshifts)                   # Calculated errors for the shifted positions
+        initial_coord = ob_view.coord.copy()
+        coord = initial_coord
+        psize = ob_view.psize.copy()
 
-        coord = di_view.pod.ob_view.coord.copy()
-
-
-        self.ar.coord = coord
-        self.ar.storageID = di_view.pod.ob_view.storageID
-
-        # Create temporary object view that can be shifted without reformatting
-        ob_view_temp = View(self.temp_ob, accessrule=self.ar)
-        dcoords[0, :] = ob_view_temp.dcoord
-
+        # if you cannot move far, do nothing
+        if np.max(psize) >= self.max_shift_dist:
+            return np.zeros((2,))
+            
         # This can be optimized by saving existing iteration fourier error...
-        error_initial = self.fourier_error(di_view, ob_view_temp.data)
-        view_idx = self.view_index_lookup[di_view.ID]
-        self.corrected_positions[view_idx] = di_view.pod.ob_view.coord
+        error = self.fourier_error(di_view, ob_view.data)
+        
         for i in range(self.p.nshifts):
             # Generate coordinate shift in one of the 4 cartesian quadrants
-            delta[i, 0] = (-1)**i * np.random.uniform(0, self.max_shift_dist)
-            delta[i, 1] = (-1)**(i//2) * np.random.uniform(0, self.max_shift_dist)
+            a, b = np.random.uniform(np.max(psize), self.max_shift_dist, 2)
+            delta = np.array([(-1)**i * a, (-1)**(i//2) *b])
 
-            rand_coord = coord + delta[i]
-
-            norm = np.linalg.norm(rand_coord - self.initial_positions[view_idx])
-            if norm > self.p.max_shift:
+            if np.linalg.norm(delta) > self.p.max_shift:
                 # Positions drifted too far, skip this position
-                errors[i] = error_initial + 1.
                 continue
 
-            # Create new view on new position
-            ob_view_temp.coord = rand_coord
-            ob_view_temp.storage.update_views(ob_view_temp)
-            dcoord = ob_view_temp.dcoord  # coordinate in pixel
-
-            # Skip if this pixel has already been explored
-            if any((dcoord == x).all() for x in dcoords):
-                errors[i] = error_initial + 1.
-                continue
-
-            # Store new coordinate and Fourier error
-            dcoords[i + 1, :] = dcoord
-            errors[i] = self.fourier_error(di_view, ob_view_temp.data)
-
-        # Identify lowest error and update position
-        if np.min(errors) < error_initial:
-            arg = np.argmin(errors)
-            di_view.pod.ob_view.coord = coord + delta[arg]
-            self.corrected_positions[view_idx] = di_view.pod.ob_view.coord
-            log(4, "view:%s,coord:%s" % (di_view.ID, di_view.pod.ob_view.coord))
-            return delta[arg]
-        else:
-            return np.zeros((2,))
+            # Move view to new position
+            new_coord = initial_coord + delta 
+            ob_view.coord = new_coord
+            ob_view.storage.update_views(ob_view)
+            data = ob_view.data
+            
+            # catch bad slicing
+            if not np.allclose(data.shape, ob_view.shape):
+                continue 
+                
+            new_error = self.fourier_error(di_view, data)
+            
+            if new_error < error:
+                # keep
+                error = new_error
+                coord = new_coord
+                log(4, "Position correction: %s, coord: %s" % (di_view.ID, coord))
+                
+        ob_view.coord = coord
+        ob_view.storage.update_views(ob_view)        
+        return coord - initial_coord
 
     def update_constraints(self, iteration):
         '''
@@ -208,26 +176,7 @@ class AnnealingRefine(PositionRefine):
         start, end = self.p.start, self.p.stop
 
         # Compute the maximum shift allowed at this iteration
-        self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start) + self.psize/2.
-        self.corrected_positions = np.zeros((len(self.Cobj.views), 2))
-        # Create a copy of the object container and expand it to avoid any run off.
-        self.temp_ob = self.Cobj.copy(ID=self.Cobj.ID+'temp_ob')
-        for sname, storage in self.temp_ob.storages.iteritems():
-            log(4, "Old storage shape is: %s" % str(storage.shape))
-            storage.padding = int(np.round(self.max_shift_dist / self.psize)) + 1
-            storage.reformat()
-            log(4, "New storage shape is: %s" % str(storage.shape))
-
-    @property
-    def container_cleanup_list(self):
-        '''
-        Returns
-        -------
-        List of container names to cleanup.
-        '''
-        container_names = []
-        container_names.append(self.temp_ob.ID)
-        return container_names
+        self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start)
 
     @property
     def citation_dictionary(self):

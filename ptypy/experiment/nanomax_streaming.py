@@ -121,7 +121,7 @@ class NanomaxZmqScan(PtyScan):
             except zmq.ZMQError:
                 # no more data available - working around bug in ptypy here
                 if self.latest_pos_index_received < self.info.min_frames * parallel.size:
-                    print 'have %u frames, waiting...' % (self.latest_pos_index_received + 1)
+                    print('have %u frames, waiting...' % (self.latest_pos_index_received + 1))
                     time.sleep(.5)
                 else:
                     break
@@ -147,15 +147,15 @@ class NanomaxZmqScan(PtyScan):
             except zmq.ZMQError:
                 # no more data available - working around bug in ptypy here
                 if self.latest_det_index_received < self.info.min_frames * parallel.size:
-                    print 'have %u detector frames, waiting...' % (self.latest_det_index_received + 1)
+                    print('have %u detector frames, waiting...' % (self.latest_det_index_received + 1))
                     time.sleep(.5)
                 else:
                     break
 
-        print '-------------------------------------'
-        print self.incoming.keys()
-        print self.incoming_det.keys()
-        print '-------------------------------------'
+        print('-------------------------------------')
+        print(self.incoming.keys())
+        print(self.incoming_det.keys())
+        print('-------------------------------------')
         ind = self.latest_pos_index_received
         if self.stream_images:
             ind = min(ind, self.latest_det_index_received)

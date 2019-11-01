@@ -16,6 +16,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+from importlib import import_module
 from .. import defaults_tree
 from ..core.data import MoonFlowerScan, PtydScan, PtyScan, QuickScan
 from ..simulations import SimScan
@@ -48,28 +49,25 @@ def _register_PtyScan_class(cls, name=None):
     return cls
 
 
-ptyscan_modules = [('hdf5_loader', 'Hdf5Loader'),
-                   ('cSAXS', 'cSAXSScan'),
-                   ('savu', 'Savu'),
-                   ('plugin', 'makeScanPlugin'),
-                   ('ID16Anfp', 'ID16AScan'),
-                   ('AMO_LCLS', 'AMOScan'),
-                   ('DiProI_FERMI', 'DiProIFERMIScan'),
-                   ('optiklabor', 'FliSpecScanMultexp'),
-                   ('UCL', 'UCLLaserScan'),
-                   ('nanomax', 'NanomaxStepscanMay2017'),
-                   ('nanomax', 'NanomaxStepscanNov2016'),
-                   ('nanomax', 'NanomaxFlyscanJune2017'),
-                   ('nanomax', 'NanomaxFlyscanOct2018'),
-                   ('nanomax', 'NanomaxStepscanNov2018'),
-                   ('nanomax', 'NanomaxStepscanSep2019'),
-                   ('nanomax_streaming', 'NanomaxZmqScan'),
-                   ('ALS_5321', 'ALS5321Scan'),
-                   ('Bragg3dSim', 'Bragg3dSimScan'),]
+ptyscan_modules = [('.hdf5_loader', 'Hdf5Loader'),
+                   ('.cSAXS', 'cSAXSScan'),
+                   ('.savu', 'Savu'),
+                   ('.plugin', 'makeScanPlugin'),
+                   ('.ID16Anfp', 'ID16AScan'),
+                   ('.AMO_LCLS', 'AMOScan'),
+                   ('.DiProI_FERMI', 'DiProIFERMIScan'),
+                   ('.optiklabor', 'FliSpecScanMultexp'),
+                   ('.UCL', 'UCLLaserScan'),
+                   ('.nanomax', 'NanomaxStepscanNov2018'),
+                   ('.nanomax', 'NanomaxFlyscanMay2019'),
+                   ('.nanomax', 'NanomaxStepscanSep2019'),
+                   ('.nanomax_streaming', 'NanomaxZmqScan'),
+                   ('.ALS_5321', 'ALS5321Scan'),
+                   ('.Bragg3dSim', 'Bragg3dSimScan')]
 
 for module, obj in ptyscan_modules:
     try:
-        lib = __import__(module, globals(), locals())
+        lib = import_module(module, 'ptypy.experiment')
     except ImportError as exception:
         log(2, 'Could not import experiment %s from %s, Reason: %s' % (obj, module, exception))
         pass

@@ -31,7 +31,7 @@ class BraggGeometryTest(unittest.TestCase):
         positions = np.array([np.arange(10), np.arange(10), np.arange(10)]).T
         for pos_ in positions:
             View(C, storageID='S0', psize=.2, coord=pos_, shape=12)
-        S = C.storages.values()[0]
+        S = list(C.storages.values())[0]
         S.reformat()
         cov = np.array(np.real(S.get_view_coverage()), dtype=int)
         # some numerical checks

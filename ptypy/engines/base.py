@@ -35,18 +35,22 @@ class BaseEngine(object):
     engine_prepare
     engine_iterate
     engine_finalize
+
     Defaults:
+
     [numiter]
     default = 20
     type = int
     lowlim = 1
     help = Total number of iterations
+
     [numiter_contiguous]
     default = 1
     type = int
     lowlim = 1
     help = Number of iterations without interruption
     doc = The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...).
+
     [probe_support]
     default = 0.7
     type = float
@@ -120,6 +124,7 @@ class BaseEngine(object):
 
         self.probe_support = {}
         # Call engine specific initialization
+        # TODO: Maybe child classes should be calling this?
         self.engine_initialize()
 
     def prepare(self):
@@ -132,14 +137,14 @@ class BaseEngine(object):
         # in the dict self.probe_support
         supp = self.p.probe_support
         if supp is not None:
-            for name, s in self.pr.storages.iteritems():
+            for name, s in self.pr.storages.items():
                 sh = s.data.shape
                 ll, xx, yy = u.grids(sh, FFTlike=False)
                 support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
                 self.probe_support[name] = support
 
         # Make sure all the pods are supported
-        for label_, pod_ in self.pods.iteritems():
+        for label_, pod_ in self.pods.items():
             if not pod_.model.__class__ in self.SUPPORTED_MODELS:
                 raise Exception('Model %s not supported by engine' % pod_.model.__class__)
 
@@ -149,6 +154,7 @@ class BaseEngine(object):
     def iterate(self, num=None):
         """
         Compute one or several iterations.
+
         num : None, int number of iterations.
             If None or num<1, a single iteration is performed.
         """
@@ -181,7 +187,7 @@ class BaseEngine(object):
         # Check if engine did things right.
         if it >= self.curiter:
 
-            logger.warn("""Engine %s did not increase iteration counter
+            logger.warning("""Engine %s did not increase iteration counter
             `self.curiter` internally. Accessing this attribute in that
             engine is inaccurate""" % self.__class__.__name__)
 
@@ -210,7 +216,7 @@ class BaseEngine(object):
     def _fill_runtime(self):
         local_error = u.parallel.gather_dict(self.error)
         if local_error:
-            error = np.array(local_error.values()).mean(0)
+            error = np.array(list(local_error.values())).mean(0)
         else:
             error = np.zeros((1,))
         info = dict(
@@ -307,25 +313,37 @@ class PositionCorrectionEngine(BaseEngine):
     default = 0.002
     type = float
     help = Maximum distance from original position [m]
-
+    
+    [position_refinement.record]
+    default = False
+    type = bool
+    help = record movement of positions
     """
 
-    def initialize(self):
+    def engine_initialize(self):
         """
         Prepare the position refinement object for use further down the line.
         """
-        super(PositionCorrectionEngine, self).initialize()
         if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
             self.do_position_refinement = False
         else:
             self.do_position_refinement = True
             log(3, "Initialising position refinement")
+            
+            # Enlarge object arrays, 
+            # This can be skipped though if the boundary is less important
+            for name, s in self.ob.storages.items():
+                s.padding = int(self.p.position_refinement.max_shift // np.max(s.psize))
+                s.reformat()
+
             # this could be some kind of dictionary lookup if we want to add more
             self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob)
             log(3, "Position refinement initialised")
             self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
             if self.p.position_refinement.stop is None:
                 self.p.position_refinement.stop = self.p.numiter
+            if self.p.position_refinement.start is None:
+                self.p.position_refinement.start = 0
 
     def position_update(self):
         """
@@ -342,37 +360,19 @@ class PositionCorrectionEngine(BaseEngine):
             Iterates through all positions and refines them by a given algorithm. 
             """
             log(4, "----------- START POS REF -------------")
+            #self.position_refinement.update_constraints(self.curiter) # this stays here
             self.position_refinement.update_constraints(self.curiter) # this stays here
 
             # Iterate through all diffraction views
-            for dname, di_view in self.di.views.iteritems():
+            for dname, di_view in self.di.views.items():
                 # Check for new coordinates
                 if di_view.active:
+                    #self.position_refinement.update_view_position(di_view)
                     self.position_refinement.update_view_position(di_view)
 
-            # Update object based on new position coordinates#
-            parallel.barrier()
-            self.position_refinement.corrected_positions = parallel.allreduce(self.position_refinement.corrected_positions)
-
-            for dname, di_view in self.di.views.iteritems():
-                # Check for new coordinates
-                di_view.pod.ob_view.coord = self.position_refinement.corrected_positions[self.position_refinement.view_index_lookup[di_view.ID]]
-
-            parallel.barrier()
-            self.ob.reformat()
-            # The size of the object might have been changed
-            del self.ptycho.containers[self.ob.ID + '_vcover']
-            del self.ptycho.containers[self.ob.ID + '_nrm']
-            self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
-            self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
-            for name, s in self.ob_viewcover.storages.iteritems():
-                s.fill(s.get_view_coverage())
-
-            parallel.barrier()
-            for c in self.position_refinement.container_cleanup_list:
-                del self.ptycho.containers[c]
-            gc.collect()
-
+            # We may not need this
+            #parallel.barrier()
+            #self.ob.reformat(True)
 
 class Base3dBraggEngine(BaseEngine):
     """
@@ -396,7 +396,7 @@ class Base3dBraggEngine(BaseEngine):
             raise NotImplementedError
 
         # Make sure all the pods are supported
-        for label_, pod_ in self.pods.iteritems():
+        for label_, pod_ in self.pods.items():
             if not pod_.model.__class__ in self.SUPPORTED_MODELS:
                 raise Exception('Model %s not supported by engine' % pod_.model.__class__)
 

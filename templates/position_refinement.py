@@ -40,10 +40,10 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter =1000
+p.engines.engine00.numiter = 400
 p.engines.engine00.position_refinement = u.Param()
 p.engines.engine00.position_refinement.start = 50
-p.engines.engine00.position_refinement.stop = 200
+p.engines.engine00.position_refinement.stop = 300
 p.engines.engine00.position_refinement.interval = 2
 p.engines.engine00.position_refinement.nshifts = 8
 p.engines.engine00.position_refinement.amplitude = 6e-7
@@ -56,7 +56,7 @@ P = Ptycho(p, level=4)
 a = 0.
 
 coords = []
-for pname, pod in P.pods.iteritems():
+for pname, pod in P.pods.items():
     # Save real position
     coords.append(np.copy(pod.ob_view.coord))
     before = pod.ob_view.coord
