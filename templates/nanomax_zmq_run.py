@@ -1,5 +1,5 @@
 """
-Loads data from a zmq stream published by Contrast,
+Loads data from a zmq stream published by Contrast at NanoMAX,
 https://github.com/alexbjorling/contrast
 """
 
@@ -22,7 +22,7 @@ p.scans.contrast = u.Param()
 # just as you have to give 'name' for engines and PtyScan subclasses.
 p.scans.contrast.name = 'Full'
 p.scans.contrast.data= u.Param()
-p.scans.contrast.data.name = 'ContrastZmqScan'
+p.scans.contrast.data.name = 'NanomaxZmqScan'
 p.scans.contrast.data.min_frames = 5
 p.scans.contrast.data.detector = 'diff'
 p.scans.contrast.data.xMotor = 'x'

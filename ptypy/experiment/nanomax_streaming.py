@@ -17,14 +17,14 @@ logger = u.verbose.logger
 
 
 @register()
-class ContrastZmqScan(PtyScan):
+class NanomaxZmqScan(PtyScan):
     """
 	This class parses zmq streams from the Contrast system.
 
     Defaults:
 
     [name]
-    default = ContrastZmqScan
+    default = NanomaxZmqScan
     type = str
     help =
     doc =
@@ -79,7 +79,7 @@ class ContrastZmqScan(PtyScan):
     """
 
     def __init__(self, *args, **kwargs):
-        super(ContrastZmqScan, self).__init__(*args, **kwargs)
+        super(NanomaxZmqScan, self).__init__(*args, **kwargs)
         self.context = zmq.Context()
 
         # main socket

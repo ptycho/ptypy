@@ -63,9 +63,9 @@ ptyscan_modules = [('hdf5_loader', 'Hdf5Loader'),
                    ('nanomax', 'NanomaxFlyscanOct2018'),
                    ('nanomax', 'NanomaxStepscanNov2018'),
                    ('nanomax', 'NanomaxStepscanSep2019'),
+                   ('nanomax_streaming', 'NanomaxZmqScan'),
                    ('ALS_5321', 'ALS5321Scan'),
-                   ('Bragg3dSim', 'Bragg3dSimScan'),
-                   ('contrast', 'ContrastZmqScan')]
+                   ('Bragg3dSim', 'Bragg3dSimScan'),]
 
 for module, obj in ptyscan_modules:
     try:
