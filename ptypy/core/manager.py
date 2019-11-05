@@ -944,6 +944,361 @@ defaults_tree['scan.Full'].add_child(sample.sample_desc)
 Full.DEFAULT = defaults_tree['scan.Full'].make_default(99)
 
 
+@defaults_tree.parse_doc('scan.FullTiled')
+class FullTiled(ScanModel):
+    """
+    Manage a single scan model (sharing, coherence, propagation, ...)
+    Does tiling.
+    Defaults:
+
+    # note: this class also imports the module-level defaults for sample
+    # and illumination, below.
+
+    [name]
+    default = Full
+    type = str
+    help =
+    doc =
+
+    [coherence]
+    default =
+    help = Coherence parameters
+    doc =
+    type = Param
+    userlevel =
+    lowlim = 0
+
+    [coherence.num_probe_modes]
+    default = 1
+    help = Number of probe modes
+    doc =
+    type = int
+    userlevel = 0
+    lowlim = 0
+
+    [coherence.num_object_modes]
+    default = 1
+    help = Number of object modes
+    doc =
+    type = int
+    userlevel = 0
+    lowlim = 0
+
+    [coherence.energies]
+    default = [1.0]
+    type = list
+    help = ?
+    doc = ?
+
+    [coherence.spectrum]
+    default = [1.0]
+    help = Amplitude of relative energy bins if the probe modes have a different energy
+    doc =
+    type = list
+    userlevel = 2
+    lowlim = 0
+
+    [coherence.object_dispersion]
+    default = None
+    help = Energy dispersive response of the object
+    doc = One of:
+       - ``None`` or ``'achromatic'``: no dispersion
+       - ``'linear'``: linear response model
+       - ``'irregular'``: no assumption
+      **[not implemented]**
+    type = str
+    userlevel = 2
+
+    [coherence.probe_dispersion]
+    default = None
+    help = Energy dispersive response of the probe
+    doc = One of:
+       - ``None`` or ``'achromatic'``: no dispersion
+       - ``'linear'``: linear response model
+       - ``'irregular'``: no assumption
+      **[not implemented]**
+    type = str
+    userlevel = 2
+
+    [tiling]
+    default =
+    help = Tiling parameters
+    doc =
+    type = Param
+    userlevel =
+    lowlim = 0
+
+    [tiling.shape]
+    default = None
+    help = Number of tiles (X, Y)
+    doc = Should be a tuple (X, Y)
+    type = tuple, list
+    userlevel = 2
+
+    [tiling.border]
+    default = None
+    help = Number of border points (shared with adjacent tiles)
+    doc = Should be a tuple (X, Y)
+    type = tuple, list
+    userlevel = 2
+    """
+
+    _PREFIX = MODEL_PREFIX
+
+    def _create_pods(self):
+        """
+        Create all new pods as specified in the new_positions,
+        new_diff_views and new_mask_views object attributes.
+        """
+        logger.info('\n' + headerline('Creating PODS', 'l'))
+        new_pods = []
+        new_probe_ids = {}
+        new_object_ids = {}
+
+        label = self.label
+
+        # Get a list of probe and object that already exist
+        existing_probes = list(self.ptycho.probe.storages.keys())
+        existing_objects = list(self.ptycho.obj.storages.keys())
+        logger.info('Found these probes : ' + ', '.join(existing_probes))
+        logger.info('Found these objects: ' + ', '.join(existing_objects))
+
+        object_id = 'S' + self.label
+        probe_id = 'S' + self.label
+
+        positions = self.new_positions
+        di_views = self.new_diff_views # should filter these views based on position
+        ma_views = self.new_mask_views
+
+        # Loop through diffraction patterns
+        for i in range(len(di_views)):
+            dv, mv = di_views.pop(0), ma_views.pop(0)
+
+            index = dv.layer
+
+            # Object and probe position
+            pos_pr = u.expect2(0.0)
+            pos_obj = positions[i] if 'empty' not in self.p.tags else 0.0
+
+            # For multiwavelength reconstructions: loop here over
+            # geometries, and modify probe_id and object_id.
+            for ii, geometry in enumerate(self.geometries):
+                # Make new IDs and keep them in record
+                # sharing_rules is not aware of IDs with suffix
+
+                pdis = self.p.coherence.probe_dispersion
+
+                if pdis is None or str(pdis) == 'achromatic':
+                    gind = 0
+                else:
+                    gind = ii
+
+                probe_id_suf = probe_id + 'G%02d' % gind
+                if (probe_id_suf not in new_probe_ids.keys()
+                        and probe_id_suf not in existing_probes):
+                    new_probe_ids[probe_id_suf] = True
+
+                odis = self.p.coherence.object_dispersion
+
+                if odis is None or str(odis) == 'achromatic':
+                    gind = 0
+                else:
+                    gind = ii
+
+                object_id_suf = object_id + 'G%02d' % gind
+                if (object_id_suf not in new_object_ids.keys()
+                        and object_id_suf not in existing_objects):
+                    new_object_ids[object_id_suf] = True
+
+                # Loop through modes
+                for pm in range(self.p.coherence.num_probe_modes):
+                    for om in range(self.p.coherence.num_object_modes):
+                        # Make a unique layer index for exit view
+                        # The actual number does not matter due to the
+                        # layermap access
+                        exit_index = index * 10000 + pm * 100 + om
+
+                        # Create views
+                        # Please note that mostly references are passed,
+                        # i.e. the views do mostly not own the accessrule
+                        # contents
+                        pv = View(container=self.ptycho.probe,
+                                  accessrule={'shape': geometry.shape,
+                                              'psize': geometry.resolution,
+                                              'coord': pos_pr,
+                                              'storageID': probe_id_suf,
+                                              'layer': pm,
+                                              'active': True})
+
+                        ov = View(container=self.ptycho.obj,
+                                  accessrule={'shape': geometry.shape,
+                                              'psize': geometry.resolution,
+                                              'coord': pos_obj,
+                                              'storageID': object_id_suf,
+                                              'layer': om,
+                                              'active': True})
+
+                        ev = View(container=self.ptycho.exit,
+                                  accessrule={'shape': geometry.shape,
+                                              'psize': geometry.resolution,
+                                              'coord': pos_pr,
+                                              'storageID': (dv.storageID +
+                                                            'G%02d' % ii),
+                                              'layer': exit_index,
+                                              'active': dv.active})
+
+                        views = {'probe': pv,
+                                 'obj': ov,
+                                 'diff': dv,
+                                 'mask': mv,
+                                 'exit': ev}
+
+                        pod = POD(ptycho=self.ptycho,
+                                  ID=None,
+                                  views=views,
+                                  geometry=geometry)  # , meta=meta)
+
+                        new_pods.append(pod)
+
+                        pod.probe_weight = 1
+                        pod.object_weight = 1
+
+        return new_pods, new_probe_ids, new_object_ids
+
+    def _initialize_geo(self, common):
+        """
+        Initialize the geometry/geometries.
+        """
+        # Extract necessary info from the received data package
+        get_keys = ['distance', 'center', 'energy', 'psize', 'shape']
+        geo_pars = u.Param({key: common[key] for key in get_keys})
+
+        # Add propagation info from this scan model
+        geo_pars.propagation = self.p.propagation
+
+        # The multispectral case will have multiple geometries
+        for ii, fac in enumerate(self.p.coherence.energies):
+            geoID = geometry.Geo._PREFIX + '%02d' % ii + self.label
+            g = geometry.Geo(self.ptycho, geoID, pars=geo_pars)
+            # now we fix the sample pixel size, This will make the frame size adapt
+            g.p.resolution_is_fix = True
+            # save old energy value:
+            g.p.energy_orig = g.energy
+            # change energy
+            g.energy *= fac
+            # append the geometry
+            self.geometries.append(g)
+
+        # Store frame shape
+        self.shape = np.array(common.get('shape', self.geometries[0].shape))
+        self.psize = self.geometries[0].psize
+
+        return
+
+    def _initialize_probe(self, probe_ids):
+        """
+        Initialize the probe storages referred to by the probe_ids.
+
+        For this case the parameter interface of the illumination module
+        matches the illumination parameters of this class, so they are
+        just fed in directly.
+        """
+        logger.info('\n' + headerline('Probe initialization', 'l'))
+
+        # Loop through probe ids
+        for pid, labels in probe_ids.items():
+
+            illu_pars = self.p.illumination
+
+            # pick storage from container
+            s = self.ptycho.probe.S.get(pid)
+
+            if s is None:
+                continue
+            else:
+                logger.info('Initializing probe storage %s using scan %s.'
+                            % (pid, self.label))
+
+            # Bypass additional tests if input is a string (previous reconstruction)
+            if illu_pars != str(illu_pars):
+
+                # if photon count is None, assign a number from the stats.
+                phot = illu_pars.get('photons')
+                phot_max = self.diff.max_power
+
+                if phot is None:
+                    logger.info(
+                        'Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' % phot_max)
+                    illu_pars['photons'] = phot_max
+                elif np.abs(np.log10(phot) - np.log10(phot_max)) > 1:
+                    logger.warning(
+                        'Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' % (
+                        phot, phot_max))
+
+                if (self.p.coherence.num_probe_modes > 1) and (type(illu_pars) is not np.ndarray):
+
+                    if (illu_pars.diversity is None) or (
+                            None in [illu_pars.diversity.noise, illu_pars.diversity.power]):
+                        log(2,
+                            "You are doing a multimodal reconstruction with none/ not much diversity between the modes! \n"
+                            "This will likely not reconstruct. You should set .scan.illumination.diversity.power and "
+                            ".scan.illumination.diversity.noise to something for the best results.")
+
+            illumination.init_storage(s, illu_pars)
+
+            s.reformat()  # Maybe not needed
+            s.model_initialized = True
+
+    def _initialize_object(self, object_ids):
+        """
+        Initializes the probe storages referred to by the object_ids.
+        """
+
+        logger.info('\n' + headerline('Object initialization', 'l'))
+
+        # Loop through object IDs
+        for oid, labels in object_ids.items():
+
+            sample_pars = self.p.sample
+
+            # pick storage from container
+            s = self.ptycho.obj.S.get(oid)
+
+            if s is None or s.model_initialized:
+                continue
+            else:
+                logger.info('Initializing object storage %s using scan %s.'
+                            % (oid, self.label))
+
+            sample_pars = self.p.sample
+
+            if type(sample_pars) is u.Param:
+                # Deep copy
+                sample_pars = sample_pars.copy(depth=10)
+
+                # Quickfix spectral contribution.
+                if (self.p.coherence.object_dispersion
+                        not in [None, 'achromatic']
+                        and self.p.coherence.probe_dispersion
+                        in [None, 'achromatic']):
+                    logger.info(
+                        'Applying spectral distribution input to object fill.')
+                    sample_pars['fill'] *= s.views[0].pod.geometry.p.spectral
+
+            sample.init_storage(s, sample_pars)
+            s.reformat()  # maybe not needed
+
+            s.model_initialized = True
+
+
+# Append illumination and sample defaults
+defaults_tree['scan.FullTiled'].add_child(illumination.illumination_desc)
+defaults_tree['scan.FullTiled'].add_child(sample.sample_desc)
+
+# Update defaults
+Full.DEFAULT = defaults_tree['scan.FullTiled'].make_default(99)
+
+
 from . import geometry_bragg
 defaults_tree['scan'].add_child(EvalDescriptor('Bragg3dModel'))
 defaults_tree['scan.Bragg3dModel'].add_child(illumination.illumination_desc, copy=True)
