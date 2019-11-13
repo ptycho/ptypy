@@ -267,7 +267,7 @@ class DM(PositionCorrectionEngine):
         # Exit wave power could run out of control
         if self.p.floating_intensities:
             exit_power = Cnorm2(self.ex)
-        for name, di_view in self.di.views.iteritems():
+        for name, di_view in self.di.views.items():
             if not di_view.active:
                 continue
             pbound = self.pbound[di_view.storage.ID]
