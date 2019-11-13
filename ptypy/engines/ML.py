@@ -476,7 +476,7 @@ class GaussianModel(BaseModel):
 
             # Second pod loop: gradients computation
             LLL = np.sum((w * DI**2).astype(np.float128))
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 xi = pod.bw(w * DI * f[name])
@@ -626,7 +626,7 @@ class PoissonModel(BaseModel):
 
             # Second pod loop: gradients computation
             LLL = self.LLbase[dname] + (m * (Imodel - I * np.log(Imodel))).sum().astype(np.float128)
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 xi = pod.bw(DI * f[name])
