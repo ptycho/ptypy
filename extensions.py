@@ -24,7 +24,7 @@ class AccelerationExtension(object):
     def get_reflection_options(self):
         user_options = []
         boolean_options = []
-        for name, description in self._options.iteritems():
+        for name, description in self._options.items():
             if isinstance(description['default'], str):
                 user_options.append((name+'=', None, description['doc']))
             elif isinstance(description['default'], bool):
