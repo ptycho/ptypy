@@ -11,7 +11,7 @@ This file is part of the PTYPY package.
 import time
 
 from ..utils import parallel
-from DM_npy import DMNpy
+from .DM_npy import DMNpy
 from ptypy import defaults_tree
 from ..core.manager import Full, Vanilla
 from ptypy.accelerate.cuda.constraints import difference_map_iterator

@@ -5,7 +5,7 @@ p = u.Param()
 p.verbose_level = 3
 p.io = u.Param()
 p.io.autosave = u.Param(active=False)
-p.io.autoplot = u.Param(active=True)
+p.io.autoplot = u.Param(active=False)
 p.ipython_kernel = False
 p.scans = u.Param()
 p.scans.MF = u.Param()

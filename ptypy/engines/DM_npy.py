@@ -9,7 +9,7 @@ This file is part of the PTYPY package.
 """
 
 from ..utils import parallel
-from DM import DM
+from .DM import DM
 from ..core.manager import Full, Vanilla
 from ptypy.accelerate.array_based import constraints as con, data_utils as du
 import numpy as np
