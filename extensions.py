@@ -48,6 +48,7 @@ class CudaExtension(AccelerationExtension): # probably going to inherit from som
                                      'doc': 'CUDA directory'},
                          'cudaflags': {'default': '-gencode arch=compute_35,\\"code=sm_35\\" ' +
                                                   '-gencode arch=compute_37,\\"code=sm_37\\" ' +
+                                                  '-gencode arch=compute_52,\\"code=sm_52\\" ' +
                                                   '-gencode arch=compute_60,\\"code=sm_60\\" ' +
                                                   '-gencode arch=compute_70,\\"code=sm_70\\" ',
                                        'doc': 'Flags to the CUDA compiler'},

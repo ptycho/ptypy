@@ -131,7 +131,7 @@ class DM(BaseEngine):
 
         self.ob_buf = None
         self.ob_nrm = None
-        #self.ob_viewcover = None
+        self.ob_viewcover = None
 
         self.pr_buf = None
         self.pr_nrm = None
@@ -163,7 +163,7 @@ class DM(BaseEngine):
         # Generate container copies
         self.ob_buf = self.ob.copy(self.ob.ID + '_alt', fill=0.)
         self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
-        #self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
+        self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
 
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)

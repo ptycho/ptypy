@@ -8,6 +8,7 @@ import numpy as np
 from copy import deepcopy
 
 import utils as tu
+from ptypy import defaults_tree
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.cuda import constraints as gcon
 from ptypy.accelerate.array_based import constraints as con
@@ -26,7 +27,9 @@ class EngineIterateUnityTest(unittest.TestCase):
         num_iters = 10  # number of iterations
         frame_size = 64  # frame size
         num_points = 50  # number of points in the scan (length of the diffraction array).
-
+        fourier_relax_factor = defaults_tree['engine']['DM']['fourier_relax_factor'].default
+        obj_inertia = defaults_tree['engine']['DM']['object_inertia'].default
+        probe_inertia =  defaults_tree['engine']['DM']['probe_inertia'].default
         alpha = 1.0  # this is basically always 1
 
         for m in range(num_probe_modes):
@@ -36,7 +39,8 @@ class EngineIterateUnityTest(unittest.TestCase):
                                                        scan_length=num_points)  # this one we run with GPU
             vectorised_scan = du.pod_to_arrays(PtychoInstanceVec, 'S0000')
             diffraction_storage = PtychoInstanceVec.di.storages['S0000']
-            pbound = (0.25 * PtychoInstanceVec.p.engine.DM.fourier_relax_factor ** 2 * diffraction_storage.pbound_stub)
+
+            pbound = (0.25 * fourier_relax_factor ** 2 * diffraction_storage.pbound_stub)
             mean_power = diffraction_storage.tot_power / np.prod(diffraction_storage.shape)
 
             print("pbound:%s" % pbound)
@@ -59,9 +63,9 @@ class EngineIterateUnityTest(unittest.TestCase):
 
             prefilter = propagator.pre_fft
             postfilter = propagator.post_fft
-            cfact_object = PtychoInstanceVec.p.engine.DM.object_inertia * mean_power * \
+            cfact_object = obj_inertia * mean_power * \
                            (vectorised_scan['object viewcover'] + 1.)
-            cfact_probe = (PtychoInstanceVec.p.engine.DM.probe_inertia * len(addr_info) /
+            cfact_probe = (probe_inertia * len(addr_info) /
                            vectorised_scan['probe'].shape[0]) * np.ones_like(vectorised_scan['probe'])
 
             probe_support = np.zeros_like(probe)
