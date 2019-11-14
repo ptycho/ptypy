@@ -73,14 +73,14 @@ illumination_desc.from_string(r"""
 
     [aperture.offset]
     default = 0.
-    type = float, tuple
+    type = float, tuple, list
     help = Offset between center of aperture and optical axes
     doc = May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset
     userlevel = 2
 
     [aperture.size]
     default = None
-    type = float, tuple
+    type = float, tuple, list
     help = Aperture width or diameter
     doc = May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture
     lowlim = 0.
@@ -95,7 +95,7 @@ illumination_desc.from_string(r"""
 
     [diversity.noise]
     default = (0.5,1.0)
-    type = tuple
+    type = tuple, list
     help = Noise in each non-primary mode of the illumination.
     doc = Can be either:
     	 - ``None`` : no noise
@@ -105,7 +105,7 @@ illumination_desc.from_string(r"""
 
     [diversity.power]
     default = 0.1
-    type = tuple, float
+    type = tuple, float, list
     help = Power of modes relative to main mode (zero-layer)
     uplim = 1.0
     lowlim = 0.0
@@ -195,6 +195,10 @@ illumination_desc.from_string(r"""
     help = Path to a ``.ptyr`` compatible file
     userlevel = 0
     """)
+
+# Strings are also supported as input parameters
+illumination_desc.options['type'] = 'Param, str'
+illumination_desc.options['help'] = 'Illumination parameters'
 
 DEFAULT = illumination_desc.make_default(99)
 DEFAULT_aperture = DEFAULT.aperture
@@ -306,7 +310,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
 
     p = DEFAULT.copy(depth=3)
     model = None
-    if hasattr(pars, 'items') or hasattr(pars, 'iteritems'):
+    if hasattr(pars, 'items') or hasattr(pars, 'items'):
         # This is a dict
         p.update(pars, in_place_depth=3)
 

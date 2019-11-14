@@ -47,7 +47,7 @@ def image_read(filename, *args, **kwargs):
     elif ext == '.h5':
         h5_image = h5read(filename, *args, **kwargs)
         def look_for_ndarray(d):
-            for k, v in d.iteritems():
+            for k, v in d.items():
                 if isinstance(v, np.ndarray):
                     return k, v
                 elif isinstance(v, dict):

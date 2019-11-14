@@ -75,10 +75,7 @@ class PtyScan(object):
     [dfile]
     type = file
     default = None
-    help = Prepared data file path
-    doc = If source was ``None`` or ``'file'``, data will be loaded from this file and processing as
-      well as saving is deactivated. If source is the name of an experiment recipe or path to a
-      file, data will be saved to this file
+    help = File path where prepared data will be saved in the ``ptyd`` format.
     userlevel = 0
 
     [chunk_format]
@@ -198,7 +195,7 @@ class PtyScan(object):
     userlevel = 1
 
     [center]
-    type = tuple, str
+    type = list, tuple, str
     default = 'fftshift'
     help = Center (pixel) of the optical axes in raw data
     doc = If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
@@ -229,7 +226,7 @@ class PtyScan(object):
     lowlim = 0
 
     [add_poisson_noise]
-    default = True
+    default = False
     type = bool
     help = Decides whether the scan should have poisson noise or not
     """
@@ -633,7 +630,7 @@ class PtyScan(object):
         indices = u.Param()
 
         # All indices in this chunk of data
-        indices.chunk = range(start, start + step)
+        indices.chunk = list(range(start, start + step))
 
         # Let parallel.loadmanager take care of assigning indices to nodes
         indices.lm = parallel.loadmanager.assign(indices.chunk)
@@ -670,10 +667,10 @@ class PtyScan(object):
         # Fill weights dictionary with references to the weights in common
 
         has_data = (len(data) > 0)
-        has_weights = (len(weights) > 0) and len(weights.values()[0]) > 0
+        has_weights = (len(weights) > 0) and len(list(weights.values())[0]) > 0
 
         if has_data:
-            dsh = np.array(data.values()[0].shape[-2:])
+            dsh = np.array(list(data.values())[0].shape[-2:])
         else:
             dsh = np.array([0, 0])
 
@@ -825,7 +822,7 @@ class PtyScan(object):
 
         # Adapt geometric info
         self.meta.center = cen / float(self.rebin)
-        self.meta.shape = u.expect2(sh) / self.rebin
+        self.meta.shape = u.expect2(sh) // self.rebin
 
         if self.info.psize is not None:
             self.meta.psize = u.expect2(self.info.psize) * self.rebin
@@ -843,7 +840,7 @@ class PtyScan(object):
             chunk.weights = weights
         elif has_data:
             chunk.weights = {}
-            self.weight2d = weights.values()[0]
+            self.weight2d = list(weights.values())[0]
 
         # Slice positions from common if they are empty too
         if positions is None or len(positions) == 0:
@@ -1118,7 +1115,7 @@ class PtyScan(object):
         node.
         """
         cen = {}
-        for k, d in data.iteritems():
+        for k, d in data.items():
             cen[k] = u.mass_center(d * (weights[k] > 0))
 
         # For some nodes, cen may still be empty.
@@ -1128,7 +1125,7 @@ class PtyScan(object):
 
         # Now master possesses all calculated centers
         if parallel.master:
-            cen = np.array(cen.values()).mean(0)
+            cen = np.array(list(cen.values())).mean(0)
         cen = parallel.bcast(cen)
 
         return cen
@@ -1181,7 +1178,7 @@ class PtyScan(object):
 
         for k in ['data', 'weights']:
             if k in c.keys():
-                if hasattr(c[k], 'iteritems'):
+                if hasattr(c[k], 'items'):
                     v = c[k]
                 else:
                     v = dict(zip(ind, np.asarray(c[k])))
@@ -1227,6 +1224,14 @@ class PtydScan(PtyScan):
     help =
     doc =
 
+    [dfile]
+    type = file
+    default = None
+    help = Prepared data file path
+    doc = If source is ``None`` or ``'file'``, data will be loaded from this file and processing as
+      well as saving is deactivated. If source is the path to a file, data will be saved to this file.
+    userlevel = 0
+
     [source]
     default = 'file'
     type = str, None
@@ -1247,8 +1252,8 @@ class PtydScan(PtyScan):
 
         if source is None or str(source) == 'file':
             # This is the case of absolutely no additional work
-            logger.info('No explicit source file was given. '
-                        'Will continue read only.')
+            logger.info('No source file was given. '
+                        'Using dfile as read-only source.')
             source = pars['dfile']
             manipulate = False
         elif pars is None or len(pars) == 0:
@@ -1258,7 +1263,7 @@ class PtydScan(PtyScan):
         else:
             logger.info('Explicit source file given. '
                         'Modification is possible.\n')
-            dfile = pars['dfile']
+            dfile = pars.get('dfile')
 
             # Check for conflict
             if dfile and (str(u.unique_path(source)) == str(u.unique_path(dfile))):
@@ -1312,20 +1317,14 @@ class PtydScan(PtyScan):
             logger.warning('There should be meta information in '
                            '%s. Something is odd here.' % source)
 
-        # Update given parameters when they are None
-        if not manipulate:
-            p.update(meta)
-        else:
-            # Replace only None entries in p
-            # FIXME:
-            # BE: This was the former right way when the defaults
-            # were mostly None, now this no longer applies, unless
-            # defaults are overwritten to None. I guess t would be
-            # canonical now to overwrite the defaults in the
-            # docstring. But since reprocessing is rare
-            for k, v in meta.items():
-                if p.get(k) is None:
-                    p[k] = v
+        # Apply parameters from ptyd file.
+        p.update(meta)
+
+        if manipulate:
+            # Override parameters that are explicitly passed as input arguments
+            for k in self.METAKEYS:
+                if k in pars:
+                    p[k] = pars[k]
 
         super(PtydScan, self).__init__(p)
 
@@ -1365,7 +1364,7 @@ class PtydScan(PtyScan):
         with h5py.File(self.source, 'r') as f:
             d = {}
             ch_items = []
-            for k, v in f['chunks'].iteritems():
+            for k, v in f['chunks'].items():
                 if v is not None:
                     ch_items.append((int(k), v))
 
@@ -1425,7 +1424,7 @@ class PtydScan(PtyScan):
         # Get our data from the ptyd file
         out = {}
         with h5py.File(self.source, 'r') as f:
-            for array, call in calls.iteritems():
+            for array, call in calls.items():
                 out[array] = [np.squeeze(f[path][slce]) for path, slce in call]
 
             f.close()
@@ -1435,10 +1434,11 @@ class PtydScan(PtyScan):
         # indices = out.get('indices', indices)
 
         # Wrap in a dict
-        for k, v in out.iteritems():
+        for k, v in out.items():
             out[k] = dict(zip(indices, v))
 
         return (out.get(key, {}) for key in ['data', 'positions', 'weights'])
+
 
 @defaults_tree.parse_doc('scandata.MoonFlowerScan')
 class MoonFlowerScan(PtyScan):
@@ -1588,6 +1588,7 @@ class MoonFlowerScan(PtyScan):
 
         return raw, {}, {}
 
+
 @defaults_tree.parse_doc('scandata.QuickScan')
 class QuickScan(PtyScan):
     """
@@ -1664,7 +1665,8 @@ class QuickScan(PtyScan):
         for k in indices:
             raw[k] = self.diff.copy().astype(np.int32)
         return raw, {}, {}
-        
+
+
 if __name__ == "__main__":
     u.verbose.set_level(3)
     MS = MoonFlowerScan(num_frames=100)

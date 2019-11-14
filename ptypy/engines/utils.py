@@ -22,7 +22,7 @@ def dynamic_load(path, baselist, fail_silently = True):
     import os
     import glob
     import re
-    import imp
+    from importlib.machinery import SourceFileLoader
 
     # Loop through paths
     engine_path = {}
@@ -58,11 +58,12 @@ def dynamic_load(path, baselist, fail_silently = True):
                                   % (classname, filename))
     
         # Load engines that have been found
-        for classname, mf in engine_path.iteritems():
+        for classname, mf in engine_path.items():
     
             # Import module
             modname, filename = mf
-            engine_module = imp.load_source(modname, filename)
+            print(modname, filename)
+            engine_module = SourceFileLoader(modname, filename).load_module()
 
     except Exception as e:
         if not fail_silently:
@@ -120,7 +121,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     # For log likelihood error
     if LL_error is True:
         LL = np.zeros_like(diff_view.data)
-        for name, pod in diff_view.pods.iteritems():
+        for name, pod in diff_view.pods.items():
             LL += u.abs2(pod.fw(pod.probe * pod.object))
         err_phot = (np.sum(fmask * (LL - I)**2 / (I + 1.))
                     / np.prod(LL.shape))
@@ -128,7 +129,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         err_phot = 0.
 
     # Propagate the exit waves
-    for name, pod in diff_view.pods.iteritems():
+    for name, pod in diff_view.pods.items():
         if not pod.active:
             continue
         f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
@@ -147,7 +148,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     if pbound is None:
         # No power bound
         fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
-        for name, pod in diff_view.pods.iteritems():
+        for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
             df = pod.bw(fm * f[name]) - pod.probe * pod.object
@@ -157,7 +158,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         # Power bound is applied
         renorm = np.sqrt(pbound / err_fmag)
         fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
-        for name, pod in diff_view.pods.iteritems():
+        for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
             df = pod.bw(fm * f[name]) - pod.probe * pod.object
@@ -165,7 +166,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
             err_exit += np.mean(u.abs2(df))
     else:
         # Within power bound so no constraint applied.
-        for name, pod in diff_view.pods.iteritems():
+        for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
             df = alpha * (pod.probe * pod.object - pod.exit)
@@ -192,7 +193,7 @@ def Cnorm2(c):
     ptypy.utils.math_utils.norm2
     """
     r = 0.
-    for name, s in c.storages.iteritems():
+    for name, s in c.storages.items():
         r += u.norm2(s.data)
     return r
 
@@ -206,6 +207,6 @@ def Cdot(c1, c2):
     :returns: The dot product (*scalar*)
     """
     r = 0.
-    for name, s in c1.storages.iteritems():
+    for name, s in c1.storages.items():
         r += np.vdot(c1.storages[name].data.flat, c2.storages[name].data.flat)
     return r

@@ -86,23 +86,23 @@ class LoadRunTest(unittest.TestCase):
         # set_vals = P.p._to_dict(Recursive=True)
         # print set_vals
         # file_vals = content.pars._to_dict(Recursive=True)
-        # for name, val in file_vals.iteritems():
+        # for name, val in file_vals.items():
         #     self.assertEqual(file_vals[name], set_vals[name])
         # self.assertDictEqual(content.pars._to_dict(Recursive=True), set_vals)
         np.random.seed(1)
 
         b = Ptycho.load_run(file_path)
         np.testing.assert_equal(type(b), type(Pcomp))
-        for name, st in b.mask.storages.iteritems():
+        for name, st in b.mask.storages.items():
             np.testing.assert_equal(st.data, P.mask.storages[name].data)
 
-        for name, st in b.diff.storages.iteritems():
+        for name, st in b.diff.storages.items():
             np.testing.assert_equal(st.data, P.diff.storages[name].data)
 
-        for name, st in b.probe.storages.iteritems():
+        for name, st in b.probe.storages.items():
             np.testing.assert_equal(st.data, P.probe.storages[name].data)
 
-        for name, st in b.obj.storages.iteritems():
+        for name, st in b.obj.storages.items():
             np.testing.assert_equal(st.data, P.obj.storages[name].data)
 
 

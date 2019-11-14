@@ -2,7 +2,7 @@ name: full_dependencies
 channels:
   - conda-forge
 dependencies:
-  - python=2.7
+  - python=3.7
   - numpy
   - scipy
   - matplotlib
@@ -10,7 +10,7 @@ dependencies:
   - pyzmq
   - pep8
   - mpi4py
-  - pil
+  - pillow
   - pyfftw
   - cmake
   - pip:

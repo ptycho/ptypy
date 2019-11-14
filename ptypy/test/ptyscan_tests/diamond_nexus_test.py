@@ -6,7 +6,7 @@ import shutil
 import numpy as np
 import ptypy
 from ptypy.test.utils import PtyscanTestRunner
-from ptypy.experiment.hdf5_loader import Hdf5Loader
+from ptypy.experiment.diamond_nexus import DiamondNexus
 from ptypy import utils as u
 
 
@@ -20,7 +20,7 @@ def create_file_and_dataset(path, key, data_type):
             entry.create_dataset(key, (10,), dtype=data_type) #spoof it with a size just so we can do the linking later.
 
 
-class Hdf5LoaderTestNoSWMR(unittest.TestCase):
+class DiamondNexusTest(unittest.TestCase):
 
     def setUp(self):
         '''
@@ -30,15 +30,15 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         We should link the data into a top level file (which is supposed to be indicative of a nexus/ CXI with external
         links).
         '''
-        self.outdir = tempfile.mkdtemp("Hdf5LoaderTestNoSWMR")
+        self.outdir = tempfile.mkdtemp("DiamondNexusTestNoSWMR")
 
         self.intensity_file = os.path.join(self.outdir, 'intensity.h5')
-        self.intensity_key = 'entry/intensity'
+        self.intensity_key = 'entry_1/data/data'
         create_file_and_dataset(path=self.intensity_file, key=self.intensity_key, data_type=np.float)
 
         self.positions_file = os.path.join(self.outdir, 'positions.h5')
-        self.positions_slow_key = 'entry/positions_slow'
-        self.positions_fast_key = 'entry/positions_fast'
+        self.positions_slow_key = 'entry_1/data/y'
+        self.positions_fast_key = 'entry_1/data/x'
         create_file_and_dataset(path=self.positions_file, key=[self.positions_slow_key, self.positions_fast_key],
                                 data_type=np.float)
 
@@ -47,29 +47,36 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         create_file_and_dataset(path=self.mask_file, key=self.mask_key, data_type=np.int)
 
         self.dark_file = os.path.join(self.outdir, 'dark.h5')
-        self.dark_key = 'entry/dark'
+        self.dark_key = 'entry_1/instrument_1/detector_1/darkfield'
         create_file_and_dataset(path=self.dark_file, key=self.dark_key, data_type=np.float)
 
         self.flat_file = os.path.join(self.outdir, 'flat.h5')
-        self.flat_key = 'entry/flat'
+        self.flat_key = 'entry_1/instrument_1/detector_1/flatfield'
         create_file_and_dataset(path=self.flat_file, key=self.flat_key, data_type=np.float)
 
         self.normalisation_file = os.path.join(self.outdir, 'normalisation.h5')
-        self.normalisation_key = 'entry/normalisation'
+        self.normalisation_key = 'entry_1/instrument_1/monitor/data'
         create_file_and_dataset(path=self.normalisation_file, key=self.normalisation_key, data_type=np.float)
 
         self.top_file = os.path.join(self.outdir, 'top_file.h5')
-        self.recorded_energy_key = 'entry/energy'
-        self.recorded_distance_key = 'entry/distance'
+        self.recorded_energy_key = 'entry_1/instrument_1/beam_1/energy'
+        self.recorded_distance_key = 'entry_1/instrument_1/detector_1/distance'
+        self.recorded_pixel_size_x_key = 'entry_1/instrument_1/detector_1/x_pixel_size'
+        self.recorded_pixel_size_y_key = 'entry_1/instrument_1/detector_1/y_pixel_size'
+
         with h5.File(self.top_file, 'w') as f:
             f.create_group('entry')
             f[self.recorded_energy_key] = 9.1
             f[self.recorded_distance_key] = 1.5
+            f[self.recorded_pixel_size_x_key] = 55e-6
+            f[self.recorded_pixel_size_y_key] = 55e-6
             # now lets link some stuff in.
             f[self.intensity_key] = h5.ExternalLink(self.intensity_file, self.intensity_key)
             f[self.positions_slow_key] = h5.ExternalLink(self.positions_file, self.positions_slow_key)
             f[self.positions_fast_key] = h5.ExternalLink(self.positions_file, self.positions_fast_key)
             f[self.normalisation_key] = h5.ExternalLink(self.normalisation_file, self.normalisation_key)
+            f[self.dark_key] = h5.ExternalLink(self.dark_file, self.dark_key)
+            f[self.flat_key] = h5.ExternalLink(self.flat_file, self.flat_key)
 
     def tearDown(self):
         if os.path.exists(self.outdir):
@@ -100,16 +107,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         h5.File(self.intensity_file, 'w')[self.intensity_key] = data
 
         data_params = u.Param()
-        data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
-
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=A*B, cleanup=False)
+        data_params.file = self.top_file
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=A*B, cleanup=False)
 
     def test_flatfield_applied_case_1(self):
         '''
@@ -135,20 +134,9 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         h5.File(self.flat_file, 'w')[self.flat_key] = ff
 
         data_params = u.Param()
-        data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
-        data_params.flatfield = u.Param()
-        data_params.flatfield.file = self.flat_file
-        data_params.flatfield.key = self.flat_key
-
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=k, cleanup=False)
 
     def test_position_data_mapping_case_1_with_exclusion(self):
         '''
@@ -182,22 +170,15 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         h5.File(self.intensity_file, 'w')[self.intensity_key] = data
 
         data_params = u.Param()
-        data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
         data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-
         data_params.positions.bounding_box = u.Param()
         data_params.positions.bounding_box.fast_axis_bounds = fast_axis_min, fast_axis_max
         data_params.positions.bounding_box.slow_axis_bounds = slow_axis_min, slow_axis_max
         # data_params.positions.bounding_box.extra_axis_bounds = None
 
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=A*B, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=A*B, cleanup=False)
 
         out_data = h5.File(output['output_file'],'r')['chunks/0/data'][...].squeeze()
         out_data_fast = h5.File(output['output_file'],'r')['chunks/0/positions'][:, 1]
@@ -249,20 +230,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         h5.File(self.dark_file, 'w')[self.dark_key] = darkfield
 
         data_params = u.Param()
-        data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
-
-        data_params.darkfield = u.Param()
-        data_params.darkfield.file = self.dark_file
-        data_params.darkfield.key = self.dark_key
-
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+        data_params.file = self.top_file
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=k, cleanup=False)
 
     def test_crop_load_works_case1(self):
         k = 12
@@ -291,19 +260,13 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.auto_center = False
         data_params.shape = (5, 5)
         data_params.center = (20, 30)
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
         data_params.mask = u.Param()
         data_params.mask.file = self.mask_file
         data_params.mask.key = self.mask_key
-
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+        print("mask file is %s" % self.mask_file)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=k, cleanup=False)
 
     def test_position_data_mapping_case_2(self):
         '''
@@ -328,14 +291,9 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params = u.Param()
         data_params.auto_center = False
         data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=k, cleanup=False)
 
     def test_position_data_mapping_case_2_with_exclusion(self):
         '''
@@ -362,17 +320,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         h5.File(self.intensity_file, 'w')[self.intensity_key] = data
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
         data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
         data_params.positions.bounding_box = u.Param()
         data_params.positions.bounding_box.fast_axis_bounds = fast_axis_min, fast_axis_max
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=k, cleanup=False)
 
 
         out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
@@ -427,19 +380,9 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
-        data_params.flatfield = u.Param()
-        data_params.flatfield.file = self.flat_file
-        data_params.flatfield.key = self.flat_key
-
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=k, cleanup=False)
 
     def test_darkfield_applied_case_2(self):
         '''
@@ -466,19 +409,9 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
-        data_params.darkfield = u.Param()
-        data_params.darkfield.file = self.dark_file
-        data_params.darkfield.key = self.dark_key
-
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=k, cleanup=False)
 
     def test_crop_load_works_case2(self):
         C = 3
@@ -502,15 +435,9 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.auto_center = False
         data_params.shape = (5, 5)
         data_params.center = (20, 30)
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=C*D, cleanup=False)
 
     def test_position_data_mapping_case_3(self):
         '''
@@ -536,15 +463,9 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=C*D, cleanup=False)
 
     def test_position_data_mapping_case_3_with_exclusion(self):
         '''
@@ -577,19 +498,14 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
         data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
         data_params.positions.bounding_box = u.Param()
         data_params.positions.bounding_box.fast_axis_bounds = fast_axis_min, fast_axis_max
         data_params.positions.bounding_box.slow_axis_bounds = slow_axis_min, slow_axis_max
 
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=C*D, cleanup=False)
 
 
 
@@ -645,15 +561,10 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
+
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=C*D, cleanup=False)
 
     def test_position_data_mapping_case_4_with_exclusion(self):
         '''
@@ -679,18 +590,13 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
         data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
         data_params.positions.bounding_box = u.Param()
         data_params.positions.bounding_box.fast_axis_bounds = fast_axis_min, fast_axis_max
         data_params.positions.bounding_box.slow_axis_bounds = slow_axis_min, slow_axis_max
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=C*D, cleanup=False)
         out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
         out_data_fast = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 1]
         out_data_slow = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 0]
@@ -747,15 +653,9 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=C*D, cleanup=False)
 
     def test_normalisation_applied(self):
         k = 12
@@ -779,19 +679,9 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
-        data_params.normalisation = u.Param()
-        data_params.normalisation.file = self.normalisation_file
-        data_params.normalisation.key = self.normalisation_key
-
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=k, cleanup=False)
 
     def test_energy_loaded(self):
         k = 12
@@ -811,23 +701,17 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         energy = np.array([9.1])
         with h5.File(self.intensity_file, 'w') as f:
             f[self.intensity_key] = data
+        with h5.File(self.top_file, 'r+') as f:
+            del f[self.recorded_energy_key]
             f[self.recorded_energy_key] = energy
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
-        data_params.recorded_energy = u.Param()
-        data_params.recorded_energy.file = self.intensity_file
-        data_params.recorded_energy.key = self.recorded_energy_key
-
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=k, cleanup=False)
+        out_energy = h5.File(output['output_file'], 'r')['meta/energy'][...]
+        np.testing.assert_equal(out_energy, energy, err_msg="The saved energy value %s is not the same as in the ptyd (%s)" % (energy, out_energy))
 
     def test_distance_loaded(self):
         k = 12
@@ -847,23 +731,17 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
         with h5.File(self.intensity_file, 'w') as f:
             f[self.intensity_key] = data
+        with h5.File(self.top_file, 'r+') as f:
+            del f[self.recorded_distance_key]
             f[self.recorded_distance_key] = distance
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
-        data_params.recorded_distance = u.Param()
-        data_params.recorded_distance.file = self.intensity_file
-        data_params.recorded_distance.key = self.recorded_distance_key
-
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=k, cleanup=False)
+        out_distance = h5.File(output['output_file'], 'r')['meta/distance'][...]
+        np.testing.assert_equal(out_distance, distance, err_msg="The saved energy value %s is not the same as in the ptyd (%s)" % (distance, out_distance))
 
     def test_mask_loaded(self):
         k = 12
@@ -890,19 +768,13 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
         data_params.mask = u.Param()
         data_params.mask.file = self.mask_file
         data_params.mask.key = self.mask_key
 
-        data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=k, cleanup=False)
 
     def test_position_data_mapping_case__with_exclusion(self):
         '''
@@ -929,18 +801,13 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         data_params = u.Param()
         data_params.auto_center = False
-        data_params.intensities = u.Param()
-        data_params.intensities.file = self.intensity_file
-        data_params.intensities.key = self.intensity_key
+        data_params.file = self.top_file
 
         data_params.positions = u.Param()
-        data_params.positions.file = self.positions_file
-        data_params.positions.slow_key = self.positions_slow_key
-        data_params.positions.fast_key = self.positions_fast_key
         data_params.positions.bounding_box = u.Param()
         data_params.positions.bounding_box.fast_axis_bounds = fast_axis_min, fast_axis_max
         data_params.positions.bounding_box.slow_axis_bounds = slow_axis_min, slow_axis_max
-        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
+        output = PtyscanTestRunner(DiamondNexus, data_params, auto_frames=C*D, cleanup=False)
         out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
         out_data_fast = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 1]
         out_data_slow = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 0]
@@ -972,11 +839,6 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
                                       err_msg='There is something up with the fast axis bounding box for case 4 with exclusion')
         np.testing.assert_array_equal(expected_slow, out_data_slow,
                                       err_msg='There is something up with the slow axis bounding box for case 4 with exclusion')
-
-
-
-
-
 
 class Hdf5LoaderTestWithSWMR(unittest.TestCase):
     def test_something(self):

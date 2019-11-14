@@ -11,9 +11,10 @@ import h5py as h5
 import ptypy.io as io
 import ptypy.utils as u
 import numpy as np
-import cPickle
 import collections
 
+class owntype(object):
+    pass
 
 class H5rwStoreTest(unittest.TestCase):
 
@@ -56,7 +57,7 @@ class H5rwStoreTest(unittest.TestCase):
         data["flower"] =  2.0
         data['an array'] = np.ones((3,3))
         content = {'ordered dict data': data}
-        print self.filepath % "store_ordered_dict_test"
+        print(self.filepath % "store_ordered_dict_test")
         try:
             io.h5write(self.filepath % "store_ordered_dict_test", content=content)
         except:
@@ -109,7 +110,6 @@ class H5rwStoreTest(unittest.TestCase):
         try:
             io.h5write(self.filepath % "store_record_array_test", content=content)
         except:
-            raise
             self.fail(msg="Couldn't store a record array type")
 
     def test_store_scalar(self):
@@ -138,11 +138,8 @@ class H5rwStoreTest(unittest.TestCase):
         pass
 
     def test_fail_unsupported(self):
-        class owntype:
-            pass
 
         def test_func():
-
             data = owntype()
             content = {'Owntype data': data}
             io.h5write(self.filepath % "store_dummytype_test", content=content)
@@ -151,9 +148,6 @@ class H5rwStoreTest(unittest.TestCase):
 
     def test_ignore_unsupported(self):
         io.h5options['UNSUPPORTED'] = 'ignore'
-
-        class owntype:
-            pass
 
         def test_func():
             data = owntype()
@@ -164,12 +158,8 @@ class H5rwStoreTest(unittest.TestCase):
         except:
             self.fail(msg="This should not have produced an exception!")
 
-
     def test_pickle_unsupported(self):
         io.h5options['UNSUPPORTED'] = 'pickle'
-
-        class owntype:
-            pass
 
         def test_func():
             data = owntype()
@@ -181,3 +171,5 @@ class H5rwStoreTest(unittest.TestCase):
         except:
             self.fail(msg="This should not have produced an exception!")
 
+if __name__=='__main__':
+    unittest.main()

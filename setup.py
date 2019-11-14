@@ -19,7 +19,7 @@ Operating System :: Unix
 
 
 MAJOR               = 0
-MINOR               = 3
+MINOR               = 4
 MICRO               = 0
 ISRELEASED          = True
 VERSION             = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
@@ -59,6 +59,7 @@ if not release:
 
 if __name__ == '__main__':
     write_version_py()
+    write_version_py('doc/version.py')
     try:
         execfile('ptypy/version.py')
         vers = version

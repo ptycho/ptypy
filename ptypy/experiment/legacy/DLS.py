@@ -246,7 +246,7 @@ class DlsScan(PtyScan):
             frames_accessible = min((frames, num_avail))
             stop = f[NEXUS_PATHS.finished_pattern][0] and (self.num_frames == start)
             f.close()
-            print "HERE",frames_accessible, stop
+            print("HERE",frames_accessible, stop)
             return frames_accessible,stop
 
     def load(self, indices):

@@ -4,7 +4,7 @@ Verbose package, based on the standard logging library.
 
 Use as:
 from verbose import logger
-logger.warn('This is a warning')
+logger.warning('This is a warning')
 logger.info('This is an information')
 ...
 
@@ -151,14 +151,14 @@ def _(label, value):
 def headerline(info='',align = 'c',fill='-'):
     li = len(info)
     if li>=60:
-        return headerline(info[li/2:],align,fill)+'\n'+headerline(info[:li/2],align,fill)
+        return headerline(info[li//2:],align,fill)+'\n'+headerline(info[:li//2],align,fill)
     else:
         if li != 0:
             li+=2
             info = ' '+info+' '
         empty = LINEMAX-li
         if align=='c':
-            left = empty/2
+            left = empty // 2
             right = empty-left
         elif align=='l':
             left = 4
@@ -196,7 +196,7 @@ def report(thing,depth=4,noheader=False):
         header+= ' %s(%d)' % (extra,len(obj)) + hn
         if level <= depth:
             #level +=1
-            for k,v in obj.iteritems():
+            for k,v in obj.items():
                 header += _format(k,level+1,v)
         return header
 
@@ -236,7 +236,7 @@ def report(thing,depth=4,noheader=False):
         return _(key, level, obj)[0] + ' None\n'
 
     def _format(key,level, obj):
-        if hasattr(obj,'iteritems'):
+        if hasattr(obj,'items'):
             stringout = _format_dict(key,level, obj)
         elif type(obj) is np.ndarray:
             stringout = _format_numpy(key,level, obj)

@@ -7,8 +7,8 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-import parallel
-import urllib2 # TODO: make compatible with python 3.5
+from . import parallel
+import urllib.request, urllib.error, urllib.parse
 from scipy import ndimage as ndi
 
 from . import array_utils as au
@@ -364,7 +364,7 @@ def png2mpg(listoffiles, framefile='frames.txt', fps=5, bitrate=2000,
                 try:
                     os.remove(line)
                 except OSError:
-                    print OSError
+                    print(OSError)
                     print('Removing %s failed .. continuing' % line)
                     continue
             nff.close()
@@ -463,7 +463,7 @@ def xradia_star(sh, spokes=48, std=0.5, minfeature=5, ringfact=2, rings=4,
     z = ind[1] + 1j*ind[0]
     spokeint, spokestep = np.linspace(0.0 * np.pi,
                                       1.0 * np.pi,
-                                      spokes / 2,
+                                      spokes // 2,
                                       False,
                                       True)
     spokeint += spokestep / 2
@@ -501,7 +501,7 @@ def xradia_star(sh, spokes=48, std=0.5, minfeature=5, ringfact=2, rings=4,
     else:
         return spokes
 
-def mass_center(A, axes=None):
+def mass_center(A, axes=None, mask=None):
     """
     Calculates mass center of n-dimensional array `A`
     along tuple of axis `axes`.
@@ -515,6 +515,9 @@ def mass_center(A, axes=None):
         Sequence of axes that contribute to distributed mass. If
         ``axes==None``, all axes are considered.
 
+    mask: ndarray, None
+        If not None, an array the same shape as A acting as mask
+
     Returns
     -------
     mass : 1d array
@@ -527,7 +530,11 @@ def mass_center(A, axes=None):
     else:
         axes = tuple(np.array(axes) + 1)
 
-    return np.sum(A * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A, dtype=np.float)
+    if mask is None:
+        return np.sum(A * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A, dtype=np.float)
+    else:
+        return np.sum(A * mask * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A * mask, dtype=np.float)
+
 
 def radial_distribution(A, radii=None):
     """
@@ -550,7 +557,7 @@ def radial_distribution(A, radii=None):
 
     """
     if radii is None:
-        radii = range(1, np.min(A.shape) / 2)
+        radii = list(range(1, np.min(A.shape) // 2))
 
     coords = np.indices(A.shape) - np.reshape(mass_center(A),
                                               (A.ndim,) + A.ndim * (1,))
@@ -600,7 +607,7 @@ def stxm_analysis(storage, probe=None):
     t2 = 0.
     # Pick a single probe view for preparation purpose:
     v = s.views[0]
-    pp = v.pods.values()[0].pr_view
+    pp = list(v.pods.values())[0].pr_view
     if probe is None:
         pr = np.abs(pp.data) # .sum(0)
     elif np.isscalar(probe):
@@ -611,7 +618,7 @@ def stxm_analysis(storage, probe=None):
         assert (pr.shape == pp.shape[-2:]), 'stxm probe has not the same shape as a view to this storage'
 
     for v in s.views:
-        pod = v.pods.values()[0]
+        pod = list(v.pods.values())[0]
         if not pod.active:
             continue
         t = pod.diff.sum()
@@ -625,7 +632,7 @@ def stxm_analysis(storage, probe=None):
         m = mass_center(pod.diff) # + 1.
         q = pod.di_view.storage._to_phys(m)
         dpc_row[ss] += q[0] * v.psize[0] * pr * 2 * np.pi / pod.geometry.lz
-        dpc_col[ss] += q[1] * v.psize[1] * pr * 2 * np.pi/pod.geometry.lz
+        dpc_col[ss] += q[1] * v.psize[1] * pr * 2 * np.pi / pod.geometry.lz
         trans[ss] += np.sqrt(t) * pr
         nrm[ss] += pr
 
@@ -690,7 +697,7 @@ def load_from_ptyr(filename, what='probe', ID=None, layer=None):
         else:
             address = 'content/' + str(what)
             conti = io.h5read(filename, address)[address]
-            storage = conti.values()[0]
+            storage = list(conti.values())[0]
         if layer is None:
             return storage['data']
         else:
@@ -787,15 +794,16 @@ def cxro_iref(formula, energy, density=-1, npts=100):
 
     url = cxro_iref.cxro_server + '/cgi-bin/getdb.pl'
     #u.logger.info('Querying CRXO database...')
-    req = urllib2.Request(url, data)
-    response = urllib2.urlopen(req)
-    t = response.read()
+    data = data.encode("utf-8")
+    req = urllib.request.Request(url)
+    response = urllib.request.urlopen(req, data=data)
+    t = response.read().decode()
     datafile = t[t.find('/tmp/'):].split('"')[0]
 
     url = cxro_iref.cxro_server + datafile
-    req = urllib2.Request(url)
-    response = urllib2.urlopen(req)
-    data = response.read()
+    req = urllib.request.Request(url)
+    response = urllib.request.urlopen(req)
+    data = response.read().decode()
 
     d = data.split('\n')
     dt = np.array([[float(x) for x in dd.split()] for dd in d[2:] if dd])

@@ -165,7 +165,7 @@ class Geo(Base):
             for k, v in p.items():
                 if k in _old2new.keys():
                     p[_old2new[k]] = v
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k in p:
                 p[k] = v
 
@@ -372,7 +372,7 @@ class Geo(Base):
         return self._propagator
 
     def __str__(self):
-        keys = self.p.keys()
+        keys = list(self.p.keys())
         keys.sort()
         start = ""
         for key in keys:
@@ -527,7 +527,7 @@ class BasicFarfieldPropagator(object):
         p = self.p
         if geo_pars is not None:
             p.update(geo_pars)
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k in p:
                 p[k] = v
 
@@ -698,7 +698,7 @@ class BasicNearfieldPropagator(object):
         p = self.p
         if geo_pars is not None:
             p.update(geo_pars)
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k in p:
                 p[k] = v
 

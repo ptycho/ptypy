@@ -1,4 +1,16 @@
-# Ptypy 0.3 release notes
+# PtyPy 0.4 release notes
+
+After quite some work we announce ptypy 0.4. Apart from including all the fixes and improvements from 0.3.0 to 0.3.1, it includes two bigger changes
+ 1. Ptypy has now been converted to python 3 and will be **python 3 only** in future. The python 2 version will not be actively maintained anymore, we keep a branch for it for a while but we don't expect to put in many fixes and certainly not anny new features. Team work by Julio, Alex, Bjoern and Aaron.
+ *Please note: all branches that haven’t been converted to python 3 by the end of 2019 will most likely be removed during 2020.* Please rebase your effort on version 0.4. If you need help rebasing your efforts, please let us know soon.
+ 2. Position correction is now supported in most engines. It has been implemented by Wilhelm Eschen following the annealing approach introduced by A.M. Maiden et al. (Ultramicroscopy, Volume 120, 2012, Pages 64-72). Bjoern, Benedikt and Aaron helped refine and test it.
+
+## Roadmap
+
+The next release will focus on scalability for HPC applications and GPU acceleration. 
+
+
+# PtyPy 0.3 release notes
 
 We are happy to announce that ptypy 0.3 is now out. If you have been using the ptypy 0.2 (from the master branch), the transition should be smooth but far from automatic - see below. The essence of this new release is
   1. a redesign of ptypy's internal structure, especially the introduction of an extendable [`ScanModel`](https://github.com/ptycho/ptypy/blob/master/ptypy/core/manager.py), which should make new ideas and new algorithms easier to implement (a big collective effort involving A. Björling, A. Parsons, B. Enders and P. Thibault),
