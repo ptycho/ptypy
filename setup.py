@@ -121,13 +121,13 @@ class BuildExtAcceleration(setuptools.command.build_ext.build_ext):
 extensions = [ext.getExtension() for ext in acceleration_build_steps]
 
 package_list = setuptools.find_packages(exclude=exclude_packages)
-print package_list
+
 setup(
     name='Python Ptychography toolbox',
     version=VERSION,
     author='Pierre Thibault, Bjoern Enders, Martin Dierolf and others',
     description='Ptychographic reconstruction toolbox',
-    long_description=file('README.rst', 'r').read(),
+    long_description=open('README.rst', 'r').read(),
     package_dir={'ptypy': 'ptypy'},
     packages=package_list,
     package_data={'ptypy': ['resources/*', ]},
