@@ -4,7 +4,7 @@ A test for the module of the relevant error metrics
 
 import unittest
 import numpy as np
-import utils as tu
+from . import utils as tu
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.array_based.constraints import difference_map_realspace_constraint, scan_and_multiply
 from ptypy.accelerate.array_based.propagation import farfield_propagator
@@ -93,7 +93,7 @@ class ErrorMetricTest(unittest.TestCase):
         N = 30
         out_length = 5
         ea_first_column = range(I)
-        da_first_column = range(I/2) + range(I/2)
+        da_first_column = list(range(int(I/2))) + list(range(int(I/2)))
 
         difference = np.empty(shape=(I, M, N), dtype=COMPLEX_TYPE)
         for idx in range(I):

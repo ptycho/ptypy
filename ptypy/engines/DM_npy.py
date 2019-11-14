@@ -135,7 +135,7 @@ class DMNpy(DM):
         # and then something to convert the arrays to numpy
         self.vectorised_scan = {}
         self.propagator = {}
-        for dID, _diffs in self.di.S.iteritems():
+        for dID, _diffs in self.di.S.items():
             self.vectorised_scan[dID] = du.pod_to_arrays(self, dID)
             first_view_id = self.vectorised_scan[dID]['meta']['view_IDs'][0]
             self.propagator[dID] = self.di.V[first_view_id].pod.geometry.propagator
@@ -149,7 +149,7 @@ class DMNpy(DM):
         to = 0.
         tf = 0.
         # num=5
-        for dID, _diffs in self.di.S.iteritems():
+        for dID, _diffs in self.di.S.items():
 
 
 
@@ -256,11 +256,11 @@ class DMNpy(DM):
 
             #yuk yuk yuk
             error_dct = {}
-            print errors.shape
+            print(errors.shape)
             jx =0
             for jx in range(num):
                 k = 0
-                for idx, name in self.di.views.iteritems():
+                for idx, name in self.di.views.items():
                     error_dct[idx] = errors[jx, :, k]
                     k += 1
                 jx +=1

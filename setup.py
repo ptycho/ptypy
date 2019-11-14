@@ -105,14 +105,14 @@ class BuildExtAcceleration(setuptools.command.build_ext.build_ext):
         # initialise the options for each extension
         setuptools.command.build_ext.build_ext.initialize_options(self)
         for ext in acceleration_build_steps:
-            for key, desc in ext.get_full_options().iteritems():
+            for key, desc in ext.get_full_options().items():
                 self.__dict__[key] = desc['default']
 
     def run(self):
         # run the build for each extension
         for ext in acceleration_build_steps:
             options = {}
-            for key, desc in ext.get_full_options().iteritems():
+            for key, desc in ext.get_full_options().items():
                 options[key] = self.__dict__[key]
             ext.build(options)
         setuptools.command.build_ext.build_ext.run(self)

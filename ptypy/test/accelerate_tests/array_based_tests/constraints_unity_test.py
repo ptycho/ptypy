@@ -5,7 +5,7 @@ The tests for the constraints
 
 import unittest
 import numpy as np
-import utils as tu
+from . import utils as tu
 from ptypy.accelerate.array_based import data_utils as du
 from collections import OrderedDict
 from ptypy.engines.utils import basic_fourier_update
@@ -204,12 +204,12 @@ class ConstraintsUnityTest(unittest.TestCase):
     def ptypy_difference_map_fourier_constraint(self, a_ptycho_instance, pbound=None):
         error_dct = OrderedDict()
         exit_wave = OrderedDict()
-        for dname, diff_view in a_ptycho_instance.diff.views.iteritems():
+        for dname, diff_view in a_ptycho_instance.diff.views.items():
             di_view = a_ptycho_instance.diff.V[dname]
             error_dct[dname] = basic_fourier_update(di_view,
                                                     pbound=pbound,
                                                     alpha=1.0)
-            for name, pod in di_view.pods.iteritems():
+            for name, pod in di_view.pods.items():
                 exit_wave[name] = pod.exit
         return exit_wave, error_dct
 

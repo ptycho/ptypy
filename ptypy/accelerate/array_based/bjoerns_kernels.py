@@ -5,7 +5,7 @@ This maps bjoerns kernels in accelerate.ocl.np_kernels to the ones in array_base
 
 import numpy as np
 from collections import OrderedDict
-from error_metrics import far_field_error
+from .error_metrics import far_field_error
 import object_probe_interaction as opi
 import constraints as con
 

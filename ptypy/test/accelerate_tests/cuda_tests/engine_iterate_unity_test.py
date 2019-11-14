@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 from copy import deepcopy
 
-import utils as tu
+from . import utils as tu
 from ptypy import defaults_tree
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.cuda import constraints as gcon

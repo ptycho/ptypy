@@ -91,7 +91,7 @@ def serialize_array_access(diff_storage):
     for view in views:
         address = []
                         
-        for pname,pod in view.pods.iteritems():
+        for pname,pod in view.pods.items():
             ## store them for each pod
             # create addresses
             a = np.array(
@@ -163,7 +163,7 @@ class DM_ocl(DM_serial):
         super(DM_ocl,self).engine_prepare()
         
         # object padding on high side (due to 16x16 wg size)    
-        for oID, ob in self.ob.storages.iteritems():
+        for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
             obv = self.ob_viewcover.S[oID]
             misfit = np.asarray(ob.shape[-2:]) % 32
@@ -182,15 +182,15 @@ class DM_ocl(DM_serial):
             self.ob_cfact[oID] = cfact
             self.ob_cfact_gpu[oID] = cla.to_device(self.queue,cfact)
             
-        for pID, pr in self.pr.storages.iteritems():
+        for pID, pr in self.pr.storages.items():
             cfact = self.p.probe_inertia * len(pr.views) / pr.data.shape[0]
             self.pr_cfact[pID] = cfact / u.parallel.size
                 
         ## The following should be restricted to new data
         
         # recursive copy to gpu
-        for name,c in self.ptycho.containers.iteritems():
-            for name,s in c.S.iteritems():
+        for name,c in self.ptycho.containers.items():
+            for name,s in c.S.items():
                 ## convert data here
                 if s.data.dtype.name =='bool':
                     data = s.data.astype(np.float32)
@@ -198,7 +198,7 @@ class DM_ocl(DM_serial):
                     data = s.data
                 s.gpu = cla.to_device(self.queue,data)
         
-        for dID, diffs in self.di.S.iteritems():
+        for dID, diffs in self.di.S.items():
             prep = u.Param()
             self.diff_info[dID] = prep
             
@@ -325,7 +325,7 @@ class DM_ocl(DM_serial):
                 
                 err_phot = np.zeros_like(err_fourier)
                 err_exit = np.zeros_like(err_fourier)
-                errs = np.array(zip(err_fourier,err_phot,err_exit))
+                errs = np.array(list(zip(err_fourier,err_phot,err_exit)))
                 error = dict(zip(prep.view_IDs, errs))
                 
                 self.benchmark.calls_fourier +=1
@@ -339,13 +339,13 @@ class DM_ocl(DM_serial):
             self.curiter += 1
             queue.finish()
 
-        for name, s in self.ob.S.iteritems():  
+        for name, s in self.ob.S.items():  
             s.data[:] = s.gpu.get(queue=self.queue)
-        for name, s in self.pr.S.iteritems():  
+        for name, s in self.pr.S.items():  
             s.data[:] = s.gpu.get(queue=self.queue)
         
         # costly but needed to sync back with 
-        for name, s in self.ex.S.iteritems():  
+        for name, s in self.ex.S.items():  
             s.data[:] = s.gpu.get(queue=self.queue)
 
         self.queue.finish()
@@ -388,7 +388,7 @@ class DM_ocl(DM_serial):
         t1 = time.time()
         queue = self.queue
         queue.finish()
-        for oID, ob in self.ob.storages.iteritems():
+        for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
             """
             if self.p.obj_smooth_std is not None:
@@ -424,7 +424,7 @@ class DM_ocl(DM_serial):
             queue.finish()
             
             
-        for oID, ob in self.ob.storages.iteritems():
+        for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
             # MPI test
             if MPI:
@@ -462,7 +462,7 @@ class DM_ocl(DM_serial):
         # storage for-loop
         change = 0
         cfact = self.p.probe_inertia 
-        for pID, pr in self.pr.storages.iteritems():
+        for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
             cfact = self.pr_cfact[pID]
             pr.gpu *= cfact
@@ -484,7 +484,7 @@ class DM_ocl(DM_serial):
 
             queue.finish()
             
-        for pID, pr in self.pr.storages.iteritems():
+        for pID, pr in self.pr.storages.items():
             
             buf = self.pr_buf.S[pID]
             prn = self.pr_nrm.S[pID]
@@ -537,28 +537,28 @@ class DM_ocl(DM_serial):
         """
         self.queue.finish()
         if parallel.master:
-            print "----- BENCHMARKS ----"
+            print("----- BENCHMARKS ----")
             acc = 0.
             for name in sorted(self.benchmark.keys()):
                 t = self.benchmark[name]
                 if name[0] in 'ABCDEFGHI':
-                    print '%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier *1000)
+                    print('%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier *1000))
                     acc +=t
                 elif str(name) == 'probe_update':
                     #pass
-                    print '%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_probe * 1000, self.benchmark.calls_probe)
+                    print('%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_probe * 1000, self.benchmark.calls_probe))
                 elif str(name) == 'object_update':
-                    print '%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_object *1000, self.benchmark.calls_object)
+                    print('%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_object *1000, self.benchmark.calls_object))
             
-            print '%20s : %1.3f ms per iteration. %d calls' % ('Fourier_total', acc / self.benchmark.calls_fourier *1000, self.benchmark.calls_fourier)
+            print('%20s : %1.3f ms per iteration. %d calls' % ('Fourier_total', acc / self.benchmark.calls_fourier *1000, self.benchmark.calls_fourier))
             
             """
-            for name, s in self.ob.S.iteritems():
+            for name, s in self.ob.S.items():
                 plt.figure('obj')
                 d = s.gpu.get()
                 #print np.abs(d[0][300:-300,300:-300]).mean()
                 plt.imshow(u.imsave(d[0][400:-400,400:-400]))
-            for name, s in self.pr.S.iteritems():
+            for name, s in self.pr.S.items():
                 d = s.gpu.get()
                 for l in d:
                     plt.figure()

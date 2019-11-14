@@ -29,7 +29,7 @@ def _vectorise_array_access(diff_storage):
     addr = []
     for view in views:
         address = []
-        for _pname, pod in view.pods.iteritems():
+        for _pname, pod in view.pods.items():
             # store them for each pod
             # create addresses
             probe_weights.append(pod.probe_weight)

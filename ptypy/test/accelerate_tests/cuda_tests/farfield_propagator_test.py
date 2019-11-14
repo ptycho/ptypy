@@ -4,7 +4,7 @@ Test for the propagation in numpy
 
 import unittest
 import numpy as np
-import utils as tu
+from . import utils as tu
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.array_based import object_probe_interaction as opi
 from ptypy.accelerate.cuda import propagation as gprop
@@ -61,9 +61,9 @@ class FarfieldPropagatorTest(unittest.TestCase):
             tend = time.time()
             gtime = tend-tstart
 
-            print "Times: CPU={}, GPU={}, speedup={}x".format(
+            print("Times: CPU={}, GPU={}, speedup={}x".format(
                 pytime, gtime, pytime/gtime
-            )
+            ))
         
 
         calculatePrintErrors(array_propagated, gpu_propagated)
@@ -134,9 +134,9 @@ class FarfieldPropagatorTest(unittest.TestCase):
             tend = time.time()
             gtime = tend-tstart
 
-            print "Times: CPU={}, GPU={}, speedup={}x".format(
+            print("Times: CPU={}, GPU={}, speedup={}x".format(
                 pytime, gtime, pytime/gtime
-            )
+            ))
         
 
         calculatePrintErrors(array_propagated, gpu_propagated)

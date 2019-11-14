@@ -5,7 +5,7 @@ tests for the object-probe interactions, including the specific DM, ePIE etc upd
 
 import unittest
 import numpy as np
-import utils as tu
+from . import utils as tu
 from copy import deepcopy
 from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 from ptypy.accelerate.array_based import data_utils as du
@@ -25,7 +25,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
         blank = np.ones_like(probe)
         po = opi.scan_and_multiply(blank, obj, exit_wave.shape, addr_info)
 
-        for idx, p in enumerate(PtychoInstance.pods.itervalues()):
+        for idx, p in enumerate(iter(PtychoInstance.pods.values())):
             np.testing.assert_array_equal(po[idx], p.object)
 
     def test_exit_wave_calculation(self):
@@ -38,7 +38,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
         exit_wave = vectorised_scan['exit wave']
 
         po = opi.scan_and_multiply(probe, obj, exit_wave.shape, addr_info)
-        for idx, p in enumerate(PtychoInstance.pods.itervalues()):
+        for idx, p in enumerate(iter(PtychoInstance.pods.values())):
             np.testing.assert_array_equal(po[idx], p.object * p.probe)
 
     def test_difference_map_realspace_constraint(self):
@@ -255,7 +255,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         dummy_addr = np.zeros_like(extract_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(update_addr, extract_addr, exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(update_addr, extract_addr, exit_addr, dummy_addr, dummy_addr))
         probe_support = np.ones_like(array_to_be_updated) * 100.0
         #(ob, probe_weights, probe, exit_wave, addr_info, cfact_probe, probe_support = None)
         opi.difference_map_update_probe(array_to_be_extracted, weights, array_to_be_updated, exit_wave, addr_info, cfact, probe_support=probe_support)
@@ -326,7 +326,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         dummy_addr = np.zeros_like(extract_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(update_addr, extract_addr, exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(update_addr, extract_addr, exit_addr, dummy_addr, dummy_addr))
         #(ob, probe_weights, probe, exit_wave, addr_info, cfact_probe, probe_support = None)
         opi.difference_map_update_probe(array_to_be_extracted, weights, array_to_be_updated, exit_wave, addr_info, cfact, probe_support=None)
 
@@ -396,7 +396,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         dummy_addr = np.zeros_like(extract_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr))
 
         opi.difference_map_update_object(array_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info, cfact, ob_smooth_std=None, clip_object=None)
         expected_output = np.array([[-5.00000000 + 5.j, 4.00000000 + 4.j],
@@ -465,7 +465,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         dummy_addr = np.zeros_like(extract_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr))
         obj_smooth_std = 2 # integer
         opi.difference_map_update_object(array_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info, cfact, ob_smooth_std=obj_smooth_std, clip_object=None)
         expected_output = np.array([[-5.00000000+5.j, 4.00000000+4.j],
@@ -533,7 +533,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         dummy_addr = np.zeros_like(extract_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr))
         clip = (0.8, 1.0)
         opi.difference_map_update_object(array_to_be_updated, weights, array_to_be_extracted, exit_wave, addr_info, cfact, ob_smooth_std=None, clip_object=clip)
         expected_output = np.array([[-0.70710677+0.70710677j, 0.70710677+0.70710683j],
@@ -653,7 +653,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
             cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
 
         dummy_addr = np.zeros_like(probe_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr))
 
         original_probe = deepcopy(probe)
         expected_object=np.array([[[-5.00000000+5.j,-5.00000000+5.j,-5.00000000+5.j,
@@ -799,7 +799,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
             cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
 
         dummy_addr = np.zeros_like(probe_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr))
 
         original_obj = deepcopy(obj)
 
@@ -923,7 +923,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
             cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
 
         dummy_addr = np.zeros_like(probe_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr))
 
         original_obj = deepcopy(obj)
         original_probe = deepcopy(probe)
@@ -1029,7 +1029,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
 
         dummy_addr = np.zeros_like(
             probe_addr)  # these aren't used by the function, but are passed as a top level address book
-        addr_info = zip(probe_addr, obj_addr, exit_addr, dummy_addr, dummy_addr)
+        addr_info = list(zip(probe_addr, obj_addr, exit_addr, dummy_addr, dummy_addr))
 
         expected_probe = np.array([[[ 0.34795576+0.32689944j, 0.34795576+0.32689944j,  0.34795576+0.32689944j,
                                       0.34795576+0.32689944j, 0.34795576+0.32689944j],
@@ -1199,7 +1199,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
             cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
 
         dummy_addr = np.zeros_like(probe_addr)  # these aren't used by the function, but are passed as a top level address book
-        addr_info = zip(probe_addr, obj_addr, exit_addr, dummy_addr, dummy_addr)
+        addr_info = list(zip(probe_addr, obj_addr, exit_addr, dummy_addr, dummy_addr))
 
         expected_probe = np.array([[[ 45.64985275-4.16102743j,  45.64985275-4.16102743j,
                                       45.64985275-4.16102743j,  45.64985275-4.16102743j,
@@ -1292,7 +1292,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
                                       probe,
                                       err_msg="The probe has not been updated correctly")
 
-        print obj
+        print(obj)
         np.testing.assert_allclose(expected_object,
                                       obj,
                                       err_msg="The object has not been updated correctly.")

@@ -75,7 +75,7 @@ def serialize_array_access(diff_storage):
     for view in views:
         address = []
                         
-        for pname,pod in view.pods.iteritems():
+        for pname,pod in view.pods.items():
             ## store them for each pod
             # create addresses
             a = np.array(
@@ -110,7 +110,7 @@ class DM_serial(DM.DM):
     
     [batch_size]
     default = 100
-    type = integer
+    type = int
     lowlim = 1
     help = Length of frame buffer for batched execution
     
@@ -169,7 +169,7 @@ class DM_serial(DM.DM):
                 
         supp = self.p.get('probe_fourier_support')
         if supp is not None:
-            for name, s in self.pr.S.iteritems():
+            for name, s in self.pr.S.items():
                 sh = s.data.shape
                 ll, xx, yy = u.grids(sh, center='fft',FFTlike=True)
                 support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
@@ -319,13 +319,13 @@ class DM_serial(DM.DM):
             self.curiter += 1
         
         """
-        for name, s in self.ob.S.iteritems():  
+        for name, s in self.ob.S.items():  
             s.data[:] = s.gpu.get(queue=self.queue)
-        for name, s in self.pr.S.iteritems():  
+        for name, s in self.pr.S.items():  
             s.data[:] = s.gpu.get(queue=self.queue)
         
         # costly but needed to sync back with 
-        for name, s in self.ex.S.iteritems():  
+        for name, s in self.ex.S.items():  
             s.data[:] = s.gpu.get(queue=self.queue)
         """
         
@@ -366,7 +366,7 @@ class DM_serial(DM.DM):
     def object_update(self, MPI=False):
         t1 = time.time()
 
-        for oID, ob in self.ob.storages.iteritems():
+        for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
             """
             if self.p.obj_smooth_std is not None:
@@ -399,7 +399,7 @@ class DM_serial(DM.DM):
                                               prep.addr)
                         
             
-        for oID, ob in self.ob.storages.iteritems():
+        for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
             # MPI test
             if MPI:
@@ -434,7 +434,7 @@ class DM_serial(DM.DM):
         # storage for-loop
         change = 0
          
-        for pID, pr in self.pr.storages.iteritems():
+        for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
             cfact = self.pr_cfact[pID] 
             pr.data *= cfact
@@ -455,7 +455,7 @@ class DM_serial(DM.DM):
                                               prep.addr)
 
             
-        for pID, pr in self.pr.storages.iteritems():
+        for pID, pr in self.pr.storages.items():
             
             buf = self.pr_buf.S[pID]
             prn = self.pr_nrm.S[pID]
@@ -502,28 +502,28 @@ class DM_serial(DM.DM):
         try deleting ever helper contianer
         """
         if parallel.master:
-            print "----- BENCHMARKS ----"
+            print("----- BENCHMARKS ----")
             acc = 0.
             for name in sorted(self.benchmark.keys()):
                 t = self.benchmark[name]
                 if name[0] in 'ABCDEFGHI':
-                    print '%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier *1000)
+                    print('%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier *1000))
                     acc +=t
                 elif str(name) == 'probe_update':
                     pass
                     #print '%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_probe * 1000, self.benchmark.calls_probe)
                 elif str(name) == 'object_update':
-                    print '%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_object *1000, self.benchmark.calls_object)
+                    print('%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_object *1000, self.benchmark.calls_object))
             
-            print '%20s : %1.3f ms per iteration. %d calls' % ('Fourier_total', acc / self.benchmark.calls_fourier *1000, self.benchmark.calls_fourier)
+            print('%20s : %1.3f ms per iteration. %d calls' % ('Fourier_total', acc / self.benchmark.calls_fourier *1000, self.benchmark.calls_fourier))
             
             
-            for name, s in self.ob.S.iteritems():
+            for name, s in self.ob.S.items():
                 plt.figure('obj')
                 d = s.data
                 #print np.abs(d[0][300:-300,300:-300]).mean()
                 plt.imshow(u.imsave(d[0][100:-100,100:-100]))
-            for name, s in self.pr.S.iteritems():
+            for name, s in self.pr.S.items():
                 d = s.data
                 for l in d:
                     plt.figure()

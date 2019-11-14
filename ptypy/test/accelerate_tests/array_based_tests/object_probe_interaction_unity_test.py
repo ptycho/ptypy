@@ -4,7 +4,7 @@ This is a unity test comparing to the pod based framework
 
 import unittest
 import numpy as np
-import utils as tu
+from . import utils as tu
 from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.array_based import object_probe_interaction as opi
@@ -34,8 +34,8 @@ class ObjectProbeInteractionUnityTest(unittest.TestCase):
     def ptypy_apply_difference_map(self, a_ptycho_instance):
         f = OrderedDict()
         alpha = 1.0
-        for dname, diff_view in a_ptycho_instance.diff.views.iteritems():
-            for name, pod in diff_view.pods.iteritems():
+        for dname, diff_view in a_ptycho_instance.diff.views.items():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 f[name] = (1 + alpha) * pod.probe * pod.object - alpha * pod.exit

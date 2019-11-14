@@ -5,13 +5,13 @@ tests for the object-probe interactions, including the specific DM, ePIE etc upd
 
 import unittest
 import numpy as np
-import utils as tu
+from . import utils as tu
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.array_based import object_probe_interaction as opi
 from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 from ptypy.accelerate.cuda import object_probe_interaction as gopi
 from copy import deepcopy
-from utils import print_array_info
+from .utils import print_array_info
 
 from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
 init_gpus(0)
@@ -254,7 +254,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         dummy_addr = np.zeros_like(extract_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(update_addr, extract_addr, exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(update_addr, extract_addr, exit_addr, dummy_addr, dummy_addr))
         probe_support = np.ones_like(array_to_be_updated) * 100.0
         #(ob, probe_weights, probe, exit_wave, addr_info, cfact_probe, probe_support = None)
 
@@ -326,7 +326,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         dummy_addr = np.zeros_like(extract_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(update_addr, extract_addr, exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(update_addr, extract_addr, exit_addr, dummy_addr, dummy_addr))
         #(ob, probe_weights, probe, exit_wave, addr_info, cfact_probe, probe_support = None)
 
         garray_to_be_updated = deepcopy(array_to_be_updated)
@@ -392,7 +392,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         dummy_addr = np.zeros_like(extract_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr))
 
         garray_to_be_updated = deepcopy(array_to_be_updated)
         gcfact = deepcopy(cfact)
@@ -457,7 +457,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         dummy_addr = np.zeros_like(extract_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr))
         obj_smooth_std = 2.0 # integer
 
         garray_to_be_updated = deepcopy(array_to_be_updated)
@@ -529,7 +529,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
             cfact[idx] = np.ones((H, I)) * 10 * (idx + 1)
 
         dummy_addr = np.zeros_like(extract_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(extract_addr, update_addr , exit_addr, dummy_addr, dummy_addr))
         clip = (0.8, 1.0)
 
         garray_to_be_updated = deepcopy(array_to_be_updated)
@@ -650,7 +650,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
             cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
 
         dummy_addr = np.zeros_like(probe_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr))
 
         gobj = deepcopy(obj)
         gprobe = deepcopy(probe)
@@ -773,7 +773,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
             cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
 
         dummy_addr = np.zeros_like(probe_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr))
 
         gobj = deepcopy(obj)
         gprobe = deepcopy(probe)
@@ -896,7 +896,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
             cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
 
         dummy_addr = np.zeros_like(probe_addr) #  these aren't used by the function, but are passed as a top level address book
-        addr_info  = zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr)
+        addr_info  = list(zip(probe_addr, obj_addr , exit_addr, dummy_addr, dummy_addr))
 
 
         gobj = deepcopy(obj)
@@ -1021,7 +1021,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
 
         dummy_addr = np.zeros_like(
             probe_addr)  # these aren't used by the function, but are passed as a top level address book
-        addr_info = zip(probe_addr, obj_addr, exit_addr, dummy_addr, dummy_addr)
+        addr_info = list(zip(probe_addr, obj_addr, exit_addr, dummy_addr, dummy_addr))
 
         gobj = deepcopy(obj)
         gprobe = deepcopy(probe)
@@ -1151,7 +1151,7 @@ class ObjectProbeInteractionTest(unittest.TestCase):
             cfact_probe[idx] = np.ones((E, F)) * 5 * (idx + 1)
 
         dummy_addr = np.zeros_like(probe_addr)  # these aren't used by the function, but are passed as a top level address book
-        addr_info = zip(probe_addr, obj_addr, exit_addr, dummy_addr, dummy_addr)
+        addr_info = list(zip(probe_addr, obj_addr, exit_addr, dummy_addr, dummy_addr))
 
         expected_probe = np.array([[[ 9.09412193-0.70329767j,  9.09412193-0.70329767j,  9.09412193-0.70329767j,
                                       9.09412193-0.70329767j,  9.09412193-0.70329767j],

@@ -6,7 +6,7 @@ Should have all the engine updates
 '''
 
 import numpy as np
-from array_utils import norm2, complex_gaussian_filter, abs2, mass_center, interpolated_shift, clip_complex_magnitudes_to_range
+from .array_utils import norm2, complex_gaussian_filter, abs2, mass_center, interpolated_shift, clip_complex_magnitudes_to_range
 from copy import deepcopy
 from . import COMPLEX_TYPE
 

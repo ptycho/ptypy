@@ -70,13 +70,13 @@ class Fourier_update_kernel(BaseKernel):
         self.configure_ocl()
         
     def sync_ocl(self):
-        for key,array in self.npy.__dict__.iteritems():
+        for key,array in self.npy.__dict__.items():
             self.ocl.__dict__[key].set(array)
             
     def configure_ocl(self):
         self.ocl_wg_size = (1,1,32)
         
-        for key,array in self.npy.__dict__.iteritems():
+        for key,array in self.npy.__dict__.items():
             self.ocl.__dict__[key] = cla.to_device(self.queue, array)
              
         assert self.queue is not None
@@ -297,7 +297,7 @@ class Fourier_update_kernel(BaseKernel):
         
     def verify_ocl(self, precision=2**(-23)):
         
-        for name, val in self.npy.__dict__.iteritems():
+        for name, val in self.npy.__dict__.items():
             val2 = self.ocl.__dict__[name].get()
             val = val
             if np.allclose(val,val2,atol=precision):
@@ -450,11 +450,11 @@ class Auxiliary_wave_kernel(BaseKernel):
         self.npy.ex = ex
         self.npy.addr = addr
     
-        for key,array in self.npy.__dict__.iteritems():
+        for key,array in self.npy.__dict__.items():
             self.ocl.__dict__[key] = cla.to_device(self.queue, array)
     
     def sync_ocl(self):
-        for key,array in self.npy.__dict__.iteritems():
+        for key,array in self.npy.__dict__.items():
             self.ocl.__dict__[key].set(array)
                     
     
@@ -550,7 +550,7 @@ class Auxiliary_wave_kernel(BaseKernel):
         
     def verify_ocl(self, precision=2**(-23)):
         
-        for name, val in self.npy.__dict__.iteritems():
+        for name, val in self.npy.__dict__.items():
             val2 = self.ocl.__dict__[name].get()
             val = val
             if np.allclose(val,val2,atol=precision):
@@ -758,11 +758,11 @@ class PO_update_kernel(BaseKernel):
         self.npy.ex = ex
         self.npy.addr = addr
     
-        for key,array in self.npy.__dict__.iteritems():
+        for key,array in self.npy.__dict__.items():
             self.ocl.__dict__[key] = cla.to_device(self.queue, array)
     
     def sync_ocl(self):
-        for key,array in self.npy.__dict__.iteritems():
+        for key,array in self.npy.__dict__.items():
             self.ocl.__dict__[key].set(array)
                     
     
@@ -861,7 +861,7 @@ class PO_update_kernel(BaseKernel):
         
     def verify_ocl(self, precision=2**(-23)):
         
-        for name, val in self.npy.__dict__.iteritems():
+        for name, val in self.npy.__dict__.items():
             val2 = self.ocl.__dict__[name].get()
             val = val
             if np.allclose(val,val2,atol=precision):

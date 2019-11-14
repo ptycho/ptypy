@@ -1050,7 +1050,7 @@ class Ptycho(Base):
             sources = {}
             positions = []
             label = []
-            for name,view in views.iteritems():
+            for name,view in views.items():
                 pos = view.pod.ob_view.coord
                 _dest = __node(pos) % N
                 label.append(_dest)
@@ -1073,7 +1073,7 @@ class Ptycho(Base):
             ## Pairing
             pairs = {}
             # prepare (enlarge) the storages on the receiving nodes
-            for name, source in sources.iteritems():
+            for name, source in sources.items():
                 dest = destinations[name] # This must work
                 pairs[name] = (source,dest)
                 view = views[name]
@@ -1087,7 +1087,7 @@ class Ptycho(Base):
     
             # transfer data
             transferred = 0
-            for name, (source,dest) in pairs.iteritems():
+            for name, (source,dest) in pairs.items():
                 view = views[name]
                 if parallel.rank == source:
                     parallel.send(view.data, dest=dest)

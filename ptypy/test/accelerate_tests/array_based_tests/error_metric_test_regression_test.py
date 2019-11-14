@@ -4,7 +4,7 @@ A test for the module of the relevant error metrics
 
 import unittest
 import numpy as np
-import utils as tu
+from . import utils as tu
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 import ptypy.utils as u
@@ -66,7 +66,7 @@ class ErrorMetricRegressionTest(unittest.TestCase):
         N = 30
         out_length = 5
         ea_first_column = range(I)
-        da_first_column = range(I/2) + range(I/2)
+        da_first_column = list(range(int(I/2))) + list(range(int(I/2)))
 
         difference = np.empty(shape=(I, M, N), dtype=COMPLEX_TYPE)
         for idx in range(I):
@@ -83,11 +83,11 @@ class ErrorMetricRegressionTest(unittest.TestCase):
         fmag = []
         af = []
         mask = []
-        for dname, diff_view in a_ptycho_instance.diff.views.iteritems():
+        for dname, diff_view in a_ptycho_instance.diff.views.items():
             fmag.append(np.sqrt(np.abs(diff_view.data)))
             af2 = np.zeros_like(diff_view.data)
             f = OrderedDict()
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 f[name] = pod.fw((1 + alpha) * pod.probe * pod.object

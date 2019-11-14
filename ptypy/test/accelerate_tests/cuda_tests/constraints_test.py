@@ -4,7 +4,7 @@ The tests for the constraints
 
 
 import unittest
-import utils as tu
+from . import utils as tu
 import numpy as np
 from copy import deepcopy
 

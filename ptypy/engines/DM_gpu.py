@@ -128,7 +128,7 @@ class DMGpu(DMNpy):
         Compute `num` iterations.
         """
 
-        for dID, _diffs in self.di.S.iteritems():
+        for dID, _diffs in self.di.S.items():
 
             cfact_probe = (self.p.probe_inertia * len(self.vectorised_scan[dID]['meta']['addr']) /
                            self.vectorised_scan[dID]['probe'].shape[0]) * np.ones_like(
@@ -171,11 +171,11 @@ class DMGpu(DMNpy):
 
             #yuk yuk yuk
             error_dct = {}
-            print errors.shape
+            print(errors.shape)
             jx =0
             for jx in range(num):
                 k = 0
-                for idx, name in self.di.views.iteritems():
+                for idx, name in self.di.views.items():
                     error_dct[idx] = errors[jx, :, k]
                     k += 1
                 jx +=1

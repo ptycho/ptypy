@@ -8,7 +8,7 @@ beamlines['i08'] = [64, 20000]#45000]
 # beamlines['i13'] = [4096, 5000]
 
 for beamline in beamlines.keys():
-    print "####### RUNNING %s #########" % beamline
+    print("####### RUNNING %s #########" % beamline)
     p = u.Param()
     p.verbose_level = 3
     p.io = u.Param()

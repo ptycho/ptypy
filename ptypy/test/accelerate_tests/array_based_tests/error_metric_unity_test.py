@@ -5,7 +5,7 @@ A test for the module of the relevant error metrics
 
 import unittest
 import numpy as np
-import utils as tu
+from . import utils as tu
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 import ptypy.utils as u
@@ -39,12 +39,12 @@ class ErrorMetricUnityTest(unittest.TestCase):
 
         vals = log_likelihood(probe_object, mask, diffraction, propagator.pre_fft, propagator.post_fft, addr_info)
         k = 0
-        for name, view in PtychoInstance.diff.V.iteritems():
+        for name, view in PtychoInstance.diff.V.items():
             error_metric[name] = vals[k]
             k += 1
 
 
-        for name, view in PodPtychoInstance.diff.V.iteritems():
+        for name, view in PodPtychoInstance.diff.V.items():
             ptypy_error = ptypy_error_metric[name]
             numpy_error = error_metric[name]
             np.testing.assert_array_equal(ptypy_error, numpy_error)
@@ -67,11 +67,11 @@ class ErrorMetricUnityTest(unittest.TestCase):
         fmag = []
         af = []
         mask = []
-        for dname, diff_view in a_ptycho_instance.diff.views.iteritems():
+        for dname, diff_view in a_ptycho_instance.diff.views.items():
             fmag.append(np.sqrt(np.abs(diff_view.data)))
             af2 = np.zeros_like(diff_view.data)
             f = OrderedDict()
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
@@ -92,11 +92,11 @@ class ErrorMetricUnityTest(unittest.TestCase):
 
     def get_ptypy_loglikelihood(self, a_ptycho_instance):
         error_dct = {}
-        for dname, diff_view in a_ptycho_instance.diff.views.iteritems():
+        for dname, diff_view in a_ptycho_instance.diff.views.items():
             I = diff_view.data
             fmask = diff_view.pod.mask
             LL = np.zeros_like(diff_view.data)
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 LL += u.abs2(pod.fw(pod.probe * pod.object))
 
             error_dct[dname] = (np.sum(fmask * (LL - I) ** 2 / (I + 1.))

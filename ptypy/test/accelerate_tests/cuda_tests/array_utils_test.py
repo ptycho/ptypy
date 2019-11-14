@@ -11,7 +11,7 @@ from ptypy.accelerate.cuda import FLOAT_TYPE as GPU_FLOAT_TYPE
 from copy import deepcopy
 from ptypy.accelerate.cuda import COMPLEX_TYPE as GPU_COMPLEX_TYPE
 import numpy as np
-from utils import print_array_info
+from .utils import print_array_info
 
 from scipy import ndimage as ndi
 from scipy import signal as sig

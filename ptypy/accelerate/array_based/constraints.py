@@ -4,10 +4,10 @@ a module to holds the constraints
 
 import numpy as np
 
-from error_metrics import log_likelihood, far_field_error, realspace_error
-from object_probe_interaction import difference_map_realspace_constraint, scan_and_multiply, difference_map_overlap_update
-from propagation import farfield_propagator
-import array_utils as au
+from .error_metrics import log_likelihood, far_field_error, realspace_error
+from .object_probe_interaction import difference_map_realspace_constraint, scan_and_multiply, difference_map_overlap_update
+from .propagation import farfield_propagator
+from . import array_utils as au
 from . import COMPLEX_TYPE, FLOAT_TYPE
 
 def renormalise_fourier_magnitudes(f, af, fmag, mask, err_fmag, addr_info, pbound):

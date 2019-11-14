@@ -1,6 +1,6 @@
 from ptypy.core import Ptycho
 from ptypy import utils as u
-from ptypy.test import utils as tu
+from .. import utils as tu
 import tempfile
 import unittest
 

@@ -2,8 +2,8 @@
 A module of the relevant error metrics
 '''
 
-from propagation import farfield_propagator
-from array_utils import sum_to_buffer, abs2
+from .propagation import farfield_propagator
+from .array_utils import sum_to_buffer, abs2
 from . import FLOAT_TYPE, COMPLEX_TYPE
 import numpy as np
 
