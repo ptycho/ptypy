@@ -357,7 +357,6 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         exit_wave_dev.gpudata.free()
         addr_dev.gpudata.free()
 
-    @unittest.skip("Not active yet")
     def test_build_exit_aux_same_as_exit_REGRESSION(self):
         '''
         setup
@@ -547,7 +546,6 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         exit_wave_dev.gpudata.free()
         addr_dev.gpudata.free()
 
-    @unittest.skip("Not active yet")
     def test_build_exit_aux_same_as_exit_UNITY(self):
         '''
         setup
@@ -613,7 +611,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         probe_dev = gpuarray.to_gpu(probe)
         addr_dev = gpuarray.to_gpu(addr)
         auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
-        exit_wave_dev = gpuarray.to_gpu(auxiliary_wave)
+        exit_wave_dev = gpuarray.to_gpu(exit_wave)
 
         from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
