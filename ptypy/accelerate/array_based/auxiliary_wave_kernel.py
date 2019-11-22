@@ -31,7 +31,6 @@ class AuxiliaryWaveKernel(BaseKernel):
         self.pr_shape = tuple([np.int32(ax) for ax in pr.shape])
         self.nviews, self.nmodes, self.ncoords, self.naxes = addr.shape
         self.num_pods = np.int32(self.nviews * self.nmodes)
-        self.nviews, self.nmodes, self.ncoords, self.naxes = addr.shape
 
 
     @property
