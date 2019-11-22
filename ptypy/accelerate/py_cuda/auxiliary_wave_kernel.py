@@ -1,78 +1,82 @@
 import numpy as np
+from pycuda.compiler import SourceModule
 
-from .base import BaseKernel
+from ..array_based import auxiliary_wave_kernel as ab
 
 
-class AuxiliaryWaveKernel(BaseKernel):
+class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
     def __init__(self, queue_thread=None):
 
         super(AuxiliaryWaveKernel, self).__init__(queue_thread)
-        self._offset = None
-        self.ob_shape = None
-        self.pr_shape = None
-        self.nviews = None
-        self.nmodes = None
-        self.ncoords = None
-        self.naxes = None
-        self.num_pods = None
-        self.ocl_wg_size = None
+        # and now initialise the cuda
+        build_aux_code = """
+        #include <iostream>
+        #include <utility>
+        #include <thrust/complex.h>
+        using thrust::complex;
 
-        self.kernels = [
-            'build_aux',
-            'build_exit',
-        ]
+        extern "C"{
+        __global__ void build_aux_cuda(
+            complex<float>* auxiliary_wave,
+            const complex<float>* exit_wave,
+            int A,
+            int B,
+            int C,
+            const complex<float>* probe,
+            int D,
+            int E,
+            int F,
+            const complex<float>* obj,
+            int G,
+            int H,
+            int I,
+            const int* addr,
+            float alpha
+            )
+            {
+              int bid = blockIdx.x;
+              int tx = threadIdx.x;
+              int ty = threadIdx.y;
+              int addr_stride = 15;
 
-    def configure(self, ob, pr, addr, alpha=1.0):
-        # changed to be consistent with PoUpdateKernel
-        self.alpha = np.float32(alpha)
-        self.batch_offset = 0
-        self.ob_shape = tuple([np.int32(ax) for ax in ob.shape]) # in Bjoerns version this is only the last two dimensions.
-        self.pr_shape = tuple([np.int32(ax) for ax in pr.shape])
-        self.nviews, self.nmodes, self.ncoords, self.naxes = addr.shape
-        self.num_pods = np.int32(self.nviews * self.nmodes)
-        self.nviews, self.nmodes, self.ncoords, self.naxes = addr.shape
+              const int* oa = addr + 3 + bid * addr_stride;
+              const int* pa = addr + bid * addr_stride;
+              const int* ea = addr + 6 + bid * addr_stride;
 
+              probe += pa[0] * E * F + pa[1] * F + pa[2];
+              obj += oa[0] * H * I + oa[1] * I + oa[2];
+              exit_wave += ea[0] * B * C;
+              auxiliary_wave += ea[0] * B * C;
 
-    @property
-    def batch_offset(self):
-        return self._offset
+              for (int b = tx; b < B; b += blockDim.x)
+              {
+                for (int c = ty; c < C; c += blockDim.y)
+                {
+                  auxiliary_wave[b * C + c] =  obj[b * I + c] * probe[b * F + c] * (1.0f + alpha) - exit_wave[b * C + c] * alpha;;
+                  }
+               }
+        }
+        }
 
-    @batch_offset.setter
-    def batch_offset(self, x):
-        self._offset = np.int32(x)
+        """
+        self.build_aux_cuda = SourceModule(build_aux_code, include_dirs=[np.get_include()],
+                                       no_extern_c=True).get_function("build_aux_cuda")
 
-
-    def build_aux(self, aux, ob, pr, ex, addr):
-
-        sh = addr.shape
-        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
-        off = self.batch_offset
-        flat_addr = flat_addr[off:off + aux.shape[0]]
-        rows, cols = ex.shape[-2:]
-
-        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            tmp = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
-                  pr[prc[0], :, :] * \
-                  (1. + self.alpha) - \
-                  ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * \
-                  self.alpha
-            aux[ind, :, :] = tmp
-
+    def build_aux(self, auxiliary_wave, object_array, probe, exit_wave, addr):
+        self.build_aux_cuda(auxiliary_wave,
+                            exit_wave,
+                            self.num_pods, self.pr_shape[1], self.pr_shape[2],
+                            probe,
+                            self.pr_shape[0], self.pr_shape[1], self.pr_shape[2],
+                            object_array,
+                            self.ob_shape[0], self.ob_shape[1], self.ob_shape[2],
+                            addr,
+                            self.alpha,
+                            block=(32, 32, 1), grid=(int(self.num_pods), 1, 1))
 
     def build_exit(self, aux, ob, pr, ex, addr):
+        raise NotImplementedError('build_exit is not yet implemented')
 
-        sh = addr.shape
-        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
-        off = self.batch_offset
-        flat_addr = flat_addr[off:off + aux.shape[0]]
-        rows, cols = ex.shape[-2:]
-        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            dex = aux[ind, :, :] - \
-                  ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
-                  pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]
-
-            ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] += dex
-            aux[ind, :, :] = dex
 
 

@@ -5,7 +5,10 @@
 
 import unittest
 import numpy as np
-from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel
+import pycuda.driver as cuda
+from pycuda import gpuarray
+
+from ptypy.accelerate.py_cuda.auxiliary_wave_kernel import AuxiliaryWaveKernel
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
@@ -17,9 +20,14 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
     def setUp(self):
         import sys
         np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
+        cuda.init()
+        current_dev = cuda.Device(0)
+        self.ctx = current_dev.make_context()
+        self.ctx.push()
 
     def tearDown(self):
         np.set_printoptions()
+        self.ctx.detach()
 
     def test_init(self):
         attrs = ["_offset",
@@ -121,6 +129,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         expected_num_pods = INT_TYPE(A)
         expected_alpha = FLOAT_TYPE(alpha_set)
 
+        np.testing.assert_equal(AWK.alpha, expected_alpha)
         np.testing.assert_equal(AWK.batch_offset, expected_batch_offset)
         np.testing.assert_equal(AWK.ob_shape, expected_ob_shape)
         np.testing.assert_equal(AWK.pr_shape, expected_pr_shape)
@@ -130,7 +139,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         np.testing.assert_equal(AWK.naxes, expected_naxes)
         np.testing.assert_equal(AWK.num_pods, expected_num_pods)
 
-    def test_build_aux_same_as_exit(self):
+    def test_build_aux_same_as_exit_REGRESSION(self):
         '''
         setup
         '''
@@ -195,10 +204,14 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         alpha_set = 1.0
         AWK.configure(object_array, probe, addr, alpha=alpha_set)
 
-        AWK.build_aux(auxiliary_wave, object_array, probe, exit_wave, addr)
+        object_array_dev = gpuarray.to_gpu(object_array)
+        probe_dev = gpuarray.to_gpu(probe)
+        addr_dev = gpuarray.to_gpu(addr)
+        auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
+        exit_wave_dev = gpuarray.to_gpu(exit_wave)
 
-        # print("auxiliary_wave after")
-        # print(repr(auxiliary_wave))
+        AWK.build_aux(auxiliary_wave_dev, object_array_dev, probe_dev, exit_wave_dev, addr_dev)
+
 
         expected_auxiliary_wave = np.array([[[-1. + 3.j,  -1. + 3.j,  -1. + 3.j],
                                              [-1. + 3.j,  -1. + 3.j,  -1. + 3.j],
@@ -249,10 +262,103 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                              [-16.+16.j, -16.+16.j, -16.+16.j],
                                              [-16.+16.j, -16.+16.j, -16.+16.j]]], dtype=COMPLEX_TYPE)
 
-        np.testing.assert_array_equal(expected_auxiliary_wave, expected_auxiliary_wave,
+        np.testing.assert_array_equal(expected_auxiliary_wave, auxiliary_wave_dev.get(),
                                       err_msg="The auxiliary_wave has not been updated as expected")
 
-    def test_build_exit_aux_same_as_exit(self):
+        object_array_dev.gpudata.free()
+        auxiliary_wave_dev.gpudata.free()
+        probe_dev.gpudata.free()
+        exit_wave_dev.gpudata.free()
+        addr_dev.gpudata.free()
+
+    def test_build_aux_same_as_exit_UNITY(self):
+        '''
+        setup
+        '''
+        B = 3  # frame size y
+        C = 3  # frame size x
+
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  #  object size y
+        I = C + npts_greater_than  #  object size x
+
+        scan_pts = 2  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):#
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        '''
+        test
+        '''
+        auxiliary_wave = np.zeros_like(exit_wave)
+        from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        nAWK = npAuxiliaryWaveKernel()
+        AWK = AuxiliaryWaveKernel()
+        alpha_set = 1.0
+        AWK.configure(object_array, probe, addr, alpha=alpha_set)
+        nAWK.configure(object_array, probe, addr, alpha=alpha_set)
+
+        object_array_dev = gpuarray.to_gpu(object_array)
+        probe_dev = gpuarray.to_gpu(probe)
+        addr_dev = gpuarray.to_gpu(addr)
+        auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
+        exit_wave_dev = gpuarray.to_gpu(exit_wave)
+
+        AWK.build_aux(auxiliary_wave_dev, object_array_dev, probe_dev, exit_wave_dev, addr_dev)
+        nAWK.build_aux(auxiliary_wave, object_array, probe, exit_wave, addr)
+
+
+        np.testing.assert_array_equal(auxiliary_wave, auxiliary_wave_dev.get(),
+                                      err_msg="The gpu auxiliary_wave does not look the same as the numpy version")
+
+        object_array_dev.gpudata.free()
+        auxiliary_wave_dev.gpudata.free()
+        probe_dev.gpudata.free()
+        exit_wave_dev.gpudata.free()
+        addr_dev.gpudata.free()
+
+    @unittest.skip("Not active yet")
+    def test_build_exit_aux_same_as_exit_REGRESSION(self):
         '''
         setup
         '''
@@ -313,14 +419,20 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         '''
         auxiliary_wave = np.zeros_like(exit_wave)
 
+        object_array_dev = gpuarray.to_gpu(object_array)
+        probe_dev = gpuarray.to_gpu(probe)
+        addr_dev = gpuarray.to_gpu(addr)
+        auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
+        exit_wave_dev = gpuarray.to_gpu(exit_wave)
         AWK = AuxiliaryWaveKernel()
+
         alpha_set = 1.0
         AWK.configure(object_array, probe, addr, alpha=alpha_set)
 
-        AWK.build_exit(auxiliary_wave, object_array, probe, exit_wave, addr)
+        AWK.build_exit(auxiliary_wave_dev, object_array_dev, probe_dev, exit_wave_dev, addr_dev)
         #
         # print("auxiliary_wave after")
-        # print(repr(auxiliary_wave))
+        # print(repr(auxiliary_wave_dev.get()))
         #
         # print("exit_wave after")
         # print(repr(exit_wave))
@@ -374,7 +486,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                              [0.-16.j, 0.-16.j, 0.-16.j],
                                              [0.-16.j, 0.-16.j, 0.-16.j]]], dtype=COMPLEX_TYPE)
 
-        np.testing.assert_array_equal(expected_auxiliary_wave, expected_auxiliary_wave,
+        np.testing.assert_array_equal(expected_auxiliary_wave, auxiliary_wave_dev.get(),
                                       err_msg="The auxiliary_wave has not been updated as expected")
 
         expected_exit_wave = np.array([[[1. - 1.j,  1. - 1.j,  1. - 1.j],
@@ -426,8 +538,108 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                         [16. + 0.j, 16. + 0.j, 16. + 0.j],
                                         [16. + 0.j, 16. + 0.j, 16. + 0.j]]], dtype=COMPLEX_TYPE)
 
-        np.testing.assert_array_equal(expected_exit_wave, expected_exit_wave,
+        np.testing.assert_array_equal(expected_exit_wave, exit_wave_dev.get(),
                                       err_msg="The exit_wave has not been updated as expected")
+
+        object_array_dev.gpudata.free()
+        auxiliary_wave_dev.gpudata.free()
+        probe_dev.gpudata.free()
+        exit_wave_dev.gpudata.free()
+        addr_dev.gpudata.free()
+
+    @unittest.skip("Not active yet")
+    def test_build_exit_aux_same_as_exit_UNITY(self):
+        '''
+        setup
+        '''
+        B = 3  # frame size y
+        C = 3  # frame size x
+
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  #  object size y
+        I = C + npts_greater_than  #  object size x
+
+        scan_pts = 2  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):#
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        '''
+        test
+        '''
+        auxiliary_wave = np.zeros_like(exit_wave)
+
+        object_array_dev = gpuarray.to_gpu(object_array)
+        probe_dev = gpuarray.to_gpu(probe)
+        addr_dev = gpuarray.to_gpu(addr)
+        auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
+        exit_wave_dev = gpuarray.to_gpu(auxiliary_wave)
+
+        from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        nAWK = npAuxiliaryWaveKernel()
+
+        AWK = AuxiliaryWaveKernel()
+
+        alpha_set = 1.0
+
+        AWK.configure(object_array, probe, addr, alpha=alpha_set)
+        nAWK.configure(object_array, probe, addr, alpha=alpha_set)
+
+        AWK.build_exit(auxiliary_wave_dev, object_array_dev, probe_dev, exit_wave_dev, addr_dev)
+        nAWK.build_exit(auxiliary_wave, object_array, probe, exit_wave, addr)
+
+        np.testing.assert_array_equal(auxiliary_wave, auxiliary_wave_dev.get(),
+                                      err_msg="The gpu auxiliary_wave does not look the same as the numpy version")
+
+        np.testing.assert_array_equal(exit_wave, exit_wave_dev.get(),
+                                      err_msg="The gpu exit_wave does not look the same as the numpy version")
+
+        object_array_dev.gpudata.free()
+        auxiliary_wave_dev.gpudata.free()
+        probe_dev.gpudata.free()
+        exit_wave_dev.gpudata.free()
+        addr_dev.gpudata.free()
+
 
 if __name__ == '__main__':
     unittest.main()
