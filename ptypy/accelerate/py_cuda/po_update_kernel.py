@@ -1,6 +1,5 @@
 import numpy as np
 from pycuda.compiler import SourceModule
-from pycuda import gpuarray
 
 from ..array_based import po_update_kernel as ab
 
