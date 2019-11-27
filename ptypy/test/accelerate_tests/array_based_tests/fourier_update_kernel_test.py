@@ -67,7 +67,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         fmag_fill = np.arange(np.prod(fmag.shape)).reshape(fmag.shape).astype(fmag.dtype)
         fmag[:] = fmag_fill
 
-        mask = np.empty(shape=(N, A, B), dtype=np.int32)  # the masks for the measured magnitudes either 1xAxB or NxAxB
+        mask = np.empty(shape=(N, A, B), dtype=FLOAT_TYPE)  # the masks for the measured magnitudes either 1xAxB or NxAxB
         mask_fill = np.ones_like(mask)
         mask_fill[::2, ::2] = 0 # checkerboard for testing
         mask[:] = mask_fill

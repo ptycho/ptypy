@@ -44,7 +44,7 @@ class FourierUpdateKernel(BaseKernel):
 
     def fourier_error(self, f, fmag, fdev, ferr, fmask):
         tf = f.reshape(self.nviews, self.nmodes, self.f_shape[1], self.f_shape[2])
-        af = np.sqrt((np.abs(tf) ** 2).sum(1))  # sum down the mode axis, why sqrt(a**2)?
+        af = np.sqrt((np.abs(tf) ** 2).sum(1))  # sum down the mode axis?
         fdev[:] = af - fmag
         ferr[:] = fmask * np.abs(fdev) ** 2 / self.mask_sum.reshape((self.nviews, 1, 1))
 
