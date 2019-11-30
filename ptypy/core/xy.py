@@ -79,7 +79,7 @@ def from_pars(xypars=None):
     """
     p = DEFAULT.copy(depth=3)
     model = None
-    if hasattr(xypars, 'items') or hasattr(xypars, 'iteritems'):
+    if hasattr(xypars, 'items') or hasattr(xypars, 'items'):
         # This is a dict
         p.update(xypars, in_place_depth=3)
     elif xypars is None:
@@ -109,7 +109,7 @@ def from_pars(xypars=None):
             pos = np.asarray(p.model)
         elif p.model == 'round':
             e, l, s = _complete(p.extent, p.steps, p.spacing)
-            pos = round_scan(s[0], l[0]/2)
+            pos = round_scan(s[0], l[0]//2)
         elif p.model == 'spiral':
             e, l, s = _complete(p.extent, p.steps, p.spacing)
             pos = spiral_scan(s[0], e[0]/2)
@@ -292,7 +292,7 @@ def spiral_scan(dr=1.5e-6, r=7.5e-6, maxpts=None):
         maxpts = 100000
 
     positions = []
-    for k in xrange(maxpts):
+    for k in range(maxpts):
         theta = alpha * np.sqrt(k)
         rr = beta * theta
         if rr > r:

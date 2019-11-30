@@ -99,7 +99,7 @@ def rebin_2d(A, rebin=1):
     rebin
     """
     sh = np.asarray(A.shape[-2:])
-    newdim = sh / rebin
+    newdim = sh // rebin
     if not (sh % rebin == 0).all():
         raise ValueError('Last two axes %s of input array `A` cannot be binned by %s' % (str(tuple(sh)),str(rebin)))
     else:
@@ -170,7 +170,7 @@ def rebin(a, *args,**kwargs):
     Returns
     -------
     out : ndarray
-        Rebined array.
+        Rebinned array.
 
     Examples
     --------
@@ -185,13 +185,13 @@ def rebin(a, *args,**kwargs):
     """
     shape = a.shape
     lenShape = a.ndim
-    factor = np.asarray(shape)/np.asarray(args)
+    factor = np.asarray(shape)//np.asarray(args)
     evList = ['a.reshape('] + \
              ['args[%d],factor[%d],'%(i,i) for i in range(lenShape)] + \
              [')'] + ['.sum(%d)'%(i+1) for i in range(lenShape)] + \
              ['*( 1.'] + ['/factor[%d]'%i for i in range(lenShape)] + [')']
     if kwargs.get('verbose',False):
-        print ''.join(evList)
+        print(''.join(evList))
     return eval(''.join(evList))
 
 def _confine(A):
@@ -381,9 +381,9 @@ def fill3D(A,B,offset=[0,0,0]):
     Ao[Ao<0]=0
     Bo = -off.copy()
     Bo[Bo<0]=0
-    print Ao,Bo
+    print(Ao,Bo)
     if (Bo > Blim).any() or (Ao > Alim).any():
-        print "misfit"
+        print("misfit")
         pass
     else:
         A[Ao[0]:min(off[0]+Blim[0],Alim[0]),Ao[1]:min(off[1]+Blim[1],Alim[1]),Ao[2]:min(off[2]+Blim[2],Alim[2])] \
@@ -573,7 +573,7 @@ def crop_pad_axis(A,hplanes,axis=-1,roll=0,fillpar=0.0, filltype='scalar'):
     """
     if np.isscalar(hplanes):
         hplanes=int(hplanes)
-        r=np.abs(hplanes) / 2 * np.sign(hplanes)
+        r=np.abs(hplanes) // 2 * np.sign(hplanes)
         l=hplanes - r
     elif len(hplanes)==2:
         l=int(hplanes[0])

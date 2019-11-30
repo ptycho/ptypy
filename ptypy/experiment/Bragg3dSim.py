@@ -231,7 +231,7 @@ class Bragg3dSimScan(PtyScan):
 
         # shuffle everything as a test
         if self.p.shuffle:
-            order = range(len(self.diff))
+            order = list(range(len(self.diff)))
             from random import shuffle
             shuffle(order)
             self.diff = [self.diff[i] for i in order]

@@ -407,9 +407,9 @@ class I13ScanNFP(PtyScan):
         # Load dark.
         if self.info.dark_number is not None:
             key = NEXUS_PATHS.frame_pattern % self.info
-            dark_indices = range(len(
+            dark_indices = list(range(len(
                 io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern
-                          % self.info)[key]))
+                          % self.info)[key])))
 
             dark = [io.h5read(self.dark_file, NEXUS_PATHS.frame_pattern
                               % self.info, slice=j)[key][
@@ -425,9 +425,9 @@ class I13ScanNFP(PtyScan):
         # Load flat.
         if self.info.flat_number is not None:
             key = NEXUS_PATHS.frame_pattern % self.info
-            flat_indices = range(len(
+            flat_indices = list(range(len(
                 io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern
-                          % self.info)[key]))
+                          % self.info)[key])))
 
             flat = [io.h5read(self.flat_file, NEXUS_PATHS.frame_pattern
                               % self.info, slice=j)[key][
@@ -544,8 +544,7 @@ class I13ScanNFP(PtyScan):
             # Create fake psf as a sum of gaussians from parameters
             else:
                 gau_sum = 0
-                for k in (
-                        self.info.rl_deconvolution.gaussians.iteritems()):
+                for k in self.info.rl_deconvolution.gaussians.items():
                     gau_sum += u.gaussian2D(raw[0].shape[0],
                                             k[1].std_x,
                                             k[1].std_y,

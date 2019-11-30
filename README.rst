@@ -1,12 +1,12 @@
 PTYPY - Ptychography Reconstruction for Python
 ==============================================
 
-|doi|
+|ptypysite|
 
 Welcome Ptychonaut!
 -------------------
      
-|ptypy| [#pronounciation]_ is a
+|ptypy| [#pronounciation]_ [#ptypypaper]_ is a
 framework for scientific ptychography compiled by 
 P. Thibault and B. Enders and licensed under the GPLv2 license.
 
@@ -111,14 +111,16 @@ The project is licensed under a GPLv2 license.
 
 .. |ptypy| replace:: PtyPy
 
-.. |doi| image:: https://zenodo.org/badge/6834/ptycho/ptypy.png
-         :target: http://dx.doi.org/10.5281/zenodo.12480
+.. |ptypysite| image:: https://ptycho.github.io/ptypy/_static/logo_100px.png
+         :target: https://ptycho.github.io/ptypy/
 
 
 References
 ----------
 
 .. [#pronounciation] Pronounced *typy*, forget the *p*, as in psychology.
+
+.. [#ptypypaper] B.Enders and P.Thibault, *Proc. R. Soc. A* **472**, `doi <http://doi.org/10.1098/rspa.2016.0640>`_
 
 .. [#states] P.Thibault and A.Menzel, *Nature* **494**, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`_
 

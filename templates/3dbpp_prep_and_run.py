@@ -33,7 +33,7 @@ p.scans.scan01.name = 'Bragg3dProjectionModel'
 p.scans.scan01.illumination = illumination
 p.scans.scan01.sample = u.Param()
 p.scans.scan01.sample.fill = 1e-6
-p.scans.scan01.r3_shape = 128/4
+p.scans.scan01.r3_shape = 128//4
 p.scans.scan01.r3_spacing = 4*10e-9
 
 # simulation

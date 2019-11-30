@@ -90,7 +90,7 @@ class Base(object):
     _PREFIX = BASE_PREFIX
     
     __slots__ = ['ID','numID','owner','_pool','_recs','_record']
-    _fields = [('ID','<U16')]
+    _fields = [('ID','<S16')]
     
     def __init__(self, owner=None, ID=None, BeOwner=True):
         """
@@ -121,7 +121,7 @@ class Base(object):
             owner._new_ptypy_object(obj=self)
         else:
             self._record = None
-            logger.warn(
+            logger.debug(
                 'Failed registering instance of %s with ID %s to object %s'
                 % (type(self), self.ID, owner))
         
@@ -145,7 +145,7 @@ class Base(object):
 
         if self._pool.get(prefix) is None:
             self._pool[prefix] = OrderedDict()
-            self._recs[prefix] = np.recarray((8,),dtype=obj.__class__._fields)
+            self._recs[prefix] = np.zeros((8,),dtype=obj.__class__._fields)
             
         d = self._pool[prefix]
         # Check if ID is already taken and assign a new one
@@ -242,14 +242,14 @@ class Base(object):
         if hasattr(self, '_pool'):
             if use_asizeof:
                 space += asizeof(self._pool, limit=0)
-            for k, v in self._pool.iteritems():
+            for k, v in self._pool.items():
                 if use_asizeof:
                     space += asizeof(v, limit=0)
-                for kk, vv in v.iteritems():
+                for kk, vv in v.items():
                     pool_space += vv.calc_mem_usage()[0]
         
         if hasattr(self, '__dict__'):
-            for k, v in self.__dict__.iteritems():
+            for k, v in self.__dict__.items():
                 if issubclass(type(v), Base):
                     continue
                 elif str(k) == '_pool' or str(k) == 'pods':
@@ -272,7 +272,7 @@ def get_class(ID):
     if ID.startswith(VIEW_PREFIX):
         return View
     elif ID.startswith(PTYCHO_PREFIX):
-        from ptycho import Ptycho
+        from .ptycho import Ptycho
         return Ptycho
     elif ID.startswith(STORAGE_PREFIX):
         return Storage
@@ -285,10 +285,10 @@ def get_class(ID):
     elif ID.startswith(PARAM_PREFIX):
         return u.Param
     elif ID.startswith(MODEL_PREFIX):
-        from manager import ModelManager
+        from .manager import ModelManager
         return ModelManager
     elif ID.startswith(GEO_PREFIX):
-        from geometry import Geo
+        from .geometry import Geo
         return Geo
     else:
         return None
@@ -324,7 +324,7 @@ class Storage(Base):
 
     def __init__(self, container, ID=None, data=None, shape=DEFAULT_SHAPE, 
                  fill=0., psize=1., origin=None, layermap=None, padonly=False,
-                 **kwargs):
+                 padding=0, **kwargs):
         """
         Parameters
         ----------
@@ -341,17 +341,18 @@ class Storage(Base):
 
         shape : tuple, int, or None
             The shape of the buffer. If None or int, the dimensionality
-            is found from the owning Container instance.
+            is found from the owning Container instance. Otherwise the
+            dimensionality is `len(shape)-1`.
 
         fill : float or complex
             The default value to fill storage with, will be converted to
             data type of owner.
 
-        psize : float or 2-tuple of float
+        psize : float or (ndim)-tuple of float
             The physical pixel size.
 
-        origin : 2-tuple of int
-            The physical coordinates of the [0,0] pixel (upper-left
+        origin : (ndim)-tuple of int
+            The physical coordinates of the [0,..,0] pixel (upper-left
             corner of the storage buffer).
 
         layermap : list or None
@@ -365,6 +366,9 @@ class Storage(Base):
             If True, reformat() will enlarge the internal buffer if needed,
             but will not shrink it.
 
+        padding: int
+            Number of pixels (voxels) to add as padding around the area defined
+            by the views.
         """
         super(Storage, self).__init__(container, ID)
 
@@ -375,18 +379,24 @@ class Storage(Base):
         #: Three/four or potentially N-dimensional array as data buffer
         self.data = None
 
+        # Additional padding around tight field of view
+        self.padding = padding
+
         # dimensionality suggestion from container
         ndim = container.ndim if container.ndim is not None else 2
 
         if shape is None:
             shape = (1,) + (1,) * ndim
+            #shape = (1,) + (1 + 2*self.padding,) * ndim
         elif np.isscalar(shape):
             shape = (1,) + (int(shape),) * ndim
+            #shape = (1,) + (int(shape+2*self.padding),) * ndim
         else:
             shape = tuple(shape)
+            #shape = (shape[0],) + tuple(x+2*self.padding for x in shape[1:])
 
         if len(shape) not in [3, 4]:
-            logger.warn('Storage view access dimension %d is not in regular '
+            logger.warning('Storage view access dimension %d is not in regular '
                         'scope (2,3). Behavior is untested.' % len(shape[1:]))
 
         self.shape = shape
@@ -416,7 +426,7 @@ class Storage(Base):
         """
 
         if layermap is None:
-            layermap = range(len(self.data))
+            layermap = list(range(len(self.data)))
         self.layermap = layermap
 
         # This is most often not accurate. Set this quantity from the outside
@@ -443,7 +453,7 @@ class Storage(Base):
         self.model_initialized = False
 
         # MPI flag: is the storage distributed across nodes or are all nodes holding the same copy?
-        self._update_distributed()
+        self._update_distributed(self.layermap,[0],[0])
 
         # Instance attributes
         # self._psize = None
@@ -492,7 +502,8 @@ class Storage(Base):
                                  shape=self.shape,
                                  psize=self.psize,
                                  origin=self.origin,
-                                 layermap=self.layermap)
+                                 layermap=self.layermap,
+                                 padding=self.padding)
         if fill is not None:
             new_storage.fill(fill)
         else:
@@ -572,10 +583,10 @@ class Storage(Base):
         v.dcoord = np.round(pcoord + 0.00001).astype(int)
 
         # These are the important attributes used when accessing the data
-        v.dlow = v.dcoord - v.shape / 2
-        v.dhigh = v.dcoord + (v.shape + 1) / 2
+        v.dlow = v.dcoord - v.shape // 2
+        v.dhigh = v.dcoord + (v.shape + 1) // 2
 
-        # v.roi = np.array([pix - v.shape/2, pix + (v.shape + 1)/2])
+        # Subpixel offset
         v.sp = pcoord - v.dcoord
         # if self.layermap is None:
         #     v.slayer = 0
@@ -611,7 +622,8 @@ class Storage(Base):
 
         # Make sure all views are up to date
         # This call takes roughly half the time of .reformat()
-        self.update()
+        if update:
+            self.update()
 
         # List of views on this storage
         views = self.views
@@ -624,12 +636,10 @@ class Storage(Base):
         sh = self.data.shape
         
         # Loop through all active views to get individual boundaries
-        #axes = [[]] * self.ndim
-        
-        mn = [np.inf] * self.ndim
-        mx = [-np.inf] * self.ndim
+        dlow_fov = [np.inf] * self.ndim
+        dhigh_fov = [-np.inf] * self.ndim
         layers = []
-        dims = range(self.ndim)
+        dims = list(range(self.ndim))
         for v in views:
             if not v.active:
                 continue
@@ -637,19 +647,24 @@ class Storage(Base):
             # Accumulate the regions of interest to
             # compute the full field of view
             for d in dims:
-                #axes[d] += [v.dlow[d], v.dhigh[d]]
-                mn[d] = min(mn[d],v.dlow[d])
-                mx[d] = max(mx[d],v.dhigh[d])
+                dlow_fov[d] = min(dlow_fov[d], v.dlow[d])
+                dhigh_fov[d] = max(dhigh_fov[d], v.dhigh[d])
                 
             # Gather a (unique) list of layers
             if v.layer not in layers:
                 layers.append(v.layer)
 
+        # Check if storage is distributed
+        # A storage is "distributed" if and only if layer maps are different across nodes.
+        new_layermap = sorted(layers)
+
+        self._update_distributed(new_layermap, dlow_fov, dhigh_fov)
+
         sh = self.data.shape
 
         # Compute Nd misfit (distance between the buffer boundaries and the
         # region required to fit all the views)
-        misfit = np.array([[-mn[d], mx[d] - sh[d+1]] for d in dims])
+        misfit = self.padding + np.array([[-dlow_fov[d], dhigh_fov[d] - sh[d+1]] for d in dims])
         
         _misfit_str = ', '.join(['%s' % m for m in misfit])
         logger.debug('%s[%s] :: misfit = [%s]'
@@ -704,8 +719,6 @@ class Storage(Base):
             new_center = self.center
         
         # Deal with layermap
-        new_layermap = sorted(layers)
-
         if self.layermap != new_layermap:
             relaid_data = []
             for i in new_layermap:
@@ -734,19 +747,21 @@ class Storage(Base):
         self.shape = new_shape
         self.center = new_center
 
-        # Check if storage is distributed
-        # A storage is "distributed" if and only if layer maps are different across nodes.
-        self._update_distributed()
-
-    def _update_distributed(self):
+    def _update_distributed(self, layermap, mn, mx):
         self.distributed = False
         if u.parallel.MPIenabled:
-            all_layers = u.parallel.comm.gather(self.layermap, root=0)
+            all_layers = u.parallel.comm.gather(layermap, root=0)
             if u.parallel.master:
                 for other_layers in all_layers[1:]:
-                    self.distributed |= (other_layers != self.layermap)
+                    self.distributed |= (other_layers != layermap)
             self.distributed = u.parallel.comm.bcast(self.distributed, root=0)
-
+            # synchronize if not distributed, this ensures the data is of the
+            # same shape across the nodes
+            # We could always consider to synchronize
+            if not self.distributed:
+                mn[:] = u.parallel.comm.allreduce(mn, u.parallel.MPI.MIN)
+                mx[:] = u.parallel.comm.allreduce(mx, u.parallel.MPI.MAX)
+                
     def _to_pix(self, coord):
         """
         Transforms physical coordinates `coord` to pixel coordinates.
@@ -1132,16 +1147,16 @@ class View(Base):
     """
     _fields = Base._fields + \
                [('active', 'b1'),
-                ('dlayer','<i8'),
+                ('dlayer', '<i8'),
                 ('layer', '<i8'), 
-                ('dhigh','(5,)i8'),
-                ('dlow','(5,)i8'),
-                ('shape','(5,)i8'),
-                ('dcoord','(5,)i8'),
+                ('dhigh', '(5,)i8'),
+                ('dlow', '(5,)i8'),
+                ('shape', '(5,)i8'),
+                ('dcoord', '(5,)i8'),
                 ('psize', '(5,)f8'),
                 ('coord', '(5,)f8'),
                 ('sp', '(5,)f8')]
-    __slots__ = Base.__slots__ + ['_ndim', 'storage', 'storageID','_pod','_pods','error']
+    __slots__ = Base.__slots__ + ['_ndim', 'storage', 'storageID', '_pod', '_pods', 'error']
     ########
     # TODO #
     ########
@@ -1254,7 +1269,7 @@ class View(Base):
 
         if (self.psize is not None
                 and not np.allclose(self.storage.psize, self.psize)):
-            logger.warn(
+            logger.warning(
                 'Inconsistent pixel size when creating view.\n (%s vs %s)'
                 % (str(self.storage.psize), str(self.psize)))
 
@@ -1281,7 +1296,7 @@ class View(Base):
         return self._record['active'] 
         
     @active.setter
-    def active(self,v):
+    def active(self, v):
         self._record['active'] = v
         
     @property
@@ -1289,9 +1304,8 @@ class View(Base):
         return self._record['dlayer']
         
     @dlayer.setter
-    def dlayer(self,v):
+    def dlayer(self, v):
         self._record['dlayer'] = v
-        
         
     @property
     def layer(self):
@@ -1333,12 +1347,11 @@ class View(Base):
             return self._pod()  # weak reference
         else:
             return self._pod
-        # return self.pods.values()[0]
         
     @property
     def pods(self):
         """
-        Returns all :any:`POD`s still connected to this view as a dict.
+        Returns all :any:`POD`\ s still connected to this view as a dict.
         """
         if self._pods is not None:
             return self._pods
@@ -1553,7 +1566,7 @@ class Container(Base):
         #: Default data dimensionality for Views and Storages.
         self.ndim = data_dims
         if self.ndim not in (2, 3):
-            logger.warn('Container untested for `data_dim` other than 2 or 3')
+            logger.warning('Container untested for `data_dim` other than 2 or 3')
 
         # Prepare for copy
         # self.original = original if original is not None else self
@@ -1564,7 +1577,7 @@ class Container(Base):
         """
         Property that returns list of all copies of this :any:`Container`
         """
-        return [c for c in self.owner._pool[CONTAINER_PREFIX].itervalues()
+        return [c for c in self.owner._pool[CONTAINER_PREFIX].values()
                 if c.original is self and c is not self]
 
     def delete_copy(self, copy_IDs=None):
@@ -1651,7 +1664,7 @@ class Container(Base):
         Return total number of pixels in this container.
         """
         sz = 0
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             if s.data is not None:
                 sz += s.data.size
         return sz
@@ -1665,7 +1678,7 @@ class Container(Base):
         overhead.
         """
         sz = 0
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             if s.data is not None:
                 sz += s.data.nbytes
         return sz
@@ -1719,7 +1732,7 @@ class Container(Base):
                 fill = 0
 
         # Copy storage objects
-        for storageID, s in self.storages.iteritems():
+        for storageID, s in self.storages.items():
             news = s.copy(new_cont, storageID, fill)
 
         # We are done! Return the new container
@@ -1732,7 +1745,7 @@ class Container(Base):
         if type(fill) is Container:
             self.fill(0.)
             self += fill
-        for s in self.storages.itervalues():
+        for s in self.storages.values():
             s.fill(fill)
 
     def allreduce(self, op=None):
@@ -1748,14 +1761,14 @@ class Container(Base):
         ptypy.utils.parallel.allreduce
         Storage.allreduce
         """
-        for s in self.storages.itervalues():
+        for s in self.storages.values():
             s.allreduce(op=op)
 
     def clear(self):
         """
         Reduce / delete all data in attached storages
         """
-        for s in self.storages.itervalues():
+        for s in self.storages.values():
             s.data = np.empty((s.data.shape[0], 1, 1), dtype=self.dtype)
             # s.datalist = [None]
 
@@ -1793,7 +1806,7 @@ class Container(Base):
         also_in_copies : bool
             If True, also reformat associated copies of this container
         """
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             s.reformat()
             if also_in_copies:
                 for c in self.copies:
@@ -1804,7 +1817,7 @@ class Container(Base):
         Returns a formatted report string on all storages in this container.
         """
         info = ["Containers ID: %s\n" % str(self.ID)]
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             info.extend(["Storage %s\n" % ID, s.report()])
         return ''.join(info)
 
@@ -1863,7 +1876,7 @@ class Container(Base):
         dct = {}
         mem = 0
         info = []
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             fstring, stats = s.formatted_report(fr.table,
                                                 fr.offset,
                                                 align,
@@ -1950,7 +1963,7 @@ class Container(Base):
         """
         self.space = 0
         info_str = []
-        for ID, s in self.storages.iteritems():
+        for ID, s in self.storages.items():
             if s.data is not None:
                 self.space += s.data.nbytes
             info_str.append(str(s) + '\n')
@@ -1959,54 +1972,54 @@ class Container(Base):
 
     def __iadd__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data += s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data += other
 
         return self
 
     def __isub__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data -= s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data -= other
 
         return self
 
     def __imul__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data *= s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data *= other
 
         return self
 
-    def __idiv__(self, other):
+    def __truediv__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data /= s2.data
         else:
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s.data /= other
         return self
 
     def __lshift__(self, other):
         if isinstance(other, Container):
-            for ID, s in self.storages.iteritems():
+            for ID, s in self.storages.items():
                 s2 = other.storages.get(ID)
                 if s2 is not None:
                     s.data[:] = s2.data

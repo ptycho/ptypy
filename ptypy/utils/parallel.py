@@ -207,7 +207,7 @@ def allreduceC(c):
     --------
     ptypy.utils.parallel.allreduce
     """
-    for s in c.S.itervalues():
+    for s in c.S.values():
         allreduce(s.data)
 
 def _MPIop(a, op, axis=None):
@@ -321,14 +321,19 @@ def send(data, dest=0, tag=0):
     """
     if type(data) is np.ndarray:
         # Sends info that array is coming and array dimensions
-        comm.send(('npy',data.shape,data.dtype.str), dest=dest, tag=1)
+        comm.send(('npy', data.shape, data.dtype.str), dest=dest, tag=1)
 
         # Send array with faster numpy interface
         # mpi4py has in issue sending booleans. we convert to uint8 (same size)
         if data.dtype.str == '|b1':
             comm.Send(data.astype('|u1'), dest=dest, tag=tag)
         else:
-            comm.Send(data, dest=dest, tag=tag)
+            try:
+                comm.Send(data, dest=dest, tag=tag)
+            except KeyError:
+                # mpi4py may complain for non-native byte order
+                data = data.astype(data.dtype.newbyteorder('='))
+                comm.Send(data, dest=dest, tag=tag)
     else:
         # Send pickled whatever thing
         comm.send(data, dest=dest, tag=1)
@@ -573,7 +578,7 @@ def gather_dict(dct, target=0):
             # your turn to send
             l = len(dct)
             comm.send(l, dest=target,tag=9999)
-            for k,v in dct.iteritems():
+            for k,v in dct.items():
                 #print rank,str(k),v
                 #send(k, dest=target)
                 comm.send(k, dest=target,tag=9999)
@@ -894,7 +899,7 @@ def _gather_dict(dct, target=0):
             # your turn to send
             l = len(dct)
             comm.send(l, dest=target)
-            for item in dct.iteritems():
+            for item in dct.items():
                 send(item, dest=target)
         barrier()
 
