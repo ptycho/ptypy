@@ -324,7 +324,7 @@ class Storage(Base):
 
     def __init__(self, container, ID=None, data=None, shape=DEFAULT_SHAPE, 
                  fill=0., psize=1., origin=None, layermap=None, padonly=False,
-                 padding=0, subpix=None, **kwargs):
+                 padding=0, **kwargs):
         """
         Parameters
         ----------
@@ -369,8 +369,7 @@ class Storage(Base):
         padding: int
             Number of pixels (voxels) to add as padding around the area defined
             by the views.
-        subpix: str, None
-            Subpixel method imported from u.array_utils, any of linear, fourier, bicubic, or any you add.
+
         """
         super(Storage, self).__init__(container, ID)
         self.shift_type = None
@@ -429,13 +428,7 @@ class Storage(Base):
             self.shape = self.data.shape
         """
 
-        if subpix is not None:
-            from ..utils import SUBPIXEL_SHIFT_METHODS
-            try:
-                self.subpixel_shift = SUBPIXEL_SHIFT_METHODS[subpix]
-            except KeyError:
-                raise KeyError('Subpixel shift method %s was not found, please choose from: %s'
-                               % (subpix, SUBPIXEL_SHIFT_METHODS.keys()))
+
 
         if layermap is None:
             layermap = range(len(self.data))

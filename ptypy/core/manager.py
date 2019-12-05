@@ -83,6 +83,13 @@ class ScanModel(object):
     default =
     help = Container for sample initialization model
 
+    [subpixel]
+    type = str, None
+    default = None
+    help = Subpixel method imported from u.array_utils, any of linear, fourier, bicubic, or any you add. Will be appled
+     to the probe.
+
+
     """
     def __init__(self, ptycho=None, pars=None, label=None):
         """
@@ -336,6 +343,22 @@ class ScanModel(object):
         # Adjust storages
         self.ptycho.probe.reformat(True)
         self.ptycho.obj.reformat(True)
+
+        if self.p.subpixel is not None:
+            t1 = time.time()
+            log(3, "Updating the subpixel shifts") # this might take a while
+            for name, s in self.ptycho.probe.storages.iteritems():
+                from ..utils import SUBPIXEL_SHIFT_METHODS
+                try:
+                    s.subpixel_shift = SUBPIXEL_SHIFT_METHODS[self.p.subpixel]
+                except KeyError:
+                    raise KeyError('Subpixel shift method %s was not found, please choose from: %s'
+                                    % (self.p.subpixel, SUBPIXEL_SHIFT_METHODS.keys()))
+            for _k, p in self.ptycho.pods.iteritems():
+                p.pr_view.sp = -p.ob_view.sp
+                p.ob_view.sp = 0.
+            t2 = time.time()
+            log(3, "Done updating the subpixel shifts. Took %s seconds" % str(t2-t1))  # this might take a while
         self.ptycho.exit.reformat()
 
         self._initialize_probe(new_probe_ids)
