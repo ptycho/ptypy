@@ -324,7 +324,7 @@ class Storage(Base):
 
     def __init__(self, container, ID=None, data=None, shape=DEFAULT_SHAPE, 
                  fill=0., psize=1., origin=None, layermap=None, padonly=False,
-                 padding=0, **kwargs):
+                 padding=0, subpix=None, **kwargs):
         """
         Parameters
         ----------
@@ -369,6 +369,8 @@ class Storage(Base):
         padding: int
             Number of pixels (voxels) to add as padding around the area defined
             by the views.
+        subpix: str, None
+            Subpixel method imported from u.array_utils, any of linear, fourier, bicubic, or any you add.
         """
         super(Storage, self).__init__(container, ID)
         self.shift_type = None
@@ -399,9 +401,11 @@ class Storage(Base):
             logger.warn('Storage view access dimension %d is not in regular '
                         'scope (2,3). Behavior is untested.' % len(shape[1:]))
 
+
         self.shape = shape
         self.data = np.empty(self.shape, self.dtype)
         self.data.fill(self.fill_value)
+
 
         """
         # Set data buffer
@@ -424,6 +428,14 @@ class Storage(Base):
                 self.data = data
             self.shape = self.data.shape
         """
+
+        if subpix is not None:
+            from ..utils import SUBPIXEL_SHIFT_METHODS
+            try:
+                self.subpixel_shift = SUBPIXEL_SHIFT_METHODS[subpix]
+            except KeyError:
+                raise KeyError('Subpixel shift method %s was not found, please choose from: %s'
+                               % (subpix, SUBPIXEL_SHIFT_METHODS.keys()))
 
         if layermap is None:
             layermap = range(len(self.data))
@@ -1030,7 +1042,7 @@ class Storage(Base):
 
         return ''.join(fstring), dct
 
-    def hook_subpixel_shift(self, data, sp):
+    def subpixel_shift(self, data, sp):
         """
         HOOK - to be implemented and replaced.
         Apply subpixel shift sp to data.
@@ -1067,9 +1079,9 @@ class Storage(Base):
         if isinstance(v, View):
             if self.ndim == 2:
                 if np.any(v.sp != 0.0):
-                    return self.hook_subpixel_shift(self.data[
+                    return self.subpixel_shift(self.data[
                              v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
-                                                    v.sp)
+                                               v.sp)
                 else:
                     return self.data[
                              v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]]
@@ -1110,27 +1122,27 @@ class Storage(Base):
             if self.ndim == 2:
                 self.data[v.dlayer,
                       v.dlow[0]:v.dhigh[0],
-                      v.dlow[1]:v.dhigh[1]] = self.hook_subpixel_shift(newdata, -v.sp)
+                      v.dlow[1]:v.dhigh[1]] = self.subpixel_shift(newdata, -v.sp)
 
             elif self.ndim == 3:
                 self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
                           v.dlow[1]:v.dhigh[1],
-                          v.dlow[2]:v.dhigh[2]] = self.hook_subpixel_shift(newdata, -v.sp)
+                          v.dlow[2]:v.dhigh[2]] = self.subpixel_shift(newdata, -v.sp)
 
             elif self.ndim == 4:
                 self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
                           v.dlow[1]:v.dhigh[1],
                           v.dlow[2]:v.dhigh[2],
-                          v.dlow[3]:v.dhigh[3]] = self.hook_subpixel_shift(newdata, -v.sp)
+                          v.dlow[3]:v.dhigh[3]] = self.subpixel_shift(newdata, -v.sp)
             elif self.ndim == 5:
                 self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
                           v.dlow[1]:v.dhigh[1],
                           v.dlow[2]:v.dhigh[2],
                           v.dlow[3]:v.dhigh[3],
-                          v.dlow[4]:v.dhigh[4]] = self.hook_subpixel_shift(newdata, -v.sp)
+                          v.dlow[4]:v.dhigh[4]] = self.subpixel_shift(newdata, -v.sp)
         elif v in self.layermap:
             self.data[self.layermap.index(v)] = newdata
         else:
