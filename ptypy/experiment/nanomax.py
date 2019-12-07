@@ -562,3 +562,109 @@ class NanomaxStepscanSep2019(PtyScan):
                         (mask.shape + (np.sum(mask),)))
 
         return mask
+
+
+@register()
+class NanomaxFlyscanDec2019(NanomaxFlyscanMay2019):
+    """
+    Flyscan class for nanomax contrast acquisitions.
+
+    Defaults:
+
+    [name]
+    default = NanomaxFlyscanDec2019
+    type = str
+    help =
+
+    """
+
+    def load_positions(self):
+        filename = '%06u.h5' % self.info.scanNumber
+        entry = 'entry'
+
+        fullfilename = os.path.join(self.info.path, filename)
+
+        with h5py.File(fullfilename, 'r') as hf:
+            x = hf['entry/measurement/npoint_buff/%s'%self.info.xMotor][()]
+            y = hf['entry/measurement/npoint_buff/%s'%self.info.yMotor][()]
+            self.images_per_line = x.shape[-1]
+            x = x.flatten()
+            y = y.flatten()
+
+        if self.info.xMotorFlipped:
+            x *= -1
+            logger.warning("note: x motor is specified as flipped")
+        if self.info.yMotorFlipped:
+            y *= -1
+            logger.warning("note: y motor is specified as flipped")
+
+        # if the x axis is tilted, take that into account.
+        xCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
+        x *= xCosFactor
+        logger.info(
+            "x motor angle results in multiplication by %.2f" % xCosFactor)
+
+        # if the y axis is tilted, take that into account.
+        yCosFactor = np.cos(self.info.yMotorAngle / 180.0 * np.pi)
+        y *= yCosFactor
+        logger.info(
+            "y motor angle results in multiplication by %.2f" % yCosFactor)
+
+        # load normalization for the whole scan and index later
+        if self.info.I0 is not None:
+            with h5py.File(fullfilename, 'r') as hf:
+                normdata = np.array(hf['%s/measurement/%s' % (entry, self.info.I0)], dtype=float)
+            normdata = normdata[self.firstLine:self.lastLine+1, :Nsteps].flatten()
+            self.normdata = normdata / np.mean(normdata)
+            print('*** going to normalize by channel %s - loaded %d values' % (self.info.I0, len(self.normdata)))
+
+        positions = - np.vstack((y, x)).T * 1e-6
+        return positions
+
+    def load(self, indices):
+
+        raw, weights, positions = {}, {}, {}
+
+        filename = '%06u.h5' % self.info.scanNumber
+        fullfilename = os.path.join(self.info.path, filename)
+
+        # read the dataset
+        for ind in indices:
+            line = self.info.firstLine + ind // self.images_per_line
+            image = ind % self.images_per_line
+            with h5py.File(fullfilename, 'r') as hf:
+                data = hf['entry/measurement/%s/%06u'%(self.info.detector, line)][image]
+            raw[ind] = data
+            if self.info.I0:
+                raw[ind] = np.round(raw[ind] / self.normdata[ind]).astype(int)
+
+        print('loaded %d images' % len(raw))
+        return raw, positions, weights
+
+    def load_weight(self):
+        """
+        Provides the mask for the whole scan, the shape of the first 
+        frame.
+        """
+
+        filename = '%06u.h5' % self.info.scanNumber
+        fullfilename = os.path.join(self.info.path, filename)
+
+        with h5py.File(fullfilename, 'r') as hf:
+            data = hf['entry/measurement/%s/%06u'%(self.info.detector, 0)][0]
+            shape = data.shape
+            mask = np.ones(shape)
+            mask[np.where(data[0] == -2)] = 0
+        logger.info("took account of the pilatus mask, %u x %u, sum %u" %
+                    (mask.shape + (np.sum(mask),)))
+
+        if self.info.maskfile:
+            with h5py.File(self.info.maskfile, 'r') as hf:
+                mask2 = np.array(hf.get('mask'))
+            logger.info("loaded additional mask, %u x %u, sum %u" %
+                        (mask2.shape + (np.sum(mask2),)))
+            mask = mask * mask2
+            logger.info("total mask, %u x %u, sum %u" %
+                        (mask.shape + (np.sum(mask),)))
+
+        return mask
