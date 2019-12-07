@@ -670,8 +670,8 @@ class Geo_BraggProjection(Geo_Bragg):
         """
         Go from 2d exit wave to probe-object 3d overlap.
         """
-        backproj = np.tile(a, reps=(self.shape[0], 1, 1))
-        return backproj / self.phaseramp
+        backproj = np.tile(a, reps=(self.shape[0], 1, 1)) / self.shape[0]
+        return backproj * (self.phaseramp)**(-1)
 
 
 class Bragg3dProjectionPropagator(BasicBragg3dPropagator):
