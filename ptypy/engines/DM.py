@@ -53,12 +53,6 @@ class DM(PositionCorrectionEngine):
     lowlim = 0
     help = Number of iterations before starting subpixel interpolation
 
-    [subpix]
-    default = None
-    type = None, str
-    choices = ['fourier', 'linear', 'interp', None]
-    help = Subpixel interpolation; 'fourier','linear', 'interp' or None
-
     [update_object_first]
     default = True
     type = bool
@@ -193,16 +187,6 @@ class DM(PositionCorrectionEngine):
         to = 0.
         tf = 0.
         tp = 0.
-        if (self.p.subpix_start == self.curiter) and (self.p.subpix is not None):
-            logger.info('Subpixel shifts')
-            from ..core import Storage
-            if self.p.subpix == 'fourier':
-                Storage.hook_subpixel_shift = eu.hook_subpixel_shift_fourier
-            elif self.p.subpix == 'linear':
-                Storage.hook_subpixel_shift = eu.hook_subpixel_shift_linear
-            elif self.p.subpix == 'interp':
-                Storage.hook_subpixel_shift = eu.hook_subpixel_shift_interp
-            logger.info('Subpixel shifts of type "%s" now being used' % self.p.subpix)
 
         for it in range(num):
             t1 = time.time()
@@ -226,7 +210,7 @@ class DM(PositionCorrectionEngine):
             tp += t4 - t3
 
             # count up'
-            self.curiter +=1
+            self.curiter += 1
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
