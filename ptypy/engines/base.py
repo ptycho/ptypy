@@ -143,7 +143,7 @@ class BaseEngine(object):
         self.finished = False
 
         # Make sure all the pods are supported
-        for label_, pod_ in self.pods.iteritems():
+        for label_, pod_ in self.pods.items():
             if not pod_.model.__class__ in self.SUPPORTED_MODELS:
                 raise Exception('Model %s not supported by engine' % pod_.model.__class__)
 
