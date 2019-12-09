@@ -23,9 +23,9 @@ import os
 # generate paramters.rst and other rst
 import subprocess
 subprocess.check_call(['python', 'script2rst.py'])  # We need this to have a clean sys.argv
-subprocess.check_call(['python','parameters2rst.py'])
-subprocess.check_call(['python','tmp2rst.py'])
-execfile('version.py')
+subprocess.check_call(['python', 'parameters2rst.py'])
+subprocess.check_call(['python', 'tmp2rst.py'])
+exec(open('version.py').read())
 
 # -- General configuration ------------------------------------------------
 
@@ -64,8 +64,8 @@ def remove_mod_docstring(app, what, name, obj, options, lines):
         if depth < 0:
             return
         
-        for k, value in dct.iteritems():
-            ref = ', see :py:data:`~%s`' % pd.children[k].entry_point if pd.children.has_key(k) else ''
+        for k, value in dct.items():
+            ref = ', see :py:data:`~%s`' % pd.children[k].entry_point if k in pd.children else ''
             if hasattr(value, 'items'):
                 v = str(value.__class__.__name__)
             elif str(value) == value:

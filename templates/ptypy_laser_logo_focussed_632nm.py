@@ -4,6 +4,7 @@ from ptypy import utils as u
 import ptypy.simulations as sim
 import numpy as np
 
+
 ### PTYCHO PARAMETERS
 p = u.Param()
 p.verbose_level = 3
@@ -42,8 +43,9 @@ sim.illumination.propagation.focussed = None
 sim.illumination.propagation.parallel = 0.03
 sim.illumination.propagation.spot_size = None
 
+ptypy_path = ptypy.__file__.strip('ptypy.__init__.py')
 sim.sample = u.Param()
-sim.sample.model = -u.rgb2complex(u.imload('../resources/ptypy_logo_1M.png')[::-1,:,:-1])
+sim.sample.model = -u.rgb2complex(u.imload('%s/resources/ptypy_logo_1M.png' % ptypy_path)[::-1,:,:-1])
 sim.sample.process = u.Param()
 sim.sample.process.offset = (0,0)
 sim.sample.process.zoom = 0.5

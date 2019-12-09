@@ -10,14 +10,13 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-from __future__ import print_function
 import zmq
 import time
 import string
 import random
 import sys
 from threading import Thread, Event
-import Queue
+import queue
 import numpy as np
 import re
 import json
@@ -33,7 +32,7 @@ DEBUG = lambda x: None
 # DEBUG = print
 
 def ID_generator(size=6, chars=string.ascii_uppercase + string.digits):
-    """\
+    """
     Generate a random ID string made of capital letters and digits.
     size [default=6] is the length of the string.
     """
@@ -41,7 +40,7 @@ def ID_generator(size=6, chars=string.ascii_uppercase + string.digits):
 
 
 def is_str(s):
-    """\
+    """
     Test if s behaves like a string.
     """
     try:
@@ -53,7 +52,7 @@ def is_str(s):
 
 
 class NumpyEncoder(json.JSONEncoder):
-    """\
+    """
     Custom JSON Encoder class that take out numpy arrays from a structure
     and replace them with a code string.
     """
@@ -88,7 +87,7 @@ NPYARRAYmatch = re.compile("NPYARRAY\[([0-9]{3})\]")
 
 
 def numpy_replace(obj, arraylist):
-    """\
+    """
     Takes an object decoded by JSON and replaces the arrays where
     they should be. (this function is recursive).
     """
@@ -99,7 +98,7 @@ def numpy_replace(obj, arraylist):
         return obj
     elif isinstance(obj, dict):
         newobj = {}
-        for k, v in obj.iteritems():
+        for k, v in obj.items():
             newobj[k] = numpy_replace(v, arraylist)
         return newobj
     elif isinstance(obj, list):
@@ -109,7 +108,7 @@ def numpy_replace(obj, arraylist):
 
 
 def numpy_zmq_send(out_socket, obj):
-    """\
+    """
     Send the given object using JSON, taking care of numpy arrays.
     """
 
@@ -142,7 +141,7 @@ def numpy_zmq_send(out_socket, obj):
 
 
 def numpy_zmq_recv(in_socket):
-    """\
+    """
     Receive a JSON object, taking care of numpy arrays
     """
     numpy_container = in_socket.recv_json()
@@ -152,7 +151,7 @@ def numpy_zmq_recv(in_socket):
         arraylist = []
         for arrayinfo in numpy_container['arraylist']:
             msg = in_socket.recv()
-            buf = buffer(msg)
+            buf = memoryview(msg)
             arraylist.append(np.frombuffer(buf, dtype=arrayinfo['dtype']).reshape(arrayinfo['shape']))
         return numpy_replace(message, arraylist)
     else:
@@ -279,7 +278,7 @@ class Server(object):
         self.pingtime = time.time()
 
         # Command queue
-        self.queue = Queue.Queue()
+        self.queue = queue.Queue()
 
         # Initialize flags to communicate state between threads.
         self._need_process = False
@@ -304,7 +303,7 @@ class Server(object):
 
     def make_ID_pool(self):
 
-        port_range = range(self.port+1,self.port+self.p.connections+1)
+        port_range = list(range(self.port+1,self.port+self.p.connections+1))
         # Initial ID pool
         IDlist = []
         # This loop ensures all IDs are unique
@@ -312,7 +311,7 @@ class Server(object):
             newID = ID_generator()
             if newID not in IDlist:
                 IDlist.append(newID)
-        self.ID_pool = zip(IDlist, port_range)
+        self.ID_pool = list(zip(IDlist, port_range))
 
     def activate(self):
         """
@@ -449,7 +448,7 @@ class Server(object):
         if now - self.pingtime > self.pinginterval:
             # Time to check
             todisconnect = []
-            for ID, lastping in self.pings.iteritems():
+            for ID, lastping in self.pings.items():
                 if now - lastping > self.pingtimeout:
                     # Timeout! Force disconnection
                     todisconnect.append(ID)
@@ -518,7 +517,7 @@ class Server(object):
         Send available objects.
         """
         DEBUG('Processing an AVAIL command')
-        return {'status': 'ok', 'avail': self.objects.keys()}
+        return {'status': 'ok', 'avail': list(self.objects.keys())}
 
     def _cmd_ping(self, ID, args):
         """\
@@ -599,7 +598,7 @@ class Server(object):
         while True:
             try:
                 q = self.queue.get_nowait()
-            except Queue.Empty:
+            except queue.Empty:
                 break
 
             # Keep track of ticket number
@@ -666,7 +665,7 @@ class Server(object):
         For now this is equivalent to Interactor.object[name] = obj, but maybe
         use weakref in the future?
         """
-        if self.objects.has_key(name):
+        if name in self.objects:
             logger.debug('Warning an object called %s already there.' % name)
         self.objects[name] = obj
 
@@ -693,7 +692,6 @@ class Server(object):
 class Client(object):
     """
     Basic but complete client to interact with the server.
-
 
     Defaults:
 
@@ -724,7 +722,7 @@ class Client(object):
     doc = Interval with which to check pings, in seconds.
 
     [connection_timeout]
-    default = 3600000.
+    default = 3600000.0
     type = float
     help = Timeout for dead server
     doc = Timeout for dead server, in milliseconds.
@@ -732,39 +730,11 @@ class Client(object):
     """
 
     def __init__(self, pars=None, **kwargs):
-        """
-        Parameters
-        ----------
-        pars : dict or Param
-            Parameter set for the client, see :py:attr:`DEFAULT`
-
-        Keyword Arguments
-        -----------------
-        address : str
-            Primary address of the remote server.
-
-        port : int
-            Primary port of the remote server.
-
-        poll_timeout : float
-            Network polling interval (in milliseconds!).
-
-        pinginterval : float
-            Interval to check pings (in seconds).
-
-        """
 
         p = self.DEFAULT.copy()
         p.update(pars)
         p.update(kwargs)
         self.p = p
-
-        """
-        # sanity check for port range:
-        if str(p.port_range)==p.port_range:
-            from ptypy.utils import str2range
-            p.port_range = str2range(p.port_range)
-        """
 
         self.req_address = p.address
         self.req_port = p.port
@@ -843,7 +813,7 @@ class Client(object):
         fulladdress = self.bind_address + ':' + str(self.bind_port)
         self.bind_socket = self.context.socket(zmq.SUB)
         self.bind_socket.connect(fulladdress)
-        self.bind_socket.setsockopt(zmq.SUBSCRIBE, "")
+        self.bind_socket.setsockopt_string(zmq.SUBSCRIBE, "")
 
         # Initialize poller
         self.poller = zmq.Poller()
@@ -864,7 +834,7 @@ class Client(object):
         self._listen()
 
     def _listen(self):
-        """\
+        """
         Main event loop (running on a thread).
         """
         while not self._stopping:
@@ -906,7 +876,7 @@ class Client(object):
         self.connected = False
 
     def _ping(self):
-        """\
+        """
         Send a ping
         """
         now = time.time()
@@ -916,19 +886,19 @@ class Client(object):
         return
 
     def _send(self, out_socket, obj):
-        """\
+        """
         Send the given object using JSON, taking care of numpy arrays.
         """
         numpy_zmq_send(out_socket, obj)
 
     def _recv(self, in_socket):
-        """\
+        """
         Receive a JSON object, taking care of numpy arrays
         """
         return numpy_zmq_recv(in_socket)
 
     def _read_message(self):
-        """\
+        """
         Read the message sent by the server and store the accompanying data
         if needed.
         """
@@ -966,7 +936,7 @@ class Client(object):
         self.datatag = {}
 
     def poll(self, ticket=None, tag=None):
-        """\
+        """
         Returns true if the transaction for a given ticket is completed.
         If ticket and tag are None, returns true only if no transaction is pending
         """
@@ -979,7 +949,7 @@ class Client(object):
             return ticket in self.completed
 
     def wait(self, ticket=None, tag=None, timeout=None):
-        """\
+        """
         Blocks and return True only when the transaction for a given ticket is completed.
         If ticket is None, returns only when no more transaction are pending.
         If timeout is a positive number, wait will return False after timeout seconds if the ticket(s)
@@ -1002,13 +972,13 @@ class Client(object):
                 return False
 
     def newdata(self, ticket):
-        """\
+        """
         Meant to be replaced, e.g. to send signals to a GUI.
         """
         pass
 
     def unexpected_ticket(self, ticket):
-        """\
+        """
         Used to deal with warnings sent by the server.
         """
         logger.debug(str(ticket) + ': ' + str(self.data[ticket]))
@@ -1029,7 +999,7 @@ class Client(object):
             self._thread.join(3)
 
     def avail(self):
-        """\
+        """
         Queries the server for the name of objects available.
         ! Synchronous call !
         """
@@ -1039,7 +1009,7 @@ class Client(object):
         return self.last_reply
 
     def do(self, execstr, timeout=0, tag=None):
-        """\
+        """
         Modify and object using an exec string.
         This function returns the "ticket number" which identifies the object once
         it will have been transmitted. If timeout > 0 and the requested object has
@@ -1059,7 +1029,7 @@ class Client(object):
         return ticket
 
     def get(self, evalstr, timeout=0, tag=None):
-        """\
+        """
         Requests an object (or part of it) using an eval string.
         This function returns the "ticket number" which identifies the object once
         it will have been transmitted. If timeout > 0 and the requested object has
@@ -1079,7 +1049,7 @@ class Client(object):
         return ticket
 
     def set(self, varname, varvalue, timeout=0, tag=None):
-        """\
+        """
         Sets an object named varname to the value varvalue.
         """
         ticket = self.masterticket + 1

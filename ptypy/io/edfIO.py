@@ -218,9 +218,9 @@ def readHeader(filename, headerlength=None):
     # convert to dictionary
     hdict = dict(hlist[0:-1])
     # convert counter and motor settings in separate dictionaries inside hdict
-    if hdict.has_key('counter_mne'):
+    if 'counter_mne' in hdict:
         hdict["counter"] = dict(zip(hdict["counter_mne"].split(" "),[convertStr(elem) for elem in hdict["counter_pos"].split(" ")]))
-    if hdict.has_key('motor_mne'):
+    if 'motor_mne' in hdict:
         hdict["motor"] = dict(zip(hdict["motor_mne"].split(" "),[convertStr(elem) for elem in hdict["motor_pos"].split(" ")]))
     # add header length in meta-data
     hdict["headerlength"] = headerlength

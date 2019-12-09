@@ -228,7 +228,7 @@ class PlotClient(object):
         log(self.log_level,'Client ready')
 
         # Get the list of object IDs
-        ob_IDs = self.client.get_now("Ptycho.obj.S.keys()")
+        ob_IDs = self.client.get_now("list(Ptycho.obj.S.keys())")
         log(self.log_level,'1 object to plot.' if len(ob_IDs) == 1 else '%d objects to plot.' % len(ob_IDs))
 
         # Prepare the data requests
@@ -240,7 +240,7 @@ class PlotClient(object):
             self.cmd_dct["Ptycho.obj.S['%s'].center" % str(ID)] = [None, S, 'center']
 
         # Get the list of probe IDs
-        pr_IDs = self.client.get_now("Ptycho.probe.S.keys()")
+        pr_IDs = self.client.get_now("list(Ptycho.probe.S.keys())")
         log(self.log_level,'1 probe to plot.' if len(pr_IDs) == 1 else '%d probes to plot.' % len(pr_IDs))
 
         # Prepare the data requests
@@ -265,7 +265,7 @@ class PlotClient(object):
         """
         Request all data to the server (asynchronous).
         """
-        for cmd, item in self.cmd_dct.iteritems():
+        for cmd, item in self.cmd_dct.items():
             item[0] = self.client.get(cmd)
 
     def _store_data(self):
@@ -273,7 +273,7 @@ class PlotClient(object):
         Transfer all data from the client to local attributes.
         """
         with self._lock:
-            for cmd, item in self.cmd_dct.iteritems():
+            for cmd, item in self.cmd_dct.items():
                 item[1][item[2]] = self.client.data[item[0]]
             # An extra step for the error. This should be handled differently at some point.
             # self.error = np.array([info['error'].sum(0) for info in self.runtime.iter_info])
@@ -361,7 +361,7 @@ class MPLplotter(object):
             if layers is None:
                 layers = cont.data.shape[0]
             if np.isscalar(layers):
-                layers = range(layers)
+                layers = list(range(layers))
             plot.layers = layers
             plot.axes_index = len(num_shape_list)
             num_shape = [len(layers)*len(plot.auto_display)+int(plot.local_error), sh]
@@ -390,7 +390,7 @@ class MPLplotter(object):
             if layers is None:
                 layers = cont.data.shape[0]
             if np.isscalar(layers):
-                layers = range(layers)
+                layers = list(range(layers))
             plot.layers = layers
             plot.axes_index = len(num_shape_list)
             num_shape = [len(layers)*len(plot.auto_display), sh]
@@ -402,10 +402,8 @@ class MPLplotter(object):
         w, h, l, r, b, t = self.p.gridspecpars
         gs.update(wspace=w*sy, hspace=h*sx, left=l, right=r, bottom=b, top=t)
         self.draw()
-        plot_fig.hold(False)
         for axes in axes_list:
             for pl in axes:
-                pl.hold(False)
                 plt.setp(pl.get_xticklabels(), fontsize=8)
                 plt.setp(pl.get_yticklabels(), fontsize=8)
         self.plot_fig = plot_fig
@@ -506,11 +504,9 @@ class MPLplotter(object):
                 err_fmag = error[:, 0]
                 err_phot = error[:, 1]
                 err_exit = error[:, 2]
-                axis.cla()
-                #axis.hold(False)
+                axis.clear()
                 fmag = err_fmag/np.max(err_fmag)
                 axis.plot(fmag, label='err_fmag %2.2f%% of %.2e' % (fmag[-1]*100, np.max(err_fmag)))
-                #axis.hold(True)
                 phot = err_phot/np.max(err_phot)
                 axis.plot(phot, label='err_phot %2.2f%% of %.2e' % (phot[-1]*100, np.max(err_phot)))
                 ex = err_exit/np.max(err_exit)
@@ -750,9 +746,9 @@ class Bragg3dClient(object):
 
     def plot_object(self):
 
-        data = self.ob.values()[0]['data'][0]
-        center = self.ob.values()[0]['center']
-        psize = self.ob.values()[0]['psize']
+        data = list(self.ob.values())[0]['data'][0]
+        center = list(self.ob.values())[0]['center']
+        psize = list(self.ob.values())[0]['psize']
         lims_r3 = (-center[0] * psize[0], (data.shape[0] - center[0]) * psize[0])
         lims_r1 = (-center[1] * psize[1], (data.shape[1] - center[1]) * psize[1])
         lims_r2 = (-center[2] * psize[2], (data.shape[2] - center[2]) * psize[2])
@@ -843,7 +839,7 @@ def spawn_MPLClient(client_pars, autoplot_pars, home=None):
     except KeyboardInterrupt:
         pass
     finally:
-        print 'Stopping plot client...'
+        print('Stopping plot client...')
         mplc.pc.stop()
 
 if __name__ =='__main__':

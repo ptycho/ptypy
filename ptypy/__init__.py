@@ -51,17 +51,17 @@ from .utils import verbose
 if not __has_zmq__:
     __zmq_msg = 'ZeroMQ not found.\nInteraction server & client disabled.\n\
     Install python-zmq via the package repositories or with `pip install --user pyzmq`'
-    verbose.logger.warn(__zmq_msg)
+    verbose.logger.warning(__zmq_msg)
 if not __has_mpi4py__:
     __mpi_msg = 'Message Passaging for Python (mpi4py) not found.\n\
     CPU-parallelization disabled.\n\
     Install python-mpi4py via the package repositories or with `pip install --user mpi4py`'
-    verbose.logger.warn(__mpi_msg)
+    verbose.logger.warning(__mpi_msg)
 if not __has_matplotlib__:
     __mpl_msg = 'Plotting for Python (matplotlib) not found.\n\
     Plotting disabled.\n\
     Install python-matplotlib via the package repositories or with `pip install --user matplotlib`'
-    verbose.logger.warn(__mpl_msg)
+    verbose.logger.warning(__mpl_msg)
 
 # Start a parameter tree
 from .utils.descriptor import EvalDescriptor

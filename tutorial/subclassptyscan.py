@@ -204,7 +204,7 @@ class NumpyScan(PtyScan):
 # The last step is to overwrite the actual loading of data.
 # Loading happens (MPI-compatible) in
 # :py:meth:`~ptypy.core.data.PtyScan.load`
-print PtyScan.load.__doc__
+print(PtyScan.load.__doc__)
 
 # Load seems a bit more complex than ``self.load_positions`` for its
 # return values. However, we can opt-out of providing weights (masks)
@@ -281,8 +281,8 @@ NPS.initialize()
 # with :py:func:`ptypy.utils.verbose.report`. The information is
 # concatenated, but the length of iterables or dicts is always indicated
 # in parantheses.
-print u.verbose.report(NPS.auto(80), noheader=True)
-print u.verbose.report(NPS.auto(80), noheader=True)
+print(u.verbose.report(NPS.auto(80), noheader=True))
+print(u.verbose.report(NPS.auto(80), noheader=True))
 
 # We observe the second chunk was not 80 frames deep but 34
 # as we only had 114 frames of data.
@@ -302,5 +302,5 @@ for i in range(50):
 # We can analyse the saved ``npy.ptyd`` with
 # :py:func:`~ptypy.io.h5IO.h5info`
 from ptypy.io import h5info
-print h5info(NPS.info.dfile)
+print(h5info(NPS.info.dfile))
 
