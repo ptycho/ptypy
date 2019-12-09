@@ -42,7 +42,7 @@ class _LogTime(object):
         self._t = time.time()
     
     def __call__(self, msg=None):
-        logger.warn('Duration %.2f for ' % (time.time()-self._t )+str(msg))
+        logger.warning('Duration %.2f for ' % (time.time()-self._t )+str(msg))
         self._t  = time.time()
 
 @defaults_tree.parse_doc('scan.ScanModel')
@@ -909,19 +909,15 @@ class Full(ScanModel):
         object_id = 'S' + self.label
         probe_id = 'S' + self.label
 
-        positions = self.new_positions
-        di_views = self.new_diff_views
-        ma_views = self.new_mask_views
-
         # Loop through diffraction patterns
-        for i in range(len(di_views)):
-            dv, mv = di_views.pop(0), ma_views.pop(0)
+        for i in range(len(self.new_diff_views)):
+            dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
 
             index = dv.layer
 
             # Object and probe position
             pos_pr = u.expect2(0.0)
-            pos_obj = positions[i] if 'empty' not in self.p.tags else 0.0
+            pos_obj = self.new_positions[i] if 'empty' not in self.p.tags else 0.0
 
             # For multiwavelength reconstructions: loop here over
             # geometries, and modify probe_id and object_id.

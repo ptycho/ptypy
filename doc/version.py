@@ -1,16 +1,18 @@
 
 # THIS FILE IS GENERATED FROM ptypy/setup.py
-short_version='0.3.0'
-version='0.3.0'
-release=False
+short_version='0.4.0'
+version='0.4.0'
+release=True
 
 if not release:
     version += '.dev'
     import subprocess
     try:
-        git_commit = subprocess.Popen(["git","log","-1","--pretty=oneline","--abbrev-commit"],stdout=subprocess.PIPE).communicate()[0].split()[0]
+        git_commit = subprocess.Popen(["git","log","-1","--pretty=oneline","--abbrev-commit"],
+                     stdout=subprocess.PIPE,
+                     stderr=subprocess.DEVNULL).communicate()[0].split()[0]
     except:
         pass
     else:
-        version += git_commit.strip().decode()
+        version += git_commit.strip()
 
