@@ -151,7 +151,7 @@ class Fourier_update_kernel(BaseKernel):
         fm[:] = (1 - mask) + mask * (mag + fdev * renorm) / (af + 1e-10)
         
         # upcasting
-        aux[:] = (aux.reshape(ish[0]/nmodes,nmodes,ish[1],ish[2]) * fm[:,np.newaxis,:,:]).reshape(ish)
+        aux[:] = (aux.reshape(ish[0]//nmodes,nmodes,ish[1],ish[2]) * fm[:,np.newaxis,:,:]).reshape(ish)
    
     def build_aux(self, alpha, ob, pr, ex, g_addr, offset = 0):
         

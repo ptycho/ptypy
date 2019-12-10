@@ -302,11 +302,10 @@ class DM_serial(DM.DM):
                     t1 = time.time()
                     ev = FUK.build_exit(ob, pr, ex, addr, offset = off)
                     self.benchmark.E_Build_exit += time.time() - t1 
-                    
-                    
+
                 err_phot = np.zeros_like(err_fourier)
                 err_exit = np.zeros_like(err_fourier)
-                errs = np.array(zip(err_fourier,err_phot,err_exit))
+                errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
                 error = dict(zip(prep.view_IDs, errs))
                 
                 self.benchmark.calls_fourier +=1
