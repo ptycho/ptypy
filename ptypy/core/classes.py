@@ -1427,20 +1427,6 @@ class View(Base):
         self.storage[self] = v
 
     @property
-    def data_sp(self):
-        """
-        The view content in data buffer of associated storage.
-        """
-        return self.storage.get_data(v=self, sp=True)
-
-    @data_sp.setter
-    def data_sp(self, v):
-        """
-        Set the view content in data buffer of associated storage.
-        """
-        self.storage.set_data(v=self, newdata=v, sp=True)
-
-    @property
     def shape(self):
         """
         Two dimensional shape of View.
@@ -2238,7 +2224,7 @@ class POD(Base):
         including eventual pixel shift.
         """
         if not self.is_empty:
-            return self.ob_view.data_sp
+            return self.ob_view.storage.get_data(v=self.ob_view, sp=self.ob_view.sp)
         else:
             # Empty probe means no object (perfect transmission)
             return np.ones(self.geometry.shape, dtype=self.owner.CType)
@@ -2246,7 +2232,7 @@ class POD(Base):
     @object_sp.setter
     def object_sp(self, v):
         if not self.is_empty:
-            self.ob_view.data_sp = v
+            self.ob_view.storage.set_data(v=self.ob_view, newdata=v, sp=self.ob_view.sp)
 
     @property
     def probe(self):
@@ -2266,11 +2252,11 @@ class POD(Base):
         Convenience property that links to slice of probe :any:`Storage`,
         including subpixel.
         """
-        return self.pr_view.data_sp
+        return self.pr_view.storage.get_data(v=self.pr_view, sp=-self.ob_view.sp)
 
     @probe_sp.setter
     def probe_sp(self, v):
-        self.pr_view.data_sp = v
+        self.pr_view.storage.set_data(v=self.pr_view, newdata=v, sp=-self.ob_view.sp)
 
     @property
     def exit(self):

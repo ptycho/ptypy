@@ -354,9 +354,9 @@ class ScanModel(object):
                 except KeyError:
                     raise KeyError('Subpixel shift method %s was not found, please choose from: %s'
                                     % (self.p.subpixel, SUBPIXEL_SHIFT_METHODS.keys()))
-            for p in new_pods:
-                p.pr_view.sp = -p.ob_view.sp
-                p.ob_view.sp = 0.
+            # for p in new_pods:
+            #     p.pr_view.sp = -p.ob_view.sp
+            #     p.ob_view.sp = 0.
             t2 = time.time()
             log(3, "Done updating the subpixel shifts. Took %s seconds" % str(t2-t1))  # this might take a while
         self.ptycho.exit.reformat()
