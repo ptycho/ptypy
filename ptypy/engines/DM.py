@@ -52,6 +52,12 @@ class DM(PositionCorrectionEngine):
     lowlim = 0
     help = Number of iterations before starting subpixel interpolation
 
+    [subpix]
+    default = None
+    type = None, str
+    choices = ['fourier', 'linear', 'interp', None]
+    help = Subpixel interpolation; 'fourier','linear', 'interp' or None
+
     [update_object_first]
     default = True
     type = bool
@@ -178,7 +184,6 @@ class DM(PositionCorrectionEngine):
             mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
 
-
     def engine_iterate(self, num=1):
         """
         Compute `num` iterations.
@@ -188,6 +193,17 @@ class DM(PositionCorrectionEngine):
         tp = 0.
 
         for it in range(num):
+            if (self.p.subpix_start == self.curiter) and (self.p.subpix is not None):
+                logger.info('Subpixel shifts')
+                from ..core import Storage
+                if self.p.subpix == 'fourier':
+                    Storage.hook_subpixel_shift = eu.hook_subpixel_shift_fourier
+                elif self.p.subpix == 'linear':
+                    Storage.hook_subpixel_shift = eu.hook_subpixel_shift_linear
+                elif self.p.subpix == 'interp':
+                    Storage.hook_subpixel_shift = eu.hook_subpixel_shift_interp
+                logger.info('Subpixel shifts of type "%s" now being used' % self.p.subpix)
+
             t1 = time.time()
 
             # Fourier update
