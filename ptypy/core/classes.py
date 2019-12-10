@@ -1114,7 +1114,7 @@ class Storage(Base):
             # there must be a nicer way to do this, numpy.take is nearly
             # right, but returns copies and not views.
             if self.ndim == 2:
-                if sp and np.any(sp != 0.0):
+                if sp is not None and np.any(sp != 0.0):
                     self.data[v.dlayer,
                               v.dlow[0]:v.dhigh[0],
                               v.dlow[1]:v.dhigh[1]] = self.subpixel_shift(newdata, -sp)
