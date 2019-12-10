@@ -34,7 +34,7 @@ from .. import defaults_tree
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'BlockScanModel', 'BlockVanilla']
+__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'BlockScanModel', 'BlockVanilla', 'BlockFull']
 
 class _LogTime(object):
     
