@@ -11,7 +11,6 @@ import time
 import numpy as np
 
 from .. import utils as u
-from .utils import basic_fourier_update
 from . import BaseEngine, register
 from ..utils.verbose import logger
 from ..utils import parallel
@@ -110,8 +109,8 @@ class DM_simple(BaseEngine):
             for name, di_view in self.di.V.iteritems():
                 if not di_view.active:
                     continue
-                error_dct[name] = basic_fourier_update(
-                    di_view, alpha=self.p.alpha, pbound=None, LL_error=False)
+                error_dct[name] = fourier_update(
+                    di_view, alpha=self.p.alpha)
 
             t1 = time.time()
             tf = t1 - t0
@@ -211,3 +210,67 @@ class DM_simple(BaseEngine):
             buf[:] = s.data
 
         return np.sqrt(change / len(self.pr.S))
+
+def fourier_update(diff_view, alpha=1.):
+    """\
+    Fourier update a single view using its associated pods.
+    Updates on all pods' exit waves.
+
+    Parameters
+    ----------
+    diff_view : View
+        View to diffraction data
+
+    alpha : float, optional
+        Mixing between old and new exit wave. Valid interval ``[0, 1]``
+
+    Returns
+    -------
+    error : ndarray
+        1d array, ``error = np.array([err_fmag, err_phot, err_exit])``.
+
+        - `err_fmag`, Fourier magnitude error; quadratic deviation from
+          root of experimental data
+        - `err_phot`, quadratic deviation from experimental data (photons)
+        - `err_exit`, quadratic deviation of exit waves before and after
+          Fourier iteration
+    """
+    # Prepare dict for storing propagated waves
+    f = {}
+
+    # Buffer for accumulated photons
+    af2 = np.zeros_like(diff_view.data)
+
+    # Get measured data
+    I = diff_view.data
+
+    # Get the mask
+    fmask = diff_view.pod.mask
+
+    err_phot = 0.
+
+    # Propagate the exit waves
+    for name, pod in diff_view.pods.iteritems():
+        if not pod.active:
+            continue
+        f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
+                         - alpha * pod.exit)
+        af2 += u.abs2(f[name])
+
+    fmag = np.sqrt(np.abs(I))
+    af = np.sqrt(af2)
+
+    # Fourier magnitudes deviations
+    fdev = af - fmag
+    err_fmag = np.sum(fmask * fdev**2) / fmask.sum()
+    err_exit = 0.
+
+    fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
+    for name, pod in diff_view.pods.iteritems():
+        if not pod.active:
+            continue
+        df = pod.bw(fm * f[name]) - pod.probe * pod.object
+        pod.exit += df
+        err_exit += np.mean(u.abs2(df))
+
+    return np.array([err_fmag, err_phot, err_exit])
