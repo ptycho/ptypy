@@ -92,6 +92,8 @@ class ScanModel(object):
     help = Container for sample initialization model
 
     """
+    _PREFIX = MODEL_PREFIX
+
     def __init__(self, ptycho=None, pars=None, label=None):
         """
         Create scan model object.
@@ -622,8 +624,8 @@ class BlockScanModel(ScanModel):
 
 class _Vanilla(object):
     """
-    Dummy for testing, there must be more than one for validate to react
-    to invalid names.
+    Vanilla model, one probe and one object per scan.
+    Probe has only size as parameter, object only the initial fill value.
 
     Defaults:
 
@@ -800,16 +802,8 @@ class _Vanilla(object):
 
         s.model_initialized = True
 
-@defaults_tree.parse_doc('scan.Vanilla')
-class Vanilla(_Vanilla,ScanModel):
-    pass
 
-@defaults_tree.parse_doc('scan.BlockVanilla')
-class BlockVanilla(_Vanilla,BlockScanModel):
-    pass
-
-@defaults_tree.parse_doc('scan.Full')
-class Full(ScanModel):
+class _Full(object):
     """
     Manage a single scan model (sharing, coherence, propagation, ...)
 
@@ -885,8 +879,6 @@ class Full(ScanModel):
     userlevel = 2
 
     """
-
-    _PREFIX = MODEL_PREFIX
 
     def _create_pods(self):
         """
@@ -1124,6 +1116,22 @@ class Full(ScanModel):
             s.reformat()  # maybe not needed
 
             s.model_initialized = True
+
+@defaults_tree.parse_doc('scan.Vanilla')
+class Vanilla(_Vanilla, ScanModel):
+    pass
+
+@defaults_tree.parse_doc('scan.BlockVanilla')
+class BlockVanilla(_Vanilla, BlockScanModel):
+    pass
+
+@defaults_tree.parse_doc('scan.Full')
+class Full(_Full, ScanModel):
+    pass
+
+@defaults_tree.parse_doc('scan.BlockFull')
+class BlockFull(_Full, BlockScanModel):
+    pass
 
 # Append illumination and sample defaults
 defaults_tree['scan.Full'].add_child(illumination.illumination_desc)
