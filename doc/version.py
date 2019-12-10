@@ -2,7 +2,7 @@
 # THIS FILE IS GENERATED FROM ptypy/setup.py
 short_version='0.4.0'
 version='0.4.0'
-release=True
+release=False
 
 if not release:
     version += '.dev'
@@ -14,5 +14,5 @@ if not release:
     except:
         pass
     else:
-        version += git_commit.strip()
+        version += git_commit.strip().decode()
 
