@@ -338,8 +338,8 @@ class DM(PositionCorrectionEngine):
         for name, pod in self.pods.iteritems():
             if not pod.active:
                 continue
-            pod.object += pod.probe.conj() * pod.exit * pod.object_weight
-            ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
+            pod.object += pod.probe_sp.conj() * pod.exit * pod.object_weight
+            ob_nrm[pod.ob_view] += u.cabs2(pod.probe_sp) * pod.object_weight
 
         # Distribute result with MPI
         for name, s in self.ob.storages.iteritems():
@@ -391,8 +391,8 @@ class DM(PositionCorrectionEngine):
         for name, pod in self.pods.iteritems():
             if not pod.active:
                 continue
-            pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
-            pr_nrm[pod.pr_view] += u.cabs2(pod.object) * pod.probe_weight
+            pod.probe_sp += pod.object.conj() * pod.exit * pod.probe_weight
+            pr_nrm[pod.pr_view] += u.cabs2(pod.object_sp) * pod.probe_weight
 
         change = 0.
 
@@ -468,7 +468,7 @@ def fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     if LL_error is True:
         LL = np.zeros_like(diff_view.data)
         for name, pod in diff_view.pods.iteritems():
-            LL += u.abs2(pod.fw(pod.probe * pod.object))
+            LL += u.abs2(pod.fw(pod.probe_sp * pod.object))
         err_phot = (np.sum(fmask * (LL - I)**2 / (I + 1.))
                     / np.prod(LL.shape))
     else:
@@ -478,7 +478,7 @@ def fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     for name, pod in diff_view.pods.iteritems():
         if not pod.active:
             continue
-        f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
+        f[name] = pod.fw((1 + alpha) * pod.probe_sp * pod.object
                          - alpha * pod.exit)
 
         af2 += u.abs2(f[name])
@@ -497,7 +497,7 @@ def fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.iteritems():
             if not pod.active:
                 continue
-            df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            df = pod.bw(fm * f[name]) - pod.probe_sp * pod.object
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     elif err_fmag > pbound:
@@ -507,7 +507,7 @@ def fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.iteritems():
             if not pod.active:
                 continue
-            df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            df = pod.bw(fm * f[name]) - pod.probe_sp * pod.object
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     else:
@@ -515,7 +515,7 @@ def fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.iteritems():
             if not pod.active:
                 continue
-            df = alpha * (pod.probe * pod.object - pod.exit)
+            df = alpha * (pod.probe_sp * pod.object - pod.exit)
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
 
