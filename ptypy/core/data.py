@@ -1490,6 +1490,11 @@ class MoonFlowerScan(PtyScan):
     type = float
     help = Point spread function of the detector
 
+    [use_subpix]
+    default = False
+    type = bool
+    help = allows the simulation to use subpixel offsets
+
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -1531,6 +1536,13 @@ class MoonFlowerScan(PtyScan):
         self.pixel = np.round(pixel).astype(int) + 10
         frame = self.pixel.max(0) + 10 + geo.shape
         self.geo = geo
+        self.subpix = np.round(pixel) - pixel
+        print(self.subpix)
+        if p.use_subpix:
+            from ..utils import shift_fourier
+            self.probe_shift = shift_fourier
+        else:
+            self.probe_shift = lambda x, y: x
         
         try:
             self.obj = resources.flower_obj(frame)
@@ -1569,7 +1581,7 @@ class MoonFlowerScan(PtyScan):
 
         for k in indices:
             intensity_j = u.abs2(self.geo.propagator.fw(
-                self.pr * self.obj[p[k][0]:p[k][0] + s[0],
+                self.probe_shift(self.pr, self.subpix[k]) * self.obj[p[k][0]:p[k][0] + s[0],
                                    p[k][1]:p[k][1] + s[1]]))
 
             if self.p.psf > 0.:
