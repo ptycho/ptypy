@@ -1052,28 +1052,35 @@ class Storage(Base):
         """
         return data
 
-    def __getitem__(self, v):
+    def get_data(self, v, sp=None):
         """
-        Storage[v], Storage[v, sp=True]
+        Return data given by v, the view object.
+
+        Parameters
+        ----------
+        v : View, int
+            View object or layer index
+        sp : None, True, tuple, ndarray, optional
+            Subpixel shift. If sp is None, do not apply subpixel shift (default).
+            If sp is True, use v.sp. Otherwise use sp as subpixel shift.
+            NOTE: subpixel shifts are implemented only for 2D views.
 
         Returns
         -------
         ndarray
             The view to internal data buffer corresponding to View or layer `v`
-            Apply subpixel shift if sp=True.
+            Apply subpixel shift if sp is a well-formed tuple or array.
         """
-
-        # Here things could get complicated.
-        # Coordinate transforms, 3D - 2D projection, ...
-        # Current implementation: ROI + subpixel shift
-        # return shift(self.datalist[v.layer][v.roi[0, 0]:v.roi[1, 0],
-        #             v.roi[0, 1]:v.roi[1, 1]], v.sp)
-        # return shift(self.data[v.slayer, v.roi[0, 0]:v.roi[1, 0],
-        #             v.roi[0, 1]:v.roi[1, 1]], v.sp)
+        if sp is True:
+            sp = v.sp
         if isinstance(v, View):
-            # Default: return slice from 'data' array (without subpixel shift)
             if self.ndim == 2:
-                return self.data[v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]]
+                if sp is not None and np.any(sp != 0.0):
+                    return self.subpixel_shift(self.data[
+                                               v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
+                                               sp)
+                else:
+                    return self.data[v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]]
             elif self.ndim == 3:
                 return self.data[
                        v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1],
@@ -1081,52 +1088,40 @@ class Storage(Base):
         elif v in self.layermap:
             # Return layer
             return self.data[self.layermap.index(v)]
-        elif isinstance(v, tuple):
-            # Call included second argument (subpixel switch)
-            v, sp = v
-            if self.ndim == 2 and sp and np.any(v.sp != 0.0):
-                return self.subpixel_shift(self.data[
-                                           v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
-                                           v.sp)
-            else:
-                return self[v]
         else:
             raise ValueError("View or layer '%s' is not present in storage %s"
                              % (v, self.ID))
 
-
-    def __setitem__(self, v, newdata):
+    def set_data(self, v, newdata, sp=None):
         """
-        Storage[v] = newdata
-        or
-        Storage[v, sp] = newdata
-
         Set internal data buffer to `newdata` for the region of view `v`.
 
         Parameters
         ----------
-        v : View
-            A View for this storage
-        sp (optional): bool
-            Apply subpixel shift
-
+        v : View, int
+            A View or layer index for this storage
         newdata : ndarray
             Two-dimensional array that fits the view's shape
+        sp : None, bool, tuple, ndarray, optional
+            Subpixel shift. If None: no shift is applied. If True, use v.sp.
+            Otherwise use sp as subpixel shift.
+            NOTE: subpixel shifts are implemented only for 2D views.
         """
-
-        # Only ROI and shift for now.
-        # This part must always be consistent with __getitem__!
-        # self.datalist[v.layer][v.roi[0, 0]:v.roi[1, 0],
-        #                       v.roi[0, 1]:v.roi[1, 1]] = shift(newdata, -v.sp)
-        # self.data[v.slayer, v.roi[0, 0]:v.roi[1, 0],
-        #          v.roi[0, 1]:v.roi[1, 1]] = shift(newdata, -v.sp)
+        # This method must be kept consistent with self.get_data.
+        if sp is True:
+            sp = v.sp
         if isinstance(v, View):
             # there must be a nicer way to do this, numpy.take is nearly
             # right, but returns copies and not views.
             if self.ndim == 2:
-                self.data[v.dlayer,
-                      v.dlow[0]:v.dhigh[0],
-                      v.dlow[1]:v.dhigh[1]] = newdata
+                if sp and np.any(sp != 0.0):
+                    self.data[v.dlayer,
+                              v.dlow[0]:v.dhigh[0],
+                              v.dlow[1]:v.dhigh[1]] = self.subpixel_shift(newdata, -sp)
+                else:
+                    self.data[v.dlayer,
+                              v.dlow[0]:v.dhigh[0],
+                              v.dlow[1]:v.dhigh[1]] = newdata
             elif self.ndim == 3:
                 self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
@@ -1147,17 +1142,36 @@ class Storage(Base):
                           v.dlow[4]:v.dhigh[4]] = newdata
         elif v in self.layermap:
             self.data[self.layermap.index(v)] = newdata
-        elif isinstance(v, tuple):
-            v, sp = v
-            if (self.ndim == 2) and sp and np.any(v.sp != 0.0):
-                self.data[v.dlayer,
-                      v.dlow[0]:v.dhigh[0],
-                      v.dlow[1]:v.dhigh[1]] = self.subpixel_shift(newdata, -v.sp)
-            else:
-                self[v] = newdata
         else:
             raise ValueError("View or layer '%s' is not present in storage %s"
                              % (v, self.ID))
+
+    def __getitem__(self, v):
+        """
+        Storage[v], equivalent to self.get_data(v)
+
+        Returns
+        -------
+        ndarray
+            The view to internal data buffer corresponding to View or layer `v`
+            Apply subpixel shift if sp=True.
+        """
+        return self.get_data(v)
+
+    def __setitem__(self, v, newdata):
+        """
+        Storage[v] = newdata, equivalent to self.set_data(v, newdata)
+
+        Set internal data buffer to `newdata` for the region of view `v`.
+
+        Parameters
+        ----------
+        v : View
+            A View for this storage
+        newdata : ndarray
+            Two-dimensional array that fits the view's shape
+        """
+        self.set_data(v, newdata)
 
     def __str__(self):
         info = '%15s : %7.2f MB :: ' % (self.ID, self.data.nbytes / 1e6)
@@ -1417,14 +1431,14 @@ class View(Base):
         """
         The view content in data buffer of associated storage.
         """
-        return self.storage[self, True]
+        return self.storage.get_data(v=self, sp=True)
 
     @data_sp.setter
     def data_sp(self, v):
         """
         Set the view content in data buffer of associated storage.
         """
-        self.storage[self, True] = v
+        self.storage.set_data(v=self, newdata=v, sp=True)
 
     @property
     def shape(self):
