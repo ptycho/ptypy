@@ -13,7 +13,7 @@ p.verbose_level = 3
 
 # set home path
 p.io = u.Param()
-p.io.home = "/tmp/ptypy/"
+p.io.home = "~/dumps/ptypy/"
 p.io.autosave = u.Param(active=False)
 
 # max 200 frames (128x128px) of diffraction data
@@ -38,7 +38,7 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_serial'
+p.engines.engine00.name = 'DM_ocl'
 p.engines.engine00.numiter = 80
 
 # prepare and run

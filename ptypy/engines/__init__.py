@@ -42,6 +42,7 @@ from .base import BaseEngine, DEFAULT_iter_info
 
 # These imports should be executable separately
 from . import DM
+from . import DM_ocl
 #from . import DM_gpu
 from . import DM_serial
 #from . import DM_npy

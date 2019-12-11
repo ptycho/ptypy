@@ -8,28 +8,21 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-#from .. import core
-from __future__ import division
 import os.path
-from .. import utils as u
-from ..utils.verbose import logger, log
-from ..utils import parallel
-#from utils import basic_fourier_update
-from . import BaseEngine
-from .DM import DM
 import numpy as np
 import time
 import pyopencl as cl
 
+from .. import utils as u
+from ..utils.verbose import logger, log
+from ..utils import parallel
+from . import BaseEngine, register, DM_serial, DM
+
 from pyopencl import array as cla
-from pyopencl import clmath as clm
-from .. import gpu
+from ..accelerate import ocl as gpu
 
-# queue = gpu.get_ocl_queue()
-
-### TODOS 
+### TODOS
 # 
-# - The Propagator needs to be made somewhere else
 # - Get it running faster with MPI (partial sync)
 # - implement "batching" when processing frames to lower the pressure on memory
 # - Be smarter about the engine.prepare() part
@@ -39,24 +32,11 @@ from .. import gpu
 ## for debugging
 from matplotlib import pyplot as plt
 
-__all__=['DM']
+__all__ = ['DM_ocl']
 
 parallel = u.parallel
 
 
-DEFAULT = u.Param(
-    fourier_relax_factor = 0.05,
-    alpha = 1,
-    update_object_first = True,
-    overlap_converge_factor = .1,
-    overlap_max_iterations = 10,
-    probe_inertia = 1e-9,               # Portion of probe that is kept from iteraiton to iteration, formally cfact
-    object_inertia = 1e-2,              # Portion of object that is kept from iteraiton to iteration, formally DM_smooth_amplitude
-    obj_smooth_std = None,              # Standard deviation for smoothing of object between iterations
-    clip_object = None,                 # None or tuple(min,max) of desired limits of the object modulus
-)
-
-        
 def gaussian_kernel(sigma, size=None, sigma_y=None, size_y=None):
     size = int(size)
     sigma = np.float(sigma)
@@ -64,11 +44,12 @@ def gaussian_kernel(sigma, size=None, sigma_y=None, size_y=None):
         size_y = size
     if not sigma_y:
         sigma_y = sigma
-    
-    x, y = np.mgrid[-size:size+1, -size_y:size_y+1]
-    
-    g = np.exp(-(x**2/(2*sigma**2)+y**2/(2*sigma_y**2)))
+
+    x, y = np.mgrid[-size:size + 1, -size_y:size_y + 1]
+
+    g = np.exp(-(x ** 2 / (2 * sigma ** 2) + y ** 2 / (2 * sigma_y ** 2)))
     return g / g.sum()
+
 
 def serialize_array_access(diff_storage):
     # Sort views according to layer in diffraction stack 
@@ -76,203 +57,198 @@ def serialize_array_access(diff_storage):
     dlayers = [view.dlayer for view in views]
     views = [views[i] for i in np.argsort(dlayers)]
     view_IDs = [view.ID for view in views]
-    
+
     # Master pod
     mpod = views[0].pod
-    
+
     # Determine linked storages for probe, object and exit waves
     pr = mpod.pr_view.storage
     ob = mpod.ob_view.storage
     ex = mpod.ex_view.storage
-    
-    poe_ID = (pr.ID,ob.ID,ex.ID)
-    
+
+    poe_ID = (pr.ID, ob.ID, ex.ID)
+
     addr = []
     for view in views:
         address = []
-                        
-        for pname,pod in view.pods.items():
+
+        for pname, pod in view.pods.items():
             ## store them for each pod
             # create addresses
             a = np.array(
-            [(pod.pr_view.dlayer,pod.pr_view.dlow[0],pod.pr_view.dlow[1]),
-            (pod.ob_view.dlayer,pod.ob_view.dlow[0],pod.ob_view.dlow[1]),
-            (pod.ex_view.dlayer,pod.ex_view.dlow[0],pod.ex_view.dlow[1]),
-            (pod.di_view.dlayer,pod.di_view.dlow[0],pod.di_view.dlow[1]),
-            (pod.ma_view.dlayer,pod.ma_view.dlow[0],pod.ma_view.dlow[1])])
-            
+                [(pod.pr_view.dlayer, pod.pr_view.dlow[0], pod.pr_view.dlow[1]),
+                 (pod.ob_view.dlayer, pod.ob_view.dlow[0], pod.ob_view.dlow[1]),
+                 (pod.ex_view.dlayer, pod.ex_view.dlow[0], pod.ex_view.dlow[1]),
+                 (pod.di_view.dlayer, pod.di_view.dlow[0], pod.di_view.dlow[1]),
+                 (pod.ma_view.dlayer, pod.ma_view.dlow[0], pod.ma_view.dlow[1])])
+
             address.append(a)
-            
+
             if pod.pr_view.storage.ID != pr.ID:
                 log(1, "Splitting probes for one diffraction stack is not supported in " + self.__class__.__name__)
             if pod.ob_view.storage.ID != ob.ID:
                 log(1, "Splitting objects for one diffraction stack is not supported in " + self.__class__.__name__)
             if pod.ex_view.storage.ID != ex.ID:
                 log(1, "Splitting exit stacks for one diffraction stack is not supported in " + self.__class__.__name__)
-                                    
+
         ## store data for each view
         # adresses
         addr.append(address)
-        
+
     # store them for each storage
     return view_IDs, poe_ID, np.array(addr).astype(np.int32)
-         
+
+
 @register()
-class DM_ocl(DM_serial):
-    
-    DEFAULT = DEFAULT
+class DM_ocl(DM.DM):
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Difference map reconstruction engine.
         """
-            
-        super(DM_ocl,self).__init__(ptycho_parent,pars)
-          
+
+        super(DM_ocl, self).__init__(ptycho_parent, pars)
+
         self.queue = gpu.get_ocl_queue()
-        
+
         # allocator for READ only buffers
-        #self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
+        # self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
         ## gaussian filter
         # dummy kernel
-        if not self.p.obj_smooth_std: 
-            gauss_kernel = gaussian_kernel(1,1).astype(np.float32)
+        if not self.p.obj_smooth_std:
+            gauss_kernel = gaussian_kernel(1, 1).astype(np.float32)
         else:
-            gauss_kernel = gaussian_kernel(self.p.obj_smooth_std,self.p.obj_smooth_std).astype(np.float32)
-        kernel_pars = {'kernel_sh_x' : gauss_kernel.shape[0], 'kernel_sh_y': gauss_kernel.shape[1]}
-        
-        self.gauss_kernel_gpu = cla.to_device(self.queue,gauss_kernel)
-        
-        
-        
+            gauss_kernel = gaussian_kernel(self.p.obj_smooth_std, self.p.obj_smooth_std).astype(np.float32)
+        kernel_pars = {'kernel_sh_x': gauss_kernel.shape[0], 'kernel_sh_y': gauss_kernel.shape[1]}
+
+        self.gauss_kernel_gpu = cla.to_device(self.queue, gauss_kernel)
+
     def engine_initialize(self):
         """
         Prepare for reconstruction.
         """
-        
-        super(DM_ocl,self).engine_initialize()
-                
+
+        super(DM_ocl, self).engine_initialize()
+
         def constbuffer(nbytes):
-            return cl.Buffer(self.queue.context,cl.mem_flags.READ_ONLY,size=nbytes)
-            
+            return cl.Buffer(self.queue.context, cl.mem_flags.READ_ONLY, size=nbytes)
+
         self.ob_cfact_gpu = {}
         self.pr_cfact_gpu = {}
-        
+
     def engine_prepare(self):
-        
-        super(DM_ocl,self).engine_prepare()
-        
+
+        super(DM_ocl, self).engine_prepare()
+
         # object padding on high side (due to 16x16 wg size)    
         for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
             obv = self.ob_viewcover.S[oID]
             misfit = np.asarray(ob.shape[-2:]) % 32
-            if (misfit!=0).any():
-                pad = 32-np.asarray(ob.shape[-2:]) % 32
-                ob.data = u.crop_pad(ob.data,[[0,pad[0]],[0,pad[1]]],axes=[-2,-1],filltype='project')
-                obv.data = u.crop_pad(obv.data,[[0,pad[0]],[0,pad[1]]],axes=[-2,-1],filltype='project')
-                obn.data = u.crop_pad(obn.data,[[0,pad[0]],[0,pad[1]]],axes=[-2,-1],filltype='project')
+            if (misfit != 0).any():
+                pad = 32 - np.asarray(ob.shape[-2:]) % 32
+                ob.data = u.crop_pad(ob.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
+                obv.data = u.crop_pad(obv.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
+                obn.data = u.crop_pad(obn.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
                 ob.shape = ob.data.shape
                 obv.shape = obv.data.shape
                 obn.shape = obn.data.shape
             ## calculating cfacts. This should actually belong to the parent class
-            cfact = self.p.object_inertia * self.mean_power *\
+            cfact = self.p.object_inertia * self.mean_power * \
                     (obv.data + 1.)
             cfact /= u.parallel.size
             self.ob_cfact[oID] = cfact
-            self.ob_cfact_gpu[oID] = cla.to_device(self.queue,cfact)
-            
+            self.ob_cfact_gpu[oID] = cla.to_device(self.queue, cfact)
+
         for pID, pr in self.pr.storages.items():
             cfact = self.p.probe_inertia * len(pr.views) / pr.data.shape[0]
             self.pr_cfact[pID] = cfact / u.parallel.size
-                
+
         ## The following should be restricted to new data
-        
+
         # recursive copy to gpu
-        for name,c in self.ptycho.containers.items():
-            for name,s in c.S.items():
+        for name, c in self.ptycho.containers.items():
+            for name, s in c.S.items():
                 ## convert data here
-                if s.data.dtype.name =='bool':
+                if s.data.dtype.name == 'bool':
                     data = s.data.astype(np.float32)
                 else:
                     data = s.data
-                s.gpu = cla.to_device(self.queue,data)
-        
+                s.gpu = cla.to_device(self.queue, data)
+
         for dID, diffs in self.di.S.items():
             prep = u.Param()
             self.diff_info[dID] = prep
-            
+
             prep.view_IDs, prep.poe_IDs, addr = serialize_array_access(diffs)
-            
+
             all_modes = addr.shape[1]
             # master pod
-            mpod =  self.di.V[prep.view_IDs[0]].pod
+            mpod = self.di.V[prep.view_IDs[0]].pod
             pr = mpod.pr_view.storage
             ob = mpod.ob_view.storage
             ex = mpod.ex_view.storage
-    
+
             prep.addr_gpu = cla.to_device(self.queue, addr)
             prep.addr = addr
-            
+
             ## auxiliary wave buffer
             aux = np.zeros_like(ex.data)
             prep.aux_gpu = cla.to_device(self.queue, aux)
             prep.aux = aux
             self.queue.finish()
-            
+
             ## setup kernels
-            from ptypy.gpu.ocl_kernels import Fourier_update_kernel as FUK
-            prep.fourier_kernel = FUK(self.queue, nmodes = all_modes, pbound = self.pbound[dID])
+            from ptypy.accelerate.ocl.ocl_kernels import Fourier_update_kernel as FUK
+            prep.fourier_kernel = FUK(self.queue, nmodes=all_modes, pbound=self.pbound[dID])
             mask = self.ma.S[dID].data.astype(np.float32)
             prep.fourier_kernel.configure(diffs.data, mask, aux)
 
-            from ptypy.gpu.ocl_kernels import Auxiliary_wave_kernel as AWK
+            from ptypy.accelerate.ocl.ocl_kernels import Auxiliary_wave_kernel as AWK
             prep.aux_ex_kernel = AWK(self.queue)
             prep.aux_ex_kernel.configure(ob.data, addr, self.p.alpha)
-            
-            from ptypy.gpu.ocl_kernels import PO_update_kernel as PUK
+
+            from ptypy.accelerate.ocl.ocl_kernels import PO_update_kernel as PUK
             prep.po_kernel = PUK(self.queue)
             prep.po_kernel.configure(ob.data, pr.data, addr)
-            
+
             geo = mpod.geometry
             # you cannot use gpyfft multiple times due to
-            if not hasattr(geo,'transform'):
-                from ptypy.gpu.ocl_fft import FFT_2D_ocl_gpyfft as FFT
-                
-                geo.transform = FFT(self.queue, aux,  
-                        pre_fft = geo.propagator.pre_fft, 
-                        post_fft = geo.propagator.post_fft, 
-                        inplace = True,
-                        symmetric = True)
-                geo.itransform = FFT(self.queue, aux,  
-                        pre_fft = geo.propagator.pre_ifft, 
-                        post_fft =  geo.propagator.post_ifft, 
-                        inplace = True,
-                        symmetric = True)
-                
+            if not hasattr(geo, 'transform'):
+                from ptypy.accelerate.ocl.ocl_fft import FFT_2D_ocl_reikna as FFT
+
+                geo.transform = FFT(self.queue, aux,
+                                    pre_fft=geo.propagator.pre_fft,
+                                    post_fft=geo.propagator.post_fft,
+                                    inplace=True,
+                                    symmetric=True)
+                geo.itransform = FFT(self.queue, aux,
+                                     pre_fft=geo.propagator.pre_ifft,
+                                     post_fft=geo.propagator.post_ifft,
+                                     inplace=True,
+                                     symmetric=True)
                 self.queue.finish()
             prep.geo = geo
 
         # finish init queue
         self.queue.finish()
 
-
     def engine_iterate(self, num=1):
         """
         Compute one iteration.
         """
-        
+
         for it in range(num):
 
             error_dct = {}
-            
+
             for dID in self.di.S.keys():
                 t1 = time.time()
-                
+
                 prep = self.diff_info[dID]
                 # find probe, object in exit ID in dependence of dID
-                pID,oID,eID = prep.poe_IDs
-                
+                pID, oID, eID = prep.poe_IDs
+
                 # get addresses 
                 addr_gpu = prep.addr_gpu
 
@@ -281,24 +257,24 @@ class DM_ocl(DM_serial):
                 ob = self.ob.S[oID].gpu
                 pr = self.pr.S[pID].gpu
                 ex = self.ex.S[eID].gpu
-                
+
                 aux = prep.aux_gpu
-                
+
                 geo = prep.geo
-                queue = self.queue          
-                
+                queue = self.queue
+
                 t1 = time.time()
                 ev = prep.aux_ex_kernel.ocl_build_aux(aux, ob, pr, ex, addr_gpu)
                 queue.finish()
-                
+
                 self.benchmark.A_Build_aux += time.time() - t1
-    
+
                 ## FFT
                 t1 = time.time()
                 geo.transform.ft(aux)
                 queue.finish()
                 self.benchmark.B_Prop += time.time() - t1
-                
+
                 ## Deviation from measured data
                 t1 = time.time()
                 prep.fourier_kernel.ocl.f = aux
@@ -310,49 +286,49 @@ class DM_ocl(DM_serial):
                 t1 = time.time()
                 geo.itransform.ift(aux)
                 queue.finish()
-                                
+
                 self.benchmark.D_iProp += time.time() - t1
-                                
+
                 ## apply changes #2
                 t1 = time.time()
                 ev = prep.aux_ex_kernel.ocl_build_exit(aux, ob, pr, ex, addr_gpu)
                 queue.finish()
-    
-                #self.prg.reduce_one_step(queue, (shape_merged[0],64), (1,64), info_gpu.data, err_temp.data, err_exit.data)
-                #queue.finish()
-                
-                self.benchmark.E_Build_exit += time.time() - t1 
-                
+
+                # self.prg.reduce_one_step(queue, (shape_merged[0],64), (1,64), info_gpu.data, err_temp.data, err_exit.data)
+                # queue.finish()
+
+                self.benchmark.E_Build_exit += time.time() - t1
+
                 err_phot = np.zeros_like(err_fourier)
                 err_exit = np.zeros_like(err_fourier)
-                errs = np.array(list(zip(err_fourier,err_phot,err_exit)))
+                errs = np.array(list(zip(err_fourier, err_phot, err_exit)))
                 error = dict(zip(prep.view_IDs, errs))
-                
-                self.benchmark.calls_fourier +=1
-                
+
+                self.benchmark.calls_fourier += 1
+
             parallel.barrier()
 
-            sync = (self.curiter % 1==0)
+            sync = (self.curiter % 1 == 0)
             self.overlap_update(MPI=True)
 
             parallel.barrier()
             self.curiter += 1
             queue.finish()
 
-        for name, s in self.ob.S.items():  
+        for name, s in self.ob.S.items():
             s.data[:] = s.gpu.get(queue=self.queue)
-        for name, s in self.pr.S.items():  
+        for name, s in self.pr.S.items():
             s.data[:] = s.gpu.get(queue=self.queue)
-        
+
         # costly but needed to sync back with 
-        for name, s in self.ex.S.items():  
+        for name, s in self.ex.S.items():
             s.data[:] = s.gpu.get(queue=self.queue)
 
         self.queue.finish()
-        
+
         self.error = error
         return error
-       
+
     def overlap_update(self, MPI=True):
         """
         DM overlap constraint update.
@@ -360,28 +336,27 @@ class DM_ocl(DM_serial):
         change = 1.
         # Condition to update probe
         do_update_probe = (self.p.probe_update_start <= self.curiter)
-         
+
         for inner in range(self.p.overlap_max_iterations):
             prestr = '%d Iteration (Overlap) #%02d:  ' % (parallel.rank, inner)
             # Update object first
             if self.p.update_object_first or (inner > 0):
                 # Update object
-                log(4,prestr + '----- object update -----',True)
-                self.object_update(MPI=(parallel.size>1 and MPI))
-                               
+                log(4, prestr + '----- object update -----', True)
+                self.object_update(MPI=(parallel.size > 1 and MPI))
+
             # Exit if probe should not yet be updated
             if not do_update_probe: break
-            
-            # Update probe
-            log(4,prestr + '----- probe update -----',True)
-            change = self.probe_update(MPI=(parallel.size>1 and MPI))
-            #change = self.probe_update(MPI=(parallel.size>1 and MPI))
 
-            log(4,prestr + 'change in probe is %.3f' % change,True)
-            
+            # Update probe
+            log(4, prestr + '----- probe update -----', True)
+            change = self.probe_update(MPI=(parallel.size > 1 and MPI))
+            # change = self.probe_update(MPI=(parallel.size>1 and MPI))
+
+            log(4, prestr + 'change in probe is %.3f' % change, True)
+
             # stop iteration if probe change is small
             if change < self.p.overlap_converge_factor: break
-            
 
     ## object update
     def object_update(self, MPI=False):
@@ -405,36 +380,34 @@ class DM_ocl(DM_serial):
             ob.gpu *= cfact
             obn.gpu[:] = cfact
             queue.finish()
-            
+
         # storage for-loop
         for dID in self.di.S.keys():
-                        
             prep = self.diff_info[dID]
-            
+
             # find probe, object in exit ID in dependence of dID
-            pID,oID,eID = prep.poe_IDs
+            pID, oID, eID = prep.poe_IDs
 
             # scan for loop
-            ev = prep.po_kernel.ocl_ob_update(self.ob.S[oID].gpu, 
-                                              self.ob_nrm.S[oID].gpu, 
-                                              self.pr.S[pID].gpu, 
-                                              self.ex.S[eID].gpu, 
+            ev = prep.po_kernel.ocl_ob_update(self.ob.S[oID].gpu,
+                                              self.ob_nrm.S[oID].gpu,
+                                              self.pr.S[pID].gpu,
+                                              self.ex.S[eID].gpu,
                                               prep.addr_gpu)
-            
+
             queue.finish()
-            
-            
+
         for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
             # MPI test
             if MPI:
-                ob.data[:]=ob.gpu.get(queue=queue)
-                obn.data[:]=obn.gpu.get(queue=queue)
+                ob.data[:] = ob.gpu.get(queue=queue)
+                obn.data[:] = obn.gpu.get(queue=queue)
                 queue.finish()
                 parallel.allreduce(ob.data)
                 parallel.allreduce(obn.data)
                 ob.data /= obn.data
-                
+
                 # Clip object (This call takes like one ms. Not time critical)
                 if self.p.clip_object is not None:
                     clip_min, clip_max = self.p.clip_object
@@ -447,90 +420,89 @@ class DM_ocl(DM_serial):
                 ob.gpu.set(ob.data)
             else:
                 ob.gpu /= obn.gpu
-            
+
             queue.finish()
-            
-        #print 'object update: ' + str(time.time()-t1)
-        self.benchmark.object_update += time.time()-t1
-        self.benchmark.calls_object +=1
-    
+
+        # print 'object update: ' + str(time.time()-t1)
+        self.benchmark.object_update += time.time() - t1
+        self.benchmark.calls_object += 1
+
     ## probe update
-    def probe_update(self,MPI=False):
+    def probe_update(self, MPI=False):
         t1 = time.time()
         queue = self.queue
-        
+
         # storage for-loop
         change = 0
-        cfact = self.p.probe_inertia 
+        cfact = self.p.probe_inertia
         for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
             cfact = self.pr_cfact[pID]
             pr.gpu *= cfact
             prn.gpu.fill(cfact)
-            
+
         for dID in self.di.S.keys():
-                    
             prep = self.diff_info[dID]
-                        
+
             # find probe, object in exit ID in dependence of dID
-            pID,oID,eID = prep.poe_IDs
-                        
+            pID, oID, eID = prep.poe_IDs
+
             # scan for-loop
-            ev = prep.po_kernel.ocl_pr_update(self.pr.S[pID].gpu, 
-                                              self.pr_nrm.S[pID].gpu, 
-                                              self.ob.S[oID].gpu, 
-                                              self.ex.S[eID].gpu, 
+            ev = prep.po_kernel.ocl_pr_update(self.pr.S[pID].gpu,
+                                              self.pr_nrm.S[pID].gpu,
+                                              self.ob.S[oID].gpu,
+                                              self.ex.S[eID].gpu,
                                               prep.addr_gpu)
 
             queue.finish()
-            
+
         for pID, pr in self.pr.storages.items():
-            
+
             buf = self.pr_buf.S[pID]
             prn = self.pr_nrm.S[pID]
-            
+
             # MPI test
             if MPI:
-            #if False:
-                pr.data[:]=pr.gpu.get(queue=queue)
-                prn.data[:]=prn.gpu.get(queue=queue)
+                # if False:
+                pr.data[:] = pr.gpu.get(queue=queue)
+                prn.data[:] = prn.gpu.get(queue=queue)
                 queue.finish()
                 parallel.allreduce(pr.data)
                 parallel.allreduce(prn.data)
                 pr.data /= prn.data
-                
+
                 # Apply probe support if requested
                 support = self.probe_support.get(pID)
-                if support is not None: 
+                if support is not None:
                     pr.data *= support
-    
+
                 # Apply probe support in Fourier space (This could be better done on GPU)
                 support = self.probe_fourier_support.get(pID)
-                if support is not None: 
+                if support is not None:
                     pr.data[:] = np.fft.ifft2(support * np.fft.fft2(pr.data))
-                    
+
                 pr.gpu.set(pr.data)
             else:
                 pr.gpu /= prn.gpu
-    
+
             # ca. 0.3 ms
-            #self.pr.S[pID].gpu = probe_gpu
-            pr.data[:]=pr.gpu.get(queue=queue)
+            # self.pr.S[pID].gpu = probe_gpu
+            pr.data[:] = pr.gpu.get(queue=queue)
             ## this should be done on GPU
             queue.finish()
-            
-            #change += u.norm2(pr[i]-buf_pr[i]) / u.norm2(pr[i])
+
+            # change += u.norm2(pr[i]-buf_pr[i]) / u.norm2(pr[i])
             change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
             buf.data[:] = pr.data
             if MPI:
                 change = parallel.allreduce(change) / parallel.size
-                    
-        #print 'probe update: ' + str(time.time()-t1)
-        self.benchmark.probe_update += time.time()-t1
-        self.benchmark.calls_probe +=1
-        
+
+        # print 'probe update: ' + str(time.time()-t1)
+        self.benchmark.probe_update += time.time() - t1
+        self.benchmark.calls_probe += 1
+
         return np.sqrt(change)
-    
+
     def engine_finalize(self):
         """
         try deleting ever helper contianer
@@ -542,16 +514,19 @@ class DM_ocl(DM_serial):
             for name in sorted(self.benchmark.keys()):
                 t = self.benchmark[name]
                 if name[0] in 'ABCDEFGHI':
-                    print('%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier *1000))
-                    acc +=t
+                    print('%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier * 1000))
+                    acc += t
                 elif str(name) == 'probe_update':
-                    #pass
-                    print('%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_probe * 1000, self.benchmark.calls_probe))
+                    # pass
+                    print('%20s : %1.3f ms per call. %d calls' % (
+                        name, t / self.benchmark.calls_probe * 1000, self.benchmark.calls_probe))
                 elif str(name) == 'object_update':
-                    print('%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_object *1000, self.benchmark.calls_object))
-            
-            print('%20s : %1.3f ms per iteration. %d calls' % ('Fourier_total', acc / self.benchmark.calls_fourier *1000, self.benchmark.calls_fourier))
-            
+                    print('%20s : %1.3f ms per call. %d calls' % (
+                        name, t / self.benchmark.calls_object * 1000, self.benchmark.calls_object))
+
+            print('%20s : %1.3f ms per iteration. %d calls' % (
+                'Fourier_total', acc / self.benchmark.calls_fourier * 1000, self.benchmark.calls_fourier))
+
             """
             for name, s in self.ob.S.items():
                 plt.figure('obj')
@@ -567,9 +542,8 @@ class DM_ocl(DM_serial):
 
             plt.show()
             """
-            
-        for original in [self.pr,self.ob,self.ex,self.di, self.ma]:
+
+        for original in [self.pr, self.ob, self.ex, self.di, self.ma]:
             original.delete_copy()
-            
+
         # delete local references to container buffer copies
-    
