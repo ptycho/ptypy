@@ -1231,7 +1231,8 @@ class View(Base):
         self.dlayer = 0
 
         # The messy stuff
-        self._set(accessrule, **kwargs)
+        if accessrule is not None or len(kwargs)>0:
+            self._set(accessrule, **kwargs)
 
     def _set(self, accessrule, **kwargs):
         """
@@ -1291,6 +1292,16 @@ class View(Base):
         else:
             return first + '\n ACTIVE : slice = %s' % str(self.slice)
 
+    def copy(self,ID=None, update = True):
+        nView = View(self.owner, ID)
+        nView._record = self._record.copy()
+        nView._ndim = self._ndim
+        nView.storage = self.storage
+        nView.storageID = self.storageID
+        if update:
+            nView.storage.update_views(nView)
+        return nView
+        
     @property
     def active(self):
         return self._record['active'] 

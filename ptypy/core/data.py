@@ -713,7 +713,7 @@ class PtyScan(object):
         self.info.shape = sh
 
         cen = self.info.center
-        if str(cen) == cen:
+        if isinstance(cen, str):
             cen = geometry.translate_to_pix(dsh, cen)
 
         auto = self.info.auto_center
@@ -833,14 +833,17 @@ class PtyScan(object):
         chunk.indices_node = indices.node
         chunk.num = self.chunknum
         chunk.data = data
-
+        
+        # chunk now always has weights
+        chunk.weights = weights
+        
         # If there are weights we add them to chunk,
         # otherwise we push it into meta
-        if has_weights:
-            chunk.weights = weights
-        elif has_data:
-            chunk.weights = {}
-            self.weight2d = list(weights.values())[0]
+        #if has_weights:
+        #    chunk.weights = weights
+        #elif has_data:
+        #    chunk.weights = {}
+        #    self.weight2d = list(weights.values())[0]
 
         # Slice positions from common if they are empty too
         if positions is None or len(positions) == 0:
@@ -920,6 +923,9 @@ class PtyScan(object):
         # The "common" part
         out = {'common': self.meta}
 
+        # The "raw" part. Might replace the iterable in future.
+        out['chunk'] = chunk
+        
         # The "iterable" part
         iterables = []
         for pos, index in zip(chunk.positions, chunk.indices):
