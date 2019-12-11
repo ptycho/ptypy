@@ -604,6 +604,9 @@ class Ptycho(Base):
             # Prepare the engine
             engine.initialize()
 
+            # One .prepare() is always executed, as Ptycho may hold data
+            engine.prepare()
+
             # Start the iteration loop
             while not engine.finished:
                 # Check for client requests
@@ -613,11 +616,12 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                self.model.new_data()
+                nd = self.model.new_data()
 
                 # Last minute preparation before a contiguous block of
                 # iterations
-                engine.prepare()
+                if not nd:
+                    engine.prepare()
 
                 auto_save = self.p.io.autosave
                 if auto_save.active and auto_save.interval > 0:
@@ -952,7 +956,10 @@ class Ptycho(Base):
             for ID, C in self.containers.items():
                 info.append(C.report())
 
-        logger.info(''.join(info), extra={'allprocesses': True})
+        if parallel.size <= 5:
+            logger.info(''.join(info), extra={'allprocesses': True})
+        else:
+            logger.info(''.join(info))
         # logger.debug(info, extra={'allprocesses': True})
 
     def plot_overview(self, fignum=100):

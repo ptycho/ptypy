@@ -16,7 +16,7 @@ from .utils import basic_fourier_update
 from . import register
 from .base import PositionCorrectionEngine
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla
 
 __all__ = ['DM']
 
@@ -114,7 +114,7 @@ class DM(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -419,9 +419,7 @@ class DM(PositionCorrectionEngine):
             s.data /= nrm
 
             # Apply probe support if requested
-            support = self.probe_support.get(name)
-            if support is not None:
-                s.data *= self.probe_support[name]
+            self.support_constraint(s)
 
             # Compute relative change in probe
             buf = pr_buf.storages[name].data
