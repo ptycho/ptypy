@@ -172,11 +172,12 @@ class DM_ocl(DM.DM):
                 obv.shape = obv.data.shape
                 obn.shape = obn.data.shape
             ## calculating cfacts. This should actually belong to the parent class
-            cfact = self.p.object_inertia * self.mean_power * \
-                    (obv.data + 1.)
-            cfact /= u.parallel.size
-            self.ob_cfact[oID] = cfact
-            self.ob_cfact_gpu[oID] = cla.to_device(self.queue, cfact)
+            #cfact = self.p.object_inertia * self.mean_power * \
+            #        (obv.data + 1.)
+            #cfact /= u.parallel.size
+            #self.ob_cfact[oID] = cfact
+            #self.ob_cfact_gpu[oID] = cla.to_device(self.queue, cfact)
+            self.ob_cfact[oID] = self.p.object_inertia * self.mean_power / u.parallel.size
 
         for pID, pr in self.pr.storages.items():
             cfact = self.p.probe_inertia * len(pr.views) / pr.data.shape[0]
@@ -394,9 +395,10 @@ class DM_ocl(DM.DM):
             else:
                 obj_gpu *= cfact
             """
-            cfact = self.ob_cfact_gpu[oID]
+            cfact = self.ob_cfact[oID]
             ob.gpu *= cfact
-            obn.gpu[:] = cfact
+            #obn.gpu[:] = cfact
+            obn.gpu.fill(cfact)
             queue.finish()
 
         # storage for-loop
@@ -489,26 +491,27 @@ class DM_ocl(DM.DM):
                 parallel.allreduce(prn.data)
                 pr.data /= prn.data
 
+                self.support_constraint(pr)
                 # Apply probe support if requested
-                support = self.probe_support.get(pID)
-                if support is not None:
-                    pr.data *= support
+                #support = self.probe_support.get(pID)
+                #if support is not None:
+                #    pr.data *= support
 
                 # Apply probe support in Fourier space (This could be better done on GPU)
-                support = self.probe_fourier_support.get(pID)
-                if support is not None:
-                    pr.data[:] = np.fft.ifft2(support * np.fft.fft2(pr.data))
+                #support = self.probe_fourier_support.get(pID)
+                #if support is not None:
+                #    pr.data[:] = np.fft.ifft2(support * np.fft.fft2(pr.data))
 
                 pr.gpu.set(pr.data)
             else:
                 pr.gpu /= prn.gpu
+                # ca. 0.3 ms
+                # self.pr.S[pID].gpu = probe_gpu
+                pr.data[:] = pr.gpu.get(queue=queue)
 
-            # ca. 0.3 ms
-            # self.pr.S[pID].gpu = probe_gpu
-            pr.data[:] = pr.gpu.get(queue=queue)
             ## this should be done on GPU
-            queue.finish()
 
+            queue.finish()
             # change += u.norm2(pr[i]-buf_pr[i]) / u.norm2(pr[i])
             change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
             buf.data[:] = pr.data
