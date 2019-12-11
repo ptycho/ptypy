@@ -127,8 +127,26 @@ class DM_ocl(DM.DM):
         """
         Prepare for reconstruction.
         """
-
         super(DM_ocl, self).engine_initialize()
+
+        self.benchmark = u.Param()
+        self.benchmark.A_Build_aux = 0.
+        self.benchmark.B_Prop = 0.
+        self.benchmark.C_Fourier_update = 0.
+        self.benchmark.D_iProp = 0.
+        self.benchmark.E_Build_exit = 0.
+        self.benchmark.probe_update = 0.
+        self.benchmark.object_update = 0.
+        self.benchmark.calls_fourier = 0
+        self.benchmark.calls_object = 0
+        self.benchmark.calls_probe = 0
+        self.dattype = np.complex64
+
+        self.error = []
+
+        self.diff_info = {}
+        self.ob_cfact = {}
+        self.pr_cfact = {}
 
         def constbuffer(nbytes):
             return cl.Buffer(self.queue.context, cl.mem_flags.READ_ONLY, size=nbytes)
@@ -271,7 +289,7 @@ class DM_ocl(DM.DM):
 
                 ## FFT
                 t1 = time.time()
-                geo.transform.ft(aux)
+                geo.transform.ft(aux, aux)
                 queue.finish()
                 self.benchmark.B_Prop += time.time() - t1
 
@@ -284,7 +302,7 @@ class DM_ocl(DM.DM):
 
                 ## iFFT
                 t1 = time.time()
-                geo.itransform.ift(aux)
+                geo.itransform.ift(aux, aux)
                 queue.finish()
 
                 self.benchmark.D_iProp += time.time() - t1

@@ -21,13 +21,14 @@ p.scans = u.Param()
 p.scans.MF = u.Param()
 # now you have to specify which ScanModel to use with scans.XX.name,
 # just as you have to give 'name' for engines and PtyScan subclasses.
-p.scans.MF.name = 'Vanilla' # or 'Full'
+p.scans.MF.name = 'Full' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
-p.scans.MF.data.num_frames = 200
+p.scans.MF.data.num_frames = 2000
 p.scans.MF.data.save = None
 
+p.scans.MF.coherence = u.Param(num_probe_modes=2)
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
