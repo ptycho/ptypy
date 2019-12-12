@@ -8,7 +8,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-import os.path
 import numpy as np
 import time
 import pyopencl as cl
@@ -36,71 +35,11 @@ __all__ = ['DM_ocl']
 
 parallel = u.parallel
 
-
-def gaussian_kernel(sigma, size=None, sigma_y=None, size_y=None):
-    size = int(size)
-    sigma = np.float(sigma)
-    if not size_y:
-        size_y = size
-    if not sigma_y:
-        sigma_y = sigma
-
-    x, y = np.mgrid[-size:size + 1, -size_y:size_y + 1]
-
-    g = np.exp(-(x ** 2 / (2 * sigma ** 2) + y ** 2 / (2 * sigma_y ** 2)))
-    return g / g.sum()
-
-
-def serialize_array_access(diff_storage):
-    # Sort views according to layer in diffraction stack 
-    views = diff_storage.views
-    dlayers = [view.dlayer for view in views]
-    views = [views[i] for i in np.argsort(dlayers)]
-    view_IDs = [view.ID for view in views]
-
-    # Master pod
-    mpod = views[0].pod
-
-    # Determine linked storages for probe, object and exit waves
-    pr = mpod.pr_view.storage
-    ob = mpod.ob_view.storage
-    ex = mpod.ex_view.storage
-
-    poe_ID = (pr.ID, ob.ID, ex.ID)
-
-    addr = []
-    for view in views:
-        address = []
-
-        for pname, pod in view.pods.items():
-            ## store them for each pod
-            # create addresses
-            a = np.array(
-                [(pod.pr_view.dlayer, pod.pr_view.dlow[0], pod.pr_view.dlow[1]),
-                 (pod.ob_view.dlayer, pod.ob_view.dlow[0], pod.ob_view.dlow[1]),
-                 (pod.ex_view.dlayer, pod.ex_view.dlow[0], pod.ex_view.dlow[1]),
-                 (pod.di_view.dlayer, pod.di_view.dlow[0], pod.di_view.dlow[1]),
-                 (pod.ma_view.dlayer, pod.ma_view.dlow[0], pod.ma_view.dlow[1])])
-
-            address.append(a)
-
-            if pod.pr_view.storage.ID != pr.ID:
-                log(1, "Splitting probes for one diffraction stack is not supported in " + self.__class__.__name__)
-            if pod.ob_view.storage.ID != ob.ID:
-                log(1, "Splitting objects for one diffraction stack is not supported in " + self.__class__.__name__)
-            if pod.ex_view.storage.ID != ex.ID:
-                log(1, "Splitting exit stacks for one diffraction stack is not supported in " + self.__class__.__name__)
-
-        ## store data for each view
-        # adresses
-        addr.append(address)
-
-    # store them for each storage
-    return view_IDs, poe_ID, np.array(addr).astype(np.int32)
-
+serialize_array_access = DM_serial.serialize_array_access
+gaussian_kernel = DM_serial.gaussian_kernel
 
 @register()
-class DM_ocl(DM.DM):
+class DM_ocl(DM.serial):
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -119,7 +58,6 @@ class DM_ocl(DM.DM):
             gauss_kernel = gaussian_kernel(1, 1).astype(np.float32)
         else:
             gauss_kernel = gaussian_kernel(self.p.obj_smooth_std, self.p.obj_smooth_std).astype(np.float32)
-        kernel_pars = {'kernel_sh_x': gauss_kernel.shape[0], 'kernel_sh_y': gauss_kernel.shape[1]}
 
         self.gauss_kernel_gpu = cla.to_device(self.queue, gauss_kernel)
 
@@ -157,31 +95,6 @@ class DM_ocl(DM.DM):
     def engine_prepare(self):
 
         super(DM_ocl, self).engine_prepare()
-
-        # object padding on high side (due to 16x16 wg size)    
-        for oID, ob in self.ob.storages.items():
-            obn = self.ob_nrm.S[oID]
-            obv = self.ob_viewcover.S[oID]
-            misfit = np.asarray(ob.shape[-2:]) % 32
-            if (misfit != 0).any():
-                pad = 32 - np.asarray(ob.shape[-2:]) % 32
-                ob.data = u.crop_pad(ob.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
-                obv.data = u.crop_pad(obv.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
-                obn.data = u.crop_pad(obn.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
-                ob.shape = ob.data.shape
-                obv.shape = obv.data.shape
-                obn.shape = obn.data.shape
-            ## calculating cfacts. This should actually belong to the parent class
-            #cfact = self.p.object_inertia * self.mean_power * \
-            #        (obv.data + 1.)
-            #cfact /= u.parallel.size
-            #self.ob_cfact[oID] = cfact
-            #self.ob_cfact_gpu[oID] = cla.to_device(self.queue, cfact)
-            self.ob_cfact[oID] = self.p.object_inertia * self.mean_power / u.parallel.size
-
-        for pID, pr in self.pr.storages.items():
-            cfact = self.p.probe_inertia * len(pr.views) / pr.data.shape[0]
-            self.pr_cfact[pID] = cfact / u.parallel.size
 
         ## The following should be restricted to new data
 
@@ -347,35 +260,6 @@ class DM_ocl(DM.DM):
 
         self.error = error
         return error
-
-    def overlap_update(self, MPI=True):
-        """
-        DM overlap constraint update.
-        """
-        change = 1.
-        # Condition to update probe
-        do_update_probe = (self.p.probe_update_start <= self.curiter)
-
-        for inner in range(self.p.overlap_max_iterations):
-            prestr = '%d Iteration (Overlap) #%02d:  ' % (parallel.rank, inner)
-            # Update object first
-            if self.p.update_object_first or (inner > 0):
-                # Update object
-                log(4, prestr + '----- object update -----', True)
-                self.object_update(MPI=(parallel.size > 1 and MPI))
-
-            # Exit if probe should not yet be updated
-            if not do_update_probe: break
-
-            # Update probe
-            log(4, prestr + '----- probe update -----', True)
-            change = self.probe_update(MPI=(parallel.size > 1 and MPI))
-            # change = self.probe_update(MPI=(parallel.size>1 and MPI))
-
-            log(4, prestr + 'change in probe is %.3f' % change, True)
-
-            # stop iteration if probe change is small
-            if change < self.p.overlap_converge_factor: break
 
     ## object update
     def object_update(self, MPI=False):

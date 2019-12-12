@@ -100,6 +100,15 @@ class Ptycho(Base):
     type = str
     userlevel = 0
 
+    [frames_per_block]
+    default = 0
+    help = Max number of frames per block of data
+    doc = This parameter determines the size of buffer arrays for GPUs.
+          Reduce this number if you run out of memory on the GPU.
+          For ``0``, the number of frames per block is infinite.
+    type = int
+    userlevel = 1
+
     [dry_run]
     default = False
     help = Dry run switch
@@ -482,7 +491,7 @@ class Ptycho(Base):
         Prints statistics on the ptypy structure if ``print_stats=True``
         """
         # Load the data. This call creates automatically the scan managers,
-        # which create the views and the PODs.
+        # which create the views and the PODs. Sets self.new_data
         self.model.new_data()
 
         # Print stats
@@ -512,7 +521,7 @@ class Ptycho(Base):
         if epars is not None:
             # Receiving a parameter set means a new engine parameter set
             # needs to be listed in self.p
-            engine_label = 'auto%02d' + len(self.engines)
+            engine_label = 'auto%02d' % len(self.engines)
 
             # List parameters
             self.p.engines[engine_label] = epars
@@ -616,11 +625,11 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                nd = self.model.new_data()
+                self.model.new_data()
 
                 # Last minute preparation before a contiguous block of
                 # iterations
-                if not nd:
+                if self.ptycho.new_data:
                     engine.prepare()
 
                 auto_save = self.p.io.autosave

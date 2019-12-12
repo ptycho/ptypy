@@ -46,8 +46,6 @@ class Fourier_update_kernel(BaseKernel):
         self.fshape = shape
         self.ishape = (self.nmodes * shape[0], shape[1], shape[2])
 
-        self.framesize = np.int32(np.prod(shape[-2:]))
-
         # temporary buffer arrays
         self.npy.fdev = np.zeros(self.fshape, dtype=np.float32)
         self.npy.ferr = np.zeros(self.fshape, dtype=np.float32)

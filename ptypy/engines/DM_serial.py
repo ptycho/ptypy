@@ -13,14 +13,14 @@ from __future__ import division
 
 import numpy as np
 import time
+from ptypy.accelerate.ocl.npy_kernels import Fourier_update_kernel
+from ptypy.accelerate.ocl.npy_kernels import PO_update_kernel
+
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
 from . import BaseEngine, register, DM
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla
-
-# queue = gpu.get_ocl_queue()
 
 ### TODOS 
 # 
@@ -68,6 +68,8 @@ def serialize_array_access(diff_storage):
     ob = mpod.ob_view.storage
     ex = mpod.ex_view.storage
 
+    ma_ID = mpod.ma_view.storage.ID
+
     poe_ID = (pr.ID, ob.ID, ex.ID)
 
     addr = []
@@ -87,18 +89,18 @@ def serialize_array_access(diff_storage):
             address.append(a)
 
             if pod.pr_view.storage.ID != pr.ID:
-                log(1, "Splitting probes for one diffraction stack is not supported in " + self.__class__.__name__)
+                log(1, "Splitting probes for one diffraction stack is not supported in " + __name__)
             if pod.ob_view.storage.ID != ob.ID:
-                log(1, "Splitting objects for one diffraction stack is not supported in " + self.__class__.__name__)
+                log(1, "Splitting objects for one diffraction stack is not supported in " + __name__)
             if pod.ex_view.storage.ID != ex.ID:
-                log(1, "Splitting exit stacks for one diffraction stack is not supported in " + self.__class__.__name__)
+                log(1, "Splitting exit stacks for one diffraction stack is not supported in " + __name__)
 
         ## store data for each view
         # adresses
         addr.append(address)
 
     # store them for each storage
-    return mpod, view_IDs, poe_ID, np.array(addr).astype(np.int32)
+    return view_IDs, poe_ID, np.array(addr).astype(np.int32)
 
 
 @register()
@@ -135,6 +137,14 @@ class DM_serial(DM.DM):
         kernel_pars = {'kernel_sh_x' : gauss_kernel.shape[0], 'kernel_sh_y': gauss_kernel.shape[1]}
         """
 
+        self.benchmark = u.Param()
+
+        # Stores all information needed with respect to the diffraction storages.
+        self.diff_info = {}
+        self.ob_cfact = {}
+        self.pr_cfact = {}
+        self.kernels = {}
+
     def engine_initialize(self):
         """
         Prepare for reconstruction.
@@ -142,75 +152,81 @@ class DM_serial(DM.DM):
 
         super(DM_serial, self).engine_initialize()
 
-        self.benchmark = u.Param()
-        self.benchmark.A_Build_aux = 0.
-        self.benchmark.B_Prop = 0.
-        self.benchmark.C_Fourier_update = 0.
-        self.benchmark.D_iProp = 0.
-        self.benchmark.E_Build_exit = 0.
-        self.benchmark.probe_update = 0.
-        self.benchmark.object_update = 0.
-        self.benchmark.calls_fourier = 0
-        self.benchmark.calls_object = 0
-        self.benchmark.calls_probe = 0
-        self.dattype = np.complex64
+        self._reset_benchmarks()
+        self._setup_kernels()
 
-        self.error = []
+    def _setup_kernels(self, scan=None):
+        """
+        Setup kernels, one for each scan. Derive scans from ptycho class
+        """
+        # get the scans
+        for label, scan in self.ptycho.modelm.scans.items():
 
-        self.diff_info = {}
-        self.ob_cfact = {}
-        self.pr_cfact = {}
+            kern = u.Param()
+            self.kernels[label] = kern
 
-    def engine_prepare(self, new_storages=None):
+            # TODO: needs to be adapted for broad bandwidth
+            geo = scan.geometries[0]
 
-        super(DM_serial, self).engine_prepare(new_storages)
+            # Get info to shape buffer arrays
+            # TODO: make this part of the engine rather than scan
+            fpc = self.ptycho.frames_per_call
+
+            # TODO : make this more foolproof
+            try:
+                nmodes = scan.p.coherence.num_probe_modes
+            except:
+                nmodes = 1
+
+            ash = (fpc * nmodes,) + tuple(geo.shape)
+            # create buffer arrays
+            aux = np.zeros(ash, dtype=np.complex64)
+            kern.aux = kern
+
+            # setup kernels, one for each SCAN.
+            kern.FUK = Fourier_update_kernel()
+            kern.FUK.allocate(aux, nmodes)
+
+            kern.POK = PO_update_kernel()
+            kern.POK.allocate()
+
+            kern.FW = geo.propagator.fw
+            kern.BW = geo.propagator.bw
+
+    def engine_prepare(self):
+
+        super(DM_serial, self).engine_prepare()
 
         ## Serialize new data ##
 
-        for d in self.new_data:
+        for label, d in self.ptycho.new_data:
             prep = u.Param()
+
+            prep.label = label
             self.diff_info[d.ID] = prep
 
-            mpod, prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
+            prep.mag = np.sqrt(d.data)
+            prep.mask_sum = self.ma.S[d.ID].data.sum(-1).sum(-1)
 
-            frames = 100
-            batch = (frames,) + d.data.shape[-2:]
-            nmodes = prep.addr.shape[1]
-
-            ## setup kernels
-            from ptypy.accelerate.ocl.npy_kernels import Fourier_update_kernel
-            prep.FUK = Fourier_update_kernel()
-            prep.FUK.allocate(batch, nmodes)
-
-            from ptypy.accelerate.ocl.npy_kernels import PO_update_kernel
-            prep.POK = PO_update_kernel()
-            prep.POK.allocate()
-
-            geo = mpod.geometry
-            geo.transform = geo.propagator.fw
-            geo.itransform = geo.propagator.bw
-            prep.geo = geo
+            prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
 
             pID, oID, eID = prep.poe_IDs
 
-            """
             ob = self.ob.S[oID]
             obn = self.ob_nrm.S[oID]
             obv = self.ob_viewcover.S[oID]
             misfit = np.asarray(ob.shape[-2:]) % 32
-            if (misfit!=0).any():
-                pad = 32-np.asarray(ob.shape[-2:]) % 32
-                ob.data = u.crop_pad(ob.data,[[0,pad[0]],[0,pad[1]]],axes=[-2,-1],filltype='project')
-                obv.data = u.crop_pad(obv.data,[[0,pad[0]],[0,pad[1]]],axes=[-2,-1],filltype='project')
-                obn.data = u.crop_pad(obn.data,[[0,pad[0]],[0,pad[1]]],axes=[-2,-1],filltype='project')
+            if (misfit != 0).any():
+                pad = 32 - np.asarray(ob.shape[-2:]) % 32
+                ob.data = u.crop_pad(ob.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
+                obv.data = u.crop_pad(obv.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
+                obn.data = u.crop_pad(obn.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
                 ob.shape = ob.data.shape
                 obv.shape = obv.data.shape
                 obn.shape = obn.data.shape
-            
-            """
-            ## calculating cfacts. This should actually belong to the parent class
+
+            # calculate c_facts
             cfact = self.p.object_inertia * self.mean_power
-            #cfact /= u.parallel.size
             self.ob_cfact[oID] = cfact / u.parallel.size
 
             pr = self.pr.S[pID]
@@ -224,7 +240,7 @@ class DM_serial(DM.DM):
 
         for it in range(num):
 
-            error_dct = {}
+            error = {}
 
             for dID in self.di.S.keys():
                 t1 = time.time()
@@ -233,64 +249,58 @@ class DM_serial(DM.DM):
                 # find probe, object in exit ID in dependence of dID
                 pID, oID, eID = prep.poe_IDs
 
-                FUK = prep.FUK
+                # references for kernels
+                FUK = self.scans[prep.label].FUK
+                pbound = self.pbound_scan[prep.label]
 
-                # get addresses 
+                # get addresses and auxilliary array
                 addr = prep.addr
+                aux = prep.aux
+                mag = prep.mag
+                mask_sum = prep.mask_sum
 
                 # local references
                 ma = self.ma.S[dID].data
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
                 ex = self.ex.S[eID].data
-                di = self.di.S[dID].data
 
-                pbound = self.pbound[dID]
-                mag = np.sqrt(di)
-                mask_sum = ma.sum(-1).sum(-1)
-                geo = prep.geo
                 err_fourier = np.zeros((mag.shape[0],))
 
-                # batched Fourier kernels
-                for off in range(0, mag.shape[0], FUK.fshape[0]):
+                t1 = time.time()
+                ev = FUK.build_aux(self.p.alpha, ob, pr, ex, addr, aux)
+                self.benchmark.A_Build_aux += time.time() - t1
 
-                    t1 = time.time()
-                    ev = FUK.build_aux(self.p.alpha, ob, pr, ex, addr, offset=off)
-                    self.benchmark.A_Build_aux += time.time() - t1
+                ## FFT
+                t1 = time.time()
+                aux[:] = prep.geo.transform(aux)
+                self.benchmark.B_Prop += time.time() - t1
 
-                    ## FFT
-                    t1 = time.time()
-                    aux = FUK.npy.aux
-                    aux[:] = geo.transform(aux)
-                    self.benchmark.B_Prop += time.time() - t1
+                # Look for absolute zeros in here in case everything explodes
+                # daux = FUK.npy.aux.copy()
+                # plt.figure('auxb %d' % it)
+                # plt.imshow(np.log10(np.abs(daux[0])))
 
-                    # Look for absolute zeros in here in case everything explodes
-                    #daux = FUK.npy.aux.copy()
-                    #plt.figure('auxb %d' % it)
-                    #plt.imshow(np.log10(np.abs(daux[0])))
-                    ## Deviation from measured data
+                ## Deviation from measured data
+                t1 = time.time()
+                FUK.fourier_error(mag, ma, mask_sum, aux)
+                FUK.error_reduce(err_fourier, aux)
+                FUK.fmag_all_update(pbound, mag, ma, err_fourier, aux)
+                self.benchmark.C_Fourier_update += time.time() - t1
 
-                    t1 = time.time()
-                    FUK.fourier_error(mag, ma, mask_sum, offset=off)
-                    FUK.error_reduce(err_fourier, offset=off)
-                    FUK.fmag_all_update(pbound, mag, ma, err_fourier, offset=off)
-                    self.benchmark.C_Fourier_update += time.time() - t1
+                t1 = time.time()
+                aux[:] = prep.geo.itransform(aux)
+                self.benchmark.D_iProp += time.time() - t1
 
-                    #aux[:,0,:]=0.0
-                    #aux[:,:,0]=0.0
-                    t1 = time.time()
-                    aux[:] = geo.itransform(aux)
-                    self.benchmark.D_iProp += time.time() - t1
-
-                    ## apply changes #2
-                    t1 = time.time()
-                    ev = FUK.build_exit(ob, pr, ex, addr, offset=off)
-                    self.benchmark.E_Build_exit += time.time() - t1
+                ## apply changes #2
+                t1 = time.time()
+                ev = FUK.build_exit(ob, pr, ex, addr, aux)
+                self.benchmark.E_Build_exit += time.time() - t1
 
                 err_phot = np.zeros_like(err_fourier)
                 err_exit = np.zeros_like(err_fourier)
                 errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
-                error = dict(zip(prep.view_IDs, errs))
+                error.update(zip(prep.view_IDs, errs))
 
                 self.benchmark.calls_fourier += 1
 
@@ -300,17 +310,6 @@ class DM_serial(DM.DM):
             self.overlap_update(MPI=True)
             parallel.barrier()
             self.curiter += 1
-
-        """
-        for name, s in self.ob.S.items():  
-            s.data[:] = s.gpu.get(queue=self.queue)
-        for name, s in self.pr.S.items():  
-            s.data[:] = s.gpu.get(queue=self.queue)
-        
-        # costly but needed to sync back with 
-        for name, s in self.ex.S.items():  
-            s.data[:] = s.gpu.get(queue=self.queue)
-        """
 
         self.error = error
         return error
@@ -481,24 +480,12 @@ class DM_serial(DM.DM):
                     # print '%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_probe * 1000, self.benchmark.calls_probe)
                 elif str(name) == 'object_update':
                     print('%20s : %1.3f ms per call. %d calls' % (
-                    name, t / self.benchmark.calls_object * 1000, self.benchmark.calls_object))
+                        name, t / self.benchmark.calls_object * 1000, self.benchmark.calls_object))
 
             print('%20s : %1.3f ms per iteration. %d calls' % (
-            'Fourier_total', acc / self.benchmark.calls_fourier * 1000, self.benchmark.calls_fourier))
+                'Fourier_total', acc / self.benchmark.calls_fourier * 1000, self.benchmark.calls_fourier))
 
-            for name, s in self.ob.S.items():
-                plt.figure('obj')
-                d = s.data
-                # print np.abs(d[0][300:-300,300:-300]).mean()
-                plt.imshow(u.imsave(d[0][100:-100, 100:-100]))
-            for name, s in self.pr.S.items():
-                d = s.data
-                for l in d:
-                    plt.figure()
-                    plt.imshow(u.imsave(l))
-                # print u.norm2(d)
-
-            plt.show()
+        self._reset_benchmarks()
 
         for original in [self.pr, self.ob, self.ex, self.di, self.ma]:
             original.delete_copy()
