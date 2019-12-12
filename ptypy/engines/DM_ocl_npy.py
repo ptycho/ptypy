@@ -269,48 +269,50 @@ class DM_ocl(DM.DM):
                 pID, oID, eID = prep.poe_IDs
 
                 # get addresses 
-                addr_gpu = prep.addr_gpu
+                addr = prep.addr
 
                 # local references
-                ma = self.ma.S[dID].gpu
-                ob = self.ob.S[oID].gpu
-                pr = self.pr.S[pID].gpu
-                ex = self.ex.S[eID].gpu
+                ma = self.ma.S[dID].data
+                ob = self.ob.S[oID].data
+                pr = self.pr.S[pID].data
+                ex = self.ex.S[eID].data
 
-                aux = prep.aux_gpu
+                aux = prep.aux
 
                 geo = prep.geo
                 queue = self.queue
 
                 t1 = time.time()
-                ev = prep.aux_ex_kernel.ocl_build_aux(aux, ob, pr, ex, addr_gpu)
+                ev = prep.aux_ex_kernel.npy_build_aux(aux, ob, pr, ex, addr)
                 queue.finish()
 
                 self.benchmark.A_Build_aux += time.time() - t1
 
                 ## FFT
                 t1 = time.time()
-                geo.transform.ft(aux, aux)
+                #geo.transform.ft(aux, aux)
+                aux[:] = geo.propagator.fw(aux)
                 queue.finish()
                 self.benchmark.B_Prop += time.time() - t1
 
                 ## Deviation from measured data
                 t1 = time.time()
-                prep.fourier_kernel.ocl.f = aux
-                err_fourier = prep.fourier_kernel.execute_ocl()
+                prep.fourier_kernel.npy.f = aux
+                err_fourier = prep.fourier_kernel.execute_npy()
                 queue.finish()
                 self.benchmark.C_Fourier_update += time.time() - t1
 
                 ## iFFT
                 t1 = time.time()
-                geo.itransform.ift(aux, aux)
+                #geo.itransform.ift(aux, aux)
+                aux[:] = geo.propagator.bw(aux)
                 queue.finish()
 
                 self.benchmark.D_iProp += time.time() - t1
 
                 ## apply changes #2
                 t1 = time.time()
-                ev = prep.aux_ex_kernel.ocl_build_exit(aux, ob, pr, ex, addr_gpu)
+                ev = prep.aux_ex_kernel.npy_build_exit(aux, ob, pr, ex, addr)
                 queue.finish()
 
                 # self.prg.reduce_one_step(queue, (shape_merged[0],64), (1,64), info_gpu.data, err_temp.data, err_exit.data)
@@ -333,7 +335,7 @@ class DM_ocl(DM.DM):
             parallel.barrier()
             self.curiter += 1
             queue.finish()
-
+        """
         for name, s in self.ob.S.items():
             s.data[:] = s.gpu.get(queue=self.queue)
         for name, s in self.pr.S.items():
@@ -342,7 +344,7 @@ class DM_ocl(DM.DM):
         # costly but needed to sync back with 
         for name, s in self.ex.S.items():
             s.data[:] = s.gpu.get(queue=self.queue)
-
+        """
         self.queue.finish()
 
         self.error = error
@@ -396,9 +398,9 @@ class DM_ocl(DM.DM):
                 obj_gpu *= cfact
             """
             cfact = self.ob_cfact[oID]
-            ob.gpu *= cfact
+            ob.data *= cfact
             #obn.gpu[:] = cfact
-            obn.gpu.fill(cfact)
+            obn.data.fill(cfact)
             queue.finish()
 
         # storage for-loop
@@ -409,11 +411,11 @@ class DM_ocl(DM.DM):
             pID, oID, eID = prep.poe_IDs
 
             # scan for loop
-            ev = prep.po_kernel.ocl_ob_update(self.ob.S[oID].gpu,
-                                              self.ob_nrm.S[oID].gpu,
-                                              self.pr.S[pID].gpu,
-                                              self.ex.S[eID].gpu,
-                                              prep.addr_gpu)
+            ev = prep.po_kernel.npy_ob_update(self.ob.S[oID].data,
+                                              self.ob_nrm.S[oID].data,
+                                              self.pr.S[pID].data,
+                                              self.ex.S[eID].data,
+                                              prep.addr)
 
             queue.finish()
 
@@ -421,8 +423,8 @@ class DM_ocl(DM.DM):
             obn = self.ob_nrm.S[oID]
             # MPI test
             if MPI:
-                ob.data[:] = ob.gpu.get(queue=queue)
-                obn.data[:] = obn.gpu.get(queue=queue)
+                #ob.data[:] = ob.gpu.get(queue=queue)
+                #obn.data[:] = obn.gpu.get(queue=queue)
                 queue.finish()
                 parallel.allreduce(ob.data)
                 parallel.allreduce(obn.data)
@@ -437,9 +439,9 @@ class DM_ocl(DM.DM):
                     too_low = (ampl_obj < clip_min)
                     ob.data[too_high] = clip_max * phase_obj[too_high]
                     ob.data[too_low] = clip_min * phase_obj[too_low]
-                ob.gpu.set(ob.data)
+                #ob.gpu.set(ob.data)
             else:
-                ob.gpu /= obn.gpu
+                ob.data /= obn.data
 
             queue.finish()
 
@@ -458,8 +460,8 @@ class DM_ocl(DM.DM):
         for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
             cfact = self.pr_cfact[pID]
-            pr.gpu *= cfact
-            prn.gpu.fill(cfact)
+            pr.data *= cfact
+            prn.data.fill(cfact)
 
         for dID in self.di.S.keys():
             prep = self.diff_info[dID]
@@ -468,11 +470,11 @@ class DM_ocl(DM.DM):
             pID, oID, eID = prep.poe_IDs
 
             # scan for-loop
-            ev = prep.po_kernel.ocl_pr_update(self.pr.S[pID].gpu,
-                                              self.pr_nrm.S[pID].gpu,
-                                              self.ob.S[oID].gpu,
-                                              self.ex.S[eID].gpu,
-                                              prep.addr_gpu)
+            ev = prep.po_kernel.npy_pr_update(self.pr.S[pID].data,
+                                              self.pr_nrm.S[pID].data,
+                                              self.ob.S[oID].data,
+                                              self.ex.S[eID].data,
+                                              prep.addr)
 
             queue.finish()
 
@@ -484,8 +486,8 @@ class DM_ocl(DM.DM):
             # MPI test
             if MPI:
                 # if False:
-                pr.data[:] = pr.gpu.get(queue=queue)
-                prn.data[:] = prn.gpu.get(queue=queue)
+                #pr.data[:] = pr.gpu.get(queue=queue)
+                #prn.data[:] = prn.gpu.get(queue=queue)
                 queue.finish()
                 parallel.allreduce(pr.data)
                 parallel.allreduce(prn.data)
@@ -502,12 +504,12 @@ class DM_ocl(DM.DM):
                 #if support is not None:
                 #    pr.data[:] = np.fft.ifft2(support * np.fft.fft2(pr.data))
 
-                pr.gpu.set(pr.data)
+                #pr.gpu.set(pr.data)
             else:
-                pr.gpu /= prn.gpu
+                pr.data /= prn.data
                 # ca. 0.3 ms
                 # self.pr.S[pID].gpu = probe_gpu
-                pr.data[:] = pr.gpu.get(queue=queue)
+                #pr.data[:] = pr.gpu.get(queue=queue)
 
             ## this should be done on GPU
 

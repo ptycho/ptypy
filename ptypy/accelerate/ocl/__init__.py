@@ -8,7 +8,7 @@ def get_ocl_queue(new_queue=False):
     from ptypy.utils import parallel
     import pyopencl as cl
     devices = cl.get_platforms()[0].get_devices(cl.device_type.GPU)
-    
+
     global ocl_context
     global ocl_queue
     
