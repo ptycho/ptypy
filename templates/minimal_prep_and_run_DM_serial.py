@@ -15,7 +15,7 @@ p.verbose_level = 3
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
 p.io.autosave = u.Param(active=False)
-p.io.autoplot = u.Param(active=False)
+p.io.autoplot = u.Param(active=True)
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
 p.scans.MF = u.Param()
@@ -25,12 +25,12 @@ p.scans.MF.name = 'Full' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
-p.scans.MF.data.num_frames = 4000
+p.scans.MF.data.num_frames = 300
 p.scans.MF.data.save = None
 
 p.scans.MF.coherence = u.Param(num_probe_modes=1)
 # position distance in fraction of illumination frame
-p.scans.MF.data.density = 0.04
+p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
 p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
