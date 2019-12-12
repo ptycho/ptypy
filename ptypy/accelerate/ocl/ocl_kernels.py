@@ -111,7 +111,6 @@ class Fourier_update_kernel(BaseKernel):
             #pragma unroll
             
             for(int i=0; i<nmodes; i++){
-                //exit[(z_z+i)*dx*dx + y*dx + x] = cfloat_mul(exit[(z_z+i)*dx*dx + y*dx + x], post_fft_g[y*dx + x]);
                 loc_af2a = cfloat_abs(exit[(z_z+i)*dx*dx + y*dx + x]);
                 loc_af2b += loc_af2a * loc_af2a;
             }
@@ -148,7 +147,6 @@ class Fourier_update_kernel(BaseKernel):
             if (renorm < 1.){            
                 fm =  m * native_divide(d*renorm +g, d+g+eps) + (1-m);
             }
-            //cfloat_t ft = cfloat_mul(f[idx], pre_ifft_g[y*dx + x]);
             f[idx] = cfloat_mulr(f[idx] , fm );
         }
         __kernel void reduce_one_step(int framesize,
@@ -242,7 +240,7 @@ class Fourier_update_kernel(BaseKernel):
 
     def npy_fourier_error(self, f, fmag, fdev, ferr, fmask, mask_sum):
         sh = f.shape
-        tf = f.reshape(sh[0] / self.nmodes, self.nmodes, sh[1], sh[2])
+        tf = f.reshape(sh[0] // self.nmodes, self.nmodes, sh[1], sh[2])
 
         af = np.sqrt((np.abs(tf) ** 2).sum(1))
 
@@ -270,7 +268,7 @@ class Fourier_update_kernel(BaseKernel):
         renorm[ind] = np.sqrt(self.pbound / err_fmag[ind])
         renorm = renorm.reshape((renorm.shape[0], 1, 1))
         af = fdev + fmag
-        fm[:] = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
+        fm[:] = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-7)
         """
         # C Amplitude correction           
         if err_fmag > self.pbound:
@@ -283,7 +281,7 @@ class Fourier_update_kernel(BaseKernel):
 
     def _npy_fmag_update(self, f, fm):
         sh = f.shape
-        tf = f.reshape(sh[0] / self.nmodes, self.nmodes, sh[1], sh[2])
+        tf = f.reshape(sh[0] // self.nmodes, self.nmodes, sh[1], sh[2])
         sh = fm.shape
         tf *= fm.reshape(sh[0], 1, sh[1], sh[2])
 
@@ -306,10 +304,10 @@ class Fourier_update_kernel(BaseKernel):
                 continue
             else:
                 dev = np.std(val - val2)
-                print("Key %s : %.2e std, %.2e mean" % (name, dev, np.mean(val)))
+                print("Key %s : %.2e std, %.2e mean" % (name, dev.real, np.mean(val).real))
 
     @classmethod
-    def test(cls, shape=(739, 256, 256), nmodes=1, pbound=0.0):
+    def test(cls, shape=(739, 256, 256), nmodes=1, pbound=0.05):
 
         L, M, N = shape
         fshape = shape
@@ -327,8 +325,8 @@ class Fourier_update_kernel(BaseKernel):
         inst.verbose = True
         inst.configure_ocl()
 
-        # inst.execute_ocl(compare=True,sync=False)
-        inst.execute_ocl()
+        inst.execute_ocl(compare=True, sync=True)
+        #inst.execute_ocl()
         g = inst.ocl.f.get()
         inst.execute_npy()
         f = inst.npy.f
@@ -338,7 +336,7 @@ class Fourier_update_kernel(BaseKernel):
         err = inst.execute_npy(g)
         inst.verify_ocl()
         """
-        print('Error : %.2e' % np.std(f - g))
+        print('Pipeline Error : %.2e' % np.std(f - g))
         for key, val in inst.benchmark.items():
             print('Kernel %s : %.2f ms' % (key, val * 1000))
 
@@ -582,7 +580,7 @@ class Auxiliary_wave_kernel(BaseKernel):
 
         inst = cls(queue_thread=queue)
         inst.verbose = True
-        bsize = nviews / 2
+        bsize = nviews // 2
         batch = np.zeros((bsize,) + pr_shape[-2:], dtype=np.complex64)
         args = (batch, ob, pr, ex, addr)
         ocl_args = tuple([cla.to_device(queue, arg) for arg in args])
@@ -917,8 +915,8 @@ class PO_update_kernel(BaseKernel):
 
 
 if __name__ == '__main__':
-    # Fourier_update_kernel.test()
-    # Auxiliary_wave_kernel.test()
+    Fourier_update_kernel.test()
+    Auxiliary_wave_kernel.test()
     PO_update_kernel.test()
     """
     nmodes = 8
