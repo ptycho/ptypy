@@ -152,7 +152,17 @@ class DM_serial(DM.DM):
 
         super(DM_serial, self).engine_initialize()
 
-        self._reset_benchmarks()
+        self.benchmark.A_Build_aux = 0.
+        self.benchmark.B_Prop = 0.
+        self.benchmark.C_Fourier_update = 0.
+        self.benchmark.D_iProp = 0.
+        self.benchmark.E_Build_exit = 0.
+        self.benchmark.probe_update = 0.
+        self.benchmark.object_update = 0.
+        self.benchmark.calls_fourier = 0
+        self.benchmark.calls_object = 0
+        self.benchmark.calls_probe = 0
+
         self._setup_kernels()
 
     def _setup_kernels(self, scan=None):
@@ -160,7 +170,7 @@ class DM_serial(DM.DM):
         Setup kernels, one for each scan. Derive scans from ptycho class
         """
         # get the scans
-        for label, scan in self.ptycho.modelm.scans.items():
+        for label, scan in self.ptycho.model.scans.items():
 
             kern = u.Param()
             self.kernels[label] = kern
@@ -170,7 +180,7 @@ class DM_serial(DM.DM):
 
             # Get info to shape buffer arrays
             # TODO: make this part of the engine rather than scan
-            fpc = self.ptycho.frames_per_call
+            fpc = self.ptycho.frames_per_block
 
             # TODO : make this more foolproof
             try:

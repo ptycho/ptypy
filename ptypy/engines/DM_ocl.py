@@ -39,7 +39,7 @@ serialize_array_access = DM_serial.serialize_array_access
 gaussian_kernel = DM_serial.gaussian_kernel
 
 @register()
-class DM_ocl(DM.serial):
+class DM_ocl(DM_serial.DM_serial):
 
     def __init__(self, ptycho_parent, pars=None):
         """

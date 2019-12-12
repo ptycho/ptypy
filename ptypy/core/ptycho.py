@@ -101,7 +101,7 @@ class Ptycho(Base):
     userlevel = 0
 
     [frames_per_block]
-    default = 0
+    default = 100000
     help = Max number of frames per block of data
     doc = This parameter determines the size of buffer arrays for GPUs.
           Reduce this number if you run out of memory on the GPU.
@@ -407,6 +407,9 @@ class Ptycho(Base):
 
         # Generate all the paths
         self.paths = paths.Paths(p.io)
+
+        # Todo: determine block size based on memory available
+        self.frames_per_block = p.frames_per_block
 
         # Find run name
         self.runtime.run = self.paths.run(p.run)

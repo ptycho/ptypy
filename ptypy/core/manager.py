@@ -1525,13 +1525,14 @@ class ModelManager(object):
 
         # Attempt to get new data
         new_data = []
-        _nframes = self.ptycho.p.frames_per_block
-
+        _nframes = self.ptycho.frames_per_block
+        # TODO use better logic here
+        _nframes = None if _nframes <= 0 else _nframes
         while self.data_available:
             for label, scan in self.scans.items():
                 if not scan.data_available:
                     continue
                 else:
                     new_data += (label, scan.new_data(_nframes))
-
+            print(_nframes, new_data)
         self.ptycho.new_data = new_data
