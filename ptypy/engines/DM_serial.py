@@ -21,6 +21,9 @@ from ..utils.verbose import logger, log
 from ..utils import parallel
 from . import BaseEngine, register, DM
 from .. import defaults_tree
+from ..accelerate.ocl.npy_kernels_for_block import FourierUpdateKernel
+from ..accelerate.ocl.npy_kernels_for_block import PoUpdateKernel
+from ..accelerate.ocl.npy_kernels_for_block import AuxiliaryWaveKernel
 
 ### TODOS 
 # 
@@ -67,8 +70,6 @@ def serialize_array_access(diff_storage):
     pr = mpod.pr_view.storage
     ob = mpod.ob_view.storage
     ex = mpod.ex_view.storage
-
-    ma_ID = mpod.ma_view.storage.ID
 
     poe_ID = (pr.ID, ob.ID, ex.ID)
 
@@ -151,7 +152,10 @@ class DM_serial(DM.DM):
         """
 
         super(DM_serial, self).engine_initialize()
+        self._reset_benchmarks()
+        self._setup_kernels()
 
+    def _reset_benchmarks(self):
         self.benchmark.A_Build_aux = 0.
         self.benchmark.B_Prop = 0.
         self.benchmark.C_Fourier_update = 0.
@@ -163,9 +167,7 @@ class DM_serial(DM.DM):
         self.benchmark.calls_object = 0
         self.benchmark.calls_probe = 0
 
-        self._setup_kernels()
-
-    def _setup_kernels(self, scan=None):
+    def _setup_kernels(self):
         """
         Setup kernels, one for each scan. Derive scans from ptycho class
         """
@@ -188,17 +190,20 @@ class DM_serial(DM.DM):
             except:
                 nmodes = 1
 
-            ash = (fpc * nmodes,) + tuple(geo.shape)
             # create buffer arrays
+            ash = (fpc * nmodes,) + tuple(geo.shape)
             aux = np.zeros(ash, dtype=np.complex64)
-            kern.aux = kern
+            kern.aux = aux
 
             # setup kernels, one for each SCAN.
-            kern.FUK = Fourier_update_kernel()
-            kern.FUK.allocate(aux, nmodes)
+            kern.FUK = FourierUpdateKernel(aux, nmodes)
+            kern.FUK.allocate()
 
-            kern.POK = PO_update_kernel()
+            kern.POK = PoUpdateKernel()
             kern.POK.allocate()
+
+            kern.AWK = AuxiliaryWaveKernel()
+            kern.AWK.allocate()
 
             kern.FW = geo.propagator.fw
             kern.BW = geo.propagator.bw
@@ -218,10 +223,14 @@ class DM_serial(DM.DM):
             prep.mag = np.sqrt(d.data)
             prep.mask_sum = self.ma.S[d.ID].data.sum(-1).sum(-1)
 
+        # Unfortunately this needs to be done for all pods, since
+        # the shape of the probe / object was modified.
+        # TODO: possible scaling issue
+        for label, d in self.di.storages.items():
+            prep = self.diff_info[d.ID]
             prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
-
             pID, oID, eID = prep.poe_IDs
-
+            """
             ob = self.ob.S[oID]
             obn = self.ob_nrm.S[oID]
             obv = self.ob_viewcover.S[oID]
@@ -234,6 +243,7 @@ class DM_serial(DM.DM):
                 ob.shape = ob.data.shape
                 obv.shape = obv.data.shape
                 obn.shape = obn.data.shape
+            """
 
             # calculate c_facts
             cfact = self.p.object_inertia * self.mean_power
@@ -260,12 +270,15 @@ class DM_serial(DM.DM):
                 pID, oID, eID = prep.poe_IDs
 
                 # references for kernels
-                FUK = self.scans[prep.label].FUK
+                kern = self.kernels[prep.label]
+                FUK = kern.FUK
                 pbound = self.pbound_scan[prep.label]
+                aux = kern.aux
+                FW = kern.FW
+                BW = kern.BW
 
                 # get addresses and auxilliary array
                 addr = prep.addr
-                aux = prep.aux
                 mag = prep.mag
                 mask_sum = prep.mask_sum
 
@@ -278,33 +291,28 @@ class DM_serial(DM.DM):
                 err_fourier = np.zeros((mag.shape[0],))
 
                 t1 = time.time()
-                ev = FUK.build_aux(self.p.alpha, ob, pr, ex, addr, aux)
+                ev = AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                 self.benchmark.A_Build_aux += time.time() - t1
 
                 ## FFT
                 t1 = time.time()
-                aux[:] = prep.geo.transform(aux)
+                aux[:] = FW(aux)
                 self.benchmark.B_Prop += time.time() - t1
-
-                # Look for absolute zeros in here in case everything explodes
-                # daux = FUK.npy.aux.copy()
-                # plt.figure('auxb %d' % it)
-                # plt.imshow(np.log10(np.abs(daux[0])))
 
                 ## Deviation from measured data
                 t1 = time.time()
-                FUK.fourier_error(mag, ma, mask_sum, aux)
-                FUK.error_reduce(err_fourier, aux)
-                FUK.fmag_all_update(pbound, mag, ma, err_fourier, aux)
+                FUK.fourier_error(mag, ma, mask_sum)
+                FUK.error_reduce(err_fourier)
+                FUK.fmag_all_update(pbound, mag, ma, err_fourier)
                 self.benchmark.C_Fourier_update += time.time() - t1
 
                 t1 = time.time()
-                aux[:] = prep.geo.itransform(aux)
+                aux[:] = BW(aux)
                 self.benchmark.D_iProp += time.time() - t1
 
                 ## apply changes #2
                 t1 = time.time()
-                ev = FUK.build_exit(ob, pr, ex, addr, aux)
+                ev = AWK.build_aux(aux, addr, ob, pr, ex)
                 self.benchmark.E_Build_exit += time.time() - t1
 
                 err_phot = np.zeros_like(err_fourier)
@@ -378,15 +386,16 @@ class DM_serial(DM.DM):
         for dID in self.di.S.keys():
             prep = self.diff_info[dID]
 
+            POK = self.kernels[prep.label].POK
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
 
             # scan for loop
-            ev = prep.POK.ob_update(self.ob.S[oID].data,
-                                    self.ob_nrm.S[oID].data,
-                                    self.pr.S[pID].data,
-                                    self.ex.S[eID].data,
-                                    prep.addr)
+            ev = POK.ob_update(self.ob.S[oID].data,
+                               self.ob_nrm.S[oID].data,
+                               self.pr.S[pID].data,
+                               self.ex.S[eID].data,
+                               prep.addr)
 
         for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
@@ -432,15 +441,16 @@ class DM_serial(DM.DM):
         for dID in self.di.S.keys():
             prep = self.diff_info[dID]
 
+            POK = self.kernels[prep.label].POK
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
 
             # scan for-loop
-            ev = prep.POK.pr_update(self.pr.S[pID].data,
-                                    self.pr_nrm.S[pID].data,
-                                    self.ob.S[oID].data,
-                                    self.ex.S[eID].data,
-                                    prep.addr)
+            ev = POK.pr_update(self.pr.S[pID].data,
+                               self.pr_nrm.S[pID].data,
+                               self.ob.S[oID].data,
+                               self.ex.S[eID].data,
+                               prep.addr)
 
         for pID, pr in self.pr.storages.items():
 

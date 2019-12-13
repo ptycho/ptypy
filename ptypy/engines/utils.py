@@ -173,11 +173,6 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
 
-    if pbound is not None:
-        # rescale the fmagnitude error to some meaning !!!
-        # PT: I am not sure I agree with this.
-        err_fmag /= pbound
-
     return np.array([err_fmag, err_phot, err_exit])
 
 

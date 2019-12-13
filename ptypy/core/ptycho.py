@@ -105,8 +105,8 @@ class Ptycho(Base):
     help = Max number of frames per block of data
     doc = This parameter determines the size of buffer arrays for GPUs.
           Reduce this number if you run out of memory on the GPU.
-          For ``0``, the number of frames per block is infinite.
     type = int
+    lowlim = 1
     userlevel = 1
 
     [dry_run]
@@ -632,7 +632,7 @@ class Ptycho(Base):
 
                 # Last minute preparation before a contiguous block of
                 # iterations
-                if self.ptycho.new_data:
+                if self.new_data:
                     engine.prepare()
 
                 auto_save = self.p.io.autosave

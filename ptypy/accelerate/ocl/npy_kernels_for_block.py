@@ -20,36 +20,19 @@ class BaseKernel(object):
             print(x)
 
 
-class Fourier_update_kernel(BaseKernel):
+class FourierUpdateKernel(BaseKernel):
 
-    def __init__(self):
+    def __init__(self, aux, nmodes=1):
 
-        super(Fourier_update_kernel, self).__init__()
-
-    def test(self, I, mask, f):
-        """
-        Test arrays for shape and data type
-        """
-        assert I.dtype == np.float32
-        assert I.shape == self.fshape
-        assert mask.dtype == np.float32
-        assert mask.shape == self.fshape
-        assert f.dtype == np.complex64
-        assert f.shape == self.ishape
-
-    def allocate(self, aux, nmodes=1):
-        """
-        Allocate memory according to the number of modes and
-        shape of the diffraction stack.
-        """
+        super(FourierUpdateKernel, self).__init__()
+        self.denom = 1e-7
         self.nmodes = np.int32(nmodes)
         ash = aux.shape
         self.fshape = (ash[0] // nmodes, ash[1], ash[2])
 
         # temporary buffer arrays
-        self.npy.fdev = np.zeros(self.fshape, dtype=np.float32)
-        self.npy.ferr = np.zeros(self.fshape, dtype=np.float32)
-        self.npy.aux = aux
+        self.npy.fdev = None
+        self.npy.ferr = None
 
         self.kernels = [
             'fourier_error',
@@ -57,21 +40,31 @@ class Fourier_update_kernel(BaseKernel):
             'fmag_all_update'
         ]
 
-    def fourier_error(self, g_mag, g_mask, g_mask_sum, offset=0):
+    def allocate(self):
+        """
+        Allocate memory according to the number of modes and
+        shape of the diffraction stack.
+        """
+        # temporary buffer arrays
+        self.npy.fdev = np.zeros(self.fshape, dtype=np.float32)
+        self.npy.ferr = np.zeros(self.fshape, dtype=np.float32)
+
+        self.kernels = [
+            'fourier_error',
+            'error_reduce',
+            'fmag_all_update'
+        ]
+
+    def fourier_error(self, b_aux, addr, mag, mask, mask_sum):
         # reference shape (write-to shape)
         sh = self.fshape
         # stopper
-        maxz = min(g_mag.shape[0] - offset, sh[0])
+        maxz = g_mag.shape[0]
 
         # batch buffers
         fdev = self.npy.fdev[:maxz]
         ferr = self.npy.ferr[:maxz]
-        aux = self.npy.aux[:maxz * self.nmodes]
-
-        # slice global arrays for local references
-        mag = g_mag[offset:offset + maxz]
-        mask_sum = g_mask_sum[offset:offset + maxz]
-        mask = g_mask[offset:offset + maxz]
+        aux = b_aux[:maxz * self.nmodes]
 
         ## Actual math ##
 
@@ -86,45 +79,37 @@ class Fourier_update_kernel(BaseKernel):
         # Calculate error on fourier magnitudes on a per-pixel basis
         ferr[:] = mask * np.abs(fdev) ** 2 / mask_sum.reshape((maxz, 1, 1))
 
-    def error_reduce(self, g_err_sum, offset=0):
+    def error_reduce(self, addr, err_sum):
         # reference shape (write-to shape)
         sh = self.fshape
 
         # stopper
-        maxz = min(g_err_sum.shape[0] - offset, sh[0])
+        maxz = g_mag.shape[0]
 
         # batch buffers
         ferr = self.npy.ferr[:maxz]
-
-        # read from slice for global arrays for local references
-        error_sum = g_err_sum[offset:offset + maxz]
 
         ## Actual math ##
 
         # Reduceses the Fourier error along the last 2 dimensions.fd
         error_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
 
-    def fmag_all_update(self, pbound, g_mag, g_mask, g_err_sum, offset=0):
+    def fmag_all_update(self, b_aux, addr, mag, mask, err_sum, pbound=0.0):
 
         sh = self.fshape
         nmodes = self.nmodes
 
         # stopper
-        maxz = min(g_mag.shape[0] - offset, sh[0])
+        maxz = g_mag.shape[0]
 
         # batch buffers
         fdev = self.npy.fdev[:maxz]
-        aux = self.npy.aux[:maxz * nmodes]
+        aux = b_aux[:maxz * nmodes]
 
-        # slice global arrays for local references
-        mag = g_mag[offset:offset + maxz]
-        err_sum = g_err_sum[offset:offset + maxz]
-        mask = g_mask[offset:offset + maxz]
+        # write-to shape
+        ish = aux.shape
 
         ## Actual math ##
-
-        # reference shape (write-to shape)
-        ish = aux.shape
 
         # local values
         fm = np.ones((maxz, sh[1], sh[2]), np.float32)
@@ -145,23 +130,35 @@ class Fourier_update_kernel(BaseKernel):
         renorm = renorm.reshape((renorm.shape[0], 1, 1))
 
         af = fdev + mag
-        fm[:] = (1 - mask) + mask * (mag + fdev * renorm) / (af + 1e-7)
+        fm[:] = (1 - mask) + mask * (mag + fdev * renorm) / (af + self.denom)
 
         #fm[:] = mag / (af + 1e-6)
         # upcasting
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
 
-    def build_aux(self, alpha, ob, pr, ex, addr, offset=0):
+class AuxiliaryWaveKernel(BaseKernel):
+
+    def __init__(self):
+        super(AuxiliaryWaveKernel, self).__init__()
+        self.kernels = [
+            'build_aux',
+            'build_exit',
+        ]
+
+    def allocate(self):
+        pass
+
+    def build_aux(self, b_aux, addr, ob, pr, ex, alpha=1.0):
 
         sh = addr.shape
+
         nmodes = sh[1]
 
         # stopper
-        maxz = min(sh[0] - offset, self.fshape[0])
+        maxz = sh[0]
 
         # batch buffers
-        addr = addr[:maxz * nmodes]
-        aux = self.npy.aux[:maxz * nmodes]
+        aux = b_aux[:maxz * nmodes]
 
         flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
         rows, cols = ex.shape[-2:]
@@ -174,17 +171,17 @@ class Fourier_update_kernel(BaseKernel):
                   alpha
             aux[ind, :, :] = tmp
 
-    def build_exit(self, ob, pr, ex, addr, offset=0):
+    def build_exit(self, b_aux, addr, ob, pr, ex):
 
         sh = addr.shape
+
         nmodes = sh[1]
 
         # stopper
-        maxz = min(sh[0] - offset, self.fshape[0])
+        maxz = sh[0]
 
         # batch buffers
-        addr = addr[:maxz * nmodes]
-        aux = self.npy.aux[:maxz * nmodes]
+        aux = b_aux[:maxz * nmodes]
 
         flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
         rows, cols = ex.shape[-2:]
@@ -198,16 +195,20 @@ class Fourier_update_kernel(BaseKernel):
             aux[ind, :, :] = dex
 
 
-class PO_update_kernel(BaseKernel):
+class PoUpdateKernel(BaseKernel):
 
     def __init__(self):
 
-        super(PO_update_kernel, self).__init__()
+        super(PoUpdateKernel, self).__init__()
+        self.kernels = [
+            'pr_update',
+            'ob_update',
+        ]
 
     def allocate(self):
         pass
 
-    def ob_update(self, ob, obn, pr, ex, addr):
+    def ob_update(self, addr, ob, obn, pr, ex):
 
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
@@ -221,7 +222,7 @@ class PO_update_kernel(BaseKernel):
                 pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]
         return
 
-    def pr_update(self, pr, prn, ob, ex, addr):
+    def pr_update(self, addr, pr, prn, ob, ex):
 
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])

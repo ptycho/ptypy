@@ -824,8 +824,6 @@ class PO_update_kernel(BaseKernel):
         return ev
 
     def npy_ob_update(self, ob, obn, pr, ex, addr):
-        obsh = self.ob_shape
-        prsh = self.pr_shape
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]
@@ -839,8 +837,6 @@ class PO_update_kernel(BaseKernel):
         return
 
     def npy_pr_update(self, pr, prn, ob, ex, addr):
-        obsh = self.ob_shape
-        prsh = self.pr_shape
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]

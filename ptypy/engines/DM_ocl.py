@@ -19,6 +19,7 @@ from . import BaseEngine, register, DM_serial, DM
 
 from pyopencl import array as cla
 from ..accelerate import ocl as gpu
+from ..accelerate.ocl.ocl_kernels import Fourier_update_kernel, Auxiliary_wave_kernel, PO_update_kernel
 
 ### TODOS
 # 
@@ -67,30 +68,67 @@ class DM_ocl(DM_serial.DM_serial):
         """
         super(DM_ocl, self).engine_initialize()
 
-        self.benchmark = u.Param()
-        self.benchmark.A_Build_aux = 0.
-        self.benchmark.B_Prop = 0.
-        self.benchmark.C_Fourier_update = 0.
-        self.benchmark.D_iProp = 0.
-        self.benchmark.E_Build_exit = 0.
-        self.benchmark.probe_update = 0.
-        self.benchmark.object_update = 0.
-        self.benchmark.calls_fourier = 0
-        self.benchmark.calls_object = 0
-        self.benchmark.calls_probe = 0
-        self.dattype = np.complex64
-
         self.error = []
-
-        self.diff_info = {}
-        self.ob_cfact = {}
-        self.pr_cfact = {}
 
         def constbuffer(nbytes):
             return cl.Buffer(self.queue.context, cl.mem_flags.READ_ONLY, size=nbytes)
 
         self.ob_cfact_gpu = {}
         self.pr_cfact_gpu = {}
+
+    def _setup_kernels(self):
+        """
+        Setup kernels, one for each scan. Derive scans from ptycho class
+        """
+        # get the scans
+        for label, scan in self.ptycho.model.scans.items():
+
+            kern = u.Param()
+            self.kernels[label] = kern
+
+            # TODO: needs to be adapted for broad bandwidth
+            geo = scan.geometries[0]
+
+            # Get info to shape buffer arrays
+            # TODO: make this part of the engine rather than scan
+            fpc = self.ptycho.frames_per_block
+
+            # TODO : make this more foolproof
+            try:
+                nmodes = scan.p.coherence.num_probe_modes *\
+                         scan.p.coherence.num_object_modes
+            except:
+                nmodes = 1
+
+            # create buffer arrays
+            ash = (fpc * nmodes,) + tuple(geo.shape)
+            aux = np.zeros(ash, dtype=np.complex64)
+            kern.aux = cla.to_device(aux)
+
+            ## setup kernels
+            prep.fourier_kernel = Fourier_update_kernel(self.queue, nmodes=nmodes, pbound=self.pbound[dID])
+            mask = self.ma.S[dID].data.astype(np.float32)
+            prep.fourier_kernel.configure(diffs.data, mask, aux)
+
+            prep.aux_ex_kernel = Auxiliary_wave_kernel(self.queue)
+            prep.aux_ex_kernel.configure(ob.data, addr, self.p.alpha)
+
+            prep.po_kernel = PO_update_kernel(self.queue)
+            prep.po_kernel.configure(ob.data, pr.data, addr)
+
+            from ptypy.accelerate.ocl.ocl_fft import FFT_2D_ocl_reikna as FFT
+            kern.FW = FFT(self.queue, aux,
+                                pre_fft=geo.propagator.pre_fft,
+                                post_fft=geo.propagator.post_fft,
+                                inplace=True,
+                                symmetric=True)
+            kern.BW = FFT(self.queue, aux,
+                                 pre_fft=geo.propagator.pre_ifft,
+                                 post_fft=geo.propagator.post_ifft,
+                                 inplace=True,
+                                 symmetric=True)
+            self.queue.finish()
+            prep.geo = geo
 
     def engine_prepare(self):
 
@@ -108,6 +146,10 @@ class DM_ocl(DM_serial.DM_serial):
                     data = s.data
                 s.gpu = cla.to_device(self.queue, data)
 
+        for prep in self.diff_info.values():
+            prep.addr_gpu = cla.to_device(self.queue, addr)
+
+        """
         for dID, diffs in self.di.S.items():
             prep = u.Param()
             self.diff_info[dID] = prep
@@ -129,39 +171,7 @@ class DM_ocl(DM_serial.DM_serial):
             prep.aux_gpu = cla.to_device(self.queue, aux)
             prep.aux = aux
             self.queue.finish()
-
-            ## setup kernels
-            from ptypy.accelerate.ocl.ocl_kernels import Fourier_update_kernel as FUK
-            prep.fourier_kernel = FUK(self.queue, nmodes=all_modes, pbound=self.pbound[dID])
-            mask = self.ma.S[dID].data.astype(np.float32)
-            prep.fourier_kernel.configure(diffs.data, mask, aux)
-
-            from ptypy.accelerate.ocl.ocl_kernels import Auxiliary_wave_kernel as AWK
-            prep.aux_ex_kernel = AWK(self.queue)
-            prep.aux_ex_kernel.configure(ob.data, addr, self.p.alpha)
-
-            from ptypy.accelerate.ocl.ocl_kernels import PO_update_kernel as PUK
-            prep.po_kernel = PUK(self.queue)
-            prep.po_kernel.configure(ob.data, pr.data, addr)
-
-            geo = mpod.geometry
-            # you cannot use gpyfft multiple times due to
-            if not hasattr(geo, 'transform'):
-                from ptypy.accelerate.ocl.ocl_fft import FFT_2D_ocl_reikna as FFT
-
-                geo.transform = FFT(self.queue, aux,
-                                    pre_fft=geo.propagator.pre_fft,
-                                    post_fft=geo.propagator.post_fft,
-                                    inplace=True,
-                                    symmetric=True)
-                geo.itransform = FFT(self.queue, aux,
-                                     pre_fft=geo.propagator.pre_ifft,
-                                     post_fft=geo.propagator.post_ifft,
-                                     inplace=True,
-                                     symmetric=True)
-                self.queue.finish()
-            prep.geo = geo
-
+        """
         # finish init queue
         self.queue.finish()
 
