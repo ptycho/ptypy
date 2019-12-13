@@ -103,7 +103,7 @@ class DM_ocl(DM_serial.DM_serial):
             # create buffer arrays
             ash = (fpc * nmodes,) + tuple(geo.shape)
             aux = np.zeros(ash, dtype=np.complex64)
-            kern.aux = cla.to_device(aux)
+            kern.aux = cla.to_device(self.queue, aux)
 
             # setup kernels, one for each SCAN.
             kern.FUK = FourierUpdateKernel(aux, nmodes)
@@ -121,12 +121,12 @@ class DM_ocl(DM_serial.DM_serial):
                                 pre_fft=geo.propagator.pre_fft,
                                 post_fft=geo.propagator.post_fft,
                                 inplace=True,
-                                symmetric=True)
+                                symmetric=True).ft
             kern.BW = FFT(self.queue, aux,
                                  pre_fft=geo.propagator.pre_ifft,
                                  post_fft=geo.propagator.post_ifft,
                                  inplace=True,
-                                 symmetric=True)
+                                 symmetric=True).ift
             self.queue.finish()
 
     def engine_prepare(self):
@@ -146,7 +146,10 @@ class DM_ocl(DM_serial.DM_serial):
                 s.gpu = cla.to_device(self.queue, data)
 
         for prep in self.diff_info.values():
-            prep.addr_gpu = cla.to_device(self.queue, addr)
+            prep.addr = cla.to_device(self.queue, prep.addr)
+            prep.mag = cla.to_device(self.queue, prep.mag)
+            prep.mask_sum = cla.to_device(self.queue, prep.mask_sum)
+            prep.err_fourier = cla.to_device(self.queue, prep.err_fourier)
 
         """
         for dID, diffs in self.di.S.items():
@@ -193,7 +196,7 @@ class DM_ocl(DM_serial.DM_serial):
                 # references for kernels
                 kern = self.kernels[prep.label]
                 FUK = kern.FUK
-                AWK = kern.FUK
+                AWK = kern.AWK
 
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
@@ -201,10 +204,10 @@ class DM_ocl(DM_serial.DM_serial):
                 BW = kern.BW
 
                 # get addresses 
-                addr = prep.addr_gpu
+                addr = prep.addr
                 mag = prep.mag
                 mask_sum = prep.mask_sum
-                err_fourier = cla.zeros((mag.shape[0],))
+                err_fourier = prep.err_fourier
 
                 # local references
                 ma = self.ma.S[dID].gpu
@@ -228,9 +231,9 @@ class DM_ocl(DM_serial.DM_serial):
 
                 ## Deviation from measured data
                 t1 = time.time()
-                FUK.fourier_error(mag, ma, mask_sum)
-                FUK.error_reduce(err_fourier)
-                FUK.fmag_all_update(pbound, mag, ma, err_fourier)
+                FUK.fourier_error(aux, addr, mag, ma, mask_sum)
+                FUK.error_reduce(addr, err_fourier)
+                FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
                 queue.finish()
                 self.benchmark.C_Fourier_update += time.time() - t1
 
@@ -249,7 +252,7 @@ class DM_ocl(DM_serial.DM_serial):
 
                 err_phot = np.zeros_like(err_fourier)
                 err_exit = np.zeros_like(err_fourier)
-                errs = np.array(list(zip(err_fourier, err_phot, err_exit)))
+                errs = np.array(list(zip(err_fourier.get(self.queue), err_phot, err_exit)))
                 error = dict(zip(prep.view_IDs, errs))
 
                 self.benchmark.calls_fourier += 1
@@ -310,7 +313,7 @@ class DM_ocl(DM_serial.DM_serial):
             pID, oID, eID = prep.poe_IDs
 
             # scan for loop
-            ev = POK.ob_update(prep.addr_gpu,
+            ev = POK.ob_update(prep.addr,
                                self.ob.S[oID].gpu,
                                self.ob_nrm.S[oID].gpu,
                                self.pr.S[pID].gpu,
@@ -369,7 +372,7 @@ class DM_ocl(DM_serial.DM_serial):
             pID, oID, eID = prep.poe_IDs
 
             # scan for-loop
-            ev = POK.pr_update(prep.addr_gpu,
+            ev = POK.pr_update(prep.addr,
                                self.pr.S[pID].gpu,
                                self.pr_nrm.S[pID].gpu,
                                self.ob.S[oID].gpu,

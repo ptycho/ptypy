@@ -34,8 +34,8 @@ class OclBase(object):
 class FourierUpdateKernel(FUK_NPY, OclBase):
 
     def __init__(self, aux, nmodes=1, queue_thread=None):
-        FUK_NPY.__init__(aux, nmodes)
-        OclBase.__init__(queue_thread)
+        FUK_NPY.__init__(self, aux, nmodes)
+        OclBase.__init__(self, queue_thread)
 
         self.framesize = np.int32(np.prod(aux.shape[-2:]))
 
@@ -153,7 +153,7 @@ class FourierUpdateKernel(FUK_NPY, OclBase):
         }
         """).build()
 
-    def allocate(selfself):
+    def allocate(self):
         self.npy.fdev = cla.zeros(self.queue, self.fshape, dtype=np.float32)
         self.npy.ferr = cla.zeros(self.queue, self.fshape, dtype=np.float32)
 
@@ -163,7 +163,8 @@ class FourierUpdateKernel(FUK_NPY, OclBase):
 
         self.prg.fourier_error(self.queue, mag.shape, self.ocl_wg_size,
                                self.nmodes,
-                               b_aux, mag, fdev, ferr, mask, mask_sum)
+                               b_aux.data, mag.data, fdev.data, ferr.data,
+                               mask.data, mask_sum.data)
         self.queue.finish()
 
     def error_reduce(self, addr, err_sum):
@@ -172,7 +173,7 @@ class FourierUpdateKernel(FUK_NPY, OclBase):
 
         self.prg.reduce_one_step(self.queue, (err_sum.shape[0], 64), (1, 64),
                                  self.framesize,
-                                 ferr, err_sum)
+                                 ferr.data, err_sum.data)
         self.queue.finish()
 
     def fmag_all_update(self, b_aux, addr, mag, mask, err_sum, pbound=0.0):
@@ -185,17 +186,19 @@ class FourierUpdateKernel(FUK_NPY, OclBase):
 
         self.prg.fmag_all_update(self.queue, shape, self.ocl_wg_size,
                                  self.nmodes, pbound,
-                                 b_aux, mask, mag, fdev, err_sum)
+                                 b_aux.data, mask.data, mag.data, fdev.data,
+                                 err_sum.data)
         self.queue.finish()
 
 
 class AuxiliaryWaveKernel(AWK_NPY, OclBase):
 
     def __init__(self, queue_thread=None):
-        AWK_NPY.__init__()
-        OclBase.__init__(queue_thread)
+        AWK_NPY.__init__(self)
+        OclBase.__init__(self, queue_thread)
 
         self._ob_shape = None
+        self._ob_id = None
         self.ocl_wg_size = (1, 1, 32)
 
         self.prg = cl.Program(self.queue.context, """
@@ -216,7 +219,6 @@ class AuxiliaryWaveKernel(AWK_NPY, OclBase):
         __kernel void build_aux(float alpha,
                             int ob_sh_row,
                             int ob_sh_col,
-                            int batch_offset,
                             __global cfloat_t *aux,  
                             __global cfloat_t *ob,
                             __global cfloat_t *pr,
@@ -226,7 +228,7 @@ class AuxiliaryWaveKernel(AWK_NPY, OclBase):
             size_t x = get_global_id(2);
             size_t dx = get_global_size(2);
             size_t y = get_global_id(1);
-            size_t z = get_global_id(0) + batch_offset;
+            size_t z = get_global_id(0);
             size_t zb = get_global_id(0);
             
             size_t obj_idx = obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x;
@@ -241,7 +243,6 @@ class AuxiliaryWaveKernel(AWK_NPY, OclBase):
         
         __kernel void build_exit(int ob_sh_row,
                             int ob_sh_col,
-                            int batch_offset,
                             __global cfloat_t *f,
                             __global cfloat_t *ob,
                             __global cfloat_t *pr,
@@ -251,7 +252,7 @@ class AuxiliaryWaveKernel(AWK_NPY, OclBase):
             size_t x = get_global_id(2);
             size_t dx = get_global_size(2);
             size_t y = get_global_id(1);
-            size_t z = get_global_id(0) + batch_offset;
+            size_t z = get_global_id(0);
             size_t zb = get_global_id(0); 
             
             size_t obj_idx = obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x;
@@ -266,14 +267,14 @@ class AuxiliaryWaveKernel(AWK_NPY, OclBase):
 
     def build_aux(self, b_aux, addr, ob, pr, ex, alpha=1.0):
         obr, obc = self._cache_object_shape(ob)
-        ev = self.prg.build_aux(self.queue, aux.shape, self.ocl_wg_size,
-                                alpha, obr, obc,
+        ev = self.prg.build_aux(self.queue, b_aux.shape, self.ocl_wg_size,
+                                np.int32(alpha), obr, obc,
                                 b_aux.data, ob.data, pr.data, ex.data, addr.data)
         return ev
 
     def build_exit(self, b_aux, addr, ob, pr, ex):
         obr, obc = self._cache_object_shape(ob)
-        ev = self.prg.build_exit(self.queue, aux.shape, self.ocl_wg_size,
+        ev = self.prg.build_exit(self.queue, b_aux.shape, self.ocl_wg_size,
                                  obr, obc,
                                  b_aux.data, ob.data, pr.data, ex.data, addr.data)
         return ev
@@ -292,8 +293,8 @@ class PoUpdateKernel(POK_NPY, OclBase):
 
     def __init__(self, queue_thread=None):
 
-        PoUpdateKernel.__init__()
-        OclBase.__init__(queue_thread)
+        POK_NPY.__init__(self)
+        OclBase.__init__(self, queue_thread)
 
         self.prg = cl.Program(self.queue.context, """
         #include <pyopencl-complex.h>

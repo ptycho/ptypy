@@ -222,6 +222,7 @@ class DM_serial(DM.DM):
 
             prep.mag = np.sqrt(d.data)
             prep.mask_sum = self.ma.S[d.ID].data.sum(-1).sum(-1)
+            prep.err_fourier = np.zeros_like(prep.mask_sum)
 
         # Unfortunately this needs to be done for all pods, since
         # the shape of the probe / object was modified.
@@ -230,7 +231,7 @@ class DM_serial(DM.DM):
             prep = self.diff_info[d.ID]
             prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
             pID, oID, eID = prep.poe_IDs
-            """
+
             ob = self.ob.S[oID]
             obn = self.ob_nrm.S[oID]
             obv = self.ob_viewcover.S[oID]
@@ -243,7 +244,7 @@ class DM_serial(DM.DM):
                 ob.shape = ob.data.shape
                 obv.shape = obv.data.shape
                 obn.shape = obn.data.shape
-            """
+
 
             # calculate c_facts
             cfact = self.p.object_inertia * self.mean_power
@@ -283,7 +284,7 @@ class DM_serial(DM.DM):
                 addr = prep.addr
                 mag = prep.mag
                 mask_sum = prep.mask_sum
-                err_fourier = np.zeros((mag.shape[0],))
+                err_fourier = prep.err_fourier
 
                 # local references
                 ma = self.ma.S[dID].data

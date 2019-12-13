@@ -13,8 +13,9 @@ def get_ocl_queue(new_queue=False):
     global ocl_queue
     
     if ocl_context is None and parallel.rank_local < len(devices):
-        ocl_context = cl.Context([devices[parallel.rank_local]])
-    
+        #ocl_context = cl.Context([devices[parallel.rank_local]])
+        ocl_context = cl.Context([devices[-1]])
+
     if ocl_context is not None:
         if new_queue or ocl_queue is None:
             ocl_queue = cl.CommandQueue(ocl_context)

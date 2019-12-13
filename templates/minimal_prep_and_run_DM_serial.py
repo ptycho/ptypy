@@ -10,7 +10,7 @@ p = u.Param()
 
 # for verbose output
 p.verbose_level = 3
-p.frames_per_block = 100
+p.frames_per_block = 200
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
@@ -25,7 +25,7 @@ p.scans.MF.name = 'BlockVanilla' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
-p.scans.MF.data.num_frames = 300
+p.scans.MF.data.num_frames = 500
 p.scans.MF.data.save = None
 
 #p.scans.MF.coherence = u.Param(num_probe_modes=1)
