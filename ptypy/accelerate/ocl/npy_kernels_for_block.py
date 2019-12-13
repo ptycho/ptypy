@@ -49,12 +49,6 @@ class FourierUpdateKernel(BaseKernel):
         self.npy.fdev = np.zeros(self.fshape, dtype=np.float32)
         self.npy.ferr = np.zeros(self.fshape, dtype=np.float32)
 
-        self.kernels = [
-            'fourier_error',
-            'error_reduce',
-            'fmag_all_update'
-        ]
-
     def fourier_error(self, b_aux, addr, mag, mask, mask_sum):
         # reference shape (write-to shape)
         sh = self.fshape

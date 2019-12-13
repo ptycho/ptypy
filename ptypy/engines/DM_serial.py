@@ -272,6 +272,8 @@ class DM_serial(DM.DM):
                 # references for kernels
                 kern = self.kernels[prep.label]
                 FUK = kern.FUK
+                AWK = kern.FUK
+
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
                 FW = kern.FW
@@ -281,6 +283,7 @@ class DM_serial(DM.DM):
                 addr = prep.addr
                 mag = prep.mag
                 mask_sum = prep.mask_sum
+                err_fourier = np.zeros((mag.shape[0],))
 
                 # local references
                 ma = self.ma.S[dID].data
@@ -288,10 +291,9 @@ class DM_serial(DM.DM):
                 pr = self.pr.S[pID].data
                 ex = self.ex.S[eID].data
 
-                err_fourier = np.zeros((mag.shape[0],))
 
                 t1 = time.time()
-                ev = AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                 self.benchmark.A_Build_aux += time.time() - t1
 
                 ## FFT
@@ -312,7 +314,7 @@ class DM_serial(DM.DM):
 
                 ## apply changes #2
                 t1 = time.time()
-                ev = AWK.build_aux(aux, addr, ob, pr, ex)
+                AWK.build_exit(aux, addr, ob, pr, ex)
                 self.benchmark.E_Build_exit += time.time() - t1
 
                 err_phot = np.zeros_like(err_fourier)
@@ -391,11 +393,11 @@ class DM_serial(DM.DM):
             pID, oID, eID = prep.poe_IDs
 
             # scan for loop
-            ev = POK.ob_update(self.ob.S[oID].data,
+            ev = POK.ob_update(prep.addr,
+                               self.ob.S[oID].data,
                                self.ob_nrm.S[oID].data,
                                self.pr.S[pID].data,
-                               self.ex.S[eID].data,
-                               prep.addr)
+                               self.ex.S[eID].data)
 
         for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
@@ -405,7 +407,6 @@ class DM_serial(DM.DM):
                 parallel.allreduce(obn.data)
                 ob.data /= obn.data
 
-                """
                 # Clip object (This call takes like one ms. Not time critical)
                 if self.p.clip_object is not None:
                     clip_min, clip_max = self.p.clip_object
@@ -415,10 +416,7 @@ class DM_serial(DM.DM):
                     too_low = (ampl_obj < clip_min)
                     ob.data[too_high] = clip_max * phase_obj[too_high]
                     ob.data[too_low] = clip_min * phase_obj[too_low]
-                #ob.gpu.set(ob.data)
-                """
             else:
-
                 ob.data /= obn.data
 
         # print 'object update: ' + str(time.time()-t1)
@@ -446,11 +444,11 @@ class DM_serial(DM.DM):
             pID, oID, eID = prep.poe_IDs
 
             # scan for-loop
-            ev = POK.pr_update(self.pr.S[pID].data,
+            ev = POK.pr_update(prep.addr,
+                               self.pr.S[pID].data,
                                self.pr_nrm.S[pID].data,
                                self.ob.S[oID].data,
-                               self.ex.S[eID].data,
-                               prep.addr)
+                               self.ex.S[eID].data)
 
         for pID, pr in self.pr.storages.items():
 
@@ -467,11 +465,7 @@ class DM_serial(DM.DM):
                 pr.data /= prn.data
 
             self.support_constraint(pr)
-            # ca. 0.3 ms
-            # self.pr.S[pID].gpu = probe_gpu
-            ## this should be done on GPU
 
-            # change += u.norm2(pr[i]-buf_pr[i]) / u.norm2(pr[i])
             change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
             buf.data[:] = pr.data
             if MPI:

@@ -19,7 +19,7 @@ from . import BaseEngine, register, DM_serial, DM
 
 from pyopencl import array as cla
 from ..accelerate import ocl as gpu
-from ..accelerate.ocl.ocl_kernels import Fourier_update_kernel, Auxiliary_wave_kernel, PO_update_kernel
+from ..accelerate.ocl.ocl_kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel
 
 ### TODOS
 # 
@@ -105,16 +105,16 @@ class DM_ocl(DM_serial.DM_serial):
             aux = np.zeros(ash, dtype=np.complex64)
             kern.aux = cla.to_device(aux)
 
-            ## setup kernels
-            prep.fourier_kernel = Fourier_update_kernel(self.queue, nmodes=nmodes, pbound=self.pbound[dID])
-            mask = self.ma.S[dID].data.astype(np.float32)
-            prep.fourier_kernel.configure(diffs.data, mask, aux)
+            # setup kernels, one for each SCAN.
+            kern.FUK = FourierUpdateKernel(aux, nmodes)
+            kern.FUK.allocate()
 
-            prep.aux_ex_kernel = Auxiliary_wave_kernel(self.queue)
-            prep.aux_ex_kernel.configure(ob.data, addr, self.p.alpha)
+            kern.POK = PoUpdateKernel()
+            kern.POK.allocate()
 
-            prep.po_kernel = PO_update_kernel(self.queue)
-            prep.po_kernel.configure(ob.data, pr.data, addr)
+            kern.AWK = AuxiliaryWaveKernel()
+            kern.AWK.allocate()
+
 
             from ptypy.accelerate.ocl.ocl_fft import FFT_2D_ocl_reikna as FFT
             kern.FW = FFT(self.queue, aux,
@@ -128,7 +128,6 @@ class DM_ocl(DM_serial.DM_serial):
                                  inplace=True,
                                  symmetric=True)
             self.queue.finish()
-            prep.geo = geo
 
     def engine_prepare(self):
 
@@ -191,8 +190,21 @@ class DM_ocl(DM_serial.DM_serial):
                 # find probe, object in exit ID in dependence of dID
                 pID, oID, eID = prep.poe_IDs
 
+                # references for kernels
+                kern = self.kernels[prep.label]
+                FUK = kern.FUK
+                AWK = kern.FUK
+
+                pbound = self.pbound_scan[prep.label]
+                aux = kern.aux
+                FW = kern.FW
+                BW = kern.BW
+
                 # get addresses 
-                addr_gpu = prep.addr_gpu
+                addr = prep.addr_gpu
+                mag = prep.mag
+                mask_sum = prep.mask_sum
+                err_fourier = cla.zeros((mag.shape[0],))
 
                 # local references
                 ma = self.ma.S[dID].gpu
@@ -200,45 +212,39 @@ class DM_ocl(DM_serial.DM_serial):
                 pr = self.pr.S[pID].gpu
                 ex = self.ex.S[eID].gpu
 
-                aux = prep.aux_gpu
-
-                geo = prep.geo
                 queue = self.queue
 
                 t1 = time.time()
-                ev = prep.aux_ex_kernel.ocl_build_aux(aux, ob, pr, ex, addr_gpu)
+                AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                 queue.finish()
 
                 self.benchmark.A_Build_aux += time.time() - t1
 
                 ## FFT
                 t1 = time.time()
-                geo.transform.ft(aux, aux)
+                FW(aux, aux)
                 queue.finish()
                 self.benchmark.B_Prop += time.time() - t1
 
                 ## Deviation from measured data
                 t1 = time.time()
-                prep.fourier_kernel.ocl.f = aux
-                err_fourier = prep.fourier_kernel.execute_ocl()
+                FUK.fourier_error(mag, ma, mask_sum)
+                FUK.error_reduce(err_fourier)
+                FUK.fmag_all_update(pbound, mag, ma, err_fourier)
                 queue.finish()
                 self.benchmark.C_Fourier_update += time.time() - t1
 
                 ## iFFT
                 t1 = time.time()
-                geo.itransform.ift(aux, aux)
+                BW(aux, aux)
                 queue.finish()
 
                 self.benchmark.D_iProp += time.time() - t1
 
                 ## apply changes #2
                 t1 = time.time()
-                ev = prep.aux_ex_kernel.ocl_build_exit(aux, ob, pr, ex, addr_gpu)
+                AWK.build_exit(aux, addr, ob, pr, ex)
                 queue.finish()
-
-                # self.prg.reduce_one_step(queue, (shape_merged[0],64), (1,64), info_gpu.data, err_temp.data, err_exit.data)
-                # queue.finish()
-
                 self.benchmark.E_Build_exit += time.time() - t1
 
                 err_phot = np.zeros_like(err_fourier)
@@ -299,16 +305,16 @@ class DM_ocl(DM_serial.DM_serial):
         for dID in self.di.S.keys():
             prep = self.diff_info[dID]
 
+            POK = self.kernels[prep.label].POK
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
 
             # scan for loop
-            ev = prep.po_kernel.ocl_ob_update(self.ob.S[oID].gpu,
-                                              self.ob_nrm.S[oID].gpu,
-                                              self.pr.S[pID].gpu,
-                                              self.ex.S[eID].gpu,
-                                              prep.addr_gpu)
-
+            ev = POK.ob_update(prep.addr_gpu,
+                               self.ob.S[oID].gpu,
+                               self.ob_nrm.S[oID].gpu,
+                               self.pr.S[pID].gpu,
+                               self.ex.S[eID].gpu)
             queue.finish()
 
         for oID, ob in self.ob.storages.items():
@@ -358,16 +364,16 @@ class DM_ocl(DM_serial.DM_serial):
         for dID in self.di.S.keys():
             prep = self.diff_info[dID]
 
+            POK = self.kernels[prep.label].POK
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
 
             # scan for-loop
-            ev = prep.po_kernel.ocl_pr_update(self.pr.S[pID].gpu,
-                                              self.pr_nrm.S[pID].gpu,
-                                              self.ob.S[oID].gpu,
-                                              self.ex.S[eID].gpu,
-                                              prep.addr_gpu)
-
+            ev = POK.pr_update(prep.addr_gpu,
+                               self.pr.S[pID].gpu,
+                               self.pr_nrm.S[pID].gpu,
+                               self.ob.S[oID].gpu,
+                               self.ex.S[eID].gpu)
             queue.finish()
 
         for pID, pr in self.pr.storages.items():
@@ -386,15 +392,6 @@ class DM_ocl(DM_serial.DM_serial):
                 pr.data /= prn.data
 
                 self.support_constraint(pr)
-                # Apply probe support if requested
-                #support = self.probe_support.get(pID)
-                #if support is not None:
-                #    pr.data *= support
-
-                # Apply probe support in Fourier space (This could be better done on GPU)
-                #support = self.probe_fourier_support.get(pID)
-                #if support is not None:
-                #    pr.data[:] = np.fft.ifft2(support * np.fft.fft2(pr.data))
 
                 pr.gpu.set(pr.data)
             else:
@@ -406,7 +403,6 @@ class DM_ocl(DM_serial.DM_serial):
             ## this should be done on GPU
 
             queue.finish()
-            # change += u.norm2(pr[i]-buf_pr[i]) / u.norm2(pr[i])
             change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
             buf.data[:] = pr.data
             if MPI:
