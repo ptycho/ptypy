@@ -272,7 +272,7 @@ class DM_serial(DM.DM):
                 # references for kernels
                 kern = self.kernels[prep.label]
                 FUK = kern.FUK
-                AWK = kern.FUK
+                AWK = kern.AWK
 
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
@@ -303,9 +303,9 @@ class DM_serial(DM.DM):
 
                 ## Deviation from measured data
                 t1 = time.time()
-                FUK.fourier_error(mag, ma, mask_sum)
-                FUK.error_reduce(err_fourier)
-                FUK.fmag_all_update(pbound, mag, ma, err_fourier)
+                FUK.fourier_error(aux, addr, mag, ma, mask_sum)
+                FUK.error_reduce(addr, err_fourier)
+                FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
                 self.benchmark.C_Fourier_update += time.time() - t1
 
                 t1 = time.time()

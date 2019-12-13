@@ -53,7 +53,7 @@ class FourierUpdateKernel(BaseKernel):
         # reference shape (write-to shape)
         sh = self.fshape
         # stopper
-        maxz = g_mag.shape[0]
+        maxz = mag.shape[0]
 
         # batch buffers
         fdev = self.npy.fdev[:maxz]
@@ -78,7 +78,7 @@ class FourierUpdateKernel(BaseKernel):
         sh = self.fshape
 
         # stopper
-        maxz = g_mag.shape[0]
+        maxz = err_sum.shape[0]
 
         # batch buffers
         ferr = self.npy.ferr[:maxz]
@@ -86,7 +86,7 @@ class FourierUpdateKernel(BaseKernel):
         ## Actual math ##
 
         # Reduceses the Fourier error along the last 2 dimensions.fd
-        error_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
+        err_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
 
     def fmag_all_update(self, b_aux, addr, mag, mask, err_sum, pbound=0.0):
 
@@ -94,7 +94,7 @@ class FourierUpdateKernel(BaseKernel):
         nmodes = self.nmodes
 
         # stopper
-        maxz = g_mag.shape[0]
+        maxz = mag.shape[0]
 
         # batch buffers
         fdev = self.npy.fdev[:maxz]
