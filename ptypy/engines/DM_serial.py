@@ -108,14 +108,7 @@ def serialize_array_access(diff_storage):
 class DM_serial(DM.DM):
     """
     A full-fledged Difference Map engine that uses numpy arrays instead of iteration.
-    
-    Defaults:
-    
-    [batch_size]
-    default = 100
-    type = int
-    lowlim = 1
-    help = Length of frame buffer for batched execution
+
     """
 
     def __init__(self, ptycho_parent, pars=None):
@@ -392,7 +385,6 @@ class DM_serial(DM.DM):
             POK = self.kernels[prep.label].POK
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
-
             # scan for loop
             ev = POK.ob_update(prep.addr,
                                self.ob.S[oID].data,

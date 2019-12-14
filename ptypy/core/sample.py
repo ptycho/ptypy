@@ -287,6 +287,8 @@ def init_storage(storage, sample_pars=None, energy=None):
         u.diversify(model, **p.diversity)
     # Return back to storage
     s.fill(model)
+    # avoids sharp edges on resize
+    s.fill_value = model.mean()
 
 
 def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):

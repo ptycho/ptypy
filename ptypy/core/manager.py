@@ -1526,7 +1526,6 @@ class ModelManager(object):
         # Attempt to get new data
         new_data = []
         _nframes = self.ptycho.frames_per_block
-
         while self.data_available:
             for label, scan in self.scans.items():
                 if not scan.data_available:

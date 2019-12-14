@@ -153,7 +153,6 @@ class AuxiliaryWaveKernel(BaseKernel):
 
         # batch buffers
         aux = b_aux[:maxz * nmodes]
-
         flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
         rows, cols = ex.shape[-2:]
 
