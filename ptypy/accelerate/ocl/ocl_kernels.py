@@ -231,7 +231,7 @@ class AuxiliaryWaveKernel(AWK_NPY, OclBase):
             size_t z = get_global_id(0);
             size_t zb = get_global_id(0);
             
-            size_t obj_idx = obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x;
+            //size_t obj_idx = obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x;
 
             cfloat_t ex0 = cfloat_rmul(alpha,ex[ex_dlayer(z)*dx*dx + y*dx + x]);
             cfloat_t ex1 = cfloat_mul(ob[obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x],pr[pr_dlayer(z)*dx*dx + y*dx+x]);
@@ -267,14 +267,14 @@ class AuxiliaryWaveKernel(AWK_NPY, OclBase):
 
     def build_aux(self, b_aux, addr, ob, pr, ex, alpha=1.0):
         obr, obc = self._cache_object_shape(ob)
-        ev = self.prg.build_aux(self.queue, b_aux.shape, self.ocl_wg_size,
-                                np.int32(alpha), obr, obc,
+        ev = self.prg.build_aux(self.queue, ex.shape, self.ocl_wg_size,
+                                np.float32(alpha), obr, obc,
                                 b_aux.data, ob.data, pr.data, ex.data, addr.data)
         return ev
 
     def build_exit(self, b_aux, addr, ob, pr, ex):
         obr, obc = self._cache_object_shape(ob)
-        ev = self.prg.build_exit(self.queue, b_aux.shape, self.ocl_wg_size,
+        ev = self.prg.build_exit(self.queue, ex.shape, self.ocl_wg_size,
                                  obr, obc,
                                  b_aux.data, ob.data, pr.data, ex.data, addr.data)
         return ev
@@ -295,7 +295,7 @@ class PoUpdateKernel(POK_NPY, OclBase):
 
         POK_NPY.__init__(self)
         OclBase.__init__(self, queue_thread)
-
+        self.ocl_wg_size = (16, 16)
         self.prg = cl.Program(self.queue.context, """
         #include <pyopencl-complex.h>
         
@@ -395,7 +395,6 @@ class PoUpdateKernel(POK_NPY, OclBase):
         }
 
         """).build()
-        self.ocl_wg_size = (16, 16)
 
     def ob_update(self, addr, ob, obn, pr, ex):
         obsh = [np.int32(ax) for ax in ob.shape]

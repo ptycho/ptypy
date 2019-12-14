@@ -385,6 +385,7 @@ class DM_serial(DM.DM):
             POK = self.kernels[prep.label].POK
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
+
             # scan for loop
             ev = POK.ob_update(prep.addr,
                                self.ob.S[oID].data,

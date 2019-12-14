@@ -10,7 +10,7 @@ p = u.Param()
 
 # for verbose output
 p.verbose_level = 3
-p.frames_per_block = 200
+p.frames_per_block = 250
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
