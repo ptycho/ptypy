@@ -238,7 +238,6 @@ class DM_serial(DM.DM):
                 obv.shape = obv.data.shape
                 obn.shape = obn.data.shape
 
-
             # calculate c_facts
             cfact = self.p.object_inertia * self.mean_power
             self.ob_cfact[oID] = cfact / u.parallel.size
@@ -284,7 +283,6 @@ class DM_serial(DM.DM):
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
                 ex = self.ex.S[eID].data
-
 
                 t1 = time.time()
                 AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
@@ -484,8 +482,8 @@ class DM_serial(DM.DM):
                     print('%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier * 1000))
                     acc += t
                 elif str(name) == 'probe_update':
-                    pass
-                    # print '%20s : %1.3f ms per call. %d calls' % (name, t / self.benchmark.calls_probe * 1000, self.benchmark.calls_probe)
+                    print('%20s : %1.3f ms per call. %d calls' % (
+                        name, t / self.benchmark.calls_probe * 1000, self.benchmark.calls_probe))
                 elif str(name) == 'object_update':
                     print('%20s : %1.3f ms per call. %d calls' % (
                         name, t / self.benchmark.calls_object * 1000, self.benchmark.calls_object))

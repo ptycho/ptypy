@@ -39,6 +39,7 @@ parallel = u.parallel
 serialize_array_access = DM_serial.serialize_array_access
 gaussian_kernel = DM_serial.gaussian_kernel
 
+
 @register()
 class DM_ocl(DM_serial.DM_serial):
 
@@ -95,7 +96,7 @@ class DM_ocl(DM_serial.DM_serial):
 
             # TODO : make this more foolproof
             try:
-                nmodes = scan.p.coherence.num_probe_modes *\
+                nmodes = scan.p.coherence.num_probe_modes * \
                          scan.p.coherence.num_object_modes
             except:
                 nmodes = 1
@@ -115,18 +116,17 @@ class DM_ocl(DM_serial.DM_serial):
             kern.AWK = AuxiliaryWaveKernel()
             kern.AWK.allocate()
 
-
             from ptypy.accelerate.ocl.ocl_fft import FFT_2D_ocl_reikna as FFT
             kern.FW = FFT(self.queue, aux,
-                                pre_fft=geo.propagator.pre_fft,
-                                post_fft=geo.propagator.post_fft,
-                                inplace=True,
-                                symmetric=True).ft
+                          pre_fft=geo.propagator.pre_fft,
+                          post_fft=geo.propagator.post_fft,
+                          inplace=True,
+                          symmetric=True).ft
             kern.BW = FFT(self.queue, aux,
-                                 pre_fft=geo.propagator.pre_ifft,
-                                 post_fft=geo.propagator.post_ifft,
-                                 inplace=True,
-                                 symmetric=True).ift
+                          pre_fft=geo.propagator.pre_ifft,
+                          post_fft=geo.propagator.post_ifft,
+                          inplace=True,
+                          symmetric=True).ift
             self.queue.finish()
 
     def engine_prepare(self):
@@ -300,7 +300,7 @@ class DM_ocl(DM_serial.DM_serial):
             """
             cfact = self.ob_cfact[oID]
             ob.gpu *= cfact
-            #obn.gpu[:] = cfact
+            # obn.gpu[:] = cfact
             obn.gpu.fill(cfact)
             queue.finish()
 
@@ -421,43 +421,7 @@ class DM_ocl(DM_serial.DM_serial):
         """
         try deleting ever helper contianer
         """
+        super(DM_ocl, self).engine_finalize()
         self.queue.finish()
-        if parallel.master:
-            print("----- BENCHMARKS ----")
-            acc = 0.
-            for name in sorted(self.benchmark.keys()):
-                t = self.benchmark[name]
-                if name[0] in 'ABCDEFGHI':
-                    print('%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier * 1000))
-                    acc += t
-                elif str(name) == 'probe_update':
-                    # pass
-                    print('%20s : %1.3f ms per call. %d calls' % (
-                        name, t / self.benchmark.calls_probe * 1000, self.benchmark.calls_probe))
-                elif str(name) == 'object_update':
-                    print('%20s : %1.3f ms per call. %d calls' % (
-                        name, t / self.benchmark.calls_object * 1000, self.benchmark.calls_object))
-
-            print('%20s : %1.3f ms per iteration. %d calls' % (
-                'Fourier_total', acc / self.benchmark.calls_fourier * 1000, self.benchmark.calls_fourier))
-
-            """
-            for name, s in self.ob.S.items():
-                plt.figure('obj')
-                d = s.gpu.get()
-                #print np.abs(d[0][300:-300,300:-300]).mean()
-                plt.imshow(u.imsave(d[0][400:-400,400:-400]))
-            for name, s in self.pr.S.items():
-                d = s.gpu.get()
-                for l in d:
-                    plt.figure()
-                    plt.imshow(u.imsave(l))
-                #print u.norm2(d)
-
-            plt.show()
-            """
-
-        for original in [self.pr, self.ob, self.ex, self.di, self.ma]:
-            original.delete_copy()
 
         # delete local references to container buffer copies

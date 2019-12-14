@@ -22,7 +22,7 @@ class OclBase(object):
         self.queue = queue_thread if queue_thread is not None else get_ocl_queue()
         self._check_profiling()
         self.benchmark = dict()
-        self.ocl_wg_size = (1, 1, 32)
+        self.ocl_wg_size = (1, 16, 16)
 
     def _check_profiling(self):
         if self.queue.properties == cl.command_queue_properties.PROFILING_ENABLE:
@@ -199,7 +199,7 @@ class AuxiliaryWaveKernel(AWK_NPY, OclBase):
 
         self._ob_shape = None
         self._ob_id = None
-        self.ocl_wg_size = (1, 1, 32)
+        # self.ocl_wg_size = (1, 16, 16)
 
         self.prg = cl.Program(self.queue.context, """
         #include <pyopencl-complex.h>
@@ -292,7 +292,6 @@ class AuxiliaryWaveKernel(AWK_NPY, OclBase):
 class PoUpdateKernel(POK_NPY, OclBase):
 
     def __init__(self, queue_thread=None):
-
         POK_NPY.__init__(self)
         OclBase.__init__(self, queue_thread)
         self.ocl_wg_size = (16, 16)
@@ -399,7 +398,7 @@ class PoUpdateKernel(POK_NPY, OclBase):
     def ob_update(self, addr, ob, obn, pr, ex):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
-        num_pods = np.int32(addr.shape[0]*addr.shape[1])
+        num_pods = np.int32(addr.shape[0] * addr.shape[1])
         ev = self.prg.ob_update(self.queue, ob.shape[-2:], self.ocl_wg_size,
                                 prsh[-1],
                                 obsh[0], num_pods,
@@ -409,7 +408,7 @@ class PoUpdateKernel(POK_NPY, OclBase):
     def pr_update(self, addr, pr, prn, ob, ex):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
-        num_pods = np.int32(addr.shape[0]*addr.shape[1])
+        num_pods = np.int32(addr.shape[0] * addr.shape[1])
 
         ev = self.prg.pr_update(self.queue, pr.shape[-2:], self.ocl_wg_size,
                                 prsh[-1], obsh[-2], obsh[-1],
