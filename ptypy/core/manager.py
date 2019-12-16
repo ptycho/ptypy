@@ -142,7 +142,6 @@ class ScanModel(object):
         self.data_available = True
         self.CType = CType
         self.FType = FType
-        self.frames_per_call = 100000
 
     @classmethod
     def makePtyScan(cls, pars):
@@ -173,7 +172,7 @@ class ScanModel(object):
 
         return ps_instance
 
-    def new_data(self):
+    def new_data(self, max_frames):
         """
         Feed data from ptyscan object.
         :return: None if no data is available, True otherwise.
@@ -189,7 +188,7 @@ class ScanModel(object):
 
         # Get data
         logger.info('Importing data from scan %s.' % self.label)
-        dp = self.ptyscan.auto(self.frames_per_call)
+        dp = self.ptyscan.auto(max_frames)
 
         self.data_available = (dp != data.EOS)
         logger.debug(u.verbose.report(dp))
@@ -350,7 +349,8 @@ class ScanModel(object):
         self._initialize_object(new_object_ids)
         self._initialize_exit(new_pods)
         logger.info('Process %d completed new_data.' % parallel.rank, extra={'allprocesses': True})
-        return True
+
+        return self.diff
 
     def _new_data_extra_analysis(self, dp):
         """
@@ -435,6 +435,7 @@ class ScanModel(object):
         self.diff.mean = mean_frame
         self.diff.max = max_frame
         self.diff.min = min_frame
+        self.diff.label = self.label
 
         info = {'label': self.label, 'max': self.diff.max_power, 'tot': self.diff.tot_power, 'mean': mean_frame.sum()}
         logger.info(
@@ -468,10 +469,10 @@ class ScanModel(object):
     def _initialize_object(self, object_ids):
         raise NotImplementedError
 
-    def _get_data(self):
+    def _get_data(self, max_frames):
         # Get data
         logger.info('Importing data from scan %s.' % self.label)
-        dp = self.ptyscan.auto(self.frames_per_call)
+        dp = self.ptyscan.auto(max_frames)
 
         self.data_available = (dp != data.EOS)
         logger.debug(u.verbose.report(dp))
@@ -485,10 +486,10 @@ class ScanModel(object):
 @defaults_tree.parse_doc('scan.BlockScanModel')
 class BlockScanModel(ScanModel):
 
-    def new_data(self):
+    def new_data(self, max_frames):
         """
         Feed data from ptyscan object.
-        :return: None if no data is available, True otherwise.
+        :return: None if no data is available, Diffraction storage otherwise.
         """
         report_time = _LogTime()
         report_time()
@@ -499,7 +500,7 @@ class BlockScanModel(ScanModel):
 
         report_time()
 
-        dp = self._get_data()
+        dp = self._get_data(max_frames)
 
         report_time('read data')
 
@@ -622,7 +623,7 @@ class BlockScanModel(ScanModel):
         self._initialize_object(new_object_ids)
         self._initialize_exit(new_pods)
 
-        return True
+        return diff
 
 
 class _Vanilla(object):
@@ -1511,16 +1512,28 @@ class ModelManager(object):
     def new_data(self):
         """
         Get all new diffraction patterns and create all views and pods
-        accordingly.
+        accordingly.s
         """
         parallel.barrier()
 
         # Nothing to do if there are no new data.
         if not self.data_available:
-            return 'No data'
+            self.ptycho.new_data = None
+            return
 
         logger.info('Processing new data.')
 
         # Attempt to get new data
-        for label, scan in self.scans.items():
-            new_data = scan.new_data()
+        new_data = []
+        _nframes = self.ptycho.frames_per_block
+        while self.data_available:
+            for label, scan in self.scans.items():
+                if not scan.data_available:
+                    continue
+                else:
+                    nd = scan.new_data(_nframes)
+                    if nd:
+                        new_data.append((label, nd))
+            #print(_nframes, new_data)
+
+        self.ptycho.new_data = new_data

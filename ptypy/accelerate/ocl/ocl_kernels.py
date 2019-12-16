@@ -2,8 +2,11 @@ import pyopencl as cl
 from pyopencl import array as cla
 import numpy as np
 import time
-from inspect import getfullargspec
-from collections import OrderedDict
+
+from . import get_ocl_queue
+from .npy_kernels_for_block import AuxiliaryWaveKernel as AWK_NPY
+from .npy_kernels_for_block import PoUpdateKernel as POK_NPY
+from .npy_kernels_for_block import FourierUpdateKernel as FUK_NPY
 
 
 class Adict(object):
@@ -12,16 +15,14 @@ class Adict(object):
         pass
 
 
-class BaseKernel(object):
+class OclBase(object):
 
-    def __init__(self, queue_thread=None, verbose=False):
+    def __init__(self, queue_thread=None):
 
-        self.queue = queue_thread
-        self.verbose = False
+        self.queue = queue_thread if queue_thread is not None else get_ocl_queue()
         self._check_profiling()
-        self.npy = Adict()
-        self.ocl = Adict()
-        self.benchmark = OrderedDict()
+        self.benchmark = dict()
+        self.ocl_wg_size = (1, 16, 16)
 
     def _check_profiling(self):
         if self.queue.properties == cl.command_queue_properties.PROFILING_ENABLE:
@@ -29,58 +30,14 @@ class BaseKernel(object):
         else:
             self.profile = False
 
-    def log(self, x):
-        if self.verbose:
-            print(x)
 
+class FourierUpdateKernel(FUK_NPY, OclBase):
 
-class Fourier_update_kernel(BaseKernel):
+    def __init__(self, aux, nmodes=1, queue_thread=None):
+        FUK_NPY.__init__(self, aux, nmodes)
+        OclBase.__init__(self, queue_thread)
 
-    def __init__(self, queue_thread=None, nmodes=1, pbound=0.0):
-
-        super(Fourier_update_kernel, self).__init__(queue_thread)
-        self.pbound = np.float32(pbound)
-        self.nmodes = np.int32(nmodes)
-
-    def configure(self, I, mask, f):
-
-        self.fshape = I.shape
-        self.shape = (self.nmodes * I.shape[0], I.shape[1], I.shape[2])
-        assert self.shape == f.shape
-        assert I.dtype == np.float32
-        assert mask.dtype == np.float32
-        assert f.dtype == np.complex64
-        self.framesize = np.int32(np.prod(I.shape[-2:]))
-
-        self.npy.f = f
-        self.npy.fmask = mask
-        self.npy.mask_sum = mask.sum(-1).sum(-1)
-        d = I.copy()
-        d[d < 0.] = 0.0  # just in case
-        d[np.isnan(d)] = 0.0
-        self.npy.fmag = np.sqrt(d)
-        self.npy.err_fmag = np.zeros((self.fshape[0],), dtype=np.float32)
-        # temporary buffer arrays
-        self.npy.fdev = np.zeros_like(self.npy.fmag)
-        self.npy.ferr = np.zeros_like(self.npy.fmag)
-
-        self.kernels = [
-            'fourier_error',
-            'error_reduce',
-            'fmag_all_update'
-        ]
-
-        self.configure_ocl()
-
-    def sync_ocl(self):
-        for key, array in self.npy.__dict__.items():
-            self.ocl.__dict__[key].set(array)
-
-    def configure_ocl(self):
-        self.ocl_wg_size = (1, 1, 32)
-
-        for key, array in self.npy.__dict__.items():
-            self.ocl.__dict__[key] = cla.to_device(self.queue, array)
+        self.framesize = np.int32(np.prod(aux.shape[-2:]))
 
         assert self.queue is not None
         self.prg = cl.Program(self.queue.context, """
@@ -196,156 +153,53 @@ class Fourier_update_kernel(BaseKernel):
         }
         """).build()
 
-    def execute_ocl(self, kernel_name=None, compare=False, sync=False):
+    def allocate(self):
+        self.npy.fdev = cla.zeros(self.queue, self.fshape, dtype=np.float32)
+        self.npy.ferr = cla.zeros(self.queue, self.fshape, dtype=np.float32)
 
-        if kernel_name is None:
-            for kernel in self.kernels:
-                self.execute_ocl(kernel, compare, sync)
-        else:
-            self.log("KERNEL " + kernel_name)
-            m_ocl = getattr(self, 'ocl_' + kernel_name)
-            m_npy = getattr(self, 'npy_' + kernel_name)
-            ocl_kernel_args = getfullargspec(m_ocl).args[1:]
-            npy_kernel_args = getfullargspec(m_npy).args[1:]
-            assert ocl_kernel_args == npy_kernel_args
-            # OCL
-            if sync:
-                self.sync_ocl()
-            args = [getattr(self.ocl, a).data for a in ocl_kernel_args]
+    def fourier_error(self, b_aux, addr, mag, mask, mask_sum):
+        fdev = self.npy.fdev
+        ferr = self.npy.ferr
 
-            self.benchmark[kernel_name] = -time.time()
-            m_ocl(*args)
-            self.benchmark[kernel_name] += time.time()
-
-            if compare:
-                args = [getattr(self.npy, a) for a in npy_kernel_args]
-                m_npy(*args)
-                self.verify_ocl()
-
-        return self.ocl.err_fmag.get()
-
-    def execute_npy(self, kernel_name=None):
-
-        if kernel_name is None:
-            for kernel in self.kernels:
-                self.execute_npy(kernel)
-        else:
-            self.log("KERNEL " + kernel_name)
-            m_npy = getattr(self, 'npy_' + kernel_name)
-            npy_kernel_args = getfullargspec(m_npy).args[1:]
-            args = [getattr(self.npy, a) for a in npy_kernel_args]
-            m_npy(*args)
-
-        return self.npy.err_fmag
-
-    def npy_fourier_error(self, f, fmag, fdev, ferr, fmask, mask_sum):
-        sh = f.shape
-        tf = f.reshape(sh[0] // self.nmodes, self.nmodes, sh[1], sh[2])
-
-        af = np.sqrt((np.abs(tf) ** 2).sum(1))
-
-        fdev[:] = af - fmag
-        ferr[:] = fmask * np.abs(fdev) ** 2 / mask_sum.reshape((mask_sum.shape[0], 1, 1))
-
-    def ocl_fourier_error(self, f, fmag, fdev, ferr, fmask, mask_sum):
-        self.prg.fourier_error(self.queue, self.fshape, self.ocl_wg_size, self.nmodes,
-                               f, fmag, fdev, ferr, fmask, mask_sum)
+        self.prg.fourier_error(self.queue, mag.shape, self.ocl_wg_size,
+                               self.nmodes,
+                               b_aux.data, mag.data, fdev.data, ferr.data,
+                               mask.data, mask_sum.data)
         self.queue.finish()
 
-    def npy_error_reduce(self, ferr, err_fmag):
-        err_fmag[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
+    def error_reduce(self, addr, err_sum):
+        # batch buffers
+        ferr = self.npy.ferr
 
-    def ocl_error_reduce(self, ferr, err_fmag):
-        shape = (self.fshape[0], 64),
-        self.prg.reduce_one_step(self.queue, (self.fshape[0], 64), (1, 64), self.framesize,
-                                 ferr, err_fmag)
+        self.prg.reduce_one_step(self.queue, (err_sum.shape[0], 64), (1, 64),
+                                 self.framesize,
+                                 ferr.data, err_sum.data)
         self.queue.finish()
 
-    def _npy_calc_fm(self, fm, fmask, fmag, fdev, err_fmag):
+    def fmag_all_update(self, b_aux, addr, mag, mask, err_sum, pbound=0.0):
+        # maybe cache this?
+        pbound = np.float32(pbound)
 
-        renorm = np.ones_like(err_fmag)
-        ind = err_fmag > self.pbound
-        renorm[ind] = np.sqrt(self.pbound / err_fmag[ind])
-        renorm = renorm.reshape((renorm.shape[0], 1, 1))
-        af = fdev + fmag
-        fm[:] = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-7)
-        """
-        # C Amplitude correction           
-        if err_fmag > self.pbound:
-            # Power bound is applied
-            renorm = np.sqrt(pbound / err_fmag)
-            fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
-        else:
-            fm = 1.0
-        """
+        sh = mag.shape
+        shape = (sh[0] * self.nmodes, sh[1], sh[2])  # could have also used `addr` for this
+        fdev = self.npy.fdev
 
-    def _npy_fmag_update(self, f, fm):
-        sh = f.shape
-        tf = f.reshape(sh[0] // self.nmodes, self.nmodes, sh[1], sh[2])
-        sh = fm.shape
-        tf *= fm.reshape(sh[0], 1, sh[1], sh[2])
-
-    def npy_fmag_all_update(self, f, fmask, fmag, fdev, err_fmag):
-        fm = np.ones_like(fmask)
-        self._npy_calc_fm(fm, fmask, fmag, fdev, err_fmag)
-        self._npy_fmag_update(f, fm)
-
-    def ocl_fmag_all_update(self, f, fmask, fmag, fdev, err_fmag):
-        self.prg.fmag_all_update(self.queue, self.shape, self.ocl_wg_size,
-                                 self.nmodes, self.pbound, f, fmask, fmag, fdev, err_fmag)
+        self.prg.fmag_all_update(self.queue, shape, self.ocl_wg_size,
+                                 self.nmodes, pbound,
+                                 b_aux.data, mask.data, mag.data, fdev.data,
+                                 err_sum.data)
         self.queue.finish()
 
-    def verify_ocl(self, precision=2 ** (-23)):
 
-        for name, val in self.npy.__dict__.items():
-            val2 = self.ocl.__dict__[name].get()
-            val = val
-            if np.allclose(val, val2, atol=precision):
-                continue
-            else:
-                dev = np.std(val - val2)
-                print("Key %s : %.2e std, %.2e mean" % (name, dev.real, np.mean(val).real))
-
-    @classmethod
-    def test(cls, shape=(739, 256, 256), nmodes=1, pbound=0.05):
-
-        L, M, N = shape
-        fshape = shape
-        shape = (nmodes * L, M, N)
-
-        f = np.random.rand(*shape).astype(np.complex64) * 200
-        I = np.random.rand(*fshape).astype(np.float32) * 200 ** 2 * nmodes
-        mask = (I > 10).astype(np.float32)
-
-        devices = cl.get_platforms()[0].get_devices(cl.device_type.GPU)
-        queue = cl.CommandQueue(cl.Context([devices[0]]))
-
-        inst = cls(queue_thread=queue, nmodes=nmodes, pbound=pbound)
-        inst.configure(I, mask, f.copy())
-        inst.verbose = True
-        inst.configure_ocl()
-
-        inst.execute_ocl(compare=True, sync=True)
-        #inst.execute_ocl()
-        g = inst.ocl.f.get()
-        inst.execute_npy()
-        f = inst.npy.f
-        """
-        g = f.copy()
-        inst.configure(I, mask, g)
-        err = inst.execute_npy(g)
-        inst.verify_ocl()
-        """
-        print('Pipeline Error : %.2e' % np.std(f - g))
-        for key, val in inst.benchmark.items():
-            print('Kernel %s : %.2f ms' % (key, val * 1000))
-
-
-class Auxiliary_wave_kernel(BaseKernel):
+class AuxiliaryWaveKernel(AWK_NPY, OclBase):
 
     def __init__(self, queue_thread=None):
+        AWK_NPY.__init__(self)
+        OclBase.__init__(self, queue_thread)
 
-        super(Auxiliary_wave_kernel, self).__init__(queue_thread)
+        self._ob_shape = None
+        self._ob_id = None
+        # self.ocl_wg_size = (1, 16, 16)
 
         self.prg = cl.Program(self.queue.context, """
         #include <pyopencl-complex.h>
@@ -365,7 +219,6 @@ class Auxiliary_wave_kernel(BaseKernel):
         __kernel void build_aux(float alpha,
                             int ob_sh_row,
                             int ob_sh_col,
-                            int batch_offset,
                             __global cfloat_t *aux,  
                             __global cfloat_t *ob,
                             __global cfloat_t *pr,
@@ -375,10 +228,10 @@ class Auxiliary_wave_kernel(BaseKernel):
             size_t x = get_global_id(2);
             size_t dx = get_global_size(2);
             size_t y = get_global_id(1);
-            size_t z = get_global_id(0) + batch_offset;
+            size_t z = get_global_id(0);
             size_t zb = get_global_id(0);
             
-            size_t obj_idx = obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x;
+            //size_t obj_idx = obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x;
 
             cfloat_t ex0 = cfloat_rmul(alpha,ex[ex_dlayer(z)*dx*dx + y*dx + x]);
             cfloat_t ex1 = cfloat_mul(ob[obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x],pr[pr_dlayer(z)*dx*dx + y*dx+x]);
@@ -388,10 +241,8 @@ class Auxiliary_wave_kernel(BaseKernel):
             aux[zb*dx*dx + y*dx + x] = cfloat_sub(cfloat_rmul(1.+alpha,ex1),ex0);            
         }
         
-        __kernel void build_exit(float alpha,
-                            int ob_sh_row,
+        __kernel void build_exit(int ob_sh_row,
                             int ob_sh_col,
-                            int batch_offset,
                             __global cfloat_t *f,
                             __global cfloat_t *ob,
                             __global cfloat_t *pr,
@@ -401,7 +252,7 @@ class Auxiliary_wave_kernel(BaseKernel):
             size_t x = get_global_id(2);
             size_t dx = get_global_size(2);
             size_t y = get_global_id(1);
-            size_t z = get_global_id(0) + batch_offset;
+            size_t z = get_global_id(0);
             size_t zb = get_global_id(0); 
             
             size_t obj_idx = obj_dlayer(z)*ob_sh_row*ob_sh_col + (y+obj_roi_row(z))*ob_sh_col + obj_roi_column(z)+x;
@@ -414,208 +265,36 @@ class Auxiliary_wave_kernel(BaseKernel):
 
         """).build()
 
-        self.kernels = [
-            'build_aux',
-            'build_exit',
-        ]
-
-    def configure(self, ob, addr, alpha=1.0):
-
-        self.batch_offset = 0
-        self.alpha = np.float32(alpha)
-        self.ob_shape = (np.int32(ob.shape[-2]), np.int32(ob.shape[-1]))
-
-        self.nviews, self.nmodes, self.ncoords, self.naxes = addr.shape
-        self.ocl_wg_size = (1, 1, 32)
-
-    @property
-    def batch_offset(self):
-        return self._offset
-
-    @batch_offset.setter
-    def batch_offset(self, x):
-        self._offset = np.int32(x)
-
-    def load(self, aux, ob, pr, ex, addr):
-
-        assert pr.dtype == np.complex64
-        assert ex.dtype == np.complex64
-        assert aux.dtype == np.complex64
-        assert ob.dtype == np.complex64
-        assert addr.dtype == np.int32
-
-        self.npy.aux = aux
-        self.npy.pr = pr
-        self.npy.ob = ob
-        self.npy.ex = ex
-        self.npy.addr = addr
-
-        for key, array in self.npy.__dict__.items():
-            self.ocl.__dict__[key] = cla.to_device(self.queue, array)
-
-    def sync_ocl(self):
-        for key, array in self.npy.__dict__.items():
-            self.ocl.__dict__[key].set(array)
-
-    def execute_ocl(self, kernel_name=None, compare=False, sync=False):
-
-        if kernel_name is None:
-            for kernel in self.kernels:
-                self.execute_ocl(kernel, compare, sync)
-        else:
-            self.log("KERNEL " + kernel_name)
-            m_ocl = getattr(self, 'ocl_' + kernel_name)
-            m_npy = getattr(self, 'npy_' + kernel_name)
-            ocl_kernel_args = getfullargspec(m_ocl).args[1:]
-            npy_kernel_args = getfullargspec(m_npy).args[1:]
-            assert ocl_kernel_args == npy_kernel_args
-            # OCL
-            if sync:
-                self.sync_ocl()
-            args = [getattr(self.ocl, a) for a in ocl_kernel_args]
-
-            self.benchmark[kernel_name] = -time.time()
-            m_ocl(*args)
-            self.benchmark[kernel_name] += time.time()
-
-            if compare:
-                args = [getattr(self.npy, a) for a in npy_kernel_args]
-                m_npy(*args)
-                self.verify_ocl()
-
-        return
-
-    def execute_npy(self, kernel_name=None):
-
-        if kernel_name is None:
-            for kernel in self.kernels:
-                self.execute_npy(kernel)
-        else:
-            self.log("KERNEL " + kernel_name)
-            m_npy = getattr(self, '_npy_' + kernel_name)
-            npy_kernel_args = getfullargspec(m_npy).args[1:]
-            args = [getattr(self.npy, a) for a in npy_kernel_args]
-            m_npy(*args)
-
-        return
-
-    def ocl_build_aux(self, aux, ob, pr, ex, addr):
-        obsh = self.ob_shape
-        ev = self.prg.build_aux(self.queue, aux.shape, self.ocl_wg_size,
-                                self.alpha, obsh[0], obsh[1], self._offset,
-                                aux.data, ob.data, pr.data, ex.data, addr.data)
+    def build_aux(self, b_aux, addr, ob, pr, ex, alpha=1.0):
+        obr, obc = self._cache_object_shape(ob)
+        ev = self.prg.build_aux(self.queue, ex.shape, self.ocl_wg_size,
+                                np.float32(alpha), obr, obc,
+                                b_aux.data, ob.data, pr.data, ex.data, addr.data)
         return ev
 
-    def npy_build_aux(self, aux, ob, pr, ex, addr):
-
-        sh = addr.shape
-        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
-        off = self.batch_offset
-        flat_addr = flat_addr[off:off + aux.shape[0]]
-        rows, cols = ex.shape[-2:]
-
-        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            tmp = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
-                  pr[prc[0], :, :] * \
-                  (1. + self.alpha) - \
-                  ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * \
-                  self.alpha
-            aux[ind, :, :] = tmp
-
-    def ocl_build_exit(self, aux, ob, pr, ex, addr):
-        obsh = self.ob_shape
-        ev = self.prg.build_exit(self.queue, aux.shape, self.ocl_wg_size,
-                                 self.alpha, obsh[0], obsh[1], self._offset,
-                                 aux.data, ob.data, pr.data, ex.data, addr.data)
-
+    def build_exit(self, b_aux, addr, ob, pr, ex):
+        obr, obc = self._cache_object_shape(ob)
+        ev = self.prg.build_exit(self.queue, ex.shape, self.ocl_wg_size,
+                                 obr, obc,
+                                 b_aux.data, ob.data, pr.data, ex.data, addr.data)
         return ev
 
-    def npy_build_exit(self, aux, ob, pr, ex, addr):
+    def _cache_object_shape(self, ob):
+        oid = id(ob)
 
-        sh = addr.shape
-        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
-        off = self.batch_offset
-        flat_addr = flat_addr[off:off + aux.shape[0]]
-        rows, cols = ex.shape[-2:]
-        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            dex = aux[ind, :, :] - \
-                  ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
-                  pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]
+        if not oid == self._ob_id:
+            self._ob_id = oid
+            self._ob_shape = (np.int32(ob.shape[-2]), np.int32(ob.shape[-1]))
 
-            ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] += dex
-            aux[ind, :, :] = dex
-
-    def verify_ocl(self, precision=2 ** (-23)):
-
-        for name, val in self.npy.__dict__.items():
-            val2 = self.ocl.__dict__[name].get()
-            val = val
-            if np.allclose(val, val2, atol=precision):
-                continue
-            else:
-                dev = np.std(val - val2)
-                mn = np.mean(np.abs(val))
-                self.log("Key %s : %.2e std, %.2e mean" % (name, dev, mn))
-
-    @classmethod
-    def test(cls, ob_shape=(10, 300, 300), pr_shape=(1, 256, 256)):
-
-        nviews, rows, cols = ob_shape
-        ex_shape = (nviews,) + pr_shape[-2:]
-        addr = np.zeros((nviews, 1, 5, 3), dtype=np.int32)
-        for i in range(nviews):
-            obc = (0, 2 * i, i)
-            prc = (0, 0, 0)
-            exc = (i, 0, 0)
-            mac = (i, 0, 0)  # unimportant
-            dic = (i, 0, 0)  # same here
-            addr[i, 0, :, :] = np.array([prc, obc, exc, mac, dic], dtype=np.int32)
-
-        ob = np.random.rand(*ob_shape).astype(np.complex64)
-        pr = np.random.rand(*pr_shape).astype(np.complex64)
-        ex = np.random.rand(*ex_shape).astype(np.complex64)
-
-        devices = cl.get_platforms()[0].get_devices(cl.device_type.GPU)
-        queue = cl.CommandQueue(cl.Context([devices[0]]), properties=cl.command_queue_properties.PROFILING_ENABLE)
-
-        inst = cls(queue_thread=queue)
-        inst.verbose = True
-        bsize = nviews // 2
-        batch = np.zeros((bsize,) + pr_shape[-2:], dtype=np.complex64)
-        args = (batch, ob, pr, ex, addr)
-        ocl_args = tuple([cla.to_device(queue, arg) for arg in args])
-        inst.configure(ob, addr)
-        # ns = inst._ocl_build_exit(*ocl_args, batch_offset = 0)
-        # inst._npy_build_exit(*args, batch_offset = 0)
-
-        # print ns
-        inst.load(*args)
-        inst.bath_offset = 3
-        inst.execute_ocl(compare=True, sync=False)
-
-        """
-        inst.execute_ocl()
-        g = inst.ocl.f.get()
-        inst.execute_npy()
-        f = inst.npy.f
-        
-        g = f.copy()
-        inst.configure(I, mask, g)
-        err = inst.execute_npy(g)
-        inst.verify_ocl()
-        
-        print('Error : %.2e' % np.std(f-g))
-        for key, val in inst.benchmark.items():
-            print('Kernel %s : %.2f ms' % (key,val*1000))
-        """
+        return self._ob_shape
 
 
-class PO_update_kernel(BaseKernel):
+class PoUpdateKernel(POK_NPY, OclBase):
 
     def __init__(self, queue_thread=None):
-
-        super(PO_update_kernel, self).__init__(queue_thread)
-
+        POK_NPY.__init__(self)
+        OclBase.__init__(self, queue_thread)
+        self.ocl_wg_size = (16, 16)
         self.prg = cl.Program(self.queue.context, """
         #include <pyopencl-complex.h>
         
@@ -716,235 +395,23 @@ class PO_update_kernel(BaseKernel):
 
         """).build()
 
-        self.kernels = [
-            'pr_update',
-            'ob_update',
-        ]
-
-    def configure(self, ob, pr, addr):
-
-        self.batch_offset = 0
-        self.ob_shape = tuple([np.int32(ax) for ax in ob.shape])
-        self.pr_shape = tuple([np.int32(ax) for ax in pr.shape])
-        # self.ob_shape = (np.int32(ob.shape[-2]),np.int32(ob.shape[-1]))
-        # self.pr_shape = (np.int32(pr.shape[-2]),np.int32(pr.shape[-1]))
-
-        self.nviews, self.nmodes, self.ncoords, self.naxes = addr.shape
-        self.num_pods = np.int32(self.nviews * self.nmodes)
-        self.ocl_wg_size = (16, 16)
-
-    @property
-    def batch_offset(self):
-        return self._offset
-
-    @batch_offset.setter
-    def batch_offset(self, x):
-        self._offset = np.int32(x)
-
-    def load(self, obn, prn, ob, pr, ex, addr):
-
-        assert pr.dtype == np.complex64
-        assert ex.dtype == np.complex64
-        assert ob.dtype == np.complex64
-        assert addr.dtype == np.int32
-
-        self.npy.pr = pr
-        self.npy.prn = prn
-        self.npy.ob = ob
-        self.npy.obn = obn
-        self.npy.ex = ex
-        self.npy.addr = addr
-
-        for key, array in self.npy.__dict__.items():
-            self.ocl.__dict__[key] = cla.to_device(self.queue, array)
-
-    def sync_ocl(self):
-        for key, array in self.npy.__dict__.items():
-            self.ocl.__dict__[key].set(array)
-
-    def execute_ocl(self, kernel_name=None, compare=False, sync=False):
-
-        if kernel_name is None:
-            for kernel in self.kernels:
-                self.execute_ocl(kernel, compare, sync)
-        else:
-            self.log("KERNEL " + kernel_name)
-            m_ocl = getattr(self, 'ocl_' + kernel_name)
-            m_npy = getattr(self, 'npy_' + kernel_name)
-            ocl_kernel_args = getfullargspec(m_ocl).args[1:]
-            npy_kernel_args = getfullargspec(m_npy).args[1:]
-            assert ocl_kernel_args == npy_kernel_args
-            # OCL
-            if sync:
-                self.sync_ocl()
-            args = [getattr(self.ocl, a) for a in ocl_kernel_args]
-
-            self.benchmark[kernel_name] = -time.time()
-            m_ocl(*args)
-            self.queue.finish()
-            self.benchmark[kernel_name] += time.time()
-
-            if compare:
-                args = [getattr(self.npy, a) for a in npy_kernel_args]
-                m_npy(*args)
-                self.verify_ocl()
-
-        return
-
-    def execute_npy(self, kernel_name=None):
-
-        if kernel_name is None:
-            for kernel in self.kernels:
-                self.execute_npy(kernel)
-        else:
-            self.log("KERNEL " + kernel_name)
-            m_npy = getattr(self, '_npy_' + kernel_name)
-            npy_kernel_args = getfullargspec(m_npy).args[1:]
-            args = [getattr(self.npy, a) for a in npy_kernel_args]
-            m_npy(*args)
-
-        return
-
-    def ocl_ob_update(self, ob, obn, pr, ex, addr):
-        obsh = self.ob_shape
-        prsh = self.pr_shape
+    def ob_update(self, addr, ob, obn, pr, ex):
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        num_pods = np.int32(addr.shape[0] * addr.shape[1])
         ev = self.prg.ob_update(self.queue, ob.shape[-2:], self.ocl_wg_size,
                                 prsh[-1],
-                                obsh[0], self.num_pods,
+                                obsh[0], num_pods,
                                 ob.data, obn.data, pr.data, ex.data, addr.data)
         return ev
 
-    def ocl_pr_update(self, pr, prn, ob, ex, addr):
-        obsh = self.ob_shape
-        prsh = self.pr_shape
+    def pr_update(self, addr, pr, prn, ob, ex):
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        num_pods = np.int32(addr.shape[0] * addr.shape[1])
+
         ev = self.prg.pr_update(self.queue, pr.shape[-2:], self.ocl_wg_size,
                                 prsh[-1], obsh[-2], obsh[-1],
-                                prsh[0], self.num_pods,
+                                prsh[0], num_pods,
                                 pr.data, prn.data, ob.data, ex.data, addr.data)
         return ev
-
-    def npy_ob_update(self, ob, obn, pr, ex, addr):
-        obsh = self.ob_shape
-        prsh = self.pr_shape
-        sh = addr.shape
-        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
-        rows, cols = ex.shape[-2:]
-        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
-                pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
-                ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
-            obn[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
-                pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
-                pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]
-        return
-
-    def npy_pr_update(self, pr, prn, ob, ex, addr):
-        obsh = self.ob_shape
-        prsh = self.pr_shape
-        sh = addr.shape
-        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
-        rows, cols = ex.shape[-2:]
-        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
-                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
-                ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
-            prn[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
-                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
-                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
-        return
-
-    def verify_ocl(self, precision=2 ** (-23)):
-
-        for name, val in self.npy.__dict__.items():
-            val2 = self.ocl.__dict__[name].get()
-            val = val
-            if np.allclose(val, val2, atol=precision):
-                continue
-            else:
-                dev = np.std(val - val2)
-                mn = np.mean(np.abs(val))
-                self.log("Key %s : %.2e std, %.2e mean" % (name, dev, mn))
-
-    @classmethod
-    def test(cls, ob_shape=(1, 320, 352), pr_shape=(4, 256, 256)):
-
-        nviews, rows, cols = ob_shape
-        nviews = 10
-        ex_shape = (nviews,) + pr_shape[-2:]
-        addr = np.zeros((1, nviews, 5, 3), dtype=np.int32)
-        for i in range(nviews):
-            obc = (0, 2 * i, i)
-            prc = (0, 0, 0)
-            exc = (i, 0, 0)
-            mac = (i, 0, 0)  # unimportant
-            dic = (i, 0, 0)  # same here
-            addr[0, i, :, :] = np.array([prc, obc, exc, mac, dic], dtype=np.int32)
-
-        ob = np.random.rand(*ob_shape).astype(np.complex64)
-        obn = np.random.rand(*ob_shape).astype(np.complex64)
-        pr = np.random.rand(*pr_shape).astype(np.complex64)
-        prn = np.random.rand(*pr_shape).astype(np.complex64)
-        ex = np.random.rand(*ex_shape).astype(np.complex64)
-
-        devices = cl.get_platforms()[0].get_devices(cl.device_type.GPU)
-        queue = cl.CommandQueue(cl.Context([devices[0]]), properties=cl.command_queue_properties.PROFILING_ENABLE)
-
-        inst = cls(queue_thread=queue)
-        inst.verbose = True
-        args = (obn, prn, ob, pr, ex, addr)
-        inst.configure(ob, pr, addr)
-        inst.load(*args)
-        inst.bath_offset = 3
-        inst.execute_ocl(compare=True, sync=False)
-
-        """
-        inst.execute_ocl()
-        g = inst.ocl.f.get()
-        inst.execute_npy()
-        f = inst.npy.f
-        
-        g = f.copy()
-        inst.configure(I, mask, g)
-        err = inst.execute_npy(g)
-        inst.verify_ocl()
-        
-        print('Error : %.2e' % np.std(f-g))
-        for key, val in inst.benchmark.items():
-            print('Kernel %s : %.2f ms' % (key,val*1000))
-        """
-
-
-if __name__ == '__main__':
-    Fourier_update_kernel.test()
-    Auxiliary_wave_kernel.test()
-    PO_update_kernel.test()
-    """
-    nmodes = 8
-    pbound = 0.
-    fshape = (50,128,128)
-    shape = (nmodes*50,128,128)
-    
-    f = np.random.rand(*shape).astype(np.complex64) * 200 
-    I = np.random.rand(*fshape).astype(np.float32) * 200**2 * nmodes
-    mask = (I > 10).astype(np.float32) 
-    
-    
-    devices = cl.get_platforms()[0].get_devices(cl.device_type.GPU)
-    queue = cl.CommandQueue(cl.Context([devices[0]]))
-    
-    inst = Fourier_update_kernel(queue_thread=queue, nmodes = nmodes, pbound = 0.0)
-    inst.configure(I, mask, f.copy())
-    inst.configure_ocl()
-    
-    inst2 = Fourier_update_kernel(queue_thread=queue, nmodes = nmodes, pbound = 0.0)
-    inst2.configure(I, mask, f.copy())
-    inst2.configure_ocl()
-    #err = inst.execute_npy(f)
-    #gf = cla.to_device(queue,f)
-    #err_ocl = inst.execute_ocl(gf)
-    
-    inst.execute_ocl_auto(True,False)
-    g = inst.ocl.f.get()
-    f = inst.npy.f
-    print np.std(f-g)
-    """

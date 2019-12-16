@@ -16,7 +16,7 @@ from .utils import basic_fourier_update
 from . import register
 from .base import PositionCorrectionEngine
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 __all__ = ['DM']
 
@@ -114,7 +114,7 @@ class DM(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -171,7 +171,7 @@ class DM(PositionCorrectionEngine):
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
 
-    def engine_prepare(self, new_data=None):
+    def engine_prepare(self):
 
         """
         Last minute initialization.
@@ -179,14 +179,22 @@ class DM(PositionCorrectionEngine):
         Everything that needs to be recalculated when new data arrives.
         """
 
-        self.new_data = new_data if new_data is not None else self.di.storages.values()
-        self.pbound = {}
-        mean_power = 0.
-        for s in self.new_data:
-            self.pbound[s.ID] = (
-                .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
-            mean_power += s.mean_power
-        self.mean_power = mean_power / len(self.di.storages)
+        if self.ptycho.new_data:
+
+            # recalculate everything
+            self.pbound = {}
+            mean_power = 0.
+            self.pbound_scan = {}
+            for s in self.di.storages.values():
+                pb = .25 * self.p.fourier_relax_factor**2 * s.pbound_stub
+                if not self.pbound_scan.get(s.label):
+                    self.pbound_scan[s.label] = pb
+                else:
+                    self.pbound_scan[s.label] = \
+                        max(pb, self.pbound_scan[s.label])
+                self.pbound[s.ID] = pb
+                mean_power += s.mean_power
+            self.mean_power = mean_power / len(self.di.storages)
 
         # Fill object with coverage of views
         for name, s in self.ob_viewcover.storages.items():
