@@ -1,4 +1,3 @@
-import pyopencl as cl
 from collections import OrderedDict
 
 class Adict(object):
