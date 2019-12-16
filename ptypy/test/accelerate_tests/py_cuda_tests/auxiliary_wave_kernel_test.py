@@ -31,11 +31,8 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         self.ctx.detach()
 
     def test_init(self):
-        attrs = ["ob_shape",
-                 "nviews",
-                 "nmodes",
-                 "ncoords",
-                 "naxes"]
+        attrs = ["_ob_shape",
+                 "_ob_id"]
 
         AWK = AuxiliaryWaveKernel(self.stream)
         for attr in attrs:
@@ -44,78 +41,6 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         np.testing.assert_equal(AWK.kernels,
                                 ['build_aux', 'build_exit'],
                                 err_msg='AuxiliaryWaveKernel does not have the correct functions registered.')
-
-    def test_configure(self):
-        '''
-        setup
-        '''
-        B = 5  # frame size y
-        C = 5  # frame size x
-
-        D = 2  # number of probe modes
-        E = B  # probe size y
-        F = C  # probe size x
-
-        npts_greater_than = 2  # how many points bigger than the probe the object is.
-        G = 2  # number of object modes
-        H = B + npts_greater_than  #  object size y
-        I = C + npts_greater_than  #  object size x
-
-        scan_pts = 2  # one dimensional scan point number
-
-        total_number_scan_positions = scan_pts ** 2
-        total_number_modes = G * D
-        A = total_number_scan_positions * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
-
-        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
-        for idx in range(D):
-            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
-
-        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
-        for idx in range(G):
-            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
-
-        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
-        X = X.reshape((total_number_scan_positions))
-        Y = Y.reshape((total_number_scan_positions))
-
-        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3))
-
-        exit_idx = 0
-        position_idx = 0
-        for xpos, ypos in zip(X, Y):#
-            mode_idx = 0
-            for pr_mode in range(D):
-                for ob_mode in range(G):
-                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
-                                                             [ob_mode, ypos, xpos],
-                                                             [exit_idx, 0, 0],
-                                                             [0, 0, 0],
-                                                             [0, 0, 0]])
-                    mode_idx += 1
-                    exit_idx += 1
-            position_idx += 1
-
-        '''
-        test
-        '''
-        AWK = AuxiliaryWaveKernel(self.stream)
-        alpha_set = 0.9
-        AWK.configure(object_array, addr, alpha=alpha_set)
-
-
-        expected_ob_shape = tuple([INT_TYPE(H), INT_TYPE(I)])
-        expected_nviews = INT_TYPE(total_number_scan_positions)
-        expected_nmodes = INT_TYPE(total_number_modes)
-        expected_ncoords = INT_TYPE(5)
-        expected_naxes = INT_TYPE(3)
-        expected_alpha = FLOAT_TYPE(alpha_set)
-
-        np.testing.assert_equal(AWK.ob_shape, expected_ob_shape)
-        np.testing.assert_equal(AWK.nviews, expected_nviews)
-        np.testing.assert_equal(AWK.nmodes, expected_nmodes)
-        np.testing.assert_equal(AWK.ncoords, expected_ncoords)
-        np.testing.assert_equal(AWK.naxes, expected_naxes)
 
     def test_build_aux_same_as_exit_REGRESSION(self):
         '''
@@ -179,8 +104,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         auxiliary_wave = np.zeros_like(exit_wave)
 
         AWK = AuxiliaryWaveKernel(self.stream)
-        alpha_set = 1.0
-        AWK.configure(object_array, addr, alpha=alpha_set)
+        alpha_set = FLOAT_TYPE(1.0)
 
         object_array_dev = gpuarray.to_gpu(object_array)
         probe_dev = gpuarray.to_gpu(probe)
@@ -188,7 +112,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
 
-        AWK.build_aux(auxiliary_wave_dev, object_array_dev, probe_dev, exit_wave_dev, addr_dev)
+        AWK.build_aux(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, exit_wave_dev, alpha=alpha_set)
 
 
         expected_auxiliary_wave = np.array([[[-1. + 3.j,  -1. + 3.j,  -1. + 3.j],
@@ -312,9 +236,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
         AWK = AuxiliaryWaveKernel(self.stream)
-        alpha_set = 1.0
-        AWK.configure(object_array, addr, alpha=alpha_set)
-        nAWK.configure(object_array,  addr, alpha=alpha_set)
+        alpha_set = FLOAT_TYPE(1.0)
 
         object_array_dev = gpuarray.to_gpu(object_array)
         probe_dev = gpuarray.to_gpu(probe)
@@ -322,8 +244,8 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
 
-        AWK.build_aux(auxiliary_wave_dev, object_array_dev, probe_dev, exit_wave_dev, addr_dev)
-        nAWK.build_aux(auxiliary_wave, object_array, probe, exit_wave, addr)
+        AWK.build_aux(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, exit_wave_dev, alpha=alpha_set)
+        nAWK.build_aux(auxiliary_wave, addr, object_array, probe, exit_wave, alpha=alpha_set)
 
 
         np.testing.assert_array_equal(auxiliary_wave, auxiliary_wave_dev.get(),
@@ -404,9 +326,8 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         AWK = AuxiliaryWaveKernel(self.stream)
 
         alpha_set = 1.0
-        AWK.configure(object_array, addr, alpha=alpha_set)
 
-        AWK.build_exit(auxiliary_wave_dev, object_array_dev, probe_dev, exit_wave_dev, addr_dev)
+        AWK.build_exit(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, exit_wave_dev)
         #
         # print("auxiliary_wave after")
         # print(repr(auxiliary_wave_dev.get()))
@@ -596,13 +517,8 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
 
         AWK = AuxiliaryWaveKernel(self.stream)
 
-        alpha_set = 1.0
-
-        AWK.configure(object_array, addr, alpha=alpha_set)
-        nAWK.configure(object_array, addr, alpha=alpha_set)
-
-        AWK.build_exit(auxiliary_wave_dev, object_array_dev, probe_dev, exit_wave_dev, addr_dev)
-        nAWK.build_exit(auxiliary_wave, object_array, probe, exit_wave, addr)
+        AWK.build_exit(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, exit_wave_dev)
+        nAWK.build_exit(auxiliary_wave, addr, object_array, probe, exit_wave)
 
         np.testing.assert_array_equal(auxiliary_wave, auxiliary_wave_dev.get(),
                                       err_msg="The gpu auxiliary_wave does not look the same as the numpy version")

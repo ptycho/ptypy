@@ -29,93 +29,13 @@ class PoUpdateKernelTest(unittest.TestCase):
         self.ctx.detach()
 
     def test_init(self):
-        attrs = ["ob_shape",
-                 "pr_shape",
-                 "nviews",
-                 "nmodes",
-                 "ncoords",
-                 "num_pods"]
+
 
         POUK = PoUpdateKernel()
-        for attr in attrs:
-            self.assertTrue(hasattr(POUK, attr), msg="PoUpdateKernel does not have attribute: %s" % attr)
 
         np.testing.assert_equal(POUK.kernels,
                                 ['pr_update', 'ob_update'],
                                 err_msg='PoUpdateKernel does not have the correct functions registered.')
-
-
-    def test_configure(self):
-        '''
-        setup
-        '''
-        B = 5  # frame size y
-        C = 5  # frame size x
-
-        D = 2  # number of probe modes
-        E = B  # probe size y
-        F = C  # probe size x
-
-        npts_greater_than = 2  # how many points bigger than the probe the object is.
-        G = 2  # number of object modes
-        H = B + npts_greater_than  #  object size y
-        I = C + npts_greater_than  #  object size x
-
-        scan_pts = 2  # one dimensional scan point number
-
-        total_number_scan_positions = scan_pts ** 2
-        total_number_modes = G * D
-        A = total_number_scan_positions * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
-
-        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
-        for idx in range(D):
-            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
-
-        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
-        for idx in range(G):
-            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
-
-        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
-        X = X.reshape((total_number_scan_positions))
-        Y = Y.reshape((total_number_scan_positions))
-
-        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3))
-
-        exit_idx = 0
-        position_idx = 0
-        for xpos, ypos in zip(X, Y):#
-            mode_idx = 0
-            for pr_mode in range(D):
-                for ob_mode in range(G):
-                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
-                                                             [ob_mode, ypos, xpos],
-                                                             [exit_idx, 0, 0],
-                                                             [0, 0, 0],
-                                                             [0, 0, 0]])
-                    mode_idx += 1
-                    exit_idx += 1
-            position_idx += 1
-
-        '''
-        test
-        '''
-        POUK = PoUpdateKernel()
-
-        POUK.configure(object_array, probe, addr)
-
-        expected_ob_shape = tuple([INT_TYPE(G), INT_TYPE(H), INT_TYPE(I)])
-        expected_pr_shape = tuple([INT_TYPE(D), INT_TYPE(E), INT_TYPE(F)])
-        expected_nviews = INT_TYPE(total_number_scan_positions)
-        expected_nmodes = INT_TYPE(total_number_modes)
-        expected_ncoords = INT_TYPE(5)
-        expected_num_pods = INT_TYPE(A)
-
-        np.testing.assert_equal(POUK.ob_shape, expected_ob_shape)
-        np.testing.assert_equal(POUK.pr_shape, expected_pr_shape)
-        np.testing.assert_equal(POUK.nviews, expected_nviews)
-        np.testing.assert_equal(POUK.nmodes, expected_nmodes)
-        np.testing.assert_equal(POUK.ncoords, expected_ncoords)
-        np.testing.assert_equal(POUK.num_pods, expected_num_pods)
 
     def test_ob_update_REGRESSION(self):
         '''
@@ -184,8 +104,6 @@ class PoUpdateKernelTest(unittest.TestCase):
         POUK = PoUpdateKernel()
         from ptypy.accelerate.array_based.po_update_kernel import PoUpdateKernel as npPoUpdateKernel
         nPOUK = npPoUpdateKernel()
-        POUK.configure(object_array, probe, addr)
-        nPOUK.configure(object_array, probe, addr)
         # print("object array denom before:")
         # print(object_array_denominator)
         object_array_dev = gpuarray.to_gpu(object_array)
@@ -194,10 +112,10 @@ class PoUpdateKernelTest(unittest.TestCase):
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
         addr_dev = gpuarray.to_gpu(addr)
         print(object_array_denominator)
-        POUK.ob_update(object_array_dev, object_array_denominator_dev, probe_dev, exit_wave_dev, addr_dev)
+        POUK.ob_update(addr_dev, object_array_dev, object_array_denominator_dev, probe_dev, exit_wave_dev)
         print("\n\n cuda  version")
         print(object_array_denominator_dev.get())
-        nPOUK.ob_update(object_array, object_array_denominator, probe, exit_wave, addr)
+        nPOUK.ob_update(addr, object_array, object_array_denominator, probe, exit_wave)
         print("\n\n numpy version")
         print(object_array_denominator)
 
@@ -319,20 +237,17 @@ class PoUpdateKernelTest(unittest.TestCase):
         from ptypy.accelerate.array_based.po_update_kernel import PoUpdateKernel as npPoUpdateKernel
         nPOUK = npPoUpdateKernel()
 
-        POUK.configure(object_array, probe, addr)
-        nPOUK.configure(object_array, probe, addr)
-
         object_array_dev = gpuarray.to_gpu(object_array)
         object_array_denominator_dev = gpuarray.to_gpu(object_array_denominator)
         probe_dev = gpuarray.to_gpu(probe)
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
         addr_dev = gpuarray.to_gpu(addr)
         # print(object_array_denominator)
-        POUK.ob_update(object_array_dev, object_array_denominator_dev, probe_dev, exit_wave_dev, addr_dev)
+        POUK.ob_update(addr_dev, object_array_dev, object_array_denominator_dev, probe_dev, exit_wave_dev)
         # print("\n\n cuda  version")
         # print(repr(object_array_dev.get()))
         # print(repr(object_array_denominator_dev.get()))
-        nPOUK.ob_update(object_array, object_array_denominator, probe, exit_wave, addr)
+        nPOUK.ob_update(addr, object_array, object_array_denominator, probe, exit_wave)
         # print("\n\n numpy version")
         # print(repr(object_array_denominator))
         # print(repr(object_array))
@@ -415,8 +330,6 @@ class PoUpdateKernelTest(unittest.TestCase):
 
         POUK = PoUpdateKernel()
 
-        POUK.configure(object_array, probe, addr)
-
         # print("probe array before:")
         # print(repr(probe))
         # print("probe denominator array before:")
@@ -428,7 +341,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
         addr_dev = gpuarray.to_gpu(addr)
 
-        POUK.pr_update(probe_dev, probe_denominator_dev, object_array_dev, exit_wave_dev, addr_dev)
+        POUK.pr_update(addr_dev, probe_dev, probe_denominator_dev, object_array_dev, exit_wave_dev)
 
         # print("probe array after:")
         # print(repr(probe))
@@ -538,8 +451,6 @@ class PoUpdateKernelTest(unittest.TestCase):
         from ptypy.accelerate.array_based.po_update_kernel import PoUpdateKernel as npPoUpdateKernel
         nPOUK = npPoUpdateKernel()
 
-        POUK.configure(object_array, probe, addr)
-        nPOUK.configure(object_array, probe, addr)
         # print("probe array before:")
         # print(repr(probe))
         # print("probe denominator array before:")
@@ -551,8 +462,8 @@ class PoUpdateKernelTest(unittest.TestCase):
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
         addr_dev = gpuarray.to_gpu(addr)
 
-        POUK.pr_update(probe_dev, probe_denominator_dev, object_array_dev, exit_wave_dev, addr_dev)
-        nPOUK.pr_update(probe, probe_denominator, object_array, exit_wave, addr)
+        POUK.pr_update(addr_dev, probe_dev, probe_denominator_dev, object_array_dev, exit_wave_dev)
+        nPOUK.pr_update(addr, probe, probe_denominator, object_array, exit_wave)
 
         # print("probe array after:")
         # print(repr(probe))

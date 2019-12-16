@@ -8,8 +8,11 @@ from ..array_based import auxiliary_wave_kernel as ab
 class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
     def __init__(self, queue_thread=None):
-        super(AuxiliaryWaveKernel, self).__init__(queue_thread)
+        super(AuxiliaryWaveKernel, self).__init__()
         # and now initialise the cuda
+        self._ob_shape = None
+        self._ob_id = None
+
         build_aux_code = """
         #include <iostream>
         #include <utility>
@@ -20,7 +23,6 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         __global__ void build_aux_cuda(
             complex<float>* auxiliary_wave,
             const complex<float>* exit_wave,
-            int A,
             int B,
             int C,
             const complex<float>* probe,
@@ -77,7 +79,6 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         __global__ void build_exit_cuda(
             complex<float>* auxiliary_wave,
             complex<float>* exit_wave,
-            int A,
             int B,
             int C,
             const complex<float>* probe,
@@ -124,27 +125,36 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         for key, array in self.npy.__dict__.items():
             self.ocl.__dict__[key] = gpuarray.to_gpu(array)
 
-    def build_aux(self, auxiliary_wave, object_array, probe, exit_wave, addr):
+    def build_aux(self, auxiliary_wave, addr, object_array, probe, exit_wave, alpha):
+        obr, obc = self._cache_object_shape(object_array)
         self.build_aux_cuda(auxiliary_wave,
                             exit_wave,
-                            self.nmodes*self.nviews, np.int32(exit_wave.shape[1]), np.int32(exit_wave.shape[2]),
+                            np.int32(exit_wave.shape[1]), np.int32(exit_wave.shape[2]),
                             probe,
                             np.int32(exit_wave.shape[1]), np.int32(exit_wave.shape[2]),
                             object_array,
-                            self.ob_shape[0], self.ob_shape[1],
+                            obr, obc,
                             addr,
-                            self.alpha,
-                            block=(32, 32, 1), grid=(int(self.nviews*self.nmodes), 1, 1), stream=self.queue)
+                            alpha,
+                            block=(32, 32, 1), grid=(int(exit_wave.shape[0]), 1, 1), stream=self.queue)
 
-    def build_exit(self, auxiliary_wave, object_array, probe, exit_wave, addr):
+    def build_exit(self, auxiliary_wave, addr, object_array, probe, exit_wave):
+        obr, obc = self._cache_object_shape(object_array)
         self.build_exit_cuda(auxiliary_wave,
                              exit_wave,
-                             self.nmodes*self.nviews, np.int32(exit_wave.shape[1]), np.int32(exit_wave.shape[2]),
+                             np.int32(exit_wave.shape[1]), np.int32(exit_wave.shape[2]),
                              probe,
                              np.int32(exit_wave.shape[1]), np.int32(exit_wave.shape[2]),
                              object_array,
-                             self.ob_shape[0], self.ob_shape[1],
+                             obr, obc,
                              addr,
-                             block=(32, 32, 1), grid=(int(self.nviews*self.nmodes), 1, 1), stream=self.queue)
+                             block=(32, 32, 1), grid=(int(exit_wave.shape[0]), 1, 1), stream=self.queue)
 
+    def _cache_object_shape(self, ob):
+        oid = id(ob)
 
+        if not oid == self._ob_id:
+            self._ob_id = oid
+            self._ob_shape = (np.int32(ob.shape[-2]), np.int32(ob.shape[-1]))
+
+        return self._ob_shape
