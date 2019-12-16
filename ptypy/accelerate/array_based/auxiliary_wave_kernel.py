@@ -14,7 +14,7 @@ class AuxiliaryWaveKernel(BaseKernel):
         self.nmodes = None
         self.ncoords = None
         self.naxes = None
-
+        self.queue = queue_thread
         self.kernels = [
             'build_aux',
             'build_exit',

@@ -1,5 +1,6 @@
 import numpy as np
 from pycuda.compiler import SourceModule
+from inspect import getfullargspec
 
 from ..array_based import fourier_update_kernel as ab
 from pycuda import gpuarray
@@ -8,7 +9,7 @@ from pycuda import gpuarray
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 
     def __init__(self, queue_thread=None, nmodes=1, pbound=0.0):
-        super(FourierUpdateKernel, self).__init__(queue_thread, nmodes=nmodes, pbound=pbound)
+        super(FourierUpdateKernel, self).__init__(queue_thread=queue_thread, nmodes=nmodes, pbound=pbound)
         fmag_all_update_cuda_code = """
         #include <iostream>
         #include <utility>
@@ -179,10 +180,13 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.error_reduce_cuda = SourceModule(err_reduce_code, include_dirs=[np.get_include()],
                                               no_extern_c=True).get_function("error_reduce_cuda")
 
+    def configure(self, I, mask, f, addr):
+        super(FourierUpdateKernel, self).configure(I, mask, f , addr)
         for key, array in self.npy.__dict__.items():
             self.ocl.__dict__[key] = gpuarray.to_gpu(array)
 
     def fourier_error(self, f, fmag, fdev, ferr, fmask, mask_sum, addr):
+        #print(self.fshape)
         self.fourier_error_cuda(np.int32(self.nmodes),
                                 f,
                                 fmask,
@@ -194,7 +198,8 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                 np.int32(self.fshape[1]),
                                 np.int32(self.fshape[2]),
                                 block=(32, 32, 1),
-                                grid=(int(self.fshape[0]), 1, 1))
+                                grid=(int(self.fshape[0]), 1, 1),
+                                stream=self.queue)
 
     def error_reduce(self, ferr, err_fmag, addr):
         import sys
@@ -208,7 +213,8 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                np.int32(self.fshape[2]),
                                block=(32, 32, 1),
                                grid=(int(self.fshape[0]), 1, 1),
-                               shared=shared_memory_size)
+                               shared=shared_memory_size,
+                               stream=self.queue)
 
     def calc_fm(self, fm, fmask, fmag, fdev, err_fmag, addr):
         raise NotImplementedError('The calc_fm kernel is not implemented yet')
@@ -223,9 +229,23 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                   fdev,
                                   err_fmag,
                                   addr,
-                                  self.pbound,
+                                  np.float32(self.pbound),
                                   np.int32(self.fshape[1]),
                                   np.int32(self.fshape[2]),
-                                  block=(int(self.fshape[1]), int(self.fshape[2]), 1),
-                                  grid=(int(self.fshape[0]*self.nmodes), 1, 1))
+                                  block=(32, 32, 1),
+                                  grid=(int(self.fshape[0]*self.nmodes), 1, 1),
+                                  stream=self.queue)
 
+    def execute(self, kernel_name=None, compare=False, sync=False):
+
+        if kernel_name is None:
+            for kernel in self.kernels:
+                self.execute(kernel, compare, sync)
+        else:
+            self.log("KERNEL " + kernel_name)
+            meth = getattr(self, kernel_name)
+            kernel_args = getfullargspec(meth).args[1:]
+            args = [getattr(self.ocl, a) for a in kernel_args]
+            meth(*args)
+
+        return self.ocl.err_fmag.get()

@@ -15,6 +15,7 @@ class PoUpdateKernel(BaseKernel):
         self.ncoords = None
         self.nmodes = None
         self.num_pods = None
+        self.queue = queue_thread
 
         self.kernels = [
             'pr_update',

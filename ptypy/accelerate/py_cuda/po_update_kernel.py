@@ -140,7 +140,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                             ob, self.ob_shape[0], self.ob_shape[1], self.ob_shape[2],
                             addr,
                             obn,
-                            block=(32, 32, 1), grid=(int(self.num_pods), 1, 1))
+                            block=(32, 32, 1), grid=(int(self.num_pods), 1, 1), stream=self.queue)
 
     def pr_update(self, pr, prn, ob, ex, addr):
         self.probe_update_cuda(ex, self.num_pods, self.pr_shape[1], self.pr_shape[2],
@@ -148,4 +148,4 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                ob, self.ob_shape[0], self.ob_shape[1], self.ob_shape[2],
                                addr,
                                prn,
-                               block=(32, 32, 1), grid=(int(self.num_pods), 1, 1))
+                               block=(32, 32, 1), grid=(int(self.num_pods), 1, 1), stream=self.queue)

@@ -24,6 +24,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         current_dev = cuda.Device(0)
         self.ctx = current_dev.make_context()
         self.ctx.push()
+        self.stream = cuda.Stream()
 
     def tearDown(self):
         np.set_printoptions()
@@ -95,7 +96,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         from ptypy.accelerate.array_based.fourier_update_kernel import FourierUpdateKernel as npFourierUpdateKernel
         pbound_set = 0.9
         nFUK = npFourierUpdateKernel(nmodes=total_number_modes, pbound=pbound_set)
-        FUK = FourierUpdateKernel(nmodes=total_number_modes, pbound=pbound_set)
+        FUK = FourierUpdateKernel(self.stream, nmodes=total_number_modes, pbound=pbound_set)
 
         nFUK.configure(fmag, mask, f, addr)
         FUK.configure(fmag, mask, f, addr)
@@ -205,7 +206,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
 
         pbound_set = 0.9
         nFUK = npFourierUpdateKernel(nmodes=total_number_modes, pbound=pbound_set)
-        FUK = FourierUpdateKernel(nmodes=total_number_modes, pbound=pbound_set)
+        FUK = FourierUpdateKernel(self.stream, nmodes=total_number_modes, pbound=pbound_set)
 
         nFUK.configure(fmag, mask, f, addr)
         FUK.configure(fmag, mask, f, addr)
@@ -309,7 +310,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         mask_sum_d = gpuarray.to_gpu(mask_sum)
         pbound_set = 0.9
         nFUK = npFourierUpdateKernel(nmodes=total_number_modes, pbound=pbound_set)
-        FUK = FourierUpdateKernel(nmodes=total_number_modes, pbound=pbound_set)
+        FUK = FourierUpdateKernel(self.stream, nmodes=total_number_modes, pbound=pbound_set)
 
         nFUK.configure(fmag, mask, f, addr)
         FUK.configure(fmag, mask, f, addr)

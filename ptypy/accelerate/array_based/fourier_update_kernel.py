@@ -13,6 +13,7 @@ class FourierUpdateKernel(BaseKernel):
         self.nmodes = np.int32(nmodes)
         self.framesize = None
         self.shape = None
+        self.queue = queue_thread
         self.kernels = [
             'fourier_error',
             'error_reduce',
@@ -44,11 +45,13 @@ class FourierUpdateKernel(BaseKernel):
 
         if kernel_name is None:
             for kernel in self.kernels:
+                print(kernel)
                 self.execute(kernel)
         else:
             self.log("KERNEL " + kernel_name)
             m_npy = getattr(self, kernel_name)
             npy_kernel_args = getfullargspec(m_npy).args[1:]
+            print(npy_kernel_args)
             args = [getattr(self.npy, a) for a in npy_kernel_args]
             m_npy(*args)
 

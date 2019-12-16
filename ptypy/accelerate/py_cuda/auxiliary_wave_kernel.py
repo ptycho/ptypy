@@ -134,7 +134,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                             self.ob_shape[0], self.ob_shape[1],
                             addr,
                             self.alpha,
-                            block=(32, 32, 1), grid=(int(self.nviews*self.nmodes), 1, 1))
+                            block=(32, 32, 1), grid=(int(self.nviews*self.nmodes), 1, 1), stream=self.queue)
 
     def build_exit(self, auxiliary_wave, object_array, probe, exit_wave, addr):
         self.build_exit_cuda(auxiliary_wave,
@@ -145,6 +145,6 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                              object_array,
                              self.ob_shape[0], self.ob_shape[1],
                              addr,
-                             block=(32, 32, 1), grid=(int(self.nviews*self.nmodes), 1, 1))
+                             block=(32, 32, 1), grid=(int(self.nviews*self.nmodes), 1, 1), stream=self.queue)
 
 

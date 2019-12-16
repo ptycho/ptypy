@@ -24,6 +24,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         current_dev = cuda.Device(0)
         self.ctx = current_dev.make_context()
         self.ctx.push()
+        self.stream = cuda.Stream()
 
     def tearDown(self):
         np.set_printoptions()
@@ -36,7 +37,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                  "ncoords",
                  "naxes"]
 
-        AWK = AuxiliaryWaveKernel()
+        AWK = AuxiliaryWaveKernel(self.stream)
         for attr in attrs:
             self.assertTrue(hasattr(AWK, attr), msg="AuxiliaryWaveKernel does not have attribute: %s" % attr)
 
@@ -98,7 +99,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         '''
         test
         '''
-        AWK = AuxiliaryWaveKernel()
+        AWK = AuxiliaryWaveKernel(self.stream)
         alpha_set = 0.9
         AWK.configure(object_array, addr, alpha=alpha_set)
 
@@ -177,7 +178,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         '''
         auxiliary_wave = np.zeros_like(exit_wave)
 
-        AWK = AuxiliaryWaveKernel()
+        AWK = AuxiliaryWaveKernel(self.stream)
         alpha_set = 1.0
         AWK.configure(object_array, addr, alpha=alpha_set)
 
@@ -310,7 +311,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         auxiliary_wave = np.zeros_like(exit_wave)
         from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
-        AWK = AuxiliaryWaveKernel()
+        AWK = AuxiliaryWaveKernel(self.stream)
         alpha_set = 1.0
         AWK.configure(object_array, addr, alpha=alpha_set)
         nAWK.configure(object_array,  addr, alpha=alpha_set)
@@ -400,7 +401,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         addr_dev = gpuarray.to_gpu(addr)
         auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
-        AWK = AuxiliaryWaveKernel()
+        AWK = AuxiliaryWaveKernel(self.stream)
 
         alpha_set = 1.0
         AWK.configure(object_array, addr, alpha=alpha_set)
@@ -593,7 +594,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
 
-        AWK = AuxiliaryWaveKernel()
+        AWK = AuxiliaryWaveKernel(self.stream)
 
         alpha_set = 1.0
 
