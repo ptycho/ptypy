@@ -19,9 +19,7 @@ from . import BaseEngine, register, DM_serial, DM
 
 from pycuda import gpuarray
 from ..accelerate import py_cuda as gpu
-from ..accelerate.py_cuda.fourier_update_kernel import FourierUpdateKernel
-from ..accelerate.py_cuda.auxiliary_wave_kernel import AuxiliaryWaveKernel
-from ..accelerate.py_cuda.po_update_kernel import PoUpdateKernel
+from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel
 
 ### TODOS
 #
@@ -126,7 +124,7 @@ class DM_pycuda(DM_serial.DM_serial):
                           post_fft=geo.propagator.post_ifft,
                           inplace=True,
                           symmetric=True).ift
-            self.queue.synchronize()
+            #self.queue.synchronize()
 
     def engine_prepare(self):
 
@@ -149,7 +147,7 @@ class DM_pycuda(DM_serial.DM_serial):
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.mask_sum = gpuarray.to_gpu(prep.mask_sum)
             prep.err_fourier = gpuarray.to_gpu(prep.err_fourier)
-
+            self.dummy_error = np.zeros_like(prep.err_fourier)
         """
         for dID, diffs in self.di.S.items():
             prep = u.Param()
@@ -171,10 +169,10 @@ class DM_pycuda(DM_serial.DM_serial):
             aux = np.zeros_like(ex.data)
             prep.aux_gpu = gpuarray.to_gpu(aux)
             prep.aux = aux
-            self.queue.synchronize()
+            #self.queue.synchronize()
         """
         # finish init queue
-        self.queue.synchronize()
+        #self.queue.synchronize()
 
     def engine_iterate(self, num=1):
         """
@@ -219,7 +217,7 @@ class DM_pycuda(DM_serial.DM_serial):
 
                 t1 = time.time()
                 AWK.build_aux(aux, addr, ob, pr, ex, alpha=np.float32(self.p.alpha))
-                queue.synchronize()
+                #queue.synchronize()
 
                 self.benchmark.A_Build_aux += time.time() - t1
 
@@ -227,7 +225,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 t1 = time.time()
                 FW(aux, aux)
 
-                queue.synchronize()
+                #queue.synchronize()
                 self.benchmark.B_Prop += time.time() - t1
 
                 ## Deviation from measured data
@@ -235,26 +233,28 @@ class DM_pycuda(DM_serial.DM_serial):
                 FUK.fourier_error(aux, addr, mag, ma, mask_sum)
                 FUK.error_reduce(addr, err_fourier)
                 FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
-                queue.synchronize()
+                #queue.synchronize()
                 self.benchmark.C_Fourier_update += time.time() - t1
                 ## iFFT
                 t1 = time.time()
                 BW(aux, aux)
 
                 #print("The context is: %s" % self.context)
-                queue.synchronize()
+                #queue.synchronize()
                 #print("Here")
                 self.benchmark.D_iProp += time.time() - t1
 
                 ## apply changes #2
                 t1 = time.time()
                 AWK.build_exit(aux, addr, ob, pr, ex)
-                queue.synchronize()
+                #queue.synchronize()
                 self.benchmark.E_Build_exit += time.time() - t1
 
-                err_phot = np.zeros_like(err_fourier)
-                err_exit = np.zeros_like(err_fourier)
-                errs = np.array(list(zip(err_fourier.get(), err_phot, err_exit)))
+                # err_phot = np.zeros_like(err_fourier)
+                # err_exit = np.zeros_like(err_fourier)
+                # err_err = np.zeros_like(err_fourier)
+                # errs = np.array(list(zip(err_err, err_phot, err_exit)))
+                errs = np.array(list(zip(self.dummy_error, self.dummy_error, self.dummy_error)))
                 error = dict(zip(prep.view_IDs, errs))
 
                 self.benchmark.calls_fourier += 1
@@ -274,10 +274,10 @@ class DM_pycuda(DM_serial.DM_serial):
             s.data[:] = s.gpu.get()
 
         # costly but needed to sync back with
-        for name, s in self.ex.S.items():
-            s.data[:] = s.gpu.get()
+        # for name, s in self.ex.S.items():
+        #     s.data[:] = s.gpu.get()
 
-        self.queue.synchronize()
+        #self.queue.synchronize()
 
         self.error = error
         return error
@@ -424,7 +424,7 @@ class DM_pycuda(DM_serial.DM_serial):
         try deleting ever helper contianer
         """
         super(DM_pycuda, self).engine_finalize()
-        self.queue.synchronize()
+        #self.queue.synchronize()
         self.context.detach()
 
         # delete local references to container buffer copies

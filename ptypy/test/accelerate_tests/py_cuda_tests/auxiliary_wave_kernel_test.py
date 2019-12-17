@@ -8,7 +8,7 @@ import numpy as np
 import pycuda.driver as cuda
 from pycuda import gpuarray
 
-from ptypy.accelerate.py_cuda.auxiliary_wave_kernel import AuxiliaryWaveKernel
+from ptypy.accelerate.py_cuda.kernels import AuxiliaryWaveKernel
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
@@ -233,7 +233,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         test
         '''
         auxiliary_wave = np.zeros_like(exit_wave)
-        from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        from ptypy.accelerate.array_based.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
         AWK = AuxiliaryWaveKernel(self.stream)
         alpha_set = FLOAT_TYPE(1.0)
@@ -512,7 +512,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
 
-        from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        from ptypy.accelerate.array_based.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
 
         AWK = AuxiliaryWaveKernel(self.stream)

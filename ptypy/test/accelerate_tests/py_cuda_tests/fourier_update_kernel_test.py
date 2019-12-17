@@ -8,7 +8,7 @@ import numpy as np
 import pycuda.driver as cuda
 from pycuda import gpuarray
 
-from ptypy.accelerate.py_cuda.fourier_update_kernel import FourierUpdateKernel
+from ptypy.accelerate.py_cuda.kernels import FourierUpdateKernel
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
@@ -91,7 +91,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         mask_sum = mask.sum(-1).sum(-1)
 
         err_fmag = np.zeros(N, dtype=FLOAT_TYPE)
-        from ptypy.accelerate.array_based.fourier_update_kernel import FourierUpdateKernel as npFourierUpdateKernel
+        from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
         pbound_set = 0.9
         nFUK = npFourierUpdateKernel(f, nmodes=total_number_modes)
         FUK = FourierUpdateKernel(f, nmodes=total_number_modes)
@@ -194,7 +194,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
 
         fdev = np.zeros_like(fmag)
         ferr = np.zeros_like(fmag)
-        from ptypy.accelerate.array_based.fourier_update_kernel import FourierUpdateKernel as npFourierUpdateKernel
+        from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
         f_d = gpuarray.to_gpu(f)
         fmag_d = gpuarray.to_gpu(fmag)
         fdev_d = gpuarray.to_gpu(fdev)
@@ -300,7 +300,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         err_fmag = np.zeros(N, dtype=FLOAT_TYPE)
         mask_sum = mask.sum(-1).sum(-1)
 
-        from ptypy.accelerate.array_based.fourier_update_kernel import FourierUpdateKernel as npFourierUpdateKernel
+        from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
         f_d = gpuarray.to_gpu(f)
         fmag_d = gpuarray.to_gpu(fmag)
         mask_d = gpuarray.to_gpu(mask)

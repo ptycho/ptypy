@@ -5,7 +5,7 @@
 
 import unittest
 import numpy as np
-from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel
+from ptypy.accelerate.array_based.kernels import AuxiliaryWaveKernel
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32

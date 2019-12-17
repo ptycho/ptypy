@@ -5,7 +5,7 @@
 
 import unittest
 import numpy as np
-from ptypy.accelerate.array_based.po_update_kernel import PoUpdateKernel
+from ptypy.accelerate.array_based.kernels import PoUpdateKernel
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
 INT_TYPE = np.int32

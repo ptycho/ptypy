@@ -5,7 +5,7 @@
 
 import unittest
 import numpy as np
-from ptypy.accelerate.array_based.fourier_update_kernel import FourierUpdateKernel
+from ptypy.accelerate.array_based.kernels import FourierUpdateKernel
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
