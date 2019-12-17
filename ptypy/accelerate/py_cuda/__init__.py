@@ -1,7 +1,10 @@
 import pycuda.driver as cuda
+from pycuda.compiler import SourceModule
+import numpy as np
+import os
 # debug_options = []
 # debug_options = ['-O0', '-G', '-g']
-debug_options = ['-O3', '-DNDEBUG', '-lineinfo']
+debug_options = ['-O3', '-DNDEBUG'] # release mode flags
 
 context = None
 queue = None
@@ -29,4 +32,13 @@ def get_context(new_queue=False):
     return context, queue
 
 
+def load_kernel(name, subs={}):
+
+    fn = "%s/cuda/%s.cu" % (os.path.dirname(__file__), name)
+    with open(fn, 'r') as f:
+        kernel = f.read()
+    for k,v in list(subs.items()):
+        kernel = kernel.replace(k, str(v))
+    mod = SourceModule(kernel, include_dirs=[np.get_include()], no_extern_c=True, options=debug_options)
+    return mod.get_function(name)
 
