@@ -45,6 +45,7 @@ from . import DM
 from . import DM_ocl
 #from . import DM_gpu
 from . import DM_serial
+from . import DM_serial_stream
 #from . import DM_npy
 from . import DM_simple
 from . import ML

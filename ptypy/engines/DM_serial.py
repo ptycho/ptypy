@@ -130,7 +130,7 @@ class DM_serial(DM.DM):
 
         kernel_pars = {'kernel_sh_x' : gauss_kernel.shape[0], 'kernel_sh_y': gauss_kernel.shape[1]}
         """
-
+        print('init')
         self.benchmark = u.Param()
 
         # Stores all information needed with respect to the diffraction storages.
@@ -227,7 +227,7 @@ class DM_serial(DM.DM):
 
             ob = self.ob.S[oID]
             obn = self.ob_nrm.S[oID]
-            obv = self.ob_viewcover.S[oID]
+            obv = self.ob_buf.S[oID]
             misfit = np.asarray(ob.shape[-2:]) % 32
             if (misfit != 0).any():
                 pad = 32 - np.asarray(ob.shape[-2:]) % 32
@@ -411,7 +411,6 @@ class DM_serial(DM.DM):
             else:
                 ob.data /= obn.data
 
-        # print 'object update: ' + str(time.time()-t1)
         self.benchmark.object_update += time.time() - t1
         self.benchmark.calls_object += 1
 
@@ -442,6 +441,9 @@ class DM_serial(DM.DM):
                                self.ob.S[oID].data,
                                self.ex.S[eID].data)
 
+            self.benchmark.probe_update += time.time() - t1
+            self.benchmark.calls_probe += 1
+
         for pID, pr in self.pr.storages.items():
 
             buf = self.pr_buf.S[pID]
@@ -462,10 +464,6 @@ class DM_serial(DM.DM):
             buf.data[:] = pr.data
             if MPI:
                 change = parallel.allreduce(change) / parallel.size
-
-        # print 'probe update: ' + str(time.time()-t1)
-        self.benchmark.probe_update += time.time() - t1
-        self.benchmark.calls_probe += 1
 
         return np.sqrt(change)
 

@@ -9,8 +9,8 @@ from ptypy import utils as u
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 4
-p.frames_per_block = 500
+p.verbose_level = 3
+p.frames_per_block = 200
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
@@ -39,8 +39,8 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_serial'
-p.engines.engine00.numiter = 5
+p.engines.engine00.name = 'DM_serial_stream'
+p.engines.engine00.numiter = 10
 p.engines.engine00.numiter_contiguous = 1
 p.engines.engine00.probe_update_start = 2
 
