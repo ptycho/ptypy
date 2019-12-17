@@ -3,6 +3,7 @@ from pycuda.compiler import SourceModule
 from pycuda import gpuarray
 
 from ..array_based import auxiliary_wave_kernel as ab
+from . import debug_options
 
 
 class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
@@ -61,7 +62,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
         """
         self.build_aux_cuda = SourceModule(build_aux_code, include_dirs=[np.get_include()],
-                                           no_extern_c=True).get_function("build_aux_cuda")
+                                           no_extern_c=True, options=debug_options).get_function("build_aux_cuda")
 
         build_exit_code = """
         #include <iostream>
@@ -118,7 +119,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         """
 
         self.build_exit_cuda = SourceModule(build_exit_code, include_dirs=[np.get_include()],
-                                            no_extern_c=True).get_function("build_exit_cuda")
+                                            no_extern_c=True, options=debug_options).get_function("build_exit_cuda")
 
     def load(self, aux, ob, pr, ex, addr):
         super(AuxiliaryWaveKernel, self).load(aux, ob, pr, ex, addr)

@@ -2,6 +2,7 @@ import numpy as np
 from pycuda.compiler import SourceModule
 
 from ..array_based import po_update_kernel as ab
+from . import debug_options
 
 
 class PoUpdateKernel(ab.PoUpdateKernel):
@@ -69,7 +70,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
         """
         self.ob_update_cuda = SourceModule(object_update_code, include_dirs=[np.get_include()],
-                                           no_extern_c=True).get_function("ob_update_cuda")
+                                           no_extern_c=True, options=debug_options).get_function("ob_update_cuda")
 
         probe_update_code = """
         #include <iostream>
@@ -132,7 +133,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         """
 
         self.probe_update_cuda = SourceModule(probe_update_code, include_dirs=[np.get_include()],
-                                              no_extern_c=True).get_function("probe_update_cuda")
+                                              no_extern_c=True, options=debug_options).get_function("probe_update_cuda")
 
     def ob_update(self, addr, ob, obn, pr, ex):
         obsh = [np.int32(ax) for ax in ob.shape]

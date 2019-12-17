@@ -1,7 +1,7 @@
 import numpy as np
 from pycuda.compiler import SourceModule
 from inspect import getfullargspec
-
+from . import debug_options
 from ..array_based import fourier_update_kernel as ab
 from pycuda import gpuarray
 
@@ -63,7 +63,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         }
         """
         self.fmag_all_update_cuda = SourceModule(fmag_all_update_cuda_code, include_dirs=[np.get_include()],
-                                                 no_extern_c=True).get_function("fmag_all_update_cuda")
+                                                 no_extern_c=True, options=debug_options).get_function("fmag_all_update_cuda")
 
         fourier_error_code = """
         #include <iostream>
@@ -121,7 +121,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         }
         """
         self.fourier_error_cuda = SourceModule(fourier_error_code, include_dirs=[np.get_include()],
-                                               no_extern_c=True).get_function("fourier_error_cuda")
+                                               no_extern_c=True, options=debug_options).get_function("fourier_error_cuda")
 
         err_reduce_code = """
         #include <iostream>
@@ -198,7 +198,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                 np.int32(self.fshape[1]),
                                 np.int32(self.fshape[2]),
                                 block=(32, 32, 1),
-                                grid=(int(self.fshape[0]), 1, 1),
+                                grid=(int(fmag.shape[0]), 1, 1),
                                     stream=self.queue)
 
     def error_reduce(self, addr, err_fmag):
@@ -212,7 +212,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                np.int32(self.fshape[1]),
                                np.int32(self.fshape[2]),
                                block=(32, 32, 1),
-                               grid=(int(self.fshape[0]), 1, 1),
+                               grid=(int(err_fmag.shape[0]), 1, 1),
                                shared=shared_memory_size,
                                stream=self.queue)
 
@@ -236,7 +236,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                   np.int32(self.fshape[1]),
                                   np.int32(self.fshape[2]),
                                   block=(32, 32, 1),
-                                  grid=(int(self.fshape[0]*self.nmodes), 1, 1),
+                                  grid=(int(fmag.shape[0]*self.nmodes), 1, 1),
                                   stream=self.queue)
 
     def execute(self, kernel_name=None, compare=False, sync=False):

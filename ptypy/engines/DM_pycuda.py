@@ -53,7 +53,7 @@ class DM_pycuda(DM_serial.DM_serial):
         super(DM_pycuda, self).__init__(ptycho_parent, pars)
 
         self.context, self.queue = gpu.get_context()
-
+        self.queue = cuda.Stream()
         # allocator for READ only buffers
         # self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
         ## gaussian filter
@@ -186,6 +186,7 @@ class DM_pycuda(DM_serial.DM_serial):
             error_dct = {}
 
             for dID in self.di.S.keys():
+                #print("DID is: %s" % dID)
                 t1 = time.time()
 
                 prep = self.diff_info[dID]
@@ -225,7 +226,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 ## FFT
                 t1 = time.time()
                 FW(aux, aux)
-                print(self.context)
+
                 queue.synchronize()
                 self.benchmark.B_Prop += time.time() - t1
 
@@ -236,12 +237,13 @@ class DM_pycuda(DM_serial.DM_serial):
                 FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
                 queue.synchronize()
                 self.benchmark.C_Fourier_update += time.time() - t1
-
                 ## iFFT
                 t1 = time.time()
                 BW(aux, aux)
-                queue.synchronize()
 
+                #print("The context is: %s" % self.context)
+                queue.synchronize()
+                #print("Here")
                 self.benchmark.D_iProp += time.time() - t1
 
                 ## apply changes #2
@@ -324,7 +326,7 @@ class DM_pycuda(DM_serial.DM_serial):
             obn = self.ob_nrm.S[oID]
             # MPI test
             if MPI:
-                ob.data[:] = ob.gpu.get(get())
+                ob.data[:] = ob.gpu.get()
                 obn.data[:] = obn.gpu.get()
                 queue.synchronize()
                 parallel.allreduce(ob.data)
