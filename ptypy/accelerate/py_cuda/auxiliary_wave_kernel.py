@@ -125,30 +125,30 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         for key, array in self.npy.__dict__.items():
             self.ocl.__dict__[key] = gpuarray.to_gpu(array)
 
-    def build_aux(self, auxiliary_wave, addr, object_array, probe, exit_wave, alpha):
-        obr, obc = self._cache_object_shape(object_array)
-        self.build_aux_cuda(auxiliary_wave,
-                            exit_wave,
-                            np.int32(exit_wave.shape[1]), np.int32(exit_wave.shape[2]),
-                            probe,
-                            np.int32(exit_wave.shape[1]), np.int32(exit_wave.shape[2]),
-                            object_array,
+    def build_aux(self, b_aux, addr, ob, pr, ex, alpha):
+        obr, obc = self._cache_object_shape(ob)
+        self.build_aux_cuda(b_aux,
+                            ex,
+                            np.int32(ex.shape[1]), np.int32(ex.shape[2]),
+                            pr,
+                            np.int32(ex.shape[1]), np.int32(ex.shape[2]),
+                            ob,
                             obr, obc,
                             addr,
                             alpha,
-                            block=(32, 32, 1), grid=(int(exit_wave.shape[0]), 1, 1), stream=self.queue)
+                            block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
 
-    def build_exit(self, auxiliary_wave, addr, object_array, probe, exit_wave):
-        obr, obc = self._cache_object_shape(object_array)
-        self.build_exit_cuda(auxiliary_wave,
-                             exit_wave,
-                             np.int32(exit_wave.shape[1]), np.int32(exit_wave.shape[2]),
-                             probe,
-                             np.int32(exit_wave.shape[1]), np.int32(exit_wave.shape[2]),
-                             object_array,
+    def build_exit(self, b_aux, addr, ob, pr, ex):
+        obr, obc = self._cache_object_shape(ob)
+        self.build_exit_cuda(b_aux,
+                             ex,
+                             np.int32(ex.shape[1]), np.int32(ex.shape[2]),
+                             pr,
+                             np.int32(ex.shape[1]), np.int32(ex.shape[2]),
+                             ob,
                              obr, obc,
                              addr,
-                             block=(32, 32, 1), grid=(int(exit_wave.shape[0]), 1, 1), stream=self.queue)
+                             block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
 
     def _cache_object_shape(self, ob):
         oid = id(ob)
