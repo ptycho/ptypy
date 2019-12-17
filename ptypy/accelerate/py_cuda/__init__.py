@@ -1,21 +1,28 @@
+import pycuda.driver as cuda
+
 context = None
 queue = None
 
+def get_context(new_queue=False):
 
-def get_queue(new_queue=False):
     from ptypy.utils import parallel
-    import pycuda.driver as cuda
-    cuda.init()
+
     global context
     global queue
 
-    if context is None and parallel.rank_local < cuda.Device.count():
-        context = cuda.Device(parallel.rank_local).make_context()
-        context.push()
+    if context is None:
+        cuda.init()
+        if parallel.rank_local < cuda.Device.count():
+            import pyopencl as cl
+            context = cuda.Device(parallel.rank_local).make_context()
+            context.push()
+        print("made context %s on rank %s" % (str(context), str(parallel.rank)))
+        print("The cuda device count on %s is:%s" % (str(parallel.rank),
+                                                     str(cuda.Device.count())))
+        print("parallel.rank:%s, parallel.rank_local:%s" % (str(parallel.rank),
+                                                            str(parallel.rank_local)))
+    if queue is None:
+        queue = cuda.Stream()
+    return context, queue
 
-    if context is not None:
-        if new_queue or queue is None:
-            queue = cuda.Stream()
-        return context, queue
-    else:
-        return None
+

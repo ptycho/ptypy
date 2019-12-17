@@ -89,8 +89,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         test
         '''
         mask_sum = mask.sum(-1).sum(-1)
-        fdev = np.zeros_like(fmag)
-        ferr = np.zeros_like(fmag)
+
         err_fmag = np.zeros(N, dtype=FLOAT_TYPE)
         from ptypy.accelerate.array_based.fourier_update_kernel import FourierUpdateKernel as npFourierUpdateKernel
         pbound_set = 0.9
