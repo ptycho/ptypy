@@ -103,7 +103,8 @@ class FourierUpdateKernel(FUK_NPY, OclBase):
             __private float d=fdev[midx];
             
             if (renorm < 1.){            
-                fm =  m * native_divide(d*renorm +g, d+g+eps) + (1-m);
+                fm =  (1-m) + m * native_divide(g+d*renorm, d+g+eps);
+                //fm =  m * (d*renorm +g) / (d+g+eps) + (1-m);
             }
             f[idx] = cfloat_mulr(f[idx] , fm );
         }
