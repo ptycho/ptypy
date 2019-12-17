@@ -1148,7 +1148,9 @@ class BlockFull(_Full, BlockScanModel):
 
 # Append illumination and sample defaults
 defaults_tree['scan.Full'].add_child(illumination.illumination_desc)
+defaults_tree['scan.BlockFull'].add_child(illumination.illumination_desc)
 defaults_tree['scan.Full'].add_child(sample.sample_desc)
+defaults_tree['scan.BlockFull'].add_child(sample.sample_desc)
 
 # Update defaults
 Full.DEFAULT = defaults_tree['scan.Full'].make_default(99)

@@ -72,6 +72,7 @@ class FourierUpdateKernel(BaseKernel):
 
         # Calculate error on fourier magnitudes on a per-pixel basis
         ferr[:] = mask * np.abs(fdev) ** 2 / mask_sum.reshape((maxz, 1, 1))
+        return
 
     def error_reduce(self, addr, err_sum):
         # reference shape (write-to shape)
@@ -88,6 +89,7 @@ class FourierUpdateKernel(BaseKernel):
         # Reduceses the Fourier error along the last 2 dimensions.fd
         #err_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
         err_sum[:] = ferr.sum(-1).sum(-1)
+        return
 
     def fmag_all_update(self, b_aux, addr, mag, mask, err_sum, pbound=0.0):
 
@@ -130,6 +132,7 @@ class FourierUpdateKernel(BaseKernel):
         #fm[:] = mag / (af + 1e-6)
         # upcasting
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
+        return
 
 class AuxiliaryWaveKernel(BaseKernel):
 
@@ -164,6 +167,7 @@ class AuxiliaryWaveKernel(BaseKernel):
                   ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * \
                   alpha
             aux[ind, :, :] = tmp
+        return
 
     def build_exit(self, b_aux, addr, ob, pr, ex):
 
@@ -187,7 +191,7 @@ class AuxiliaryWaveKernel(BaseKernel):
 
             ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] += dex
             aux[ind, :, :] = dex
-
+        return
 
 class PoUpdateKernel(BaseKernel):
 

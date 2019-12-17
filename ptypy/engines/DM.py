@@ -275,6 +275,17 @@ class DM(PositionCorrectionEngine):
                                                    alpha=self.p.alpha)
         return error_dct
 
+    def clip_object(self, ob):
+        # Clip object (This call takes like one ms. Not time critical)
+        if self.p.clip_object is not None:
+            clip_min, clip_max = self.p.clip_object
+            ampl_obj = np.abs(ob.data)
+            phase_obj = np.exp(1j * np.angle(ob.data))
+            too_high = (ampl_obj > clip_max)
+            too_low = (ampl_obj < clip_min)
+            ob.data[too_high] = clip_max * phase_obj[too_high]
+            ob.data[too_low] = clip_min * phase_obj[too_low]
+
     def overlap_update(self):
         """
         DM overlap constraint update.
@@ -374,16 +385,7 @@ class DM(PositionCorrectionEngine):
             # A possible (but costly) sanity check would be as follows:
             # if all((np.abs(nrm)-np.abs(cfact))/np.abs(cfact) < 1.):
             #    logger.warning('object_inertia seem too high!')
-
-            # Clip object
-            if self.p.clip_object is not None:
-                clip_min, clip_max = self.p.clip_object
-                ampl_obj = np.abs(s.data)
-                phase_obj = np.exp(1j * np.angle(s.data))
-                too_high = (ampl_obj > clip_max)
-                too_low = (ampl_obj < clip_min)
-                s.data[too_high] = clip_max * phase_obj[too_high]
-                s.data[too_low] = clip_min * phase_obj[too_low]
+            self.clip_object(s)
 
     def probe_update(self):
         """

@@ -48,5 +48,5 @@ p.engines.engine00.probe_update_start = 2
 # prepare and run
 P = Ptycho(p,level=5)
 #P.run()
-
+P.print_stats()
 #u.pause(10)
