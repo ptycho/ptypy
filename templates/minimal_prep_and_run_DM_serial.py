@@ -10,12 +10,12 @@ p = u.Param()
 
 # for verbose output
 p.verbose_level = 3
-p.frames_per_block = 100
+p.frames_per_block = 1000
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
-p.io.autosave = u.Param(active=False)
-p.io.autoplot = u.Param(active=True)
+p.io.autosave = u.Param(active=True)
+p.io.autoplot = u.Param(active=False)
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
 p.scans.MF = u.Param()
@@ -25,11 +25,11 @@ p.scans.MF.name = 'BlockFull' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
-p.scans.MF.data.num_frames = 100
+p.scans.MF.data.num_frames = 2000
 p.scans.MF.data.save = None
 
 p.scans.MF.illumination = u.Param(diversity=None)
-p.scans.MF.coherence = u.Param(num_probe_modes=3)
+p.scans.MF.coherence = u.Param(num_probe_modes=5)
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
@@ -41,7 +41,7 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM_pycuda'
-p.engines.engine00.numiter = 50
+p.engines.engine00.numiter = 20
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.probe_update_start = 2
 
