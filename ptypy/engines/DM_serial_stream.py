@@ -109,7 +109,7 @@ class DM_serial_stream(DM_serial):
                     # get addresses and auxilliary array
                     addr = prep.addr
                     mag = prep.mag
-                    mask_sum = prep.mask_sum
+                    ma_sum = prep.ma_sum
                     err_fourier = prep.err_fourier
 
                     # local references
@@ -134,7 +134,7 @@ class DM_serial_stream(DM_serial):
 
                         ## Deviation from measured data
                         t1 = time.time()
-                        FUK.fourier_error(aux, addr, mag, ma, mask_sum)
+                        FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
                         FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
                         self.benchmark.C_Fourier_update += time.time() - t1

@@ -215,7 +215,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         '''
         test
         '''
-        nmodes = 4
+        nmodes = 2
         # pr_npy, ob_npy, ex_npy, addr_npy = self._configure()
         addr_npy = np.zeros((4, nmodes, 5, 3), dtype=INT_TYPE)
         shape = (4, 3, 3)
@@ -223,8 +223,9 @@ class FourierUpdateKernelTest(unittest.TestCase):
         fshape = shape
         shape = (nmodes * L, M, N)
 
-        aux_npy = np.random.rand(*shape).astype(COMPLEX_TYPE) * 200
-        mag_npy = np.random.rand(*fshape).astype(FLOAT_TYPE) * 200 ** 2 * nmodes
+        X, Y, Z = np.indices(shape)
+        aux_npy = (1j*Z+X+Z).astype(COMPLEX_TYPE) * 200
+        mag_npy = np.indices(fshape).sum(0).astype(FLOAT_TYPE) * 200 ** 2 * nmodes
         ma_npy = (mag_npy > 10).astype(FLOAT_TYPE)
         err_fourier_npy = np.zeros((L,), dtype=FLOAT_TYPE)
         mask_sum_npy = ma_npy.sum(-1).sum(-1)
@@ -256,17 +257,17 @@ class FourierUpdateKernelTest(unittest.TestCase):
 
         self.queue.finish()
         FUK.fourier_error(aux_dev, addr_dev, mag_dev, ma_dev, mask_sum_dev)
-        #FUK.error_reduce(addr_dev, err_fourier_dev)
-        #FUK.fmag_all_update(aux_dev, addr_dev, mag_dev, ma_dev, err_fourier_dev, pbound=0.5)
+        FUK.error_reduce(addr_dev, err_fourier_dev)
+        FUK.fmag_all_update(aux_dev, addr_dev, mag_dev, ma_dev, err_fourier_dev, pbound=0.5)
         nFUK.fourier_error(aux_npy, addr_npy, mag_npy, ma_npy, mask_sum_npy)
-        #nFUK.error_reduce(addr_npy, err_fourier_npy)
-        #nFUK.fmag_all_update(aux_npy, addr_npy, mag_npy, ma_npy, err_fourier_npy, pbound=0.5)
-        #np.testing.assert_array_equal(aux_npy, aux_dev.get(),
-        #                              err_msg="The gpu auxiliary_wave does not look the same as the numpy version")
-        np.testing.assert_array_equal(nFUK.npy.fdev, FUK.npy.fdev.get(),
-                                      err_msg="The gpu auxiliary_wave does not look the same as the numpy version")
-        np.testing.assert_array_equal(nFUK.npy.ferr, FUK.npy.ferr.get(),
-                                      err_msg="The gpu auxiliary_wave does not look the same as the numpy version")
+        nFUK.error_reduce(addr_npy, err_fourier_npy)
+        nFUK.fmag_all_update(aux_npy, addr_npy, mag_npy, ma_npy, err_fourier_npy, pbound=0.5)
+        np.testing.assert_array_almost_equal_nulp(nFUK.npy.fdev, FUK.npy.fdev.get())
+              #  err_msg="The gpu fdev differs more than single precision allows.")
+        np.testing.assert_array_almost_equal_nulp(nFUK.npy.ferr, FUK.npy.ferr.get())
+              #  err_msg="The gpu ferr differs more than single precision allows.")
+        np.testing.assert_array_almost_equal_nulp(aux_npy, aux_dev.get(), 80) #,
+              # err_msg="The gpu auxiliary_wave differs more than single precision allows.")
 
     """
     def test_build_aux_same_as_exit_REGRESSION(self):
