@@ -5,6 +5,7 @@ from pycuda import gpuarray
 from . import load_kernel
 from ..array_based import kernels as ab
 
+
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 
     def __init__(self, aux, nmodes=1, queue_thread=None):
@@ -49,12 +50,6 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                grid=(int(err_fmag.shape[0]), 1, 1),
                                shared=shared_memory_size,
                                stream=self.queue)
-
-    def calc_fm(self, fm, fmask, fmag, fdev, err_fmag, addr):
-        raise NotImplementedError('The calc_fm kernel is not implemented yet')
-
-    def fmag_update(self, f, fm, addr):
-        raise NotImplementedError('The fmag_update kernel is not implemented yet')
 
     def fmag_all_update(self, f, addr, fmag, fmask, err_fmag, pbound=0.0):
         fdev = self.npy.fdev

@@ -22,14 +22,14 @@ class FourierUpdateKernelTest(unittest.TestCase):
         np.set_printoptions()
 
     def test_init(self):
-        attrs = ["fshape",
-                 "nmodes",
-                 "framesize",
+        attrs = ["denom",
                  "fshape",
-                 "shape",
-                 "pbound"]
+                 "nmodes",
+                 "npy"]
 
-        FUK = FourierUpdateKernel()
+        fake_aux = np.zeros((10, 20, 30)) # not used except to initialise
+        fake_nmodes = 5#  not used except to initialise
+        FUK = FourierUpdateKernel(fake_aux, nmodes=fake_nmodes)
         for attr in attrs:
             self.assertTrue(hasattr(FUK, attr), msg="FourierUpdateKernel does not have attribute: %s" % attr)
 
@@ -37,7 +37,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
                                 ['fourier_error', 'error_reduce', 'fmag_all_update'],
                                 err_msg='FourierUpdateKernel does not have the correct functions registered.')
 
-    def test_configure(self):
+    def test_allocate(self):
         '''
         setup
         '''
@@ -45,10 +45,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         C = 5  # frame size x
 
         D = 2  # number of probe modes
-        G = 2 # number og object modes
-
-        E = B  # probe size y
-        F = C  # probe size x
+        G = 2  # number og object modes
 
         scan_pts = 2  # one dimensional scan point number
 
@@ -64,52 +61,19 @@ class FourierUpdateKernelTest(unittest.TestCase):
         fmag_fill = np.arange(np.prod(fmag.shape)).reshape(fmag.shape).astype(fmag.dtype)
         fmag[:] = fmag_fill
 
-        mask = np.empty(shape=(N, B, C), dtype=FLOAT_TYPE)  # the masks for the measured magnitudes either 1xAxB or NxAxB
-        mask_fill = np.ones_like(mask)
-        mask_fill[::2, ::2] = 0 # checkerboard for testing
-        mask[:] = mask_fill
+        FUK = FourierUpdateKernel(f, nmodes=total_number_modes)
+        FUK.allocate()
 
-        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
-        X = X.reshape((N,))
-        Y = Y.reshape((N,))
+        expected_fdev_shape = (f.shape[0] // total_number_modes, f.shape[1], f.shape[2])
+        expected_fdev_type = FLOAT_TYPE
 
-        addr = np.zeros((N, total_number_modes, 5, 3))
+        expected_ferr_shape = (f.shape[0] // total_number_modes, f.shape[1], f.shape[2])
+        expected_ferr_type = FLOAT_TYPE
 
-        exit_idx = 0
-        position_idx = 0
-        for xpos, ypos in zip(X, Y):
-            mode_idx = 0
-            for pr_mode in range(D):
-                for ob_mode in range(G):
-                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
-                                                             [ob_mode, ypos, xpos],
-                                                             [exit_idx, 0, 0],
-                                                             [position_idx, 0, 0],
-                                                             [position_idx, 0, 0]])
-                    mode_idx += 1
-                    exit_idx += 1
-            position_idx += 1
-
-
-        # print("address book is:")
-        # print(repr(addr))
-
-        '''
-        test
-        '''
-        pbound_set = 0.9
-        FUK = FourierUpdateKernel(nmodes=total_number_modes, pbound=pbound_set)
-        FUK.configure(fmag **2 , mask, f, addr)
-
-        expected_f_shape = tuple([INT_TYPE(N), INT_TYPE(B), INT_TYPE(C)])
-        expected_pbound = FLOAT_TYPE(pbound_set)
-        expected_nmodes = INT_TYPE(total_number_modes)
-        expected_frame_size = INT_TYPE(B) * INT_TYPE(C)
-
-        np.testing.assert_equal(FUK.fshape, expected_f_shape)
-        np.testing.assert_equal(FUK.pbound, expected_pbound)
-        np.testing.assert_equal(FUK.nmodes, expected_nmodes)
-        np.testing.assert_equal(FUK.framesize, expected_frame_size)
+        np.testing.assert_equal(FUK.npy.fdev.shape, expected_fdev_shape)
+        np.testing.assert_equal(FUK.npy.fdev.dtype, expected_fdev_type)
+        np.testing.assert_equal(FUK.npy.ferr.shape, expected_ferr_shape)
+        np.testing.assert_equal(FUK.npy.ferr.dtype, expected_ferr_type)
 
     def test_fourier_error(self):
         '''
@@ -165,27 +129,14 @@ class FourierUpdateKernelTest(unittest.TestCase):
             position_idx += 1
 
 
-        # print("address book is:")
-        # print(repr(addr))
-
-        '''
-        test
-        '''
         mask_sum = mask.sum(-1).sum(-1)
 
-        fdev = np.zeros_like(fmag)
-        ferr = np.zeros_like(fmag)
         err_fmag = np.zeros(N, dtype=FLOAT_TYPE)
         pbound_set = 0.9
-        FUK = FourierUpdateKernel(nmodes=total_number_modes, pbound=pbound_set)
-        FUK.configure(fmag **2 , mask, f, addr)
-        FUK.fourier_error(f, fmag, fdev, ferr, mask, mask_sum, addr)
-        # print("fdev:")
-        # print(repr(fdev))
-        # print("ferr:")
-        # print(repr(ferr))
-        #
-        # self.assertTrue(False)
+        FUK = FourierUpdateKernel(f, nmodes=total_number_modes)
+        FUK.allocate()
+        FUK.fourier_error(f, addr, fmag, mask, mask_sum)
+
 
         expected_fdev = np.array([[[7.7459664,   6.7459664,   5.7459664,   4.7459664,   3.7459664],
                                    [2.7459664,   1.7459664,   0.74596643,  -0.25403357,  -1.2540336],
@@ -211,7 +162,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
                                    [-48.866074, -49.866074, -50.866074, -51.866074, -52.866074],
                                    [-53.866074, -54.866074, -55.866074, -56.866074, -57.866074]]],
                                  dtype=FLOAT_TYPE)
-        np.testing.assert_array_equal(fdev, expected_fdev,
+        np.testing.assert_array_equal(FUK.npy.fdev, expected_fdev,
                                       err_msg="fdev does not give the expected error "
                                               "for the fourier_update_kernel.fourier_error emthods")
 
@@ -239,7 +190,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
                                    [9.55157242e+01, 9.94650116e+01, 1.03494293e+02, 1.07603584e+02, 1.11792870e+02],
                                    [1.16062157e+02, 1.20411446e+02, 1.24840721e+02, 1.29350006e+02, 1.33939301e+02]]],
                                  dtype=FLOAT_TYPE)
-        np.testing.assert_array_equal(ferr, expected_ferr,
+        np.testing.assert_array_equal(FUK.npy.ferr, expected_ferr,
                                       err_msg="ferr does not give the expected error "
                                               "for the fourier_update_kernel.fourier_error emthods")
 
@@ -270,17 +221,23 @@ class FourierUpdateKernelTest(unittest.TestCase):
                           [1.16062157e+02, 1.20411446e+02, 1.24840721e+02, 1.29350006e+02, 1.33939301e+02]]],
                         dtype=FLOAT_TYPE)
 
+
+        # print(repr(ferr))
+        print(ferr.shape)
+        print(repr(ferr))
+        auxiliary_shape = (4, 5, 5)
+        fake_aux = np.zeros(auxiliary_shape, dtype=COMPLEX_TYPE)
         scan_pts = 2  # one dimensional scan point number
         N = scan_pts ** 2
 
         addr = np.zeros((N, 1, 5, 3))
 
-        FUK = FourierUpdateKernel(nmodes=1, pbound=0.9)
+        FUK = FourierUpdateKernel(fake_aux, nmodes=1)
+        FUK.allocate()
         err_fmag = np.zeros(N, dtype=FLOAT_TYPE)
-        FUK.error_reduce(ferr, err_fmag, addr)
+        FUK.error_reduce(addr, err_fmag)
 
-        # print(err_fmag)
-        # print(repr(ferr))
+
 
         expected_ferr = np.array([[[0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00],
                                    [7.54033208e-01, 3.04839879e-01, 5.56465909e-02, 6.45330548e-03, 1.57260016e-01],
@@ -310,108 +267,6 @@ class FourierUpdateKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(expected_ferr, ferr, err_msg="The fourier_update_kernel.error_reduce"
                                                                    "is not behaving as expected.")
 
-    def test_calc_fm(self):
-        '''
-        setup
-        '''
-        B = 5  # frame size y
-        C = 5  # frame size x
-
-        D = 2  # number of probe modes
-        G = 2 # number og object modes
-
-        E = B  # probe size y
-        F = C  # probe size x
-
-        scan_pts = 2  # one dimensional scan point number
-
-        N = scan_pts ** 2
-        total_number_modes = G * D
-        A = N * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
-
-        f = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
-        for idx in range(A):
-            f[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
-
-        fmag = np.empty(shape=(N, B, C), dtype=FLOAT_TYPE)  # the measured magnitudes NxAxB
-        fmag_fill = np.arange(np.prod(fmag.shape)).reshape(fmag.shape).astype(fmag.dtype)
-        fmag[:] = fmag_fill
-
-        fm = np.ones((N, B, C), dtype=FLOAT_TYPE)
-
-        mask = np.empty(shape=(N, B, C), dtype=FLOAT_TYPE)# the masks for the measured magnitudes either 1xAxB or NxAxB
-        mask_fill = np.ones_like(mask)
-        mask_fill[::2, ::2] = 0 # checkerboard for testing
-        mask[:] = mask_fill
-
-        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
-        X = X.reshape((N,))
-        Y = Y.reshape((N,))
-
-        addr = np.zeros((N, total_number_modes, 5, 3))
-
-        exit_idx = 0
-        position_idx = 0
-        for xpos, ypos in zip(X, Y):
-            mode_idx = 0
-            for pr_mode in range(D):
-                for ob_mode in range(G):
-                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
-                                                             [ob_mode, ypos, xpos],
-                                                             [exit_idx, 0, 0],
-                                                             [position_idx, 0, 0],
-                                                             [position_idx, 0, 0]])
-                    mode_idx += 1
-                    exit_idx += 1
-            position_idx += 1
-
-
-        # print("address book is:")
-        # print(repr(addr))
-
-        '''
-        test
-        '''
-
-        fdev = np.zeros_like(fmag)
-        ferr = np.zeros_like(fmag)
-        err_fmag = np.zeros(N, dtype=FLOAT_TYPE)
-        pbound_set = 0.9
-        mask_sum = mask.sum(-1).sum(-1)
-
-        FUK = FourierUpdateKernel(nmodes=total_number_modes, pbound=pbound_set)
-        FUK.configure(fmag **2 , mask, f, addr)
-        FUK.fourier_error(f, fmag, fdev, ferr, mask, mask_sum, addr)
-        FUK.error_reduce(ferr, err_fmag, addr)
-        FUK._calc_fm(fm, mask, fmag, fdev, err_fmag, addr)
-
-        expected_fm = np.array([[[1.        , 1.        , 1.        , 1.        , 1.        ],
-                                 [0.6955777 , 0.8064393 , 0.91730094, 1.0281626 , 1.1390243 ],
-                                 [1.        , 1.        , 1.        , 1.        , 1.        ],
-                                 [1.804194  , 1.9150558 , 2.0259173 , 2.136779  , 2.2476408 ],
-                                 [1.        , 1.        , 1.        , 1.        , 1.        ]],
-
-                                [[1.3237704 , 1.374796  , 1.4258218 , 1.4768474 , 1.5278732 ],
-                                 [1.5788988 , 1.6299245 , 1.6809502 , 1.7319758 , 1.7830015 ],
-                                 [1.8340272 , 1.8850529 , 1.9360785 , 1.9871043 , 2.0381298 ],
-                                 [2.0891557 , 2.1401813 , 2.191207  , 2.2422326 , 2.2932584 ],
-                                 [2.344284  , 2.3953097 , 2.4463353 , 2.4973612 , 2.5483868 ]],
-
-                                [[1.        , 1.        , 1.        , 1.        , 1.        ],
-                                 [1.81701   , 1.8495167 , 1.8820235 , 1.91453   , 1.9470367 ],
-                                 [1.        , 1.        , 1.        , 1.        , 1.        ],
-                                 [2.1420763 , 2.1745832 , 2.20709   , 2.2395964 , 2.272103  ],
-                                 [1.        , 1.        , 1.        , 1.        , 1.        ]],
-
-                                [[1.8064898 , 1.830304  , 1.8541181 , 1.8779323 , 1.9017462 ],
-                                 [1.9255604 , 1.9493744 , 1.9731885 , 1.9970027 , 2.0208168 ],
-                                 [2.0446308 , 2.068445  , 2.092259  , 2.1160731 , 2.1398873 ],
-                                 [2.1637013 , 2.1875153 , 2.2113295 , 2.2351437 , 2.2589576 ],
-                                 [2.2827718 , 2.306586  , 2.3304    , 2.354214  , 2.3780282 ]]], dtype=FLOAT_TYPE)
-
-        np.testing.assert_array_equal(fm, expected_fm, err_msg="the fm array from the calc_fm kernel is"
-                                                               " not behaving as expected.")
-
     def test_fmag_update(self):
         '''
         setup
@@ -420,10 +275,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         C = 5  # frame size x
 
         D = 2  # number of probe modes
-        G = 2 # number og object modes
-
-        E = B  # probe size y
-        F = C  # probe size x
+        G = 2  # number og object modes
 
         scan_pts = 2  # one dimensional scan point number
 
@@ -439,11 +291,9 @@ class FourierUpdateKernelTest(unittest.TestCase):
         fmag_fill = np.arange(np.prod(fmag.shape)).reshape(fmag.shape).astype(fmag.dtype)
         fmag[:] = fmag_fill
 
-        fm = np.ones((N, B, C), dtype=FLOAT_TYPE)
-
-        mask = np.empty(shape=(N, B, C), dtype=FLOAT_TYPE)# the masks for the measured magnitudes either 1xAxB or NxAxB
+        mask = np.empty(shape=(N, B, C), dtype=FLOAT_TYPE) # the masks for the measured magnitudes either 1xAxB or NxAxB
         mask_fill = np.ones_like(mask)
-        mask_fill[::2, ::2] = 0 # checkerboard for testing
+        mask_fill[::2, ::2] = 0  # checkerboard for testing
         mask[:] = mask_fill
 
         X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
@@ -475,22 +325,19 @@ class FourierUpdateKernelTest(unittest.TestCase):
         test
         '''
 
-        fdev = np.zeros_like(fmag)
-        ferr = np.zeros_like(fmag)
         err_fmag = np.zeros(N, dtype=FLOAT_TYPE)
         pbound_set = 0.9
         mask_sum = mask.sum(-1).sum(-1)
 
-        FUK = FourierUpdateKernel(nmodes=total_number_modes, pbound=pbound_set)
-        FUK.configure(fmag **2 , mask, f, addr)
-        FUK.fourier_error(f, fmag, fdev, ferr, mask, mask_sum, addr)
-        FUK.error_reduce(ferr, err_fmag, addr)
-        FUK._calc_fm(fm, mask, fmag, fdev, err_fmag, addr)
+        FUK = FourierUpdateKernel(f, nmodes=total_number_modes)
+        FUK.allocate()
+        FUK.fourier_error(f, addr, fmag, mask, mask_sum)
+        FUK.error_reduce(addr, err_fmag)
+        FUK.fmag_all_update(f, addr, fmag, mask, err_fmag, pbound=pbound_set)
         # print("f before:")
         # print(repr(f))
         # print(fm.shape)
         # print(f.shape)
-        FUK._fmag_update(f, fm, addr)
         # print("f after:")
         # print(repr(f))
         # self.assertTrue(False)
