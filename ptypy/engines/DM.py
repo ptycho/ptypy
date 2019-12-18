@@ -407,7 +407,7 @@ class DM(PositionCorrectionEngine):
         for name, pod in self.pods.iteritems():
             if not pod.active:
                 continue
-            pod.probe_sp += pod.object.conj() * pod.exit * pod.probe_weight
+            pod.probe += pod.object_sp.conj() * pod.exit_sp * pod.probe_weight
             pr_nrm[pod.pr_view] += u.cabs2(pod.object_sp) * pod.probe_weight
 
         change = 0.

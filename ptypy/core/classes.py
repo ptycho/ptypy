@@ -2250,7 +2250,7 @@ class POD(Base):
     def probe_sp(self):
         """
         Convenience property that links to slice of probe :any:`Storage`,
-        including subpixel.
+        including the (negative) subpixel shift of the associated object view.
         """
         return self.pr_view.storage.get_data(v=self.pr_view, sp=-self.ob_view.sp)
 
@@ -2273,6 +2273,25 @@ class POD(Base):
     def exit(self, v):
         if self.use_exit_container:
             self.ex_view.data = v
+        else:
+            self._exit = v
+
+    @property
+    def exit_sp(self):
+        """
+        Convenience property that links to slice of exit wave
+        :any:`Storage`, including the (negative) subpixel shift of
+        the associated object view.
+        """
+        if self.use_exit_container:
+            return self.ex_view.storage.get_data(v=self.ex_view, sp=-self.ob_view.sp)
+        else:
+            return self._exit
+
+    @exit_sp.setter
+    def exit_sp(self, v):
+        if self.use_exit_container:
+            self.ex_view.storage.set_data(v=self.ex_view, newdata=v, sp=-self.ob_view.sp)
         else:
             self._exit = v
 
