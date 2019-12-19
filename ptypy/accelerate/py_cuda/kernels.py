@@ -107,7 +107,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                             ob,
                             obr, obc,
                             addr,
-                            alpha,
+                            np.float32(alpha),
                             block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
 
     def build_exit(self, b_aux, addr, ob, pr, ex):

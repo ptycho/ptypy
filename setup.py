@@ -69,8 +69,7 @@ if __name__ == '__main__':
 
 # optional packages that we don't always want to build
 exclude_packages = ['*test*',
-                    '*array_based*',
-                    '*cuda*']
+                    '*.accelerate.cuda*']
 
 acceleration_build_steps = []
 
@@ -89,7 +88,7 @@ if '--all-acceleration' in sys.argv:
     # cuda
     acceleration_build_steps.append(CudaExtension(DEBUG))
     exclude_packages.remove('*cuda*')
-    exclude_packages.remove('*array_based*')
+    #exclude_packages.remove('*array_based*')
 
 
 # chain this before build_ext
@@ -121,7 +120,7 @@ class BuildExtAcceleration(setuptools.command.build_ext.build_ext):
 extensions = [ext.getExtension() for ext in acceleration_build_steps]
 
 package_list = setuptools.find_packages(exclude=exclude_packages)
-
+#print(package_list)
 setup(
     name='Python Ptychography toolbox',
     version=VERSION,
@@ -130,7 +129,8 @@ setup(
     long_description=open('README.rst', 'r').read(),
     package_dir={'ptypy': 'ptypy'},
     packages=package_list,
-    package_data={'ptypy': ['resources/*', ]},
+    package_data={'ptypy': ['resources/*',],
+                  'ptypy.accelerate.py_cuda.cuda': ['*.cu']},
     scripts=['scripts/ptypy.plot',
              'scripts/ptypy.inspect',
              'scripts/ptypy.plotclient',
