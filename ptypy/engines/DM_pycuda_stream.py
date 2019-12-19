@@ -34,22 +34,26 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
         ## The following should be restricted to new data
 
-        # recursive copy to gpu
-        for _cname, c in self.ptycho.containers.items():
-            for _sname, s in c.S.items():
-                # convert data here
-                if s.data.dtype.name == 'bool':
-                    data = s.data.astype(np.float32)
-                else:
-                    data = s.data
-                s.gpu = gpuarray.to_gpu(data)
+        for name, s in self.ob.S.items():
+            s.gpu = gpuarray.to_gpu(s.data)
+        for name, s in self.ob_buf.S.items():
+            s.gpu = gpuarray.to_gpu(s.data)
+        for name, s in self.ob_nrm.S.items():
+            s.gpu = gpuarray.to_gpu(s.data)
+        for name, s in self.pr.S.items():
+            s.gpu = gpuarray.to_gpu(s.data)
+        for name, s in self.pr_nrm.S.items():
+            s.gpu = gpuarray.to_gpu(s.data)
 
         for prep in self.diff_info.values():
-            prep.addr = gpuarray.to_gpu(prep.addr)
-            prep.mag = gpuarray.to_gpu(prep.mag)
-            prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
-            prep.err_fourier = gpuarray.to_gpu(prep.err_fourier)
+            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
+            prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
+            prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
             self.dummy_error = np.zeros_like(prep.err_fourier)
+
+    @property
+    def gpu_is_full(self):
+        return False
 
     def engine_iterate(self, num=1):
         """
@@ -110,18 +114,49 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     BW = kern.BW
 
                     # get addresses and auxilliary array
-                    addr = prep.addr
-                    mag = prep.mag
-                    ma_sum = prep.ma_sum
-                    err_fourier = prep.err_fourier
+                    addr = prep.addr_gpu
+                    err_fourier = prep.err_fourier_gpu
+                    ma_sum = prep.ma_sum_gpu
+
+                    # stuff to be cycled
+                    mag = gpuarray.to_gpu(prep.mag)
+                    ma = gpuarray.to_gpu(self.ma.S[dID].data)
+
 
                     # local references
-                    ma = self.ma.S[dID].gpu
                     ob = self.ob.S[oID].gpu
                     obn = self.ob_nrm.S[oID].gpu
                     obb = self.ob_buf.S[oID].gpu
                     pr = self.pr.S[pID].gpu
-                    ex = self.ex.S[eID].gpu
+
+                    # cycle exit in and out, cause it's used by both
+                    if 'ex_gpu' in prep:
+                        print('got it')
+                        ex = prep.ex_gpu
+                    elif not self.gpu_is_full:
+                        print('new')
+                        N, a, b  = self.ex.S[eID].data.shape
+                        ex_c = np.zeros_like(aux.get())
+                        ex_c[:N] = self.ex.S[eID].data
+                        ex = gpuarray.to_gpu(ex_c)
+                        prep.ex_gpu = ex
+                    else:
+                        print('steal')
+                        # get a buffer
+                        for tID, p in self.diff_info.items():
+                            if not 'ex' in p:
+                                continue
+                            else:
+                                ex = p.pop('ex')
+                                eID = p.poe_IDs[2]
+                                break
+                        ex_t = self.ex.S[eID].data
+                        ex_t[:] = ex.get()[:ex_t.shape[0]]
+                        N, a, b  = self.ex.S[eID].data.shape
+                        ex_c = np.zeros_like(aux)
+                        ex_c[:N] = self.ex.S[eID].data
+                        ex.set(ex_c)
+                        prep.ex_gpu = ex
 
                     # Fourier update.
                     if do_update_fourier:
@@ -134,6 +169,39 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         t1 = time.time()
                         FW(aux, aux)
                         self.benchmark.B_Prop += time.time() - t1
+
+                        # cycle exit in and out, cause it's used by both
+                        if 'ma_gpu' in prep:
+                            ma = prep.ma_gpu
+                            mag = prep.mag_gpu
+                        elif not self.gpu_is_full:
+                            N, a, b = prep.mag.shape
+                            ma_c = np.zeros_like(FUK.npy.fdev.get())
+                            mag_c = np.zeros_like(FUK.npy.fdev.get())
+                            ma_c[:N] = self.ma.S[dID].data
+                            mag_c[:N] = prep.mag
+                            ma = gpuarray.to_gpu(ma_c)
+                            mag = gpuarray.to_gpu(mag_c)
+                            prep.ma_gpu = ma
+                            prep.mag_gpu = mag
+                        else:
+                            # get a buffer
+                            for tID, p in self.diff_info.items():
+                                if not 'ma_gpu' in p:
+                                    continue
+                                else:
+                                    ma = p.pop('ma_gpu')
+                                    mag = p.pop('mag_gpu')
+                                    break
+                            N, a, b = prep.mag.shape
+                            ma_c = np.zeros_like(FUK.npy.fdev.get())
+                            mag_c = np.zeros_like(FUK.npy.fdev.get())
+                            ma_c[:N] = self.ma.S[dID].data
+                            mag_c[:N] = prep.mag
+                            ma.set(ma_c)
+                            mag.set(mag_c)
+                            prep.ma_gpu = ma
+                            prep.mag_gpu = mag
 
                         ## Deviation from measured data
                         t1 = time.time()
@@ -226,76 +294,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         self.error = error
         return error
 
-    ## object update
-    def object_update(self, MPI=False):
-        t1 = time.time()
-        queue = self.queue
-        queue.synchronize()
-        for oID, ob in self.ob.storages.items():
-            obn = self.ob_nrm.S[oID]
-            """
-            if self.p.obj_smooth_std is not None:
-                logger.info('Smoothing object, cfact is %.2f' % cfact)
-                t2 = time.time()
-                self.prg.gaussian_filter(queue, (info[3],info[4]), None, obj_gpu.data, self.gauss_kernel_gpu.data)
-                queue.synchronize()
-                obj_gpu *= cfact
-                print 'gauss: '  + str(time.time()-t2)
-            else:
-                obj_gpu *= cfact
-            """
-            cfact = self.ob_cfact[oID]
-            ob.gpu *= cfact
-            # obn.gpu[:] = cfact
-            obn.gpu.fill(cfact)
-            queue.synchronize()
-
-        # storage for-loop
-        for dID in self.di.S.keys():
-            prep = self.diff_info[dID]
-
-            POK = self.kernels[prep.label].POK
-            # find probe, object in exit ID in dependence of dID
-            pID, oID, eID = prep.poe_IDs
-
-            # scan for loop
-            ev = POK.ob_update(prep.addr,
-                               self.ob.S[oID].gpu,
-                               self.ob_nrm.S[oID].gpu,
-                               self.pr.S[pID].gpu,
-                               self.ex.S[eID].gpu)
-            queue.synchronize()
-
-        for oID, ob in self.ob.storages.items():
-            obn = self.ob_nrm.S[oID]
-            # MPI test
-            if MPI:
-                ob.data[:] = ob.gpu.get()
-                obn.data[:] = obn.gpu.get()
-                queue.synchronize()
-                parallel.allreduce(ob.data)
-                parallel.allreduce(obn.data)
-                ob.data /= obn.data
-
-                # Clip object (This call takes like one ms. Not time critical)
-                if self.p.clip_object is not None:
-                    clip_min, clip_max = self.p.clip_object
-                    ampl_obj = np.abs(ob.data)
-                    phase_obj = np.exp(1j * np.angle(ob.data))
-                    too_high = (ampl_obj > clip_max)
-                    too_low = (ampl_obj < clip_min)
-                    ob.data[too_high] = clip_max * phase_obj[too_high]
-                    ob.data[too_low] = clip_min * phase_obj[too_low]
-                ob.gpu.set(ob.data)
-            else:
-                ob.gpu /= obn.gpu
-
-            queue.synchronize()
-
-        # print 'object update: ' + str(time.time()-t1)
-        self.benchmark.object_update += time.time() - t1
-        self.benchmark.calls_object += 1
-
     ## probe update
     def probe_update(self, MPI=False):
         t1 = time.time()
@@ -318,11 +316,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             pID, oID, eID = prep.poe_IDs
 
             # scan for-loop
-            ev = POK.pr_update(prep.addr,
+            ev = POK.pr_update(prep.addr_gpu,
                                self.pr.S[pID].gpu,
                                self.pr_nrm.S[pID].gpu,
                                self.ob.S[oID].gpu,
-                               self.ex.S[eID].gpu)
+                               prep.ex_gpu)
             queue.synchronize()
 
         for pID, pr in self.pr.storages.items():
