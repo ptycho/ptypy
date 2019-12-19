@@ -27,6 +27,7 @@ __all__ = ['DM_pycuda']
 serialize_array_access = DM_serial.serialize_array_access
 gaussian_kernel = DM_serial.gaussian_kernel
 
+
 @register()
 class DM_pycuda(DM_serial.DM_serial):
 

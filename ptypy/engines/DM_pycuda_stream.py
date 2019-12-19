@@ -11,6 +11,7 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 from pycuda import gpuarray
+import pycuda.driver as cuda
 
 from .. import utils as u
 from ..utils.verbose import logger, log
@@ -27,6 +28,11 @@ __all__ = ['DM_pycuda_stream']
 @register()
 class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
+    def __init__(self, ptycho_parent, pars = None):
+
+        super(DM_pycuda_stream, self).__init__(ptycho_parent, pars)
+
+        self.qu2 = cuda.Stream()
 
     def engine_prepare(self):
 
@@ -59,6 +65,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         """
         Compute one iteration.
         """
+        #ma_buf = ma_c = np.zeros(FUK.fshape, dtype=np.float32)
 
         for it in range(num):
 
@@ -119,8 +126,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     ma_sum = prep.ma_sum_gpu
 
                     # stuff to be cycled
-                    mag = gpuarray.to_gpu(prep.mag)
-                    ma = gpuarray.to_gpu(self.ma.S[dID].data)
+                    #mag = gpuarray.to_gpu(prep.mag)
+                    #ma = gpuarray.to_gpu(self.ma.S[dID].data)
 
 
                     # local references
@@ -136,9 +143,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     elif not self.gpu_is_full:
                         print('new')
                         N, a, b  = self.ex.S[eID].data.shape
-                        ex_c = np.zeros_like(aux.get())
-                        ex_c[:N] = self.ex.S[eID].data
-                        ex = gpuarray.to_gpu(ex_c)
+                        #ex_c = np.zeros(aux.shape, dtype=np.complex64)
+                        #ex_c[:N] = self.ex.S[eID].data
+                        ex = gpuarray.to_gpu_async(self.ex.S[eID].data, stream=self.qu2)
                         prep.ex_gpu = ex
                     else:
                         print('steal')
@@ -172,19 +179,23 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         # cycle exit in and out, cause it's used by both
                         if 'ma_gpu' in prep:
+                            print('got it ma')
                             ma = prep.ma_gpu
                             mag = prep.mag_gpu
                         elif not self.gpu_is_full:
+                            print('new ma', self.ma.S[dID].data.dtype)
                             N, a, b = prep.mag.shape
-                            ma_c = np.zeros_like(FUK.npy.fdev.get())
-                            mag_c = np.zeros_like(FUK.npy.fdev.get())
-                            ma_c[:N] = self.ma.S[dID].data
-                            mag_c[:N] = prep.mag
-                            ma = gpuarray.to_gpu(ma_c)
-                            mag = gpuarray.to_gpu(mag_c)
+                            #ma_c = np.zeros(FUK.fshape, dtype=np.float32)
+                            #mag_c = np.zeros(FUK.fshape, dtype=np.float32)
+                            #ma_c[:N] = self.ma.S[dID].data
+                            #mag_c[:N] = prep.mag
+                            mag = gpuarray.to_gpu_async(prep.mag, stream=self.qu2)
+                            ma = gpuarray.to_gpu_async(self.ma.S[dID].data.astype(np.float32), stream=self.qu2)
+                            print(ma.shape, mag.shape)
                             prep.ma_gpu = ma
                             prep.mag_gpu = mag
                         else:
+                            print('steal ma')
                             # get a buffer
                             for tID, p in self.diff_info.items():
                                 if not 'ma_gpu' in p:
@@ -194,8 +205,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                                     mag = p.pop('mag_gpu')
                                     break
                             N, a, b = prep.mag.shape
-                            ma_c = np.zeros_like(FUK.npy.fdev.get())
-                            mag_c = np.zeros_like(FUK.npy.fdev.get())
+                            ma_c = np.zeros(FUK.fshape, dtype=np.float32)
+                            mag_c = np.zeros(FUK.fshape, dtype=np.float32)
                             ma_c[:N] = self.ma.S[dID].data
                             mag_c[:N] = prep.mag
                             ma.set(ma_c)
@@ -225,10 +236,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         #errs = np.ascontiguousarray(np.vstack([err_fourier.get(), err_phot, err_exit]).T)
                         error.update(zip(prep.view_IDs, errs))
-                        queue.synchronize()
+                        #queue.synchronize()
                         self.benchmark.calls_fourier += 1
-
-                    parallel.barrier()
 
                     prestr = '%d Iteration (Overlap) #%02d:  ' % (parallel.rank, inner)
 

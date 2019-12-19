@@ -10,7 +10,7 @@ p = u.Param()
 
 # for verbose output
 p.verbose_level = 3
-p.frames_per_block = 200
+p.frames_per_block = 500
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
@@ -25,11 +25,11 @@ p.scans.MF.name = 'BlockFull' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
-p.scans.MF.data.num_frames = 400
+p.scans.MF.data.num_frames = 1000
 p.scans.MF.data.save = None
 
 p.scans.MF.illumination = u.Param(diversity=None)
-p.scans.MF.coherence = u.Param(num_probe_modes=2)
+p.scans.MF.coherence = u.Param(num_probe_modes=4)
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
