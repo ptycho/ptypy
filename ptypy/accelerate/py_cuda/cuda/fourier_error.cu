@@ -33,12 +33,12 @@ __global__ void fourier_error(int nmodes,
       fmask += ma[0] * A * B;
       ferr += da[0] * A * B;
 
-      for (int a = tx; a < A; a += blockDim.x)
+      for (int a = ty; a < A; a += blockDim.y)
       {
-        for (int b = ty; b < B; b += blockDim.y)
+        for (int b = tx; b < B; b += blockDim.x)
         {
           float acc = 0.0;
-          for (int idx = 0; idx < nmodes; idx+=1 )
+          for (int idx = 0; idx < nmodes; ++idx )
           {
            float abs_exit_wave = abs(f[a * B + b + idx*A*B]);
            acc += abs_exit_wave * abs_exit_wave; // if we do this manually (real*real +imag*imag) we get bad rounding errors
