@@ -32,14 +32,18 @@ __global__ void fmag_all_update(complex<float> *f,
       f += ea[0] * A * B ;
       float renorm = sqrt(pbound / err);
 
-      for (int a = tx; a < A; a += blockDim.x)
+      for (int a = ty; a < A; a += blockDim.y)
       {
-        for (int b = ty; b < B; b += blockDim.y)
+        for (int b = tx; b < B; b += blockDim.x)
         {
           float m = fmask[a * A + b];
           if (renorm < 1.0f)
           {
-
+            /*
+            // assuming this is actually a mask, i.e. 0 or 1
+            float fm = m < 0.5f ? 1.0f : 
+              ((fmag[a * A + b] + fdev[a * A + b] * renorm) / (fdev[a * A + b] + fmag[a * A + b]  + 1e-10f)) ;
+            */
             float fm = (1.0f - m) + m * ((fmag[a * A + b] + fdev[a * A + b] * renorm) / (fdev[a * A + b] + fmag[a * A + b]  + 1e-10f)) ;
             f[a * A + b] = fm * f[a * A + b];
           }
