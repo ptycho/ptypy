@@ -85,7 +85,9 @@ extern "C" __global__ void ob_update2(int pr_sh,
         auto cpr = conj(pr);
         ob[idx] += cpr * 
           ex_g[ad[1]*pr_sh*pr_sh +v1*pr_sh + v2];
-        obn[idx].real() += pr.real() * pr.real() + pr.imag() * pr.imag();
+        auto rr = obn[idx].real();
+        rr += pr.real() * pr.real() + pr.imag() * pr.imag();
+        obn[idx].real(rr);
       }
     }
 
