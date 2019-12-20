@@ -10,31 +10,19 @@ This file is part of the PTYPY package.
 
 import numpy as np
 import time
-import pycuda
-import pycuda.driver as cuda
+from pycuda import gpuarray
+
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
 from . import BaseEngine, register, DM_serial, DM
-
-from pycuda import gpuarray
 from ..accelerate import py_cuda as gpu
 from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel
 
-### TODOS
-#
-# - Get it running faster with MPI (partial sync)
-# - implement "batching" when processing frames to lower the pressure on memory
-# - Be smarter about the engine.prepare() part
-# - Propagator needs to be reconfigurable for a certain batch size, gpyfft hates that.
-# - Fourier_update_kernel needs to allow batched execution
-
-## for debugging
-from matplotlib import pyplot as plt
+MPI = parallel.size > 1
+MPI = True
 
 __all__ = ['DM_pycuda']
-
-parallel = u.parallel
 
 serialize_array_access = DM_serial.serialize_array_access
 gaussian_kernel = DM_serial.gaussian_kernel
@@ -51,7 +39,6 @@ class DM_pycuda(DM_serial.DM_serial):
         super(DM_pycuda, self).__init__(ptycho_parent, pars)
 
         self.context, self.queue = gpu.get_context()
-        self.queue = cuda.Stream()
         # allocator for READ only buffers
         # self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
         ## gaussian filter
@@ -133,9 +120,9 @@ class DM_pycuda(DM_serial.DM_serial):
         ## The following should be restricted to new data
 
         # recursive copy to gpu
-        for name, c in self.ptycho.containers.items():
-            for name, s in c.S.items():
-                ## convert data here
+        for _cname, c in self.ptycho.containers.items():
+            for _sname, s in c.S.items():
+                # convert data here
                 if s.data.dtype.name == 'bool':
                     data = s.data.astype(np.float32)
                 else:
@@ -152,34 +139,9 @@ class DM_pycuda(DM_serial.DM_serial):
             prep.addr = gpuarray.to_gpu(prep.addr)
             prep.addr2 = gpuarray.to_gpu(prep.addr2)
             prep.mag = gpuarray.to_gpu(prep.mag)
-            prep.mask_sum = gpuarray.to_gpu(prep.mask_sum)
+            prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier = gpuarray.to_gpu(prep.err_fourier)
             self.dummy_error = np.zeros_like(prep.err_fourier)
-        """
-        for dID, diffs in self.di.S.items():
-            prep = u.Param()
-            self.diff_info[dID] = prep
-
-            prep.view_IDs, prep.poe_IDs, addr = serialize_array_access(diffs)
-
-            all_modes = addr.shape[1]
-            # master pod
-            mpod = self.di.V[prep.view_IDs[0]].pod
-            pr = mpod.pr_view.storage
-            ob = mpod.ob_view.storage
-            ex = mpod.ex_view.storage
-
-            prep.addr_gpu = gpuarray.to_gpu(addr)
-            prep.addr = addr
-
-            ## auxiliary wave buffer
-            aux = np.zeros_like(ex.data)
-            prep.aux_gpu = gpuarray.to_gpu(aux)
-            prep.aux = aux
-            #self.queue.synchronize()
-        """
-        # finish init queue
-        #self.queue.synchronize()
 
     def engine_iterate(self, num=1):
         """
@@ -188,10 +150,7 @@ class DM_pycuda(DM_serial.DM_serial):
 
         for it in range(num):
 
-            error_dct = {}
-
             for dID in self.di.S.keys():
-                #print("DID is: %s" % dID)
                 t1 = time.time()
 
                 prep = self.diff_info[dID]
@@ -211,7 +170,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 # get addresses
                 addr = prep.addr
                 mag = prep.mag
-                mask_sum = prep.mask_sum
+                ma_sum = prep.ma_sum
                 err_fourier = prep.err_fourier
 
                 # local references
@@ -223,38 +182,38 @@ class DM_pycuda(DM_serial.DM_serial):
                 queue = self.queue
 
                 t1 = time.time()
-                AWK.build_aux(aux, addr, ob, pr, ex, alpha=np.float32(self.p.alpha))
-                #queue.synchronize()
+                AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                # queue.synchronize()
 
                 self.benchmark.A_Build_aux += time.time() - t1
 
-                ## FFT
+                # FFT
                 t1 = time.time()
                 FW(aux, aux)
 
-                #queue.synchronize()
+                # queue.synchronize()
                 self.benchmark.B_Prop += time.time() - t1
 
-                ## Deviation from measured data
+                #  Deviation from measured data
                 t1 = time.time()
-                FUK.fourier_error(aux, addr, mag, ma, mask_sum)
+                FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                 FUK.error_reduce(addr, err_fourier)
                 FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
-                #queue.synchronize()
+                # queue.synchronize()
                 self.benchmark.C_Fourier_update += time.time() - t1
-                ## iFFT
+                # iFFT
                 t1 = time.time()
                 BW(aux, aux)
 
-                #print("The context is: %s" % self.context)
-                #queue.synchronize()
-                #print("Here")
+                # print("The context is: %s" % self.context)
+                # queue.synchronize()
+                # print("Here")
                 self.benchmark.D_iProp += time.time() - t1
 
-                ## apply changes #2
+                # apply changes #2
                 t1 = time.time()
                 AWK.build_exit(aux, addr, ob, pr, ex)
-                #queue.synchronize()
+                # queue.synchronize()
                 self.benchmark.E_Build_exit += time.time() - t1
 
                 # err_phot = np.zeros_like(err_fourier)
@@ -269,7 +228,7 @@ class DM_pycuda(DM_serial.DM_serial):
             parallel.barrier()
 
             sync = (self.curiter % 1 == 0)
-            self.overlap_update(MPI=True)
+            self.overlap_update(MPI=MPI)
 
             parallel.barrier()
             self.curiter += 1
@@ -340,15 +299,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 parallel.allreduce(obn.data)
                 ob.data /= obn.data
 
-                # Clip object (This call takes like one ms. Not time critical)
-                if self.p.clip_object is not None:
-                    clip_min, clip_max = self.p.clip_object
-                    ampl_obj = np.abs(ob.data)
-                    phase_obj = np.exp(1j * np.angle(ob.data))
-                    too_high = (ampl_obj > clip_max)
-                    too_low = (ampl_obj < clip_min)
-                    ob.data[too_high] = clip_max * phase_obj[too_high]
-                    ob.data[too_low] = clip_min * phase_obj[too_low]
+                self.clip_object(ob)
                 ob.gpu.set(ob.data)
             else:
                 ob.gpu /= obn.gpu

@@ -68,8 +68,9 @@ class FourierUpdateKernel(FUK_NPY, OclBase):
             #pragma unroll
             
             for(int i=0; i<nmodes; i++){
-                loc_af2a = cfloat_abs(exit[(z_z+i)*dx*dx + y*dx + x]);
-                loc_af2b += loc_af2a * loc_af2a;
+                //loc_af2a = cfloat_abs(exit[(z_z+i)*dx*dx + y*dx + x]);
+                //loc_af2b += loc_af2a * loc_af2a;
+                loc_af2b += cfloat_abs_squared(exit[(z_z+i)*dx*dx + y*dx + x]);
             }
             
             loc_f[2] = sqrt(loc_af2b) - fmag[z_merged*dx*dx + y*dx + x];
@@ -102,7 +103,8 @@ class FourierUpdateKernel(FUK_NPY, OclBase):
             __private float d=fdev[midx];
             
             if (renorm < 1.){            
-                fm =  m * native_divide(d*renorm +g, d+g+eps) + (1-m);
+                fm =  (1-m) + m * native_divide(g+d*renorm, d+g+eps);
+                //fm =  m * (d*renorm +g) / (d+g+eps) + (1-m);
             }
             f[idx] = cfloat_mulr(f[idx] , fm );
         }

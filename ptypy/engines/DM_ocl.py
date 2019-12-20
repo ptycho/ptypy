@@ -135,6 +135,7 @@ class DM_ocl(DM_serial.DM_serial):
 
         ## The following should be restricted to new data
 
+        # For Streaming / Queuing: Limit to data that stays on GPU like pr & ob
         # recursive copy to gpu
         for name, c in self.ptycho.containers.items():
             for name, s in c.S.items():
@@ -145,35 +146,18 @@ class DM_ocl(DM_serial.DM_serial):
                     data = s.data
                 s.gpu = cla.to_device(self.queue, data)
 
+        # For streaming, part of this needs to be moved to engine_iterate
+        # this contains stuff that aligns with the data
+        # also only new data should be considered here.
         for prep in self.diff_info.values():
             prep.addr = cla.to_device(self.queue, prep.addr)
             prep.mag = cla.to_device(self.queue, prep.mag)
             prep.mask_sum = cla.to_device(self.queue, prep.mask_sum)
             prep.err_fourier = cla.to_device(self.queue, prep.err_fourier)
+            ## potentially
+            #prep.ex = ...
+            #prep.ma = ...
 
-        """
-        for dID, diffs in self.di.S.items():
-            prep = u.Param()
-            self.diff_info[dID] = prep
-
-            prep.view_IDs, prep.poe_IDs, addr = serialize_array_access(diffs)
-
-            all_modes = addr.shape[1]
-            # master pod
-            mpod = self.di.V[prep.view_IDs[0]].pod
-            pr = mpod.pr_view.storage
-            ob = mpod.ob_view.storage
-            ex = mpod.ex_view.storage
-
-            prep.addr_gpu = cla.to_device(self.queue, addr)
-            prep.addr = addr
-
-            ## auxiliary wave buffer
-            aux = np.zeros_like(ex.data)
-            prep.aux_gpu = cla.to_device(self.queue, aux)
-            prep.aux = aux
-            self.queue.finish()
-        """
         # finish init queue
         self.queue.finish()
 
