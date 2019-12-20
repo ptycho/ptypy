@@ -53,4 +53,5 @@ __global__ void ob_update(
           }
        }
 }
+
 }

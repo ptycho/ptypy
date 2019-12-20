@@ -3,8 +3,8 @@ from pycuda.compiler import SourceModule
 import numpy as np
 import os
 # debug_options = []
-# debug_options = ['-O0', '-G', '-g']
-debug_options = ['-O3', '-DNDEBUG'] # release mode flags
+# debug_options = ['-O0', '-G', '-g', '-std=c++11', '--keep']
+debug_options = ['-O3', '-DNDEBUG', '-std=c++11', '-lineinfo'] # release mode flags
 
 context = None
 queue = None
