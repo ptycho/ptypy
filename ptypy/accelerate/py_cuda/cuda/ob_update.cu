@@ -44,9 +44,9 @@ __global__ void ob_update(
 
       exit_wave += ea[0] * B * C;
 
-      for (int b = tx; b < B; b += blockDim.x)
+      for (int b = ty; b < B; b += blockDim.y)
       {
-        for (int c = ty; c < C; c += blockDim.y)
+        for (int c = tx; c < C; c += blockDim.x)
         {
           atomicAdd(&obj[b * I + c], conj(probe[b * F + c]) * exit_wave[b * C + c] );
           atomicAdd(&denominator[b * I + c], probe[b * F + c] * conj(probe[b * F + c]) );

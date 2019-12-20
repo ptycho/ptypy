@@ -15,19 +15,19 @@ __global__ void build_exit(
     complex<float>* exit_wave,
     int B,
     int C,
-    const complex<float>* probe,
+    const complex<float>* __restrict__ probe,
     int E,
     int F,
-    const complex<float>* obj,
+    const complex<float>* __restrict__ obj,
     int H,
     int I,
-    const int* addr
+    const int* __restrict__ addr
     )
     {
       int bid = blockIdx.x;
       int tx = threadIdx.x;
       int ty = threadIdx.y;
-      int addr_stride = 15;
+      const int addr_stride = 15;
 
       const int* oa = addr + 3 + bid * addr_stride;
       const int* pa = addr + bid * addr_stride;
@@ -38,13 +38,13 @@ __global__ void build_exit(
       exit_wave += ea[0] * B * C;
       auxiliary_wave += ea[0] * B * C;
 
-      for (int b = tx; b < B; b += blockDim.x)
+      for (int b = ty; b < B; b += blockDim.y)
       {
-        for (int c = ty; c < C; c += blockDim.y)
+        for (int c = tx; c < C; c += blockDim.x)
         {
-          atomicAdd(&auxiliary_wave[b * C + c], probe[b * F + c] * obj[b * I + c] * -1.0f); // atomicSub is only for ints
-          atomicAdd(&exit_wave[b * C + c], auxiliary_wave[b * C + c] );
-          }
-       }
-}
+          atomicAdd(&auxiliary_wave[b * C + c], -probe[b * F + c] * obj[b * I + c]); // atomicSub is only for ints
+          atomicAdd(&exit_wave[b * C + c], auxiliary_wave[b * C + c]);
+        }
+      }
+    }
 }

@@ -6,16 +6,16 @@ using thrust::complex;
 extern "C"{
 __global__ void build_aux(
     complex<float>* auxiliary_wave,
-    const complex<float>* exit_wave,
+    const complex<float>* __restrict__ exit_wave,
     int B,
     int C,
-    const complex<float>* probe,
+    const complex<float>* __restrict__ probe,
     int E,
     int F,
-    const complex<float>* obj,
+    const complex<float>* __restrict__ obj,
     int H,
     int I,
-    const int* addr,
+    const int* __restrict__ addr,
     float alpha
     )
     {
@@ -33,12 +33,14 @@ __global__ void build_aux(
       exit_wave += ea[0] * B * C;
       auxiliary_wave += ea[0] * B * C;
 
-      for (int b = tx; b < B; b += blockDim.x)
+      for (int b = ty; b < B; b += blockDim.y)
       {
-        for (int c = ty; c < C; c += blockDim.y)
+        for (int c = tx; c < C; c += blockDim.x)
         {
-          auxiliary_wave[b * C + c] =  obj[b * I + c] * probe[b * F + c] * (1.0f + alpha) - exit_wave[b * C + c] * alpha;;
-          }
-       }
-}
+          auxiliary_wave[b * C + c] =  obj[b * I + c] * 
+            probe[b * F + c] * (1.0f + alpha) - 
+            exit_wave[b * C + c] * alpha;
+        }
+      }
+  }
 }
