@@ -5,7 +5,7 @@
 
 
 extern "C"{
-__global__ void error_reduce(float *ferr,
+__global__ void error_reduce(const float *ferr,
                                   float *err_fmag,
                                   int M,
                                   int N)
@@ -15,19 +15,19 @@ __global__ void error_reduce(float *ferr,
   int batch = blockIdx.x;
   extern __shared__ float sum_v[];
 
-  int shidx = tx * blockDim.y + ty; // shidx is the index in shared memory for this single block
-  sum_v[shidx] = 0.0;
+  int shidx = ty * blockDim.x + tx; // shidx is the index in shared memory for this single block
+  float sum = 0.0;
 
-  for (int m = tx; m < M; m += blockDim.x)
+  for (int m = ty; m < M; m += blockDim.y)
   {
-    for (int n = ty; n < N; n += blockDim.y)
+    for (int n = tx; n < N; n += blockDim.x)
     {
       int idx = batch * M * N + m * N + n; // idx is index qwith respect to the full stack
-      sum_v[shidx] += ferr[idx];
+      sum += ferr[idx];
     }
   }
-
-
+  
+  sum_v[shidx] = sum;
   __syncthreads();
   int nt = blockDim.x * blockDim.y;
   int c = nt;
