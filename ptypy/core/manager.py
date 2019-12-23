@@ -87,7 +87,7 @@ class ScanModel(object):
     help = Container for probe initialization model
 
     [sample]
-    type = Param
+    type = Param, str
     default =
     help = Container for sample initialization model
 

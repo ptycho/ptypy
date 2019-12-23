@@ -167,6 +167,9 @@ sample_desc.from_string(r"""
     userlevel = 2
     """)
 
+# Strings are also supported as input parameters
+sample_desc.options['type'] = 'Param, str'
+
 DEFAULT = sample_desc.make_default(99)
 
 DEFAULT_process = DEFAULT.process
