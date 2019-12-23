@@ -206,7 +206,9 @@ class DM(PositionCorrectionEngine):
             tf += t2 - t1
 
             # Overlap update
+            self.call_ep("pre_overlap_update")
             self.overlap_update()
+            self.call_ep("post_overlap_update")
 
             t3 = time.time()
             to += t3 - t2

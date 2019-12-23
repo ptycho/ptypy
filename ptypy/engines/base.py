@@ -69,6 +69,7 @@ class BaseEngine(object):
 
     # Define with which models this engine can work.
     COMPATIBLE_MODELS = []
+    EXTENSION_POINTS = {}
 
     def __init__(self, ptycho, pars=None):
         """
@@ -304,6 +305,64 @@ class BaseEngine(object):
         """
         raise NotImplementedError()
 
+    def call_ep(self, ep_name, *args, **kwargs):
+        """
+        Call the named extension point.
+
+        Parameters
+        ----------
+        ep_name: str
+            The name of the extension point.
+        """
+        if ep_name in self.EXTENSION_POINTS:
+            self.EXTENSION_POINTS[ep_name](self, *args, **kwargs)
+
+    @classmethod
+    def add_extension(cls, ep_name, f=False):
+        """
+        Register extension point. CLASS METHOD
+
+        Examples
+        --------
+        Register an already defined method::
+
+            DM.add_extension("post_object_update", mymethod_that_messes_with_object)
+
+        Register a method using a decorator::
+
+            @DM.add_extension("post_object_update")
+            def mess_with_object(self):
+                for name, s in self.ob.storages.items():
+                    s.fill(0.)
+
+        Note
+        ----
+        There is no check for the existence of an extension point. A typo in `ep_name` will not be caught.
+
+        Parameters
+        ----------
+        ep_name: str
+           extension point name.
+        f: object
+           extension method: a callable with self as single argument.
+
+        Returns
+        -------
+        A decorator if f=False, otherwise nothing.
+        """
+        if f is False:
+            # Behave as decorator
+            def _dec(fct):
+                cls.add_extension(ep_name, fct)
+                return fct
+            return _dec
+        elif f is None:
+            # Attempt to de-register extension
+            if ep_name in cls.EXTENSION_POINTS:
+                cls.EXTENSION_POINTS.pop(ep_name)
+        else:
+            # Add extension
+            cls.EXTENSION_POINTS[ep_name] = f
 
 
 #local_tree = EvalDescriptor('')

@@ -199,7 +199,9 @@ class ML(PositionCorrectionEngine):
         ta = time.time()
         for it in range(num):
             t1 = time.time()
+            self.call_ep("pre_new_grad")
             new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad()
+            self.call_ep("post_new_grad", new_ob_grad, new_pr_grad)
             tg += time.time() - t1
 
             if self.p.probe_update_start <= self.curiter:
