@@ -145,8 +145,9 @@ class PoUpdateKernel(ab.PoUpdateKernel):
     def ob_update(self, addr, ob, obn, pr, ex):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
-        num_pods = np.int32(addr.shape[2] * addr.shape[3])
-        if False:
+        
+        if True:
+            num_pods = np.int32(addr.shape[0] * addr.shape[1])
             self.ob_update_cuda(ex, num_pods, prsh[1], prsh[2],
                                 pr, prsh[0], prsh[1], prsh[2],
                                 ob, obsh[0], obsh[1], obsh[2],
@@ -154,6 +155,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                 obn,
                                 block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
         else:
+            num_pods = np.int32(addr.shape[2] * addr.shape[3])
             if not self.ob_update2_cuda:
                 self.ob_update2_cuda = load_kernel("ob_update2", {
                    "NUM_MODES": obsh[0],

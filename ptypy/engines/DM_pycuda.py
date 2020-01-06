@@ -131,13 +131,9 @@ class DM_pycuda(DM_serial.DM_serial):
 
         for prep in self.diff_info.values():
             
-            prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
-            #print('shape: {}'.format(prep.addr.shape))
-            
-            #print(prep.addr2[1,0,1:50,0])
-            #print('flags: {}'.format(prep.addr2.flags))
+            #prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
             prep.addr = gpuarray.to_gpu(prep.addr)
-            prep.addr2 = gpuarray.to_gpu(prep.addr2)
+            #prep.addr2 = gpuarray.to_gpu(prep.addr2)
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier = gpuarray.to_gpu(prep.err_fourier)
@@ -281,7 +277,7 @@ class DM_pycuda(DM_serial.DM_serial):
             pID, oID, eID = prep.poe_IDs
 
             # scan for loop
-            ev = POK.ob_update(prep.addr2,
+            ev = POK.ob_update(prep.addr,
                                self.ob.S[oID].gpu,
                                self.ob_nrm.S[oID].gpu,
                                self.pr.S[pID].gpu,
