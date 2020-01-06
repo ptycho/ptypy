@@ -1,0 +1,23 @@
+numpy
+scipy
+matplotlib
+h5py
+pyzmq
+pep8
+mpi4py
+pillow
+pyfftw
+pytest-cov
+coveralls
+coverage~=4.5.4
+cython
+fabio
+pyopencl
+pycuda
+mako
+
+# Non-pip packages also required
+# pybind11
+# open-mpi
+# C/C++ build essentials
+# CUDA

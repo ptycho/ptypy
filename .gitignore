@@ -24,3 +24,5 @@ ptypy/version.py
 /.settings/
 /dumps/
 /.coverage
+/env
+*.egg-info
