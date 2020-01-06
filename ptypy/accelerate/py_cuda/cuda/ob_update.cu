@@ -27,10 +27,10 @@ __global__ void ob_update(
     complex<float>* denominator
     )
     {
-      int bid = blockIdx.x;
-      int tx = threadIdx.x;
-      int ty = threadIdx.y;
-      int addr_stride = 15;
+      const int bid = blockIdx.x;
+      const int tx = threadIdx.x;
+      const int ty = threadIdx.y;
+      const int addr_stride = 15;
 
       const int* oa = addr + 3 + bid * addr_stride;
       const int* pa = addr + bid * addr_stride;
@@ -48,9 +48,9 @@ __global__ void ob_update(
       {
         for (int c = tx; c < C; c += blockDim.x)
         {
-          atomicAdd(&obj[b * I + c], conj(probe[b * F + c]) * exit_wave[b * C + c] );
-          auto denomreal = reinterpret_cast<float*>(&denominator[b * I + c]);
           auto probe_val = probe[b * F + c];
+          atomicAdd(&obj[b * I + c], conj(probe_val) * exit_wave[b * C + c] );
+          auto denomreal = reinterpret_cast<float*>(&denominator[b * I + c]);
           auto upd_probe = probe_val.real() * probe_val.real() + probe_val.imag() * probe_val.imag();
           atomicAdd(denomreal, upd_probe);
           }

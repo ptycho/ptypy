@@ -27,10 +27,10 @@ __global__ void pr_update(
     complex<float>* denominator
     )
     {
-      int bid = blockIdx.x;
-      int tx = threadIdx.x;
-      int ty = threadIdx.y;
-      int addr_stride = 15;
+      const int bid = blockIdx.x;
+      const int tx = threadIdx.x;
+      const int ty = threadIdx.y;
+      const int addr_stride = 15;
 
       const int* oa = addr + 3 + bid * addr_stride;
       const int* pa = addr + bid * addr_stride;
@@ -48,9 +48,9 @@ __global__ void pr_update(
       {
         for (int c = tx; c < C; c += blockDim.x)
         {
-          atomicAdd(&probe[b * F + c], conj(obj[b * I + c]) * exit_wave[b * C + c] );
-          auto denomreal = reinterpret_cast<float*>(&denominator[b * F + c]);
           auto obj_val = obj[b * I + c];
+          atomicAdd(&probe[b * F + c], conj(obj_val) * exit_wave[b * C + c] );
+          auto denomreal = reinterpret_cast<float*>(&denominator[b * F + c]);
           auto upd_obj = obj_val.real() * obj_val.real() + obj_val.imag() * obj_val.imag();
           atomicAdd(denomreal, upd_obj);
           }
