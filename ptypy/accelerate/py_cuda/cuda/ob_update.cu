@@ -49,7 +49,10 @@ __global__ void ob_update(
         for (int c = tx; c < C; c += blockDim.x)
         {
           atomicAdd(&obj[b * I + c], conj(probe[b * F + c]) * exit_wave[b * C + c] );
-          atomicAdd(&denominator[b * I + c], probe[b * F + c] * conj(probe[b * F + c]) );
+          auto denomreal = reinterpret_cast<float*>(&denominator[b * F + c]);
+          auto probe_val = probe[b * F + c];
+          auto upd_probe = probe_val.real() * probe_val.real() + probe_val.imag() * probe_val.imag();
+          atomicAdd(denomreal, upd_probe);
           }
        }
 }
