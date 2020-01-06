@@ -44,9 +44,9 @@ __global__ void pr_update(
 
       exit_wave += ea[0] * B * C;
 
-      for (int b = tx; b < B; b += blockDim.x)
+      for (int b = ty; b < B; b += blockDim.y)
       {
-        for (int c = ty; c < C; c += blockDim.y)
+        for (int c = tx; c < C; c += blockDim.x)
         {
           atomicAdd(&probe[b * F + c], conj(obj[b * I + c]) * exit_wave[b * C + c] );
           auto denomreal = reinterpret_cast<float*>(&denominator[b * F + c]);
