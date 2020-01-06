@@ -11,7 +11,7 @@ __device__ inline void atomicAdd(complex<float>* x, complex<float> y)
 
 extern "C"{
 __global__ void ob_update(
-    const complex<float>* exit_wave,
+    const complex<float>* __restrict__ exit_wave,
     int A,
     int B,
     int C,
@@ -23,7 +23,7 @@ __global__ void ob_update(
     int G,
     int H,
     int I,
-    const int* addr,
+    const int* __restrict__ addr,
     complex<float>* denominator
     )
     {
