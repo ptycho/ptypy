@@ -42,8 +42,10 @@ __global__ void build_exit(
       {
         for (int c = tx; c < C; c += blockDim.x)
         {
-          atomicAdd(&auxiliary_wave[b * C + c], -probe[b * F + c] * obj[b * I + c]); // atomicSub is only for ints
-          atomicAdd(&exit_wave[b * C + c], auxiliary_wave[b * C + c]);
+          auto auxv = auxiliary_wave[b * C + c];
+          auxv -= probe[b * F + c] * obj[b * I + c];
+          exit_wave[b * C + c] += auxv;
+          auxiliary_wave[b * C + c] = auxv;
         }
       }
     }
