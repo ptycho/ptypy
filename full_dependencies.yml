@@ -18,4 +18,6 @@ dependencies:
     - coveralls
     - cython
     - fabio
+    - pyopencl
+    - pycuda
 
