@@ -67,7 +67,7 @@ for future reference.
     * The constant kernel parameters were put into texture caches using the
       `const X* __restrict__` modifiers
     * This accelerates the repeated loads and frees the L2/L1 caches for other data
-    * **Speedup:**: XXX
+    * **Speedup:** XXX
 7. Loop unrolling:
     * Through experimentation it was found that the update loop could be unrolled by factor 4 for best performance
     * **Speedup:** XXX
@@ -93,5 +93,34 @@ for future reference.
     * This was modified
     * **Speedup:** XXX
 
+### Build Exit Wave
+
+1. Starting Point
+    * Version with atomic adds to update the exit wave array
+2. Coalesced Access:
+    * Swap loop order to iterate of the `threadIdx.x` dimension in the inner loop (this is the fast-running index between threads)
+    * This makes sure that the global memory loads and stores are coalesced
+    * **Speedup:** XXX
+3. Remove Atomics
+    * The exit wave output is actually not overlapping
+    * Atomics are not needed
+    * **Speedup:** XXX
+
+### FFT
+
+* The Rekina version is used with pre-FFT and post-IFFT arrays built-in for scaling and shifting
+* This should be compared to cuFFT and callbacks to check if that is faster for CUDA
+
+#### Optimisation Plan
+
+1. Replace Rekina with cuFFT, without pre- and post-shifting, and assess performance difference (see if moving to cuFFT is worth the effort)
+2. Add the pre and post shifting as separate kernels and check how this affects performance, also compared to Rekina
+3. Integrate pre- and post-shifting using cuFFT's callback mechanism
+  (this needs either to fork/update SciKit CUDA or to manually wrap cuFFT)
+4. If it's a plain shift, we should investigate if calculating the shift on-the-fly rather than using a full array to multiply can be done and what performance difference this makes.
+
+### Other Kernels
+
+* So far, only the loop ordering has been modified to get better coalescing
 
 ## Streaming Engine
