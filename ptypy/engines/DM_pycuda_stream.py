@@ -138,17 +138,17 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                     # cycle exit in and out, cause it's used by both
                     if 'ex_gpu' in prep:
-                        print('got it')
+                        # print('got it')
                         ex = prep.ex_gpu
                     elif not self.gpu_is_full:
-                        print('new')
+                        # print('new')
                         N, a, b  = self.ex.S[eID].data.shape
                         #ex_c = np.zeros(aux.shape, dtype=np.complex64)
                         #ex_c[:N] = self.ex.S[eID].data
                         ex = gpuarray.to_gpu_async(self.ex.S[eID].data, stream=self.qu2)
                         prep.ex_gpu = ex
                     else:
-                        print('steal')
+                        # print('steal')
                         # get a buffer
                         for tID, p in self.diff_info.items():
                             if not 'ex' in p:
@@ -179,11 +179,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         # cycle exit in and out, cause it's used by both
                         if 'ma_gpu' in prep:
-                            print('got it ma')
+                            # print('got it ma')
                             ma = prep.ma_gpu
                             mag = prep.mag_gpu
                         elif not self.gpu_is_full:
-                            print('new ma', self.ma.S[dID].data.dtype)
+                            # print('new ma', self.ma.S[dID].data.dtype)
                             N, a, b = prep.mag.shape
                             #ma_c = np.zeros(FUK.fshape, dtype=np.float32)
                             #mag_c = np.zeros(FUK.fshape, dtype=np.float32)
@@ -191,11 +191,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                             #mag_c[:N] = prep.mag
                             mag = gpuarray.to_gpu_async(prep.mag, stream=self.qu2)
                             ma = gpuarray.to_gpu_async(self.ma.S[dID].data.astype(np.float32), stream=self.qu2)
-                            print(ma.shape, mag.shape)
+                            # print(ma.shape, mag.shape)
                             prep.ma_gpu = ma
                             prep.mag_gpu = mag
                         else:
-                            print('steal ma')
+                            # print('steal ma')
                             # get a buffer
                             for tID, p in self.diff_info.items():
                                 if not 'ma_gpu' in p:
