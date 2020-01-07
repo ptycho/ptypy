@@ -14,7 +14,6 @@ for future reference.
   - [Error Reduce](#error-reduce)
   - [FMag All Update](#fmag-all-update)
   - [Fourier Error](#fourier-error)
-  - [Other Kernels](#other-kernels)
 - [Streaming Engine](#streaming-engine)
 
 ## Individual Kernels
@@ -137,36 +136,45 @@ for future reference.
 
 ### Error Reduce
 
-1. Texture Cache
+1. Coalesced Access:
+    * Swap loop order to iterate of the `threadIdx.x` dimension in the inner loop (this is the fast-running index between threads)
+    * This makes sure that the global memory loads and stores are coalesced
+    * **Speedup:** XXX
+2. Texture Cache
    * Not beneficial, as elements are accessed exactly once
-2. Loop unrolling
+3. Loop unrolling
    * Removes 30us (kernel is very fast anyway)
 
 ### FMag All Update
 
-1. Texture Cache
+1. Coalesced Access:
+    * Swap loop order to iterate of the `threadIdx.x` dimension in the inner loop (this is the fast-running index between threads)
+    * This makes sure that the global memory loads and stores are coalesced
+    * **Speedup:** XXX
+2. Texture Cache
   * Not beneficial on any of the constant inputs
-2. Boolean Mask
+3. Boolean Mask
   * Using a boolean expression with `m < 0.5 ? X : Y` is slightly slower than the floating point version (48.8ms -> 49.2ms)
-3. Loop Unrolling
+4. Loop Unrolling
   * Make no difference
 
 ### Fourier Error
 
-1. Texture Cache
+1. Coalesced Access:
+    * Swap loop order to iterate of the `threadIdx.x` dimension in the inner loop (this is the fast-running index between threads)
+    * This makes sure that the global memory loads and stores are coalesced
+    * **Speedup:** XXX
+2. Texture Cache
   * Not beneficial on any of the constant inputs
-2. Store fdev in register
+3. Store fdev in register
   * tries to avoid writing back to global memory and reading it back immediately
   * seems that compiler already does this optimisation -> no difference
-3. Avoid absolute value calculation
+4. Avoid absolute value calculation
   * The fdev value is squared afterwards and is real-valued, so there's no need for absolute value calculation
   * --> makes no noticable difference
-4. Use Mask as Boolean
+5. Use Mask as Boolean
   * Chaning expression with the boolean ? operator to avoid unnecessary loads when mask is 0
   * Didn't change anything in the performance
 
-### Other Kernels
-
-* So far, only the loop ordering has been modified to get better coalescing
 
 ## Streaming Engine
