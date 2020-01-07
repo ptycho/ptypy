@@ -4,6 +4,16 @@ This log summarises the optimisations performed on the PyCuda engine,
 including the attempted ones that did not lead to improvements,
 for future reference.
 
+- [Individual Kernels](#individual-kernels)
+  - [Object and Probe Update](#object-and-probe-update)
+    - [Tiled Version Optimisations](#tiled-version-optimisations)
+    - [Atomic Version Optimisations](#atomic-version-optimisations)
+  - [Build Exit Wave](#build-exit-wave)
+  - [FFT](#fft)
+    - [Optimisation Plan](#optimisation-plan)
+  - [Other Kernels](#other-kernels)
+- [Streaming Engine](#streaming-engine)
+
 ## Individual Kernels
 
 ### Object and Probe Update
