@@ -5,31 +5,40 @@
 
 import unittest
 import numpy as np
-import pycuda.driver as cuda
-from pycuda import gpuarray
 
-from ptypy.accelerate.py_cuda.fft import FFT
+def have_pycuda():
+    try:
+        import pycuda.driver
+        return True
+    except:
+        return False
+
+if have_pycuda():
+    import pycuda.driver as cuda
+    from pycuda import gpuarray
+    from pycuda.tools import make_default_context
+    from ptypy.accelerate.py_cuda.fft import FFT
+    
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
 INT_TYPE = np.int32
 
 
+@unittest.skipIf(not have_pycuda(), "no PyCUDA or GPU drivers available")
 class FftTest(unittest.TestCase):
 
     def setUp(self):
         print("Called setup")
         import sys
         np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
-        cuda.init()
-        current_dev = cuda.Device(0)
-        self.ctx = current_dev.make_context()
-        self.ctx.push()
+        self.ctx = make_default_context()
         self.stream = cuda.Stream()
 
     def tearDown(self):
         print("Called teardown")
         np.set_printoptions()
+        self.ctx.pop()
         self.ctx.detach()
 
     def test_fft_works_1(self):
@@ -76,7 +85,6 @@ class FftTest(unittest.TestCase):
         print("Freeing the mem")
         f_d.gpudata.free()
         print("done Freeing the mem")
-
 
     def test_fft_works_2(self):
         '''
