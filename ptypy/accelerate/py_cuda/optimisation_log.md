@@ -11,6 +11,9 @@ for future reference.
   - [Build Exit Wave](#build-exit-wave)
   - [FFT](#fft)
     - [Optimisation Plan](#optimisation-plan)
+  - [Error Reduce](#error-reduce)
+  - [FMag All Update](#fmag-all-update)
+  - [Fourier Error](#fourier-error)
   - [Other Kernels](#other-kernels)
 - [Streaming Engine](#streaming-engine)
 
@@ -115,6 +118,9 @@ for future reference.
     * The exit wave output is actually not overlapping
     * Atomics are not needed
     * **Speedup:** XXX
+4. Loop Unrolling
+    * Unrolling innner loop by factor for gives a slight performance advantage
+    * **Speedup:** 93ms -> 91ms
 
 ### FFT
 
@@ -128,6 +134,36 @@ for future reference.
 3. Integrate pre- and post-shifting using cuFFT's callback mechanism
   (this needs either to fork/update SciKit CUDA or to manually wrap cuFFT)
 4. If it's a plain shift, we should investigate if calculating the shift on-the-fly rather than using a full array to multiply can be done and what performance difference this makes.
+
+### Error Reduce
+
+1. Texture Cache
+   * Not beneficial, as elements are accessed exactly once
+2. Loop unrolling
+   * Removes 30us (kernel is very fast anyway)
+
+### FMag All Update
+
+1. Texture Cache
+  * Not beneficial on any of the constant inputs
+2. Boolean Mask
+  * Using a boolean expression with `m < 0.5 ? X : Y` is slightly slower than the floating point version (48.8ms -> 49.2ms)
+3. Loop Unrolling
+  * Make no difference
+
+### Fourier Error
+
+1. Texture Cache
+  * Not beneficial on any of the constant inputs
+2. Store fdev in register
+  * tries to avoid writing back to global memory and reading it back immediately
+  * seems that compiler already does this optimisation -> no difference
+3. Avoid absolute value calculation
+  * The fdev value is squared afterwards and is real-valued, so there's no need for absolute value calculation
+  * --> makes no noticable difference
+4. Use Mask as Boolean
+  * Chaning expression with the boolean ? operator to avoid unnecessary loads when mask is 0
+  * Didn't change anything in the performance
 
 ### Other Kernels
 

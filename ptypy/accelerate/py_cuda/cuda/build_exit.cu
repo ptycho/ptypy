@@ -38,8 +38,10 @@ __global__ void build_exit(
       exit_wave += ea[0] * B * C;
       auxiliary_wave += ea[0] * B * C;
 
+      
       for (int b = ty; b < B; b += blockDim.y)
       {
+        #pragma unroll (4) // we use blockDim.x = 32, and C is typically more than 128 (it will work for less as well)
         for (int c = tx; c < C; c += blockDim.x)
         {
           auto auxv = auxiliary_wave[b * C + c];

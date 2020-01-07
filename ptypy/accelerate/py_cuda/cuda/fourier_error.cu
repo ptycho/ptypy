@@ -13,7 +13,7 @@ __global__ void fourier_error(int nmodes,
                            const float *fmag,
                            float *fdev,
                            float *ferr,
-                           const float *mask_sum,
+                           const float * mask_sum,
                            const int *addr,
                            int A,
                            int B
@@ -43,9 +43,9 @@ __global__ void fourier_error(int nmodes,
            float abs_exit_wave = abs(f[a * B + b + idx*A*B]);
            acc += abs_exit_wave * abs_exit_wave; // if we do this manually (real*real +imag*imag) we get bad rounding errors
           }
-          fdev[a * B + b] = sqrt(acc) - fmag[a * B + b];
-          float abs_fdev = abs(fdev[a * B + b]);
-          ferr[a * B + b] = (fmask[a * B + b] * abs_fdev * abs_fdev) / mask_sum[ma[0]];
+          auto fdevv = sqrt(acc) - fmag[a * B + b];
+          ferr[a * B + b] = (fmask[a * B + b] * fdevv * fdevv) / mask_sum[ma[0]];
+          fdev[a * B + b] = fdevv;
         }
       }
 
