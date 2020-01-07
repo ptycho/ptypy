@@ -6,6 +6,14 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
+
+import os
+import getpass
+from pathlib import Path
+username = getpass.getuser()
+tmpdir = os.path.join('/dls/tmp', username, 'dumps', 'ptypy')
+Path(tmpdir).mkdir(parents=True, exist_ok=True)
+
 p = u.Param()
 
 # for verbose output
@@ -13,7 +21,7 @@ p.verbose_level = 3
 p.frames_per_block = 100
 # set home path
 p.io = u.Param()
-p.io.home = "/dls/tmp/clb02321/dumps/ptypy"
+p.io.home = tmpdir
 p.io.autosave = u.Param(active=True)
 p.io.autoplot = u.Param(active=False)
 # max 200 frames (128x128px) of diffraction data
