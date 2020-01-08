@@ -141,6 +141,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         self.ob_update_cuda = load_kernel("ob_update")
         self.ob_update2_cuda = None # load_kernel("ob_update2")
         self.pr_update_cuda = load_kernel("pr_update")
+        self.pr_update2_cuda = None
 
     def ob_update(self, addr, ob, obn, pr, ex):
         obsh = [np.int32(ax) for ax in ob.shape]
@@ -175,10 +176,26 @@ class PoUpdateKernel(ab.PoUpdateKernel):
     def pr_update(self, addr, pr, prn, ob, ex):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
-        num_pods = np.int32(addr.shape[0] * addr.shape[1])
-        self.pr_update_cuda(ex, num_pods, prsh[1], prsh[2],
-                               pr, prsh[0], prsh[1], prsh[2],
-                               ob, obsh[0], obsh[1], obsh[2],
-                               addr,
-                               prn,
-                               block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
+        if True:
+            num_pods = np.int32(addr.shape[0] * addr.shape[1])
+            self.pr_update_cuda(ex, num_pods, prsh[1], prsh[2],
+                                pr, prsh[0], prsh[1], prsh[2],
+                                ob, obsh[0], obsh[1], obsh[2],
+                                addr,
+                                prn,
+                                block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
+        else:
+            num_pods = np.int32(addr.shape[2] * addr.shape[3])
+            if not self.pr_update2_cuda:
+                self.pr_update2_cuda = load_kernel("pr_update2", {
+                   "NUM_MODES": prsh[0],
+                   "BDIM_X": 16,
+                   "BDIM_Y": 16 
+                })
+            grid = [int(x/16) for x in pr.shape[-2:]]
+            grid = (grid[0], grid[1], int(1))
+            self.pr_update2_cuda(prsh[-1], obsh[-2], obsh[-1],
+                                 prsh[0], num_pods,
+                                 pr, prn, ob, ex, addr,
+                                 block=(16,16,1), grid=grid, stream=self.queue)
+            
