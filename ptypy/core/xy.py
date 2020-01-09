@@ -185,7 +185,7 @@ def augment_to_coordlist(a, Npos):
     return b[:Npos, :2]
 
 
-def raster_scan(dy=1.5e-6, dx=1.5e-6, ny=10, nx=10):
+def raster_scan(dy=1.5e-6, dx=1.5e-6, ny=10, nx=10, ang=0.):
     """
     Generates a raster scan.
 
@@ -197,6 +197,9 @@ def raster_scan(dy=1.5e-6, dx=1.5e-6, ny=10, nx=10):
 
     dy, dx : float
         Step size (grid spacing) in *y* and *x*
+        
+    ang: float
+        Rotation angle of the raster grid (counterclockwise, in degrees)
 
     Returns
     -------
@@ -211,6 +214,9 @@ def raster_scan(dy=1.5e-6, dx=1.5e-6, ny=10, nx=10):
     >>> plt.plot(pos[:, 1], pos[:, 0], 'o-'); plt.show()
     """
     iix, iiy = np.indices((nx, ny))
+    if ang != 0.:
+        ang *= np.pi/180.
+        iix, iiy = np.cos(ang)*iix + np.sin(ang)*iiy, np.cos(ang)*iiy - np.sin(ang)*iix
     positions = [(dx*i, dy*j) for i, j in zip(iix.ravel(), iiy.ravel())]
     return np.asarray(positions)
 
