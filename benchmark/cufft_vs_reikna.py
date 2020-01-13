@@ -1,3 +1,23 @@
+"""
+Tests cuFFT vs Reikna FFT performance (not accuracy). 
+
+Together with a C++ implementation of cuFFT with callbacks,
+we get the following numbers on a P100 GPU:
+
+For 100 calls of 256x256 with batch size 2000:
+- Reikna with or without filters: 1,470ms
+- cuFFT without filters         :   792ms
+- cuFFT with separate filters   : 1,564ms
+- cuFFT with callbacks          :   916ms
+
+For 128x128 with batch size 2000:
+- Reikna with or without filters:   389ms
+- cuFFT without filters         :   194ms
+- cuFFT with separate filters   :   388ms
+- cuFFT with callbacks          :   223ms
+"""
+
+
 import numpy as np
 import pycuda.driver as cuda
 from pycuda import gpuarray
@@ -15,6 +35,7 @@ B = 128
 C = 128
 
 COMPLEX_TYPE = np.complex64
+
 
 f = np.empty(shape=(A, B, C), dtype=np.complex64)
 for idx in range(A):
