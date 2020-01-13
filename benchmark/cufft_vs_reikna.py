@@ -3,6 +3,7 @@ import pycuda.driver as cuda
 from pycuda import gpuarray
 from pycuda.tools import make_default_context
 from ptypy.accelerate.py_cuda.fft import FFT
+from ptypy.accelerate.py_cuda.cufft import FFT as cuFFT
 import time
 import skcuda.fft as cu_fft 
 
@@ -10,8 +11,8 @@ ctx = make_default_context()
 stream = cuda.Stream()
 
 A = 2000
-B = 256
-C = 256
+B = 128
+C = 128
 
 COMPLEX_TYPE = np.complex64
 
@@ -24,7 +25,7 @@ postfilter = (np.arange(13, 13 + B*C).reshape((B, C)) + 1j*np.arange(13, 13 + B*
 
 f_d = gpuarray.to_gpu(f)
 
-prop_fwd = FFT(f, stream, pre_fft=None, post_fft=None, inplace=True, symmetric=True)
+prop_fwd = FFT(f, stream, pre_fft=prefilter, post_fft=postfilter, inplace=True, symmetric=True)
 
 start_reikna = cuda.Event()
 stop_reikna = cuda.Event()
@@ -41,11 +42,14 @@ time_reikna = stop_reikna.time_since(start_reikna)
 
 print('Reikna for {}: {}ms'.format((A,B,C), time_reikna))
 
-plan_fwd = cu_fft.Plan((B, C), np.complex64, np.complex64, A, stream)
+# with pre- and post-filter
+# cuprop_fw = cuFFT(f, stream, pre_fft=prefilter, post_fft=postfilter, inplace=True, symmetric=True)
+# without filters, and symmetric=False avoids scaling the result
+cuprop_fw = cuFFT(f, stream, pre_fft=None, post_fft=None, inplace=True, symmetric=False)
 
 start_cufft.record(stream)
 for p in range(100):
-    cu_fft.fft(f_d, f_d, plan_fwd)
+    cuprop_fw.ft(f_d, f_d)
 stop_cufft.record(stream)
 start_cufft.synchronize()
 stop_cufft.synchronize()
