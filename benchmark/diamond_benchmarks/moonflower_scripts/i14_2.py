@@ -6,6 +6,7 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
+import time
 
 import os
 import getpass
@@ -22,8 +23,11 @@ p.frames_per_block = 1000
 # set home path
 p.io = u.Param()
 p.io.home = tmpdir
-p.io.autosave = u.Param(active=True)
+p.io.autosave = u.Param(active=False)
 p.io.autoplot = u.Param(active=False)
+p.io.interaction = u.Param()
+p.io.interaction.server = u.Param(active=False)
+
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
 p.scans.i14_2 = u.Param()
@@ -58,7 +62,9 @@ p.engines.engine00.numiter_contiguous = 20
 p.engines.engine00.probe_update_start = 1
 
 # prepare and run
-P = Ptycho(p,level=5)
-#P.run()
+P = Ptycho(p,level=4)
+t1 = time.perf_counter()
+P.run()
+t2 = time.perf_counter()
 P.print_stats()
-#u.pause(10)
+print('Elapsed Compute Time: {} seconds'.format(t2-t1))
