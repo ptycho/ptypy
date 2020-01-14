@@ -1,6 +1,6 @@
 import numpy as np
 from collections import OrderedDict
-
+from ptypy.utils.verbose import logger, log
 
 class Adict(object):
 
@@ -233,3 +233,100 @@ class PoUpdateKernel(BaseKernel):
                 ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
                 ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
         return
+
+
+class PositionCorrectionKernel(BaseKernel):
+    def __init__(self, aux, nmodes):
+        super(PositionCorrectionKernel, self).__init__()
+        ash = aux.shape
+        self.fshape = (ash[0] // nmodes, ash[1], ash[2])
+        self.npy.ferr = None
+        self.npy.fdev = None
+        self.addr = None
+        self.nmodes = nmodes
+        self.address_mangler = None
+        self.kernels = ['build_aux',
+                        'fourier_error',
+                        'error_reduce',
+                        'update_addr']
+
+    def allocate(self):
+        self.npy.fdev = np.zeros(self.fshape, dtype=np.float32) # we won't use this again but preallocate for speed
+        self.npy.ferr = np.zeros(self.fshape, dtype=np.float32)
+
+    def build_aux(self, b_aux, addr, ob, pr):
+        '''
+        different to the AWK, no alpha subtraction. It would be the same, but with alpha permanentaly set to 0.
+        '''
+        sh = addr.shape
+
+        nmodes = sh[1]
+
+        # stopper
+        maxz = sh[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * nmodes]
+        flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
+        rows, cols = aux.shape[-2:]
+
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            dex = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * pr[prc[0], :, :]
+            aux[ind, :, :] = dex
+
+    def fourier_error(self, b_aux, addr, mag, mask, mask_sum):
+        '''
+        Should be identical to that of the FUK, but we don't need fdev out.
+        '''
+        # reference shape (write-to shape)
+        sh = self.fshape
+        # stopper
+        maxz = mag.shape[0]
+
+        # batch buffers
+        ferr = self.npy.ferr[:maxz]
+        fdev = self.npy.fdev[:maxz]
+        aux = b_aux[:maxz * self.nmodes]
+
+        ## Actual math ##
+
+        # build model from complex fourier magnitudes, summing up
+        # all modes incoherently
+        tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
+        af = np.sqrt((np.abs(tf) ** 2).sum(1))
+
+        # calculate difference to real data (g_mag)
+        fdev[:] = af - mag # we won't reuse this so don't need to keep a persistent buffer
+
+        # Calculate error on fourier magnitudes on a per-pixel basis
+        ferr[:] = mask * np.abs(fdev) ** 2 / mask_sum.reshape((maxz, 1, 1))
+        return
+
+    def error_reduce(self, addr, err_sum):
+        '''
+        This should the exact same tree reduction as the FUK.
+        '''
+        # reference shape (write-to shape)
+        sh = self.fshape
+
+        # stopper
+        maxz = err_sum.shape[0]
+
+        # batch buffers
+        ferr = self.npy.ferr[:maxz]
+
+        ## Actual math ##
+
+        # Reduceses the Fourier error along the last 2 dimensions.fd
+        #err_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
+        err_sum[:] = ferr.sum(-1).sum(-1)
+        return
+
+    def update_addr_and_error_state(self, addr, error_state, mangled_addr, err_sum):
+        '''
+        updates the addresses and err state vector corresponding to the smallest error. I think this can be done on the cpu
+        '''
+        update_indices = err_sum < error_state
+        log(4, "updating %s indices" % np.sum(update_indices))
+        addr[update_indices] = mangled_addr[update_indices]
+        error_state[update_indices] = err_sum[update_indices]

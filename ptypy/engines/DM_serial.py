@@ -21,9 +21,10 @@ from ..utils.verbose import logger, log
 from ..utils import parallel
 from . import BaseEngine, register, DM
 from .. import defaults_tree
-from ..accelerate.ocl.npy_kernels_for_block import FourierUpdateKernel
-from ..accelerate.ocl.npy_kernels_for_block import PoUpdateKernel
-from ..accelerate.ocl.npy_kernels_for_block import AuxiliaryWaveKernel
+from ..accelerate.array_based.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ..accelerate.array_based import address_manglers
+# from ..accelerate.ocl.npy_kernels_for_block import PoUpdateKernel
+# from ..accelerate.ocl.npy_kernels_for_block import AuxiliaryWaveKernel
 
 ### TODOS 
 # 
@@ -201,6 +202,19 @@ class DM_serial(DM.DM):
             kern.FW = geo.propagator.fw
             kern.BW = geo.propagator.bw
 
+            if self.do_position_refinement:
+                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
+                                                                self.p.position_refinement.start,
+                                                                self.p.position_refinement.stop,
+                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
+                                                                randomseed=0)
+                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
+                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
+
+                kern.PCK = PositionCorrectionKernel(aux, nmodes)
+                kern.PCK.allocate()
+                kern.PCK.address_mangler = addr_mangler
+
     def engine_prepare(self):
 
         super(DM_serial, self).engine_prepare()
@@ -223,6 +237,9 @@ class DM_serial(DM.DM):
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
             prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
+            if self.do_position_refinement:
+                prep.original_addr = np.zeros_like(prep.addr)
+                prep.original_addr[:] = prep.addr
             pID, oID, eID = prep.poe_IDs
 
             ob = self.ob.S[oID]
@@ -309,6 +326,7 @@ class DM_serial(DM.DM):
                 AWK.build_exit(aux, addr, ob, pr, ex)
                 self.benchmark.E_Build_exit += time.time() - t1
 
+
                 err_phot = np.zeros_like(err_fourier)
                 err_exit = np.zeros_like(err_fourier)
                 errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
@@ -321,6 +339,45 @@ class DM_serial(DM.DM):
             sync = (self.curiter % 1 == 0)
             self.overlap_update(MPI=True)
             parallel.barrier()
+
+            if self.do_position_refinement and (self.curiter):
+                do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+                do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+
+                # Update positions
+                if do_update_pos:
+                    """
+                    Iterates through all positions and refines them by a given algorithm. 
+                    """
+                    log(4, "----------- START POS REF -------------")
+                    for dID in self.di.S.keys():
+                        ma = self.ma.S[dID].data
+                        ob = self.ob.S[oID].data
+                        pr = self.pr.S[pID].data
+                        prep = self.diff_info[dID]
+                        kern = self.kernels[prep.label]
+                        addr = prep.addr
+                        original_addr = prep.addr # use this instead of the one in the address mangler.
+                        mag = prep.mag
+                        ma_sum = prep.ma_sum
+                        err_fourier = prep.err_fourier
+
+                        PCK = kern.PCK
+                        FW = kern.FW
+
+                        error_state = np.zeros_like(err_fourier)
+                        error_state[:] = err_fourier
+                        log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+                        for i in range(self.p.position_refinement.nshifts):
+                            mangled_addr = PCK.address_mangler.mangle_address(addr, original_addr, self.curiter)
+                            PCK.build_aux(aux, mangled_addr, ob, pr)
+                            aux[:] = FW(aux)
+                            PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
+                            PCK.error_reduce(mangled_addr, err_fourier)
+                            PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
+                        prep.err_fourier = error_state
+                        prep.addr = addr
+
             self.curiter += 1
 
         self.error = error
