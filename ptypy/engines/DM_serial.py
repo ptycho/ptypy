@@ -357,7 +357,7 @@ class DM_serial(DM.DM):
                         prep = self.diff_info[dID]
                         kern = self.kernels[prep.label]
                         addr = prep.addr
-                        original_addr = prep.addr # use this instead of the one in the address mangler.
+                        original_addr = prep.original_addr # use this instead of the one in the address mangler.
                         mag = prep.mag
                         ma_sum = prep.ma_sum
                         err_fourier = prep.err_fourier
