@@ -221,6 +221,13 @@ class PlotClient(object):
         log(self.log_level,'Client requesting runtime container')
         self.runtime = Param(self.client.get_now("Ptycho.runtime"))
 
+        try:
+            _a = self.runtime['iter_info']
+        except KeyError:
+            # we've initialied the plotclient before the engine init loop, should create an iter_info list to match.
+            # avoids a race condition in engine.init
+            self.runtime['iter_info'] = []
+
         while not ready:
             time.sleep(.1)
             ready = self.client.get_now("'start' in Ptycho.runtime")

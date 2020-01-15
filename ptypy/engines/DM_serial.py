@@ -131,7 +131,6 @@ class DM_serial(DM.DM):
 
         kernel_pars = {'kernel_sh_x' : gauss_kernel.shape[0], 'kernel_sh_y': gauss_kernel.shape[1]}
         """
-        print('init')
         self.benchmark = u.Param()
 
         # Stores all information needed with respect to the diffraction storages.
@@ -228,7 +227,9 @@ class DM_serial(DM.DM):
             self.diff_info[d.ID] = prep
 
             prep.mag = np.sqrt(d.data)
-            prep.ma_sum = self.ma.S[d.ID].data.sum(-1).sum(-1)
+            mask_data = self.ma.S[d.ID].data.astype(np.float32)  # in the gpu kernels, which this is tested against, this is converted to a float
+            self.ma.S[d.ID].data = mask_data
+            prep.ma_sum = mask_data.sum(-1).sum(-1)
             prep.err_fourier = np.zeros_like(prep.ma_sum)
 
         # Unfortunately this needs to be done for all pods, since
