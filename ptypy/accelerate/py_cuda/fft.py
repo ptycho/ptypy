@@ -1,4 +1,3 @@
-import skcuda.fft as cu_fft
 from pycuda.compiler import SourceModule
 
 import numpy as np

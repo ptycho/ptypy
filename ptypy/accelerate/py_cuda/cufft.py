@@ -10,9 +10,51 @@ class FFT(object):
                  inplace=False,
                  pre_fft=None,
                  post_fft=None,
-                 symmetric=True):
+                 symmetric=True,
+                 use_external=True):
         self.queue = queue
+        dims = array.ndim
+        if dims < 2:
+            raise AssertionError('Input array must be at least 2-dimensional')
+        self.arr_shape = (array.shape[-2], array.shape[-1])
+        self.batches = int(np.product(array.shape[0:dims-2]) if dims > 2 else 1)
+
+        if use_external:
+            self._load_filtered_fft(array, pre_fft, post_fft, symmetric)
+        else:
+            self._load_separate_knls(array, pre_fft, post_fft, symmetric)
+
+    def _load_filtered_fft(self, array, pre_fft, post_fft, symmetric):
+        if pre_fft is not None:
+            self.pre_fft = gpuarray.to_gpu(pre_fft)
+            self.pre_fft_ptr = self.pre_fft.gpudata
+        else:
+            self.pre_fft_ptr = 0
+        if post_fft is not None:
+            self.post_fft = gpuarray.to_gpu(post_fft)
+            self.post_fft_ptr = self.post_fft.gpudata
+        else:
+            self.post_fft_ptr = 0
+
+        from . import import_fft
+        mod = import_fft.import_fft(self.arr_shape[0], self.arr_shape[1])
+        self.fftobj = mod.FilteredFFT(
+                self.batches, 
+                symmetric, 
+                self.pre_fft_ptr,
+                self.post_fft_ptr, 
+                self.queue.handle)
+
+        self.ft = self._ft_ext
+        self.ift = self._ift_ext
+    
+    def _ft_ext(self, input, output):
+        self.fftobj.fft(input.gpudata, output.gpudata)
+    
+    def _ift_ext(self, input, output):
+        self.fftobj.ifft(input.gpudata, output.gpudata)
         
+    def _load_separate_knls(self, array, pre_fft, post_fft, symmetric):
         self.pre_fft_knl = load_kernel("batched_multiply", {
             'MPY_DO_SCALE': 'false',
             'MPY_DO_FILT': 'true'
@@ -23,11 +65,6 @@ class FFT(object):
             'MPY_DO_FILT': 'true' if post_fft is not None else 'false'
         }) if (symmetric or post_fft is not None) else None
 
-        dims = array.ndim
-        if dims < 2:
-            raise AssertionError('Input array must be at least 2-dimensional')
-        self.arr_shape = (array.shape[-2], array.shape[-1])
-        self.batches = int(np.product(array.shape[0:dims-2]) if dims > 2 else 1)
         self.block = (32, 32, 1)
         self.grid = (
             int((self.arr_shape[0] + 31) // 32),
@@ -47,11 +84,15 @@ class FFT(object):
         if pre_fft is not None:
             self.pre_fft = gpuarray.to_gpu(pre_fft)
         else:
-            self.pre_fft = gpuarray.empty((1,), dtype=np.complex64)
+            self.pre_fft = gpuarray.empty((0,), dtype=np.complex64)
         if post_fft is not None:
             self.post_fft = gpuarray.to_gpu(post_fft)
         else:
-            self.post_fft = gpuarray.empty((1,), dtype=np.complex64)
+            self.post_fft = gpuarray.empty((0,), dtype=np.complex64)
+        
+        self.ft = self._ft_separate
+        self.ift = self._ift_separate
+
 
     def _prefilt(self, x, y):
         if self.pre_fft_knl:
@@ -76,12 +117,12 @@ class FFT(object):
                               block=self.block, grid=self.grid,
                               stream=self.queue)
 
-    def ft(self, x, y):
+    def _ft_separate(self, x, y):
         d = self._prefilt(x, y)            
         cu_fft.fft(d, y, self.plan)
         self._postfilt(y)
     
-    def ift(self, x, y):
+    def _ift_separate(self, x, y):
         d = self._prefilt(x, y)
         cu_fft.ifft(d, y, self.plan)
         self._postfilt(y)

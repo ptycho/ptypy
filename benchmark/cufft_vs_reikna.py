@@ -25,14 +25,13 @@ from pycuda.tools import make_default_context
 from ptypy.accelerate.py_cuda.fft import FFT
 from ptypy.accelerate.py_cuda.cufft import FFT as cuFFT
 import time
-import skcuda.fft as cu_fft 
 
 ctx = make_default_context()
 stream = cuda.Stream()
 
 A = 2000
-B = 128
-C = 128
+B = 256
+C = 256
 
 COMPLEX_TYPE = np.complex64
 
@@ -64,9 +63,9 @@ time_reikna = stop_reikna.time_since(start_reikna)
 print('Reikna for {}: {}ms'.format((A,B,C), time_reikna))
 
 # with pre- and post-filter
-# cuprop_fw = cuFFT(f, stream, pre_fft=prefilter, post_fft=postfilter, inplace=True, symmetric=True)
+cuprop_fw = cuFFT(f, stream, pre_fft=prefilter, post_fft=postfilter, inplace=True, symmetric=True)
 # without filters, and symmetric=False avoids scaling the result
-cuprop_fw = cuFFT(f, stream, pre_fft=None, post_fft=None, inplace=True, symmetric=False)
+#cuprop_fw = cuFFT(f, stream, pre_fft=None, post_fft=None, inplace=True, symmetric=False)
 
 start_cufft.record(stream)
 for p in range(100):

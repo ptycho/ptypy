@@ -21,4 +21,7 @@ dependencies:
     - pyopencl
     - pycuda
     - pybind11
+    - cppimport
+    - scikit-cuda
+    - reikna
 

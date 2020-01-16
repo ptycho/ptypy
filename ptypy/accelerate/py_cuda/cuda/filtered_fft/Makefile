@@ -32,7 +32,7 @@ clean:
 	$(NVCC) $(NVCC_FLAGS) $(OPTFLAGS) -Xcompiler "$(CXXFLAGS)" $(CPPFLAGS) -c $< -o $@
 
 %.o: %.cpp
-	$(CXX) $(OPTFLAGS) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+	$(NVCC) $(NVCC_FLAGS) -x cu $(OPTFLAGS) -Xcompiler "$(CXXFLAGS)" $(CPPFLAGS) -c $< -o $@
 
 $(MODULE): $(OBJ) $(OBJ_MOD)
 	$(NVCC) $(OPTFLAGS) -shared $(LD_FLAGS) $(OBJ) $(OBJ_MOD) -o $@
