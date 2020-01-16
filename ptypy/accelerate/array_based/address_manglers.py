@@ -5,13 +5,14 @@ utils to help with position refinement
 import numpy as np
 from ...utils.verbose import logger
 from copy import deepcopy as copy
+np.random.seed(0)
 class RandomIntMangle(object):
     '''
     assumes integer pixel shift.
     '''
     def __init__(self, max_step_per_shift,  start, stop, max_bound=None,  randomseed=None):
         # can be initialised in the engine.init
-        np.random.seed(randomseed)
+
         self.max_bound = max_bound  # maximum distance from the starting positions
         self.max_step = lambda it: (max_step_per_shift * (stop - it) / (stop - start)) # maximum step per iteration, decreases with progression
         self.call_no = 0

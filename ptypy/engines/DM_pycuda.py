@@ -17,7 +17,8 @@ from ..utils.verbose import logger, log
 from ..utils import parallel
 from . import BaseEngine, register, DM_serial, DM
 from ..accelerate import py_cuda as gpu
-from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel
+from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ..accelerate.array_based import address_manglers
 
 MPI = parallel.size > 1
 MPI = True
@@ -111,6 +112,19 @@ class DM_pycuda(DM_serial.DM_serial):
                           post_fft=geo.propagator.post_ifft,
                           inplace=True,
                           symmetric=True).ift
+
+            if self.do_position_refinement:
+                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
+                                                                self.p.position_refinement.start,
+                                                                self.p.position_refinement.stop,
+                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
+                                                                randomseed=0)
+                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
+                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
+
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, queue_thread=self.queue)
+                kern.PCK.allocate()
+                kern.PCK.address_mangler = addr_mangler
             #self.queue.synchronize()
 
     def engine_prepare(self):
@@ -137,7 +151,7 @@ class DM_pycuda(DM_serial.DM_serial):
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier = gpuarray.to_gpu(prep.err_fourier)
-            self.dummy_error = np.zeros_like(prep.err_fourier)
+        self.dummy_error = np.zeros(prep.err_fourier.shape, dtype=np.float32) # np.zeros_like returns 'object' data type
 
     def engine_iterate(self, num=1):
         """
@@ -145,7 +159,7 @@ class DM_pycuda(DM_serial.DM_serial):
         """
 
         for it in range(num):
-
+            error = {}
             for dID in self.di.S.keys():
                 t1 = time.time()
 
@@ -219,6 +233,10 @@ class DM_pycuda(DM_serial.DM_serial):
                 errs = np.array(list(zip(self.dummy_error, self.dummy_error, self.dummy_error)))
                 error = dict(zip(prep.view_IDs, errs))
 
+                err_fourier_cpu = np.array(err_fourier.get())
+                errs = np.ascontiguousarray(np.vstack([err_fourier_cpu, self.dummy_error, self.dummy_error]).T)
+                error.update(zip(prep.view_IDs, errs))
+
                 self.benchmark.calls_fourier += 1
 
             parallel.barrier()
@@ -227,6 +245,51 @@ class DM_pycuda(DM_serial.DM_serial):
             self.overlap_update(MPI=MPI)
 
             parallel.barrier()
+            if self.do_position_refinement and (self.curiter):
+                do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+                do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+
+                # Update positions
+                if do_update_pos:
+                    """
+                    Iterates through all positions and refines them by a given algorithm. 
+                    """
+                    log(3, "----------- START POS REF -------------")
+                    for dID in self.di.S.keys():
+
+                        prep = self.diff_info[dID]
+                        pID, oID, eID = prep.poe_IDs
+                        ma = self.ma.S[dID].gpu
+                        ob = self.ob.S[oID].gpu
+                        pr = self.pr.S[pID].gpu
+                        kern = self.kernels[prep.label]
+                        aux = kern.aux
+                        addr = prep.addr
+                        original_addr = prep.original_addr
+                        mag = prep.mag
+                        ma_sum = prep.ma_sum
+                        err_fourier = prep.err_fourier
+
+                        PCK = kern.PCK
+                        FW = kern.FW
+
+                        error_state = np.zeros(err_fourier.shape, dtype=np.float32)
+                        error_state[:] = err_fourier.get()
+                        log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+                        for i in range(self.p.position_refinement.nshifts):
+                            mangled_addr = PCK.address_mangler.mangle_address(addr.get(), original_addr, self.curiter)
+                            mangled_addr_gpu = gpuarray.to_gpu(mangled_addr)
+                            PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
+                            FW(aux, aux)
+                            PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
+                            PCK.error_reduce(mangled_addr_gpu, err_fourier)
+                            PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier.get())
+                        prep.err_fourier.set(error_state)
+                        # prep.addr = addr
+
+
+
+
             self.curiter += 1
             queue.synchronize()
 
