@@ -2,7 +2,7 @@
 <%
 setup_pybind11(cfg)
 cfg['sources'] = ['filtered_fft.cpp']
-cfg['dependencies'] = ['errors.hpp', 'filtered_fft.hpp']
+cfg['dependencies'] = ['errors.hpp', 'filtered_fft.hpp', 'filtered_fft.cpp']
 cfg['libraries'] = ['cufft_static', 'culibos', 'cudart_static']
 cfg['parallel'] = True
 %>
@@ -26,6 +26,7 @@ class FilteredFFTPython
 {
 public:
     FilteredFFTPython(int batches, bool symmetric, 
+        bool is_forward,
         std::size_t prefilt_ptr,
         std::size_t postfilt_ptr,
         std::size_t stream) 
@@ -33,6 +34,7 @@ public:
         fft_ = make_filtered(
             batches, 
             symmetric,
+            is_forward,
             reinterpret_cast<complex<float>*>(prefilt_ptr),
             reinterpret_cast<complex<float>*>(postfilt_ptr),
             reinterpret_cast<cudaStream_t>(stream)
@@ -42,6 +44,7 @@ public:
     int getBatches() const { return fft_->getBatches(); }
     int getRows() const { return fft_->getRows(); }
     int getColumns() const { return fft_->getColumns(); }
+    bool isForward() const { return fft_->isForward(); }
 
     void fft(std::size_t in_ptr, std::size_t out_ptr)
     {
@@ -80,9 +83,10 @@ PYBIND11_MODULE(MODULE_NAME, m) {
     m.doc() = "Filtered FFT for PtyPy";
 
     py::class_<FilteredFFTPython>(m, "FilteredFFT")
-        .def(py::init<int, bool, std::size_t, std::size_t,std::size_t>(),
+        .def(py::init<int, bool, bool, std::size_t, std::size_t,std::size_t>(),
              py::arg("batches"), 
              py::arg("symmetricScaling"), 
+             py::arg("is_forward"),
              py::arg("prefilt"), 
              py::arg("postfilt"), 
              py::arg("stream")
@@ -94,6 +98,10 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("ifft", &FilteredFFTPython::ifft, 
              py::arg("input_ptr"), 
              py::arg("output_ptr")
-        );
+        )
+        .def_property_readonly("batches", &FilteredFFTPython::getBatches)
+        .def_property_readonly("rows", &FilteredFFTPython::getRows)
+        .def_property_readonly("columns", &FilteredFFTPython::getColumns)
+        .def_property_readonly("is_forward", &FilteredFFTPython::isForward);
 }
 

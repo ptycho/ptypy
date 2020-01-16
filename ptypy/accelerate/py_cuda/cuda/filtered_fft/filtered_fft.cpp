@@ -25,6 +25,8 @@
 #include <cufft.h>
 #include <cufftXt.h>
 #include <cuda.h>
+#include <cmath>
+#include <cassert>
 
 #ifndef MY_FFT_ROWS
 # define MY_FFT_ROWS 128
@@ -36,8 +38,26 @@
 # pragma GCC warning "MY_FFT_COLS not set in preprocessor - defaulting to 128"
 #endif
 
+/// TMP way to get the sqrt for the scaling factor, to avoid calling 
+/// square root if the array is square
+template <int ROWS, int COLUMNS>
+struct tmp_sqrt {
+    static __device__ float apply() { 
+        static_assert(ROWS!=COLUMNS, "should never be called");
+        assert(false);
+        return sqrt(float(ROWS*COLUMNS));
+    }
+};
 
-template <int ROWS, int COLUMNS, bool SYMMETRIC>
+template <int DIM>
+struct tmp_sqrt<DIM, DIM> {
+    static constexpr __device__ float apply() {
+        return DIM;
+    }
+};
+
+
+template <int ROWS, int COLUMNS, bool SYMMETRIC, bool IS_FORWARD>
 class FilteredFFTImpl : public FilteredFFT {
 public:
     
@@ -62,25 +82,34 @@ public:
     int getBatches() const override { return batches_; }
     int getRows() const override { return ROWS; }
     int getColumns() const override { return COLUMNS; }
+    bool isForward() const override { return IS_FORWARD; }
 
     /// Run the FFT (forward) - can be in-place
     void fft(complex<float>* input, complex<float>* output) override
     {
-        cudaCheck(cufftExecC2C(plan_,
-            reinterpret_cast<cufftComplex*>(input),
-            reinterpret_cast<cufftComplex*>(output),
-            CUFFT_FORWARD
-        ));
+        if (SYMMETRIC && !IS_FORWARD) {
+            throw std::runtime_error("Calling FFT on a reverse-initialised instance");
+        } else {
+            cudaCheck(cufftExecC2C(plan_,
+                reinterpret_cast<cufftComplex*>(input),
+                reinterpret_cast<cufftComplex*>(output),
+                CUFFT_FORWARD
+            ));
+        }
     }
 
     /// Run the IFFT (reverse) - can be in-place
     void ifft(complex<float>* input, complex<float>* output) override
     {
-        cudaCheck(cufftExecC2C(plan_,
-            reinterpret_cast<cufftComplex*>(input),
-            reinterpret_cast<cufftComplex*>(output),
-            CUFFT_INVERSE
-        ));
+        if (SYMMETRIC && IS_FORWARD) {
+            throw std::runtime_error("Calling IFFT on a forward-initialised instance");
+        } else {
+            cudaCheck(cufftExecC2C(plan_,
+                reinterpret_cast<cufftComplex*>(input),
+                reinterpret_cast<cufftComplex*>(output),
+                CUFFT_INVERSE
+            ));
+        }
     }
 
     ~FilteredFFTImpl()
@@ -116,7 +145,16 @@ public:
         auto outData = reinterpret_cast<complex<float>*>(dataOut);
         auto filter = reinterpret_cast<complex<float>*>(callerInf);
         auto v = complex<float>(element.x, element.y);
-        v *= (1.0f / (ROWS*COLUMNS)) * filter[offset % (ROWS*COLUMNS)];
+        if (!SYMMETRIC && !IS_FORWARD) {
+            v *= filter[offset % (ROWS*COLUMNS)] / (ROWS*COLUMNS);
+        }
+        else if (IS_FORWARD && !SYMMETRIC) {
+            v *= filter[offset % (ROWS*COLUMNS)];
+        }
+        else {
+            auto fact = tmp_sqrt<ROWS,COLUMNS>::apply();
+            v *= filter[offset % (ROWS*COLUMNS)] / fact;
+        } 
         outData[offset] = v;
     }
 
@@ -130,24 +168,15 @@ public:
     ) {
         auto outData = reinterpret_cast<complex<float>*>(dataOut);
         auto v = complex<float>(element.x, element.y);
-        v /= (ROWS*COLUMNS);
+        if (!SYMMETRIC && !IS_FORWARD) {  
+            v /= ROWS * COLUMNS;
+        } else {
+            auto fact = tmp_sqrt<ROWS,COLUMNS>::apply();
+            v /= fact;
+        }
         outData[offset] = v;
     }
 
-    /// store with filtering only (no scaling)
-    __device__ static void CB_postfilt_filtonly(
-        void* dataOut,
-        size_t offset,
-        cufftComplex element,
-        void* callerInf,
-        void* sharedPtr
-    ) {
-        auto outData = reinterpret_cast<complex<float>*>(dataOut);
-        auto filter = reinterpret_cast<complex<float>*>(callerInf);
-        auto v = complex<float>(element.x, element.y);
-        v *= filter[offset % (ROWS*COLUMNS)];
-        outData[offset] = v;
-    }
 
 private:
     /// the core of the plan setup
@@ -169,37 +198,30 @@ __device__ cufftCallbackLoadC d_loadCallbackPtr;
 __device__ cufftCallbackStoreC d_storeCallbackPtr;
 
 /// small kernel to set the load callback device function pointer
-template <int ROWS, int COLUMNS, bool SYMMETRIC>
+template <int ROWS, int COLUMNS, bool SYMMETRIC, bool IS_FORWARD>
 __global__ void setLoadDevFunPtr()
 {
-    d_loadCallbackPtr = FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC>::CB_prefilt;
+    d_loadCallbackPtr = FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC,IS_FORWARD>::CB_prefilt;
 }
 
 /// small kernel to set the store callback device function pointer
-template <int ROWS, int COLUMNS, bool SYMMETRIC>
+template <int ROWS, int COLUMNS, bool SYMMETRIC, bool IS_FORWARD>
 __global__ void setStoreDevFunPtr()
 {
-    d_storeCallbackPtr = FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC>::CB_postfilt;
+    d_storeCallbackPtr = FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC,IS_FORWARD>::CB_postfilt;
 }
 
 /// small kernel to set the store callback device function pointer for scale only
-template <int ROWS, int COLUMNS, bool SYMMETRIC>
+template <int ROWS, int COLUMNS, bool SYMMETRIC, bool IS_FORWARD>
 __global__ void setStoreScaleDevFunPtr()
 {
-    d_storeCallbackPtr = FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC>::CB_postfilt_scaleonly;
-}
-
-/// small kernel to set the store callback device function pointer for filter only
-template <int ROWS, int COLUMNS, bool SYMMETRIC>
-__global__ void setStoreFiltDevFunPtr()
-{
-    d_storeCallbackPtr = FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC>::CB_postfilt_filtonly;
+    d_storeCallbackPtr = FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC,IS_FORWARD>::CB_postfilt_scaleonly;
 }
 
 
 /// setup the plan
-template <int ROWS, int COLUMNS, bool SYMMETRIC>
-void FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC>::setupPlan() {
+template <int ROWS, int COLUMNS, bool SYMMETRIC, bool IS_FORWARD>
+void FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC,IS_FORWARD>::setupPlan() {
     // basic plan setup
     cudaCheck(cufftCreate(&plan_));
     int dims[] = {ROWS, COLUMNS};
@@ -219,7 +241,7 @@ void FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC>::setupPlan() {
     // pre-filter
     if (prefilt_)   // no need to set load callback if we're not prefiltering
     {
-        setLoadDevFunPtr<ROWS,COLUMNS,SYMMETRIC><<<1,1>>>();
+        setLoadDevFunPtr<ROWS,COLUMNS,SYMMETRIC,IS_FORWARD><<<1,1>>>();
         cufftCallbackLoadC h_loadCallbackPtr;
         cudaCheck(cudaMemcpyFromSymbol(&h_loadCallbackPtr, d_loadCallbackPtr, sizeof(h_loadCallbackPtr)));
         cudaCheck(cufftXtSetCallback(plan_, 
@@ -229,17 +251,14 @@ void FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC>::setupPlan() {
     }
 
     // post-filter
-    if (SYMMETRIC || postfilt_)  // we scale in postCall, so also needed if not postfiltering
+    if (!(IS_FORWARD && !SYMMETRIC) || postfilt_)  // we scale in postCall, so also needed if not postfiltering
     {
         cufftCallbackStoreC h_storeCallbackPtr;
-        if (SYMMETRIC && postfilt_) {
-            setStoreDevFunPtr<ROWS,COLUMNS,SYMMETRIC><<<1,1>>>();
+        if (postfilt_) {
+            setStoreDevFunPtr<ROWS,COLUMNS,SYMMETRIC,IS_FORWARD><<<1,1>>>();
         } 
-        else if (SYMMETRIC && !postfilt_) {
-            setStoreScaleDevFunPtr<ROWS,COLUMNS,SYMMETRIC><<<1,1>>>();
-        }
-        else if (!SYMMETRIC && postfilt_) {
-            setStoreFiltDevFunPtr<ROWS,COLUMNS,SYMMETRIC><<<1,1>>>();
+        else {
+            setStoreScaleDevFunPtr<ROWS,COLUMNS,SYMMETRIC,IS_FORWARD><<<1,1>>>();
         }
         cudaCheck(cudaMemcpyFromSymbol(&h_storeCallbackPtr, d_storeCallbackPtr, sizeof(h_storeCallbackPtr)));
         cudaCheck(cufftXtSetCallback(plan_, 
@@ -252,18 +271,29 @@ void FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC>::setupPlan() {
 //////////// Factory Functions for Python
 
 FilteredFFT* make_filtered(int batches, bool symmetricScaling,
+  bool isForward,
   complex<float>* prefilt, complex<float>* postfilt, 
   cudaStream_t stream)
 {
     if (symmetricScaling)
     {
-        return new FilteredFFTImpl<MY_FFT_ROWS, MY_FFT_COLS, true>(batches, 
-            prefilt, postfilt, stream);
+        if (isForward) {
+            return new FilteredFFTImpl<MY_FFT_ROWS, MY_FFT_COLS, true, true>(batches, 
+                prefilt, postfilt, stream);
+        } else {
+            return new FilteredFFTImpl<MY_FFT_ROWS, MY_FFT_COLS, true, false>(batches, 
+                prefilt, postfilt, stream);
+        }
     }
     else
     {
-        return new FilteredFFTImpl<MY_FFT_ROWS, MY_FFT_COLS, false>(batches, 
-            prefilt, postfilt, stream);
+        if (isForward) {
+            return new FilteredFFTImpl<MY_FFT_ROWS, MY_FFT_COLS, false, true>(batches, 
+                prefilt, postfilt, stream);
+        } else {
+            return new FilteredFFTImpl<MY_FFT_ROWS, MY_FFT_COLS, false, false>(batches, 
+                prefilt, postfilt, stream);
+        }
     }
     
 }

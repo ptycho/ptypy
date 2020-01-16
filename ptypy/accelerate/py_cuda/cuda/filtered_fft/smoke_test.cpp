@@ -28,7 +28,7 @@ int main() {
     cudaCheck(cudaMalloc((void**)&post, rows*cols*sizeof(complex<float>)));
     cudaCheck(cudaMalloc((void**)&f, batches*rows*cols*sizeof(complex<float>)));
 
-    auto fft = make_filtered(batches, true, pre, post, stream);
+    auto fft = make_filtered(batches, true, true, pre, post, stream);
 
     if (rows != fft->getRows() || cols != fft->getColumns())
         throw std::runtime_error("Mismatch in rows/cols between smoke test and module");
@@ -42,10 +42,12 @@ int main() {
     std::cout << "FFT " << batches << "x" << rows << "x" << cols << 
         ": " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms\n";
 
+    auto ifft = make_filtered(batches, true, false, pre, post, stream);
+
     cudaCheck(cudaDeviceSynchronize());
     auto start2 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < 100; ++i)
-        fft->ifft(f, f);
+        ifft->ifft(f, f);
     cudaCheck(cudaDeviceSynchronize());
     auto end2 = std::chrono::high_resolution_clock::now();
     std::cout << "IFFT " << batches << "x" << rows << "x" << cols << 
@@ -54,6 +56,7 @@ int main() {
     std::cout << "Done\n";
 
     destroy_filtered(fft);
+    destroy_filtered(ifft);
 
     cudaStreamDestroy(stream);
     cudaFree(pre);

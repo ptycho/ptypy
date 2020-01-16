@@ -11,6 +11,7 @@ class FFT(object):
                  pre_fft=None,
                  post_fft=None,
                  symmetric=True,
+                 forward=True,
                  use_external=True):
         self.queue = queue
         dims = array.ndim
@@ -20,11 +21,11 @@ class FFT(object):
         self.batches = int(np.product(array.shape[0:dims-2]) if dims > 2 else 1)
 
         if use_external:
-            self._load_filtered_fft(array, pre_fft, post_fft, symmetric)
+            self._load_filtered_fft(array, pre_fft, post_fft, symmetric, forward)
         else:
-            self._load_separate_knls(array, pre_fft, post_fft, symmetric)
+            self._load_separate_knls(array, pre_fft, post_fft, symmetric, forward)
 
-    def _load_filtered_fft(self, array, pre_fft, post_fft, symmetric):
+    def _load_filtered_fft(self, array, pre_fft, post_fft, symmetric, forward):
         if pre_fft is not None:
             self.pre_fft = gpuarray.to_gpu(pre_fft)
             self.pre_fft_ptr = self.pre_fft.gpudata
@@ -41,6 +42,7 @@ class FFT(object):
         self.fftobj = mod.FilteredFFT(
                 self.batches, 
                 symmetric, 
+                forward,
                 self.pre_fft_ptr,
                 self.post_fft_ptr, 
                 self.queue.handle)
@@ -54,7 +56,7 @@ class FFT(object):
     def _ift_ext(self, input, output):
         self.fftobj.ifft(input.gpudata, output.gpudata)
         
-    def _load_separate_knls(self, array, pre_fft, post_fft, symmetric):
+    def _load_separate_knls(self, array, pre_fft, post_fft, symmetric, forward):
         self.pre_fft_knl = load_kernel("batched_multiply", {
             'MPY_DO_SCALE': 'false',
             'MPY_DO_FILT': 'true'

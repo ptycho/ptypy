@@ -12,7 +12,7 @@ CUDADIR = $(dir $(shell which nvcc) )/..
 INCLUDES = $(shell python -m pybind11 --includes) -I$(CUDADIR)/include
 PYMODEXT = $(shell python-config --extension-suffix)
 CPPFLAGS += -DMY_FFT_ROWS=128 -DMY_FFT_COLS=128 $(INCLUDES)
-OPTFLAGS = -O3 -DNDEBUG -std=c++14
+OPTFLAGS = -O3  -std=c++14
 CXXFLAGS += -fPIC
 LD_FLAGS += -L$(CUDADIR)/lib64 -lcufft_static -lculibos -cudart shared -ldl -lrt -lpthread
 OBJ = filtered_fft.o 

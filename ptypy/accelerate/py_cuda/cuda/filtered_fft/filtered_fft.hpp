@@ -12,6 +12,7 @@ public:
     virtual int getBatches() const = 0;
     virtual int getRows() const = 0;
     virtual int getColumns() const = 0;
+    virtual bool isForward() const = 0;
     virtual ~FilteredFFT() {}
 };
 
@@ -19,7 +20,9 @@ public:
 // to the factory here
 // Note that cudaStream_t (runtime API) and CUStream (driver API) are
 // the same type
-FilteredFFT* make_filtered(int batches, bool symmetricScaling,
+FilteredFFT* make_filtered(int batches, 
+  bool symmetricScaling,
+  bool isForward,
   complex<float>* prefilt, complex<float>* postfilt, 
   cudaStream_t stream);
 
