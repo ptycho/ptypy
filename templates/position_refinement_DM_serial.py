@@ -7,16 +7,20 @@ of actual data. It uses the test Scan class
 import numpy as np
 from ptypy.core import Ptycho
 from ptypy import utils as u
+
+
+
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 4
-p.frames_per_block = 100
+p.verbose_level = 3
+p.frames_per_block = 500
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
 p.io.autosave = u.Param(active=False)
-p.io.autoplot = u.Param(active=True)
+p.io.autoplot = u.Param(active=True)#True, interval=100)
+
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
 p.scans.MF = u.Param()
@@ -26,7 +30,7 @@ p.scans.MF.name = 'BlockFull' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
-p.scans.MF.data.num_frames = 400
+p.scans.MF.data.num_frames = 2000
 p.scans.MF.data.save = None
 
 p.scans.MF.illumination = u.Param(diversity=None)
@@ -37,28 +41,29 @@ p.scans.MF.coherence = u.Param(num_probe_modes=1)
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
-p.scans.MF.data.photons = 1e8
+p.scans.MF.data.photons = 1e6
 # Gaussian FWHM of possible detector blurring
 p.scans.MF.data.psf = 0.
+p.scans.MF.data.add_poisson_noise = False
 
 
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_serial'
-p.engines.engine00.numiter = 200
+p.engines.engine00.name = 'DM_pycuda'
+p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.position_refinement = u.Param()
 p.engines.engine00.position_refinement.start = 50
-p.engines.engine00.position_refinement.stop = 150
+p.engines.engine00.position_refinement.stop = 950
 p.engines.engine00.position_refinement.interval = 10
-p.engines.engine00.position_refinement.nshifts = 32
+p.engines.engine00.position_refinement.nshifts = 16
 p.engines.engine00.position_refinement.amplitude = 1e-6
 p.engines.engine00.position_refinement.max_shift = 2e-6
 
 # prepare and run
 P = Ptycho(p, level=4)
-#
+
 # Mess up the positions
 a = 0.
 
@@ -82,3 +87,4 @@ P.obj.reformat()# update the object storage
 
 # Run
 P.run()
+

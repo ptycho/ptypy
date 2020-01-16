@@ -352,11 +352,14 @@ class DM_serial(DM.DM):
                     """
                     log(4, "----------- START POS REF -------------")
                     for dID in self.di.S.keys():
+
+                        prep = self.diff_info[dID]
+                        pID, oID, eID = prep.poe_IDs
                         ma = self.ma.S[dID].data
                         ob = self.ob.S[oID].data
                         pr = self.pr.S[pID].data
-                        prep = self.diff_info[dID]
                         kern = self.kernels[prep.label]
+                        aux = kern.aux
                         addr = prep.addr
                         original_addr = prep.original_addr # use this instead of the one in the address mangler.
                         mag = prep.mag
