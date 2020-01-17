@@ -8,7 +8,7 @@ SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd $SCRIPTDIR/../../..  # ptypy folder
 
 # scripts to run + output folder
-scripts=i08 i13 i14_1 i14_2
+scripts="i08 i13 i14_1 i14_2"
 profdir=/dls/tmp/${USER}/nvprof
 
 
