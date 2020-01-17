@@ -261,7 +261,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         if MPI:
                             obb.data[:] = obb.gpu.get()
                             obn.data[:] = obn.gpu.get()
-                            queue.synchronize()
+                            # queue.synchronize()    // get synchronises automatically
                             parallel.allreduce(obb.data)
                             parallel.allreduce(obn.data)
                             obb.data /= obn.data
@@ -271,7 +271,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                             obb.gpu /= obn.gpu
                             ob.gpu[:] = obb.gpu
 
-                    queue.synchronize()
+                    #queue.synchronize()
                 # Exit if probe should not yet be updated
                 if not do_update_probe:
                     break
@@ -330,7 +330,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                                self.pr_nrm.S[pID].gpu,
                                self.ob.S[oID].gpu,
                                prep.ex_gpu)
-            queue.synchronize()
+            #queue.synchronize()
 
         for pID, pr in self.pr.storages.items():
 
@@ -342,7 +342,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 # if False:
                 pr.data[:] = pr.gpu.get()
                 prn.data[:] = prn.gpu.get()
-                queue.synchronize()
+                #queue.synchronize()
                 parallel.allreduce(pr.data)
                 parallel.allreduce(prn.data)
                 pr.data /= prn.data
