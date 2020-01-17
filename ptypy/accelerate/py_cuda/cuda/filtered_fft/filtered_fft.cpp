@@ -1,4 +1,5 @@
 /** Core implementation of the filtered FFT using cuFFT + callbacks.
+ * Note, this is a .cu file actually. The .cpp is used to make it work with cppimport
  *
  * The FilteredFFTImpl class is implemented as a template, 
  * to allow a specific implementation with compile-time constants
@@ -38,23 +39,6 @@
 # pragma GCC warning "MY_FFT_COLS not set in preprocessor - defaulting to 128"
 #endif
 
-/// TMP way to get the sqrt for the scaling factor, to avoid calling 
-/// square root if the array is square
-template <int ROWS, int COLUMNS>
-struct tmp_sqrt {
-    static __device__ float apply() { 
-        static_assert(ROWS!=COLUMNS, "should never be called");
-        assert(false);
-        return sqrt(float(ROWS*COLUMNS));
-    }
-};
-
-template <int DIM>
-struct tmp_sqrt<DIM, DIM> {
-    static constexpr __device__ float apply() {
-        return DIM;
-    }
-};
 
 
 template <int ROWS, int COLUMNS, bool SYMMETRIC, bool IS_FORWARD>
@@ -130,7 +114,12 @@ public:
         auto inData = reinterpret_cast<complex<float>*>(dataIn);
         auto filter = reinterpret_cast<complex<float>*>(callerInf);
         auto v = inData[offset];
-        v *= filter[offset % (ROWS*COLUMNS)];
+        // Note:
+        // Modulo with powers of 2 are replaced by bit operations by the compiler,
+        // which are much faster.
+        // If non-powers of 2 are needed, it might be possible to work out the 
+        // per-array filter offset from the threadIdx / blockidx fields.
+        v *= filter[offset % (ROWS*COLUMNS)];  
         return {v.real(), v.imag()};
     }
 
@@ -152,7 +141,12 @@ public:
             v *= filter[offset % (ROWS*COLUMNS)];
         }
         else {
-            auto fact = tmp_sqrt<ROWS,COLUMNS>::apply();
+            float fact;
+            if (ROWS == COLUMNS) {
+                fact = ROWS;
+            } else {
+                fact = sqrt(float(ROWS*COLUMNS));
+            }
             v *= filter[offset % (ROWS*COLUMNS)] / fact;
         } 
         outData[offset] = v;
@@ -171,7 +165,12 @@ public:
         if (!SYMMETRIC && !IS_FORWARD) {  
             v /= ROWS * COLUMNS;
         } else {
-            auto fact = tmp_sqrt<ROWS,COLUMNS>::apply();
+            float fact;
+            if (ROWS == COLUMNS) {
+                fact = ROWS;
+            } else {
+                fact = sqrt(float(ROWS*COLUMNS));
+            }
             v /= fact;
         }
         outData[offset] = v;
