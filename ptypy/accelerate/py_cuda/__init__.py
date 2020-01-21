@@ -19,7 +19,6 @@ def get_context(new_queue=False):
     if context is None:
         cuda.init()
         if parallel.rank_local < cuda.Device.count():
-            import pyopencl as cl
             context = cuda.Device(parallel.rank_local).make_context()
             context.push()
         # print("made context %s on rank %s" % (str(context), str(parallel.rank)))
