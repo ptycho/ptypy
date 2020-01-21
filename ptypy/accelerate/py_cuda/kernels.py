@@ -143,11 +143,11 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         self.pr_update_cuda = load_kernel("pr_update")
         self.pr_update2_cuda = None
 
-    def ob_update(self, addr, ob, obn, pr, ex):
+    def ob_update(self, addr, ob, obn, pr, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
 
-        if True:
+        if atomics:
             num_pods = np.int32(addr.shape[0] * addr.shape[1])
             self.ob_update_cuda(ex, num_pods, prsh[1], prsh[2],
                                 pr, prsh[0], prsh[1], prsh[2],
@@ -173,10 +173,10 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             self.ob_update2_cuda(prsh[-1], obsh[0], num_pods, ob, obn, pr, ex, addr,
                                  block=(16,16, 1), grid=grid, stream=self.queue)
 
-    def pr_update(self, addr, pr, prn, ob, ex):
+    def pr_update(self, addr, pr, prn, ob, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
-        if True:
+        if atomics:
             num_pods = np.int32(addr.shape[0] * addr.shape[1])
             self.pr_update_cuda(ex, num_pods, prsh[1], prsh[2],
                                 pr, prsh[0], prsh[1], prsh[2],

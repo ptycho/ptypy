@@ -133,6 +133,8 @@ class DM_pycuda(DM_serial.DM_serial):
 
         super(DM_pycuda, self).engine_prepare()
 
+        use_atomics = self.p.probe_object_update_cuda_atomics
+
         ## The following should be restricted to new data
 
         # recursive copy to gpu
@@ -147,9 +149,11 @@ class DM_pycuda(DM_serial.DM_serial):
 
         for prep in self.diff_info.values():
             
-            #prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
+            if not use_atomics:
+                prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
             prep.addr = gpuarray.to_gpu(prep.addr)
-            #prep.addr2 = gpuarray.to_gpu(prep.addr2)
+            if not use_atomics:
+                prep.addr2 = gpuarray.to_gpu(prep.addr2)
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier = gpuarray.to_gpu(prep.err_fourier)
@@ -312,6 +316,7 @@ class DM_pycuda(DM_serial.DM_serial):
     ## object update
     def object_update(self, MPI=False):
         t1 = time.time()
+        use_atomics = self.p.probe_object_update_cuda_atomics
         queue = self.queue
         queue.synchronize()
         for oID, ob in self.ob.storages.items():
@@ -342,11 +347,13 @@ class DM_pycuda(DM_serial.DM_serial):
             pID, oID, eID = prep.poe_IDs
 
             # scan for loop
-            ev = POK.ob_update(prep.addr,
+            addr = prep.addr if use_atomics else prep.addr2
+            ev = POK.ob_update(addr,
                                self.ob.S[oID].gpu,
                                self.ob_nrm.S[oID].gpu,
                                self.pr.S[pID].gpu,
-                               self.ex.S[eID].gpu)
+                               self.ex.S[eID].gpu,
+                               atomics = use_atomics)
             queue.synchronize()
 
         for oID, ob in self.ob.storages.items():
@@ -379,6 +386,7 @@ class DM_pycuda(DM_serial.DM_serial):
         # storage for-loop
         change = 0
         cfact = self.p.probe_inertia
+        use_atomics = self.p.probe_object_update_cuda_atomics
         for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
             cfact = self.pr_cfact[pID]
@@ -393,11 +401,13 @@ class DM_pycuda(DM_serial.DM_serial):
             pID, oID, eID = prep.poe_IDs
 
             # scan for-loop
-            ev = POK.pr_update(prep.addr,
+            addr = prep.addr if use_atomics else prep.addr2
+            ev = POK.pr_update(addr,
                                self.pr.S[pID].gpu,
                                self.pr_nrm.S[pID].gpu,
                                self.ob.S[oID].gpu,
-                               self.ex.S[eID].gpu)
+                               self.ex.S[eID].gpu,
+                               atomics=use_atomics)
             queue.synchronize()
 
         for pID, pr in self.pr.storages.items():
