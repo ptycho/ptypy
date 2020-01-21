@@ -10,10 +10,9 @@ for future reference.
     - [Atomic Version Optimisations](#atomic-version-optimisations)
   - [Build Exit Wave](#build-exit-wave)
   - [FFT](#fft)
-    - [Optimisation Plan](#optimisation-plan)
   - [Error Reduce](#error-reduce)
-  - [FMag All Update](#fmag-all-update)
   - [Fourier Error](#fourier-error)
+- [Kernel Fusion](#kernel-fusion)
 - [Streaming Engine](#streaming-engine)
 
 ## Individual Kernels
@@ -123,31 +122,33 @@ for future reference.
 
 ### FFT
 
-* The Rekina version is used with pre-FFT and post-IFFT arrays built-in for scaling and shifting
-* This should be compared to cuFFT and callbacks to check if that is faster for CUDA
+* The Reikna version is used with pre-FFT and post-IFFT arrays built-in for scaling and shifting
+* Comparisons showed large speedups of cuFFT if callback mechanism is used
+* With separate kernels for pre- and post-filtering it's worse than Reikna
+* Times:
 
-#### Optimisation Plan
+```
+For 100 calls of 256x256 with batch size 2000:
+- Reikna with or without filters: 1,470ms
+- cuFFT without filters         :   792ms
+- cuFFT with separate filters   : 1,564ms
+- cuFFT with callbacks          :   916ms
 
-1. Replace Rekina with cuFFT, without pre- and post-shifting, and assess performance difference (see if moving to cuFFT is worth the effort)
-2. Add the pre and post shifting as separate kernels and check how this affects performance, also compared to Rekina
-3. Integrate pre- and post-shifting using cuFFT's callback mechanism
-  (this needs either to fork/update SciKit CUDA or to manually wrap cuFFT)
-4. If it's a plain shift, we should investigate if calculating the shift on-the-fly rather than using a full array to multiply can be done and what performance difference this makes.
+For 128x128 with batch size 2000:
+- Reikna with or without filters:   389ms
+- cuFFT without filters         :   194ms
+- cuFFT with separate filters   :   388ms
+- cuFFT with callbacks          :   223ms
+```
+
+* Put separate pybind11 module, compiled on-the-fly with cppimport, with hard-coded array sizes for greater efficiency (recompiled for different sizes)
+* Implemented in cufft.py module
 
 ### Error Reduce
 
 1. Coalesced Access:
     * Swap loop order to iterate of the `threadIdx.x` dimension in the inner loop (this is the fast-running index between threads)
-    * This makes sure that the global memory loads and stores are coalesced
-    * **Speedup:** XXX
-2. Texture Cache
-   * Not beneficial, as elements are accessed exactly once
-3. Loop unrolling
-   * Removes 30us (kernel is very fast anyway)
-
-### FMag All Update
-
-1. Coalesced Access:
+    * This makesfmagess:
     * Swap loop order to iterate of the `threadIdx.x` dimension in the inner loop (this is the fast-running index between threads)
     * This makes sure that the global memory loads and stores are coalesced
     * **Speedup:** XXX
@@ -176,5 +177,17 @@ for future reference.
   * Chaning expression with the boolean ? operator to avoid unnecessary loads when mask is 0
   * Didn't change anything in the performance
 
+
+## Kernel Fusion
+
+* fourier_error and fmag_all_update are joinable
+  * In former, all modes are calculated by 1 block, while the latter looks at them individually, but it could do the same
+  * fourier_error has only 50% occupancy in i08 case (10 modes)
+  * why is abs(f)^2 calculated - what are "errors" here? OpenCL uses the real*real+imag*imag version btw.
+  * small fraction of overall time anyay...
+  * Could try shared mem reduce instead of modes for fourier_error
+  * Seems small, but worth a try
+  * Then kernels can be fused together
+* 
 
 ## Streaming Engine
