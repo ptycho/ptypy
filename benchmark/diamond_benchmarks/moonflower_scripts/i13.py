@@ -37,7 +37,7 @@ p.scans.i13.name = 'BlockFull' # or 'Full'
 p.scans.i13.data= u.Param()
 p.scans.i13.data.name = 'MoonFlowerScan'
 p.scans.i13.data.shape = 512
-p.scans.i13.data.num_frames = 10000
+p.scans.i13.data.num_frames = 5000
 p.scans.i13.data.save = None
 
 p.scans.i13.illumination = u.Param()
