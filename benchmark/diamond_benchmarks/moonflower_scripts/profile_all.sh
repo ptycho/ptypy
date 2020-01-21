@@ -15,14 +15,14 @@ profdir=/dls/tmp/${USER}/nvprof
 mkdir -p ${profdir}
 
 # run with CUDA 10 profiler and nvcc
-module load cuda/10.1
+#module load cuda/10.1
 
 # run all scripts
 for script in $scripts
 do
     rm -f ${profdir}/${script}.*.nvprof
     mpirun -np 4 \
-       nvprof -o ${profdir}/${script}.%q{PMI_RANK}.nvprof \
+       nvprof -f -o ${profdir}/${script}.%q{OMPI_COMM_WORLD_RANK}.nvprof \
        python benchmark/diamond_benchmarks/moonflower_scripts/${script}.py \
        2>&1 | tee ${profdir}/${script}.log
 done
