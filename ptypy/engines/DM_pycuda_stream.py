@@ -33,6 +33,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         super(DM_pycuda_stream, self).__init__(ptycho_parent, pars)
 
         self.qu2 = cuda.Stream()
+        self._list_blocks_on_device = []
 
     def engine_prepare(self):
 
@@ -59,7 +60,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
     @property
     def gpu_is_full(self):
-        return False
+        return len(self._list_blocks_on_device) > 2
 
     def engine_iterate(self, num=1):
         """
@@ -140,30 +141,28 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     if 'ex_gpu' in prep:
                         print('got it')
                         ex = prep.ex_gpu
-                    elif not self.gpu_is_full:
-                        print('new')
-                        N, a, b  = self.ex.S[eID].data.shape
+                        ma = prep.ma_gpu
+                        mag = prep.mag_gpu
+                    else:
+                        if self.gpu_is_full:
+                            print('steal')
+                            tID = self._list_blocks_on_device.pop(0)
+                            _prep = self.diff_info[tID]
+                            del _prep.ex_gpu # gc needs to pick this up
+                            del _prep.ma_gpu  # gc needs to pick this up
+                            del _prep.mag_gpu  # gc needs to pick this up
+                        # print('new')
+                        # N, a, b  = self.ex.S[eID].data.shape
                         #ex_c = np.zeros(aux.shape, dtype=np.complex64)
                         #ex_c[:N] = self.ex.S[eID].data
                         ex = gpuarray.to_gpu_async(self.ex.S[eID].data, stream=self.qu2)
+                        mag = gpuarray.to_gpu_async(prep.mag, stream=self.qu2)
+                        ma = gpuarray.to_gpu_async(self.ma.S[dID].data.astype(np.float32), stream=self.qu2)
+                        # print(ma.shape, mag.shape)
                         prep.ex_gpu = ex
-                    else:
-                        print('steal')
-                        # get a buffer
-                        for tID, p in self.diff_info.items():
-                            if not 'ex' in p:
-                                continue
-                            else:
-                                ex = p.pop('ex')
-                                eID = p.poe_IDs[2]
-                                break
-                        ex_t = self.ex.S[eID].data
-                        ex_t[:] = ex.get()[:ex_t.shape[0]]
-                        N, a, b  = self.ex.S[eID].data.shape
-                        ex_c = np.zeros_like(aux)
-                        ex_c[:N] = self.ex.S[eID].data
-                        ex.set(ex_c)
-                        prep.ex_gpu = ex
+                        prep.ma_gpu = ma
+                        prep.mag_gpu = mag
+                        self._list_blocks_on_device.append(dID)
 
                     # Fourier update.
                     if do_update_fourier:
@@ -178,41 +177,41 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self.benchmark.B_Prop += time.time() - t1
 
                         # cycle exit in and out, cause it's used by both
-                        if 'ma_gpu' in prep:
-                            print('got it ma')
-                            ma = prep.ma_gpu
-                            mag = prep.mag_gpu
-                        elif not self.gpu_is_full:
-                            print('new ma', self.ma.S[dID].data.dtype)
-                            N, a, b = prep.mag.shape
-                            #ma_c = np.zeros(FUK.fshape, dtype=np.float32)
-                            #mag_c = np.zeros(FUK.fshape, dtype=np.float32)
-                            #ma_c[:N] = self.ma.S[dID].data
-                            #mag_c[:N] = prep.mag
-                            mag = gpuarray.to_gpu_async(prep.mag, stream=self.qu2)
-                            ma = gpuarray.to_gpu_async(self.ma.S[dID].data.astype(np.float32), stream=self.qu2)
-                            print(ma.shape, mag.shape)
-                            prep.ma_gpu = ma
-                            prep.mag_gpu = mag
-                        else:
-                            print('steal ma')
-                            # get a buffer
-                            for tID, p in self.diff_info.items():
-                                if not 'ma_gpu' in p:
-                                    continue
-                                else:
-                                    ma = p.pop('ma_gpu')
-                                    mag = p.pop('mag_gpu')
-                                    break
-                            N, a, b = prep.mag.shape
-                            ma_c = np.zeros(FUK.fshape, dtype=np.float32)
-                            mag_c = np.zeros(FUK.fshape, dtype=np.float32)
-                            ma_c[:N] = self.ma.S[dID].data
-                            mag_c[:N] = prep.mag
-                            ma.set(ma_c)
-                            mag.set(mag_c)
-                            prep.ma_gpu = ma
-                            prep.mag_gpu = mag
+                        # if 'ma_gpu' in prep:
+                        #     # print('got it ma')
+                        #     ma = prep.ma_gpu
+                        #     mag = prep.mag_gpu
+                        # else:
+                        #     if self.gpu_is_full:
+                        #         tID = self._list_blocks_on_device.pop(0)
+                        #         _prep = self.diff_info[tID]
+                        #
+                        #     # print('new ma', self.ma.S[dID].data.dtype)
+                        #     #N, a, b = prep.mag.shape
+                        #     #ma_c = np.zeros(FUK.fshape, dtype=np.float32)
+                        #     #mag_c = np.zeros(FUK.fshape, dtype=np.float32)
+                        #     #ma_c[:N] = self.ma.S[dID].data
+                        #     #mag_c[:N] = prep.mag
+                        #
+                        # else:
+                        #     # print('steal ma')
+                        #     # get a buffer
+                        #     for tID, p in self.diff_info.items():
+                        #         if not 'ma_gpu' in p:
+                        #             continue
+                        #         else:
+                        #             ma = p.pop('ma_gpu')
+                        #             mag = p.pop('mag_gpu')
+                        #             break
+                        #     N, a, b = prep.mag.shape
+                        #     ma_c = np.zeros(FUK.fshape, dtype=np.float32)
+                        #     mag_c = np.zeros(FUK.fshape, dtype=np.float32)
+                        #     ma_c[:N] = self.ma.S[dID].data
+                        #     mag_c[:N] = prep.mag
+                        #     ma.set(ma_c)
+                        #     mag.set(mag_c)
+                        #     prep.ma_gpu = ma
+                        #     prep.mag_gpu = mag
 
                         ## Deviation from measured data
                         t1 = time.time()
@@ -317,7 +316,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             pr.gpu *= cfact
             prn.gpu.fill(cfact)
 
-        for dID in self.di.S.keys():
+        for dID in list(self.di.S.keys()).reversed():
             prep = self.diff_info[dID]
 
             POK = self.kernels[prep.label].POK
