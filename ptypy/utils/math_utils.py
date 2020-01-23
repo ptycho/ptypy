@@ -163,7 +163,7 @@ def delxf(a, axis=-1, out=None):
     slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
     slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
 
-    if out == None:
+    if (out is None):
         out = np.zeros_like(a)
 
     out[tuple(slice2)] = a[tuple(slice1)] - a[tuple(slice2)]
