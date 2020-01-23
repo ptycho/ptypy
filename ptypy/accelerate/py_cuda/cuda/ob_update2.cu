@@ -2,14 +2,6 @@
 #include <cassert>
 using thrust::complex;
         
-/*
-#define pr_dlayer(k) addr[(k)*15]
-#define ex_dlayer(k) addr[(k)*15 + 6]
-
-#define obj_dlayer(k) addr[(k)*15 + 3]
-#define obj_roi_row(k) addr[(k)*15 + 4]
-#define obj_roi_column(k) addr[(k)*15 + 5]
-*/
 
 #define pr_dlayer(k) addr[(k)]
 #define ex_dlayer(k) addr[6*num_pods + (k)]
@@ -21,31 +13,39 @@ using thrust::complex;
 // #define BDIM_X 16
 // #define BDIM_Y 16
 
-// shared memory
 
-extern "C" __global__ void ob_update2(int pr_sh,
-                                      int ob_modes,
-                                      int num_pods,
-                                      complex<float>* ob_g,
+extern "C" __global__ void ob_update2(int pr_sh,    
+                                      int ob_modes, 
+                                      int num_pods, 
+                                      int ob_sh,    
+                                      int pr_modes,
+                                      int ex_0,
+                                      int ex_1,
+                                      int ex_2,
+                                      complex<float>* ob_g, 
                                       complex<float>* obn_g,
-                                      const complex<float>* __restrict__ pr_g,
-                                      const complex<float>* __restrict__ ex_g,
+                                      const complex<float>* __restrict__ pr_g, // 2, 5, 5
+                                      const complex<float>* __restrict__ ex_g, // 16, 5, 5
                                       const int* addr)
 {
   int y = blockIdx.y * BDIM_Y + threadIdx.y;
-  int dy = gridDim.y * BDIM_Y;
+  int dy = ob_sh;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
-  int dz = BDIM_X * gridDim.x;
+  int dz = ob_sh;
   complex<float> ob[NUM_MODES], obn[NUM_MODES];
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(ob_modes <= NUM_MODES);
 
-  #pragma unroll
-  for (int i = 0; i < NUM_MODES; ++i) {
-    ob[i] = ob_g[i*dy*dz + y*dz + z];
-    obn[i] = obn_g[i*dy*dz + y*dz + z];
-  }
+  if (y < ob_sh && z < ob_sh) {
+    #pragma unroll
+    for (int i = 0; i < NUM_MODES; ++i) {
+      auto idx = i*dy*dz + y*dz + z;
+      assert(idx < ob_modes * ob_sh * ob_sh);
+      ob[i] = ob_g[idx];
+      obn[i] = obn_g[idx];
+    }
+  }  
 
   __shared__ int addresses[BDIM_X*BDIM_Y*5];
 
@@ -73,18 +73,25 @@ extern "C" __global__ void ob_update2(int pr_sh,
 
     __syncthreads();
 
+    if (y >= ob_sh || z >= ob_sh)
+      continue;
+
     #pragma unroll 4
     for (int i = 0; i < mi; ++i){
       int* ad = addresses + i*5;
       int v1 = y - ad[3];
       int v2 = z - ad[4];
       if (v1 >= 0 && v1 < pr_sh && v2 >= 0 && v2 < pr_sh) {
-        auto pr = pr_g[ad[0] * pr_sh * pr_sh + v1 * pr_sh + v2];
+        auto pridx = ad[0] * pr_sh * pr_sh + v1 * pr_sh + v2;
+        assert(pridx < pr_modes * pr_sh * pr_sh);
+        auto pr = pr_g[pridx];
         int idx = ad[2];
         assert(idx < NUM_MODES);
         auto cpr = conj(pr);
+        auto exidx = ad[1]*pr_sh*pr_sh +v1*pr_sh + v2;
+        assert(exidx < ex_0 * ex_1 * ex_2);
         ob[idx] += cpr * 
-          ex_g[ad[1]*pr_sh*pr_sh +v1*pr_sh + v2];
+          ex_g[exidx];
         auto rr = obn[idx].real();
         rr += pr.real() * pr.real() + pr.imag() * pr.imag();
         obn[idx].real(rr);
@@ -93,9 +100,11 @@ extern "C" __global__ void ob_update2(int pr_sh,
 
   }
 
-  for (int i = 0; i < NUM_MODES; ++i){
-    ob_g[i*dy*dz + y*dz + z] = ob[i];
-    obn_g[i*dy*dz + y*dz + z] = obn[i];
+  if (y < ob_sh && z < ob_sh) {
+    for (int i = 0; i < NUM_MODES; ++i){
+      ob_g[i*dy*dz + y*dz + z] = ob[i];
+      obn_g[i*dy*dz + y*dz + z] = obn[i];
+    }
   }
 
 }

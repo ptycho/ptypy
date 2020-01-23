@@ -164,18 +164,28 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "BDIM_Y": 16
                 })
 
-            #print('pods: {}'.format(num_pods))
-            #print('address: {}'.format(addr.shape))
+            # print('pods: {}'.format(num_pods))
+            # print('address: {}'.format(addr.shape))
+            # print('ob: {}'.format(ob.shape))
+            # print('obn: {}'.format(obn.shape))
+            # print('ex: {}'.format(ex.shape))
+            # print('prsh: {}'.format(prsh))
             # make a local stripped down clone of addr array for usage here:
 
-            grid = [int(x/16) for x in ob.shape[-2:]]
+            grid = [int((x+15)//16) for x in ob.shape[-2:]]
             grid = (grid[0], grid[1], int(1))
-            self.ob_update2_cuda(prsh[-1], obsh[0], num_pods, ob, obn, pr, ex, addr,
+            self.ob_update2_cuda(prsh[-1], obsh[0], num_pods, obsh[-2], 
+                                 prsh[0], 
+                                 np.int32(ex.shape[0]), 
+                                 np.int32(ex.shape[1]), 
+                                 np.int32(ex.shape[2]), 
+                                 ob, obn, pr, ex, addr,
                                  block=(16,16, 1), grid=grid, stream=self.queue)
 
     def pr_update(self, addr, pr, prn, ob, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
+        #print('Ob sh: {}, pr sh: {}'.format(obsh, prsh))
         if atomics:
             num_pods = np.int32(addr.shape[0] * addr.shape[1])
             self.pr_update_cuda(ex, num_pods, prsh[1], prsh[2],
@@ -192,10 +202,17 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "BDIM_X": 16,
                     "BDIM_Y": 16
                 })
-            grid = [int(x/16) for x in pr.shape[-2:]]
+
+            # print('pods: {}'.format(num_pods))
+            # print('address: {}'.format(addr.shape))
+            # print('ex: {}'.format(ex.shape))
+            # print('prsh: {}'.format(prsh))
+            # print('ob: {}'.format(ob.shape))
+
+            grid = [int((x+15)//16) for x in pr.shape[-2:]]
             grid = (grid[0], grid[1], int(1))
             self.pr_update2_cuda(prsh[-1], obsh[-2], obsh[-1],
-                                 prsh[0], num_pods,
+                                 prsh[0], obsh[0], num_pods,
                                  pr, prn, ob, ex, addr,
                                  block=(16,16,1), grid=grid, stream=self.queue)
 

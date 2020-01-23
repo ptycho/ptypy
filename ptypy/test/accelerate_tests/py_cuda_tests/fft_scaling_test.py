@@ -58,6 +58,7 @@ class FftScalingTest(unittest.TestCase):
     def setUp(self):
         import sys
         np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
+        cuda.init()
         self.ctx = make_default_context()
         self.stream = cuda.Stream()
 

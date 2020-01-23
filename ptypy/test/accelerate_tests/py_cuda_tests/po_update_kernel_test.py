@@ -30,6 +30,7 @@ class PoUpdateKernelTest(unittest.TestCase):
     def setUp(self):
         import sys
         np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
+        cuda.init()
         self.ctx = make_default_context()
         self.ctx.push()
 
@@ -46,7 +47,7 @@ class PoUpdateKernelTest(unittest.TestCase):
                                 ['pr_update', 'ob_update'],
                                 err_msg='PoUpdateKernel does not have the correct functions registered.')
 
-    def test_ob_update_REGRESSION(self):
+    def ob_update_REGRESSION_tester(self, atomics=True):
         '''
         setup
         '''
@@ -101,6 +102,7 @@ class PoUpdateKernelTest(unittest.TestCase):
                     mode_idx += 1
                     exit_idx += 1
             position_idx += 1
+        
 
         '''
         test
@@ -119,9 +121,14 @@ class PoUpdateKernelTest(unittest.TestCase):
         object_array_denominator_dev = gpuarray.to_gpu(object_array_denominator)
         probe_dev = gpuarray.to_gpu(probe)
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
-        addr_dev = gpuarray.to_gpu(addr)
+        if not atomics:
+            addr2 = np.ascontiguousarray(np.transpose(addr, (2, 3, 0, 1)))
+            addr_dev = gpuarray.to_gpu(addr2)
+        else:
+            addr_dev = gpuarray.to_gpu(addr)
+
         print(object_array_denominator)
-        POUK.ob_update(addr_dev, object_array_dev, object_array_denominator_dev, probe_dev, exit_wave_dev)
+        POUK.ob_update(addr_dev, object_array_dev, object_array_denominator_dev, probe_dev, exit_wave_dev, atomics=atomics)
         print("\n\n cuda  version")
         print(object_array_denominator_dev.get())
         nPOUK.ob_update(addr, object_array, object_array_denominator, probe, exit_wave)
@@ -177,7 +184,13 @@ class PoUpdateKernelTest(unittest.TestCase):
         exit_wave_dev.gpudata.free()
         addr_dev.gpudata.free()
 
-    def test_ob_update_UNITY(self):
+    def test_ob_update_atomics_REGRESSION(self):
+        self.ob_update_REGRESSION_tester(atomics=True)
+
+    def test_ob_update_tiled_REGRESSION(self):
+        self.ob_update_REGRESSION_tester(atomics=False)
+
+    def ob_update_UNITY_tester(self, atomics=True):
         '''
         setup
         '''
@@ -250,9 +263,14 @@ class PoUpdateKernelTest(unittest.TestCase):
         object_array_denominator_dev = gpuarray.to_gpu(object_array_denominator)
         probe_dev = gpuarray.to_gpu(probe)
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
-        addr_dev = gpuarray.to_gpu(addr)
+        if not atomics:
+            addr2 = np.ascontiguousarray(np.transpose(addr, (2, 3, 0, 1)))
+            addr_dev = gpuarray.to_gpu(addr2)
+        else:
+            addr_dev = gpuarray.to_gpu(addr)
+
         # print(object_array_denominator)
-        POUK.ob_update(addr_dev, object_array_dev, object_array_denominator_dev, probe_dev, exit_wave_dev)
+        POUK.ob_update(addr_dev, object_array_dev, object_array_denominator_dev, probe_dev, exit_wave_dev, atomics=atomics)
         # print("\n\n cuda  version")
         # print(repr(object_array_dev.get()))
         # print(repr(object_array_denominator_dev.get()))
@@ -275,7 +293,13 @@ class PoUpdateKernelTest(unittest.TestCase):
         exit_wave_dev.gpudata.free()
         addr_dev.gpudata.free()
 
-    def test_pr_update_REGRESSION(self):
+    def test_ob_update_atomics_UNITY(self):
+        self.ob_update_UNITY_tester(atomics=True)
+    
+    def test_ob_update_tiled_UNITY(self):
+        self.ob_update_UNITY_tester(atomics=False)
+
+    def pr_update_REGRESSION_tester(self, atomics=True):
         '''
         setup
         '''
@@ -348,9 +372,14 @@ class PoUpdateKernelTest(unittest.TestCase):
         probe_denominator_dev = gpuarray.to_gpu(probe_denominator)
         probe_dev = gpuarray.to_gpu(probe)
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
-        addr_dev = gpuarray.to_gpu(addr)
+        if not atomics:
+            addr2 = np.ascontiguousarray(np.transpose(addr, (2, 3, 0, 1)))
+            addr_dev = gpuarray.to_gpu(addr2)
+        else:
+            addr_dev = gpuarray.to_gpu(addr)
 
-        POUK.pr_update(addr_dev, probe_dev, probe_denominator_dev, object_array_dev, exit_wave_dev)
+
+        POUK.pr_update(addr_dev, probe_dev, probe_denominator_dev, object_array_dev, exit_wave_dev, atomics=atomics)
 
         # print("probe array after:")
         # print(repr(probe))
@@ -394,7 +423,13 @@ class PoUpdateKernelTest(unittest.TestCase):
         exit_wave_dev.gpudata.free()
         addr_dev.gpudata.free()
 
-    def test_pr_update_UNITY(self):
+    def test_pr_update_atomics_REGRESSION(self):
+        self.pr_update_REGRESSION_tester(atomics=True)
+
+    def test_pr_update_tiled_REGRESSION(self):
+        self.pr_update_REGRESSION_tester(atomics=False)
+
+    def pr_update_UNITY_tester(self, atomics=True):
         '''
         setup
         '''
@@ -469,9 +504,14 @@ class PoUpdateKernelTest(unittest.TestCase):
         probe_denominator_dev = gpuarray.to_gpu(probe_denominator)
         probe_dev = gpuarray.to_gpu(probe)
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
-        addr_dev = gpuarray.to_gpu(addr)
+        if not atomics:
+            addr2 = np.ascontiguousarray(np.transpose(addr, (2, 3, 0, 1)))
+            addr_dev = gpuarray.to_gpu(addr2)
+        else:
+            addr_dev = gpuarray.to_gpu(addr)
 
-        POUK.pr_update(addr_dev, probe_dev, probe_denominator_dev, object_array_dev, exit_wave_dev)
+
+        POUK.pr_update(addr_dev, probe_dev, probe_denominator_dev, object_array_dev, exit_wave_dev, atomics=atomics)
         nPOUK.pr_update(addr, probe, probe_denominator, object_array, exit_wave)
 
         # print("probe array after:")
@@ -490,6 +530,12 @@ class PoUpdateKernelTest(unittest.TestCase):
         probe_dev.gpudata.free()
         exit_wave_dev.gpudata.free()
         addr_dev.gpudata.free()
+
+    def test_pr_update_atomics_UNITY(self):
+        self.pr_update_UNITY_tester(atomics=True)
+
+    def test_pr_update_tiled_UNITY(self):
+        self.pr_update_UNITY_tester(atomics=False)
 
 if __name__ == '__main__':
     unittest.main()
