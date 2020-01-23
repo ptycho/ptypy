@@ -20,6 +20,8 @@ from . import register, DM_pycuda
 from ..accelerate import py_cuda as gpu
 from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel
 
+from pycuda.tools import DeviceMemoryPool
+
 MPI = parallel.size > 1
 MPI = True
 
@@ -31,7 +33,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
     def __init__(self, ptycho_parent, pars = None):
 
         super(DM_pycuda_stream, self).__init__(ptycho_parent, pars)
-
+        self.dmp = DeviceMemoryPool()
         self.qu2 = cuda.Stream()
         self._ex_blocks_on_device = {}
         self._dat_blocks_on_device = {}
@@ -63,7 +65,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
     @property
     def ex_is_full(self):
         exl = self._ex_blocks_on_device
-        return len([e for e in exl.values() if e > 1]) > 3   \
+        return len([e for e in exl.values() if e > 1]) > 2   \
 
     @property
     def data_is_full(self):
@@ -164,7 +166,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                             # not on device but there is space -> queue for stream
                             _prep = self.diff_info[tID]
                             eID = _prep.poe_IDs[2]
-                            _prep.ex_gpu = gpuarray.to_gpu_async(self.ex.S[eID].data, stream=self.qu2)
+                            _prep.ex_gpu = gpuarray.to_gpu_async(self.ex.S[eID].data, allocator=self.dmp.allocate, stream=self.qu2)
                             # mark transfer
                             self._ex_blocks_on_device[tID] = 2
 
@@ -179,8 +181,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self.benchmark.A_Build_aux += time.time() - t1
 
                         # one time references
-                        mag = gpuarray.to_gpu_async(prep.mag, stream=self.qu2)
-                        ma = gpuarray.to_gpu_async(prep.ma, stream=self.qu2)
+                        mag = gpuarray.to_gpu_async(prep.mag, allocator=self.dmp.allocate, stream=self.qu2)
+                        ma = gpuarray.to_gpu_async(prep.ma, allocator=self.dmp.allocate, stream=self.qu2)
 
                         ## FFT
                         t1 = time.time()
@@ -324,7 +326,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     # not on device but there is space -> queue for stream
                     _prep = self.diff_info[tID]
                     eID = _prep.poe_IDs[2]
-                    _prep.ex_gpu = gpuarray.to_gpu_async(self.ex.S[eID].data, stream=self.qu2)
+                    _prep.ex_gpu = gpuarray.to_gpu_async(self.ex.S[eID].data, allocator=self.dmp.allocate, stream=self.qu2)
                     # mark transfer
                     self._ex_blocks_on_device[tID] = 2
 
