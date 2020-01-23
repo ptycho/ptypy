@@ -295,3 +295,7 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
             self._ob_shape = (np.int32(ob.shape[-2]), np.int32(ob.shape[-1]))
 
         return self._ob_shape
+
+class DerivativesKernel:
+    def __init__(self):
+        pass
