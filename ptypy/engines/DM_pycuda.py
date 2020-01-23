@@ -133,7 +133,8 @@ class DM_pycuda(DM_serial.DM_serial):
 
         super(DM_pycuda, self).engine_prepare()
 
-        use_atomics = self.p.probe_object_update_cuda_atomics
+        use_atomics = self.p.probe_update_cuda_atomics or self.p.object_update_cuda_atomics
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         ## The following should be restricted to new data
 
@@ -149,10 +150,10 @@ class DM_pycuda(DM_serial.DM_serial):
 
         for prep in self.diff_info.values():
             
-            if not use_atomics:
+            if use_tiles:
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
             prep.addr = gpuarray.to_gpu(prep.addr)
-            if not use_atomics:
+            if use_tiles:
                 prep.addr2 = gpuarray.to_gpu(prep.addr2)
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
@@ -316,7 +317,7 @@ class DM_pycuda(DM_serial.DM_serial):
     ## object update
     def object_update(self, MPI=False):
         t1 = time.time()
-        use_atomics = self.p.probe_object_update_cuda_atomics
+        use_atomics = self.p.object_update_cuda_atomics
         queue = self.queue
         queue.synchronize()
         for oID, ob in self.ob.storages.items():
@@ -386,7 +387,7 @@ class DM_pycuda(DM_serial.DM_serial):
         # storage for-loop
         change = 0
         cfact = self.p.probe_inertia
-        use_atomics = self.p.probe_object_update_cuda_atomics
+        use_atomics = self.p.probe_update_cuda_atomics
         for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
             cfact = self.pr_cfact[pID]

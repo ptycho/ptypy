@@ -112,10 +112,16 @@ class DM(PositionCorrectionEngine):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
-    [probe_object_update_cuda_atomics]
+    [probe_update_cuda_atomics]
     default = True
     type = bool
-    help = For GPU, use the atomics version for probe and object updates
+    help = For GPU, use the atomics version for probe update kernel
+
+    [object_update_cuda_atomics]
+    default = True
+    type = bool
+    help = For GPU, use the atomics version for object update kernel
+
 
     """
 

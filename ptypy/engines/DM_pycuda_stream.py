@@ -51,8 +51,15 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for name, s in self.pr_nrm.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
 
+        use_atomics = self.p.probe_update_cuda_atomics or self.p.object_update_cuda_atomics
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
+            
+
         for prep in self.diff_info.values():
             prep.addr_gpu = gpuarray.to_gpu(prep.addr)
+            if use_tiles:
+                prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
+                prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
             prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
             self.dummy_error = np.zeros_like(prep.err_fourier)
@@ -100,7 +107,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         cfactf32 = np.float32(cfact)
                         obb.gpu[:] = ob.gpu * cfactf32
                         obn.gpu.fill(np.complex64(cfact), self.queue)
-                        
+                
+                atomics_probe = self.p.probe_update_cuda_atomics 
+                atomics_object = self.p.object_update_cuda_atomics
+                use_atomics = atomics_object or atomics_probe
+                use_tiles = (not atomics_object) or (not atomics_probe)
 
                 # First cycle: Fourier + object update
                 for dID in self.di.S.keys():
@@ -123,6 +134,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                     # get addresses and auxilliary array
                     addr = prep.addr_gpu
+                    addr2 = prep.addr2_gpu if use_tiles else None
                     err_fourier = prep.err_fourier_gpu
                     ma_sum = prep.ma_sum_gpu
 
@@ -249,7 +261,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         t1 = time.time()
 
                         # scan for loop
-                        ev = POK.ob_update(addr, obb, obn, pr, ex)
+                        addrt = addr if atomics_object else addr2
+                        ev = POK.ob_update(addrt, obb, obn, pr, ex, atomics=atomics_object)
 
                         self.benchmark.object_update += time.time() - t1
                         self.benchmark.calls_object += 1
@@ -319,6 +332,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             pr.gpu *= cfactf32
             prn.gpu.fill(np.complex64(cfact), self.queue)
 
+        use_atomics = self.p.probe_update_cuda_atomics
         for dID in self.di.S.keys():
             prep = self.diff_info[dID]
 
@@ -327,11 +341,13 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             pID, oID, eID = prep.poe_IDs
 
             # scan for-loop
-            ev = POK.pr_update(prep.addr_gpu,
+            addrt = prep.addr_gpu if use_atomics else prep.addr2_gpu
+            ev = POK.pr_update(addrt,
                                self.pr.S[pID].gpu,
                                self.pr_nrm.S[pID].gpu,
                                self.ob.S[oID].gpu,
-                               prep.ex_gpu)
+                               prep.ex_gpu,
+                               atomics=use_atomics)
             #queue.synchronize()
 
         for pID, pr in self.pr.storages.items():

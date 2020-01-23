@@ -1088,12 +1088,20 @@ type = int
 userlevel = 2
 lowlim = 0
 
-[engine.DM.probe_object_update_cuda_atomics]
-help = For GPU, use the atomics version for probe and object updates
+[engine.DM.object_update_cuda_atomics]
+help = For GPU, use the atomics version for object update kernel
 default = True
 type = bool
 userlevel = 2
 doc =
+
+[engine.DM.probe_update_cuda_atomics]
+help = For GPU, use the atomics version for probe update kernel
+default = True
+type = bool
+userlevel = 2
+doc =
+
 
 [engine.ML]
 default = 

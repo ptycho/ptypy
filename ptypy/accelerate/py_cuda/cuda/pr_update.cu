@@ -27,6 +27,8 @@ __global__ void pr_update(
     complex<float>* denominator
     )
     {
+      assert(B == E);  // prsh[1]
+      assert(C == F);  // prsh[2]
       const int bid = blockIdx.x;
       const int tx = threadIdx.x;
       const int ty = threadIdx.y;
