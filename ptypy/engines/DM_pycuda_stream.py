@@ -33,7 +33,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         super(DM_pycuda_stream, self).__init__(ptycho_parent, pars)
 
         self.qu2 = cuda.Stream()
-        self._list_blocks_on_device = []
+        self._ex_blocks_on_device = {}
+        self._dat_blocks_on_device = {}
 
     def engine_prepare(self):
 
@@ -52,22 +53,35 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for name, s in self.pr_nrm.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
 
-        for prep in self.diff_info.values():
+        for dID, prep in self.diff_info.items():
             prep.addr_gpu = gpuarray.to_gpu(prep.addr)
             prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
+            prep.ma = self.ma.S[dID].data.astype(np.float32)
             self.dummy_error = np.zeros_like(prep.err_fourier)
 
     @property
-    def gpu_is_full(self):
-        return len(self._list_blocks_on_device) > 2
+    def ex_is_full(self):
+        exl = self._ex_blocks_on_device
+        return len([e for e in exl.values() if e > 1]) > 3   \
+
+    @property
+    def data_is_full(self):
+        exl = self._dat_blocks_on_device
+        return len([e for e in exl.values() if e > 1]) > 2
 
     def engine_iterate(self, num=1):
         """
         Compute one iteration.
         """
         #ma_buf = ma_c = np.zeros(FUK.fshape, dtype=np.float32)
-
+        self.dID_list = list(self.di.S.keys())
+        self._ex_blocks_on_device = dict.fromkeys(self.dID_list,1)
+        self._dat_blocks_on_device = dict.fromkeys(self.dID_list,1)
+        # 0: used, freed
+        # 1: unused, not on device
+        # 2: transfer to or on device
+        # 3: used, on device
         for it in range(num):
 
             queue = self.queue
@@ -103,7 +117,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         obn.gpu.fill(cfact)
 
                 # First cycle: Fourier + object update
-                for dID in self.di.S.keys():
+                for d_idx, dID in enumerate(self.dID_list):
                     t1 = time.time()
 
                     prep = self.diff_info[dID]
@@ -126,92 +140,52 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     err_fourier = prep.err_fourier_gpu
                     ma_sum = prep.ma_sum_gpu
 
-                    # stuff to be cycled
-                    #mag = gpuarray.to_gpu(prep.mag)
-                    #ma = gpuarray.to_gpu(self.ma.S[dID].data)
-
-
                     # local references
                     ob = self.ob.S[oID].gpu
                     obn = self.ob_nrm.S[oID].gpu
                     obb = self.ob_buf.S[oID].gpu
                     pr = self.pr.S[pID].gpu
 
-                    # cycle exit in and out, cause it's used by both
-                    if 'ex_gpu' in prep:
-                        print('got it')
-                        ex = prep.ex_gpu
-                        ma = prep.ma_gpu
-                        mag = prep.mag_gpu
-                    else:
-                        if self.gpu_is_full:
-                            print('steal')
-                            tID = self._list_blocks_on_device.pop(0)
+                    print(d_idx, it, inner)
+                    for tID in self.dID_list:
+                        _stat = self._ex_blocks_on_device[tID]
+                        if _stat == 2:
+                            # data on device or on its way
+                            continue
+                        elif _stat == 3 and not self.ex_is_full:
+                            continue
+                        elif _stat == 3 and self.ex_is_full:
+                            # release data if already used and device full
+                            print('Ex Free : ' + str(tID))
+                            del self.diff_info[tID].ex_gpu
+                            self._ex_blocks_on_device[tID] = 0
+                        elif _stat == 1 and not self.ex_is_full:
+                            print('Ex H2D : ' + str(tID))
+                            # not on device but there is space -> queue for stream
                             _prep = self.diff_info[tID]
-                            del _prep.ex_gpu # gc needs to pick this up
-                            del _prep.ma_gpu  # gc needs to pick this up
-                            del _prep.mag_gpu  # gc needs to pick this up
-                        # print('new')
-                        # N, a, b  = self.ex.S[eID].data.shape
-                        #ex_c = np.zeros(aux.shape, dtype=np.complex64)
-                        #ex_c[:N] = self.ex.S[eID].data
-                        ex = gpuarray.to_gpu_async(self.ex.S[eID].data, stream=self.qu2)
-                        mag = gpuarray.to_gpu_async(prep.mag, stream=self.qu2)
-                        ma = gpuarray.to_gpu_async(self.ma.S[dID].data.astype(np.float32), stream=self.qu2)
-                        # print(ma.shape, mag.shape)
-                        prep.ex_gpu = ex
-                        prep.ma_gpu = ma
-                        prep.mag_gpu = mag
-                        self._list_blocks_on_device.append(dID)
+                            eID = _prep.poe_IDs[2]
+                            _prep.ex_gpu = gpuarray.to_gpu_async(self.ex.S[eID].data, stream=self.qu2)
+                            # mark transfer
+                            self._ex_blocks_on_device[tID] = 2
+
+                    ex = prep.ex_gpu
 
                     # Fourier update.
                     if do_update_fourier:
                         log(4, '----- Fourier update -----', True)
+
                         t1 = time.time()
                         AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                         self.benchmark.A_Build_aux += time.time() - t1
+
+                        # one time references
+                        mag = gpuarray.to_gpu_async(prep.mag, stream=self.qu2)
+                        ma = gpuarray.to_gpu_async(prep.ma, stream=self.qu2)
 
                         ## FFT
                         t1 = time.time()
                         FW(aux, aux)
                         self.benchmark.B_Prop += time.time() - t1
-
-                        # cycle exit in and out, cause it's used by both
-                        # if 'ma_gpu' in prep:
-                        #     # print('got it ma')
-                        #     ma = prep.ma_gpu
-                        #     mag = prep.mag_gpu
-                        # else:
-                        #     if self.gpu_is_full:
-                        #         tID = self._list_blocks_on_device.pop(0)
-                        #         _prep = self.diff_info[tID]
-                        #
-                        #     # print('new ma', self.ma.S[dID].data.dtype)
-                        #     #N, a, b = prep.mag.shape
-                        #     #ma_c = np.zeros(FUK.fshape, dtype=np.float32)
-                        #     #mag_c = np.zeros(FUK.fshape, dtype=np.float32)
-                        #     #ma_c[:N] = self.ma.S[dID].data
-                        #     #mag_c[:N] = prep.mag
-                        #
-                        # else:
-                        #     # print('steal ma')
-                        #     # get a buffer
-                        #     for tID, p in self.diff_info.items():
-                        #         if not 'ma_gpu' in p:
-                        #             continue
-                        #         else:
-                        #             ma = p.pop('ma_gpu')
-                        #             mag = p.pop('mag_gpu')
-                        #             break
-                        #     N, a, b = prep.mag.shape
-                        #     ma_c = np.zeros(FUK.fshape, dtype=np.float32)
-                        #     mag_c = np.zeros(FUK.fshape, dtype=np.float32)
-                        #     ma_c[:N] = self.ma.S[dID].data
-                        #     mag_c[:N] = prep.mag
-                        #     ma.set(ma_c)
-                        #     mag.set(mag_c)
-                        #     prep.ma_gpu = ma
-                        #     prep.mag_gpu = mag
 
                         ## Deviation from measured data
                         t1 = time.time()
@@ -252,6 +226,16 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self.benchmark.object_update += time.time() - t1
                         self.benchmark.calls_object += 1
 
+                    # mark as computed
+                    self._ex_blocks_on_device[dID] = 3
+
+                for _dID, stat in self._ex_blocks_on_device.items():
+                    if stat == 3: self._ex_blocks_on_device[_dID] = 2
+                    elif stat == 0: self._ex_blocks_on_device[_dID] = 1
+
+                # swap direction
+                self.dID_list.reverse()
+
                 if do_update_object:
                     for oID, ob in self.ob.storages.items():
                         obn = self.ob_nrm.S[oID]
@@ -260,7 +244,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         if MPI:
                             obb.data[:] = obb.gpu.get()
                             obn.data[:] = obn.gpu.get()
-                            queue.synchronize()
+                            #queue.synchronize()
                             parallel.allreduce(obb.data)
                             parallel.allreduce(obn.data)
                             obb.data /= obn.data
@@ -270,7 +254,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                             obb.gpu /= obn.gpu
                             ob.gpu[:] = obb.gpu
 
-                    queue.synchronize()
+                    #queue.synchronize()
                 # Exit if probe should not yet be updated
                 if not do_update_probe:
                     break
@@ -285,7 +269,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 # stop iteration if probe change is small
                 if change < self.p.overlap_converge_factor: break
 
-            queue.synchronize()
+            #queue.synchronize()
             parallel.barrier()
             self.curiter += 1
 
@@ -316,12 +300,33 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             pr.gpu *= cfact
             prn.gpu.fill(cfact)
 
-        for dID in list(self.di.S.keys()).reversed():
+        for dID in self.dID_list:
             prep = self.diff_info[dID]
 
             POK = self.kernels[prep.label].POK
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
+
+            for tID in self.dID_list:
+                _stat = self._ex_blocks_on_device[tID]
+                if _stat == 2:
+                    # data on device or on its way
+                    continue
+                elif _stat == 3 and not self.ex_is_full:
+                    continue
+                elif _stat == 3 and self.ex_is_full:
+                    # release data if already used and device full
+                    print('Ex Free : ' + str(tID))
+                    del self.diff_info[tID].ex_gpu
+                    self._ex_blocks_on_device[tID] = 0
+                elif _stat == 1 and not self.ex_is_full:
+                    print('Ex H2D : ' + str(tID))
+                    # not on device but there is space -> queue for stream
+                    _prep = self.diff_info[tID]
+                    eID = _prep.poe_IDs[2]
+                    _prep.ex_gpu = gpuarray.to_gpu_async(self.ex.S[eID].data, stream=self.qu2)
+                    # mark transfer
+                    self._ex_blocks_on_device[tID] = 2
 
             # scan for-loop
             ev = POK.pr_update(prep.addr_gpu,
@@ -329,7 +334,17 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                                self.pr_nrm.S[pID].gpu,
                                self.ob.S[oID].gpu,
                                prep.ex_gpu)
-            queue.synchronize()
+
+            # mark as computed
+            self._ex_blocks_on_device[dID] = 3
+
+        for _dID, stat in self._ex_blocks_on_device.items():
+            if stat == 3:
+                self._ex_blocks_on_device[_dID] = 2
+            elif stat == 0:
+                self._ex_blocks_on_device[_dID] = 1
+
+        self.dID_list.reverse()
 
         for pID, pr in self.pr.storages.items():
 
@@ -341,7 +356,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 # if False:
                 pr.data[:] = pr.gpu.get()
                 prn.data[:] = prn.gpu.get()
-                queue.synchronize()
+                #queue.synchronize()
                 parallel.allreduce(pr.data)
                 parallel.allreduce(prn.data)
                 pr.data /= prn.data
@@ -357,7 +372,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
             ## this should be done on GPU
 
-            queue.synchronize()
+            #queue.synchronize()
             change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
             buf.data[:] = pr.data
             if MPI:
