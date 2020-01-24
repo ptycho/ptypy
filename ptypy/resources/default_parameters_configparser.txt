@@ -152,7 +152,7 @@ type = float
 
 [engine.DM.probe_update_cuda_atomics]
 help = For GPU, use the atomics version for probe updates kernel
-default = True
+default = False
 type = bool
 userlevel = 2
 doc =

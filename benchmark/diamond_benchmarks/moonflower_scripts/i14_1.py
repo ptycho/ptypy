@@ -60,6 +60,8 @@ p.engines.engine00.name = 'DM_pycuda_stream'
 p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 20
 p.engines.engine00.probe_update_start = 1
+p.engines.engine00.probe_update_cuda_atomics = False
+p.engines.engine00.object_update_cuda_atomics = True
 
 # prepare and run
 P = Ptycho(p,level=4)

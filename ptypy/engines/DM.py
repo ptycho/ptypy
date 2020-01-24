@@ -113,7 +113,7 @@ class DM(PositionCorrectionEngine):
     help = Pixel radius around optical axes that the probe mass center must reside in
 
     [probe_update_cuda_atomics]
-    default = True
+    default = False
     type = bool
     help = For GPU, use the atomics version for probe update kernel
 
