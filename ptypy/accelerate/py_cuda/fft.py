@@ -9,7 +9,8 @@ class FFT(object):
                  inplace=False,
                  pre_fft=None,
                  post_fft=None,
-                 symmetric=True):
+                 symmetric=True,
+                 forward=True):
 
         self.queue = queue
         from pycuda import gpuarray

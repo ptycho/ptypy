@@ -101,7 +101,12 @@ class DM_pycuda(DM_serial.DM_serial):
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
 
-            from ptypy.accelerate.py_cuda.cufft import FFT
+            try:
+                from ptypy.accelerate.py_cuda.cufft import FFT
+            except:
+                logger.warning('Unable to import cuFFT version - using Reikna instead')
+                from ptypy.accelerate.py_cuda.fft import FFT
+
             kern.FW = FFT(aux, self.queue,
                           pre_fft=geo.propagator.pre_fft,
                           post_fft=geo.propagator.post_fft,
