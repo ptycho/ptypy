@@ -9,10 +9,12 @@ dependencies:
   - h5py
   - pyzmq
   - pep8
+  - openmpi
   - mpi4py
   - pillow
   - pyfftw
   - cmake>=3.8.0
+  - pip
   - pip:
     - pytest-cov
     - coveralls
