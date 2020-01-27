@@ -134,7 +134,7 @@ class DM_pycuda(DM_serial.DM_serial):
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier = gpuarray.to_gpu(prep.err_fourier)
-            self.dummy_error = np.zeros_like(prep.err_fourier)
+            self.dummy_error = np.zeros(prep.err_fourier.shape, dtype=np.float32)
 
     def engine_iterate(self, num=1):
         """
@@ -142,7 +142,7 @@ class DM_pycuda(DM_serial.DM_serial):
         """
 
         for it in range(num):
-
+            error = {}
             for dID in self.di.S.keys():
                 t1 = time.time()
 
@@ -213,8 +213,12 @@ class DM_pycuda(DM_serial.DM_serial):
                 # err_exit = np.zeros_like(err_fourier)
                 # err_err = np.zeros_like(err_fourier)
                 # errs = np.array(list(zip(err_err, err_phot, err_exit)))
-                errs = np.array(list(zip(self.dummy_error, self.dummy_error, self.dummy_error)))
-                error = dict(zip(prep.view_IDs, errs))
+                # errs = np.array(list(zip(prep.err_fourier.get(), self.dummy_error, self.dummy_error)))
+                # error = dict(zip(prep.view_IDs, errs))
+                err_fourier_cpu = np.array(err_fourier.get())
+
+                errs = np.ascontiguousarray(np.vstack([err_fourier_cpu, self.dummy_error, self.dummy_error]).T)
+                error.update(zip(prep.view_IDs, errs))
 
                 self.benchmark.calls_fourier += 1
 

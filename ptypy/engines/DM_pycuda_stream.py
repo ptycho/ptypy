@@ -60,7 +60,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             prep.addr_gpu = gpuarray.to_gpu(prep.addr)
             prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
-            self.dummy_error = np.zeros_like(prep.err_fourier)
+            self.dummy_error = np.zeros(prep.err_fourier.shape, dtype=np.float32)
             # prepare page-locked mems:
             ma = self.ma.S[dID].data.astype(np.float32)
             prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
@@ -263,9 +263,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         #err_phot = np.zeros_like(err_fourier)
                         #err_exit = np.zeros_like(err_fourier)
-                        errs = np.array(list(zip(self.dummy_error, self.dummy_error, self.dummy_error)))
+                        err_fourier_cpu = np.array(err_fourier.get())
 
-                        #errs = np.ascontiguousarray(np.vstack([err_fourier.get(), err_phot, err_exit]).T)
+                        errs = np.ascontiguousarray(np.vstack([err_fourier_cpu, self.dummy_error, self.dummy_error]).T)
                         error.update(zip(prep.view_IDs, errs))
                         #queue.synchronize()
                         self.benchmark.calls_fourier += 1
