@@ -25,6 +25,8 @@ from pycuda.tools import DeviceMemoryPool
 MPI = parallel.size > 1
 MPI = True
 
+BLOCKS_ON_DEVICE = 2
+
 __all__ = ['DM_pycuda_stream']
 
 @register()
@@ -35,6 +37,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         super(DM_pycuda_stream, self).__init__(ptycho_parent, pars)
         self.dmp = DeviceMemoryPool()
         self.qu2 = cuda.Stream()
+        self.qu3 = cuda.Stream()
+
         self._ex_blocks_on_device = {}
         self._data_blocks_on_device = {}
 
@@ -75,14 +79,14 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
     @property
     def ex_is_full(self):
         exl = self._ex_blocks_on_device
-        return len([e for e in exl.values() if e > 1]) > 2 
+        return len([e for e in exl.values() if e > 1]) > BLOCKS_ON_DEVICE 
 
     @property
     def data_is_full(self):
         exl = self._data_blocks_on_device
-        return len([e for e in exl.values() if e > 1]) > 2
+        return len([e for e in exl.values() if e > 1]) > BLOCKS_ON_DEVICE
 
-    def gpu_swap_ex(self, swaps=1):
+    def gpu_swap_ex(self, swaps=1, upload=True):
         """
         Find an exit wave block to transfer until. Delete block on device if full
         """
@@ -92,13 +96,14 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             prep = self.diff_info[tID]
             if stat == 3 and self.ex_is_full:
                 # release data if already used and device full
-                print('Ex Free : ' + str(tID))
-                prep.ex_gpu.get_async(self.qu2, prep.ex)
+                #print('Ex Free : ' + str(tID))
+                if upload:
+                    prep.ex_gpu.get_async(self.qu3, prep.ex)
                 del prep.ex_gpu
                 del prep.ex_ev
                 self._ex_blocks_on_device[tID] = 0
             elif stat == 1 and not self.ex_is_full and s<=swaps:
-                print('Ex H2D : ' + str(tID))
+                #print('Ex H2D : ' + str(tID))
                 # not on device but there is space -> queue for stream
                 prep.ex_gpu = gpuarray.to_gpu_async(prep.ex, allocator=self.dmp.allocate, stream=self.qu2)
                 prep.ex_ev = cuda.Event()
@@ -118,13 +123,13 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             stat = self._data_blocks_on_device[tID]
             if stat == 3 and self.data_is_full:
                 # release data if already used and device full
-                print('Data Free : ' + str(tID))
+                #rint('Data Free : ' + str(tID))
                 del self.diff_info[tID].ma_gpu
                 del self.diff_info[tID].mag_gpu
                 del self.diff_info[tID].data_ev
                 self._data_blocks_on_device[tID] = 0
             elif stat == 1 and not self.data_is_full and s<=swaps:
-                print('Data H2D : ' + str(tID))
+                #print('Data H2D : ' + str(tID))
                 # not on device but there is space -> queue for stream
                 prep = self.diff_info[tID]
                 prep.mag_gpu = gpuarray.to_gpu_async(prep.mag, allocator=self.dmp.allocate, stream=self.qu2)
@@ -212,10 +217,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     obb = self.ob_buf.S[oID].gpu
                     pr = self.pr.S[pID].gpu
 
-                    #print(d_idx, it, inner)
-                    
-                    self.gpu_swap_ex(5)
-                    print(self._ex_blocks_on_device.items())
+
+                    self.gpu_swap_ex()
                     prep.ex_ev.synchronize()
                     ex = prep.ex_gpu
                     
@@ -224,7 +227,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     if do_update_fourier:
                         log(4, '----- Fourier update -----', True)
                         
-                        self.gpu_swap_data(5)
+                        self.gpu_swap_data()
 
                         t1 = time.time()
                         AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
@@ -289,7 +292,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     elif stat == 0: self._data_blocks_on_device[_dID] = 1
 
                 # swap direction
-                self.dID_list.reverse()
+                if do_update_fourier:
+                    self.dID_list.reverse()
 
                 if do_update_object:
                     for oID, ob in self.ob.storages.items():
@@ -366,8 +370,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             POK = self.kernels[prep.label].POK
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
-            print(self._ex_blocks_on_device.items())
-            self.gpu_swap_ex()
+
+            self.gpu_swap_ex(upload=True)
             prep.ex_ev.synchronize()
             # scan for-loop
             ev = POK.pr_update(prep.addr_gpu,
@@ -385,7 +389,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             elif stat == 0:
                 self._ex_blocks_on_device[_dID] = 1
 
-        self.dID_list.reverse()
+        #self.dID_list.reverse()
 
         for pID, pr in self.pr.storages.items():
 
