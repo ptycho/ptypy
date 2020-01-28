@@ -183,9 +183,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         else:
                             obj_gpu *= cfact
                         """
-                        obb.gpu[:] = ob.gpu
-                        obb.gpu *= cfact
-                        obn.gpu.fill(cfact)
+                        ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=self.queue)
+                        obn.gpu.fill(np.complex64(cfact), stream=self.queue)
 
                 # First cycle: Fourier + object update
                 for dID in self.dID_list:
@@ -361,8 +360,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
             cfact = self.pr_cfact[pID]
-            pr.gpu *= cfact
-            prn.gpu.fill(cfact)
+            pr.gpu._axpbz(np.complex64(cfact), 0, pr.gpu, stream=queue)
+            prn.gpu.fill(cfact, stream=queue)
 
         for dID in self.dID_list:
             prep = self.diff_info[dID]
