@@ -215,9 +215,8 @@ class DM_serial(DM.DM):
 
             prep.mag = np.sqrt(d.data)
             # prep.ma_sum = self.ma.S[d.ID].data.sum(-1).sum(-1)
-            mask_data = self.ma.S[d.ID].data.astype(np.float32)
-            self.ma.S[d.ID].data = mask_data
-            prep.ma_sum = mask_data.sum(-1).sum(-1)
+            prep.ma = self.ma.S[d.ID].data.astype(np.float32)
+            prep.ma_sum = prep.ma.sum(-1).sum(-1)
             prep.err_fourier = np.zeros_like(prep.ma_sum)
 
         # Unfortunately this needs to be done for all pods, since
@@ -282,7 +281,7 @@ class DM_serial(DM.DM):
                 err_fourier = prep.err_fourier
 
                 # local references
-                ma = self.ma.S[dID].data
+                ma = prep.ma
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
                 ex = self.ex.S[eID].data

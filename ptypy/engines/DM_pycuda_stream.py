@@ -42,8 +42,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
         super(DM_pycuda.DM_pycuda, self).engine_prepare()
 
-        ## The following should be restricted to new data
-
         for name, s in self.ob.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.ob_buf.S.items():
@@ -55,13 +53,14 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for name, s in self.pr_nrm.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
 
-        for dID, prep in self.diff_info.items():
+        for label, d in self.ptycho.new_data:
+            dID = d.ID
+            prep = self.diff_info[dID]
             pID, oID, eID = prep.poe_IDs
             prep.addr_gpu = gpuarray.to_gpu(prep.addr)
             prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
-            prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
-            self.dummy_error = np.zeros(prep.err_fourier.shape, dtype=np.float32)
             # prepare page-locked mems:
+            prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
             ma = self.ma.S[dID].data.astype(np.float32)
             prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
             prep.ma[:] = ma            
@@ -76,7 +75,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
     @property
     def ex_is_full(self):
         exl = self._ex_blocks_on_device
-        return len([e for e in exl.values() if e > 1]) > 5 
+        return len([e for e in exl.values() if e > 1]) > 2 
 
     @property
     def data_is_full(self):
@@ -90,16 +89,17 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         s = 0
         for tID in self.dID_list:
             stat = self._ex_blocks_on_device[tID]
+            prep = self.diff_info[tID]
             if stat == 3 and self.ex_is_full:
                 # release data if already used and device full
                 print('Ex Free : ' + str(tID))
-                del self.diff_info[tID].ex_gpu
-                del self.diff_info[tID].ex_ev
+                prep.ex_gpu.get_async(self.qu2, prep.ex)
+                del prep.ex_gpu
+                del prep.ex_ev
                 self._ex_blocks_on_device[tID] = 0
             elif stat == 1 and not self.ex_is_full and s<=swaps:
                 print('Ex H2D : ' + str(tID))
                 # not on device but there is space -> queue for stream
-                prep = self.diff_info[tID]
                 prep.ex_gpu = gpuarray.to_gpu_async(prep.ex, allocator=self.dmp.allocate, stream=self.qu2)
                 prep.ex_ev = cuda.Event()
                 prep.ex_ev.record(self.qu2)
@@ -151,7 +151,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         # 3: used, on device
         for it in range(num):
 
-            queue = self.queue
             error = {}
 
             for inner in range(self.p.overlap_max_iterations):
@@ -184,7 +183,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         obn.gpu.fill(cfact)
 
                 # First cycle: Fourier + object update
-                for d_idx, dID in enumerate(self.dID_list):
+                for dID in self.dID_list:
                     t1 = time.time()
 
                     prep = self.diff_info[dID]
@@ -216,7 +215,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     #print(d_idx, it, inner)
                     
                     self.gpu_swap_ex(5)
-
+                    print(self._ex_blocks_on_device.items())
                     prep.ex_ev.synchronize()
                     ex = prep.ex_gpu
                     
@@ -261,12 +260,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         AWK.build_exit(aux, addr, ob, pr, ex)
                         self.benchmark.E_Build_exit += time.time() - t1
 
-                        #err_phot = np.zeros_like(err_fourier)
-                        #err_exit = np.zeros_like(err_fourier)
-                        err_fourier_cpu = np.array(err_fourier.get())
-
-                        errs = np.ascontiguousarray(np.vstack([err_fourier_cpu, self.dummy_error, self.dummy_error]).T)
-                        error.update(zip(prep.view_IDs, errs))
                         #queue.synchronize()
                         self.benchmark.calls_fourier += 1
 
@@ -343,7 +336,12 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         # costly but needed to sync back with
         # for name, s in self.ex.S.items():
         #     s.data[:] = s.gpu.get()
-
+        for dID, prep in self.diff_info.items():
+            err_fourier = prep.err_fourier_gpu.get()
+            err_phot = np.zeros_like(err_fourier)
+            err_exit = np.zeros_like(err_fourier)
+            errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
+            error.update(zip(prep.view_IDs, errs))
 
         self.error = error
         return error
@@ -368,7 +366,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             POK = self.kernels[prep.label].POK
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
-
+            print(self._ex_blocks_on_device.items())
             self.gpu_swap_ex()
             prep.ex_ev.synchronize()
             # scan for-loop

@@ -41,7 +41,7 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM_pycuda_stream'
-p.engines.engine00.numiter = 20
+p.engines.engine00.numiter = 60
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.probe_update_start = 1
 

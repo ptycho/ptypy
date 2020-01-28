@@ -129,12 +129,12 @@ class DM_pycuda(DM_serial.DM_serial):
                     data = s.data
                 s.gpu = gpuarray.to_gpu(data)
 
-        for prep in self.diff_info.values():
+        for label, d in self.ptycho.new_data:
+            prep = self.diff_info[d.ID]
             prep.addr = gpuarray.to_gpu(prep.addr)
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
-            prep.err_fourier = gpuarray.to_gpu(prep.err_fourier)
-            self.dummy_error = np.zeros(prep.err_fourier.shape, dtype=np.float32)
+            prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
 
     def engine_iterate(self, num=1):
         """
@@ -164,7 +164,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 addr = prep.addr
                 mag = prep.mag
                 ma_sum = prep.ma_sum
-                err_fourier = prep.err_fourier
+                err_fourier = prep.err_fourier_gpu
 
                 # local references
                 ma = self.ma.S[dID].gpu
@@ -209,17 +209,6 @@ class DM_pycuda(DM_serial.DM_serial):
                 # queue.synchronize()
                 self.benchmark.E_Build_exit += time.time() - t1
 
-                # err_phot = np.zeros_like(err_fourier)
-                # err_exit = np.zeros_like(err_fourier)
-                # err_err = np.zeros_like(err_fourier)
-                # errs = np.array(list(zip(err_err, err_phot, err_exit)))
-                # errs = np.array(list(zip(prep.err_fourier.get(), self.dummy_error, self.dummy_error)))
-                # error = dict(zip(prep.view_IDs, errs))
-                err_fourier_cpu = np.array(err_fourier.get())
-
-                errs = np.ascontiguousarray(np.vstack([err_fourier_cpu, self.dummy_error, self.dummy_error]).T)
-                error.update(zip(prep.view_IDs, errs))
-
                 self.benchmark.calls_fourier += 1
 
             parallel.barrier()
@@ -239,8 +228,12 @@ class DM_pycuda(DM_serial.DM_serial):
         # costly but needed to sync back with
         # for name, s in self.ex.S.items():
         #     s.data[:] = s.gpu.get()
-
-        #self.queue.synchronize()
+        for dID, prep in self.diff_info.items():
+            err_fourier = prep.err_fourier_gpu.get()
+            err_phot = np.zeros_like(err_fourier)
+            err_exit = np.zeros_like(err_fourier)
+            errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
+            error.update(zip(prep.view_IDs, errs))
 
         self.error = error
         return error
