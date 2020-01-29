@@ -97,7 +97,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             if stat == 3 and self.ex_is_full:
                 # release data if already used and device full
                 #print('Ex Free : ' + str(tID))
-                if upload:
+                self.qu3.wait_for_event(prep.ev_ex_d2h)
+                if upload
                     prep.ex_gpu.get_async(self.qu3, prep.ex)
                 del prep.ex_gpu
                 del prep.ex_ev
@@ -106,8 +107,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 #print('Ex H2D : ' + str(tID))
                 # not on device but there is space -> queue for stream
                 prep.ex_gpu = gpuarray.to_gpu_async(prep.ex, allocator=self.dmp.allocate, stream=self.qu2)
-                prep.ex_ev = cuda.Event()
-                prep.ex_ev.record(self.qu2)
+                prep.ev_ex_h2d = cuda.Event()
+                prep.ev_ex_h2d.record(self.qu2)
                 # mark transfer
                 self._ex_blocks_on_device[tID] = 2
                 s+=1
@@ -126,7 +127,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 #rint('Data Free : ' + str(tID))
                 del self.diff_info[tID].ma_gpu
                 del self.diff_info[tID].mag_gpu
-                del self.diff_info[tID].data_ev
+                del self.diff_info[tID].ev_data_h2d
                 self._data_blocks_on_device[tID] = 0
             elif stat == 1 and not self.data_is_full and s<=swaps:
                 #print('Data H2D : ' + str(tID))
@@ -134,8 +135,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 prep = self.diff_info[tID]
                 prep.mag_gpu = gpuarray.to_gpu_async(prep.mag, allocator=self.dmp.allocate, stream=self.qu2)
                 prep.ma_gpu = gpuarray.to_gpu_async(prep.ma, allocator=self.dmp.allocate, stream=self.qu2)     
-                prep.data_ev = cuda.Event()
-                prep.data_ev.record(self.qu2)
+                prep.ev_data_h2d = cuda.Event()
+                prep.ev_data_h2d.record(self.qu2)
                 # mark transfer
                 self._data_blocks_on_device[tID] = 2
                 s+=1
@@ -218,7 +219,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
 
                     self.gpu_swap_ex()
-                    prep.ex_ev.synchronize()
+                    prep.ev_ex_h2d.synchronize()
                     ex = prep.ex_gpu
                     
 
@@ -239,7 +240,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self.benchmark.B_Prop += time.time() - t1
 
 
-                        prep.data_ev.synchronize()
+                        prep.ev_data_h2d.synchronize()
                         ma = prep.ma_gpu
                         mag = prep.mag_gpu
 
@@ -280,6 +281,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self.benchmark.calls_object += 1
 
                     # mark as computed
+                    prep.ev_ex_d2h = cuda.Event()
+                    prep.ev_ex_d2h.record(self.queue)
                     self._ex_blocks_on_device[dID] = 3
 
                 for _dID, stat in self._ex_blocks_on_device.items():
@@ -380,6 +383,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                                prep.ex_gpu)
 
             # mark as computed
+            prep.ev_ex_d2h = cuda.Event()
+            prep.ev_ex_d2h.record(self.queue)
             self._ex_blocks_on_device[dID] = 3
 
         for _dID, stat in self._ex_blocks_on_device.items():
