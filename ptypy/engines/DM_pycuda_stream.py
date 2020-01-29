@@ -98,10 +98,10 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 # release data if already used and device full
                 #print('Ex Free : ' + str(tID))
                 self.qu3.wait_for_event(prep.ev_ex_d2h)
-                if upload
+                if upload:
                     prep.ex_gpu.get_async(self.qu3, prep.ex)
                 del prep.ex_gpu
-                del prep.ex_ev
+                del prep.ev_ex_h2d
                 self._ex_blocks_on_device[tID] = 0
             elif stat == 1 and not self.ex_is_full and s<=swaps:
                 #print('Ex H2D : ' + str(tID))
@@ -262,7 +262,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         t1 = time.time()
                         AWK.build_exit(aux, addr, ob, pr, ex)
                         self.benchmark.E_Build_exit += time.time() - t1
-
+                        
                         #queue.synchronize()
                         self.benchmark.calls_fourier += 1
 
@@ -374,7 +374,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             pID, oID, eID = prep.poe_IDs
 
             self.gpu_swap_ex(upload=True)
-            prep.ex_ev.synchronize()
+            prep.ev_ex_h2d.synchronize()
             # scan for-loop
             ev = POK.pr_update(prep.addr_gpu,
                                self.pr.S[pID].gpu,
