@@ -5,9 +5,9 @@ using thrust::complex;
 extern "C" __global__ void delx_mid(
     const DTYPE *__restrict__ input,
     DTYPE *output,
-    int lower_dim,  //x for 3D   // 1
-    int higher_dim, //z for 3D   // 2
-    int axis_dim)                // 3
+    int lower_dim,  //x for 3D   
+    int higher_dim, //z for 3D   
+    int axis_dim)                
 {
 
     __shared__ DTYPE shared_data[BDIM_Y][BDIM_X];
@@ -19,7 +19,7 @@ extern "C" __global__ void delx_mid(
     unsigned int iy = ty;
 
     // offset pointers
-    int xoffset = (ix / lower_dim) * lower_dim;
+    int xoffset = (ix / higher_dim) * lower_dim;
     input += ix + xoffset;
     output += ix + xoffset;
 
