@@ -31,9 +31,13 @@ def get_context(new_queue=False):
     return context, queue
 
 
-def load_kernel(name, subs={}):
+def load_kernel(name, subs={}, file=None):
 
-    fn = "%s/cuda/%s.cu" % (os.path.dirname(__file__), name)
+    if file is None:
+        fn = "%s/cuda/%s.cu" % (os.path.dirname(__file__), name)
+    else:
+        fn = "%s/cuda/%s" % (os.path.dirname(__file__), file)
+        
     with open(fn, 'r') as f:
         kernel = f.read()
     for k,v in list(subs.items()):
