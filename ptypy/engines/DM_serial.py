@@ -13,8 +13,6 @@ from __future__ import division
 
 import numpy as np
 import time
-from ptypy.accelerate.ocl.npy_kernels import Fourier_update_kernel
-from ptypy.accelerate.ocl.npy_kernels import PO_update_kernel
 
 from .. import utils as u
 from ..utils.verbose import logger, log
@@ -23,8 +21,7 @@ from . import BaseEngine, register, DM
 from .. import defaults_tree
 from ..accelerate.array_based.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..accelerate.array_based import address_manglers
-# from ..accelerate.ocl.npy_kernels_for_block import PoUpdateKernel
-# from ..accelerate.ocl.npy_kernels_for_block import AuxiliaryWaveKernel
+
 
 ### TODOS 
 # 
@@ -119,8 +116,6 @@ class DM_serial(DM.DM):
 
         super(DM_serial, self).__init__(ptycho_parent, pars)
 
-        # allocator for READ only buffers
-        # self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
         ## gaussian filter
         # dummy kernel
         """

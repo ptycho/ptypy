@@ -86,7 +86,7 @@ class FourierUpdateKernel(BaseKernel):
 
         ## Actual math ##
 
-        # Reduceses the Fourier error along the last 2 dimensions.fd
+        # Reduces the Fourier error along the last 2 dimensions.fd
         #err_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
@@ -132,6 +132,160 @@ class FourierUpdateKernel(BaseKernel):
         #fm[:] = mag / (af + 1e-6)
         # upcasting
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
+        return
+
+class GradientDescentKernel(BaseKernel):
+
+    def __init__(self, aux, nmodes=1, floating_intensities=False):
+
+        super(GradientDescentKernel, self).__init__()
+        self.denom = 1e-7
+        self.nmodes = np.int32(nmodes)
+        ash = aux.shape
+        self.bshape = aux.shape
+        self.fshape = (ash[0] // nmodes, ash[1], ash[2])
+        # temporary buffer arrays
+        self.do_float = floating_intensities
+        if self.do_float:
+            self.npy.LLden  = None
+        self.npy.LLerr = None
+        self.npy.Imodel = None
+
+        self.npy.float_err1 = None
+        self.npy.float_err2 = None
+
+        self.kernels = [
+            'fourier_error',
+            'error_reduce',
+            'fmag_all_update'
+        ]
+
+    def allocate(self):
+        """
+        Allocate memory according to the number of modes and
+        shape of the diffraction stack.
+        """
+        # temporary buffer arrays
+        self.npy.LLden = np.zeros(self.fshape, dtype=np.float32)
+        self.npy.LLerr = np.zeros(self.fshape, dtype=np.float32)
+        self.npy.Imodel = np.zeros(self.fshape, dtype=np.float32)
+
+
+    def make_model(self, b_aux, addr):
+
+        # reference shape (write-to shape)
+        sh = self.fshape
+
+        # batch buffers
+        Imodel = self.npy.Imodel
+        aux = b_aux
+
+        ## Actual math ## (subset of FUK.fourier_error)
+        tf = aux.reshape(sh[0], self.nmodes, sh[1], sh[2])
+        Imodel[:] = (np.abs(tf) ** 2).sum(1)
+
+    def make_a012(self, b_f, b_a, b_b, addr, I):
+
+        # reference shape (write-to shape)
+        sh = self.fshape
+
+        # stopper
+        maxz = I.shape[0]
+
+        A0 = self.npy.Imodel[:maxz]
+        A1 = self.npy.LLerr[:maxz]
+        A2 = self.npy.LLden[:maxz]
+
+        # batch buffers
+        f = b_f[:maxz]
+        a = b_a[:maxz]
+        b = b_b[:maxz]
+
+        ## Actual math ## (subset of FUK.fourier_error)
+        A0.fill(0.)
+        tf = np.abs(f).astype(np.float32) ** 2
+        A0[:] = tf.reshape(sh[0], self.nmodes, sh[1], sh[2]).sum(1) - I
+
+        A1.fill(0.)
+        tf = 2. * np.real(f * a.conj())
+        A1[:] = tf.reshape(sh[0], self.nmodes, sh[1], sh[2]).sum(1) - I
+
+        A2.fill(0.)
+        tf = 2. * np.real(f * b.conj()) + np.abs(a) ** 2
+        A2[:] = tf.reshape(sh[0], self.nmodes, sh[1], sh[2]).sum(1) - I
+        return
+
+    def fill_b(self, addr, Brenorm, w, B)
+
+        # stopper
+        maxz = w.shape[0]
+
+        A0 = self.npy.Imodel[:maxz]
+        A1 = self.npy.LLerr[:maxz]
+        A2 = self.npy.LLden[:maxz]
+
+        ## Actual math ##
+
+        # maybe two kernel calls
+
+        B[0] += np.dot(w.flat, (A0 ** 2).flat) * Brenorm
+        B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
+        B[2] += np.dot(w.flat, (A1 ** 2 + 2 * A0 * A2).flat) * Brenorm
+        return
+
+    def error_reduce(self, addr, err_sum):
+        # reference shape (write-to shape)
+        sh = self.fshape
+
+        # stopper
+        maxz = err_sum.shape[0]
+
+        # batch buffers
+        ferr = self.npy.LLerr[:maxz]
+
+        ## Actual math ##
+
+        # Reduces the LL error along the last 2 dimensions.fd
+        err_sum[:] = ferr.sum(-1).sum(-1)
+        return
+
+    def main(self, aux_b, addr, w, I):
+        # reference shape (write-to shape)
+        sh = self.fshape
+
+        # stopper
+        maxz = I.shape[0]
+
+        # batch buffers
+        err = self.npy.LLerr[:maxz]
+        Imodel = self.npy.Imodel[:maxz]
+        aux = b_aux[:maxz*self.nmodes]
+
+        # write-to shape
+        ish = aux.shape
+
+        ## math ##
+        DI = Imodel - I
+        err[:] = w * DI ** 2
+        tmp = w * DI
+        aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * tmp[:, np.newaxis, :, :]).reshape(ish)
+        return
+
+    def error_reduce(self, addr, err_sum):
+        # reference shape (write-to shape)
+        sh = self.fshape
+
+        # stopper
+        maxz = err_sum.shape[0]
+
+        # batch buffers
+        ferr = self.npy.ferr[:maxz]
+
+        ## Actual math ##
+
+        # Reduceses the Fourier error along the last 2 dimensions.fd
+        #err_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
+        err_sum[:] = ferr.sum(-1).sum(-1)
         return
 
 class AuxiliaryWaveKernel(BaseKernel):
@@ -193,6 +347,29 @@ class AuxiliaryWaveKernel(BaseKernel):
             aux[ind, :, :] = dex
         return
 
+    def build_aux_no_ex(self, b_aux, addr, ob, pr, fac=1.0, add=False):
+
+        sh = addr.shape
+
+        nmodes = sh[1]
+
+        # stopper
+        maxz = sh[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * nmodes]
+        flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            tmp = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
+                  pr[prc[0], :, :] * fac
+            if add:
+                aux[ind, :, :] += tmp
+            else:
+                aux[ind, :, :] = tmp
+        return
+
 class PoUpdateKernel(BaseKernel):
 
     def __init__(self):
@@ -234,6 +411,27 @@ class PoUpdateKernel(BaseKernel):
                 ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
         return
 
+    def ob_update_ML(self, addr, ob, pr, ex, fac=2.0):
+
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
+                pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
+                ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * fac
+        return
+
+    def pr_update_ML(self, addr, pr, ob, ex, fac=2.0):
+
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
+                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
+                ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * fac
+        return
 
 class PositionCorrectionKernel(BaseKernel):
     def __init__(self, aux, nmodes):
