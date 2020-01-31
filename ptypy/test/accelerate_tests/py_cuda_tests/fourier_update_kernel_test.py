@@ -30,6 +30,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
     def setUp(self):
         import sys
         np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
+        cuda.init()
         self.ctx = make_default_context()
 
     def tearDown(self):
@@ -325,6 +326,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
 
         nFUK.fourier_error(f, addr, fmag, mask, mask_sum)
         nFUK.error_reduce(addr, err_fmag)
+        
 
         FUK.fourier_error(f_d, addr_d, fmag_d, mask_d, mask_sum_d)
         FUK.error_reduce(addr_d, err_fmag_d)

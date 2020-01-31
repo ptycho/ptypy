@@ -13,6 +13,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.queue = queue_thread
         self.fmag_all_update_cuda = load_kernel("fmag_all_update")
         self.fourier_error_cuda = load_kernel("fourier_error")
+        self.fourier_error2_cuda = None 
         self.error_reduce_cuda = load_kernel("error_reduce")
 
     def allocate(self):
@@ -22,19 +23,47 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
     def fourier_error(self, f, addr, fmag, fmask, mask_sum):
         fdev = self.npy.fdev
         ferr = self.npy.ferr
-        self.fourier_error_cuda(np.int32(self.nmodes),
-                                f,
-                                fmask,
-                                fmag,
-                                fdev,
-                                ferr,
-                                mask_sum,
-                                addr,
-                                np.int32(self.fshape[1]),
-                                np.int32(self.fshape[2]),
-                                block=(32, 32, 1),
-                                grid=(int(fmag.shape[0]), 1, 1),
-                                stream=self.queue)
+        if True:
+            # version going over all modes in a single thread (faster)
+            self.fourier_error_cuda(np.int32(self.nmodes),
+                                    f,
+                                    fmask,
+                                    fmag,
+                                    fdev,
+                                    ferr,
+                                    mask_sum,
+                                    addr,
+                                    np.int32(self.fshape[1]),
+                                    np.int32(self.fshape[2]),
+                                    block=(32, 32, 1),
+                                    grid=(int(fmag.shape[0]), 1, 1),
+                                    stream=self.queue)
+        else:
+            # version using one thread per mode + shared mem reduction (slower)
+            if self.fourier_error2_cuda is None:
+                self.fourier_error2_cuda = load_kernel("fourier_error2")
+            bx = 16
+            by = 16
+            bz = int(self.nmodes)
+            blk = (bx, by, bz)
+            grd = (int((self.fshape[2] + bx-1) // bx), 
+                                        int((self.fshape[1] + by-1) // by),
+                                        int(self.fshape[0]))
+            #print('block={}, grid={}, fshape={}'.format(blk, grd, self.fshape))
+            self.fourier_error2_cuda(np.int32(self.nmodes),
+                                    f,
+                                    fmask,
+                                    fmag,
+                                    fdev,
+                                    ferr,
+                                    mask_sum,
+                                    addr,
+                                    np.int32(self.fshape[1]),
+                                    np.int32(self.fshape[2]),
+                                    block=blk,
+                                    grid=grd,
+                                    shared=int(bx*by*bz*4),
+                                    stream=self.queue)
 
     def error_reduce(self, addr, err_fmag):
         import sys

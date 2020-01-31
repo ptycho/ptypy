@@ -176,18 +176,28 @@ For 128x128 with batch size 2000:
 5. Use Mask as Boolean
   * Chaning expression with the boolean ? operator to avoid unnecessary loads when mask is 0
   * Didn't change anything in the performance
+6. Occupancy
+   * Kernel only got only 50% occupancy, due to too many registers per block
+   * Specifying `__launch_bounds__` on the kernel made compiler generate less registers --> 100% occupancy
+   * Speedup: 35.8ms -> 31.5ms
+7. Using one thread per mode + shared memory:
+  * original lets every thread go in a loop over all modes to su
+  * this version uses a thread per mode + shared memory + reduction instead
+  * implemented in [fourier_error2.cu](cuda/fourier_error2.cu)
+  * Test results on P100, minimal pre and run template for DM, 20 iterations:
+    * original  : 35.80ms total (40 calls)
+    * shared mem: 80.12ms
+
+Further optimisations:
+* why is abs(f)^2 calculated - what are "errors" here? OpenCL uses the real*real+imag*imag version
+  
 
 
 ## Kernel Fusion
 
 * fourier_error and fmag_all_update are joinable
-  * In former, all modes are calculated by 1 block, while the latter looks at them individually, but it could do the same
-  * fourier_error has only 50% occupancy in i08 case (10 modes)
-  * why is abs(f)^2 calculated - what are "errors" here? OpenCL uses the real*real+imag*imag version btw.
-  * small fraction of overall time anyay...
-  * Could try shared mem reduce instead of modes for fourier_error
-  * Seems small, but worth a try
-  * Then kernels can be fused together
-* 
+  * In former, all modes are calculated by 1 block, while the latter looks at them individually
+  * fourier_error2 does that in shared memory with same no. of threads than fmag_all_update, but it's >2x slower than the other fourier_error
+* However, fourier_error2 and fmag_all_update are mergable
 
 ## Streaming Engine
