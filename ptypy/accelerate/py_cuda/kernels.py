@@ -308,7 +308,7 @@ class DerivativesKernel:
         self.queue = stream
         self.dtype = dtype
         self.last_axis_block = (256, 4, 1)
-        self.mid_axis_block = (32, 32, 1)
+        self.mid_axis_block = (256, 4, 1)
         
         self.delxf_last = load_kernel("delx_last", file="delx_last.cu", subs={
             'IS_FORWARD': 'true',

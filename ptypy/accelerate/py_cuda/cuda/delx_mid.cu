@@ -9,12 +9,13 @@ extern "C" __global__ void delx_mid(
     int higher_dim, //z for 3D   
     int axis_dim)                
 {
-
-    __shared__ DTYPE shared_data[BDIM_Y][BDIM_X];
+    // reinterpret to avoid constructor of complex<float>() + compiler warning
+    __shared__ char shr[BDIM_X * BDIM_Y * sizeof(DTYPE)];
+    auto shared_data = reinterpret_cast<DTYPE *>(shr);
 
     unsigned int tx = threadIdx.x;
     unsigned int ty = threadIdx.y;
-    unsigned int tz = threadIdx.z;   // only 0 here
+    unsigned int tz = threadIdx.z; // only 0 here
 
     unsigned int ix = tx + blockIdx.x * BDIM_X;
     unsigned int iy = ty;
@@ -32,8 +33,7 @@ extern "C" __global__ void delx_mid(
 
         if (iy < axis_dim && ix < lower_dim)
         {
-            shared_data[ty][tx] = input[iy * lower_dim + ix];
-            //printf("%d, %d: %f\n", ty, tx, shared_data[ty][tx]);
+            shared_data[ty * BDIM_X + tx] = input[iy * lower_dim + ix];
         }
         __syncthreads();
 
@@ -44,35 +44,34 @@ extern "C" __global__ void delx_mid(
                 DTYPE plus1;
                 if (ty < BDIM_Y - 1 && iy < axis_dim - 1) // we have a next element in shared data
                 {
-                    plus1 = shared_data[ty + 1][tx];
+                    plus1 = shared_data[(ty + 1) * BDIM_X + tx];
                 }
                 else if (iy == axis_dim - 1) // end of axis - next same as current to get 0
                 {
-                    plus1 = shared_data[ty][tx];
+                    plus1 = shared_data[ty * BDIM_X + tx];
                 }
-                else                        // end of block, but nore input is there
+                else // end of block, but nore input is there
                 {
                     plus1 = input[(iy + 1) * lower_dim + ix];
                 }
-                //printf("%d, %d, %d: %f - %f = %f; ix=%d, xoffset=%d, iy=%d\n", blockIdx.x, ty, tx, plus1, shared_data[ty][tx], plus1 - shared_data[ty][tx], ix, xoffset, iy);
-                output[iy * lower_dim + ix] = plus1 - shared_data[ty][tx];
+                output[iy * lower_dim + ix] = plus1 - shared_data[ty * BDIM_X + tx];
             }
             else
             {
                 DTYPE minus1;
                 if (ty > 0) // we have a previous element in shared
                 {
-                    minus1 = shared_data[ty - 1][tx];
+                    minus1 = shared_data[(ty - 1) * BDIM_X + tx];
                 }
                 else if (iy == 0) // use same as next to get zero
                 {
-                    minus1 = shared_data[ty][tx];
+                    minus1 = shared_data[ty * BDIM_X + tx];
                 }
                 else // read previous input (ty == 0 but iy > 0)
                 {
-                    minus1 = input[(iy-1) * lower_dim + ix];
+                    minus1 = input[(iy - 1) * lower_dim + ix];
                 }
-                output[iy * lower_dim + ix] = shared_data[ty][tx] - minus1;
+                output[iy * lower_dim + ix] = shared_data[ty * BDIM_X + tx] - minus1;
             }
         }
     }
