@@ -23,6 +23,19 @@ prsh: [2, 5, 5]
 ob: (2, 7, 7)
 */
 
+__device__ inline void set_real(complex<float>& v, float r) {
+  v.real(r);
+}
+__device__ inline void set_real(float& v, float r) {
+  v = r;
+}
+__device__ inline float get_real(const complex<float>& v) {
+  return v.real();
+}
+__device__ inline float get_real(float v) {
+  return v;
+}
+
 extern "C" __global__ void pr_update2(int pr_sh,
                                       int ob_sh_row,
                                       int ob_sh_col,
@@ -30,7 +43,7 @@ extern "C" __global__ void pr_update2(int pr_sh,
                                       int ob_modes,
                                       int num_pods,
                                       complex<float>* pr_g,
-                                      complex<float>* prn_g,
+                                      DENOM_TYPE* prn_g,
                                       const complex<float>* __restrict__ ob_g,
                                       const complex<float>* __restrict__ ex_g,
                                       const int* addr)
@@ -39,7 +52,8 @@ extern "C" __global__ void pr_update2(int pr_sh,
   int dy = pr_sh;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
   int dz = pr_sh;
-  complex<float> pr[NUM_MODES], prn[NUM_MODES];
+  complex<float> pr[NUM_MODES];
+  DENOM_TYPE prn[NUM_MODES];
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(pr_modes <= NUM_MODES);
@@ -101,9 +115,9 @@ extern "C" __global__ void pr_update2(int pr_sh,
         auto cob = conj(ob);
         pr[idx] += cob * 
           ex_g[ad[1]*pr_sh*pr_sh +y*pr_sh + z];
-        auto rr = prn[idx].real();
+        auto rr = get_real(prn[idx]);
         rr += ob.real() * ob.real() + ob.imag() * ob.imag();
-        prn[idx].real(rr);
+        set_real(prn[idx], rr);
       }
     }
 

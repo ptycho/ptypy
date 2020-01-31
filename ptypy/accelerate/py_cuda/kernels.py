@@ -197,13 +197,24 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
 class PoUpdateKernel(ab.PoUpdateKernel):
 
-    def __init__(self, queue_thread=None):
+    def __init__(self, queue_thread=None, denom_type=np.complex64):
         super(PoUpdateKernel, self).__init__()
         # and now initialise the cuda
+        if denom_type == np.complex64:
+            dtype = 'complex<float>'
+        elif denom_type == np.float32:
+            dtype = 'float'
+        else:
+            raise ValueError('only complex64 and float32 types supported')
+        self.dtype = dtype
         self.queue = queue_thread
-        self.ob_update_cuda = load_kernel("ob_update")
+        self.ob_update_cuda = load_kernel("ob_update", {
+            'DENOM_TYPE': dtype
+        })
         self.ob_update2_cuda = None # load_kernel("ob_update2")
-        self.pr_update_cuda = load_kernel("pr_update")
+        self.pr_update_cuda = load_kernel("pr_update", {
+            'DENOM_TYPE': dtype
+        })
         self.pr_update2_cuda = None
 
     def ob_update(self, addr, ob, obn, pr, ex, atomics=True):
@@ -224,7 +235,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                 self.ob_update2_cuda = load_kernel("ob_update2", {
                     "NUM_MODES": obsh[0],
                     "BDIM_X": 16,
-                    "BDIM_Y": 16
+                    "BDIM_Y": 16,
+                    'DENOM_TYPE': self.dtype
                 })
 
             # print('pods: {}'.format(num_pods))
@@ -263,7 +275,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                 self.pr_update2_cuda = load_kernel("pr_update2", {
                     "NUM_MODES": prsh[0],
                     "BDIM_X": 16,
-                    "BDIM_Y": 16
+                    "BDIM_Y": 16,
+                    'DENOM_TYPE': self.dtype
                 })
 
             # print('pods: {}'.format(num_pods))

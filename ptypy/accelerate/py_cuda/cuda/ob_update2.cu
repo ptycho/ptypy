@@ -13,6 +13,18 @@ using thrust::complex;
 // #define BDIM_X 16
 // #define BDIM_Y 16
 
+__device__ inline void set_real(complex<float>& v, float r) {
+  v.real(r);
+}
+__device__ inline void set_real(float& v, float r) {
+  v = r;
+}
+__device__ inline float get_real(const complex<float>& v) {
+  return v.real();
+}
+__device__ inline float get_real(float v) {
+  return v;
+}
 
 extern "C" __global__ void ob_update2(int pr_sh,    
                                       int ob_modes, 
@@ -23,7 +35,7 @@ extern "C" __global__ void ob_update2(int pr_sh,
                                       int ex_1,
                                       int ex_2,
                                       complex<float>* ob_g, 
-                                      complex<float>* obn_g,
+                                      DENOM_TYPE* obn_g,
                                       const complex<float>* __restrict__ pr_g, // 2, 5, 5
                                       const complex<float>* __restrict__ ex_g, // 16, 5, 5
                                       const int* addr)
@@ -32,7 +44,8 @@ extern "C" __global__ void ob_update2(int pr_sh,
   int dy = ob_sh;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
   int dz = ob_sh;
-  complex<float> ob[NUM_MODES], obn[NUM_MODES];
+  complex<float> ob[NUM_MODES];
+  DENOM_TYPE obn[NUM_MODES];
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(ob_modes <= NUM_MODES);
@@ -92,9 +105,9 @@ extern "C" __global__ void ob_update2(int pr_sh,
         assert(exidx < ex_0 * ex_1 * ex_2);
         ob[idx] += cpr * 
           ex_g[exidx];
-        auto rr = obn[idx].real();
+        auto rr = get_real(obn[idx]);
         rr += pr.real() * pr.real() + pr.imag() * pr.imag();
-        obn[idx].real(rr);
+        set_real(obn[idx], rr);
       }
     }
 
