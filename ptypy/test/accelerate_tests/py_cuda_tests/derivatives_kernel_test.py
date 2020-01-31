@@ -305,38 +305,38 @@ class DerivativesKernelTest(unittest.TestCase):
     @unittest.skip("performance test")
     def test_perf_3d_0(self):
         shape = [500, 1024, 1024]
-        inp = np.zeros(shape, dtype=np.complex64)
+        inp = np.ones(shape, dtype=np.complex64)
         inp_dev = gpuarray.to_gpu(inp)
-        outp = np.zeros_like(inp)
+        outp = np.ones_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
         DK = DerivativesKernel(inp.dtype, stream=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=0)
         outp[:] = outp_dev.get()
-        np.testing.assert_array_equal(outp, inp)
+        np.testing.assert_array_equal(outp, 0)
 
     @unittest.skip("performance test")
     def test_perf_3d_1(self):
         shape = [500, 1024, 1024]
-        inp = np.zeros(shape, dtype=np.complex64)
+        inp = np.ones(shape, dtype=np.complex64)
         inp_dev = gpuarray.to_gpu(inp)
-        outp = np.zeros_like(inp)
+        outp = np.ones_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
         DK = DerivativesKernel(inp.dtype, stream=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=1)
         outp[:] = outp_dev.get()
-        np.testing.assert_array_equal(outp, inp)
+        np.testing.assert_array_equal(outp, 0)
 
     @unittest.skip("performance test")
     def test_perf_3d_2(self):
         shape = [500, 1024, 1024]
-        inp = np.zeros(shape, dtype=np.complex64)
+        inp = np.ones(shape, dtype=np.complex64)
         inp_dev = gpuarray.to_gpu(inp)
-        outp = np.zeros_like(inp)
+        outp = np.ones_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
         DK = DerivativesKernel(inp.dtype, stream=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=2)
         outp[:] = outp_dev.get()
-        np.testing.assert_array_equal(outp, inp)
+        np.testing.assert_array_equal(outp, 0)
