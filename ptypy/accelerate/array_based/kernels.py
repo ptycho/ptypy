@@ -215,7 +215,7 @@ class GradientDescentKernel(BaseKernel):
         A2[:] = tf.reshape(sh[0], self.nmodes, sh[1], sh[2]).sum(1) - I
         return
 
-    def fill_b(self, addr, Brenorm, w, B)
+    def fill_b(self, addr, Brenorm, w, B):
 
         # stopper
         maxz = w.shape[0]
@@ -249,17 +249,17 @@ class GradientDescentKernel(BaseKernel):
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
 
-    def main(self, aux_b, addr, w, I):
+    def main(self, b_aux, addr, w, I):
         # reference shape (write-to shape)
         sh = self.fshape
-
+        nmodes = self.nmodes
         # stopper
         maxz = I.shape[0]
 
         # batch buffers
         err = self.npy.LLerr[:maxz]
         Imodel = self.npy.Imodel[:maxz]
-        aux = b_aux[:maxz*self.nmodes]
+        aux = b_aux[:maxz*nmodes]
 
         # write-to shape
         ish = aux.shape
@@ -359,7 +359,7 @@ class AuxiliaryWaveKernel(BaseKernel):
         # batch buffers
         aux = b_aux[:maxz * nmodes]
         flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
-        rows, cols = ex.shape[-2:]
+        rows, cols = b_aux.shape[-2:]
 
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             tmp = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \

@@ -15,6 +15,7 @@ import numpy as np
 import time
 
 from .ML import ML, BaseModel, prepare_smoothing_preconditioner, Regul_del2
+from .DM_serial import serialize_array_access
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
@@ -408,6 +409,7 @@ class GaussianModel(BaseModel):
             kern = self.kernels[prep.label]
             GDK = kern.GDK
             AWK = kern.AWK
+            POK = kern.POK
 
             aux = kern.aux
 
@@ -450,12 +452,12 @@ class GaussianModel(BaseModel):
             POK.ob_update_ML(aux, addr, obg, pr)
             POK.pr_update_ML(aux, addr, prg, ob)
 
-        for dID, prep in self.diff_info.items():
+        for dID, prep in self.engine.diff_info.items():
             err_phot = prep.err_phot / np.prod(prep.w.shape)
             err_fourier = np.zeros_like(err_phot)
             err_exit = np.zeros_like(err_phot)
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
-            error.update(zip(prep.view_IDs, errs))
+            error_dct.update(zip(prep.view_IDs, errs))
             LL += err_phot.sum()
 
         # MPI reduction of gradients

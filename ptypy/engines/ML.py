@@ -21,7 +21,7 @@ from .utils import Cnorm2, Cdot
 from . import register
 from .base import PositionCorrectionEngine
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 __all__ = ['ML']
 
