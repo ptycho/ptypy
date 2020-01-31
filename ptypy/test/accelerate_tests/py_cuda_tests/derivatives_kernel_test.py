@@ -193,14 +193,15 @@ class DerivativesKernelTest(unittest.TestCase):
     def test_delxf_3dim2(self):
         inp = np.array([
             [
-                [0, 2, 6,],
-                [1, -4, 5,],
+                [1, 2, 4,],
+                [7, 11, 16,],
             ],
             [
-                [2, 6, 8,],
-                [0, 1, 3]
+                [22, 29, 37,],
+                [46, 56, 67]
             ]
         ], dtype=np.float32)
+        
         inp_dev = gpuarray.to_gpu(inp)
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
@@ -212,14 +213,15 @@ class DerivativesKernelTest(unittest.TestCase):
 
         exp = np.array([
             [
-                [1, -6, -1,],
+                [6, 9, 12,],
                 [0, 0, 0,],
             ],
             [
-                [-2, -5, -5,],
+                [24, 27, 30,],
                 [0, 0, 0],
             ]
         ], dtype=np.float32)
+
         np.testing.assert_array_equal(outp, exp)
 
     def test_delxf_3dim1_unity(self):
@@ -236,14 +238,44 @@ class DerivativesKernelTest(unittest.TestCase):
         exp = delxf(inp, axis=0)
         np.testing.assert_array_almost_equal(outp, exp)
 
-    def test_delxf_3dim2_unity(self):
-        # inp = np.ascontiguousarray(np.random.randn(2, 3, 1), dtype=np.float32)
+    def test_delxf_3dim2_unity1(self):
         inp = np.array([
             [ [1], [2], [4]],
             [ [8], [16], [32]]
         ], dtype=np.float32)
-        print('inshape={}'.format(inp.shape))
-        
+       
+        inp_dev = gpuarray.to_gpu(inp)
+        outp = np.zeros_like(inp)
+        outp_dev = gpuarray.to_gpu(outp)
+
+        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK.delxf(inp_dev, out=outp_dev, axis=1)
+        outp[:] = outp_dev.get()
+
+        exp = delxf(inp, axis=1)
+
+        np.testing.assert_array_almost_equal(np.squeeze(outp), np.squeeze(exp))
+
+    def test_delxf_3dim2_unity2(self):
+        inp = np.array([
+            [ [1, 2], [4, 7], [11,16] ],
+            [ [22,29], [37,46], [56,67]]
+        ], dtype=np.float32)
+       
+        inp_dev = gpuarray.to_gpu(inp)
+        outp = np.zeros_like(inp)
+        outp_dev = gpuarray.to_gpu(outp)
+
+        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK.delxf(inp_dev, out=outp_dev, axis=1)
+        outp[:] = outp_dev.get()
+
+        exp = delxf(inp, axis=1)
+
+        np.testing.assert_array_almost_equal(np.squeeze(outp), np.squeeze(exp))
+
+    def test_delxf_3dim2_unity(self):
+        inp = np.ascontiguousarray(np.random.randn(33, 283, 142), dtype=np.float32)
         
         inp_dev = gpuarray.to_gpu(inp)
         outp = np.zeros_like(inp)
@@ -254,8 +286,7 @@ class DerivativesKernelTest(unittest.TestCase):
         outp[:] = outp_dev.get()
 
         exp = delxf(inp, axis=1)
-        
-        np.testing.assert_array_almost_equal(np.squeeze(outp), np.squeeze(exp))
+        np.testing.assert_array_almost_equal(outp, exp)
 
     def test_delxf_3dim3_unity(self):
         inp = np.ascontiguousarray(np.random.randn(33, 283, 142), dtype=np.float32)

@@ -308,7 +308,7 @@ class DerivativesKernel:
         self.queue = stream
         self.dtype = dtype
         self.last_axis_block = (256, 4, 1)
-        self.mid_axis_block = (4, 256, 1)
+        self.mid_axis_block = (32, 32, 1)
         
         self.delxf_last = load_kernel("delx_last", file="delx_last.cu", subs={
             'IS_FORWARD': 'true',
@@ -355,12 +355,12 @@ class DerivativesKernel:
         else:
             lower_dim = np.int32(np.product(input.shape[(axis+1):]))
             higher_dim = np.int32(np.product(input.shape[:axis]))
-            print('lower={}, higher={}, axis_dim={}, grid={}'.format(lower_dim, higher_dim, input.shape[axis], (higher_dim*lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0]))
+            gx = int((lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
+            gy = 1
+            gz = int(higher_dim)
             self.delxf_mid(input, out, lower_dim, higher_dim, np.int32(input.shape[axis]),
                 block=self.mid_axis_block,
-                grid=(
-                    int((higher_dim*lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0]), 
-                    1, 1),
+                grid=(gx, gy, gz), 
                 stream=self.queue
             )
 
@@ -385,11 +385,12 @@ class DerivativesKernel:
         else:
             lower_dim = np.int32(np.product(input.shape[(axis+1):]))
             higher_dim = np.int32(np.product(input.shape[:axis]))
+            gx = int((lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
+            gy = 1
+            gz = int(higher_dim)
             self.delxb_mid(input, out, lower_dim, higher_dim, np.int32(input.shape[axis]),
                 block=self.mid_axis_block,
-                grid=(
-                    int((higher_dim*lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0]), 
-                    1, 1),
+                grid=(gx, gy, gz),
                 stream=self.queue
             )
         

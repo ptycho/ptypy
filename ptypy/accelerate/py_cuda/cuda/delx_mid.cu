@@ -14,14 +14,15 @@ extern "C" __global__ void delx_mid(
 
     unsigned int tx = threadIdx.x;
     unsigned int ty = threadIdx.y;
+    unsigned int tz = threadIdx.z;   // only 0 here
 
     unsigned int ix = tx + blockIdx.x * BDIM_X;
     unsigned int iy = ty;
+    unsigned int iz = tz + blockIdx.z * blockDim.z;
 
-    // offset pointers
-    int xoffset = (ix / higher_dim) * lower_dim;
-    input += ix + xoffset;
-    output += ix + xoffset;
+    // offset pointers for z dimension
+    input += iz * axis_dim * lower_dim;
+    output += iz * axis_dim * lower_dim;
 
     auto maxblocks = (axis_dim + BDIM_Y - 1) / BDIM_Y;
 
@@ -29,14 +30,14 @@ extern "C" __global__ void delx_mid(
     {
         iy = ty + bidx * BDIM_Y;
 
-        if (iy < axis_dim && ix < lower_dim * higher_dim)
+        if (iy < axis_dim && ix < lower_dim)
         {
-            shared_data[ty][tx] = input[iy * lower_dim];
+            shared_data[ty][tx] = input[iy * lower_dim + ix];
             //printf("%d, %d: %f\n", ty, tx, shared_data[ty][tx]);
         }
         __syncthreads();
 
-        if (iy < axis_dim && ix < lower_dim * higher_dim)
+        if (iy < axis_dim && ix < lower_dim)
         {
             if (IS_FORWARD)
             {
@@ -51,10 +52,10 @@ extern "C" __global__ void delx_mid(
                 }
                 else                        // end of block, but nore input is there
                 {
-                    plus1 = input[(iy + 1) * lower_dim];
+                    plus1 = input[(iy + 1) * lower_dim + ix];
                 }
-                //printf("%d, %d: %f - %f; ix=%d, xoffset=%d, iy=%d\n", ty, tx, plus1, shared_data[ty][tx], ix, xoffset, iy);
-                output[iy * lower_dim] = plus1 - shared_data[ty][tx];
+                //printf("%d, %d, %d: %f - %f = %f; ix=%d, xoffset=%d, iy=%d\n", blockIdx.x, ty, tx, plus1, shared_data[ty][tx], plus1 - shared_data[ty][tx], ix, xoffset, iy);
+                output[iy * lower_dim + ix] = plus1 - shared_data[ty][tx];
             }
             else
             {
@@ -69,9 +70,9 @@ extern "C" __global__ void delx_mid(
                 }
                 else // read previous input (ty == 0 but iy > 0)
                 {
-                    minus1 = input[(iy-1) * lower_dim];
+                    minus1 = input[(iy-1) * lower_dim + ix];
                 }
-                output[iy * lower_dim] = shared_data[ty][tx] - minus1;
+                output[iy * lower_dim + ix] = shared_data[ty][tx] - minus1;
             }
         }
     }
