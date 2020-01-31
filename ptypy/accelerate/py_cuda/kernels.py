@@ -15,6 +15,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.fourier_error_cuda = load_kernel("fourier_error")
         self.fourier_error2_cuda = None 
         self.error_reduce_cuda = load_kernel("error_reduce")
+        self.fourier_update_cuda = None
 
     def allocate(self):
         self.npy.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
@@ -66,7 +67,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                     stream=self.queue)
 
     def error_reduce(self, addr, err_fmag):
-        import sys
+        # import sys
         # float_size = sys.getsizeof(np.float32(4))
         # shared_memory_size =int(2 * 32 * 32 *float_size) # this doesn't work even though its the same...
         shared_memory_size = int(49152)
@@ -94,6 +95,39 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                   block=(32, 32, 1),
                                   grid=(int(fmag.shape[0]*self.nmodes), 1, 1),
                                   stream=self.queue)
+
+    # Note: this was a test to join the kernels, but it's > 2x slower!
+    def fourier_update(self, f, addr, fmag, fmask, mask_sum, err_fmag, pbound=0):
+        if self.fourier_update_cuda  is None:
+            self.fourier_update_cuda = load_kernel("fourier_update")
+        fdev = self.npy.fdev
+        ferr = self.npy.ferr
+
+        bx = 16
+        by = 16
+        bz = int(self.nmodes)
+        blk = (bx, by, bz)
+        grd = (int((self.fshape[2] + bx-1) // bx), 
+                int((self.fshape[1] + by-1) // by),
+                int(self.fshape[0]))
+        smem = int(bx*by*bz*4)
+        self.fourier_update_cuda(np.int32(self.nmodes),
+                                    f,
+                                    fmask,
+                                    fmag,
+                                    fdev,
+                                    ferr,
+                                    mask_sum,
+                                    addr,
+                                    err_fmag,
+                                    np.float32(pbound),
+                                    np.int32(self.fshape[1]),
+                                    np.int32(self.fshape[2]),
+                                    block=blk,
+                                    grid=grd,
+                                    shared=smem,
+                                    stream=self.queue)
+ 
 
     def execute(self, kernel_name=None, compare=False, sync=False):
 

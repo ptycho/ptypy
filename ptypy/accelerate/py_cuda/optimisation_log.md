@@ -199,5 +199,7 @@ Further optimisations:
   * In former, all modes are calculated by 1 block, while the latter looks at them individually
   * fourier_error2 does that in shared memory with same no. of threads than fmag_all_update, but it's >2x slower than the other fourier_error
 * However, fourier_error2 and fmag_all_update are mergable
+* This has been tried in fourier_update.cu, but it was > 2x slower than 
+  individual kernels
 
 ## Streaming Engine
