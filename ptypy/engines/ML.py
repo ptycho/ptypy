@@ -285,7 +285,7 @@ class ML(PositionCorrectionEngine):
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
-
+            print(B, Cnorm2(self.ob_h), Cnorm2(self.ob_grad), Cnorm2(self.pr_h), Cnorm2(self.pr_grad))
             if np.isinf(B).any() or np.isnan(B).any():
                 logger.warning(
                     'Warning! inf or nan found! Trying to continue...')
@@ -339,6 +339,8 @@ class BaseModel(object):
         self.di = self.engine.di
         self.p = self.engine.p
         self.ob = self.engine.ob
+        self.ob_grad = self.engine.ob_grad_new
+        self.pr_grad = self.engine.pr_grad_new
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
 
@@ -504,7 +506,7 @@ class GaussianModel(BaseModel):
 
         self.LL = LL / self.tot_measpts
 
-        return self.ob_grad, self.pr_grad, error_dct
+        return error_dct
 
     def poly_line_coeffs(self, ob_h, pr_h):
         """

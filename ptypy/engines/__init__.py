@@ -42,19 +42,24 @@ from .base import BaseEngine, DEFAULT_iter_info
 
 # These imports should be executable separately
 from . import DM
-from . import DM_ocl
-from . import DM_pycuda
-# from . import DM_numpty
-#from . import DM_gpu
-from . import DM_serial
-from . import DM_serial_stream
-from . import DM_pycuda_stream
-#from . import DM_npy
 from . import DM_simple
 from . import ML
 from . import dummy
 from . import ePIE
 from . import Bragg3d_engines
+
+from . import DM_serial
+from . import ML_serial
+from . import DM_serial_stream
+try:
+    from . import DM_pycuda
+    from . import DM_pycuda_stream
+except:
+    pass
+try:
+    from . import DM_ocl
+except:
+    pass
 
 
 # dynamic load, maybe discarded in future

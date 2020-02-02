@@ -21,9 +21,7 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from .utils import Cnorm2, Cdot
 from . import register
-from .base import PositionCorrectionEngine
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla
 from ..accelerate.array_based.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..accelerate.array_based import address_manglers
 
@@ -39,7 +37,8 @@ class ML_serial(ML):
         """
         super(ML_serial, self).__init__(ptycho_parent, pars)
 
-
+        self.kernels = {}
+        self.diff_info = {}
 
     def engine_initialize(self):
         """
@@ -119,7 +118,7 @@ class ML_serial(ML):
             mask_data = self.ma.S[d.ID].data.astype(np.float32)  # in the gpu kernels, which this is tested against, this is converted to a float
             self.ma.S[d.ID].data = mask_data
             prep.ma_sum = mask_data.sum(-1).sum(-1)
-            prep.err_fourier = np.zeros_like(prep.ma_sum)
+            prep.err_phot = np.zeros_like(prep.ma_sum)
 
         # Unfortunately this needs to be done for all pods, since
         # the shape of the probe / object was modified.
@@ -133,8 +132,8 @@ class ML_serial(ML):
             pID, oID, eID = prep.poe_IDs
 
             ob = self.ob.S[oID]
-            obn = self.ob_nrm.S[oID]
-            obv = self.ob_buf.S[oID]
+            obn = self.ob_grad.S[oID]
+            obv = self.ob_grad_new.S[oID]
             misfit = np.asarray(ob.shape[-2:]) % 32
             if (misfit != 0).any():
                 pad = 32 - np.asarray(ob.shape[-2:]) % 32
@@ -157,16 +156,16 @@ class ML_serial(ML):
         ta = time.time()
         for it in range(num):
             t1 = time.time()
-            new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad()
+            error_dct = self.ML_model.new_grad()
+            new_ob_grad = self.ob_grad_new
+            new_pr_grad = self.pr_grad_new
+
             tg += time.time() - t1
 
             if self.p.probe_update_start <= self.curiter:
                 # Apply probe support if needed
                 for name, s in new_pr_grad.storages.items():
                     self.support_constraint(s)
-                    #support = self.probe_support.get(name)
-                    #if support is not None:
-                    #    s.data *= support
             else:
                 new_pr_grad.fill(0.)
 
@@ -282,6 +281,8 @@ class BaseModel(object):
         self.di = self.engine.di
         self.p = self.engine.p
         self.ob = self.engine.ob
+        self.ob_grad = self.engine.ob_grad_new
+        self.pr_grad = self.engine.pr_grad_new
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
 
@@ -322,12 +323,6 @@ class BaseModel(object):
         """
         Clean up routine
         """
-        # Delete containers
-        del self.engine.ptycho.containers[self.ob_grad.ID]
-        del self.ob_grad
-        del self.engine.ptycho.containers[self.pr_grad.ID]
-        del self.pr_grad
-
         # Remove working attributes
         for name, diff_view in self.di.views.items():
             if not diff_view.active:
@@ -392,8 +387,10 @@ class GaussianModel(BaseModel):
         Note: The negative log-likelihood and local errors are also computed
         here.
         """
-        self.ob_grad.fill(0.)
-        self.pr_grad.fill(0.)
+        ob_grad = self.engine.ob_grad_new
+        pr_grad = self.engine.pr_grad_new
+        ob_grad.fill(0.)
+        pr_grad.fill(0.)
 
         # We need an array for MPI
         LL = np.array([0.])
@@ -422,11 +419,11 @@ class GaussianModel(BaseModel):
             err_phot = prep.err_phot
 
             # local references
-            ob = self.ob.S[oID].data
-            obg = self.ob_grad.S[oID].data
-            pr = self.pr.S[pID].data
-            prg = self.pr_grad.S[pID].data
-            I = self.di.S[eID].data
+            ob = self.engine.ob.S[oID].data
+            obg = ob_grad.S[oID].data
+            pr = self.engine.pr.S[pID].data
+            prg = pr_grad.S[pID].data
+            I = self.engine.di.S[eID].data
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
@@ -461,20 +458,19 @@ class GaussianModel(BaseModel):
             LL += err_phot.sum()
 
         # MPI reduction of gradients
-        self.ob_grad.allreduce()
-        self.pr_grad.allreduce()
+        ob_grad.allreduce()
+        pr_grad.allreduce()
         parallel.allreduce(LL)
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.items():
-                self.ob_grad.storages[name].data += self.regularizer.grad(
-                    s.data)
+            for name, s in self.engine.ob.storages.items():
+                ob_grad.storages[name].data += self.regularizer.grad(s.data)
                 LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
 
-        return self.ob_grad, self.pr_grad, error_dct
+        return error_dct
 
 
     def poly_line_coeffs(self, ob_h, pr_h):
@@ -512,9 +508,7 @@ class GaussianModel(BaseModel):
 
             # local references
             ob = self.ob.S[oID].data
-            obg = self.ob_grad.S[oID].data
             pr = self.pr.S[pID].data
-            prg = self.pr_grad.S[pID].data
             I = self.di.S[eID].data
 
             # make propagated exit (to buffer)

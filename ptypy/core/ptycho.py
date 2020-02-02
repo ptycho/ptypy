@@ -617,6 +617,7 @@ class Ptycho(Base):
             engine.initialize()
 
             # One .prepare() is always executed, as Ptycho may hold data
+            self.new_data = [(d.label, d) for d in self.diff.S.values()]
             engine.prepare()
 
             # Start the iteration loop
