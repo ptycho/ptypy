@@ -222,14 +222,14 @@ class DM_serial(DM.DM):
             self.diff_info[d.ID] = prep
 
             prep.mag = np.sqrt(d.data)
-            mask_data = self.ma.S[d.ID].data.astype(np.float32)  # in the gpu kernels, which this is tested against, this is converted to a float
-            self.ma.S[d.ID].data = mask_data
-            prep.ma_sum = mask_data.sum(-1).sum(-1)
+            prep.ma = self.ma.S[d.ID].data.astype(np.float32)
+            # self.ma.S[d.ID].data = prep.ma
+            prep.ma_sum = prep.ma.sum(-1).sum(-1)
             prep.err_fourier = np.zeros_like(prep.ma_sum)
 
         # Unfortunately this needs to be done for all pods, since
         # the shape of the probe / object was modified.
-        # TODO: possible scaling issue
+        # TODO: possible scaling issue, remove the need for padding
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
             prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
@@ -292,7 +292,7 @@ class DM_serial(DM.DM):
                 err_fourier = prep.err_fourier
 
                 # local references
-                ma = self.ma.S[dID].data
+                ma = prep.ma
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
                 ex = self.ex.S[eID].data

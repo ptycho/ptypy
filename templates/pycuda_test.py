@@ -10,12 +10,12 @@ p = u.Param()
 
 # for verbose output
 p.verbose_level = 3
-p.frames_per_block = 200
+p.frames_per_block = 500
 # set home path
 p.io = u.Param()
-p.io.home = "~/dumps/ptypy/"
+p.io.home = "/tmp/dumps/ptypy/"
 p.io.autosave = u.Param(active=False)
-p.io.autoplot = u.Param(active=False)
+p.io.autoplot = u.Param(active=True)
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
 p.scans.MF = u.Param()
@@ -29,7 +29,7 @@ p.scans.MF.data.num_frames = 1000
 p.scans.MF.data.save = None
 
 p.scans.MF.illumination = u.Param(diversity=None)
-p.scans.MF.coherence = u.Param(num_probe_modes=1)
+p.scans.MF.coherence = u.Param(num_probe_modes=4)
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
@@ -41,12 +41,10 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM_pycuda_stream'
-p.engines.engine00.numiter = 60
-p.engines.engine00.numiter_contiguous = 10
+p.engines.engine00.numiter = 1000
+p.engines.engine00.numiter_contiguous = 100
 p.engines.engine00.probe_update_start = 1
 
 # prepare and run
 P = Ptycho(p,level=5)
-#P.run()
-P.print_stats()
-#u.pause(10)
+
