@@ -4,7 +4,7 @@ from pycuda import gpuarray
 from ptypy.utils.verbose import log
 from . import load_kernel
 from ..array_based import kernels as ab
-
+from ..array_based.base import Adict
 
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 
@@ -194,6 +194,42 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
         return self._ob_shape
 
+
+class GradientDescentKernel(ab.GradientDescentKernel):
+
+    def __init__(self, aux, nmodes=1, queue=None):
+        super().__init__(aux, nmodes)
+        self.queue = queue
+        
+        self.gpu = Adict()
+        self.gpu.LLden = None
+        self.gpu.LLerr = None 
+        self.gpu.Imodel = None 
+
+        subs = {
+            'CTYPE': 'complex<float>' if self.ctype == np.complex64 else 'complex<double>',
+            'FTYPE': 'float' if self.ftype == np.float32 else 'double'
+        }
+
+    def allocate(self):
+        self.gpu.LLden = gpuarray.zeros(self.fshape, dtype=self.ftype)
+        self.gpu.LLerr = gpuarray.zeros(self.fshape, dtype=self.ftype)
+        self.gpu.Imodel = gpuarray.zeros(self.fshape, dtype=self.ftype)
+
+    def make_model(self, b_aux):
+        pass
+
+    def make_a012(self, b_f, b_a, b_b, I):
+        pass
+
+    def fill_b(self, Brenorm, w, B):
+        pass
+
+    def error_reduce(self, err_sum):
+        pass
+
+    def main(self, b_aux, w, I):
+        pass
 
 class PoUpdateKernel(ab.PoUpdateKernel):
 
