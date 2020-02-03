@@ -2,6 +2,7 @@
      beamline is developing, as is the data format. """
 
 import numpy as np
+import hdf5plugin
 import h5py
 import os.path
 
@@ -86,7 +87,7 @@ class NanomaxStepscanNov2018(PtyScan):
     [I0]
     default = None
     type = str
-    help = Normalization channel, like counter1 for example
+    help = Normalization channel, like alba2/1 for example
     doc =
 
     """
@@ -666,5 +667,55 @@ class NanomaxFlyscanDec2019(NanomaxFlyscanMay2019):
             mask = mask * mask2
             logger.info("total mask, %u x %u, sum %u" %
                         (mask.shape + (np.sum(mask),)))
+
+        return mask
+
+@register()
+class NanomaxContrast(NanomaxStepscanSep2019):
+    """
+    This class loads data written with the nanomax pirate system,
+    in a slightly matured state. Step and fly scan have the same
+    format.
+    """
+
+    def load(self, indices):
+        raw, weights, positions = {}, {}, {}
+
+        filename = '%06u.h5' % self.info.scanNumber
+        fullfilename = os.path.join(self.info.path, filename)
+
+        with h5py.File(fullfilename, 'r') as fp:
+            for ind in indices:
+                raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind]
+                if self.info.I0:
+                    raw[ind] = raw[ind] / self.normdata[ind]
+
+        return raw, positions, weights
+
+    def load_weight(self):
+        """
+        Provides the mask for the whole scan, the shape of the first 
+        frame.
+        """
+
+        r, w, p = self.load(indices=(0,))
+        data = r[0]
+        mask = np.ones_like(data)
+        if self.info.detector == 'pilatus':
+            mask[np.where(data < 0)] = 0
+        if self.info.detector == 'eiger':
+            mask[np.where(data == 2**32-1)] = 0
+            mask[np.where(data == 2**16-1)] = 0
+        logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
+                    (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
+
+        if self.info.maskfile:
+            with h5py.File(self.info.maskfile, 'r') as hf:
+                mask2 = np.array(hf.get('mask'))
+            logger.info("loaded additional mask, %u x %u, sum %u, so %u masked pixels" %
+                        (mask2.shape + (np.sum(mask2), np.prod(mask2.shape)-np.sum(mask2))))
+            mask = mask * mask2
+            logger.info("total mask, %u x %u, sum %u, so %u masked pixels" %
+                    (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
 
         return mask
