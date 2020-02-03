@@ -24,7 +24,7 @@ __global__ void pr_update(
     int H,
     int I,
     const int* __restrict__ addr,
-    complex<float>* denominator
+    DENOM_TYPE* denominator
     )
     {
       assert(B == E);  // prsh[1]

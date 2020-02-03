@@ -45,10 +45,12 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for name, s in self.ob_buf.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.ob_nrm.S.items():
+            s.data = np.ascontiguousarray(s.data, dtype=np.float32)
             s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.pr.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.pr_nrm.S.items():
+            s.data = np.ascontiguousarray(s.data, dtype=np.float32)
             s.gpu = gpuarray.to_gpu(s.data)
 
         use_atomics = self.p.probe_update_cuda_atomics or self.p.object_update_cuda_atomics
@@ -106,7 +108,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         """
                         cfactf32 = np.float32(cfact)
                         obb.gpu[:] = ob.gpu * cfactf32
-                        obn.gpu.fill(np.complex64(cfact), self.queue)
+                        obn.gpu.fill(np.float32(cfact), self.queue)
                 
                 atomics_probe = self.p.probe_update_cuda_atomics 
                 atomics_object = self.p.object_update_cuda_atomics
@@ -330,7 +332,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             cfact = self.pr_cfact[pID]
             cfactf32 = np.float32(cfact)
             pr.gpu *= cfactf32
-            prn.gpu.fill(np.complex64(cfact), self.queue)
+            prn.gpu.fill(np.float32(cfact), self.queue)
 
         use_atomics = self.p.probe_update_cuda_atomics
         for dID in self.di.S.keys():

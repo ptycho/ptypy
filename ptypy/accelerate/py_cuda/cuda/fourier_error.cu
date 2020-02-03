@@ -7,7 +7,9 @@ using std::sqrt;
 using thrust::abs;
 
 extern "C"{
-__global__ void fourier_error(int nmodes,
+__global__ void 
+__launch_bounds__(1024, 2)
+fourier_error(int nmodes,
                            complex<float> *f,
                            const float *fmask,
                            const float *fmag,

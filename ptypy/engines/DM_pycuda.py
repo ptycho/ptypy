@@ -109,7 +109,7 @@ class DM_pycuda(DM_serial.DM_serial):
             kern.FUK = FourierUpdateKernel(aux, nmodes, queue_thread=self.queue)
             kern.FUK.allocate()
 
-            kern.POK = PoUpdateKernel(queue_thread=self.queue)
+            kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type=np.float32)
             kern.POK.allocate()
 
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
@@ -164,7 +164,10 @@ class DM_pycuda(DM_serial.DM_serial):
                 if s.data.dtype.name == 'bool':
                     data = s.data.astype(np.float32)
                 else:
+                    if _cname == 'Cobj_nrm' or _cname == 'Cprobe_nrm':
+                        s.data = np.ascontiguousarray(s.data, dtype=np.float32)
                     data = s.data
+                
                 s.gpu = gpuarray.to_gpu(data)
 
         for prep in self.diff_info.values():
