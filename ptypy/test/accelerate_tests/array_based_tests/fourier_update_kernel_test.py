@@ -223,8 +223,8 @@ class FourierUpdateKernelTest(unittest.TestCase):
 
 
         # print(repr(ferr))
-        print(ferr.shape)
-        print(repr(ferr))
+        #print(ferr.shape)
+        #print(repr(ferr))
         auxiliary_shape = (4, 5, 5)
         fake_aux = np.zeros(auxiliary_shape, dtype=COMPLEX_TYPE)
         scan_pts = 2  # one dimensional scan point number

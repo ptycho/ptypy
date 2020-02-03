@@ -136,18 +136,16 @@ class FourierUpdateKernel(BaseKernel):
 
 class GradientDescentKernel(BaseKernel):
 
-    def __init__(self, aux, nmodes=1, floating_intensities=False):
+    def __init__(self, aux, nmodes=1):
 
         super(GradientDescentKernel, self).__init__()
         self.denom = 1e-7
         self.nmodes = np.int32(nmodes)
         ash = aux.shape
-        self.bshape = aux.shape
+        self.bshape = ash
         self.fshape = (ash[0] // nmodes, ash[1], ash[2])
-        # temporary buffer arrays
-        self.do_float = floating_intensities
-        if self.do_float:
-            self.npy.LLden  = None
+
+        self.npy.LLden  = None
         self.npy.LLerr = None
         self.npy.Imodel = None
 
@@ -155,9 +153,11 @@ class GradientDescentKernel(BaseKernel):
         self.npy.float_err2 = None
 
         self.kernels = [
-            'fourier_error',
+            'make_model',
             'error_reduce',
-            'fmag_all_update'
+            'make_a012',
+            'fill_b',
+            'main'
         ]
 
     def allocate(self):
@@ -173,7 +173,7 @@ class GradientDescentKernel(BaseKernel):
 
     def make_model(self, b_aux, addr):
 
-        # reference shape (write-to shape)
+        # reference shape (= GPU global dims)
         sh = self.fshape
 
         # batch buffers
@@ -186,36 +186,38 @@ class GradientDescentKernel(BaseKernel):
 
     def make_a012(self, b_f, b_a, b_b, addr, I):
 
-        # reference shape (write-to shape)
-        sh = self.fshape
+        # reference shape (= GPU global dims)
+        sh = I.shape
 
         # stopper
         maxz = I.shape[0]
 
-        A0 = self.npy.Imodel[:maxz]
-        A1 = self.npy.LLerr[:maxz]
-        A2 = self.npy.LLden[:maxz]
+        A0 = self.npy.Imodel
+        A1 = self.npy.LLerr
+        A2 = self.npy.LLden
 
         # batch buffers
-        f = b_f[:maxz]
-        a = b_a[:maxz]
-        b = b_b[:maxz]
+        f = b_f[:maxz * self.nmodes]
+        a = b_a[:maxz * self.nmodes]
+        b = b_b[:maxz * self.nmodes]
 
         ## Actual math ## (subset of FUK.fourier_error)
         A0.fill(0.)
         tf = np.abs(f).astype(np.float32) ** 2
-        A0[:] = tf.reshape(sh[0], self.nmodes, sh[1], sh[2]).sum(1) - I
+        A0[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) - I
 
         A1.fill(0.)
         tf = 2. * np.real(f * a.conj())
-        A1[:] = tf.reshape(sh[0], self.nmodes, sh[1], sh[2]).sum(1) - I
+        A1[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) - I
 
         A2.fill(0.)
         tf = 2. * np.real(f * b.conj()) + np.abs(a) ** 2
-        A2[:] = tf.reshape(sh[0], self.nmodes, sh[1], sh[2]).sum(1) - I
+        A2[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) - I
         return
 
     def fill_b(self, addr, Brenorm, w, B):
+
+        # don't know the best dims but this element wise anyway
 
         # stopper
         maxz = w.shape[0]
@@ -234,8 +236,9 @@ class GradientDescentKernel(BaseKernel):
         return
 
     def error_reduce(self, addr, err_sum):
-        # reference shape (write-to shape)
-        sh = self.fshape
+
+        # reference shape  (= GPU global dims)
+        sh = err_sum.shape
 
         # stopper
         maxz = err_sum.shape[0]
@@ -250,8 +253,7 @@ class GradientDescentKernel(BaseKernel):
         return
 
     def main(self, b_aux, addr, w, I):
-        # reference shape (write-to shape)
-        sh = self.fshape
+
         nmodes = self.nmodes
         # stopper
         maxz = I.shape[0]
@@ -261,7 +263,7 @@ class GradientDescentKernel(BaseKernel):
         Imodel = self.npy.Imodel[:maxz]
         aux = b_aux[:maxz*nmodes]
 
-        # write-to shape
+        # write-to shape  (= GPU global dims)
         ish = aux.shape
 
         ## math ##
