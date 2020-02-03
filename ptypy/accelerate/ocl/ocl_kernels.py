@@ -313,7 +313,7 @@ class PoUpdateKernel(POK_NPY, OclBase):
                                 int ob_modes,
                                 int num_pods,
                                 __global cfloat_t *ob_g,
-                                __global cfloat_t *obn_g,
+                                __global float *obn_g,
                                 __global cfloat_t *pr_g,
                                 __global cfloat_t *ex_g,
                                 __global int *addr)
@@ -323,7 +323,7 @@ class PoUpdateKernel(POK_NPY, OclBase):
             size_t y = get_global_id(0);
             size_t dy = get_global_size(0);
             __private cfloat_t ob[8];
-            __private cfloat_t obn[8];
+            __private float obn[8];
 
             int v1 = 0;
             int v2 = 0;
@@ -341,7 +341,8 @@ class PoUpdateKernel(POK_NPY, OclBase):
                 if ((v1>=0)&&(v1<pr_sh)&&(v2>=0)&&(v2<pr_sh)){ 
                     pr = pr_g[pr_dlayer(i)*pr_sh*pr_sh + v1*pr_sh + v2];
                     ob[obj_dlayer(i)] = cfloat_add(ob[obj_dlayer(i)],cfloat_mul(cfloat_conj(pr),ex_g[ex_dlayer(i)*pr_sh*pr_sh +v1*pr_sh + v2]));
-                    obn[obj_dlayer(i)] = cfloat_add(obn[obj_dlayer(i)],cfloat_mul(pr,cfloat_conj(pr)));
+                    //obn[obj_dlayer(i)] = cfloat_add(obn[obj_dlayer(i)],cfloat_mul(pr,cfloat_conj(pr)));
+                    obn[obj_dlayer(i)] += cfloat_abs_squared(pr);
                 }
             
             }
@@ -356,7 +357,7 @@ class PoUpdateKernel(POK_NPY, OclBase):
                                 int pr_modes,
                                 int num_pods,
                                 __global cfloat_t *pr_g,
-                                __global cfloat_t *prn_g,
+                                __global float *prn_g,
                                 __global cfloat_t *ob_g,
                                 __global cfloat_t *ex_g,
                                 __global int *addr)
@@ -366,7 +367,7 @@ class PoUpdateKernel(POK_NPY, OclBase):
             size_t y = get_global_id(0);
             size_t dy = get_global_size(0);
             __private cfloat_t pr[8];
-            __private cfloat_t prn[8];
+            __private float prn[8];
             
             int v1 = 0;
             int v2 = 0;
@@ -383,7 +384,8 @@ class PoUpdateKernel(POK_NPY, OclBase):
                 if ((v1>=0)&&(v1<ob_sh_row)&&(v2>=0)&&(v2<ob_sh_col)){ 
                     ob = ob_g[obj_dlayer(i)*ob_sh_row*ob_sh_col + v1*ob_sh_col + v2];
                     pr[pr_dlayer(i)] = cfloat_add(pr[pr_dlayer(i)], cfloat_mul(cfloat_conj(ob),ex_g[ex_dlayer(i)*pr_sh*pr_sh +y*pr_sh + z]));
-                    prn[pr_dlayer(i)] = cfloat_add(prn[pr_dlayer(i)],cfloat_mul(ob,cfloat_conj( ob )));
+                    //prn[pr_dlayer(i)] = cfloat_add(prn[pr_dlayer(i)],cfloat_mul(ob,cfloat_conj( ob )));
+                    prn[pr_dlayer(i)] += cfloat_abs_squared(ob);
                 }
             
             }

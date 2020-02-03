@@ -39,6 +39,8 @@ class ML_serial(ML):
 
         self.kernels = {}
         self.diff_info = {}
+        self.cn2_ob_grad = 0.
+        self.cn2_pr_grad = 0.
 
     def engine_initialize(self):
         """
@@ -175,12 +177,15 @@ class ML_serial(ML):
                 for name, s in new_ob_grad.storages.items():
                     s.data[:] = self.smooth_gradient(s.data)
 
+            cn2_new_pr_grad = Cnorm2(new_pr_grad)
+            cn2_new_ob_grad = Cnorm2(new_ob_grad)
+
             # probe/object rescaling
             if self.p.scale_precond:
-                cn2_new_pr_grad = Cnorm2(new_pr_grad)
+                cn2_new_pr_grad = cn2_new_pr_grad
                 if cn2_new_pr_grad > 1e-5:
-                    scale_p_o = (self.p.scale_probe_object * Cnorm2(new_ob_grad)
-                                 / Cnorm2(new_pr_grad))
+                    scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad
+                                 / cn2_new_pr_grad)
                 else:
                     scale_p_o = self.p.scale_probe_object
                 if self.scale_p_o is None:
@@ -199,12 +204,12 @@ class ML_serial(ML):
                 bt = 0.
             else:
                 bt_num = (self.scale_p_o
-                          * (Cnorm2(new_pr_grad)
+                          * (cn2_new_pr_grad
                              - np.real(Cdot(new_pr_grad, self.pr_grad)))
-                          + (Cnorm2(new_ob_grad)
+                          + (cn2_new_ob_grad
                              - np.real(Cdot(new_ob_grad, self.ob_grad))))
 
-                bt_denom = self.scale_p_o*Cnorm2(self.pr_grad) + Cnorm2(self.ob_grad)
+                bt_denom = self.scale_p_o * self.cn2_pr_grad + self.cn2_ob_grad
 
                 bt = max(0, bt_num/bt_denom)
 
@@ -212,6 +217,8 @@ class ML_serial(ML):
 
             self.ob_grad << new_ob_grad
             self.pr_grad << new_pr_grad
+            self.cn2_ob_grad = cn2_new_ob_grad
+            self.cn2_pr_grad = cn2_new_pr_grad
 
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
@@ -222,6 +229,7 @@ class ML_serial(ML):
                     s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             else:
                 self.ob_h -= self.ob_grad
+
             self.pr_h *= bt / self.tmin
             self.pr_grad *= self.scale_p_o
             self.pr_h -= self.pr_grad
@@ -500,7 +508,6 @@ class GaussianModel(BaseModel):
             b = kern.b
 
             FW = kern.FW
-            BW = kern.BW
 
             # get addresses and auxilliary array
             addr = prep.addr

@@ -112,17 +112,6 @@ class DM(PositionCorrectionEngine):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
-    [probe_update_cuda_atomics]
-    default = False
-    type = bool
-    help = For GPU, use the atomics version for probe update kernel
-
-    [object_update_cuda_atomics]
-    default = True
-    type = bool
-    help = For GPU, use the atomics version for object update kernel
-
-
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
@@ -176,11 +165,11 @@ class DM(PositionCorrectionEngine):
 
         # Generate container copies
         self.ob_buf = self.ob.copy(self.ob.ID + '_alt', fill=0.)
-        self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
+        self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0., dtype='real')
         self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
 
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
-        self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
+        self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0., dtype='real')
 
     def engine_prepare(self):
 
@@ -383,7 +372,7 @@ class DM(PositionCorrectionEngine):
             if not pod.active:
                 continue
             pod.object += pod.probe.conj() * pod.exit * pod.object_weight
-            ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
+            ob_nrm[pod.ob_view] += u.abs2(pod.probe) * pod.object_weight
 
         # Distribute result with MPI
         for name, s in self.ob.storages.items():
@@ -427,7 +416,7 @@ class DM(PositionCorrectionEngine):
             if not pod.active:
                 continue
             pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
-            pr_nrm[pod.pr_view] += u.cabs2(pod.object) * pod.probe_weight
+            pr_nrm[pod.pr_view] += u.abs2(pod.object) * pod.probe_weight
 
         change = 0.
 

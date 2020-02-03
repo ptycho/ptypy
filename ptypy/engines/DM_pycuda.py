@@ -32,6 +32,20 @@ gaussian_kernel = DM_serial.gaussian_kernel
 @register()
 class DM_pycuda(DM_serial.DM_serial):
 
+    """
+    Defaults:
+
+    [probe_update_cuda_atomics]
+    default = False
+    type = bool
+    help = For GPU, use the atomics version for probe update kernel
+
+    [object_update_cuda_atomics]
+    default = True
+    type = bool
+    help = For GPU, use the atomics version for object update kernel
+
+    """
     def __init__(self, ptycho_parent, pars=None):
         """
         Difference map reconstruction engine.

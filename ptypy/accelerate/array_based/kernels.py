@@ -393,8 +393,8 @@ class PoUpdateKernel(BaseKernel):
                 pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
                 ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
             obn[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
-                pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
-                pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]
+                (pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
+                pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]).real
         return
 
     def pr_update(self, addr, pr, prn, ob, ex):
@@ -407,8 +407,8 @@ class PoUpdateKernel(BaseKernel):
                 ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
                 ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
             prn[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
-                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
-                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
+                (ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
+                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]).real
         return
 
     def ob_update_ML(self, addr, ob, pr, ex, fac=2.0):

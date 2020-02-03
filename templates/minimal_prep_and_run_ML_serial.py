@@ -39,10 +39,10 @@ p.scans.MF.data.psf = 0.
 
 # attach a reconstrucion engine
 p.engines = u.Param()
-#p.engines.engine00 = u.Param()
-#p.engines.engine00.name = 'DM_serial'
-#p.engines.engine00.numiter = 10
-#p.engines.engine00.numiter_contiguous = 1
+p.engines.engine00 = u.Param()
+p.engines.engine00.name = 'DM_serial'
+p.engines.engine00.numiter = 10
+p.engines.engine00.numiter_contiguous = 1
 p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'ML_serial'
 p.engines.engine01.numiter = 20

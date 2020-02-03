@@ -152,7 +152,7 @@ class DM_ocl(DM_serial.DM_serial):
         for prep in self.diff_info.values():
             prep.addr = cla.to_device(self.queue, prep.addr)
             prep.mag = cla.to_device(self.queue, prep.mag)
-            prep.mask_sum = cla.to_device(self.queue, prep.mask_sum)
+            prep.ma_sum = cla.to_device(self.queue, prep.ma_sum)
             prep.err_fourier = cla.to_device(self.queue, prep.err_fourier)
             ## potentially
             #prep.ex = ...
@@ -190,7 +190,7 @@ class DM_ocl(DM_serial.DM_serial):
                 # get addresses 
                 addr = prep.addr
                 mag = prep.mag
-                mask_sum = prep.mask_sum
+                ma_sum = prep.ma_sum
                 err_fourier = prep.err_fourier
 
                 # local references
@@ -215,7 +215,7 @@ class DM_ocl(DM_serial.DM_serial):
 
                 ## Deviation from measured data
                 t1 = time.time()
-                FUK.fourier_error(aux, addr, mag, ma, mask_sum)
+                FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                 FUK.error_reduce(addr, err_fourier)
                 FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
                 queue.finish()
