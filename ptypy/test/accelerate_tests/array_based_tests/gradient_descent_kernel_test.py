@@ -75,7 +75,7 @@ class GradientDescentKernelTest(unittest.TestCase):
 
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_model(b_f, addr)
+        GDK.make_model(b_f)
         #print('Im',repr(GDK.npy.Imodel))
         exp_Imodel = np.array([[[ 1.,  1.,  1.],
         [ 3.,  3.,  3.],
@@ -92,7 +92,7 @@ class GradientDescentKernelTest(unittest.TestCase):
        [[85., 85., 85.],
         [87., 87., 87.],
         [93., 93., 93.]]], dtype=FLOAT_TYPE)
-        np.testing.assert_array_equal(exp_Imodel, GDK.npy.Imodel,
+        np.testing.assert_array_almost_equal(exp_Imodel, GDK.npy.Imodel,
                                       err_msg="`Imodel` buffer has not been updated as expected")
 
 
@@ -101,7 +101,7 @@ class GradientDescentKernelTest(unittest.TestCase):
 
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_a012(b_f, b_a, b_b, addr, I)
+        GDK.make_a012(b_f, b_a, b_b, I)
         print('A0',repr(GDK.npy.Imodel))
         print('A1',repr(GDK.npy.LLerr))
         print('A2',repr(GDK.npy.LLden))
@@ -121,7 +121,7 @@ class GradientDescentKernelTest(unittest.TestCase):
        [[ 0.,  0.,  0.],
         [ 0.,  0.,  0.],
         [ 0.,  0.,  0.]]], dtype=FLOAT_TYPE)
-        np.testing.assert_array_equal(exp_A0, GDK.npy.Imodel,
+        np.testing.assert_array_almost_equal(exp_A0, GDK.npy.Imodel,
                                       err_msg="`Imodel` buffer (=A0) has not been updated as expected")
         exp_A1 = np.array([[[ 0.,  0.,  0.],
         [ 1.,  5.,  9.],
@@ -138,7 +138,7 @@ class GradientDescentKernelTest(unittest.TestCase):
        [[ 0.,  0.,  0.],
         [ 0.,  0.,  0.],
         [ 0.,  0.,  0.]]], dtype=FLOAT_TYPE)
-        np.testing.assert_array_equal(exp_A1, GDK.npy.LLerr,
+        np.testing.assert_array_almost_equal(exp_A1, GDK.npy.LLerr,
                                       err_msg="`LLerr` buffer (=A1) has not been updated as expected")
         exp_A2 = np.array([[[ 0.,  4., 12.],
         [ 3.,  7., 15.],
@@ -155,7 +155,7 @@ class GradientDescentKernelTest(unittest.TestCase):
        [[ 0.,  0.,  0.],
         [ 0.,  0.,  0.],
         [ 0.,  0.,  0.]]], dtype=FLOAT_TYPE)
-        np.testing.assert_array_equal(exp_A2, GDK.npy.LLden,
+        np.testing.assert_array_almost_equal(exp_A2, GDK.npy.LLden,
                                       err_msg="`LLden` buffer (=A2) has not been updated as expected")
 
     def test_fill_b(self):
@@ -164,11 +164,11 @@ class GradientDescentKernelTest(unittest.TestCase):
         B = np.zeros((3,), dtype=FLOAT_TYPE)
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_a012(b_f, b_a, b_b, addr, I)
-        GDK.fill_b(addr, Brenorm, w, B)
+        GDK.make_a012(b_f, b_a, b_b, I)
+        GDK.fill_b(Brenorm, w, B)
         #print('B',repr(B))
         exp_B = np.array([ 4699.8,  3953.6, 10963.4], dtype=FLOAT_TYPE)
-        np.testing.assert_array_equal(exp_B, B,
+        np.testing.assert_array_almost_equal(exp_B, B,
                                       err_msg="`B` has not been updated as expected")
 
 
@@ -177,10 +177,10 @@ class GradientDescentKernelTest(unittest.TestCase):
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
         GDK.npy.LLerr = np.indices(GDK.npy.LLerr.shape, dtype=FLOAT_TYPE)[0]
-        GDK.error_reduce(addr, err_sum)
+        GDK.error_reduce(err_sum)
         #print('Err',repr(err_sum))
         exp_err = np.array([ 0.,  9., 18.], dtype=FLOAT_TYPE)
-        np.testing.assert_array_equal(exp_err, err_sum,
+        np.testing.assert_array_almost_equal(exp_err, err_sum,
                                       err_msg="`err_sum` has not been updated as expected")
         return
 
@@ -188,7 +188,7 @@ class GradientDescentKernelTest(unittest.TestCase):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.main(b_f, addr, w, I)
+        GDK.main(b_f, w, I)
         #print('B_F',repr(b_f))
         #print('LL',repr(GDK.npy.LLerr))
         exp_b_f = np.array([[[  0. +0.j,   0. +0.j,   0. +0.j],
@@ -222,7 +222,7 @@ class GradientDescentKernelTest(unittest.TestCase):
        [[  7. +0.j,   7. +0.j,   7. +0.j],
         [  7. +1.j,   7. +1.j,   7. +1.j],
         [  7. +2.j,   7. +2.j,   7. +2.j]]], dtype=COMPLEX_TYPE)
-        np.testing.assert_array_equal(exp_b_f, b_f,
+        np.testing.assert_array_almost_equal(exp_b_f, b_f,
                                       err_msg="Auxiliary has not been updated as expected")
         exp_LL =np.array([[[ 0.,  0.,  0.],
         [ 1.,  1.,  1.],
@@ -239,7 +239,7 @@ class GradientDescentKernelTest(unittest.TestCase):
        [[ 0.,  0.,  0.],
         [ 0.,  0.,  0.],
         [ 0.,  0.,  0.]]], dtype=FLOAT_TYPE)
-        np.testing.assert_array_equal(exp_LL, GDK.npy.LLerr,
+        np.testing.assert_array_almost_equal(exp_LL, GDK.npy.LLerr,
                                       err_msg="LogLikelihood error has not been updated as expected")
         return
 
