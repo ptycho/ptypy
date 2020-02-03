@@ -226,7 +226,7 @@ class GradientDescentKernel(BaseKernel):
 
         ## Actual math ##
 
-        # maybe two kernel calls
+        # maybe two kernel calls?
 
         B[0] += np.dot(w.flat, (A0 ** 2).flat) * Brenorm
         B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
@@ -271,22 +271,6 @@ class GradientDescentKernel(BaseKernel):
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * tmp[:, np.newaxis, :, :]).reshape(ish)
         return
 
-    def error_reduce(self, addr, err_sum):
-        # reference shape (write-to shape)
-        sh = self.fshape
-
-        # stopper
-        maxz = err_sum.shape[0]
-
-        # batch buffers
-        ferr = self.npy.ferr[:maxz]
-
-        ## Actual math ##
-
-        # Reduceses the Fourier error along the last 2 dimensions.fd
-        #err_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
-        err_sum[:] = ferr.sum(-1).sum(-1)
-        return
 
 class AuxiliaryWaveKernel(BaseKernel):
 
@@ -363,7 +347,7 @@ class AuxiliaryWaveKernel(BaseKernel):
 
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             tmp = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
-                  pr[prc[0], :, :] * fac
+                  pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] * fac
             if add:
                 aux[ind, :, :] += tmp
             else:
