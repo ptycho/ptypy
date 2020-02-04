@@ -111,11 +111,11 @@ class NanomaxZmqScan(PtyScan):
         while True:
             try:
                 msg = self.socket.recv_pyobj(flags=zmq.NOBLOCK)
-                headers = (msg == {}) or (u'path' in msg.keys())
+                headers = ('path' in msg.keys())
                 if not headers:
                     self.latest_pos_index_received += 1
                     self.incoming[self.latest_pos_index_received] = msg
-                elif msg == {}:
+                elif msg['path'] in ('interrupted', 'finished'):
                     end_of_scan = True
                     break
             except zmq.ZMQError:

@@ -2,7 +2,10 @@
      beamline is developing, as is the data format. """
 
 import numpy as np
-import hdf5plugin
+try:
+	import hdf5plugin
+except ImportError:
+	print('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
 import h5py
 import os.path
 
@@ -676,6 +679,12 @@ class NanomaxContrast(NanomaxStepscanSep2019):
     This class loads data written with the nanomax pirate system,
     in a slightly matured state. Step and fly scan have the same
     format.
+
+    [name]
+    default = NanomaxContrast
+    type = str
+    help =
+
     """
 
     def load(self, indices):
