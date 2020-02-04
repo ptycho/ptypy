@@ -210,6 +210,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
             'CTYPE': 'complex<float>' if self.ctype == np.complex64 else 'complex<double>',
             'FTYPE': 'float' if self.ftype == np.float32 else 'double'
         }
+        self.make_model_cuda = load_kernel('make_model', subs)
 
     def allocate(self):
         self.gpu.LLden = gpuarray.zeros(self.fshape, dtype=self.ftype)
@@ -217,7 +218,21 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.gpu.Imodel = gpuarray.zeros(self.fshape, dtype=self.ftype)
 
     def make_model(self, b_aux):
-        pass
+        # reference shape
+        sh = self.fshape
+
+        # batch buffers
+        Imodel = self.gpu.Imodel
+        aux = b_aux
+
+        # dimensions / grid
+        z = np.int32(sh[0])
+        y = np.int32(self.nmodes)
+        x = np.int32(sh[1] * sh[2])
+        bx = 1024
+        self.make_model_cuda(aux, Imodel, z, y, x,
+                             block=(bx, 1, 1),
+                             grid=(int((x + bx - 1) // bx), 1, int(z)))
 
     def make_a012(self, b_f, b_a, b_b, I):
         pass

@@ -42,11 +42,17 @@ class GradientDescentKernelTest(unittest.TestCase):
         self.ctx.pop()
         self.ctx.detach()
 
-    def prepare_arrays(self):
-        nmodes = 2
-        N_buf = 4
-        N = 3
-        A = 3
+    def prepare_arrays(self, performance=False):
+        if not performance:
+            nmodes = 2
+            N_buf = 4 
+            N = 3 
+            A = 3 
+        else:
+            nmodes = 4
+            N_buf = 8
+            N = 32
+            A =  1024
         i_sh = (N, A, A)
         e_sh = (N*nmodes, A, A)
         f_sh = (N_buf, A, A)
@@ -104,6 +110,14 @@ class GradientDescentKernelTest(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             exp_Imodel, GDK.gpu.Imodel.get(),
             err_msg="`Imodel` buffer has not been updated as expected")
+
+    @unittest.skip('performance test')
+    def test_make_model_performance(self):
+        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
+
+        GDK = GradientDescentKernel(b_f, addr.shape[1])
+        GDK.allocate()
+        GDK.make_model(b_f)
 
     def test_make_a012(self):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
