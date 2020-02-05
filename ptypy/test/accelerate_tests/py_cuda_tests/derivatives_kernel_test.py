@@ -5,6 +5,7 @@
 
 import unittest
 import numpy as np
+from . import perfrun
 
 def have_pycuda():
     try:
@@ -302,7 +303,7 @@ class DerivativesKernelTest(unittest.TestCase):
         exp = delxf(inp, axis=2)
         np.testing.assert_array_almost_equal(outp, exp)
 
-    @unittest.skip("performance test")
+    @unittest.skipIf(not perfrun, "performance test")
     def test_perf_3d_0(self):
         shape = [500, 1024, 1024]
         inp = np.ones(shape, dtype=np.complex64)
@@ -315,7 +316,7 @@ class DerivativesKernelTest(unittest.TestCase):
         outp[:] = outp_dev.get()
         np.testing.assert_array_equal(outp, 0)
 
-    @unittest.skip("performance test")
+    @unittest.skipIf(not perfrun, "performance test")
     def test_perf_3d_1(self):
         shape = [500, 1024, 1024]
         inp = np.ones(shape, dtype=np.complex64)
@@ -328,7 +329,7 @@ class DerivativesKernelTest(unittest.TestCase):
         outp[:] = outp_dev.get()
         np.testing.assert_array_equal(outp, 0)
 
-    @unittest.skip("performance test")
+    @unittest.skipIf(not perfrun, "performance test")
     def test_perf_3d_2(self):
         shape = [500, 1024, 1024]
         inp = np.ones(shape, dtype=np.complex64)

@@ -5,7 +5,7 @@
 
 import unittest
 import numpy as np
-
+from . import perfrun
 
 def have_pycuda():
     try:
@@ -111,7 +111,7 @@ class GradientDescentKernelTest(unittest.TestCase):
             exp_Imodel, GDK.gpu.Imodel.get(),
             err_msg="`Imodel` buffer has not been updated as expected")
 
-    @unittest.skip('performance test')
+    @unittest.skipIf(not perfrun, "performance test")
     def test_make_model_performance(self):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
 
@@ -183,7 +183,7 @@ class GradientDescentKernelTest(unittest.TestCase):
             exp_A2, GDK.gpu.LLden.get(),
             err_msg="`LLden` buffer (=A2) has not been updated as expected")
 
-    @unittest.skip('performance test')
+    @unittest.skipIf(not perfrun, "performance test")
     def test_make_a012_performance(self):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
 
@@ -208,6 +208,17 @@ class GradientDescentKernelTest(unittest.TestCase):
             rtol=1e-7,
             err_msg="`B` has not been updated as expected")
 
+    @unittest.skipIf(not perfrun, "performance test")
+    def test_fill_b_perf(self):
+        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
+        Brenorm = 0.35
+        B = np.zeros((3,), dtype=FLOAT_TYPE)
+        B_dev = gpuarray.to_gpu(B)
+        GDK = GradientDescentKernel(b_f, addr.shape[1])
+        GDK.allocate()
+        GDK.make_a012(b_f, b_a, b_b, I)
+        GDK.fill_b(Brenorm, w, B_dev)
+    
     def test_error_reduce(self):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
         GDK = GradientDescentKernel(b_f, addr.shape[1])
@@ -220,7 +231,15 @@ class GradientDescentKernelTest(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             exp_err, err_sum.get(),
             err_msg="`err_sum` has not been updated as expected")
-        return
+    
+    @unittest.skipIf(not perfrun, "performance test")
+    def test_error_reduce_perf(self):
+        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
+        GDK = GradientDescentKernel(b_f, addr.shape[1])
+        GDK.allocate()
+        GDK.npy.LLerr = np.indices(GDK.gpu.LLerr.shape, dtype=FLOAT_TYPE)[0]
+        GDK.gpu.LLerr = gpuarray.to_gpu(GDK.npy.LLerr)
+        GDK.error_reduce(err_sum)
 
     def test_main(self):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
@@ -281,3 +300,10 @@ class GradientDescentKernelTest(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             exp_LL, GDK.gpu.LLerr.get(),
             err_msg="LogLikelihood error has not been updated as expected")
+
+    @unittest.skipIf(not perfrun, "performance test")
+    def test_main_perf(self):
+        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
+        GDK = GradientDescentKernel(b_f, addr.shape[1])
+        GDK.allocate()
+        GDK.main(b_f, w, I)

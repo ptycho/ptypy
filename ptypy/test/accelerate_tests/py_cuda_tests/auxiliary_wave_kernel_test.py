@@ -5,6 +5,7 @@
 
 import unittest
 import numpy as np
+from . import perfrun
 
 def have_pycuda():
     try:
@@ -541,20 +542,30 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         exit_wave_dev.gpudata.free()
         addr_dev.gpudata.free()
 
-    def prepare_arrays(self):
-        B = 3  # frame size y
-        C = 3  # frame size x
+    def prepare_arrays(self, performance=False):
+        if not performance:
+            B = 3  # frame size y
+            C = 3  # frame size x
+            D = 2  # number of probe modes
+            E = B  # probe size y
+            F = C  # probe size x
 
-        D = 2  # number of probe modes
-        E = B  # probe size y
-        F = C  # probe size x
+            npts_greater_than = 2  # how many points bigger than the probe the object is.
+            G = 2  # number of object modes
 
-        npts_greater_than = 2  # how many points bigger than the probe the object is.
-        G = 2  # number of object modes
+            scan_pts = 2  # one dimensional scan point number
+        else:
+            B = 256
+            C = 256
+            D = 5
+            E = B
+            F = C
+            npts_greater_than = 500
+            G = 4
+            scan_pts = 10
+
         H = B + npts_greater_than  # object size y
         I = C + npts_greater_than  # object size x
-
-        scan_pts = 2  # one dimensional scan point number
 
         total_number_scan_positions = scan_pts ** 2
         total_number_modes = G * D
@@ -593,7 +604,10 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                     exit_idx += 1
             position_idx += 1
 
-        return addr, object_array, probe, exit_wave
+        return (gpuarray.to_gpu(addr), 
+            gpuarray.to_gpu(object_array), 
+            gpuarray.to_gpu(probe), 
+            gpuarray.to_gpu(exit_wave))
 
 
     def test_build_aux_no_ex_REGRESSION(self):
@@ -601,20 +615,15 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         setup
         '''
         addr, object_array, probe, exit_wave = self.prepare_arrays()
-        addr_dev = gpuarray.to_gpu(addr)
-        obj_dev = gpuarray.to_gpu(object_array)
-        pr_dev = gpuarray.to_gpu(probe)
-        ex_dev = gpuarray.to_gpu(exit_wave)
 
         '''
         test
         '''
-        auxiliary_wave = np.zeros_like(exit_wave)
-        aux_dev = gpuarray.to_gpu(auxiliary_wave)
+        auxiliary_wave = gpuarray.zeros_like(exit_wave)
 
         AWK = AuxiliaryWaveKernel(self.stream)
         AWK.allocate()
-        AWK.build_aux_no_ex(aux_dev, addr_dev, obj_dev, pr_dev, 
+        AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, 
             fac=1.0, add=False)
         expected_auxiliary_wave = np.array([[[0. + 2.j, 0. + 2.j, 0. + 2.j],
                                              [0. + 2.j, 0. + 2.j, 0. + 2.j],
@@ -664,11 +673,11 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                             [[0. + 16.j, 0. + 16.j, 0. + 16.j],
                                              [0. + 16.j, 0. + 16.j, 0. + 16.j],
                                              [0. + 16.j, 0. + 16.j, 0. + 16.j]]], dtype=np.complex64)
-        np.testing.assert_array_equal(aux_dev.get(), expected_auxiliary_wave,
+        np.testing.assert_array_equal(auxiliary_wave.get(), expected_auxiliary_wave,
                                       err_msg="The auxiliary_wave has not been updated as expected")
+        
         auxiliary_wave = exit_wave
-        aux_dev = gpuarray.to_gpu(auxiliary_wave)
-        AWK.build_aux_no_ex(aux_dev, addr_dev, obj_dev, pr_dev, fac=2.0, add=True)
+        AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, fac=2.0, add=True)
 
         expected_auxiliary_wave = np.array([[[1. + 5.j, 1. + 5.j, 1. + 5.j],
                                              [1. + 5.j, 1. + 5.j, 1. + 5.j],
@@ -718,9 +727,18 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                             [[16. + 48.j, 16. + 48.j, 16. + 48.j],
                                              [16. + 48.j, 16. + 48.j, 16. + 48.j],
                                              [16. + 48.j, 16. + 48.j, 16. + 48.j]]], dtype=np.complex64)
-        np.testing.assert_array_equal(aux_dev.get(), expected_auxiliary_wave,
+        np.testing.assert_array_equal(auxiliary_wave.get(), expected_auxiliary_wave,
                                       err_msg="The auxiliary_wave has not been updated as expected")
 
+    @unittest.skipIf(not perfrun, "performance test")
+    def test_build_aux_no_ex_performance(self):
+        addr, object_array, probe, exit_wave = self.prepare_arrays(performance=True)
+        auxiliary_wave = gpuarray.zeros_like(exit_wave)
+
+        AWK = AuxiliaryWaveKernel(self.stream)
+        AWK.allocate()
+        AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, 
+            fac=1.0, add=False)
 
 
 if __name__ == '__main__':
