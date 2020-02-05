@@ -6,6 +6,7 @@ from . import load_kernel
 from ..array_based import kernels as ab
 from ..array_based.base import Adict
 
+
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 
     def __init__(self, aux, nmodes=1, queue_thread=None):
@@ -13,7 +14,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.queue = queue_thread
         self.fmag_all_update_cuda = load_kernel("fmag_all_update")
         self.fourier_error_cuda = load_kernel("fourier_error")
-        self.fourier_error2_cuda = None 
+        self.fourier_error2_cuda = None
         self.error_reduce_cuda = load_kernel("error_reduce")
         self.fourier_update_cuda = None
 
@@ -47,24 +48,24 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
             by = 16
             bz = int(self.nmodes)
             blk = (bx, by, bz)
-            grd = (int((self.fshape[2] + bx-1) // bx), 
-                                        int((self.fshape[1] + by-1) // by),
-                                        int(self.fshape[0]))
+            grd = (int((self.fshape[2] + bx-1) // bx),
+                   int((self.fshape[1] + by-1) // by),
+                   int(self.fshape[0]))
             #print('block={}, grid={}, fshape={}'.format(blk, grd, self.fshape))
             self.fourier_error2_cuda(np.int32(self.nmodes),
-                                    f,
-                                    fmask,
-                                    fmag,
-                                    fdev,
-                                    ferr,
-                                    mask_sum,
-                                    addr,
-                                    np.int32(self.fshape[1]),
-                                    np.int32(self.fshape[2]),
-                                    block=blk,
-                                    grid=grd,
-                                    shared=int(bx*by*bz*4),
-                                    stream=self.queue)
+                                     f,
+                                     fmask,
+                                     fmag,
+                                     fdev,
+                                     ferr,
+                                     mask_sum,
+                                     addr,
+                                     np.int32(self.fshape[1]),
+                                     np.int32(self.fshape[2]),
+                                     block=blk,
+                                     grid=grd,
+                                     shared=int(bx*by*bz*4),
+                                     stream=self.queue)
 
     def error_reduce(self, addr, err_fmag):
         # import sys
@@ -98,7 +99,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
 
     # Note: this was a test to join the kernels, but it's > 2x slower!
     def fourier_update(self, f, addr, fmag, fmask, mask_sum, err_fmag, pbound=0):
-        if self.fourier_update_cuda  is None:
+        if self.fourier_update_cuda is None:
             self.fourier_update_cuda = load_kernel("fourier_update")
         fdev = self.npy.fdev
         ferr = self.npy.ferr
@@ -107,27 +108,26 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         by = 16
         bz = int(self.nmodes)
         blk = (bx, by, bz)
-        grd = (int((self.fshape[2] + bx-1) // bx), 
-                int((self.fshape[1] + by-1) // by),
-                int(self.fshape[0]))
+        grd = (int((self.fshape[2] + bx-1) // bx),
+               int((self.fshape[1] + by-1) // by),
+               int(self.fshape[0]))
         smem = int(bx*by*bz*4)
         self.fourier_update_cuda(np.int32(self.nmodes),
-                                    f,
-                                    fmask,
-                                    fmag,
-                                    fdev,
-                                    ferr,
-                                    mask_sum,
-                                    addr,
-                                    err_fmag,
-                                    np.float32(pbound),
-                                    np.int32(self.fshape[1]),
-                                    np.int32(self.fshape[2]),
-                                    block=blk,
-                                    grid=grd,
-                                    shared=smem,
-                                    stream=self.queue)
- 
+                                 f,
+                                 fmask,
+                                 fmag,
+                                 fdev,
+                                 ferr,
+                                 mask_sum,
+                                 addr,
+                                 err_fmag,
+                                 np.float32(pbound),
+                                 np.int32(self.fshape[1]),
+                                 np.int32(self.fshape[2]),
+                                 block=blk,
+                                 grid=grd,
+                                 shared=smem,
+                                 stream=self.queue)
 
     def execute(self, kernel_name=None, compare=False, sync=False):
 
@@ -154,6 +154,10 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         self._ob_id = None
         self.build_aux_cuda = load_kernel("build_aux")
         self.build_exit_cuda = load_kernel("build_exit")
+        self.build_aux_no_ex_cuda = load_kernel("build_aux_no_ex", {
+            'CTYPE': 'complex<float>',
+            'FTYPE': 'float'
+        })
 
     def load(self, aux, ob, pr, ex, addr):
         super(AuxiliaryWaveKernel, self).load(aux, ob, pr, ex, addr)
@@ -185,6 +189,26 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                              addr,
                              block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
 
+    def build_aux_no_ex(self, b_aux, addr, ob, pr, fac=1.0, add=False):
+        obr, obc = self._cache_object_shape(ob)
+        sh = addr.shape
+        nmodes = sh[1]
+        maxz = sh[0]
+        self.build_aux_no_ex_cuda(b_aux,
+                                  np.int32(b_aux.shape[-2]),
+                                  np.int32(b_aux.shape[-1]),
+                                  pr,
+                                  np.int32(pr.shape[-2]),
+                                  np.int32(pr.shape[-1]),
+                                  ob,
+                                  obr, obc,
+                                  addr,
+                                  np.float32(fac),
+                                  np.int32(add),
+                                  block=(32, 32, 1),
+                                  grid=(int(maxz * nmodes), 1, 1),
+                                  stream=self.queue)
+
     def _cache_object_shape(self, ob):
         oid = id(ob)
 
@@ -200,22 +224,32 @@ class GradientDescentKernel(ab.GradientDescentKernel):
     def __init__(self, aux, nmodes=1, queue=None):
         super().__init__(aux, nmodes)
         self.queue = queue
-        
+
         self.gpu = Adict()
         self.gpu.LLden = None
-        self.gpu.LLerr = None 
-        self.gpu.Imodel = None 
+        self.gpu.LLerr = None
+        self.gpu.Imodel = None
 
         subs = {
             'CTYPE': 'complex<float>' if self.ctype == np.complex64 else 'complex<double>',
             'FTYPE': 'float' if self.ftype == np.float32 else 'double'
         }
         self.make_model_cuda = load_kernel('make_model', subs)
+        self.make_a012_cuda = load_kernel('make_a012', subs)
+        self.error_reduce_cuda = load_kernel('error_reduce', subs)
+        self.fill_b_cuda = load_kernel('fill_b', {**subs, 'BDIM_X': 1024})
+        self.fill_b_reduce_cuda = load_kernel(
+            'fill_b_reduce', {**subs, 'BDIM_X': 1024})
+        self.main_cuda = load_kernel('gd_main', subs)
 
     def allocate(self):
         self.gpu.LLden = gpuarray.zeros(self.fshape, dtype=self.ftype)
         self.gpu.LLerr = gpuarray.zeros(self.fshape, dtype=self.ftype)
         self.gpu.Imodel = gpuarray.zeros(self.fshape, dtype=self.ftype)
+        # temporary array for the reduction in fill_b
+        self.gpu.Btmp = gpuarray.zeros(
+            (3, (np.prod(self.fshape) + 1023) // 1024),
+            dtype=self.ftype)
 
     def make_model(self, b_aux):
         # reference shape
@@ -232,19 +266,97 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         bx = 1024
         self.make_model_cuda(aux, Imodel, z, y, x,
                              block=(bx, 1, 1),
-                             grid=(int((x + bx - 1) // bx), 1, int(z)))
+                             grid=(int((x + bx - 1) // bx), 1, int(z)),
+                             stream=self.queue)
 
     def make_a012(self, b_f, b_a, b_b, I):
-        pass
+        # reference shape (= GPU global dims)
+        sh = I.shape
+
+        # stopper
+        maxz = I.shape[0]
+
+        A0 = self.gpu.Imodel
+        A1 = self.gpu.LLerr
+        A2 = self.gpu.LLden
+
+        z = np.int32(sh[0])
+        maxz = np.int32(maxz)
+        y = np.int32(self.nmodes)
+        x = np.int32(sh[1]*sh[2])
+        bx = 1024
+        self.make_a012_cuda(b_f, b_a, b_b, I,
+                            A0, A1, A2, z, y, x, maxz,
+                            block=(bx, 1, 1),
+                            grid=(int((x + bx - 1) // bx), 1, int(z)),
+                            stream=self.queue)
 
     def fill_b(self, Brenorm, w, B):
-        pass
+        # stopper
+        maxz = w.shape[0]
+
+        A0 = self.gpu.Imodel
+        A1 = self.gpu.LLerr
+        A2 = self.gpu.LLden
+
+        sz = np.int32(np.prod(w.shape))
+        blks = int((sz + 1023) // 1024)
+        assert self.gpu.Btmp.shape[1] >= blks
+        # 2-stage reduction - even if 1 block, as we have a += in second kernel
+        self.fill_b_cuda(A0, A1, A2, w,
+                         np.float32(Brenorm) if self.ftype == np.float32 else np.float64(
+                             Brenorm),
+                         sz, self.gpu.Btmp,
+                         block=(1024, 1, 1),
+                         grid=(blks, 1, 1),
+                         stream=self.queue)
+        self.fill_b_reduce_cuda(self.gpu.Btmp, B, np.int32(blks),
+                                block=(1024, 1, 1),
+                                grid=(1, 1, 1),
+                                stream=self.queue)
 
     def error_reduce(self, err_sum):
-        pass
+        # reference shape  (= GPU global dims)
+        sh = err_sum.shape
+
+        # stopper
+        maxz = err_sum.shape[0]
+
+        # batch buffers
+        ferr = self.gpu.LLerr
+
+        # Reduces the LL error along the last 2 dimensions.fd
+        self.error_reduce_cuda(ferr, err_sum,
+                               np.int32(ferr.shape[-2]
+                                        ), np.int32(ferr.shape[-1]),
+                               block=(32, 32, 1),
+                               grid=(int(maxz), 1, 1),
+                               shared=32*32*4,
+                               stream=self.queue)
 
     def main(self, b_aux, w, I):
-        pass
+        nmodes = self.nmodes
+        # stopper
+        maxz = I.shape[0]
+
+        # batch buffers
+        err = self.gpu.LLerr
+        Imodel = self.gpu.Imodel
+        aux = b_aux
+
+        # write-to shape  (= GPU global dims)
+        ish = aux.shape
+
+        x = np.int32(ish[1] * ish[2])
+        y = np.int32(nmodes)
+        z = np.int32(maxz)
+        bx = 1024
+        self.main_cuda(Imodel, I, w, err, aux,
+                       z, y, x,
+                       block=(bx, 1, 1),
+                       grid=(int((x + bx - 1) // bx), 1, int(z)),
+                       stream=self.queue)
+
 
 class PoUpdateKernel(ab.PoUpdateKernel):
 
@@ -262,11 +374,21 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         self.ob_update_cuda = load_kernel("ob_update", {
             'DENOM_TYPE': dtype
         })
-        self.ob_update2_cuda = None # load_kernel("ob_update2")
+        self.ob_update2_cuda = None  # load_kernel("ob_update2")
         self.pr_update_cuda = load_kernel("pr_update", {
             'DENOM_TYPE': dtype
         })
         self.pr_update2_cuda = None
+        self.ob_update_ML_cuda = load_kernel("ob_update_ML", {
+            'CTYPE': 'complex<float>',
+            'FTYPE': 'float'
+        })
+        self.ob_update2_ML_cuda = None
+        self.pr_update_ML_cuda = load_kernel("pr_update_ML", {
+            'CTYPE': 'complex<float>',
+            'FTYPE': 'float'
+        })
+        self.pr_update2_ML_cuda = None
 
     def ob_update(self, addr, ob, obn, pr, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
@@ -300,13 +422,13 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
             grid = [int((x+15)//16) for x in ob.shape[-2:]]
             grid = (grid[0], grid[1], int(1))
-            self.ob_update2_cuda(prsh[-1], obsh[0], num_pods, obsh[-2], 
-                                 prsh[0], 
-                                 np.int32(ex.shape[0]), 
-                                 np.int32(ex.shape[1]), 
-                                 np.int32(ex.shape[2]), 
+            self.ob_update2_cuda(prsh[-1], obsh[0], num_pods, obsh[-2],
+                                 prsh[0],
+                                 np.int32(ex.shape[0]),
+                                 np.int32(ex.shape[1]),
+                                 np.int32(ex.shape[2]),
                                  ob, obn, pr, ex, addr,
-                                 block=(16,16, 1), grid=grid, stream=self.queue)
+                                 block=(16, 16, 1), grid=grid, stream=self.queue)
 
     def pr_update(self, addr, pr, prn, ob, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
@@ -341,7 +463,68 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             self.pr_update2_cuda(prsh[-1], obsh[-2], obsh[-1],
                                  prsh[0], obsh[0], num_pods,
                                  pr, prn, ob, ex, addr,
-                                 block=(16,16,1), grid=grid, stream=self.queue)
+                                 block=(16, 16, 1), grid=grid, stream=self.queue)
+
+    def ob_update_ML(self, addr, ob, pr, ex, fac=2.0, atomics=True):
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+
+        if atomics:
+            num_pods = np.int32(addr.shape[0] * addr.shape[1])
+            self.ob_update_ML_cuda(ex, num_pods, prsh[1], prsh[2],
+                                   pr, prsh[0], prsh[1], prsh[2],
+                                   ob, obsh[0], obsh[1], obsh[2],
+                                   addr,
+                                   np.float32(fac),
+                                   block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
+        else:
+            num_pods = np.int32(addr.shape[2] * addr.shape[3])
+            if not self.ob_update2_ML_cuda:
+                self.ob_update2_ML_cuda = load_kernel("ob_update2_ML", {
+                    "NUM_MODES": obsh[0],
+                    "BDIM_X": 16,
+                    "BDIM_Y": 16,
+                    'CTYPE': 'complex<float>',
+                    'FTYPE': 'float'
+                })
+            grid = [int((x+15)//16) for x in ob.shape[-2:]]
+            grid = (grid[0], grid[1], int(1))
+            self.ob_update2_ML_cuda(prsh[-1], obsh[0], num_pods, obsh[-2],
+                                    prsh[0],
+                                    np.int32(ex.shape[0]),
+                                    np.int32(ex.shape[1]),
+                                    np.int32(ex.shape[2]),
+                                    ob, pr, ex, addr, np.float32(fac),
+                                    block=(16, 16, 1), grid=grid, stream=self.queue)
+
+    def pr_update_ML(self, addr, pr, ob, ex, fac=2.0, atomics=False):
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        if atomics:
+            num_pods = np.int32(addr.shape[0] * addr.shape[1])
+            self.pr_update_ML_cuda(ex, num_pods, prsh[1], prsh[2],
+                                pr, prsh[0], prsh[1], prsh[2],
+                                ob, obsh[0], obsh[1], obsh[2],
+                                addr,
+                                np.float32(fac),
+                                block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
+        else:
+            num_pods = np.int32(addr.shape[2] * addr.shape[3])
+            if not self.pr_update2_ML_cuda:
+                self.pr_update2_ML_cuda = load_kernel("pr_update2_ML", {
+                    "NUM_MODES": prsh[0],
+                    "BDIM_X": 16,
+                    "BDIM_Y": 16,
+                    'CTYPE': 'complex<float>',
+                    'FTYPE': 'float'
+                })
+
+            grid = [int((x+15)//16) for x in pr.shape[-2:]]
+            grid = (grid[0], grid[1], int(1))
+            self.pr_update2_ML_cuda(prsh[-1], obsh[-2], obsh[-1],
+                                 prsh[0], obsh[0], num_pods,
+                                 pr, ob, ex, addr, np.float32(fac),
+                                 block=(16, 16, 1), grid=grid, stream=self.queue)
 
 
 class PositionCorrectionKernel(ab.PositionCorrectionKernel):
@@ -354,7 +537,6 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         self.fourier_error_cuda = load_kernel("fourier_error")
         self.error_reduce_cuda = load_kernel("error_reduce")
         self.build_aux_pc_cuda = load_kernel("build_aux_position_correction")
-
 
     def allocate(self):
         self.npy.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
@@ -408,7 +590,7 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         '''
         update_indices = err_sum < error_state
         log(4, "updating %s indices" % np.sum(update_indices))
-        addr_cpu  = addr.get()
+        addr_cpu = addr.get()
         addr_cpu[update_indices] = mangled_addr[update_indices]
         addr.set(addr_cpu)
 
@@ -423,6 +605,7 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
 
         return self._ob_shape
 
+
 class DerivativesKernel:
     def __init__(self, dtype, stream=None):
         if dtype == np.float32:
@@ -430,13 +613,14 @@ class DerivativesKernel:
         elif dtype == np.complex64:
             stype = "complex<float>"
         else:
-            raise NotImplementedError("delxf is only implemented for float32 and complex64")
-        
+            raise NotImplementedError(
+                "delxf is only implemented for float32 and complex64")
+
         self.queue = stream
         self.dtype = dtype
         self.last_axis_block = (256, 4, 1)
         self.mid_axis_block = (256, 4, 1)
-        
+
         self.delxf_last = load_kernel("delx_last", file="delx_last.cu", subs={
             'IS_FORWARD': 'true',
             'BDIM_X': str(self.last_axis_block[0]),
@@ -472,25 +656,26 @@ class DerivativesKernel:
 
         if axis == input.ndim - 1:
             flat_dim = np.int32(np.product(input.shape[0:-1]))
-            self.delxf_last(input, out, flat_dim, np.int32(input.shape[axis]), 
-                block=self.last_axis_block, 
-                grid=(
-                    int((flat_dim + self.last_axis_block[1] - 1) // self.last_axis_block[1]), 
-                    1, 1),
+            self.delxf_last(input, out, flat_dim, np.int32(input.shape[axis]),
+                            block=self.last_axis_block,
+                            grid=(
+                int((flat_dim +
+                     self.last_axis_block[1] - 1) // self.last_axis_block[1]),
+                1, 1),
                 stream=self.queue
             )
         else:
             lower_dim = np.int32(np.product(input.shape[(axis+1):]))
             higher_dim = np.int32(np.product(input.shape[:axis]))
-            gx = int((lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
+            gx = int(
+                (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
             gy = 1
             gz = int(higher_dim)
             self.delxf_mid(input, out, lower_dim, higher_dim, np.int32(input.shape[axis]),
-                block=self.mid_axis_block,
-                grid=(gx, gy, gz), 
-                stream=self.queue
-            )
-
+                           block=self.mid_axis_block,
+                           grid=(gx, gy, gz),
+                           stream=self.queue
+                           )
 
     def delxb(self, input, out, axis=-1):
         if input.dtype != self.dtype:
@@ -499,25 +684,26 @@ class DerivativesKernel:
         if axis < 0:
             axis = input.ndim + axis
         axis = np.int32(axis)
-        
+
         if axis == input.ndim - 1:
             flat_dim = np.int32(np.product(input.shape[0:-1]))
-            self.delxb_last(input, out, flat_dim, np.int32(input.shape[axis]), 
-                block=self.last_axis_block, 
-                grid=(
-                    int((flat_dim + self.last_axis_block[1] - 1) // self.last_axis_block[1]),
-                    1, 1),
+            self.delxb_last(input, out, flat_dim, np.int32(input.shape[axis]),
+                            block=self.last_axis_block,
+                            grid=(
+                int((flat_dim +
+                     self.last_axis_block[1] - 1) // self.last_axis_block[1]),
+                1, 1),
                 stream=self.queue
             )
         else:
             lower_dim = np.int32(np.product(input.shape[(axis+1):]))
             higher_dim = np.int32(np.product(input.shape[:axis]))
-            gx = int((lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
+            gx = int(
+                (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
             gy = 1
             gz = int(higher_dim)
             self.delxb_mid(input, out, lower_dim, higher_dim, np.int32(input.shape[axis]),
-                block=self.mid_axis_block,
-                grid=(gx, gy, gz),
-                stream=self.queue
-            )
-        
+                           block=self.mid_axis_block,
+                           grid=(gx, gy, gz),
+                           stream=self.queue
+                           )

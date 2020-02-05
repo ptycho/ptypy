@@ -183,6 +183,14 @@ class GradientDescentKernelTest(unittest.TestCase):
             exp_A2, GDK.gpu.LLden.get(),
             err_msg="`LLden` buffer (=A2) has not been updated as expected")
 
+    @unittest.skip('performance test')
+    def test_make_a012_performance(self):
+        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
+
+        GDK = GradientDescentKernel(b_f, addr.shape[1])
+        GDK.allocate()
+        GDK.make_a012(b_f, b_a, b_b, I)
+
     def test_fill_b(self):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
         Brenorm = 0.35
@@ -191,12 +199,13 @@ class GradientDescentKernelTest(unittest.TestCase):
         GDK = GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
         GDK.make_a012(b_f, b_a, b_b, I)
-        GDK.fill_b(Brenorm, w, B)
+        GDK.fill_b(Brenorm, w, B_dev)
         B[:] = B_dev.get()
 
         exp_B = np.array([4699.8,  3953.6, 10963.4], dtype=FLOAT_TYPE)
-        np.testing.assert_array_almost_equal(
-            exp_B, B,
+        np.testing.assert_allclose(
+            B, exp_B,
+            rtol=1e-7,
             err_msg="`B` has not been updated as expected")
 
     def test_error_reduce(self):

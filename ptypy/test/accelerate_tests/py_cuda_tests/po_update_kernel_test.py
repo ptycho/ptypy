@@ -39,6 +39,74 @@ class PoUpdateKernelTest(unittest.TestCase):
         self.ctx.pop()
         self.ctx.detach()
 
+    def prepare_arrays(self):
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  # object size y
+        I = C + npts_greater_than  # object size x
+
+        scan_pts = 2  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):  #
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        object_array_denominator = np.empty_like(object_array, dtype=FLOAT_TYPE)
+        for idx in range(G):
+            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2)  # + 1j * np.ones((H, I)) * (5 * idx + 2)
+
+        probe_denominator = np.empty_like(probe, dtype=FLOAT_TYPE)
+        for idx in range(D):
+            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2)  # + 1j * np.ones((E, F)) * (5 * idx + 2)
+
+        return (gpuarray.to_gpu(addr), 
+            gpuarray.to_gpu(object_array), 
+            gpuarray.to_gpu(object_array_denominator), 
+            gpuarray.to_gpu(probe), 
+            gpuarray.to_gpu(exit_wave), 
+            gpuarray.to_gpu(probe_denominator))
+
+
     def test_init(self):
 
         POUK = PoUpdateKernel()
@@ -536,6 +604,93 @@ class PoUpdateKernelTest(unittest.TestCase):
 
     def test_pr_update_tiled_UNITY(self):
         self.pr_update_UNITY_tester(atomics=False)
+
+
+    def pr_update_ML_tester(self, atomics=False):
+        '''
+        setup
+        '''
+        addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
+        '''
+        test
+        '''
+        POUK = PoUpdateKernel()
+
+        POUK.allocate()  # this doesn't do anything, but is the call pattern.
+
+        if not atomics:
+            addr2 = np.ascontiguousarray(np.transpose(addr.get(), (2, 3, 0, 1)))
+            addr = gpuarray.to_gpu(addr2)
+
+        POUK.pr_update_ML(addr, probe, object_array, exit_wave, atomics=atomics)
+
+        expected_probe = np.array([[[625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j]],
+
+                                   [[786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j]]],
+                                  dtype=COMPLEX_TYPE)
+
+        np.testing.assert_array_equal(probe.get(), expected_probe,
+                                      err_msg="The probe has not been updated as expected")
+
+    def test_pr_update_ML_atomics_REGRESSION(self):
+        self.pr_update_ML_tester(True)
+
+    def test_pr_update_ML_tiled_REGRESSION(self):
+        self.pr_update_ML_tester(False)
+
+    def ob_update_ML_tester(self, atomics=True):
+        '''
+        setup
+        '''
+        addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
+        '''
+        test
+        '''
+        POUK = PoUpdateKernel()
+
+        POUK.allocate()  # this doesn't do anything, but is the call pattern.
+
+        if not atomics:
+            addr2 = np.ascontiguousarray(np.transpose(addr.get(), (2, 3, 0, 1)))
+            addr = gpuarray.to_gpu(addr2)
+
+        POUK.ob_update_ML(addr, object_array, probe, exit_wave, atomics=atomics)
+
+        expected_object_array = np.array(
+            [[[29. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 77. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [125. + 1.j, 297. + 1.j, 297. + 1.j, 297. + 1.j, 297. + 1.j, 173. + 1.j, 1. + 1.j],
+              [1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j]],
+
+             [[44. + 4.j, 132. + 4.j, 132. + 4.j, 132. + 4.j, 132. + 4.j, 92. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [140. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 188. + 4.j, 4. + 4.j],
+              [4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j]]],
+            dtype=COMPLEX_TYPE)
+
+        np.testing.assert_array_equal(object_array.get(), expected_object_array,
+                                      err_msg="The object array has not been updated as expected")
+
+    def test_ob_update_ML_atomics_REGRESSION(self):
+        self.ob_update_ML_tester(True)
+
+    def test_ob_update_ML_tiled_REGRESSION(self):
+        self.ob_update_ML_tester(False)
+
 
 if __name__ == '__main__':
     unittest.main()
