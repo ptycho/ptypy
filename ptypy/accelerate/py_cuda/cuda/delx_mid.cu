@@ -1,5 +1,4 @@
 #include <thrust/complex.h>
-#include <stdio.h>
 using thrust::complex;
 
 extern "C" __global__ void delx_mid(

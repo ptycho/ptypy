@@ -8,7 +8,6 @@ using thrust::complex;
 #define obj_roi_row(k) addr[4 * num_pods + (k)]
 #define obj_roi_column(k) addr[5 * num_pods + (k)]
 
-
 extern "C" __global__ void ob_update2_ML(int pr_sh,
                                          int ob_modes,
                                          int num_pods,
@@ -34,7 +33,7 @@ extern "C" __global__ void ob_update2_ML(int pr_sh,
 
   if (y < ob_sh && z < ob_sh)
   {
-    #pragma unroll
+#pragma unroll
     for (int i = 0; i < NUM_MODES; ++i)
     {
       auto idx = i * dy * dz + y * dz + z;
@@ -72,7 +71,7 @@ extern "C" __global__ void ob_update2_ML(int pr_sh,
     if (y >= ob_sh || z >= ob_sh)
       continue;
 
-    #pragma unroll 4
+#pragma unroll 4
     for (int i = 0; i < mi; ++i)
     {
       int* ad = addresses + i * 5;

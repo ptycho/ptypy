@@ -33,7 +33,7 @@ extern "C" __global__ void pr_update2_ML(int pr_sh,
 
   if (y < pr_sh && z < pr_sh)
   {
-#   pragma unroll
+#pragma unroll
     for (int i = 0; i < NUM_MODES; ++i)
     {
       auto idx = i * dy * dz + y * dz + z;
@@ -71,7 +71,7 @@ extern "C" __global__ void pr_update2_ML(int pr_sh,
     if (y >= pr_sh || z >= pr_sh)
       continue;
 
-#   pragma unroll 4
+#pragma unroll 4
     for (int i = 0; i < mi; ++i)
     {
       int* ad = addresses + i * 5;
