@@ -29,13 +29,15 @@ class PyCudaTest(unittest.TestCase):
         self.ctx = make_default_context()
         self.stream = cuda.Stream()
         # enable assertions in CUDA kernels for testing
-        self.opts_old = py_cuda.debug_options.copy()
-        if '-DNDEBUG' in py_cuda.debug_options:
-            py_cuda.debug_options.remove('-DNDEBUG')
+        if not 'perf' in self._testMethodName:
+            self.opts_old = py_cuda.debug_options.copy()
+            if '-DNDEBUG' in py_cuda.debug_options:
+                py_cuda.debug_options.remove('-DNDEBUG')
 
     def tearDown(self):
         np.set_printoptions()
         self.ctx.pop()
         self.ctx.detach()
-        py_cuda.debug_options = self.opts_old
+        if not 'perf' in self._testMethodName:
+            py_cuda.debug_options = self.opts_old
 
