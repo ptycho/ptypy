@@ -173,7 +173,7 @@ class GradientDescentKernel(BaseKernel):
         self.npy.Imodel = np.zeros(self.fshape, dtype=self.ftype)
 
 
-    def make_model(self, b_aux):
+    def make_model(self, b_aux, addr):
 
         # reference shape (= GPU global dims)
         sh = self.fshape
@@ -186,7 +186,7 @@ class GradientDescentKernel(BaseKernel):
         tf = aux.reshape(sh[0], self.nmodes, sh[1], sh[2])
         Imodel[:] = (np.abs(tf) ** 2).sum(1)
 
-    def make_a012(self, b_f, b_a, b_b, I):
+    def make_a012(self, b_f, b_a, b_b, addr, I):
 
         # reference shape (= GPU global dims)
         sh = I.shape
@@ -217,7 +217,7 @@ class GradientDescentKernel(BaseKernel):
         A2[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) - I
         return
 
-    def fill_b(self, Brenorm, w, B):
+    def fill_b(self, addr, Brenorm, w, B):
 
         # don't know the best dims but this element wise anyway
 
@@ -237,7 +237,7 @@ class GradientDescentKernel(BaseKernel):
         B[2] += np.dot(w.flat, (A1 ** 2 + 2 * A0 * A2).flat) * Brenorm
         return
 
-    def error_reduce(self, err_sum):
+    def error_reduce(self, addr, err_sum):
 
         # reference shape  (= GPU global dims)
         sh = err_sum.shape
@@ -254,7 +254,7 @@ class GradientDescentKernel(BaseKernel):
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
 
-    def main(self, b_aux, w, I):
+    def main(self, b_aux, addr, w, I):
 
         nmodes = self.nmodes
         # stopper

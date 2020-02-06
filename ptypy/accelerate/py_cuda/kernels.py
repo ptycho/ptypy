@@ -248,10 +248,10 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.gpu.Imodel = gpuarray.zeros(self.fshape, dtype=self.ftype)
         # temporary array for the reduction in fill_b
         self.gpu.Btmp = gpuarray.zeros(
-            (3, (np.prod(self.fshape) + 1023) // 1024),
+            (3, (np.prod(self.fshape)*self.nmodes + 1023) // 1024),
             dtype=np.float64)
 
-    def make_model(self, b_aux):
+    def make_model(self, b_aux, addr):
         # reference shape
         sh = self.fshape
 
@@ -269,7 +269,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                              grid=(int((x + bx - 1) // bx), 1, int(z)),
                              stream=self.queue)
 
-    def make_a012(self, b_f, b_a, b_b, I):
+    def make_a012(self, b_f, b_a, b_b, addr, I):
         # reference shape (= GPU global dims)
         sh = I.shape
 
@@ -291,7 +291,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                             grid=(int((x + bx - 1) // bx), 1, int(z)),
                             stream=self.queue)
 
-    def fill_b(self, Brenorm, w, B):
+    def fill_b(self, addr, Brenorm, w, B):
         # stopper
         maxz = w.shape[0]
 
@@ -301,6 +301,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
 
         sz = np.int32(np.prod(w.shape))
         blks = int((sz + 1023) // 1024)
+        # print('blocks={}, Btmp={}, fshape={}, wshape={}, modes={}'.format(blks, self.gpu.Btmp.shape, self.fshape, w.shape, self.nmodes))
         assert self.gpu.Btmp.shape[1] >= blks
         # 2-stage reduction - even if 1 block, as we have a += in second kernel
         self.fill_b_cuda(A0, A1, A2, w,
@@ -315,7 +316,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                 grid=(1, 1, 1),
                                 stream=self.queue)
 
-    def error_reduce(self, err_sum):
+    def error_reduce(self, addr, err_sum):
         # reference shape  (= GPU global dims)
         sh = err_sum.shape
 
@@ -325,16 +326,19 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         # batch buffers
         ferr = self.gpu.LLerr
 
+        # print('maxz={}, ferr={}'.format(maxz, ferr.shape))
+        assert(maxz <= np.prod(ferr.shape[:-2]))
+
         # Reduces the LL error along the last 2 dimensions.fd
         self.error_reduce_cuda(ferr, err_sum,
-                               np.int32(ferr.shape[-2]
-                                        ), np.int32(ferr.shape[-1]),
+                               np.int32(ferr.shape[-2]), 
+                               np.int32(ferr.shape[-1]),
                                block=(32, 32, 1),
                                grid=(int(maxz), 1, 1),
                                shared=32*32*4,
                                stream=self.queue)
 
-    def main(self, b_aux, w, I):
+    def main(self, b_aux, addr, w, I):
         nmodes = self.nmodes
         # stopper
         maxz = I.shape[0]

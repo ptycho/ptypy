@@ -30,14 +30,14 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
 
             scan_pts = 2  # one dimensional scan point number
         else:
-            B = 256
-            C = 256
-            D = 5
+            B = 128
+            C = 128
+            D = 2
             E = B
             F = C
-            npts_greater_than = 500
+            npts_greater_than = 1215
             G = 4
-            scan_pts = 10
+            scan_pts = 14
 
         H = B + npts_greater_than  # object size y
         I = C + npts_greater_than  # object size x
@@ -78,6 +78,10 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
                     mode_idx += 1
                     exit_idx += 1
             position_idx += 1
+        if performance:
+            print('addr={}, obj={}, pr={}, ex={}'.format(addr.shape, object_array.shape, probe.shape, exit_wave.shape))
+            # assert False
+
         return addr, object_array, probe, exit_wave
 
     def copy_to_gpu(self, addr, object_array, probe, exit_wave):
@@ -500,6 +504,7 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
     @unittest.skipIf(not perfrun, "performance test")
     def test_build_aux_no_ex_performance(self):
         addr, object_array, probe, exit_wave = self.prepare_arrays(performance=True)
+        addr, object_array, probe, exit_wave = self.copy_to_gpu(addr, object_array, probe, exit_wave)
         auxiliary_wave = gpuarray.zeros_like(exit_wave)
 
         AWK = AuxiliaryWaveKernel(self.stream)

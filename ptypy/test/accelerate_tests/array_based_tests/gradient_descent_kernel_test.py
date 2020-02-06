@@ -75,7 +75,7 @@ class GradientDescentKernelTest(unittest.TestCase):
 
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_model(b_f)
+        GDK.make_model(b_f, addr)
         #print('Im',repr(GDK.npy.Imodel))
         exp_Imodel = np.array([[[ 1.,  1.,  1.],
         [ 3.,  3.,  3.],
@@ -101,7 +101,7 @@ class GradientDescentKernelTest(unittest.TestCase):
 
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_a012(b_f, b_a, b_b, I)
+        GDK.make_a012(b_f, b_a, b_b, addr, I)
         print('A0',repr(GDK.npy.Imodel))
         print('A1',repr(GDK.npy.LLerr))
         print('A2',repr(GDK.npy.LLden))
@@ -164,8 +164,8 @@ class GradientDescentKernelTest(unittest.TestCase):
         B = np.zeros((3,), dtype=FLOAT_TYPE)
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_a012(b_f, b_a, b_b, I)
-        GDK.fill_b(Brenorm, w, B)
+        GDK.make_a012(b_f, b_a, b_b, addr, I)
+        GDK.fill_b(addr, Brenorm, w, B)
         #print('B',repr(B))
         exp_B = np.array([ 4699.8,  3953.6, 10963.4], dtype=FLOAT_TYPE)
         np.testing.assert_array_almost_equal(exp_B, B,
@@ -177,7 +177,7 @@ class GradientDescentKernelTest(unittest.TestCase):
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
         GDK.npy.LLerr = np.indices(GDK.npy.LLerr.shape, dtype=FLOAT_TYPE)[0]
-        GDK.error_reduce(err_sum)
+        GDK.error_reduce(addr, err_sum)
         #print('Err',repr(err_sum))
         exp_err = np.array([ 0.,  9., 18.], dtype=FLOAT_TYPE)
         np.testing.assert_array_almost_equal(exp_err, err_sum,
@@ -188,7 +188,7 @@ class GradientDescentKernelTest(unittest.TestCase):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.main(b_f, w, I)
+        GDK.main(b_f, addr, w, I)
         #print('B_F',repr(b_f))
         #print('LL',repr(GDK.npy.LLerr))
         exp_b_f = np.array([[[  0. +0.j,   0. +0.j,   0. +0.j],
