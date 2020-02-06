@@ -1,14 +1,14 @@
 #include <cassert>
 
-extern "C" __global__ void fill_b_reduce(const FTYPE* in, FTYPE* B, int blocks)
+extern "C" __global__ void fill_b_reduce(const double* in, FTYPE* B, int blocks)
 {
   // always a single thread block for 2nd stage
   assert(gridDim.x == 1);
   int tx = threadIdx.x;
 
-  __shared__ FTYPE smem[3][BDIM_X];
+  __shared__ double smem[3][BDIM_X];
 
-  auto sum0 = FTYPE(), sum1 = FTYPE(), sum2 = FTYPE();
+  double sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
   for (int ix = tx; ix < blocks; ix += blockDim.x)
   {
     sum0 += in[ix * 3 + 0];
@@ -37,8 +37,8 @@ extern "C" __global__ void fill_b_reduce(const FTYPE* in, FTYPE* B, int blocks)
 
   if (tx == 0)
   {
-    B[0] += smem[0][0];
-    B[1] += smem[1][0];
-    B[2] += smem[2][0];
+    B[0] += FTYPE(smem[0][0]);
+    B[1] += FTYPE(smem[1][0]);
+    B[2] += FTYPE(smem[2][0]);
   }
 }

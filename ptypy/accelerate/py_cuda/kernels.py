@@ -249,7 +249,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         # temporary array for the reduction in fill_b
         self.gpu.Btmp = gpuarray.zeros(
             (3, (np.prod(self.fshape) + 1023) // 1024),
-            dtype=self.ftype)
+            dtype=np.float64)
 
     def make_model(self, b_aux):
         # reference shape

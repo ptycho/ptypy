@@ -1,18 +1,19 @@
-
 extern "C" __global__ void fill_b(const FTYPE* A0,
                                   const FTYPE* A1,
                                   const FTYPE* A2,
                                   const FTYPE* w,
                                   FTYPE Brenorm,
                                   int size,
-                                  FTYPE* out)
+                                  double* out)
 {
   int tx = threadIdx.x;
   int ix = tx + blockIdx.x * blockDim.x;
-  __shared__ FTYPE smem[3][BDIM_X];
+  __shared__ double smem[3][BDIM_X];
 
   if (ix < size)
   {
+    // FTYPE(2) to make sure it's float in single precision and doesn't
+    // accidentally promote the equation to double
     smem[0][tx] = w[ix] * A0[ix] * A0[ix];
     smem[1][tx] = w[ix] * FTYPE(2) * A0[ix] * A1[ix];
     smem[2][tx] = w[ix] * (A1[ix] * A1[ix] + FTYPE(2) * A0[ix] * A2[ix]);
@@ -42,8 +43,8 @@ extern "C" __global__ void fill_b(const FTYPE* A0,
 
   if (tx == 0)
   {
-    out[blockIdx.x * 3 + 0] = smem[0][0] * Brenorm;
-    out[blockIdx.x * 3 + 1] = smem[1][0] * Brenorm;
-    out[blockIdx.x * 3 + 2] = smem[2][0] * Brenorm;
+    out[blockIdx.x * 3 + 0] = smem[0][0] * double(Brenorm);
+    out[blockIdx.x * 3 + 1] = smem[1][0] * double(Brenorm);
+    out[blockIdx.x * 3 + 2] = smem[2][0] * double(Brenorm);
   }
 }

@@ -21,7 +21,7 @@ extern "C" __global__ void make_a012(const CTYPE* f,
 
   if (iz >= maxz)
   {
-    A0[iz * x + ix] = FTYPE(0);
+    A0[iz * x + ix] = FTYPE(0);  // make sure it's the right type (double/float)
     A1[iz * x + ix] = FTYPE(0);
     A2[iz * x + ix] = FTYPE(0);
     return;
@@ -41,6 +41,8 @@ extern "C" __global__ void make_a012(const CTYPE* f,
     // 2 * real(f * conj(a))
     sumtf1 += FTYPE(2) * (fv.real() * av.real() + fv.imag() * av.imag());
 
+    // use FTYPE(2) to make sure double creaps into a float calculation
+    // as 2.0 * would make everything double.
     auto bv = b[iz * y * x + iy * x + ix];
     // 2 * real(f * conj(b)) + abs(a)^2
     sumtf2 += FTYPE(2) * (fv.real() * bv.real() + fv.imag() * bv.imag()) +
