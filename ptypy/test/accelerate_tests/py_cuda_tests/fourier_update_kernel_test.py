@@ -5,38 +5,19 @@
 
 import unittest
 import numpy as np
+from . import PyCudaTest, have_pycuda
 
-def have_pycuda():
-    try:
-        import pycuda.driver
-        return True
-    except:
-        return False
 
 if have_pycuda():
-    import pycuda.driver as cuda
     from pycuda import gpuarray
-    from pycuda.tools import make_default_context
     from ptypy.accelerate.py_cuda.kernels import FourierUpdateKernel
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
 INT_TYPE = np.int32
 
+class FourierUpdateKernelTest(PyCudaTest):
 
-@unittest.skipIf(not have_pycuda(), "no PyCUDA or GPU drivers available")
-class FourierUpdateKernelTest(unittest.TestCase):
-
-    def setUp(self):
-        import sys
-        np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
-        cuda.init()
-        self.ctx = make_default_context()
-
-    def tearDown(self):
-        np.set_printoptions()
-        self.ctx.pop()
-        self.ctx.detach()
 
     def test_fmag_all_update_UNITY(self):
         '''
@@ -132,12 +113,6 @@ class FourierUpdateKernelTest(unittest.TestCase):
                                                                       "is \n%s, \nbut gpu f is \n %s, \n mask is:\n %s \n" %  (repr(expected_f),
                                                                                                                                repr(measured_f),
                                                                                                                                repr(mask)))
-
-        f_d.gpudata.free()
-        fmag_d.gpudata.free()
-        mask_d.gpudata.free()
-        err_fmag_d.gpudata.free()
-        addr_d.gpudata.free()
 
     def test_fourier_error_UNITY(self):
         '''
@@ -237,15 +212,6 @@ class FourierUpdateKernelTest(unittest.TestCase):
                                                                             repr(expected_ferr),
                                                                             repr(measured_ferr)))
 
-        f_d.gpudata.free()
-        fmag_d.gpudata.free()
-        fdev_d.gpudata.free()
-        ferr_d.gpudata.free()
-        mask_d.gpudata.free()
-
-        addr_d.gpudata.free()
-
-
     def test_error_reduce_UNITY(self):
         '''
         setup
@@ -318,8 +284,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         mask_sum_d = gpuarray.to_gpu(mask_sum)
         pbound_set = 0.9
         nFUK = npFourierUpdateKernel(f, nmodes=total_number_modes)
-        stream =cuda.Stream()
-        FUK = FourierUpdateKernel(f, nmodes=total_number_modes, queue_thread=stream)
+        FUK = FourierUpdateKernel(f, nmodes=total_number_modes, queue_thread=self.stream)
 
         nFUK.allocate()
         FUK.allocate()
@@ -331,8 +296,6 @@ class FourierUpdateKernelTest(unittest.TestCase):
         FUK.fourier_error(f_d, addr_d, fmag_d, mask_d, mask_sum_d)
         FUK.error_reduce(addr_d, err_fmag_d)
 
-        stream.synchronize()
-
         expected_err_fmag = err_fmag
         measured_err_fmag = err_fmag_d.get()
 
@@ -341,13 +304,6 @@ class FourierUpdateKernelTest(unittest.TestCase):
                                                                             "is \n%s, \nbut gpu err_fmag is \n %s, \n " % (
                                                                             repr(expected_err_fmag),
                                                                             repr(measured_err_fmag)))
-
-        f_d.gpudata.free()
-        fmag_d.gpudata.free()
-        mask_d.gpudata.free()
-        addr_d.gpudata.free()
-        err_fmag_d.gpudata.free()
-
 
     def test_error_reduce(self):
         # array from the previous test

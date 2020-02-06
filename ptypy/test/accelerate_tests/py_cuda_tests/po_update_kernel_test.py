@@ -5,18 +5,10 @@
 
 import unittest
 import numpy as np
-
-def have_pycuda():
-    try:
-        import pycuda.driver
-        return True
-    except:
-        return False
+from . import PyCudaTest, have_pycuda
 
 if have_pycuda():
-    import pycuda.driver as cuda
     from pycuda import gpuarray
-    from pycuda.tools import make_default_context
     from ptypy.accelerate.py_cuda.kernels import PoUpdateKernel
 
 COMPLEX_TYPE = np.complex64
@@ -24,20 +16,7 @@ FLOAT_TYPE = np.float32
 INT_TYPE = np.int32
 
 
-@unittest.skipIf(not have_pycuda(), "no PyCUDA or GPU drivers available")
-class PoUpdateKernelTest(unittest.TestCase):
-
-    def setUp(self):
-        import sys
-        np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
-        cuda.init()
-        self.ctx = make_default_context()
-        self.ctx.push()
-
-    def tearDown(self):
-        np.set_printoptions()
-        self.ctx.pop()
-        self.ctx.detach()
+class PoUpdateKernelTest(PyCudaTest):
 
     def prepare_arrays(self):
         B = 5  # frame size y
@@ -246,11 +225,6 @@ class PoUpdateKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(object_array_denominator_dev.get(), expected_object_array_denominator,
                                       err_msg="The object array denominatorhas not been updated as expected")
 
-        object_array_dev.gpudata.free()
-        object_array_denominator_dev.gpudata.free()
-        probe_dev.gpudata.free()
-        exit_wave_dev.gpudata.free()
-        addr_dev.gpudata.free()
 
     def test_ob_update_atomics_REGRESSION(self):
         self.ob_update_REGRESSION_tester(atomics=True)
@@ -355,11 +329,6 @@ class PoUpdateKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(object_array_denominator, object_array_denominator_dev.get(),
                                       err_msg="The object array denominatorhas not been updated as expected")
 
-        object_array_dev.gpudata.free()
-        object_array_denominator_dev.gpudata.free()
-        probe_dev.gpudata.free()
-        exit_wave_dev.gpudata.free()
-        addr_dev.gpudata.free()
 
     def test_ob_update_atomics_UNITY(self):
         self.ob_update_UNITY_tester(atomics=True)
@@ -485,11 +454,6 @@ class PoUpdateKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(probe_denominator_dev.get(), expected_probe_denominator,
                                       err_msg="The probe denominatorhas not been updated as expected")
 
-        object_array_dev.gpudata.free()
-        probe_denominator_dev.gpudata.free()
-        probe_dev.gpudata.free()
-        exit_wave_dev.gpudata.free()
-        addr_dev.gpudata.free()
 
     def test_pr_update_atomics_REGRESSION(self):
         self.pr_update_REGRESSION_tester(atomics=True)
@@ -593,11 +557,6 @@ class PoUpdateKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(probe_denominator, probe_denominator_dev.get(),
                                       err_msg="The probe denominatorhas not been updated as expected")
 
-        object_array_dev.gpudata.free()
-        probe_denominator_dev.gpudata.free()
-        probe_dev.gpudata.free()
-        exit_wave_dev.gpudata.free()
-        addr_dev.gpudata.free()
 
     def test_pr_update_atomics_UNITY(self):
         self.pr_update_UNITY_tester(atomics=True)

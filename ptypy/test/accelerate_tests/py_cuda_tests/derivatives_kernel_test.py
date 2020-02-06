@@ -5,19 +5,10 @@
 
 import unittest
 import numpy as np
-from . import perfrun
-
-def have_pycuda():
-    try:
-        import pycuda.driver
-        return True
-    except:
-        return False
+from . import perfrun, PyCudaTest, have_pycuda
 
 if have_pycuda():
-    import pycuda.driver as cuda
     from pycuda import gpuarray
-    from pycuda.tools import make_default_context
     from ptypy.accelerate.py_cuda.kernels import DerivativesKernel
 from ptypy.utils.math_utils import delxf, delxb 
 
@@ -25,21 +16,7 @@ COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
 INT_TYPE = np.int32
 
-
-@unittest.skipIf(not have_pycuda(), "no PyCUDA or GPU drivers available")
-class DerivativesKernelTest(unittest.TestCase):
-
-    def setUp(self):
-        import sys
-        np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
-        cuda.init()
-        self.ctx = make_default_context()
-        self.stream = cuda.Stream()
-
-    def tearDown(self):
-        np.set_printoptions()
-        self.ctx.pop()
-        self.ctx.detach()
+class DerivativesKernelTest(PyCudaTest):
 
     def test_delxf_1dim(self):
         inp = np.array([0, 1, 2, 4, 8, 0, 6], dtype=np.float32)
