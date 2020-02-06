@@ -29,7 +29,7 @@ p.scans.MF.data.num_frames = 200
 p.scans.MF.data.save = None
 
 # position distance in fraction of illumination frame
-p.scans.MF.data.density = 0.1
+p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
 p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
