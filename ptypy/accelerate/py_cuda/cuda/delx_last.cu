@@ -1,6 +1,15 @@
 #include <thrust/complex.h>
 using thrust::complex;
 
+/** This is the special case for when we diff along the last axis.
+ * 
+ * Here, flat_dim is all other dims multiplied together, and axis_dim
+ * is the dimension along which we diff. 
+ * To ensure that we stay coalesced (compared to delx_mid), 
+ * we use the x index to iterate within each thread block (the loop).
+ * Otherwise it follows the same ideas as delx_mid - please read the
+ * description there.
+  */
 extern "C" __global__ void delx_last(const DTYPE *__restrict__ input,
                                      DTYPE *output,
                                      int flat_dim,
@@ -40,8 +49,7 @@ extern "C" __global__ void delx_last(const DTYPE *__restrict__ input,
         {
           plus1 = shared_data[ty * BDIM_X + tx + 1];
         }
-        else if (ix ==
-                 axis_dim - 1)  // end of axis - next same as current to get 0
+        else if (ix == axis_dim - 1)  // end of axis - same as current to get 0
         {
           plus1 = shared_data[ty * BDIM_X + tx];
         }
