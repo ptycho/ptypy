@@ -205,9 +205,10 @@ class ML(PositionCorrectionEngine):
             if self.p.probe_update_start <= self.curiter:
                 # Apply probe support if needed
                 for name, s in new_pr_grad.storages.items():
-                    support = self.probe_support.get(name)
-                    if support is not None:
-                        s.data *= support
+                    self.support_constraint(s)
+                    #support = self.probe_support.get(name)
+                    #if support is not None:
+                    #    s.data *= support
             else:
                 new_pr_grad.fill(0.)
 

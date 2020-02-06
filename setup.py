@@ -15,7 +15,7 @@ Operating System :: Unix
 MAJOR               = 0
 MINOR               = 4
 MICRO               = 0
-ISRELEASED          = True
+ISRELEASED          = False
 VERSION             = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 
 #import os
@@ -39,7 +39,7 @@ if not release:
     except:
         pass
     else:
-        version += git_commit.strip()
+        version += git_commit.strip().decode()
 
 """
     a = open(filename, 'w')
