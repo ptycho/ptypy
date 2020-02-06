@@ -29,7 +29,7 @@ p.scans.MF.data.num_frames = 200
 p.scans.MF.data.save = None
 
 # position distance in fraction of illumination frame
-p.scans.MF.data.density = 0.2
+p.scans.MF.data.density = 0.1
 # total number of photon in empty beam
 p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
@@ -46,14 +46,4 @@ p.engines.engine00.numiter = 80
 
 # prepare and run
 P = Ptycho(p,level=4)
-
-# Update PODs                                                                                                                          
-#for pod in P.pods.values():
-#    if not pod.active:
-#        continue
-#    pod.exit = pod.probe * pod.object
-
-#from ptypy import debug
-#debug.ipshell()
-
 P.run()

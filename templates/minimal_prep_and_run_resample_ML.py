@@ -43,22 +43,16 @@ p.scans.MF.resample = 2
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'ML'
-p.engines.engine00.reg_del2 = False                      # Whether to use a Gaussian prior (smoothing) regularizer
+p.engines.engine00.reg_del2 = True                  # Whether to use a Gaussian prior (smoothing) regularizer
 p.engines.engine00.reg_del2_amplitude = 1.             # Amplitude of the Gaussian prior if used
-p.engines.engine00.scale_precond = False
-#p.engines.engine00.scale_probe_object = 1.
-#p.engines.engine00.smooth_gradient = 20.
-#p.engines.engine00.smooth_gradient_decay = 1/50.
-p.engines.engine00.floating_intensities = False
+p.engines.engine00.scale_precond = True
+p.engines.engine00.scale_probe_object = 1.
+p.engines.engine00.smooth_gradient = 20.
+p.engines.engine00.smooth_gradient_decay = 1/50.
+p.engines.engine00.floating_intensities = True
 p.engines.engine00.numiter = 300
 
 # prepare and run
 P = Ptycho(p,level=4)
-
-# Update PODs                                                                                                                          
-#for pod in P.pods.values():
-#    if not pod.active:
-#        continue
-#    pod.exit = pod.probe * pod.object
 P.run()
 
