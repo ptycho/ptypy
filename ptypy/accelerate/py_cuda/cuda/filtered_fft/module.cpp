@@ -45,6 +45,12 @@ public:
     int getRows() const { return fft_->getRows(); }
     int getColumns() const { return fft_->getColumns(); }
     bool isForward() const { return fft_->isForward(); }
+    void setStream(std::size_t stream) {
+        fft_->setStream(reinterpret_cast<cudaStream_t>(stream));
+    }
+    std::size_t getStream() const {
+        return reinterpret_cast<std::size_t>(fft_->getStream());
+    }
 
     void fft(std::size_t in_ptr, std::size_t out_ptr)
     {
@@ -102,6 +108,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_property_readonly("batches", &FilteredFFTPython::getBatches)
         .def_property_readonly("rows", &FilteredFFTPython::getRows)
         .def_property_readonly("columns", &FilteredFFTPython::getColumns)
-        .def_property_readonly("is_forward", &FilteredFFTPython::isForward);
+        .def_property_readonly("is_forward", &FilteredFFTPython::isForward)
+        .def_property("queue", &FilteredFFTPython::getStream, &FilteredFFTPython::setStream);
 }
 

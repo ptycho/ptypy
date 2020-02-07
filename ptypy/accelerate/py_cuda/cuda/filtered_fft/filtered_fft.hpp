@@ -13,6 +13,8 @@ public:
     virtual int getRows() const = 0;
     virtual int getColumns() const = 0;
     virtual bool isForward() const = 0;
+    virtual void setStream(cudaStream_t stream) = 0;
+    virtual cudaStream_t getStream() const = 0;
     virtual ~FilteredFFT() {}
 };
 

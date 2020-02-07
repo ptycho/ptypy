@@ -12,7 +12,7 @@ class FFT(object):
                  symmetric=True,
                  forward=True):
 
-        self.queue = queue
+        self._queue = queue
         from pycuda import gpuarray
         ## reikna
         from reikna import cluda
@@ -58,33 +58,53 @@ class FFT(object):
         )
 
         if pre_fft is None and post_fft is None:
-            self._ftreikna = ftreikna.compile(thr)
-            self.ft = lambda x, y: self._ftreikna(y, scale, x, 0)
-            self.ift = lambda x, y: self._ftreikna(y, iscale, x, 1)
-
+            self.pre_fft = self.post_fft = None
         elif pre_fft is not None and post_fft is None:
             self.pre_fft = thr.to_device(pre_fft)
+            self.post_fft = None
             ftreikna.parameter.input.connect(tr, tr.output, pre_fft=tr.fac, data=tr.input)
-            self._ftreikna = ftreikna.compile(thr)
-            self.ft = lambda x, y: self._ftreikna(y, scale, self.pre_fft, x, 0)
-            self.ift = lambda x, y: self._ftreikna(y, iscale, self.pre_fft, x, 1)
-
         elif pre_fft is None and post_fft is not None:
             self.post_fft = thr.to_device(post_fft)
+            self.pre_fft = None
             ftreikna.parameter.out.connect(tr, tr.input, post_fft=tr.fac, result=tr.output)
-            self._ftreikna = ftreikna.compile(thr)
-            self.ft = lambda x, y: self._ftreikna(y, self.post_fft, scale, x, 0)
-            self.ift = lambda x, y: self._ftreikna(y, self.post_fft, iscale, x, 1)
-
         else:
             self.pre_fft = thr.to_device(pre_fft)
             self.post_fft = thr.to_device(post_fft)
             ftreikna.parameter.input.connect(tr, tr.output, pre_fft=tr.fac, data=tr.input)
             ftreikna.parameter.out.connect(tr, tr.input, post_fft=tr.fac, result=tr.output)
-            # print self._ftreikna.signature.parameters.keys()
-            self._ftreikna = ftreikna.compile(thr)
-            self.ft = lambda x, y: self._ftreikna(y, self.post_fft, scale, self.pre_fft, x, 0)
-            self.ift = lambda x, y: self._ftreikna(y, self.post_fft, iscale, self.pre_fft, x, 1)
+        
+        self._ftreikna_raw = ftreikna
+        self._scale = scale
+        self._iscale = iscale
+        self._set_stream(thr)
+
+    @property
+    def queue(self):
+        return self._queue
+
+    @queue.setter
+    def queue(self, stream):
+        self._queue = stream
+        from reikna import cluda
+        api = cluda.cuda_api()
+        thr = api.Thread(stream)
+        self._set_stream(thr)
+
+    def _set_stream(self, thr):
+        self._ftreikna = self._ftreikna_raw.compile(thr)
+
+        if self.pre_fft is None and self.post_fft is None:
+            self.ft = lambda x, y: self._ftreikna(y, self._scale, x, 0)
+            self.ift = lambda x, y: self._ftreikna(y, self._iscale, x, 1)
+        elif self.pre_fft is not None and self.post_fft is None:
+            self.ft = lambda x, y: self._ftreikna(y, self._scale, self.pre_fft, x, 0)
+            self.ift = lambda x, y: self._ftreikna(y, self._iscale, self.pre_fft, x, 1)
+        elif self.pre_fft is None and self.post_fft is not None:
+            self.ft = lambda x, y: self._ftreikna(y, self.post_fft, self._scale, x, 0)
+            self.ift = lambda x, y: self._ftreikna(y, self.post_fft, self._iscale, x, 1)
+        else:
+            self.ft = lambda x, y: self._ftreikna(y, self.post_fft, self._scale, self.pre_fft, x, 0)
+            self.ift = lambda x, y: self._ftreikna(y, self.post_fft, self._iscale, self.pre_fft, x, 1)
 
 
     # self.queue = queue

@@ -67,6 +67,13 @@ public:
     int getRows() const override { return ROWS; }
     int getColumns() const override { return COLUMNS; }
     bool isForward() const override { return IS_FORWARD; }
+    void setStream(cudaStream_t stream) override {
+        stream_ = stream;
+        cudaCheck(cufftSetStream(plan_, stream));
+    };
+    virtual cudaStream_t getStream() const {
+        return stream_;
+    }
 
     /// Run the FFT (forward) - can be in-place
     void fft(complex<float>* input, complex<float>* output) override
