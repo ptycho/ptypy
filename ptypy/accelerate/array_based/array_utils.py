@@ -5,6 +5,19 @@ import numpy as np
 from scipy import ndimage as ndi
 
 
+def dot(A, B, acc_dtype=np.float64):
+    assert A.dtype == B.dtype, "Input arrays must of same data type"
+    if np.iscomplexobj(B):
+        out = np.sum(np.multiply(A, B.conj()).real, dtype=acc_dtype)
+    else:
+        out = np.sum(np.multiply(A, B), dtype=acc_dtype)
+    return out
+
+
+def norm2(A):
+    return dot(A, A)
+
+
 def abs2(input):
     '''
     

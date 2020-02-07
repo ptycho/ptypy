@@ -11,6 +11,12 @@ from ptypy.accelerate.array_based import array_utils as au
 
 class ArrayUtilsTest(unittest.TestCase):
 
+    def test_dot_resolution(self):
+        X,Y,Z = np.indices((3,3,1001), dtype=np.float32)
+        A = 10 ** Y + 1j * 10 ** X
+        out = au.dot(A, A)
+        np.testing.assert_array_equal(out, 60666606.0)
+
     def test_abs2_real_input(self):
         single_dim = 50.0
         npts = single_dim ** 3
