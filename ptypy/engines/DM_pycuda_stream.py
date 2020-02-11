@@ -25,7 +25,7 @@ from pycuda.tools import DeviceMemoryPool
 MPI = parallel.size > 1
 MPI = True
 
-BLOCKS_ON_DEVICE = 60
+BLOCKS_ON_DEVICE = 2
 
 __all__ = ['DM_pycuda_stream']
 
@@ -41,40 +41,51 @@ class GpuStreamData:
         self.allocator = allocator
 
     def ex_to_gpu(self, dID, ex):
+        print('ex to gpu, dID={}'.format(dID))
         # we have that block already on device
-        if self.ex_dID == dID:
+        if self.ex_dID == dID and self.ex is not None:
+            print('already on device')
             return self.ex
         # wait for previous work on same memory to complete
         if self.ev_done is not None:
+            print('synchronising...')
             self.ev_done.synchronize()
             self.ev_done = None  
         self.ex_dID = dID
         # transfer async
         self.ex = gpuarray.to_gpu_async(ex, allocator=self.allocator, stream=self.queue)
+        print('issued transfer')
         return self.ex
 
     def ex_from_gpu(self, dID, ex):
+        print('issued transfer back of ex, dID={}'.format(dID))
         self.ex.get_async(self.qeue, ex)
 
     def ma_to_gpu(self, dID, ma, mag):
+        print('ma to gpu, dID={}'.format(dID))
         # we have that block already on device
-        if self.ma_dID == dID:
+        if self.ma_dID == dID and self.ma is not None:
+            print('already on device')
             return self.ma, self.mag
         # wait for previous work on memory to complete
         if self.ev_done is not None:
+            print('synchronizing...')
             self.ev_done.synchronize()
             self.ev_done = None
         self.ma_dID = dID
         # transfer async
         self.ma = gpuarray.to_gpu_async(ma, allocator=self.allocator, stream=self.queue)
         self.mag = gpuarray.to_gpu_async(mag, allocator=self.allocator, stream=self.queue)
+        print('transfers issued')
         return self.ma, self.mag
     
     def record_done(self):
+        print('recording done...')
         self.ev_done = cuda.Event()
         self.ev_done.record(self.queue)
 
     def synchronize(self):
+        print('synchronizing full queue')
         self.queue.synchronize()
         self.ev_done = None
 
@@ -314,6 +325,10 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             parallel.barrier()
             self.curiter += 1
 
+        print('end loop, syncall and copy back')
+        for sd in self.streams:
+            sd.synchronize()
+        
         for name, s in self.ob.S.items():
             s.gpu.get(s.data)
         for name, s in self.pr.S.items():
