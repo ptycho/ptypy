@@ -126,13 +126,13 @@ class DM_pycuda(DM_serial.DM_serial):
                           post_fft=geo.propagator.post_fft,
                           inplace=True,
                           symmetric=True,
-                          forward=True).ft
+                          forward=True)
             kern.BW = FFT(aux, self.queue,
                           pre_fft=geo.propagator.pre_ifft,
                           post_fft=geo.propagator.post_ifft,
                           inplace=True,
                           symmetric=True,
-                          forward=False).ift
+                          forward=False)
 
             if self.do_position_refinement:
                 addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
@@ -232,7 +232,7 @@ class DM_pycuda(DM_serial.DM_serial):
 
                 # FFT
                 t1 = time.time()
-                FW(aux, aux)
+                FW.ft(aux, aux)
 
                 # queue.synchronize()
                 self.benchmark.B_Prop += time.time() - t1
@@ -246,7 +246,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 self.benchmark.C_Fourier_update += time.time() - t1
                 # iFFT
                 t1 = time.time()
-                BW(aux, aux)
+                BW.ift(aux, aux)
 
                 # print("The context is: %s" % self.context)
                 # queue.synchronize()
@@ -302,7 +302,7 @@ class DM_pycuda(DM_serial.DM_serial):
                             mangled_addr = PCK.address_mangler.mangle_address(addr.get(), original_addr, self.curiter)
                             mangled_addr_gpu = gpuarray.to_gpu(mangled_addr)
                             PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
-                            FW(aux, aux)
+                            FW.ft(aux, aux)
                             PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
                             PCK.error_reduce(mangled_addr_gpu, err_fourier)
                             PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier.get())
