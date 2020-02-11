@@ -278,7 +278,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     self.cur_stream = (self.cur_stream + self.stream_direction) % BLOCKS_ON_DEVICE
 
                 if do_update_object:
-                    self.object_allreduce()
+                    self._object_allreduce()
 
                 # Exit if probe should not yet be updated
                 if not do_update_probe:
@@ -314,7 +314,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         return error
     
 
-    def object_allreduce(self):
+    def _object_allreduce(self):
         # make sure that all transfers etc are finished
         for sd in self.streams:
             sd.synchronize()
@@ -336,6 +336,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 obb.gpu /= obn.gpu
                 ob.gpu[:] = obb.gpu
 
+    def _probe_allreduce(self):
+        
 
 
     ## probe update
@@ -374,6 +376,10 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             self.cur_stream = (self.cur_stream + self.stream_direction) % BLOCKS_ON_DEVICE
 
             
+        # sync all streams first
+        for sd in self.streams:
+            sd.synchronize()
+
         for pID, pr in self.pr.storages.items():
 
             buf = self.pr_buf.S[pID]
@@ -396,10 +402,13 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 pr.gpu.get(pr.data)
 
             ## this should be done on GPU
+            tt1 = time.time()
             change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
             buf.data[:] = pr.data
             if MPI:
                 change = parallel.allreduce(change) / parallel.size
+            tt2 = time.time()
+            print('time for pr change: {}s'.format(tt2-tt1))
 
         # print 'probe update: ' + str(time.time()-t1)
         self.benchmark.probe_update += time.time() - t1
