@@ -336,9 +336,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 obb.gpu /= obn.gpu
                 ob.gpu[:] = obb.gpu
 
-    def _probe_allreduce(self):
-        
-
 
     ## probe update
     def probe_update(self, MPI=False):
