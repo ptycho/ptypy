@@ -707,7 +707,8 @@ def load_from_ptyr(filename, what='probe', how='array', ID=None, layer=None):
         elif how == 'storage':
             from ..core import Storage, Container
             C = Container(data_dims=2, data_type='complex')
-            return Storage._from_dict(dct=storage, container=C)
+            storage['owner'] = C
+            return Storage._from_dict(storage)
 
 def phase_from_dpc(dpc_row, dpc_col):
     """
