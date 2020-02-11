@@ -25,7 +25,7 @@ from pycuda.tools import DeviceMemoryPool
 MPI = parallel.size > 1
 MPI = True
 
-BLOCKS_ON_DEVICE = 2
+BLOCKS_ON_DEVICE = 4
 
 __all__ = ['DM_pycuda_stream']
 
@@ -48,7 +48,7 @@ class GpuStreamData:
             return self.ex
         # wait for previous work on same memory to complete
         if self.ev_done is not None:
-            print('synchronising...')
+            #print('synchronising...')
             self.ev_done.synchronize()
             self.ev_done = None  
         self.ex_dID = dID
@@ -111,25 +111,25 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for name, s in self.ob_buf.S.items():
             # obb
             d = s.data
-            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=4)
+            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=0)
             s.data[:] = d
             s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.ob_nrm.S.items():
             # obn
             d = s.data
-            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="c", mem_flags=4)
+            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="c", mem_flags=0)
             s.data[:] = d
             s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.pr.S.items():
             # pr
             d = s.data
-            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=4)
+            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=0)
             s.data[:] = d
             s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.pr_nrm.S.items():
             # prn
             d = s.data
-            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=4)
+            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=0)
             s.data[:] = d
             s.gpu = gpuarray.to_gpu(s.data)
 
@@ -359,13 +359,24 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             if MPI:
                 ## FIXXME: make obb/obn data pinned memory + schedule on
                 ## last stream that was used
+                #tt1 = time.time()
                 obb.gpu.get(obb.data)
                 obn.gpu.get(obn.data)
+                #print('d2h obj {}'.format(time.time()-tt1))
+                #tt1 = time.time()
                 parallel.allreduce(obb.data)
                 parallel.allreduce(obn.data)
+                #print('allreduce {}'.format(time.time()-tt1))
+                #tt1 = time.time()
                 obb.data /= obn.data
+                #print('div obj {}'.format(time.time()-tt1))
+                #tt1 = time.time()
                 self.clip_object(obb)
+                #print('clip obj {}'.format(time.time()-tt1))
+                tt1 = time.time()
                 ob.gpu.set(obb.data)  # async tx on same stream?
+                #print('h2d obj {}'.format(time.time()-tt1))
+
             else:
                 obb.gpu /= obn.gpu
                 ob.gpu[:] = obb.gpu
