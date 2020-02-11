@@ -461,6 +461,13 @@ class Storage(Base):
         # solution required
         # self._origin = None
 
+    @classmethod
+    def _from_dict(cls, dct, container):
+        obj = super()._from_dict(dct)
+        obj.owner = container
+        container._new_ptypy_object(obj)
+        return obj
+
     @property
     def ndim(self):
         """
