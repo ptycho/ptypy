@@ -25,7 +25,7 @@ from pycuda.tools import DeviceMemoryPool
 MPI = parallel.size > 1
 MPI = True
 
-BLOCKS_ON_DEVICE = 4
+BLOCKS_ON_DEVICE = 60
 
 __all__ = ['DM_pycuda_stream']
 
@@ -87,7 +87,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
         super(DM_pycuda_stream, self).__init__(ptycho_parent, pars)
         self.dmp = DeviceMemoryPool()
-        self.streams = [GpuStreamData() for _ in range(BLOCKS_ON_DEVICE)]
+        self.streams = [GpuStreamData(self.dmp.allocate) for _ in range(BLOCKS_ON_DEVICE)]
         self.cur_stream = 0
         self.stream_direction = 1
 
@@ -112,13 +112,13 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for name, s in self.pr.S.items():
             # pr
             d = s.data
-            s.data = cuda.pagelocked_empty(d.shape, d.type, order="C", mem_flags=4)
+            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=4)
             s.data[:] = d
             s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.pr_nrm.S.items():
             # prn
             d = s.data
-            s.data = cuda.pagelocked_empty(d.shape, d.type, order="C", mem_flags=4)
+            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=4)
             s.data[:] = d
             s.gpu = gpuarray.to_gpu(s.data)
 
@@ -164,7 +164,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
             error = {}
 
-            for inner in rnage(self.p.overlap_max_iterations):
+            for inner in range(self.p.overlap_max_iterations):
 
                 change = 0
 
@@ -196,6 +196,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 
                 # First cycle: Fourier + object update
                 for dID in self.dID_list:
+                    t1 = time.time()
                     prep = self.diff_info[dID]
                     streamdata = self.streams[self.cur_stream]
                     
@@ -234,7 +235,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     pr = self.pr.S[pID].gpu
 
                     # transfer exit wave to gpu
-                    prep.ex_gpu = streamdata.ex_to_gpu(dId, prep.ex)
+                    prep.ex_gpu = streamdata.ex_to_gpu(dID, prep.ex)
                     ex = prep.ex_gpu 
 
                     # Fourier update
@@ -246,26 +247,42 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         ma = prep.ma_gpu
                         mag = prep.mag_gpu
 
+                        t1 = time.time()
                         ## prep + forward FFT
                         AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        self.benchmark.A_Build_aux += time.time() - t1
+
+                        t1 = time.time()
                         FW.ft(aux, aux)
+                        self.benchmark.B_Prop += time.time() - t1
+
                         ## Deviation from measured data
+                        t1 = time.time()
                         FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
                         FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
+                        self.benchmark.C_Fourier_update += time.time() - t1
+
                         ## Backward FFT
+                        t1 = time.time()
                         BW.ift(aux, aux)
                         ## apply changes
                         AWK.build_exit(aux, addr, ob, pr, ex)
+                        self.benchmark.E_Build_exit += time.time() - t1
+
+                        self.benchmark.calls_fourier += 1
 
                     prestr = '%d Iteration (Overlap) #%02d:  ' % (parallel.rank, inner)
 
                     # Object update
                     if do_update_object:
                         log(4, prestr + '----- object update -----', True)
+                        t1 = time.time()
 
                         addrt = addr if atomics_object else addr2
                         ev = POK.ob_update(addrt, obb, obn, pr, ex, atomics=atomics_object)
+                        self.benchmark.object_update += time.time() - t1
+                        self.benchmark.calls_object += 1
 
                     streamdata.record_done()
                     self.cur_stream = (self.cur_stream + self.stream_direction) % BLOCKS_ON_DEVICE
@@ -280,9 +297,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 if do_update_object:
                     self._object_allreduce()
 
-                # Exit if probe should not yet be updated
+                # Exit if probe should fnot yet be updated
                 if not do_update_probe:
-                    return
+                    break
 
                 # Update probe
                 log(4, prestr + '----- probe update -----', True)
@@ -405,7 +422,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             if MPI:
                 change = parallel.allreduce(change) / parallel.size
             tt2 = time.time()
-            print('time for pr change: {}s'.format(tt2-tt1))
+            #print('time for pr change: {}s'.format(tt2-tt1))
 
         # print 'probe update: ' + str(time.time()-t1)
         self.benchmark.probe_update += time.time() - t1
