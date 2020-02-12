@@ -396,7 +396,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             pr.gpu._axpbz(np.complex64(cfact), 0, pr.gpu, stream=streamdata.queue)
             prn.gpu.fill(np.float32(cfact), stream=streamdata.queue)
 
-        print('***************************')
         for dID in self.dID_list:
             prep = self.diff_info[dID]
             streamdata = self.streams[self.cur_stream]
