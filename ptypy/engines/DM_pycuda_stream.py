@@ -41,51 +41,40 @@ class GpuStreamData:
         self.allocator = allocator
 
     def ex_to_gpu(self, dID, ex):
-        #print('ex to gpu, dID={}'.format(dID))
         # we have that block already on device
         if self.ex_dID == dID and self.ex is not None:
-            #print('already on device')
             return self.ex
         # wait for previous work on same memory to complete
         if self.ev_done is not None:
-            #print('synchronising...')
             self.ev_done.synchronize()
             self.ev_done = None  
         self.ex_dID = dID
         # transfer async
         self.ex = gpuarray.to_gpu_async(ex, allocator=self.allocator, stream=self.queue)
-        #print('issued transfer')
         return self.ex
 
     def ex_from_gpu(self, dID, ex):
-        #print('issued transfer back of ex, dID={}'.format(dID))
         self.ex.get_async(self.queue, ex)
 
     def ma_to_gpu(self, dID, ma, mag):
-        #print('ma to gpu, dID={}'.format(dID))
         # we have that block already on device
         if self.ma_dID == dID and self.ma is not None:
-            #print('already on device')
             return self.ma, self.mag
         # wait for previous work on memory to complete
         if self.ev_done is not None:
-            #print('synchronizing...')
             self.ev_done.synchronize()
             self.ev_done = None
         self.ma_dID = dID
         # transfer async
         self.ma = gpuarray.to_gpu_async(ma, allocator=self.allocator, stream=self.queue)
         self.mag = gpuarray.to_gpu_async(mag, allocator=self.allocator, stream=self.queue)
-        #print('transfers issued')
         return self.ma, self.mag
     
     def record_done(self):
-        #print('recording done...')
         self.ev_done = cuda.Event()
         self.ev_done.record(self.queue)
 
     def synchronize(self):
-        #print('synchronizing full queue')
         self.queue.synchronize()
         self.ev_done = None
 
@@ -108,6 +97,10 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
         for name, s in self.ob.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
+        # we use default mem_flags for ob/obn/pr/prn page-locking, as we are 
+        # operating on them on CPU as well after each iteration.
+        # Write-Combined memory (flags=4) is for write-only on CPU side,
+        # reads are really slow.
         for name, s in self.ob_buf.S.items():
             # obb
             d = s.data
@@ -122,9 +115,12 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.pr.S.items():
             # pr
-            d = s.data
-            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=0)
-            s.data[:] = d
+            # if we use page-locked for pr, we get a segfault at the end for unkown reasons
+            # Since pr is small compared to object, and we operate on the data with numpy in
+            # probe_update, it's ok to leave this in paged memory for now
+            # d = s.data
+            # s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=0)
+            # s.data[:] = d
             s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.pr_nrm.S.items():
             # prn
@@ -357,26 +353,15 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             obn = self.ob_nrm.S[oID]
             obb = self.ob_buf.S[oID]
             if MPI:
-                ## FIXXME: make obb/obn data pinned memory + schedule on
-                ## last stream that was used
-                #tt1 = time.time()
                 obb.gpu.get(obb.data)
                 obn.gpu.get(obn.data)
-                #print('d2h obj {}'.format(time.time()-tt1))
-                #tt1 = time.time()
                 parallel.allreduce(obb.data)
                 parallel.allreduce(obn.data)
-                #print('allreduce {}'.format(time.time()-tt1))
-                #tt1 = time.time()
                 obb.data /= obn.data
-                #print('div obj {}'.format(time.time()-tt1))
-                #tt1 = time.time()
                 self.clip_object(obb)
-                #print('clip obj {}'.format(time.time()-tt1))
                 tt1 = time.time()
                 ob.gpu.set(obb.data)  # async tx on same stream?
-                #print('h2d obj {}'.format(time.time()-tt1))
-
+                
             else:
                 obb.gpu /= obn.gpu
                 ob.gpu[:] = obb.gpu
