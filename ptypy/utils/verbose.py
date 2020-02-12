@@ -238,6 +238,8 @@ def report(thing,depth=4,noheader=False):
     def _format(key,level, obj):
         if hasattr(obj,'items'):
             stringout = _format_dict(key,level, obj)
+        elif hasattr(obj, 'views'):
+            stringout = _format(key, level, str(obj))
         elif type(obj) is np.ndarray:
             stringout = _format_numpy(key,level, obj)
         elif str(obj)==obj:
