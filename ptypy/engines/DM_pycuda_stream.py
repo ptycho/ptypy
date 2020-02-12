@@ -39,6 +39,16 @@ class GpuStreamData:
         self.ev_done = None
         self.ex_dID = None
         self.allocator = allocator
+        self.ev_compute = None
+
+    def end_compute(self):
+        self.ev_compute = cuda.Event()
+        self.ev_compute.record(self.queue)
+        return self.ev_compute
+
+    def start_compute(self, prev_event):
+        if prev_event is not None:
+            self.queue.wait_for_event(prev_event)
 
     def ex_to_gpu(self, dID, ex):
         # we have that block already on device
@@ -166,6 +176,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         atomics_object = self.p.object_update_cuda_atomics
         use_atomics = atomics_object or atomics_probe
         use_tiles = (not atomics_object) or (not atomics_probe)
+        prev_event = None
         
         for it in range(num):
 
@@ -182,6 +193,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 # initialize probe and object buffer to receive an update
                 # we do this on the first stream we work on
                 streamdata = self.streams[self.cur_stream]
+                streamdata.start_compute(prev_event)
                 if do_update_object:
                     for oID, ob in self.ob.storages.items():
                         cfact = self.ob_cfact[oID]
@@ -255,6 +267,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         mag = prep.mag_gpu
 
                         t1 = time.time()
+                        streamdata.start_compute(prev_event)
                         ## prep + forward FFT
                         AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                         self.benchmark.A_Build_aux += time.time() - t1
@@ -277,6 +290,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         AWK.build_exit(aux, addr, ob, pr, ex)
                         self.benchmark.E_Build_exit += time.time() - t1
                         
+                        # end_compute is to allow aux re-use, so we can mark it here
+                        prev_event = streamdata.end_compute()
                         streamdata.ex_from_gpu(dID, prep.ex)
 
                         self.benchmark.calls_fourier += 1
@@ -289,7 +304,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         t1 = time.time()
 
                         addrt = addr if atomics_object else addr2
-                        ev = POK.ob_update(addrt, obb, obn, pr, ex, atomics=atomics_object)
+                        POK.ob_update(addrt, obb, obn, pr, ex, atomics=atomics_object)
                         self.benchmark.object_update += time.time() - t1
                         self.benchmark.calls_object += 1
 
@@ -374,13 +389,14 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         use_atomics = self.p.probe_update_cuda_atomics
         # storage for-loop
         change = 0
+        prev_event = None
         for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
             cfact = self.pr_cfact[pID]
             pr.gpu._axpbz(np.complex64(cfact), 0, pr.gpu, stream=streamdata.queue)
             prn.gpu.fill(np.float32(cfact), stream=streamdata.queue)
 
-
+        print('***************************')
         for dID in self.dID_list:
             prep = self.diff_info[dID]
             streamdata = self.streams[self.cur_stream]
@@ -394,12 +410,14 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
             # scan for-loop
             addrt = prep.addr_gpu if use_atomics else prep.addr2_gpu
+            streamdata.start_compute(prev_event)
             ev = POK.pr_update(addrt,
                                self.pr.S[pID].gpu,
                                self.pr_nrm.S[pID].gpu,
                                self.ob.S[oID].gpu,
                                prep.ex_gpu,
                                atomics=use_atomics)
+            prev_event = streamdata.end_compute()
             self.cur_stream = (self.cur_stream + self.stream_direction) % BLOCKS_ON_DEVICE
 
             
