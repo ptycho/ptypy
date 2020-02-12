@@ -368,7 +368,7 @@ def init_storage(storage, pars, energy=None):
     elif type(p.model) is np.ndarray:
         model = p.model
     elif p.model in resources.probes:
-        model = resources.probes[p.model](s.shape)
+        model = resources.probes[p.model](s.shape[1:])
     elif type(p.model) is Storage:
         # resample the incoming probe storage based on the current pixel
         #size and shape
