@@ -98,7 +98,7 @@ class GpuDataManager:
         Parameters are the same as for GpuData, and num is the number of
         GpuData instances to create (blocks on device).
         """
-        self.data = [GpuData(allocator, shape, dtype, syncback, name) for _ in range(num)]
+        self.data = [GpuData(allocator, shape, dtype, syncback) for _ in range(num)]
 
     @property
     def syncback(self):
@@ -262,9 +262,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         use_atomics = self.p.probe_update_cuda_atomics or self.p.object_update_cuda_atomics
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
-        ex_mem = 0
-        ma_mem = 0
-        mag_mem = 0
+        ex_mem = ma_mem = mag_mem = 0
         exsh = mash = magsh = None
         blocks = 0
         for label, d in self.ptycho.new_data:
