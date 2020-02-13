@@ -316,9 +316,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         nstreams = min(MAX_STREAMS, blocks)
 
         print('exit arrays: {}, ma_arrays: {}, streams: {}, totalblocks: {}'.format(nex, nma, nstreams, blocks))
-        self.ex_data = GpuDataManager(self.dmp.allocate, exsh, np.complex64, nex, True, 'ex')
-        self.ma_data = GpuDataManager(self.dmp.allocate, mash, np.float32, nma, False, 'ma')
-        self.mag_data = GpuDataManager(self.dmp.allocate, magsh, np.float32, nma, False, 'mag')
+        self.ex_data = GpuDataManager(self.dmp.allocate, exsh, np.complex64, nex, True)
+        self.ma_data = GpuDataManager(self.dmp.allocate, mash, np.float32, nma, False)
+        self.mag_data = GpuDataManager(self.dmp.allocate, magsh, np.float32, nma, False)
         self.streams = [GpuStreamData(self.ex_data, self.ma_data, self.mag_data) for _ in range(nstreams)]
 
     def engine_iterate(self, num=1):
