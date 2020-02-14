@@ -14,194 +14,128 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 
+from .ML import ML, BaseModel, prepare_smoothing_preconditioner, Regul_del2
+from .ML_serial import ML_serial
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
 from .utils import Cnorm2, Cdot
-from . import register
-from .base import PositionCorrectionEngine
-from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
+from ..accelerate import py_cuda as gpu
+from ..accelerate.py_cuda.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel
+from ..accelerate.array_based import address_manglers
 
-__all__ = ['ML']
+__all__ = ['ML_pycuda']
 
 
 @register()
-class ML(PositionCorrectionEngine):
-    """
-    Maximum likelihood reconstruction engine.
-
-
-    Defaults:
-
-    [name]
-    default = ML
-    type = str
-    help =
-    doc =
-
-    [ML_type]
-    default = 'gaussian'
-    type = str
-    help = Likelihood model
-    choices = ['gaussian','poisson','euclid']
-    doc = One of ‘gaussian’, poisson’ or ‘euclid’. Only 'gaussian' is implemented.
-
-    [floating_intensities]
-    default = False
-    type = bool
-    help = Adaptive diffraction pattern rescaling
-    doc = If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).
-
-    [intensity_renormalization]
-    default = 1.
-    type = float
-    lowlim = 0.0
-    help = Rescales the intensities so they can be interpreted as Poisson counts.
-
-    [reg_del2]
-    default = False
-    type = bool
-    help = Whether to use a Gaussian prior (smoothing) regularizer
-
-    [reg_del2_amplitude]
-    default = .01
-    type = float
-    lowlim = 0.0
-    help = Amplitude of the Gaussian prior if used
-
-    [smooth_gradient]
-    default = 0.0
-    type = float
-    help = Smoothing preconditioner
-    doc = Sigma for gaussian filter (turned off if 0.)
-
-    [smooth_gradient_decay]
-    default = 0.
-    type = float
-    help = Decay rate for smoothing preconditioner
-    doc = Sigma for gaussian filter will reduce exponentially at this rate
-
-    [scale_precond]
-    default = False
-    type = bool
-    help = Whether to use the object/probe scaling preconditioner
-    doc = This parameter can give faster convergence for weakly scattering samples.
-
-    [scale_probe_object]
-    default = 1.
-    type = float
-    lowlim = 0.0
-    help = Relative scale of probe to object
-
-    [probe_update_start]
-    default = 2
-    type = int
-    lowlim = 0
-    help = Number of iterations before probe update starts
-
-    """
-
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
+class ML_pycuda(ML_serial):
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Maximum likelihood reconstruction engine.
         """
-        super(ML, self).__init__(ptycho_parent, pars)
+        super(ML_pycuda, self).__init__(ptycho_parent, pars)
 
-        p = self.DEFAULT.copy()
-        if pars is not None:
-            p.update(pars)
-        self.p = p
-
-        # Instance attributes
-
-        # Object gradient
-        self.ob_grad = None
-
-        # Object minimization direction
-        self.ob_h = None
-
-        # Probe gradient
-        self.pr_grad = None
-
-        # Probe minimization direction
-        self.pr_h = None
-
-        # Working variables
-        # Object gradient
-        self.ob_grad_new = None
-
-        # Probe gradient
-        self.pr_grad_new = None
-
-
-        # Other
-        self.tmin = None
-        self.ML_model = None
-        self.smooth_gradient = None
-        self.scale_p_o = None
-        self.scale_p_o_memory = .9
-
-        self.ptycho.citations.add_article(
-            title='Maximum-likelihood refinement for coherent diffractive imaging',
-            author='Thibault P. and Guizar-Sicairos M.',
-            journal='New Journal of Physics',
-            volume=14,
-            year=2012,
-            page=63004,
-            doi='10.1088/1367-2630/14/6/063004',
-            comment='The maximum likelihood reconstruction algorithm',
-        )
+        self.context, self.queue = gpu.get_context()
 
     def engine_initialize(self):
         """
         Prepare for ML reconstruction.
         """
-        super(ML, self).engine_initialize()
-        
-        # Object gradient and minimization direction
-        self.ob_grad = self.ob.copy(self.ob.ID + '_grad', fill=0.)
-        self.ob_grad_new = self.ob.copy(self.ob.ID + '_grad_new', fill=0.)
-        self.ob_h = self.ob.copy(self.ob.ID + '_h', fill=0.)
+        super(ML_serial, self).engine_initialize()
+        self._setup_kernels()
 
-        # Probe gradient and minimization direction
-        self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
-        self.pr_grad_new = self.pr.copy(self.pr.ID + '_grad_new', fill=0.)
-        self.pr_h = self.pr.copy(self.pr.ID + '_h', fill=0.)
+    def _setup_kernels(self):
+        """
+        Setup kernels, one for each scan. Derive scans from ptycho class
+        """
+        # get the scans
+        for label, scan in self.ptycho.model.scans.items():
 
-        self.tmin = 1.
+            kern = u.Param()
+            self.kernels[label] = kern
 
-        # Other options
-        self.smooth_gradient = prepare_smoothing_preconditioner(
-            self.p.smooth_gradient)
+            # TODO: needs to be adapted for broad bandwidth
+            geo = scan.geometries[0]
 
-        self._initialize_model()
+            # Get info to shape buffer arrays
+            # TODO: make this part of the engine rather than scan
+            fpc = self.ptycho.frames_per_block
 
-    def _initialize_model(self):
+            # TODO : make this more foolproof
+            try:
+                nmodes = scan.p.coherence.num_probe_modes * \
+                         scan.p.coherence.num_object_modes
+            except:
+                nmodes = 1
 
-        # Create noise model
-        if self.p.ML_type.lower() == "gaussian":
-            self.ML_model = GaussianModel(self)
-        elif self.p.ML_type.lower() == "poisson":
-            self.ML_model = PoissonModel(self)
-        elif self.p.ML_type.lower() == "euclid":
-            raise NotImplementedError('Euclid norm model not yet implemented')
-        else:
-            raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
+            # create buffer arrays
+            ash = (fpc * nmodes,) + tuple(geo.shape)
+            aux = np.zeros(ash, dtype=np.complex64)
+            kern.aux = aux
+            kern.a = np.zeros(ash, dtype=np.complex64)
+            kern.a = np.zeros(ash, dtype=np.complex64)
 
+            # setup kernels, one for each SCAN.
+            kern.GDK = GradientDescentKernel(aux, nmodes, queue_thread=self.queue)
+            kern.GDK.allocate()
 
+            kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type=np.float32)
+            kern.POK.allocate()
+
+            kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
+            kern.AWK.allocate()
+
+            try:
+                from ptypy.accelerate.py_cuda.cufft import FFT
+            except:
+                logger.warning('Unable to import cuFFT version - using Reikna instead')
+                from ptypy.accelerate.py_cuda.fft import FFT
+
+            kern.FW = FFT(aux, self.queue,
+                          pre_fft=geo.propagator.pre_fft,
+                          post_fft=geo.propagator.post_fft,
+                          inplace=True,
+                          symmetric=True,
+                          forward=True).ft
+            kern.BW = FFT(aux, self.queue,
+                          pre_fft=geo.propagator.pre_ifft,
+                          post_fft=geo.propagator.post_ifft,
+                          inplace=True,
+                          symmetric=True,
+                          forward=False).ift
+
+            if self.do_position_refinement:
+                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
+                                                                self.p.position_refinement.start,
+                                                                self.p.position_refinement.stop,
+                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
+                                                                randomseed=0)
+                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
+                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
+
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, queue_thread=self.queue)
+                kern.PCK.allocate()
+                kern.PCK.address_mangler = addr_mangler
 
     def engine_prepare(self):
-        """
-        Last minute initialization, everything, that needs to be recalculated,
-        when new data arrives.
-        """
-        # - # fill object with coverage of views
-        # - for name,s in self.ob_viewcover.S.items():
-        # -    s.fill(s.get_view_coverage())
-        self.ML_model.prepare()
+
+        super(ML_pycuda, self).engine_prepare()
+
+        ## Serialize new data ##
+
+        for label, d in self.ptycho.new_data:
+            prep = u.Param()
+
+            prep.label = label
+            self.diff_info[d.ID] = prep
+
+            mask_data = self.ma.S[d.ID].data.astype(np.float32)  # in the gpu kernels, which this is tested against, this is converted to a float
+            self.ma.S[d.ID].data = mask_data
+            prep.ma_sum = mask_data.sum(-1).sum(-1)
+            prep.err_phot = np.zeros_like(prep.ma_sum)
+
 
     def engine_iterate(self, num=1):
         """
@@ -216,16 +150,15 @@ class ML(PositionCorrectionEngine):
         for it in range(num):
             t1 = time.time()
             error_dct = self.ML_model.new_grad()
-            new_ob_grad, new_pr_grad = self.ob_grad_new, self.pr_grad_new
+            new_ob_grad = self.ob_grad_new
+            new_pr_grad = self.pr_grad_new
+
             tg += time.time() - t1
 
             if self.p.probe_update_start <= self.curiter:
                 # Apply probe support if needed
                 for name, s in new_pr_grad.storages.items():
                     self.support_constraint(s)
-                    #support = self.probe_support.get(name)
-                    #if support is not None:
-                    #    s.data *= support
             else:
                 new_pr_grad.fill(0.)
 
@@ -235,12 +168,15 @@ class ML(PositionCorrectionEngine):
                 for name, s in new_ob_grad.storages.items():
                     s.data[:] = self.smooth_gradient(s.data)
 
+            cn2_new_pr_grad = Cnorm2(new_pr_grad)
+            cn2_new_ob_grad = Cnorm2(new_ob_grad)
+
             # probe/object rescaling
             if self.p.scale_precond:
-                cn2_new_pr_grad = Cnorm2(new_pr_grad)
+                cn2_new_pr_grad = cn2_new_pr_grad
                 if cn2_new_pr_grad > 1e-5:
-                    scale_p_o = (self.p.scale_probe_object * Cnorm2(new_ob_grad)
-                                 / Cnorm2(new_pr_grad))
+                    scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad
+                                 / cn2_new_pr_grad)
                 else:
                     scale_p_o = self.p.scale_probe_object
                 if self.scale_p_o is None:
@@ -259,12 +195,12 @@ class ML(PositionCorrectionEngine):
                 bt = 0.
             else:
                 bt_num = (self.scale_p_o
-                          * (Cnorm2(new_pr_grad)
+                          * (cn2_new_pr_grad
                              - np.real(Cdot(new_pr_grad, self.pr_grad)))
-                          + (Cnorm2(new_ob_grad)
+                          + (cn2_new_ob_grad
                              - np.real(Cdot(new_ob_grad, self.ob_grad))))
 
-                bt_denom = self.scale_p_o*Cnorm2(self.pr_grad) + Cnorm2(self.ob_grad)
+                bt_denom = self.scale_p_o * self.cn2_pr_grad + self.cn2_ob_grad
 
                 bt = max(0, bt_num/bt_denom)
 
@@ -272,6 +208,8 @@ class ML(PositionCorrectionEngine):
 
             self.ob_grad << new_ob_grad
             self.pr_grad << new_pr_grad
+            self.cn2_ob_grad = cn2_new_ob_grad
+            self.cn2_pr_grad = cn2_new_pr_grad
 
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
@@ -282,6 +220,7 @@ class ML(PositionCorrectionEngine):
                     s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             else:
                 self.ob_h -= self.ob_grad
+
             self.pr_h *= bt / self.tmin
             self.pr_grad *= self.scale_p_o
             self.pr_h -= self.pr_grad
@@ -291,7 +230,7 @@ class ML(PositionCorrectionEngine):
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
-            print(B, Cnorm2(self.ob_h), Cnorm2(self.ob_grad), Cnorm2(self.pr_h), Cnorm2(self.pr_grad))
+
             if np.isinf(B).any() or np.isnan(B).any():
                 logger.warning(
                     'Warning! inf or nan found! Trying to continue...')
@@ -318,14 +257,10 @@ class ML(PositionCorrectionEngine):
         """
         del self.ptycho.containers[self.ob_grad.ID]
         del self.ob_grad
-        del self.ptycho.containers[self.ob_grad_new.ID]
-        del self.ob_grad_new
         del self.ptycho.containers[self.ob_h.ID]
         del self.ob_h
         del self.ptycho.containers[self.pr_grad.ID]
         del self.pr_grad
-        del self.ptycho.containers[self.pr_grad_new.ID]
-        del self.pr_grad_new
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
 
@@ -355,23 +290,24 @@ class BaseModel(object):
         else:
             self.Irenorm = self.p.intensity_renormalization
 
-        if self.p.reg_del2:
-            self.regularizer = Regul_del2(amplitude=self.p.reg_del2_amplitude)
-        else:
-            self.regularizer = None
-
         # Create working variables
         self.LL = 0.
 
-
-    def prepare(self):
         # Useful quantities
         self.tot_measpts = sum(s.data.size
                                for s in self.di.storages.values())
         self.tot_power = self.Irenorm * sum(s.tot_power
                                             for s in self.di.storages.values())
+
+        self.regularizer = None
+        self.prepare_regularizer()
+
+    def prepare_regularizer(self):
+        """
+        Prepare regularizer.
+        """
         # Prepare regularizer
-        if self.regularizer is not None:
+        if self.p.reg_del2:
             obj_Npix = self.ob.size
             expected_obj_var = obj_Npix / self.tot_power  # Poisson
             reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
@@ -379,9 +315,8 @@ class BaseModel(object):
                 'Rescaling regularization amplitude using '
                 'the Poisson distribution assumption.')
             logger.debug('Factor: %8.5g' % reg_rescale)
-
-            # TODO remove usage of .p. access
-            self.regularizer.amplitude = self.p.reg_del2_amplitude * reg_rescale
+            reg_del2_amplitude = self.p.reg_del2_amplitude * reg_rescale
+            self.regularizer = Regul_del2(amplitude=reg_del2_amplitude)
 
     def __del__(self):
         """
@@ -451,68 +386,91 @@ class GaussianModel(BaseModel):
         Note: The negative log-likelihood and local errors are also computed
         here.
         """
-        self.ob_grad.fill(0.)
-        self.pr_grad.fill(0.)
+        ob_grad = self.engine.ob_grad_new
+        pr_grad = self.engine.pr_grad_new
+        ob_grad.fill(0.)
+        pr_grad.fill(0.)
 
         # We need an array for MPI
         LL = np.array([0.])
         error_dct = {}
 
-        # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.items():
-            if not diff_view.active:
-                continue
+        for dID in self.di.S.keys():
 
-            # Weights and intensities for this view
-            w = self.weights[diff_view]
-            I = diff_view.data
+            prep = self.diff_info[dID]
+            # find probe, object in exit ID in dependence of dID
+            pID, oID, eID = prep.poe_IDs
 
-            Imodel = np.zeros_like(I)
-            f = {}
+            # references for kernels
+            kern = self.kernels[prep.label]
+            GDK = kern.GDK
+            AWK = kern.AWK
+            POK = kern.POK
 
-            # First pod loop: compute total intensity
-            for name, pod in diff_view.pods.items():
-                if not pod.active:
-                    continue
-                f[name] = pod.fw(pod.probe * pod.object)
-                Imodel += u.abs2(f[name])
+            aux = kern.aux
 
-            # Floating intensity option
+            FW = kern.FW
+            BW = kern.BW
+
+            # get addresses and auxilliary array
+            addr = prep.addr
+            w = prep.weights
+            err_phot = prep.err_phot
+
+            # local references
+            ob = self.engine.ob.S[oID].data
+            obg = ob_grad.S[oID].data
+            pr = self.engine.pr.S[pID].data
+            prg = pr_grad.S[pID].data
+            I = self.engine.di.S[eID].data
+
+            # make propagated exit (to buffer)
+            AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
+
+            # forward prop
+            FW(aux, aux)
+            GDK.make_model(aux, addr)
+
+            """
+            # for later
             if self.p.floating_intensities:
-                self.float_intens_coeff[dname] = ((w * Imodel * I).sum()
-                                                / (w * Imodel**2).sum())
-                Imodel *= self.float_intens_coeff[dname]
+                tmp = np.zeros_like(Imodel)
+                tmp = w * Imodel * I
+                GDK.error_reduce(err_num, w * Imodel * I)
+                GDK.error_reduce(err_den, w * Imodel ** 2)
+                Imodel *= (err_num / err_den).reshape(Imodel.shape[0], 1, 1)
+            """
 
-            DI = Imodel - I
+            GDK.main(aux, addr, w, I)
+            GDK.error_reduce(addr, err_phot)
+            BW(aux, aux)
 
-            # Second pod loop: gradients computation
-            LLL = np.sum((w * DI**2).astype(np.float64))
-            for name, pod in diff_view.pods.items():
-                if not pod.active:
-                    continue
-                xi = pod.bw(w * DI * f[name])
-                self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
-                self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
+            POK.ob_update_ML(aux, addr, obg, pr)
+            POK.pr_update_ML(aux, addr, prg, ob)
 
-            diff_view.error = LLL
-            error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
-            LL += LLL
+        for dID, prep in self.engine.diff_info.items():
+            err_phot = prep.err_phot / np.prod(prep.w.shape)
+            err_fourier = np.zeros_like(err_phot)
+            err_exit = np.zeros_like(err_phot)
+            errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
+            error_dct.update(zip(prep.view_IDs, errs))
+            LL += err_phot.sum()
 
         # MPI reduction of gradients
-        self.ob_grad.allreduce()
-        self.pr_grad.allreduce()
+        ob_grad.allreduce()
+        pr_grad.allreduce()
         parallel.allreduce(LL)
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.items():
-                self.ob_grad.storages[name].data += self.regularizer.grad(
-                    s.data)
+            for name, s in self.engine.ob.storages.items():
+                ob_grad.storages[name].data += self.regularizer.grad(s.data)
                 LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
 
         return error_dct
+
 
     def poly_line_coeffs(self, ob_h, pr_h):
         """
@@ -524,45 +482,53 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.items():
-            if not diff_view.active:
-                continue
+        for dID in self.di.S.keys():
 
-            # Weights and intensities for this view
-            w = self.weights[diff_view]
-            I = diff_view.data
+            prep = self.diff_info[dID]
 
-            A0 = None
-            A1 = None
-            A2 = None
+            # find probe, object in exit ID in dependence of dID
+            pID, oID, eID = prep.poe_IDs
 
-            for name, pod in diff_view.pods.items():
-                if not pod.active:
-                    continue
-                f = pod.fw(pod.probe * pod.object)
-                a = pod.fw(pod.probe * ob_h[pod.ob_view]
-                           + pr_h[pod.pr_view] * pod.object)
-                b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
+            # references for kernels
+            kern = self.kernels[prep.label]
+            GDK = kern.GDK
+            AWK = kern.AWK
 
-                if A0 is None:
-                    A0 = u.abs2(f).astype(np.longdouble)
-                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
-                    A2 = (2 * np.real(f * b.conj()).astype(np.longdouble)
-                          + u.abs2(a).astype(np.longdouble))
-                else:
-                    A0 += u.abs2(f)
-                    A1 += 2 * np.real(f * a.conj())
-                    A2 += 2 * np.real(f * b.conj()) + u.abs2(a)
+            f = kern.aux
+            a = kern.a
+            b = kern.b
 
+            FW = kern.FW
+
+            # get addresses and auxilliary array
+            addr = prep.addr
+            w = prep.weights
+
+            # local references
+            ob = self.ob.S[oID].data
+            pr = self.pr.S[pID].data
+            I = self.di.S[eID].data
+
+            # make propagated exit (to buffer)
+            AWK.build_aux_no_ex(f, addr, ob, pr, add=False)
+            AWK.build_aux_no_ex(a, addr, ob, pr, add=False)
+            AWK.build_aux_no_ex(a, addr, ob, pr, add=True)
+            AWK.build_aux_no_ex(b, addr, ob, pr, add=False)
+
+            # forward prop
+            FW(f, f)
+            FW(a, a)
+            FW(b, b)
+
+            GDK.fill_a012(f, a, b, addr, I)
+
+            """
             if self.p.floating_intensities:
                 A0 *= self.float_intens_coeff[dname]
                 A1 *= self.float_intens_coeff[dname]
                 A2 *= self.float_intens_coeff[dname]
-            A0 -= I
-
-            B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
-            B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
-            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
+            """
+            GDK.fill_b(addr, Brenorm, w, B)
 
         parallel.allreduce(B)
 
@@ -728,110 +694,3 @@ class PoissonModel(BaseModel):
         return B
 
 
-class Regul_del2(object):
-    """\
-    Squared gradient regularizer (Gaussian prior).
-
-    This class applies to any numpy array.
-    """
-    def __init__(self, amplitude, axes=[-2, -1]):
-        # Regul.__init__(self, axes)
-        self.axes = axes
-        self.amplitude = amplitude
-        self.delxy = None
-        self.g = None
-        self.LL = None
-
-    def grad(self, x):
-        """
-        Compute and return the regularizer gradient given the array x.
-        """
-        ax0, ax1 = self.axes
-        del_xf = u.delxf(x, axis=ax0)
-        del_yf = u.delxf(x, axis=ax1)
-        del_xb = u.delxb(x, axis=ax0)
-        del_yb = u.delxb(x, axis=ax1)
-
-        self.delxy = [del_xf, del_yf, del_xb, del_yb]
-        self.g = 2. * self.amplitude*(del_xb + del_yb - del_xf - del_yf)
-
-        self.LL = self.amplitude * (u.norm2(del_xf)
-                               + u.norm2(del_yf)
-                               + u.norm2(del_xb)
-                               + u.norm2(del_yb))
-
-        return self.g
-
-    def poly_line_coeffs(self, h, x=None):
-        ax0, ax1 = self.axes
-        if x is None:
-            del_xf, del_yf, del_xb, del_yb = self.delxy
-        else:
-            del_xf = u.delxf(x, axis=ax0)
-            del_yf = u.delxf(x, axis=ax1)
-            del_xb = u.delxb(x, axis=ax0)
-            del_yb = u.delxb(x, axis=ax1)
-
-        hdel_xf = u.delxf(h, axis=ax0)
-        hdel_yf = u.delxf(h, axis=ax1)
-        hdel_xb = u.delxb(h, axis=ax0)
-        hdel_yb = u.delxb(h, axis=ax1)
-
-        c0 = self.amplitude * (u.norm2(del_xf)
-                               + u.norm2(del_yf)
-                               + u.norm2(del_xb)
-                               + u.norm2(del_yb))
-
-        c1 = 2 * self.amplitude * np.real(np.vdot(del_xf, hdel_xf)
-                                          + np.vdot(del_yf, hdel_yf)
-                                          + np.vdot(del_xb, hdel_xb)
-                                          + np.vdot(del_yb, hdel_yb))
-
-        c2 = self.amplitude * (u.norm2(hdel_xf)
-                               + u.norm2(hdel_yf)
-                               + u.norm2(hdel_xb)
-                               + u.norm2(hdel_yb))
-
-        self.coeff = np.array([c0, c1, c2])
-        return self.coeff
-
-
-def prepare_smoothing_preconditioner(amplitude):
-    """
-    Factory for smoothing preconditioner.
-    """
-    if amplitude == 0.:
-        return None
-
-    class GaussFilt(object):
-        def __init__(self, sigma):
-            self.sigma = sigma
-
-        def __call__(self, x):
-            return u.c_gf(x, [0, self.sigma, self.sigma])
-
-    # from scipy.signal import correlate2d
-    # class HannFilt:
-    #    def __call__(self, x):
-    #        y = np.empty_like(x)
-    #        sh = x.shape
-    #        xf = x.reshape((-1,) + sh[-2:])
-    #        yf = y.reshape((-1,) + sh[-2:])
-    #        for i in range(len(xf)):
-    #            yf[i] = correlate2d(xf[i],
-    #                                np.array([[.0625, .125, .0625],
-    #                                          [.125, .25, .125],
-    #                                          [.0625, .125, .0625]]),
-    #                                mode='same')
-    #        return y
-
-    if amplitude > 0.:
-        logger.debug(
-            'Using a smooth gradient filter (Gaussian blur - only for ML)')
-        return GaussFilt(amplitude)
-
-    elif amplitude < 0.:
-        raise RuntimeError('Hann filter not implemented (negative smoothing amplitude not supported)')
-        # logger.debug(
-        #    'Using a smooth gradient filter (Hann window - only for ML)')
-        # return HannFilt()

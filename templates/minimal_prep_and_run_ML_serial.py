@@ -29,7 +29,7 @@ p.scans.MF.data.num_frames = 600
 p.scans.MF.data.save = None
 
 p.scans.MF.illumination = u.Param(diversity=None)
-p.scans.MF.coherence = u.Param(num_probe_modes=2)
+p.scans.MF.coherence = u.Param(num_probe_modes=1)
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.1
 # total number of photon in empty beam
