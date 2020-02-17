@@ -23,7 +23,7 @@ p.frames_per_block = 500
 # set home path
 p.io = u.Param()
 p.io.home = tmpdir
-p.io.autosave = u.Param(active=False)
+p.io.autosave = u.Param(active=False) # active=True, interval=50000)
 p.io.autoplot = u.Param(active=False)
 p.io.interaction = u.Param()
 p.io.interaction.server = u.Param(active=False)
@@ -57,7 +57,7 @@ p.scans.I08.data.psf = 1.5
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM_pycuda_stream'
-p.engines.engine00.numiter = 1000 #1000
+p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 20
 p.engines.engine00.probe_update_start = 1
 p.engines.engine00.probe_update_cuda_atomics = False

@@ -14,8 +14,6 @@ profdir=/dls/tmp/${USER}/nvprof
 
 mkdir -p ${profdir}
 
-# run with CUDA 10 profiler and nvcc
-#module load cuda/10.1
 
 # run all scripts
 for script in $scripts

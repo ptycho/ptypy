@@ -43,7 +43,7 @@ class GpuData:
     Note: Allocator should be pooled for best performance
     """
 
-    def __init__(self, allocator, syncback=False):
+    def __init__(self, nbytes, syncback=False):
         """
         New instance of GpuData. Allocates the GPU-side array.
 
@@ -54,10 +54,21 @@ class GpuData:
         """
 
         self.gpu = None
+        self.gpuraw = cuda.mem_alloc(nbytes)
+        self.nbytes = nbytes
         self.gpuId = None
         self.cpu = None
         self.syncback = syncback
-        self.allocator = allocator
+        self.ev_done = None
+
+    def _allocator(self, nbytes):
+        if nbytes > self.nbytes:
+            raise Exception('requested more bytes than maximum given before')
+        return self.gpuraw
+
+    def record_done(self, stream):
+        self.ev_done = cuda.Event()
+        self.ev_done.record(stream)
 
     def to_gpu(self, cpu, id, stream):
         """
@@ -68,7 +79,9 @@ class GpuData:
                 self.from_gpu(stream)
             self.gpuId = id
             self.cpu = cpu
-            self.gpu = gpuarray.to_gpu_async(cpu, allocator=self.allocator, stream=stream)
+            if self.ev_done is not None:
+                self.ev_done.synchronize()
+            self.gpu = gpuarray.to_gpu_async(cpu, allocator=self._allocator, stream=stream)
         return self.gpu
 
     def from_gpu(self, stream):
@@ -77,7 +90,11 @@ class GpuData:
         before.
         """
         if self.cpu is not None and self.gpuId is not None and self.gpu is not None:
+            if self.ev_done is not None:
+                stream.wait_for_event(self.ev_done)
             self.gpu.get_async(stream, self.cpu)
+            self.ev_done = cuda.Event()
+            self.ev_done.record(stream)
 
 class GpuDataManager:
     """
@@ -88,13 +105,13 @@ class GpuDataManager:
     while during probe update, it's not.
     """
 
-    def __init__(self, allocator, num, syncback=False):
+    def __init__(self, nbytes, num, syncback=False):
         """
         Create an instance of GpuDataManager.
         Parameters are the same as for GpuData, and num is the number of
         GpuData instances to create (blocks on device).
         """
-        self.data = [GpuData(allocator, syncback) for _ in range(num)]
+        self.data = [GpuData(nbytes, syncback) for _ in range(num)]
 
     @property
     def syncback(self):
@@ -127,6 +144,14 @@ class GpuDataManager:
         m = self.data.pop(idx)
         self.data.append(m)
         return m.to_gpu(cpu, id, stream)
+
+    def record_done(self, id, stream):
+        for x in self.data:
+            if x.gpuId == id:
+                x.record_done(stream)
+                return
+        raise Exception('recording done for id not in pool')
+
     
     def sync_to_cpu(self, stream):
         """
@@ -142,7 +167,6 @@ class GpuStreamData:
         self.ex_data = ex_data
         self.ma_data = ma_data
         self.mag_data = mag_data
-        self.ev_done = None  # done with this stream
         self.ev_compute = None
 
     def end_compute(self):
@@ -170,11 +194,6 @@ class GpuStreamData:
         before overwriting it
         """
 
-        # wait for previous work on same memory to complete
-        if self.ev_done is not None:
-            self.queue.wait_for_event(self.ev_done)
-            #self.ev_done.synchronize()
-            self.ev_done = None  
         return self.ex_data.to_gpu(ex, dID, self.queue)
 
     def ma_to_gpu(self, dID, ma, mag):
@@ -182,27 +201,25 @@ class GpuStreamData:
         Copy MA array to GPU
         """
         # wait for previous work on memory to complete
-        if self.ev_done is not None:
-            self.queue.wait_for_event(self.ev_done)
-            self.ev_done = None
         ma_gpu = self.ma_data.to_gpu(ma, dID, self.queue)
         mag_gpu = self.mag_data.to_gpu(mag, dID, self.queue)
         return ma_gpu, mag_gpu
     
-    def record_done(self):
+    def record_done_ex(self, dID):
         """
         Record when we're done with this stream, so that it can be re-used
         """
-        self.ev_done = cuda.Event()
-        self.ev_done.record(self.queue)
+        self.ex_data.record_done(dID, self.queue)
+
+    def record_done_ma(self, dID):
+        self.ma_data.record_done(dID, self.queue)
+        self.mag_data.record_done(dID, self.queue)
 
     def synchronize(self):
         """
         Wait for stream to finish its work
         """
         self.queue.synchronize()
-        self.ev_done = None
-
 
 
 @register()
@@ -211,7 +228,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
     def __init__(self, ptycho_parent, pars = None):
 
         super(DM_pycuda_stream, self).__init__(ptycho_parent, pars)
-        self.dmp = DeviceMemoryPool()
         self.streams = None 
         self.ma_data = None
         self.mag_data = None
@@ -281,9 +297,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             mag = prep.mag
             prep.mag = cuda.pagelocked_empty(mag.shape, mag.dtype, order="C", mem_flags=4)
             prep.mag[:] = mag
-            ex_mem = max(ex_mem, ex.size * 8)
-            ma_mem = max(ma_mem, ma.size * 4)
-            mag_mem = max(mag_mem, mag.size * 4)
+            ex_mem = max(ex_mem, ex.nbytes)
+            ma_mem = max(ma_mem, ma.nbytes)
+            mag_mem = max(mag_mem, mag.nbytes)
             blocks += 1
         
         # now check remaining memory and allocate as many blocks as would fit
@@ -296,9 +312,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         nstreams = min(MAX_STREAMS, blocks)
 
         print('exit arrays: {}, ma_arrays: {}, streams: {}, totalblocks: {}'.format(nex, nma, nstreams, blocks))
-        self.ex_data = GpuDataManager(self.dmp.allocate, nex, True)
-        self.ma_data = GpuDataManager(self.dmp.allocate, nma, False)
-        self.mag_data = GpuDataManager(self.dmp.allocate, nma, False)
+        self.ex_data = GpuDataManager(ex_mem, nex, True)
+        self.ma_data = GpuDataManager(ma_mem, nma, False)
+        self.mag_data = GpuDataManager(mag_mem, nma, False)
         self.streams = [GpuStreamData(self.ex_data, self.ma_data, self.mag_data) for _ in range(nstreams)]
 
     def engine_iterate(self, num=1):
@@ -392,17 +408,14 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     pr = self.pr.S[pID].gpu
 
                     # transfer exit wave to gpu
-                    prep.ex_gpu = streamdata.ex_to_gpu(dID, prep.ex)
-                    ex = prep.ex_gpu 
+                    ex = streamdata.ex_to_gpu(dID, prep.ex)
 
                     # Fourier update
                     if do_update_fourier:
                         log(4, '------ Fourier update -----', True)
 
                         # transfer other input data in
-                        prep.ma_gpu, prep.mag_gpu = streamdata.ma_to_gpu(dID, prep.ma, prep.mag)
-                        ma = prep.ma_gpu
-                        mag = prep.mag_gpu
+                        ma, mag = streamdata.ma_to_gpu(dID, prep.ma, prep.mag)
 
                         t1 = time.time()
                         streamdata.start_compute(prev_event)
@@ -420,6 +433,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         FUK.error_reduce(addr, err_fourier)
                         FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
                         self.benchmark.C_Fourier_update += time.time() - t1
+                        streamdata.record_done_ma(dID)
 
                         ## Backward FFT
                         t1 = time.time()
@@ -445,7 +459,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self.benchmark.object_update += time.time() - t1
                         self.benchmark.calls_object += 1
 
-                    streamdata.record_done()
+                    streamdata.record_done_ex(dID)
                     self.cur_stream = (self.cur_stream + self.stream_direction) % len(self.streams)
 
                 # swap direction for next time
@@ -550,7 +564,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
 
-            prep.ex_gpu = streamdata.ex_to_gpu(dID, prep.ex)
+            ex = streamdata.ex_to_gpu(dID, prep.ex)
 
             # scan for-loop
             addrt = prep.addr_gpu if use_atomics else prep.addr2_gpu
@@ -559,8 +573,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                                self.pr.S[pID].gpu,
                                self.pr_nrm.S[pID].gpu,
                                self.ob.S[oID].gpu,
-                               prep.ex_gpu,
+                               ex,
                                atomics=use_atomics)
+            streamdata.record_done_ex(dID)
             prev_event = streamdata.end_compute()
             self.cur_stream = (self.cur_stream + self.stream_direction) % len(self.streams)
 
@@ -607,7 +622,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
     def engine_finalize(self):
         # clear all GPU data, pinned memory, etc
-        self.dmp.stop_holding()
         self.streams = None
         self.ex_data = None
         self.ma_data = None
