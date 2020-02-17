@@ -73,9 +73,6 @@ class DM_pycuda(DM_serial.DM_serial):
 
         self.error = []
 
-        self.ob_cfact_gpu = {}
-        self.pr_cfact_gpu = {}
-
     def _setup_kernels(self):
         """
         Setup kernels, one for each scan. Derive scans from ptycho class
@@ -472,8 +469,14 @@ class DM_pycuda(DM_serial.DM_serial):
         """
         try deleting ever helper contianer
         """
-        super(DM_pycuda, self).engine_finalize()
-        #self.queue.synchronize()
+        for name, s in self.pr.S.items():
+            del s.gpu
+        for name, s in self.ob.S.items():
+            del s.gpu
+        
         self.context.detach()
+        # might call gpu frees after context is destroyed
+        # error?
+        super(DM_pycuda, self).engine_finalize()
 
         # delete local references to container buffer copies

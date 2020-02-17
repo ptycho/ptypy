@@ -40,13 +40,10 @@ class GpuData:
     and transfers if it's not already there.
 
     To be used for the exit wave, ma, and mag arrays.
-
-    Assumptions:
-    - The data type and size of data is the same, for every CPU block
-      transferred (this is asserted)
+    Note: Allocator should be pooled for best performance
     """
 
-    def __init__(self, allocator, shape, dtype, syncback=False):
+    def __init__(self, allocator, syncback=False):
         """
         New instance of GpuData. Allocates the GPU-side array.
 
@@ -56,23 +53,22 @@ class GpuData:
         :param syncback: Should the data be synced back to CPU any time it's swapped out
         """
 
-        self.shape = shape
-        self.gpu = gpuarray.empty(shape, dtype=dtype, allocator=allocator)
+        self.gpu = None
         self.gpuId = None
         self.cpu = None
         self.syncback = syncback
+        self.allocator = allocator
 
     def to_gpu(self, cpu, id, stream):
         """
         Transfer cpu array to GPU on stream (async), keeping track of its id
         """
-        assert self.shape == cpu.shape
         if self.gpuId != id:
             if self.syncback:
                 self.from_gpu(stream)
             self.gpuId = id
             self.cpu = cpu
-            self.gpu.set_async(cpu, stream)
+            self.gpu = gpuarray.to_gpu_async(cpu, allocator=self.allocator, stream=stream)
         return self.gpu
 
     def from_gpu(self, stream):
@@ -80,7 +76,7 @@ class GpuData:
         Transfer data back to CPU, into same data handle it was copied from
         before.
         """
-        if self.cpu is not None and self.gpuId is not None:
+        if self.cpu is not None and self.gpuId is not None and self.gpu is not None:
             self.gpu.get_async(stream, self.cpu)
 
 class GpuDataManager:
@@ -92,13 +88,13 @@ class GpuDataManager:
     while during probe update, it's not.
     """
 
-    def __init__(self, allocator, shape, dtype, num, syncback=False):
+    def __init__(self, allocator, num, syncback=False):
         """
         Create an instance of GpuDataManager.
         Parameters are the same as for GpuData, and num is the number of
         GpuData instances to create (blocks on device).
         """
-        self.data = [GpuData(allocator, shape, dtype, syncback) for _ in range(num)]
+        self.data = [GpuData(allocator, syncback) for _ in range(num)]
 
     @property
     def syncback(self):
@@ -199,7 +195,6 @@ class GpuStreamData:
         """
         self.ev_done = cuda.Event()
         self.ev_done.record(self.queue)
-        pass
 
     def synchronize(self):
         """
@@ -263,7 +258,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         ex_mem = ma_mem = mag_mem = 0
-        exsh = mash = magsh = None
         blocks = 0
         for label, d in self.ptycho.new_data:
             dID = d.ID
@@ -287,21 +281,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             mag = prep.mag
             prep.mag = cuda.pagelocked_empty(mag.shape, mag.dtype, order="C", mem_flags=4)
             prep.mag[:] = mag
-            if ex_mem == 0:
-                ex_mem = ex.size * 8
-                exsh = ex.shape
-            else:
-                assert ex_mem == ex.size * 8
-            if ma_mem == 0:
-                ma_mem = ma.size * 4
-                mash = ma.shape
-            else:
-                assert ma_mem == ma.size * 4
-            if mag_mem == 0:
-                mag_mem = mag.size * 4
-                magsh = mag.shape
-            else:
-                assert mag_mem == mag.size * 4
+            ex_mem = max(ex_mem, ex.size * 8)
+            ma_mem = max(ma_mem, ma.size * 4)
+            mag_mem = max(mag_mem, mag.size * 4)
             blocks += 1
         
         # now check remaining memory and allocate as many blocks as would fit
@@ -314,9 +296,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         nstreams = min(MAX_STREAMS, blocks)
 
         print('exit arrays: {}, ma_arrays: {}, streams: {}, totalblocks: {}'.format(nex, nma, nstreams, blocks))
-        self.ex_data = GpuDataManager(self.dmp.allocate, exsh, np.complex64, nex, True)
-        self.ma_data = GpuDataManager(self.dmp.allocate, mash, np.float32, nma, False)
-        self.mag_data = GpuDataManager(self.dmp.allocate, magsh, np.float32, nma, False)
+        self.ex_data = GpuDataManager(self.dmp.allocate, nex, True)
+        self.ma_data = GpuDataManager(self.dmp.allocate, nma, False)
+        self.mag_data = GpuDataManager(self.dmp.allocate, nma, False)
         self.streams = [GpuStreamData(self.ex_data, self.ma_data, self.mag_data) for _ in range(nstreams)]
 
     def engine_iterate(self, num=1):
@@ -624,44 +606,16 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         return np.sqrt(change)
 
     def engine_finalize(self):
-        # bring exit waves back to cpu
-        self.ex_data.sync_to_cpu(self.queue)
-        self.queue.synchronize()
         # clear all GPU data, pinned memory, etc
         self.dmp.stop_holding()
         self.streams = None
         self.ex_data = None
         self.ma_data = None
         self.mag_data = None
-        for name, s in self.ob_buf.S.items():
-            # obb
-            s.data = np.copy(s.data)
-            del s.gpu
-        for name, s in self.ob_nrm.S.items():
-            # obn
-            s.data = np.copy(s.data)
-            del s.gpu
         for name, s in self.pr.S.items():
             # pr
             s.data = np.copy(s.data)
-            del s.gpu
-        for name, s in self.pr_nrm.S.items():
-            # prn
-            s.data = np.copy(s.data)
-            del s.gpu
 
-        for _, prep in self.diff_info.items():
-            pID, oID, eID = prep.poe_IDs
-
-            del prep.addr_gpu
-            if hasattr(prep, 'addr2'):
-                del prep.addr2
-                del prep.addr2_gpu
-
-            del prep.ma_sum_gpu
-            del prep.err_fourier_gpu
-            prep.ma = np.copy(prep.ma)
-            prep.ex = np.copy(prep.ex)
-            prep.mag= np.copy(prep.mag)
+        self.diff_info = None
         self.dmg = None
         super().engine_finalize()
