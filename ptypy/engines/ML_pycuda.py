@@ -121,21 +121,25 @@ class ML_pycuda(ML_serial):
 
     def engine_prepare(self):
 
-        super(ML_pycuda, self).engine_prepare()
-
         ## Serialize new data ##
 
         for label, d in self.ptycho.new_data:
             prep = u.Param()
-
             prep.label = label
             self.diff_info[d.ID] = prep
+            prep.err_phot = np.zeros_like((d.data.shape[0],), dtype=np.float32)
 
-            mask_data = self.ma.S[d.ID].data.astype(np.float32)  # in the gpu kernels, which this is tested against, this is converted to a float
-            self.ma.S[d.ID].data = mask_data
-            prep.ma_sum = mask_data.sum(-1).sum(-1)
-            prep.err_phot = np.zeros_like(prep.ma_sum)
+        # Unfortunately this needs to be done for all pods, since
+        # the shape of the probe / object was modified.
+        # TODO: possible scaling issue
+        for label, d in self.di.storages.items():
+            prep = self.diff_info[d.ID]
+            prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
+            if self.do_position_refinement:
+                prep.original_addr = np.zeros_like(prep.addr)
+                prep.original_addr[:] = prep.addr
 
+        self.ML_model.prepare()
 
     def engine_iterate(self, num=1):
         """
@@ -146,7 +150,6 @@ class ML_pycuda(ML_serial):
         ########################
         tg = 0.
         tc = 0.
-        ta = time.time()
         for it in range(num):
             t1 = time.time()
             error_dct = self.ML_model.new_grad()
@@ -251,104 +254,19 @@ class ML_pycuda(ML_serial):
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
 
-    def engine_finalize(self):
-        """
-        Delete temporary containers.
-        """
-        del self.ptycho.containers[self.ob_grad.ID]
-        del self.ob_grad
-        del self.ptycho.containers[self.ob_h.ID]
-        del self.ob_h
-        del self.ptycho.containers[self.pr_grad.ID]
-        del self.pr_grad
-        del self.ptycho.containers[self.pr_h.ID]
-        del self.pr_h
-
-
-class BaseModel(object):
+class BaseModelSerial(BaseModel):
     """
     Base class for log-likelihood models.
     """
-
-    def __init__(self, MLengine):
-        """
-        Core functions for ML computation using a Gaussian model.
-        """
-        self.engine = MLengine
-
-        # Transfer commonly used attributes from ML engine
-        self.di = self.engine.di
-        self.p = self.engine.p
-        self.ob = self.engine.ob
-        self.ob_grad = self.engine.ob_grad_new
-        self.pr_grad = self.engine.pr_grad_new
-        self.pr = self.engine.pr
-        self.float_intens_coeff = {}
-
-        if self.p.intensity_renormalization is None:
-            self.Irenorm = 1.
-        else:
-            self.Irenorm = self.p.intensity_renormalization
-
-        # Create working variables
-        self.LL = 0.
-
-        # Useful quantities
-        self.tot_measpts = sum(s.data.size
-                               for s in self.di.storages.values())
-        self.tot_power = self.Irenorm * sum(s.tot_power
-                                            for s in self.di.storages.values())
-
-        self.regularizer = None
-        self.prepare_regularizer()
-
-    def prepare_regularizer(self):
-        """
-        Prepare regularizer.
-        """
-        # Prepare regularizer
-        if self.p.reg_del2:
-            obj_Npix = self.ob.size
-            expected_obj_var = obj_Npix / self.tot_power  # Poisson
-            reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
-            logger.debug(
-                'Rescaling regularization amplitude using '
-                'the Poisson distribution assumption.')
-            logger.debug('Factor: %8.5g' % reg_rescale)
-            reg_del2_amplitude = self.p.reg_del2_amplitude * reg_rescale
-            self.regularizer = Regul_del2(amplitude=reg_del2_amplitude)
 
     def __del__(self):
         """
         Clean up routine
         """
-        # Remove working attributes
-        for name, diff_view in self.di.views.items():
-            if not diff_view.active:
-                continue
-            try:
-                del diff_view.error
-            except:
-                pass
-
-    def new_grad(self):
-        """
-        Compute a new gradient direction according to the noise model.
-
-        Note: The negative log-likelihood and local errors should also be computed
-        here.
-        """
-        raise NotImplementedError
-
-    def poly_line_coeffs(self, ob_h, pr_h):
-        """
-        Compute the coefficients of the polynomial for line minimization
-        in direction h
-        """
-        raise NotImplementedError
+        pass
 
 
-class GaussianModel(BaseModel):
+class GaussianModel(BaseModelSerial):
     """
     Gaussian noise model.
     TODO: feed actual statistical weights instead of using the Poisson statistic heuristic.
@@ -358,26 +276,22 @@ class GaussianModel(BaseModel):
         """
         Core functions for ML computation using a Gaussian model.
         """
-        BaseModel.__init__(self, MLengine)
+        super(GaussianModel, self).__init__(MLengine)
 
-        # Gaussian model requires weights
-        # TODO: update this part of the code once actual weights are passed in the PODs
-        self.weights = self.engine.di.copy(self.engine.di.ID + '_weights')
-        # FIXME: This part needs to be updated once statistical weights are properly
-        # supported in the data preparation.
-        for name, di_view in self.di.views.items():
-            if not di_view.active:
-                continue
-            self.weights[di_view] = (self.Irenorm * di_view.pod.ma_view.data
-                                     / (1./self.Irenorm + di_view.data))
+    def prepare(self):
+
+        super(GaussianModel, self).prepare()
+
+        for label, d in self.engine.ptycho.new_data:
+            prep = self.engine.diff_info[d.ID]
+            prep.weights = (self.Irenorm * self.engine.ma.S[d.ID].data
+                            / (1. / self.Irenorm + d.data))
 
     def __del__(self):
         """
         Clean up routine
         """
-        BaseModel.__del__(self)
-        del self.engine.ptycho.containers[self.weights.ID]
-        del self.weights
+        super(GaussianModel, self).__del__()
 
     def new_grad(self):
         """
@@ -396,13 +310,12 @@ class GaussianModel(BaseModel):
         error_dct = {}
 
         for dID in self.di.S.keys():
-
-            prep = self.diff_info[dID]
+            prep = self.engine.diff_info[dID]
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
 
             # references for kernels
-            kern = self.kernels[prep.label]
+            kern = self.engine.kernels[prep.label]
             GDK = kern.GDK
             AWK = kern.AWK
             POK = kern.POK
@@ -422,13 +335,13 @@ class GaussianModel(BaseModel):
             obg = ob_grad.S[oID].data
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
-            I = self.engine.di.S[eID].data
+            I = self.engine.di.S[dID].data
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
 
             # forward prop
-            FW(aux, aux)
+            aux[:] = FW(aux)
             GDK.make_model(aux, addr)
 
             """
@@ -443,13 +356,13 @@ class GaussianModel(BaseModel):
 
             GDK.main(aux, addr, w, I)
             GDK.error_reduce(addr, err_phot)
-            BW(aux, aux)
+            aux[:] = BW(aux)
 
-            POK.ob_update_ML(aux, addr, obg, pr)
-            POK.pr_update_ML(aux, addr, prg, ob)
+            POK.ob_update_ML(addr, obg, pr, aux)
+            POK.pr_update_ML(addr, prg, ob, aux)
 
         for dID, prep in self.engine.diff_info.items():
-            err_phot = prep.err_phot / np.prod(prep.w.shape)
+            err_phot = prep.err_phot / np.prod(prep.weights.shape)
             err_fourier = np.zeros_like(err_phot)
             err_exit = np.zeros_like(err_phot)
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
@@ -471,26 +384,24 @@ class GaussianModel(BaseModel):
 
         return error_dct
 
-
-    def poly_line_coeffs(self, ob_h, pr_h):
+    def poly_line_coeffs(self, c_ob_h, c_pr_h):
         """
         Compute the coefficients of the polynomial for line minimization
         in direction h
         """
 
         B = np.zeros((3,), dtype=np.longdouble)
-        Brenorm = 1. / self.LL[0]**2
+        Brenorm = 1. / self.LL[0] ** 2
 
         # Outer loop: through diffraction patterns
         for dID in self.di.S.keys():
-
-            prep = self.diff_info[dID]
+            prep = self.engine.diff_info[dID]
 
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
 
             # references for kernels
-            kern = self.kernels[prep.label]
+            kern = self.engine.kernels[prep.label]
             GDK = kern.GDK
             AWK = kern.AWK
 
@@ -506,21 +417,23 @@ class GaussianModel(BaseModel):
 
             # local references
             ob = self.ob.S[oID].data
+            ob_h = c_ob_h.S[oID].data
             pr = self.pr.S[pID].data
-            I = self.di.S[eID].data
+            pr_h = c_pr_h.S[pID].data
+            I = self.di.S[dID].data
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(f, addr, ob, pr, add=False)
-            AWK.build_aux_no_ex(a, addr, ob, pr, add=False)
-            AWK.build_aux_no_ex(a, addr, ob, pr, add=True)
-            AWK.build_aux_no_ex(b, addr, ob, pr, add=False)
+            AWK.build_aux_no_ex(a, addr, ob_h, pr, add=False)
+            AWK.build_aux_no_ex(a, addr, ob, pr_h, add=True)
+            AWK.build_aux_no_ex(b, addr, ob_h, pr_h, add=False)
 
             # forward prop
-            FW(f, f)
-            FW(a, a)
-            FW(b, b)
+            f[:] = FW(f)
+            a[:] = FW(a)
+            b[:] = FW(b)
 
-            GDK.fill_a012(f, a, b, addr, I)
+            GDK.make_a012(f, a, b, addr, I)
 
             """
             if self.p.floating_intensities:
@@ -541,156 +454,3 @@ class GaussianModel(BaseModel):
         self.B = B
 
         return B
-
-
-class PoissonModel(BaseModel):
-    """
-    Poisson noise model.
-    """
-
-    def __init__(self, MLengine):
-        """
-        Core functions for ML computation using a Gaussian model.
-        """
-        BaseModel.__init__(self, MLengine)
-        from scipy import special
-        self.LLbase = {}
-        for name, di_view in self.di.views.items():
-            if not di_view.active:
-                continue
-            self.LLbase[name] = special.gammaln(di_view.data+1).sum()
-
-    def new_grad(self):
-        """
-        Compute a new gradient direction according to a Poisson noise model.
-
-        Note: The negative log-likelihood and local errors are also computed
-        here.
-        """
-        self.ob_grad.fill(0.)
-        self.pr_grad.fill(0.)
-
-        # We need an array for MPI
-        LL = np.array([0.])
-        error_dct = {}
-
-        # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.items():
-            if not diff_view.active:
-                continue
-
-            # Mask and intensities for this view
-            I = diff_view.data
-            m = diff_view.pod.ma_view.data
-
-            Imodel = np.zeros_like(I)
-            f = {}
-
-            # First pod loop: compute total intensity
-            for name, pod in diff_view.pods.items():
-                if not pod.active:
-                    continue
-                f[name] = pod.fw(pod.probe * pod.object)
-                Imodel += u.abs2(f[name])
-
-            # Floating intensity option
-            if self.p.floating_intensities:
-                self.float_intens_coeff[dname] = I.sum() / Imodel.sum()
-                Imodel *= self.float_intens_coeff[dname]
-
-            Imodel += 1e-6
-            DI = m * (1. - I / Imodel)
-
-            # Second pod loop: gradients computation
-            LLL = self.LLbase[dname] + (m * (Imodel - I * np.log(Imodel))).sum().astype(np.float64)
-            for name, pod in diff_view.pods.items():
-                if not pod.active:
-                    continue
-                xi = pod.bw(DI * f[name])
-                self.ob_grad[pod.ob_view] += 2 * xi * pod.probe.conj()
-                self.pr_grad[pod.pr_view] += 2 * xi * pod.object.conj()
-
-            diff_view.error = LLL
-            error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
-            LL += LLL
-
-        # MPI reduction of gradients
-        self.ob_grad.allreduce()
-        self.pr_grad.allreduce()
-        parallel.allreduce(LL)
-
-        # Object regularizer
-        if self.regularizer:
-            for name, s in self.ob.storages.items():
-                self.ob_grad.storages[name].data += self.regularizer.grad(
-                    s.data)
-                LL += self.regularizer.LL
-
-        self.LL = LL / self.tot_measpts
-
-        return self.ob_grad, self.pr_grad, error_dct
-
-    def poly_line_coeffs(self, ob_h, pr_h):
-        """
-        Compute the coefficients of the polynomial for line minimization
-        in direction h
-        """
-        B = np.zeros((3,), dtype=np.longdouble)
-        Brenorm = 1/(self.tot_measpts * self.LL[0])**2
-
-        # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.items():
-            if not diff_view.active:
-                continue
-
-            # Weights and intensities for this view
-            I = diff_view.data
-            m = diff_view.pod.ma_view.data
-
-            A0 = None
-            A1 = None
-            A2 = None
-
-            for name, pod in diff_view.pods.items():
-                if not pod.active:
-                    continue
-                f = pod.fw(pod.probe * pod.object)
-                a = pod.fw(pod.probe * ob_h[pod.ob_view]
-                           + pr_h[pod.pr_view] * pod.object)
-                b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
-
-                if A0 is None:
-                    A0 = u.abs2(f).astype(np.longdouble)
-                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
-                    A2 = (2 * np.real(f * b.conj()).astype(np.longdouble)
-                          + u.abs2(a).astype(np.longdouble))
-                else:
-                    A0 += u.abs2(f)
-                    A1 += 2 * np.real(f * a.conj())
-                    A2 += 2 * np.real(f * b.conj()) + u.abs2(a)
-
-            if self.p.floating_intensities:
-                A0 *= self.float_intens_coeff[dname]
-                A1 *= self.float_intens_coeff[dname]
-                A2 *= self.float_intens_coeff[dname]
-
-            A0 += 1e-6
-            DI = 1. - I/A0
-
-            B[0] += (self.LLbase[dname] + (m * (A0 - I * np.log(A0))).sum().astype(np.float64)) * Brenorm
-            B[1] += np.dot(m.flat, (A1*DI).flat) * Brenorm
-            B[2] += (np.dot(m.flat, (A2*DI).flat) + .5*np.dot(m.flat, (I*(A1/A0)**2.).flat)) * Brenorm
-
-        parallel.allreduce(B)
-
-        # Object regularizer
-        if self.regularizer:
-            for name, s in self.ob.storages.items():
-                B += Brenorm * self.regularizer.poly_line_coeffs(
-                    ob_h.storages[name].data, s.data)
-
-        self.B = B
-
-        return B
-
-
