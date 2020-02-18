@@ -10,11 +10,11 @@ p = u.Param()
 
 # for verbose output
 p.verbose_level = 3
-p.frames_per_block = 100
+p.frames_per_block = 200
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
-p.io.autosave = u.Param(active=False)
+p.io.autosave = u.Param(active=True)
 p.io.autoplot = u.Param(active=True)
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
@@ -25,14 +25,14 @@ p.scans.MF.name = 'BlockFull' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
-p.scans.MF.data.num_frames = 600
+p.scans.MF.data.num_frames = 1000
 p.scans.MF.data.save = None
 p.scans.MF.data.block_wait_count = 1
 
 p.scans.MF.illumination = u.Param(diversity=None)
-p.scans.MF.coherence = u.Param(num_probe_modes=2)
+p.scans.MF.coherence = u.Param(num_probe_modes=1)
 # position distance in fraction of illumination frame
-p.scans.MF.data.density = 0.1
+p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
 p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
@@ -42,12 +42,9 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM_serial'
-p.engines.engine00.numiter = 20
-p.engines.engine00.numiter_contiguous = 1
-p.engines.engine01 = u.Param()
-p.engines.engine01.name = 'ML_serial'
-p.engines.engine01.numiter = 20
-p.engines.engine01.numiter_contiguous = 1
+p.engines.engine00.numiter = 60
+p.engines.engine00.numiter_contiguous = 2
+p.engines.engine00.probe_update_start = 1
 
 # prepare and run
 P = Ptycho(p,level=5)

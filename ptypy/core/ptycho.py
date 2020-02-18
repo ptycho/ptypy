@@ -327,7 +327,8 @@ class Ptycho(Base):
         self.diff = None
         self.mask = None
         self.model = None
-        
+        self.new_data = None
+
         # Communication
         self.interactor = None
         self.plotter = None
@@ -495,7 +496,7 @@ class Ptycho(Base):
         """
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
-        self.model.new_data()
+        self.new_data = self.model.new_data()
 
         # Print stats
         parallel.barrier()
@@ -629,7 +630,7 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                self.model.new_data()
+                self.new_data = self.model.new_data()
 
                 # Last minute preparation before a contiguous block of
                 # iterations

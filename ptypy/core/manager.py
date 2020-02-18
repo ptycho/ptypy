@@ -475,7 +475,9 @@ class ScanModel(object):
         dp = self.ptyscan.auto(max_frames)
 
         self.data_available = (dp != data.EOS)
-        logger.debug(u.verbose.report(dp))
+
+        # TODO remove reports if not needed
+        #logger.debug(u.verbose.report(dp))
 
         if dp == data.WAIT or not self.data_available:
             return None
@@ -501,6 +503,8 @@ class BlockScanModel(ScanModel):
         report_time()
 
         dp = self._get_data(max_frames)
+        if dp is None:
+            return None
 
         report_time('read data')
 
@@ -1520,22 +1524,22 @@ class ModelManager(object):
 
         # Nothing to do if there are no new data.
         if not self.data_available:
-            self.ptycho.new_data = None
-            return
+            return None
+
 
         logger.info('Processing new data.')
 
         # Attempt to get new data
-        new_data = []
         _nframes = self.ptycho.frames_per_block
-        while self.data_available:
-            for label, scan in self.scans.items():
-                if not scan.data_available:
-                    continue
-                else:
-                    nd = scan.new_data(_nframes)
-                    if nd:
-                        new_data.append((label, nd))
-            #print(_nframes, new_data)
 
-        self.ptycho.new_data = new_data
+        new_data = []
+        for label, scan in self.scans.items():
+            if not scan.data_available:
+                continue
+            else:
+                nd = scan.new_data(_nframes)
+                while nd:
+                    new_data.append((label, nd))
+                    nd = scan.new_data(_nframes)
+
+        return new_data

@@ -174,7 +174,8 @@ class DM_serial(DM.DM):
 
             # TODO : make this more foolproof
             try:
-                nmodes = scan.p.coherence.num_probe_modes
+                nmodes = scan.p.coherence.num_probe_modes * \
+                         scan.p.coherence.num_object_modes
             except:
                 nmodes = 1
 
