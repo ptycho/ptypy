@@ -409,14 +409,17 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                     # transfer exit wave to gpu
                     ex = streamdata.ex_to_gpu(dID, prep.ex)
+                    
+                    # transfer ma/mag data to gpu if needed
+                    if do_update_fourier:
+                        # transfer other input data in
+                        ma, mag = streamdata.ma_to_gpu(dID, prep.ma, prep.mag)
+                    # waits for compute on previous stream to finish before continuing
                     streamdata.start_compute(prev_event)
 
                     # Fourier update
                     if do_update_fourier:
                         log(4, '------ Fourier update -----', True)
-
-                        # transfer other input data in
-                        ma, mag = streamdata.ma_to_gpu(dID, prep.ma, prep.mag)
 
                         t1 = time.time()
                         ## prep + forward FFT
