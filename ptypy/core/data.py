@@ -1501,6 +1501,11 @@ class MoonFlowerScan(PtyScan):
     type = bool
     help = Decides whether the scan should have poisson noise or not
 
+    [block_wait_count]
+    default = 0
+    type = int
+    help = Signals a WAIT to the model after this many blocks.
+
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -1559,8 +1564,19 @@ class MoonFlowerScan(PtyScan):
         moon /= np.sqrt(u.abs2(moon).sum() / p.photons)
         self.pr = moon
         self.load_common_in_parallel = True
-        
+
+        self._check_called = 0
         self.p = p
+
+    def check(self, frames=None, start=None):
+        frames_accessible, eos = super().check(frames, start)
+        self._check_called += 1
+
+        bwc = self.p.block_wait_count
+        if bwc >=1 and self._check_called % (bwc+1) == 0:
+            frames_accessible = 0
+
+        return frames_accessible, eos
 
     def load_positions(self):
         return self.pos

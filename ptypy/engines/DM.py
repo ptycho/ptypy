@@ -269,7 +269,8 @@ class DM(PositionCorrectionEngine):
         for name, di_view in self.di.views.items():
             if not di_view.active:
                 continue
-            pbound = self.pbound[di_view.storage.ID]
+            #pbound = self.pbound[di_view.storage.ID]
+            pbound = self.pbound_scan[di_view.storage.label]
             error_dct[name] = basic_fourier_update(di_view,
                                                    pbound=pbound,
                                                    alpha=self.p.alpha)
