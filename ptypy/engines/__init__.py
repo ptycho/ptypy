@@ -53,6 +53,7 @@ from . import ML_serial
 from . import DM_serial_stream
 try:
     from . import DM_pycuda
+    from . import ML_pycuda
     from . import DM_pycuda_stream
 except:
     pass
