@@ -14,7 +14,7 @@ p.frames_per_block = 200
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
-p.io.autosave = u.Param(active=False)
+p.io.autosave = u.Param(active=True, interval=50000)
 p.io.autoplot = u.Param(active=False)
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
