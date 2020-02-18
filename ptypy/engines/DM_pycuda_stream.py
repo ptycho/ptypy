@@ -409,6 +409,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                     # transfer exit wave to gpu
                     ex = streamdata.ex_to_gpu(dID, prep.ex)
+                    streamdata.start_compute(prev_event)
 
                     # Fourier update
                     if do_update_fourier:
@@ -418,7 +419,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         ma, mag = streamdata.ma_to_gpu(dID, prep.ma, prep.mag)
 
                         t1 = time.time()
-                        streamdata.start_compute(prev_event)
                         ## prep + forward FFT
                         AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                         self.benchmark.A_Build_aux += time.time() - t1
@@ -442,9 +442,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         AWK.build_exit(aux, addr, ob, pr, ex)
                         self.benchmark.E_Build_exit += time.time() - t1
                         
-                        # end_compute is to allow aux re-use, so we can mark it here
-                        prev_event = streamdata.end_compute()
-
                         self.benchmark.calls_fourier += 1
 
                     prestr = '%d Iteration (Overlap) #%02d:  ' % (parallel.rank, inner)
@@ -459,6 +456,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self.benchmark.object_update += time.time() - t1
                         self.benchmark.calls_object += 1
 
+                    # end_compute is to allow aux + ob re-use, so we can mark it here
+                    prev_event = streamdata.end_compute()
                     streamdata.record_done_ex(dID)
                     self.cur_stream = (self.cur_stream + self.stream_direction) % len(self.streams)
 

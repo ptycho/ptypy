@@ -23,7 +23,7 @@ p.frames_per_block = 100
 # set home path
 p.io = u.Param()
 p.io.home = tmpdir
-p.io.autosave = u.Param(active=False)
+p.io.autosave = u.Param(active=False) #(active=True, interval=50000)
 p.io.autoplot = u.Param(active=False)
 p.io.interaction = u.Param()
 p.io.interaction.server = u.Param(active=False)
