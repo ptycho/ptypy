@@ -89,13 +89,13 @@ class ML_pycuda(ML_serial):
 
             # create buffer arrays
             ash = (fpc * nmodes,) + tuple(geo.shape)
-            aux = np.zeros(ash, dtype=np.complex64)
+            aux = gpuarray.zeros(ash, dtype=np.complex64)
             kern.aux = aux
-            kern.a = np.zeros(ash, dtype=np.complex64)
-            kern.a = np.zeros(ash, dtype=np.complex64)
+            kern.a = gpuarray.zeros(ash, dtype=np.complex64)
+            kern.b = gpuarray.zeros(ash, dtype=np.complex64)
 
             # setup kernels, one for each SCAN.
-            kern.GDK = GradientDescentKernel(aux, nmodes, queue_thread=self.queue)
+            kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue)
             kern.GDK.allocate()
 
             kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type=np.float32)
@@ -154,6 +154,7 @@ class ML_pycuda(ML_serial):
         ## Serialize new data ##
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
+        """
         # recursive copy to gpu
         for _cname, c in self.ptycho.containers.items():
             if c.original != self.pr and c.original != self.ob:
@@ -161,7 +162,7 @@ class ML_pycuda(ML_serial):
             for _sname, s in c.S.items():
                 # convert data here
                 s.gpu = gpuarray.to_gpu(s.data)
-
+        """
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
             prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
@@ -229,7 +230,7 @@ class GaussianModel(BaseModelSerial):
             GDK = kern.GDK
             AWK = kern.AWK
             POK = kern.POK
-
+            GDK.gpu.LLerr.fill(0.)
             aux = kern.aux
 
             FW = kern.FW
@@ -239,7 +240,6 @@ class GaussianModel(BaseModelSerial):
             addr = prep.addr_gpu
             w = gpuarray.to_gpu(prep.weights)
             err_phot = prep.err_phot_gpu
-
             # local references
             ob = gpuarray.to_gpu(self.engine.ob.S[oID].data)
             obg = gpuarray.to_gpu(ob_grad.S[oID].data)
@@ -263,15 +263,24 @@ class GaussianModel(BaseModelSerial):
                 GDK.error_reduce(err_den, w * Imodel ** 2)
                 Imodel *= (err_num / err_den).reshape(Imodel.shape[0], 1, 1)
             """
-
+            LLerr = GDK.gpu.LLerr.get()
+            print(np.isnan(LLerr).any())
+            print(np.isnan(I.get()).any())
+            print(np.isnan(aux.get()).any())
             GDK.main(aux, addr, w, I)
+            LLerr = GDK.gpu.LLerr.get()
+            print(np.isnan(LLerr).any())
+            #print(GDK.gpu.LLerr.get()[0])
             GDK.error_reduce(addr, err_phot)
-            aux[:] = BW(aux)
-
+            BW(aux, aux)
+            #print(err_phot.get())
             use_atomics = self.p.object_update_cuda_atomics
-            POK.ob_update_ML(addr, obg, pr, aux, use_atomics)
+            addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
+            POK.ob_update_ML(addr, obg, pr, aux, atomics=use_atomics)
+
             use_atomics = self.p.probe_update_cuda_atomics
-            POK.pr_update_ML(addr, prg, ob, aux, use_atomics)
+            addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
+            POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
 
             obg.get(ob_grad.S[oID].data)
             prg.get(pr_grad.S[pID].data)
@@ -288,7 +297,7 @@ class GaussianModel(BaseModelSerial):
         ob_grad.allreduce()
         pr_grad.allreduce()
         parallel.allreduce(LL)
-
+        print(LL)
         # Object regularizer
         if self.regularizer:
             for name, s in self.engine.ob.storages.items():
@@ -305,7 +314,7 @@ class GaussianModel(BaseModelSerial):
         in direction h
         """
 
-        B = gpuarray.zeros((3,), dtype=np.longdouble)
+        B = gpuarray.zeros((3,), dtype=np.float32) # does not accept np.longdouble
         Brenorm = 1. / self.LL[0] ** 2
 
         # Outer loop: through diffraction patterns

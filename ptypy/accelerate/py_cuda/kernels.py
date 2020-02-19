@@ -164,7 +164,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         for key, array in self.npy.__dict__.items():
             self.ocl.__dict__[key] = gpuarray.to_gpu(array)
 
-    def build_aux(self, b_aux, addr, ob, pr, ex, alpha):
+    def build_aux(self, b_aux, addr, ob, pr, ex, alpha=1.0):
         obr, obc = self._cache_object_shape(ob)
         self.build_aux_cuda(b_aux,
                             ex,

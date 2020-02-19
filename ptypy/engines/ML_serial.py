@@ -126,7 +126,7 @@ class ML_serial(ML):
             prep = u.Param()
             prep.label = label
             self.diff_info[d.ID] = prep
-            prep.err_phot = np.zeros_like((d.data.shape[0],), dtype=np.float32)
+            prep.err_phot = np.zeros((d.data.shape[0],), dtype=np.float32)
 
         # Unfortunately this needs to be done for all pods, since
         # the shape of the probe / object was modified.
