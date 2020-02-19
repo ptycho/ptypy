@@ -14,14 +14,6 @@ if have_pycuda():
 
 class GpuDataTest(PyCudaTest):
 
-    def setUp(self):
-        super().setUp()
-        self.alloc = DeviceMemoryPool()
-    
-    def tearDown(self):
-        self.alloc.stop_holding()
-        super().tearDown()
-    
     def test_to_gpu_new(self):
         # arrange
         cpu = 2. * np.ones((5,5), dtype=np.float32)
@@ -119,7 +111,60 @@ class GpuDataTest(PyCudaTest):
         # act/assert
         with self.assertRaises(Exception):
             gdata.to_gpu(cpu2, '1', self.stream)
-        
+
+    def test_data_resize_raise(self):
+        # arrange
+        cpu = np.ones((5,5), dtype=np.float32)
+        gdata = GpuData(cpu.nbytes, syncback=False)
+        gpu = gdata.to_gpu(cpu, '1', self.stream)
+        cpu2 = np.ones((10,5), dtype=np.float32)
+
+        # act
+        gdata.resize(cpu2.nbytes)
+        gpu2 = gdata.to_gpu(cpu2, '1', self.stream)
+
+        # assert
+        self.assertEqual(gdata.gpuId, '1')
+        self.assertEqual(gdata.nbytes, cpu2.nbytes)
+        self.assertEqual(gpu2.size, cpu2.size)
+        self.assertGreaterEqual(gdata.nbytes_buffer, cpu2.nbytes)
+
+    def test_data_resize_shrink(self):
+        # arrange
+        cpu = np.ones((5,5), dtype=np.float32)
+        gdata = GpuData(cpu.nbytes, syncback=False)
+        gpu = gdata.to_gpu(cpu, '1', self.stream)
+        cpu2 = np.ones((4,6), dtype=np.float32)
+
+        # act
+        gdata.resize(cpu2.nbytes)
+        gpu2 = gdata.to_gpu(cpu2, '1', self.stream)
+
+        # assert
+        self.assertEqual(gdata.gpuId, '1')
+        self.assertEqual(gdata.nbytes, cpu2.nbytes)
+        self.assertEqual(gpu2.size, cpu2.size)
+        self.assertGreaterEqual(gdata.nbytes_buffer, cpu2.nbytes)
+
+    def test_datamanager_memory(self):
+        # arrange / act
+        gdm = GpuDataManager(128, 4)
+        gdm.reset(124, 3)
+
+        # assert
+        self.assertEqual(gdm.memory, 3*128)
+        self.assertEqual(gdm.nbytes, 124)
+
+    def test_datamanager_free(self):
+        # arrange
+        gdm = GpuDataManager(128, 2)
+
+        # act
+        gdm.free()
+
+        # assert
+        self.assertEqual(gdm.memory, 0)
+
     def test_datamanager_newids(self):
         # arrange
         cpu1 = 2. * np.ones((5,5), dtype=np.float32)

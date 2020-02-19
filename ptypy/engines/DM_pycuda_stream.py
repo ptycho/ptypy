@@ -56,6 +56,7 @@ class GpuData:
         self.gpu = None
         self.gpuraw = cuda.mem_alloc(nbytes)
         self.nbytes = nbytes
+        self.nbytes_buffer = nbytes
         self.gpuId = None
         self.cpu = None
         self.syncback = syncback
@@ -95,6 +96,36 @@ class GpuData:
             self.gpu.get_async(stream, self.cpu)
             self.ev_done = cuda.Event()
             self.ev_done.record(stream)
+    
+    def resize(self, nbytes):
+        """
+        Resize the size of the underlying buffer, to allow re-use in different contexts.
+        Note that memory will only be freed/reallocated if the new number of bytes are
+        either larger than before, or if they are less than 90% of the original size -
+        otherwise it reuses the existing buffer
+        """
+        if nbytes > self.nbytes_buffer or nbytes < self.nbytes_buffer * .9:
+            self.nbytes_buffer = nbytes
+            self.gpuraw.free()
+            self.gpuraw = cuda.mem_alloc(self.nbytes_buffer)
+        self.nbytes = nbytes
+        self.reset()
+        
+    def reset(self):
+        """
+        Resets handles of cpu references and ids, so that all data will be transfered
+        again even if IDs match.
+        """
+        self.gpuId = None
+        self.cpu = None
+        self.ev_done = None
+
+    def free(self):
+        """
+        Free the underlying buffer on GPU - this object should not be used afterwards
+        """
+        self.gpuraw.free()
+        self.gpuraw = None
 
 class GpuDataManager:
     """
@@ -127,6 +158,41 @@ class GpuDataManager:
         """
         for d in self.data:
             d.syncback = whether
+    
+    @property
+    def nbytes(self):
+        """
+        Get the number of bytes in each block
+        """
+        return self.data[0].nbytes
+
+    @property
+    def memory(self):
+        """
+        Get all memory occupied by all blocks
+        """
+        m = 0
+        for d in self.data:
+            m += d.nbytes_buffer
+        return m
+
+    def reset(self, nbytes, num):
+        """
+        Reset this object as if these parameters were given to the constructor.
+        The syncback property is untouched.
+        """
+        for i in range(num, len(self.data)):
+            self.data[i].free()
+        self.data = self.data[:num]
+        for d in self.data:
+            d.resize(nbytes)
+
+    def free(self):
+        """
+        Explicitly clear all data blocks - same as resetting to 0 blocks
+        """
+        self.reset(0, 0)
+
     
     def to_gpu(self, cpu, id, stream):
         """
@@ -303,18 +369,34 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             blocks += 1
         
         # now check remaining memory and allocate as many blocks as would fit
-        mem = cuda.mem_get_info()
+        mem = cuda.mem_get_info()[0]
+        if self.ex_data is not None:
+            mem += self.ex_data.memory    # as we realloc these, consider as free memory
+        if self.ma_data is not None:
+            mem += self.ma_data.memory
+        if self.mag_data is not None:
+            mem += self.mag_data.memory
+
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
-        fit = int(mem[0] - 200*1024*1024) // blk  # leave 200MB room for safety
+        fit = int(mem - 200*1024*1024) // blk  # leave 200MB room for safety
         fit = min(MAX_BLOCKS, fit)
         nex = min(fit * EX_MA_BLOCKS_RATIO, blocks)
         nma = min(fit, blocks)
         nstreams = min(MAX_STREAMS, blocks)
 
         print('exit arrays: {}, ma_arrays: {}, streams: {}, totalblocks: {}'.format(nex, nma, nstreams, blocks))
-        self.ex_data = GpuDataManager(ex_mem, nex, True)
-        self.ma_data = GpuDataManager(ma_mem, nma, False)
-        self.mag_data = GpuDataManager(mag_mem, nma, False)
+        if self.ex_data is not None:
+            self.ex_data.reset(ex_mem, nex)
+        else:
+            self.ex_data = GpuDataManager(ex_mem, nex, True)
+        if self.ma_data is not None:
+            self.ma_data.reset(ma_mem, nma)
+        else:
+            self.ma_data = GpuDataManager(ma_mem, nma, False)
+        if self.mag_data is not None:
+            self.mag_data.reset(mag_mem, nma)
+        else:
+            self.mag_data = GpuDataManager(mag_mem, nma, False)
         self.streams = [GpuStreamData(self.ex_data, self.ma_data, self.mag_data) for _ in range(nstreams)]
 
     def engine_iterate(self, num=1):
