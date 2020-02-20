@@ -10,7 +10,7 @@ p = u.Param()
 
 # for verbose output
 p.verbose_level = 3
-p.frames_per_block = 300
+p.frames_per_block = 400
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
@@ -41,9 +41,9 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'ML_pycuda'
-p.engines.engine00.numiter = 2
-p.engines.engine00.numiter_contiguous = 2
-p.engines.engine00.probe_update_start = 1
+p.engines.engine00.numiter = 20
+p.engines.engine00.numiter_contiguous = 10
+
 
 # prepare and run
 P = Ptycho(p,level=5)

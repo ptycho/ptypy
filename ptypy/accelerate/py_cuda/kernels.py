@@ -355,6 +355,8 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         y = np.int32(nmodes)
         z = np.int32(maxz)
         bx = 1024
+
+        #print(Imodel.dtype, I.dtype, w.dtype, err.dtype, aux.dtype, z, y, x)
         self.main_cuda(Imodel, I, w, err, aux,
                        z, y, x,
                        block=(bx, 1, 1),

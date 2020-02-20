@@ -286,7 +286,7 @@ class GaussianModel(BaseModelSerial):
         for label, d in self.engine.ptycho.new_data:
             prep = self.engine.diff_info[d.ID]
             prep.weights = (self.Irenorm * self.engine.ma.S[d.ID].data
-                            / (1. / self.Irenorm + d.data))
+                            / (1. / self.Irenorm + d.data)).astype(d.data.dtype)
 
     def __del__(self):
         """

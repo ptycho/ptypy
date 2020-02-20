@@ -24,6 +24,7 @@ from ..utils import parallel
 from .utils import Cnorm2, Cdot
 from ..accelerate import py_cuda as gpu
 from ..accelerate.py_cuda.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ..accelerate.array_based.kernels import GradientDescentKernel as GDK_serial
 from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel
 from ..accelerate.array_based import address_manglers
 
@@ -97,6 +98,9 @@ class ML_pycuda(ML_serial):
             # setup kernels, one for each SCAN.
             kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue)
             kern.GDK.allocate()
+
+            #kern.GDKs = GDK_serial(aux.get(), nmodes)
+            #kern.GDKs.allocate()
 
             kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type=np.float32)
             kern.POK.allocate()
@@ -176,6 +180,14 @@ class ML_pycuda(ML_serial):
             if use_tiles:
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
 
+    def engine_finalize(self):
+        """
+        try deleting ever helper contianer
+        """
+
+        #self.queue.synchronize()
+        self.context.detach()
+        super().engine_finalize()
 
 class GaussianModel(BaseModelSerial):
     """
@@ -196,7 +208,7 @@ class GaussianModel(BaseModelSerial):
         for label, d in self.engine.ptycho.new_data:
             prep = self.engine.diff_info[d.ID]
             prep.weights = (self.Irenorm * self.engine.ma.S[d.ID].data
-                            / (1. / self.Irenorm + d.data))
+                            / (1. / self.Irenorm + d.data)).astype(d.data.dtype)
 
     def __del__(self):
         """
@@ -230,7 +242,6 @@ class GaussianModel(BaseModelSerial):
             GDK = kern.GDK
             AWK = kern.AWK
             POK = kern.POK
-            GDK.gpu.LLerr.fill(0.)
             aux = kern.aux
 
             FW = kern.FW
@@ -263,13 +274,24 @@ class GaussianModel(BaseModelSerial):
                 GDK.error_reduce(err_den, w * Imodel ** 2)
                 Imodel *= (err_num / err_den).reshape(Imodel.shape[0], 1, 1)
             """
-            LLerr = GDK.gpu.LLerr.get()
-            print(np.isnan(LLerr).any())
-            print(np.isnan(I.get()).any())
-            print(np.isnan(aux.get()).any())
+            #LLerr = GDK.gpu.LLerr.get()
+            #print(np.allclose(GDK.gpu.Imodel.get(), kern.GDKs.npy.Imodel))
+            #print(np.isnan(LLerr).any())
+            #print(np.isnan(GDK.gpu.Imodel.get()).any())
+            #print(np.isnan(I.get()).any())
+            #print(np.isnan(aux.get()).any())
+            #aux2 = aux.get()
             GDK.main(aux, addr, w, I)
-            LLerr = GDK.gpu.LLerr.get()
-            print(np.isnan(LLerr).any())
+            #kern.GDKs.main(aux2, addr.get(), w.get(), I.get())
+            #LLerr = GDK.gpu.LLerr.get()
+            #LLerrs = kern.GDKs.npy.LLerr
+            #na = np.isnan(LLerr)
+            #print('main cpu made nan', np.isnan(LLerrs).any())
+            #print('main gpu made nan', na.any(), na.sum())
+            #print('diff', LLerr-LLerrs)
+            #print('LLerr', LLerrs)
+            #print(I.get()[na])
+            #print(w.get()[na])
             #print(GDK.gpu.LLerr.get()[0])
             GDK.error_reduce(addr, err_phot)
             BW(aux, aux)
@@ -297,7 +319,7 @@ class GaussianModel(BaseModelSerial):
         ob_grad.allreduce()
         pr_grad.allreduce()
         parallel.allreduce(LL)
-        print(LL)
+        #print(LL)
         # Object regularizer
         if self.regularizer:
             for name, s in self.engine.ob.storages.items():
