@@ -23,7 +23,7 @@ p.frames_per_block = 73
 # set home path
 p.io = u.Param()
 p.io.home = tmpdir
-p.io.autosave = u.Param(active=False) # active=True, interval=50000)
+p.io.autosave = u.Param(active=True, interval=50000)
 p.io.autoplot = u.Param(active=False)
 p.io.interaction = u.Param()
 p.io.interaction.server = u.Param(active=False)
@@ -57,7 +57,7 @@ p.scans.insane.data.psf = 0.0
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_serial'
+p.engines.engine00.name = 'DM_pycuda_stream'
 p.engines.engine00.numiter = 200
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.probe_update_start = 1

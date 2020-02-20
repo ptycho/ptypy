@@ -18,8 +18,8 @@ p.frames_per_block = 500
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
-p.io.autosave = u.Param(active=False)
-p.io.autoplot = u.Param(active=True)#True, interval=100)
+p.io.autosave = u.Param(active=True, interval=500)
+p.io.autoplot = u.Param(active=False)#True, interval=100)
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
@@ -50,7 +50,7 @@ p.scans.MF.data.add_poisson_noise = False
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_pycuda'
+p.engines.engine00.name = 'DM_pycuda_stream'
 p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.position_refinement = u.Param()
