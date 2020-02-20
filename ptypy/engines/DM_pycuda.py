@@ -18,6 +18,7 @@ from ..utils import parallel
 from . import BaseEngine, register, DM_serial, DM
 from ..accelerate import py_cuda as gpu
 from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel
 from ..accelerate.array_based import address_manglers
 
 MPI = parallel.size > 1
@@ -111,6 +112,8 @@ class DM_pycuda(DM_serial.DM_serial):
 
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
+
+            kern.AUK = ArrayUtilsKernel(queue=self.queue)
 
             try:
                 from ptypy.accelerate.py_cuda.cufft import FFT
@@ -291,6 +294,7 @@ class DM_pycuda(DM_serial.DM_serial):
 
                         PCK = kern.PCK
                         FW = kern.FW
+                        AUK = kern.AUK
 
                         error_state = np.zeros(err_fourier.shape, dtype=np.float32)
                         error_state[:] = err_fourier.get()
@@ -305,9 +309,10 @@ class DM_pycuda(DM_serial.DM_serial):
                             PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier.get())
                         prep.err_fourier_gpu.set(error_state)
                         if use_tiles:
-                            addr_cpu = addr.get(streamdata.queue)
-                            prep.addr2 = np.ascontiguousarray(np.transpose(addr_cpu, (2, 3, 0, 1)))
-                            prep.addr2 = gpuarray.to_gpu(prep.addr2)
+                            s1 = addr.shape[0] * addr.shape[1]
+                            s2 = addr.shape[2] * addr.shape[3]
+                            AUK.transpose(addr.reshape(s1, s2), prep.addr2.reshape(s2, s1))
+
                         # prep.addr = addr
 
 

@@ -318,6 +318,7 @@ It is recommended to modify the DM kernels in a similar fashion for flexibility.
 - So far, it mangles and shifts the addresses on the CPU, and uses the GPU
   to evaluate the errors
 - It's working, but there is singificant data transfers between host and device
+- Transposing the addresses for tiled version of ob/pr update is done on GPU though
 - Suggested future optimisations:
   - Implement a GPU kernel to pick the indexes from the mangled and original arrays, i.e. for the `update_addr_and_error_state` method
     - this is straightforward, just reading a line for one of the two input arrays
@@ -333,14 +334,6 @@ It is recommended to modify the DM kernels in a similar fashion for flexibility.
     - or generating them on the fly on the GPU - a simple integer XOR-shift based
       random generator should suffice, as statistical properties are less
       important here
-  - Perform the transpose of the final address array for the tiled version on GPU
-    - the transpose dimensions are (2, 3, 0, 1) in 4D, which is the same as the 2D
-      transpose of the same array, multiplying the first 2 and last 2 axis
-      dimenions together
-    - therefore a regular matrix transpose implementation can be used
-    - a good fast implementation kernel can be found [here](https://github.com/JonathanWatkins/CUDA/blob/master/NvidiaCourse/Exercises/transpose/transpose.cu)
-    - The [Reikna transpose](http://reikna.publicfields.net/en/latest/api/computations.html#transposition-permutation) might also be used,
-      though it looks like Reikna kernels need to be recompiled when streams are changed, which adds overhead
 
 ## Streaming Engine
 

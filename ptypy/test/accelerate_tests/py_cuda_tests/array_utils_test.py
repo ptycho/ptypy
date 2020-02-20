@@ -79,3 +79,48 @@ class ArrayUtilsTest(PyCudaTest):
         ## Act
         AU = au.ArrayUtilsKernel(acc_dtype=np.float64)
         out_dev = AU.dot(A_dev, A_dev)
+
+    def test_transpose_2D(self):
+        ## Arrange
+        inp,_ = np.indices((5,3), dtype=np.int32)
+        inp_dev = gpuarray.to_gpu(inp)
+        out_dev = gpuarray.empty((3,5), dtype=np.int32)
+        
+        ## Act
+        AU = au.ArrayUtilsKernel()
+        AU.transpose(inp_dev, out_dev)
+
+        ## Assert
+        out_exp = np.transpose(inp, (1, 0))
+        out = out_dev.get()
+        np.testing.assert_array_equal(out, out_exp)
+
+    def test_transpose_2D_large(self):
+        ## Arrange
+        inp,_ = np.indices((137,61), dtype=np.int32)
+        inp_dev = gpuarray.to_gpu(inp)
+        out_dev = gpuarray.empty((61,137), dtype=np.int32)
+        
+        ## Act
+        AU = au.ArrayUtilsKernel()
+        AU.transpose(inp_dev, out_dev)
+
+        ## Assert
+        out_exp = np.transpose(inp, (1, 0))
+        out = out_dev.get()
+        np.testing.assert_array_equal(out, out_exp)
+
+    def test_transpose_4D(self):
+        ## Arrange
+        inp = np.random.randint(0, 10000, (250, 3, 5, 3), dtype=np.int32) # like addr
+        inp_dev = gpuarray.to_gpu(inp)
+        out_dev = gpuarray.empty((5, 3, 250, 3), dtype=np.int32)
+
+        ## Act
+        AU = au.ArrayUtilsKernel()
+        AU.transpose(inp_dev.reshape(750, 15), out_dev.reshape(15, 750))
+
+        ## Assert
+        out_exp = np.transpose(inp, (2, 3, 0, 1))
+        out = out_dev.get()
+        np.testing.assert_array_equal(out, out_exp)

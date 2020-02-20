@@ -18,6 +18,10 @@ class ArrayUtilsKernel:
             'DTYPE': 'double' if acc_dtype==np.float64 else 'float',
             'BDIM_X': 1024
         })
+        self.transpose_cuda = load_kernel("transpose", {
+            'DTYPE': 'int',
+            'BDIM': 16
+        })
         self.Ctmp = None
         
     def dot(self, A, B, out=None):
@@ -54,4 +58,24 @@ class ArrayUtilsKernel:
                 stream=self.queue)
         
         return out
+
+    def transpose(self, input, output):
+        # only for int at the moment (addr array), and 2D (reshape pls)
+        if len(input.shape) != 2:
+            raise ValueError("Only 2D tranpose is supported - reshape as desired")
+        if input.shape[0] != output.shape[1] or input.shape[1] != output.shape[0]:
+            raise ValueError("Input/Output must be of flipped shape")
+        if input.dtype != np.int32 or output.dtype != np.int32:
+            raise ValueError("Only int types are supported at the moment")
+        
+        width = input.shape[1]
+        height = input.shape[0]
+        blk = (16, 16, 1)
+        grd = (
+            int((input.shape[1] + 15)// 16),
+            int((input.shape[0] + 15)// 16),
+            1
+        )
+        self.transpose_cuda(input, output, np.int32(width), np.int32(height),
+            block=blk, grid=grd, stream=self.queue)
 

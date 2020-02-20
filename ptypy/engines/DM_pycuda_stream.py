@@ -616,8 +616,10 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         PCK = kern.PCK
                         FW = kern.FW
+                        AUK = kern.AUK
                         PCK.queue = streamdata.queue
                         FW.queue = streamdata.queue
+                        AUK.queue = streamdata.queue
 
                         error_state = np.zeros(err_fourier.shape, dtype=np.float32)
                         err_fourier.get_async(streamdata.queue, error_state)
@@ -637,10 +639,10 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                             PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier_cpu)
                         prep.err_fourier_gpu.set_async(ary=error_state, stream=streamdata.queue)
                         if use_tiles:
-                            addr_cpu = prep.addr_gpu.get_async(streamdata.queue)
-                            streamdata.queue.synchronize()
-                            prep.addr2 = np.ascontiguousarray(np.transpose(addr_cpu, (2, 3, 0, 1)))
-                            prep.addr2_gpu = gpuarray.to_gpu_async(prep.addr2, stream=streamdata.queue)
+                            s1 = prep.addr_gpu.shape[0] * prep.addr_gpu.shape[1]
+                            s2 = prep.addr_gpu.shape[2] * prep.addr_gpu.shape[3]
+                            AUK.transpose(prep.addr_gpu.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+
                         prev_event = streamdata.end_compute()
                         
                         # next stream
