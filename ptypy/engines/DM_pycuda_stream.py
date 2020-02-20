@@ -347,9 +347,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         ex_mem = ma_mem = mag_mem = 0
-        blocks = 0
-        for label, d in self.ptycho.new_data:
-            dID = d.ID
+        idlist = list(self.di.S.keys())
+        blocks = len(idlist)
+        for dID in idlist:
             prep = self.diff_info[dID]
             pID, oID, eID = prep.poe_IDs
 
@@ -370,10 +370,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             mag = prep.mag
             prep.mag = cuda.pagelocked_empty(mag.shape, mag.dtype, order="C", mem_flags=4)
             prep.mag[:] = mag
-            ex_mem = max(ex_mem, ex.nbytes)
-            ma_mem = max(ma_mem, ma.nbytes)
-            mag_mem = max(mag_mem, mag.nbytes)
-            blocks += 1
+            ex_mem = max(ex_mem, prep.ex.nbytes)
+            ma_mem = max(ma_mem, prep.ma.nbytes)
+            mag_mem = max(mag_mem, prep.mag.nbytes)
         
         # now check remaining memory and allocate as many blocks as would fit
         mem = cuda.mem_get_info()[0]
@@ -391,8 +390,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         nma = min(fit, blocks)
         nstreams = min(MAX_STREAMS, blocks)
 
-        print('ex_memory: {}, ma_memory: {}, mag_memory: {}'.format(ex_mem, ma_mem, mag_mem))
-        print('exit arrays: {}, ma_arrays: {}, streams: {}, totalblocks: {}'.format(nex, nma, nstreams, blocks))
+        log(3, 'PyCUDA blocks fitting on GPU: exit arrays={}, ma_arrays={}, streams={}, totalblocks={}'.format(nex, nma, nstreams, blocks))
+        # reset memory or create new
         if self.ex_data is not None:
             self.ex_data.reset(ex_mem, nex)
         else:
