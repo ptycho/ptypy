@@ -64,7 +64,7 @@ class GpuData:
 
     def _allocator(self, nbytes):
         if nbytes > self.nbytes:
-            raise Exception('requested more bytes than maximum given before')
+            raise Exception('requested more bytes than maximum given before: {} vs {}'.format(nbytes, self.nbytes))
         return self.gpuraw
 
     def record_done(self, stream):
@@ -107,7 +107,7 @@ class GpuData:
         if nbytes > self.nbytes_buffer or nbytes < self.nbytes_buffer * .9:
             self.nbytes_buffer = nbytes
             self.gpuraw.free()
-            self.gpuraw = cuda.mem_alloc(self.nbytes_buffer)
+            self.gpuraw = cuda.mem_alloc(self.nbytes)
         self.nbytes = nbytes
         self.reset()
         
@@ -181,11 +181,18 @@ class GpuDataManager:
         Reset this object as if these parameters were given to the constructor.
         The syncback property is untouched.
         """
+        sync = self.syncback
+        # remove if too many, explictly freeing memory
         for i in range(num, len(self.data)):
             self.data[i].free()
+        # cut short if too many
         self.data = self.data[:num]
+        # reset existing
         for d in self.data:
             d.resize(nbytes)
+        # append new ones
+        for i in range(len(self.data), num):
+            self.data.append(GpuData(nbytes, sync))
 
     def free(self):
         """
@@ -384,6 +391,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         nma = min(fit, blocks)
         nstreams = min(MAX_STREAMS, blocks)
 
+        print('ex_memory: {}, ma_memory: {}, mag_memory: {}'.format(ex_mem, ma_mem, mag_mem))
         print('exit arrays: {}, ma_arrays: {}, streams: {}, totalblocks: {}'.format(nex, nma, nstreams, blocks))
         if self.ex_data is not None:
             self.ex_data.reset(ex_mem, nex)
@@ -476,6 +484,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     POK.queue = queue
                     FW.queue = queue
                     BW.queue = queue
+                    
 
                     # get addresses and auxilliary array
                     addr = prep.addr_gpu
@@ -578,6 +587,66 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 if change < self.p.overlap_converge_factor: break
 
             parallel.barrier()
+
+            if self.do_position_refinement and (self.curiter):
+                do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+                do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+
+                # Update positions
+                if do_update_pos:
+                    """
+                    Iterates through all positions and refines them by a given algorithm. 
+                    """
+                    log(3, "----------- START POS REF -------------")
+                    prev_event = None
+                    for dID in self.di.S.keys():
+                        streamdata = self.streams[self.cur_stream]
+
+                        prep = self.diff_info[dID]
+                        pID, oID, eID = prep.poe_IDs
+                        ob = self.ob.S[oID].gpu
+                        pr = self.pr.S[pID].gpu
+                        kern = self.kernels[prep.label]
+                        aux = kern.aux
+                        addr = prep.addr_gpu
+                        original_addr = prep.original_addr
+                        ma_sum = prep.ma_sum_gpu
+                        ma, mag = streamdata.ma_to_gpu(dID, prep.ma, prep.mag)
+                        
+                        err_fourier = prep.err_fourier_gpu
+
+                        PCK = kern.PCK
+                        FW = kern.FW
+                        PCK.queue = streamdata.queue
+                        FW.queue = streamdata.queue
+
+                        error_state = np.zeros(err_fourier.shape, dtype=np.float32)
+                        err_fourier.get_async(streamdata.queue, error_state)
+                        streamdata.start_compute(prev_event)
+
+                        log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+                        for i in range(self.p.position_refinement.nshifts):
+                            addr_cpu = addr.get_async(streamdata.queue)
+                            streamdata.queue.synchronize()
+                            mangled_addr = PCK.address_mangler.mangle_address(addr_cpu, original_addr, self.curiter)
+                            mangled_addr_gpu = gpuarray.to_gpu_async(mangled_addr, stream=streamdata.queue)
+                            PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
+                            FW.ft(aux, aux)
+                            PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
+                            PCK.error_reduce(mangled_addr_gpu, err_fourier)
+                            err_fourier_cpu = err_fourier.get_async(streamdata.queue)
+                            PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier_cpu)
+                        prep.err_fourier_gpu.set_async(ary=error_state, stream=streamdata.queue)
+                        if use_tiles:
+                            addr_cpu = prep.addr_gpu.get_async(streamdata.queue)
+                            streamdata.queue.synchronize()
+                            prep.addr2 = np.ascontiguousarray(np.transpose(addr_cpu, (2, 3, 0, 1)))
+                            prep.addr2_gpu = gpuarray.to_gpu_async(prep.addr2, stream=streamdata.queue)
+                        prev_event = streamdata.end_compute()
+                        
+                        # next stream
+                        self.cur_stream = (self.cur_stream + self.stream_direction) % len(self.streams)
+
             self.curiter += 1
 
         #print('end loop, syncall and copy back')

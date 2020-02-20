@@ -166,6 +166,14 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
     def build_aux(self, b_aux, addr, ob, pr, ex, alpha):
         obr, obc = self._cache_object_shape(ob)
+        # print('grid={}, 1, 1'.format(int(ex.shape[0])))
+        # print('b_aux={}, sh={}'.format(type(b_aux), b_aux.shape))
+        # print('ex={}, sh={}'.format(type(ex), ex.shape))
+        # print('pr={}, sh={}'.format(type(pr), pr.shape))
+        # print('ob={}, sh={}'.format(type(ob), ob.shape))
+        # print('obr={}, obc={}'.format(obr, obc))
+        # print('addr={}, sh={}'.format(type(addr), addr.shape))
+        # print('stream={}'.format(self.queue))
         self.build_aux_cuda(b_aux,
                             ex,
                             np.int32(ex.shape[1]), np.int32(ex.shape[2]),
@@ -594,9 +602,10 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         '''
         update_indices = err_sum < error_state
         log(4, "updating %s indices" % np.sum(update_indices))
-        addr_cpu = addr.get()
+        addr_cpu = addr.get_async(self.queue)
+        self.queue.synchronize()
         addr_cpu[update_indices] = mangled_addr[update_indices]
-        addr.set(addr_cpu)
+        addr.set_async(ary=addr_cpu, stream=self.queue)
 
         error_state[update_indices] = err_sum[update_indices]
 

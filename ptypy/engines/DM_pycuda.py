@@ -287,7 +287,7 @@ class DM_pycuda(DM_serial.DM_serial):
                         original_addr = prep.original_addr
                         mag = prep.mag
                         ma_sum = prep.ma_sum
-                        err_fourier = prep.err_fourier
+                        err_fourier = prep.err_fourier_gpu
 
                         PCK = kern.PCK
                         FW = kern.FW
@@ -303,7 +303,11 @@ class DM_pycuda(DM_serial.DM_serial):
                             PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
                             PCK.error_reduce(mangled_addr_gpu, err_fourier)
                             PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier.get())
-                        prep.err_fourier.set(error_state)
+                        prep.err_fourier_gpu.set(error_state)
+                        if use_tiles:
+                            addr_cpu = addr.get(streamdata.queue)
+                            prep.addr2 = np.ascontiguousarray(np.transpose(addr_cpu, (2, 3, 0, 1)))
+                            prep.addr2 = gpuarray.to_gpu(prep.addr2)
                         # prep.addr = addr
 
 
