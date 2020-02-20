@@ -407,6 +407,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         prsh = [np.int32(ax) for ax in pr.shape]
 
         if atomics:
+            if addr.shape[3] != 3 or addr.shape[2] != 5:
+                raise ValueError('Address not in required shape for atomics ob_update')
             num_pods = np.int32(addr.shape[0] * addr.shape[1])
             self.ob_update_cuda(ex, num_pods, prsh[1], prsh[2],
                                 pr, prsh[0], prsh[1], prsh[2],
@@ -415,6 +417,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                 obn,
                                 block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
         else:
+            if addr.shape[0] != 5 or addr.shape[1] != 3:
+                raise ValueError('Address not in required shape for tiled ob_update')
             num_pods = np.int32(addr.shape[2] * addr.shape[3])
             if not self.ob_update2_cuda:
                 self.ob_update2_cuda = load_kernel("ob_update2", {
@@ -423,14 +427,6 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "BDIM_Y": 16,
                     'DENOM_TYPE': self.dtype
                 })
-
-            # print('pods: {}'.format(num_pods))
-            # print('address: {}'.format(addr.shape))
-            # print('ob: {}'.format(ob.shape))
-            # print('obn: {}'.format(obn.shape))
-            # print('ex: {}'.format(ex.shape))
-            # print('prsh: {}'.format(prsh))
-            # make a local stripped down clone of addr array for usage here:
 
             grid = [int((x+15)//16) for x in ob.shape[-2:]]
             grid = (grid[0], grid[1], int(1))
@@ -445,8 +441,10 @@ class PoUpdateKernel(ab.PoUpdateKernel):
     def pr_update(self, addr, pr, prn, ob, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
-        #print('Ob sh: {}, pr sh: {}'.format(obsh, prsh))
         if atomics:
+            if addr.shape[3] != 3 or addr.shape[2] != 5:
+                raise ValueError('Address not in required shape for atomics pr_update')
+
             num_pods = np.int32(addr.shape[0] * addr.shape[1])
             self.pr_update_cuda(ex, num_pods, prsh[1], prsh[2],
                                 pr, prsh[0], prsh[1], prsh[2],
@@ -455,6 +453,9 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                 prn,
                                 block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
         else:
+            if addr.shape[0] != 5 or addr.shape[1] != 3:
+                raise ValueError('Address not in required shape for tiled pr_update')
+
             num_pods = np.int32(addr.shape[2] * addr.shape[3])
             if not self.pr_update2_cuda:
                 self.pr_update2_cuda = load_kernel("pr_update2", {
@@ -463,12 +464,6 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "BDIM_Y": 16,
                     'DENOM_TYPE': self.dtype
                 })
-
-            # print('pods: {}'.format(num_pods))
-            # print('address: {}'.format(addr.shape))
-            # print('ex: {}'.format(ex.shape))
-            # print('prsh: {}'.format(prsh))
-            # print('ob: {}'.format(ob.shape))
 
             grid = [int((x+15)//16) for x in pr.shape[-2:]]
             grid = (grid[0], grid[1], int(1))
@@ -482,6 +477,9 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         prsh = [np.int32(ax) for ax in pr.shape]
 
         if atomics:
+            if addr.shape[3] != 3 or addr.shape[2] != 5:
+                raise ValueError('Address not in required shape for tiled ob_update')
+
             num_pods = np.int32(addr.shape[0] * addr.shape[1])
             self.ob_update_ML_cuda(ex, num_pods, prsh[1], prsh[2],
                                    pr, prsh[0], prsh[1], prsh[2],
@@ -490,6 +488,9 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                    np.float32(fac),
                                    block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
         else:
+            if addr.shape[0] != 5 or addr.shape[1] != 3:
+                raise ValueError('Address not in required shape for tiled ob_update')
+
             num_pods = np.int32(addr.shape[2] * addr.shape[3])
             if not self.ob_update2_ML_cuda:
                 self.ob_update2_ML_cuda = load_kernel("ob_update2_ML", {
@@ -513,6 +514,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
         if atomics:
+            if addr.shape[3] != 3 or addr.shape[2] != 5:
+                raise ValueError('Address not in required shape for tiled pr_update')
             num_pods = np.int32(addr.shape[0] * addr.shape[1])
             self.pr_update_ML_cuda(ex, num_pods, prsh[1], prsh[2],
                                 pr, prsh[0], prsh[1], prsh[2],
@@ -521,6 +524,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                 np.float32(fac),
                                 block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
         else:
+            if addr.shape[0] != 5 or addr.shape[1] != 3:
+                raise ValueError('Address not in required shape for tiled pr_update')
             num_pods = np.int32(addr.shape[2] * addr.shape[3])
             if not self.pr_update2_ML_cuda:
                 self.pr_update2_ML_cuda = load_kernel("pr_update2_ML", {
