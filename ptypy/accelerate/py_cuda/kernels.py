@@ -554,6 +554,7 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         self.fourier_error_cuda = load_kernel("fourier_error")
         self.error_reduce_cuda = load_kernel("error_reduce")
         self.build_aux_pc_cuda = load_kernel("build_aux_position_correction")
+        self.update_addr_and_error_state_cuda = load_kernel("update_addr_error_state")
 
     def allocate(self):
         self.npy.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
@@ -601,18 +602,27 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
                                shared=shared_memory_size,
                                stream=self.queue)
 
-    def update_addr_and_error_state(self, addr, error_state, mangled_addr, err_sum):
+    def update_addr_and_error_state_old(self, addr, error_state, mangled_addr, err_sum):
         '''
         updates the addresses and err state vector corresponding to the smallest error. I think this can be done on the cpu
         '''
         update_indices = err_sum < error_state
         log(4, "updating %s indices" % np.sum(update_indices))
+        print('update ind {}, addr {}, mangled {}'.format(update_indices.shape, addr.shape, mangled_addr.shape))
         addr_cpu = addr.get_async(self.queue)
         self.queue.synchronize()
         addr_cpu[update_indices] = mangled_addr[update_indices]
         addr.set_async(ary=addr_cpu, stream=self.queue)
 
         error_state[update_indices] = err_sum[update_indices]
+
+    def update_addr_and_error_state(self, addr, error_state, mangled_addr, err_sum):
+        # assume all data is on GPU!
+        self.update_addr_and_error_state_cuda(addr, mangled_addr, error_state, err_sum,
+            np.int32(addr.shape[1]),
+            block=(32, 2, 1), 
+            grid=(1, int((err_sum.shape[0] + 1) // 2), 1),
+            stream=self.queue)
 
     def _cache_object_shape(self, ob):
         oid = id(ob)

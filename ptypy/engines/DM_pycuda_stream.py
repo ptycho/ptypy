@@ -361,6 +361,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
             # prepare page-locked mems:
             prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
+            if self.do_position_refinement:
+                prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
             ma = self.ma.S[dID].data.astype(np.float32)
             prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
             prep.ma[:] = ma   
@@ -611,8 +613,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         original_addr = prep.original_addr
                         ma_sum = prep.ma_sum_gpu
                         ma, mag = streamdata.ma_to_gpu(dID, prep.ma, prep.mag)
-                        
-                        err_fourier = prep.err_fourier_gpu
 
                         PCK = kern.PCK
                         FW = kern.FW
@@ -621,8 +621,12 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         FW.queue = streamdata.queue
                         AUK.queue = streamdata.queue
 
-                        error_state = np.zeros(err_fourier.shape, dtype=np.float32)
-                        err_fourier.get_async(streamdata.queue, error_state)
+                        #error_state = np.zeros(err_fourier.shape, dtype=np.float32)
+                        #err_fourier.get_async(streamdata.queue, error_state)
+                        cuda.memcpy_dtod_async(dest=prep.error_state_gpu.ptr,
+                                               src=prep.err_fourier_gpu.ptr,
+                                               size=prep.err_fourier_gpu.nbytes,
+                                               stream=streamdata.queue)
                         streamdata.start_compute(prev_event)
 
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
@@ -634,10 +638,16 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                             PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
                             FW.ft(aux, aux)
                             PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
-                            PCK.error_reduce(mangled_addr_gpu, err_fourier)
-                            err_fourier_cpu = err_fourier.get_async(streamdata.queue)
-                            PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier_cpu)
-                        prep.err_fourier_gpu.set_async(ary=error_state, stream=streamdata.queue)
+                            PCK.error_reduce(mangled_addr_gpu, prep.err_fourier_gpu)
+                            # err_fourier_cpu = err_fourier.get_async(streamdata.queue)
+                            PCK.update_addr_and_error_state(addr, 
+                                prep.error_state_gpu, 
+                                mangled_addr_gpu, 
+                                prep.err_fourier_gpu)
+                        cuda.memcpy_dtod_async(dest=prep.err_fourier_gpu.ptr,
+                                               src=prep.error_state_gpu.ptr,
+                                               size=prep.err_fourier_gpu.nbytes,
+                                               stream=streamdata.queue)
                         if use_tiles:
                             s1 = prep.addr_gpu.shape[0] * prep.addr_gpu.shape[1]
                             s2 = prep.addr_gpu.shape[2] * prep.addr_gpu.shape[3]

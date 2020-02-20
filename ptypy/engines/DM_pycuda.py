@@ -11,6 +11,7 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 from pycuda import gpuarray
+import pycuda.driver as cuda
 
 from .. import utils as u
 from ..utils.verbose import logger, log
@@ -177,7 +178,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
 
             prep.addr = gpuarray.to_gpu(prep.addr)
-
+            
             # Todo: Which address to pick?
             if use_tiles:
                 prep.addr2 = gpuarray.to_gpu(prep.addr2)
@@ -185,11 +186,15 @@ class DM_pycuda(DM_serial.DM_serial):
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
+            if self.do_position_refinement:
+                prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
 
     def engine_iterate(self, num=1):
         """
         Compute one iteration.
         """
+
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         for it in range(num):
             error = {}
@@ -296,8 +301,11 @@ class DM_pycuda(DM_serial.DM_serial):
                         FW = kern.FW
                         AUK = kern.AUK
 
-                        error_state = np.zeros(err_fourier.shape, dtype=np.float32)
-                        error_state[:] = err_fourier.get()
+                        #error_state = np.zeros(err_fourier.shape, dtype=np.float32)
+                        #error_state[:] = err_fourier.get()
+                        cuda.memcpy_dtod(dest=prep.error_state_gpu.ptr,
+                                         src=err_fourier.ptr,
+                                         size=err_fourier.nbytes)
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                         for i in range(self.p.position_refinement.nshifts):
                             mangled_addr = PCK.address_mangler.mangle_address(addr.get(), original_addr, self.curiter)
@@ -306,8 +314,14 @@ class DM_pycuda(DM_serial.DM_serial):
                             FW.ft(aux, aux)
                             PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
                             PCK.error_reduce(mangled_addr_gpu, err_fourier)
-                            PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier.get())
-                        prep.err_fourier_gpu.set(error_state)
+                            PCK.update_addr_and_error_state(addr, 
+                                prep.error_state_gpu, 
+                                mangled_addr_gpu, 
+                                err_fourier)
+                        # prep.err_fourier_gpu.set(error_state)
+                        cuda.memcpy_dtod(dest=prep.err_fourier_gpu.ptr,
+                            src=prep.error_state_gpu.ptr,
+                            size=prep.err_fourier_gpu.nbytes)
                         if use_tiles:
                             s1 = addr.shape[0] * addr.shape[1]
                             s2 = addr.shape[2] * addr.shape[3]
