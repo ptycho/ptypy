@@ -308,6 +308,8 @@ class ML(PositionCorrectionEngine):
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
 
+        # Save floating intensities into runtime
+        self.ptycho.runtime["float_intens"] = parallel.gather_dict(self.ML_model.float_intens_coeff)
 
 class BaseModel(object):
     """
