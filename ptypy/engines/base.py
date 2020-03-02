@@ -419,7 +419,7 @@ class PositionCorrectionEngine(BaseEngine):
         """
         # Gather all new positions from each node
         coords = {}
-        for ID, v in self.di.views.iteritems():
+        for ID, v in self.di.views.items():
             if v.active:
                 coords[ID] = v.pod.ob_view.coord
         coords = parallel.gather_dict(coords)
