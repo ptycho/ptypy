@@ -1434,7 +1434,7 @@ class Bragg3dModel(Vanilla):
             % (shape, shape, extent, extent, psize))
         t0 = time.time()
 
-        Cprobe = Container(data_dims=2, data_type='float')
+        Cprobe = Container(data_dims=2, data_type='complex')
         Sprobe = Cprobe.new_storage(psize=psize, shape=shape)
 
         # fill the incoming probe
