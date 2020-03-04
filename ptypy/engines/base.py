@@ -378,7 +378,7 @@ class PositionCorrectionEngine(BaseEngine):
                 s.reformat()
 
             # this could be some kind of dictionary lookup if we want to add more
-            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob)
+            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
             log(3, "Position refinement initialised")
             self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
             if self.p.position_refinement.stop is None:
@@ -407,7 +407,7 @@ class PositionCorrectionEngine(BaseEngine):
             for dname, di_view in self.di.views.items():
                 # Check for new coordinates
                 if di_view.active:
-                    self.position_refinement.update_view_position(di_view, metric=self.p.position_refinement.metric)
+                    self.position_refinement.update_view_position(di_view)
 
             # We may not need this
             #parallel.barrier()

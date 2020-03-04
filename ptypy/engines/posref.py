@@ -52,7 +52,7 @@ class PositionRefine(object):
 
 class AnnealingRefine(PositionRefine):
 
-    def __init__(self, position_refinement_parameters, Cobj):
+    def __init__(self, position_refinement_parameters, Cobj, metric="fourier"):
         '''
         Annealing Position Refinement.
         Refines the positions by the following algorithm:
@@ -67,7 +67,8 @@ class AnnealingRefine(PositionRefine):
 
         Cobj : ptypy.core.classes.Container
             The current pbject container object
-
+        metric : str
+            "fourier" or "photon"
         '''
         super(AnnealingRefine, self).__init__(position_refinement_parameters)
 
@@ -76,9 +77,18 @@ class AnnealingRefine(PositionRefine):
         # Updated before each iteration by self.update_constraints
         self.max_shift_dist = None
 
+        # Choose metric for fourier error
+        if metric == "fourier":
+            self.fourier_error = self.estimate_fourier_metric
+        elif metric == "photon":
+            self.fourier_error = self.estimate_photon_metric
+        else:
+            raise NotImplementedError("Metric %s is currently not implemented" %metric)
 
-    def fourier_error(self, di_view, obj, metric="fourier"):
+    def estimate_fourier_metric(self, di_view, obj):
         '''
+        Calculates error based on DM fourier error estimate.
+        
         Parameters
         ----------
         di_view : ptypy.core.classes.View
@@ -86,8 +96,6 @@ class AnnealingRefine(PositionRefine):
 
         obj : numpy.ndarray
             The current calculated object for which we wish to evaluate the error against.
-        metric : str
-            "fourier" or "photon"
         Returns
         -------
         np.float
@@ -96,15 +104,30 @@ class AnnealingRefine(PositionRefine):
         af2 = np.zeros_like(di_view.data)
         for name, pod in di_view.pods.items():
             af2 += u.abs2(pod.fw(pod.probe*obj))
-        if metric == "fourier":
-            return np.sum(di_view.pod.mask * (np.sqrt(af2) - np.sqrt(np.abs(di_view.data)))**2)
-        elif metric == "photon":
-            return (np.sum(di_view.pod.mask * (af2 - di_view.data)**2 / (di_view.data + 1.)) / np.prod(af2.shape))
-        else:
-            raise NotImplementedError("Metric %s is currently not implemented" %metric)
+        return np.sum(di_view.pod.mask * (np.sqrt(af2) - np.sqrt(np.abs(di_view.data)))**2)
 
+    def estimate_photon_metric(self, di_view, obj):
+        '''
+        Calculates error based on reduced likelihood estimate.
+        
+        Parameters
+        ----------
+        di_view : ptypy.core.classes.View
+            A diffraction view for which we wish to calculate the error.
 
-    def update_view_position(self, di_view, metric):
+        obj : numpy.ndarray
+            The current calculated object for which we wish to evaluate the error against.
+        Returns
+        -------
+        np.float
+            The calculated fourier error
+        '''
+        af2 = np.zeros_like(di_view.data)
+        for name, pod in di_view.pods.items():
+            af2 += u.abs2(pod.fw(pod.probe*obj))
+        return (np.sum(di_view.pod.mask * (af2 - di_view.data)**2 / (di_view.data + 1.)) / np.prod(af2.shape))
+
+    def update_view_position(self, di_view):
         '''
         Refines the positions by the following algorithm:
 
@@ -138,7 +161,7 @@ class AnnealingRefine(PositionRefine):
             return np.zeros((2,))
             
         # This can be optimized by saving existing iteration fourier error...
-        error = self.fourier_error(di_view, ob_view.data, metric)
+        error = self.fourier_error(di_view, ob_view.data)
         
         for i in range(self.p.nshifts):
             # Generate coordinate shift in one of the 4 cartesian quadrants
@@ -159,7 +182,7 @@ class AnnealingRefine(PositionRefine):
             if not np.allclose(data.shape, ob_view.shape):
                 continue 
                 
-            new_error = self.fourier_error(di_view, data, metric)
+            new_error = self.fourier_error(di_view, data)
             
             if new_error < error:
                 # keep
