@@ -421,15 +421,16 @@ class PositionCorrectionEngine(BaseEngine):
         coords = {}
         for ID, v in self.di.views.items():
             if v.active:
-                coords[ID] = v.pod.ob_view.coord
+                coords[v.pod.ob_view.ID] = v.pod.ob_view.coord
         coords = parallel.gather_dict(coords)
 
         # Update storage
         if parallel.master:
             for ID, S in self.ob.storages.items():
                 for v in S.views:
-                    if v.ID in coords:
+                    if v.pod.pr_view.layer == 0:
                         v.coord = coords[v.ID]
+
 
 class Base3dBraggEngine(BaseEngine):
     """
