@@ -349,6 +349,11 @@ class PositionCorrectionEngine(BaseEngine):
     default = 0.002
     type = float
     help = Maximum distance from original position [m]
+
+    [position_refinement.metric]
+    default = "fourier"
+    type = str
+    help = Error metric, can choose between "fourier" and "photon"
     
     [position_refinement.record]
     default = False
@@ -373,7 +378,7 @@ class PositionCorrectionEngine(BaseEngine):
                 s.reformat()
 
             # this could be some kind of dictionary lookup if we want to add more
-            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob)
+            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
             log(3, "Position refinement initialised")
             self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
             if self.p.position_refinement.stop is None:
@@ -396,14 +401,12 @@ class PositionCorrectionEngine(BaseEngine):
             Iterates through all positions and refines them by a given algorithm. 
             """
             log(4, "----------- START POS REF -------------")
-            #self.position_refinement.update_constraints(self.curiter) # this stays here
             self.position_refinement.update_constraints(self.curiter) # this stays here
 
             # Iterate through all diffraction views
             for dname, di_view in self.di.views.items():
                 # Check for new coordinates
                 if di_view.active:
-                    #self.position_refinement.update_view_position(di_view)
                     self.position_refinement.update_view_position(di_view)
 
             # We may not need this
