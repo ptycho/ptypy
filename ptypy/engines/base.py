@@ -417,6 +417,9 @@ class PositionCorrectionEngine(BaseEngine):
         """
         Synchronize positions
         """
+        if self.do_position_refinement is False:
+            return
+
         # Gather all new positions from each node
         coords = {}
         for ID, v in self.di.views.items():
