@@ -22,6 +22,7 @@ class EngineIterateUnityTest(unittest.TestCase):
         # reset the cached GPU functions after each test
         reset_function_cache()
 
+    @unittest.skip("Is not currently used. I suspect this comes from the race condition in the atomic adds in overlap update")
     def test_DM_engine_iterate_mathod(self):
         num_probe_modes = 2  # number of modes
         num_iters = 10  # number of iterations

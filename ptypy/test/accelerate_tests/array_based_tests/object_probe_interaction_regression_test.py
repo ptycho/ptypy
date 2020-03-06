@@ -478,6 +478,7 @@ class ObjectProbeInteractionRegressionTest(unittest.TestCase):
 
         np.testing.assert_array_equal(np.diagonal(array_to_be_updated), expected_output)
 
+    @unittest.skip("Not used at the moment.")
     def test_difference_map_update_object_with_no_smooth_but_clipping_regression(self):
         B = 5
         C = 5
