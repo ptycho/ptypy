@@ -36,7 +36,7 @@ p.scans.MF.data.photons = 1e8
 p.scans.MF.data.psf = 0.
 
 # Resample by a factor of 2
-p.scans.MF.resample = 2
+p.scans.MF.resample = 1
 
 # attach a reconstrucion engine
 p.engines = u.Param()
