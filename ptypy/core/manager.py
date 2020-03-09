@@ -92,15 +92,15 @@ class ScanModel(object):
     help = Container for sample initialization model
 
     [resample]
-    type = float, None
-    default = None
+    type = int, None
+    default = 1
     help = Resampling fraction of the image frames w.r.t. diffraction frames
     doc = A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
           as densely as the raw diffraction data.
 
     [pad]
     type = int, None
-    default = None
+    default = 0
     help = Amount of padding (in pixels) to be added (or removed) around the diffraction data
     """
     _PREFIX = MODEL_PREFIX
@@ -759,20 +759,20 @@ class _Vanilla(object):
         Initialize the geometry based on input data package
         Parameters.
         """
-        self.pad = self.p.pad
         probe_shape = common['shape']
         center = common['center']
         psize = common['psize']        
-
-        if self.pad is not None:
-            probe_shape = tuple(np.array(probe_shape) + self.pad)
-
-        self.resample = self.p.resample
-        if self.resample is not None:
-            probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
-            center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
-            psize = np.array(psize) / self.resample
         
+        # Adjust geometry parameters for resampling
+        self.resample = self.p.resample
+        probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
+        center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
+        psize = np.array(psize) / self.resample
+
+        # Adjust geomtery parameters for padding
+        self.pad = self.p.pad
+        probe_shape = tuple(np.array(probe_shape) + self.pad)
+
         # Collect geometry parameters
         get_keys = ['distance', 'center', 'energy', 'psize']
         geo_pars = u.Param({key: common[key] for key in get_keys})
@@ -1035,18 +1035,19 @@ class _Full(object):
         """
         Initialize the geometry/geometries.
         """
-        self.pad = self.p.pad
         probe_shape = common['shape']
         center = common['center']
-        psize = common['psize']
-        if self.pad is not None:
-            probe_shape = tuple(np.array(probe_shape) + self.pad)
-
+        psize = common['psize']        
+        
+        # Adjust geometry parameters for resampling
         self.resample = self.p.resample
-        if self.resample is not None:
-            probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
-            center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
-            psize = np.array(psize) / self.resample
+        probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
+        center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
+        psize = np.array(psize) / self.resample
+
+        # Adjust geomtery parameters for padding
+        self.pad = self.p.pad
+        probe_shape = tuple(np.array(probe_shape) + self.pad)
 
         # Extract necessary info from the received data package
         get_keys = ['distance', 'center', 'energy', 'psize']
@@ -1221,13 +1222,13 @@ class Bragg3dModel(Vanilla):
     help =
 
     [resample]
-    type = float, None
-    default = None
+    type = int, None
+    default = 1
     help = Diffraction resampling *CURRENTLY NOT SUPPORTED FOR BRAGG CASE*
 
     [pad]
     type = int, None
-    default = None
+    default = 0
     help = Padding of diffraction data *CURRENTLY NOT SUPPORTED FOR BRAGG CASE*
     """
 
@@ -1451,13 +1452,12 @@ class Bragg3dModel(Vanilla):
         to raw data frames, they now refer to 3-dimensional diffraction
         patterns as specified by Geo_Bragg.
         """
-        if self.p.pad is not None:
+        if self.p.pad != 0:
             raise NotImplementedError('Diffraction pattern padding is not supported by Bragg Scan Model')
-        if self.p.resample is not None:
+        if self.p.resample != 1:
             raise NotImplementedError('Diffraction pattern resampling is not supported by Bragg Scan Model')
-
-        self.pad = None
-        self.resample = None
+        self.pad = 0
+        self.resample = 1
 
         # Collect and assemble geometric parameters
         get_keys = ['distance', 'center', 'energy']

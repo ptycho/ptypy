@@ -464,10 +464,7 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 f[name] = pod.fw(pod.probe * pod.object)
-                if pod.model.resample is not None:
-                    Imodel += u.rebin_2d(u.abs2(f[name]), pod.model.resample)[0]
-                else:
-                    Imodel += u.abs2(f[name])
+                Imodel += u.rebin_2d(u.abs2(f[name]), pod.model.resample)[0]
 
             # Floating intensity option
             if self.p.floating_intensities:
@@ -482,10 +479,7 @@ class GaussianModel(BaseModel):
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
-                if pod.model.resample is not None:
-                    xi = pod.bw(u.zoom(w*DI, pod.model.resample, order=0) * f[name])
-                else:
-                    xi = pod.bw(w * DI * f[name])
+                xi = pod.bw(u.zoom(w*DI, pod.model.resample, order=0) * f[name])
                 self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
                 self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
@@ -553,11 +547,9 @@ class GaussianModel(BaseModel):
                 A0 *= self.float_intens_coeff[dname]
                 A1 *= self.float_intens_coeff[dname]
                 A2 *= self.float_intens_coeff[dname]
-            if pod.model.resample is not None:
-                A0 -= u.zoom(I, pod.model.resample, order=0)
-                w = u.zoom(w, pod.model.resample, order=0)
-            else:
-                A0 -= I
+
+            A0 -= u.zoom(I, pod.model.resample, order=0)
+            w = u.zoom(w, pod.model.resample, order=0)
             
             B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
             B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm

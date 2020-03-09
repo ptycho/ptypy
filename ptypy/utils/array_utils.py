@@ -311,7 +311,9 @@ def zoom(c,*arg,**kwargs):
     numpy.ndarray
         Zoomed array
     """
-    
+    if arg[0] == 1:
+        return c
+
     from scipy.ndimage import zoom as _zoom
 
     if np.iscomplexobj(c):

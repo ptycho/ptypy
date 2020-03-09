@@ -123,10 +123,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     if LL_error is True:
         LL = np.zeros_like(diff_view.data)
         for name, pod in diff_view.pods.items():
-            if pod.model.resample is not None:
-                LL += u.rebin_2d(u.abs2(pod.fw(pod.probe * pod.object)), pod.model.resample)[0]
-            else:
-                LL += u.abs2(pod.fw(pod.probe * pod.object))
+            LL += u.rebin_2d(u.abs2(pod.fw(pod.probe * pod.object)), pod.model.resample)[0]
         err_phot = (np.sum(fmask * (LL - I)**2 / (I + 1.))
                     / np.prod(LL.shape))
     else:
@@ -138,10 +135,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
             continue
         f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
                          - alpha * pod.exit)
-        if pod.model.resample is not None:
-            af2 += u.rebin_2d(u.abs2(f[name]), pod.model.resample)[0]
-        else:
-            af2 += u.abs2(f[name])
+        af2 += u.rebin_2d(u.abs2(f[name]), pod.model.resample)[0]
             
     fmag = np.sqrt(np.abs(I))
     af = np.sqrt(af2)
@@ -157,10 +151,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            if pod.model.resample is not None:
-                df = pod.bw(u.zoom(fm, pod.model.resample, order=0) * f[name]) - pod.probe * pod.object
-            else:
-                df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            df = pod.bw(u.zoom(fm, pod.model.resample, order=0) * f[name]) - pod.probe * pod.object
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     elif err_fmag > pbound:
@@ -170,10 +161,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            if pod.model.resample is not None:
-                df = pod.bw(u.zoom(fm, pod.model.resample, order=0) * f[name]) - pod.probe * pod.object
-            else:
-                df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            df = pod.bw(u.zoom(fm, pod.model.resample, order=0) * f[name]) - pod.probe * pod.object
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     else:
