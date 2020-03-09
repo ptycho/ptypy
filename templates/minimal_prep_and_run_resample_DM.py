@@ -36,13 +36,14 @@ p.scans.MF.data.photons = 1e8
 p.scans.MF.data.psf = 0.
 
 # Resample by a factor of 2
-p.scans.MF.resample = 1
+p.scans.MF.resample = 2
 
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter = 80
+p.engines.engine00.numiter = 100
+p.engines.engine00.probe_support = 0.05
 
 # prepare and run
 P = Ptycho(p,level=4)

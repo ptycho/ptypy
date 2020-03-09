@@ -439,12 +439,11 @@ class ScanModel(object):
             parallel.allreduce(max_frame, parallel.MPI.MAX)
             parallel.allreduce(min_frame, parallel.MPI.MIN)
         mean_frame /= (norm + (norm == 0))
-
         self.diff.norm = norm
         self.diff.max_power = parallel.MPImax(Itotal)
         self.diff.tot_power = parallel.MPIsum(Itotal)
-        self.diff.mean_power = self.diff.tot_power / (len(diff_views) * mean_frame.shape[-1]**2)
-        self.diff.pbound_stub = self.diff.max_power / mean_frame.shape[-1]**2
+        self.diff.mean_power = self.diff.tot_power / (len(diff_views) * np.prod(self.diff_shape))
+        self.diff.pbound_stub = self.diff.max_power / np.prod(self.diff_shape)
         self.diff.mean = mean_frame
         self.diff.max = max_frame
         self.diff.min = min_frame

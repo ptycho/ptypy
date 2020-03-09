@@ -135,8 +135,8 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
             continue
         f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
                          - alpha * pod.exit)
-        af2 += u.rebin_2d(u.abs2(f[name]), pod.model.resample)[0]
-            
+        af2 += (u.rebin_2d(u.abs2(f[name]), pod.model.resample)[0] * pod.model.resample**2)
+
     fmag = np.sqrt(np.abs(I))
     af = np.sqrt(af2)
 

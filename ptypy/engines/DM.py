@@ -180,8 +180,7 @@ class DM(PositionCorrectionEngine):
         self.pbound = {}
         mean_power = 0.
         for name, s in self.di.storages.items():
-            self.pbound[name] = (
-                .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
+            self.pbound[name] = (.25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
             mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
 
@@ -331,7 +330,6 @@ class DM(PositionCorrectionEngine):
                 # This estimate assumes that the probe power is uniformly distributed through the
                 # array and therefore underestimate the strength of the probe terms.
                 cfact = self.p.object_inertia * self.mean_power
-
                 if self.p.obj_smooth_std is not None:
                     logger.info(
                         'Smoothing object, average cfact is %.2f'
