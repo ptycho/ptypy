@@ -97,11 +97,6 @@ class ScanModel(object):
     help = Resampling fraction of the image frames w.r.t. diffraction frames
     doc = A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
           as densely as the raw diffraction data.
-
-    [pad]
-    type = int, None
-    default = 0
-    help = Amount of padding (in pixels) to be added (or removed) around the diffraction data
     """
     _PREFIX = MODEL_PREFIX
 
@@ -768,10 +763,6 @@ class _Vanilla(object):
         center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
         psize = np.array(psize) / self.resample
 
-        # Adjust geomtery parameters for padding
-        self.pad = self.p.pad
-        probe_shape = tuple(np.array(probe_shape) + self.pad)
-
         # Collect geometry parameters
         get_keys = ['distance', 'center', 'energy', 'psize']
         geo_pars = u.Param({key: common[key] for key in get_keys})
@@ -1044,10 +1035,6 @@ class _Full(object):
         center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
         psize = np.array(psize) / self.resample
 
-        # Adjust geomtery parameters for padding
-        self.pad = self.p.pad
-        probe_shape = tuple(np.array(probe_shape) + self.pad)
-
         # Extract necessary info from the received data package
         get_keys = ['distance', 'center', 'energy', 'psize']
         geo_pars = u.Param({key: common[key] for key in get_keys})
@@ -1224,11 +1211,6 @@ class Bragg3dModel(Vanilla):
     type = int, None
     default = 1
     help = Diffraction resampling *CURRENTLY NOT SUPPORTED FOR BRAGG CASE*
-
-    [pad]
-    type = int, None
-    default = 0
-    help = Padding of diffraction data *CURRENTLY NOT SUPPORTED FOR BRAGG CASE*
     """
 
     def __init__(self, ptycho=None, pars=None, label=None):
@@ -1451,11 +1433,8 @@ class Bragg3dModel(Vanilla):
         to raw data frames, they now refer to 3-dimensional diffraction
         patterns as specified by Geo_Bragg.
         """
-        if self.p.pad != 0:
-            raise NotImplementedError('Diffraction pattern padding is not supported by Bragg Scan Model')
         if self.p.resample != 1:
             raise NotImplementedError('Diffraction pattern resampling is not supported by Bragg Scan Model')
-        self.pad = 0
         self.resample = 1
 
         # Collect and assemble geometric parameters
