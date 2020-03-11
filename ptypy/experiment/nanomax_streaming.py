@@ -7,6 +7,8 @@ import numpy as np
 import zmq
 from zmq.utils import jsonapi as json
 import time
+import bitshuffle
+import struct
 
 from ..core.data import PtyScan
 from .. import utils as u
@@ -14,6 +16,16 @@ from . import register
 from ..utils import parallel
 
 logger = u.verbose.logger
+
+
+def decompress(data, shape, dtype):
+    block_size = struct.unpack('>I', data[8:12])[0] // dtype.itemsize
+    data = np.frombuffer(data[12:], np.int8)
+    output = bitshuffle.decompress_lz4(arr=data,
+                                       shape=shape,
+                                       dtype=dtype,
+                                       block_size=block_size)
+    return output
 
 
 @register()
@@ -30,7 +42,7 @@ class NanomaxZmqScan(PtyScan):
     doc =
 
     [host]
-    default = 'localhost'
+    default = '172.16.125.18'
     type = str
     help = Name of the publishing host
     doc =
@@ -59,21 +71,15 @@ class NanomaxZmqScan(PtyScan):
     help = Which detector from the contrast stream to use
 
     [detector_host]
-    default = None
+    default = '192.168.19.182'
     type = str
     help = Take images from a separate stream - hostname
     doc =
 
     [detector_port]
-    default = None
+    default = 9998
     type = int
     help = Take images from a separate stream - port
-    doc =
-
-    [motorMultiplier]
-    default = 1.0
-    type = float
-    help = Scaling factor for motor positions.
     doc =
 
     """
@@ -130,20 +136,13 @@ class NanomaxZmqScan(PtyScan):
         while self.stream_images:
             try:
                 parts = self.det_socket.recv_multipart(flags=zmq.NOBLOCK)
-                header = json.loads(parts[0])
-                htype = header['htype']
-                if htype == 'dimage-1.0':
-                    info = json.loads(parts[1])
-                    shape = info['shape']
-                    img = np.frombuffer(parts[2], dtype=np.int32).reshape(shape)
-                    self.latest_det_index_received += 1
-                    self.incoming_det[self.latest_det_index_received] = img
-# DOESN'T WORK FOR
-# SOFTWARE SCANS!
-#                if htype == 'dseries_end-1.0':
-#                    print('Found last detector frame')
-#                    end_of_det_stream = True
-#                    break
+                info = json.loads(parts[0])
+                shape = info['shape']
+                dtype = np.dtype(info['type'])
+                img = decompress(parts[1], shape, dtype)
+                self.latest_det_index_received += 1
+                self.incoming_det[self.latest_det_index_received] = img
+
             except zmq.ZMQError:
                 # no more data available - working around bug in ptypy here
                 if self.latest_det_index_received < self.info.min_frames * parallel.size:
@@ -198,11 +197,14 @@ class NanomaxZmqScan(PtyScan):
         # repackage data and return
         for i in  indices:
             raw[i] = dct[i][self.info.detector]
-            pos[i] = np.array([
-                        dct[i][self.info.xMotor],
-                        dct[i][self.info.yMotor],
-                        ]) * 1e-6
-            pos[i] = pos[i] * self.info.motorMultiplier
+#            pos[i] = np.array([
+#                        dct[i][self.info.xMotor],
+#                        dct[i][self.info.yMotor],
+#                        ]) * 1e-6
+            x = dct[i][self.info.xMotor]
+            y = dct[i][self.info.yMotor]
+            pos[i] = -np.array((y, x)) * 1e-6
             weight[i] = np.ones_like(raw[i])
+            weight[i][np.where(raw[i] == 2**32-1)] = 0
 
         return raw, pos, weight
