@@ -774,6 +774,7 @@ class _Vanilla(object):
         # make a Geo instance and fix resolution
         g = geometry.Geo(owner=self.ptycho, pars=geo_pars)
         g.p.resolution_is_fix = True
+        g.resample = self.resample
 
         # save the geometry
         self.geometries = [g]
@@ -1055,6 +1056,8 @@ class _Full(object):
             g.p.energy_orig = g.energy
             # change energy
             g.energy *= fac
+            # resampling
+            g.resample = self.resample
             # append the geometry
             self.geometries.append(g)
 
@@ -1453,6 +1456,7 @@ class Bragg3dModel(Vanilla):
         logger.info('Reconstruction will use these geometric parameters:')
         logger.info(g)
         g.p.resolution_is_fix = True
+        g.resample = self.resample
 
         # save the geometry
         self.geometries = [g]

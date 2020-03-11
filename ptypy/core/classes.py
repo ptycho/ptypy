@@ -2159,6 +2159,22 @@ class POD(Base):
         return self.geometry.propagator.bw
 
     @property
+    def upsample(self):
+        """
+        Convencience property that returns upsample function of attached
+        Geometry instance. Equivalent to ``self.geometry.upsample``.
+        """
+        return self.geometry.upsample
+
+    @property
+    def downsample(self):
+        """
+        Convencience property that returns downsample function of attached
+        Geometry instance. Equivalent to ``self.geometry.upsample``.
+        """
+        return self.geometry.downsample
+
+    @property
     def object(self):
         """
         Convenience property that links to slice of object :any:`Storage`.

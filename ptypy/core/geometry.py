@@ -238,6 +238,9 @@ class Geo(Base):
         self._propagator = self._get_propagator()
         self.interact = True
 
+        # Resampling
+        self.resample = 1
+
     def update(self, update_propagator=True):
         """
         Update the internal pixel sizes, giving precedence to the sample
@@ -377,6 +380,22 @@ class Geo(Base):
             self._propagator = self._get_propagator()
 
         return self._propagator
+
+    def upsample(self, c):
+        """
+        Upsample the array c (float or complex).
+        """
+        if self.resample == 1:
+            return c
+        return u.zoom(c, self.resample, order=0) / (self.resample**2)
+
+    def downsample(self, a):
+        """
+        Downsample the array a (float)
+        """
+        if self.resample == 1:
+            return a
+        return u.rebin_2d(a, self.resample)[0]
 
     def __str__(self):
         keys = list(self.p.keys())
