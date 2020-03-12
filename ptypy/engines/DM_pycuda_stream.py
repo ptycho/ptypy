@@ -107,7 +107,7 @@ class GpuData:
         if nbytes > self.nbytes_buffer or nbytes < self.nbytes_buffer * .9:
             self.nbytes_buffer = nbytes
             self.gpuraw.free()
-            self.gpuraw = cuda.mem_alloc(self.nbytes)
+            self.gpuraw = cuda.mem_alloc(nbytes)
         self.nbytes = nbytes
         self.reset()
         
