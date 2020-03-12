@@ -1535,7 +1535,7 @@ class MoonFlowerScan(PtyScan):
         else:
             pos = u.Param()
             pos.spacing = geo.resolution * geo.shape * p.density
-            pos.steps = np.int(np.round(np.sqrt(self.num_frames) * 1.4))
+            pos.steps = np.int(np.round(np.sqrt(self.num_frames) + 1))
             pos.extent = pos.steps * pos.spacing
             pos.model = p.model
             pos.count = self.num_frames
