@@ -906,7 +906,7 @@ class Ptycho(Base):
                 minimal.positions = {}
                 for ID, S in self.obj.storages.items():
                     minimal.obj[ID]['grids'] = S.grids()
-                    minimal.positions[ID] = np.array([v.coord for v in S.views])
+                    minimal.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
 
                 try:
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
