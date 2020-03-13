@@ -103,7 +103,7 @@ class AnnealingRefine(PositionRefine):
         '''
         af2 = np.zeros_like(di_view.data)
         for name, pod in di_view.pods.items():
-            af2 += pod.downsampe(u.abs2(pod.fw(pod.probe*obj)))
+            af2 += pod.downsample(u.abs2(pod.fw(pod.probe*obj)))
         return np.sum(di_view.pod.mask * (np.sqrt(af2) - np.sqrt(np.abs(di_view.data)))**2)
 
     def estimate_photon_metric(self, di_view, obj):

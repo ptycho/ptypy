@@ -2170,7 +2170,7 @@ class POD(Base):
     def downsample(self):
         """
         Convencience property that returns downsample function of attached
-        Geometry instance. Equivalent to ``self.geometry.upsample``.
+        Geometry instance. Equivalent to ``self.geometry.downsample``.
         """
         return self.geometry.downsample
 
