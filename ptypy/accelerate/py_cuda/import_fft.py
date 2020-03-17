@@ -19,11 +19,20 @@ class CustomizeCompilerFactory:
         mod = 'module_' + str(self.rows) + '_' + str(self.columns)
         log(2,"mod:%s" % mod)
         log(2, "self.rows:%s, columns:%s" % (self.rows, self.columns))
-        self.defines = [
-            '-DMODULE_NAME=' + mod,
-            '-DMY_FFT_ROWS=' + str(self.rows),
-            '-DMY_FFT_COLS=' + str(self.columns)
-        ]
+        # self.defines = [
+        #     '-DMODULE_NAME=' + mod,
+        #     '-DMY_FFT_ROWS=' + str(self.rows),
+        #     '-DMY_FFT_COLS=' + str(self.columns)
+        #
+        # ]
+
+        if self.rows == 32:
+            log(2, "Rows was 32!")
+            self.customize_compiler = self.customize_compiler_32_32
+
+        if self.rows == 128:
+            log(2, "Rows was 128!")
+            self.customize_compiler = self.customize_compiler_128_128
 
     def replace_flags(self, flags):
         ret = []
@@ -48,18 +57,26 @@ class CustomizeCompilerFactory:
                 ret.append(f)
         return ret
 
-    def customize_compiler(self, compiler):
-        self.old_customize_compiler(compiler)
-
-        log(2, "rows:%s, cols: %s " % (self.rows, self.columns))
+    def customize_compiler_128_128(self, compiler):
+        log(2, "Using the 128x128 one")
+        # self.old_customize_compiler(compiler)
+        # log(2, "Compiler is: %s" % str(compiler))
+        # log(2, "compiler:%s" % str(compiler.compiler))
+        # log(2, "compiler_so:%s" % str(compiler.compiler_so))
+        # log(2, "compiler_cxx:%s" % str(compiler.compiler_cxx))
+        # log(2, "CFLAGS: %s" % str(sysconfig.get_config_var('CFLAGS')))
+        # log(2, "rows:%s, cols: %s " % (self.rows, self.columns))
         comp_cmd = self.replace_flags(compiler.compiler) + ['-dc', '-x', 'cu', self.archflag]
         comp_so = self.replace_flags(compiler.compiler_so) + ['-Xcompiler', '-fPIC', '-dc', '-x', 'cu', self.archflag]
         comp_cxx = self.replace_flags(compiler.compiler_cxx)
         linker_so = self.replace_flags(compiler.linker_so) + [self.archflag]
-
-        comp_cxx += self.defines
-        comp_cmd += self.defines
-        comp_so += self.defines
+        defines = [
+            '-DMODULE_NAME=' + 'module_' + str(128) + '_' + str(128),
+            '-DMY_FFT_ROWS=' + str(128),
+            '-DMY_FFT_COLS=' + str(128)]
+        comp_cxx += defines
+        comp_cmd += defines
+        comp_so += defines
         log(2, "comp_cxx:%s" % str(comp_cxx))
         log(2, "comp_cmd:%s" % str(comp_cmd))
         log(2, "comp_so:%s" % str(comp_so))
@@ -70,11 +87,81 @@ class CustomizeCompilerFactory:
         linker_so[0] = 'nvcc'
 
 
+
         compiler.set_executables(
             compiler=comp_cmd,
             compiler_so = comp_so,
             compiler_cxx = comp_cxx,
             linker_so=linker_so)
+
+    def customize_compiler_32_32(self, compiler):
+        log(2, "Using the 32x32 one")
+        # self.old_customize_compiler(compiler)
+        # log(2, "Compiler is: %s" % str(compiler))
+        # log(2, "compiler:%s" % str(compiler.compiler))
+        # log(2, "compiler_so:%s" % str(compiler.compiler_so))
+        # log(2, "compiler_cxx:%s" % str(compiler.compiler_cxx))
+        # log(2, "CFLAGS: %s" % str(sysconfig.get_config_var('CFLAGS')))
+        # log(2, "rows:%s, cols: %s " % (self.rows, self.columns))
+        comp_cmd = self.replace_flags(compiler.compiler) + ['-dc', '-x', 'cu', self.archflag]
+        comp_so = self.replace_flags(compiler.compiler_so) + ['-Xcompiler', '-fPIC', '-dc', '-x', 'cu', self.archflag]
+        comp_cxx = self.replace_flags(compiler.compiler_cxx)
+        linker_so = self.replace_flags(compiler.linker_so) + [self.archflag]
+        defines = [
+            '-DMODULE_NAME=' + 'module_' + str(32) + '_' + str(32),
+            '-DMY_FFT_ROWS=' + str(32),
+            '-DMY_FFT_COLS=' + str(32)]
+        comp_cxx += defines
+        comp_cmd += defines
+        comp_so += defines
+        log(2, "comp_cxx:%s" % str(comp_cxx))
+        log(2, "comp_cmd:%s" % str(comp_cmd))
+        log(2, "comp_so:%s" % str(comp_so))
+
+        comp_cmd[0] = 'nvcc'
+        comp_so[0] = 'nvcc'
+        comp_cxx[0] = 'nvcc'
+        linker_so[0] = 'nvcc'
+
+
+
+        compiler.set_executables(
+            compiler=comp_cmd,
+            compiler_so = comp_so,
+            compiler_cxx = comp_cxx,
+            linker_so=linker_so)
+
+    # def customize_compiler(self, compiler):
+    #     self.old_customize_compiler(compiler)
+    #     log(2, "Compiler is: %s" % str(compiler))
+    #     log(2, "compiler:%s" % str(compiler.compiler))
+    #     log(2, "compiler_so:%s" % str(compiler.compiler_so))
+    #     log(2, "compiler_cxx:%s" % str(compiler.compiler_cxx))
+    #     log(2, "CFLAGS: %s" % str(sysconfig.get_config_var('CFLAGS')))
+    #     # log(2, "rows:%s, cols: %s " % (self.rows, self.columns))
+    #     comp_cmd = self.replace_flags(compiler.compiler) + ['-dc', '-x', 'cu', self.archflag]
+    #     comp_so = self.replace_flags(compiler.compiler_so) + ['-Xcompiler', '-fPIC', '-dc', '-x', 'cu', self.archflag]
+    #     comp_cxx = self.replace_flags(compiler.compiler_cxx)
+    #     linker_so = self.replace_flags(compiler.linker_so) + [self.archflag]
+    #
+    #     comp_cxx += self.defines
+    #     comp_cmd += self.defines
+    #     comp_so += self.defines
+    #     # log(2, "comp_cxx:%s" % str(comp_cxx))
+    #     # log(2, "comp_cmd:%s" % str(comp_cmd))
+    #     # log(2, "comp_so:%s" % str(comp_so))
+    #
+    #     comp_cmd[0] = 'nvcc'
+    #     comp_so[0] = 'nvcc'
+    #     comp_cxx[0] = 'nvcc'
+    #     linker_so[0] = 'nvcc'
+    #
+    #
+    #     compiler.set_executables(
+    #         compiler=comp_cmd,
+    #         compiler_so = comp_so,
+    #         compiler_cxx = comp_cxx,
+    #         linker_so=linker_so)
 
 
 def import_fft(rows, columns):
