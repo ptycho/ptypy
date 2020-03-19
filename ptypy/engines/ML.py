@@ -465,7 +465,7 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 f[name] = pod.fw(pod.probe * pod.object)
-                Imodel += u.abs2(f[name])
+                Imodel += pod.downsample(u.abs2(f[name]))
 
             # Floating intensity option
             if self.p.floating_intensities:
@@ -480,7 +480,7 @@ class GaussianModel(BaseModel):
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
-                xi = pod.bw(w * DI * f[name])
+                xi = pod.bw(pod.upsample(w*DI) * f[name])
                 self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
                 self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
@@ -548,8 +548,10 @@ class GaussianModel(BaseModel):
                 A0 *= self.float_intens_coeff[dname]
                 A1 *= self.float_intens_coeff[dname]
                 A2 *= self.float_intens_coeff[dname]
-            A0 -= I
 
+            A0 -= pod.upsample(I)
+            w = pod.upsample(w)
+            
             B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
             B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
             B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm

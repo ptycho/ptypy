@@ -123,7 +123,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     if LL_error is True:
         LL = np.zeros_like(diff_view.data)
         for name, pod in diff_view.pods.items():
-            LL += u.abs2(pod.fw(pod.probe * pod.object))
+            LL += pod.downsample(u.abs2(pod.fw(pod.probe * pod.object)))
         err_phot = (np.sum(fmask * (LL - I)**2 / (I + 1.))
                     / np.prod(LL.shape))
     else:
@@ -135,8 +135,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
             continue
         f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
                          - alpha * pod.exit)
-
-        af2 += u.abs2(f[name])
+        af2 += pod.downsample(u.abs2(f[name]))
 
     fmag = np.sqrt(np.abs(I))
     af = np.sqrt(af2)
@@ -152,7 +151,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            df = pod.bw(pod.upsample(fm) * f[name]) - pod.probe * pod.object
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     elif err_fmag > pbound:
@@ -162,7 +161,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            df = pod.bw(pod.upsample(fm) * f[name]) - pod.probe * pod.object
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     else:
@@ -211,3 +210,4 @@ def Cdot(c1, c2):
     for name, s in c1.storages.items():
         r += np.vdot(c1.storages[name].data.flat, c2.storages[name].data.flat)
     return r
+

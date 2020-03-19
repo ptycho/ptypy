@@ -227,12 +227,12 @@ class EPIE(BaseEngine):
                 image = pod.fw(exit_)
                 fmag = np.sqrt(np.abs(pod.diff))
                 error_fmag = (
-                    np.sum(pod.mask * (np.abs(image) - fmag)**2)
+                    np.sum(pod.mask * pod.downsample(np.abs(image) - fmag)**2)
                     / pod.mask.sum()
                 )
                 image = (
-                    pod.mask * fmag * np.exp(1j * np.angle(image))
-                    + (1 - pod.mask) * image
+                    pod.upsample(pod.mask * fmag) * np.exp(1j * np.angle(image))
+                    + pod.upsample(1 - pod.mask) * image
                 )
                 pod.exit = pod.bw(image)
                 error_exit = np.sum(np.abs(pod.exit - exit_)**2)
@@ -307,6 +307,7 @@ class EPIE(BaseEngine):
                         s.data /= parallel.size
                 t3 = time.time()
                 tc += t3 - t2
+
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)

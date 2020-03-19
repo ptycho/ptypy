@@ -105,7 +105,6 @@ def rebin_2d(A, rebin=1):
     else:
         return A.reshape(-1, newdim[0], rebin, newdim[1], rebin).mean(-1).mean(-2)
 
-
 def crop_pad_symmetric_2d(A, newshape, center=None):
     """
     Crops or pads Array `A` symmetrically along the last two axes `(-2,-1)`
@@ -312,7 +311,9 @@ def zoom(c,*arg,**kwargs):
     numpy.ndarray
         Zoomed array
     """
-    
+    #if np.all(arg[0] == 1):
+    #    return c
+    #
     from scipy.ndimage import zoom as _zoom
 
     if np.iscomplexobj(c):
