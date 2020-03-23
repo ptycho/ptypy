@@ -138,7 +138,8 @@ class EPIE(BaseEngine):
 
         # Instance attributes
         self.ob_nodecover = None
-
+        self.mean_power = None
+        
         self.ptycho.citations.add_article(
             title='An improved ptychographical phase retrieval algorithm for diffractive imaging',
             author='Maiden A. and Rodenburg J.',
@@ -179,6 +180,13 @@ class EPIE(BaseEngine):
         # communicate this over MPI
         parallel.allreduceC(self.ob_nodecover)
 
+        # Mean power in the data
+        mean_power = 0.
+        for name, s in self.di.storages.items():
+            mean_power += s.mean_power
+        self.mean_power = mean_power / len(self.di.storages)
+
+        
         # DEBUGGING: show the actual domain decomposition
         # if self.curiter == 0:
         #     import matplotlib.pyplot as plt
@@ -236,11 +244,17 @@ class EPIE(BaseEngine):
                 )
                 pod.exit = pod.bw(image)
                 error_exit = np.sum(np.abs(pod.exit - exit_)**2)
-                error_phot = 0.0  # this is done with log likelihood - do later
+                LL = u.abs2(pod.fw(pod.probe * pod.object))
+                error_phot = (np.sum(pod.mask * (LL - pod.diff)**2 / (pod.diff + 1.)) / np.prod(LL.shape))
                 error_dct[name] = [error_fmag, error_phot, error_exit]
                 t1 = time.time()
                 tf += t1 - t0
 
+                # Power correection
+                # scale probe such that its mean power equals the mean power of the diffraction data
+                # This stabilizes the ePIE algorithm and prevents the probe from growing too large.
+                pod.probe *= np.sqrt(self.mean_power / u.abs2(pod.probe).mean())
+                
                 # Object update:
                 logger.debug(pre_str + '----- ePIE object update -----')
                 pod.object += (self.p.alpha
@@ -308,6 +322,7 @@ class EPIE(BaseEngine):
                 t3 = time.time()
                 tc += t3 - t2
 
+            self.curiter += 1
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
