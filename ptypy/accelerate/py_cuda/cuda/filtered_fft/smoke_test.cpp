@@ -1,5 +1,5 @@
-#include "errors.hpp"
-#include "filtered_fft.hpp"
+#include "errors.h"
+#include "filtered_fft.h"
 #include <cuda.h>
 #include <iostream>
 #include <chrono>

@@ -1,192 +1,212 @@
-# monkey-patch setuptools
-from distutils import sysconfig
+# # monkey-patch setuptools
+# from distutils import sysconfig
+# import os
+# import shutil
 import os
-import shutil
+from distutils.sysconfig import get_config_var
+
+import importlib
+import setuptools
+import setuptools.command.build_ext
+import tempfile
 from pycuda import driver
-from ptypy.utils.verbose import log
+
+# from ptypy.utils.verbose import log
+# on Windows, we need the original PATH without Anaconda's compiler in it:
+PATH = os.environ.get('PATH')
+from setuptools import Extension
+from setuptools.command.build_ext import build_ext
+from . import find
+import pybind11
+
+import os
+from os.path import join as pjoin
+from distutils.extension import Extension
+from distutils.command.build_ext import build_ext
+import numpy
 
 
-class CustomizeCompilerFactory:
-    def __init__(self, rows, columns, old_customize_compiler_function):
-        self.rows = rows
-        self.columns = columns
-        self.old_customize_compiler = old_customize_compiler_function
-        log(2, "called get_customize_compiler with rows:%s, columns: %s" % (rows, columns))
-        log(2, "and immediately self. rows:%s, self.columns: %s" % (self.rows, self.columns))
-        cmp = driver.Context.get_device().compute_capability()
-        #print(dev.compute_capability())
-        self.archflag = '-arch=sm_{}{}'.format(cmp[0], cmp[1])
-        mod = 'module_' + str(self.rows) + '_' + str(self.columns)
-        log(2,"mod:%s" % mod)
-        log(2, "self.rows:%s, columns:%s" % (self.rows, self.columns))
-        # self.defines = [
-        #     '-DMODULE_NAME=' + mod,
-        #     '-DMY_FFT_ROWS=' + str(self.rows),
-        #     '-DMY_FFT_COLS=' + str(self.columns)
-        #
-        # ]
-
-        if self.rows == 32:
-            log(2, "Rows was 32!")
-            self.customize_compiler = self.customize_compiler_32_32
-
-        if self.rows == 128:
-            log(2, "Rows was 128!")
-            self.customize_compiler = self.customize_compiler_128_128
-
-    def replace_flags(self, flags):
-        ret = []
-        bflag=False
-        for f in flags:
-            if bflag:
-                ret += ['-Xcompiler', '"-B ' + f + '"']
-                bflag = False
-            elif f.startswith('-Wl'):
-                ret += ['-Xlinker', f.replace('-Wl,', '')]
-            elif f == '-Wstrict-prototypes':  # C only
-                continue
-            elif f.startswith('-W'):
-                ret += ['-Xcompiler', f]
-            elif f.startswith('-f'):
-                ret += ['-Xcompiler', f]
-            elif f == '-pthread':
-                ret.append('-lpthread')
-            elif f == '-B':
-                bflag=True
-            else:
-                ret.append(f)
-        return ret
-
-    def customize_compiler_128_128(self, compiler):
-        log(2, "Using the 128x128 one")
-        # self.old_customize_compiler(compiler)
-        # log(2, "Compiler is: %s" % str(compiler))
-        # log(2, "compiler:%s" % str(compiler.compiler))
-        # log(2, "compiler_so:%s" % str(compiler.compiler_so))
-        # log(2, "compiler_cxx:%s" % str(compiler.compiler_cxx))
-        # log(2, "CFLAGS: %s" % str(sysconfig.get_config_var('CFLAGS')))
-        # log(2, "rows:%s, cols: %s " % (self.rows, self.columns))
-        comp_cmd = self.replace_flags(compiler.compiler) + ['-dc', '-x', 'cu', self.archflag]
-        comp_so = self.replace_flags(compiler.compiler_so) + ['-Xcompiler', '-fPIC', '-dc', '-x', 'cu', self.archflag]
-        comp_cxx = self.replace_flags(compiler.compiler_cxx)
-        linker_so = self.replace_flags(compiler.linker_so) + [self.archflag]
-        defines = [
-            '-DMODULE_NAME=' + 'module_' + str(128) + '_' + str(128),
-            '-DMY_FFT_ROWS=' + str(128),
-            '-DMY_FFT_COLS=' + str(128)]
-        comp_cxx += defines
-        comp_cmd += defines
-        comp_so += defines
-        log(2, "comp_cxx:%s" % str(comp_cxx))
-        log(2, "comp_cmd:%s" % str(comp_cmd))
-        log(2, "comp_so:%s" % str(comp_so))
-
-        comp_cmd[0] = 'nvcc'
-        comp_so[0] = 'nvcc'
-        comp_cxx[0] = 'nvcc'
-        linker_so[0] = 'nvcc'
+def find_in_path(name, path):
+    "Find a file in a search path"
+    # adapted fom http://code.activestate.com/recipes/52224-find-a-file-given-a-search-path/
+    for dir in path.split(os.pathsep):
+        binpath = pjoin(dir, name)
+        if os.path.exists(binpath):
+            return os.path.abspath(binpath)
+    return None
 
 
+def locate_cuda():
+    """Locate the CUDA environment on the system
 
-        compiler.set_executables(
-            compiler=comp_cmd,
-            compiler_so = comp_so,
-            compiler_cxx = comp_cxx,
-            linker_so=linker_so)
+    Returns a dict with keys 'home', 'nvcc', 'include', and 'lib64'
+    and values giving the absolute path to each directory.
 
-    def customize_compiler_32_32(self, compiler):
-        log(2, "Using the 32x32 one")
-        # self.old_customize_compiler(compiler)
-        # log(2, "Compiler is: %s" % str(compiler))
-        # log(2, "compiler:%s" % str(compiler.compiler))
-        # log(2, "compiler_so:%s" % str(compiler.compiler_so))
-        # log(2, "compiler_cxx:%s" % str(compiler.compiler_cxx))
-        # log(2, "CFLAGS: %s" % str(sysconfig.get_config_var('CFLAGS')))
-        # log(2, "rows:%s, cols: %s " % (self.rows, self.columns))
-        comp_cmd = self.replace_flags(compiler.compiler) + ['-dc', '-x', 'cu', self.archflag]
-        comp_so = self.replace_flags(compiler.compiler_so) + ['-Xcompiler', '-fPIC', '-dc', '-x', 'cu', self.archflag]
-        comp_cxx = self.replace_flags(compiler.compiler_cxx)
-        linker_so = self.replace_flags(compiler.linker_so) + [self.archflag]
-        defines = [
-            '-DMODULE_NAME=' + 'module_' + str(32) + '_' + str(32),
-            '-DMY_FFT_ROWS=' + str(32),
-            '-DMY_FFT_COLS=' + str(32)]
-        comp_cxx += defines
-        comp_cmd += defines
-        comp_so += defines
-        log(2, "comp_cxx:%s" % str(comp_cxx))
-        log(2, "comp_cmd:%s" % str(comp_cmd))
-        log(2, "comp_so:%s" % str(comp_so))
+    Starts by looking for the CUDAHOME env variable. If not found, everything
+    is based on finding 'nvcc' in the PATH.
+    """
 
-        comp_cmd[0] = 'nvcc'
-        comp_so[0] = 'nvcc'
-        comp_cxx[0] = 'nvcc'
-        linker_so[0] = 'nvcc'
+    # first check if the CUDAHOME env variable is in use
+    if 'CUDAHOME' in os.environ:
+        home = os.environ['CUDAHOME']
+        nvcc = pjoin(home, 'bin', 'nvcc')
+    else:
+        # otherwise, search the PATH for NVCC
+        nvcc = find_in_path('nvcc', os.environ['PATH'])
+        if nvcc is None:
+            raise EnvironmentError('The nvcc binary could not be '
+                                   'located in your $PATH. Either add it to your path, or set $CUDAHOME')
+        home = os.path.dirname(os.path.dirname(nvcc))
+
+    cudaconfig = {'home': home, 'nvcc': nvcc,
+                  'include': pjoin(home, 'include'),
+                  'lib64': pjoin(home, 'lib64')}
+    for k, v in cudaconfig.items():
+        if not os.path.exists(v):
+            raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))
+
+    return cudaconfig
 
 
+def customize_compiler_for_nvcc(self):
+    """inject deep into distutils to customize how the dispatch
+    to gcc/nvcc works.
 
-        compiler.set_executables(
-            compiler=comp_cmd,
-            compiler_so = comp_so,
-            compiler_cxx = comp_cxx,
-            linker_so=linker_so)
+    If you subclass UnixCCompiler, it's not trivial to get your subclass
+    injected in, and still have the right customizations (i.e.
+    distutils.sysconfig.customize_compiler) run on it. So instead of going
+    the OO route, I have this. Note, it's kindof like a wierd functional
+    subclassing going on."""
 
-    # def customize_compiler(self, compiler):
-    #     self.old_customize_compiler(compiler)
-    #     log(2, "Compiler is: %s" % str(compiler))
-    #     log(2, "compiler:%s" % str(compiler.compiler))
-    #     log(2, "compiler_so:%s" % str(compiler.compiler_so))
-    #     log(2, "compiler_cxx:%s" % str(compiler.compiler_cxx))
-    #     log(2, "CFLAGS: %s" % str(sysconfig.get_config_var('CFLAGS')))
-    #     # log(2, "rows:%s, cols: %s " % (self.rows, self.columns))
-    #     comp_cmd = self.replace_flags(compiler.compiler) + ['-dc', '-x', 'cu', self.archflag]
-    #     comp_so = self.replace_flags(compiler.compiler_so) + ['-Xcompiler', '-fPIC', '-dc', '-x', 'cu', self.archflag]
-    #     comp_cxx = self.replace_flags(compiler.compiler_cxx)
-    #     linker_so = self.replace_flags(compiler.linker_so) + [self.archflag]
-    #
-    #     comp_cxx += self.defines
-    #     comp_cmd += self.defines
-    #     comp_so += self.defines
-    #     # log(2, "comp_cxx:%s" % str(comp_cxx))
-    #     # log(2, "comp_cmd:%s" % str(comp_cmd))
-    #     # log(2, "comp_so:%s" % str(comp_so))
-    #
-    #     comp_cmd[0] = 'nvcc'
-    #     comp_so[0] = 'nvcc'
-    #     comp_cxx[0] = 'nvcc'
-    #     linker_so[0] = 'nvcc'
-    #
-    #
-    #     compiler.set_executables(
-    #         compiler=comp_cmd,
-    #         compiler_so = comp_so,
-    #         compiler_cxx = comp_cxx,
-    #         linker_so=linker_so)
+    # tell the compiler it can processes .cu
+    self.src_extensions.append('.cu')
 
+    # save references to the default compiler_so and _comple methods
+    default_compiler_so = self.compiler_so
+    default_linker_so = self.linker_so
 
-def import_fft(rows, columns):
-
-    module_name = 'module_' + str(rows) + '_' + str(columns)
-    dirname = os.path.join(os.path.dirname(__file__), 'cuda', 'filtered_fft')
-    src = os.path.join(dirname, 'module.cpp')
-    dst = os.path.join(dirname, module_name + '.cpp')
-    shutil.copy(src, dst)
-    #print('copies {} to {}'.format(src, dst))
-
-    # monkey-patch the customize_compiler function
-    old = sysconfig.customize_compiler
-    new = CustomizeCompilerFactory(rows, columns, old)
-    print("The new.rows:%s, new.columns: %s" % (new.rows, new.columns))
-    log(2, "new:%s" % new)
-    sysconfig.customize_compiler = new.customize_compiler
-
-    import cppimport
-    cppimport.set_quiet(True)
-    cppimport
-    filtered_fft = cppimport.imp("ptypy.accelerate.py_cuda.cuda.filtered_fft." + module_name)
+    original__compile = self._compile
+    original_link = self.link
+    CUDA = locate_cuda()
+    # now redefine the _compile method. This gets executed for each
+    # object but distutils doesn't have the ability to change compilers
+    # based on source extension: we add it.
+    def _compile(obj, src, ext, cc_args, extra_postargs, pp_opts):
+        # if os.path.splitext(src)[1] == '.cpp':
+            # use the cuda for .cu files
+        full_module_name = "ptypy.accelerate.py_cuda.cuda.filtered_fft.module"
+        module_file_path = find.find_module_cpppath(full_module_name)
     
-    # revert the monkey-patch
-    sysconfig.customize_compiler = old
-    del new
-    return filtered_fft
+        nvcc_path = find_in_path('nvcc', os.environ['PATH'])
+        if nvcc_path is None or not os.path.isfile(nvcc_path):
+            raise EnvironmentError('The nvcc binary could not be located in your'
+                                    ' $PATH. Either add it to your path, or set'
+                                    ' appropiate $CUDAHOME.')
 
+        CUDADIR = os.path.dirname(nvcc_path)        
+        module_dir = os.path.dirname(module_file_path)
+        cmp = driver.Context.get_device().compute_capability()
+        # print(dev.compute_capability())
+        archflag = '-arch=sm_{}{}'.format(cmp[0], cmp[1])
+        pybind_includes = [pybind11.get_include(True)]
+        INCLUDES = pybind_includes + [CUDA['lib64'], module_dir]
+        INCLUDES = ["-I%s" % ix for ix in INCLUDES]
+        # PYMODEXT = $(shell python-config --extension-suffix)
+        PYMODEXT = '.so'
+        CPPFLAGS = INCLUDES + extra_postargs
+        OPTFLAGS = ["-O3", "-std=c++14"]
+        CXXFLAGS = ['"-fPIC"']
+        NVCC_FLAGS = ["-dc", archflag]
+        LD_FLAGS = ["-lcufft_static", "-lculibos", "-ldl", "-lrt", "-lpthread", "-cudart shared"]
+        # $(NVCC) $(NVCC_FLAGS) $(OPTFLAGS) -Xcompiler "$(CXXFLAGS)" $(CPPFLAGS)
+        compiler_command = [CUDA["nvcc"]] + NVCC_FLAGS + OPTFLAGS + ["-Xcompiler"] + CXXFLAGS + CPPFLAGS
+        compiler_exec = " ".join(compiler_command)
+
+        self.set_executable('compiler_so', compiler_exec)
+
+
+        # use only a subset of the extra_postargs, which are 1-1 translated
+        # from the extra_compile_args in the Extension class
+        postargs = []
+        pp = pp_opts.append([])
+        # else:
+        #     postargs = extra_postargs['gcc']
+
+        original__compile(obj, src, ext, cc_args, postargs, pp) # the _compile method
+        # reset the default compiler_so, which we might have changed for cuda
+        self.compiler_so = default_compiler_so
+
+    # inject our redefined _compile method into the class
+    self._compile = _compile
+
+    def link(target_desc, objects,
+             output_filename, output_dir=None, libraries=None,
+             library_dirs=None, runtime_library_dirs=None,
+             export_symbols=None, debug=0, extra_preargs=None,
+             extra_postargs=None, build_temp=None, target_lang=None):
+        OPTFLAGS = ["-O3", "-std=c++14"]
+        LD_FLAGS = ["-lcufft_static", "-lculibos", "-ldl", "-lrt", "-lpthread", "-cudart shared"]
+
+        linker_command = [CUDA["nvcc"]] + OPTFLAGS + ["-shared"] + LD_FLAGS
+        linker_exec = " ".join(linker_command)
+
+        self.set_executable('linker_so', linker_exec)
+        original_link(target_desc, objects,
+             output_filename, output_dir=None, libraries=None,
+             library_dirs=None, runtime_library_dirs=None,
+             export_symbols=None, debug=0, extra_preargs=None,
+             extra_postargs=None, build_temp=None, target_lang=None)
+        self.linker_so = default_linker_so
+    self.link = link
+
+# run the customize_compiler
+class custom_build_ext(build_ext):
+    def build_extensions(self):
+        customize_compiler_for_nvcc(self.compiler)
+        build_ext.build_extensions(self)
+
+
+def import_fft(rows, columns, build_path=None):
+    if build_path is None:
+        build_path = tempfile.mkdtemp(prefix="extension_tests")
+
+
+ # we only need this if it's not always in a fixed path. I think we can probably assume this.
+
+    CUDA = locate_cuda()
+    full_module_name = "ptypy.accelerate.py_cuda.cuda.filtered_fft.module"
+
+    module_file_path = find.find_module_cpppath(full_module_name)
+    module_dir = os.path.dirname(module_file_path)
+
+    ext = Extension('module',
+                    sources=[module_file_path, os.path.join(module_dir, "filtered_fft.cu")],
+                    library_dirs=[],
+                    libraries=[], # distuils adds a -l infront of all of these (add_library_option:https://github.com/python/cpython/blob/1c1e68cf3e3a2a19a0edca9a105273e11ddddc6e/Lib/distutils/ccompiler.py#L1115)
+                    runtime_library_dirs=[],
+                    # this syntax is specific to this build system
+                    # we're only going to use certain compiler args with nvcc and not with gcc
+                    # the implementation of this trick is in customize_compiler() below
+                    extra_compile_args=["-DMY_FFT_COLS=%s" % str(columns) , "-DMY_FFT_ROWS=%s" % str(rows)],
+                    include_dirs=[])
+
+
+
+    script_args = ['build_ext',
+                   '--build-temp=%s' % build_path,
+                   '--build-lib=%s' % build_path]
+    setuptools_args = {"name": full_module_name,
+                       "ext_modules": [ext],
+                       "script_args": script_args,
+                       "cmdclass":{"build_ext": custom_build_ext}
+                       }
+    setuptools.setup(**setuptools_args)
+
+
+    spec = importlib.util.spec_from_file_location('module',
+                                                  os.path.join(build_path,
+                                                               "module" + get_config_var('EXT_SUFFIX')
+                                                               )
+                                                  )
+    mod = importlib.util.module_from_spec(spec)
+    return mod

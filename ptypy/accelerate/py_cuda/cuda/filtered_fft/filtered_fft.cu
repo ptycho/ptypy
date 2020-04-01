@@ -20,8 +20,8 @@
  *
  */
 
-#include "errors.hpp"
-#include "filtered_fft.hpp"
+#include "errors.h"
+#include "filtered_fft.h"
 
 #include <cufft.h>
 #include <cufftXt.h>

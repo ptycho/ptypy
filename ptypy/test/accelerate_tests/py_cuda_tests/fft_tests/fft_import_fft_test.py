@@ -14,13 +14,13 @@ class ImportFFTTest(PyCudaTest):
 
     def test_import_fft(self):
         import_fft.import_fft(32, 32)
-
-
+    
+    
     def test_import_fft_twice(self):
         import_fft.import_fft(128, 128)
-    #
-    # def test_import_fft_twice_again(self):
-    #     import_fft.import_fft(32, 32)
+    
+    def test_import_fft_twice_again(self):
+        import_fft.import_fft(32, 32)
 
     # def test_32_32(self):
     #     rows = columns = 32
@@ -37,7 +37,7 @@ class ImportFFTTest(PyCudaTest):
     #     sysconfig.customize_compiler = get_customize_compiler(rows, columns, old)
     #
     #     import cppimport
-    #     # cppimport.force_rebuild()
+#     # cppimport.force_rebuild()
     #     # cppimport.set_quiet(True)
     #     # cppimport
     #     import_module_name = "ptypy.accelerate.py_cuda.cuda.filtered_fft.%s.module" % module_name

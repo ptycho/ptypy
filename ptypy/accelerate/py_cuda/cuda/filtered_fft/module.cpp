@@ -1,17 +1,5 @@
-/*
-<%
-setup_pybind11(cfg)
-cfg['sources'] = ['filtered_fft.cpp']
-cfg['dependencies'] = ['errors.hpp', 'filtered_fft.hpp', 'filtered_fft.cpp']
-cfg['libraries'] = ['cufft_static', 'culibos', 'cudart_static']
-cfg['parallel'] = True
-%>
-*/
-
-/** This file contains the Python interface, exposed using PyBind11. */
-
 #include <pybind11/pybind11.h>
-#include "filtered_fft.hpp"
+#include "filtered_fft.h"
 
 
 /** Wrapper class to expose to Python, taking size_t instead of all
@@ -81,14 +69,11 @@ private:
 
 namespace py = pybind11;
 
-#ifndef MODULE_NAME
-#define MODULE_NAME filtered_fft 
-#endif
 
-PYBIND11_MODULE(MODULE_NAME, m) {
+PYBIND11_MODULE(module, m) {
     m.doc() = "Filtered FFT for PtyPy";
 
-    py::class_<FilteredFFTPython>(m, "FilteredFFT")
+    py::class_<FilteredFFTPython>(m, "FilteredFFT", py::module_local())
         .def(py::init<int, bool, bool, std::size_t, std::size_t,std::size_t>(),
              py::arg("batches"), 
              py::arg("symmetricScaling"), 

@@ -131,7 +131,7 @@ setup(
     packages=package_list,
     package_data={'ptypy': ['resources/*',],
                   'ptypy.accelerate.py_cuda.cuda': ['*.cu'],
-                  'ptypy.accelerate.py_cuda.cuda.filtered_fft': ['*.hpp', '*.cpp', 'Makefile']},
+                  'ptypy.accelerate.py_cuda.cuda.filtered_fft': ['*.hpp', '*.cpp', 'Makefile', '*.cu', '*.h']},
     scripts=['scripts/ptypy.plot',
              'scripts/ptypy.inspect',
              'scripts/ptypy.plotclient',
