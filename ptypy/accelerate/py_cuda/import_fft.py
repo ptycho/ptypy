@@ -16,7 +16,6 @@ from pycuda import driver
 PATH = os.environ.get('PATH')
 from setuptools import Extension
 from setuptools.command.build_ext import build_ext
-from . import find
 import pybind11
 
 import os
@@ -34,7 +33,6 @@ def find_in_path(name, path):
         if os.path.exists(binpath):
             return os.path.abspath(binpath)
     return None
-
 
 def locate_cuda():
     """Locate the CUDA environment on the system
@@ -64,18 +62,13 @@ def locate_cuda():
     for k, v in cudaconfig.items():
         if not os.path.exists(v):
             raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))
-
     return cudaconfig
 
 class NvccCompiler(UnixCCompiler):
     def __init__(self, *args, **kwargs):
         super(NvccCompiler, self).__init__(*args, **kwargs)
-        # we only need this if it's not always in a fixed path. I think we can probably assume this.
-        # we could probably just give the module dir directly since we know where it is
-        full_module_name = "ptypy.accelerate.py_cuda.cuda.filtered_fft.module"
-        module_file_path = find.find_module_cpppath(full_module_name)
-        module_dir = os.path.dirname(module_file_path)
         self.CUDA = locate_cuda()
+        module_dir = os.path.join(__file__.strip('import_fft.py'), 'cuda', 'filtered_fft') 
         cmp = driver.Context.get_device().compute_capability()
         archflag = '-arch=sm_{}{}'.format(cmp[0], cmp[1])
         self.src_extensions.append('.cu')
@@ -88,22 +81,15 @@ class NvccCompiler(UnixCCompiler):
         self.OPTFLAGS = ["-O3", "-std=c++14"]
 
     def _compile(self, obj, src, ext, cc_args, extra_postargs, pp_opts):
-        # if os.path.splitext(src)[1] == '.cpp':
-            # use the cuda for .cu files
         default_compiler_so = self.compiler_so
-
-
-        CPPFLAGS = self.INCLUDES + extra_postargs
+        CPPFLAGS = self.INCLUDES + extra_postargs # little hack here, since postargs usually goes at the end, which we won't do.
         # makefile line is
         # $(NVCC) $(NVCC_FLAGS) $(OPTFLAGS) -Xcompiler "$(CXXFLAGS)" $(CPPFLAGS)
         compiler_command = [self.CUDA["nvcc"]] + self.NVCC_FLAGS + self.OPTFLAGS + ["-Xcompiler"] + self.CXXFLAGS + CPPFLAGS
         compiler_exec = " ".join(compiler_command)
         self.set_executable('compiler_so', compiler_exec)
-
-        postargs = []
-        pp = pp_opts.append([])
-
-        super(NvccCompiler, self)._compile(obj, src, ext, cc_args, postargs, pp) # the _compile method
+        postargs = [] # we don't actually have any postargs
+        super(NvccCompiler, self)._compile(obj, src, ext, cc_args, postargs, pp_opts) # the _compile method
         # reset the default compiler_so, which we might have changed for cuda
         self.compiler_so = default_compiler_so
     
@@ -113,10 +99,10 @@ class NvccCompiler(UnixCCompiler):
              export_symbols=None, debug=0, extra_preargs=None,
              extra_postargs=None, build_temp=None, target_lang=None):
         default_linker_so = self.linker_so
-
+        # make file line is
+        # $(NVCC) $(OPTFLAGS) -shared $(LD_FLAGS) $(OBJ) $(OBJ_MOD) -o $@
         linker_command = [self.CUDA["nvcc"]] + self.OPTFLAGS + ["-shared"] + self.LD_FLAGS
         linker_exec = " ".join(linker_command)
-
         self.set_executable('linker_so', linker_exec)
         super(NvccCompiler, self).link(target_desc, objects,
              output_filename, output_dir=None, libraries=None,
@@ -140,14 +126,13 @@ class custom_build_ext(build_ext):
 def import_fft(rows, columns, build_path=None):
     if build_path is None:
         build_path = tempfile.mkdtemp(prefix="extension_tests")
-    # we only need this if it's not always in a fixed path. I think we can probably assume this.
-    # we could probably just give the module dir directly since we know where it is
-    full_module_name = "ptypy.accelerate.py_cuda.cuda.filtered_fft.module"
-    module_file_path = find.find_module_cpppath(full_module_name)
-    module_dir = os.path.dirname(module_file_path)
 
-    ext = Extension('module',
-                    sources=[module_file_path, os.path.join(module_dir, "filtered_fft.cu")],
+    full_module_name = "module"
+    module_dir = os.path.join(__file__.strip('import_fft.py'), 'cuda', 'filtered_fft')  
+    # do I need to add all the arguments here, or do they default to empty lists/None?
+    ext = Extension(full_module_name,
+                    sources=[os.path.join(module_dir, "module.cpp"),
+                             os.path.join(module_dir, "filtered_fft.cu")],
                     library_dirs=[],
                     libraries=[], # distuils adds a -l infront of all of these (add_library_option:https://github.com/python/cpython/blob/1c1e68cf3e3a2a19a0edca9a105273e11ddddc6e/Lib/distutils/ccompiler.py#L1115)
                     runtime_library_dirs=[],
@@ -157,6 +142,7 @@ def import_fft(rows, columns, build_path=None):
     script_args = ['build_ext',
                    '--build-temp=%s' % build_path,
                    '--build-lib=%s' % build_path]
+    # do I need full_module_name here?
     setuptools_args = {"name": full_module_name,
                        "ext_modules": [ext],
                        "script_args": script_args,
@@ -165,10 +151,10 @@ def import_fft(rows, columns, build_path=None):
 
     setuptools.setup(**setuptools_args)
 
-    spec = importlib.util.spec_from_file_location('module',
+    spec = importlib.util.spec_from_file_location(full_module_name,
                                                   os.path.join(build_path,
                                                                "module" + get_config_var('EXT_SUFFIX')
                                                                )
                                                   )
-    mod = importlib.util.module_from_spec(spec)
-    return mod
+
+    return importlib.util.module_from_spec(spec)
