@@ -163,8 +163,6 @@ class ML_serial(ML):
         else:
             new_pr_grad.fill(0.)
 
-        for name, s in new_pr_grad.storages.items():
-
         norm = Cnorm2(new_pr_grad)
         dot = np.real(Cdot(new_pr_grad, self.pr_grad))
         self.pr_grad << new_pr_grad

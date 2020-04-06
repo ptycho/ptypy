@@ -15,6 +15,7 @@ import numpy as np
 import time
 from pycuda import gpuarray
 import pycuda.driver as cuda
+from pycuda.tools import DeviceMemoryPool
 
 from . import register
 from .ML import ML, BaseModel, prepare_smoothing_preconditioner, Regul_del2
@@ -380,6 +381,7 @@ class GaussianModel(BaseModelSerial):
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
             POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
 
+        # TODO we err_phot.sum, but not necessraily this error_dct until the end of contiguous iteration
         for dID, prep in self.engine.diff_info.items():
             err_phot = prep.err_phot_gpu.get() / np.prod(prep.weights.shape)
             err_fourier = np.zeros_like(err_phot)
