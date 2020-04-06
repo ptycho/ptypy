@@ -140,6 +140,36 @@ class ML_serial(ML):
 
         self.ML_model.prepare()
 
+    def _replace_ob_grad(self):
+        new_ob_grad = self.ob_grad_new
+        # Smoothing preconditioner
+        if self.smooth_gradient:
+            self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
+            for name, s in new_ob_grad.storages.items():
+                s.data[:] = self.smooth_gradient(s.data)
+
+        norm = Cnorm2(new_ob_grad)
+        dot = np.real(Cdot(new_ob_grad, self.ob_grad))
+        self.ob_grad << new_ob_grad
+        return norm, dot
+
+    def _replace_pr_grad(self):
+        new_pr_grad = self.pr_grad_new
+        # probe support
+        if self.p.probe_update_start <= self.curiter:
+            # Apply probe support if needed
+            for name, s in new_pr_grad.storages.items():
+                self.support_constraint(s)
+        else:
+            new_pr_grad.fill(0.)
+
+        for name, s in new_pr_grad.storages.items():
+
+        norm = Cnorm2(new_pr_grad)
+        dot = np.real(Cdot(new_pr_grad, self.pr_grad))
+        self.pr_grad << new_pr_grad
+        return norm, dot
+
     def engine_iterate(self, num=1):
         """
         Compute `num` iterations.
@@ -153,31 +183,10 @@ class ML_serial(ML):
         for it in range(num):
             t1 = time.time()
             error_dct = self.ML_model.new_grad()
-            new_ob_grad = self.ob_grad_new
-            new_pr_grad = self.pr_grad_new
-
             tg += time.time() - t1
 
-            if self.p.probe_update_start <= self.curiter:
-                # Apply probe support if needed
-                for name, s in new_pr_grad.storages.items():
-                    self.support_constraint(s)
-            else:
-                new_pr_grad.fill(0.)
-
-            # Smoothing preconditioner
-            if self.smooth_gradient:
-                self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
-                for name, s in new_ob_grad.storages.items():
-                    s.data[:] = self.smooth_gradient(s.data)
-
-            # Calculations before turning over the gradients
-            cn2_new_pr_grad = Cnorm2(new_pr_grad)
-            cn2_new_ob_grad = Cnorm2(new_ob_grad)
-            cdotr_pr_grad = np.real(Cdot(new_pr_grad, self.pr_grad))
-            cdotr_ob_grad = np.real(Cdot(new_ob_grad, self.ob_grad))
-            self.ob_grad << new_ob_grad
-            self.pr_grad << new_pr_grad
+            cn2_new_pr_grad, cdotr_pr_grad = self._replace_pr_grad()
+            cn2_new_ob_grad, cdotr_ob_grad = self._replace_ob_grad()
 
             # probe/object rescaling
             if self.p.scale_precond:

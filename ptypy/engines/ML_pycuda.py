@@ -59,6 +59,9 @@ class ML_pycuda(ML_serial):
 
         self.context, self.queue = gpu.get_context()
 
+        self.dmp = DeviceMemoryPool()
+        self.queue_transfer = cuda.Stream()
+
     def engine_initialize(self):
         """
         Prepare for ML reconstruction.
@@ -70,6 +73,8 @@ class ML_pycuda(ML_serial):
         """
         Setup kernels, one for each scan. Derive scans from ptycho class
         """
+        AUK = ArrayUtilsKernel(queue=self.queue)
+        self._dot_kernel = AUK.dot
         # get the scans
         for label, scan in self.ptycho.model.scans.items():
 
@@ -109,6 +114,7 @@ class ML_pycuda(ML_serial):
 
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
+
 
             try:
                 from ptypy.accelerate.py_cuda.cufft import FFT
@@ -169,6 +175,38 @@ class ML_pycuda(ML_serial):
             for container in self.ptycho.containers.values():
                 self._set_pr_ob_ref_for_data(dev=dev, container=container)
 
+    def _replace_ob_grad(self):
+        new_ob_grad = self.ob_grad_new
+        # Smoothing preconditioner
+        if self.smooth_gradient:
+            self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
+            for name, s in new_ob_grad.storages.items():
+                s.data[:] = self.smooth_gradient(s.data)
+
+        return self._replace_grad(self.ob_grad, new_ob_grad)
+
+    def _replace_pr_grad(self):
+        new_pr_grad = self.pr_grad_new
+        # probe support
+        if self.p.probe_update_start <= self.curiter:
+            # Apply probe support if needed
+            for name, s in new_pr_grad.storages.items():
+                self.support_constraint(s)
+        else:
+            new_pr_grad.fill(0.)
+
+        return self._replace_grad(self.pr_grad , new_pr_grad)
+
+    def _replace_grad(self, grad, new_grad):
+        norm = np.double(0.)
+        dot = np.double(0.)
+        for name, new in new_grad.storages.items():
+            old = grad.storages[name]
+            norm += self._dot_kernel(new.gpu,new.gpu)
+            dot += self._dot_kernel(new.gpu,old.gpu)
+            old.gpu[:] = new.gpu
+        return norm, dot
+
     def engine_prepare(self):
 
         super().engine_prepare()
@@ -200,7 +238,6 @@ class ML_pycuda(ML_serial):
 
             prep.I = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
             prep.I[:] = d.data
-
 
     def engine_finalize(self):
         """
@@ -287,9 +324,14 @@ class GaussianModel(BaseModelSerial):
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
 
-            # for streaming?
-            w = gpuarray.to_gpu(prep.weights)
-            I = gpuarray.to_gpu(prep.I)
+            # TODO streaming?
+            #w = gpuarray.to_gpu(prep.weights)
+            #I = gpuarray.to_gpu(prep.I)
+            stream = self.engine.queue_transfer
+            w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.dmp.allocate, stream=stream)
+            I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.dmp.allocate, stream=stream)
+            ev = cuda.Event()
+            ev.record(stream)
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
@@ -314,6 +356,7 @@ class GaussianModel(BaseModelSerial):
             #print(np.isnan(I.get()).any())
             #print(np.isnan(aux.get()).any())
             #aux2 = aux.get()
+            GDK.queue.wait_for_event(ev)
             GDK.main(aux, addr, w, I)
             #kern.GDKs.main(aux2, addr.get(), w.get(), I.get())
             #LLerr = GDK.gpu.LLerr.get()
@@ -380,6 +423,7 @@ class GaussianModel(BaseModelSerial):
         Compute the coefficients of the polynomial for line minimization
         in direction h
         """
+        self.engine._set_pr_ob_ref_for_data('gpu')
 
         B = gpuarray.zeros((3,), dtype=np.float32) # does not accept np.longdouble
         Brenorm = 1. / self.LL[0] ** 2
@@ -404,14 +448,26 @@ class GaussianModel(BaseModelSerial):
 
             # get addresses and auxilliary array
             addr = prep.addr_gpu
-            w = gpuarray.to_gpu(prep.weights)
+
+            # TODO streaming?
+            #w = gpuarray.to_gpu(prep.weights)
+            #I = gpuarray.to_gpu(prep.I)
+            stream = self.engine.queue_transfer
+            w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.dmp.allocate, stream=stream)
+            I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.dmp.allocate, stream=stream)
+            ev = cuda.Event()
+            ev.record(stream)
 
             # local references
-            ob = gpuarray.to_gpu(self.ob.S[oID].data)
-            ob_h = gpuarray.to_gpu(c_ob_h.S[oID].data)
-            pr = gpuarray.to_gpu(self.pr.S[pID].data)
-            pr_h = gpuarray.to_gpu(c_pr_h.S[pID].data)
-            I = gpuarray.to_gpu(self.di.S[dID].data)
+            ob = self.ob.S[oID].data
+            ob_h = c_ob_h.S[oID].data
+            pr = self.pr.S[pID].data
+            pr_h = c_pr_h.S[pID].data
+            # ob = gpuarray.to_gpu(self.ob.S[oID].data)
+            # ob_h = gpuarray.to_gpu(c_ob_h.S[oID].data)
+            # pr = gpuarray.to_gpu(self.pr.S[pID].data)
+            # pr_h = gpuarray.to_gpu(c_pr_h.S[pID].data)
+
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(f, addr, ob, pr, add=False)
