@@ -14,6 +14,7 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 from pycuda import gpuarray
+import pycuda.driver as cuda
 
 from . import register
 from .ML import ML, BaseModel, prepare_smoothing_preconditioner, Regul_del2
@@ -29,6 +30,7 @@ from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel
 from ..accelerate.array_based import address_manglers
 
 __all__ = ['ML_pycuda']
+
 
 
 @register()
@@ -152,21 +154,37 @@ class ML_pycuda(ML_serial):
         else:
             raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
 
+    def _set_pr_ob_ref_for_data(self, dev='gpu', container=None):
+        """
+        Overloading the context of Storage.data here, to allow for in-place math on Container instances:
+        """
+        if container is not None and container.original != self.pr and container.original != self.ob:
+            for s in container.S.values():
+                # convert data here
+                if dev == 'gpu':
+                    s.data = s.gpu
+                elif dev == 'cpu':
+                    s.data = s.cpu
+        else:
+            for container in self.ptycho.containers.values():
+                self._set_pr_ob_ref_for_data(dev=dev, container=container)
+
     def engine_prepare(self):
 
         super().engine_prepare()
         ## Serialize new data ##
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
-        """
-        # recursive copy to gpu
+        # recursive copy to gpu for probe and object
         for _cname, c in self.ptycho.containers.items():
             if c.original != self.pr and c.original != self.ob:
                 continue
             for _sname, s in c.S.items():
                 # convert data here
                 s.gpu = gpuarray.to_gpu(s.data)
-        """
+                s.cpu = cuda.pagelocked_empty(s.data.shape, s.data.dtype, order="C")
+                s.cpu[:] = s.data
+
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
             prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
@@ -179,6 +197,10 @@ class ML_pycuda(ML_serial):
             # Todo: Which address to pick?
             if use_tiles:
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
+
+            prep.I = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
+            prep.I[:] = d.data
+
 
     def engine_finalize(self):
         """
@@ -207,8 +229,10 @@ class GaussianModel(BaseModelSerial):
 
         for label, d in self.engine.ptycho.new_data:
             prep = self.engine.diff_info[d.ID]
-            prep.weights = (self.Irenorm * self.engine.ma.S[d.ID].data
-                            / (1. / self.Irenorm + d.data)).astype(d.data.dtype)
+            w = (self.Irenorm * self.engine.ma.S[d.ID].data
+                       / (1. / self.Irenorm + d.data)).astype(d.data.dtype)
+            prep.weights = cuda.pagelocked_empty(w.shape, w.dtype, order="C", mem_flags=4)
+            prep.weights[:] = w
 
     def __del__(self):
         """
@@ -225,8 +249,10 @@ class GaussianModel(BaseModelSerial):
         """
         ob_grad = self.engine.ob_grad_new
         pr_grad = self.engine.pr_grad_new
-        ob_grad.fill(0.)
-        pr_grad.fill(0.)
+
+        self.engine._set_pr_ob_ref_for_data('gpu')
+        ob_grad << 0.
+        pr_grad << 0.
 
         # We need an array for MPI
         LL = np.array([0.])
@@ -249,14 +275,21 @@ class GaussianModel(BaseModelSerial):
 
             # get addresses and auxilliary array
             addr = prep.addr_gpu
-            w = gpuarray.to_gpu(prep.weights)
+
             err_phot = prep.err_phot_gpu
             # local references
-            ob = gpuarray.to_gpu(self.engine.ob.S[oID].data)
-            obg = gpuarray.to_gpu(ob_grad.S[oID].data)
-            pr = gpuarray.to_gpu(self.engine.pr.S[pID].data)
-            prg = gpuarray.to_gpu(pr_grad.S[pID].data)
-            I = gpuarray.to_gpu(self.engine.di.S[dID].data)
+            # ob = gpuarray.to_gpu(self.engine.ob.S[oID].data)
+            # obg = gpuarray.to_gpu(ob_grad.S[oID].data)
+            # pr = gpuarray.to_gpu(self.engine.pr.S[pID].data)
+            # prg = gpuarray.to_gpu(pr_grad.S[pID].data)
+            ob = self.engine.ob.S[oID].data
+            obg = ob_grad.S[oID].data
+            pr = self.engine.pr.S[pID].data
+            prg = pr_grad.S[pID].data
+
+            # for streaming?
+            w = gpuarray.to_gpu(prep.weights)
+            I = gpuarray.to_gpu(prep.I)
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
@@ -304,9 +337,6 @@ class GaussianModel(BaseModelSerial):
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
             POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
 
-            obg.get(ob_grad.S[oID].data)
-            prg.get(pr_grad.S[pID].data)
-
         for dID, prep in self.engine.diff_info.items():
             err_phot = prep.err_phot_gpu.get() / np.prod(prep.weights.shape)
             err_fourier = np.zeros_like(err_phot)
@@ -316,10 +346,25 @@ class GaussianModel(BaseModelSerial):
             LL += err_phot.sum()
 
         # MPI reduction of gradients
+
+        # DtoH copies
+        for s in ob_grad.S.values():
+            s.gpu.get(s.cpu)
+        for s in pr_grad.S.values():
+            s.gpu.get(s.cpu)
+        self.engine._set_pr_ob_ref_for_data('cpu')
+
         ob_grad.allreduce()
         pr_grad.allreduce()
         parallel.allreduce(LL)
-        #print(LL)
+
+        # HtoD cause we continue on gpu
+        for s in ob_grad.S.values():
+            s.gpu.set(s.cpu)
+        for s in pr_grad.S.values():
+            s.gpu.set(s.cpu)
+        self.engine._set_pr_ob_ref_for_data('gpu')
+
         # Object regularizer
         if self.regularizer:
             for name, s in self.engine.ob.storages.items():

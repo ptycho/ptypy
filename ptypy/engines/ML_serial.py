@@ -171,8 +171,13 @@ class ML_serial(ML):
                 for name, s in new_ob_grad.storages.items():
                     s.data[:] = self.smooth_gradient(s.data)
 
+            # Calculations before turning over the gradients
             cn2_new_pr_grad = Cnorm2(new_pr_grad)
             cn2_new_ob_grad = Cnorm2(new_ob_grad)
+            cdotr_pr_grad = np.real(Cdot(new_pr_grad, self.pr_grad))
+            cdotr_ob_grad = np.real(Cdot(new_ob_grad, self.ob_grad))
+            self.ob_grad << new_ob_grad
+            self.pr_grad << new_pr_grad
 
             # probe/object rescaling
             if self.p.scale_precond:
@@ -197,11 +202,7 @@ class ML_serial(ML):
             if self.curiter == 0:
                 bt = 0.
             else:
-                bt_num = (self.scale_p_o
-                          * (cn2_new_pr_grad
-                             - np.real(Cdot(new_pr_grad, self.pr_grad)))
-                          + (cn2_new_ob_grad
-                             - np.real(Cdot(new_ob_grad, self.ob_grad))))
+                bt_num = (self.scale_p_o * (cn2_new_pr_grad - cdotr_pr_grad) + (cn2_new_ob_grad - cdotr_ob_grad))
 
                 bt_denom = self.scale_p_o * self.cn2_pr_grad + self.cn2_ob_grad
 
@@ -209,8 +210,6 @@ class ML_serial(ML):
 
             # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
 
-            self.ob_grad << new_ob_grad
-            self.pr_grad << new_pr_grad
             self.cn2_ob_grad = cn2_new_ob_grad
             self.cn2_pr_grad = cn2_new_pr_grad
 
@@ -303,8 +302,8 @@ class GaussianModel(BaseModelSerial):
         """
         ob_grad = self.engine.ob_grad_new
         pr_grad = self.engine.pr_grad_new
-        ob_grad.fill(0.)
-        pr_grad.fill(0.)
+        ob_grad << 0.
+        pr_grad << 0.
 
         # We need an array for MPI
         LL = np.array([0.])
