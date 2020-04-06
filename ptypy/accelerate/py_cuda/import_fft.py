@@ -2,13 +2,16 @@
 "Just-in-time" compilation for callbacks in cufft.
 '''
 import os
+import sys
 import importlib
 import tempfile
 import setuptools
 import sysconfig
 from pycuda import driver as cuda_driver
 import pybind11
-
+import contextlib
+from io import StringIO
+from ptypy.utils.verbose import log
 import distutils
 from distutils.unixccompiler import UnixCCompiler
 from distutils.command.build_ext import build_ext
@@ -107,7 +110,21 @@ class CustomBuildExt(build_ext):
         super(CustomBuildExt, self).build_extensions()
         self.compiler=old_compiler
 
-def import_fft(rows, columns, build_path=None):
+@contextlib.contextmanager
+def stdchannel_redirected(stdchannel):
+    """
+    Redirects stdout or stderr to a StringIO object. As of python 3.4, there is a
+    standard library contextmanager for this, but backwards compatibility!
+    """
+    old = getattr(sys, stdchannel)
+    try:
+        s = StringIO()
+        setattr(sys, stdchannel, s)
+        yield s
+    finally:
+        setattr(sys, stdchannel, old)
+
+def import_fft(rows, columns, build_path=None, quiet=True):
     if build_path is None:
         build_path = tempfile.mkdtemp(prefix="extension_tests")
 
@@ -129,7 +146,13 @@ def import_fft(rows, columns, build_path=None):
                        "cmdclass":{"build_ext": CustomBuildExt
                        }}
 
-    setuptools.setup(**setuptools_args)
+    if quiet:
+        # we really don't care about the make print for almost all cases so we redirect
+        with stdchannel_redirected("stdout"):
+            with stdchannel_redirected("stderr"):
+                setuptools.setup(**setuptools_args)
+    else:
+        setuptools.setup(**setuptools_args)
 
     spec = importlib.util.spec_from_file_location(full_module_name,
                                                   os.path.join(build_path,
