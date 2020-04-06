@@ -214,14 +214,15 @@ class ML_serial(ML):
                 bt_denom = self.scale_p_o * self.cn2_pr_grad + self.cn2_ob_grad
 
                 bt = max(0, bt_num / bt_denom)
-
+                #print(it, bt, bt_num, bt_denom)
             # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
 
             self.cn2_ob_grad = cn2_new_ob_grad
             self.cn2_pr_grad = cn2_new_pr_grad
 
+            dt = self.ptycho.FType
             # 3. Next conjugate
-            self.ob_h *= bt / self.tmin
+            self.ob_h *= dt(bt / self.tmin)
 
             # Smoothing preconditioner
             if self.smooth_gradient:
@@ -230,8 +231,8 @@ class ML_serial(ML):
             else:
                 self.ob_h -= self.ob_grad
 
-            self.pr_h *= bt / self.tmin
-            self.pr_grad *= self.scale_p_o
+            self.pr_h *= dt(bt / self.tmin)
+            self.pr_grad *= dt(self.scale_p_o)
             self.pr_h -= self.pr_grad
 
             # In principle, the way things are now programmed this part
@@ -246,7 +247,7 @@ class ML_serial(ML):
                 B[np.isinf(B)] = 0.
                 B[np.isnan(B)] = 0.
 
-            self.tmin = -.5 * B[1] / B[2]
+            self.tmin = dt(-.5 * B[1] / B[2])
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
             self.ob += self.ob_h

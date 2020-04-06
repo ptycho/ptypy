@@ -26,7 +26,6 @@ from ..utils import parallel
 from .utils import Cnorm2, Cdot
 from ..accelerate import py_cuda as gpu
 from ..accelerate.py_cuda.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ..accelerate.array_based.kernels import GradientDescentKernel as GDK_serial
 from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel
 from ..accelerate.array_based import address_manglers
 
@@ -74,6 +73,13 @@ class ML_pycuda(ML_serial):
         """
         Setup kernels, one for each scan. Derive scans from ptycho class
         """
+
+        try:
+            from ptypy.accelerate.py_cuda.cufft import FFT
+        except:
+            logger.warning('Unable to import cuFFT version - using Reikna instead')
+            from ptypy.accelerate.py_cuda.fft import FFT
+
         AUK = ArrayUtilsKernel(queue=self.queue)
         self._dot_kernel = AUK.dot
         # get the scans
@@ -116,13 +122,6 @@ class ML_pycuda(ML_serial):
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
 
-
-            try:
-                from ptypy.accelerate.py_cuda.cufft import FFT
-            except:
-                logger.warning('Unable to import cuFFT version - using Reikna instead')
-                from ptypy.accelerate.py_cuda.fft import FFT
-
             kern.FW = FFT(aux, self.queue,
                           pre_fft=geo.propagator.pre_fft,
                           post_fft=geo.propagator.post_fft,
@@ -161,17 +160,20 @@ class ML_pycuda(ML_serial):
         else:
             raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
 
-    def _set_pr_ob_ref_for_data(self, dev='gpu', container=None):
+    def _set_pr_ob_ref_for_data(self, dev='gpu', container=None, sync_copy=False):
         """
         Overloading the context of Storage.data here, to allow for in-place math on Container instances:
         """
-        if container is not None and container.original != self.pr and container.original != self.ob:
-            for s in container.S.values():
-                # convert data here
-                if dev == 'gpu':
-                    s.data = s.gpu
-                elif dev == 'cpu':
-                    s.data = s.cpu
+        if container is not None:
+            if container.original==self.pr or container.original==self.ob:
+                for s in container.S.values():
+                    # convert data here
+                    if dev == 'gpu':
+                        s.data = s.gpu
+                        if sync_copy: s.gpu.set(s.cpu)
+                    elif dev == 'cpu':
+                        s.data = s.cpu
+                        if sync_copy: s.gpu.get(s.cpu)
         else:
             for container in self.ptycho.containers.values():
                 self._set_pr_ob_ref_for_data(dev=dev, container=container)
@@ -192,7 +194,9 @@ class ML_pycuda(ML_serial):
         if self.p.probe_update_start <= self.curiter:
             # Apply probe support if needed
             for name, s in new_pr_grad.storages.items():
-                self.support_constraint(s)
+                # TODO this needs to be implemented on GPU
+                #self.support_constraint(s)
+                pass
         else:
             new_pr_grad.fill(0.)
 
@@ -203,10 +207,16 @@ class ML_pycuda(ML_serial):
         dot = np.double(0.)
         for name, new in new_grad.storages.items():
             old = grad.storages[name]
-            norm += self._dot_kernel(new.gpu,new.gpu)
-            dot += self._dot_kernel(new.gpu,old.gpu)
+            norm += self._dot_kernel(new.gpu,new.gpu).get()[0]
+            dot += self._dot_kernel(new.gpu,old.gpu).get()[0]
             old.gpu[:] = new.gpu
         return norm, dot
+
+    def engine_iterate(self, num=1):
+        err = super().engine_iterate(num)
+        # copy all data back to cpu
+        self._set_pr_ob_ref_for_data(dev='cpu', container=None, sync_copy=True)
+        return err
 
     def engine_prepare(self):
 
@@ -482,6 +492,7 @@ class GaussianModel(BaseModelSerial):
             FW(a,a)
             FW(b,b)
 
+            GDK.queue.wait_for_event(ev)
             GDK.make_a012(f, a, b, addr, I)
 
             """

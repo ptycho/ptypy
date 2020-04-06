@@ -392,7 +392,6 @@ class Ptycho(Base):
         self.CType = np.dtype(
             'c' + str(2 * np.dtype(np.typeDict[p.data_type]).itemsize)).type
         logger.info(_('Data type', self.data_type))
-
         # Check if there is already a runtime container
         if not hasattr(self, 'runtime'):
             self.runtime = u.Param()  # DEFAULT_runtime.copy()
