@@ -9,13 +9,13 @@ if have_pycuda():
     from ptypy.accelerate.py_cuda.fft import FFT as ReiknaFFT
     from ptypy.accelerate.py_cuda.cufft import FFT as cuFFT
 
-COMPLEX_TYPE = np.complex64
-FLOAT_TYPE = np.float32
-INT_TYPE = np.int32
+    COMPLEX_TYPE = np.complex64
+    FLOAT_TYPE = np.float32
+    INT_TYPE = np.int32
 
-class SkcudaCuFFT(cuFFT):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, use_external=False)
+    class SkcudaCuFFT(cuFFT):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs, use_external=False)
 
 class FftSetStreamTest(PyCudaTest):
 

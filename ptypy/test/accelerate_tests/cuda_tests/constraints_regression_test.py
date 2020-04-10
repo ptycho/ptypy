@@ -2,13 +2,16 @@
 The tests for the constraints
 '''
 
-
 import unittest
 import numpy as np
 from copy import deepcopy
 from ptypy.accelerate.array_based import constraints as con, FLOAT_TYPE, COMPLEX_TYPE
-from ptypy.accelerate.cuda import constraints as gcon
+from . import have_cuda, only_if_cuda_available
 
+if have_cuda():
+    from ptypy.accelerate.cuda import constraints as gcon
+
+@only_if_cuda_available
 class ConstraintsRegressionTest(unittest.TestCase):
     '''
     a module to holds the constraints

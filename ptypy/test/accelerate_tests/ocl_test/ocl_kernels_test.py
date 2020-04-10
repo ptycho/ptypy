@@ -5,17 +5,22 @@
 
 import unittest
 import numpy as np
-import pyopencl as pocl
-from pyopencl import array as cla
-from ptypy.accelerate.ocl.ocl_kernels import AuxiliaryWaveKernel, FourierUpdateKernel
-# from ptypy.accelerate.ocl.npy_kernels_for_block import AuxiliaryWaveKernel
-from ptypy.accelerate.ocl import get_ocl_queue
+
+try:
+    import pyopencl as pocl
+    from pyopencl import array as cla
+    from ptypy.accelerate.ocl.ocl_kernels import AuxiliaryWaveKernel, FourierUpdateKernel
+    # from ptypy.accelerate.ocl.npy_kernels_for_block import AuxiliaryWaveKernel
+    from ptypy.accelerate.ocl import get_ocl_queue
+    have_ocl = True
+except ImportError:
+    have_ocl = False
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
 INT_TYPE = np.int32
 
-
+@unittest.skipIf(not have_ocl, "no PyOpenCL or GPU drivers available")
 class AuxiliaryWaveKernelTest(unittest.TestCase):
 
     def setUp(self):
@@ -190,7 +195,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(aux_npy, aux_dev.get(),
                                       err_msg="The gpu auxiliary_wave does not look the same as the numpy version")
 
-
+@unittest.skipIf(not have_ocl, "no PyOpenCL or GPU drivers available")
 class FourierUpdateKernelTest(unittest.TestCase):
 
     def setUp(self):

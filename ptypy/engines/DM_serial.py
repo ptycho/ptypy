@@ -33,7 +33,7 @@ from ..accelerate.array_based import address_manglers
 # - Fourier_update_kernel needs to allow batched execution
 
 ## for debugging
-from matplotlib import pyplot as plt
+#from matplotlib import pyplot as plt
 
 __all__ = ['DM_serial']
 
