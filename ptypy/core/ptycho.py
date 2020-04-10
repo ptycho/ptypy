@@ -666,7 +666,7 @@ class Ptycho(Base):
             engine.finalize()
 
             # Save
-            if self.p.io.rfile and auto_save.active:
+            if self.p.io.rfile:
                 self.save_run()
             else:
                 pass
