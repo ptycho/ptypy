@@ -518,7 +518,7 @@ class BlockScanModel(ScanModel):
         if not self.containers_initialized:
             self._initialize_containers()
 
-        sh = (1,) + tuple(self.shape)
+        sh = (1,) + tuple(self.diff_shape)
 
         # this is a hack for now
         dp = self._new_data_extra_analysis(dp)
@@ -529,7 +529,7 @@ class BlockScanModel(ScanModel):
             chunk = dp['chunk']
 
         # Generalized shape which works for 2d and 3d cases
-        sh = (max(len(chunk.indices_node),1),) + tuple(self.shape)
+        sh = (max(len(chunk.indices_node),1),) + tuple(self.diff_shape)
         indices_node = chunk['indices_node']
         
         diff = self.Cdiff.new_storage(shape=sh, psize=self.psize, padonly=True,
@@ -538,7 +538,7 @@ class BlockScanModel(ScanModel):
                                       fill=1.0, layermap=indices_node)
         # Prepare for View generation
         AR_diff = DEFAULT_ACCESSRULE.copy()
-        AR_diff.shape = self.shape # this is None due to init
+        AR_diff.shape = self.diff_shape # this is None due to init
         AR_diff.coord = 0.0
         AR_diff.psize = self.psize
         AR_mask = AR_diff.copy()
