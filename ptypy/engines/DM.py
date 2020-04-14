@@ -112,6 +112,12 @@ class DM(PositionCorrectionEngine):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
+    [compute_log_likelihood]
+    default = True
+    type = bool
+    help = A switch for computing the log-likelihood error (this can impact the performance of the engine) 
+
+
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla]
@@ -262,7 +268,8 @@ class DM(PositionCorrectionEngine):
             pbound = self.pbound[di_view.storage.ID]
             error_dct[name] = basic_fourier_update(di_view,
                                                    pbound=pbound,
-                                                   alpha=self.p.alpha)
+                                                   alpha=self.p.alpha,
+                                                   LL_error=self.p.compute_log_likelihood)
         return error_dct
 
     def overlap_update(self):
