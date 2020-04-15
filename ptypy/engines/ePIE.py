@@ -261,8 +261,8 @@ class EPIE(BaseEngine):
                                   * np.conj(pod.object) / object_max
                                   * (pod.exit - exit_))
                     # Apply the probe support
-                    if self.probe_support is not None:
-                        pod.probe *= self.probe_support[pod.pr_view.storageID][0]
+                    if self._probe_support is not None:
+                        pod.probe *= self._probe_support[pod.pr_view.storageID][0]
                 t2 = time.time()
                 to += t2 - t1
 
