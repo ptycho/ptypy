@@ -261,8 +261,8 @@ class EPIE(BaseEngine):
                                   * np.conj(pod.object) / object_max
                                   * (pod.exit - exit_))
                     # Apply the probe support
-                    if self.probe_support is not None:
-                        pod.probe *= self.probe_support[pod.pr_view.storageID][0]
+                    if self._probe_support is not None:
+                        pod.probe *= self._probe_support[pod.pr_view.storageID][0]
                 t2 = time.time()
                 to += t2 - t1
 
@@ -365,8 +365,8 @@ class EPIE(BaseEngine):
 
         # now, the node number corresponding to a coordinate (x, y) is
         def __node(x, y):
-            return ((x - xlims[0]) // dx
-                    + layout[1] * (y - ylims[0]) // dy)
+            return (int((x - xlims[0]) / dx)
+                    + layout[1] * int((y - ylims[0]) / dy))
 
         # now, each node works out which of its own pods to send off,
         # and the result is communicated to all other nodes as a dict.
@@ -388,6 +388,8 @@ class EPIE(BaseEngine):
             if self.pods[name].active:
                 # sending this pod, so add it to a temporary list
                 sendpods.append(name)
+
+        for name, dest in destinations.items():
             if dest == parallel.rank:
                 # receiving this pod, so mark it as active
                 self.pods[name].di_view.active = True
