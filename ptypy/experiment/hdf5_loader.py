@@ -478,7 +478,7 @@ class Hdf5Loader(PtyScan):
         weights = {}
         for ii in indices:
             jj = self.preview_indices[ii]
-            weights[ii], intensities[jj] = self.get_corrected_intensities(jj)
+            weights[ii], intensities[ii] = self.get_corrected_intensities(jj)
             positions[ii] = np.array([self.slow_axis[jj] * self.p.positions.slow_multiplier,
                                       self.fast_axis[jj] * self.p.positions.fast_multiplier])
 
