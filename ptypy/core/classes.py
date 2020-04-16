@@ -1256,6 +1256,7 @@ class View(Base):
             sh = (1,) + tuple(self.shape) if self.shape is not None else None
             s = self.owner.new_storage(ID=self.storageID,
                                        psize=rule.psize,
+                                       origin=rule.coord,
                                        shape=sh)
         self.storage = s
 
