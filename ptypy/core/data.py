@@ -1558,7 +1558,7 @@ class MoonFlowerScan(PtyScan):
         self.p = p
 
     def load_positions(self):
-        return self.pos + 0.5
+        return self.pos
 
     def load_weight(self):
         return np.ones(self.pr.shape)
