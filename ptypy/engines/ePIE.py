@@ -115,6 +115,11 @@ class EPIE(BaseEngine):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
+    [compute_log_likelihood]
+    default = True
+    type = bool
+    help = A switch for computing the log-likelihood error
+
     """
 
     SUPPORTED_MODELS = [Full, Vanilla]
@@ -235,7 +240,7 @@ class EPIE(BaseEngine):
                 image = pod.fw(exit_)
                 fmag = np.sqrt(np.abs(pod.diff))
                 error_fmag = (
-                    np.sum(pod.mask * pod.downsample(np.abs(image) - fmag)**2)
+                    np.sum(pod.mask * (pod.downsample(np.abs(image)) - fmag)**2)
                     / pod.mask.sum()
                 )
                 image = (
@@ -243,10 +248,15 @@ class EPIE(BaseEngine):
                     + pod.upsample(1 - pod.mask) * image
                 )
                 pod.exit = pod.bw(image)
+
                 error_exit = np.sum(np.abs(pod.exit - exit_)**2)
-                LL = u.abs2(pod.fw(pod.probe * pod.object))
-                error_phot = (np.sum(pod.mask * (LL - pod.diff)**2 / (pod.diff + 1.)) / np.prod(LL.shape))
+                if self.p.compute_log_likelihood:
+                    LL = pod.downsample(u.abs2(pod.fw(pod.probe * pod.object)))
+                    error_phot = (np.sum(pod.mask * (LL - pod.diff)**2 / (pod.diff + 1.)) / np.prod(LL.shape))
+                else:
+                    error_phot = 0.
                 error_dct[name] = [error_fmag, error_phot, error_exit]
+
                 t1 = time.time()
                 tf += t1 - t0
 
