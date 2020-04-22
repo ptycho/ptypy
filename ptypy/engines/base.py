@@ -358,20 +358,29 @@ class PositionCorrectionEngine(BaseEngine):
     type = bool
     help = record movement of positions
     """
-        
+
+    def __init__(self, ptycho_parent, pars):
+        """
+        Position Correction engine.
+        """
+        super(PositionCorrectionEngine, self).__init__(ptycho_parent, pars)
+
+        # Make a copy of position refinenment defaults
+        p = self.DEFAULT.position_refinement.copy()
+        # If position correction is turned on, use defaults and start from beginning
+        if self.p.position_refinement is True:
+            p.start = 0
+        # If new position correction params are provided, update defaults
+        elif isinstance(self.p.position_refinement,u.Param):
+            p.update(self.p.position_refinement)
+        # Overwrite position refinement parameters
+        self.p.position_refinement = p
+
+
     def engine_initialize(self):
         """
         Prepare the position refinement object for use further down the line.
         """
-        p = self.DEFAULT.position_refinement.copy()
-        
-        # If position correction is turned on, use defaults and start from beginning
-        if self.p.position_refinement is True:
-            p.start = 0
-        # If position correction params are provided, update defaults
-        elif isinstance(self.p.position_refinement,u.Param):
-            p.update(self.p.position_refinement)
-        self.p.position_refinement = p
 
         # Switch for position refinement
         if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
