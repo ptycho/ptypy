@@ -197,11 +197,8 @@ class ScanModel(object):
 
         # Get data
         logger.info('Importing data from scan %s.' % self.label)
-<<<<<<< HEAD
         dp = self.ptyscan.auto(max_frames)
-=======
-        dp = self.ptyscan.auto(self.frames_per_call)
->>>>>>> origin/master
+
 
         self.data_available = (dp != data.EOS)
         logger.debug(u.verbose.report(dp))
@@ -456,7 +453,7 @@ class ScanModel(object):
 
     def _create_pods(self):
         """
-        Create all new pods as specified in the new_positions,
+        Create all new pods as specified in the new_positions,  
         new_diff_views and new_mask_views object attributes. Also create
         all necessary views on object, probe, and exit wave.
 
