@@ -10,12 +10,15 @@ from copy import deepcopy
 from . import utils as tu
 from ptypy import defaults_tree
 from ptypy.accelerate.array_based import data_utils as du
-from ptypy.accelerate.cuda import constraints as gcon
-from ptypy.accelerate.array_based import constraints as con
-from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
-init_gpus(0)
 
+from . import have_cuda, only_if_cuda_available
+if have_cuda():
+    from ptypy.accelerate.cuda import constraints as gcon
+    from ptypy.accelerate.array_based import constraints as con
+    from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
+    init_gpus(0)
 
+@only_if_cuda_available
 class EngineIterateUnityTest(unittest.TestCase):
 
     def tearDown(self):

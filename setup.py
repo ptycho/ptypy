@@ -2,7 +2,7 @@
 
 import setuptools, setuptools.command.build_ext
 from distutils.core import setup
-from Cython.Build import cythonize
+#from Cython.Build import cythonize
 import sys
 
 from extensions import CudaExtension
@@ -81,13 +81,13 @@ if '--tests' in sys.argv:
 if '--with-cuda' in sys.argv:
     sys.argv.remove('--with-cuda')
     acceleration_build_steps.append(CudaExtension(DEBUG))
-    exclude_packages.remove('*cuda*')
+    exclude_packages.remove('*.accelerate.cuda*')
 
 if '--all-acceleration' in sys.argv:
     sys.argv.remove('--all-acceleration')
     # cuda
     acceleration_build_steps.append(CudaExtension(DEBUG))
-    exclude_packages.remove('*cuda*')
+    exclude_packages.remove('*.accelerate.cuda*')
     #exclude_packages.remove('*array_based*')
 
 
@@ -138,7 +138,7 @@ setup(
              'scripts/ptypy.new',
              'scripts/ptypy.csv2cp',
              'scripts/ptypy.run'],
-    ext_modules=cythonize(extensions),
-    cmdclass={'build_ext': BuildExtAcceleration
-    }
+    #ext_modules=cythonize(extensions),
+    #cmdclass={'build_ext': BuildExtAcceleration
+    #}
 )

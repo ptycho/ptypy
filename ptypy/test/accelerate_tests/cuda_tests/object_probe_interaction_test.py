@@ -9,13 +9,16 @@ from . import utils as tu
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.array_based import object_probe_interaction as opi
 from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
-from ptypy.accelerate.cuda import object_probe_interaction as gopi
 from copy import deepcopy
 from .utils import print_array_info
 
-from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
-init_gpus(0)
+from . import have_cuda, only_if_cuda_available
+if have_cuda():
+    from ptypy.accelerate.cuda import object_probe_interaction as gopi
+    from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
+    init_gpus(0)
 
+@only_if_cuda_available
 class ObjectProbeInteractionTest(unittest.TestCase):
 
     def tearDown(self):

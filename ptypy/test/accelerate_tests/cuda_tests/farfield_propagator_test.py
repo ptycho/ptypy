@@ -7,17 +7,18 @@ import numpy as np
 from . import utils as tu
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.array_based import object_probe_interaction as opi
-from ptypy.accelerate.cuda import propagation as gprop
 from ptypy.accelerate.array_based import propagation as prop
-
 import time
+
+from . import have_cuda, only_if_cuda_available
+if have_cuda():
+    from ptypy.accelerate.cuda import propagation as gprop
+    from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
+    init_gpus(0)
 
 doTiming = False
 
-from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
-init_gpus(0)
-
-
+@only_if_cuda_available
 def calculatePrintErrors(expected, actual):
     abserr = np.abs(expected-actual)
     max_abserr = np.max(abserr)

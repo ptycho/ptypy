@@ -1,14 +1,14 @@
 
-import unittest
+import unittest, pytest
 from ptypy.test.accelerate_tests.py_cuda_tests import PyCudaTest, have_pycuda
-from ptypy.accelerate.py_cuda import import_fft
 import os, shutil
-from pycuda.tools import make_default_context
 from distutils import sysconfig
 
 if have_pycuda():
     import pycuda.driver as cuda
     from pycuda import gpuarray
+    from ptypy.accelerate.py_cuda import import_fft
+    from pycuda.tools import make_default_context
 
 class ImportFFTTest(PyCudaTest):
 

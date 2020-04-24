@@ -2,7 +2,6 @@
 The tests for the constraints
 '''
 
-
 import unittest
 from . import utils as tu
 import numpy as np
@@ -17,16 +16,17 @@ from ptypy.accelerate.array_based.propagation import farfield_propagator
 import ptypy.accelerate.array_based.array_utils as au
 from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 
-from ptypy.accelerate.cuda import constraints as gcon
-from ptypy.accelerate.cuda.constraints import get_difference as gget_difference
-from ptypy.accelerate.cuda.constraints import renormalise_fourier_magnitudes as grenormalise_fourier_magnitudes
-from ptypy.accelerate.cuda.constraints import difference_map_fourier_constraint as gdifference_map_fourier_constraint
-from ptypy.accelerate.cuda import array_utils as gau
+from . import have_cuda, only_if_cuda_available
+if have_cuda():
+    from ptypy.accelerate.cuda import constraints as gcon
+    from ptypy.accelerate.cuda.constraints import get_difference as gget_difference
+    from ptypy.accelerate.cuda.constraints import renormalise_fourier_magnitudes as grenormalise_fourier_magnitudes
+    from ptypy.accelerate.cuda.constraints import difference_map_fourier_constraint as gdifference_map_fourier_constraint
+    from ptypy.accelerate.cuda import array_utils as gau
+    from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
+    init_gpus(0)
 
-from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
-init_gpus(0)
-
-
+@only_if_cuda_available
 class ConstraintsTest(unittest.TestCase):
 
     def tearDown(self):
