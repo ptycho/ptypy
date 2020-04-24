@@ -365,6 +365,7 @@ class PositionCorrectionEngine(BaseEngine):
         """
         super(PositionCorrectionEngine, self).__init__(ptycho_parent, pars)
 
+        # TODO: this just a workaround fix, see issue #256
         # Make a copy of position refinenment defaults
         p = self.DEFAULT.position_refinement.copy()
         # If position correction is turned on, use defaults and start from beginning
