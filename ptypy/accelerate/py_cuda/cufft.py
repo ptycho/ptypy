@@ -41,7 +41,7 @@ class FFT(object):
             self.post_fft_ptr = 0
 
         from . import import_fft
-        mod = import_fft.import_fft(self.arr_shape[0], self.arr_shape[1])
+        mod = import_fft.ImportFFT(self.arr_shape[0], self.arr_shape[1]).get_mod()
         self.fftobj = mod.FilteredFFT(
                 self.batches, 
                 symmetric, 

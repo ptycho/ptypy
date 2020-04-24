@@ -13,14 +13,14 @@ if have_pycuda():
 class ImportFFTTest(PyCudaTest):
 
     def test_import_fft(self):
-        import_fft.import_fft(32, 32)
+        import_fft.ImportFFT(32, 32)
     
     
     def test_import_fft_different_shape(self):
-        import_fft.import_fft(128, 128)
+        import_fft.ImportFFT(128, 128)
     
     def test_import_fft_same_module_again(self):
-        import_fft.import_fft(32, 32)
+        import_fft.ImportFFT(32, 32)
 
 
 if __name__=="__main__":

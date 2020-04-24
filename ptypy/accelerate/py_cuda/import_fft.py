@@ -124,40 +124,53 @@ def stdchannel_redirected(stdchannel):
     finally:
         setattr(sys, stdchannel, old)
 
-def import_fft(rows, columns, build_path=None, quiet=True):
-    if build_path is None:
-        build_path = tempfile.mkdtemp(prefix="extension_tests")
 
-    full_module_name = "module"
-    module_dir = os.path.join(__file__.strip('import_fft.py'), 'cuda', 'filtered_fft')  
-    # If we specify the libraries through the extension we soon run into trouble since distutils adds a -l infront of all of these (add_library_option:https://github.com/python/cpython/blob/1c1e68cf3e3a2a19a0edca9a105273e11ddddc6e/Lib/distutils/ccompiler.py#L1115)
-    ext = distutils.extension.Extension(full_module_name,
-                                        sources=[os.path.join(module_dir, "module.cpp"),
-                                                    os.path.join(module_dir, "filtered_fft.cu")],
-                                        extra_compile_args=["-DMY_FFT_COLS=%s" % str(columns) , "-DMY_FFT_ROWS=%s" % str(rows)])
+class ImportFFT:
+    def __init__(self, rows, columns, build_path=None, quiet=True):
+        self.build_path = build_path
+        self.cleanup_build_path = None
+        if self.build_path is None:
+            self.build_path = tempfile.mkdtemp(prefix="ptypy_fft")
+            self.cleanup_build_path = True
 
-    script_args = ['build_ext',
-                   '--build-temp=%s' % build_path,
-                   '--build-lib=%s' % build_path]
-    # do I need full_module_name here?
-    setuptools_args = {"name": full_module_name,
-                       "ext_modules": [ext],
-                       "script_args": script_args,
-                       "cmdclass":{"build_ext": CustomBuildExt
-                       }}
+        full_module_name = "module"
+        module_dir = os.path.join(__file__.strip('import_fft.py'), 'cuda', 'filtered_fft')
+        # If we specify the libraries through the extension we soon run into trouble since distutils adds a -l infront of all of these (add_library_option:https://github.com/python/cpython/blob/1c1e68cf3e3a2a19a0edca9a105273e11ddddc6e/Lib/distutils/ccompiler.py#L1115)
+        ext = distutils.extension.Extension(full_module_name,
+                                            sources=[os.path.join(module_dir, "module.cpp"),
+                                                        os.path.join(module_dir, "filtered_fft.cu")],
+                                            extra_compile_args=["-DMY_FFT_COLS=%s" % str(columns) , "-DMY_FFT_ROWS=%s" % str(rows)])
 
-    if quiet:
-        # we really don't care about the make print for almost all cases so we redirect
-        with stdchannel_redirected("stdout"):
-            with stdchannel_redirected("stderr"):
-                setuptools.setup(**setuptools_args)
-    else:
-        setuptools.setup(**setuptools_args)
+        script_args = ['build_ext',
+                       '--build-temp=%s' % self.build_path,
+                       '--build-lib=%s' % self.build_path]
+        # do I need full_module_name here?
+        setuptools_args = {"name": full_module_name,
+                           "ext_modules": [ext],
+                           "script_args": script_args,
+                           "cmdclass":{"build_ext": CustomBuildExt
+                           }}
 
-    spec = importlib.util.spec_from_file_location(full_module_name,
-                                                  os.path.join(build_path,
-                                                               "module" + distutils.sysconfig.get_config_var('EXT_SUFFIX')
-                                                               )
-                                                  )
+        if quiet:
+            # we really don't care about the make print for almost all cases so we redirect
+            with stdchannel_redirected("stdout"):
+                with stdchannel_redirected("stderr"):
+                    setuptools.setup(**setuptools_args)
+        else:
+            setuptools.setup(**setuptools_args)
 
-    return importlib.util.module_from_spec(spec)
+        spec = importlib.util.spec_from_file_location(full_module_name,
+                                                      os.path.join(self.build_path,
+                                                                   "module" + distutils.sysconfig.get_config_var('EXT_SUFFIX')
+                                                                   )
+                                                      )
+        self.mod = importlib.util.module_from_spec(spec)
+
+    def get_mod(self):
+        return self.mod
+
+    def __del__(self):
+        import shutil
+        if self.cleanup_build_path:
+            log(5, "cleaning up the build directory")
+            shutil.rmtree(self.build_path)
