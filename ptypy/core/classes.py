@@ -1257,6 +1257,7 @@ class View(Base):
             sh = (1,) + tuple(self.shape) if self.shape is not None else None
             s = self.owner.new_storage(ID=self.storageID,
                                        psize=rule.psize,
+                                       origin=rule.coord,
                                        shape=sh)
         self.storage = s
 
@@ -2123,7 +2124,7 @@ class POD(Base):
 
         if self.ex_view is None:
             self.use_exit_container = False
-            self._exit = np.ones_like(self.geometry.shape,
+            self._exit = np.ones_like(self.pr_view.shape,
                                       dtype=self.owner.CType)
         else:
             self.use_exit_container = True
@@ -2160,6 +2161,22 @@ class POD(Base):
         return self.geometry.propagator.bw
 
     @property
+    def upsample(self):
+        """
+        Convencience property that returns upsample function of attached
+        Geometry instance. Equivalent to ``self.geometry.upsample``.
+        """
+        return self.geometry.upsample
+
+    @property
+    def downsample(self):
+        """
+        Convencience property that returns downsample function of attached
+        Geometry instance. Equivalent to ``self.geometry.downsample``.
+        """
+        return self.geometry.downsample
+
+    @property
     def object(self):
         """
         Convenience property that links to slice of object :any:`Storage`.
@@ -2169,7 +2186,7 @@ class POD(Base):
             return self.ob_view.data
         else:
             # Empty probe means no object (perfect transmission)
-            return np.ones(self.geometry.shape, dtype=self.owner.CType)
+            return np.ones(self.ob_view.shape, dtype=self.owner.CType)
 
     @object.setter
     def object(self, v):
