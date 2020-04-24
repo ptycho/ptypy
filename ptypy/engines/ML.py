@@ -21,7 +21,7 @@ from .utils import Cnorm2, Cdot
 from . import register
 from .base import PositionCorrectionEngine
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 __all__ = ['ML']
 
@@ -102,7 +102,7 @@ class ML(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -123,6 +123,14 @@ class ML(PositionCorrectionEngine):
 
         # Probe minimization direction
         self.pr_h = None
+
+        # Working variables
+        # Object gradient
+        self.ob_grad_new = None
+
+        # Probe gradient
+        self.pr_grad_new = None
+
 
         # Other
         self.tmin = None
@@ -150,10 +158,12 @@ class ML(PositionCorrectionEngine):
         
         # Object gradient and minimization direction
         self.ob_grad = self.ob.copy(self.ob.ID + '_grad', fill=0.)
+        self.ob_grad_new = self.ob.copy(self.ob.ID + '_grad_new', fill=0.)
         self.ob_h = self.ob.copy(self.ob.ID + '_h', fill=0.)
 
         # Probe gradient and minimization direction
         self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
+        self.pr_grad_new = self.pr.copy(self.pr.ID + '_grad_new', fill=0.)
         self.pr_h = self.pr.copy(self.pr.ID + '_h', fill=0.)
 
         self.tmin = 1.
@@ -194,7 +204,8 @@ class ML(PositionCorrectionEngine):
         ta = time.time()
         for it in range(num):
             t1 = time.time()
-            new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad()
+            error_dct = self.ML_model.new_grad()
+            new_ob_grad, new_pr_grad = self.ob_grad_new, self.pr_grad_new
             tg += time.time() - t1
 
             if self.p.probe_update_start <= self.curiter:
@@ -269,7 +280,7 @@ class ML(PositionCorrectionEngine):
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
-
+            print(B, Cnorm2(self.ob_h), Cnorm2(self.ob_grad), Cnorm2(self.pr_h), Cnorm2(self.pr_grad))
             if np.isinf(B).any() or np.isnan(B).any():
                 logger.warning(
                     'Warning! inf or nan found! Trying to continue...')
@@ -297,10 +308,14 @@ class ML(PositionCorrectionEngine):
         super(ML, self).engine_finalize()
         del self.ptycho.containers[self.ob_grad.ID]
         del self.ob_grad
+        del self.ptycho.containers[self.ob_grad_new.ID]
+        del self.ob_grad_new
         del self.ptycho.containers[self.ob_h.ID]
         del self.ob_h
         del self.ptycho.containers[self.pr_grad.ID]
         del self.pr_grad
+        del self.ptycho.containers[self.pr_grad_new.ID]
+        del self.pr_grad_new
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
 
@@ -322,6 +337,8 @@ class BaseModel(object):
         self.di = self.engine.di
         self.p = self.engine.p
         self.ob = self.engine.ob
+        self.ob_grad = self.engine.ob_grad_new
+        self.pr_grad = self.engine.pr_grad_new
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
 
@@ -331,10 +348,6 @@ class BaseModel(object):
             self.Irenorm = self.p.intensity_renormalization
 
         # Create working variables
-        # New object gradient
-        self.ob_grad = self.engine.ob.copy(self.ob.ID + '_ngrad', fill=0.)
-        # New probe gradient
-        self.pr_grad = self.engine.pr.copy(self.pr.ID + '_ngrad', fill=0.)
         self.LL = 0.
 
         # Useful quantities
@@ -366,12 +379,6 @@ class BaseModel(object):
         """
         Clean up routine
         """
-        # Delete containers
-        del self.engine.ptycho.containers[self.ob_grad.ID]
-        del self.ob_grad
-        del self.engine.ptycho.containers[self.pr_grad.ID]
-        del self.pr_grad
-
         # Remove working attributes
         for name, diff_view in self.di.views.items():
             if not diff_view.active:
@@ -497,7 +504,7 @@ class GaussianModel(BaseModel):
 
         self.LL = LL / self.tot_measpts
 
-        return self.ob_grad, self.pr_grad, error_dct
+        return error_dct
 
     def poly_line_coeffs(self, ob_h, pr_h):
         """

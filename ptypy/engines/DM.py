@@ -16,7 +16,7 @@ from .utils import basic_fourier_update
 from . import register
 from .base import PositionCorrectionEngine
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 __all__ = ['DM']
 
@@ -120,7 +120,7 @@ class DM(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -166,24 +166,35 @@ class DM(PositionCorrectionEngine):
 
         # Generate container copies
         self.ob_buf = self.ob.copy(self.ob.ID + '_alt', fill=0.)
-        self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
+        self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0., dtype='real')
         self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
 
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
-        self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
-        
+        self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0., dtype='real')
+
     def engine_prepare(self):
+
         """
         Last minute initialization.
 
         Everything that needs to be recalculated when new data arrives.
         """
-        self.pbound = {}
-        mean_power = 0.
-        for name, s in self.di.storages.items():
-            self.pbound[name] = (.25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
-            mean_power += s.mean_power
-        self.mean_power = mean_power / len(self.di.storages)
+        if self.ptycho.new_data:
+
+            # recalculate everything
+            self.pbound = {}
+            mean_power = 0.
+            self.pbound_scan = {}
+            for s in self.di.storages.values():
+                pb = .25 * self.p.fourier_relax_factor**2 * s.pbound_stub
+                if not self.pbound_scan.get(s.label):
+                    self.pbound_scan[s.label] = pb
+                else:
+                    self.pbound_scan[s.label] = \
+                        max(pb, self.pbound_scan[s.label])
+                self.pbound[s.ID] = pb
+                mean_power += s.mean_power
+            self.mean_power = mean_power / len(self.di.storages)
 
         # Fill object with coverage of views
         for name, s in self.ob_viewcover.storages.items():
@@ -260,12 +271,24 @@ class DM(PositionCorrectionEngine):
         for name, di_view in self.di.views.items():
             if not di_view.active:
                 continue
-            pbound = self.pbound[di_view.storage.ID]
+            #pbound = self.pbound[di_view.storage.ID]
+            pbound = self.pbound_scan[di_view.storage.label]
             error_dct[name] = basic_fourier_update(di_view,
                                                    pbound=pbound,
                                                    alpha=self.p.alpha,
                                                    LL_error=self.p.compute_log_likelihood)
         return error_dct
+
+    def clip_object(self, ob):
+        # Clip object (This call takes like one ms. Not time critical)
+        if self.p.clip_object is not None:
+            clip_min, clip_max = self.p.clip_object
+            ampl_obj = np.abs(ob.data)
+            phase_obj = np.exp(1j * np.angle(ob.data))
+            too_high = (ampl_obj > clip_max)
+            too_low = (ampl_obj < clip_min)
+            ob.data[too_high] = clip_max * phase_obj[too_high]
+            ob.data[too_low] = clip_min * phase_obj[too_low]
 
     def overlap_update(self):
         """
@@ -352,7 +375,7 @@ class DM(PositionCorrectionEngine):
             if not pod.active:
                 continue
             pod.object += pod.probe.conj() * pod.exit * pod.object_weight
-            ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
+            ob_nrm[pod.ob_view] += u.abs2(pod.probe) * pod.object_weight
 
         # Distribute result with MPI
         for name, s in self.ob.storages.items():
@@ -365,16 +388,7 @@ class DM(PositionCorrectionEngine):
             # A possible (but costly) sanity check would be as follows:
             # if all((np.abs(nrm)-np.abs(cfact))/np.abs(cfact) < 1.):
             #    logger.warning('object_inertia seem too high!')
-
-            # Clip object
-            if self.p.clip_object is not None:
-                clip_min, clip_max = self.p.clip_object
-                ampl_obj = np.abs(s.data)
-                phase_obj = np.exp(1j * np.angle(s.data))
-                too_high = (ampl_obj > clip_max)
-                too_low = (ampl_obj < clip_min)
-                s.data[too_high] = clip_max * phase_obj[too_high]
-                s.data[too_low] = clip_min * phase_obj[too_low]
+            self.clip_object(s)
 
     def probe_update(self):
         """
@@ -405,7 +419,7 @@ class DM(PositionCorrectionEngine):
             if not pod.active:
                 continue
             pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
-            pr_nrm[pod.pr_view] += u.cabs2(pod.object) * pod.probe_weight
+            pr_nrm[pod.pr_view] += u.abs2(pod.object) * pod.probe_weight
 
         change = 0.
 

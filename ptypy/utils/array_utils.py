@@ -473,7 +473,7 @@ def pad_lr(A,axis,l,r,fillpar=0.0, filltype='scalar'):
         right=np.ones(fsh,A.dtype)*fillpar
     if filltype=='custom':
         left=fillpar[0].astype(A.dtype)
-        rigth=fillpar[1].astype(A.dtype)
+        right=fillpar[1].astype(A.dtype)
     return np.concatenate((left,A,right),axis=axis)
 
 

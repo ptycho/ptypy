@@ -8,6 +8,7 @@ doc/rst/getting_started.rst
 doc/rst/parameters.rst
 doc/rst/data_management.rst
 *~
+dist/
 doc/_img/*.png
 tutorial/*.png
 ghostdriver*
@@ -15,3 +16,14 @@ doc/version.py
 ptypy/version.py
 .idea/
 .cache/
+.vscode/
+*.so
+*.a
+/.cproject
+/.project
+/.pydevproject
+/.settings/
+/dumps/
+/.coverage
+/env
+*.egg-info

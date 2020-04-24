@@ -7,21 +7,29 @@ import unittest
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import numpy as np
+
 import os
 import tempfile
+import shutil
 
 class Bragg3dModelTest(unittest.TestCase):
+    def setUp(self):
+        self.outpath = tempfile.mkdtemp(suffix="Bragg3dModelTest")
+
+    def tearDown(self):
+        shutil.rmtree(self.outpath)
+
     def test_frame_assembly(self):
         from ptypy.experiment.Bragg3dSim import Bragg3dSimScan
         # parameter tree
-        outpath = tempfile.mkdtemp(suffix="Bragg3dModelTest")
         p = u.Param()
         p.scans = u.Param()
         p.scans.scan01 = u.Param()
         p.scans.scan01.name = 'Bragg3dModel'
         p.scans.scan01.data = u.Param()
         p.scans.scan01.data.name = 'Bragg3dSimScan'
-        p.scans.scan01.data.dump = os.path.join(outpath, 'tmp.npz')
+        p.scans.scan01.data.dump = os.path.join(self.outpath, 'tmp.npz')
+
         p.scans.scan01.data.shuffle = True
 
         # simulate and then load data
