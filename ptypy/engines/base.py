@@ -305,9 +305,6 @@ class BaseEngine(object):
         raise NotImplementedError()
 
 
-
-#local_tree = EvalDescriptor('')
-#@local_tree.parse_doc('engine.common')
 class PositionCorrectionEngine(BaseEngine):
     """
     A sub class engine that supports position correction
@@ -323,6 +320,7 @@ class PositionCorrectionEngine(BaseEngine):
     default = None
     type = int
     help = Number of iterations until position refinement starts
+    doc = If None, position refinement starts at first iteration
 
     [position_refinement.stop]
     default = None
@@ -341,12 +339,12 @@ class PositionCorrectionEngine(BaseEngine):
     help = Number of random shifts calculated in each position refinement step (has to be multiple of 4)
 
     [position_refinement.amplitude]
-    default = 0.001
+    default = 0.000001
     type = float
     help = Distance from original position per random shift [m]
 
     [position_refinement.max_shift]
-    default = 0.002
+    default = 0.000002
     type = float
     help = Maximum distance from original position [m]
 
@@ -361,10 +359,31 @@ class PositionCorrectionEngine(BaseEngine):
     help = record movement of positions
     """
 
+    def __init__(self, ptycho_parent, pars):
+        """
+        Position Correction engine.
+        """
+        super(PositionCorrectionEngine, self).__init__(ptycho_parent, pars)
+
+        # TODO: this just a workaround fix, see issue #256
+        # Make a copy of position refinenment defaults
+        p = self.DEFAULT.position_refinement.copy()
+        # If position correction is turned on, use defaults and start from beginning
+        if self.p.position_refinement is True:
+            p.start = 0
+        # If new position correction params are provided, update defaults
+        elif isinstance(self.p.position_refinement,u.Param):
+            p.update(self.p.position_refinement)
+        # Overwrite position refinement parameters
+        self.p.position_refinement = p
+
+
     def engine_initialize(self):
         """
         Prepare the position refinement object for use further down the line.
         """
+
+        # Switch for position refinement
         if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
             self.do_position_refinement = False
         else:

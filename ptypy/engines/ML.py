@@ -110,11 +110,6 @@ class ML(PositionCorrectionEngine):
         """
         super(ML, self).__init__(ptycho_parent, pars)
 
-        p = self.DEFAULT.copy()
-        if pars is not None:
-            p.update(pars)
-        self.p = p
-
         # Instance attributes
 
         # Object gradient
