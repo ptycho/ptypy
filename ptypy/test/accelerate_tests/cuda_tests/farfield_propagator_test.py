@@ -18,7 +18,6 @@ if have_cuda():
 
 doTiming = False
 
-@only_if_cuda_available
 def calculatePrintErrors(expected, actual):
     abserr = np.abs(expected-actual)
     max_abserr = np.max(abserr)
@@ -35,7 +34,7 @@ def calculatePrintErrors(expected, actual):
     print("Rel Errors: max={}, min={}, mean={}, stddev={}".format(
         max_relerr, min_relerr, mean_relerr, std_relerr))
     
-
+@only_if_cuda_available
 class FarfieldPropagatorTest(unittest.TestCase):
 
     def tearDown(self):
