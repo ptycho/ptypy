@@ -40,12 +40,12 @@ extern "C" __global__ void fmag_all_update(complex<float>* f,
         // assuming this is actually a mask, i.e. 0 or 1 --> this is slower
         float fm = m < 0.5f ? 1.0f :
           ((fmag[a * A + b] + fdev[a * A + b] * renorm) / (fdev[a * A + b] +
-        fmag[a * A + b]  + 1e-10f)) ;
+        fmag[a * A + b]  + 1e-7f)) ;
         */
         auto fmagv = fmag[a * A + b];
         auto fdevv = fdev[a * A + b];
         float fm = (1.0f - m) +
-                   m * ((fmagv + fdevv * renorm) / (fmagv + fdevv + 1e-10f));
+                   m * ((fmagv + fdevv * renorm) / (fmagv + fdevv + 1e-7f));
         f[a * A + b] *= fm;
       }
     }
