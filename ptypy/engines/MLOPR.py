@@ -12,6 +12,8 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
+import numpy as np
+import h5py
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
@@ -45,6 +47,11 @@ class MLOPR(ML):
     type = int
     help = Number of iterations before starting to span the probe ensemble subspace
 
+    [initmodes_stop]
+    default = 0
+    type = int
+    help = Number of iterations before stopping to use initial probe modes (HACK)
+
     """
 
     SUPPORTED_MODELS = [OPRModel]
@@ -73,7 +80,7 @@ class MLOPR(ML):
             ind = self.model.local_indices[name]
             if (s.data.shape != s.shape) & (len(ind) == s.shape[0]):
                 s.data = s.data[ind]
-
+                
     def engine_finalize(self):
         """
         Try deleting every helper container.
@@ -86,24 +93,56 @@ class MLOPR(ML):
             pr = parallel.gather_list(list(s.data), N, ind)
             if parallel.master:
                 s.data = np.array(pr)
-
+        if parallel.master:
+            self.ptycho.runtime['OPR_modes'] = self.model.OPR_modes
+            self.ptycho.runtime['OPR_coeffs'] = self.model.OPR_coeffs
+            
     def hook_post_iterate_update(self):
         """
         Orthogonal Probe Relaxation (OPR) update.
         """
+        # Outer loop, go through diffraction views
+        for dname, diff_view in self.di.views.iteritems():
+            if not diff_view.active:
+                continue
+            
+            # Gather all probes
+            probes = {}
+            for name, pod in diff_view.pods.iteritems():
+                if not pod.active:
+                    continue
+                probes[name] = pod.probe
+
+            # Orthogonalise prob
+
+        
         for name, s in self.pr.storages.iteritems():
             if self.curiter < self.p.subspace_start:
-                subdim = 1
-            else:
-                subdim = self.p.subspace_dim
-                ind = self.model.local_indices[name]
-                pr_input = np.array([s[l] for i,l in self.model.local_layers[name]])
-                new_pr, modes, coeffs = reduce_dimension(a=pr_input,
-                                                         dim=subdim, 
-                                                         local_indices=ind)
+                return
+                
+            #if self.curiter < self.p.initmodes_stop:
+            #    fname = '/scratch/loh/benedikt/LCLS/amok3415/paper/single_r2_ML_4000.ptyr'
+            #    with h5py.File(fname, "r") as f:
+            #        e,initmodes = u.ortho(f['content/probe/Sscan_00G00/data'][:])
+            #else:
+            initmodes = None
+                
+            ind = self.model.local_indices[name]
+            pr_input = np.array([s[l] for i,l in self.model.local_layers[name]])
+            new_pr, modes, coeffs = reduce_dimension(a=pr_input, dim=self.p.subspace_dim, local_indices=ind, initmodes=initmodes)
+            
             self.model.OPR_modes[name] = modes
             self.model.OPR_coeffs[name] = coeffs
 
+            if parallel.master & (self.curiter%5 == 0):
+                # HACK: Saving modes to file
+                fname = '/scratch/loh/benedikt/LCLS/amok3415/tmp/opr_modes_%04d.h5' %self.curiter
+                with h5py.File(fname, "w") as f:
+                    #for name, s in self.pr.storages.iteritems():
+                    f['modes/%s' %name] = self.model.OPR_modes[name]
+                    f['coeffs/%s' %name] = self.model.OPR_coeffs[name]
+
+            
             # Update probes
             for k, il in enumerate(self.model.local_layers[name]):
                 s[il[1]] = new_pr[k]

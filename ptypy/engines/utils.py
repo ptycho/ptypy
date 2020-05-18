@@ -189,7 +189,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True, float_
     return np.array([err_fmag, err_phot, err_exit])
 
 
-def reduce_dimension(a, dim, local_indices=None):
+def reduce_dimension(a, dim, local_indices=None, initmodes=None):
     """
     Apply a low-rank approximation on a.
 
@@ -287,6 +287,10 @@ def reduce_dimension(a, dim, local_indices=None):
 
     parallel.allreduce(modes)
 
+    # Overwrite modes
+    if initmodes is not None:
+        modes = initmodes
+    
     # Reconstruct the array
     eigvecc = eigvec.conj()[:,:-2]
     output = np.zeros_like(a)

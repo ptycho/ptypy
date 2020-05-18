@@ -25,6 +25,7 @@ from ..core.manager import Full, Vanilla
 
 __all__ = ['ML']
 
+from IPython.core.debugger import set_trace
 
 @register()
 class ML(PositionCorrectionEngine):
@@ -211,22 +212,30 @@ class ML(PositionCorrectionEngine):
         ta = time.time()
         for it in range(num):
             t1 = time.time()
+
             new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad()
+
             tg += time.time() - t1
 
-            if self.p.probe_update_start <= self.curiter:
+            #HACK
+            #update_probe = (self.curiter % 5 == 0) | (self.curiter > self.p.smooth_gradient_decay_stop)
+            if (self.p.probe_update_start <= self.curiter):# & update_probe:
                 # Apply probe support if needed
                 for name, s in new_pr_grad.storages.iteritems():
                     support = self.probe_support.get(name)
                     if support is not None:
                         s.data *= support
+                self.p.floating_intensities = False
             else:
                 new_pr_grad.fill(0.)
 
             # Smoothing preconditioner
+            do_smoothing =  (self.curiter < self.p.smooth_gradient_decay_start)
+            do_smoothing |= (self.curiter >= self.p.smooth_gradient_decay_stop)
             if self.smooth_gradient:
-                if (self.curiter >= self.p.smooth_gradient_decay_start) & (self.curiter <self.p.smooth_gradient_decay_stop):
+                if do_smoothing:# & ~update_probe:
                     self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
+                    #print("Smoothing object gradient with sigma %.2f" %(self.smooth_gradient.sigma))
                 for name, s in new_ob_grad.storages.iteritems():
                     s.data[:] = self.smooth_gradient(s.data)
 
@@ -301,10 +310,6 @@ class ML(PositionCorrectionEngine):
 
             # Newton-Raphson loop would end here
 
-            
-            # Allow for further modifications
-            self.hook_post_iterate_update()
-
             # Probe smoothing
             with h5py.File("/scratch/loh/benedikt/LCLS/amok3415/preproc/mask.h5", "r") as f:
                 fmask = f['mask'][:]
@@ -314,6 +319,12 @@ class ML(PositionCorrectionEngine):
                 for name, pod in diff_view.pods.iteritems():
                     pod.probe = pod.bw(pod.fw(pod.probe) * fmask)
 
+            # Allow for further modifications
+            self.hook_post_iterate_update()
+
+            # Position refinement
+            self.position_update()
+            
             # increase iteration counter
             self.curiter +=1
 
@@ -341,6 +352,9 @@ class ML(PositionCorrectionEngine):
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
 
+        float_intens = parallel.gather_dict(self.ML_model.float_intens_coeff)
+        #if parallel.master:
+        self.ptycho.runtime["float_intens"] = float_intens
 
 class BaseModel(object):
     """
