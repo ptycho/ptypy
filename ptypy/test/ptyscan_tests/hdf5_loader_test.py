@@ -61,6 +61,7 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         self.top_file = os.path.join(self.outdir, 'top_file.h5')
         self.recorded_energy_key = 'entry/energy'
         self.recorded_distance_key = 'entry/distance'
+        self.recorded_psize_key = 'entry/psize'
         with h5.File(self.top_file, 'w') as f:
             f.create_group('entry')
             f[self.recorded_energy_key] = 9.1
@@ -822,6 +823,7 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.recorded_energy = u.Param()
         data_params.recorded_energy.file = self.intensity_file
         data_params.recorded_energy.key = self.recorded_energy_key
+        data_params.recorded_energy.multiplier = 1.0
 
         data_params.positions = u.Param()
         data_params.positions.file = self.positions_file
@@ -858,12 +860,51 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.recorded_distance = u.Param()
         data_params.recorded_distance.file = self.intensity_file
         data_params.recorded_distance.key = self.recorded_distance_key
+        data_params.recorded_distance.multiplier = 1.0
 
         data_params.positions = u.Param()
         data_params.positions.file = self.positions_file
         data_params.positions.slow_key = self.positions_slow_key
         data_params.positions.fast_key = self.positions_fast_key
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+
+    def test_psize_loaded(self):
+        k = 12
+        frame_size_m = 50
+        frame_size_n = 50
+
+        positions_slow = np.arange(k)
+        positions_fast = np.arange(k)
+
+        # now chuck them in the files
+        with h5.File(self.positions_file, 'w') as f:
+            f[self.positions_slow_key] = positions_slow
+            f[self.positions_fast_key] = positions_fast
+        psize = np.array([55e-6])
+
+        # make up some data ...
+        data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
+            f[self.recorded_psize_key] = psize
+
+        data_params = u.Param()
+        data_params.auto_center = False
+        data_params.intensities = u.Param()
+        data_params.intensities.file = self.intensity_file
+        data_params.intensities.key = self.intensity_key
+
+        data_params.recorded_psize = u.Param()
+        data_params.recorded_psize.file = self.intensity_file
+        data_params.recorded_psize.key = self.recorded_psize_key
+        data_params.recorded_psize.multiplier = 1.0
+
+        data_params.positions = u.Param()
+        data_params.positions.file = self.positions_file
+        data_params.positions.slow_key = self.positions_slow_key
+        data_params.positions.fast_key = self.positions_fast_key
+        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+
 
     def test_mask_loaded(self):
         k = 12
