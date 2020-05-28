@@ -183,13 +183,12 @@ def readData(filenameprefix,imgstart=0,imgnumber = 1,xi = 0, xf = 0, bin_fact = 
 
     return (datm,meta)
 
-def _readImage(filename,dtype,width,height,headerlength=2048):
+def _readImage(filename, dtype, width, height, headerlength=2048):
     """Reads the actual image data from given file.
     Returns numpy.ndarray"""
-    f1 = open(filename)
-    f1.seek(headerlength)
-    im = np.fromfile(f1,dtype).reshape([height,width])
-    f1.close()
+    with open(filename, 'rb') as f:
+        f.seek(headerlength)
+        im = np.fromfile(f,dtype).reshape([height, width])
     return im
 
 def writeData():
@@ -200,17 +199,17 @@ def readHeader(filename, headerlength=None):
     """Reads and parses  the metadata contained in the header of an .edf file.
     Returns dictionary."""
 
-    with file(filename,'r') as f:
-        if f.read(1) != '{':
+    with open(filename,'rb') as f:
+        if f.read(1) != b'{':
             raise RuntimeError('File "%s" does not seem to be edf format.' % filename)
         if headerlength is None:
             f.seek(2)
             s = f.read(10*1024)
-            headerlength = s.find('}\n') + 4
-            s = s[:headerlength-2]
+            headerlength = s.find(b'}\n') + 4
+            s = s[:headerlength-2].decode('ascii')
         else:
             f.seek(2)
-            s = f.read(headerlength-2)
+            s = f.read(headerlength-2).decode('ascii')
 
     # split read string into a list of 2-element lists
     hlist = [elem.split("=") for elem in s.replace("\n","").split(";")]
