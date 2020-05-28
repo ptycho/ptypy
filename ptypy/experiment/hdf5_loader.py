@@ -490,7 +490,6 @@ class Hdf5Loader(PtyScan):
         return intensities, positions, weights
 
     def load_mapped_and_arbitrary_scan(self, indices):
-        print(np.array(self.preview_indices).shape)
         intensities = {}
         positions = {}
         weights = {}
@@ -606,7 +605,6 @@ class Hdf5Loader(PtyScan):
             log(3, "Positions are raster, but data is a list of frames. Unpacking the data to match the positions...")
             slow_axis_bounds = [0, self.slow_axis.shape[0]]
             fast_axis_bounds = [0, self.fast_axis.shape[-1]]
-            print(slow_axis_bounds, fast_axis_bounds)
 
             set_slow_axis_bounds = self.p.positions.bounding_box.slow_axis_bounds
             set_fast_axis_bounds = self.p.positions.bounding_box.fast_axis_bounds
@@ -622,7 +620,6 @@ class Hdf5Loader(PtyScan):
                     fast_axis_bounds = set_fast_axis_bounds
 
             indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
-            print(indices[0].shape, indices[1].shape)
             self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()])
             self.num_frames = len(self.preview_indices[0])
             self._ismapped = False
