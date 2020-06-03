@@ -237,6 +237,11 @@ class Hdf5Loader(PtyScan):
     type = float
     help = This is the multiplier for the recorded energy.
 
+    [recorded_energy.offset]
+    default = 0.0
+    type = float
+    help = This is an offset for the recorded energy (keV).
+
     [recorded_distance]
     default =
     type = Param
@@ -406,7 +411,8 @@ class Hdf5Loader(PtyScan):
             log(3, "No normalisation will be applied.")
 
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()] * self.p.recorded_energy.multiplier)
+            self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()])
+            self.p.energy = (self.p.energy * self.p.recorded_energy.multiplier) + self.p.recorded_energy.offset
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
 
