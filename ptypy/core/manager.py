@@ -904,10 +904,10 @@ class _Full(object):
     type = str
     userlevel = 2
 
-    [reference_energy]
+    [resolution]
     default = None
-    help = Will force the reconstruction to adapt the detector pixels to keep the reconstruction resolution the same as if at this energy.
-    doc = Reference photon energy in keV
+    help = Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
+    doc = Half-period resolution given in [m] 
     type = None, float
     userlevel = 0
     lowlim = 0
@@ -1050,10 +1050,7 @@ class _Full(object):
         geo_pars.shape = probe_shape
         geo_pars.center = center
         geo_pars.psize = psize
-
-        # Temporarily overwrite with reference energy (if provided)
-        if self.p.reference_energy is not None:
-            geo_pars.energy = self.p.reference_energy
+        geo_pars.resolution = self.p.resolution
 
         # Add propagation info from this scan model
         geo_pars.propagation = self.p.propagation
@@ -1064,8 +1061,6 @@ class _Full(object):
             g = geometry.Geo(self.ptycho, geoID, pars=geo_pars)
             # now we fix the sample pixel size, This will make the frame size adapt
             g.p.resolution_is_fix = True
-            g.p.psize_is_fix = False
-            g.energy = common['energy'] # this puts back correct energy, if reference energy was used
             # save old energy value
             g.p.energy_orig = g.energy
             # change energy
