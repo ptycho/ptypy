@@ -904,6 +904,14 @@ class _Full(object):
     type = str
     userlevel = 2
 
+    [resolution]
+    default = None
+    help = Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
+    doc = Half-period resolution given in [m] 
+    type = None, float
+    userlevel = 0
+    lowlim = 0
+
     """
 
     def _create_pods(self):
@@ -1042,6 +1050,7 @@ class _Full(object):
         geo_pars.shape = probe_shape
         geo_pars.center = center
         geo_pars.psize = psize
+        geo_pars.resolution = self.p.resolution
 
         # Add propagation info from this scan model
         geo_pars.propagation = self.p.propagation
@@ -1052,7 +1061,7 @@ class _Full(object):
             g = geometry.Geo(self.ptycho, geoID, pars=geo_pars)
             # now we fix the sample pixel size, This will make the frame size adapt
             g.p.resolution_is_fix = True
-            # save old energy value:
+            # save old energy value
             g.p.energy_orig = g.energy
             # change energy
             g.energy *= fac
@@ -1183,7 +1192,6 @@ defaults_tree['scan.Full'].add_child(sample.sample_desc)
 
 # Update defaults
 Full.DEFAULT = defaults_tree['scan.Full'].make_default(99)
-
 
 from . import geometry_bragg
 defaults_tree['scan'].add_child(EvalDescriptor('Bragg3dModel'))
