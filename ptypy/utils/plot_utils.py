@@ -17,7 +17,7 @@ import matplotlib.cm
 # importing pyplot may fail when no display is available.
 NODISPLAY = (os.getenv("DISPLAY") is None)
 if NODISPLAY:
-    matplotlib.use('agg')
+    matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 
 from .verbose import logger
