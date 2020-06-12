@@ -242,6 +242,7 @@ class DM(PositionCorrectionEngine):
         for c in containers:
             logger.debug('Attempt to remove container %s' % c.ID)
             del self.ptycho.containers[c.ID]
+            #    IDM.used.remove(c.ID)
 
         del self.ob_buf
         del self.ob_nrm
@@ -415,10 +416,10 @@ class DM(PositionCorrectionEngine):
             parallel.allreduce(s.data)
             parallel.allreduce(nrm)
             s.data /= nrm
-            
+
             # Apply probe support if requested
             self.support_constraint(s)
-            
+
             # Compute relative change in probe
             buf = pr_buf.storages[name].data
             change += u.norm2(s.data - buf) / u.norm2(s.data)
