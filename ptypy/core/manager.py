@@ -29,7 +29,6 @@ from .classes import MODEL_PREFIX
 from ..utils import parallel
 from ..utils.descriptor import EvalDescriptor
 from .. import defaults_tree
-from .. engines.utils import reduce_dimension
 
 # Please set these globally later
 FType = np.float64
