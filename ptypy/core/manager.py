@@ -1266,8 +1266,8 @@ class OPRModel(Full):
         new_pods, new_probe_ids, new_object_ids = super(OPRModel, self)._create_pods()
 
         prviewdata = {}
-        nmodes = max([ix.layer for _iy, ix in self.ptycho.probe.views.iteritems()]) + 1
-        for vID, v in self.ptycho.probe.views.iteritems():
+        nmodes = max([ix.layer for _iy, ix in self.ptycho.probe.views.items()]) + 1
+        for vID, v in self.ptycho.probe.views.items():
             # Get the associated diffraction frame
             di_view = v.pod.di_view
             # Reformat the layer
@@ -1282,7 +1282,7 @@ class OPRModel(Full):
         self.ptycho.probe.reformat()
 
         # Store probe data back
-        for vID, v in self.ptycho.probe.views.iteritems():
+        for vID, v in self.ptycho.probe.views.items():
             if v.active:
                 self.ptycho.probe[v] = prviewdata[vID]
         del prviewdata
@@ -1293,7 +1293,7 @@ class OPRModel(Full):
         self.OPR_coeffs = {}
         self.local_layers = {}
         self.local_indices = {}
-        for sID, s in self.ptycho.probe.S.iteritems():
+        for sID, s in self.ptycho.probe.S.items():
             #shape = (dim,) + s.data.shape[1:]
             #dtype = s.data.dtype
             #self.OPR_modes[sID] = np.zeros(shape=shape, dtype=dtype)

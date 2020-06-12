@@ -170,7 +170,7 @@ class DM(PositionCorrectionEngine):
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
 
-        self.model  = self.pods[self.pods.keys()[0]].model
+        self.model  = self.pods[list(self.pods.keys())[0]].model
 
     def engine_prepare(self):
         """
