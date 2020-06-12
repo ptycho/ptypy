@@ -116,12 +116,6 @@ class DM(PositionCorrectionEngine):
     default = True
     type = bool
     help = A switch for computing the log-likelihood error (this can impact the performance of the engine) 
-
-    [ortho_probe_relax_start]
-    default = 0
-    type = int
-    help = Number of iterations before orthogonal probe relaxation (OPR) starts, only applies of scan model is set to 'OPRModel'
-
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, OPRModel]
@@ -176,7 +170,6 @@ class DM(PositionCorrectionEngine):
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
 
-        self.pr_old = self.pr.copy(self.pr.ID + '_old') # can we make do without this?
         self.model  = self.pods[self.pods.keys()[0]].model
 
     def engine_prepare(self):
@@ -395,7 +388,7 @@ class DM(PositionCorrectionEngine):
         # BE: was this asymmetric in original code
         # only because of the number of MPI nodes ?
         if parallel.master:
-            for name, s in pr.storages.iteritems():
+            for name, s in pr.storages.items():
                 # Instead of Npts_scan, the number of views should be considered
                 # Please note that a call to s.views may be
                 # slow for many views in the probe.
@@ -407,7 +400,7 @@ class DM(PositionCorrectionEngine):
             pr_nrm.fill(0.0)
 
         # DM update per node
-        for name, pod in self.pods.iteritems():
+        for name, pod in self.pods.items():
             if not pod.active:
                 continue
             pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
@@ -416,12 +409,15 @@ class DM(PositionCorrectionEngine):
         change = 0.
 
         # Distribute result with MPI
-        for name, s in pr.storages.iteritems():
+        for name, s in pr.storages.items():
             # MPI reduction of results
             nrm = pr_nrm.storages[name].data
             parallel.allreduce(s.data)
             parallel.allreduce(nrm)
             s.data /= nrm
+            
+            # Apply probe support if requested
+            self.support_constraint(s)
             
             # Compute relative change in probe
             buf = pr_buf.storages[name].data
@@ -429,5 +425,5 @@ class DM(PositionCorrectionEngine):
 
             # Fill buffer with new probe
             buf[:] = s.data
-            
+
         return np.sqrt(change / len(pr.storages))
