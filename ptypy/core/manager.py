@@ -1164,6 +1164,7 @@ class _Full(object):
 
             s.model_initialized = True
 
+
 @defaults_tree.parse_doc('scan.Vanilla')
 class Vanilla(_Vanilla, ScanModel):
     pass
@@ -1260,10 +1261,11 @@ class OPRModel(Full):
 
     _PREFIX = MODEL_PREFIX
 
-
-
     def _create_pods(self):
         new_pods, new_probe_ids, new_object_ids = super(OPRModel, self)._create_pods()
+
+        # Let all probe storages reshape themselves
+        self.ptycho.probe.reformat()
 
         prviewdata = {}
         nmodes = max([ix.layer for _iy, ix in self.ptycho.probe.views.items()]) + 1
@@ -1288,7 +1290,6 @@ class OPRModel(Full):
         del prviewdata
 
         # Create dictionaries to store OPR modes
-        #dim = self.p.subspace_dim if self.p.subspace_dim > 0 else 1
         self.OPR_modes = {}
         self.OPR_coeffs = {}
         self.local_layers = {}
@@ -1308,9 +1309,6 @@ class OPRModel(Full):
             self.local_layers[sID] = [x for x in layers if x[1] in s.layermap]
             self.local_indices[sID] = [i for i, l in self.local_layers[sID]]
         return new_pods, new_probe_ids, new_object_ids
-
-
-
 
 
 # Append illumination and sample defaults
