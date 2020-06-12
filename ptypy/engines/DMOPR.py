@@ -72,7 +72,7 @@ class DMOPR(DM):
         # Make sure that probe storage only contains local probes
         # BD: This is a consequence of gathering all probes for saving to file
         #     at some point before this engine is initialized
-        for name, s in self.pr.storages.iteritems():
+        for name, s in self.pr.storages.items():
             ind = self.model.local_indices[name]
             if (s.data.shape != s.shape) & (len(ind) == s.shape[0]):
                 s.data = s.data[ind]
@@ -83,7 +83,7 @@ class DMOPR(DM):
         Gather independent probes for saving.
         """
         super(DMOPR, self).engine_finalize()
-        for name, s in self.pr.storages.iteritems():
+        for name, s in self.pr.storages.items():
             ind = self.model.local_indices[name]
             N = parallel.allreduce(len(ind))
             pr = parallel.gather_list(list(s.data), N, ind)
@@ -103,7 +103,7 @@ class DMOPR(DM):
         pr_buf = self.pr_buf
 
         # DM update per node
-        for name, pod in self.pods.iteritems():
+        for name, pod in self.pods.items():
             if not pod.active:
                 continue
             pod.probe += pod.object.conj() * pod.exit * pod.probe_weight * self.p.IP_metric
@@ -112,7 +112,7 @@ class DMOPR(DM):
         change, nrm = 0., 0.
 
         # Distribute result with MPI
-        for name, s in pr.storages.iteritems():
+        for name, s in pr.storages.items():
 
             # Orthogonal probe relaxation (OPR) update step
             self.probe_consistency_update(s,name)
