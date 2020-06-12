@@ -7,7 +7,7 @@ import numpy as np
 
 
 p = u.Param()
-p.verbose_level = 4
+p.verbose_level = 5
 p.data_type = "single"
 p.run = 'test_indep_probes'
 p.io = u.Param()
@@ -73,7 +73,7 @@ P = Ptycho(p, level=4)
 
 # Mess up the positions in a predictible way (for MPI)
 a = 0.
-for pname, pod in P.pods.iteritems():
+for pname, pod in P.pods.items():
     pod.ob_view.coord += 3e-7 * np.array([np.sin(a), np.cos(a)])
     #pod.diff *= np.random.uniform(0.1,1)
     a += 4.

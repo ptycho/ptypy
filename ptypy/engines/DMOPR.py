@@ -67,7 +67,7 @@ class DMOPR(DM):
         Obtain a reference to the OPR scan model
         """
         super(DMOPR, self).engine_initialize()
-        self.model  = self.pods[self.pods.keys()[0]].model
+        self.model  = self.pods[list(self.pods.keys())[0]].model
 
         # Make sure that probe storage only contains local probes
         # BD: This is a consequence of gathering all probes for saving to file

@@ -12,11 +12,11 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
+from .utils import basic_fourier_update
+from . import register
 from .base import PositionCorrectionEngine
-from .utils import basic_fourier_update, reduce_dimension
-from . import BaseEngine, register
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, OPRModel
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla
 
 __all__ = ['DM']
 
@@ -116,9 +116,11 @@ class DM(PositionCorrectionEngine):
     default = True
     type = bool
     help = A switch for computing the log-likelihood error (this can impact the performance of the engine) 
+
+
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, OPRModel]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -169,9 +171,7 @@ class DM(PositionCorrectionEngine):
 
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
-
-        self.model  = self.pods[list(self.pods.keys())[0]].model
-
+        
     def engine_prepare(self):
         """
         Last minute initialization.
@@ -228,7 +228,7 @@ class DM(PositionCorrectionEngine):
 
     def engine_finalize(self):
         """
-        Try deleting every helper container.
+        Try deleting ever helper container.
         """
         super(DM, self).engine_finalize()
 
