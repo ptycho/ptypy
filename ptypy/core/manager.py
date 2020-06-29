@@ -1292,6 +1292,7 @@ class OPRModel(Full):
         # Create dictionaries to store OPR modes
         self.OPR_modes = {}
         self.OPR_coeffs = {}
+        self.OPR_allprobes = {}
         self.local_layers = {}
         self.local_indices = {}
         for sID, s in self.ptycho.probe.S.items():

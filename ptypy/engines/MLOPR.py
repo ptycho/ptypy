@@ -66,14 +66,6 @@ class MLOPR(ML):
         super(MLOPR, self).engine_initialize()
         self.model  = self.pods[list(self.pods.keys())[0]].model
 
-        # Make sure that probe storage only contains local probes
-        # BD: This is a consequence of gathering all probes for saving to file
-        #     at some point before this engine is initialized
-        for name, s in self.pr.storages.items():
-            ind = self.model.local_indices[name]
-            if (s.data.shape != s.shape) & (len(ind) == s.shape[0]):
-                s.data = s.data[ind]
-
     def engine_finalize(self):
         """
         Try deleting every helper container.
@@ -83,9 +75,15 @@ class MLOPR(ML):
         for name, s in self.pr.storages.items():
             ind = self.model.local_indices[name]
             N = parallel.allreduce(len(ind))
-            pr = parallel.gather_list(list(s.data), N, ind)
+            pr = np.array(parallel.gather_list(list(s.data), N, ind))
             if parallel.master:
-                s.data = np.array(pr)
+                self.model.OPR_allprobes[name] = pr
+
+        # Add OPR data to runtime
+        if parallel.master:
+            self.ptycho.runtime['OPR_modes'] = self.model.OPR_modes
+            self.ptycho.runtime['OPR_coeffs'] = self.model.OPR_coeffs
+            self.ptycho.runtime['OPR_allprobes'] = self.model.OPR_allprobes
 
     def hook_post_iterate_update(self):
         """
