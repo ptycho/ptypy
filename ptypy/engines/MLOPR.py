@@ -25,7 +25,7 @@ __all__ = ['MLOPR']
 @register()
 class MLOPR(ML):
     """
-    Subclass of Maximum likelihood reconstruction engine for independent probes
+    Subclass of Maximum likelihood reconstruction engine for independent probes (OPR).
 
     Defaults:
 
@@ -85,7 +85,7 @@ class MLOPR(ML):
             self.ptycho.runtime['OPR_coeffs'] = self.model.OPR_coeffs
             self.ptycho.runtime['OPR_allprobes'] = self.model.OPR_allprobes
 
-    def hook_post_iterate_update(self):
+    def _post_iterate_update(self):
         """
         Orthogonal Probe Relaxation (OPR) update.
         """

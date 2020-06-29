@@ -283,8 +283,8 @@ class ML(PositionCorrectionEngine):
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
 
-            # Allow for further modifications
-            self.hook_post_iterate_update()
+            # Allow for customized modifications at the end of each iteration
+            self._post_iterate_update()
 
             # increase iteration counter
             self.curiter +=1
@@ -293,7 +293,7 @@ class ML(PositionCorrectionEngine):
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
 
-    def hook_post_iterate_update(self):
+    def _post_iterate_update(self):
         """
         Enables modification at the end of each ML iteration.
         """

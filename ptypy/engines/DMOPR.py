@@ -22,7 +22,7 @@ __all__ = ['DMOPR']
 @register()
 class DMOPR(DM):
     """
-    Subclass of Difference Map engine for independent probes.
+    Subclass of Difference Map engine for independent probes (OPR).
 
     Defaults:
 
