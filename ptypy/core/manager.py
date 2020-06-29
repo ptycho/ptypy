@@ -1162,6 +1162,41 @@ class _Full(object):
             s.model_initialized = True
 
 
+class _OPRModel(object):
+    """
+    Scan for Orthogonal Probe Relaxation (OPR) ptychography, where each has its own probe. 
+
+    Defaults:
+
+    [name]
+    default = OPRModel
+    type = str
+    help =
+    doc =
+    """
+
+    def __init__(self, ptycho=None, pars=None, label=None):
+        super(_OPRModel, self).__init__(ptycho, pars, label)
+        self.p.illumination['diversity'] = None
+
+    def _create_pods(self):
+        new_pods, new_probe_ids, new_object_ids = super(_OPRModel, self)._create_pods()
+
+        for vID, v in self.ptycho.probe.views.items():
+            # Get the associated diffraction frame
+            di_view = v.pod.di_view
+            # Reformat the layer
+            v.layer = di_view.layer*self.p.coherence.num_probe_modes + v.layer
+            # Deactivate if the associate di_view is inactive (to spread the probe across nodes consistently with diff)
+            v.active = di_view.active
+
+        # Create dictionaries to store OPR modes
+        self.OPR_modes = {}
+        self.OPR_coeffs = {}
+        self.OPR_allprobes = {}
+
+        return new_pods, new_probe_ids, new_object_ids
+
 @defaults_tree.parse_doc('scan.Vanilla')
 class Vanilla(_Vanilla, ScanModel):
     pass
@@ -1179,75 +1214,12 @@ class BlockFull(_Full, BlockScanModel):
     pass
 
 @defaults_tree.parse_doc('scan.OPRModel')
-class OPRModel(Full):
-    """
-    Scan for Orthogonal Probe Relaxation (OPR) ptychography, where each has its own probe. 
+class OPRModel(_OPRModel, Full):
+    pass
 
-    Defaults:
-
-    [name]
-    default = OPRModel
-    type = str
-    help =
-    doc =
-    """
-
-    _PREFIX = MODEL_PREFIX
-
-    def __init__(self, ptycho=None, pars=None, label=None):
-        super(OPRModel, self).__init__(ptycho, pars, label)
-        self.p.illumination['diversity'] = None
-
-    def _create_pods(self):
-        new_pods, new_probe_ids, new_object_ids = super(OPRModel, self)._create_pods()
-
-        # Let all probe storages reshape themselves
-        self.ptycho.probe.reformat()
-
-        prviewdata = {}
-        nmodes = max([ix.layer for _iy, ix in self.ptycho.probe.views.items()]) + 1
-        for vID, v in self.ptycho.probe.views.items():
-            # Get the associated diffraction frame
-            di_view = v.pod.di_view
-            # Reformat the layer
-            v.layer = di_view.layer*nmodes + v.layer#np.array((di_view.layer, v.layer))
-            # Deactivate if the associate di_view is inactive (to spread the probe across nodes consistently with diff)
-            v.active = di_view.active
-            # Store the current view data so we can restore it after reformat
-            if v.active:
-                prviewdata[vID] = v.data.copy()
-
-        # Let all probe storages reshape themselves
-        self.ptycho.probe.reformat()
-
-        # Store probe data back
-        for vID, v in self.ptycho.probe.views.items():
-            if v.active:
-                self.ptycho.probe[v] = prviewdata[vID]
-        del prviewdata
-
-        # Create dictionaries to store OPR modes
-        self.OPR_modes = {}
-        self.OPR_coeffs = {}
-        self.OPR_allprobes = {}
-        self.local_layers = {}
-        self.local_indices = {}
-        for sID, s in self.ptycho.probe.S.items():
-            #shape = (dim,) + s.data.shape[1:]
-            #dtype = s.data.dtype
-            #self.OPR_modes[sID] = np.zeros(shape=shape, dtype=dtype)
-
-            # Prepare a sorted list (with index) of all layers
-            # (which are locally available through views)
-            unique_layers = sorted(set([v.layer for v in
-                s.owner.views_in_storage(s=s, active_only=False)]))
-            layers = list(enumerate(unique_layers))
-
-            # Then make a list of layers held locally by the node
-            self.local_layers[sID] = [x for x in layers if x[1] in s.layermap]
-            self.local_indices[sID] = [i for i, l in self.local_layers[sID]]
-        return new_pods, new_probe_ids, new_object_ids
-
+@defaults_tree.parse_doc('scan.BlockOPRModel')
+class BlockOPRModel(_OPRModel, BlockFull):
+    pass
 
 # Append illumination and sample defaults
 defaults_tree['scan.Full'].add_child(illumination.illumination_desc)

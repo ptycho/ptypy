@@ -66,6 +66,10 @@ class MLOPR(ML):
         super(MLOPR, self).engine_initialize()
         self.model  = self.pods[list(self.pods.keys())[0]].model
 
+        # Clear OPR probes from runtime
+        if "OPR_allprobes" in self.ptycho.runtime:
+            self.ptycho.runtime['OPR_allprobes'] = None
+
     def engine_finalize(self):
         """
         Try deleting every helper container.
@@ -73,9 +77,8 @@ class MLOPR(ML):
         """
         super(MLOPR, self).engine_finalize()
         for name, s in self.pr.storages.items():
-            ind = self.model.local_indices[name]
-            N = parallel.allreduce(len(ind))
-            pr = np.array(parallel.gather_list(list(s.data), N, ind))
+            N = parallel.allreduce(len(s.layermap))
+            pr = np.array(parallel.gather_list(list(s.data), N, s.layermap))
             if parallel.master:
                 self.model.OPR_allprobes[name] = pr
 
@@ -94,14 +97,15 @@ class MLOPR(ML):
                 subdim = 1
             else:
                 subdim = self.p.subspace_dim
-                ind = self.model.local_indices[name]
-                pr_input = np.array([s[l] for i,l in self.model.local_layers[name]])
-                new_pr, modes, coeffs = reduce_dimension(a=pr_input,
-                                                         dim=subdim, 
-                                                         local_indices=ind)
+
+            pr_input = np.array([s[l] for l in s.layermap])
+            new_pr, modes, coeffs = reduce_dimension(a=pr_input,
+                                                     dim=subdim, 
+                                                     local_indices=s.layermap)
+
             self.model.OPR_modes[name] = modes
             self.model.OPR_coeffs[name] = coeffs
 
             # Update probes
-            for k, il in enumerate(self.model.local_layers[name]):
-                s[il[1]] = new_pr[k]
+            for k, l in enumerate(s.layermap):
+                s[l] = new_pr[k]
