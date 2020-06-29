@@ -1114,9 +1114,6 @@ class _Full(object):
                                "This will likely not reconstruct. You should set .scan.illumination.diversity.power and "
                                ".scan.illumination.diversity.noise to something for the best results.")
 
-                if (self.p.name == "OPRModel"):
-                    illu_pars['diversity'] = None
-
             illumination.init_storage(s, illu_pars)
 
             s.reformat()  # Maybe not needed
@@ -1184,82 +1181,22 @@ class BlockFull(_Full, BlockScanModel):
 @defaults_tree.parse_doc('scan.OPRModel')
 class OPRModel(Full):
     """
-    Manage a single scan model (sharing, coherence, propagation, ...)
+    Scan for Orthogonal Probe Relaxation (OPR) ptychography, where each has its own probe. 
 
     Defaults:
-
-    # note: this class also imports the module-level defaults for sample
-    # and illumination, below.
 
     [name]
     default = OPRModel
     type = str
     help =
     doc =
-
-    [coherence]
-    default =
-    help = Coherence parameters
-    doc =
-    type = Param
-    userlevel =
-    lowlim = 0
-
-    [coherence.num_probe_modes]
-    default = 1
-    help = Number of probe modes
-    doc =
-    type = int
-    userlevel = 0
-    lowlim = 0
-
-    [coherence.num_object_modes]
-    default = 1
-    help = Number of object modes
-    doc =
-    type = int
-    userlevel = 0
-    lowlim = 0
-
-    [coherence.energies]
-    default = [1.0]
-    type = list
-    help = ?
-    doc = ?
-
-    [coherence.spectrum]
-    default = [1.0]
-    help = Amplitude of relative energy bins if the probe modes have a different energy
-    doc =
-    type = list
-    userlevel = 2
-    lowlim = 0
-
-    [coherence.object_dispersion]
-    default = None
-    help = Energy dispersive response of the object
-    doc = One of:
-       - ``None`` or ``'achromatic'``: no dispersion
-       - ``'linear'``: linear response model
-       - ``'irregular'``: no assumption
-      **[not implemented]**
-    type = str
-    userlevel = 2
-
-    [coherence.probe_dispersion]
-    default = None
-    help = Energy dispersive response of the probe
-    doc = One of:
-       - ``None`` or ``'achromatic'``: no dispersion
-       - ``'linear'``: linear response model
-       - ``'irregular'``: no assumption
-      **[not implemented]**
-    type = str
-    userlevel = 2
-
     """
 
     _PREFIX = MODEL_PREFIX
+
+    def __init__(self, ptycho=None, pars=None, label=None):
+        super(OPRModel, self).__init__(ptycho, pars, label)
+        self.p.illumination['diversity'] = None
 
     def _create_pods(self):
         new_pods, new_probe_ids, new_object_ids = super(OPRModel, self)._create_pods()

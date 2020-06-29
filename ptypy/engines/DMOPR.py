@@ -74,7 +74,6 @@ class DMOPR(DM):
         Try deleting every helper container.
         Gather independent probes for saving.
         """
-        print("DMOPR finalize")
         super(DMOPR, self).engine_finalize()
         for name, s in self.pr.storages.items():
             ind = self.model.local_indices[name]
