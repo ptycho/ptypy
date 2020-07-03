@@ -13,8 +13,8 @@ before_install:
   - conda info -a # and print the info
 
 env:
-  - TEST_ENV_NAME=core_dependencies
-  - TEST_ENV_NAME=full_dependencies
+  - TEST_ENV_NAME=ptypy_core_dependencies
+  - TEST_ENV_NAME=ptypy_full_dependencies
 
 install: True
 
