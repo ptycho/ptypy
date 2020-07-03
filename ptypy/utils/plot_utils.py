@@ -15,6 +15,10 @@ import matplotlib as mpl
 import matplotlib.cm
 import matplotlib.pyplot as plt
 
+#NODISPLAY = (os.getenv("DISPLAY") is None)
+#if NODISPLAY:
+#    matplotlib.use('agg')
+
 from .verbose import logger
 from .array_utils import grids
 
