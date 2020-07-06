@@ -34,7 +34,7 @@ from .. import defaults_tree
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'BlockScanModel', 'BlockVanilla', 'BlockFull']
+__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'OPRModel', 'BlockScanModel', 'BlockVanilla', 'BlockFull', 'BlockOPRModel']
 
 class _LogTime(object):
     
@@ -1170,6 +1170,42 @@ class _Full(object):
 
             s.model_initialized = True
 
+
+class _OPRModel(object):
+    """
+    Scan for Orthogonal Probe Relaxation (OPR) ptychography, where each has its own probe. 
+
+    Defaults:
+
+    [name]
+    default = OPRModel
+    type = str
+    help =
+    doc =
+    """
+
+    def __init__(self, ptycho=None, pars=None, label=None):
+        super(_OPRModel, self).__init__(ptycho, pars, label)
+        self.p.illumination['diversity'] = None
+
+    def _create_pods(self):
+        new_pods, new_probe_ids, new_object_ids = super(_OPRModel, self)._create_pods()
+
+        for vID, v in self.ptycho.probe.views.items():
+            # Get the associated diffraction frame
+            di_view = v.pod.di_view
+            # Reformat the layer
+            v.layer = di_view.layer*self.p.coherence.num_probe_modes + v.layer
+            # Deactivate if the associate di_view is inactive (to spread the probe across nodes consistently with diff)
+            v.active = di_view.active
+
+        # Create dictionaries to store OPR modes
+        self.OPR_modes = {}
+        self.OPR_coeffs = {}
+        self.OPR_allprobes = {}
+
+        return new_pods, new_probe_ids, new_object_ids
+
 @defaults_tree.parse_doc('scan.Vanilla')
 class Vanilla(_Vanilla, ScanModel):
     pass
@@ -1184,6 +1220,14 @@ class Full(_Full, ScanModel):
 
 @defaults_tree.parse_doc('scan.BlockFull')
 class BlockFull(_Full, BlockScanModel):
+    pass
+
+@defaults_tree.parse_doc('scan.OPRModel')
+class OPRModel(_OPRModel, Full):
+    pass
+
+@defaults_tree.parse_doc('scan.BlockOPRModel')
+class BlockOPRModel(_OPRModel, BlockFull):
     pass
 
 # Append illumination and sample defaults

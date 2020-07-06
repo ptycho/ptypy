@@ -283,12 +283,21 @@ class ML(PositionCorrectionEngine):
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
 
+            # Allow for customized modifications at the end of each iteration
+            self._post_iterate_update()
+
             # increase iteration counter
             self.curiter +=1
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
+
+    def _post_iterate_update(self):
+        """
+        Enables modification at the end of each ML iteration.
+        """
+        pass
 
     def engine_finalize(self):
         """
