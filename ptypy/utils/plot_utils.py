@@ -13,12 +13,11 @@ import os
 from PIL import Image
 import matplotlib as mpl
 import matplotlib.cm
-
-# importing pyplot may fail when no display is available.
-NODISPLAY = (os.getenv("DISPLAY") is None)
-if NODISPLAY:
-    matplotlib.use('agg')
 import matplotlib.pyplot as plt
+
+#NODISPLAY = (os.getenv("DISPLAY") is None)
+#if NODISPLAY:
+#    matplotlib.use('agg')
 
 from .verbose import logger
 from .array_utils import grids
