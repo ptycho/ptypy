@@ -110,7 +110,7 @@ class DMOPR(DM):
         for name, s in pr.storages.items():
 
             # Orthogonal probe relaxation (OPR) update step
-            self.probe_consistency_update(s,name)
+            self._probe_consistency_update(s,name)
 
             # Apply probe support if requested
             self.support_constraint(s)
@@ -129,7 +129,7 @@ class DMOPR(DM):
         return np.sqrt(change / len(pr.storages))
 
 
-    def probe_consistency_update(self, s, name):
+    def _probe_consistency_update(self, s, name):
         """
         Probe consistency update for orthogonal probe relaxation.
         """ 

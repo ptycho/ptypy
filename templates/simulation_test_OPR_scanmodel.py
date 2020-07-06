@@ -7,17 +7,17 @@ import numpy as np
 
 
 p = u.Param()
-p.verbose_level = 5
+p.verbose_level = 4
 p.data_type = "single"
 p.run = 'test_indep_probes'
 p.io = u.Param()
-p.io.home = "~/tmp/ptypy/"
+p.io.home = "/tmp/ptypy/"
 p.io.autosave = u.Param()
 p.io.autosave.interval = 200
 p.io.autoplot = u.Param()
 p.io.autoplot.active = False
 p.io.interaction = u.Param()
-p.io.interaction.active = False
+p.io.interaction.active = True
 
 p.scans = u.Param()
 p.scans.MF = u.Param()
@@ -46,6 +46,8 @@ p.scans.MF.data.center = 'fftshift'
 p.scans.MF.data.photons = 100000000.0
 p.scans.MF.data.psf = 0.0
 p.scans.MF.data.density = 0.20
+p.scans.MF.coherence = u.Param()
+p.scans.MF.coherence.num_probe_modes = 1
 
 p.engines = u.Param()
 p.engines.engine01 = u.Param()
@@ -56,7 +58,7 @@ p.engines.engine01.overlap_max_iterations = 2
 p.engines.engine01.fourier_relax_factor = 0.05
 p.engines.engine01.probe_support = None
 p.engines.engine01.subspace_dim = 10
-p.engines.engine01.subspace_start = 50
+p.engines.engine01.subspace_start = 100
 p.engines.engine01.IP_metric = 1
 
 p.engines.engine02 = u.Param()
@@ -81,3 +83,4 @@ P.obj.reformat()
 
 # Run
 P.run()
+P.finalize()
