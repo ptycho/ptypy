@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python3
 
 from ptypy import utils as u
 import textwrap
@@ -31,7 +31,7 @@ def print_param(entry, parent=None, depth=50):
     else:
         entry_name = ''
     if entry.children and depth > 0:
-        for childname, child in entry.children.iteritems():
+        for childname, child in entry.children.items():
             print_param(child, entry_name, depth=depth-1)
     return
 

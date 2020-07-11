@@ -101,7 +101,7 @@ class Detector(object):
         self.shape = expect2(self.shape)
         self._make_mask()
         if self.center is None:
-            self.center = expect2(self._mask.shape)/2
+            self.center = expect2(self._mask.shape)//2
 
     def _update(self,pars=None):
         if pars is not None:

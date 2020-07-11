@@ -16,7 +16,7 @@ from .utils import basic_fourier_update
 from . import register
 from .base import PositionCorrectionEngine
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla
 
 __all__ = ['DM']
 
@@ -112,20 +112,21 @@ class DM(PositionCorrectionEngine):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
+    [compute_log_likelihood]
+    default = True
+    type = bool
+    help = A switch for computing the log-likelihood error (this can impact the performance of the engine) 
+
+
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Difference map reconstruction engine.
         """
         super(DM, self).__init__(ptycho_parent, pars)
-
-        p = self.DEFAULT.copy()
-        if pars is not None:
-            p.update(pars)
-        self.p = p
 
         # Instance attributes
         self.error = None
@@ -179,14 +180,13 @@ class DM(PositionCorrectionEngine):
         """
         self.pbound = {}
         mean_power = 0.
-        for name, s in self.di.storages.iteritems():
-            self.pbound[name] = (
-                .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
+        for name, s in self.di.storages.items():
+            self.pbound[name] = (.25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
             mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
 
         # Fill object with coverage of views
-        for name, s in self.ob_viewcover.storages.iteritems():
+        for name, s in self.ob_viewcover.storages.items():
             s.fill(s.get_view_coverage())
 
     def engine_iterate(self, num=1):
@@ -230,6 +230,8 @@ class DM(PositionCorrectionEngine):
         """
         Try deleting ever helper container.
         """
+        super(DM, self).engine_finalize()
+
         containers = [
             self.ob_buf,
             self.ob_nrm,
@@ -255,13 +257,14 @@ class DM(PositionCorrectionEngine):
         DM Fourier constraint update (including DM step).
         """
         error_dct = {}
-        for name, di_view in self.di.views.iteritems():
+        for name, di_view in self.di.views.items():
             if not di_view.active:
                 continue
             pbound = self.pbound[di_view.storage.ID]
             error_dct[name] = basic_fourier_update(di_view,
                                                    pbound=pbound,
-                                                   alpha=self.p.alpha)
+                                                   alpha=self.p.alpha,
+                                                   LL_error=self.p.compute_log_likelihood)
         return error_dct
 
     def overlap_update(self):
@@ -298,7 +301,7 @@ class DM(PositionCorrectionEngine):
 
     def center_probe(self):
         if self.p.probe_center_tol is not None:
-            for name, s in self.pr.storages.iteritems():
+            for name, s in self.pr.storages.items():
                 c1 = u.mass_center(u.abs2(s.data).sum(0))
                 c2 = np.asarray(s.shape[-2:]) // 2
                 # fft convention should however use geometry instead
@@ -325,13 +328,12 @@ class DM(PositionCorrectionEngine):
             ob.fill(0.0)
             ob_nrm.fill(0.)
         else:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in self.ob.storages.items():
                 # The amplitude of the regularization term has to be scaled with the
                 # power of the probe (which is estimated from the power in diffraction patterns).
                 # This estimate assumes that the probe power is uniformly distributed through the
                 # array and therefore underestimate the strength of the probe terms.
                 cfact = self.p.object_inertia * self.mean_power
-
                 if self.p.obj_smooth_std is not None:
                     logger.info(
                         'Smoothing object, average cfact is %.2f'
@@ -346,14 +348,14 @@ class DM(PositionCorrectionEngine):
                 ob_nrm.storages[name].fill(cfact)
 
         # DM update per node
-        for name, pod in self.pods.iteritems():
+        for name, pod in self.pods.items():
             if not pod.active:
                 continue
             pod.object += pod.probe.conj() * pod.exit * pod.object_weight
             ob_nrm[pod.ob_view] += u.cabs2(pod.probe) * pod.object_weight
 
         # Distribute result with MPI
-        for name, s in self.ob.storages.iteritems():
+        for name, s in self.ob.storages.items():
             # Get the np arrays
             nrm = ob_nrm.storages[name].data
             parallel.allreduce(s.data)
@@ -387,7 +389,7 @@ class DM(PositionCorrectionEngine):
         # BE: was this asymmetric in original code
         # only because of the number of MPI nodes ?
         if parallel.master:
-            for name, s in pr.storages.iteritems():
+            for name, s in pr.storages.items():
                 # Instead of Npts_scan, the number of views should be considered
                 # Please note that a call to s.views may be
                 # slow for many views in the probe.
@@ -399,7 +401,7 @@ class DM(PositionCorrectionEngine):
             pr_nrm.fill(0.0)
 
         # DM update per node
-        for name, pod in self.pods.iteritems():
+        for name, pod in self.pods.items():
             if not pod.active:
                 continue
             pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
@@ -408,7 +410,7 @@ class DM(PositionCorrectionEngine):
         change = 0.
 
         # Distribute result with MPI
-        for name, s in pr.storages.iteritems():
+        for name, s in pr.storages.items():
             # MPI reduction of results
             nrm = pr_nrm.storages[name].data
             parallel.allreduce(s.data)
@@ -416,9 +418,7 @@ class DM(PositionCorrectionEngine):
             s.data /= nrm
 
             # Apply probe support if requested
-            support = self.probe_support.get(name)
-            if support is not None:
-                s.data *= self.probe_support[name]
+            self.support_constraint(s)
 
             # Compute relative change in probe
             buf = pr_buf.storages[name].data

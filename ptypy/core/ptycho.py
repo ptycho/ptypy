@@ -9,7 +9,7 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
-import paths
+from . import paths
 from collections import OrderedDict
 
 from .. import utils as u
@@ -425,7 +425,7 @@ class Ptycho(Base):
             port = self.interactor.activate()
 
             if port is None:
-                logger.warn('Interaction server initialization failed. '
+                logger.warning('Interaction server initialization failed. '
                             'Continuing without server.')
                 self.interactor = None
                 self.plotter = None
@@ -602,6 +602,9 @@ class Ptycho(Base):
             # Prepare the engine
             engine.initialize()
 
+            # One .prepare() is always executed, as Ptycho may hold data
+            engine.prepare()
+
             # Start the iteration loop
             while not engine.finished:
                 # Check for client requests
@@ -611,11 +614,12 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                self.model.new_data()
+                nd = self.model.new_data()
 
                 # Last minute preparation before a contiguous block of
                 # iterations
-                engine.prepare()
+                if not nd:
+                    engine.prepare()
 
                 auto_save = self.p.io.autosave
                 if auto_save is not None and auto_save.interval > 0:
@@ -700,7 +704,7 @@ class Ptycho(Base):
         citation_info = '\n'.join([headerline('This reconstruction relied on the following work', 'l', '='),
         str(self.citations),
         headerline('', 'l', '=')])
-        logger.warn(citation_info)
+        logger.warning(citation_info)
 
     @classmethod
     def _from_dict(cls, dct):
@@ -727,7 +731,7 @@ class Ptycho(Base):
         P : Ptycho
             Ptycho instance with ``level == 2``
         """
-        import save_load
+        from . import save_load
         from .. import io
 
         # Determine if this is a .pty file
@@ -772,7 +776,7 @@ class Ptycho(Base):
 
             logger.info('Regenerating exit waves')
             P.exit.reformat()
-            P.model._initialize_exit(P.pods.values())
+            P.model._initialize_exit(list(P.pods.values()))
 
         if load_data:
             logger.info('Loading data')
@@ -798,7 +802,7 @@ class Ptycho(Base):
                 - *'full_flat'*, (almost) complete environment
 
         """
-        import save_load
+        from . import save_load
         from .. import io
 
         dest_file = None
@@ -816,13 +820,13 @@ class Ptycho(Base):
             import os
             if os.path.exists(dest_file):
                 if force_overwrite:
-                    logger.warn('Save file exists but will be overwritten '
+                    logger.warning('Save file exists but will be overwritten '
                                 '(force_overwrite is True)')
                 elif not force_overwrite:
                     raise RuntimeError('File %s exists! Operation cancelled.'
                                        % dest_file)
                 elif force_overwrite is None:
-                    ans = raw_input('File %s exists! Overwrite? [Y]/N'
+                    ans = input('File %s exists! Overwrite? [Y]/N'
                                     % dest_file)
                     if ans and ans.upper() != 'Y':
                         raise RuntimeError('Operation cancelled by user.')
@@ -876,7 +880,7 @@ class Ptycho(Base):
                 try:
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
-                    logger.warn("The parameters we are saving won't pass a validator check!")
+                    logger.warning("The parameters we are saving won't pass a validator check!")
                 dump.pars = self.p.copy()  # _to_dict(Recursive=True)
                 dump.runtime = self.runtime.copy()
                 # Discard some bits of runtime to save space
@@ -902,12 +906,12 @@ class Ptycho(Base):
                 minimal.positions = {}
                 for ID, S in self.obj.storages.items():
                     minimal.obj[ID]['grids'] = S.grids()
-                    minimal.positions[ID] = np.array([v.coord for v in S.views])
+                    minimal.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
 
                 try:
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
-                    logger.warn("The parameters we are saving won't pass a validator check!")
+                    logger.warning("The parameters we are saving won't pass a validator check!")
                 minimal.pars = self.p.copy()  # _to_dict(Recursive=True)
                 minimal.runtime = self.runtime.copy()
 
@@ -938,7 +942,7 @@ class Ptycho(Base):
                 '-' * 80 + '\n']
 
         header = True
-        for ID, C in self.containers.iteritems():
+        for ID, C in self.containers.items():
             info.append(C.formatted_report(table_format,
                                            offset,
                                            include_header=header))
@@ -947,10 +951,13 @@ class Ptycho(Base):
 
         info.append('\n')
         if str(detail) != 'summary':
-            for ID, C in self.containers.iteritems():
+            for ID, C in self.containers.items():
                 info.append(C.report())
 
-        logger.info(''.join(info), extra={'allprocesses': True})
+        if parallel.size <= 5:
+            logger.info(''.join(info), extra={'allprocesses': True})
+        else:
+            logger.info(''.join(info))
         # logger.debug(info, extra={'allprocesses': True})
 
     def plot_overview(self, fignum=100):

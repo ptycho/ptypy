@@ -630,7 +630,7 @@ class PtyScan(object):
         indices = u.Param()
 
         # All indices in this chunk of data
-        indices.chunk = range(start, start + step)
+        indices.chunk = list(range(start, start + step))
 
         # Let parallel.loadmanager take care of assigning indices to nodes
         indices.lm = parallel.loadmanager.assign(indices.chunk)
@@ -667,10 +667,10 @@ class PtyScan(object):
         # Fill weights dictionary with references to the weights in common
 
         has_data = (len(data) > 0)
-        has_weights = (len(weights) > 0) and len(weights.values()[0]) > 0
+        has_weights = (len(weights) > 0) and len(list(weights.values())[0]) > 0
 
         if has_data:
-            dsh = np.array(data.values()[0].shape[-2:])
+            dsh = np.array(list(data.values())[0].shape[-2:])
         else:
             dsh = np.array([0, 0])
 
@@ -713,7 +713,7 @@ class PtyScan(object):
         self.info.shape = sh
 
         cen = self.info.center
-        if str(cen) == cen:
+        if isinstance(cen, str):
             cen = geometry.translate_to_pix(dsh, cen)
 
         auto = self.info.auto_center
@@ -822,7 +822,7 @@ class PtyScan(object):
 
         # Adapt geometric info
         self.meta.center = cen / float(self.rebin)
-        self.meta.shape = u.expect2(sh) / self.rebin
+        self.meta.shape = u.expect2(sh) // self.rebin
 
         if self.info.psize is not None:
             self.meta.psize = u.expect2(self.info.psize) * self.rebin
@@ -833,14 +833,17 @@ class PtyScan(object):
         chunk.indices_node = indices.node
         chunk.num = self.chunknum
         chunk.data = data
-
+        
+        # chunk now always has weights
+        chunk.weights = weights
+        
         # If there are weights we add them to chunk,
         # otherwise we push it into meta
-        if has_weights:
-            chunk.weights = weights
-        elif has_data:
-            chunk.weights = {}
-            self.weight2d = weights.values()[0]
+        #if has_weights:
+        #    chunk.weights = weights
+        #elif has_data:
+        #    chunk.weights = {}
+        #    self.weight2d = list(weights.values())[0]
 
         # Slice positions from common if they are empty too
         if positions is None or len(positions) == 0:
@@ -920,6 +923,9 @@ class PtyScan(object):
         # The "common" part
         out = {'common': self.meta}
 
+        # The "raw" part. Might replace the iterable in future.
+        out['chunk'] = chunk
+        
         # The "iterable" part
         iterables = []
         for pos, index in zip(chunk.positions, chunk.indices):
@@ -1115,7 +1121,7 @@ class PtyScan(object):
         node.
         """
         cen = {}
-        for k, d in data.iteritems():
+        for k, d in data.items():
             cen[k] = u.mass_center(d * (weights[k] > 0))
 
         # For some nodes, cen may still be empty.
@@ -1125,7 +1131,7 @@ class PtyScan(object):
 
         # Now master possesses all calculated centers
         if parallel.master:
-            cen = np.array(cen.values()).mean(0)
+            cen = np.array(list(cen.values())).mean(0)
         cen = parallel.bcast(cen)
 
         return cen
@@ -1178,7 +1184,7 @@ class PtyScan(object):
 
         for k in ['data', 'weights']:
             if k in c.keys():
-                if hasattr(c[k], 'iteritems'):
+                if hasattr(c[k], 'items'):
                     v = c[k]
                 else:
                     v = dict(zip(ind, np.asarray(c[k])))
@@ -1364,7 +1370,7 @@ class PtydScan(PtyScan):
         with h5py.File(self.source, 'r') as f:
             d = {}
             ch_items = []
-            for k, v in f['chunks'].iteritems():
+            for k, v in f['chunks'].items():
                 if v is not None:
                     ch_items.append((int(k), v))
 
@@ -1424,7 +1430,7 @@ class PtydScan(PtyScan):
         # Get our data from the ptyd file
         out = {}
         with h5py.File(self.source, 'r') as f:
-            for array, call in calls.iteritems():
+            for array, call in calls.items():
                 out[array] = [np.squeeze(f[path][slce]) for path, slce in call]
 
             f.close()
@@ -1434,7 +1440,7 @@ class PtydScan(PtyScan):
         # indices = out.get('indices', indices)
 
         # Wrap in a dict
-        for k, v in out.iteritems():
+        for k, v in out.items():
             out[k] = dict(zip(indices, v))
 
         return (out.get(key, {}) for key in ['data', 'positions', 'weights'])

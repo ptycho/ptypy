@@ -24,7 +24,7 @@ from .parameters import Param
 __all__ = ['Descriptor', 'ArgParseDescriptor', 'EvalDescriptor']
 
 
-class CODES:
+class CODES(object):
     PASS = 1
     FAIL = 0
     UNKNOWN = 2
@@ -97,7 +97,7 @@ class Descriptor(object):
 
     @property
     def option_keys(self):
-        return self._all_options.keys()
+        return list(self._all_options.keys())
 
     @property
     def is_child(self):
@@ -381,16 +381,16 @@ class Descriptor(object):
         
         Keyword arguments are forwarded to `ConfigParser.RawConfigParser`
         """
-        from ConfigParser import RawConfigParser as Parser
+        from configparser import RawConfigParser as Parser
         #kwargs['empty_lines_in_values'] = True # This will only work in Python3
         parser = Parser(**kwargs)
-        parser.readfp(fbuffer)
+        parser.read_file(fbuffer)
         for num, sec in enumerate(parser.sections()):
             desc = self.new_child(name=sec, options=dict(parser.items(sec)))
 
         return parser
 
-    def from_string(self, s, **kwargs):
+    def from_string(self, s, strict=False, **kwargs):
         """
         Load Parameter from string using Python's ConfigParser
 
@@ -399,9 +399,9 @@ class Descriptor(object):
 
         Keyword arguments are forwarded to `ConfigParser.RawConfigParser`
         """
-        from StringIO import StringIO
+        from io import StringIO
         s = textwrap.dedent(s)
-        return self.load_conf_parser(StringIO(s), **kwargs)
+        return self.load_conf_parser(StringIO(s), strict=strict, **kwargs)
 
     def save_conf_parser(self, fbuffer, print_optional=True):
         """
@@ -410,7 +410,7 @@ class Descriptor(object):
         Each parameter occupies its own section.
         Separator characters in sections names map to a tree-hierarchy.
         """
-        from ConfigParser import RawConfigParser as Parser
+        from configparser import RawConfigParser as Parser
         parser = Parser()
         for name, desc in self.descendants:
             parser.add_section(name)
@@ -425,8 +425,8 @@ class Descriptor(object):
         """
         Return the full content of descriptor as a string in configparser format.
         """
-        import StringIO
-        s = StringIO.StringIO()
+        import io
+        s = io.StringIO()
         self.save_conf_parser(s)
         return s.getvalue().strip()
 
@@ -434,13 +434,13 @@ class Descriptor(object):
         """
         Pretty-print the Parameter options in ConfigParser format.
         """
-        from ConfigParser import RawConfigParser as Parser
-        import StringIO
+        from configparser import RawConfigParser as Parser
+        import io
         parser = Parser()
         parser.add_section(self.name)
         for k, v in self.options.items():
             parser.set(self.name, k, v)
-        s = StringIO.StringIO()
+        s = io.StringIO()
         parser.write(s)
         return s.getvalue().strip()
 
@@ -489,7 +489,7 @@ class ArgParseDescriptor(Descriptor):
         """
         try:
             return ast.literal_eval(val)
-        except ValueError or SyntaxError as e:
+        except (ValueError, SyntaxError) as e:
             msg = e.args[0] + ". could not read %s for parameter %s" % (val, self.path)
             raise ValueError(msg)
         except SyntaxError as e:
@@ -570,7 +570,7 @@ class ArgParseDescriptor(Descriptor):
             return CustomAction
 
         # Add all arguments
-        for argname, desc in ndesc.iteritems():
+        for argname, desc in ndesc.items():
 
             if desc.name in excludes or argname in groups:
                 continue
@@ -829,7 +829,7 @@ class EvalDescriptor(ArgParseDescriptor):
             return
 
         # Detect wildcard
-        wildcard = (self.children.keys() == ['*'])
+        wildcard = (list(self.children.keys()) == ['*'])
 
         # Grab or check children
         if wildcard:
@@ -850,6 +850,8 @@ class EvalDescriptor(ArgParseDescriptor):
         if pars is None or \
                 (type(pars).__name__ in self.type) or \
                 (hasattr(pars, 'items') and 'Param' in self.type) or \
+                (type(pars).__name__ == 'tuple' and 'list' in self.type) or \
+                (type(pars).__name__ == 'list' and 'tuple' in self.type) or \
                 (type(pars).__name__ == 'int' and 'float' in self.type) or \
                 (type(pars).__name__[:5] == 'float' and 'float' in self.type):
             yield {'d': self, 'path': path, 'status': 'ok', 'info': ''}
@@ -914,11 +916,17 @@ class EvalDescriptor(ArgParseDescriptor):
                     if (lowlim is None) or (path not in pars) or (pars[path] is None):
                         out[path]['lowlim'] = CODES.PASS
                     else:
-                        out[path]['lowlim'] = CODES.PASS if (pars[path] >= lowlim) else CODES.FAIL
+                        if hasattr(pars[path], "__iter__"):
+                            out[path]['lowlim'] = CODES.PASS if all([(ix>= lowlim) for ix in pars[path]]) else CODES.FAIL
+                        else:
+                            out[path]['lowlim'] = CODES.PASS if (pars[path] >= lowlim) else CODES.FAIL
                     if uplim is None or pars[path] is None:
                         out[path]['uplim'] = CODES.PASS
                     else:
-                        out[path]['uplim'] = CODES.PASS if (pars[path] <= uplim) else CODES.FAIL
+                        if hasattr(pars[path], "__iter__"):
+                            out[path]['uplim'] = CODES.PASS if all([(ix <= uplim) for ix in pars[path]]) else CODES.FAIL
+                        else:
+                            out[path]['uplim'] = CODES.PASS if (pars[path] <= uplim) else CODES.FAIL
             elif res['status'] == 'wrongtype':
                 # Wrong type
                 out[path]['type'] = CODES.INVALID
