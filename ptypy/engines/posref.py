@@ -196,7 +196,7 @@ class AnnealingRefine(PositionRefine):
                 
         ob_view.coord = coord
         ob_view.storage.update_views(ob_view)
-        for name, pod in ob_view.pods.iteritems():
+        for name, pod in ob_view.pods.items():
             pod.pr_view.sp = -ob_view.sp
             pod.ob_view.sp = 0.
         return coord - initial_coord

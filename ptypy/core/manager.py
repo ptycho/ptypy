@@ -362,7 +362,7 @@ class ScanModel(object):
         if self.p.subpixel is not None:
             t1 = time.time()
             log(3, "Updating the subpixel shifts") # this might take a while
-            for name, s in self.ptycho.probe.storages.iteritems():
+            for name, s in self.ptycho.probe.storages.items():
                 from ..utils import SUBPIXEL_SHIFT_METHODS
                 try:
                     s.subpixel_shift = SUBPIXEL_SHIFT_METHODS[self.p.subpixel]
