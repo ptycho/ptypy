@@ -178,11 +178,6 @@ class DM(PositionCorrectionEngine):
             self.pbound[name] = (.25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
             mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
-
-        # Fill object with coverage of views
-        for name, s in self.ob_viewcover.storages.items():
-            s.fill(s.get_view_coverage())
-
             
     def engine_iterate(self, num=1):
         """
