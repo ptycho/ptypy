@@ -111,8 +111,10 @@ class Geo(Base):
     [shape]
     type = int, tuple
     default = 256
-    help = Number of pixels in detector frame
-    doc = Can be a 2-tuple of int (Nx, Ny) or an int N, in which case it is interpreted as (N, N).
+    help = Number of image pixels
+    doc = Shape represents the number of pixels in the wavefield/image frames, and not necessarily
+          the number of pixel in the raw diffraction patterns, as undersample or padding may be used.
+          Valid entries are 2-tuple of int (Nx, Ny) or an int N, in which case it is interpreted as (N, N).
     userlevel = 1
 
     [misfit]
@@ -165,7 +167,7 @@ class Geo(Base):
             for k, v in p.items():
                 if k in _old2new.keys():
                     p[_old2new[k]] = v
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k in p:
                 p[k] = v
 
@@ -236,6 +238,9 @@ class Geo(Base):
         self._propagator = self._get_propagator()
         self.interact = True
 
+        # Resampling
+        self.resample = 1
+
     def update(self, update_propagator=True):
         """
         Update the internal pixel sizes, giving precedence to the sample
@@ -277,7 +282,8 @@ class Geo(Base):
     @property
     def energy(self):
         """
-        Property to get and set the energy
+        Get or set the energy (in keV). If self.interact is True, recompute
+        dependent quantities accordingly.
         """
         return self.p.energy
 
@@ -292,14 +298,15 @@ class Geo(Base):
     @property
     def lam(self):
         """
-        Property to get and set the wavelength
+        Get or set the wavelength (in meters).
+
+        If self.interact is True, recompute dependent quantities accordingly. Changing wavelengths
+        never changes the image extent (self.sh).
         """
         return self.p.lam
 
     @lam.setter
     def lam(self, v):
-        # changing wavelengths never changes N, only psize
-        # for changing N, please do so manually
         self.p.lam = v
         self.p.energy = self._keV2m / v
         if self.interact:
@@ -308,15 +315,14 @@ class Geo(Base):
     @property
     def resolution(self):
         """
-        Property to get and set the pixel size in source plane
+        Get or set the pixel size in the image plane (in meters).
+
+        If self.interact is True, recompute dependent quantities accordingly.
         """
         return self.p.resolution
 
     @resolution.setter
     def resolution(self, v):
-        """
-        changing source space pixel size
-        """
         self.p.resolution[:] = u.expect2(v)
         if self.interact:
             self.update()
@@ -324,7 +330,9 @@ class Geo(Base):
     @property
     def psize(self):
         """
-        Property to get and set the pixel size in the propagated plane
+        Get or set the pixel size in the propagated plane (in meters).
+
+        If self.interact is True, recompute dependent quantities accordingly.
         """
         return self.p.psize
 
@@ -337,14 +345,16 @@ class Geo(Base):
     @property
     def lz(self):
         """
-        Retrieves product of wavelength and propagation distance
+        Product of wavelength and propagation distance (read-only)
         """
         return self.p.lam * self.p.distance
 
     @property
     def shape(self):
         """
-        Property to get and set the *shape* i.e. the frame dimensions
+        Get or set the frame dimensions.
+
+        If self.interact is True, recompute dependent quantities accordingly.
         """
         return self.p.shape
 
@@ -357,22 +367,38 @@ class Geo(Base):
     @property
     def distance(self):
         """
-        Propagation distance in meters
+        Propagation distance in meters (read-only)
         """
         return self.p.distance
 
     @property
     def propagator(self):
         """
-        Retrieves propagator, creates propagator instance if necessary.
+        Propagator, created on-the-fly if needed (read-only)
         """
         if not hasattr(self, '_propagator'):
             self._propagator = self._get_propagator()
 
         return self._propagator
 
+    def upsample(self, c):
+        """
+        Upsample the array c (float or complex).
+        """
+        if self.resample == 1:
+            return c
+        return u.zoom(c, self.resample, order=0) / (self.resample**2)
+
+    def downsample(self, a):
+        """
+        Downsample the array a (float)
+        """
+        if self.resample == 1:
+            return a
+        return u.rebin_2d(a, self.resample)[0]
+
     def __str__(self):
-        keys = self.p.keys()
+        keys = list(self.p.keys())
         keys.sort()
         start = ""
         for key in keys:
@@ -381,13 +407,13 @@ class Geo(Base):
 
     def _to_dict(self):
         # Delete propagator reference
-        del self._propagator
+        try:
+            del self._propagator
+        except AttributeError:
+            pass
+
         # Return internal dicts
         return self.__dict__.copy()
-
-    # def _post_dict_import(self):
-    #    self.propagator = get_propagator(self.p)
-    #    self.interact = True
 
     def _get_propagator(self):
         # attach desired datatype for propagator
@@ -527,7 +553,7 @@ class BasicFarfieldPropagator(object):
         p = self.p
         if geo_pars is not None:
             p.update(geo_pars)
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k in p:
                 p[k] = v
 
@@ -697,7 +723,7 @@ class BasicNearfieldPropagator(object):
         p = self.p
         if geo_pars is not None:
             p.update(geo_pars)
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k in p:
                 p[k] = v
 

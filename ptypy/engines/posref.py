@@ -52,7 +52,7 @@ class PositionRefine(object):
 
 class AnnealingRefine(PositionRefine):
 
-    def __init__(self, position_refinement_parameters, Cobj):
+    def __init__(self, position_refinement_parameters, Cobj, metric="fourier"):
         '''
         Annealing Position Refinement.
         Refines the positions by the following algorithm:
@@ -67,7 +67,8 @@ class AnnealingRefine(PositionRefine):
 
         Cobj : ptypy.core.classes.Container
             The current pbject container object
-
+        metric : str
+            "fourier" or "photon"
         '''
         super(AnnealingRefine, self).__init__(position_refinement_parameters)
 
@@ -76,9 +77,18 @@ class AnnealingRefine(PositionRefine):
         # Updated before each iteration by self.update_constraints
         self.max_shift_dist = None
 
+        # Choose metric for fourier error
+        if metric == "fourier":
+            self.fourier_error = self.estimate_fourier_metric
+        elif metric == "photon":
+            self.fourier_error = self.estimate_photon_metric
+        else:
+            raise NotImplementedError("Metric %s is currently not implemented" %metric)
 
-    def fourier_error(self, di_view, obj):
+    def estimate_fourier_metric(self, di_view, obj):
         '''
+        Calculates error based on DM fourier error estimate.
+        
         Parameters
         ----------
         di_view : ptypy.core.classes.View
@@ -91,11 +101,31 @@ class AnnealingRefine(PositionRefine):
         np.float
             The calculated fourier error
         '''
-
         af2 = np.zeros_like(di_view.data)
-        for name, pod in di_view.pods.iteritems():
-            af2 += u.abs2(pod.fw(pod.probe*obj))
+        for name, pod in di_view.pods.items():
+            af2 += pod.downsample(u.abs2(pod.fw(pod.probe*obj)))
         return np.sum(di_view.pod.mask * (np.sqrt(af2) - np.sqrt(np.abs(di_view.data)))**2)
+
+    def estimate_photon_metric(self, di_view, obj):
+        '''
+        Calculates error based on reduced likelihood estimate.
+        
+        Parameters
+        ----------
+        di_view : ptypy.core.classes.View
+            A diffraction view for which we wish to calculate the error.
+
+        obj : numpy.ndarray
+            The current calculated object for which we wish to evaluate the error against.
+        Returns
+        -------
+        np.float
+            The calculated fourier error
+        '''
+        af2 = np.zeros_like(di_view.data)
+        for name, pod in di_view.pods.items():
+            af2 += pod.downsample(u.abs2(pod.fw(pod.probe*obj)))
+        return (np.sum(di_view.pod.mask * (af2 - di_view.data)**2 / (di_view.data + 1.)) / np.prod(af2.shape))
 
     def update_view_position(self, di_view):
         '''
@@ -162,7 +192,7 @@ class AnnealingRefine(PositionRefine):
                 # keep
                 error = new_error
                 coord = new_coord
-                log(4, "Position correction: %s, coord: %s" % (di_view.ID, coord))
+                log(4, "Position correction: %s, coord: %s, delta: %s" % (di_view.ID, coord, delta))
                 
         ob_view.coord = coord
         ob_view.storage.update_views(ob_view)

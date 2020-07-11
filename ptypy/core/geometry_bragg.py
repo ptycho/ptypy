@@ -4,9 +4,9 @@ Geometry management and propagation for Bragg geometry.
 
 from .. import utils as u
 from ..utils.verbose import logger
-from geometry import Geo as _Geo
+from .geometry import Geo as _Geo
 from ..utils.descriptor import EvalDescriptor
-from classes import Container, Storage, View
+from .classes import Container, Storage, View
 import numpy as np
 from scipy.ndimage.interpolation import map_coordinates
 
@@ -377,7 +377,7 @@ class Geo_Bragg(_Geo):
 
             # optionally crop the new array
             if keep_dims:
-                d = d[:, pad / 2:shape[1] + pad / 2, :]
+                d = d[:, pad // 2:shape[1] + pad // 2, :]
             # construct a new Storage
             if input_system == 'cartesian':
                 new_psize = S.psize * np.array([1 / self.costheta, 1, 1])
@@ -413,7 +413,7 @@ class Geo_Bragg(_Geo):
                 d[:, i, :] = np.roll(d[:, i, :], shift, axis=0)
             # optionally crop the new array
             if keep_dims:
-                d = d[pad / 2:shape[0] + pad / 2, :, :]
+                d = d[pad // 2:shape[0] + pad // 2, :, :]
             # construct a new Storage
             if input_system == 'cartesian':
                 new_psize = S.psize * np.array([1, 1 / self.costheta, 1])
@@ -467,8 +467,8 @@ class Geo_Bragg(_Geo):
 
         # center both storages (meaning that the central pixel is the
         # physical origin)
-        S_3d.center = np.array(S_3d.shape[1:]) / 2
-        S_2d.center = np.array(S_2d.shape[1:]) / 2
+        S_3d.center = np.array(S_3d.shape[1:]) // 2
+        S_2d.center = np.array(S_2d.shape[1:]) // 2
 
         # find the physical coordinates (zi, yi) of each point in the 3d probe
         if system == 'natural':

@@ -30,10 +30,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 # Modules
 import unittest
@@ -182,7 +178,7 @@ class TestBase(unittest.TestCase):
     def test_to_dict(self):
         """Extract information from container object and store in a dict"""
         self.assertListEqual(
-            self.basic_base._to_dict().keys(),
+            list(self.basic_base._to_dict().keys()),
             self.basic_base.__slots__,
             'Converting container object information to dictionary failed.'
         )
@@ -713,32 +709,32 @@ class TestContainer(unittest.TestCase):
             'Testing __imul__ function failed.'
         )
 
-    def test__idiv__(self):
-        """Testing __idiv__ function"""
+    def test__truediv__(self):
+        """Testing __truediv__ function"""
         # Test container case
         # Not ideal, as value needs to be added first for reasonable check
         self.basic_container_ifte.__iadd__(24)
-        self.basic_container_ifte.__idiv__(self.basic_container_iftf)
+        self.basic_container_ifte.__truediv__(self.basic_container_iftf)
 
         self.assertTrue(
             np.array_equal(
                 self.basic_container_ifte.storages['S0000'].data,
                 np.array([[[1. + 0.j]]])
             ),
-            'Testing __idiv__ function failed.'
+            'Testing __truediv__ function failed.'
         )
 
         # Test scalar case
         # Not ideal, as value needs to be added first for reasonable check
         self.basic_container_dpt.__iadd__(25)
-        self.basic_container_dpt.__idiv__(25)
+        self.basic_container_dpt.__truediv__(25)
 
         self.assertTrue(
             np.array_equal(
                 self.basic_container_dpt.storages['S0000'].data,
                 np.array([[[1. + 0.j]]])
             ),
-            'Testing __idiv__ function failed.'
+            'Testing __truediv__ function failed.'
         )
 
     def test__lshift__(self):

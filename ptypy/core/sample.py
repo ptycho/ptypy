@@ -167,6 +167,9 @@ sample_desc.from_string(r"""
     userlevel = 2
     """)
 
+# Strings are also supported as input parameters
+sample_desc.options['type'] = 'Param, str'
+
 DEFAULT = sample_desc.make_default(99)
 
 DEFAULT_process = DEFAULT.process
@@ -196,7 +199,7 @@ def init_storage(storage, sample_pars=None, energy=None):
     sam = sample_pars
     p = DEFAULT.copy(depth=3)
     model = None
-    if hasattr(sam, 'items') or hasattr(sam, 'iteritems'):
+    if hasattr(sam, 'items') or hasattr(sam, 'items'):
         # This is a dict
         p.update(sam, in_place_depth=3)
 

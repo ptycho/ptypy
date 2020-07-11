@@ -124,11 +124,6 @@ class ML(PositionCorrectionEngine):
         """
         super(ML, self).__init__(ptycho_parent, pars)
 
-        p = self.DEFAULT.copy()
-        if pars is not None:
-            p.update(pars)
-        self.p = p
-
         # Instance attributes
 
         # Object gradient
@@ -197,7 +192,7 @@ class ML(PositionCorrectionEngine):
         when new data arrives.
         """
         # - # fill object with coverage of views
-        # - for name,s in self.ob_viewcover.S.iteritems():
+        # - for name,s in self.ob_viewcover.S.items():
         # -    s.fill(s.get_view_coverage())
         pass
 
@@ -229,17 +224,18 @@ class ML(PositionCorrectionEngine):
 
             if self.p.probe_update_start <= self.curiter:
                 # Apply probe support if needed
-                for name, s in new_pr_grad.storages.iteritems():
-                    support = self.probe_support.get(name)
-                    if support is not None:
-                        s.data *= support
+                for name, s in new_pr_grad.storages.items():
+                    self.support_constraint(s)
+                    #support = self.probe_support.get(name)
+                    #if support is not None:
+                    #    s.data *= support
             else:
                 new_pr_grad.fill(0.)
 
             # Smoothing preconditioner
             if self.smooth_gradient:
                 self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
-                for name, s in new_ob_grad.storages.iteritems():
+                for name, s in new_ob_grad.storages.items():
                     s.data[:] = self.smooth_gradient(s.data)
 
             # probe/object rescaling
@@ -285,7 +281,7 @@ class ML(PositionCorrectionEngine):
 
             # Smoothing preconditioner
             if self.smooth_gradient:
-                for name, s in self.ob_h.storages.iteritems():
+                for name, s in self.ob_h.storages.items():
                     s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             else:
                 self.ob_h -= self.ob_grad
@@ -312,6 +308,9 @@ class ML(PositionCorrectionEngine):
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
 
+            # Allow for customized modifications at the end of each iteration
+            self._post_iterate_update()
+
             # increase iteration counter
             self.curiter +=1
 
@@ -319,10 +318,17 @@ class ML(PositionCorrectionEngine):
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
 
+    def _post_iterate_update(self):
+        """
+        Enables modification at the end of each ML iteration.
+        """
+        pass
+
     def engine_finalize(self):
         """
         Delete temporary containers.
         """
+        super(ML, self).engine_finalize()
         del self.ptycho.containers[self.ob_grad.ID]
         del self.ob_grad
         del self.ptycho.containers[self.ob_h.ID]
@@ -332,6 +338,8 @@ class ML(PositionCorrectionEngine):
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
 
+        # Save floating intensities into runtime
+        self.ptycho.runtime["float_intens"] = parallel.gather_dict(self.ML_model.float_intens_coeff)
 
 class BaseModel(object):
     """
@@ -399,7 +407,7 @@ class BaseModel(object):
         del self.pr_grad
 
         # Remove working attributes
-        for name, diff_view in self.di.views.iteritems():
+        for name, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
             try:
@@ -441,7 +449,7 @@ class GaussianModel(BaseModel):
         self.weights = self.engine.di.copy(self.engine.di.ID + '_weights')
         # FIXME: This part needs to be updated once statistical weights are properly
         # supported in the data preparation.
-        for name, di_view in self.di.views.iteritems():
+        for name, di_view in self.di.views.items():
             if not di_view.active:
                 continue
             self.weights[di_view] = (self.Irenorm * di_view.pod.ma_view.data
@@ -470,7 +478,7 @@ class GaussianModel(BaseModel):
         error_dct = {}
 
         # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
+        for dname, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
 
@@ -482,11 +490,11 @@ class GaussianModel(BaseModel):
             f = {}
 
             # First pod loop: compute total intensity
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 f[name] = pod.fw(pod.probe * pod.object)
-                Imodel += u.abs2(f[name])
+                Imodel += pod.downsample(u.abs2(f[name]))
 
             # Floating intensity option
             if self.p.floating_intensities:
@@ -498,10 +506,10 @@ class GaussianModel(BaseModel):
 
             # Second pod loop: gradients computation
             LLL = np.sum((w * DI**2).astype(np.float64))
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
-                xi = pod.bw(w * DI * f[name])
+                xi = pod.bw(pod.upsample(w*DI) * f[name])
                 self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
                 self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
@@ -516,7 +524,7 @@ class GaussianModel(BaseModel):
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in self.ob.storages.items():
                 self.ob_grad.storages[name].data += self.regularizer.grad(
                     s.data)
                 LL += self.regularizer.LL
@@ -535,7 +543,7 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
+        for dname, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
 
@@ -547,7 +555,7 @@ class GaussianModel(BaseModel):
             A1 = None
             A2 = None
 
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 f = pod.fw(pod.probe * pod.object)
@@ -569,8 +577,10 @@ class GaussianModel(BaseModel):
                 A0 *= self.float_intens_coeff[dname]
                 A1 *= self.float_intens_coeff[dname]
                 A2 *= self.float_intens_coeff[dname]
-            A0 -= I
 
+            A0 -= pod.upsample(I)
+            w = pod.upsample(w)
+            
             B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
             B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
             B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
@@ -579,7 +589,7 @@ class GaussianModel(BaseModel):
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in self.ob.storages.items():
                 B += Brenorm * self.regularizer.poly_line_coeffs(
                     ob_h.storages[name].data, s.data)
 
@@ -600,7 +610,7 @@ class PoissonModel(BaseModel):
         BaseModel.__init__(self, MLengine)
         from scipy import special
         self.LLbase = {}
-        for name, di_view in self.di.views.iteritems():
+        for name, di_view in self.di.views.items():
             if not di_view.active:
                 continue
             self.LLbase[name] = special.gammaln(di_view.data+1).sum()
@@ -620,7 +630,7 @@ class PoissonModel(BaseModel):
         error_dct = {}
 
         # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
+        for dname, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
 
@@ -632,7 +642,7 @@ class PoissonModel(BaseModel):
             f = {}
 
             # First pod loop: compute total intensity
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 f[name] = pod.fw(pod.probe * pod.object)
@@ -648,7 +658,7 @@ class PoissonModel(BaseModel):
 
             # Second pod loop: gradients computation
             LLL = self.LLbase[dname] + (m * (Imodel - I * np.log(Imodel))).sum().astype(np.float64)
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 xi = pod.bw(DI * f[name])
@@ -666,7 +676,7 @@ class PoissonModel(BaseModel):
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in self.ob.storages.items():
                 self.ob_grad.storages[name].data += self.regularizer.grad(
                     s.data)
                 LL += self.regularizer.LL
@@ -684,7 +694,7 @@ class PoissonModel(BaseModel):
         Brenorm = 1/(self.tot_measpts * self.LL[0])**2
 
         # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.iteritems():
+        for dname, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
 
@@ -696,7 +706,7 @@ class PoissonModel(BaseModel):
             A1 = None
             A2 = None
 
-            for name, pod in diff_view.pods.iteritems():
+            for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 f = pod.fw(pod.probe * pod.object)
@@ -730,7 +740,7 @@ class PoissonModel(BaseModel):
 
         # Object regularizer
         if self.regularizer:
-            for name, s in self.ob.storages.iteritems():
+            for name, s in self.ob.storages.items():
                 B += Brenorm * self.regularizer.poly_line_coeffs(
                     ob_h.storages[name].data, s.data)
 
@@ -814,7 +824,7 @@ def prepare_smoothing_preconditioner(amplitude):
     if amplitude == 0.:
         return None
 
-    class GaussFilt:
+    class GaussFilt(object):
         def __init__(self, sigma):
             self.sigma = sigma
 

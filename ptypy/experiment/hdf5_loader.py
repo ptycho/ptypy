@@ -34,90 +34,90 @@ class Hdf5Loader(PtyScan):
     [intensities]
     default =
     type = Param
-    help = This parameter contains the diffraction data. Data shapes can be either (A, B, frame_size_m, frame_size_n) or
-            (C, frame_size_m, frame_size_n). It's assumed in this latter case that the fast axis in the scan corresponds
-            the fast axis on disc (i.e. C-ordered layout).
+    help = Parameters for the diffraction data.
+    doc = Data shapes can be either (A, B, frame_size_m, frame_size_n) or (C, frame_size_m, frame_size_n).
+          It is assumed in this latter case that the fast axis in the scan corresponds
+          the fast axis on disc (i.e. C-ordered layout).
 
     [intensities.is_swmr]
     default = False
     type = bool
-    help = If this is set to be true, then intensities are assumed to be a swmr dataset that is being written as processing
-            is taking place
+    help = If True, then intensities are assumed to be a swmr dataset that is being written as processing
+           is taking place.
 
     [intensities.live_key]
     default = None
     type = str
-    help = If intensities.is_swmr is true then we need a live_key to know where the data collection has progressed to.
-            This is the key to these live keys inside the intensities.file. They are zero at the scan start, but non-zero
-            when the position is complete.
+    help = Key to live keys inside the intensities.file (used only if is_swmr is True)
+    doc = Live_keys indicate where the data collection has progressed to. They are zero at the 
+          scan start, but non-zero when the position is complete.
 
     [intensities.file]
     default = None
     type = str
-    help = This is the path to the file containing the diffraction intensities.
+    help = Path to the file containing the diffraction intensities.
 
     [intensities.key]
     default = None
     type = str
-    help = This is the key to the intensities entry in the hdf5 file.
+    help = Key to the intensities entry in the hdf5 file.
 
     [positions]
     default =
     type = Param
-    help = This parameter contains the position information data. Shapes for each axis that are currently covered and
-            tested corresponding to the intensity shapes are:
-                                 axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
-                                 axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n),
-                                 axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
-                                 axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the
-                                 size of the other axis,
-                            and  axis_data.shape (C,) for data.shape (C*D, frame_size_m, frame_size_n) where D is the
-                            size of the other axis.
+    help = Parameters for the position information data. 
+    doc = Shapes for each axis that are currently covered and tested corresponding 
+          to the intensity shapes are:
+            * axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
+            * axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n),
+            * axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
+            * axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the
+              size of the other axis, and 
+            * axis_data.shape (C,) for data.shape (C*D, frame_size_m, frame_size_n) where D is the
+              size of the other axis.
 
     [positions.is_swmr]
     default = False
     type = bool
-    help = If this is set to be true, then positions are assumed to be swmr datasets that are being written as processing
-            is taking place.
+    help = If True, positions are assumed to be a swmr dataset that is being written as processing
+           is taking place.
 
     [positions.live_key]
     default = None
     type = str
-    help = If positions.is_swmr is true then we need a live_key to know where the data collection has progressed to.
-            This is the key to these live keys inside the positions.file. If None, whilst positions.is_swmr is True,
-            then we just assume the same keys work for both positions and intensities. They are zero at the scan start,
-            but non-zero when the position is complete.
+    help = Live_keys indicate where the data collection has progressed to. They are zero at the 
+           scan start, but non-zero when the position is complete. If None whilst positions.is_swmr 
+           is True, use "intensities.live_key".
 
     [positions.file]
     default = None
     type = str
-    help = This is the path to the file containing the  position information. If None then we try to find the information
-            in the "intensities.file" location.
+    help = Path to the file containing the position information. If None use "intensities.file".
 
     [positions.slow_key]
     default = None
     type = str
-    help = This is the key to the slow-axis positions entry in the hdf5 file.
+    help = Key to the slow-axis positions entry in the hdf5 file.
 
     [positions.slow_multiplier]
     default = 1.0
     type = float
-    help = This is a scaling factor to get the motor position into metres.
+    help = Multiplicative factor that converts motor positions to metres.
 
     [positions.fast_key]
     default = None
     type = str
-    help = This is the key to the fast-axis positions entry in the hdf5 file.
+    help = Key to the fast-axis positions entry in the hdf5 file.
 
     [positions.fast_multiplier]
     default = 1.0
     type = float
-    help = This is a scaling factor to get the motor position into metres.
+    help = Multiplicative factor that converts motor positions to metres.
 
     [positions.bounding_box]
     default =
     type = Param
-    help = Defines a bounding box (in array indices) to reconstruct a restricted area
+    help = Bounding box (in array indices) to reconstruct a restricted area
 
     [positions.bounding_box.fast_axis_bounds]
     default = None
@@ -129,59 +129,67 @@ class Hdf5Loader(PtyScan):
     type = None, int, tuple, list
     help = If an int, this is the lower bound only, if a tuple is (min, max)
 
+    [positions.skip]
+    default = 1
+    type = int
+    help = Skip a given number of positions (in each direction)
+
     [mask]
     default =
     type = Param
-    help = This parameter contains the mask data. The  shape is assumed to be (frame_size_m, frame_size_n) or the same
-            shape of the full intensities data.
+    help = Parameters for mask data. 
+    doc = The shape of the loaded data is assumed to be (frame_size_m, frame_size_n) or the same
+          shape of the full intensities data.
 
     [mask.file]
     default = None
     type = str
-    help = This is the path to the file containing the diffraction mask.
+    help = Path to the file containing the diffraction mask.
 
     [mask.key]
     default = None
     type = str
-    help = This is the key to the mask entry in the hdf5 file.
+    help = Key to the mask entry in the hdf5 file.
 
     [flatfield]
     default =
     type = Param
-    help = This parameter contains the flatfield data. The shape is assumed to be (frame_size_m, frame_size_n) or the same
+    help = Parameters for flatfield data.
+    doc = The shape of the loaded data is assumed to be (frame_size_m, frame_size_n) or the same
             shape of the full intensities data.
 
     [flatfield.file]
     default = None
     type = str
-    help = This is the path to the file containing the diffraction flatfield.
+    help = Path to the file containing the diffraction flatfield.
 
     [flatfield.key]
     default = None
     type = str
-    help = This is the key to the flatfield entry in the hdf5 file.
+    help = Key to the flatfield entry in the hdf5 file.
 
     [darkfield]
     default =
     type = Param
-    help = This parameter contains the darkfield data.The shape is assumed to be (frame_size_m, frame_size_n) or the same
-            shape of the full intensities data.
+    help = Parameters for darkfield data. 
+    doc = The shape is assumed to be (frame_size_m, frame_size_n) or the same
+          shape of the full intensities data.
 
     [darkfield.file]
     default = None
     type = str
-    help = This is the path to the file containing the diffraction darkfield.
+    help = Path to the file containing the diffraction darkfield.
 
     [darkfield.key]
     default = None
     type = str
-    help = This is the key to the darkfield entry in the hdf5 file.
+    help = Key to the darkfield entry in the hdf5 file.
 
     [normalisation]
     default =
     type = Param
-    help = This parameter contains information about the per-point normalisation (i.e. ion chamber reading).
-            It is assumed to have the same dimensionality as data.shape[:-2]
+    help = Parameters for per-point normalisation (i.e. ion chamber reading).
+    doc = The shape of loaded data is assumed to have the same dimensionality as data.shape[:-2]
 
     [normalisation.is_swmr]
     default = False
@@ -245,6 +253,11 @@ class Hdf5Loader(PtyScan):
     type = str
     help = This is the key to the recorded_distance entry in the hdf5 file.
 
+    [recorded_distance.multiplier]
+    default = 1.0
+    type = float
+    help = This is the multiplier for the recorded distance.
+
     [recorded_psize]
     default =
     type = Param
@@ -260,6 +273,11 @@ class Hdf5Loader(PtyScan):
     default = None
     type = str
     help = This is the key to the recorded_psize entry in the hdf5 file.
+
+    [recorded_psize.multiplier]
+    default = 1.0
+    type = float
+    help = This is the multiplier for the recorded detector psize.
 
     [shape]
     type = int, tuple
@@ -326,6 +344,9 @@ class Hdf5Loader(PtyScan):
         log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(data_shape,
                                                                                                                        positions_slow_shape,
                                                                                                                       positions_fast_shape))
+        if self.p.positions.skip > 1:
+            log(3, "Skipping every {:d} positions".format(self.p.positions.skip))
+        
         self.compute_scan_mapping_and_trajectory(data_shape, positions_fast_shape, positions_slow_shape)
 
         if None not in [self.p.darkfield.file, self.p.darkfield.key]:
@@ -385,19 +406,18 @@ class Hdf5Loader(PtyScan):
             log(3, "No normalisation will be applied.")
 
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            print self.p.recorded_energy.multiplier
             self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()] * self.p.recorded_energy.multiplier)
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
 
 
         if None not in [self.p.recorded_distance.file, self.p.recorded_distance.key]:
-            self.p.distance = h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][()]
+            self.p.distance = np.float(h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][()] * self.p.recorded_distance.multiplier)
             self.meta.distance = self.p.distance
             log(3, "loading distance={} from file".format(self.p.distance))
         
         if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
-            self.p.psize = h5.File(self.p.recorded_psize.file, 'r')[self.p.recorded_psize.key][()]
+            self.p.psize = np.float(h5.File(self.p.recorded_psize.file, 'r')[self.p.recorded_psize.key][()] * self.p.recorded_psize.multiplier)
             self.meta.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
 
@@ -475,7 +495,7 @@ class Hdf5Loader(PtyScan):
         weights = {}
         for ii in indices:
             jj = self.preview_indices[ii]
-            weights[ii], intensities[jj] = self.get_corrected_intensities(jj)
+            weights[ii], intensities[ii] = self.get_corrected_intensities(jj)
             positions[ii] = np.array([self.slow_axis[jj] * self.p.positions.slow_multiplier,
                                       self.fast_axis[jj] * self.p.positions.fast_multiplier])
 
@@ -489,7 +509,7 @@ class Hdf5Loader(PtyScan):
         There is a lot of logic here, I wonder if there is a better way to get rid of it.
         Limited a bit by the MPI, adn thinking about extension to large data size.
         '''
-        if isinstance(index, int):
+        if not hasattr(index, '__iter__'):
             index = (index,)
         indexed_frame_slices = tuple([slice(ix, ix+1, 1) for ix in index])
         indexed_frame_slices += self.frame_slices
@@ -506,15 +526,15 @@ class Hdf5Loader(PtyScan):
 
         if self.flatfield is not None:
             if self.flatfield_laid_out_like_data:
-                intensity /= self.flatfield[indexed_frame_slices].squeeze()
+                intensity[:] = intensity / self.flatfield[indexed_frame_slices].squeeze()
             else:
-                intensity /= self.flatfield[self.frame_slices].squeeze()
+                intensity[:] = intensity / self.flatfield[self.frame_slices].squeeze()
 
         if self.normalisation is not None:
             if self.normalisation_laid_out_like_positions:
-                intensity /= self.normalisation[index]
+                intensity[:] = intensity / self.normalisation[index]
             else:
-                intensity /= self.normalisation
+                intensity[:] = intensity / self.normalisation
 
         if self.mask is not None:
             if self.mask_laid_out_like_data:
@@ -531,6 +551,7 @@ class Hdf5Loader(PtyScan):
         '''
         This horrendous block of logic is all to do with making a semi-intelligent guess at what the data looks like.
         '''
+        skip = self.p.positions.skip
         if data_shape[:-2] == positions_slow_shape == positions_fast_shape:
             '''
             cases covered:
@@ -560,8 +581,8 @@ class Hdf5Loader(PtyScan):
                     elif isinstance(fast_axis_bounds, (tuple, list)):
                         fast_axis_bounds = set_fast_axis_bounds
 
-                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
-                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
+                self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
                 self.num_frames = len(self.preview_indices[0])
             else:
                 if (set_slow_axis_bounds is not None) and (set_fast_axis_bounds is not None):
@@ -573,7 +594,7 @@ class Hdf5Loader(PtyScan):
                     elif isinstance(fast_axis_bounds, (tuple, list)):
                         fast_axis_bounds = set_fast_axis_bounds
                 self._scantype = "arb"
-                self.preview_indices = range(*fast_axis_bounds)
+                self.preview_indices = np.array(list(range(*fast_axis_bounds)))[::skip]
                 self.num_frames = len(self.preview_indices)
 
         elif ((len(positions_fast_shape)>1) and (len(positions_slow_shape)>1)) and data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
@@ -582,8 +603,8 @@ class Hdf5Loader(PtyScan):
             axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
             '''
             log(3, "Positions are raster, but data is a list of frames. Unpacking the data to match the positions...")
-            slow_axis_bounds = [0, self.slow_axis.shape[1]]
-            fast_axis_bounds = [0, self.fast_axis.shape[1]]
+            slow_axis_bounds = [0, self.slow_axis.shape[0]]
+            fast_axis_bounds = [0, self.fast_axis.shape[-1]]
 
             set_slow_axis_bounds = self.p.positions.bounding_box.slow_axis_bounds
             set_fast_axis_bounds = self.p.positions.bounding_box.fast_axis_bounds
@@ -598,8 +619,8 @@ class Hdf5Loader(PtyScan):
                 elif isinstance(fast_axis_bounds, (tuple, list)):
                     fast_axis_bounds = set_fast_axis_bounds
 
-            indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
-            self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()])
+            indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
+            self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()])
             self.num_frames = len(self.preview_indices[0])
             self._ismapped = False
             self._scantype = 'raster'
@@ -629,9 +650,9 @@ class Hdf5Loader(PtyScan):
 
                 self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
 
-                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
-                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
-                self.num_frames = np.prod(indices[0].shape)
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
+                self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
+                self.num_frames = len(self.preview_indices[0])
 
                 self._ismapped = True
                 self._scantype = 'raster'
@@ -658,10 +679,9 @@ class Hdf5Loader(PtyScan):
 
                 self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
 
-                indices = np.meshgrid(range(*fast_axis_bounds), range(*slow_axis_bounds))
-
-                self.preview_indices = np.array([indices[1].flatten(), indices[0].flatten()], dtype=int)
-                self.num_frames = np.prod(indices[0].shape)
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
+                self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
+                self.num_frames = len(self.preview_indices[0])
 
 
                 self._ismapped = False

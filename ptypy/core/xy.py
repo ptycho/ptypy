@@ -79,7 +79,7 @@ def from_pars(xypars=None):
     """
     p = DEFAULT.copy(depth=3)
     model = None
-    if hasattr(xypars, 'items') or hasattr(xypars, 'iteritems'):
+    if hasattr(xypars, 'items') or hasattr(xypars, 'items'):
         # This is a dict
         p.update(xypars, in_place_depth=3)
     elif xypars is None:
@@ -109,7 +109,7 @@ def from_pars(xypars=None):
             pos = np.asarray(p.model)
         elif p.model == 'round':
             e, l, s = _complete(p.extent, p.steps, p.spacing)
-            pos = round_scan(s[0], l[0]/2)
+            pos = round_scan(s[0], l[0]//2)
         elif p.model == 'spiral':
             e, l, s = _complete(p.extent, p.steps, p.spacing)
             pos = spiral_scan(s[0], e[0]/2)
@@ -185,7 +185,7 @@ def augment_to_coordlist(a, Npos):
     return b[:Npos, :2]
 
 
-def raster_scan(dy=1.5e-6, dx=1.5e-6, ny=10, nx=10):
+def raster_scan(dy=1.5e-6, dx=1.5e-6, ny=10, nx=10, ang=0.):
     """
     Generates a raster scan.
 
@@ -197,6 +197,9 @@ def raster_scan(dy=1.5e-6, dx=1.5e-6, ny=10, nx=10):
 
     dy, dx : float
         Step size (grid spacing) in *y* and *x*
+        
+    ang: float
+        Rotation angle of the raster grid (counterclockwise, in degrees)
 
     Returns
     -------
@@ -211,6 +214,9 @@ def raster_scan(dy=1.5e-6, dx=1.5e-6, ny=10, nx=10):
     >>> plt.plot(pos[:, 1], pos[:, 0], 'o-'); plt.show()
     """
     iix, iiy = np.indices((nx, ny))
+    if ang != 0.:
+        ang *= np.pi/180.
+        iix, iiy = np.cos(ang)*iix + np.sin(ang)*iiy, np.cos(ang)*iiy - np.sin(ang)*iix
     positions = [(dx*i, dy*j) for i, j in zip(iix.ravel(), iiy.ravel())]
     return np.asarray(positions)
 
@@ -292,7 +298,7 @@ def spiral_scan(dr=1.5e-6, r=7.5e-6, maxpts=None):
         maxpts = 100000
 
     positions = []
-    for k in xrange(maxpts):
+    for k in range(maxpts):
         theta = alpha * np.sqrt(k)
         rr = beta * theta
         if rr > r:

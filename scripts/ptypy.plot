@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import sys
 import argparse
@@ -33,7 +33,7 @@ header = io.h5read(filename,'header')['header']
 if str(header['kind']) == 'fullflat':
     raise NotImplementedError('Loading specific data from flattened dump not yet supported')
 else: 
-    content = io.h5read(filename,'content').values()[0]#['content']
+    content = list(io.h5read(filename,'content').values())[0]#['content']
     runtime = content['runtime']
     probes = u.Param()
     probes.update(content['probe'], Convert = True)
