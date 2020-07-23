@@ -16,7 +16,6 @@ from ptypy.core.data import PtyScan
 from ptypy.experiment import register
 from ptypy.utils.verbose import log
 from ptypy.utils.array_utils import _translate_to_pix
-from ptypy.utils import parallel
 
 
 @register()
