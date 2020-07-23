@@ -16,6 +16,7 @@ from ptypy.core.data import PtyScan
 from ptypy.experiment import register
 from ptypy.utils.verbose import log
 from ptypy.utils.array_utils import _translate_to_pix
+from ptypy.utils import parallel
 
 
 @register()
@@ -216,6 +217,11 @@ class Hdf5Loader(PtyScan):
     type = str
     help = This is the key to the normalisation entry in the hdf5 file.
 
+    [normalisation.sigma]
+    default = 3
+    type = int
+    help = Sigma value applied for automatic detection of outliers in the normalisation dataset.
+
     [recorded_energy]
     default =
     type = Param
@@ -394,6 +400,8 @@ class Hdf5Loader(PtyScan):
 
         if None not in [self.p.normalisation.file, self.p.normalisation.key]:
             self.normalisation = h5.File(self.p.normalisation.file, 'r')[self.p.normalisation.key]
+            self.normalisation_mean = self.normalisation[:].mean()
+            self.normalisation_std  = self.normalisation[:].std()
             if (self.normalisation.shape == self.fast_axis.shape == self.slow_axis.shape):
                 log(3, "The normalisation is the same dimensionality as the axis information.")
                 self.normalisation_laid_out_like_positions = True
@@ -513,8 +521,6 @@ class Hdf5Loader(PtyScan):
             index = (index,)
         indexed_frame_slices = tuple([slice(ix, ix+1, 1) for ix in index])
         indexed_frame_slices += self.frame_slices
-
-
         intensity = self.intensities[indexed_frame_slices].squeeze()
 
         # TODO: Remove these logic blocks into something a bit more sensible.
@@ -532,9 +538,11 @@ class Hdf5Loader(PtyScan):
 
         if self.normalisation is not None:
             if self.normalisation_laid_out_like_positions:
-                intensity[:] = intensity / self.normalisation[index]
+                scale =  self.normalisation[index]
             else:
-                intensity[:] = intensity / self.normalisation
+                scale = np.squeeze(self.normalisation[indexed_frame_slices])
+            if np.abs(scale - self.normalisation_mean) < (self.p.normalisation.sigma * self.normalisation_std):
+                intensity[:] = intensity / scale * self.normalisation_mean
 
         if self.mask is not None:
             if self.mask_laid_out_like_data:
