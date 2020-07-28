@@ -13,7 +13,7 @@ p.verbose_level = 3
 p.frames_per_block = 400
 # set home path
 p.io = u.Param()
-p.io.home = "~/dumps/ptypy/"
+p.io.home = "~/dumps/ptypy/gpu/"
 p.io.autosave = u.Param(active=True)
 p.io.autoplot = u.Param(active=False)
 # max 200 frames (128x128px) of diffraction data
@@ -40,9 +40,9 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'ML_pycuda'
-p.engines.engine00.numiter = 400
-p.engines.engine00.numiter_contiguous = 80
+p.engines.engine00.name = 'ML_serial'
+p.engines.engine00.numiter = 10
+p.engines.engine00.numiter_contiguous = 5
 
 
 # prepare and run

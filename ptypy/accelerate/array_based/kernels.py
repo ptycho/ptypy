@@ -210,11 +210,11 @@ class GradientDescentKernel(BaseKernel):
 
         A1.fill(0.)
         tf = 2. * np.real(f * a.conj())
-        A1[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) - I
+        A1[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1)
 
         A2.fill(0.)
         tf = 2. * np.real(f * b.conj()) + np.abs(a) ** 2
-        A2[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) - I
+        A2[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1)
         return
 
     def fill_b(self, addr, Brenorm, w, B):

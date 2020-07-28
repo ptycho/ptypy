@@ -370,12 +370,13 @@ class GaussianModel(BaseModelSerial):
             POK.pr_update_ML(addr, prg, ob, aux)
 
         for dID, prep in self.engine.diff_info.items():
-            err_phot = prep.err_phot / np.prod(prep.weights.shape)
+            err_phot = prep.err_phot
+            LL += err_phot.sum()
+            err_phot /= np.prod(prep.weights.shape[-2:])
             err_fourier = np.zeros_like(err_phot)
             err_exit = np.zeros_like(err_phot)
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error_dct.update(zip(prep.view_IDs, errs))
-            LL += err_phot.sum()
 
         # MPI reduction of gradients
         ob_grad.allreduce()
@@ -389,7 +390,7 @@ class GaussianModel(BaseModelSerial):
                 LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
-
+        print(self.LL)
         return error_dct
 
     def poly_line_coeffs(self, c_ob_h, c_pr_h):

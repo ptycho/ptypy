@@ -51,6 +51,6 @@ extern "C" __global__ void make_a012(const CTYPE* f,
 
   auto Iv = I[iz * x + ix];
   A0[iz * x + ix] = sumtf0 - Iv;
-  A1[iz * x + ix] = sumtf1 - Iv;
-  A2[iz * x + ix] = sumtf2 - Iv;
+  A1[iz * x + ix] = sumtf1;
+  A2[iz * x + ix] = sumtf2;
 }
