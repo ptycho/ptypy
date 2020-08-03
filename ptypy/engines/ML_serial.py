@@ -458,7 +458,7 @@ class GaussianModel(BaseModelSerial):
         if self.regularizer:
             for name, s in self.ob.storages.items():
                 B += Brenorm * self.regularizer.poly_line_coeffs(
-                    ob_h.storages[name].data, s.data)
+                    c_ob_h.storages[name].data, s.data)
 
         self.B = B
 

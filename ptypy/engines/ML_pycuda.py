@@ -19,15 +19,14 @@ from pycuda.tools import DeviceMemoryPool
 from collections import deque
 
 from . import register
-from .ML import ML, BaseModel, prepare_smoothing_preconditioner, Regul_del2
+from .ML import ML, BaseModel, prepare_smoothing_preconditioner
 from .ML_serial import ML_serial, BaseModelSerial
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
-from .utils import Cnorm2, Cdot
 from ..accelerate import py_cuda as gpu
 from ..accelerate.py_cuda.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel
+from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel, DerivativesKernel
 from ..accelerate.array_based import address_manglers
 
 __all__ = ['ML_pycuda']
@@ -353,6 +352,15 @@ class GaussianModel(BaseModelSerial):
         """
         super(GaussianModel, self).__init__(MLengine)
 
+        if self.p.reg_del2:
+            self.regularizer = Regul_del2_pycuda(
+                self.p.reg_del2_amplitude,
+                queue=self.engine.queue,
+                allocator=self.engine.dmp.allocate
+            )
+        else:
+            self.regularizer = None
+
     def prepare(self):
 
         super(GaussianModel, self).prepare()
@@ -581,8 +589,132 @@ class GaussianModel(BaseModelSerial):
         if self.regularizer:
             for name, s in self.ob.storages.items():
                 B += Brenorm * self.regularizer.poly_line_coeffs(
-                    ob_h.storages[name].data, s.data)
+                    c_ob_h.storages[name].data, s.data)
 
         self.B = B
 
         return B
+
+class Regul_del2_pycuda(object):
+    """\
+    Squared gradient regularizer (Gaussian prior).
+
+    This class applies to any numpy array.
+    """
+    def __init__(self, amplitude, axes=[-2, -1], queue=None, allocator=None):
+        # Regul.__init__(self, axes)
+        self.axes = axes
+        self.amplitude = amplitude
+        self.delxy = None
+        self.g = None
+        self.LL = None
+        self.queue = queue
+        self.AUK = ArrayUtilsKernel(queue=queue)
+        self.DELK_c = DerivativesKernel(np.complex64, queue=queue)
+        self.DELK_f = DerivativesKernel(np.float32, queue=queue)
+
+        if allocator is None:
+            self._dmp = DeviceMemoryPool()
+            self.allocator=self._dmp.allocate
+        else:
+            self.allocator = allocator
+            self._dmp= None
+
+        empty = lambda x: gpuarray.empty(x.shape, x.dtype, allocator=self.allocator)
+
+        def delxb(x, axis=-1):
+            out = empty(x)
+            if x.dtype == np.float32:
+                self.DELK_f.delxb(x, out, axis)
+            elif x.dtype == np.complex64:
+                self.DELK_c.delxb(x, out, axis)
+            else:
+                raise TypeError("Type %s invalid for derivatives" % x.dtype)
+            return out
+
+        self.delxb = delxb
+
+        def delxf(x, axis=-1):
+            out = empty(x)
+            if x.dtype == np.float32:
+                self.DELK_f.delxf(x, out, axis)
+            elif x.dtype == np.complex64:
+                self.DELK_c.delxf(x, out, axis)
+            else:
+                raise TypeError("Type %s invalid for derivatives" % x.dtype)
+            return out
+
+        self.delxf = delxf
+        self.norm =  lambda x : self.AUK.norm2(x).get().item()
+        self.dot = lambda x, y : self.AUK.dot(x,y).get().item()
+
+        from pycuda.elementwise import ElementwiseKernel
+        self._grad_reg_kernel = ElementwiseKernel(
+            "pycuda::complex<float> *g, float fac, \
+            pycuda::complex<float> *py, pycuda::complex<float> *px, \
+            pycuda::complex<float> *my, pycuda::complex<float> *mx",
+            "g[i] = (px[i]+py[i]-my[i]-mx[i]) * fac",
+            "grad_reg",
+        )
+        def grad(amp, px,py, mx, my):
+            out = empty(px)
+            self._grad_reg_kernel(out, amp, py, px, mx, my, stream=self.queue)
+            return out
+        self.reg_grad = grad
+
+    def grad(self, x):
+        """
+        Compute and return the regularizer gradient given the array x.
+        """
+        ax0, ax1 = self.axes
+        del_xf = self.delxf(x, axis=ax0)
+        del_yf = self.delxf(x, axis=ax1)
+        del_xb = self.delxb(x, axis=ax0)
+        del_yb = self.delxb(x, axis=ax1)
+
+        self.delxy = [del_xf, del_yf, del_xb, del_yb]
+
+        # TODO this one might be slow, maybe try with elementwise kernel
+        #self.g = (del_xb + del_yb - del_xf - del_yf) * 2. * self.amplitude
+        self.g = self.reg_grad(2. * self.amplitude, del_xb, del_yb, del_xf, del_yf)
+
+
+        self.LL = self.amplitude * (self.norm(del_xf)
+                               + self.norm(del_yf)
+                               + self.norm(del_xb)
+                               + self.norm(del_yb))
+
+        return self.g
+
+    def poly_line_coeffs(self, h, x=None):
+        ax0, ax1 = self.axes
+        if x is None:
+            del_xf, del_yf, del_xb, del_yb = self.delxy
+        else:
+            del_xf = self.delxf(x, axis=ax0)
+            del_yf = self.delxf(x, axis=ax1)
+            del_xb = self.delxb(x, axis=ax0)
+            del_yb = self.delxb(x, axis=ax1)
+
+        hdel_xf = self.delxf(h, axis=ax0)
+        hdel_yf = self.delxf(h, axis=ax1)
+        hdel_xb = self.delxb(h, axis=ax0)
+        hdel_yb = self.delxb(h, axis=ax1)
+
+        c0 = self.amplitude * (self.norm(del_xf)
+                               + self.norm(del_yf)
+                               + self.norm(del_xb)
+                               + self.norm(del_yb))
+
+        c1 = 2 * self.amplitude * (self.dot(del_xf, hdel_xf)
+                                 + self.dot(del_yf, hdel_yf)
+                                 + self.dot(del_xb, hdel_xb)
+                                 + self.dot(del_yb, hdel_yb))
+
+        c2 = self.amplitude * (self.norm(hdel_xf)
+                               + self.norm(hdel_yf)
+                               + self.norm(hdel_xb)
+                               + self.norm(hdel_yb))
+
+        self.coeff = np.array([c0, c1, c2])
+        return self.coeff

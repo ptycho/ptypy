@@ -55,3 +55,108 @@ class ArrayUtilsKernel:
         
         return out
 
+    def norm2(self, A, out=None):
+        return self.dot(A, A, out)
+
+
+class DerivativesKernel:
+    def __init__(self, dtype, queue=None):
+        if dtype == np.float32:
+            stype = "float"
+        elif dtype == np.complex64:
+            stype = "complex<float>"
+        else:
+            raise NotImplementedError(
+                "delxf is only implemented for float32 and complex64")
+
+        self.queue = queue
+        self.dtype = dtype
+        self.last_axis_block = (256, 4, 1)
+        self.mid_axis_block = (256, 4, 1)
+
+        self.delxf_last = load_kernel("delx_last", file="delx_last.cu", subs={
+            'IS_FORWARD': 'true',
+            'BDIM_X': str(self.last_axis_block[0]),
+            'BDIM_Y': str(self.last_axis_block[1]),
+            'DTYPE': stype
+        })
+        self.delxb_last = load_kernel("delx_last", file="delx_last.cu", subs={
+            'IS_FORWARD': 'false',
+            'BDIM_X': str(self.last_axis_block[0]),
+            'BDIM_Y': str(self.last_axis_block[1]),
+            'DTYPE': stype
+        })
+        self.delxf_mid = load_kernel("delx_mid", file="delx_mid.cu", subs={
+            'IS_FORWARD': 'true',
+            'BDIM_X': str(self.mid_axis_block[0]),
+            'BDIM_Y': str(self.mid_axis_block[1]),
+            'DTYPE': stype
+        })
+        self.delxb_mid = load_kernel("delx_mid", file="delx_mid.cu", subs={
+            'IS_FORWARD': 'false',
+            'BDIM_X': str(self.mid_axis_block[0]),
+            'BDIM_Y': str(self.mid_axis_block[1]),
+            'DTYPE': stype
+        })
+
+    def delxf(self, input, out, axis=-1):
+        if input.dtype != self.dtype:
+            raise ValueError('Invalid input data type')
+
+        if axis < 0:
+            axis = input.ndim + axis
+        axis = np.int32(axis)
+
+        if axis == input.ndim - 1:
+            flat_dim = np.int32(np.product(input.shape[0:-1]))
+            self.delxf_last(input, out, flat_dim, np.int32(input.shape[axis]),
+                            block=self.last_axis_block,
+                            grid=(
+                int((flat_dim +
+                     self.last_axis_block[1] - 1) // self.last_axis_block[1]),
+                1, 1),
+                stream=self.queue
+            )
+        else:
+            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
+            higher_dim = np.int32(np.product(input.shape[:axis]))
+            gx = int(
+                (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
+            gy = 1
+            gz = int(higher_dim)
+            self.delxf_mid(input, out, lower_dim, higher_dim, np.int32(input.shape[axis]),
+                           block=self.mid_axis_block,
+                           grid=(gx, gy, gz),
+                           stream=self.queue
+                           )
+
+    def delxb(self, input, out, axis=-1):
+        if input.dtype != self.dtype:
+            raise ValueError('Invalid input data type')
+
+        if axis < 0:
+            axis = input.ndim + axis
+        axis = np.int32(axis)
+
+        if axis == input.ndim - 1:
+            flat_dim = np.int32(np.product(input.shape[0:-1]))
+            self.delxb_last(input, out, flat_dim, np.int32(input.shape[axis]),
+                            block=self.last_axis_block,
+                            grid=(
+                int((flat_dim +
+                     self.last_axis_block[1] - 1) // self.last_axis_block[1]),
+                1, 1),
+                stream=self.queue
+            )
+        else:
+            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
+            higher_dim = np.int32(np.product(input.shape[:axis]))
+            gx = int(
+                (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
+            gy = 1
+            gz = int(higher_dim)
+            self.delxb_mid(input, out, lower_dim, higher_dim, np.int32(input.shape[axis]),
+                           block=self.mid_axis_block,
+                           grid=(gx, gy, gz),
+                           stream=self.queue
+                           )

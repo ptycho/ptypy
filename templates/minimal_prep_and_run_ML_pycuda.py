@@ -29,7 +29,7 @@ p.scans.MF.data.num_frames = 600
 p.scans.MF.data.save = None
 
 p.scans.MF.illumination = u.Param(diversity=None)
-p.scans.MF.coherence = u.Param(num_probe_modes=2)
+p.scans.MF.coherence = u.Param(num_probe_modes=1)
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
@@ -43,6 +43,8 @@ p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'ML_serial'
 p.engines.engine00.numiter = 10
 p.engines.engine00.numiter_contiguous = 5
+p.engines.engine00.reg_del2 = True                      # Whether to use a Gaussian prior (smoothing) regularizer
+p.engines.engine00.reg_del2_amplitude = 1.             # Amplitude of the Gaussian prior if used
 
 
 # prepare and run

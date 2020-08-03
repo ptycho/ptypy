@@ -356,7 +356,7 @@ class BaseModel(object):
             self.Irenorm = self.p.intensity_renormalization
 
         if self.p.reg_del2:
-            self.regularizer = Regul_del2(amplitude=self.p.reg_del2_amplitude)
+            self.regularizer = Regul_del2(self.p.reg_del2_amplitude)
         else:
             self.regularizer = None
 
