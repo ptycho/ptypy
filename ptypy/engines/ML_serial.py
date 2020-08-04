@@ -127,6 +127,9 @@ class ML_serial(ML):
             prep.label = label
             self.diff_info[d.ID] = prep
             prep.err_phot = np.zeros((d.data.shape[0],), dtype=np.float32)
+            # set floating intensity coefficients to 1.0
+            # they get overridden if self.p.floating_intensities=True
+            prep.floating_coefficients = np.ones((d.data.shape[0],), dtype=np.float32)
 
         # Unfortunately this needs to be done for all pods, since
         # the shape of the probe / object was modified.
@@ -337,6 +340,7 @@ class GaussianModel(BaseModelSerial):
             addr = prep.addr
             w = prep.weights
             err_phot = prep.err_phot
+            fic = prep.float_intens_coeff
 
             # local references
             ob = self.engine.ob.S[oID].data
@@ -352,15 +356,8 @@ class GaussianModel(BaseModelSerial):
             aux[:] = FW(aux)
             GDK.make_model(aux, addr)
 
-            """
-            # for later
             if self.p.floating_intensities:
-                tmp = np.zeros_like(Imodel)
-                tmp = w * Imodel * I
-                GDK.error_reduce(err_num, w * Imodel * I)
-                GDK.error_reduce(err_den, w * Imodel ** 2)
-                Imodel *= (err_num / err_den).reshape(Imodel.shape[0], 1, 1)
-            """
+                GDK.intensity_renorm(addr, w, I, fic)
 
             GDK.main(aux, addr, w, I)
             GDK.error_reduce(addr, err_phot)
@@ -423,6 +420,7 @@ class GaussianModel(BaseModelSerial):
             # get addresses and auxilliary array
             addr = prep.addr
             w = prep.weights
+            fic = prep.float_intens_coeff
 
             # local references
             ob = self.ob.S[oID].data
@@ -442,14 +440,8 @@ class GaussianModel(BaseModelSerial):
             a[:] = FW(a)
             b[:] = FW(b)
 
-            GDK.make_a012(f, a, b, addr, I)
+            GDK.make_a012(f, a, b, addr, I, fic)
 
-            """
-            if self.p.floating_intensities:
-                A0 *= self.float_intens_coeff[dname]
-                A1 *= self.float_intens_coeff[dname]
-                A2 *= self.float_intens_coeff[dname]
-            """
             GDK.fill_b(addr, Brenorm, w, B)
 
         parallel.allreduce(B)

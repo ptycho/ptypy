@@ -241,11 +241,16 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.fill_b_reduce_cuda = load_kernel(
             'fill_b_reduce', {**subs, 'BDIM_X': 1024})
         self.main_cuda = load_kernel('gd_main', subs)
+        self.intensity_renorm_cuda_step1 = load_kernel('step1', subs,'intens_renorm.cu')
+        self.intensity_renorm_cuda_step2 = load_kernel('step2', subs,'intens_renorm.cu')
 
     def allocate(self):
         self.gpu.LLden = gpuarray.zeros(self.fshape, dtype=self.ftype)
         self.gpu.LLerr = gpuarray.zeros(self.fshape, dtype=self.ftype)
         self.gpu.Imodel = gpuarray.zeros(self.fshape, dtype=self.ftype)
+        self.gpu.fic_tmp = gpuarray.empty((self.fshape[0],), dtype=self.ftype)
+        self.gpu.fic_tmp.fill(1.0)
+
         # temporary array for the reduction in fill_b
         self.gpu.Btmp = gpuarray.zeros(
             (3, (np.prod(self.fshape)*self.nmodes + 1023) // 1024),
@@ -269,7 +274,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                              grid=(int((x + bx - 1) // bx), 1, int(z)),
                              stream=self.queue)
 
-    def make_a012(self, b_f, b_a, b_b, addr, I):
+    def make_a012(self, b_f, b_a, b_b, addr, I, fic):
         # reference shape (= GPU global dims)
         sh = I.shape
 
@@ -285,7 +290,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         y = np.int32(self.nmodes)
         x = np.int32(sh[1]*sh[2])
         bx = 1024
-        self.make_a012_cuda(b_f, b_a, b_b, I,
+        self.make_a012_cuda(b_f, b_a, b_b, I, fic,
                             A0, A1, A2, z, y, x, maxz,
                             block=(bx, 1, 1),
                             grid=(int((x + bx - 1) // bx), 1, int(z)),
@@ -337,6 +342,55 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                grid=(int(maxz), 1, 1),
                                shared=32*32*4,
                                stream=self.queue)
+
+    def intensity_renorm(self, addr, w, I, fic):
+
+        # reference shape  (= GPU global dims)
+        sh = I.shape
+
+        # stopper
+        maxz = I.shape[0]
+
+        # internal buffers
+        num = self.gpu.LLerr
+        den = self.gpu.LLden
+        Imodel = self.gpu.Imodel
+        fic_tmp = self.gpu.fic_tmp
+
+        ## math ##
+        x = np.int32(sh[1] * sh[2])
+        z = np.int32(maxz)
+        bx = 1024
+
+        #print(Imodel.dtype, I.dtype, w.dtype, err.dtype, aux.dtype, z, y, x)
+        self.intensity_renorm_cuda_step1(Imodel, I, w, num, den,
+                       z, x,
+                       block=(bx, 1, 1),
+                       grid=(int((x + bx - 1) // bx), 1, int(z)),
+                       stream=self.queue)
+
+        self.error_reduce_cuda(num, fic,
+                               np.int32(num.shape[-2]),
+                               np.int32(num.shape[-1]),
+                               block=(32, 32, 1),
+                               grid=(int(maxz), 1, 1),
+                               shared=32*32*4,
+                               stream=self.queue)
+
+        self.error_reduce_cuda(den, fic_tmp,
+                               np.int32(den.shape[-2]),
+                               np.int32(den.shape[-1]),
+                               block=(32, 32, 1),
+                               grid=(int(maxz), 1, 1),
+                               shared=32*32*4,
+                               stream=self.queue)
+
+        #print(Imodel.dtype, I.dtype, w.dtype, err.dtype, aux.dtype, z, y, x)
+        self.intensity_renorm_cuda_step2(den, fic, Imodel,
+                       z, x,
+                       block=(bx, 1, 1),
+                       grid=(int((x + bx - 1) // bx), 1, int(z)),
+                       stream=self.queue)
 
     def main(self, b_aux, addr, w, I):
         nmodes = self.nmodes

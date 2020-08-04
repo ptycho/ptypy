@@ -101,7 +101,7 @@ class GradientDescentKernelTest(unittest.TestCase):
 
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_a012(b_f, b_a, b_b, addr, I)
+        GDK.make_a012(b_f, b_a, b_b, addr, I, fic)
         print('A0',repr(GDK.npy.Imodel))
         print('A1',repr(GDK.npy.LLerr))
         print('A2',repr(GDK.npy.LLden))

@@ -172,6 +172,7 @@ class GradientDescentKernel(BaseKernel):
         self.npy.LLerr = np.zeros(self.fshape, dtype=self.ftype)
         self.npy.Imodel = np.zeros(self.fshape, dtype=self.ftype)
 
+        self.npy.float_tmp = np.ones((self.fshape[0],), dtype=self.ftype)
 
     def make_model(self, b_aux, addr):
 
@@ -186,7 +187,7 @@ class GradientDescentKernel(BaseKernel):
         tf = aux.reshape(sh[0], self.nmodes, sh[1], sh[2])
         Imodel[:] = (np.abs(tf) ** 2).sum(1)
 
-    def make_a012(self, b_f, b_a, b_b, addr, I):
+    def make_a012(self, b_f, b_a, b_b, addr, I, fic):
 
         # reference shape (= GPU global dims)
         sh = I.shape
@@ -205,15 +206,15 @@ class GradientDescentKernel(BaseKernel):
 
         ## Actual math ## (subset of FUK.fourier_error)
         A0.fill(0.)
-        tf = np.abs(f).astype(self.ftype) ** 2
+        tf = np.abs(f).astype(self.ftype) ** 2 * fic.reshape((maxz,1,1))
         A0[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) - I
 
         A1.fill(0.)
-        tf = 2. * np.real(f * a.conj())
+        tf = 2. * np.real(f * a.conj()) * fic.reshape((maxz,1,1))
         A1[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1)
 
         A2.fill(0.)
-        tf = 2. * np.real(f * b.conj()) + np.abs(a) ** 2
+        tf = 2. * np.real(f * b.conj()) + np.abs(a) ** 2 * fic.reshape((maxz,1,1))
         A2[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1)
         return
 
@@ -253,6 +254,30 @@ class GradientDescentKernel(BaseKernel):
         # Reduces the LL error along the last 2 dimensions.fd
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
+
+    def intensity_renorm(self, addr, w, I, fic):
+
+        # reference shape  (= GPU global dims)
+        sh = fic.shape
+
+        # stopper
+        maxz = fic.shape[0]
+
+        # internal buffers
+        num = self.npy.LLerr[:maxz]
+        den = self.npy.LLden[:maxz]
+        Imodel = self.npy.Imodel[:maxz]
+        fic_tmp = self.npy.fic_tmp[:maxz]
+
+        ## math ##
+        num[:] = w * Imodel * I
+        den[:] = w * Imodel ** 2
+
+        fic[:] = num.sum(-1).sum(-1)
+        fic_tmp[:]= den.sum(-1).sum(-1)
+        fic/=fic_tmp
+
+        Imodel *= fic.reshape(Imodel.shape[0], 1, 1)
 
     def main(self, b_aux, addr, w, I):
 

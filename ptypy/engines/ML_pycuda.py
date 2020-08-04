@@ -318,6 +318,7 @@ class ML_pycuda(ML_serial):
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
             prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
+            prep.fic_gpu = gpuarray.ones_like(prep.err_phot_gpu)
 
             if use_tiles:
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
@@ -413,13 +414,10 @@ class GaussianModel(BaseModelSerial):
 
             # get addresses and auxilliary array
             addr = prep.addr_gpu
+            fic = prep.fic_gpu
 
             err_phot = prep.err_phot_gpu
             # local references
-            # ob = gpuarray.to_gpu(self.engine.ob.S[oID].data)
-            # obg = gpuarray.to_gpu(ob_grad.S[oID].data)
-            # pr = gpuarray.to_gpu(self.engine.pr.S[pID].data)
-            # prg = gpuarray.to_gpu(pr_grad.S[pID].data)
             ob = self.engine.ob.S[oID].data
             obg = ob_grad.S[oID].data
             pr = self.engine.pr.S[pID].data
@@ -442,15 +440,8 @@ class GaussianModel(BaseModelSerial):
             FW(aux, aux)
             GDK.make_model(aux, addr)
 
-            """
-            # for later
             if self.p.floating_intensities:
-                tmp = np.zeros_like(Imodel)
-                tmp = w * Imodel * I
-                GDK.error_reduce(err_num, w * Imodel * I)
-                GDK.error_reduce(err_den, w * Imodel ** 2)
-                Imodel *= (err_num / err_den).reshape(Imodel.shape[0], 1, 1)
-            """
+                GDK.intensity_renorm(addr, w, I, fic)
 
             GDK.queue.wait_for_event(ev)
             GDK.main(aux, addr, w, I)
@@ -537,8 +528,9 @@ class GaussianModel(BaseModelSerial):
 
             FW = kern.FW
 
-            # get addresses and auxilliary array
+            # get addresses and auxiliary arrays
             addr = prep.addr_gpu
+            fic = prep.fic_gpu
 
             # TODO streaming?
             #w = gpuarray.to_gpu(prep.weights)
@@ -554,11 +546,6 @@ class GaussianModel(BaseModelSerial):
             ob_h = c_ob_h.S[oID].data
             pr = self.pr.S[pID].data
             pr_h = c_pr_h.S[pID].data
-            # ob = gpuarray.to_gpu(self.ob.S[oID].data)
-            # ob_h = gpuarray.to_gpu(c_ob_h.S[oID].data)
-            # pr = gpuarray.to_gpu(self.pr.S[pID].data)
-            # pr_h = gpuarray.to_gpu(c_pr_h.S[pID].data)
-
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(f, addr, ob, pr, add=False)
@@ -572,7 +559,7 @@ class GaussianModel(BaseModelSerial):
             FW(b,b)
 
             GDK.queue.wait_for_event(ev)
-            GDK.make_a012(f, a, b, addr, I)
+            GDK.make_a012(f, a, b, addr, I, fic)
 
             """
             if self.p.floating_intensities:
