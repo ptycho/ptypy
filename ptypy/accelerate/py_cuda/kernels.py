@@ -241,8 +241,8 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.fill_b_reduce_cuda = load_kernel(
             'fill_b_reduce', {**subs, 'BDIM_X': 1024})
         self.main_cuda = load_kernel('gd_main', subs)
-        self.intensity_renorm_cuda_step1 = load_kernel('step1', subs,'intens_renorm.cu')
-        self.intensity_renorm_cuda_step2 = load_kernel('step2', subs,'intens_renorm.cu')
+        self.floating_intensity_cuda_step1 = load_kernel('step1', subs,'intens_renorm.cu')
+        self.floating_intensity_cuda_step2 = load_kernel('step2', subs,'intens_renorm.cu')
 
     def allocate(self):
         self.gpu.LLden = gpuarray.zeros(self.fshape, dtype=self.ftype)
@@ -343,7 +343,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                shared=32*32*4,
                                stream=self.queue)
 
-    def intensity_renorm(self, addr, w, I, fic):
+    def floating_intensity(self, addr, w, I, fic):
 
         # reference shape  (= GPU global dims)
         sh = I.shape
@@ -362,7 +362,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         z = np.int32(maxz)
         bx = 1024
 
-        self.intensity_renorm_cuda_step1(Imodel, I, w, num, den,
+        self.floating_intensity_cuda_step1(Imodel, I, w, num, den,
                        z, x,
                        block=(bx, 1, 1),
                        grid=(int((x + bx - 1) // bx), 1, int(z)),
@@ -384,7 +384,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                shared=32*32*4,
                                stream=self.queue)
 
-        self.intensity_renorm_cuda_step2(fic_tmp, fic, Imodel,
+        self.floating_intensity_cuda_step2(fic_tmp, fic, Imodel,
                        z, x,
                        block=(bx, 1, 1),
                        grid=(int((x + bx - 1) // bx), 1, int(z)),

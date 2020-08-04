@@ -159,7 +159,8 @@ class GradientDescentKernel(BaseKernel):
             'error_reduce',
             'make_a012',
             'fill_b',
-            'main'
+            'main',
+            'floating_intensity'
         ]
 
     def allocate(self):
@@ -205,17 +206,18 @@ class GradientDescentKernel(BaseKernel):
         b = b_b[:maxz * self.nmodes]
 
         ## Actual math ## (subset of FUK.fourier_error)
+        fc = fic.reshape((maxz,1,1))
         A0.fill(0.)
-        tf = np.abs(f).astype(self.ftype) ** 2 * fic.reshape((maxz,1,1))
-        A0[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) - I
+        tf = np.abs(f).astype(self.ftype) ** 2
+        A0[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc - I
 
         A1.fill(0.)
-        tf = 2. * np.real(f * a.conj()) * fic.reshape((maxz,1,1))
-        A1[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1)
+        tf = 2. * np.real(f * a.conj())
+        A1[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc
 
         A2.fill(0.)
-        tf = 2. * np.real(f * b.conj()) + np.abs(a) ** 2 * fic.reshape((maxz,1,1))
-        A2[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1)
+        tf = 2. * np.real(f * b.conj()) + np.abs(a) ** 2
+        A2[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc
         return
 
     def fill_b(self, addr, Brenorm, w, B):
@@ -255,7 +257,7 @@ class GradientDescentKernel(BaseKernel):
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
 
-    def intensity_renorm(self, addr, w, I, fic):
+    def floating_intensity(self, addr, w, I, fic):
 
         # reference shape  (= GPU global dims)
         sh = fic.shape

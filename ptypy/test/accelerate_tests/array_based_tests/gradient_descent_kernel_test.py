@@ -95,17 +95,46 @@ class GradientDescentKernelTest(unittest.TestCase):
         np.testing.assert_array_almost_equal(exp_Imodel, GDK.npy.Imodel,
                                       err_msg="`Imodel` buffer has not been updated as expected")
 
+    def test_floating_intensity(self):
+        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
+        fic = np.ones((I.shape[0],), dtype=I.dtype)
+        GDK=GradientDescentKernel(b_f, addr.shape[1])
+        GDK.allocate()
+        GDK.npy.Imodel[:I.shape[0]] = I * (1+np.arange(I.shape[0]))[::-1].reshape((I.shape[0],1,1))
+        GDK.floating_intensity(addr, w, I, fic)
+        #print('Imodel',repr(GDK.npy.Imodel))
+        #print('fic',repr(1./fic))
+        exp_Imodel = np.array([[[0., 0., 0.],
+                [1., 1., 1.],
+                [4., 4., 4.]],
+
+               [[1., 1., 1.],
+                [2., 2., 2.],
+                [5., 5., 5.]],
+
+               [[4., 4., 4.],
+                [5., 5., 5.],
+                [8., 8., 8.]],
+
+               [[0., 0., 0.],
+                [0., 0., 0.],
+                [0., 0., 0.]]], dtype=np.float32)
+        exp_fic=1./np.array([3., 2., 1.], dtype=np.float32)
+        np.testing.assert_array_almost_equal(exp_Imodel, GDK.npy.Imodel,
+            err_msg="`Imodel` buffer has not been updated as expected")
+        np.testing.assert_array_almost_equal(exp_fic, fic,
+            err_msg="floating intensity coeff (fic) has not been updated as expected")
+
 
     def test_make_a012(self):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
-
+        fic = np.ones((I.shape[0],), dtype=I.dtype)
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
         GDK.make_a012(b_f, b_a, b_b, addr, I, fic)
-        print('A0',repr(GDK.npy.Imodel))
-        print('A1',repr(GDK.npy.LLerr))
-        print('A2',repr(GDK.npy.LLden))
-
+        #print('Imodel',repr(GDK.npy.Imodel))
+        #print('LLerr',repr(GDK.npy.LLerr))
+        #print('LLden',repr(GDK.npy.LLden))
         exp_A0 = np.array([[[ 1.,  1.,  1.],
         [ 2.,  2.,  2.],
         [ 5.,  5.,  5.]],
@@ -124,16 +153,16 @@ class GradientDescentKernelTest(unittest.TestCase):
         np.testing.assert_array_almost_equal(exp_A0, GDK.npy.Imodel,
                                       err_msg="`Imodel` buffer (=A0) has not been updated as expected")
         exp_A1 = np.array([[[ 0.,  0.,  0.],
-        [ 1.,  5.,  9.],
-        [ 0.,  8., 16.]],
+        [ 2.,  6., 10.],
+        [ 4., 12., 20.]],
 
-       [[-1., -1., -1.],
-        [ 8., 12., 16.],
-        [15., 23., 31.]],
+       [[ 0.,  0.,  0.],
+        [10., 14., 18.],
+        [20., 28., 36.]],
 
-       [[-4., -4., -4.],
-        [13., 17., 21.],
-        [28., 36., 44.]],
+       [[ 0.,  0.,  0.],
+        [18., 22., 26.],
+        [36., 44., 52.]],
 
        [[ 0.,  0.,  0.],
         [ 0.,  0.,  0.],
@@ -141,16 +170,16 @@ class GradientDescentKernelTest(unittest.TestCase):
         np.testing.assert_array_almost_equal(exp_A1, GDK.npy.LLerr,
                                       err_msg="`LLerr` buffer (=A1) has not been updated as expected")
         exp_A2 = np.array([[[ 0.,  4., 12.],
-        [ 3.,  7., 15.],
-        [ 8., 12., 20.]],
+        [ 4.,  8., 16.],
+        [12., 16., 24.]],
 
-       [[-1., 11., 27.],
-        [10., 22., 38.],
-        [23., 35., 51.]],
+       [[ 0., 12., 28.],
+        [12., 24., 40.],
+        [28., 40., 56.]],
 
-       [[-4., 16., 40.],
-        [15., 35., 59.],
-        [36., 56., 80.]],
+       [[ 0., 20., 44.],
+        [20., 40., 64.],
+        [44., 64., 88.]],
 
        [[ 0.,  0.,  0.],
         [ 0.,  0.,  0.],
@@ -160,14 +189,15 @@ class GradientDescentKernelTest(unittest.TestCase):
 
     def test_fill_b(self):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
+        fic = np.ones((I.shape[0],), dtype=I.dtype)
         Brenorm = 0.35
         B = np.zeros((3,), dtype=FLOAT_TYPE)
         GDK=GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_a012(b_f, b_a, b_b, addr, I)
+        GDK.make_a012(b_f, b_a, b_b, addr, I, fic)
         GDK.fill_b(addr, Brenorm, w, B)
         #print('B',repr(B))
-        exp_B = np.array([ 4699.8,  3953.6, 10963.4], dtype=FLOAT_TYPE)
+        exp_B = np.array([ 4699.8,  5398.4, 13398.], dtype=FLOAT_TYPE)
         np.testing.assert_array_almost_equal(exp_B, B,
                                       err_msg="`B` has not been updated as expected")
 
