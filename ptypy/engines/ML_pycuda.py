@@ -440,10 +440,11 @@ class GaussianModel(BaseModelSerial):
             FW(aux, aux)
             GDK.make_model(aux, addr)
 
+            GDK.queue.wait_for_event(ev)
+
             if self.p.floating_intensities:
                 GDK.intensity_renorm(addr, w, I, fic)
 
-            GDK.queue.wait_for_event(ev)
             GDK.main(aux, addr, w, I)
             ev = cuda.Event()
             ev.record(GDK.queue)

@@ -45,6 +45,7 @@ p.engines.engine00.numiter = 10
 p.engines.engine00.numiter_contiguous = 5
 p.engines.engine00.reg_del2 = True                      # Whether to use a Gaussian prior (smoothing) regularizer
 p.engines.engine00.reg_del2_amplitude = 1.             # Amplitude of the Gaussian prior if used
+p.engines.engine00.floating_intensities = True
 
 
 # prepare and run

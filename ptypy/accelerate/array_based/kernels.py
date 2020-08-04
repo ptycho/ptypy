@@ -172,7 +172,7 @@ class GradientDescentKernel(BaseKernel):
         self.npy.LLerr = np.zeros(self.fshape, dtype=self.ftype)
         self.npy.Imodel = np.zeros(self.fshape, dtype=self.ftype)
 
-        self.npy.float_tmp = np.ones((self.fshape[0],), dtype=self.ftype)
+        self.npy.fic_tmp = np.ones((self.fshape[0],), dtype=self.ftype)
 
     def make_model(self, b_aux, addr):
 

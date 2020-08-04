@@ -362,7 +362,6 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         z = np.int32(maxz)
         bx = 1024
 
-        #print(Imodel.dtype, I.dtype, w.dtype, err.dtype, aux.dtype, z, y, x)
         self.intensity_renorm_cuda_step1(Imodel, I, w, num, den,
                        z, x,
                        block=(bx, 1, 1),
@@ -385,8 +384,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                shared=32*32*4,
                                stream=self.queue)
 
-        #print(Imodel.dtype, I.dtype, w.dtype, err.dtype, aux.dtype, z, y, x)
-        self.intensity_renorm_cuda_step2(den, fic, Imodel,
+        self.intensity_renorm_cuda_step2(fic_tmp, fic, Imodel,
                        z, x,
                        block=(bx, 1, 1),
                        grid=(int((x + bx - 1) // bx), 1, int(z)),

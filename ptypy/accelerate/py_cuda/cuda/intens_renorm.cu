@@ -22,7 +22,7 @@ extern "C" __global__ void step1(const FTYPE* Imodel,
 
 extern "C" __global__ void step2(const FTYPE* den,
                                  FTYPE* fic,
-                                 FTYPE*I Imodel,
+                                 FTYPE* Imodel,
                                  int z,
                                  int x)
 {

@@ -129,7 +129,7 @@ class ML_serial(ML):
             prep.err_phot = np.zeros((d.data.shape[0],), dtype=np.float32)
             # set floating intensity coefficients to 1.0
             # they get overridden if self.p.floating_intensities=True
-            prep.floating_coefficients = np.ones((d.data.shape[0],), dtype=np.float32)
+            prep.float_intens_coeff = np.ones((d.data.shape[0],), dtype=np.float32)
 
         # Unfortunately this needs to be done for all pods, since
         # the shape of the probe / object was modified.
