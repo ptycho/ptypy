@@ -354,6 +354,7 @@ class GaussianModel(BaseModelSerial):
 
             # forward prop
             aux[:] = FW(aux)
+
             GDK.make_model(aux, addr)
 
             if self.p.floating_intensities:
@@ -361,6 +362,7 @@ class GaussianModel(BaseModelSerial):
 
             GDK.main(aux, addr, w, I)
             GDK.error_reduce(addr, err_phot)
+
             aux[:] = BW(aux)
 
             POK.ob_update_ML(addr, obg, pr, aux)

@@ -248,13 +248,12 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.gpu.LLden = gpuarray.zeros(self.fshape, dtype=self.ftype)
         self.gpu.LLerr = gpuarray.zeros(self.fshape, dtype=self.ftype)
         self.gpu.Imodel = gpuarray.zeros(self.fshape, dtype=self.ftype)
-        self.gpu.fic_tmp = gpuarray.empty((self.fshape[0],), dtype=self.ftype)
-        self.gpu.fic_tmp.fill(1.0)
+        tmp = np.ones((self.fshape[0],), dtype=self.ftype)
+        self.gpu.fic_tmp = gpuarray.to_gpu(tmp)
 
         # temporary array for the reduction in fill_b
-        self.gpu.Btmp = gpuarray.zeros(
-            (3, (np.prod(self.fshape)*self.nmodes + 1023) // 1024),
-            dtype=np.float64)
+        sh = (3, (np.prod(self.fshape)*self.nmodes + 1023) // 1024)
+        self.gpu.Btmp = gpuarray.zeros(sh, dtype=np.float64)
 
     def make_model(self, b_aux, addr):
         # reference shape
@@ -389,6 +388,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                        block=(bx, 1, 1),
                        grid=(int((x + bx - 1) // bx), 1, int(z)),
                        stream=self.queue)
+
 
     def main(self, b_aux, addr, w, I):
         nmodes = self.nmodes

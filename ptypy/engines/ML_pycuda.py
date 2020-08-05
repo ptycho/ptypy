@@ -450,6 +450,7 @@ class GaussianModel(BaseModelSerial):
             ev.record(GDK.queue)
 
             GDK.error_reduce(addr, err_phot)
+
             BW(aux, aux)
 
             use_atomics = self.p.object_update_cuda_atomics

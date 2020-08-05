@@ -9,7 +9,7 @@ from ptypy import utils as u
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 3
+p.verbose_level = 2
 p.frames_per_block = 400
 # set home path
 p.io = u.Param()
@@ -40,7 +40,7 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'ML_serial'
+p.engines.engine00.name = 'ML_pycuda'
 p.engines.engine00.numiter = 10
 p.engines.engine00.numiter_contiguous = 5
 p.engines.engine00.reg_del2 = True                      # Whether to use a Gaussian prior (smoothing) regularizer

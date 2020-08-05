@@ -28,9 +28,9 @@ class GradientDescentKernelTest(PyCudaTest):
             A = 3 
         else:
             nmodes = 4
-            N_buf = 8
-            N = 32
-            A =  1024
+            N_buf = 100
+            N = 80
+            A =  512
         i_sh = (N, A, A)
         e_sh = (N*nmodes, A, A)
         f_sh = (N_buf, A, A)
@@ -43,6 +43,7 @@ class GradientDescentKernelTest(PyCudaTest):
         b_a = Y + 1j * Z
         b_b = Z + 1j * X
         err_sum = np.zeros((N,), dtype=FLOAT_TYPE)
+        fic = np.ones((N,), dtype=FLOAT_TYPE)
         addr = np.zeros((N, nmodes, 5, 3), dtype=INT_TYPE)
         I = np.empty(i_sh, dtype=FLOAT_TYPE)
         I[:] = np.round(np.abs(b_f[:N])**2 % 20)
@@ -60,10 +61,16 @@ class GradientDescentKernelTest(PyCudaTest):
                 gpuarray.to_gpu(I),
                 gpuarray.to_gpu(w),
                 gpuarray.to_gpu(err_sum),
-                gpuarray.to_gpu(addr))
+                gpuarray.to_gpu(addr),
+                gpuarray.to_gpu(fic))
+
+    def test_allocate(self):
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays()
+        GDK = GradientDescentKernel(b_f, addr.shape[1])
+        GDK.allocate()
 
     def test_make_model(self):
-        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays()
 
         GDK = GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
@@ -91,18 +98,48 @@ class GradientDescentKernelTest(PyCudaTest):
 
     @unittest.skipIf(not perfrun, "performance test")
     def test_make_model_performance(self):
-        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays(performance=True)
 
         GDK = GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
         GDK.make_model(b_f, addr)
 
-    def test_make_a012(self):
-        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
+    def test_floating_intensity(self):
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays()
+        GDK=GradientDescentKernel(b_f, addr.shape[1])
+        GDK.allocate()
+        GDK.gpu.Imodel[0] = I[0] * 3.
+        GDK.gpu.Imodel[1] = I[1] * 2.
+        GDK.gpu.Imodel[2] = I[2]
+        GDK.floating_intensity(addr, w, I, fic)
+        #print('Imodel',repr(GDK.gpu.Imodel))
+        #print('fic',repr(1./fic))
+        exp_Imodel = np.array([[[0., 0., 0.],
+                [1., 1., 1.],
+                [4., 4., 4.]],
 
+               [[1., 1., 1.],
+                [2., 2., 2.],
+                [5., 5., 5.]],
+
+               [[4., 4., 4.],
+                [5., 5., 5.],
+                [8., 8., 8.]],
+
+               [[0., 0., 0.],
+                [0., 0., 0.],
+                [0., 0., 0.]]], dtype=np.float32)
+        exp_fic=1./np.array([3., 2., 1.], dtype=np.float32)
+        np.testing.assert_array_almost_equal(exp_Imodel, GDK.gpu.Imodel.get(),
+            err_msg="`Imodel` buffer has not been updated as expected")
+        np.testing.assert_array_almost_equal(exp_fic, fic.get(),
+            err_msg="floating intensity coeff (fic) has not been updated as expected")
+
+    def test_make_a012(self):
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays()
         GDK = GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_a012(b_f, b_a, b_b, addr, I)
+        GDK.make_a012(b_f, b_a, b_b, addr, I, fic)
 
         exp_A0 = np.array([[[1.,  1.,  1.],
                             [2.,  2.,  2.],
@@ -123,64 +160,64 @@ class GradientDescentKernelTest(PyCudaTest):
             exp_A0, GDK.gpu.Imodel.get(),
             err_msg="`Imodel` buffer (=A0) has not been updated as expected")
 
-        exp_A1 = np.array([[[0.,  0.,  0.],
-                            [1.,  5.,  9.],
-                            [0.,  8., 16.]],
+        exp_A1 = np.array([[[0., 0., 0.],
+                            [2., 6., 10.],
+                            [4., 12., 20.]],
 
-                           [[-1., -1., -1.],
-                            [8., 12., 16.],
-                            [15., 23., 31.]],
+                           [[0., 0., 0.],
+                            [10., 14., 18.],
+                            [20., 28., 36.]],
 
-                           [[-4., -4., -4.],
-                            [13., 17., 21.],
-                            [28., 36., 44.]],
+                           [[0., 0., 0.],
+                            [18., 22., 26.],
+                            [36., 44., 52.]],
 
-                           [[0.,  0.,  0.],
-                            [0.,  0.,  0.],
-                            [0.,  0.,  0.]]], dtype=FLOAT_TYPE)
+                           [[0., 0., 0.],
+                            [0., 0., 0.],
+                            [0., 0., 0.]]], dtype=FLOAT_TYPE)
         np.testing.assert_array_almost_equal(
             exp_A1, GDK.gpu.LLerr.get(),
             err_msg="`LLerr` buffer (=A1) has not been updated as expected")
 
-        exp_A2 = np.array([[[0.,  4., 12.],
-                            [3.,  7., 15.],
-                            [8., 12., 20.]],
+        exp_A2 = np.array([[[0., 4., 12.],
+                            [4., 8., 16.],
+                            [12., 16., 24.]],
 
-                           [[-1., 11., 27.],
-                            [10., 22., 38.],
-                            [23., 35., 51.]],
+                           [[0., 12., 28.],
+                            [12., 24., 40.],
+                            [28., 40., 56.]],
 
-                           [[-4., 16., 40.],
-                            [15., 35., 59.],
-                            [36., 56., 80.]],
+                           [[0., 20., 44.],
+                            [20., 40., 64.],
+                            [44., 64., 88.]],
 
-                           [[0.,  0.,  0.],
-                            [0.,  0.,  0.],
-                            [0.,  0.,  0.]]], dtype=FLOAT_TYPE)
+                           [[0., 0., 0.],
+                            [0., 0., 0.],
+                            [0., 0., 0.]]], dtype=FLOAT_TYPE)
         np.testing.assert_array_almost_equal(
             exp_A2, GDK.gpu.LLden.get(),
             err_msg="`LLden` buffer (=A2) has not been updated as expected")
 
     @unittest.skipIf(not perfrun, "performance test")
     def test_make_a012_performance(self):
-        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays(performance=True)
 
         GDK = GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_a012(b_f, b_a, b_b, addr, I)
+        GDK.make_a012(b_f, b_a, b_b, addr, I, fic)
 
     def test_fill_b(self):
-        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays()
         Brenorm = 0.35
         B = np.zeros((3,), dtype=FLOAT_TYPE)
         B_dev = gpuarray.to_gpu(B)
         GDK = GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_a012(b_f, b_a, b_b, addr, I)
+        GDK.make_a012(b_f, b_a, b_b, addr, I, fic)
         GDK.fill_b(addr, Brenorm, w, B_dev)
         B[:] = B_dev.get()
 
-        exp_B = np.array([4699.8,  3953.6, 10963.4], dtype=FLOAT_TYPE)
+        exp_B = np.array([ 4699.8,  5398.4, 13398.], dtype=FLOAT_TYPE)
         np.testing.assert_allclose(
             B, exp_B,
             rtol=1e-7,
@@ -188,17 +225,17 @@ class GradientDescentKernelTest(PyCudaTest):
 
     @unittest.skipIf(not perfrun, "performance test")
     def test_fill_b_perf(self):
-        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays(performance=True)
         Brenorm = 0.35
         B = np.zeros((3,), dtype=FLOAT_TYPE)
         B_dev = gpuarray.to_gpu(B)
         GDK = GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
-        GDK.make_a012(b_f, b_a, b_b, addr, I)
+        GDK.make_a012(b_f, b_a, b_b, addr, I, fic)
         GDK.fill_b(addr, Brenorm, w, B_dev)
     
     def test_error_reduce(self):
-        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays()
         GDK = GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
         GDK.npy.LLerr = np.indices(GDK.gpu.LLerr.shape, dtype=FLOAT_TYPE)[0]
@@ -212,7 +249,7 @@ class GradientDescentKernelTest(PyCudaTest):
     
     @unittest.skipIf(not perfrun, "performance test")
     def test_error_reduce_perf(self):
-        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays(performance=True)
         GDK = GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
         GDK.npy.LLerr = np.indices(GDK.gpu.LLerr.shape, dtype=FLOAT_TYPE)[0]
@@ -220,7 +257,7 @@ class GradientDescentKernelTest(PyCudaTest):
         GDK.error_reduce(addr, err_sum)
 
     def test_main(self):
-        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays()
         GDK = GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
         GDK.main(b_f, addr, w, I)
@@ -281,7 +318,7 @@ class GradientDescentKernelTest(PyCudaTest):
 
     @unittest.skipIf(not perfrun, "performance test")
     def test_main_perf(self):
-        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays(performance=True)
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays(performance=True)
         GDK = GradientDescentKernel(b_f, addr.shape[1])
         GDK.allocate()
         GDK.main(b_f, addr, w, I)

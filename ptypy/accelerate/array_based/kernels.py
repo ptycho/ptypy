@@ -274,11 +274,9 @@ class GradientDescentKernel(BaseKernel):
         ## math ##
         num[:] = w * Imodel * I
         den[:] = w * Imodel ** 2
-
         fic[:] = num.sum(-1).sum(-1)
         fic_tmp[:]= den.sum(-1).sum(-1)
         fic/=fic_tmp
-
         Imodel *= fic.reshape(Imodel.shape[0], 1, 1)
 
     def main(self, b_aux, addr, w, I):
@@ -297,8 +295,9 @@ class GradientDescentKernel(BaseKernel):
 
         ## math ##
         DI = Imodel - I
-        err[:] = w * DI ** 2
         tmp = w * DI
+        err[:] = tmp * DI
+
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * tmp[:, np.newaxis, :, :]).reshape(ish)
         return
 
