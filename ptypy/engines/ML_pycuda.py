@@ -336,6 +336,16 @@ class ML_pycuda(ML_serial):
         """
         try deleting ever helper contianer
         """
+        for name, s in self.pr.S.items():
+            s.data = s.gpu.get() # need this, otherwise getting segfault once context is detached
+            # no longer need those
+            del s.gpu
+            del s.cpu
+        for name, s in self.ob.S.items():
+            s.data = s.gpu.get() # need this, otherwise getting segfault once context is detached
+            # no longer need those
+            del s.gpu
+            del s.cpu
 
         #self.queue.synchronize()
         self.context.detach()
