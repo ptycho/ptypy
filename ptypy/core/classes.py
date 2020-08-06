@@ -369,8 +369,10 @@ class Storage(Base):
         padding: int
             Number of pixels (voxels) to add as padding around the area defined
             by the views.
+
         """
         super(Storage, self).__init__(container, ID)
+        self.shift_type = None
 
         #: Default fill value
         self.fill_value = fill if fill is not None else 0.
@@ -381,7 +383,6 @@ class Storage(Base):
 
         # Additional padding around tight field of view
         self.padding = padding
-
         # dimensionality suggestion from container
         ndim = container.ndim if container.ndim is not None else 2
 
@@ -399,9 +400,11 @@ class Storage(Base):
             logger.warning('Storage view access dimension %d is not in regular '
                         'scope (2,3). Behavior is untested.' % len(shape[1:]))
 
+
         self.shape = shape
         self.data = np.empty(self.shape, self.dtype)
         self.data.fill(self.fill_value)
+
 
         """
         # Set data buffer
@@ -424,6 +427,8 @@ class Storage(Base):
                 self.data = data
             self.shape = self.data.shape
         """
+
+
 
         if layermap is None:
             layermap = list(range(len(self.data)))
@@ -1030,14 +1035,32 @@ class Storage(Base):
 
         return ''.join(fstring), dct
 
+    def subpixel_shift(self, data, sp):
+        """
+        HOOK - to be implemented and replaced.
+        Apply subpixel shift sp to data.
+
+
+        Parameters
+        ----------
+        data: numpy array
+        sp: tuple representing subpixel shift
+
+        Returns
+        -------
+        shifted array the same shape and type as data
+        """
+        return data
+
     def __getitem__(self, v):
         """
-        Storage[v]
+        Storage[v], Storage[v, sp=True]
 
         Returns
         -------
         ndarray
             The view to internal data buffer corresponding to View or layer `v`
+            Apply subpixel shift if sp=True.
         """
 
         # Here things could get complicated.
@@ -1048,23 +1071,35 @@ class Storage(Base):
         # return shift(self.data[v.slayer, v.roi[0, 0]:v.roi[1, 0],
         #             v.roi[0, 1]:v.roi[1, 1]], v.sp)
         if isinstance(v, View):
+            # Default: return slice from 'data' array (without subpixel shift)
             if self.ndim == 2:
-                return shift(self.data[
-                             v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
-                             v.sp)
+                return self.data[v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]]
             elif self.ndim == 3:
-                return shift(self.data[
-                             v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1],
-                             v.dlow[2]:v.dhigh[2]], v.sp)
+                return self.data[
+                       v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1],
+                       v.dlow[2]:v.dhigh[2]]
         elif v in self.layermap:
+            # Return layer
             return self.data[self.layermap.index(v)]
+        elif isinstance(v, tuple):
+            # Call included second argument (subpixel switch)
+            v, sp = v
+            if self.ndim == 2 and sp and np.any(v.sp != 0.0):
+                return self.subpixel_shift(self.data[
+                                           v.dlayer, v.dlow[0]:v.dhigh[0], v.dlow[1]:v.dhigh[1]],
+                                           v.sp)
+            else:
+                return self[v]
         else:
             raise ValueError("View or layer '%s' is not present in storage %s"
                              % (v, self.ID))
 
+
     def __setitem__(self, v, newdata):
         """
         Storage[v] = newdata
+        or
+        Storage[v, sp] = newdata
 
         Set internal data buffer to `newdata` for the region of view `v`.
 
@@ -1072,6 +1107,8 @@ class Storage(Base):
         ----------
         v : View
             A View for this storage
+        sp (optional): bool
+            Apply subpixel shift
 
         newdata : ndarray
             Two-dimensional array that fits the view's shape
@@ -1088,28 +1125,36 @@ class Storage(Base):
             # right, but returns copies and not views.
             if self.ndim == 2:
                 self.data[v.dlayer,
-                          v.dlow[0]:v.dhigh[0],
-                          v.dlow[1]:v.dhigh[1]] = (shift(newdata, -v.sp))
+                      v.dlow[0]:v.dhigh[0],
+                      v.dlow[1]:v.dhigh[1]] = newdata
             elif self.ndim == 3:
                 self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
                           v.dlow[1]:v.dhigh[1],
-                          v.dlow[2]:v.dhigh[2]] = (shift(newdata, -v.sp))
+                          v.dlow[2]:v.dhigh[2]] = newdata
             elif self.ndim == 4:
                 self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
                           v.dlow[1]:v.dhigh[1],
                           v.dlow[2]:v.dhigh[2],
-                          v.dlow[3]:v.dhigh[3]] = (shift(newdata, -v.sp))
+                          v.dlow[3]:v.dhigh[3]] = newdata
             elif self.ndim == 5:
                 self.data[v.dlayer,
                           v.dlow[0]:v.dhigh[0],
                           v.dlow[1]:v.dhigh[1],
                           v.dlow[2]:v.dhigh[2],
                           v.dlow[3]:v.dhigh[3],
-                          v.dlow[4]:v.dhigh[4]] = (shift(newdata, -v.sp))
+                          v.dlow[4]:v.dhigh[4]] = newdata
         elif v in self.layermap:
             self.data[self.layermap.index(v)] = newdata
+        elif isinstance(v, tuple):
+            v, sp = v
+            if (self.ndim == 2) and sp and np.any(v.sp != 0.0):
+                self.data[v.dlayer,
+                      v.dlow[0]:v.dhigh[0],
+                      v.dlow[1]:v.dhigh[1]] = self.subpixel_shift(newdata, -v.sp)
+            else:
+                self[v] = newdata
         else:
             raise ValueError("View or layer '%s' is not present in storage %s"
                              % (v, self.ID))
@@ -1121,13 +1166,6 @@ class Storage(Base):
         else:
             info += 'empty=%s @%s' % (self.shape, self.dtype)
         return info + ' psize=%(_psize)s center=%(_center)s' % self.__dict__
-
-
-def shift(v, sp):
-    """
-    Placeholder for future subpixel shifting method.
-    """
-    return v
 
 
 class View(Base):
@@ -1384,6 +1422,20 @@ class View(Base):
         Set the view content in data buffer of associated storage.
         """
         self.storage[self] = v
+
+    @property
+    def data_sp(self):
+        """
+        The view content in data buffer of associated storage.
+        """
+        return self.storage[self, True]
+
+    @data_sp.setter
+    def data_sp(self, v):
+        """
+        Set the view content in data buffer of associated storage.
+        """
+        self.storage[self, True] = v
 
     @property
     def shape(self):
@@ -2193,6 +2245,23 @@ class POD(Base):
             self.ob_view.data = v
 
     @property
+    def object_sp(self):
+        """
+        Convenience property that links to slice of object :any:`Storage`,
+        including eventual pixel shift.
+        """
+        if not self.is_empty:
+            return self.ob_view.data_sp
+        else:
+            # Empty probe means no object (perfect transmission)
+            return np.ones(self.geometry.shape, dtype=self.owner.CType)
+
+    @object_sp.setter
+    def object_sp(self, v):
+        if not self.is_empty:
+            self.ob_view.data_sp = v
+
+    @property
     def probe(self):
         """
         Convenience property that links to slice of probe :any:`Storage`.
@@ -2203,6 +2272,18 @@ class POD(Base):
     @probe.setter
     def probe(self, v):
         self.pr_view.data = v
+
+    @property
+    def probe_sp(self):
+        """
+        Convenience property that links to slice of probe :any:`Storage`,
+        including subpixel.
+        """
+        return self.pr_view.data_sp
+
+    @probe_sp.setter
+    def probe_sp(self, v):
+        self.pr_view.data_sp = v
 
     @property
     def exit(self):

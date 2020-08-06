@@ -22,3 +22,4 @@ if hmpl:
     from .plot_client import PlotClient, MPLClient, spawn_MPLClient, MPLplotter
 del hmpl
 
+SUBPIXEL_SHIFT_METHODS = {'bicubic': shift_interp, 'fourier': shift_fourier, 'linear': lambda x, y: shift_interp(x, y, order=1)}

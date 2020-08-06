@@ -18,6 +18,7 @@ from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
 from .utils import Cnorm2, Cdot
+from . import utils as eu
 from . import register
 from .base import PositionCorrectionEngine
 from .. import defaults_tree
@@ -99,6 +100,19 @@ class ML(PositionCorrectionEngine):
     type = int
     lowlim = 0
     help = Number of iterations before probe update starts
+
+    [subpix_start]
+    default = 0
+    type = int
+    lowlim = 0
+    help = Number of iterations before starting subpixel interpolation
+
+    [subpix]
+    default = None
+    type = None, str
+    choices = ['fourier', 'linear', 'interp', None]
+    help = Subpixel interpolation; 'fourier','linear', 'interp' or None
+
 
     """
 
@@ -193,6 +207,17 @@ class ML(PositionCorrectionEngine):
         tc = 0.
         ta = time.time()
         for it in range(num):
+            if (self.p.subpix_start == self.curiter) and (self.p.subpix is not None):
+                logger.info('Subpixel shifts')
+                from ..core import Storage
+                if self.p.subpix == 'fourier':
+                    Storage.hook_subpixel_shift = eu.hook_subpixel_shift_fourier
+                elif self.p.subpix == 'linear':
+                    Storage.hook_subpixel_shift = eu.hook_subpixel_shift_linear
+                elif self.p.subpix == 'interp':
+                    Storage.hook_subpixel_shift = eu.hook_subpixel_shift_interp
+                logger.info('Subpixel shifts of type "%s" now being used' % self.p.subpix)
+
             t1 = time.time()
             new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad()
             tg += time.time() - t1

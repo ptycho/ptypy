@@ -156,16 +156,16 @@ class AnnealingRefine(PositionRefine):
         coord = initial_coord
         psize = ob_view.psize.copy()
 
-        # if you cannot move far, do nothing
-        if np.max(psize) >= self.max_shift_dist:
-            return np.zeros((2,))
+        # # if you cannot move far, do nothing
+        # if np.max(psize) >= self.max_shift_dist:
+        #     return np.zeros((2,))
             
         # This can be optimized by saving existing iteration fourier error...
         error = self.fourier_error(di_view, ob_view.data)
         
         for i in range(self.p.nshifts):
             # Generate coordinate shift in one of the 4 cartesian quadrants
-            a, b = np.random.uniform(np.max(psize), self.max_shift_dist, 2)
+            a, b = np.random.uniform(0, self.max_shift_dist, 2)
             delta = np.array([(-1)**i * a, (-1)**(i//2) *b])
 
             if np.linalg.norm(delta) > self.p.max_shift:
@@ -175,7 +175,11 @@ class AnnealingRefine(PositionRefine):
             # Move view to new position
             new_coord = initial_coord + delta 
             ob_view.coord = new_coord
+
             ob_view.storage.update_views(ob_view)
+            for name, pod in ob_view.pods.items():
+                pod.pr_view.sp = -ob_view.sp
+                pod.ob_view.sp = 0.
             data = ob_view.data
             
             # catch bad slicing
@@ -191,7 +195,10 @@ class AnnealingRefine(PositionRefine):
                 log(4, "Position correction: %s, coord: %s, delta: %s" % (di_view.ID, coord, delta))
                 
         ob_view.coord = coord
-        ob_view.storage.update_views(ob_view)        
+        ob_view.storage.update_views(ob_view)
+        for name, pod in ob_view.pods.items():
+            pod.pr_view.sp = -ob_view.sp
+            pod.ob_view.sp = 0.
         return coord - initial_coord
 
     def update_constraints(self, iteration):

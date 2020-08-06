@@ -12,6 +12,7 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
+from . import utils as eu
 from .utils import basic_fourier_update
 from . import register
 from .base import PositionCorrectionEngine
@@ -51,11 +52,6 @@ class DM(PositionCorrectionEngine):
     type = int
     lowlim = 0
     help = Number of iterations before starting subpixel interpolation
-
-    [subpix]
-    default = 'linear'
-    type = str
-    help = Subpixel interpolation; 'fourier','linear' or None for no interpolation
 
     [update_object_first]
     default = True
@@ -133,7 +129,6 @@ class DM(PositionCorrectionEngine):
 
         self.ob_buf = None
         self.ob_nrm = None
-        self.ob_viewcover = None
 
         self.pr_buf = None
         self.pr_nrm = None
@@ -167,7 +162,6 @@ class DM(PositionCorrectionEngine):
         # Generate container copies
         self.ob_buf = self.ob.copy(self.ob.ID + '_alt', fill=0.)
         self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0.)
-        self.ob_viewcover = self.ob.copy(self.ob.ID + '_vcover', fill=0.)
 
         self.pr_buf = self.pr.copy(self.pr.ID + '_alt', fill=0.)
         self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0.)
@@ -184,11 +178,7 @@ class DM(PositionCorrectionEngine):
             self.pbound[name] = (.25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
             mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
-
-        # Fill object with coverage of views
-        for name, s in self.ob_viewcover.storages.items():
-            s.fill(s.get_view_coverage())
-
+            
     def engine_iterate(self, num=1):
         """
         Compute `num` iterations.
@@ -196,6 +186,7 @@ class DM(PositionCorrectionEngine):
         to = 0.
         tf = 0.
         tp = 0.
+
         for it in range(num):
             t1 = time.time()
 
@@ -217,8 +208,8 @@ class DM(PositionCorrectionEngine):
             t4 = time.time()
             tp += t4 - t3
 
-            # count up
-            self.curiter +=1
+            # count up'
+            self.curiter += 1
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
@@ -235,7 +226,6 @@ class DM(PositionCorrectionEngine):
         containers = [
             self.ob_buf,
             self.ob_nrm,
-            self.ob_viewcover,
             self.pr_buf,
             self.pr_nrm]
 
@@ -246,7 +236,6 @@ class DM(PositionCorrectionEngine):
 
         del self.ob_buf
         del self.ob_nrm
-        del self.ob_viewcover
         del self.pr_buf
         del self.pr_nrm
 
@@ -428,3 +417,4 @@ class DM(PositionCorrectionEngine):
             buf[:] = s.data
 
         return np.sqrt(change / len(pr.storages))
+

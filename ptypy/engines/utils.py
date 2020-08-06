@@ -13,6 +13,7 @@ from .. import utils as u
 from .. import parallel
 from scipy.sparse.linalg import eigsh
 
+
 # This dynamic loas could easily be generalized to other types.
 def dynamic_load(path, baselist, fail_silently = True):
     """
@@ -320,3 +321,31 @@ def Cdot(c1, c2):
         r += np.vdot(c1.storages[name].data.flat, c2.storages[name].data.flat)
     return r
 
+
+# Hook for subpixel shift
+def hook_subpixel_shift_fourier(self, data, sp):
+    """
+    Fourier space shift
+    """
+    return u.shift_fourier(data, sp)
+
+
+def hook_subpixel_shift_linear(self, data, sp):
+    """
+    Bilinear shift
+    """
+    return u.shift_interp(data, sp, order=1)
+
+
+def hook_subpixel_shift_interp(self, data, sp):
+    """
+    Spline 3 shift
+    """
+    return u.shift_interp(data, sp)
+
+
+def hook_subpixel_shift_null(self, data, sp):
+    """
+    No shift
+    """
+    return data
