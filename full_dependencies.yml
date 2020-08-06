@@ -20,7 +20,7 @@ dependencies:
     - coveralls
     - cython
     - fabio
-    - pyopencl
+    - pyopencl==2020.1
     - pycuda
     - pybind11
     - cppimport
