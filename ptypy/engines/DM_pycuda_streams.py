@@ -31,7 +31,7 @@ EX_MA_BLOCKS_RATIO = 2
 MAX_STREAMS = 500   # max number of streams to use
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
 
-__all__ = ['DM_pycuda_stream']
+__all__ = ['DM_pycuda_streams']
 
 class GpuData:
     """
@@ -296,11 +296,11 @@ class GpuStreamData:
 
 
 @register()
-class DM_pycuda_stream(DM_pycuda.DM_pycuda):
+class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
     def __init__(self, ptycho_parent, pars = None):
 
-        super(DM_pycuda_stream, self).__init__(ptycho_parent, pars)
+        super(DM_pycuda_streams, self).__init__(ptycho_parent, pars)
         self.streams = None 
         self.ma_data = None
         self.mag_data = None
