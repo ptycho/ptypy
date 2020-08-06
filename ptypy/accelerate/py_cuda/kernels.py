@@ -79,7 +79,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                np.int32(self.fshape[2]),
                                block=(32, 32, 1),
                                grid=(int(err_fmag.shape[0]), 1, 1),
-                               shared=shared_memory_size,
+                               shared=32*32*4,
                                stream=self.queue)
 
     def fmag_all_update(self, f, addr, fmag, fmask, err_fmag, pbound=0.0):

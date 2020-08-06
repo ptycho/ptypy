@@ -236,7 +236,7 @@ class FourierUpdateKernelTest(PyCudaTest):
             f[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
 
         fmag = np.empty(shape=(N, B, C), dtype=FLOAT_TYPE)  # the measured magnitudes NxAxB
-        fmag_fill = np.arange(np.prod(fmag.shape)).reshape(fmag.shape).astype(fmag.dtype)
+        fmag_fill = np.arange(np.prod(fmag.shape).item()).reshape(fmag.shape).astype(fmag.dtype)
         fmag[:] = fmag_fill
 
         mask = np.empty(shape=(N, B, C),
