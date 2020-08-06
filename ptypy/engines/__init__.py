@@ -54,6 +54,8 @@ from . import DM_serial_stream
 try:
     from . import DM_pycuda
     from . import DM_pycuda_streams
+    from . import ML_pycuda
+    from . import DM_pycuda_stream
 except:
     pass
 try:

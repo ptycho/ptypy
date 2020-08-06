@@ -9,7 +9,7 @@ from . import perfrun, PyCudaTest, have_pycuda
 
 if have_pycuda():
     from pycuda import gpuarray
-    from ptypy.accelerate.py_cuda.kernels import DerivativesKernel
+    from ptypy.accelerate.py_cuda.array_utils import DerivativesKernel
 from ptypy.utils.math_utils import delxf, delxb 
 
 COMPLEX_TYPE = np.complex64
@@ -24,7 +24,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev)
 
         outp[:] = outp_dev.get()
@@ -36,7 +36,7 @@ class DerivativesKernelTest(PyCudaTest):
         inp = np.array([0, 1, 2, 4, 8, 0, 6], dtype=np.float32)
         inp_dev = gpuarray.to_gpu(inp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=inp_dev)
 
         outp = inp_dev.get()
@@ -54,7 +54,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=0)
 
         outp[:] = outp_dev.get()
@@ -75,7 +75,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=1)
 
         outp[:] = outp_dev.get()
@@ -92,7 +92,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxb(inp_dev, out=outp_dev)
 
         outp[:] = outp_dev.get()
@@ -109,7 +109,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxb(inp_dev, out=outp_dev, axis=0)
 
         outp[:] = outp_dev.get()
@@ -130,7 +130,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxb(inp_dev, out=outp_dev, axis=1)
 
         outp[:] = outp_dev.get()
@@ -154,7 +154,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=1)
 
         outp[:] = outp_dev.get()
@@ -184,7 +184,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=1)
 
         outp[:] = outp_dev.get()
@@ -209,7 +209,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=0)
         outp[:] = outp_dev.get()
 
@@ -226,7 +226,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=1)
         outp[:] = outp_dev.get()
 
@@ -244,7 +244,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=1)
         outp[:] = outp_dev.get()
 
@@ -259,7 +259,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=1)
         outp[:] = outp_dev.get()
 
@@ -273,11 +273,25 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.zeros_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=2)
         outp[:] = outp_dev.get()
 
         exp = delxf(inp, axis=2)
+        np.testing.assert_array_almost_equal(outp, exp)
+
+    def test_delxb_3dim3_unity(self):
+        inp = np.ascontiguousarray(np.random.randn(33, 283, 142), dtype=np.float32)
+
+        inp_dev = gpuarray.to_gpu(inp)
+        outp = np.zeros_like(inp)
+        outp_dev = gpuarray.to_gpu(outp)
+
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
+        DK.delxb(inp_dev, out=outp_dev, axis=2)
+        outp[:] = outp_dev.get()
+
+        exp = delxb(inp, axis=2)
         np.testing.assert_array_almost_equal(outp, exp)
 
     @unittest.skipIf(not perfrun, "performance test")
@@ -288,7 +302,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.ones_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=0)
         outp[:] = outp_dev.get()
         np.testing.assert_array_equal(outp, 0)
@@ -301,7 +315,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.ones_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=1)
         outp[:] = outp_dev.get()
         np.testing.assert_array_equal(outp, 0)
@@ -314,7 +328,7 @@ class DerivativesKernelTest(PyCudaTest):
         outp = np.ones_like(inp)
         outp_dev = gpuarray.to_gpu(outp)
 
-        DK = DerivativesKernel(inp.dtype, stream=self.stream)
+        DK = DerivativesKernel(inp.dtype, queue=self.stream)
         DK.delxf(inp_dev, out=outp_dev, axis=2)
         outp[:] = outp_dev.get()
         np.testing.assert_array_equal(outp, 0)

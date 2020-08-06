@@ -164,7 +164,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         for key, array in self.npy.__dict__.items():
             self.ocl.__dict__[key] = gpuarray.to_gpu(array)
 
-    def build_aux(self, b_aux, addr, ob, pr, ex, alpha):
+    def build_aux(self, b_aux, addr, ob, pr, ex, alpha=1.0):
         obr, obc = self._cache_object_shape(ob)
         # print('grid={}, 1, 1'.format(int(ex.shape[0])))
         # print('b_aux={}, sh={}'.format(type(b_aux), b_aux.shape))
@@ -249,15 +249,19 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.fill_b_reduce_cuda = load_kernel(
             'fill_b_reduce', {**subs, 'BDIM_X': 1024})
         self.main_cuda = load_kernel('gd_main', subs)
+        self.floating_intensity_cuda_step1 = load_kernel('step1', subs,'intens_renorm.cu')
+        self.floating_intensity_cuda_step2 = load_kernel('step2', subs,'intens_renorm.cu')
 
     def allocate(self):
         self.gpu.LLden = gpuarray.zeros(self.fshape, dtype=self.ftype)
         self.gpu.LLerr = gpuarray.zeros(self.fshape, dtype=self.ftype)
         self.gpu.Imodel = gpuarray.zeros(self.fshape, dtype=self.ftype)
+        tmp = np.ones((self.fshape[0],), dtype=self.ftype)
+        self.gpu.fic_tmp = gpuarray.to_gpu(tmp)
+
         # temporary array for the reduction in fill_b
-        self.gpu.Btmp = gpuarray.zeros(
-            (3, (np.prod(self.fshape)*self.nmodes + 1023) // 1024),
-            dtype=np.float64)
+        sh = (3, (np.prod(self.fshape)*self.nmodes + 1023) // 1024)
+        self.gpu.Btmp = gpuarray.zeros(sh, dtype=np.float64)
 
     def make_model(self, b_aux, addr):
         # reference shape
@@ -277,7 +281,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                              grid=(int((x + bx - 1) // bx), 1, int(z)),
                              stream=self.queue)
 
-    def make_a012(self, b_f, b_a, b_b, addr, I):
+    def make_a012(self, b_f, b_a, b_b, addr, I, fic):
         # reference shape (= GPU global dims)
         sh = I.shape
 
@@ -293,7 +297,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         y = np.int32(self.nmodes)
         x = np.int32(sh[1]*sh[2])
         bx = 1024
-        self.make_a012_cuda(b_f, b_a, b_b, I,
+        self.make_a012_cuda(b_f, b_a, b_b, I, fic,
                             A0, A1, A2, z, y, x, maxz,
                             block=(bx, 1, 1),
                             grid=(int((x + bx - 1) // bx), 1, int(z)),
@@ -346,6 +350,54 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                shared=32*32*4,
                                stream=self.queue)
 
+    def floating_intensity(self, addr, w, I, fic):
+
+        # reference shape  (= GPU global dims)
+        sh = I.shape
+
+        # stopper
+        maxz = I.shape[0]
+
+        # internal buffers
+        num = self.gpu.LLerr
+        den = self.gpu.LLden
+        Imodel = self.gpu.Imodel
+        fic_tmp = self.gpu.fic_tmp
+
+        ## math ##
+        x = np.int32(sh[1] * sh[2])
+        z = np.int32(maxz)
+        bx = 1024
+
+        self.floating_intensity_cuda_step1(Imodel, I, w, num, den,
+                       z, x,
+                       block=(bx, 1, 1),
+                       grid=(int((x + bx - 1) // bx), 1, int(z)),
+                       stream=self.queue)
+
+        self.error_reduce_cuda(num, fic,
+                               np.int32(num.shape[-2]),
+                               np.int32(num.shape[-1]),
+                               block=(32, 32, 1),
+                               grid=(int(maxz), 1, 1),
+                               shared=32*32*4,
+                               stream=self.queue)
+
+        self.error_reduce_cuda(den, fic_tmp,
+                               np.int32(den.shape[-2]),
+                               np.int32(den.shape[-1]),
+                               block=(32, 32, 1),
+                               grid=(int(maxz), 1, 1),
+                               shared=32*32*4,
+                               stream=self.queue)
+
+        self.floating_intensity_cuda_step2(fic_tmp, fic, Imodel,
+                       z, x,
+                       block=(bx, 1, 1),
+                       grid=(int((x + bx - 1) // bx), 1, int(z)),
+                       stream=self.queue)
+
+
     def main(self, b_aux, addr, w, I):
         nmodes = self.nmodes
         # stopper
@@ -363,6 +415,8 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         y = np.int32(nmodes)
         z = np.int32(maxz)
         bx = 1024
+
+        #print(Imodel.dtype, I.dtype, w.dtype, err.dtype, aux.dtype, z, y, x)
         self.main_cuda(Imodel, I, w, err, aux,
                        z, y, x,
                        block=(bx, 1, 1),
@@ -633,105 +687,3 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
 
         return self._ob_shape
 
-
-class DerivativesKernel:
-    def __init__(self, dtype, stream=None):
-        if dtype == np.float32:
-            stype = "float"
-        elif dtype == np.complex64:
-            stype = "complex<float>"
-        else:
-            raise NotImplementedError(
-                "delxf is only implemented for float32 and complex64")
-
-        self.queue = stream
-        self.dtype = dtype
-        self.last_axis_block = (256, 4, 1)
-        self.mid_axis_block = (256, 4, 1)
-
-        self.delxf_last = load_kernel("delx_last", file="delx_last.cu", subs={
-            'IS_FORWARD': 'true',
-            'BDIM_X': str(self.last_axis_block[0]),
-            'BDIM_Y': str(self.last_axis_block[1]),
-            'DTYPE': stype
-        })
-        self.delxb_last = load_kernel("delx_last", file="delx_last.cu", subs={
-            'IS_FORWARD': 'false',
-            'BDIM_X': str(self.last_axis_block[0]),
-            'BDIM_Y': str(self.last_axis_block[1]),
-            'DTYPE': stype
-        })
-        self.delxf_mid = load_kernel("delx_mid", file="delx_mid.cu", subs={
-            'IS_FORWARD': 'true',
-            'BDIM_X': str(self.mid_axis_block[0]),
-            'BDIM_Y': str(self.mid_axis_block[1]),
-            'DTYPE': stype
-        })
-        self.delxb_mid = load_kernel("delx_mid", file="delx_mid.cu", subs={
-            'IS_FORWARD': 'false',
-            'BDIM_X': str(self.mid_axis_block[0]),
-            'BDIM_Y': str(self.mid_axis_block[1]),
-            'DTYPE': stype
-        })
-
-    def delxf(self, input, out, axis=-1):
-        if input.dtype != self.dtype:
-            raise ValueError('Invalid input data type')
-
-        if axis < 0:
-            axis = input.ndim + axis
-        axis = np.int32(axis)
-
-        if axis == input.ndim - 1:
-            flat_dim = np.int32(np.product(input.shape[0:-1]))
-            self.delxf_last(input, out, flat_dim, np.int32(input.shape[axis]),
-                            block=self.last_axis_block,
-                            grid=(
-                int((flat_dim +
-                     self.last_axis_block[1] - 1) // self.last_axis_block[1]),
-                1, 1),
-                stream=self.queue
-            )
-        else:
-            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
-            higher_dim = np.int32(np.product(input.shape[:axis]))
-            gx = int(
-                (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
-            gy = 1
-            gz = int(higher_dim)
-            self.delxf_mid(input, out, lower_dim, higher_dim, np.int32(input.shape[axis]),
-                           block=self.mid_axis_block,
-                           grid=(gx, gy, gz),
-                           stream=self.queue
-                           )
-
-    def delxb(self, input, out, axis=-1):
-        if input.dtype != self.dtype:
-            raise ValueError('Invalid input data type')
-
-        if axis < 0:
-            axis = input.ndim + axis
-        axis = np.int32(axis)
-
-        if axis == input.ndim - 1:
-            flat_dim = np.int32(np.product(input.shape[0:-1]))
-            self.delxb_last(input, out, flat_dim, np.int32(input.shape[axis]),
-                            block=self.last_axis_block,
-                            grid=(
-                int((flat_dim +
-                     self.last_axis_block[1] - 1) // self.last_axis_block[1]),
-                1, 1),
-                stream=self.queue
-            )
-        else:
-            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
-            higher_dim = np.int32(np.product(input.shape[:axis]))
-            gx = int(
-                (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
-            gy = 1
-            gz = int(higher_dim)
-            self.delxb_mid(input, out, lower_dim, higher_dim, np.int32(input.shape[axis]),
-                           block=self.mid_axis_block,
-                           grid=(gx, gy, gz),
-                           stream=self.queue
-                           )

@@ -165,8 +165,8 @@ class DM_pycuda(DM_serial.DM_serial):
                 if s.data.dtype.name == 'bool':
                     data = s.data.astype(np.float32)
                 else:
-                    if _cname == 'Cobj_nrm' or _cname == 'Cprobe_nrm':
-                        s.data = np.ascontiguousarray(s.data, dtype=np.float32)
+                    #if _cname == 'Cobj_nrm' or _cname == 'Cprobe_nrm':
+                    #    s.data = np.ascontiguousarray(s.data, dtype=np.float32)
                     data = s.data
                 
                 s.gpu = gpuarray.to_gpu(data)

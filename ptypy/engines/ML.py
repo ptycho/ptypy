@@ -173,6 +173,14 @@ class ML(PositionCorrectionEngine):
 
         self.tmin = 1.
 
+        # Other options
+        self.smooth_gradient = prepare_smoothing_preconditioner(
+            self.p.smooth_gradient)
+
+        self._initialize_model()
+
+    def _initialize_model(self):
+
         # Create noise model
         if self.p.ML_type.lower() == "gaussian":
             self.ML_model = GaussianModel(self)
@@ -183,9 +191,7 @@ class ML(PositionCorrectionEngine):
         else:
             raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
 
-        # Other options
-        self.smooth_gradient = prepare_smoothing_preconditioner(
-            self.p.smooth_gradient)
+
 
     def engine_prepare(self):
         """
@@ -195,7 +201,7 @@ class ML(PositionCorrectionEngine):
         # - # fill object with coverage of views
         # - for name,s in self.ob_viewcover.S.items():
         # -    s.fill(s.get_view_coverage())
-        pass
+        self.ML_model.prepare()
 
     def engine_iterate(self, num=1):
         """
@@ -349,24 +355,23 @@ class BaseModel(object):
         else:
             self.Irenorm = self.p.intensity_renormalization
 
+        if self.p.reg_del2:
+            self.regularizer = Regul_del2(self.p.reg_del2_amplitude)
+        else:
+            self.regularizer = None
+
         # Create working variables
         self.LL = 0.
 
+
+    def prepare(self):
         # Useful quantities
         self.tot_measpts = sum(s.data.size
                                for s in self.di.storages.values())
         self.tot_power = self.Irenorm * sum(s.tot_power
                                             for s in self.di.storages.values())
-
-        self.regularizer = None
-        self.prepare_regularizer()
-
-    def prepare_regularizer(self):
-        """
-        Prepare regularizer.
-        """
         # Prepare regularizer
-        if self.p.reg_del2:
+        if self.regularizer is not None:
             obj_Npix = self.ob.size
             expected_obj_var = obj_Npix / self.tot_power  # Poisson
             reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
@@ -374,8 +379,9 @@ class BaseModel(object):
                 'Rescaling regularization amplitude using '
                 'the Poisson distribution assumption.')
             logger.debug('Factor: %8.5g' % reg_rescale)
-            reg_del2_amplitude = self.p.reg_del2_amplitude * reg_rescale
-            self.regularizer = Regul_del2(amplitude=reg_del2_amplitude)
+
+            # TODO remove usage of .p. access
+            self.regularizer.amplitude = self.p.reg_del2_amplitude * reg_rescale
 
     def __del__(self):
         """
@@ -505,7 +511,7 @@ class GaussianModel(BaseModel):
                 LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
-
+        print(self.LL)
         return error_dct
 
     def poly_line_coeffs(self, ob_h, pr_h):

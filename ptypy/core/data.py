@@ -147,6 +147,7 @@ class PtyScan(object):
     help = Minimum number of frames loaded by each node
     doc =
     userlevel = 2
+    lowlim = 1
 
     [positions_theory]
     type = ndarray

@@ -7,11 +7,11 @@ extern "C" __global__ void error_reduce(const float* ferr,
   int tx = threadIdx.x;
   int ty = threadIdx.y;
   int batch = blockIdx.x;
-  extern __shared__ float sum_v[];
+  extern __shared__ double sum_v[1024];
 
   int shidx =
       ty * blockDim.x + tx;  // shidx: index in shared memory for this block
-  float sum = 0.0f;
+  double sum = 0.0f;
 
   for (int m = ty; m < M; m += blockDim.y)
   {

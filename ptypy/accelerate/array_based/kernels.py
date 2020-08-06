@@ -159,7 +159,8 @@ class GradientDescentKernel(BaseKernel):
             'error_reduce',
             'make_a012',
             'fill_b',
-            'main'
+            'main',
+            'floating_intensity'
         ]
 
     def allocate(self):
@@ -172,6 +173,7 @@ class GradientDescentKernel(BaseKernel):
         self.npy.LLerr = np.zeros(self.fshape, dtype=self.ftype)
         self.npy.Imodel = np.zeros(self.fshape, dtype=self.ftype)
 
+        self.npy.fic_tmp = np.ones((self.fshape[0],), dtype=self.ftype)
 
     def make_model(self, b_aux, addr):
 
@@ -186,7 +188,7 @@ class GradientDescentKernel(BaseKernel):
         tf = aux.reshape(sh[0], self.nmodes, sh[1], sh[2])
         Imodel[:] = (np.abs(tf) ** 2).sum(1)
 
-    def make_a012(self, b_f, b_a, b_b, addr, I):
+    def make_a012(self, b_f, b_a, b_b, addr, I, fic):
 
         # reference shape (= GPU global dims)
         sh = I.shape
@@ -204,17 +206,18 @@ class GradientDescentKernel(BaseKernel):
         b = b_b[:maxz * self.nmodes]
 
         ## Actual math ## (subset of FUK.fourier_error)
+        fc = fic.reshape((maxz,1,1))
         A0.fill(0.)
         tf = np.abs(f).astype(self.ftype) ** 2
-        A0[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) - I
+        A0[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc - I
 
         A1.fill(0.)
         tf = 2. * np.real(f * a.conj())
-        A1[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) - I
+        A1[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc
 
         A2.fill(0.)
         tf = 2. * np.real(f * b.conj()) + np.abs(a) ** 2
-        A2[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) - I
+        A2[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc
         return
 
     def fill_b(self, addr, Brenorm, w, B):
@@ -254,6 +257,28 @@ class GradientDescentKernel(BaseKernel):
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
 
+    def floating_intensity(self, addr, w, I, fic):
+
+        # reference shape  (= GPU global dims)
+        sh = fic.shape
+
+        # stopper
+        maxz = fic.shape[0]
+
+        # internal buffers
+        num = self.npy.LLerr[:maxz]
+        den = self.npy.LLden[:maxz]
+        Imodel = self.npy.Imodel[:maxz]
+        fic_tmp = self.npy.fic_tmp[:maxz]
+
+        ## math ##
+        num[:] = w * Imodel * I
+        den[:] = w * Imodel ** 2
+        fic[:] = num.sum(-1).sum(-1)
+        fic_tmp[:]= den.sum(-1).sum(-1)
+        fic/=fic_tmp
+        Imodel *= fic.reshape(Imodel.shape[0], 1, 1)
+
     def main(self, b_aux, addr, w, I):
 
         nmodes = self.nmodes
@@ -270,8 +295,9 @@ class GradientDescentKernel(BaseKernel):
 
         ## math ##
         DI = Imodel - I
-        err[:] = w * DI ** 2
         tmp = w * DI
+        err[:] = tmp * DI
+
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * tmp[:, np.newaxis, :, :]).reshape(ish)
         return
 
