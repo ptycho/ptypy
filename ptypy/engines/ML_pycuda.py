@@ -275,9 +275,18 @@ class ML_pycuda(ML_serial):
         if self.p.probe_update_start <= self.curiter:
             # Apply probe support if needed
             for name, s in new_pr_grad.storages.items():
+
+                # DtoH copies
+                s.gpu.get(s.cpu)
+                self._set_pr_ob_ref_for_data('cpu')
+
                 # TODO this needs to be implemented on GPU
-                #self.support_constraint(s)
-                pass
+                self.support_constraint(s)
+
+                # HtoD cause we continue on gpu
+                s.gpu.set(s.cpu)
+                self._set_pr_ob_ref_for_data('gpu')
+
         else:
             new_pr_grad.fill(0.)
 
@@ -509,7 +518,7 @@ class GaussianModel(BaseModelSerial):
                 LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
-        print(self.LL)
+
         return error_dct
 
     def poly_line_coeffs(self, c_ob_h, c_pr_h):
