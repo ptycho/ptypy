@@ -6,10 +6,11 @@
 import unittest
 import numpy as np
 from . import perfrun, PyCudaTest, have_pycuda
+from ptypy.accelerate.array_based import array_utils as au
 
 if have_pycuda():
     from pycuda import gpuarray
-    import ptypy.accelerate.py_cuda.array_utils as au
+    import ptypy.accelerate.py_cuda.array_utils as gau
 
 class ArrayUtilsTest(PyCudaTest):
 
@@ -20,7 +21,7 @@ class ArrayUtilsTest(PyCudaTest):
         A_dev = gpuarray.to_gpu(A)
 
         ## Act
-        AU = au.ArrayUtilsKernel(acc_dtype=np.float32)
+        AU = gau.ArrayUtilsKernel(acc_dtype=np.float32)
         out_dev = AU.dot(A_dev, A_dev)
         out = out_dev.get()
 
@@ -34,7 +35,7 @@ class ArrayUtilsTest(PyCudaTest):
         A_dev = gpuarray.to_gpu(A)
 
         ## Act
-        AU = au.ArrayUtilsKernel(acc_dtype=np.float64)
+        AU = gau.ArrayUtilsKernel(acc_dtype=np.float64)
         out_dev = AU.dot(A_dev, A_dev)
         out = out_dev.get()
 
@@ -48,7 +49,7 @@ class ArrayUtilsTest(PyCudaTest):
         A_dev = gpuarray.to_gpu(A)
 
         ## Act
-        AU = au.ArrayUtilsKernel(acc_dtype=np.float32)
+        AU = gau.ArrayUtilsKernel(acc_dtype=np.float32)
         out_dev = AU.dot(A_dev, A_dev)
         out = out_dev.get()
 
@@ -62,7 +63,7 @@ class ArrayUtilsTest(PyCudaTest):
         A_dev = gpuarray.to_gpu(A)
 
         ## Act
-        AU = au.ArrayUtilsKernel(acc_dtype=np.float64)
+        AU = gau.ArrayUtilsKernel(acc_dtype=np.float64)
         out_dev = AU.dot(A_dev, A_dev)
         out = out_dev.get()
 
@@ -77,7 +78,7 @@ class ArrayUtilsTest(PyCudaTest):
         A_dev = gpuarray.to_gpu(A)
 
         ## Act
-        AU = au.ArrayUtilsKernel(acc_dtype=np.float64)
+        AU = gau.ArrayUtilsKernel(acc_dtype=np.float64)
         out_dev = AU.dot(A_dev, A_dev)
 
     def test_transpose_2D(self):
@@ -87,7 +88,7 @@ class ArrayUtilsTest(PyCudaTest):
         out_dev = gpuarray.empty((3,5), dtype=np.int32)
         
         ## Act
-        AU = au.ArrayUtilsKernel()
+        AU = gau.ArrayUtilsKernel()
         AU.transpose(inp_dev, out_dev)
 
         ## Assert
@@ -102,7 +103,7 @@ class ArrayUtilsTest(PyCudaTest):
         out_dev = gpuarray.empty((61,137), dtype=np.int32)
         
         ## Act
-        AU = au.ArrayUtilsKernel()
+        AU = gau.ArrayUtilsKernel()
         AU.transpose(inp_dev, out_dev)
 
         ## Assert
@@ -117,10 +118,55 @@ class ArrayUtilsTest(PyCudaTest):
         out_dev = gpuarray.empty((5, 3, 250, 3), dtype=np.int32)
 
         ## Act
-        AU = au.ArrayUtilsKernel()
+        AU = gau.ArrayUtilsKernel()
         AU.transpose(inp_dev.reshape(750, 15), out_dev.reshape(15, 750))
 
         ## Assert
         out_exp = np.transpose(inp, (2, 3, 0, 1))
         out = out_dev.get()
         np.testing.assert_array_equal(out, out_exp)
+
+    def test_complex_gaussian_filter_1d_UNITY(self):
+        data = np.zeros((11,), dtype=np.complex64)
+        data[5] = 1.0 +1.0j
+        mfs = [1.0]
+        out = au.complex_gaussian_filter(data, mfs)
+        outg = gau.complex_gaussian_filter(data, mfs)
+        np.testing.assert_allclose(out, outg, rtol=1e-6)
+
+    def test_complex_gaussian_filter_2d_simple_UNITY(self):
+        data = np.zeros((11, 11), dtype=np.complex64)
+        data[5, 5] = 1.0+1.0j
+        mfs = 1.0,0.0
+        out = au.complex_gaussian_filter(data, mfs)
+        outg = gau.complex_gaussian_filter(data, mfs)
+        np.testing.assert_allclose(out, outg, rtol=1e-6)
+
+    def test_complex_gaussian_filter_2d_simple2_UNITY(self):
+        data = np.zeros((11, 11), dtype=np.complex64)
+        data[5, 5] = 1.0+1.0j
+        mfs = 0.0,1.0
+        out = au.complex_gaussian_filter(data, mfs)
+        outg = gau.complex_gaussian_filter(data, mfs)
+        np.testing.assert_allclose(out, outg, rtol=1e-6)
+
+    def test_complex_gaussian_filter_2d_UNITY(self):
+        data = np.zeros((8, 8), dtype=np.complex64)
+        data[3:5, 3:5] = 2.0+2.0j
+        mfs = 3.0,4.0
+        out = au.complex_gaussian_filter(data, mfs)
+        outg = gau.complex_gaussian_filter(data, mfs)
+        np.testing.assert_allclose(out, outg, rtol=1e-6)
+
+    def test_complex_gaussian_filter_2d_batched(self):
+        batch_number = 2
+        A = 5
+        B = 5
+
+        data = np.zeros((batch_number, A, B), dtype=np.complex64)
+        data[:, 2:3, 2:3] = 2.0+2.0j
+        mfs = 3.0,4.0
+        out = au.complex_gaussian_filter(data, mfs)
+        gout = gau.complex_gaussian_filter(data, mfs)
+        
+        np.testing.assert_allclose(out, gout, rtol=1e-6)
