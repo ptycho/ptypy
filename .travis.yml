@@ -30,8 +30,8 @@ before_install:
   - PATH=${CUDA_HOME}/bin:${PATH}
 
 env:
-  - TEST_ENV_NAME=core_dependencies
-  - TEST_ENV_NAME=full_dependencies
+  - TEST_ENV_NAME=ptypy_core_dependencies
+  - TEST_ENV_NAME=ptypy_full_dependencies
 
 install: True
 

@@ -17,6 +17,7 @@ class PtypyI13AuStarNearfield9p7keVTest(unittest.TestCase):
         p.io.run = None
         p.io.autosave = u.Param(active=False)
         p.io.autoplot = u.Param(active=False)
+        p.ipython_kernel = False
         p.scan = u.Param()
         p.scan.source = None
         p.scan.geometry = u.Param()
