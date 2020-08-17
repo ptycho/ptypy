@@ -511,7 +511,7 @@ class GaussianModel(BaseModel):
                 LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
-        print(self.LL)
+
         return error_dct
 
     def poly_line_coeffs(self, ob_h, pr_h):
