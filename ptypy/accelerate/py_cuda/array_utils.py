@@ -1,5 +1,6 @@
 from . import load_kernel
 from pycuda import gpuarray
+from ptypy.utils import gaussian
 import numpy as np
 
 class ArrayUtilsKernel:
@@ -184,3 +185,93 @@ class DerivativesKernel:
                            grid=(gx, gy, gz),
                            stream=self.queue
                            )
+
+
+class GaussianSmoothingKernel:
+    def __init__(self, queue=None, num_stdevs=4):
+        self.dtype = np.complex64
+        self.stype = "complex<float>"
+        self.queue = queue
+        self.num_stdevs = num_stdevs
+        self.blockdim_x = 16
+        self.blockdim_y = 4
+        
+        # at least 2 blocks per SM
+        self.max_shared_per_block = 48 * 1024 // 2 
+        self.max_shared_per_block_complex = self.max_shared_per_block / 2 * np.dtype(np.float32).itemsize
+        self.max_kernel_radius = self.max_shared_per_block_complex / self.blockdim_y
+
+        self.convolution_row = load_kernel("convolution_row", file="convolution.cu", subs={
+            'BDIM_X': self.blockdim_y,
+            'BDIM_Y': self.blockdim_x,
+            'DTYPE': self.stype
+        })
+        self.convolution_col = load_kernel("convolution_col", file="convolution.cu", subs={
+            'BDIM_X': self.blockdim_x,
+            'BDIM_Y': self.blockdim_y,
+            'DTYPE': self.stype
+        })
+
+    
+    def convolution(self, input, output, mfs):
+        ndims = input.ndim
+        shape = input.shape
+
+        # Check input dimensions        
+        if ndims == 3:
+            batches,y,x = shape
+            stdy, stdx = mfs
+        elif ndims == 2:
+            batches = 1
+            y,x = shape
+            stdy, stdx = mfs
+        elif ndims == 1:
+            batches = 1
+            y,x = shape[0],1
+            stdy, stdx = mfs[0], 0.0
+        else:
+            raise NotImplementedError("input needs to be of dimensions 0 < ndims <= 3")
+
+        # Row convolution kernel
+        if stdx > 0.0:
+            r = int(self.num_stdevs * stdx + 0.5)
+            kernel = gpuarray.to_gpu(gaussian(np.arange(0,r+1,1), stdx).astype(np.float32))
+            if r > self.max_kernel_radius:
+                raise ValueError("Size of Gaussian kernel too large")
+
+            bx = self.blockdim_y
+            by = self.blockdim_x
+            
+            shared = (bx + 2*r) * by * np.dtype(np.complex64).itemsize
+            if shared > self.max_shared_per_block:
+                raise MemoryError("Cannot run kernel in shared memory")
+
+            blk = (bx, by, 1)
+            grd = (int((x + bx -1)// bx), int((y + by-1)// by), batches)
+            self.convolution_row(input, output, np.int32(y), np.int32(x), kernel, np.int32(r), 
+                                 block=blk, grid=grd, shared=shared, stream=self.queue)
+
+            # Overwrite input
+            input = output
+
+        # Column convolution kernel
+        if stdy > 0.0:
+            r = int(self.num_stdevs * stdy + 0.5)
+            kernel = gpuarray.to_gpu(gaussian(np.arange(0,r+1,1), stdy).astype(np.float32))
+            if r > self.max_kernel_radius:
+                raise ValueError("Size of Gaussian kernel too large")
+
+            bx = self.blockdim_x
+            by = self.blockdim_y
+            
+            shared = (by + 2*r) * bx * np.dtype(np.complex64).itemsize
+            if shared > self.max_shared_per_block:
+                raise MemoryError("Cannot run kernel in shared memory")
+
+            blk = (bx, by, 1)
+            grd = (int((x + bx -1)// bx), int((y + by-1)// by), batches)
+            self.convolution_col(input, output, np.int32(y), np.int32(x), kernel, np.int32(r), 
+                                 block=blk, grid=grd, shared=shared, stream=self.queue)
+
+        if (stdx == 0 and stdy == 0):
+            output = input
