@@ -1,11 +1,5 @@
 #include <thrust/complex.h>
 using thrust::complex;
-#include <iostream>
-
-// allow testing this on CPU
-#ifndef __NVCC__
-#define __device__
-#endif
 
 /** Implements reflect-mode index wrapping
  *
@@ -76,10 +70,11 @@ extern "C" __global__ void convolution_row(const DTYPE *__restrict__ input,
     // width of shared memory
     int shwidth = BDIM_Y + 2 * kernel_radius;
 
-    // fill up shared memory    
+    // only do this if row index is in range
+    // (need to keep threads with us, so that synchthreads below doesn't deadlock)  
     if (gbx + tx < height)
     {
-        // main part - reflecting as needed
+        // main data (center point for each thread) - reflecting as needed
         IndexReflect ind(-gby, width - gby);
         shm[tx * shwidth + (kernel_radius + ty)] = input[tx * width + ind(ty)];
 
@@ -151,7 +146,7 @@ extern "C" __global__ void convolution_col(const DTYPE *__restrict__ input,
     // (need to keep threads with us, so that synchthreads below doesn't deadlock)
     if (gby + ty < width)
     {
-        // // main data (center point for each thread) - reflecting if needed
+        // main data (center point for each thread) - reflecting if needed
         IndexReflect ind(-gbx, height - gbx);
         shm[(kernel_radius + tx) * BDIM_Y + ty] = input[ind(tx) * width + ty];
 

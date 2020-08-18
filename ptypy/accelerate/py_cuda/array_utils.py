@@ -193,22 +193,22 @@ class GaussianSmoothingKernel:
         self.stype = "complex<float>"
         self.queue = queue
         self.num_stdevs = num_stdevs
-        self.blockdim_x = 16
-        self.blockdim_y = 4
+        self.blockdim_x = 4
+        self.blockdim_y = 16
         
-        # at least 2 blocks per SM
+        # At least 2 blocks per SM
         self.max_shared_per_block = 48 * 1024 // 2 
         self.max_shared_per_block_complex = self.max_shared_per_block / 2 * np.dtype(np.float32).itemsize
         self.max_kernel_radius = self.max_shared_per_block_complex / self.blockdim_y
 
         self.convolution_row = load_kernel("convolution_row", file="convolution.cu", subs={
-            'BDIM_X': self.blockdim_y,
-            'BDIM_Y': self.blockdim_x,
+            'BDIM_X': self.blockdim_x,
+            'BDIM_Y': self.blockdim_y,
             'DTYPE': self.stype
         })
         self.convolution_col = load_kernel("convolution_col", file="convolution.cu", subs={
-            'BDIM_X': self.blockdim_x,
-            'BDIM_Y': self.blockdim_y,
+            'BDIM_X': self.blockdim_y,
+            'BDIM_Y': self.blockdim_x,
             'DTYPE': self.stype
         })
 
@@ -239,8 +239,8 @@ class GaussianSmoothingKernel:
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
 
-            bx = self.blockdim_y
-            by = self.blockdim_x
+            bx = self.blockdim_x
+            by = self.blockdim_y
             
             shared = (bx + 2*r) * by * np.dtype(np.complex64).itemsize
             if shared > self.max_shared_per_block:
@@ -261,8 +261,8 @@ class GaussianSmoothingKernel:
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
 
-            bx = self.blockdim_x
-            by = self.blockdim_y
+            bx = self.blockdim_y
+            by = self.blockdim_x
             
             shared = (by + 2*r) * bx * np.dtype(np.complex64).itemsize
             if shared > self.max_shared_per_block:

@@ -7,7 +7,6 @@ import unittest
 import numpy as np
 from . import perfrun, PyCudaTest, have_pycuda
 from ptypy.accelerate.array_based import array_utils as au
-from ptypy.utils import gaussian2D
 
 if have_pycuda():
     from pycuda import gpuarray
