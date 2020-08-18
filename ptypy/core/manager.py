@@ -34,9 +34,8 @@ from .. import defaults_tree
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'BlockScanModel', 'BlockVanilla',
-           'BlockFull']
-
+__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'OPRModel', 'BlockScanModel',
+           'BlockVanilla', 'BlockFull', 'BlockOPRModel']
 
 class _LogTime(object):
 
@@ -90,10 +89,16 @@ class ScanModel(object):
     help = Container for probe initialization model
 
     [sample]
-    type = Param
+    type = Param, str
     default =
     help = Container for sample initialization model
 
+    [resample]
+    type = int, None
+    default = 1
+    help = Resampling fraction of the image frames w.r.t. diffraction frames
+    doc = A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+          as densely as the raw diffraction data.
     """
     _PREFIX = MODEL_PREFIX
 
@@ -134,8 +139,11 @@ class ScanModel(object):
         self.new_mask_views = None
 
         self.geometries = []
-        self.shape = None
-        self.psize = None
+        self.diff_shape = None    # Shape of diffaction frames
+        self.probe_shape = None   # Shape of probe views (may be different if resampling or padding)
+        self.object_shape = None  # Currently same as probe_shape
+        self.exit_shape = None    # Currently same as object_shape
+        self.psize = None         # Pixel size in the detector plane
 
         # Object flags and constants
         self.containers_initialized = False
@@ -188,7 +196,9 @@ class ScanModel(object):
 
         # Get data
         logger.info('Importing data from scan %s.' % self.label)
+
         dp = self.ptyscan.auto(max_frames)
+        #dp = self.ptyscan.auto(self.frames_per_call)
 
         self.data_available = (dp != data.EOS)
         logger.debug(u.verbose.report(dp))
@@ -197,8 +207,10 @@ class ScanModel(object):
             return None
 
         label = self.label
+
         report_time('read data')
         logger.info('Creating views and storages.')
+
         # Prepare the scan geometry if not already done.
         if not self.geometries:
             self._initialize_geo(dp['common'])
@@ -208,7 +220,7 @@ class ScanModel(object):
             self._initialize_containers()
 
         # Generalized shape which works for 2d and 3d cases
-        sh = (1,) + tuple(self.shape)
+        sh = (1,) + tuple(self.diff_shape)
 
         # Storage generation if not already existing
         if self.diff is None:
@@ -243,7 +255,7 @@ class ScanModel(object):
 
         # Prepare for View generation
         AR_diff = DEFAULT_ACCESSRULE.copy()
-        AR_diff.shape = self.shape
+        AR_diff.shape = self.diff_shape
         AR_diff.coord = 0.0
         AR_diff.psize = self.psize
         AR_mask = AR_diff.copy()
@@ -426,12 +438,11 @@ class ScanModel(object):
             parallel.allreduce(max_frame, parallel.MPI.MAX)
             parallel.allreduce(min_frame, parallel.MPI.MIN)
         mean_frame /= (norm + (norm == 0))
-
         self.diff.norm = norm
         self.diff.max_power = parallel.MPImax(Itotal)
         self.diff.tot_power = parallel.MPIsum(Itotal)
-        self.diff.mean_power = self.diff.tot_power / (len(diff_views) * mean_frame.shape[-1] ** 2)
-        self.diff.pbound_stub = self.diff.max_power / mean_frame.shape[-1] ** 2
+        self.diff.mean_power = self.diff.tot_power / (len(diff_views) * np.prod(self.diff_shape))
+        self.diff.pbound_stub = self.diff.max_power / np.prod(self.diff_shape)
         self.diff.mean = mean_frame
         self.diff.max = max_frame
         self.diff.min = min_frame
@@ -517,7 +528,7 @@ class BlockScanModel(ScanModel):
         if not self.containers_initialized:
             self._initialize_containers()
 
-        sh = (1,) + tuple(self.shape)
+        sh = (1,) + tuple(self.diff_shape)
 
         # this is a hack for now
         dp = self._new_data_extra_analysis(dp)
@@ -528,7 +539,8 @@ class BlockScanModel(ScanModel):
             chunk = dp['chunk']
 
         # Generalized shape which works for 2d and 3d cases
-        sh = (max(len(chunk.indices_node), 1),) + tuple(self.shape)
+        sh = (max(len(chunk.indices_node),1),) + tuple(self.diff_shape)
+
         indices_node = chunk['indices_node']
 
         diff = self.Cdiff.new_storage(shape=sh, psize=self.psize, padonly=True,
@@ -537,7 +549,7 @@ class BlockScanModel(ScanModel):
                                       fill=1.0, layermap=indices_node)
         # Prepare for View generation
         AR_diff = DEFAULT_ACCESSRULE.copy()
-        AR_diff.shape = self.shape  # this is None due to init
+        AR_diff.shape = self.diff_shape # this is None due to init
         AR_diff.coord = 0.0
         AR_diff.psize = self.psize
         AR_mask = AR_diff.copy()
@@ -690,12 +702,12 @@ class _Vanilla(object):
             # if True:
             if pv is None:
                 pv = View(container=self.ptycho.probe,
-                          accessrule={'shape': geometry.shape,
-                                      'psize': geometry.resolution,
-                                      'coord': u.expectN(0.0, ndim),
-                                      'storageID': ID,
-                                      'layer': 0,
-                                      'active': True})
+                      accessrule={'shape': self.probe_shape,
+                                  'psize': geometry.resolution,
+                                  'coord': u.expectN(0.0, ndim),
+                                  'storageID': ID,
+                                  'layer': 0,
+                                  'active': True})
             else:
                 pv = pv.copy(update=False)
                 pv.coord = 0.0
@@ -703,12 +715,12 @@ class _Vanilla(object):
             # if True:
             if ov is None:
                 ov = View(container=self.ptycho.obj,
-                          accessrule={'shape': geometry.shape,
-                                      'psize': geometry.resolution,
-                                      'coord': self.new_positions[i],
-                                      'storageID': ID,
-                                      'layer': 0,
-                                      'active': True})
+                      accessrule={'shape': self.object_shape,
+                                  'psize': geometry.resolution,
+                                  'coord': self.new_positions[i],
+                                  'storageID': ID,
+                                  'layer': 0,
+                                  'active': True})
             else:
                 ov = ov.copy(update=False)
                 ov.coord = self.new_positions[i]
@@ -716,13 +728,13 @@ class _Vanilla(object):
             # if True:
             if ev is None:
                 ev = View(container=self.ptycho.exit,
-                          accessrule={'shape': geometry.shape,
-                                      'psize': geometry.resolution,
-                                      'coord': u.expectN(0.0, ndim),
-                                      'storageID': dv.storageID,
-                                      'layer': dv.layer,
-                                      'active': dv.active})
-            else:
+                      accessrule={'shape': self.exit_shape,
+                                  'psize': geometry.resolution,
+                                  'coord': u.expectN(0.0, ndim),
+                                  'storageID': dv.storageID,
+                                  'layer': dv.layer,
+                                  'active': dv.active})
+            else: 
                 ev = ev.copy(update=False)
                 ev.storageID = dv.storageID
                 ev.layer = dv.layer
@@ -751,21 +763,37 @@ class _Vanilla(object):
         Initialize the geometry based on input data package
         Parameters.
         """
+        probe_shape = common['shape']
+        center = common['center']
+        psize = common['psize']        
+        
+        # Adjust geometry parameters for resampling
+        self.resample = self.p.resample
+        probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
+        center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
+        psize = np.array(psize) / self.resample
 
         # Collect geometry parameters
-        get_keys = ['distance', 'center', 'energy', 'psize', 'shape']
+        get_keys = ['distance', 'center', 'energy', 'psize']
         geo_pars = u.Param({key: common[key] for key in get_keys})
+        geo_pars.shape = probe_shape
+        geo_pars.center = center
         geo_pars.propagation = self.p.propagation
+        geo_pars.psize = psize
 
         # make a Geo instance and fix resolution
         g = geometry.Geo(owner=self.ptycho, pars=geo_pars)
         g.p.resolution_is_fix = True
+        g.resample = self.resample
 
         # save the geometry
         self.geometries = [g]
 
-        # Store frame shape
-        self.shape = np.array(common.get('shape', g.shape))
+        # Store frame shapes
+        self.diff_shape = np.array(common.get('shape', g.shape))
+        self.probe_shape = probe_shape
+        self.object_shape = probe_shape
+        self.exit_shape = probe_shape
         self.psize = g.psize
         return
 
@@ -886,6 +914,14 @@ class _Full(object):
     type = str
     userlevel = 2
 
+    [resolution]
+    default = None
+    help = Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
+    doc = Half-period resolution given in [m] 
+    type = None, float
+    userlevel = 0
+    lowlim = 0
+
     """
 
     def _create_pods(self):
@@ -962,7 +998,7 @@ class _Full(object):
                         # i.e. the views do mostly not own the accessrule
                         # contents
                         pv = View(container=self.ptycho.probe,
-                                  accessrule={'shape': geometry.shape,
+                                  accessrule={'shape': self.probe_shape,
                                               'psize': geometry.resolution,
                                               'coord': pos_pr,
                                               'storageID': probe_id_suf,
@@ -970,7 +1006,7 @@ class _Full(object):
                                               'active': True})
 
                         ov = View(container=self.ptycho.obj,
-                                  accessrule={'shape': geometry.shape,
+                                  accessrule={'shape': self.object_shape,
                                               'psize': geometry.resolution,
                                               'coord': pos_obj,
                                               'storageID': object_id_suf,
@@ -978,7 +1014,7 @@ class _Full(object):
                                               'active': True})
 
                         ev = View(container=self.ptycho.exit,
-                                  accessrule={'shape': geometry.shape,
+                                  accessrule={'shape': self.exit_shape,
                                               'psize': geometry.resolution,
                                               'coord': pos_pr,
                                               'storageID': (dv.storageID +
@@ -1008,9 +1044,23 @@ class _Full(object):
         """
         Initialize the geometry/geometries.
         """
+        probe_shape = common['shape']
+        center = common['center']
+        psize = common['psize']        
+        
+        # Adjust geometry parameters for resampling
+        self.resample = self.p.resample
+        probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
+        center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
+        psize = np.array(psize) / self.resample
+
         # Extract necessary info from the received data package
-        get_keys = ['distance', 'center', 'energy', 'psize', 'shape']
+        get_keys = ['distance', 'center', 'energy', 'psize']
         geo_pars = u.Param({key: common[key] for key in get_keys})
+        geo_pars.shape = probe_shape
+        geo_pars.center = center
+        geo_pars.psize = psize
+        geo_pars.resolution = self.p.resolution
 
         # Add propagation info from this scan model
         geo_pars.propagation = self.p.propagation
@@ -1021,15 +1071,20 @@ class _Full(object):
             g = geometry.Geo(self.ptycho, geoID, pars=geo_pars)
             # now we fix the sample pixel size, This will make the frame size adapt
             g.p.resolution_is_fix = True
-            # save old energy value:
+            # save old energy value
             g.p.energy_orig = g.energy
             # change energy
             g.energy *= fac
+            # resampling
+            g.resample = self.resample
             # append the geometry
             self.geometries.append(g)
 
         # Store frame shape
-        self.shape = np.array(common.get('shape', self.geometries[0].shape))
+        self.diff_shape = np.array(common.get('shape', self.geometries[0].shape))
+        self.probe_shape = probe_shape
+        self.object_shape = probe_shape
+        self.exit_shape = probe_shape
         self.psize = self.geometries[0].psize
 
         return
@@ -1130,6 +1185,41 @@ class _Full(object):
             s.model_initialized = True
 
 
+class _OPRModel(object):
+    """
+    Scan for Orthogonal Probe Relaxation (OPR) ptychography, where each has its own probe. 
+
+    Defaults:
+
+    [name]
+    default = OPRModel
+    type = str
+    help =
+    doc =
+    """
+
+    def __init__(self, ptycho=None, pars=None, label=None):
+        super(_OPRModel, self).__init__(ptycho, pars, label)
+        self.p.illumination['diversity'] = None
+
+    def _create_pods(self):
+        new_pods, new_probe_ids, new_object_ids = super(_OPRModel, self)._create_pods()
+
+        for vID, v in self.ptycho.probe.views.items():
+            # Get the associated diffraction frame
+            di_view = v.pod.di_view
+            # Reformat the layer
+            v.layer = di_view.layer*self.p.coherence.num_probe_modes + v.layer
+            # Deactivate if the associate di_view is inactive (to spread the probe across nodes consistently with diff)
+            v.active = di_view.active
+
+        # Create dictionaries to store OPR modes
+        self.OPR_modes = {}
+        self.OPR_coeffs = {}
+        self.OPR_allprobes = {}
+
+        return new_pods, new_probe_ids, new_object_ids
+
 @defaults_tree.parse_doc('scan.Vanilla')
 class Vanilla(_Vanilla, ScanModel):
     pass
@@ -1149,6 +1239,13 @@ class Full(_Full, ScanModel):
 class BlockFull(_Full, BlockScanModel):
     pass
 
+@defaults_tree.parse_doc('scan.OPRModel')
+class OPRModel(_OPRModel, Full):
+    pass
+
+@defaults_tree.parse_doc('scan.BlockOPRModel')
+class BlockOPRModel(_OPRModel, BlockFull):
+    pass
 
 # Append illumination and sample defaults
 defaults_tree['scan.Full'].add_child(illumination.illumination_desc)
@@ -1187,6 +1284,10 @@ class Bragg3dModel(Vanilla):
     type = str
     help =
 
+    [resample]
+    type = int, None
+    default = 1
+    help = Diffraction resampling *CURRENTLY NOT SUPPORTED FOR BRAGG CASE*
     """
 
     def __init__(self, ptycho=None, pars=None, label=None):
@@ -1410,6 +1511,9 @@ class Bragg3dModel(Vanilla):
         to raw data frames, they now refer to 3-dimensional diffraction
         patterns as specified by Geo_Bragg.
         """
+        if self.p.resample != 1:
+            raise NotImplementedError('Diffraction pattern resampling is not supported by Bragg Scan Model')
+        self.resample = 1
 
         # Collect and assemble geometric parameters
         get_keys = ['distance', 'center', 'energy']
@@ -1427,12 +1531,16 @@ class Bragg3dModel(Vanilla):
         logger.info('Reconstruction will use these geometric parameters:')
         logger.info(g)
         g.p.resolution_is_fix = True
+        g.resample = self.resample
 
         # save the geometry
         self.geometries = [g]
 
         # Store frame shape
-        self.shape = g.shape
+        self.diff_shape = g.shape
+        self.probe_shape = self.diff_shape
+        self.object_shape = self.diff_shape
+        self.exit_shape = self.diff_shape
         self.psize = g.psize
 
     def _initialize_probe(self, probe_ids):
@@ -1456,7 +1564,7 @@ class Bragg3dModel(Vanilla):
                     % (shape, shape, extent, extent, psize))
         t0 = time.time()
 
-        Cprobe = Container(data_dims=2, data_type='float')
+        Cprobe = Container(data_dims=2, data_type='complex')
         Sprobe = Cprobe.new_storage(psize=psize, shape=shape)
 
         # fill the incoming probe

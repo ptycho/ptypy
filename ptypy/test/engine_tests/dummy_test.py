@@ -1,5 +1,5 @@
 """
-Test for the DM_simple engine.
+Test for the Dummy engine.
 
 This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.

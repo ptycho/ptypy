@@ -305,9 +305,6 @@ class BaseEngine(object):
         raise NotImplementedError()
 
 
-
-#local_tree = EvalDescriptor('')
-#@local_tree.parse_doc('engine.common')
 class PositionCorrectionEngine(BaseEngine):
     """
     A sub class engine that supports position correction
@@ -323,6 +320,7 @@ class PositionCorrectionEngine(BaseEngine):
     default = None
     type = int
     help = Number of iterations until position refinement starts
+    doc = If None, position refinement starts at first iteration
 
     [position_refinement.stop]
     default = None
@@ -341,14 +339,19 @@ class PositionCorrectionEngine(BaseEngine):
     help = Number of random shifts calculated in each position refinement step (has to be multiple of 4)
 
     [position_refinement.amplitude]
-    default = 0.001
+    default = 0.000001
     type = float
     help = Distance from original position per random shift [m]
 
     [position_refinement.max_shift]
-    default = 0.002
+    default = 0.000002
     type = float
     help = Maximum distance from original position [m]
+
+    [position_refinement.metric]
+    default = "fourier"
+    type = str
+    help = Error metric, can choose between "fourier" and "photon"
     
     [position_refinement.record]
     default = False
@@ -356,10 +359,31 @@ class PositionCorrectionEngine(BaseEngine):
     help = record movement of positions
     """
 
+    def __init__(self, ptycho_parent, pars):
+        """
+        Position Correction engine.
+        """
+        super(PositionCorrectionEngine, self).__init__(ptycho_parent, pars)
+
+        # TODO: this just a workaround fix, see issue #256
+        # Make a copy of position refinenment defaults
+        p = self.DEFAULT.position_refinement.copy()
+        # If position correction is turned on, use defaults and start from beginning
+        if self.p.position_refinement is True:
+            p.start = 0
+        # If new position correction params are provided, update defaults
+        elif isinstance(self.p.position_refinement,u.Param):
+            p.update(self.p.position_refinement)
+        # Overwrite position refinement parameters
+        self.p.position_refinement = p
+
+
     def engine_initialize(self):
         """
         Prepare the position refinement object for use further down the line.
         """
+
+        # Switch for position refinement
         if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
             self.do_position_refinement = False
         else:
@@ -373,7 +397,7 @@ class PositionCorrectionEngine(BaseEngine):
                 s.reformat()
 
             # this could be some kind of dictionary lookup if we want to add more
-            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob)
+            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
             log(3, "Position refinement initialised")
             self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
             if self.p.position_refinement.stop is None:
@@ -396,19 +420,39 @@ class PositionCorrectionEngine(BaseEngine):
             Iterates through all positions and refines them by a given algorithm. 
             """
             log(4, "----------- START POS REF -------------")
-            #self.position_refinement.update_constraints(self.curiter) # this stays here
             self.position_refinement.update_constraints(self.curiter) # this stays here
 
             # Iterate through all diffraction views
             for dname, di_view in self.di.views.items():
                 # Check for new coordinates
                 if di_view.active:
-                    #self.position_refinement.update_view_position(di_view)
                     self.position_refinement.update_view_position(di_view)
 
             # We may not need this
             #parallel.barrier()
             #self.ob.reformat(True)
+
+    def engine_finalize(self):
+        """
+        Synchronize positions
+        """
+        if self.do_position_refinement is False:
+            return
+
+        # Gather all new positions from each node
+        coords = {}
+        for ID, v in self.di.views.items():
+            if v.active:
+                coords[v.pod.ob_view.ID] = v.pod.ob_view.coord
+        coords = parallel.gather_dict(coords)
+
+        # Update storage
+        if parallel.master:
+            for ID, S in self.ob.storages.items():
+                for v in S.views:
+                    if v.pod.pr_view.layer == 0:
+                        v.coord = coords[v.ID]
+
 
 class Base3dBraggEngine(BaseEngine):
     """

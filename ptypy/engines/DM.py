@@ -112,6 +112,12 @@ class DM(PositionCorrectionEngine):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
+    [compute_log_likelihood]
+    default = True
+    type = bool
+    help = A switch for computing the log-likelihood error (this can impact the performance of the engine) 
+
+
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
@@ -121,11 +127,6 @@ class DM(PositionCorrectionEngine):
         Difference map reconstruction engine.
         """
         super(DM, self).__init__(ptycho_parent, pars)
-
-        p = self.DEFAULT.copy()
-        if pars is not None:
-            p.update(pars)
-        self.p = p
 
         # Instance attributes
         self.error = None
@@ -178,7 +179,6 @@ class DM(PositionCorrectionEngine):
 
         Everything that needs to be recalculated when new data arrives.
         """
-
         if self.ptycho.new_data:
 
             # recalculate everything
@@ -241,6 +241,8 @@ class DM(PositionCorrectionEngine):
         """
         Try deleting ever helper container.
         """
+        super(DM, self).engine_finalize()
+
         containers = [
             self.ob_buf,
             self.ob_nrm,
@@ -273,7 +275,8 @@ class DM(PositionCorrectionEngine):
             pbound = self.pbound_scan[di_view.storage.label]
             error_dct[name] = basic_fourier_update(di_view,
                                                    pbound=pbound,
-                                                   alpha=self.p.alpha)
+                                                   alpha=self.p.alpha,
+                                                   LL_error=self.p.compute_log_likelihood)
         return error_dct
 
     def clip_object(self, ob):
@@ -354,7 +357,6 @@ class DM(PositionCorrectionEngine):
                 # This estimate assumes that the probe power is uniformly distributed through the
                 # array and therefore underestimate the strength of the probe terms.
                 cfact = self.p.object_inertia * self.mean_power
-
                 if self.p.obj_smooth_std is not None:
                     logger.info(
                         'Smoothing object, average cfact is %.2f'
