@@ -26,7 +26,8 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from ..accelerate import py_cuda as gpu
 from ..accelerate.py_cuda.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel, DerivativesKernel
+from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel
+
 from ..accelerate.array_based import address_manglers
 
 __all__ = ['ML_pycuda']
@@ -143,6 +144,8 @@ class ML_pycuda(ML_serial):
 
         self.dmp = DeviceMemoryPool()
         self.queue_transfer = cuda.Stream()
+        
+        self.GSK = GaussianSmoothingKernel(queue=self.queue)
 
     def engine_initialize(self):
         """
@@ -259,13 +262,18 @@ class ML_pycuda(ML_serial):
             for container in self.ptycho.containers.values():
                 self._set_pr_ob_ref_for_data(dev=dev, container=container, sync_copy=sync_copy)
 
+    def _get_smooth_gradient(self, data, sigma):
+        tmp = gpuarray.empty(data.shape, dtype=np.complex64)
+        self.GSK.convolution(data, tmp, [sigma, sigma])
+        return tmp
+
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new
         # Smoothing preconditioner
         if self.smooth_gradient:
             self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
             for name, s in new_ob_grad.storages.items():
-                s.data[:] = self.smooth_gradient(s.data)
+                s.gpu = self._get_smooth_gradient(s.gpu, self.smooth_gradient.sigma)
 
         return self._replace_grad(self.ob_grad, new_ob_grad)
 

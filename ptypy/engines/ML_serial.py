@@ -143,13 +143,16 @@ class ML_serial(ML):
 
         self.ML_model.prepare()
 
+    def _get_smooth_gradient(self, data, sigma):
+        return self.smooth_gradient(data)
+
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new
         # Smoothing preconditioner
         if self.smooth_gradient:
             self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
             for name, s in new_ob_grad.storages.items():
-                s.data[:] = self.smooth_gradient(s.data)
+                s.data[:] = self._get_smooth_gradient(s.data, self.smooth_gradient.sigma)
 
         norm = Cnorm2(new_ob_grad)
         dot = np.real(Cdot(new_ob_grad, self.ob_grad))
@@ -230,7 +233,7 @@ class ML_serial(ML):
             # Smoothing preconditioner
             if self.smooth_gradient:
                 for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
+                    s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
             else:
                 self.ob_h -= self.ob_grad
 
@@ -389,7 +392,6 @@ class GaussianModel(BaseModelSerial):
                 LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
-        print(self.LL)
         return error_dct
 
     def poly_line_coeffs(self, c_ob_h, c_pr_h):
