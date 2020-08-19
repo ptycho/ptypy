@@ -251,8 +251,8 @@ class ID16AScan(PtyScan):
             for ii in self.filelist:
                 projobj = io.h5read(ii,self.h5_path)[self.h5_path]
                 metadata = projobj['parameters']
-                motor_mne = str(metadata['motor_mne ']).split() # motor names
-                motor_pos = [eval(kk) for kk in str(metadata['motor_pos ']).split()] # motor pos
+                motor_mne = str(metadata['motor_mne ']).split("'")[1].split() # motor names
+                motor_pos = [eval(kk) for kk in str(metadata['motor_pos ']).split("'")[1].split()] # motor pos
                 motor_idx = (motor_mne.index('spy'), motor_mne.index('spz')) # index motors
                 positions.append((motor_pos[motor_idx[0]], \
                                   motor_pos[motor_idx[1]]))# translation motor positions

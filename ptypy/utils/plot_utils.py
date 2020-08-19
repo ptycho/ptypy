@@ -14,6 +14,7 @@ from PIL import Image
 import matplotlib as mpl
 import matplotlib.cm
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 
 #NODISPLAY = (os.getenv("DISPLAY") is None)
 #if NODISPLAY:
@@ -370,8 +371,29 @@ def imload(filename):
     """
     return np.array(Image.open(filename))
 
+# Removing it due to DeprecationWarning in Matplotlib
+# DeprecationWarning: Passing raw data via parameters data and lut to register_cmap() is deprecated since 3.3 and will become an error two minor releases later. Instead use: register_cmap(cmap=LinearSegmentedColormap(name, data, lut))
 # Franz map
-mpl.cm.register_cmap(name='franzmap', data={'red':   ((0.000,   0,    0),
+# mpl.cm.register_cmap(name='franzmap', data={'red':   ((0.000,   0,    0),
+#                                                       (0.350,   0,    0),
+#                                                       (0.660,   1,    1),
+#                                                       (0.890,   1,    1),
+#                                                       (1.000, 0.5,  0.5)),
+#                                             'green': ((0.000,   0,    0),
+#                                                       (0.120,   0,    0),
+#                                                       (0.160,  .2,   .2),
+#                                                       (0.375,   1,    1),
+#                                                       (0.640,   1,    1),
+#                                                       (0.910,   0,    0),
+#                                                       (1.000,   0,    0)),
+#                                             'blue':  ((0.000,   0,    0),
+#                                                       (0.150,   1,    1),
+#                                                       (0.340,   1,    1),
+#                                                       (0.650,   0,    0),
+#                                                       (1.000,   0,    0))}, lut=256)
+
+# Franz Map
+franzmap_cm = {'red':   ((0.000,   0,    0),
                                                       (0.350,   0,    0),
                                                       (0.660,   1,    1),
                                                       (0.890,   1,    1),
@@ -387,8 +409,9 @@ mpl.cm.register_cmap(name='franzmap', data={'red':   ((0.000,   0,    0),
                                                       (0.150,   1,    1),
                                                       (0.340,   1,    1),
                                                       (0.650,   0,    0),
-                                                      (1.000,   0,    0))}, lut=256)
-
+                                                      (1.000,   0,    0))}
+                                                      
+mpl.cm.register_cmap(cmap=LinearSegmentedColormap(name='franzmap', segmentdata=franzmap_cm), lut=256)
 
 def franzmap():
     """\
