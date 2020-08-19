@@ -21,6 +21,7 @@ from . import BaseEngine, register, DM
 from .. import defaults_tree
 from ..accelerate.array_based.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..accelerate.array_based import address_manglers
+from ..accelerate.array_based import array_utils as au
 
 
 ### TODOS 
@@ -418,19 +419,15 @@ class DM_serial(DM.DM):
 
         for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
-            """
+            cfact = self.p.object_inertia * self.mean_power
+            
             if self.p.obj_smooth_std is not None:
                 logger.info('Smoothing object, cfact is %.2f' % cfact)
-                t2 = time.time()
-                self.prg.gaussian_filter(queue, (info[3],info[4]), None, obj_gpu.data, self.gauss_kernel_gpu.data)
-                queue.finish()
-                obj_gpu *= cfact
-                print 'gauss: '  + str(time.time()-t2)
+                smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
+                ob.data = cfact * au.complex_gaussian_filter(ob.data, smooth_mfs)
             else:
-                obj_gpu *= cfact
-            """
-            cfact = self.p.object_inertia * self.mean_power
-            ob.data *= cfact
+                ob.data *= cfact
+            
             obn.data[:] = cfact
 
         # storage for-loop

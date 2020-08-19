@@ -442,17 +442,14 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         cfact = self.ob_cfact[oID]
                         obn = self.ob_nrm.S[oID]
                         obb = self.ob_buf.S[oID]
-                        """
+                        
                         if self.p.obj_smooth_std is not None:
                             logger.info('Smoothing object, cfact is %.2f' % cfact)
-                            t2 = time.time()
-                            self.prg.gaussian_filter(queue, (info[3],info[4]), None, obj_gpu.data, self.gauss_kernel_gpu.data)
-                            queue.finish()
-                            obj_gpu *= cfact
-                            print 'gauss: '  + str(time.time()-t2)
-                        else:
-                            obj_gpu *= cfact
-                        """
+                            smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
+                            ob_gpu_tmp = gpuarray.empty(ob.shape, dtype=np.complex64)
+                            self.GSK.convolution(ob.gpu, ob_gpu_tmp, smooth_mfs)
+                            ob.gpu = ob_gpu_tmp
+                        
                         ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=streamdata.queue)
                         obn.gpu.fill(np.float32(cfact), stream=streamdata.queue)
                 
