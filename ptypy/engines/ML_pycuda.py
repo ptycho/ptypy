@@ -140,19 +140,19 @@ class ML_pycuda(ML_serial):
         """
         super().__init__(ptycho_parent, pars)
 
-        self.context, self.queue = gpu.get_context()
+    def engine_initialize(self):
+        """
+        Prepare for ML reconstruction.
+        """
+        self.context, self.queue = gpu.get_context(new_context=True, new_queue=True)
 
         self.dmp = DeviceMemoryPool()
         self.queue_transfer = cuda.Stream()
         
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
-
-    def engine_initialize(self):
-        """
-        Prepare for ML reconstruction.
-        """
+        
         super().engine_initialize()
-        self._setup_kernels()
+        #self._setup_kernels()
 
     def _setup_kernels(self):
         """

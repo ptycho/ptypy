@@ -9,14 +9,14 @@ debug_options = ['-O3', '-DNDEBUG', '-std=c++11', '-lineinfo'] # release mode fl
 context = None
 queue = None
 
-def get_context(new_queue=False):
+def get_context(new_context=False, new_queue=False):
 
     from ptypy.utils import parallel
 
     global context
     global queue
 
-    if context is None:
+    if context is None or new_context:
         cuda.init()
         if parallel.rank_local < cuda.Device.count():
             context = cuda.Device(parallel.rank_local).make_context()
@@ -26,7 +26,7 @@ def get_context(new_queue=False):
         #                                              str(cuda.Device.count())))
         # print("parallel.rank:%s, parallel.rank_local:%s" % (str(parallel.rank),
         #                                                     str(parallel.rank_local)))
-    if queue is None:
+    if queue is None or new_queue:
         queue = cuda.Stream()
     return context, queue
 

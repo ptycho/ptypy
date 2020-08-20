@@ -52,10 +52,13 @@ class DM_pycuda(DM_serial.DM_serial):
         """
         Difference map reconstruction engine.
         """
-
         super(DM_pycuda, self).__init__(ptycho_parent, pars)
 
-        self.context, self.queue = gpu.get_context()
+    def engine_initialize(self):
+        """
+        Prepare for reconstruction.
+        """
+        self.context, self.queue = gpu.get_context(new_context=True, new_queue=True)
         # allocator for READ only buffers
         # self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
         ## gaussian filter
@@ -69,13 +72,7 @@ class DM_pycuda(DM_serial.DM_serial):
         # Gaussian Smoothing Kernel
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
 
-
-    def engine_initialize(self):
-        """
-        Prepare for reconstruction.
-        """
         super(DM_pycuda, self).engine_initialize()
-
         self.error = []
 
     def _setup_kernels(self):
