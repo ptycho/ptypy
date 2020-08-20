@@ -188,7 +188,7 @@ class ML_pycuda(ML_serial):
                 nmodes = 1
 
             # create buffer arrays
-            ash = (fpc * nmodes,) + tuple(geo.shape)
+            ash = (fpc * nmodes,) + tuple([int(s) for s in geo.shape])
             aux = gpuarray.zeros(ash, dtype=np.complex64)
             kern.aux = aux
             kern.a = gpuarray.zeros(ash, dtype=np.complex64)
