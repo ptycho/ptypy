@@ -62,7 +62,7 @@ class NvccCompiler(UnixCCompiler):
         cmp = cuda_driver.Context.get_device().compute_capability()
         archflag = '-arch=sm_{}{}'.format(cmp[0], cmp[1])
         self.src_extensions.append('.cu')
-        self.LD_FLAGS = ["-lcufft_static", "-lculibos", "-ldl", "-lrt", "-lpthread", "-cudart shared"]
+        self.LD_FLAGS = [archflag, "-lcufft_static", "-lculibos", "-ldl", "-lrt", "-lpthread", "-cudart shared"]
         self.NVCC_FLAGS = ["-dc", archflag]
         self.CXXFLAGS = ['"-fPIC"']
         pybind_includes = [pybind11.get_include(), sysconfig.get_path('include')]  

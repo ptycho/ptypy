@@ -19,7 +19,7 @@ from ..utils import parallel
 from . import BaseEngine, register, DM_serial, DM
 from ..accelerate import py_cuda as gpu
 from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel
+from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel, GaussianSmoothingKernel
 from ..accelerate.array_based import address_manglers
 
 MPI = parallel.size > 1
@@ -52,27 +52,27 @@ class DM_pycuda(DM_serial.DM_serial):
         """
         Difference map reconstruction engine.
         """
-
         super(DM_pycuda, self).__init__(ptycho_parent, pars)
-
-        self.context, self.queue = gpu.get_context()
-        # allocator for READ only buffers
-        # self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
-        ## gaussian filter
-        # dummy kernel
-        if not self.p.obj_smooth_std:
-            gauss_kernel = gaussian_kernel(1, 1).astype(np.float32)
-        else:
-            gauss_kernel = gaussian_kernel(self.p.obj_smooth_std, self.p.obj_smooth_std).astype(np.float32)
-
-        self.gauss_kernel_gpu = gpuarray.to_gpu(gauss_kernel)
 
     def engine_initialize(self):
         """
         Prepare for reconstruction.
         """
-        super(DM_pycuda, self).engine_initialize()
+        self.context, self.queue = gpu.get_context(new_context=True, new_queue=True)
+        # allocator for READ only buffers
+        # self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
+        ## gaussian filter
+        # dummy kernel
+        # if not self.p.obj_smooth_std:
+        #     gauss_kernel = gaussian_kernel(1, 1).astype(np.float32)
+        # else:
+        #     gauss_kernel = gaussian_kernel(self.p.obj_smooth_std, self.p.obj_smooth_std).astype(np.float32)
+        # self.gauss_kernel_gpu = gpuarray.to_gpu(gauss_kernel)
+        
+        # Gaussian Smoothing Kernel
+        self.GSK = GaussianSmoothingKernel(queue=self.queue)
 
+        super(DM_pycuda, self).engine_initialize()
         self.error = []
 
     def _setup_kernels(self):
@@ -361,20 +361,16 @@ class DM_pycuda(DM_serial.DM_serial):
         queue.synchronize()
         for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
-            """
+            cfact = self.ob_cfact[oID]
+
             if self.p.obj_smooth_std is not None:
                 logger.info('Smoothing object, cfact is %.2f' % cfact)
-                t2 = time.time()
-                self.prg.gaussian_filter(queue, (info[3],info[4]), None, obj_gpu.data, self.gauss_kernel_gpu.data)
-                queue.synchronize()
-                obj_gpu *= cfact
-                print 'gauss: '  + str(time.time()-t2)
-            else:
-                obj_gpu *= cfact
-            """
-            cfact = self.ob_cfact[oID]
+                smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
+                ob_gpu_tmp = gpuarray.empty(ob.shape, dtype=np.complex64)
+                self.GSK.convolution(ob.gpu, ob_gpu_tmp, smooth_mfs)
+                ob.gpu = ob_gpu_tmp
+                
             ob.gpu *= cfact
-            # obn.gpu[:] = cfact
             obn.gpu.fill(cfact)
             queue.synchronize()
 

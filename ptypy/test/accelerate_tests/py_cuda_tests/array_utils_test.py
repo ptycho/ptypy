@@ -6,10 +6,11 @@
 import unittest
 import numpy as np
 from . import perfrun, PyCudaTest, have_pycuda
+from ptypy.accelerate.array_based import array_utils as au
 
 if have_pycuda():
     from pycuda import gpuarray
-    import ptypy.accelerate.py_cuda.array_utils as au
+    import ptypy.accelerate.py_cuda.array_utils as gau
 
 class ArrayUtilsTest(PyCudaTest):
 
@@ -20,7 +21,7 @@ class ArrayUtilsTest(PyCudaTest):
         A_dev = gpuarray.to_gpu(A)
 
         ## Act
-        AU = au.ArrayUtilsKernel(acc_dtype=np.float32)
+        AU = gau.ArrayUtilsKernel(acc_dtype=np.float32)
         out_dev = AU.dot(A_dev, A_dev)
         out = out_dev.get()
 
@@ -34,7 +35,7 @@ class ArrayUtilsTest(PyCudaTest):
         A_dev = gpuarray.to_gpu(A)
 
         ## Act
-        AU = au.ArrayUtilsKernel(acc_dtype=np.float64)
+        AU = gau.ArrayUtilsKernel(acc_dtype=np.float64)
         out_dev = AU.dot(A_dev, A_dev)
         out = out_dev.get()
 
@@ -48,7 +49,7 @@ class ArrayUtilsTest(PyCudaTest):
         A_dev = gpuarray.to_gpu(A)
 
         ## Act
-        AU = au.ArrayUtilsKernel(acc_dtype=np.float32)
+        AU = gau.ArrayUtilsKernel(acc_dtype=np.float32)
         out_dev = AU.dot(A_dev, A_dev)
         out = out_dev.get()
 
@@ -62,7 +63,7 @@ class ArrayUtilsTest(PyCudaTest):
         A_dev = gpuarray.to_gpu(A)
 
         ## Act
-        AU = au.ArrayUtilsKernel(acc_dtype=np.float64)
+        AU = gau.ArrayUtilsKernel(acc_dtype=np.float64)
         out_dev = AU.dot(A_dev, A_dev)
         out = out_dev.get()
 
@@ -77,7 +78,7 @@ class ArrayUtilsTest(PyCudaTest):
         A_dev = gpuarray.to_gpu(A)
 
         ## Act
-        AU = au.ArrayUtilsKernel(acc_dtype=np.float64)
+        AU = gau.ArrayUtilsKernel(acc_dtype=np.float64)
         out_dev = AU.dot(A_dev, A_dev)
 
     def test_transpose_2D(self):
@@ -87,7 +88,7 @@ class ArrayUtilsTest(PyCudaTest):
         out_dev = gpuarray.empty((3,5), dtype=np.int32)
         
         ## Act
-        AU = au.ArrayUtilsKernel()
+        AU = gau.ArrayUtilsKernel()
         AU.transpose(inp_dev, out_dev)
 
         ## Assert
@@ -102,7 +103,7 @@ class ArrayUtilsTest(PyCudaTest):
         out_dev = gpuarray.empty((61,137), dtype=np.int32)
         
         ## Act
-        AU = au.ArrayUtilsKernel()
+        AU = gau.ArrayUtilsKernel()
         AU.transpose(inp_dev, out_dev)
 
         ## Assert
@@ -117,10 +118,98 @@ class ArrayUtilsTest(PyCudaTest):
         out_dev = gpuarray.empty((5, 3, 250, 3), dtype=np.int32)
 
         ## Act
-        AU = au.ArrayUtilsKernel()
+        AU = gau.ArrayUtilsKernel()
         AU.transpose(inp_dev.reshape(750, 15), out_dev.reshape(15, 750))
 
         ## Assert
         out_exp = np.transpose(inp, (2, 3, 0, 1))
         out = out_dev.get()
         np.testing.assert_array_equal(out, out_exp)
+
+    def test_complex_gaussian_filter_1d_UNITY(self):
+        # Arrange
+        inp = np.zeros((11,), dtype=np.complex64)
+        inp[5] = 1.0 +1.0j
+        mfs = [1.0]
+        inp_dev = gpuarray.to_gpu(inp)
+        out_dev = gpuarray.empty((11,), dtype=np.complex64)
+
+        # Act
+        GS = gau.GaussianSmoothingKernel()
+        GS.convolution(inp_dev, out_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter(inp, mfs)
+        out = out_dev.get()
+        np.testing.assert_allclose(out_exp, out, rtol=1e-5)
+
+    def test_complex_gaussian_filter_2d_simple_UNITY(self):
+        # Arrange
+        inp = np.zeros((11, 11), dtype=np.complex64)
+        inp[5, 5] = 1.0+1.0j
+        mfs = 1.0,0.0
+        inp_dev = gpuarray.to_gpu(inp)
+        out_dev = gpuarray.empty((11,11), dtype=np.complex64)
+
+        # Act
+        GS = gau.GaussianSmoothingKernel()
+        GS.convolution(inp_dev, out_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter(inp, mfs)
+        out = out_dev.get()
+        np.testing.assert_allclose(out_exp, out, rtol=1e-5)
+
+    def test_complex_gaussian_filter_2d_simple2_UNITY(self):
+        # Arrange
+        inp = np.zeros((11, 11), dtype=np.complex64)
+        inp[5, 5] = 1.0+1.0j
+        mfs = 0.0,1.0
+        inp_dev = gpuarray.to_gpu(inp)
+        out_dev = gpuarray.empty((11,11),dtype=np.complex64)
+
+        # Act
+        GS = gau.GaussianSmoothingKernel()
+        GS.convolution(inp_dev, out_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter(inp, mfs)
+        out = out_dev.get()
+        np.testing.assert_allclose(out_exp, out, rtol=1e-5)
+
+    def test_complex_gaussian_filter_2d_UNITY(self):
+        # Arrange
+        inp = np.zeros((8, 8), dtype=np.complex64)
+        inp[3:5, 3:5] = 2.0+2.0j
+        mfs = 3.0,4.0
+        inp_dev = gpuarray.to_gpu(inp)
+        out_dev = gpuarray.empty((8,8), dtype=np.complex64)
+
+        # Act
+        GS = gau.GaussianSmoothingKernel()
+        GS.convolution(inp_dev, out_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter(inp, mfs)
+        out = out_dev.get()
+        np.testing.assert_allclose(out_exp, out, rtol=1e-4)
+
+    def test_complex_gaussian_filter_2d_batched(self):
+        # Arrange
+        batch_number = 2
+        A = 5
+        B = 5
+        inp = np.zeros((batch_number, A, B), dtype=np.complex64)
+        inp[:, 2:3, 2:3] = 2.0+2.0j
+        mfs = 3.0,4.0
+        inp_dev = gpuarray.to_gpu(inp)
+        out_dev = gpuarray.empty((batch_number,A,B), dtype=np.complex64)
+
+        # Act
+        GS = gau.GaussianSmoothingKernel()
+        GS.convolution(inp_dev, out_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter(inp, mfs)
+        out = out_dev.get()        
+        np.testing.assert_allclose(out_exp, out, rtol=1e-4)
