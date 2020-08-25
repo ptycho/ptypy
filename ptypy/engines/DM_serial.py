@@ -150,6 +150,7 @@ class DM_serial(DM.DM):
         self.benchmark.C_Fourier_update = 0.
         self.benchmark.D_iProp = 0.
         self.benchmark.E_Build_exit = 0.
+        self.benchmark.F_LLerror = 0.
         self.benchmark.probe_update = 0.
         self.benchmark.object_update = 0.
         self.benchmark.calls_fourier = 0
@@ -271,27 +272,25 @@ class DM_serial(DM.DM):
             error = {}
 
             for dID in self.di.S.keys():
-                t1 = time.time()
 
+                # find probe, object and exit ID in dependence of dID
                 prep = self.diff_info[dID]
-                # find probe, object in exit ID in dependence of dID
                 pID, oID, eID = prep.poe_IDs
 
                 # references for kernels
                 kern = self.kernels[prep.label]
                 FUK = kern.FUK
                 AWK = kern.AWK
-
-                pbound = self.pbound_scan[prep.label]
-                aux = kern.aux
                 FW = kern.FW
                 BW = kern.BW
 
-                # get addresses and auxilliary array
+                # get addresses and buffers
                 addr = prep.addr
                 mag = prep.mag
                 ma_sum = prep.ma_sum
                 err_fourier = prep.err_fourier
+                pbound = self.pbound_scan[prep.label]
+                aux = kern.aux
 
                 # local references
                 ma = prep.ma
@@ -299,11 +298,18 @@ class DM_serial(DM.DM):
                 pr = self.pr.S[pID].data
                 ex = self.ex.S[eID].data
 
+                ## compute log-likelihood
+                if self.p.compute_log_likelihood:
+                    t1 = time.time()
+                    pass
+                    self.benchmark.F_LLerror += time.time() - t1
+
+                ## build auxilliary wave
                 t1 = time.time()
                 AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                 self.benchmark.A_Build_aux += time.time() - t1
 
-                ## FFT
+                ## forward FFT
                 t1 = time.time()
                 aux[:] = FW(aux)
                 self.benchmark.B_Prop += time.time() - t1
@@ -315,16 +321,17 @@ class DM_serial(DM.DM):
                 FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
                 self.benchmark.C_Fourier_update += time.time() - t1
 
+                ## backward FFT
                 t1 = time.time()
                 aux[:] = BW(aux)
                 self.benchmark.D_iProp += time.time() - t1
 
-                ## apply changes #2
+                ## build exit wave
                 t1 = time.time()
                 AWK.build_exit(aux, addr, ob, pr, ex)
                 self.benchmark.E_Build_exit += time.time() - t1
 
-
+                # update errors
                 err_phot = np.zeros_like(err_fourier)
                 err_exit = np.zeros_like(err_fourier)
                 errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
