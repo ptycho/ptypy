@@ -33,6 +33,7 @@ class FourierUpdateKernel(BaseKernel):
         # temporary buffer arrays
         self.npy.fdev = None
         self.npy.ferr = None
+        self.npy.LLerr = None
 
         self.kernels = [
             'fourier_error',
@@ -48,6 +49,7 @@ class FourierUpdateKernel(BaseKernel):
         # temporary buffer arrays
         self.npy.fdev = np.zeros(self.fshape, dtype=np.float32)
         self.npy.ferr = np.zeros(self.fshape, dtype=np.float32)
+        self.npy.LLerr = np.zeros(self.fshape[0], dtype=np.float32)
 
     def fourier_error(self, b_aux, addr, mag, mask, mask_sum):
         # reference shape (write-to shape)
@@ -133,6 +135,29 @@ class FourierUpdateKernel(BaseKernel):
         # upcasting
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
         return
+
+    def log_likelihood(self, b_aux, addr, mag, mask):
+        # reference shape (write-to shape)
+        sh = self.fshape
+        # stopper
+        maxz = mag.shape[0]
+
+        # batch buffers
+        LLerr = self.npy.LLerr[:maxz]
+        aux = b_aux[:maxz * self.nmodes]
+
+        # build model from complex fourier magnitudes, summing up 
+        # all modes incoherently
+        tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
+        LL = (np.abs(tf) ** 2).sum(1)
+
+        # Intensity data
+        I = mag**2
+
+        # Calculate log likelihood
+        LLerr[:] = ((mask * (LL - I)**2 / (I + 1.)).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
+        return
+
 
 class GradientDescentKernel(BaseKernel):
 

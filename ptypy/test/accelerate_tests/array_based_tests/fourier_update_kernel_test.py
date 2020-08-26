@@ -5,7 +5,11 @@
 
 import unittest
 import numpy as np
-from ptypy.accelerate.array_based.kernels import FourierUpdateKernel
+import ptypy.utils as u
+from . import utils as tu
+from ptypy.accelerate.array_based import data_utils as du
+from ptypy.accelerate.array_based.kernels import FourierUpdateKernel, AuxiliaryWaveKernel
+
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
@@ -440,7 +444,48 @@ class FourierUpdateKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(f, expected_f, err_msg="the f array from the fmag_all_update kernesl isnot behaving as expected.")
 
 
+    def test_log_likelihood(self):
+        nmodes = 1
+        PtychoInstance = tu.get_ptycho_instance('log_likelihood_test', nmodes)
+        ptypy_error_metric = self.get_ptypy_loglikelihood(PtychoInstance)
+        LLerr_expected = np.array([LL for LL in ptypy_error_metric.values()]).astype(np.float32)
 
+        vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
+        addr = vectorised_scan['meta']['addr'].reshape((len(ptypy_error_metric)//nmodes, nmodes, 5, 3))
+        probe = vectorised_scan['probe']
+        obj = vectorised_scan['obj']
+        mask = vectorised_scan['mask']
+        exit_wave = vectorised_scan['exit wave']
+        mag = np.sqrt(vectorised_scan['diffraction'])
+
+        aux = np.zeros_like(exit_wave)
+        AWK = AuxiliaryWaveKernel()
+        AWK.allocate()
+        AWK.build_aux_no_ex(aux, addr, obj, probe, fac=1.0, add=False)
+
+        scan = list(PtychoInstance.model.scans.values())[0]
+        geo = scan.geometries[0]
+        aux[:] = geo.propagator.fw(aux)
+
+        FUK = FourierUpdateKernel(aux, nmodes=1)
+        FUK.allocate()
+        FUK.log_likelihood(aux, addr, mag, mask)
+
+        np.testing.assert_allclose(FUK.npy.LLerr, LLerr_expected, rtol=1e-6, err_msg="LLerr does not give the expected error "
+                                                                                     "for the fourier_update_kernel.log_likelihood method") 
+
+    def get_ptypy_loglikelihood(self, a_ptycho_instance):
+        error_dct = {}
+        for dname, diff_view in a_ptycho_instance.diff.views.items():
+            I = diff_view.data
+            fmask = diff_view.pod.mask
+            LL = np.zeros_like(diff_view.data)
+            for name, pod in diff_view.pods.items():
+                LL += u.abs2(pod.fw(pod.probe * pod.object))
+
+            error_dct[dname] = (np.sum(fmask * (LL - I) ** 2 / (I + 1.))
+                            / np.prod(LL.shape))
+        return error_dct
 
 
 if __name__ == '__main__':
