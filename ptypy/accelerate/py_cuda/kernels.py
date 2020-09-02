@@ -129,6 +129,27 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                  shared=smem,
                                  stream=self.queue)
 
+    def log_likelihood(self, b_aux, addr, mag, mask, err_phot):
+        # reference shape (write-to shape)
+        #sh = self.fshape
+        # stopper
+        #maxz = mag.shape[0]
+
+        # batch buffers
+        #aux = b_aux[:maxz * self.nmodes]
+
+        # build model from complex fourier magnitudes, summing up 
+        # all modes incoherently
+        #tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
+        #LL = (np.abs(tf) ** 2).sum(1)
+
+        # Intensity data
+        #I = mag**2
+
+        # Calculate log likelihood error
+        #err_phot[:] = ((mask * (LL - I)**2 / (I + 1.)).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
+        return
+
     def execute(self, kernel_name=None, compare=False, sync=False):
 
         if kernel_name is None:

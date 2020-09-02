@@ -355,5 +355,106 @@ class FourierUpdateKernelTest(PyCudaTest):
         np.testing.assert_array_equal(expected_err_mag, measured_err_mag, err_msg="The fourier_update_kernel.error_reduce"
                                                                    "is not behaving as expected.")
 
+
+    def test_log_likelihood_UNITY(self):
+        '''
+        setup
+        '''
+        B = 3  # frame size y
+        C = 3  # frame size x
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+
+        scan_pts = 2  # one dimensional scan point number
+
+        H = B + npts_greater_than  # object size y
+        I = C + npts_greater_than  # object size x
+
+        N = scan_pts ** 2
+        total_number_modes = G * D
+        A = N * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        fmag = np.empty(shape=(N, B, C), dtype=FLOAT_TYPE)  # the measured magnitudes NxAxB
+        fmag_fill = np.arange(np.prod(fmag.shape).item()).reshape(fmag.shape).astype(fmag.dtype)
+        fmag[:] = fmag_fill
+
+        mask = np.empty(shape=(N, B, C),
+                        dtype=FLOAT_TYPE)  # the masks for the measured magnitudes either 1xAxB or NxAxB
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        mask[:] = mask_fill
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((N))
+        Y = Y.reshape((N))
+
+        addr = np.zeros((N, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):  #
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        from ptypy.accelerate.array_based.kernels import AuxiliaryWaveKernel #as npAuxiliaryWaveKernel
+        aux = np.zeros_like(exit_wave)
+        AWK = AuxiliaryWaveKernel()
+        AWK.allocate()
+        AWK.build_aux_no_ex(aux, addr, object_array, probe, fac=1.0, add=False)
+
+        '''
+        test
+        '''
+        mask_sum = mask.sum(-1).sum(-1)
+        LLerr = np.zeros_like(mask_sum, dtype=np.float32)
+        LLerr_d = gpuarray.to_gpu(LLerr)
+        fmag_d  = gpuarray.to_gpu(fmag)
+        mask_d  = gpuarray.to_gpu(mask)
+        addr_d  = gpuarray.to_gpu(addr)
+        aux_d   = gpuarray.to_gpu(aux)
+
+        from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
+        npFUK = npFourierUpdateKernel(aux, nmodes=1)
+        npFUK.allocate()
+        npFUK.log_likelihood(aux, addr, fmag, mask, LLerr)
+
+        FUK = FourierUpdateKernel(aux_d, nmodes=1)
+        FUK.allocate()
+        #FUK.log_likelihood(aux_d, addr_d, fmag_d, mask_d, LLerr_d)
+
+        expected_err_phot = LLerr
+        measured_err_phot = LLerr_d.get()
+        np.testing.assert_array_equal(expected_err_phot, measured_err_phot, err_msg="Numpy log-likelihood error "
+                                                                            "is \n%s, \nbut gpu log-likelihood error is \n%s, \n " % (
+                                                                            repr(expected_err_phot),
+                                                                            repr(measured_err_phot)))
+
+
+
 if __name__ == '__main__':
     unittest.main()
