@@ -228,6 +228,7 @@ class DM_serial(DM.DM):
             prep.ma = self.ma.S[d.ID].data.astype(np.float32)
             # self.ma.S[d.ID].data = prep.ma
             prep.ma_sum = prep.ma.sum(-1).sum(-1)
+            prep.err_phot = np.zeros_like(prep.ma_sum)
             prep.err_fourier = np.zeros_like(prep.ma_sum)
 
         # Unfortunately this needs to be done for all pods, since
@@ -288,6 +289,7 @@ class DM_serial(DM.DM):
                 addr = prep.addr
                 mag = prep.mag
                 ma_sum = prep.ma_sum
+                err_phot = prep.err_phot
                 err_fourier = prep.err_fourier
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
@@ -301,7 +303,9 @@ class DM_serial(DM.DM):
                 ## compute log-likelihood
                 if self.p.compute_log_likelihood:
                     t1 = time.time()
-                    pass
+                    AWK.build_aux_no_ex(aux, addr, ob, pr)
+                    aux[:] = FW(aux)
+                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)
                     self.benchmark.F_LLerror += time.time() - t1
 
                 ## build auxilliary wave
@@ -332,7 +336,6 @@ class DM_serial(DM.DM):
                 self.benchmark.E_Build_exit += time.time() - t1
 
                 # update errors
-                err_phot = np.zeros_like(err_fourier)
                 err_exit = np.zeros_like(err_fourier)
                 errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
                 error.update(zip(prep.view_IDs, errs))

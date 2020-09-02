@@ -469,10 +469,11 @@ class FourierUpdateKernelTest(unittest.TestCase):
 
         FUK = FourierUpdateKernel(aux, nmodes=1)
         FUK.allocate()
-        FUK.log_likelihood(aux, addr, mag, mask)
+        LLerr = np.zeros_like(LLerr_expected, dtype=np.float32)
+        FUK.log_likelihood(aux, addr, mag, mask, LLerr)
 
-        np.testing.assert_allclose(FUK.npy.LLerr, LLerr_expected, rtol=1e-6, err_msg="LLerr does not give the expected error "
-                                                                                     "for the fourier_update_kernel.log_likelihood method") 
+        np.testing.assert_allclose(LLerr, LLerr_expected, rtol=1e-6, err_msg="LLerr does not give the expected error "
+                                                                             "for the fourier_update_kernel.log_likelihood method") 
 
     def get_ptypy_loglikelihood(self, a_ptycho_instance):
         error_dct = {}
