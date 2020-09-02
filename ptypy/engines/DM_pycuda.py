@@ -84,7 +84,6 @@ class DM_pycuda(DM_serial.DM_serial):
 
             kern = u.Param()
             self.kernels[label] = kern
-
             # TODO: needs to be adapted for broad bandwidth
             geo = scan.geometries[0]
 
@@ -186,6 +185,7 @@ class DM_pycuda(DM_serial.DM_serial):
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
+            prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
             if self.do_position_refinement:
                 prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
 
@@ -216,6 +216,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 mag = prep.mag
                 ma_sum = prep.ma_sum
                 err_fourier = prep.err_fourier_gpu
+                err_phot = prep.err_phot
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
 
@@ -228,7 +229,9 @@ class DM_pycuda(DM_serial.DM_serial):
                 ## compute log-likelihood
                 if self.p.compute_log_likelihood:
                     t1 = time.time()
-                    pass
+                    AWK.build_aux_no_ex(aux, addr, ob, pr)
+                    FW.ft(aux, aux)
+                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)                    
                     self.benchmark.F_LLerror += time.time() - t1
                 
                 ## build auxilliary wave
@@ -339,7 +342,7 @@ class DM_pycuda(DM_serial.DM_serial):
         #     s.data[:] = s.gpu.get()
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
-            err_phot = np.zeros_like(err_fourier)
+            err_phot = prep.err_phot#np.zeros_like(err_fourier)
             err_exit = np.zeros_like(err_fourier)
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error.update(zip(prep.view_IDs, errs))

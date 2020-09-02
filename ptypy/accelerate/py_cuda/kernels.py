@@ -17,14 +17,21 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.fourier_error2_cuda = None
         self.error_reduce_cuda = load_kernel("error_reduce")
         self.fourier_update_cuda = None
+        self.log_likelihood_cuda = load_kernel("log_likelihood")
+
+        self.gpu = Adict()
+        self.gpu.fdev = None
+        self.gpu.ferr = None
+        self.gpu.llerr = None
 
     def allocate(self):
-        self.npy.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
-        self.npy.ferr = gpuarray.zeros(self.fshape, dtype=np.float32)
+        self.gpu.fdev  = gpuarray.zeros(self.fshape, dtype=np.float32)
+        self.gpu.ferr  = gpuarray.zeros(self.fshape, dtype=np.float32)
+        self.gpu.llerr = gpuarray.zeros(self.fshape, dtype=np.float32)
 
     def fourier_error(self, f, addr, fmag, fmask, mask_sum):
-        fdev = self.npy.fdev
-        ferr = self.npy.ferr
+        fdev = self.gpu.fdev
+        ferr = self.gpu.ferr
         if True:
             # version going over all modes in a single thread (faster)
             self.fourier_error_cuda(np.int32(self.nmodes),
@@ -73,7 +80,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         # shared_memory_size =int(2 * 32 * 32 *float_size) # this doesn't work even though its the same...
         shared_memory_size = int(49152)
 
-        self.error_reduce_cuda(self.npy.ferr,
+        self.error_reduce_cuda(self.gpu.ferr,
                                err_fmag,
                                np.int32(self.fshape[1]),
                                np.int32(self.fshape[2]),
@@ -83,7 +90,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                stream=self.queue)
 
     def fmag_all_update(self, f, addr, fmag, fmask, err_fmag, pbound=0.0):
-        fdev = self.npy.fdev
+        fdev = self.gpu.fdev
         self.fmag_all_update_cuda(f,
                                   fmask,
                                   fmag,
@@ -101,8 +108,8 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
     def fourier_update(self, f, addr, fmag, fmask, mask_sum, err_fmag, pbound=0):
         if self.fourier_update_cuda is None:
             self.fourier_update_cuda = load_kernel("fourier_update")
-        fdev = self.npy.fdev
-        ferr = self.npy.ferr
+        fdev = self.gpu.fdev
+        ferr = self.gpu.ferr
 
         bx = 16
         by = 16
@@ -130,26 +137,24 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                  stream=self.queue)
 
     def log_likelihood(self, b_aux, addr, mag, mask, err_phot):
-        # reference shape (write-to shape)
-        #sh = self.fshape
-        # stopper
-        #maxz = mag.shape[0]
+        llerr = self.gpu.llerr
+        self.log_likelihood_cuda(np.int32(self.nmodes),
+                                 b_aux,
+                                 mask,
+                                 mag,
+                                 addr,
+                                 llerr,
+                                 np.int32(self.fshape[1]),
+                                 np.int32(self.fshape[2]),
+                                 block=(32, 32, 1),
+                                 grid=(int(mag.shape[0]), 1, 1),
+                                 stream=self.queue)
 
-        # batch buffers
-        #aux = b_aux[:maxz * self.nmodes]
+        # copy back to CPU here, reduce and truncate
+        # because aux/llerr has always same length as frames_per_block
+        err_phot[:] = llerr.get().sum(-1).sum(-1)[:mag.shape[0]] 
 
-        # build model from complex fourier magnitudes, summing up 
-        # all modes incoherently
-        #tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
-        #LL = (np.abs(tf) ** 2).sum(1)
-
-        # Intensity data
-        #I = mag**2
-
-        # Calculate log likelihood error
-        #err_phot[:] = ((mask * (LL - I)**2 / (I + 1.)).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
-        return
-
+    # DEPRECATED?
     def execute(self, kernel_name=None, compare=False, sync=False):
 
         if kernel_name is None:
@@ -180,6 +185,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
             'FTYPE': 'float'
         })
 
+    # DEPRECATED?
     def load(self, aux, ob, pr, ex, addr):
         super(AuxiliaryWaveKernel, self).load(aux, ob, pr, ex, addr)
         for key, array in self.npy.__dict__.items():
@@ -632,8 +638,8 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         self.update_addr_and_error_state_cuda = load_kernel("update_addr_error_state")
 
     def allocate(self):
-        self.npy.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
-        self.npy.ferr = gpuarray.zeros(self.fshape, dtype=np.float32)
+        self.gpu.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
+        self.gpu.ferr = gpuarray.zeros(self.fshape, dtype=np.float32)
 
     def build_aux(self, b_aux, addr, ob, pr):
         obr, obc = self._cache_object_shape(ob)
@@ -646,8 +652,8 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
                                block=(32, 32, 1), grid=(int(np.prod(addr.shape[:1])), 1, 1), stream=self.queue)
 
     def fourier_error(self, f, addr, fmag, fmask, mask_sum):
-        fdev = self.npy.fdev
-        ferr = self.npy.ferr
+        fdev = self.gpu.fdev
+        ferr = self.gpu.ferr
         self.fourier_error_cuda(np.int32(self.nmodes),
                                 f,
                                 fmask,
@@ -668,7 +674,7 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         # shared_memory_size =int(2 * 32 * 32 *float_size) # this doesn't work even though its the same...
         shared_memory_size = int(49152)
 
-        self.error_reduce_cuda(self.npy.ferr,
+        self.error_reduce_cuda(self.gpu.ferr,
                                err_fmag,
                                np.int32(self.fshape[1]),
                                np.int32(self.fshape[2]),
