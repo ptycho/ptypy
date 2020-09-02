@@ -47,10 +47,6 @@ extern "C" __global__ void __launch_bounds__(1024, 2)
       }
       auto I = fmag[a * B + b] * fmag[a * B + b];
       llerr[a * B + b] = fmask[a * B + b] * (acc - I) * (acc - I) / (I + 1) / norm;
-      //((mask * (LL - I)**2 / (I + 1.)).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
-      //auto fdevv = sqrt(acc) - fmag[a * B + b];
-      //ferr[a * B + b] = (fmask[a * B + b] * fdevv * fdevv) / mask_sum[ma[0]];
-      //fdev[a * B + b] = fdevv;
     }
   }
 }
