@@ -335,7 +335,8 @@ class DM_serial(DM.DM):
                 ## build exit wave
                 t1 = time.time()
                 AWK.build_exit(aux, addr, ob, pr, ex)
-                AWK.exit_error(aux, addr, err_exit)
+                FUK.exit_error(aux,addr)
+                FUK.error_reduce(addr, err_exit)
                 self.benchmark.E_Build_exit += time.time() - t1
 
                 # update errors

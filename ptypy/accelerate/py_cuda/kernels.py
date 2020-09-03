@@ -18,6 +18,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.error_reduce_cuda = load_kernel("error_reduce")
         self.fourier_update_cuda = None
         self.log_likelihood_cuda = load_kernel("log_likelihood")
+        self.exit_error_cuda = load_kernel("exit_error")
 
         self.gpu = Adict()
         self.gpu.fdev = None
@@ -74,18 +75,13 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                      shared=int(bx*by*bz*4),
                                      stream=self.queue)
 
-    def error_reduce(self, addr, err_fmag):
-        # import sys
-        # float_size = sys.getsizeof(np.float32(4))
-        # shared_memory_size =int(2 * 32 * 32 *float_size) # this doesn't work even though its the same...
-        shared_memory_size = int(49152)
-
+    def error_reduce(self, addr, err_sum):
         self.error_reduce_cuda(self.gpu.ferr,
-                               err_fmag,
+                               err_sum,
                                np.int32(self.fshape[1]),
                                np.int32(self.fshape[2]),
                                block=(32, 32, 1),
-                               grid=(int(err_fmag.shape[0]), 1, 1),
+                               grid=(int(err_sum.shape[0]), 1, 1),
                                shared=32*32*4,
                                stream=self.queue)
 
@@ -153,6 +149,20 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         # copy back to CPU here, reduce and truncate
         # because aux/llerr has always same length as frames_per_block
         err_phot[:] = llerr.get().sum(-1).sum(-1)[:mag.shape[0]] 
+
+    def exit_error(self, aux, addr):
+        sh = addr.shape
+        maxz = sh[0]
+        ferr = self.gpu.ferr
+        self.exit_error_cuda(np.int32(self.nmodes),
+                             aux,
+                             ferr,
+                             addr,
+                             np.int32(self.fshape[1]),
+                             np.int32(self.fshape[2]),
+                             block=(32, 32, 1),
+                             grid=(int(maxz), 1, 1),
+                             stream=self.queue)
 
     # DEPRECATED?
     def execute(self, kernel_name=None, compare=False, sync=False):

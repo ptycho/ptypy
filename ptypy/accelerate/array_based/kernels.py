@@ -155,6 +155,16 @@ class FourierUpdateKernel(BaseKernel):
         err_phot[:] = ((mask * (LL - I)**2 / (I + 1.)).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
         return
 
+    def exit_error(self, aux, addr):
+        sh = addr.shape
+        maxz = sh[0]
+
+        # batch buffers
+        ferr = self.npy.ferr[:maxz]
+        dex = aux[:maxz * self.nmodes]
+        fsh = dex.shape[-2:]
+        ferr[:] = (np.abs(dex.reshape((maxz,self.nmodes,fsh[0], fsh[1])))**2).sum(axis=1) / np.prod(fsh)
+
 
 class GradientDescentKernel(BaseKernel):
 
@@ -405,13 +415,6 @@ class AuxiliaryWaveKernel(BaseKernel):
             else:
                 aux[ind, :, :] = tmp
         return
-
-    def exit_error(self, b_aux, addr, exit_err):
-        sh = addr.shape
-        nmodes = sh[1]
-        maxz = sh[0]
-        dex = b_aux[:maxz * nmodes]
-        exit_err[:] = (np.abs(dex.reshape((maxz,nmodes,-1)))**2).mean(-1).sum(-1)
 
 class PoUpdateKernel(BaseKernel):
 
