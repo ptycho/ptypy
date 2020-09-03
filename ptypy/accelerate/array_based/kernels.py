@@ -406,6 +406,13 @@ class AuxiliaryWaveKernel(BaseKernel):
                 aux[ind, :, :] = tmp
         return
 
+    def exit_error(self, b_aux, addr, exit_err):
+        sh = addr.shape
+        nmodes = sh[1]
+        maxz = sh[0]
+        dex = b_aux[:maxz * nmodes]
+        exit_err[:] = (np.abs(dex.reshape((maxz,nmodes,-1)))**2).mean(-1).sum(-1)
+
 class PoUpdateKernel(BaseKernel):
 
     def __init__(self):

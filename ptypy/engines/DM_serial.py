@@ -230,6 +230,7 @@ class DM_serial(DM.DM):
             prep.ma_sum = prep.ma.sum(-1).sum(-1)
             prep.err_phot = np.zeros_like(prep.ma_sum)
             prep.err_fourier = np.zeros_like(prep.ma_sum)
+            prep.err_exit = np.zeros_like(prep.ma_sum)
 
         # Unfortunately this needs to be done for all pods, since
         # the shape of the probe / object was modified.
@@ -291,6 +292,7 @@ class DM_serial(DM.DM):
                 ma_sum = prep.ma_sum
                 err_phot = prep.err_phot
                 err_fourier = prep.err_fourier
+                err_exit = prep.err_exit
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
 
@@ -333,10 +335,10 @@ class DM_serial(DM.DM):
                 ## build exit wave
                 t1 = time.time()
                 AWK.build_exit(aux, addr, ob, pr, ex)
+                AWK.exit_error(aux, addr, err_exit)
                 self.benchmark.E_Build_exit += time.time() - t1
 
                 # update errors
-                err_exit = np.zeros_like(err_fourier)
                 errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
                 error.update(zip(prep.view_IDs, errs))
 
