@@ -489,5 +489,83 @@ class FourierUpdateKernelTest(unittest.TestCase):
         return error_dct
 
 
+    def test_exit_error(self):
+        '''
+        setup
+        '''
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        G = 2 # number og object modes
+
+        E = B  # probe size y
+        F = C  # probe size x
+
+        scan_pts = 2  # one dimensional scan point number
+
+        N = scan_pts ** 2
+        total_number_modes = G * D
+        A = N * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        aux = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            aux[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((N,))
+        Y = Y.reshape((N,))
+
+        addr = np.zeros((N, total_number_modes, 5, 3))
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [position_idx, 0, 0],
+                                                             [position_idx, 0, 0]])
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        err_sum = np.zeros(N, dtype=FLOAT_TYPE)
+        FUK = FourierUpdateKernel(aux, nmodes=total_number_modes)
+        FUK.allocate()
+        FUK.exit_error(aux, addr)
+
+        expected_ferr = np.array([[[ 2.3999996, 2.3999996, 2.3999996, 2.3999996, 2.3999996],
+                                   [ 2.3999996, 2.3999996, 2.3999996, 2.3999996, 2.3999996],
+                                   [ 2.3999996, 2.3999996, 2.3999996, 2.3999996, 2.3999996],
+                                   [ 2.3999996, 2.3999996, 2.3999996, 2.3999996, 2.3999996],
+                                   [ 2.3999996, 2.3999996, 2.3999996, 2.3999996, 2.3999996]],
+
+                                  [[13.92, 13.92, 13.92, 13.92, 13.92],
+                                   [13.92, 13.92, 13.92, 13.92, 13.92],
+                                   [13.92, 13.92, 13.92, 13.92, 13.92],
+                                   [13.92, 13.92, 13.92, 13.92, 13.92],
+                                   [13.92, 13.92, 13.92, 13.92, 13.92]],
+
+                                  [[35.68, 35.68, 35.68, 35.68, 35.68 ],
+                                   [35.68, 35.68, 35.68, 35.68, 35.68 ],
+                                   [35.68, 35.68, 35.68, 35.68, 35.68 ],
+                                   [35.68, 35.68, 35.68, 35.68, 35.68 ],
+                                   [35.68, 35.68, 35.68, 35.68, 35.68 ]],
+
+                                  [[67.68, 67.68, 67.68, 67.68, 67.68 ],
+                                   [67.68, 67.68, 67.68, 67.68, 67.68 ],
+                                   [67.68, 67.68, 67.68, 67.68, 67.68 ],
+                                   [67.68, 67.68, 67.68, 67.68, 67.68 ],
+                                   [67.68, 67.68, 67.68, 67.68, 67.68 ]]], dtype=FLOAT_TYPE)
+
+        np.testing.assert_array_equal(FUK.npy.ferr, expected_ferr,
+                                      err_msg="ferr does not give the expected error "
+                                              "for the fourier_update_kernel.fourier_error emthods")
+
+
 if __name__ == '__main__':
     unittest.main()

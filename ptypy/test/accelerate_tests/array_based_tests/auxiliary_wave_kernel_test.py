@@ -391,31 +391,5 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
                                       err_msg="The auxiliary_wave has not been updated as expected")
 
-
-
-    def test_exit_error(self):
-        '''
-        setup
-        '''
-        addr, object_array, probe, exit_wave = self.prepare_arrays()
-        print(addr.shape)
-        '''
-        test
-        '''
-        auxiliary_wave = np.zeros_like(exit_wave)
-        exit_err = np.zeros(addr.shape[0])
-
-        AWK = AuxiliaryWaveKernel()
-        AWK.allocate()
-
-        AWK.build_exit(auxiliary_wave, addr, object_array, probe, exit_wave)
-        AWK.exit_error(auxiliary_wave, addr, exit_err)
-
-        expected_exit_err = np.array([340., 340., 340., 340.], dtype=np.float32)
-  
-        np.testing.assert_array_equal(exit_err, expected_exit_err,
-                                      err_msg="The auxiliary_wave has not been updated as expected")
-
-
 if __name__ == '__main__':
     unittest.main()
