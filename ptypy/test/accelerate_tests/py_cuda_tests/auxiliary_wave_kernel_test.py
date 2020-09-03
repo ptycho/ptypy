@@ -512,6 +512,30 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, 
             fac=1.0, add=False)
 
+    def test_exit_error_UNITY(self):
+        ## Arrange
+        addr, object_array, probe, exit_wave = self.prepare_arrays()
+        addr_dev, object_array_dev, probe_dev, exit_wave_dev = self.copy_to_gpu(addr, object_array, probe, exit_wave)
+        auxiliary_wave = np.zeros_like(exit_wave)
+        auxiliary_wave_dev = np.copy(auxiliary_wave)#gpuarray.zeros_like(exit_wave_dev)
+        exit_err = np.zeros(addr.shape[0])
+        exit_err_dev = np.copy(exit_err)
+
+        ## Act
+        from ptypy.accelerate.array_based.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        nAWK = npAuxiliaryWaveKernel()
+        AWK = AuxiliaryWaveKernel(self.stream)
+
+        #AWK.build_exit(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, exit_wave_dev)
+        #nAWK.build_exit(auxiliary_wave, addr, object_array, probe, exit_wave)
+
+        AWK.exit_error(auxiliary_wave, addr, exit_err_dev)
+        nAWK.exit_error(auxiliary_wave, addr, exit_err)
+
+        ## Assert
+        np.testing.assert_array_equal(exit_err, exit_err_dev,
+                                      err_msg="The gpu exit error does not look the same as the numpy version")
+
 
 if __name__ == '__main__':
     unittest.main()

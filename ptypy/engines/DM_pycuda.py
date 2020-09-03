@@ -186,6 +186,7 @@ class DM_pycuda(DM_serial.DM_serial):
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
             prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
+            prep.err_exit_gpu = gpuarray.to_gpu(prep.err_exit)
             if self.do_position_refinement:
                 prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
 
@@ -217,6 +218,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 ma_sum = prep.ma_sum
                 err_fourier = prep.err_fourier_gpu
                 err_phot = prep.err_phot
+                err_exit = prep.err_exit
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
 
@@ -259,6 +261,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 ## build exit wave
                 t1 = time.time()
                 AWK.build_exit(aux, addr, ob, pr, ex)
+                AWK.exit_error(aux.get(), addr.get(), err_exit)
                 self.benchmark.E_Build_exit += time.time() - t1
 
                 self.benchmark.calls_fourier += 1
@@ -343,7 +346,7 @@ class DM_pycuda(DM_serial.DM_serial):
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
             err_phot = prep.err_phot
-            err_exit = np.zeros_like(err_fourier)
+            err_exit = prep.err_exit#np.zeros_like(err_fourier)
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error.update(zip(prep.view_IDs, errs))
 
