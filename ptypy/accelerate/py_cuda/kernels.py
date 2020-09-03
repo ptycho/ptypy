@@ -23,12 +23,10 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.gpu = Adict()
         self.gpu.fdev = None
         self.gpu.ferr = None
-        self.gpu.llerr = None
 
     def allocate(self):
         self.gpu.fdev  = gpuarray.zeros(self.fshape, dtype=np.float32)
         self.gpu.ferr  = gpuarray.zeros(self.fshape, dtype=np.float32)
-        self.gpu.llerr = gpuarray.zeros(self.fshape, dtype=np.float32)
 
     def fourier_error(self, f, addr, fmag, fmask, mask_sum):
         fdev = self.gpu.fdev
@@ -133,22 +131,19 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                  stream=self.queue)
 
     def log_likelihood(self, b_aux, addr, mag, mask, err_phot):
-        llerr = self.gpu.llerr
+        ferr = self.gpu.ferr
         self.log_likelihood_cuda(np.int32(self.nmodes),
                                  b_aux,
                                  mask,
                                  mag,
                                  addr,
-                                 llerr,
+                                 ferr,
                                  np.int32(self.fshape[1]),
                                  np.int32(self.fshape[2]),
                                  block=(32, 32, 1),
                                  grid=(int(mag.shape[0]), 1, 1),
                                  stream=self.queue)
-
-        # copy back to CPU here, reduce and truncate
-        # because aux/llerr has always same length as frames_per_block
-        err_phot[:] = llerr.get().sum(-1).sum(-1)[:mag.shape[0]] 
+        self.error_reduce(addr, err_phot)
 
     def exit_error(self, aux, addr):
         sh = addr.shape

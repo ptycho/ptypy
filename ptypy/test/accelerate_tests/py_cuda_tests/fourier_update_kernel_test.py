@@ -409,11 +409,11 @@ class FourierUpdateKernelTest(PyCudaTest):
         '''
         mask_sum = mask.sum(-1).sum(-1)
         LLerr = np.zeros_like(mask_sum, dtype=np.float32)
-        LLerr_d = np.zeros_like(mask_sum, dtype=np.float32)
         f_d = gpuarray.to_gpu(f)
         fmag_d = gpuarray.to_gpu(fmag)
         mask_d = gpuarray.to_gpu(mask)
         addr_d = gpuarray.to_gpu(addr)
+        LLerr_d = gpuarray.to_gpu(LLerr)
 
         from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
         nFUK = npFourierUpdateKernel(f, nmodes=total_number_modes)
@@ -425,9 +425,9 @@ class FourierUpdateKernelTest(PyCudaTest):
         FUK.log_likelihood(f_d, addr_d, fmag_d, mask_d, LLerr_d)
 
         expected_err_phot = LLerr
-        measured_err_phot = LLerr_d
+        measured_err_phot = LLerr_d.get()
 
-        np.testing.assert_allclose(LLerr, LLerr_d, err_msg="Numpy log-likelihood error "
+        np.testing.assert_allclose(expected_err_phot, measured_err_phot, err_msg="Numpy log-likelihood error "
                                                                                  "is \n%s, \nbut gpu log-likelihood error is \n%s, \n " % (
                                                                                  repr(expected_err_phot),
                                                                                  repr(measured_err_phot)), rtol=1e-5)

@@ -217,7 +217,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 mag = prep.mag
                 ma_sum = prep.ma_sum
                 err_fourier = prep.err_fourier_gpu
-                err_phot = prep.err_phot
+                err_phot = prep.err_phot_gpu
                 err_exit = prep.err_exit_gpu
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
@@ -346,7 +346,7 @@ class DM_pycuda(DM_serial.DM_serial):
         #     s.data[:] = s.gpu.get()
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
-            err_phot = prep.err_phot
+            err_phot = prep.err_phot.get()
             err_exit = prep.err_exit_gpu.get()
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error.update(zip(prep.view_IDs, errs))
