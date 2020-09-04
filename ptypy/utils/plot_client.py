@@ -79,6 +79,19 @@ nearfield.ob.cmaps=['gray', 'jet']
 nearfield.ob.crop=[0.0, 0.0]  # fraction of array to crop for display
 nearfield.ob.rm_pr=False #
 TEMPLATES['nearfield'] = nearfield
+
+nfbnw = DEFAULT.copy(depth=4)
+nfbnw.pr.clims=[None, [-np.pi, np.pi]]
+nfbnw.pr.cmaps=['gray', 'hsv']
+nfbnw.pr.crop=[0.0, 0.0]  # fraction of array to crop for display
+nfbnw.pr.rm_pr=False  #
+nfbnw.ob.clims=[None, None]
+nfbnw.ob.cmaps=['gray', 'bone']
+nfbnw.ob.crop=[0.0, 0.0]  # fraction of array to crop for display
+nfbnw.ob.rm_pr=False #
+TEMPLATES['nf_black_and_white'] = nfbnw
+
+del nfbnw
 del nearfield
 del bnw
 del weak

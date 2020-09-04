@@ -745,7 +745,7 @@ def phase_from_dpc(dpc_row, dpc_col):
 
     return np.real(nf[..., :sh[-2], :sh[-1]])
 
-_cxro_server = 'http://henke.lbl.gov'
+_cxro_server = 'https://henke.lbl.gov'
 
 _cxro_POST_query = ''.join([
     'Material=Enter+Formula',
