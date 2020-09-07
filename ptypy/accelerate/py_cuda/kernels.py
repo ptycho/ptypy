@@ -143,6 +143,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                  block=(32, 32, 1),
                                  grid=(int(mag.shape[0]), 1, 1),
                                  stream=self.queue)
+        # TODO: we might want to move this call outside of here
         self.error_reduce(addr, err_phot)
 
     def exit_error(self, aux, addr):
