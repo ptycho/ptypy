@@ -287,8 +287,6 @@ class FourierUpdateKernelTest(PyCudaTest):
 
         FUK.fourier_error(f_d, addr_d, fmag_d, mask_d, mask_sum_d)
         FUK.error_reduce(addr_d, err_fmag_d)
-        print(err_fmag_d.get())
-        assert(0)
 
         expected_err_fmag = err_fmag
         measured_err_fmag = err_fmag_d.get()
