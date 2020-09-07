@@ -361,6 +361,8 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
             prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
             # prepare page-locked mems:
             prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
+            prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
+            prep.err_exit_gpu = gpuarray.to_gpu(prep.err_exit)
             if self.do_position_refinement:
                 prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
             ma = self.ma.S[dID].data.astype(np.float32)
@@ -488,6 +490,8 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                     addr = prep.addr_gpu
                     addr2 = prep.addr2_gpu if use_tiles else None
                     err_fourier = prep.err_fourier_gpu
+                    err_phot = prep.err_phot_gpu
+                    err_exit = prep.err_exit_gpu
                     ma_sum = prep.ma_sum_gpu
 
                     # local references
@@ -510,8 +514,17 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                     if do_update_fourier:
                         log(4, '------ Fourier update -----', True)
 
-                        t1 = time.time()
+
+                        ## compute log-likelihood
+                        if self.p.compute_log_likelihood:
+                            t1 = time.time()
+                            AWK.build_aux_no_ex(aux, addr, ob, pr)
+                            FW.ft(aux, aux)
+                            FUK.log_likelihood(aux, addr, mag, ma, err_phot)                    
+                            self.benchmark.F_LLerror += time.time() - t1
+
                         ## prep + forward FFT
+                        t1 = time.time()
                         AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                         self.benchmark.A_Build_aux += time.time() - t1
 
@@ -532,6 +545,8 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         BW.ift(aux, aux)
                         ## apply changes
                         AWK.build_exit(aux, addr, ob, pr, ex)
+                        FUK.exit_error(aux, addr)
+                        FUK.error_reduce(addr, err_exit)
                         self.benchmark.E_Build_exit += time.time() - t1
                         
                         self.benchmark.calls_fourier += 1
@@ -670,8 +685,8 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         # FIXXME: copy to pinned memory
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
-            err_phot = np.zeros_like(err_fourier)
-            err_exit = np.zeros_like(err_fourier)
+            err_phot = prep.err_phot_gpu.get()
+            err_exit = prep.err_exit_gpu.get()
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error.update(zip(prep.view_IDs, errs))
 
