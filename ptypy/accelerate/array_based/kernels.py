@@ -134,6 +134,38 @@ class FourierUpdateKernel(BaseKernel):
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
         return
 
+    def log_likelihood(self, b_aux, addr, mag, mask, err_phot):
+        # reference shape (write-to shape)
+        sh = self.fshape
+        # stopper
+        maxz = mag.shape[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * self.nmodes]
+
+        # build model from complex fourier magnitudes, summing up 
+        # all modes incoherently
+        tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
+        LL = (np.abs(tf) ** 2).sum(1)
+
+        # Intensity data
+        I = mag**2
+
+        # Calculate log likelihood error
+        err_phot[:] = ((mask * (LL - I)**2 / (I + 1.)).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
+        return
+
+    def exit_error(self, aux, addr):
+        sh = addr.shape
+        maxz = sh[0]
+
+        # batch buffers
+        ferr = self.npy.ferr[:maxz]
+        dex = aux[:maxz * self.nmodes]
+        fsh = dex.shape[-2:]
+        ferr[:] = (np.abs(dex.reshape((maxz,self.nmodes,fsh[0], fsh[1])))**2).sum(axis=1) / np.prod(fsh)
+
+
 class GradientDescentKernel(BaseKernel):
 
     def __init__(self, aux, nmodes=1):

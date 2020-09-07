@@ -5,7 +5,11 @@
 
 import unittest
 import numpy as np
-from ptypy.accelerate.array_based.kernels import FourierUpdateKernel
+import ptypy.utils as u
+from . import utils as tu
+from ptypy.accelerate.array_based import data_utils as du
+from ptypy.accelerate.array_based.kernels import FourierUpdateKernel, AuxiliaryWaveKernel
+
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
@@ -440,7 +444,127 @@ class FourierUpdateKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(f, expected_f, err_msg="the f array from the fmag_all_update kernesl isnot behaving as expected.")
 
 
+    def test_log_likelihood(self):
+        nmodes = 1
+        PtychoInstance = tu.get_ptycho_instance('log_likelihood_test', nmodes)
+        ptypy_error_metric = self.get_ptypy_loglikelihood(PtychoInstance)
+        LLerr_expected = np.array([LL for LL in ptypy_error_metric.values()]).astype(np.float32)
 
+        vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
+        addr = vectorised_scan['meta']['addr'].reshape((len(ptypy_error_metric)//nmodes, nmodes, 5, 3))
+        probe = vectorised_scan['probe']
+        obj = vectorised_scan['obj']
+        mask = vectorised_scan['mask']
+        exit_wave = vectorised_scan['exit wave']
+        mag = np.sqrt(vectorised_scan['diffraction'])
+
+        aux = np.zeros_like(exit_wave)
+        AWK = AuxiliaryWaveKernel()
+        AWK.allocate()
+        AWK.build_aux_no_ex(aux, addr, obj, probe, fac=1.0, add=False)
+
+        scan = list(PtychoInstance.model.scans.values())[0]
+        geo = scan.geometries[0]
+        aux[:] = geo.propagator.fw(aux)
+
+        FUK = FourierUpdateKernel(aux, nmodes=1)
+        FUK.allocate()
+        LLerr = np.zeros_like(LLerr_expected, dtype=np.float32)
+        FUK.log_likelihood(aux, addr, mag, mask, LLerr)
+
+        np.testing.assert_allclose(LLerr, LLerr_expected, rtol=1e-6, err_msg="LLerr does not give the expected error "
+                                                                             "for the fourier_update_kernel.log_likelihood method") 
+
+    def get_ptypy_loglikelihood(self, a_ptycho_instance):
+        error_dct = {}
+        for dname, diff_view in a_ptycho_instance.diff.views.items():
+            I = diff_view.data
+            fmask = diff_view.pod.mask
+            LL = np.zeros_like(diff_view.data)
+            for name, pod in diff_view.pods.items():
+                LL += u.abs2(pod.fw(pod.probe * pod.object))
+
+            error_dct[dname] = (np.sum(fmask * (LL - I) ** 2 / (I + 1.))
+                            / np.prod(LL.shape))
+        return error_dct
+
+
+    def test_exit_error(self):
+        '''
+        setup
+        '''
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        G = 2 # number og object modes
+
+        E = B  # probe size y
+        F = C  # probe size x
+
+        scan_pts = 2  # one dimensional scan point number
+
+        N = scan_pts ** 2
+        total_number_modes = G * D
+        A = N * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        aux = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            aux[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((N,))
+        Y = Y.reshape((N,))
+
+        addr = np.zeros((N, total_number_modes, 5, 3))
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [position_idx, 0, 0],
+                                                             [position_idx, 0, 0]])
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        err_sum = np.zeros(N, dtype=FLOAT_TYPE)
+        FUK = FourierUpdateKernel(aux, nmodes=total_number_modes)
+        FUK.allocate()
+        FUK.exit_error(aux, addr)
+
+        expected_ferr = np.array([[[ 2.3999996, 2.3999996, 2.3999996, 2.3999996, 2.3999996],
+                                   [ 2.3999996, 2.3999996, 2.3999996, 2.3999996, 2.3999996],
+                                   [ 2.3999996, 2.3999996, 2.3999996, 2.3999996, 2.3999996],
+                                   [ 2.3999996, 2.3999996, 2.3999996, 2.3999996, 2.3999996],
+                                   [ 2.3999996, 2.3999996, 2.3999996, 2.3999996, 2.3999996]],
+
+                                  [[13.92, 13.92, 13.92, 13.92, 13.92],
+                                   [13.92, 13.92, 13.92, 13.92, 13.92],
+                                   [13.92, 13.92, 13.92, 13.92, 13.92],
+                                   [13.92, 13.92, 13.92, 13.92, 13.92],
+                                   [13.92, 13.92, 13.92, 13.92, 13.92]],
+
+                                  [[35.68, 35.68, 35.68, 35.68, 35.68 ],
+                                   [35.68, 35.68, 35.68, 35.68, 35.68 ],
+                                   [35.68, 35.68, 35.68, 35.68, 35.68 ],
+                                   [35.68, 35.68, 35.68, 35.68, 35.68 ],
+                                   [35.68, 35.68, 35.68, 35.68, 35.68 ]],
+
+                                  [[67.68, 67.68, 67.68, 67.68, 67.68 ],
+                                   [67.68, 67.68, 67.68, 67.68, 67.68 ],
+                                   [67.68, 67.68, 67.68, 67.68, 67.68 ],
+                                   [67.68, 67.68, 67.68, 67.68, 67.68 ],
+                                   [67.68, 67.68, 67.68, 67.68, 67.68 ]]], dtype=FLOAT_TYPE)
+
+        np.testing.assert_array_equal(FUK.npy.ferr, expected_ferr,
+                                      err_msg="ferr does not give the expected error "
+                                              "for the fourier_update_kernel.fourier_error emthods")
 
 
 if __name__ == '__main__':

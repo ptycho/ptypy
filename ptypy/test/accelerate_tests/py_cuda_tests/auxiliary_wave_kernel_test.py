@@ -19,8 +19,8 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
 
     def prepare_arrays(self, performance=False):
         if not performance:
-            B = 3  # frame size y
-            C = 3  # frame size x
+            B = 5  # frame size y
+            C = 5  # frame size x
             D = 2  # number of probe modes
             E = B  # probe size y
             F = C  # probe size x
@@ -511,7 +511,6 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         AWK.allocate()
         AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, 
             fac=1.0, add=False)
-
 
 if __name__ == '__main__':
     unittest.main()

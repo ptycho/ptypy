@@ -100,8 +100,8 @@ class FourierUpdateKernelTest(PyCudaTest):
 
         # now set the state for both.
 
-        FUK.npy.fdev = gpuarray.to_gpu(nFUK.npy.fdev)
-        FUK.npy.ferr = gpuarray.to_gpu(nFUK.npy.ferr)
+        FUK.gpu.fdev = gpuarray.to_gpu(nFUK.npy.fdev)
+        FUK.gpu.ferr = gpuarray.to_gpu(nFUK.npy.ferr)
 
         FUK.fmag_all_update(f_d, addr_d, fmag_d, mask_d, err_fmag_d, pbound=pbound_set)
 
@@ -122,7 +122,7 @@ class FourierUpdateKernelTest(PyCudaTest):
         C = 5  # frame size x
 
         D = 2  # number of probe modes
-        G = 2  # number og object modes
+        G = 2  # number of object modes
 
         E = B  # probe size y
         F = C  # probe size x
@@ -168,45 +168,37 @@ class FourierUpdateKernelTest(PyCudaTest):
                     exit_idx += 1
             position_idx += 1
 
-        # print("address book is:")
-        # print(repr(addr))
-
         '''
         test
         '''
         mask_sum = mask.sum(-1).sum(-1)
 
-        fdev = np.zeros_like(fmag)
-        ferr = np.zeros_like(fmag)
         from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
         f_d = gpuarray.to_gpu(f)
         fmag_d = gpuarray.to_gpu(fmag)
-        fdev_d = gpuarray.to_gpu(fdev)
-        ferr_d = gpuarray.to_gpu(ferr)
         mask_d = gpuarray.to_gpu(mask)
         addr_d = gpuarray.to_gpu(addr)
         mask_sum_d = gpuarray.to_gpu(mask_sum)
 
-        pbound_set = 0.9
-        nFUK = npFourierUpdateKernel(f, nmodes=1)
-        FUK = FourierUpdateKernel(f, nmodes=1)
+        nFUK = npFourierUpdateKernel(f, nmodes=total_number_modes)
+        FUK = FourierUpdateKernel(f, nmodes=total_number_modes)
 
         nFUK.allocate()
         FUK.allocate()
 
         nFUK.fourier_error(f, addr, fmag, mask, mask_sum)
-
         FUK.fourier_error(f_d, addr_d, fmag_d, mask_d, mask_sum_d)
 
-        expected_fdev = fdev
-        measured_fdev = fdev_d.get()
+        expected_fdev = nFUK.npy.fdev
+        measured_fdev = FUK.gpu.fdev.get()
         np.testing.assert_array_equal(expected_fdev, measured_fdev, err_msg="Numpy fdev "
                                                                             "is \n%s, \nbut gpu fdev is \n %s, \n " % (
                                                                             repr(expected_fdev),
                                                                             repr(measured_fdev)))
 
-        expected_ferr = ferr
-        measured_ferr = ferr_d.get()
+        expected_ferr = nFUK.npy.ferr
+        measured_ferr = FUK.gpu.ferr.get()
+
         np.testing.assert_array_equal(expected_ferr, measured_ferr, err_msg="Numpy ferr"
                                                                             "is \n%s, \nbut gpu ferr is \n %s, \n " % (
                                                                             repr(expected_ferr),
@@ -295,6 +287,8 @@ class FourierUpdateKernelTest(PyCudaTest):
 
         FUK.fourier_error(f_d, addr_d, fmag_d, mask_d, mask_sum_d)
         FUK.error_reduce(addr_d, err_fmag_d)
+        print(err_fmag_d.get())
+        assert(0)
 
         expected_err_fmag = err_fmag
         measured_err_fmag = err_fmag_d.get()
@@ -340,7 +334,7 @@ class FourierUpdateKernelTest(PyCudaTest):
         FUK = FourierUpdateKernel(aux, nmodes=1)
         err_mag = np.zeros(N, dtype=FLOAT_TYPE)
         err_mag_d = gpuarray.to_gpu(err_mag)
-        FUK.npy.ferr = gpuarray.to_gpu(ferr)
+        FUK.gpu.ferr = gpuarray.to_gpu(ferr)
         addr_d = gpuarray.to_gpu(addr)
 
         FUK.error_reduce(addr_d, err_mag_d)
@@ -354,6 +348,158 @@ class FourierUpdateKernelTest(PyCudaTest):
 
         np.testing.assert_array_equal(expected_err_mag, measured_err_mag, err_msg="The fourier_update_kernel.error_reduce"
                                                                    "is not behaving as expected.")
+
+
+    def test_log_likelihood_UNITY(self):
+        '''
+        setup
+        '''
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        G = 2  # number of object modes
+
+        E = B  # probe size y
+        F = C  # probe size x
+
+        scan_pts = 2  # one dimensional scan point number
+
+        N = scan_pts ** 2
+        total_number_modes = G * D
+        A = N * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        f = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            f[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        fmag = np.empty(shape=(N, B, C), dtype=FLOAT_TYPE)  # the measured magnitudes NxAxB
+        fmag_fill = np.arange(np.prod(fmag.shape)).reshape(fmag.shape).astype(fmag.dtype)
+        fmag[:] = fmag_fill
+
+        mask = np.empty(shape=(N, B, C),
+                        dtype=FLOAT_TYPE)  # the masks for the measured magnitudes either 1xAxB or NxAxB
+        mask_fill = np.ones_like(mask)
+        mask_fill[::2, ::2] = 0  # checkerboard for testing
+        mask[:] = mask_fill
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((N,))
+        Y = Y.reshape((N,))
+
+        addr = np.zeros((N, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [position_idx, 0, 0],
+                                                             [position_idx, 0, 0]])
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        '''
+        test
+        '''
+        mask_sum = mask.sum(-1).sum(-1)
+        LLerr = np.zeros_like(mask_sum, dtype=np.float32)
+        f_d = gpuarray.to_gpu(f)
+        fmag_d = gpuarray.to_gpu(fmag)
+        mask_d = gpuarray.to_gpu(mask)
+        addr_d = gpuarray.to_gpu(addr)
+        LLerr_d = gpuarray.to_gpu(LLerr)
+
+        from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
+        nFUK = npFourierUpdateKernel(f, nmodes=total_number_modes)
+        nFUK.allocate()
+        nFUK.log_likelihood(f, addr, fmag, mask, LLerr)
+
+        FUK = FourierUpdateKernel(f, nmodes=total_number_modes)
+        FUK.allocate()
+        FUK.log_likelihood(f_d, addr_d, fmag_d, mask_d, LLerr_d)
+
+        expected_err_phot = LLerr
+        measured_err_phot = LLerr_d.get()
+
+        np.testing.assert_allclose(expected_err_phot, measured_err_phot, err_msg="Numpy log-likelihood error "
+                                                                                 "is \n%s, \nbut gpu log-likelihood error is \n%s, \n " % (
+                                                                                 repr(expected_err_phot),
+                                                                                 repr(measured_err_phot)), rtol=1e-5)
+
+    def test_exit_error_UNITY(self):
+        '''
+        setup
+        '''
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        G = 2  # number of object modes
+
+        E = B  # probe size y
+        F = C  # probe size x
+
+        scan_pts = 2  # one dimensional scan point number
+
+        N = scan_pts ** 2
+        total_number_modes = G * D
+        A = N * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        aux = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            aux[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((N,))
+        Y = Y.reshape((N,))
+
+        addr = np.zeros((N, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [position_idx, 0, 0],
+                                                             [position_idx, 0, 0]])
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        '''
+        test
+        '''
+        from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
+        aux_d = gpuarray.to_gpu(aux)
+        addr_d = gpuarray.to_gpu(addr)
+
+        nFUK = npFourierUpdateKernel(aux, nmodes=total_number_modes)
+        FUK = FourierUpdateKernel(aux, nmodes=total_number_modes)
+
+        nFUK.allocate()
+        FUK.allocate()
+
+        nFUK.exit_error(aux, addr, )
+        FUK.exit_error(aux_d, addr_d)
+
+        expected_ferr = nFUK.npy.ferr
+        measured_ferr = FUK.gpu.ferr.get()
+
+        np.testing.assert_allclose(expected_ferr, measured_ferr, err_msg="Numpy ferr"
+                                                                            "is \n%s, \nbut gpu ferr is \n %s, \n " % (
+                                                                            repr(expected_ferr),
+                                                                            repr(measured_ferr)), rtol=1e-7)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -17,14 +17,20 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.fourier_error2_cuda = None
         self.error_reduce_cuda = load_kernel("error_reduce")
         self.fourier_update_cuda = None
+        self.log_likelihood_cuda = load_kernel("log_likelihood")
+        self.exit_error_cuda = load_kernel("exit_error")
+
+        self.gpu = Adict()
+        self.gpu.fdev = None
+        self.gpu.ferr = None
 
     def allocate(self):
-        self.npy.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
-        self.npy.ferr = gpuarray.zeros(self.fshape, dtype=np.float32)
+        self.gpu.fdev  = gpuarray.zeros(self.fshape, dtype=np.float32)
+        self.gpu.ferr  = gpuarray.zeros(self.fshape, dtype=np.float32)
 
     def fourier_error(self, f, addr, fmag, fmask, mask_sum):
-        fdev = self.npy.fdev
-        ferr = self.npy.ferr
+        fdev = self.gpu.fdev
+        ferr = self.gpu.ferr
         if True:
             # version going over all modes in a single thread (faster)
             self.fourier_error_cuda(np.int32(self.nmodes),
@@ -67,23 +73,18 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                      shared=int(bx*by*bz*4),
                                      stream=self.queue)
 
-    def error_reduce(self, addr, err_fmag):
-        # import sys
-        # float_size = sys.getsizeof(np.float32(4))
-        # shared_memory_size =int(2 * 32 * 32 *float_size) # this doesn't work even though its the same...
-        shared_memory_size = int(49152)
-
-        self.error_reduce_cuda(self.npy.ferr,
-                               err_fmag,
+    def error_reduce(self, addr, err_sum):
+        self.error_reduce_cuda(self.gpu.ferr,
+                               err_sum,
                                np.int32(self.fshape[1]),
                                np.int32(self.fshape[2]),
                                block=(32, 32, 1),
-                               grid=(int(err_fmag.shape[0]), 1, 1),
+                               grid=(int(err_sum.shape[0]), 1, 1),
                                shared=32*32*4,
                                stream=self.queue)
 
     def fmag_all_update(self, f, addr, fmag, fmask, err_fmag, pbound=0.0):
-        fdev = self.npy.fdev
+        fdev = self.gpu.fdev
         self.fmag_all_update_cuda(f,
                                   fmask,
                                   fmag,
@@ -101,8 +102,8 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
     def fourier_update(self, f, addr, fmag, fmask, mask_sum, err_fmag, pbound=0):
         if self.fourier_update_cuda is None:
             self.fourier_update_cuda = load_kernel("fourier_update")
-        fdev = self.npy.fdev
-        ferr = self.npy.ferr
+        fdev = self.gpu.fdev
+        ferr = self.gpu.ferr
 
         bx = 16
         by = 16
@@ -129,6 +130,37 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                  shared=smem,
                                  stream=self.queue)
 
+    def log_likelihood(self, b_aux, addr, mag, mask, err_phot):
+        ferr = self.gpu.ferr
+        self.log_likelihood_cuda(np.int32(self.nmodes),
+                                 b_aux,
+                                 mask,
+                                 mag,
+                                 addr,
+                                 ferr,
+                                 np.int32(self.fshape[1]),
+                                 np.int32(self.fshape[2]),
+                                 block=(32, 32, 1),
+                                 grid=(int(mag.shape[0]), 1, 1),
+                                 stream=self.queue)
+        # TODO: we might want to move this call outside of here
+        self.error_reduce(addr, err_phot)
+
+    def exit_error(self, aux, addr):
+        sh = addr.shape
+        maxz = sh[0]
+        ferr = self.gpu.ferr
+        self.exit_error_cuda(np.int32(self.nmodes),
+                             aux,
+                             ferr,
+                             addr,
+                             np.int32(self.fshape[1]),
+                             np.int32(self.fshape[2]),
+                             block=(32, 32, 1),
+                             grid=(int(maxz), 1, 1),
+                             stream=self.queue)
+
+    # DEPRECATED?
     def execute(self, kernel_name=None, compare=False, sync=False):
 
         if kernel_name is None:
@@ -159,6 +191,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
             'FTYPE': 'float'
         })
 
+    # DEPRECATED?
     def load(self, aux, ob, pr, ex, addr):
         super(AuxiliaryWaveKernel, self).load(aux, ob, pr, ex, addr)
         for key, array in self.npy.__dict__.items():
@@ -611,8 +644,8 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         self.update_addr_and_error_state_cuda = load_kernel("update_addr_error_state")
 
     def allocate(self):
-        self.npy.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
-        self.npy.ferr = gpuarray.zeros(self.fshape, dtype=np.float32)
+        self.gpu.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
+        self.gpu.ferr = gpuarray.zeros(self.fshape, dtype=np.float32)
 
     def build_aux(self, b_aux, addr, ob, pr):
         obr, obc = self._cache_object_shape(ob)
@@ -625,8 +658,8 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
                                block=(32, 32, 1), grid=(int(np.prod(addr.shape[:1])), 1, 1), stream=self.queue)
 
     def fourier_error(self, f, addr, fmag, fmask, mask_sum):
-        fdev = self.npy.fdev
-        ferr = self.npy.ferr
+        fdev = self.gpu.fdev
+        ferr = self.gpu.ferr
         self.fourier_error_cuda(np.int32(self.nmodes),
                                 f,
                                 fmask,
@@ -647,7 +680,7 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         # shared_memory_size =int(2 * 32 * 32 *float_size) # this doesn't work even though its the same...
         shared_memory_size = int(49152)
 
-        self.error_reduce_cuda(self.npy.ferr,
+        self.error_reduce_cuda(self.gpu.ferr,
                                err_fmag,
                                np.int32(self.fshape[1]),
                                np.int32(self.fshape[2]),

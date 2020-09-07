@@ -56,7 +56,7 @@ p.scans.i14_1.data.psf = 0.2
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_pycuda_stream'
+p.engines.engine00.name = 'DM_pycuda_streams'
 p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 20
 p.engines.engine00.probe_update_start = 1

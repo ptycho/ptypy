@@ -84,7 +84,6 @@ class DM_pycuda(DM_serial.DM_serial):
 
             kern = u.Param()
             self.kernels[label] = kern
-
             # TODO: needs to be adapted for broad bandwidth
             geo = scan.geometries[0]
 
@@ -186,6 +185,8 @@ class DM_pycuda(DM_serial.DM_serial):
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
+            prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
+            prep.err_exit_gpu = gpuarray.to_gpu(prep.err_exit)
             if self.do_position_refinement:
                 prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
 
@@ -193,33 +194,33 @@ class DM_pycuda(DM_serial.DM_serial):
         """
         Compute one iteration.
         """
-
+        queue = self.queue
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         for it in range(num):
             error = {}
             for dID in self.di.S.keys():
-                t1 = time.time()
 
+                # find probe, object and exit ID in dependence of dID
                 prep = self.diff_info[dID]
-                # find probe, object in exit ID in dependence of dID
                 pID, oID, eID = prep.poe_IDs
 
                 # references for kernels
                 kern = self.kernels[prep.label]
                 FUK = kern.FUK
                 AWK = kern.AWK
-
-                pbound = self.pbound_scan[prep.label]
-                aux = kern.aux
                 FW = kern.FW
                 BW = kern.BW
 
-                # get addresses
+                # get addresses and buffers
                 addr = prep.addr
                 mag = prep.mag
                 ma_sum = prep.ma_sum
                 err_fourier = prep.err_fourier_gpu
+                err_phot = prep.err_phot_gpu
+                err_exit = prep.err_exit_gpu
+                pbound = self.pbound_scan[prep.label]
+                aux = kern.aux
 
                 # local references
                 ma = self.ma.S[dID].gpu
@@ -227,41 +228,41 @@ class DM_pycuda(DM_serial.DM_serial):
                 pr = self.pr.S[pID].gpu
                 ex = self.ex.S[eID].gpu
 
-                queue = self.queue
-
+                ## compute log-likelihood
+                if self.p.compute_log_likelihood:
+                    t1 = time.time()
+                    AWK.build_aux_no_ex(aux, addr, ob, pr)
+                    FW.ft(aux, aux)
+                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)                    
+                    self.benchmark.F_LLerror += time.time() - t1
+                
+                ## build auxilliary wave
                 t1 = time.time()
                 AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                # queue.synchronize()
-
                 self.benchmark.A_Build_aux += time.time() - t1
 
-                # FFT
+                ## forward FFT
                 t1 = time.time()
                 FW.ft(aux, aux)
-
-                # queue.synchronize()
                 self.benchmark.B_Prop += time.time() - t1
 
-                #  Deviation from measured data
+                ## Deviation from measured data
                 t1 = time.time()
                 FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                 FUK.error_reduce(addr, err_fourier)
                 FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
-                # queue.synchronize()
                 self.benchmark.C_Fourier_update += time.time() - t1
-                # iFFT
+
+                ## backward FFT
                 t1 = time.time()
                 BW.ift(aux, aux)
-
-                # print("The context is: %s" % self.context)
-                # queue.synchronize()
-                # print("Here")
                 self.benchmark.D_iProp += time.time() - t1
-
-                # apply changes #2
+                
+                ## build exit wave
                 t1 = time.time()
                 AWK.build_exit(aux, addr, ob, pr, ex)
-                # queue.synchronize()
+                FUK.exit_error(aux, addr)
+                FUK.error_reduce(addr, err_exit)
                 self.benchmark.E_Build_exit += time.time() - t1
 
                 self.benchmark.calls_fourier += 1
@@ -345,8 +346,8 @@ class DM_pycuda(DM_serial.DM_serial):
         #     s.data[:] = s.gpu.get()
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
-            err_phot = np.zeros_like(err_fourier)
-            err_exit = np.zeros_like(err_fourier)
+            err_phot = prep.err_phot.get()
+            err_exit = prep.err_exit_gpu.get()
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error.update(zip(prep.view_IDs, errs))
 

@@ -391,6 +391,5 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
                                       err_msg="The auxiliary_wave has not been updated as expected")
 
-
 if __name__ == '__main__':
     unittest.main()
