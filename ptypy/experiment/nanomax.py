@@ -692,6 +692,7 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         fullfilename = os.path.join(self.info.path, filename)
 
         with h5py.File(fullfilename, 'r') as fp:
+            self.meta.energy = fp['entry/snapshot/energy'][:] * 1e-3
             for ind in indices:
                 raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind]
                 if self.info.I0:
