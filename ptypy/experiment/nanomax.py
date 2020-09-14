@@ -1,20 +1,18 @@
 """  Implementation of PtyScan subclasses to hold nanomax scan data. The
      beamline is developing, as is the data format. """
 
+from ..core.data import PtyScan
+from .. import utils as u
+from . import register
+logger = u.verbose.logger
+
 import numpy as np
 try:
 	import hdf5plugin
 except ImportError:
-	print('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
+	logger.warning('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
 import h5py
 import os.path
-
-from ..core.data import PtyScan
-from .. import utils as u
-from . import register
-
-logger = u.verbose.logger
-
 
 @register()
 class NanomaxStepscanNov2018(PtyScan):
@@ -128,7 +126,7 @@ class NanomaxStepscanNov2018(PtyScan):
             if self.info.I0 is not None:
                 with h5py.File(fullfilename, 'r') as hf:
                     normdata.append(np.array(hf['%s/measurement/%s' % (entry, self.info.I0)], dtype=float))
-                print('*** going to normalize by channel %s' % self.info.I0)
+                logger.info('*** going to normalize by channel %s' % self.info.I0)
 
             with h5py.File(fullfilename, 'r') as hf:
                 x.append(xFlipper * xCosFactor
@@ -340,7 +338,7 @@ class NanomaxFlyscanMay2019(PtyScan):
                 normdata = np.array(hf['%s/measurement/%s' % (entry, self.info.I0)], dtype=float)
             normdata = normdata[self.firstLine:self.lastLine+1, :Nsteps].flatten()
             self.normdata = normdata / np.mean(normdata)
-            print('*** going to normalize by channel %s - loaded %d values' % (self.info.I0, len(self.normdata)))
+            logger.info('*** going to normalize by channel %s - loaded %d values' % (self.info.I0, len(self.normdata)))
 
         positions = - np.vstack((y, x)).T * 1e-6
         return positions
@@ -363,7 +361,7 @@ class NanomaxFlyscanMay2019(PtyScan):
             if self.info.I0:
                 raw[ind] = np.round(raw[ind] / self.normdata[ind]).astype(int)
 
-        print('loaded %d images' % len(raw))
+        logger.info('loaded %d images' % len(raw))
         return raw, positions, weights
 
     def load_weight(self):
@@ -508,7 +506,7 @@ class NanomaxStepscanSep2019(PtyScan):
             if self.info.I0 is not None:
                 with h5py.File(fullfilename, 'r') as hf:
                     normdata.append(np.array(hf['entry/measurement/%s' % (self.info.I0)], dtype=float))
-                print('*** going to normalize by channel %s' % self.info.I0)
+                logger.info('*** going to normalize by channel %s' % self.info.I0)
 
             with h5py.File(fullfilename, 'r') as hf:
                 x.append(xFlipper * xCosFactor
@@ -620,7 +618,7 @@ class NanomaxFlyscanDec2019(NanomaxFlyscanMay2019):
                 normdata = np.array(hf['%s/measurement/%s' % (entry, self.info.I0)], dtype=float)
             normdata = normdata[self.firstLine:self.lastLine+1, :Nsteps].flatten()
             self.normdata = normdata / np.mean(normdata)
-            print('*** going to normalize by channel %s - loaded %d values' % (self.info.I0, len(self.normdata)))
+            logger.info('*** going to normalize by channel %s - loaded %d values' % (self.info.I0, len(self.normdata)))
 
         positions = - np.vstack((y, x)).T * 1e-6
         return positions
@@ -642,7 +640,7 @@ class NanomaxFlyscanDec2019(NanomaxFlyscanMay2019):
             if self.info.I0:
                 raw[ind] = np.round(raw[ind] / self.normdata[ind]).astype(int)
 
-        print('loaded %d images' % len(raw))
+        logger.info('loaded %d images' % len(raw))
         return raw, positions, weights
 
     def load_weight(self):
