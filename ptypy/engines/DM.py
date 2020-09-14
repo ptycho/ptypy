@@ -16,7 +16,7 @@ from .utils import basic_fourier_update
 from . import register
 from .base import PositionCorrectionEngine
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla, Bragg3dModel
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla
 
 __all__ = ['DM']
 
@@ -112,20 +112,21 @@ class DM(PositionCorrectionEngine):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
+    [compute_log_likelihood]
+    default = True
+    type = bool
+    help = A switch for computing the log-likelihood error (this can impact the performance of the engine) 
+
+
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla]
 
     def __init__(self, ptycho_parent, pars=None):
         """
         Difference map reconstruction engine.
         """
         super(DM, self).__init__(ptycho_parent, pars)
-
-        p = self.DEFAULT.copy()
-        if pars is not None:
-            p.update(pars)
-        self.p = p
 
         # Instance attributes
         self.error = None
@@ -180,8 +181,7 @@ class DM(PositionCorrectionEngine):
         self.pbound = {}
         mean_power = 0.
         for name, s in self.di.storages.items():
-            self.pbound[name] = (
-                .25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
+            self.pbound[name] = (.25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
             mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
 
@@ -230,6 +230,8 @@ class DM(PositionCorrectionEngine):
         """
         Try deleting ever helper container.
         """
+        super(DM, self).engine_finalize()
+
         containers = [
             self.ob_buf,
             self.ob_nrm,
@@ -261,7 +263,8 @@ class DM(PositionCorrectionEngine):
             pbound = self.pbound[di_view.storage.ID]
             error_dct[name] = basic_fourier_update(di_view,
                                                    pbound=pbound,
-                                                   alpha=self.p.alpha)
+                                                   alpha=self.p.alpha,
+                                                   LL_error=self.p.compute_log_likelihood)
         return error_dct
 
     def overlap_update(self):
@@ -331,7 +334,6 @@ class DM(PositionCorrectionEngine):
                 # This estimate assumes that the probe power is uniformly distributed through the
                 # array and therefore underestimate the strength of the probe terms.
                 cfact = self.p.object_inertia * self.mean_power
-
                 if self.p.obj_smooth_std is not None:
                     logger.info(
                         'Smoothing object, average cfact is %.2f'
@@ -416,9 +418,7 @@ class DM(PositionCorrectionEngine):
             s.data /= nrm
 
             # Apply probe support if requested
-            support = self.probe_support.get(name)
-            if support is not None:
-                s.data *= self.probe_support[name]
+            self.support_constraint(s)
 
             # Compute relative change in probe
             buf = pr_buf.storages[name].data

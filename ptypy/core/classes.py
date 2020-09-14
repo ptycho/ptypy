@@ -1231,7 +1231,8 @@ class View(Base):
         self.dlayer = 0
 
         # The messy stuff
-        self._set(accessrule, **kwargs)
+        if accessrule is not None or len(kwargs)>0:
+            self._set(accessrule, **kwargs)
 
     def _set(self, accessrule, **kwargs):
         """
@@ -1255,6 +1256,7 @@ class View(Base):
             sh = (1,) + tuple(self.shape) if self.shape is not None else None
             s = self.owner.new_storage(ID=self.storageID,
                                        psize=rule.psize,
+                                       origin=rule.coord,
                                        shape=sh)
         self.storage = s
 
@@ -1291,6 +1293,16 @@ class View(Base):
         else:
             return first + '\n ACTIVE : slice = %s' % str(self.slice)
 
+    def copy(self,ID=None, update = True):
+        nView = View(self.owner, ID)
+        nView._record = self._record.copy()
+        nView._ndim = self._ndim
+        nView.storage = self.storage
+        nView.storageID = self.storageID
+        if update:
+            nView.storage.update_views(nView)
+        return nView
+        
     @property
     def active(self):
         return self._record['active'] 
@@ -2111,7 +2123,7 @@ class POD(Base):
 
         if self.ex_view is None:
             self.use_exit_container = False
-            self._exit = np.ones_like(self.geometry.shape,
+            self._exit = np.ones_like(self.pr_view.shape,
                                       dtype=self.owner.CType)
         else:
             self.use_exit_container = True
@@ -2148,6 +2160,22 @@ class POD(Base):
         return self.geometry.propagator.bw
 
     @property
+    def upsample(self):
+        """
+        Convencience property that returns upsample function of attached
+        Geometry instance. Equivalent to ``self.geometry.upsample``.
+        """
+        return self.geometry.upsample
+
+    @property
+    def downsample(self):
+        """
+        Convencience property that returns downsample function of attached
+        Geometry instance. Equivalent to ``self.geometry.downsample``.
+        """
+        return self.geometry.downsample
+
+    @property
     def object(self):
         """
         Convenience property that links to slice of object :any:`Storage`.
@@ -2157,7 +2185,7 @@ class POD(Base):
             return self.ob_view.data
         else:
             # Empty probe means no object (perfect transmission)
-            return np.ones(self.geometry.shape, dtype=self.owner.CType)
+            return np.ones(self.ob_view.shape, dtype=self.owner.CType)
 
     @object.setter
     def object(self, v):

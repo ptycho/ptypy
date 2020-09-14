@@ -34,8 +34,16 @@ from .. import defaults_tree
 FType = np.float64
 CType = np.complex128
 
-__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel']
+__all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'OPRModel', 'BlockScanModel', 'BlockVanilla', 'BlockFull', 'BlockOPRModel']
 
+class _LogTime(object):
+    
+    def __init__(self):
+        self._t = time.time()
+    
+    def __call__(self, msg=None):
+        logger.warning('Duration %.2f for ' % (time.time()-self._t )+str(msg))
+        self._t  = time.time()
 
 @defaults_tree.parse_doc('scan.ScanModel')
 class ScanModel(object):
@@ -79,11 +87,19 @@ class ScanModel(object):
     help = Container for probe initialization model
 
     [sample]
-    type = Param
+    type = Param, str
     default =
     help = Container for sample initialization model
 
+    [resample]
+    type = int, None
+    default = 1
+    help = Resampling fraction of the image frames w.r.t. diffraction frames
+    doc = A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+          as densely as the raw diffraction data.
     """
+    _PREFIX = MODEL_PREFIX
+
     def __init__(self, ptycho=None, pars=None, label=None):
         """
         Create scan model object.
@@ -121,8 +137,11 @@ class ScanModel(object):
         self.new_mask_views = None
 
         self.geometries = []
-        self.shape = None
-        self.psize = None
+        self.diff_shape = None    # Shape of diffaction frames
+        self.probe_shape = None   # Shape of probe views (may be different if resampling or padding)
+        self.object_shape = None  # Currently same as probe_shape
+        self.exit_shape = None    # Currently same as object_shape
+        self.psize = None         # Pixel size in the detector plane
 
         # Object flags and constants
         self.containers_initialized = False
@@ -165,23 +184,19 @@ class ScanModel(object):
         Feed data from ptyscan object.
         :return: None if no data is available, True otherwise.
         """
+        report_time =_LogTime()
+        report_time()
 
-        import time
-        self._t = time.time()
-        def report_time():
-            logger.info('Time %.2f' % (time.time()-self._t ))
-            self._t  = time.time()
-            
         # Initialize if that has not been done yet
         if not self.ptyscan.is_initialized:
             self.ptyscan.initialize()
         
-        report_time()
+        report_time('ptyscan init')
+        
         # Get data
         logger.info('Importing data from scan %s.' % self.label)
         dp = self.ptyscan.auto(self.frames_per_call)
-        
-        
+
         self.data_available = (dp != data.EOS)
         logger.debug(u.verbose.report(dp))
 
@@ -189,8 +204,10 @@ class ScanModel(object):
             return None
 
         label = self.label
-        report_time()
+
+        report_time('read data')
         logger.info('Creating views and storages.' )
+
         # Prepare the scan geometry if not already done.
         if not self.geometries:
             self._initialize_geo(dp['common'])
@@ -200,7 +217,7 @@ class ScanModel(object):
             self._initialize_containers()
 
         # Generalized shape which works for 2d and 3d cases
-        sh = (1,) + tuple(self.shape)
+        sh = (1,) + tuple(self.diff_shape)
 
         # Storage generation if not already existing
         if self.diff is None:
@@ -234,18 +251,18 @@ class ScanModel(object):
             return None
 
         # Prepare for View generation
-        AR_diff_base = DEFAULT_ACCESSRULE.copy()
-        AR_diff_base.shape = self.shape
-        AR_diff_base.coord = 0.0
-        AR_diff_base.psize = self.psize
-        AR_mask_base = AR_diff_base.copy()
-        AR_diff_base.storageID = self.diff.ID
-        AR_mask_base.storageID = self.mask.ID
+        AR_diff = DEFAULT_ACCESSRULE.copy()
+        AR_diff.shape = self.diff_shape
+        AR_diff.coord = 0.0
+        AR_diff.psize = self.psize
+        AR_mask = AR_diff.copy()
+        AR_diff.storageID = self.diff.ID
+        AR_mask.storageID = self.mask.ID
 
         diff_views = []
         mask_views = []
         positions = []
-
+        
         # First pass: create or update views and reformat corresponding storage
         for dct in dp['iterable']:
 
@@ -257,8 +274,6 @@ class ScanModel(object):
             if pos is None:
                 logger.warning('No position set to scan point %d of scan %s' % (index, label))
 
-            AR_diff = AR_diff_base
-            AR_mask = AR_mask_base
             AR_diff.layer = index
             AR_mask.layer = index
             AR_diff.active = active
@@ -293,7 +308,7 @@ class ScanModel(object):
         # that will create the right sizes and the datalist access
         self.diff.reformat()
         self.mask.reformat()
-        report_time()
+        report_time('creating views and storages')
         logger.info('Inserting data in diff and mask storages')
         
         # Second pass: copy the data 
@@ -317,7 +332,7 @@ class ScanModel(object):
         self.positions += positions
         self.diff_views += diff_views
         self.mask_views += mask_views
-        report_time()
+        report_time('inserting data')
         logger.info('Data organization complete, updating stats')
         
         self._update_stats()
@@ -332,16 +347,17 @@ class ScanModel(object):
         logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
             parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
         
-        report_time()
+        u.parallel.barrier()
+        report_time('creating pods')
         # Adjust storages
         self.ptycho.probe.reformat(True)
         self.ptycho.obj.reformat(True)
-        self.ptycho.exit.reformat()
-
+        self.ptycho.exit.reformat(True)
+        report_time('reformating')
         self._initialize_probe(new_probe_ids)
         self._initialize_object(new_object_ids)
         self._initialize_exit(new_pods)
-
+        logger.info('Process %d completed new_data.' % parallel.rank, extra={'allprocesses': True})
         return True
 
     def _new_data_extra_analysis(self, dp):
@@ -365,6 +381,7 @@ class ScanModel(object):
             # Use with a Ptycho instance
             self.Cdiff = self.ptycho.diff
             self.Cmask = self.ptycho.mask
+
         self.containers_initialized = True
 
     @staticmethod
@@ -394,7 +411,7 @@ class ScanModel(object):
 
         # Reinitialize containers
         Itotal = []
-        max_frame = np.zeros(self.diff_views[0].shape)
+        max_frame = np.zeros(diff_views[0].shape)
         min_frame = np.zeros_like(max_frame)
         mean_frame = np.zeros_like(max_frame)
         norm = np.zeros_like(max_frame)
@@ -417,12 +434,11 @@ class ScanModel(object):
             parallel.allreduce(max_frame, parallel.MPI.MAX)
             parallel.allreduce(min_frame, parallel.MPI.MIN)
         mean_frame /= (norm + (norm == 0))
-
         self.diff.norm = norm
         self.diff.max_power = parallel.MPImax(Itotal)
         self.diff.tot_power = parallel.MPIsum(Itotal)
-        self.diff.mean_power = self.diff.tot_power / (len(diff_views) * mean_frame.shape[-1]**2)
-        self.diff.pbound_stub = self.diff.max_power / mean_frame.shape[-1]**2
+        self.diff.mean_power = self.diff.tot_power / (len(diff_views) * np.prod(self.diff_shape))
+        self.diff.pbound_stub = self.diff.max_power / np.prod(self.diff_shape)
         self.diff.mean = mean_frame
         self.diff.max = max_frame
         self.diff.min = min_frame
@@ -459,12 +475,167 @@ class ScanModel(object):
     def _initialize_object(self, object_ids):
         raise NotImplementedError
 
+    def _get_data(self):
+        # Get data
+        logger.info('Importing data from scan %s.' % self.label)
+        dp = self.ptyscan.auto(self.frames_per_call)
+        
+        self.data_available = (dp != data.EOS)
+        logger.debug(u.verbose.report(dp))
 
-@defaults_tree.parse_doc('scan.Vanilla')
-class Vanilla(ScanModel):
+        if dp == data.WAIT or not self.data_available:
+            return None
+        else:
+            return dp 
+            
+@defaults_tree.parse_doc('scan.BlockScanModel')
+class BlockScanModel(ScanModel):
+    
+    def new_data(self):
+        """
+        Feed data from ptyscan object.
+        :return: None if no data is available, True otherwise.
+        """
+        report_time =_LogTime()
+        report_time()
+            
+        # Initialize if that has not been done yet
+        if not self.ptyscan.is_initialized:
+            self.ptyscan.initialize()
+        
+        report_time()
+
+        dp = self._get_data()
+        
+        report_time('read data')
+        
+        logger.info('Creating views and storages.' )
+        # Prepare the scan geometry if not already done.
+        if not self.geometries:
+            self._initialize_geo(dp['common'])
+
+        # Create containers if not already done
+        if not self.containers_initialized:
+            self._initialize_containers()
+
+        sh = (1,) + tuple(self.diff_shape)
+
+        # this is a hack for now
+        dp = self._new_data_extra_analysis(dp)
+        if dp is None:
+            return None
+        else:
+            common = dp['common']
+            chunk = dp['chunk']
+
+        # Generalized shape which works for 2d and 3d cases
+        sh = (max(len(chunk.indices_node),1),) + tuple(self.diff_shape)
+        indices_node = chunk['indices_node']
+        
+        diff = self.Cdiff.new_storage(shape=sh, psize=self.psize, padonly=True,
+                                      fill=0.0, layermap=indices_node)
+        mask = self.Cmask.new_storage(shape=sh, psize=self.psize, padonly=True,
+                                      fill=1.0, layermap=indices_node)
+        # Prepare for View generation
+        AR_diff = DEFAULT_ACCESSRULE.copy()
+        AR_diff.shape = self.diff_shape # this is None due to init
+        AR_diff.coord = 0.0
+        AR_diff.psize = self.psize
+        AR_mask = AR_diff.copy()
+        AR_diff.storageID = diff.ID
+        AR_mask.storageID = mask.ID
+
+        diff_views = []
+        mask_views = []
+        positions = []
+        
+        dv = None
+        mv = None
+        
+        data = chunk['data']
+        weights = chunk['weights']
+        
+        # First pass: create or update views and reformat corresponding storage
+        for index in chunk['indices']:
+            
+            if dv is None:
+                dv = View(self.Cdiff, accessrule=AR_diff) # maybe use index here
+                mv = View(self.Cmask, accessrule=AR_mask)
+            else:
+                dv = dv.copy()
+                mv = mv.copy()
+                
+            maybe_data = data.get(index)
+            active = maybe_data is not None
+            
+            dv.active = active
+            mv.active = active
+            dv.layer = index
+            mv.layer = index
+            
+            
+            diff_views.append(dv)
+            mask_views.append(mv)
+            
+            if active:
+                l = indices_node.index(index)
+                dv.dlayer = l
+                mv.dlayer = l
+                dv.data[:] = maybe_data
+                mv.data[:] = weights.get(index, np.ones_like(maybe_data)) 
+                
+        # positions
+        positions = chunk.positions
+        
+        ## warning message for empty postions?
+        
+        # this is not absolutely necessary
+        #diff.update_views()
+        #mask.update_views()
+        diff.nlayers = parallel.MPImax(diff.layermap) + 1
+        mask.nlayers = parallel.MPImax(mask.layermap) + 1
+        # save state / could be replaced by handing of arguments to methods
+        self.diff = diff
+        self.mask = mask
+        self.new_positions = positions
+        self.new_diff_views = diff_views
+        self.new_mask_views = mask_views
+        self.positions += list(positions)
+        self.diff_views += diff_views
+        self.mask_views += mask_views
+        report_time('creating views and storages')
+        logger.info('Data organization complete, updating stats')
+        
+        self._update_stats()
+
+        # Create new views on object, probe, and exit wave, and connect
+        # these through new pods.
+        new_pods, new_probe_ids, new_object_ids = self._create_pods()
+        for pod_ in new_pods:
+            if pod_.model is not None:
+                continue
+            pod_.model = self
+        logger.info('Process %d created %d new PODs, %d new probes and %d new objects.' % (
+            parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
+        
+        report_time('creating pods')
+        # Adjust storages
+        self.ptycho.probe.reformat(True)
+        self.ptycho.obj.reformat(True)
+        self.ptycho.exit.reformat(True)
+        report_time('reformating')
+
+        self._initialize_probe(new_probe_ids)
+        self._initialize_object(new_object_ids)
+        self._initialize_exit(new_pods)
+
+        return True
+
+
+class _Vanilla(object):
     """
-    Dummy for testing, there must be more than one for validate to react
-    to invalid names.
+    Vanilla model, one probe and one object per scan.
+    Probe has only size as parameter, object only the initial fill value.
 
     Defaults:
 
@@ -507,37 +678,59 @@ class Vanilla(ScanModel):
             new_object_ids[ID] = True
 
         geometry = self.geometries[0]
-
+        
+        pv = None
+        ev = None
+        ov = None
+        ndim = self.Cdiff.ndim
+        
         # Loop through diffraction patterns
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
 
             # Create views
-            ndim = self.Cdiff.ndim
-            pv = View(container=self.ptycho.probe,
-                      accessrule={'shape': geometry.shape,
+            #if True:
+            if pv is None:
+                pv = View(container=self.ptycho.probe,
+                      accessrule={'shape': self.probe_shape,
                                   'psize': geometry.resolution,
                                   'coord': u.expectN(0.0, ndim),
                                   'storageID': ID,
                                   'layer': 0,
                                   'active': True})
-
-            ov = View(container=self.ptycho.obj,
-                      accessrule={'shape': geometry.shape,
+            else:
+                pv = pv.copy(update=False)
+                pv.coord = 0.0
+            
+            #if True:
+            if ov is None:
+                ov = View(container=self.ptycho.obj,
+                      accessrule={'shape': self.object_shape,
                                   'psize': geometry.resolution,
                                   'coord': self.new_positions[i],
                                   'storageID': ID,
                                   'layer': 0,
                                   'active': True})
-
-            ev = View(container=self.ptycho.exit,
-                      accessrule={'shape': geometry.shape,
+            else:
+                ov = ov.copy(update=False)
+                ov.coord = self.new_positions[i]
+                
+            #if True:
+            if ev is None:
+                ev = View(container=self.ptycho.exit,
+                      accessrule={'shape': self.exit_shape,
                                   'psize': geometry.resolution,
                                   'coord': u.expectN(0.0, ndim),
                                   'storageID': dv.storageID,
                                   'layer': dv.layer,
                                   'active': dv.active})
-
+            else: 
+                ev = ev.copy(update=False)
+                ev.storageID = dv.storageID
+                ev.layer = dv.layer
+                ev.active= dv.active
+                ev.coord = 0.0
+                
             views = {'probe': pv,
                      'obj': ov,
                      'diff': dv,
@@ -560,29 +753,47 @@ class Vanilla(ScanModel):
         Initialize the geometry based on input data package
         Parameters.
         """
+        probe_shape = common['shape']
+        center = common['center']
+        psize = common['psize']        
+        
+        # Adjust geometry parameters for resampling
+        self.resample = self.p.resample
+        probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
+        center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
+        psize = np.array(psize) / self.resample
 
         # Collect geometry parameters
-        get_keys = ['distance', 'center', 'energy', 'psize', 'shape']
+        get_keys = ['distance', 'center', 'energy', 'psize']
         geo_pars = u.Param({key: common[key] for key in get_keys})
+        geo_pars.shape = probe_shape
+        geo_pars.center = center
         geo_pars.propagation = self.p.propagation
+        geo_pars.psize = psize
 
         # make a Geo instance and fix resolution
         g = geometry.Geo(owner=self.ptycho, pars=geo_pars)
         g.p.resolution_is_fix = True
+        g.resample = self.resample
 
         # save the geometry
         self.geometries = [g]
 
-        # Store frame shape
-        self.shape = np.array(common.get('shape', g.shape))
+        # Store frame shapes
+        self.diff_shape = np.array(common.get('shape', g.shape))
+        self.probe_shape = probe_shape
+        self.object_shape = probe_shape
+        self.exit_shape = probe_shape
         self.psize = g.psize
-
         return
 
     def _initialize_probe(self, probe_ids):
         """
         Initialize the probe storage referred to by probe_ids.keys()[0]
         """
+        if not probe_ids:
+            return
+            
         logger.info('\n'+headerline('Probe initialization', 'l'))
 
         # pick storage from container, there's only one probe
@@ -602,6 +813,9 @@ class Vanilla(ScanModel):
         """
         Initializes the probe storage referred to by object_ids.keys()[0]
         """
+        if not object_ids:
+            return
+            
         logger.info('\n'+headerline('Object initialization', 'l'))
 
         # pick storage from container, there's only one object
@@ -615,8 +829,7 @@ class Vanilla(ScanModel):
         s.model_initialized = True
 
 
-@defaults_tree.parse_doc('scan.Full')
-class Full(ScanModel):
+class _Full(object):
     """
     Manage a single scan model (sharing, coherence, propagation, ...)
 
@@ -691,9 +904,15 @@ class Full(ScanModel):
     type = str
     userlevel = 2
 
-    """
+    [resolution]
+    default = None
+    help = Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
+    doc = Half-period resolution given in [m] 
+    type = None, float
+    userlevel = 0
+    lowlim = 0
 
-    _PREFIX = MODEL_PREFIX
+    """
 
     def _create_pods(self):
         """
@@ -716,19 +935,15 @@ class Full(ScanModel):
         object_id = 'S' + self.label
         probe_id = 'S' + self.label
 
-        positions = self.new_positions
-        di_views = self.new_diff_views
-        ma_views = self.new_mask_views
-
         # Loop through diffraction patterns
-        for i in range(len(di_views)):
-            dv, mv = di_views.pop(0), ma_views.pop(0)
+        for i in range(len(self.new_diff_views)):
+            dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
 
             index = dv.layer
 
             # Object and probe position
             pos_pr = u.expect2(0.0)
-            pos_obj = positions[i] if 'empty' not in self.p.tags else 0.0
+            pos_obj = self.new_positions[i] if 'empty' not in self.p.tags else 0.0
 
             # For multiwavelength reconstructions: loop here over
             # geometries, and modify probe_id and object_id.
@@ -773,7 +988,7 @@ class Full(ScanModel):
                         # i.e. the views do mostly not own the accessrule
                         # contents
                         pv = View(container=self.ptycho.probe,
-                                  accessrule={'shape': geometry.shape,
+                                  accessrule={'shape': self.probe_shape,
                                               'psize': geometry.resolution,
                                               'coord': pos_pr,
                                               'storageID': probe_id_suf,
@@ -781,7 +996,7 @@ class Full(ScanModel):
                                               'active': True})
 
                         ov = View(container=self.ptycho.obj,
-                                  accessrule={'shape': geometry.shape,
+                                  accessrule={'shape': self.object_shape,
                                               'psize': geometry.resolution,
                                               'coord': pos_obj,
                                               'storageID': object_id_suf,
@@ -789,7 +1004,7 @@ class Full(ScanModel):
                                               'active': True})
 
                         ev = View(container=self.ptycho.exit,
-                                  accessrule={'shape': geometry.shape,
+                                  accessrule={'shape': self.exit_shape,
                                               'psize': geometry.resolution,
                                               'coord': pos_pr,
                                               'storageID': (dv.storageID +
@@ -819,9 +1034,23 @@ class Full(ScanModel):
         """
         Initialize the geometry/geometries.
         """
+        probe_shape = common['shape']
+        center = common['center']
+        psize = common['psize']        
+        
+        # Adjust geometry parameters for resampling
+        self.resample = self.p.resample
+        probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
+        center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
+        psize = np.array(psize) / self.resample
+
         # Extract necessary info from the received data package
-        get_keys = ['distance', 'center', 'energy', 'psize', 'shape']
+        get_keys = ['distance', 'center', 'energy', 'psize']
         geo_pars = u.Param({key: common[key] for key in get_keys})
+        geo_pars.shape = probe_shape
+        geo_pars.center = center
+        geo_pars.psize = psize
+        geo_pars.resolution = self.p.resolution
 
         # Add propagation info from this scan model
         geo_pars.propagation = self.p.propagation
@@ -832,15 +1061,20 @@ class Full(ScanModel):
             g = geometry.Geo(self.ptycho, geoID, pars=geo_pars)
             # now we fix the sample pixel size, This will make the frame size adapt
             g.p.resolution_is_fix = True
-            # save old energy value:
+            # save old energy value
             g.p.energy_orig = g.energy
             # change energy
             g.energy *= fac
+            # resampling
+            g.resample = self.resample
             # append the geometry
             self.geometries.append(g)
 
         # Store frame shape
-        self.shape = np.array(common.get('shape', self.geometries[0].shape))
+        self.diff_shape = np.array(common.get('shape', self.geometries[0].shape))
+        self.probe_shape = probe_shape
+        self.object_shape = probe_shape
+        self.exit_shape = probe_shape
         self.psize = self.geometries[0].psize
 
         return
@@ -936,13 +1170,72 @@ class Full(ScanModel):
 
             s.model_initialized = True
 
+
+class _OPRModel(object):
+    """
+    Scan for Orthogonal Probe Relaxation (OPR) ptychography, where each has its own probe. 
+
+    Defaults:
+
+    [name]
+    default = OPRModel
+    type = str
+    help =
+    doc =
+    """
+
+    def __init__(self, ptycho=None, pars=None, label=None):
+        super(_OPRModel, self).__init__(ptycho, pars, label)
+        self.p.illumination['diversity'] = None
+
+    def _create_pods(self):
+        new_pods, new_probe_ids, new_object_ids = super(_OPRModel, self)._create_pods()
+
+        for vID, v in self.ptycho.probe.views.items():
+            # Get the associated diffraction frame
+            di_view = v.pod.di_view
+            # Reformat the layer
+            v.layer = di_view.layer*self.p.coherence.num_probe_modes + v.layer
+            # Deactivate if the associate di_view is inactive (to spread the probe across nodes consistently with diff)
+            v.active = di_view.active
+
+        # Create dictionaries to store OPR modes
+        self.OPR_modes = {}
+        self.OPR_coeffs = {}
+        self.OPR_allprobes = {}
+
+        return new_pods, new_probe_ids, new_object_ids
+
+@defaults_tree.parse_doc('scan.Vanilla')
+class Vanilla(_Vanilla, ScanModel):
+    pass
+
+@defaults_tree.parse_doc('scan.BlockVanilla')
+class BlockVanilla(_Vanilla, BlockScanModel):
+    pass
+
+@defaults_tree.parse_doc('scan.Full')
+class Full(_Full, ScanModel):
+    pass
+
+@defaults_tree.parse_doc('scan.BlockFull')
+class BlockFull(_Full, BlockScanModel):
+    pass
+
+@defaults_tree.parse_doc('scan.OPRModel')
+class OPRModel(_OPRModel, Full):
+    pass
+
+@defaults_tree.parse_doc('scan.BlockOPRModel')
+class BlockOPRModel(_OPRModel, BlockFull):
+    pass
+
 # Append illumination and sample defaults
 defaults_tree['scan.Full'].add_child(illumination.illumination_desc)
 defaults_tree['scan.Full'].add_child(sample.sample_desc)
 
 # Update defaults
 Full.DEFAULT = defaults_tree['scan.Full'].make_default(99)
-
 
 from . import geometry_bragg
 defaults_tree['scan'].add_child(EvalDescriptor('Bragg3dModel'))
@@ -969,6 +1262,10 @@ class Bragg3dModel(Vanilla):
     type = str
     help =
 
+    [resample]
+    type = int, None
+    default = 1
+    help = Diffraction resampling *CURRENTLY NOT SUPPORTED FOR BRAGG CASE*
     """
 
     def __init__(self, ptycho=None, pars=None, label=None):
@@ -1191,6 +1488,9 @@ class Bragg3dModel(Vanilla):
         to raw data frames, they now refer to 3-dimensional diffraction
         patterns as specified by Geo_Bragg.
         """
+        if self.p.resample != 1:
+            raise NotImplementedError('Diffraction pattern resampling is not supported by Bragg Scan Model')
+        self.resample = 1
 
         # Collect and assemble geometric parameters
         get_keys = ['distance', 'center', 'energy']
@@ -1208,12 +1508,16 @@ class Bragg3dModel(Vanilla):
         logger.info('Reconstruction will use these geometric parameters:')
         logger.info(g)
         g.p.resolution_is_fix = True
+        g.resample = self.resample
 
         # save the geometry
         self.geometries = [g]
 
         # Store frame shape
-        self.shape = g.shape
+        self.diff_shape = g.shape
+        self.probe_shape = self.diff_shape
+        self.object_shape = self.diff_shape
+        self.exit_shape = self.diff_shape
         self.psize = g.psize
 
     def _initialize_probe(self, probe_ids):
@@ -1237,7 +1541,7 @@ class Bragg3dModel(Vanilla):
             % (shape, shape, extent, extent, psize))
         t0 = time.time()
 
-        Cprobe = Container(data_dims=2, data_type='float')
+        Cprobe = Container(data_dims=2, data_type='complex')
         Sprobe = Cprobe.new_storage(psize=psize, shape=shape)
 
         # fill the incoming probe
@@ -1312,3 +1616,7 @@ class ModelManager(object):
         # Attempt to get new data
         for label, scan in self.scans.items():
             new_data = scan.new_data()
+
+
+
+

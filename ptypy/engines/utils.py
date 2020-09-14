@@ -10,6 +10,8 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 from .. import utils as u
+from .. import parallel
+from scipy.sparse.linalg import eigsh
 
 # This dynamic loas could easily be generalized to other types.
 def dynamic_load(path, baselist, fail_silently = True):
@@ -123,7 +125,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     if LL_error is True:
         LL = np.zeros_like(diff_view.data)
         for name, pod in diff_view.pods.items():
-            LL += u.abs2(pod.fw(pod.probe * pod.object))
+            LL += pod.downsample(u.abs2(pod.fw(pod.probe * pod.object)))
         err_phot = (np.sum(fmask * (LL - I)**2 / (I + 1.))
                     / np.prod(LL.shape))
     else:
@@ -135,8 +137,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
             continue
         f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
                          - alpha * pod.exit)
-
-        af2 += u.abs2(f[name])
+        af2 += pod.downsample(u.abs2(f[name]))
 
     fmag = np.sqrt(np.abs(I))
     af = np.sqrt(af2)
@@ -152,7 +153,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            df = pod.bw(pod.upsample(fm) * f[name]) - pod.probe * pod.object
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     elif err_fmag > pbound:
@@ -162,7 +163,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(fm * f[name]) - pod.probe * pod.object
+            df = pod.bw(pod.upsample(fm) * f[name]) - pod.probe * pod.object
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     else:
@@ -180,6 +181,113 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         err_fmag /= pbound
 
     return np.array([err_fmag, err_phot, err_exit])
+
+
+def reduce_dimension(a, dim, local_indices=None):
+    """
+    Apply a low-rank approximation on a.
+
+    :param a:
+     3D numpy array.
+
+    :param dim:
+     The number of dimensions to retain. The case dim=0 (which would
+     just reduce all layers to a mean) is not implemented.
+
+    :param local_indices:
+     Used for Containers distributed across nodes. Local indices of
+     the current node.
+
+    :return: [reduced array, modes, coefficients]
+     Where:
+      - reduced array is the result of dimensionality reduction
+         (same shape as a)
+      - modes: 3D array of length dim containing eigenmodes
+         (aka singular vectors)
+      - coefficients: 2D matrix representing the decomposition of a.
+    """
+    if local_indices is None:  # No MPI - generate a list of indices
+        Nl = len(a)
+        local_indices = range(Nl)
+    # Distributed array - share info between nodes to compute
+    # totalsize of matrix
+    else:
+        assert len(a) == len(local_indices)
+        Nl = parallel.allreduce(len(local_indices))
+
+    # Create the matrix to diagonalise
+    M = np.zeros((Nl, Nl), dtype=complex)
+
+    size = parallel.size
+    rank = parallel.rank
+
+    # Communication takes a different form if size is even or odd
+    size_is_even = (size == 2 * (size // 2))
+
+    # Using Round-Robin pairing to optimise parallelism
+    if size_is_even:
+        peer_nodes = np.roll(np.arange(size - 1), rank)
+        peer_nodes[peer_nodes == rank] = size - 1
+        if rank == size - 1:
+            peer_nodes = ((size // 2) * np.arange(size - 1)) % (size - 1)
+    else:
+        peer_nodes = np.roll(np.arange(size), rank)
+
+    # Even size means that local scalar product have all
+    # to be done in parallel
+    if size_is_even:
+        for l0, i0 in enumerate(local_indices):
+            for l1, i1 in enumerate(local_indices):
+                if i0 > i1:
+                    continue
+                M[i0, i1] = np.vdot(a[l0], a[l1])
+                M[i1, i0] = np.conj(M[i0, i1])
+
+    # Fill matrix by looping through peers and communicate info
+    # for scalar products
+    for other_rank in peer_nodes:
+        if other_rank == rank:
+            # local scalar product
+            for l0, i0 in enumerate(local_indices):
+                for l1, i1 in enumerate(local_indices):
+                    if i0 > i1:
+                        continue
+                    M[i0, i1] = np.vdot(a[l0], a[l1])
+                    M[i1, i0] = np.conj(M[i0, i1])
+        elif other_rank > rank:
+            # Send layer indices
+            parallel.send(local_indices, other_rank, tag=0)
+            # Send data
+            parallel.send(a, other_rank, tag=1)
+        else:
+            # Receive layer indices
+            other_indices = parallel.receive(source=other_rank, tag=0)
+            b = parallel.receive(source=other_rank, tag=1)
+            # Compute matrix elements
+            for l0, i0 in enumerate(local_indices):
+                for l1, i1 in enumerate(other_indices):
+                    M[i0, i1] = np.vdot(a[l0], b[l1])
+                    M[i1, i0] = np.conj(M[i0, i1])
+
+    # Finally group all matrix info
+    parallel.allreduce(M)
+
+    # Diagonalise the matrix
+    eigval, eigvec = eigsh(M, k=dim + 2, which='LM')
+
+    # Generate the modes
+    modes = np.array([sum(a[l] * eigvec[i, k]
+        for l, i in enumerate(local_indices)) for k in range(dim)])
+
+    parallel.allreduce(modes)
+
+    # Reconstruct the array
+    eigvecc = eigvec.conj()[:,:-2]
+    output = np.zeros_like(a)
+    for l, i in enumerate(local_indices):
+        output[l] = sum(modes[k] * eigvecc[i, k] for k in range(dim))
+
+    return output, modes, eigvecc
 
 
 def Cnorm2(c):
@@ -211,3 +319,4 @@ def Cdot(c1, c2):
     for name, s in c1.storages.items():
         r += np.vdot(c1.storages[name].data.flat, c2.storages[name].data.flat)
     return r
+
