@@ -342,19 +342,27 @@ class Hdf5Loader(PtyScan):
                     self.p.normalisation.is_swmr]:
             raise NotImplementedError("Currently swmr functionality is not implemented! Coming soon...")
 
+        # Check for spectro scans
+        print(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key])
+        self._is_spectro_scan = len(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key].shape)
+        if self._is_spectro_scan and self.p.outer_index is None:
+            self.p.outer_index = 0
+        if self._is_spectro_scan:
+            log(3, "This is appears to be a spectro scan, selecting index = {}".format(self.p.outer_index))
+
         self.intensities = h5.File(self.p.intensities.file, 'r')[self.p.intensities.key]
-        if self.p.outer_index is not None:
+        if self._is_spectro_scan and self.p.outer_index is not None:
             self.intensities = self.intensities[self.p.outer_index]
         data_shape = self.intensities.shape
 
         fast_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.fast_key][...]
-        if self.p.outer_index is not None:
+        if self._is_spectro_scan and self.p.outer_index is not None:
             fast_axis = fast_axis[self.p.outer_index]
         self.fast_axis = np.squeeze(fast_axis) if fast_axis.ndim > 2 else fast_axis
         positions_fast_shape = self.fast_axis.shape
 
         slow_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.slow_key][...]
-        if self.p.outer_index is not None:
+        if self._is_spectro_scan and self.p.outer_index is not None:
             slow_axis = slow_axis[self.p.outer_index]
         self.slow_axis = np.squeeze(slow_axis) if slow_axis.ndim > 2 else slow_axis
         positions_slow_shape = self.slow_axis.shape
@@ -428,14 +436,13 @@ class Hdf5Loader(PtyScan):
             log(3, "No normalisation will be applied.")
 
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            if self.p.outer_index is not None:
+            if self._is_spectro_scan and self.p.outer_index is not None:
                 self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][self.p.outer_index])
             else:
                 self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()])
             self.p.energy = self.p.energy * self.p.recorded_energy.multiplier + self.p.recorded_energy.offset
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
-
 
         if None not in [self.p.recorded_distance.file, self.p.recorded_distance.key]:
             self.p.distance = np.float(h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][()] * self.p.recorded_distance.multiplier)
