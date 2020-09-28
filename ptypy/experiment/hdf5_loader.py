@@ -345,7 +345,10 @@ class Hdf5Loader(PtyScan):
 
         # Check for spectro scans
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            self._is_spectro_scan = len(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key].shape)
+            _energy_dset = h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key]
+            if len(_energy_dset.shape):
+                if _energy_dset.shape[0] > 1:
+                    self._is_spectro_scan = True
         if self._is_spectro_scan and self.p.outer_index is None:
             self.p.outer_index = 0
         if self._is_spectro_scan:
