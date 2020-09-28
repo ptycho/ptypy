@@ -327,6 +327,7 @@ class Hdf5Loader(PtyScan):
         self.flatfield_field_laid_out_like_data = None
         self.mask_laid_out_like_data = None
         self.preview_indices = None
+        self._is_spectro_scan = False
 
         # lets raise some exceptions here for the essentials
         if None in [self.p.intensities.file,
@@ -343,8 +344,8 @@ class Hdf5Loader(PtyScan):
             raise NotImplementedError("Currently swmr functionality is not implemented! Coming soon...")
 
         # Check for spectro scans
-        print(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key])
-        self._is_spectro_scan = len(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key].shape)
+        if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
+            self._is_spectro_scan = len(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key].shape)
         if self._is_spectro_scan and self.p.outer_index is None:
             self.p.outer_index = 0
         if self._is_spectro_scan:
