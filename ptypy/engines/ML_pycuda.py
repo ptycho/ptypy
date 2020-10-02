@@ -488,6 +488,12 @@ class GaussianModel(BaseModelSerial):
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
             POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
 
+            print("{:s}: prg.get().mean(): {:f}".format(dID, prg.get().mean()))
+            print("{:s}: obg.get().mean(): {:f}".format(dID, obg.get().mean()))
+
+        print("after: prg.get().mean(): {:f}".format(prg.get().mean()))
+        print("after: obg.get().mean(): {:f}".format(obg.get().mean()))
+
         # TODO we err_phot.sum, but not necessarily this error_dct until the end of contiguous iteration
         for dID, prep in self.engine.diff_info.items():
             err_phot = prep.err_phot_gpu.get()
@@ -499,6 +505,9 @@ class GaussianModel(BaseModelSerial):
             error_dct.update(zip(prep.view_IDs, errs))
 
 
+        #print("prg 2: ", prg.get().mean())
+        #print("obg 2: ", obg.get().mean())
+
         # MPI reduction of gradients
 
         # DtoH copies
@@ -508,9 +517,15 @@ class GaussianModel(BaseModelSerial):
             s.gpu.get(s.cpu)
         self.engine._set_pr_ob_ref_for_data('cpu')
 
+        #print("prg 3: ", prg.get().mean())
+        #print("obg 3: ", obg.get().mean())
+
         ob_grad.allreduce()
         pr_grad.allreduce()
         parallel.allreduce(LL)
+
+        #print("prg 4: ", prg.get().mean())
+        #print("obg 4: ", obg.get().mean())
 
         # HtoD cause we continue on gpu
         for s in ob_grad.S.values():
@@ -518,6 +533,9 @@ class GaussianModel(BaseModelSerial):
         for s in pr_grad.S.values():
             s.gpu.set(s.cpu)
         self.engine._set_pr_ob_ref_for_data('gpu')
+
+        #print("prg 5: ", prg.get().mean())
+        #print("obg 5: ", obg.get().mean())
 
         # Object regularizer
         if self.regularizer:
@@ -576,11 +594,17 @@ class GaussianModel(BaseModelSerial):
             pr = self.pr.S[pID].data
             pr_h = c_pr_h.S[pID].data
 
+            #print("ob_h: ", ob_h.get().mean())
+            #print("pr_h: ", pr_h.get().mean())
+
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(f, addr, ob, pr, add=False)
             AWK.build_aux_no_ex(a, addr, ob_h, pr, add=False)
             AWK.build_aux_no_ex(a, addr, ob, pr_h, add=True)
             AWK.build_aux_no_ex(b, addr, ob_h, pr_h, add=False)
+
+            #print("a: ", a.shape, a.get().mean())
+            #print("b: ", b.shape, b.get().mean())
 
             # forward prop
             FW(f,f)
@@ -588,7 +612,15 @@ class GaussianModel(BaseModelSerial):
             FW(b,b)
 
             GDK.queue.wait_for_event(ev)
+            #print("fic: ", fic.get())
+            #print("f: ", f.shape, f.get().mean())
+
+
             GDK.make_a012(f, a, b, addr, I, fic)
+
+            #print("A0: ", GDK.gpu.Imodel.get().mean())
+            #print("A1: ", GDK.gpu.LLerr.get().mean())
+            #print("A2: ", GDK.gpu.LLden.get().mean())
 
             """
             if self.p.floating_intensities:
@@ -599,6 +631,7 @@ class GaussianModel(BaseModelSerial):
             GDK.fill_b(addr, Brenorm, w, B)
 
         B = B.get()
+        print("B: ", B)
         parallel.allreduce(B)
 
         # Object regularizer
