@@ -600,7 +600,6 @@ class GaussianModel(BaseModelSerial):
             FW(b,b)
 
             GDK.queue.wait_for_event(ev)
-
             GDK.make_a012(f, a, b, addr, I, fic)
 
             """
@@ -610,7 +609,6 @@ class GaussianModel(BaseModelSerial):
                 A2 *= self.float_intens_coeff[dname]
             """
             GDK.fill_b(addr, Brenorm, w, B)
-
             GDK.queue.synchronize()
 
         B = B.get()

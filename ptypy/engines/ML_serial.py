@@ -192,9 +192,6 @@ class ML_serial(ML):
             cn2_new_pr_grad, cdotr_pr_grad = self._replace_pr_grad()
             cn2_new_ob_grad, cdotr_ob_grad = self._replace_ob_grad()
 
-            for dID in self.di.S.keys():
-                prep = self.diff_info[dID]
-                oid = prep.poe_IDs[1]
 
             # probe/object rescaling
             if self.p.scale_precond:
@@ -451,7 +448,7 @@ class GaussianModel(BaseModelSerial):
             GDK.make_a012(f, a, b, addr, I, fic)
 
             GDK.fill_b(addr, Brenorm, w, B)
-        
+
         parallel.allreduce(B)
 
         # Object regularizer
