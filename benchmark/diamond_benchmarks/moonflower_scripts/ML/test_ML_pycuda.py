@@ -19,7 +19,7 @@ p = u.Param()
 
 # for verbose output
 p.verbose_level = 3
-p.frames_per_block = 300
+p.frames_per_block = 20
 # set home path
 p.io = u.Param()
 p.io.home = tmpdir
@@ -77,9 +77,9 @@ p.engines.engine01.reg_del2 = False
 p.engines.engine01.reg_del2_amplitude = .1 
 p.engines.engine01.scale_precond = False
 p.engines.engine01.scale_probe_object = 1.
-
-#p.engines.engine00.probe_update_cuda_atomics = False
-#p.engines.engine00.object_update_cuda_atomics = True
+p.engines.engine01.probe_update_cuda_atomics = False
+p.engines.engine01.object_update_cuda_atomics = False
+p.engines.engine01.use_cuda_device_memory_pool = True
 
 # prepare and run
 P = Ptycho(p,level=4)

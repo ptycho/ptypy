@@ -25,9 +25,6 @@ from ..accelerate.array_based.kernels import GradientDescentKernel, AuxiliaryWav
     PositionCorrectionKernel
 from ..accelerate.array_based import address_manglers
 
-import matplotlib.pyplot as plt
-import sys
-
 __all__ = ['ML_serial']
 
 
@@ -144,16 +141,6 @@ class ML_serial(ML):
                 prep.original_addr = np.zeros_like(prep.addr)
                 prep.original_addr[:] = prep.addr
 
-        #     # DEBUGGING
-        #     print(label)
-        #     pID, oID, eID = prep.poe_IDs
-        #     ob = self.ob.S[oID].data
-
-        #     plt.figure()
-        #     plt.imshow(np.angle(ob)[0])
-        #     plt.show()
-        # sys.exit()
-
         self.ML_model.prepare()
 
     def _get_smooth_gradient(self, data, sigma):
@@ -208,13 +195,6 @@ class ML_serial(ML):
             for dID in self.di.S.keys():
                 prep = self.diff_info[dID]
                 oid = prep.poe_IDs[1]
-                # print("ID: ", dID)
-                # try:
-                #     print("ob_grad: ", self.ob_grad.S[oid].data.mean())
-                #     print("pr_grad: ", self.pr_grad.S[oid].data.mean())
-                # except:
-                #     print("ob_grad: ", self.ob_grad.S[oid].data.get().mean())
-                #     print("pr_grad: ", self.pr_grad.S[oid].data.get().mean())
 
             # probe/object rescaling
             if self.p.scale_precond:
@@ -261,39 +241,16 @@ class ML_serial(ML):
             else:
                 self.ob_h -= self.ob_grad
 
-            # for dID in self.di.S.keys():
-            #     prep = self.diff_info[dID]
-            #     oid = prep.poe_IDs[1]
-            #     print("ID: ", dID)
-            #     try:
-            #         print("ob_grad: ", self.ob_grad.S[oid].data.mean())
-            #         print("pr_grad: ", self.pr_grad.S[oid].data.mean())
-            #     except:
-            #         print("ob_grad: ", self.ob_grad.S[oid].data.get().mean())
-            #         print("pr_grad: ", self.pr_grad.S[oid].data.get().mean())
-
             self.pr_h *= dt(bt / self.tmin)
             self.pr_grad *= dt(self.scale_p_o)
             self.pr_h -= self.pr_grad
-
-            # for dID in self.di.S.keys():
-            #     prep = self.diff_info[dID]
-            #     oid = prep.poe_IDs[1]
-            #     print("ID: ", dID)
-            #     try:
-            #         print("ob_h: ", self.ob_h.S[oid].data.mean())
-            #         print("pr_h: ", self.pr_h.S[oid].data.mean())
-            #     except:
-            #         print("ob_h: ", self.ob_h.S[oid].data.get().mean())
-            #         print("pr_h: ", self.pr_h.S[oid].data.get().mean())
 
             # In principle, the way things are now programmed this part
             # could be iterated over in a real Newton-Raphson style.
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
-            #print(self.curiter, B)
-            #sys.exit()
+
             if np.isinf(B).any() or np.isnan(B).any():
                 logger.warning(
                     'Warning! inf or nan found! Trying to continue...')
@@ -418,12 +375,6 @@ class GaussianModel(BaseModelSerial):
             POK.ob_update_ML(addr, obg, pr, aux)
             POK.pr_update_ML(addr, prg, ob, aux)
 
-            print("{:s}: prg.get().mean(): {:f}".format(dID, prg.mean()))
-            print("{:s}: obg.get().mean(): {:f}".format(dID, obg.mean()))
-
-        print("after: prg.get().mean(): {:f}".format(prg.mean()))
-        print("after: obg.get().mean(): {:f}".format(obg.mean()))
-
         for dID, prep in self.engine.diff_info.items():
             err_phot = prep.err_phot
             LL += err_phot.sum()
@@ -432,9 +383,6 @@ class GaussianModel(BaseModelSerial):
             err_exit = np.zeros_like(err_phot)
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error_dct.update(zip(prep.view_IDs, errs))
-
-        # print("prg 2: ", prg.mean())
-        # print("obg 2: ", obg.mean())
 
         # MPI reduction of gradients
         ob_grad.allreduce()
@@ -489,36 +437,21 @@ class GaussianModel(BaseModelSerial):
             pr_h = c_pr_h.S[pID].data
             I = self.di.S[dID].data
 
-            #print("ob_h: ", ob_h.mean())
-            #print("pr_h: ", pr_h.mean())
-
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(f, addr, ob, pr, add=False)
             AWK.build_aux_no_ex(a, addr, ob_h, pr, add=False)
             AWK.build_aux_no_ex(a, addr, ob, pr_h, add=True)
             AWK.build_aux_no_ex(b, addr, ob_h, pr_h, add=False)
 
-            #print("a: ", a.shape, a.mean())
-            #print("b: ", b.shape, b.mean())
-
             # forward prop
             f[:] = FW(f)
             a[:] = FW(a)
             b[:] = FW(b)
 
-            #print("fic: ", fic)
-            #print("f: ", f.shape, f.mean())
-
-
             GDK.make_a012(f, a, b, addr, I, fic)
-
-            #print("A0: ", GDK.npy.Imodel.mean())
-            #print("A1: ", GDK.npy.LLerr.mean())
-            #print("A2: ", GDK.npy.LLden.mean())
 
             GDK.fill_b(addr, Brenorm, w, B)
         
-        print("B: ", B)
         parallel.allreduce(B)
 
         # Object regularizer
