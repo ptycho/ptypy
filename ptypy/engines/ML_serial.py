@@ -192,7 +192,6 @@ class ML_serial(ML):
             cn2_new_pr_grad, cdotr_pr_grad = self._replace_pr_grad()
             cn2_new_ob_grad, cdotr_ob_grad = self._replace_ob_grad()
 
-
             # probe/object rescaling
             if self.p.scale_precond:
                 cn2_new_pr_grad = cn2_new_pr_grad
