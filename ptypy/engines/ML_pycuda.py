@@ -132,6 +132,11 @@ class ML_pycuda(ML_serial):
     type = bool
     help = For GPU, use the atomics version for object update kernel
 
+    [use_cuda_device_memory_pool]
+    default = True
+    type = bool
+    help = For GPU, use a device memory pool
+
     """
 
     def __init__(self, ptycho_parent, pars=None):
@@ -146,7 +151,13 @@ class ML_pycuda(ML_serial):
         """
         self.context, self.queue = gpu.get_context(new_context=True, new_queue=True)
 
-        self.dmp = DeviceMemoryPool()
+        if self.p.use_cuda_device_memory_pool:
+            self._dmp = DeviceMemoryPool()
+            self.allocate = self._dmp.allocate
+        else:
+            self._dmp = None
+            self.allocate = cuda.mem_alloc
+
         self.queue_transfer = cuda.Stream()
         
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
@@ -384,7 +395,7 @@ class GaussianModel(BaseModelSerial):
             self.regularizer = Regul_del2_pycuda(
                 self.p.reg_del2_amplitude,
                 queue=self.engine.queue,
-                allocator=self.engine.dmp.allocate
+                allocator=self.engine.allocate
             )
         else:
             self.regularizer = None
@@ -455,8 +466,8 @@ class GaussianModel(BaseModelSerial):
             #I = gpuarray.to_gpu(prep.I)
             stream = self.engine.queue_transfer
             # TODO keep alive
-            w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.dmp.allocate, stream=stream)
-            I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.dmp.allocate, stream=stream)
+            w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.allocate, stream=stream)
+            I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.allocate, stream=stream)
             ev = cuda.Event()
             ev.record(stream)
 
@@ -488,6 +499,8 @@ class GaussianModel(BaseModelSerial):
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
             POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
 
+            GDK.queue.synchronize()
+
         # TODO we err_phot.sum, but not necessarily this error_dct until the end of contiguous iteration
         for dID, prep in self.engine.diff_info.items():
             err_phot = prep.err_phot_gpu.get()
@@ -497,7 +510,6 @@ class GaussianModel(BaseModelSerial):
             err_exit = np.zeros_like(err_phot)
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error_dct.update(zip(prep.view_IDs, errs))
-
 
         # MPI reduction of gradients
 
@@ -565,8 +577,8 @@ class GaussianModel(BaseModelSerial):
             #w = gpuarray.to_gpu(prep.weights)
             #I = gpuarray.to_gpu(prep.I)
             stream = self.engine.queue_transfer
-            w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.dmp.allocate, stream=stream)
-            I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.dmp.allocate, stream=stream)
+            w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.allocate, stream=stream)
+            I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.allocate, stream=stream)
             ev = cuda.Event()
             ev.record(stream)
 
@@ -597,6 +609,7 @@ class GaussianModel(BaseModelSerial):
                 A2 *= self.float_intens_coeff[dname]
             """
             GDK.fill_b(addr, Brenorm, w, B)
+            GDK.queue.synchronize()
 
         B = B.get()
         parallel.allreduce(B)
