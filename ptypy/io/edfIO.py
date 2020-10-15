@@ -200,18 +200,20 @@ def readHeader(filename, headerlength=None):
     """Reads and parses  the metadata contained in the header of an .edf file.
     Returns dictionary."""
 
-    with file(filename,'r') as f:
-        if f.read(1) != '{':
+    with open(filename,'rb') as f:
+        if f.read(1) != b'{':
             raise RuntimeError('File "%s" does not seem to be edf format.' % filename)
         if headerlength is None:
             f.seek(2)
             s = f.read(10*1024)
-            headerlength = s.find('}\n') + 4
+            headerlength = s.find(b'}\n') + 4
             s = s[:headerlength-2]
         else:
             f.seek(2)
             s = f.read(headerlength-2)
-
+            
+    # Encoding s as utf-8
+    s = str(s,'utf-8')
     # split read string into a list of 2-element lists
     hlist = [elem.split("=") for elem in s.replace("\n","").split(";")]
     hlist = [[convertStr(elem.strip()) for elem in elem2] for elem2 in hlist]
