@@ -643,6 +643,10 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         self.build_aux_pc_cuda = load_kernel("build_aux_position_correction")
         self.update_addr_and_error_state_cuda = load_kernel("update_addr_error_state")
 
+        self.gpu = Adict()
+        self.gpu.fdev = None
+        self.gpu.ferr = None
+
     def allocate(self):
         self.gpu.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
         self.gpu.ferr = gpuarray.zeros(self.fshape, dtype=np.float32)
