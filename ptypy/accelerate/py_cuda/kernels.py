@@ -679,18 +679,17 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
                                 stream=self.queue)
 
     def error_reduce(self, addr, err_fmag):
-        import sys
+        #import sys
         # float_size = sys.getsizeof(np.float32(4))
         # shared_memory_size =int(2 * 32 * 32 *float_size) # this doesn't work even though its the same...
-        shared_memory_size = int(49152)
-
+        # shared_memory_size = int(49152)
         self.error_reduce_cuda(self.gpu.ferr,
                                err_fmag,
                                np.int32(self.fshape[1]),
                                np.int32(self.fshape[2]),
                                block=(32, 32, 1),
                                grid=(int(err_fmag.shape[0]), 1, 1),
-                               shared=shared_memory_size,
+                               shared=32*32*4,
                                stream=self.queue)
 
     def update_addr_and_error_state_old(self, addr, error_state, mangled_addr, err_sum):
