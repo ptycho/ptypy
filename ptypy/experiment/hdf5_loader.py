@@ -221,6 +221,22 @@ class Hdf5Loader(PtyScan):
     type = int
     help = Sigma value applied for automatic detection of outliers in the normalisation dataset.
 
+    [framefilter]
+    default = 
+    type = Param
+    help = Parameters for the filtering of frames
+    doc = The shape of loaded data is assumed to hvae the same dimensionality as data.shape[:-2]
+
+    [framefilter.file]
+    default = None
+    type = str
+    help = This is the path to the file containing the filter information. 
+
+    [framefilter.key]
+    default = None
+    type = str
+    help = This is the key to the frame filter entry in the hdf5 file.
+
     [recorded_energy]
     default =
     type = Param
@@ -327,6 +343,7 @@ class Hdf5Loader(PtyScan):
         self.flatfield_field_laid_out_like_data = None
         self.mask_laid_out_like_data = None
         self.preview_indices = None
+        self.framefilter = None
         self._is_spectro_scan = False
 
         # lets raise some exceptions here for the essentials
@@ -374,11 +391,22 @@ class Hdf5Loader(PtyScan):
 
 
         log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(data_shape,
-                                                                                                                       positions_slow_shape,
+                                                                                                                      positions_slow_shape,
                                                                                                                       positions_fast_shape))
         if self.p.positions.skip > 1:
             log(3, "Skipping every {:d} positions".format(self.p.positions.skip))
         
+        if None not in [self.p.framefilter.file, self.p.framefilter.key]:
+            self.framefilter = h5.File(self.p.framefilter.file, 'r')[self.p.framefilter.key]
+            if (self.framefilter.shape == self.fast_axis.shape == self.slow_axis.shape):
+                log(3, "The frame filter has the same dimensionality as the axis information.")
+            elif self.framefilter.shape[:2] == self.fast_axis.shape == self.slow_axis.shape:
+                log(3, "The frame filter matches the axis information, but will average the other dimensions.")
+            else:
+                raise RuntimeError("I have no idea what to do with this is shape of frame filter data.")
+        else:
+            log(3, "No frame filter will be applied.")
+
         self.compute_scan_mapping_and_trajectory(data_shape, positions_fast_shape, positions_slow_shape)
 
         if None not in [self.p.darkfield.file, self.p.darkfield.key]:
@@ -620,6 +648,8 @@ class Hdf5Loader(PtyScan):
 
                 indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
+                if self.framefilter is not None:
+                    self.preview_indices = self.preview_indices[:,self.framefilter[::skip,::skip].flatten()]
                 self.num_frames = len(self.preview_indices[0])
             else:
                 if (set_slow_axis_bounds is not None) and (set_fast_axis_bounds is not None):
@@ -632,6 +662,8 @@ class Hdf5Loader(PtyScan):
                         fast_axis_bounds = set_fast_axis_bounds
                 self._scantype = "arb"
                 self.preview_indices = np.array(list(range(*fast_axis_bounds)))[::skip]
+                if self.framefilter is not None:
+                    self.preview_indices = self.preview_indices[self.framefilter[::skip]]
                 self.num_frames = len(self.preview_indices)
 
         elif ((len(positions_fast_shape)>1) and (len(positions_slow_shape)>1)) and data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
@@ -658,6 +690,8 @@ class Hdf5Loader(PtyScan):
 
             indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
             self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()])
+            if self.framefilter:
+                log(3, "Framefilter not supported for this case")
             self.num_frames = len(self.preview_indices[0])
             self._ismapped = False
             self._scantype = 'raster'
@@ -689,10 +723,12 @@ class Hdf5Loader(PtyScan):
 
                 indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
+                if self.framefilter:
+                    log(3, "Framefilter not supported for this case")
                 self.num_frames = len(self.preview_indices[0])
-
                 self._ismapped = True
                 self._scantype = 'raster'
+
             elif data_shape[0] == (positions_slow_shape[0] * positions_fast_shape[0]):
                 '''
                 cases covered:
@@ -718,11 +754,12 @@ class Hdf5Loader(PtyScan):
 
                 indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
+                if self.framefilter:
+                    log(3, "Framefilter not supported for this case")
                 self.num_frames = len(self.preview_indices[0])
-
-
                 self._ismapped = False
                 self._scantype = 'raster'
+
             else:
                 raise IOError("I don't know what to do with these positions/data shapes")
         else:

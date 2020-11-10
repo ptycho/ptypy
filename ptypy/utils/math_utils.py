@@ -57,8 +57,8 @@ def gaussian(x, std=1.0, off=0.0):
     Evaluates gaussian standard normal
 
     .. math::
-        g(x)=\\frac{1}{\mathrm{std}\sqrt{2\pi}}\,\exp
-        \\left(-\\frac{(x-\mathrm{off})^2}{2 \mathrm{std}^2 }\\right)
+        g(x)=\\frac{1}{\\mathrm{std}\\sqrt{2\\pi}}\\,\\exp
+        \\left(-\\frac{(x-\\mathrm{off})^2}{2 \\mathrm{std}^2 }\\right)
 
     Parameters
     ----------
