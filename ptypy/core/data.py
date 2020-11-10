@@ -1207,7 +1207,7 @@ class PtyScan(object):
                 hddaddress = self.dfile + '.part%03d' % num
                 io.h5write(hddaddress, todisk)
 
-                with h5py.File(self.dfile) as f:
+                with h5py.File(self.dfile, 'a') as f:
                     f[h5address] = h5py.ExternalLink(hddaddress, '/')
                     f.close()
 
