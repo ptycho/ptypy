@@ -443,7 +443,7 @@ def h5read(filename, *args, **kwargs):
 
     def _load_str(dset):
         #return str(dset[()])
-        return dset.asstr()
+        return dset.asstr()[0]
 
     def _load_unicode(dset):
         return dset[()].decode('utf-8')
