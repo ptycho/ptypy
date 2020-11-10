@@ -6,6 +6,65 @@ from . import load_kernel
 from ..array_based import kernels as ab
 from ..array_based.base import Adict
 
+class PropagationKernel:
+
+    def __init__(self, aux, propagator, queue_thread=None):
+        self.aux = aux
+        self._queue = queue_thread
+        from ptypy.core.geometry import BasicFarfieldPropagator
+        self._prop_is_ff = propagator is BasicFarfieldPropagator
+
+        self.fw = None
+        self.bw = None
+        self._fft1 = None
+        self._fft2 = None
+
+
+    def allocate(self):
+
+        aux = self.aux
+
+        try:
+            from ptypy.accelerate.py_cuda.cufft import FFT
+        except:
+            logger.warning('Unable to import cuFFT version - using Reikna instead')
+            from ptypy.accelerate.py_cuda.fft import FFT
+
+        if self._prop_is_ff:
+            self._fft1 = FFT(aux, self.queue,
+                             pre_fft=_p.pre_fft,
+                             post_fft=_p.post_fft,
+                             symmetric=True,
+                             forward=True)
+            self._fft2 = FFT(aux, self.queue,
+                             pre_fft=_p.pre_ifft,
+                             post_fft=_p.post_ifft,
+                             symmetric=True,
+                             forward=False)
+            self.fw = self._fft1.ft
+            self.bw = self._fft2.ift
+        else:
+            self._fft1 = FFT(aux, self.queue,
+                             post_fft=_p.kernel,
+                             symmetric=True,
+                             forward=True)
+            self._fft2 = FFT(aux, self.queue,
+                             post_fft=_p.ikernel,
+                             inplace=True,
+                             symmetric=True,
+                             forward=True)
+            self.fw = lambda x: self._fft1.ift(self._fft1.ft(x))
+            self.bw = lambda x: self._fft1.ift(self._fft2.ft(x))
+
+    @property
+    def queue(self):
+        return self._queue
+
+    @queue.setter
+    def queue(self, queue):
+        self._queue = queue
+        self._fft1.queue = queue
+        self._fft2.queue = queue
 
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 

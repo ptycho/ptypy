@@ -25,7 +25,7 @@ from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
 from ..accelerate import py_cuda as gpu
-from ..accelerate.py_cuda.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ..accelerate.py_cuda.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
 from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel
 
 from ..accelerate.array_based import address_manglers
@@ -215,18 +215,9 @@ class ML_pycuda(ML_serial):
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
 
-            kern.FW = FFT(aux, self.queue,
-                          pre_fft=geo.propagator.pre_fft,
-                          post_fft=geo.propagator.post_fft,
-                          inplace=True,
-                          symmetric=True,
-                          forward=True).ft
-            kern.BW = FFT(aux, self.queue,
-                          pre_fft=geo.propagator.pre_ifft,
-                          post_fft=geo.propagator.post_ifft,
-                          inplace=True,
-                          symmetric=True,
-                          forward=False).ift
+            kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue)
+            kern.PROP.allocate()
+
 
             if self.do_position_refinement:
                 addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
@@ -447,8 +438,8 @@ class GaussianModel(BaseModelSerial):
             POK = kern.POK
             aux = kern.aux
 
-            FW = kern.FW
-            BW = kern.BW
+            FW = kern.PROP.fw
+            BW = kern.PROP.bw
 
             # get addresses and auxilliary array
             addr = prep.addr_gpu
@@ -567,7 +558,7 @@ class GaussianModel(BaseModelSerial):
             a = kern.a
             b = kern.b
 
-            FW = kern.FW
+            FW = kern.PROP.fw
 
             # get addresses and auxiliary arrays
             addr = prep.addr_gpu

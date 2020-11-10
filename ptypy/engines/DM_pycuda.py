@@ -18,7 +18,7 @@ from ..utils.verbose import logger, log
 from ..utils import parallel
 from . import BaseEngine, register, DM_serial, DM
 from ..accelerate import py_cuda as gpu
-from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
 from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel, GaussianSmoothingKernel
 from ..accelerate.array_based import address_manglers
 
@@ -115,24 +115,8 @@ class DM_pycuda(DM_serial.DM_serial):
 
             kern.AUK = ArrayUtilsKernel(queue=self.queue)
 
-            try:
-                from ptypy.accelerate.py_cuda.cufft import FFT
-            except:
-                logger.warning('Unable to import cuFFT version - using Reikna instead')
-                from ptypy.accelerate.py_cuda.fft import FFT
-
-            kern.FW = FFT(aux, self.queue,
-                          pre_fft=geo.propagator.pre_fft,
-                          post_fft=geo.propagator.post_fft,
-                          inplace=True,
-                          symmetric=True,
-                          forward=True)
-            kern.BW = FFT(aux, self.queue,
-                          pre_fft=geo.propagator.pre_ifft,
-                          post_fft=geo.propagator.post_ifft,
-                          inplace=True,
-                          symmetric=True,
-                          forward=False)
+            kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue)
+            kern.PROP.allocate()
 
             if self.do_position_refinement:
                 addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
@@ -209,8 +193,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 kern = self.kernels[prep.label]
                 FUK = kern.FUK
                 AWK = kern.AWK
-                FW = kern.FW
-                BW = kern.BW
+                PROP = kern.PROP
 
                 # get addresses and buffers
                 addr = prep.addr
@@ -243,7 +226,7 @@ class DM_pycuda(DM_serial.DM_serial):
 
                 ## forward FFT
                 t1 = time.time()
-                FW.ft(aux, aux)
+                PROP.fw(aux, aux)
                 self.benchmark.B_Prop += time.time() - t1
 
                 ## Deviation from measured data
@@ -255,7 +238,7 @@ class DM_pycuda(DM_serial.DM_serial):
 
                 ## backward FFT
                 t1 = time.time()
-                BW.ift(aux, aux)
+                PROP.bw(aux, aux)
                 self.benchmark.D_iProp += time.time() - t1
                 
                 ## build exit wave
@@ -312,7 +295,7 @@ class DM_pycuda(DM_serial.DM_serial):
                             mangled_addr = PCK.address_mangler.mangle_address(addr.get(), original_addr, self.curiter)
                             mangled_addr_gpu = gpuarray.to_gpu(mangled_addr)
                             PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
-                            FW.ft(aux, aux)
+                            PROP.fw(aux, aux)
                             PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
                             PCK.error_reduce(mangled_addr_gpu, err_fourier)
                             PCK.update_addr_and_error_state(addr, 
