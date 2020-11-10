@@ -13,7 +13,6 @@ from ptypy.core.classes import DEFAULT_ACCESSRULE
 class CoreTest(unittest.TestCase):
     C1 = Container(data_type='real')
     S1 = C1.new_storage(shape=(1, 7, 7))
-    S1=C1.new_storage(data=np.ones((1,7,7)))
     ar = DEFAULT_ACCESSRULE.copy()
     ar.shape = (4, 4)  # ar.shape = 4 would have been also valid.
     ar.coord = 0.      # ar.coord = (0.,0.) would have been accepted, too.
@@ -29,7 +28,6 @@ class CoreTest(unittest.TestCase):
     data = S1[V1]
     V1.coord = (0.28, 0.28)
     S1.update_views(V1)
-    print(V1.storageID)
     mn = S1[V1].mean()
     S1.fill_value = mn
     S1.reformat()
