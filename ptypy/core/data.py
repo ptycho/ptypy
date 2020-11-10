@@ -93,8 +93,8 @@ class PtyScan(object):
         <newline>
         - ``None``: No saving
         - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-        - ``'append'``: appends each chunk in master \*.ptyd file
-        - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
+        - ``'append'``: appends each chunk in master \\*.ptyd file
+        - ``'link'``: appends external links in master \\*.ptyd file and stores chunks separately
         <newline>
         in the path given by the link. Links file paths are relative to master file.
     userlevel = 1
@@ -316,7 +316,7 @@ class PtyScan(object):
         Begins the Data preparation and intended as the first method
         that does read-write access on (large) data. Does the following:
 
-        * Creates a \*.ptyd data file at location specified by
+        * Creates a \\*.ptyd data file at location specified by
           :py:data:`dfile` (master node only)
         * Calls :py:meth:`load_weight`, :py:meth:`load_positions`
           :py:meth:`load_common` (master node only for

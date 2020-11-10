@@ -338,7 +338,7 @@ def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
     uses the same keyword arguments.
 
     Addiionally, it allows for complex input and out by complex overloading, see
-    :any:`complex_overload`\ . 
+    :any:`complex_overload`. 
 
     Parameters
     ----------
