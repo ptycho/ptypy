@@ -442,7 +442,8 @@ def h5read(filename, *args, **kwargs):
         return d
 
     def _load_str(dset):
-        return str(dset[()])
+        #return str(dset[()])
+        dset[()].asstr()
 
     def _load_unicode(dset):
         return dset[()].decode('utf-8')
