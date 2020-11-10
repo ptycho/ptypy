@@ -83,7 +83,6 @@ class Geo(Base):
     help = Distance from object to detector (in meters)
     doc =
     userlevel = 0
-    lowlim = 0
 
     [psize]
     type = float
