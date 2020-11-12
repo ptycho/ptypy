@@ -57,7 +57,6 @@ class PropagationKernel:
                              symmetric=True,
                              forward=True)
             self._fft3 = FFT(aux, self.queue,
-                             post_fft=self._p.kernel,
                              symmetric=True,
                              forward=False)
 
