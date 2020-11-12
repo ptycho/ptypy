@@ -55,14 +55,23 @@ class PropagationKernel:
                              post_fft=self._p.ikernel,
                              inplace=True,
                              symmetric=True,
+                             forward=True)
+            self._fft3 = FFT(aux, self.queue,
+                             post_fft=self._p.kernel,
+                             symmetric=True,
+                             forward=False)
+            self._fft4 = FFT(aux, self.queue,
+                             post_fft=self._p.ikernel,
+                             inplace=True,
+                             symmetric=True,
                              forward=False)
             def _fw(x,y):
                 self._fft1.ft(x,y)
-                self._fft2.ift(y,y)
+                self._fft3.ift(y,y)
             
             def _bw(x,y):
-                self._fft1.ft(x,y)
-                self._fft2.ift(y,y)
+                self._fft2.ft(x,y)
+                self._fft3.ift(y,y)
                 
             self.fw = _fw
             self.bw = _bw
