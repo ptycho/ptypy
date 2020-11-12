@@ -68,7 +68,7 @@ class DM_pycuda(DM_serial.DM_serial):
         # else:
         #     gauss_kernel = gaussian_kernel(self.p.obj_smooth_std, self.p.obj_smooth_std).astype(np.float32)
         # self.gauss_kernel_gpu = gpuarray.to_gpu(gauss_kernel)
-        
+
         # Gaussian Smoothing Kernel
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
 
@@ -151,7 +151,7 @@ class DM_pycuda(DM_serial.DM_serial):
                     #if _cname == 'Cobj_nrm' or _cname == 'Cprobe_nrm':
                     #    s.data = np.ascontiguousarray(s.data, dtype=np.float32)
                     data = s.data
-                
+
                 s.gpu = gpuarray.to_gpu(data)
 
         for label, d in self.ptycho.new_data:
@@ -161,7 +161,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
 
             prep.addr = gpuarray.to_gpu(prep.addr)
-            
+
             # Todo: Which address to pick?
             if use_tiles:
                 prep.addr2 = gpuarray.to_gpu(prep.addr2)
@@ -215,10 +215,10 @@ class DM_pycuda(DM_serial.DM_serial):
                 if self.p.compute_log_likelihood:
                     t1 = time.time()
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
-                    FW.ft(aux, aux)
-                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)                    
+                    PROP.fw(aux, aux)
+                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)
                     self.benchmark.F_LLerror += time.time() - t1
-                
+
                 ## build auxilliary wave
                 t1 = time.time()
                 AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
@@ -240,7 +240,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 t1 = time.time()
                 PROP.bw(aux, aux)
                 self.benchmark.D_iProp += time.time() - t1
-                
+
                 ## build exit wave
                 t1 = time.time()
                 AWK.build_exit(aux, addr, ob, pr, ex)
@@ -263,7 +263,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 # Update positions
                 if do_update_pos:
                     """
-                    Iterates through all positions and refines them by a given algorithm. 
+                    Iterates through all positions and refines them by a given algorithm.
                     """
                     log(3, "----------- START POS REF -------------")
                     for dID in self.di.S.keys():
@@ -298,9 +298,9 @@ class DM_pycuda(DM_serial.DM_serial):
                             PROP.fw(aux, aux)
                             PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
                             PCK.error_reduce(mangled_addr_gpu, err_fourier)
-                            PCK.update_addr_and_error_state(addr, 
-                                prep.error_state_gpu, 
-                                mangled_addr_gpu, 
+                            PCK.update_addr_and_error_state(addr,
+                                prep.error_state_gpu,
+                                mangled_addr_gpu,
                                 err_fourier)
                         # prep.err_fourier_gpu.set(error_state)
                         cuda.memcpy_dtod(dest=prep.err_fourier_gpu.ptr,
@@ -353,7 +353,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 ob_gpu_tmp = gpuarray.empty(ob.shape, dtype=np.complex64)
                 self.GSK.convolution(ob.gpu, ob_gpu_tmp, smooth_mfs)
                 ob.gpu = ob_gpu_tmp
-                
+
             ob.gpu *= cfact
             obn.gpu.fill(cfact)
             queue.synchronize()
@@ -476,7 +476,7 @@ class DM_pycuda(DM_serial.DM_serial):
             del s.gpu
         for name, s in self.ob.S.items():
             del s.gpu
-        
+
         self.context.detach()
         # might call gpu frees after context is destroyed
         # error?

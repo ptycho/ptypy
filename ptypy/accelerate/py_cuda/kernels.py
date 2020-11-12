@@ -1,7 +1,7 @@
 import numpy as np
 from inspect import getfullargspec
 from pycuda import gpuarray
-from ptypy.utils.verbose import log
+from ptypy.utils.verbose import log, logger
 from . import load_kernel
 from ..array_based import kernels as ab
 from ..array_based.base import Adict
@@ -11,13 +11,15 @@ class PropagationKernel:
     def __init__(self, aux, propagator, queue_thread=None):
         self.aux = aux
         self._queue = queue_thread
-        from ptypy.core.geometry import BasicFarfieldPropagator
-        self._prop_is_ff = propagator is BasicFarfieldPropagator
+        self.prop_type = propagator.p.propagation
+        #from ptypy.core.geometry import BasicFarfieldPropagator
+        #self._prop_is_ff = propagator is BasicFarfieldPropagator
 
         self.fw = None
         self.bw = None
         self._fft1 = None
         self._fft2 = None
+        self._p = propagator
 
 
     def allocate(self):
@@ -30,31 +32,32 @@ class PropagationKernel:
             logger.warning('Unable to import cuFFT version - using Reikna instead')
             from ptypy.accelerate.py_cuda.fft import FFT
 
-        if self._prop_is_ff:
+        if self.prop_type == 'farfield':
+        #if self._prop_is_ff:
             self._fft1 = FFT(aux, self.queue,
-                             pre_fft=_p.pre_fft,
-                             post_fft=_p.post_fft,
+                             pre_fft=self._p.pre_fft,
+                             post_fft=self._p.post_fft,
                              symmetric=True,
                              forward=True)
             self._fft2 = FFT(aux, self.queue,
-                             pre_fft=_p.pre_ifft,
-                             post_fft=_p.post_ifft,
+                             pre_fft=self._p.pre_ifft,
+                             post_fft=self._p.post_ifft,
                              symmetric=True,
                              forward=False)
             self.fw = self._fft1.ft
             self.bw = self._fft2.ift
         else:
             self._fft1 = FFT(aux, self.queue,
-                             post_fft=_p.kernel,
+                             post_fft=self._p.kernel,
                              symmetric=True,
                              forward=True)
             self._fft2 = FFT(aux, self.queue,
-                             post_fft=_p.ikernel,
+                             post_fft=self._p.ikernel,
                              inplace=True,
                              symmetric=True,
                              forward=True)
-            self.fw = lambda x: self._fft1.ift(self._fft1.ft(x))
-            self.bw = lambda x: self._fft1.ift(self._fft2.ft(x))
+            self.fw = lambda self,x: self._fft1.ift(self._fft1.ft(x))
+            self.bw = lambda self,x: self._fft2.ift(self._fft2.ft(x))
 
     @property
     def queue(self):
@@ -435,7 +438,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
 
         # Reduces the LL error along the last 2 dimensions.fd
         self.error_reduce_cuda(ferr, err_sum,
-                               np.int32(ferr.shape[-2]), 
+                               np.int32(ferr.shape[-2]),
                                np.int32(ferr.shape[-1]),
                                block=(32, 32, 1),
                                grid=(int(maxz), 1, 1),
@@ -769,7 +772,7 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         # assume all data is on GPU!
         self.update_addr_and_error_state_cuda(addr, mangled_addr, error_state, err_sum,
             np.int32(addr.shape[1]),
-            block=(32, 2, 1), 
+            block=(32, 2, 1),
             grid=(1, int((err_sum.shape[0] + 1) // 2), 1),
             stream=self.queue)
 
