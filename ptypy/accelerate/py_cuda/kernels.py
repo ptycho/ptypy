@@ -56,8 +56,16 @@ class PropagationKernel:
                              inplace=True,
                              symmetric=True,
                              forward=True)
-            self.fw = lambda self,x: self._fft1.ift(self._fft1.ft(x))
-            self.bw = lambda self,x: self._fft2.ift(self._fft2.ft(x))
+            def _fw(x,y):
+                self._fft1.ft(x,y)
+                self._fft1.ift(y,y)
+            
+            def _bw(x,y):
+                self._fft2.ft(x,y)
+                self._fft1.ift(y,y)
+                
+            self.fw = _fw
+            self.bw = _bw
 
     @property
     def queue(self):
