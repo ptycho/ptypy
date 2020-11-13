@@ -481,7 +481,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                     POK.queue = queue
                     PROP.queue = queue
 
-
                     # get addresses and auxilliary array
                     addr = prep.addr_gpu
                     addr2 = prep.addr2_gpu if use_tiles else None

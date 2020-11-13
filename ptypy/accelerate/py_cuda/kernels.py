@@ -12,15 +12,11 @@ class PropagationKernel:
         self.aux = aux
         self._queue = queue_thread
         self.prop_type = propagator.p.propagation
-        #from ptypy.core.geometry import BasicFarfieldPropagator
-        #self._prop_is_ff = propagator is BasicFarfieldPropagator
-
         self.fw = None
         self.bw = None
         self._fft1 = None
         self._fft2 = None
         self._p = propagator
-
 
     def allocate(self):
 
@@ -33,7 +29,6 @@ class PropagationKernel:
             from ptypy.accelerate.py_cuda.fft import FFT
 
         if self.prop_type == 'farfield':
-        #if self._prop_is_ff:
             self._fft1 = FFT(aux, self.queue,
                              pre_fft=self._p.pre_fft,
                              post_fft=self._p.post_fft,
@@ -46,7 +41,7 @@ class PropagationKernel:
                              forward=False)
             self.fw = self._fft1.ft
             self.bw = self._fft2.ift
-        else:
+        elif self.prop_type == "nearfield":
             self._fft1 = FFT(aux, self.queue,
                              post_fft=self._p.kernel,
                              symmetric=True,
@@ -70,6 +65,8 @@ class PropagationKernel:
                 
             self.fw = _fw
             self.bw = _bw
+        else:
+            logger.warning("Unable to select propagator %s, only nearfield and farfield are supported" %self.prop_type)
 
     @property
     def queue(self):
@@ -80,6 +77,7 @@ class PropagationKernel:
         self._queue = queue
         self._fft1.queue = queue
         self._fft2.queue = queue
+        self._fft3.queue = queue
 
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 
