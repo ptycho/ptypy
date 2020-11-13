@@ -746,7 +746,7 @@ class BasicNearfieldPropagator(object):
         a2 = (V**2 + W**2)
 
         self.kernel = np.exp(
-            2j * np.pi * (p.distance / p.lam) * (np.sqrt(1-a2) - 1))
+            2j * np.pi * (p.distance / p.lam) * (np.sqrt(1-a2) - 1)).astype(self.dtype)
         # self.kernel = np.fft.fftshift(self.kernel)
         self.ikernel = self.kernel.conj()
 
