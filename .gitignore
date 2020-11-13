@@ -27,3 +27,4 @@ ptypy/version.py
 /.coverage
 /env
 *.egg-info
+.DS_Store

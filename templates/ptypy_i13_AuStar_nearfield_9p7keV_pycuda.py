@@ -8,6 +8,7 @@ import numpy as np
 p = u.Param()
 p.verbose_level = 3
 p.run = None
+
 p.frames_per_block = 20
 
 p.data_type = "single"
@@ -61,7 +62,7 @@ sim.plot = False
 p.scans = u.Param()
 p.scans.scan00 = u.Param()
 p.scans.scan00.name = 'Full'
-p.scans.scan00.propagation = "nearfield"
+p.scans.scan00.propagation = 'nearfield'
 
 p.scans.scan00.coherence = u.Param()
 p.scans.scan00.coherence.num_probe_modes = 1
@@ -87,7 +88,7 @@ p.scans.scan00.data.update(sim)
 # Reconstruction parameters
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM'
+p.engines.engine00.name = 'DM_pycuda'
 p.engines.engine00.numiter = 100
 p.engines.engine00.object_inertia = 1.
 p.engines.engine00.numiter_contiguous = 1
