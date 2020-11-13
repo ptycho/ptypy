@@ -9,7 +9,7 @@ p = u.Param()
 p.verbose_level = 3
 p.run = None
 
-p.frames_per_block = 500
+p.frames_per_block = 20
 
 p.data_type = "single"
 p.run = None
@@ -22,9 +22,9 @@ p.io.autoplot.layout ='nearfield'
 # Simulation parameters
 sim = u.Param()
 sim.energy = 9.7
-sim.distance = 8.46e-3
+sim.distance = 8.46e-2
 sim.psize = 100e-9
-sim.shape = 512
+sim.shape = 256
 sim.xy = u.Param()
 sim.xy.override = u.parallel.MPIrand_uniform(0.0,10e-6,(20,2))
 #sim.xy.positions = np.random.normal(0.0,3e-6,(20,2))
@@ -61,7 +61,7 @@ sim.plot = False
 # Scan model and initial value parameters
 p.scans = u.Param()
 p.scans.scan00 = u.Param()
-p.scans.scan00.name = 'BlockFull'
+p.scans.scan00.name = 'Full'
 p.scans.scan00.propagation = 'nearfield'
 
 p.scans.scan00.coherence = u.Param()
