@@ -194,6 +194,26 @@ class ArrayUtilsTest(PyCudaTest):
         out = out_dev.get()
         np.testing.assert_allclose(out_exp, out, rtol=1e-4)
 
+    def test_complex_gaussian_filter_2d_nonsquare_UNITY(self):
+        # Arrange
+        inp = np.zeros((32, 16), dtype=np.complex64)
+        inp[3:4, 11:12] = 2.0+2.0j
+        inp[3:5, 3:5] = 2.0+2.0j
+        inp[20:25,3:5] = 2.0+2.0j
+        mfs = 1.0,1.0
+        inp_dev = gpuarray.to_gpu(inp)
+        out_dev = gpuarray.empty(inp.shape, dtype=np.complex64)
+
+        # Act
+        GS = gau.GaussianSmoothingKernel()
+        GS.convolution(inp_dev, out_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter(inp, mfs)
+        out = out_dev.get()
+
+        np.testing.assert_allclose(out_exp, out, rtol=1e-4)
+
     def test_complex_gaussian_filter_2d_batched(self):
         # Arrange
         batch_number = 2
