@@ -77,7 +77,8 @@ class PropagationKernel:
         self._queue = queue
         self._fft1.queue = queue
         self._fft2.queue = queue
-        self._fft3.queue = queue
+        if self.prop_type == "nearfield":
+            self._fft3.queue = queue
 
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 
