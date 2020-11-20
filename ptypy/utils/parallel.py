@@ -753,6 +753,9 @@ if MPI is not None:
     bcast_dict(hosts_ranks)
     rank_local = hosts_ranks[host].index(rank)
     del rank_host
+else:
+    rank_local = 0
+    hosts_ranks={'localhost':[0]}
 
 def MPInoise2d(sh,rms=1.0, mfs=2,rms_mod=None, mfs_mod=2):
     """
