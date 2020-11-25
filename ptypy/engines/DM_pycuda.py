@@ -435,27 +435,22 @@ class DM_pycuda(DM_serial.DM_serial):
             buf = self.pr_buf.S[pID]
             prn = self.pr_nrm.S[pID]
 
-            # MPI test
             if MPI:
-                # if False:
                 pr.data[:] = pr.gpu.get()
                 prn.data[:] = prn.gpu.get()
                 queue.synchronize()
                 parallel.allreduce(pr.data)
                 parallel.allreduce(prn.data)
                 pr.data /= prn.data
-
                 self.support_constraint(pr)
-
                 pr.gpu.set(pr.data)
             else:
                 pr.gpu /= prn.gpu
-                # ca. 0.3 ms
-                # self.pr.S[pID].gpu = probe_gpu
                 pr.data[:] = pr.gpu.get()
+                self.support_constraint(pr)
+                pr.gpu.set(pr.data)
 
             ## this should be done on GPU
-
             queue.synchronize()
             change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
             buf.data[:] = pr.data
