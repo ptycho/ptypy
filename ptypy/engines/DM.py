@@ -93,6 +93,12 @@ class DM(PositionCorrectionEngine):
     lowlim = 0.0
     help = If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
     doc = Set this value higher for noisy data.
+    
+    [fourier_relax_normalization]
+    default = True
+    type = bool
+    help = If True, the fourier relax factor is redefined as 0.25 times fourier_relax_factor**2 times the maximum power of all data frames
+    doc = Set this to False for more consistent behaviour independent of diffraction power.
 
     [obj_smooth_std]
     default = None
@@ -181,7 +187,10 @@ class DM(PositionCorrectionEngine):
         self.pbound = {}
         mean_power = 0.
         for name, s in self.di.storages.items():
-            self.pbound[name] = (.25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
+            if self.p.fourier_relax_normalization:
+                self.pbound[name] = (.25 * self.p.fourier_relax_factor**2 * s.pbound_stub)
+            else:
+                self.pbound[name] = self.p.fourier_relax_factor            
             mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
 
