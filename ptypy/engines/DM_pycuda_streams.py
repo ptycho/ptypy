@@ -472,17 +472,14 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
                     pbound = self.pbound_scan[prep.label]
                     aux = kern.aux
-                    FW = kern.FW
-                    BW = kern.BW
+                    PROP = kern.PROP
 
                     # set streams
                     queue = streamdata.queue
                     FUK.queue = queue
                     AWK.queue = queue
                     POK.queue = queue
-                    FW.queue = queue
-                    BW.queue = queue
-                    
+                    PROP.queue = queue
 
                     # get addresses and auxilliary array
                     addr = prep.addr_gpu
@@ -517,7 +514,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         if self.p.compute_log_likelihood:
                             t1 = time.time()
                             AWK.build_aux_no_ex(aux, addr, ob, pr)
-                            FW.ft(aux, aux)
+                            PROP.fw(aux, aux)
                             FUK.log_likelihood(aux, addr, mag, ma, err_phot)                    
                             self.benchmark.F_LLerror += time.time() - t1
 
@@ -527,7 +524,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         self.benchmark.A_Build_aux += time.time() - t1
 
                         t1 = time.time()
-                        FW.ft(aux, aux)
+                        PROP.fw(aux, aux)
                         self.benchmark.B_Prop += time.time() - t1
 
                         ## Deviation from measured data
@@ -540,7 +537,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
                         ## Backward FFT
                         t1 = time.time()
-                        BW.ift(aux, aux)
+                        PROP.bw(aux, aux)
                         ## apply changes
                         AWK.build_exit(aux, addr, ob, pr, ex)
                         FUK.exit_error(aux, addr)
@@ -625,10 +622,10 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         ma, mag = streamdata.ma_to_gpu(dID, prep.ma, prep.mag)
 
                         PCK = kern.PCK
-                        FW = kern.FW
+                        PROP = kern.PROP
                         AUK = kern.AUK
                         PCK.queue = streamdata.queue
-                        FW.queue = streamdata.queue
+                        PROP.queue = streamdata.queue
                         AUK.queue = streamdata.queue
 
                         #error_state = np.zeros(err_fourier.shape, dtype=np.float32)
@@ -646,7 +643,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                             mangled_addr = PCK.address_mangler.mangle_address(addr_cpu, original_addr, self.curiter)
                             mangled_addr_gpu = gpuarray.to_gpu_async(mangled_addr, stream=streamdata.queue)
                             PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
-                            FW.ft(aux, aux)
+                            PROP.fw(aux, aux)
                             PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
                             PCK.error_reduce(mangled_addr_gpu, prep.err_fourier_gpu)
                             # err_fourier_cpu = err_fourier.get_async(streamdata.queue)

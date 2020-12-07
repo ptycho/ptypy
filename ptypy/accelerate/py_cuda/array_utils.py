@@ -247,7 +247,7 @@ class GaussianSmoothingKernel:
                 raise MemoryError("Cannot run kernel in shared memory")
 
             blk = (bx, by, 1)
-            grd = (int((x + bx -1)// bx), int((y + by-1)// by), batches)
+            grd = (int((y + bx -1)// bx), int((x + by-1)// by), batches)
             self.convolution_row(input, output, np.int32(y), np.int32(x), kernel, np.int32(r), 
                                  block=blk, grid=grd, shared=shared, stream=self.queue)
 
@@ -269,7 +269,7 @@ class GaussianSmoothingKernel:
                 raise MemoryError("Cannot run kernel in shared memory")
 
             blk = (bx, by, 1)
-            grd = (int((x + bx -1)// bx), int((y + by-1)// by), batches)
+            grd = (int((y + bx -1)// bx), int((x + by-1)// by), batches)
             self.convolution_col(input, output, np.int32(y), np.int32(x), kernel, np.int32(r), 
                                  block=blk, grid=grd, shared=shared, stream=self.queue)
 

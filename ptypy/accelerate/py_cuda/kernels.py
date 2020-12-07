@@ -1,11 +1,84 @@
 import numpy as np
 from inspect import getfullargspec
 from pycuda import gpuarray
-from ptypy.utils.verbose import log
+from ptypy.utils.verbose import log, logger
 from . import load_kernel
 from ..array_based import kernels as ab
 from ..array_based.base import Adict
 
+class PropagationKernel:
+
+    def __init__(self, aux, propagator, queue_thread=None):
+        self.aux = aux
+        self._queue = queue_thread
+        self.prop_type = propagator.p.propagation
+        self.fw = None
+        self.bw = None
+        self._fft1 = None
+        self._fft2 = None
+        self._p = propagator
+
+    def allocate(self):
+
+        aux = self.aux
+
+        try:
+            from ptypy.accelerate.py_cuda.cufft import FFT
+        except:
+            logger.warning('Unable to import cuFFT version - using Reikna instead')
+            from ptypy.accelerate.py_cuda.fft import FFT
+
+        if self.prop_type == 'farfield':
+            self._fft1 = FFT(aux, self.queue,
+                             pre_fft=self._p.pre_fft,
+                             post_fft=self._p.post_fft,
+                             symmetric=True,
+                             forward=True)
+            self._fft2 = FFT(aux, self.queue,
+                             pre_fft=self._p.pre_ifft,
+                             post_fft=self._p.post_ifft,
+                             symmetric=True,
+                             forward=False)
+            self.fw = self._fft1.ft
+            self.bw = self._fft2.ift
+        elif self.prop_type == "nearfield":
+            self._fft1 = FFT(aux, self.queue,
+                             post_fft=self._p.kernel,
+                             symmetric=True,
+                             forward=True)
+            self._fft2 = FFT(aux, self.queue,
+                             post_fft=self._p.ikernel,
+                             inplace=True,
+                             symmetric=True,
+                             forward=True)
+            self._fft3 = FFT(aux, self.queue,
+                             symmetric=True,
+                             forward=False)
+
+            def _fw(x,y):
+                self._fft1.ft(x,y)
+                self._fft3.ift(y,y)
+            
+            def _bw(x,y):
+                self._fft2.ft(x,y)
+                self._fft3.ift(y,y)
+                
+            self.fw = _fw
+            self.bw = _bw
+        else:
+            logger.warning("Unable to select propagator %s, only nearfield and farfield are supported" %self.prop_type)
+
+    @property
+    def queue(self):
+        return self._queue
+
+    @queue.setter
+    def queue(self, queue):
+        self._queue = queue
+        self._fft1.queue = queue
+        self._fft2.queue = queue
+        if self.prop_type == "nearfield":
+            self._fft3.queue = queue
 
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 
@@ -376,7 +449,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
 
         # Reduces the LL error along the last 2 dimensions.fd
         self.error_reduce_cuda(ferr, err_sum,
-                               np.int32(ferr.shape[-2]), 
+                               np.int32(ferr.shape[-2]),
                                np.int32(ferr.shape[-1]),
                                block=(32, 32, 1),
                                grid=(int(maxz), 1, 1),
@@ -710,7 +783,7 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         # assume all data is on GPU!
         self.update_addr_and_error_state_cuda(addr, mangled_addr, error_state, err_sum,
             np.int32(addr.shape[1]),
-            block=(32, 2, 1), 
+            block=(32, 2, 1),
             grid=(1, int((err_sum.shape[0] + 1) // 2), 1),
             stream=self.queue)
 

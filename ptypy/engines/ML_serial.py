@@ -260,6 +260,9 @@ class ML_serial(ML):
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
 
+            # Allow for customized modifications at the end of each iteration
+            self._post_iterate_update()
+
             # increase iteration counter
             self.curiter += 1
 
