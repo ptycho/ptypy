@@ -6,8 +6,8 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
-p = u.Param()
 
+p = u.Param()
 # for verbose output
 p.verbose_level = 3
 

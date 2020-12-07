@@ -6,7 +6,7 @@ test Scan `ptypy.core.data.MoonFlowerScan`
 from ptypy import utils as u
 from ptypy import io
 from ptypy.core.data import MoonFlowerScan
-from ptypy.test import utils as tu
+from .. import utils as tu
 import unittest
 global DATA
 DATA = u.Param(

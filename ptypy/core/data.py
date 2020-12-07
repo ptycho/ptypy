@@ -147,6 +147,7 @@ class PtyScan(object):
     help = Minimum number of frames loaded by each node
     doc =
     userlevel = 2
+    lowlim = 1
 
     [positions_theory]
     type = ndarray
@@ -1495,6 +1496,16 @@ class MoonFlowerScan(PtyScan):
     default = 0.
     type = float
     help = Point spread function of the detector
+    
+    [add_poisson_noise]
+    default = True
+    type = bool
+    help = Decides whether the scan should have poisson noise or not
+
+    [block_wait_count]
+    default = 0
+    type = int
+    help = Signals a WAIT to the model after this many blocks.
 
     """
 
@@ -1525,7 +1536,7 @@ class MoonFlowerScan(PtyScan):
         else:
             pos = u.Param()
             pos.spacing = geo.resolution * geo.shape * p.density
-            pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+            pos.steps = np.int(np.round(np.sqrt(self.num_frames) + 1))
             pos.extent = pos.steps * pos.spacing
             pos.model = p.model
             pos.count = self.num_frames
@@ -1554,8 +1565,19 @@ class MoonFlowerScan(PtyScan):
         moon /= np.sqrt(u.abs2(moon).sum() / p.photons)
         self.pr = moon
         self.load_common_in_parallel = True
-        
+
+        self._check_called = 0
         self.p = p
+
+    def check(self, frames=None, start=None):
+        frames_accessible, eos = super().check(frames, start)
+        self._check_called += 1
+
+        bwc = self.p.block_wait_count
+        if bwc >=1 and self._check_called % (bwc+1) == 0:
+            frames_accessible = 0
+
+        return frames_accessible, eos
 
     def load_positions(self):
         return self.pos
@@ -1585,6 +1607,7 @@ class MoonFlowerScan(PtyScan):
                 raw[k] = np.random.poisson(intensity_j).astype(np.int32)
             else:
                 raw[k] = intensity_j.astype(np.int32)
+
 
         return raw, {}, {}
 

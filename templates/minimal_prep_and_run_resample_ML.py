@@ -6,6 +6,7 @@ of actual data. It uses the test Scan class
 #import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
+
 p = u.Param()
 
 # for verbose output

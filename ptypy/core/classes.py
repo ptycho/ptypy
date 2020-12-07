@@ -531,6 +531,7 @@ class Storage(Base):
         elif np.isscalar(fill):
             # Fill with scalar value
             self.data.fill(fill)
+            self.fill_value = fill
         elif type(fill) is np.ndarray:
             # Replace the buffer
             if fill.ndim < self.ndim or fill.ndim > (self.ndim + 1):

@@ -100,6 +100,15 @@ class Ptycho(Base):
     type = str
     userlevel = 0
 
+    [frames_per_block]
+    default = 100000
+    help = Max number of frames per block of data
+    doc = This parameter determines the size of buffer arrays for GPUs.
+          Reduce this number if you run out of memory on the GPU.
+    type = int
+    lowlim = 1
+    userlevel = 1
+
     [dry_run]
     default = False
     help = Dry run switch
@@ -185,7 +194,7 @@ class Ptycho(Base):
     default = Param
     type = Param
     help = Plotting client parameters
-    doc = Csontainer for the plotting.
+    doc = Container for the plotting.
 
     [io.autoplot.active]
     default = True
@@ -318,7 +327,8 @@ class Ptycho(Base):
         self.diff = None
         self.mask = None
         self.model = None
-        
+        self.new_data = None
+
         # Communication
         self.interactor = None
         self.plotter = None
@@ -383,7 +393,6 @@ class Ptycho(Base):
         self.CType = np.dtype(
             'c' + str(2 * np.dtype(np.typeDict[p.data_type]).itemsize)).type
         logger.info(_('Data type', self.data_type))
-
         # Check if there is already a runtime container
         if not hasattr(self, 'runtime'):
             self.runtime = u.Param()  # DEFAULT_runtime.copy()
@@ -398,6 +407,9 @@ class Ptycho(Base):
 
         # Generate all the paths
         self.paths = paths.Paths(p.io)
+
+        # Todo: determine block size based on memory available
+        self.frames_per_block = p.frames_per_block
 
         # Find run name
         self.runtime.run = self.paths.run(p.run)
@@ -439,6 +451,7 @@ class Ptycho(Base):
 
                 # Start automated plot client
                 self.plotter = None
+
                 if (parallel.master and autoplot.active and autoplot.threaded and
                         autoplot.interval > 0):
                     from multiprocessing import Process
@@ -446,6 +459,7 @@ class Ptycho(Base):
                     self.plotter = Process(target=u.spawn_MPLClient,
                                            args=(iaction.client, autoplot,))
                     self.plotter.start()
+
         else:
             # No interaction wanted
             self.interactor = None
@@ -480,8 +494,8 @@ class Ptycho(Base):
         Prints statistics on the ptypy structure if ``print_stats=True``
         """
         # Load the data. This call creates automatically the scan managers,
-        # which create the views and the PODs.
-        self.model.new_data()
+        # which create the views and the PODs. Sets self.new_data
+        self.new_data = self.model.new_data()
 
         # Print stats
         parallel.barrier()
@@ -510,7 +524,7 @@ class Ptycho(Base):
         if epars is not None:
             # Receiving a parameter set means a new engine parameter set
             # needs to be listed in self.p
-            engine_label = 'auto%02d' + len(self.engines)
+            engine_label = 'auto%02d' % len(self.engines)
 
             # List parameters
             self.p.engines[engine_label] = epars
@@ -603,6 +617,7 @@ class Ptycho(Base):
             engine.initialize()
 
             # One .prepare() is always executed, as Ptycho may hold data
+            self.new_data = [(d.label, d) for d in self.diff.S.values()]
             engine.prepare()
 
             # Start the iteration loop
@@ -614,15 +629,15 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                nd = self.model.new_data()
+                self.new_data = self.model.new_data()
 
                 # Last minute preparation before a contiguous block of
                 # iterations
-                if not nd:
+                if self.new_data:
                     engine.prepare()
 
                 auto_save = self.p.io.autosave
-                if auto_save is not None and auto_save.interval > 0:
+                if auto_save.active and auto_save.interval > 0:
                     if engine.curiter % auto_save.interval == 0:
                         auto = self.paths.auto_file(self.runtime)
                         logger.info(headerline('Autosaving'))
@@ -640,7 +655,7 @@ class Ptycho(Base):
                     # err = np.array(info['error'].values()).mean(0)
                     err = info['error']
                     logger.info('Iteration #%(iteration)d of %(engine)s :: '
-                                'Time %(duration).2f' % info)
+                                'Time %(duration).3f' % info)
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, '
                                 'Exit %.2e' % tuple(err))
 
@@ -673,7 +688,7 @@ class Ptycho(Base):
                 self.run(label=label)
         else:
             # Prepare and run ALL engines in self.p.engines
-            self.init_engine()
+            if not self.engines: self.init_engine()
             self.runtime.allstart = time.asctime()
             self.runtime.allstop = None
             for engine in self.engines.values():
@@ -993,3 +1008,134 @@ class Ptycho(Base):
                            (slice(0, 1), slice(None), slice(None)),
                            cmap='gray')
             fignum += 1
+
+    
+    def redistribute_data(self, div = 'rect', obj_storage=None):
+        """
+        This function redistributes data among nodes, so that each
+        node becomes in charge of a contiguous block of scanning
+        positions.
+        Each node is associated with a domain of the scanning pattern,
+        and communication happens node-to-node after each has worked
+        out which of its pods are not part of its domain.
+        """
+        t0 = time.time()
+        
+        if obj_storage is None:
+            for s in self.obj.storages.values():
+                out = self.redistribute_data(div=div, obj_storage=s)
+            return out
+        else:
+            # Not effective for object modes, but these are rare anyway
+            views = obj_storage.views
+            # get the range of positions 
+            pos = np.array([v.coord for v in views])
+            mn = pos.min(0)
+            mx = pos.max(0)
+            diff = mx - mn
+            # expand the outer borders slightly to avoid edge effects
+            mn -= 0.01 * diff
+            mx += 0.01 * diff
+            # in [0,1]
+            normed = lambda x : (x-mn) / (mx-mn)
+                
+            N = parallel.size
+            if div == 'rect':
+                roots = np.arange(int(np.sqrt(N)),0,-1)
+                i = roots[N % roots == 0][0]
+                assert (i * (N / i) == N)
+                
+                def __node(pos):
+                    x,y = normed(pos)
+                    rank = int( i * x) + i * int(N/i * y )
+                    return rank
+                
+            elif div == 'angle':
+                def __node(pos):
+                    x,y = normed(pos) -.5
+                    return  int(min(N * (np.angle(x+ 1.j * y) / np.pi+1.)/2.,N-1))
+                    
+            elif div == 'row':
+                __node = lambda pos : int(normed(pos)[0] * N)
+                
+            elif div == 'column':
+                __node = lambda pos : int(normed(pos)[1] * N)
+    
+            # Now get the the views to the diffraction data
+            views =  dict([(v.ID,v.pod.di_view) for v in views])
+       
+            # Determine which views need to be moved.            
+            # This relies heavily on the per-node tagging of active/passive
+            destinations = {}
+            sources = {}
+            positions = []
+            label = []
+            for name,view in views.items():
+                pos = view.pod.ob_view.coord
+                _dest = __node(pos) % N
+                label.append(_dest)
+                positions.append(normed(pos))
+                if _dest == parallel.rank:
+                    # Nothing to do
+                    continue
+                else:
+                    destinations[name] = _dest
+                if view.active:
+                    sources[name] = parallel.rank
+            destinations = parallel.gather_dict(destinations)
+            destinations = parallel.bcast_dict(destinations)
+            sources = parallel.gather_dict(sources)
+            sources = parallel.bcast_dict(sources)
+            if not destinations:
+                logger.info('No data redistribution necessary.')
+                return positions, label
+            
+            ## Pairing
+            pairs = {}
+            # prepare (enlarge) the storages on the receiving nodes
+            for name, source in sources.items():
+                dest = destinations[name] # This must work
+                pairs[name] = (source,dest)
+                view = views[name]
+                if dest == parallel.rank:
+                    # receiving this pod, so mark it as active
+                    view.active = True
+                    view.pod.ma_view.active = True
+                    view.pod.ex_view.active = True
+            for name in ['Cdiff', 'Cmask']:
+                self.containers[name].reformat()
+    
+            # transfer data
+            transferred = 0
+            for name, (source,dest) in pairs.items():
+                view = views[name]
+                if parallel.rank == source:
+                    parallel.send(view.data, dest=dest)
+                    parallel.send(view.pod.mask, dest=dest)
+                    view.active = False
+                    view.pod.ma_view.active = False
+                    view.pod.ex_view.active = False
+                    transferred += 1
+                if dest == parallel.rank:
+                    # your turn to receive
+                    view.data = parallel.receive()
+                    view.pod.mask = parallel.receive()
+                parallel.barrier()
+                
+            for name in ['Cdiff', 'Cmask', 'Cexit']:
+                self.containers[name].reformat()
+                
+            transferred = parallel.comm.reduce(transferred)
+            t1 = time.time()
+    
+            if parallel.master:
+                logger.info('Redistributed data, moved %u pods in %.2f s'
+                            %  (transferred, t1 - t0))
+    
+        return positions, label
+
+    def _best_decomposition(self, N):
+        """
+        Work out the best arrangement of domains for a given number of
+        nodes. Assumes a roughly square scan.
+        """

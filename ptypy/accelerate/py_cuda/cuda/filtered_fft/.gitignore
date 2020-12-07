@@ -1,0 +1,6 @@
+*.o
+smoke_test
+*.so
+.module*
+.rendered*
+module_*_*
