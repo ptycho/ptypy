@@ -87,18 +87,18 @@ class DM(PositionCorrectionEngine):
     lowlim = 0.0
     help = Weight of the current object in the update
 
+    [fourier_power_bound]
+    default = None
+    type = float
+    help = If rms error of model vs diffraction data is smaller than this value, Fourier constraint is met
+    doc = Set this value higher for noisy data. By default, power bound is calculated using fourier_relax_factor
+
     [fourier_relax_factor]
     default = 0.05
     type = float
     lowlim = 0.0
-    help = If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
+    help = A factor used to calculate the Fourier power bound as 0.25 * fourier_relax_factor**2 * maximum power in diffraction data
     doc = Set this value higher for noisy data.
-    
-    [fourier_relax_normalization]
-    default = True
-    type = bool
-    help = If True, the fourier relax factor is redefined as 0.25 times fourier_relax_factor**2 times the maximum power of all data frames
-    doc = Set this to False for more consistent behaviour independent of diffraction power.
 
     [obj_smooth_std]
     default = None
@@ -191,10 +191,10 @@ class DM(PositionCorrectionEngine):
             mean_power = 0.
             self.pbound_scan = {}
             for s in self.di.storages.values():
-                if self.p.fourier_relax_normalization:
+                if self.p.fourier_power_bound is None:
                     pb = .25 * self.p.fourier_relax_factor**2 * s.pbound_stub
                 else:
-                    pb = self.p.fourier_relax_factor            
+                    pb = self.p.fourier_power_bound            
                 if not self.pbound_scan.get(s.label):
                     self.pbound_scan[s.label] = pb
                 else:
