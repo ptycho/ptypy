@@ -1,6 +1,6 @@
 from . import load_kernel
 from pycuda import gpuarray
-from ptypy.utils import gaussian
+from scipy.ndimage.filters import _gaussian_kernel1d
 import numpy as np
 
 class ArrayUtilsKernel:
@@ -233,9 +233,10 @@ class GaussianSmoothingKernel:
             raise NotImplementedError("input needs to be of dimensions 0 < ndims <= 3")
 
         # Row convolution kernel
-        if stdx > 0.0:
+        # TODO: is this threshold acceptable in all cases?
+        if stdx > 0.1:
             r = int(self.num_stdevs * stdx + 0.5)
-            kernel = gpuarray.to_gpu(gaussian(np.arange(0,r+1,1), stdx).astype(np.float32))
+            kernel = gpuarray.to_gpu(_gaussian_kernel1d(stdx,0,r)[r:].astype(np.float32))
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
 
@@ -255,9 +256,10 @@ class GaussianSmoothingKernel:
             input = output
 
         # Column convolution kernel
-        if stdy > 0.0:
+        # TODO: is this threshold acceptable in all cases?
+        if stdy > 0.1:
             r = int(self.num_stdevs * stdy + 0.5)
-            kernel = gpuarray.to_gpu(gaussian(np.arange(0,r+1,1), stdy).astype(np.float32))
+            kernel = gpuarray.to_gpu(_gaussian_kernel1d(stdy,0,r)[r:].astype(np.float32))
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
 
@@ -272,6 +274,9 @@ class GaussianSmoothingKernel:
             grd = (int((y + bx -1)// bx), int((x + by-1)// by), batches)
             self.convolution_col(input, output, np.int32(y), np.int32(x), kernel, np.int32(r), 
                                  block=blk, grid=grd, shared=shared, stream=self.queue)
-
-        if (stdx == 0 and stdy == 0):
+            
+        # TODO: is this threshold acceptable in all cases?
+        if (stdx <= 0.1 and stdy <= 0.1):
             output = input
+
+        return output
