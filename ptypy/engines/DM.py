@@ -91,7 +91,7 @@ class DM(PositionCorrectionEngine):
     default = None
     type = float
     help = If rms error of model vs diffraction data is smaller than this value, Fourier constraint is met
-    doc = Set this value higher for noisy data. By default, power bound is calculated using fourier_relax_factor
+    doc = For Poisson-sampled data, the theoretical value for this parameter is 1/4. Set this value higher for noisy data. By default, power bound is calculated using fourier_relax_factor
 
     [fourier_relax_factor]
     default = 0.05
