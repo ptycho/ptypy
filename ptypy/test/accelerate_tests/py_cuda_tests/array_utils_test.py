@@ -136,7 +136,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         GS = gau.GaussianSmoothingKernel()
-        out_dev = GS.convolution(inp_dev, out_dev, mfs)
+        GS.convolution(inp_dev, out_dev, mfs)
 
         # Assert
         out_exp = au.complex_gaussian_filter(inp, mfs)
@@ -153,7 +153,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         GS = gau.GaussianSmoothingKernel()
-        out_dev = GS.convolution(inp_dev, out_dev, mfs)
+        GS.convolution(inp_dev, out_dev, mfs)
 
         # Assert
         out_exp = au.complex_gaussian_filter(inp, mfs)
@@ -171,7 +171,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         GS = gau.GaussianSmoothingKernel()
-        out_dev = GS.convolution(inp_dev, out_dev, mfs)
+        GS.convolution(inp_dev, out_dev, mfs)
 
         # Assert
         out_exp = au.complex_gaussian_filter(inp, mfs)
@@ -188,9 +188,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         GS = gau.GaussianSmoothingKernel()
-        out_dev = GS.convolution(inp_dev, out_dev, mfs)
-        print(inp_dev.ptr)
-        print(out_dev.ptr)
+        GS.convolution(inp_dev, out_dev, mfs)
 
         # Assert
         out_exp = au.complex_gaussian_filter(inp, mfs)
@@ -207,7 +205,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         GS = gau.GaussianSmoothingKernel()
-        out_dev = GS.convolution(inp_dev, out_dev, mfs)
+        GS.convolution(inp_dev, out_dev, mfs)
 
         # Assert
         out_exp = au.complex_gaussian_filter(inp, mfs)
@@ -224,7 +222,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         GS = gau.GaussianSmoothingKernel()
-        out_dev = GS.convolution(inp_dev, out_dev, mfs)
+        GS.convolution(inp_dev, out_dev, mfs)
 
         # Assert
         out_exp = au.complex_gaussian_filter(inp, mfs)
@@ -243,7 +241,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         GS = gau.GaussianSmoothingKernel()
-        out_dev = GS.convolution(inp_dev, out_dev, mfs)
+        GS.convolution(inp_dev, out_dev, mfs)
 
         # Assert
         out_exp = au.complex_gaussian_filter(inp, mfs)
@@ -264,7 +262,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         GS = gau.GaussianSmoothingKernel()
-        out_dev = GS.convolution(inp_dev, out_dev, mfs)
+        GS.convolution(inp_dev, out_dev, mfs)
 
         # Assert
         out_exp = au.complex_gaussian_filter(inp, mfs)

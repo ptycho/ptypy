@@ -281,6 +281,4 @@ class GaussianSmoothingKernel:
             
         # TODO: is this threshold acceptable in all cases?
         if (stdx <= 0.1 and stdy <= 0.1):
-            output = input
-
-        return output
+            output[:] = input[:]

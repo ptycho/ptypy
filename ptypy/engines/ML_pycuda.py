@@ -266,7 +266,8 @@ class ML_pycuda(ML_serial):
 
     def _get_smooth_gradient(self, data, sigma):
         tmp = gpuarray.empty(data.shape, dtype=np.complex64)
-        return self.GSK.convolution(data, tmp, [sigma, sigma])
+        self.GSK.convolution(data, tmp, [sigma, sigma])
+        return tmp
 
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new
