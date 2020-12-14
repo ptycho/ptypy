@@ -87,11 +87,17 @@ class DM(PositionCorrectionEngine):
     lowlim = 0.0
     help = Weight of the current object in the update
 
+    [fourier_power_bound]
+    default = None
+    type = float
+    help = If rms error of model vs diffraction data is smaller than this value, Fourier constraint is met
+    doc = For Poisson-sampled data, the theoretical value for this parameter is 1/4. Set this value higher for noisy data. By default, power bound is calculated using fourier_relax_factor
+
     [fourier_relax_factor]
     default = 0.05
     type = float
     lowlim = 0.0
-    help = If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
+    help = A factor used to calculate the Fourier power bound as 0.25 * fourier_relax_factor**2 * maximum power in diffraction data
     doc = Set this value higher for noisy data.
 
     [obj_smooth_std]
@@ -182,17 +188,17 @@ class DM(PositionCorrectionEngine):
         if self.ptycho.new_data:
 
             # recalculate everything
-            self.pbound = {}
             mean_power = 0.
             self.pbound_scan = {}
             for s in self.di.storages.values():
-                pb = .25 * self.p.fourier_relax_factor**2 * s.pbound_stub
+                if self.p.fourier_power_bound is None:
+                    pb = .25 * self.p.fourier_relax_factor**2 * s.pbound_stub
+                else:
+                    pb = self.p.fourier_power_bound            
                 if not self.pbound_scan.get(s.label):
                     self.pbound_scan[s.label] = pb
                 else:
-                    self.pbound_scan[s.label] = \
-                        max(pb, self.pbound_scan[s.label])
-                self.pbound[s.ID] = pb
+                    self.pbound_scan[s.label] = max(pb, self.pbound_scan[s.label])
                 mean_power += s.mean_power
             self.mean_power = mean_power / len(self.di.storages)
 
