@@ -1,6 +1,6 @@
 from . import load_kernel
 from pycuda import gpuarray
-from scipy.ndimage.filters import _gaussian_kernel1d
+from ptypy.utils import gaussian
 import numpy as np
 
 class ArrayUtilsKernel:
@@ -236,7 +236,9 @@ class GaussianSmoothingKernel:
         # TODO: is this threshold acceptable in all cases?
         if stdx > 0.1:
             r = int(self.num_stdevs * stdx + 0.5)
-            kernel = gpuarray.to_gpu(_gaussian_kernel1d(stdx,0,r)[r:].astype(np.float32))
+            g = gaussian(np.arange(-r,r+1), stdx)
+            g /= g.sum()
+            kernel = gpuarray.to_gpu(g[r:].astype(np.float32))
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
 
@@ -259,7 +261,9 @@ class GaussianSmoothingKernel:
         # TODO: is this threshold acceptable in all cases?
         if stdy > 0.1:
             r = int(self.num_stdevs * stdy + 0.5)
-            kernel = gpuarray.to_gpu(_gaussian_kernel1d(stdy,0,r)[r:].astype(np.float32))
+            g = gaussian(np.arange(-r,r+1), stdy)
+            g /= g.sum()
+            kernel = gpuarray.to_gpu(g[r:].astype(np.float32))
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
 
