@@ -126,11 +126,28 @@ class ArrayUtilsTest(PyCudaTest):
         out = out_dev.get()
         np.testing.assert_array_equal(out, out_exp)
 
-    def test_complex_gaussian_filter_1d_UNITY(self):
+    def test_complex_gaussian_filter_1d_no_blurring_UNITY(self):
         # Arrange
         inp = np.zeros((11,), dtype=np.complex64)
         inp[5] = 1.0 +1.0j
-        mfs = [1.0]
+        mfs = [0]
+        inp_dev = gpuarray.to_gpu(inp)
+        out_dev = gpuarray.empty((11,), dtype=np.complex64)
+
+        # Act
+        GS = gau.GaussianSmoothingKernel()
+        GS.convolution(inp_dev, out_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter(inp, mfs)
+        out = out_dev.get()
+        self.assertTrue(np.testing.assert_allclose(out_exp, out, rtol=1e-5) is None)
+
+    def test_complex_gaussian_filter_1d_little_blurring_UNITY(self):
+        # Arrange
+        inp = np.zeros((11,), dtype=np.complex64)
+        inp[5] = 1.0 +1.0j
+        mfs = [0.2]
         inp_dev = gpuarray.to_gpu(inp)
         out_dev = gpuarray.empty((11,), dtype=np.complex64)
 
@@ -143,11 +160,29 @@ class ArrayUtilsTest(PyCudaTest):
         out = out_dev.get()
         np.testing.assert_allclose(out_exp, out, rtol=1e-5)
 
-    def test_complex_gaussian_filter_2d_simple_UNITY(self):
+    
+    def test_complex_gaussian_filter_1d_more_blurring_UNITY(self):
+        # Arrange
+        inp = np.zeros((11,), dtype=np.complex64)
+        inp[5] = 1.0 +1.0j
+        mfs = [2.0]
+        inp_dev = gpuarray.to_gpu(inp)
+        out_dev = gpuarray.empty((11,), dtype=np.complex64)
+
+        # Act
+        GS = gau.GaussianSmoothingKernel()
+        GS.convolution(inp_dev, out_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter(inp, mfs)
+        out = out_dev.get()
+        np.testing.assert_allclose(out_exp, out, rtol=1e-5)
+
+    def test_complex_gaussian_filter_2d_no_blurring_UNITY(self):
         # Arrange
         inp = np.zeros((11, 11), dtype=np.complex64)
         inp[5, 5] = 1.0+1.0j
-        mfs = 1.0,0.0
+        mfs = 0.0,0.0
         inp_dev = gpuarray.to_gpu(inp)
         out_dev = gpuarray.empty((11,11), dtype=np.complex64)
 
@@ -160,11 +195,11 @@ class ArrayUtilsTest(PyCudaTest):
         out = out_dev.get()
         np.testing.assert_allclose(out_exp, out, rtol=1e-5)
 
-    def test_complex_gaussian_filter_2d_simple2_UNITY(self):
+    def test_complex_gaussian_filter_2d_little_blurring_UNITY(self):
         # Arrange
         inp = np.zeros((11, 11), dtype=np.complex64)
         inp[5, 5] = 1.0+1.0j
-        mfs = 0.0,1.0
+        mfs = 0.2,0.2
         inp_dev = gpuarray.to_gpu(inp)
         out_dev = gpuarray.empty((11,11),dtype=np.complex64)
 
@@ -177,7 +212,7 @@ class ArrayUtilsTest(PyCudaTest):
         out = out_dev.get()
         np.testing.assert_allclose(out_exp, out, rtol=1e-5)
 
-    def test_complex_gaussian_filter_2d_UNITY(self):
+    def test_complex_gaussian_filter_2d_more_blurring_UNITY(self):
         # Arrange
         inp = np.zeros((8, 8), dtype=np.complex64)
         inp[3:5, 3:5] = 2.0+2.0j
