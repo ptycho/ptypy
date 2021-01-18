@@ -223,8 +223,7 @@ class DM_serial(DM.DM):
 
             prep.label = label
             self.diff_info[d.ID] = prep
-
-            prep.mag = np.sqrt(d.data)
+            prep.mag = np.sqrt(np.abs(d.data))
             prep.ma = self.ma.S[d.ID].data.astype(np.float32)
             # self.ma.S[d.ID].data = prep.ma
             prep.ma_sum = prep.ma.sum(-1).sum(-1)
