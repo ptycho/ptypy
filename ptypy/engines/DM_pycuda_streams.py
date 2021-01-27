@@ -791,15 +791,17 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         return np.sqrt(change)
 
     def engine_finalize(self):
+        """
+        clear GPU data and destroy context.
+        """
         # clear all GPU data, pinned memory, etc
         self.streams = None
         self.ex_data = None
         self.ma_data = None
         self.mag_data = None
-        for name, s in self.pr.S.items():
-            # pr
-            s.data = np.copy(s.data)
 
-        self.dmg = None
+        # copy data to cpu
+        for name, s in self.pr.S.items():
+            s.data = np.copy(s.data) # is this the same as s.data.get()?
+
         super().engine_finalize()
-        self.diff_info = None
