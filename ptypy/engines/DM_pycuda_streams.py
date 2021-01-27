@@ -622,7 +622,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         ma, mag = streamdata.ma_to_gpu(dID, prep.ma, prep.mag)
 
                         PCK = kern.PCK
-                        PROP = kern.PROP
                         AUK = kern.AUK
                         PCK.queue = streamdata.queue
                         PROP.queue = streamdata.queue
@@ -792,15 +791,16 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         return np.sqrt(change)
 
     def engine_finalize(self):
-        # clear all GPU data, pinned memory, etc
+        """
+        Clear all GPU data, pinned memory, etc
+        """ 
         self.streams = None
         self.ex_data = None
         self.ma_data = None
         self.mag_data = None
-        for name, s in self.pr.S.items():
-            # pr
-            s.data = np.copy(s.data)
 
-        self.diff_info = None
-        self.dmg = None
+        # copy data to cpu
+        for name, s in self.pr.S.items():
+            s.data = np.copy(s.data) # is this the same as s.data.get()?
+
         super().engine_finalize()

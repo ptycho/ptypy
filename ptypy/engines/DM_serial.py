@@ -198,6 +198,7 @@ class DM_serial(DM.DM):
 
             kern.FW = geo.propagator.fw
             kern.BW = geo.propagator.bw
+            kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
                 addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
@@ -557,7 +558,13 @@ class DM_serial(DM.DM):
 
         self._reset_benchmarks()
 
-        for original in [self.pr, self.ob, self.ex, self.di, self.ma]:
-            original.delete_copy()
+        for label, d in self.di.storages.items():
+            prep = self.diff_info[d.ID]
+            res = self.kernels[prep.label].resolution
+            for i,view in enumerate(d.views):
+                for j,(pname, pod) in enumerate(view.pods.items()):
+                    delta = (prep.original_addr[i][j][1][1:] - prep.addr[i][j][1][1:]) * res
+                    pod.ob_view.coord += delta 
+                    pod.ob_view.storage.update_views(pod.ob_view)
 
-        # delete local references to container buffer copies
+        super(DM_serial, self).engine_finalize()

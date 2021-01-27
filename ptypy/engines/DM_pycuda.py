@@ -117,6 +117,7 @@ class DM_pycuda(DM_serial.DM_serial):
 
             kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue)
             kern.PROP.allocate()
+            kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
                 addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
@@ -282,7 +283,6 @@ class DM_pycuda(DM_serial.DM_serial):
                         err_fourier = prep.err_fourier_gpu
 
                         PCK = kern.PCK
-                        FW = kern.FW
                         AUK = kern.AUK
 
                         #error_state = np.zeros(err_fourier.shape, dtype=np.float32)
@@ -302,6 +302,7 @@ class DM_pycuda(DM_serial.DM_serial):
                                 prep.error_state_gpu,
                                 mangled_addr_gpu,
                                 err_fourier)
+                        
                         # prep.err_fourier_gpu.set(error_state)
                         cuda.memcpy_dtod(dest=prep.err_fourier_gpu.ptr,
                             src=prep.error_state_gpu.ptr,
@@ -465,16 +466,17 @@ class DM_pycuda(DM_serial.DM_serial):
 
     def engine_finalize(self):
         """
-        try deleting ever helper contianer
+        clear GPU data and destroy context.
         """
         for name, s in self.pr.S.items():
             del s.gpu
         for name, s in self.ob.S.items():
             del s.gpu
+        
+        for dID, prep in self.diff_info.items():
+            prep.addr = prep.addr.get()
 
         self.context.detach()
         # might call gpu frees after context is destroyed
         # error?
         super(DM_pycuda, self).engine_finalize()
-
-        # delete local references to container buffer copies
