@@ -792,9 +792,8 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
     def engine_finalize(self):
         """
-        clear GPU data and destroy context.
-        """
-        # clear all GPU data, pinned memory, etc
+        Clear all GPU data, pinned memory, etc
+        """ 
         self.streams = None
         self.ex_data = None
         self.ma_data = None
