@@ -161,11 +161,11 @@ class DM_pycuda(DM_serial.DM_serial):
             if use_tiles:
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
 
-            prep.addr = gpuarray.to_gpu(prep.addr)
+            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
 
             # Todo: Which address to pick?
             if use_tiles:
-                prep.addr2 = gpuarray.to_gpu(prep.addr2)
+                prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
 
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
@@ -197,7 +197,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 PROP = kern.PROP
 
                 # get addresses and buffers
-                addr = prep.addr
+                addr = prep.addr_gpu
                 mag = prep.mag
                 ma_sum = prep.ma_sum
                 err_fourier = prep.err_fourier_gpu
@@ -276,7 +276,7 @@ class DM_pycuda(DM_serial.DM_serial):
                         pr = self.pr.S[pID].gpu
                         kern = self.kernels[prep.label]
                         aux = kern.aux
-                        addr = prep.addr
+                        addr = prep.addr_gpu
                         original_addr = prep.original_addr
                         mag = prep.mag
                         ma_sum = prep.ma_sum
@@ -310,7 +310,7 @@ class DM_pycuda(DM_serial.DM_serial):
                         if use_tiles:
                             s1 = addr.shape[0] * addr.shape[1]
                             s2 = addr.shape[2] * addr.shape[3]
-                            AUK.transpose(addr.reshape(s1, s2), prep.addr2.reshape(s2, s1))
+                            AUK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
                         # prep.addr = addr
 
@@ -368,7 +368,7 @@ class DM_pycuda(DM_serial.DM_serial):
             pID, oID, eID = prep.poe_IDs
 
             # scan for loop
-            addr = prep.addr if use_atomics else prep.addr2
+            addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
             ev = POK.ob_update(addr,
                                self.ob.S[oID].gpu,
                                self.ob_nrm.S[oID].gpu,
@@ -422,7 +422,7 @@ class DM_pycuda(DM_serial.DM_serial):
             pID, oID, eID = prep.poe_IDs
 
             # scan for-loop
-            addr = prep.addr if use_atomics else prep.addr2
+            addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
             ev = POK.pr_update(addr,
                                self.pr.S[pID].gpu,
                                self.pr_nrm.S[pID].gpu,
@@ -474,7 +474,7 @@ class DM_pycuda(DM_serial.DM_serial):
             del s.gpu
         
         for dID, prep in self.diff_info.items():
-            prep.addr = prep.addr.get()
+            prep.addr = prep.addr_gpu.get()
 
         self.context.detach()
         # might call gpu frees after context is destroyed
