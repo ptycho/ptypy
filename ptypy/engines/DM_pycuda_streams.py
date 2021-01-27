@@ -622,7 +622,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         ma, mag = streamdata.ma_to_gpu(dID, prep.ma, prep.mag)
 
                         PCK = kern.PCK
-                        PROP = kern.PROP
                         AUK = kern.AUK
                         PCK.queue = streamdata.queue
                         PROP.queue = streamdata.queue
@@ -801,6 +800,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
             # pr
             s.data = np.copy(s.data)
 
-        self.diff_info = None
         self.dmg = None
         super().engine_finalize()
+        self.diff_info = None

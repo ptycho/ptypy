@@ -557,6 +557,16 @@ class DM_serial(DM.DM):
 
         self._reset_benchmarks()
 
+        for label, d in self.di.storages.items():
+            prep = self.diff_info[d.ID]
+            for i,view in enumerate(d.views):
+                for j,(pname, pod) in enumerate(view.pods.items()):
+                    pod.ob_view.dlow[0] = prep.addr[i][j][1][1]
+                    pod.ob_view.dlow[1] = prep.addr[i][j][1][2]
+
+
+        super(DM_serial, self).engine_finalize()
+
         for original in [self.pr, self.ob, self.ex, self.di, self.ma]:
             original.delete_copy()
 

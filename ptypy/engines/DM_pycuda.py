@@ -282,7 +282,6 @@ class DM_pycuda(DM_serial.DM_serial):
                         err_fourier = prep.err_fourier_gpu
 
                         PCK = kern.PCK
-                        FW = kern.FW
                         AUK = kern.AUK
 
                         #error_state = np.zeros(err_fourier.shape, dtype=np.float32)
@@ -471,6 +470,9 @@ class DM_pycuda(DM_serial.DM_serial):
             del s.gpu
         for name, s in self.ob.S.items():
             del s.gpu
+        
+        for dID, prep in self.diff_info.items():
+            prep.addr = prep.addr.get()
 
         self.context.detach()
         # might call gpu frees after context is destroyed
