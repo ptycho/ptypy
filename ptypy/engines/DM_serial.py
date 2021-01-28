@@ -558,13 +558,14 @@ class DM_serial(DM.DM):
 
         self._reset_benchmarks()
 
-        for label, d in self.di.storages.items():
-            prep = self.diff_info[d.ID]
-            res = self.kernels[prep.label].resolution
-            for i,view in enumerate(d.views):
-                for j,(pname, pod) in enumerate(view.pods.items()):
-                    delta = (prep.original_addr[i][j][1][1:] - prep.addr[i][j][1][1:]) * res
-                    pod.ob_view.coord += delta 
-                    pod.ob_view.storage.update_views(pod.ob_view)
+        if self.do_position_refinement:
+            for label, d in self.di.storages.items():
+                prep = self.diff_info[d.ID]
+                res = self.kernels[prep.label].resolution
+                for i,view in enumerate(d.views):
+                    for j,(pname, pod) in enumerate(view.pods.items()):
+                        delta = (prep.original_addr[i][j][1][1:] - prep.addr[i][j][1][1:]) * res
+                        pod.ob_view.coord += delta 
+                        pod.ob_view.storage.update_views(pod.ob_view)
 
         super(DM_serial, self).engine_finalize()
