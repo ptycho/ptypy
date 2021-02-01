@@ -61,7 +61,8 @@ jobs:
         # If files with 100% should be skipped from report.
         skip_covered: true
         # Minimum allowed coverage percentage as an integer.
-        minimum_coverage: 70
+        minimum_coverage: 90
+        only_changed_files: true
     - name: Junit Report to Annotations
       uses: ashley-taylor/junit-report-annotations-action@master
       with:
