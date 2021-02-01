@@ -50,7 +50,7 @@ jobs:
       run: |
         conda install pytest
         conda install pytest-cov
-        pytest ptypy/test --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+        pytest ptypy/test --doctest-modules --junitxml=junit/test-results.xml --cov=ptypy --cov-report=xml --cov-report=html
     - name: cobertura-report
       uses: 5monkeys/cobertura-action@v7
       with:
