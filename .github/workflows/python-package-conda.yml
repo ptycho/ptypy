@@ -35,4 +35,5 @@ jobs:
     - name: Test with pytest
       run: |
         conda install pytest
-        pytest ptypy/test
+        conda install pytest-cov
+        pytest ptypy/test --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
