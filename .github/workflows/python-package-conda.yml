@@ -21,9 +21,6 @@ jobs:
     - name: Install dependencies
       run: |
         conda env update --file ptypy_full_dependencies.yml --name full_dependencies
-    - name: Install ptypy
-      run: |
-        python setup.py install
 #    - name: Lint with flake8
 #      run: |
 #        conda install flake8
@@ -32,7 +29,7 @@ jobs:
 #        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
 #        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
-      
       run: |
         conda install pytest
-        $CONDA/bin/pytest ptypy/test -v
+        python -c "import numpy"
+        $CONDA/bin/pytest ptypy/testls 
