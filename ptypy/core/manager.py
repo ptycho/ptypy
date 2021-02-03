@@ -186,7 +186,6 @@ class ScanModel(object):
         :return: None if no data is available, True otherwise.
         """
         report_time = _LogTime()
-        report_time()
 
         # Initialize if that has not been done yet
         if not self.ptyscan.is_initialized:
@@ -352,17 +351,9 @@ class ScanModel(object):
 
         u.parallel.barrier()
         report_time('creating pods')
-        # Adjust storages
-        self.ptycho.probe.reformat(True)
-        self.ptycho.obj.reformat(True)
-        self.ptycho.exit.reformat(True)
-        report_time('reformating')
-        self._initialize_probe(new_probe_ids)
-        self._initialize_object(new_object_ids)
-        self._initialize_exit(new_pods)
         logger.info('Process %d completed new_data.' % parallel.rank, extra={'allprocesses': True})
 
-        return self.diff
+        return self.diff, new_probe_ids, new_object_ids, new_pods
 
     def _new_data_extra_analysis(self, dp):
         """
@@ -505,13 +496,12 @@ class BlockScanModel(ScanModel):
         :return: None if no data is available, Diffraction storage otherwise.
         """
         report_time = _LogTime()
-        report_time()
 
         # Initialize if that has not been done yet
         if not self.ptyscan.is_initialized:
             self.ptyscan.initialize()
 
-        report_time()
+        report_time('ptyscan init')
 
         dp = self._get_data(max_frames)
         if dp is None:
@@ -629,17 +619,8 @@ class BlockScanModel(ScanModel):
             parallel.rank, len(new_pods), len(new_probe_ids), len(new_object_ids)), extra={'allprocesses': True})
 
         report_time('creating pods')
-        # Adjust storages
-        self.ptycho.probe.reformat(True)
-        self.ptycho.obj.reformat(True)
-        self.ptycho.exit.reformat(True)
-        report_time('reformating')
 
-        self._initialize_probe(new_probe_ids)
-        self._initialize_object(new_object_ids)
-        self._initialize_exit(new_pods)
-
-        return diff
+        return diff, new_probe_ids, new_object_ids, new_pods
 
 
 class _Vanilla(object):
@@ -1645,9 +1626,23 @@ class ModelManager(object):
             if not scan.data_available:
                 continue
             else:
+                prb_ids, obj_ids, pod_ids = dict(), dict(), set()
                 nd = scan.new_data(_nframes)
                 while nd:
-                    new_data.append((label, nd))
+                    new_data.append((label, nd[0]))
+                    prb_ids.update(nd[1])
+                    obj_ids.update(nd[2])
+                    pod_ids = pod_ids.union(nd[3])
                     nd = scan.new_data(_nframes)
+
+                # Reformatting
+                self.ptycho.probe.reformat(True)
+                self.ptycho.obj.reformat(True)
+                self.ptycho.exit.reformat(True)
+
+                # Initialize probe/object/exit
+                scan._initialize_probe(prb_ids)
+                scan._initialize_object(obj_ids)
+                scan._initialize_exit(list(pod_ids))
 
         return new_data
