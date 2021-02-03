@@ -1604,7 +1604,7 @@ class ModelManager(object):
     def data_available(self):
         return any(s.data_available for s in list(self.scans.values()))
 
-    def new_data(self, reformat=True):
+    def new_data(self):
         """
         Get all new diffraction patterns and create all views and pods
         accordingly.s
