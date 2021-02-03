@@ -1,10 +1,20 @@
 [run]
 omit = 
-    ptypy/core/data_old.py
-    ptypy/core/xy_old.py 
-    ptypy/engines/ML_old.py
-    ptypy/experiment/I13DLS_legacy.py
+    ptypy/experiment/ALS_5321.py
+    ptypy/experiment/AMO_LCLS.py
+    ptypy/experiment/DiProI_FERMI.py
+    ptypy/experiment/ID16Anfp.py
+    ptypy/experiment/UCL.py
+    ptypy/experiment/cSAXS.py
+    ptypy/experiment/legacy/*
+    ptypy/experiment/spec.py
+    ptypy/experiment/optiklabor.py
+    ptypy/experiment/plugin.py
+    ptypy/experiment/savu.py
     ptypy/core/pattern.py
+    ptypy/test/*
+    ptypy/debug/*
+    ptypy/resources/*
 [report]
 exclude_lines =
         pragma: no cover
