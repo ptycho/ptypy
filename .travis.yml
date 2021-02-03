@@ -1,0 +1,35 @@
+cache: apt
+sudo: true
+language: python
+python:
+  - 3.7
+before_install:
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh; # grab miniconda
+  - bash miniconda.sh -b -p $HOME/miniconda # install miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH" # add it to the path
+  - conda config --set always_yes yes --set changeps1 no # we want it to always do yes, and start a new console
+  - conda update -q conda # update this quietly
+  - conda install pyyaml
+  - conda info -a # and print the info
+
+env:
+  - TEST_ENV_NAME=ptypy_core_dependencies
+  - TEST_ENV_NAME=ptypy_full_dependencies
+
+install: True
+
+script:
+  - conda env create --file ${TEST_ENV_NAME}.yml;
+  - source activate ${TEST_ENV_NAME}; # activate it
+  - conda install pytest # additional dependencies for the tests
+  - pip install pytest-cov
+  - pip install coveralls
+  - echo $PYTHONPATH
+  - conda list
+  - python setup.py install # install ptypy
+  - py.test ptypy/test -v --cov ptypy --cov-report term-missing # now run the tests
+
+after_script:
+  - coveralls
+
+
