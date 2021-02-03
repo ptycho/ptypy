@@ -1,4 +1,4 @@
-name: ptypy automated test workflow
+name: ptypy tests
 
 on:
   # Trigger the workflow on push or pull request,
