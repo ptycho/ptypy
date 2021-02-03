@@ -34,7 +34,7 @@ jobs:
         echo $CONDA/bin >> $GITHUB_PATH
     - name: Install dependencies
       run: |
-        conda env update --file ptypy_full_dependencies.yml --name base
+        conda env update --file ptypy_core_dependencies.yml --name base
     - name: Prepare ptypy
       run: |
         # Dry install to create ptypy/version.py
@@ -50,28 +50,29 @@ jobs:
       run: |
         conda install pytest
         conda install pytest-cov
-        pytest ptypy/test --doctest-modules --junitxml=junit/test-results.xml --cov=ptypy --cov-report=xml --cov-report=html --cov-config=.coveragerc
-    - name: cobertura-report
-      if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize')
-      uses: 5monkeys/cobertura-action@v7
-      with:
-        # The GITHUB_TOKEN for this repo
-        repo_token:  ${{ secrets.GITHUB_TOKEN }}
-        # Path to the cobertura file.
-        path: coverage.xml
-        # If files with 100% should be skipped from report.
-        skip_covered: true
-        # Minimum allowed coverage percentage as an integer.
-        minimum_coverage: 90
-        only_changed_files: true
-    - name: Junit Report to Annotations
-      uses: ashley-taylor/junit-report-annotations-action@master
-      with:
-        # github token
-        access-token: ${{ secrets.GITHUB_TOKEN }}
-        # glob to junit xml files
-        path: junit/test-results.xml
-        # include summary annotation
-        includeSummary: true
-        # max number of failed tests to include
-        numFailures: 10
+        # pytest ptypy/test --doctest-modules --junitxml=junit/test-results.xml --cov=ptypy --cov-report=xml --cov-report=html --cov-config=.coveragerc
+        pytest
+#    - name: cobertura-report
+#      if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize')
+#      uses: 5monkeys/cobertura-action@v7
+#      with:
+#        # The GITHUB_TOKEN for this repo
+#        repo_token:  ${{ secrets.GITHUB_TOKEN }}
+#        # Path to the cobertura file.
+#        path: coverage.xml
+#        # If files with 100% should be skipped from report.
+#        skip_covered: true
+#        # Minimum allowed coverage percentage as an integer.
+#        minimum_coverage: 90
+#        only_changed_files: true
+#    - name: Junit Report to Annotations
+#      uses: ashley-taylor/junit-report-annotations-action@master
+#      with:
+#        # github token
+#        access-token: ${{ secrets.GITHUB_TOKEN }}
+#        # glob to junit xml files
+#        path: junit/test-results.xml
+#        # include summary annotation
+#        includeSummary: true
+#        # max number of failed tests to include
+#        numFailures: 10
