@@ -17,10 +17,7 @@ from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
 from . import register, DM_pycuda
-from ..accelerate import py_cuda as gpu
-from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel
-
-from pycuda.tools import DeviceMemoryPool
+from ..accelerate.py_cuda.mem_utils import GpuDataManager
 
 MPI = parallel.size > 1
 MPI = True
@@ -32,207 +29,6 @@ MAX_STREAMS = 500   # max number of streams to use
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
 
 __all__ = ['DM_pycuda_streams']
-
-class GpuData:
-    """
-    Manages one block of GPU data with corresponding CPU data.
-    Keeps track of which cpu array is currently on GPU by its id,
-    and transfers if it's not already there.
-
-    To be used for the exit wave, ma, and mag arrays.
-    Note: Allocator should be pooled for best performance
-    """
-
-    def __init__(self, nbytes, syncback=False):
-        """
-        New instance of GpuData. Allocates the GPU-side array.
-
-        :param allocator: A callable used for allocating GPU memory
-        :param shape: The shape of the data
-        :param dtype: Data type (numpy)
-        :param syncback: Should the data be synced back to CPU any time it's swapped out
-        """
-
-        self.gpu = None
-        self.gpuraw = cuda.mem_alloc(nbytes)
-        self.nbytes = nbytes
-        self.nbytes_buffer = nbytes
-        self.gpuId = None
-        self.cpu = None
-        self.syncback = syncback
-        self.ev_done = None
-
-    def _allocator(self, nbytes):
-        if nbytes > self.nbytes:
-            raise Exception('requested more bytes than maximum given before: {} vs {}'.format(nbytes, self.nbytes))
-        return self.gpuraw
-
-    def record_done(self, stream):
-        self.ev_done = cuda.Event()
-        self.ev_done.record(stream)
-
-    def to_gpu(self, cpu, id, stream):
-        """
-        Transfer cpu array to GPU on stream (async), keeping track of its id
-        """
-        if self.gpuId != id:
-            if self.syncback:
-                self.from_gpu(stream)
-            self.gpuId = id
-            self.cpu = cpu
-            if self.ev_done is not None:
-                self.ev_done.synchronize()
-            self.gpu = gpuarray.to_gpu_async(cpu, allocator=self._allocator, stream=stream)
-        return self.gpu
-
-    def from_gpu(self, stream):
-        """
-        Transfer data back to CPU, into same data handle it was copied from
-        before.
-        """
-        if self.cpu is not None and self.gpuId is not None and self.gpu is not None:
-            if self.ev_done is not None:
-                stream.wait_for_event(self.ev_done)
-            self.gpu.get_async(stream, self.cpu)
-            self.ev_done = cuda.Event()
-            self.ev_done.record(stream)
-    
-    def resize(self, nbytes):
-        """
-        Resize the size of the underlying buffer, to allow re-use in different contexts.
-        Note that memory will only be freed/reallocated if the new number of bytes are
-        either larger than before, or if they are less than 90% of the original size -
-        otherwise it reuses the existing buffer
-        """
-        if nbytes > self.nbytes_buffer or nbytes < self.nbytes_buffer * .9:
-            self.nbytes_buffer = nbytes
-            self.gpuraw.free()
-            self.gpuraw = cuda.mem_alloc(nbytes)
-        self.nbytes = nbytes
-        self.reset()
-        
-    def reset(self):
-        """
-        Resets handles of cpu references and ids, so that all data will be transfered
-        again even if IDs match.
-        """
-        self.gpuId = None
-        self.cpu = None
-        self.ev_done = None
-
-    def free(self):
-        """
-        Free the underlying buffer on GPU - this object should not be used afterwards
-        """
-        self.gpuraw.free()
-        self.gpuraw = None
-
-class GpuDataManager:
-    """
-    Manages a set of GpuData instances, to keep several blocks on device.
-
-    Note that the syncback property is used so that during fourier updates,
-    the exit wave array is synced bck to cpu (it is updated),
-    while during probe update, it's not.
-    """
-
-    def __init__(self, nbytes, num, syncback=False):
-        """
-        Create an instance of GpuDataManager.
-        Parameters are the same as for GpuData, and num is the number of
-        GpuData instances to create (blocks on device).
-        """
-        self.data = [GpuData(nbytes, syncback) for _ in range(num)]
-
-    @property
-    def syncback(self):
-        """
-        Get if syncback of data to CPU on swapout is enabled.
-        """
-        return self.data[0].syncback
-    
-    @syncback.setter
-    def syncback(self, whether):
-        """
-        Adjust the syncback setting
-        """
-        for d in self.data:
-            d.syncback = whether
-    
-    @property
-    def nbytes(self):
-        """
-        Get the number of bytes in each block
-        """
-        return self.data[0].nbytes
-
-    @property
-    def memory(self):
-        """
-        Get all memory occupied by all blocks
-        """
-        m = 0
-        for d in self.data:
-            m += d.nbytes_buffer
-        return m
-
-    def reset(self, nbytes, num):
-        """
-        Reset this object as if these parameters were given to the constructor.
-        The syncback property is untouched.
-        """
-        sync = self.syncback
-        # remove if too many, explictly freeing memory
-        for i in range(num, len(self.data)):
-            self.data[i].free()
-        # cut short if too many
-        self.data = self.data[:num]
-        # reset existing
-        for d in self.data:
-            d.resize(nbytes)
-        # append new ones
-        for i in range(len(self.data), num):
-            self.data.append(GpuData(nbytes, sync))
-
-    def free(self):
-        """
-        Explicitly clear all data blocks - same as resetting to 0 blocks
-        """
-        self.reset(0, 0)
-
-    
-    def to_gpu(self, cpu, id, stream):
-        """
-        Transfer a block to the GPU, given its ID and CPU data array
-        """
-        idx = 0
-        for x in self.data:
-            if x.gpuId == id:
-                break
-            idx += 1
-        if idx == len(self.data):
-            idx = 0
-        else:
-            pass
-        m = self.data.pop(idx)
-        self.data.append(m)
-        return m.to_gpu(cpu, id, stream)
-
-    def record_done(self, id, stream):
-        for x in self.data:
-            if x.gpuId == id:
-                x.record_done(stream)
-                return
-        raise Exception('recording done for id not in pool')
-
-    
-    def sync_to_cpu(self, stream):
-        """
-        Sync back all data to CPU
-        """
-        for x in self.data:
-            x.from_gpu(stream)
-        
 
 class GpuStreamData:
     def __init__(self, ex_data, ma_data, mag_data):
@@ -277,7 +73,7 @@ class GpuStreamData:
         ma_gpu = self.ma_data.to_gpu(ma, dID, self.queue)
         mag_gpu = self.mag_data.to_gpu(mag, dID, self.queue)
         return ma_gpu, mag_gpu
-    
+
     def record_done_ex(self, dID):
         """
         Record when we're done with this stream, so that it can be re-used
@@ -416,13 +212,14 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         """
         self.dID_list = list(self.di.S.keys())
 
+        prev_event = None
+
         # atomics or tiled version for probe / object update kernels
         atomics_probe = self.p.probe_update_cuda_atomics
         atomics_object = self.p.object_update_cuda_atomics
         use_atomics = atomics_object or atomics_probe
         use_tiles = (not atomics_object) or (not atomics_probe)
-        prev_event = None
-        
+
         for it in range(num):
 
             error = {}
@@ -508,7 +305,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                     # Fourier update
                     if do_update_fourier:
                         log(4, '------ Fourier update -----', True)
-
 
                         ## compute log-likelihood
                         if self.p.compute_log_likelihood:

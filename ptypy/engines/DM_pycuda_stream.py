@@ -17,10 +17,9 @@ from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
 from . import register, DM_pycuda
-from ..accelerate import py_cuda as gpu
-from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel
 
 from pycuda.tools import DeviceMemoryPool
+from ..accelerate.py_cuda.mem_utils import make_pagelocked_paired_arrays as mppa
 
 MPI = parallel.size > 1
 MPI = True
@@ -49,15 +48,13 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for name, s in self.ob.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.ob_buf.S.items():
-            s.gpu = gpuarray.to_gpu(s.data)
+            s.gpu, s.data = mppa(s.data)
         for name, s in self.ob_nrm.S.items():
-            #s.data = np.ascontiguousarray(s.data, dtype=np.float32)
-            s.gpu = gpuarray.to_gpu(s.data)
+            s.gpu, s.data = mppa(s.data)
         for name, s in self.pr.S.items():
-            s.gpu = gpuarray.to_gpu(s.data)
+            s.gpu, s.data = mppa(s.data)
         for name, s in self.pr_nrm.S.items():
-            #s.data = np.ascontiguousarray(s.data, dtype=np.float32)
-            s.gpu = gpuarray.to_gpu(s.data)
+            s.gpu, s.data = mppa(s.data)
 
         use_atomics = self.p.probe_update_cuda_atomics or self.p.object_update_cuda_atomics
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
@@ -159,12 +156,20 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         """
         #ma_buf = ma_c = np.zeros(FUK.fshape, dtype=np.float32)
         self.dID_list = list(self.di.S.keys())
+
         self._ex_blocks_on_device = dict.fromkeys(self.dID_list,1)
         self._data_blocks_on_device = dict.fromkeys(self.dID_list,1)
         # 0: used, freed
         # 1: unused, not on device
         # 2: transfer to or on device
         # 3: used, on device
+
+        # atomics or tiled version for probe / object update kernels
+        atomics_probe = self.p.probe_update_cuda_atomics
+        atomics_object = self.p.object_update_cuda_atomics
+        use_atomics = atomics_object or atomics_probe
+        use_tiles = (not atomics_object) or (not atomics_probe)
+
         for it in range(num):
 
             error = {}
@@ -183,32 +188,21 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         cfact = self.ob_cfact[oID]
                         obn = self.ob_nrm.S[oID]
                         obb = self.ob_buf.S[oID]
-                        """
+
                         if self.p.obj_smooth_std is not None:
                             logger.info('Smoothing object, cfact is %.2f' % cfact)
-                            t2 = time.time()
-                            self.prg.gaussian_filter(queue, (info[3],info[4]), None, obj_gpu.data, self.gauss_kernel_gpu.data)
-                            queue.finish()
-                            obj_gpu *= cfact
-                            print 'gauss: '  + str(time.time()-t2)
-                        else:
-                            obj_gpu *= cfact
-                        """
+                            smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
+                            self.GSK.convolution(ob.gpu, obb.gpu, smooth_mfs)
                         #obb.gpu[:] = ob.gpu * cfactf32
                         ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=self.queue)
 
                         obn.gpu.fill(np.float32(cfact), stream=self.queue)
 
-                atomics_probe = self.p.probe_update_cuda_atomics
-                atomics_object = self.p.object_update_cuda_atomics
-                use_atomics = atomics_object or atomics_probe
-                use_tiles = (not atomics_object) or (not atomics_probe)
-
                 # First cycle: Fourier + object update
                 for dID in self.dID_list:
                     t1 = time.time()
-
                     prep = self.diff_info[dID]
+
                     # find probe, object in exit ID in dependence of dID
                     pID, oID, eID = prep.poe_IDs
 
@@ -220,13 +214,15 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                     pbound = self.pbound_scan[prep.label]
                     aux = kern.aux
-                    FW = kern.FW
-                    BW = kern.BW
+                    PROP = kern.PROP
+
 
                     # get addresses and auxilliary array
                     addr = prep.addr_gpu
                     addr2 = prep.addr2_gpu if use_tiles else None
                     err_fourier = prep.err_fourier_gpu
+                    err_phot = prep.err_phot_gpu
+                    err_exit = prep.err_exit_gpu
                     ma_sum = prep.ma_sum_gpu
 
                     # local references
@@ -245,6 +241,14 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         
                         self.gpu_swap_data()
 
+                        ## compute log-likelihood
+                        if self.p.compute_log_likelihood:
+                            t1 = time.time()
+                            AWK.build_aux_no_ex(aux, addr, ob, pr)
+                            PROP.fw(aux, aux)
+                            FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                            self.benchmark.F_LLerror += time.time() - t1
+
                         t1 = time.time()
                         AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                         self.benchmark.A_Build_aux += time.time() - t1
@@ -252,7 +256,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         ## FFT
                         t1 = time.time()
-                        FW(aux, aux)
+                        PROP.fw(aux, aux)
                         self.benchmark.B_Prop += time.time() - t1
 
                         prep.ev_data_h2d.synchronize()
@@ -270,12 +274,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self._data_blocks_on_device[dID] = 3
                         
                         t1 = time.time()
-                        BW(aux, aux)
-                        self.benchmark.D_iProp += time.time() - t1
-
-                        ## apply changes #2
-                        t1 = time.time()
+                        PROP.bw(aux, aux)
+                        ## apply changes
                         AWK.build_exit(aux, addr, ob, pr, ex)
+                        FUK.exit_error(aux, addr)
+                        FUK.error_reduce(addr, err_exit)
                         self.benchmark.E_Build_exit += time.time() - t1
                         
                         #queue.synchronize()
@@ -285,14 +288,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                     # Update object
                     if do_update_object:
-                        # Update object
                         log(4, prestr + '----- object update -----', True)
                         t1 = time.time()
 
-                        # scan for loop
                         addrt = addr if atomics_object else addr2
-                        ev = POK.ob_update(addrt, obb, obn, pr, ex, atomics=atomics_object)
-
+                        POK.ob_update(addrt, obb, obn, pr, ex, atomics=atomics_object)
                         self.benchmark.object_update += time.time() - t1
                         self.benchmark.calls_object += 1
 
@@ -359,8 +359,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         #     s.data[:] = s.gpu.get()
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
-            err_phot = np.zeros_like(err_fourier)
-            err_exit = np.zeros_like(err_fourier)
+            err_phot = prep.err_phot_gpu.get()
+            err_exit = prep.err_exit_gpu.get()
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error.update(zip(prep.view_IDs, errs))
 
