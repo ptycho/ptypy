@@ -79,8 +79,7 @@ setup(
               'ptypy.io',
               'ptypy.resources',
               'ptypy.experiment',
-              'ptypy.experiment.legacy',
-              'ptypy.test'],
+              'ptypy.experiment.legacy'],
     package_data={'ptypy': ['resources/*', ]},
     #include_package_data=True
     scripts=[
