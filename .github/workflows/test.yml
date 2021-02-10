@@ -50,8 +50,8 @@ jobs:
       run: |
         conda install pytest
         conda install pytest-cov
-        # pytest ptypy/test -v --doctest-modules --junitxml=junit/test-results.xml --cov=ptypy --cov-report=xml --cov-report=html --cov-config=.coveragerc
-        pytest test -v --ignore=test/accelerate_tests
+        # pytest ptypy/test --doctest-modules --junitxml=junit/test-results.xml --cov=ptypy --cov-report=xml --cov-report=html --cov-config=.coveragerc
+        pytest
 #    - name: cobertura-report
 #      if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize')
 #      uses: 5monkeys/cobertura-action@v7
