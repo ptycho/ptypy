@@ -1,6 +1,6 @@
 
 import unittest, pytest
-from ptypy.test.accelerate_tests.py_cuda_tests import PyCudaTest, have_pycuda
+from test.accelerate_tests.py_cuda_tests import PyCudaTest, have_pycuda
 import os, shutil
 from distutils import sysconfig
 

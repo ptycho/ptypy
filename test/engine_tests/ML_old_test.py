@@ -7,7 +7,7 @@ This file is part of the PTYPY package.
 """
 
 import unittest
-from .. import utils as tu
+from test import utils as tu
 from ptypy import utils as u
 
 class MLNewTest(unittest.TestCase):

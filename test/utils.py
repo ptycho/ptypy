@@ -13,8 +13,8 @@ import inspect
 import shutil
 import os
 import tempfile
-from .. import utils as u
-from ..core import Ptycho
+from ptypy import utils as u
+from ptypy.core import Ptycho
 
 
 def get_test_data_path(name):
