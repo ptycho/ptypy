@@ -5,7 +5,7 @@ import h5py as h5
 import shutil
 import numpy as np
 import ptypy
-from ptypy.test.utils import PtyscanTestRunner
+from test.utils import PtyscanTestRunner
 from ptypy.experiment.hdf5_loader import Hdf5Loader
 from ptypy import utils as u
 

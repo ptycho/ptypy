@@ -13,8 +13,8 @@ import inspect
 import shutil
 import os
 import tempfile
-from .. import utils as u
-from ..core import Ptycho
+from ptypy import utils as u
+from ptypy.core import Ptycho
 
 
 def get_test_data_path(name):
@@ -41,6 +41,7 @@ def PtyscanTestRunner(ptyscan_instance, data_params, save_type='append', auto_fr
             shutil.rmtree(outdir)
         return out_dict
 
+
 def EngineTestRunner(engine_params,propagator='farfield',output_path='./', output_file=None):
 
 
@@ -51,7 +52,7 @@ def EngineTestRunner(engine_params,propagator='farfield',output_path='./', outpu
     p.io.interaction.active = False
     p.io.home = output_path
     p.io.rfile = "%s.ptyr" % output_file
-    p.io.autosave = u.Param(active=False)
+    p.io.autosave = u.Param(active=True)
     p.io.autoplot = u.Param(active=False)
     p.ipython_kernel = False
     p.scans = u.Param()
@@ -81,6 +82,9 @@ def EngineTestRunner(engine_params,propagator='farfield',output_path='./', outpu
     p.scans.MF.data.photons = 100000000.0
     p.scans.MF.data.psf = 0.0
     p.scans.MF.data.density = 0.2
+    p.scans.MF.data.add_poisson_noise = False
+    p.scans.MF.coherence = u.Param()
+    p.scans.MF.coherence.num_probe_modes = 1 # currently breaks when this is =2
     p.engines = u.Param()
     p.engines.engine00 = engine_params
     P = Ptycho(p, level=5)

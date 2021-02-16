@@ -1,6 +1,6 @@
 
 import unittest
-from ptypy.test import utils as tu
+from .. import utils as tu
 from ptypy import utils as u
 
 

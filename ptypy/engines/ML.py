@@ -21,7 +21,7 @@ from .utils import Cnorm2, Cdot
 from . import register
 from .base import PositionCorrectionEngine
 from .. import defaults_tree
-from ..core.manager import Full, Vanilla
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 __all__ = ['ML']
 
@@ -102,7 +102,7 @@ class ML(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -123,6 +123,14 @@ class ML(PositionCorrectionEngine):
 
         # Probe minimization direction
         self.pr_h = None
+
+        # Working variables
+        # Object gradient
+        self.ob_grad_new = None
+
+        # Probe gradient
+        self.pr_grad_new = None
+
 
         # Other
         self.tmin = None
@@ -150,13 +158,23 @@ class ML(PositionCorrectionEngine):
         
         # Object gradient and minimization direction
         self.ob_grad = self.ob.copy(self.ob.ID + '_grad', fill=0.)
+        self.ob_grad_new = self.ob.copy(self.ob.ID + '_grad_new', fill=0.)
         self.ob_h = self.ob.copy(self.ob.ID + '_h', fill=0.)
 
         # Probe gradient and minimization direction
         self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
+        self.pr_grad_new = self.pr.copy(self.pr.ID + '_grad_new', fill=0.)
         self.pr_h = self.pr.copy(self.pr.ID + '_h', fill=0.)
 
         self.tmin = 1.
+
+        # Other options
+        self.smooth_gradient = prepare_smoothing_preconditioner(
+            self.p.smooth_gradient)
+
+        self._initialize_model()
+
+    def _initialize_model(self):
 
         # Create noise model
         if self.p.ML_type.lower() == "gaussian":
@@ -168,9 +186,7 @@ class ML(PositionCorrectionEngine):
         else:
             raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
 
-        # Other options
-        self.smooth_gradient = prepare_smoothing_preconditioner(
-            self.p.smooth_gradient)
+
 
     def engine_prepare(self):
         """
@@ -180,7 +196,7 @@ class ML(PositionCorrectionEngine):
         # - # fill object with coverage of views
         # - for name,s in self.ob_viewcover.S.items():
         # -    s.fill(s.get_view_coverage())
-        pass
+        self.ML_model.prepare()
 
     def engine_iterate(self, num=1):
         """
@@ -194,7 +210,8 @@ class ML(PositionCorrectionEngine):
         ta = time.time()
         for it in range(num):
             t1 = time.time()
-            new_ob_grad, new_pr_grad, error_dct = self.ML_model.new_grad()
+            error_dct = self.ML_model.new_grad()
+            new_ob_grad, new_pr_grad = self.ob_grad_new, self.pr_grad_new
             tg += time.time() - t1
 
             if self.p.probe_update_start <= self.curiter:
@@ -269,7 +286,7 @@ class ML(PositionCorrectionEngine):
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
-
+            #print(B, Cnorm2(self.ob_h), Cnorm2(self.ob_grad), Cnorm2(self.pr_h), Cnorm2(self.pr_grad))
             if np.isinf(B).any() or np.isnan(B).any():
                 logger.warning(
                     'Warning! inf or nan found! Trying to continue...')
@@ -306,10 +323,14 @@ class ML(PositionCorrectionEngine):
         super(ML, self).engine_finalize()
         del self.ptycho.containers[self.ob_grad.ID]
         del self.ob_grad
+        del self.ptycho.containers[self.ob_grad_new.ID]
+        del self.ob_grad_new
         del self.ptycho.containers[self.ob_h.ID]
         del self.ob_h
         del self.ptycho.containers[self.pr_grad.ID]
         del self.pr_grad
+        del self.ptycho.containers[self.pr_grad_new.ID]
+        del self.pr_grad_new
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
 
@@ -331,6 +352,8 @@ class BaseModel(object):
         self.di = self.engine.di
         self.p = self.engine.p
         self.ob = self.engine.ob
+        self.ob_grad = self.engine.ob_grad_new
+        self.pr_grad = self.engine.pr_grad_new
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
 
@@ -339,28 +362,23 @@ class BaseModel(object):
         else:
             self.Irenorm = self.p.intensity_renormalization
 
+        if self.p.reg_del2:
+            self.regularizer = Regul_del2(self.p.reg_del2_amplitude)
+        else:
+            self.regularizer = None
+
         # Create working variables
-        # New object gradient
-        self.ob_grad = self.engine.ob.copy(self.ob.ID + '_ngrad', fill=0.)
-        # New probe gradient
-        self.pr_grad = self.engine.pr.copy(self.pr.ID + '_ngrad', fill=0.)
         self.LL = 0.
 
+
+    def prepare(self):
         # Useful quantities
         self.tot_measpts = sum(s.data.size
                                for s in self.di.storages.values())
         self.tot_power = self.Irenorm * sum(s.tot_power
                                             for s in self.di.storages.values())
-
-        self.regularizer = None
-        self.prepare_regularizer()
-
-    def prepare_regularizer(self):
-        """
-        Prepare regularizer.
-        """
         # Prepare regularizer
-        if self.p.reg_del2:
+        if self.regularizer is not None:
             obj_Npix = self.ob.size
             expected_obj_var = obj_Npix / self.tot_power  # Poisson
             reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
@@ -368,19 +386,14 @@ class BaseModel(object):
                 'Rescaling regularization amplitude using '
                 'the Poisson distribution assumption.')
             logger.debug('Factor: %8.5g' % reg_rescale)
-            reg_del2_amplitude = self.p.reg_del2_amplitude * reg_rescale
-            self.regularizer = Regul_del2(amplitude=reg_del2_amplitude)
+
+            # TODO remove usage of .p. access
+            self.regularizer.amplitude = self.p.reg_del2_amplitude * reg_rescale
 
     def __del__(self):
         """
         Clean up routine
         """
-        # Delete containers
-        del self.engine.ptycho.containers[self.ob_grad.ID]
-        del self.ob_grad
-        del self.engine.ptycho.containers[self.pr_grad.ID]
-        del self.pr_grad
-
         # Remove working attributes
         for name, diff_view in self.di.views.items():
             if not diff_view.active:
@@ -506,7 +519,7 @@ class GaussianModel(BaseModel):
 
         self.LL = LL / self.tot_measpts
 
-        return self.ob_grad, self.pr_grad, error_dct
+        return error_dct
 
     def poly_line_coeffs(self, ob_h, pr_h):
         """

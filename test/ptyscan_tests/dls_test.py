@@ -7,7 +7,7 @@ This file is part of the PTYPY package.
 """
 
 import unittest
-from ptypy.test import utils as tu
+from .. import utils as tu
 from ptypy.experiment.legacy.DLS import DlsScan
 from ptypy import utils as u
 

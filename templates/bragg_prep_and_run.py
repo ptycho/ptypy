@@ -4,6 +4,7 @@ Simulates and then inverts 3d Bragg ptycho data.
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
+import tempfile
 
 p = u.Param()
 p.run = 'Si110_stripes'
@@ -13,7 +14,7 @@ p.verbose_level = 3
 
 # use special plot layout for 3d data
 p.io = u.Param()
-p.io.home = '/tmp/ptypy/'
+p.io.home = tempfile.mkdtemp('braggtest')
 p.io.autoplot = u.Param()
 p.io.autoplot.layout = 'bragg3d'
 p.io.autoplot.dump = True

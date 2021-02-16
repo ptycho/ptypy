@@ -6,7 +6,7 @@ import unittest
 import tempfile
 import h5py as h5
 
-from ptypy.test import utils as tu
+from test import utils as tu
 import ptypy.utils as u
 
 class FileSavingTest(unittest.TestCase):
