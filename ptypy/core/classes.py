@@ -628,8 +628,6 @@ class Storage(Base):
 
         # List of views on this storage
         views = self.views
-        if not views:
-            return self # BD: This can be a problem is rank=0 has no views, but other ranks still have views
 
         logger.debug('%s[%s] :: %d views for this storage'
                      % (self.owner.ID, self.ID, len(views)))
@@ -658,8 +656,12 @@ class Storage(Base):
         # Check if storage is distributed
         # A storage is "distributed" if and only if layer maps are different across nodes.
         new_layermap = sorted(layers)
-        # BD: in the case where only non-zero ranks have views, this function call never returns
+
         self._update_distributed(new_layermap, dlow_fov, dhigh_fov)
+
+        # Return if no views, it is important that this only happens after self.distributed is updated 
+        if not views:
+            return self
 
         sh = self.data.shape
 
@@ -751,13 +753,10 @@ class Storage(Base):
     def _update_distributed(self, layermap, mn, mx):
         self.distributed = False
         if u.parallel.MPIenabled:
-            # BD: In the case where rank=0 has no more views, this gather will return an empty list of layers
             all_layers = u.parallel.comm.gather(layermap, root=0)
             if u.parallel.master:
                 for other_layers in all_layers[1:]:
                     self.distributed |= (other_layers != layermap)
-            # BD: this is were things can go stuck, if rank=0 has no more views, 
-            # the process is no longer available to do this bcast and the child process waits forever
             self.distributed = u.parallel.comm.bcast(self.distributed, root=0)
             # synchronize if not distributed, this ensures the data is of the
             # same shape across the nodes
