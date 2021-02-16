@@ -1010,7 +1010,7 @@ class Ptycho(Base):
             fignum += 1
 
     
-    def redistribute_data(self, div = 'rect', obj_storage=None):
+    def _redistribute_data(self, div = 'rect', obj_storage=None):
         """
         This function redistributes data among nodes, so that each
         node becomes in charge of a contiguous block of scanning
@@ -1023,7 +1023,7 @@ class Ptycho(Base):
         
         if obj_storage is None:
             for s in self.obj.storages.values():
-                out = self.redistribute_data(div=div, obj_storage=s)
+                out = self._redistribute_data(div=div, obj_storage=s)
             return out
         else:
             # Not effective for object modes, but these are rare anyway
