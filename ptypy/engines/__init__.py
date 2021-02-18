@@ -53,6 +53,7 @@ from . import Bragg3d_engines
 from . import DM_serial
 from . import ML_serial
 from . import DM_serial_stream
+from . import DM_local
 try:
     from . import DM_pycuda
     from . import DM_pycuda_streams
