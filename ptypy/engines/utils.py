@@ -152,7 +152,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(pod.upsample(fm) * f[name]) - pod.probe * pod.object
+            df = pod.bw(pod.upsample(fm) * f[name]) - alpha * pod.probe * pod.object + (alpha - 1) * pod.exit
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     elif err_fmag > pbound:
@@ -162,7 +162,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(pod.upsample(fm) * f[name]) - pod.probe * pod.object
+            df = pod.bw(pod.upsample(fm) * f[name]) - alpha * pod.probe * pod.object + (alpha - 1) * pod.exit
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     else:
@@ -170,7 +170,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = alpha * (pod.probe * pod.object - pod.exit)
+            df = (pod.probe * pod.object - pod.exit)
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
 
