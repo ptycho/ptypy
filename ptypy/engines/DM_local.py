@@ -44,6 +44,12 @@ class DM_local(PositionCorrectionEngine):
     lowlim = 0.0
     help = Difference map tuning parameter, a value of 0 makes it equal to ePIE.
 
+    [tau]
+    default = 1
+    type = float
+    lowlim = 0.0
+    help = fourier update parameter, a value of 0 means no fourier update.
+
     [probe_inertia]
     default = 1e-9
     type = float
@@ -60,6 +66,18 @@ class DM_local(PositionCorrectionEngine):
     default = None
     type = tuple
     help = Clip object amplitude into this interval
+
+    [rescale_probe]
+    default = True
+    type = bool
+    lowlim = 0
+    help = Normalise probe power according to data
+
+    [fourier_power_bound]
+    default = None
+    type = float
+    help = If rms error of model vs diffraction data is smaller than this value, Fourier constraint is met
+    doc = For Poisson-sampled data, the theoretical value for this parameter is 1/4. Set this value higher for noisy data.
 
     [compute_log_likelihood]
     default = True
@@ -79,10 +97,6 @@ class DM_local(PositionCorrectionEngine):
         # Instance attributes
         self.error = None
         self.pbound = None
-
-        # Required to get proper normalization of object inertia
-        # The actual value is computed in engine_prepare
-        # Another possibility would be to use the maximum value of all probe storages.
         self.mean_power = None
 
         # keep track of timings
@@ -94,7 +108,6 @@ class DM_local(PositionCorrectionEngine):
         self.pr_cfact = {}
         self.kernels = {}
 
-    
     def engine_initialize(self):
         """
         Prepare for reconstruction.
@@ -188,7 +201,7 @@ class DM_local(PositionCorrectionEngine):
             self.pbound_scan = {}
             for s in self.di.storages.values():            
                 if not self.pbound_scan.get(s.label):
-                    self.pbound_scan[s.label] = 0.25
+                    self.pbound_scan[s.label] = self.p.fourier_power_bound
                 else:
                     self.pbound_scan[s.label] = max(pb, self.pbound_scan[s.label])
                 mean_power += s.mean_power
@@ -259,7 +272,7 @@ class DM_local(PositionCorrectionEngine):
                 BW = kern.BW
 
                 # global buffers
-                pbound = 0 #self.pbound_scan[prep.label]
+                pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
                 vieworder = prep.vieworder
 
@@ -315,14 +328,15 @@ class DM_local(PositionCorrectionEngine):
 
                     ## build exit wave
                     t1 = time.time()
-                    AWK.build_exit_alpha(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                    AWK.build_exit_alpha_tau(aux, addr, ob, pr, ex, alpha=self.p.alpha, tau=self.p.tau)
                     FUK.exit_error(aux,addr)
                     FUK.error_reduce(addr, err_exit)
                     self.benchmark.E_Build_exit += time.time() - t1
                     self.benchmark.calls_fourier += 1
 
                     ## probe/object rescale
-                    pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
+                    if self.p.rescale_probe:
+                        pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
 
                     # object update
                     t1 = time.time()
