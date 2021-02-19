@@ -20,6 +20,7 @@ This file is part of the PTYPY package.
 import numpy as np
 import os
 import h5py
+import time
 from . import geometry
 from . import xy
 from .. import utils as u
@@ -85,6 +86,14 @@ class PtyScan(object):
     doc =
     userlevel = 2
 
+    [url]
+    type = str
+    default = None
+    help = URL where prepared data will be saved in the ``ptyd`` format layout.
+    doc = The url will be parsed by Python's to urllib.parse.urlparse to extract path, host and port.
+      It might supersede the ``dfile parameter`` in the future since it also allows for file system paths.
+    userlevel = 1
+
     [save]
     type = str
     default = None
@@ -95,6 +104,7 @@ class PtyScan(object):
         - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
         - ``'append'``: appends each chunk in master \\*.ptyd file
         - ``'link'``: appends external links in master \\*.ptyd file and stores chunks separately
+        - ``'iaserver'``: uses a :py:class:`ptypy.io.interaction.Server`
         <newline>
         in the path given by the link. Links file paths are relative to master file.
     userlevel = 1
@@ -312,6 +322,50 @@ class PtyScan(object):
         self._flags = np.array([0, 0, 0], dtype=int)
         self.is_initialized = False
 
+        self._write = None
+        self._append = None
+        self._client = None
+
+    def _h5write(self, path, *args, **kwargs):
+        if os.path.exists(path):
+            backup = self.dfile + '.old'
+            logger.warning('File %s already exist. Renamed to %s.'
+                           % (path, backup))
+            try:
+                # on windows, os.rename doesn't work if target exists
+                os.remove(backup)
+            except:
+                pass
+            os.rename(path, backup)
+        # Prepare an empty file with the appropriate structure
+        io.h5write(path, *args, **kwargs)
+
+    def _iawrite(self, path, *args, **kwargs):
+        from urllib.parse import urlparse
+        if not self._client:
+            r = urlparse(self.info.url)
+            c = io.interaction.Client(port=r.port, address=r.scheme+'://'+r.hostname)
+            c.activate()
+            logger.info('Waiting for Client to connect to IA Server')
+            while not c.connected:
+                time.sleep(0.1)
+            logger.info('Client connected')
+            self._client = c
+
+        self._iaappend(path, *args, **kwargs)
+
+    def _iaappend(self, path, *args, **kwargs):
+        self._client.wait()
+        # Update input dictionary
+        if args:
+            d = args[0].copy()  # shallow copy
+        else:
+            d = {}
+        d.update(kwargs)
+        d = u.flat_dict(d)
+        for k, v in d.items():
+            self._client.set(path+':/'+k, v)
+
     def initialize(self):
         """
         Begins the Data preparation and intended as the first method
@@ -330,21 +384,16 @@ class PtyScan(object):
 
         # Prepare writing to file
         if self.info.save is not None:
+            if self.info.save == 'iaserver':
+                self._append = self._iaappend
+                self._write = self._iawrite
+            else:
+                self._write = self._h5write
+                self._append = io.h5append
             # We will create a .ptyd
             self.dfile = self.info.dfile
             if parallel.master:
-                if os.path.exists(self.dfile):
-                    backup = self.dfile + '.old'
-                    logger.warning('File %s already exist. Renamed to %s.'
-                                   % (self.dfile, backup))
-                    try:
-                        # on windows, os.rename doesn't work if target exists
-                        os.remove(backup)
-                    except:
-                        pass
-                    os.rename(self.dfile, backup)
-                # Prepare an empty file with the appropriate structure
-                io.h5write(self.dfile, PTYD.copy())
+                self._write(self.dfile, PTYD.copy())
             # Wait for master
             parallel.barrier()
 
@@ -437,7 +486,7 @@ class PtyScan(object):
 
         if self.info.save is not None and parallel.master:
             logger.info('Appending info dict to file %s\n' % self.info.dfile)
-            io.h5append(self.info.dfile, info=dict(self.info))
+            self._append(self.info.dfile, info=dict(self.info))
         # Wait for master
         parallel.barrier()
 
@@ -451,7 +500,7 @@ class PtyScan(object):
         """
         # Maybe do this at end of everything
         if self.info.save is not None and parallel.master:
-            io.h5append(self.info.dfile, info=dict(self.info))
+            self._append(self.info.dfile, info=dict(self.info))
 
     def load_weight(self):
         """
@@ -870,7 +919,7 @@ class PtyScan(object):
         # With first chunk we update info
         if self.chunknum < 1:
             if self.info.save is not None and parallel.master:
-                io.h5append(self.dfile, meta=dict(self.meta))
+                self._append(self.dfile, meta=dict(self.meta))
 
             parallel.barrier()
 
@@ -911,7 +960,7 @@ class PtyScan(object):
             out = self._make_data_package(msg)
             # save chunk
             if self.info.save is not None:
-                self._mpi_save_chunk(self.info.save, msg)
+                self._mpi_save_chunk(msg)
             # delete chunk
             del self.chunk
             return out
@@ -1149,7 +1198,7 @@ class PtyScan(object):
         else:
             return msg
 
-    def _mpi_save_chunk(self, kind='link', chunk=None):
+    def _mpi_save_chunk(self, chunk=None):
         """
         Saves data chunk to hdf5 file specified with `dfile`.
 
@@ -1161,7 +1210,7 @@ class PtyScan(object):
 
         2 out of 3 modes currently supported
 
-        kind : 'merge','append','link'
+        kind : 'merge','append','link', 'iaserver'
 
             'append' : appends chunks of data in same file
             'link' : saves chunks in separate files and adds ExternalLinks
@@ -1177,6 +1226,7 @@ class PtyScan(object):
         """
         # Gather all distributed dictionary data.
         c = chunk if chunk is not None else self.chunk
+        kind = self.info.save
 
         # Shallow copy
         todisk = dict(c)
@@ -1200,9 +1250,9 @@ class PtyScan(object):
         # All information is at master node.
         if parallel.master:
             # Form a dictionary
-            if str(kind) == 'append':
+            if str(kind) == 'append' or str(kind) == 'iaserver':
                 h5address = 'chunks/%d' % num
-                io.h5append(self.dfile, {h5address: todisk})
+                self._append(self.dfile, {h5address: todisk})
             elif str(kind) == 'link':
                 h5address = 'chunks/%d' % num
                 hddaddress = self.dfile + '.part%03d' % num

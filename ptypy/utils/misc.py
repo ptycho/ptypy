@@ -13,9 +13,57 @@ from functools import wraps
 from collections import OrderedDict
 from collections import namedtuple
 
-__all__ = ['str2int', 'str2range', 'complex_overload', 'expect2',
-           'expect3', 'keV2m', 'keV2nm', 'nm2keV', 'clean_path',
+__all__ = ['str2int', 'str2range', 'complex_overload', 'expect2', 'flat_dict',
+           'expect3', 'keV2m', 'keV2nm', 'nm2keV', 'clean_path', 'nest_dict',
            'unique_path', 'Table', 'all_subclasses', 'expectN', 'isstr']
+
+def flat_dict(dct, sep='/'):
+    """
+    Flatten nested dictionary structure.
+    Will get caught in circular reference.
+    Will transform all keys to strings
+    """
+    out = {}
+    ids = set()
+    def _f(prefix, _dct):
+        # ident = id(dct)
+        # if ident in ids:
+        #     raise RuntimeError('Circular reference detected! Aborting.')
+        # else:
+        #     ids.add(ident)
+        for k, v in _dct.items():
+            key = prefix + sep + str(k)
+            key = key.strip(sep)
+            if not hasattr(v, 'items'):
+                out[key] = v
+            else:
+                _f(key, v)
+
+    _f('', dct)
+
+    return out
+
+def nest_dict(dct, sep='/'):
+    """
+    Nest flattened dictionary structure
+    """
+    out = {}
+    for k, v in dct.items():
+        if sep not in k.strip(sep):
+            out[k] = v
+        else:
+            ref = out
+            path = k.strip(sep).split(sep)
+            key = path.pop(-1)
+            for d in path:
+                if d not in ref:
+                    ref[d]={}
+                    ref = ref[d]
+                else:
+                    ref = ref[d]
+            ref[key] = v
+
+    return out
 
 
 def all_subclasses(cls, names=False):
