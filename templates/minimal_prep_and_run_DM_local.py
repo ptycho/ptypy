@@ -11,6 +11,9 @@ p = u.Param()
 # for verbose output
 p.verbose_level = 3
 
+# Frames per block
+p.frames_per_block = 200
+
 # set home path
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
@@ -42,7 +45,8 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM_local'
-p.engines.engine00.numiter = 80
+p.engines.engine00.numiter = 100
+p.engines.engine00.alpha = 0 # behaves like ePIE
 
 # prepare and run
 P = Ptycho(p,level=5)

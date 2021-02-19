@@ -143,7 +143,7 @@ class DM_local(PositionCorrectionEngine):
                 nmodes = 1
 
             # create buffer arrays
-            ash = (fpc * nmodes,) + tuple(geo.shape)
+            ash = (1 * nmodes,) + tuple(geo.shape)
             aux = np.zeros(ash, dtype=np.complex64)
             kern.aux = aux
 
@@ -224,13 +224,16 @@ class DM_local(PositionCorrectionEngine):
                 ob.data = u.crop_pad(ob.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
                 ob.shape = ob.data.shape
 
-            # calculate c_facts
-            cfact = self.p.object_inertia * self.mean_power
-            self.ob_cfact[oID] = cfact / u.parallel.size
+            # Keep a list of view indices
+            prep.vieworder = np.arange(prep.addr.shape[0])
 
-            pr = self.pr.S[pID]
-            cfact = self.p.probe_inertia * len(pr.views) / pr.data.shape[0]
-            self.pr_cfact[pID] = cfact / u.parallel.size
+            # calculate c_facts
+            #cfact = self.p.object_inertia * self.mean_power
+            #self.ob_cfact[oID] = cfact / u.parallel.size
+
+            #pr = self.pr.S[pID]
+            #cfact = self.p.probe_inertia * len(pr.views) / pr.data.shape[0]
+            #self.pr_cfact[pID] = cfact / u.parallel.size
 
 
     def engine_iterate(self, num=1):
@@ -247,14 +250,95 @@ class DM_local(PositionCorrectionEngine):
                 prep = self.diff_info[dID]
                 pID, oID, eID = prep.poe_IDs
 
-                print(prep.addr.shape)
+                # references for kernels
+                kern = self.kernels[prep.label]
+                FUK = kern.FUK
+                AWK = kern.AWK
+                POK = kern.POK
+                FW = kern.FW
+                BW = kern.BW
 
-            for name, di_view in self.di.views.items():
-                if not di_view.active:
-                    continue
-                error_dct[name] = np.array([0,0,0])
+                # global buffers
+                pbound = 0 #self.pbound_scan[prep.label]
+                aux = kern.aux
+                vieworder = prep.vieworder
 
-            time.sleep(0.1)
+                # references for ob, pr, ex
+                ob = self.ob.S[oID].data
+                pr = self.pr.S[pID].data
+                ex = self.ex.S[eID].data
+
+                # randomly shuffle view order
+                np.random.shuffle(vieworder)
+
+                # Iterate through views
+                for i in prep.vieworder:
+
+                    # Get local adress and arrays
+                    addr = prep.addr[i,None]
+                    mag = prep.mag[i,None]
+                    ma = prep.ma[i,None]
+                    ma_sum = prep.ma_sum[i,None]
+
+                    err_phot = prep.err_phot[i,None]
+                    err_fourier = prep.err_fourier[i,None]
+                    err_exit = prep.err_exit[i,None]
+
+                    ## compute log-likelihood
+                    t1 = time.time()
+                    AWK.build_aux_no_ex(aux, addr, ob, pr)
+                    aux[:] = FW(aux)
+                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                    self.benchmark.F_LLerror += time.time() - t1
+
+                    ## build auxilliary wave
+                    t1 = time.time()
+                    AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                    self.benchmark.A_Build_aux += time.time() - t1
+
+                    ## forward FFT
+                    t1 = time.time()
+                    aux[:] = FW(aux)
+                    self.benchmark.B_Prop += time.time() - t1
+
+                    ## Deviation from measured data
+                    t1 = time.time()
+                    FUK.fourier_error(aux, addr, mag, ma, ma_sum)
+                    FUK.error_reduce(addr, err_fourier)
+                    FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
+                    self.benchmark.C_Fourier_update += time.time() - t1
+
+                    ## backward FFT
+                    t1 = time.time()
+                    aux[:] = BW(aux)
+                    self.benchmark.D_iProp += time.time() - t1
+
+                    ## build exit wave
+                    t1 = time.time()
+                    AWK.build_exit_alpha(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                    FUK.exit_error(aux,addr)
+                    FUK.error_reduce(addr, err_exit)
+                    self.benchmark.E_Build_exit += time.time() - t1
+                    self.benchmark.calls_fourier += 1
+
+                    ## probe/object rescale
+                    pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
+
+                    # object update
+                    t1 = time.time()
+                    POK.ob_update_local(addr, ob, pr, ex, aux)
+                    self.benchmark.object_update += time.time() - t1
+                    self.benchmark.calls_object += 1
+
+                    # probe update
+                    t1 = time.time()
+                    POK.pr_update_local(addr, pr, ob, ex, aux)
+                    self.benchmark.probe_update += time.time() - t1
+                    self.benchmark.calls_probe += 1
+
+                # update errors
+                errs = np.ascontiguousarray(np.vstack([prep.err_fourier, prep.err_phot, prep.err_exit]).T)
+                error_dct.update(zip(prep.view_IDs, errs))
 
             self.curiter += 1
 

@@ -359,7 +359,6 @@ class AuxiliaryWaveKernel(BaseKernel):
         aux = b_aux[:maxz * nmodes]
         flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
         rows, cols = ex.shape[-2:]
-
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             tmp = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
                   pr[prc[0], :, :] * \
@@ -388,6 +387,30 @@ class AuxiliaryWaveKernel(BaseKernel):
             dex = aux[ind, :, :] - \
                   ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
                   pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]
+
+            ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] += dex
+            aux[ind, :, :] = dex
+        return
+
+    def build_exit_alpha(self, b_aux, addr, ob, pr, ex, alpha=1):
+        sh = addr.shape
+
+        nmodes = sh[1]
+
+        # stopper
+        maxz = sh[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * nmodes]
+
+        flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            dex = aux[ind, :, :] - alpha * \
+                  ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
+                  pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] + \
+                  (alpha - 1) * ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
 
             ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] += dex
             aux[ind, :, :] = dex
@@ -477,6 +500,31 @@ class PoUpdateKernel(BaseKernel):
             pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
                 ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
                 ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * fac
+        return
+
+    def ob_update_local(self, addr, ob, pr, ex, aux):
+
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            aux[ind,:,:] = pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] * \
+                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
+            ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
+                pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
+                (ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind,:,:]) / \
+                np.max(np.abs(pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols])**2)
+        return
+
+    def pr_update_local(self, addr, pr, ob, ex, aux):
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
+                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
+                (ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind,:,:]) / \
+                np.max(np.abs(ob[obc[0]])**2)
         return
 
 class PositionCorrectionKernel(BaseKernel):
