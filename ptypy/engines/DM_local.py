@@ -240,6 +240,15 @@ class DM_local(PositionCorrectionEngine):
         for it in range(num):   
 
             error_dct = {}
+
+            for dID in self.di.S.keys():
+
+                # find probe, object and exit ID in dependence of dID
+                prep = self.diff_info[dID]
+                pID, oID, eID = prep.poe_IDs
+
+                print(prep.addr.shape)
+
             for name, di_view in self.di.views.items():
                 if not di_view.active:
                     continue
