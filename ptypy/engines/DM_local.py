@@ -282,7 +282,7 @@ class DM_local(PositionCorrectionEngine):
                 np.random.shuffle(vieworder)
 
                 # Iterate through views
-                for i in prep.vieworder:
+                for i in vieworder:
 
                     # Get local adress and arrays
                     addr = prep.addr[i,None]

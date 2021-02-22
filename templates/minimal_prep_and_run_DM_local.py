@@ -39,17 +39,17 @@ p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
 p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
-p.scans.MF.data.psf = 0.5
+p.scans.MF.data.psf = 0.0
 p.scans.MF.coherence = u.Param()
-p.scans.MF.coherence.num_probe_modes = 2
+p.scans.MF.coherence.num_probe_modes = 1
 
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM_local'
 p.engines.engine00.numiter = 100
-p.engines.engine00.alpha = 0.0 # 0 behaves like ePIE
-p.engines.engine00.tau = 1.0
+p.engines.engine00.alpha = 0 # alpha=0, tau=1 behaves like ePIE
+p.engines.engine00.tau = 1
 p.engines.engine00.rescale_probe = False
 p.engines.engine00.fourier_power_bound = 0.0
 
