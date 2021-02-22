@@ -200,10 +200,7 @@ class DM_local(PositionCorrectionEngine):
             mean_power = 0.
             self.pbound_scan = {}
             for s in self.di.storages.values():            
-                if not self.pbound_scan.get(s.label):
-                    self.pbound_scan[s.label] = self.p.fourier_power_bound
-                else:
-                    self.pbound_scan[s.label] = max(pb, self.pbound_scan[s.label])
+                self.pbound_scan[s.label] = self.p.fourier_power_bound
                 mean_power += s.mean_power
             self.mean_power = mean_power / len(self.di.storages)
 
