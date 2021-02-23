@@ -18,7 +18,7 @@ This file is part of the PTYPY package.
 """
 from importlib import import_module
 from .. import defaults_tree
-from ..core.data import MoonFlowerScan, PtydScan, PtyScan, QuickScan
+from ..core.data import MoonFlowerScan, PtydScan, PtyScan, QuickScan, IAScan
 from ..simulations import SimScan
 from ..utils.verbose import log
 
@@ -26,6 +26,7 @@ __all__ = ['MoonFlowerScan', 'PtydScan', 'PtyScan', 'QuickScan', 'SimScan']
 PTYSCANS = {'MoonFlowerScan': MoonFlowerScan,
             'PtydScan': PtydScan,
             'PtyScan': PtyScan,
+            'IAScan': IAScan,
             'QuickScan': QuickScan,
             'SimScan': SimScan}
 

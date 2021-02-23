@@ -24,8 +24,9 @@ p.scans = u.Param()
 p.scans.MF = u.Param()
 p.scans.MF.name = 'BlockFull'
 p.scans.MF.data= u.Param()
-p.scans.MF.data.name = 'PtydScan'
-p.scans.MF.data.dfile ='/tmp/ptypy/sample.ptyd'
+p.scans.MF.data.name = 'IAScan'
+p.scans.MF.data.dfile = 'sample'
+p.scans.MF.data.source = 'tcp://127.0.0.1:5860'
 p.scans.MF.data.min_frames = 10
 
 p.engines = u.Param()

@@ -31,9 +31,16 @@ data.distance = 7
 data.auto_center = None
 data.rebin = None
 data.orientation = None
-data.url = 'tcp://127.0.0.1:55060'
+data.url = 'tcp://127.0.0.1:5860'
 # optionally validate the parameter tree
 ptypy.defaults_tree['scandata.MoonFlowerScan'].validate(data)
+
+# from ptypy.io.interaction import Server
+# S = Server(
+#     address="tcp://127.0.0.1",
+#     port=5860,
+# )
+# S.activate()
 
 # create PtyScan instance
 MF = ptypy.core.data.MoonFlowerScan(data)
@@ -42,5 +49,12 @@ for i in range(20):
     # autoprocess data
     msg = MF.auto(10)
     time.sleep(3)
+    # for ii in range(30):
+    #     S.process_requests()
+    #     time.sleep(0.1)
     # logs the out put of .auto() to terminal prompt
     u.verbose.logger.info(u.verbose.report(msg), extra={'allprocesses': True})
+
+# while True:
+#     S.process_requests()
+#     time.sleep(0.1)

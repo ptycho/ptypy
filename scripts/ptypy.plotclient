@@ -11,7 +11,7 @@ excludes = ['active']
 parser = plot_desc.add2argparser(parser, excludes=excludes)
 
 excludes = ['active', 'threaded', 'connections', 'interval']
-client_desc = defaults_tree['io.interaction']
+client_desc = defaults_tree['io.interaction.client']
 parser = client_desc.add2argparser(parser, excludes=excludes)
 parser.add_argument('-d', '--dir', dest='directory', type=str, default='./',
                     help='image dump directory')

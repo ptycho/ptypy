@@ -47,7 +47,7 @@ CODES = {WAIT: 'Scan unfinished. More frames available after a pause',
          EOS: 'End of scan reached'}
 
 __all__ = ['PtyScan', 'PTYD', 'PtydScan',
-           'MoonFlowerScan']
+           'MoonFlowerScan', 'IAScan']
 
 
 @defaults_tree.parse_doc('scandata.PtyScan')
@@ -88,7 +88,7 @@ class PtyScan(object):
 
     [url]
     type = str
-    default = None
+    default = tcp://127.0.0.1:5860
     help = URL where prepared data will be saved in the ``ptyd`` format layout.
     doc = The url will be parsed by Python's to urllib.parse.urlparse to extract path, host and port.
       It might supersede the ``dfile parameter`` in the future since it also allows for file system paths.
@@ -172,7 +172,7 @@ class PtyScan(object):
     type = int
     default = None
     help = Maximum number of frames to be prepared
-    doc = If `positions_theory` are provided, num_frames will be ovverriden with the number of
+    doc = If `positions_theory` are provided, num_frames will be overriden with the number of
       positions available
     userlevel = 1
 
@@ -364,7 +364,7 @@ class PtyScan(object):
         d.update(kwargs)
         d = u.flat_dict(d)
         for k, v in d.items():
-            self._client.set(path+':/'+k, v)
+            self._client.set(path+'/'+k, v)
 
     def initialize(self):
         """
@@ -1233,24 +1233,38 @@ class PtyScan(object):
         num = todisk.pop('num')
         ind = todisk.pop('indices_node')
 
-        for k in ['data', 'weights']:
-            if k in c.keys():
-                if hasattr(c[k], 'items'):
-                    v = c[k]
-                else:
-                    v = dict(zip(ind, np.asarray(c[k])))
+        # gather data
+        todisk['data'] = parallel.gather_dict(c['data'])
+        parallel.barrier()
 
-                parallel.barrier()
+        # gather weights... why so complicated?
+        v = c.get('weights')
+        if v is not None:
+            # should we test for array instead?
+            if not hasattr(v,'items'):
+                v = dict(zip(ind, np.asarray(v)))
+
                 # Gather the content
-                newv = parallel.gather_dict(v)
-                todisk[k] = np.asarray([newv[j] for j in sorted(newv.keys())])
+            todisk['weights'] = parallel.gather_dict(v)
 
         parallel.barrier()
 
-        # All information is at master node.
         if parallel.master:
-            # Form a dictionary
-            if str(kind) == 'append' or str(kind) == 'iaserver':
+
+            if str(kind) == 'iaserver':
+                h5address = 'chunks/%d' % num
+                todisk['positions'] = dict(zip(c['indices'], c['positions']))
+                self._append(self.dfile, {h5address: todisk})
+            else:
+                # make arrays:
+                v = todisk['data']
+                todisk['data'] = np.asarray([v[j] for j in sorted(v.keys())])
+                v = todisk.get('weights')
+                if v is not None:
+                    todisk['weights'] = np.asarray([v[j] for j in sorted(v.keys())])
+
+             # Form a dictionary
+            if str(kind) == 'append':
                 h5address = 'chunks/%d' % num
                 self._append(self.dfile, {h5address: todisk})
             elif str(kind) == 'link':
@@ -1344,14 +1358,6 @@ class PtydScan(PtyScan):
         with h5py.File(source, 'r') as f:
             check = f.get('chunks/0')
             f.close()
-            # Get number of frames supposedly in the file
-            # FIXME: try/except clause only for backward compatibilty
-            # for .ptyd files created priot to commit 2e626ff
-            #try:
-            #    source_frames = f.get('info/num_frames_actual')[...].item()
-            #except TypeError:
-            #    source_frames = len(f.get('info/positions_scan')[...])
-            #f.close()
 
         if check is None:
             raise IOError('Ptyd source %s contains no data. Load aborted'
@@ -1496,6 +1502,146 @@ class PtydScan(PtyScan):
 
         return (out.get(key, {}) for key in ['data', 'positions', 'weights'])
 
+@defaults_tree.parse_doc('scandata.IAScan')
+class IAScan(PtyScan):
+    """
+    PtyScan provided by Interaction Server.
+
+    Defaults:
+
+    [name]
+    default = IAScan
+    type = str
+    help =
+    doc =
+
+    [dfile]
+    type = file
+    default = None
+    help = Prepared data file path
+    doc = If source is ``None`` or ``'file'``, data will be loaded from this file and processing as
+      well as saving is deactivated. If source is the path to a file, data will be saved to this file.
+    userlevel = 0
+
+    [source]
+    default = tcp://127.0.0.1:5860
+    type = str
+    help = Source url. Will be parsed by urllib.parse.urlparse
+    doc = `None` for input shall be deprecated in future
+
+    [override]
+    default = true
+    type = bool
+    help = Override meta parameters obtained from source with those specified as parameters here
+    doc =
+    """
+
+    def __init__(self, pars=None, **kwargs):
+        """
+        PtyScan provided by native "ptyd" file format.
+        """
+        # Create parameter set
+        p = self.DEFAULT.copy(99)
+        p.update(pars)
+        p.update(kwargs)
+        source = p.source
+        if u.parallel.master:
+            from urllib.parse import urlparse
+            r = urlparse(source)
+            c = io.interaction.Client(port=r.port, address=r.scheme + '://' + r.hostname)
+            c.activate()
+            logger.info('Waiting for Client to connect to IA Server')
+            while not c.connected:
+                time.sleep(0.1)
+            logger.info('Client connected')
+            dfile = p.dfile
+            # Get meta information
+            mkeys = [k for k in c.avail()['avail'] if "/meta/" in k and dfile in k]
+            tokens = [c.get(k) for k in mkeys]
+            c.wait()
+            meta = dict((k.split('/')[-1].strip(), c.data[t]) for k, t in zip(mkeys,tokens))
+        else:
+            c = None
+            meta = {}
+
+        parallel.barrier()
+        meta = u.parallel.bcast_dict(meta)
+
+        if meta.get('num_frames') is None:
+            logger.warning('Ptyd source is not aware of the total'
+                           'number of diffraction frames expected')
+
+        if len(meta) == 0:
+            logger.warning('There should be meta information in '
+                           '%s. Something is odd here.' % source)
+
+        # Apply parameters from ptyd file.
+        p.update(meta)
+
+        # Override parameters that are explicitly passed as input arguments
+        for k in self.METAKEYS:
+            if k in pars:
+                p[k] = pars[k]
+
+        super().__init__(p)
+
+        # Other instance attributes
+        self._dkeys = None
+        self._dfile = p.dfile
+        self._client = c
+
+        # Don't allow parallel load of any kind (must all go through master)
+        self.load_common_in_parallel = False
+        self.load_in_parallel = False
+
+    def check(self, frames=None, start=None):
+        """
+        Implementation of the check routine for a .ptyd file format.
+
+        See also
+        --------
+        PtyScan.check
+        """
+        if start is None:
+            start = self.framestart
+
+        if frames is None:
+            frames = self.min_frames
+
+        self._dkeys = sorted([k for k in self._client.avail()['avail'] if "/data/" in k and self._dfile in k])
+        # Accessible frames
+        frames_accessible = min((frames, len(self._dkeys) - start))
+        # end_of_scan = source_frames <= start + frames_accessible
+        return frames_accessible, None
+
+
+    def load_weight(self):
+        if 'weight2d' in self.info:
+            return self.info.weight2d
+        else:
+            return None
+
+    def load_positions(self):
+        return None
+
+    def load(self, indices):
+        """
+        """
+        c = self._client
+        if c is not None:
+            self._dkeys = parallel.comm.bcast(self._dkeys)
+            dkeys = self._dkeys
+            d = [c.get(dkeys[ind]) for ind in indices]
+            w = [c.get(dkeys[ind].replace('/data/','/weights/')) for ind in indices]
+            p = [c.get(dkeys[ind].replace('/data/','/positions/')) for ind in indices]
+            c.wait()
+            d = dict(zip(indices, [c.data[t] for t in d]))
+            w = dict(zip(indices, [c.data[t] for t in w]))
+            p = dict(zip(indices, [c.data[t] for t in p]))
+
+            return d, p, w
+        else:
+            return {}, {}, {}
 
 @defaults_tree.parse_doc('scandata.MoonFlowerScan')
 class MoonFlowerScan(PtyScan):

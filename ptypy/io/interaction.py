@@ -563,12 +563,15 @@ class Server(object):
         DEBUG('Executing GETNOW command')
         status = 'ok'
         try:
-            out = eval(args['str'], {}, self.objects)
+            # TODO: separate GET in GET and EVAL
+            out = self.objects.get(q['str'])
+            if out is None:
+                out = eval(q['str'], {}, self.objects)
         except:
             status = sys.exc_info()[0]
             out = None
 
-        return {'status': status, 'out': out}
+        return {'status': str(status), 'out': out}
 
     def _send(self, out_socket, obj):
         """\
@@ -620,7 +623,10 @@ class Server(object):
             # Process the command
             if q['cmd'] == 'GET':
                 try:
-                    out = eval(q['str'], {}, self.objects)
+                    # TODO: separate GET in GET and EVAL
+                    out = self.objects.get(q['str'])
+                    if out is None:
+                        out = eval(q['str'], {}, self.objects)
                 except:
                     status = sys.exc_info()[0]
                     out = None
