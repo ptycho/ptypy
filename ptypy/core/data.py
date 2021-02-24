@@ -644,8 +644,7 @@ class PtyScan(object):
                 logger.warning('Number of frames not specified and .check()'
                                'cannot determine end-of-scan. Aborting..')
                 self.abort = True
-
-            if eos is None:
+            elif eos is None:
                 self.end_of_scan = (s + self.frames_accessible
                                     >= self.num_frames)
             else:
@@ -1629,16 +1628,19 @@ class IAScan(PtyScan):
         """
         c = self._client
         if c is not None:
-            self._dkeys = parallel.comm.bcast(self._dkeys)
+            #self._dkeys = parallel.comm.bcast(self._dkeys)
             dkeys = self._dkeys
             d = [c.get(dkeys[ind]) for ind in indices]
             w = [c.get(dkeys[ind].replace('/data/','/weights/')) for ind in indices]
             p = [c.get(dkeys[ind].replace('/data/','/positions/')) for ind in indices]
             c.wait()
             d = dict(zip(indices, [c.data[t] for t in d]))
+            # TODO: this is a hack
+            #d = np.ones_like(next(iter(d.values())))
             w = dict(zip(indices, [c.data[t] for t in w]))
+            # Catch the no-weight scenario
+            w = w if all(w.values()) else {}
             p = dict(zip(indices, [c.data[t] for t in p]))
-
             return d, p, w
         else:
             return {}, {}, {}

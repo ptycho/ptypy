@@ -26,9 +26,7 @@ p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
 p.scans.MF.data.num_frames = 200
-p.scans.MF.data.save = 'iaserver'
-p.scans.MF.data.url = 'tcp://127.0.0.1:55060'
-p.scans.MF.data.dfile = 'test'
+p.scans.MF.data.save = None
 
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2

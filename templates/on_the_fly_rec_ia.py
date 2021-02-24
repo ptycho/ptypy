@@ -11,13 +11,13 @@ Tested to work with mpi
 import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
-
+import sys
 p = u.Param()
 p.verbose_level = 3
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.autosave = u.Param(active=False)
-p.io.autoplot = u.Param()
+p.io.autosave = u.Param(active=True)
+p.io.autoplot = u.Param(active=True)
 p.io.autoplot.layout = 'minimal'
 
 p.scans = u.Param()
@@ -25,7 +25,7 @@ p.scans.MF = u.Param()
 p.scans.MF.name = 'BlockFull'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'IAScan'
-p.scans.MF.data.dfile = 'sample'
+p.scans.MF.data.dfile = sys.argv[1] #'sample.ptyd'
 p.scans.MF.data.source = 'tcp://127.0.0.1:5860'
 p.scans.MF.data.min_frames = 10
 
