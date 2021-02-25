@@ -18,12 +18,11 @@ from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 
 from . import have_cuda, only_if_cuda_available
 if have_cuda():
-    from ptypy.accelerate.cuda import constraints as gcon
-    from ptypy.accelerate.cuda.constraints import get_difference as gget_difference
-    from ptypy.accelerate.cuda.constraints import renormalise_fourier_magnitudes as grenormalise_fourier_magnitudes
-    from ptypy.accelerate.cuda.constraints import difference_map_fourier_constraint as gdifference_map_fourier_constraint
-    from ptypy.accelerate.cuda import array_utils as gau
-    from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
+    from archive.cuda_extension.accelerate.cuda import constraints as gcon
+    from archive.cuda_extension.accelerate.cuda import get_difference as gget_difference
+    from archive.cuda_extension.accelerate.cuda import renormalise_fourier_magnitudes as grenormalise_fourier_magnitudes
+    from archive.cuda_extension.accelerate.cuda import difference_map_fourier_constraint as gdifference_map_fourier_constraint
+    from archive.cuda_extension.accelerate.cuda.config import init_gpus, reset_function_cache
     init_gpus(0)
 
 @only_if_cuda_available

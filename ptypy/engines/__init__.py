@@ -11,8 +11,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-from .. import utils as u
-from .. import defaults_tree
 from .utils import *
 
 
@@ -38,7 +36,6 @@ def by_name(name):
         raise RuntimeError('Unknown engine: %s' % name)
     return ENGINES[name]
 
-from .base import BaseEngine, DEFAULT_iter_info
 
 # These imports should be executable separately
 from . import DM

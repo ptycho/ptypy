@@ -9,16 +9,15 @@ from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.array_based.constraints import difference_map_realspace_constraint, scan_and_multiply
 from ptypy.accelerate.array_based.propagation import farfield_propagator
 import ptypy.accelerate.array_based.array_utils  as au
-from ptypy.accelerate.array_based import FLOAT_TYPE
 from ptypy.accelerate.array_based.error_metrics import log_likelihood, far_field_error, realspace_error
 from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 
 from . import have_cuda, only_if_cuda_available
 if have_cuda():
-    from ptypy.accelerate.cuda.error_metrics import log_likelihood as glog_likelihood
-    from ptypy.accelerate.cuda.error_metrics import far_field_error as gfar_field_error
-    from ptypy.accelerate.cuda.error_metrics import realspace_error as grealspace_error
-    from ptypy.accelerate.cuda.config import init_gpus, reset_function_cache
+    from archive.cuda_extension.accelerate.cuda.error_metrics import log_likelihood as glog_likelihood
+    from archive.cuda_extension.accelerate.cuda.error_metrics import far_field_error as gfar_field_error
+    from archive.cuda_extension.accelerate.cuda.error_metrics import realspace_error as grealspace_error
+    from archive.cuda_extension.accelerate.cuda.config import init_gpus, reset_function_cache
     init_gpus(0)
 
 @only_if_cuda_available

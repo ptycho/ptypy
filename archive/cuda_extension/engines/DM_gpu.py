@@ -14,7 +14,7 @@ from ..utils import parallel
 from .DM_npy import DMNpy
 from ptypy import defaults_tree
 from ..core.manager import Full, Vanilla
-from ptypy.accelerate.cuda.constraints import difference_map_iterator
+from archive.cuda_extension.accelerate.cuda import difference_map_iterator
 from . import register
 import numpy as np
 

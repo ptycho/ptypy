@@ -9,7 +9,7 @@ from ptypy.accelerate.array_based import constraints as con, FLOAT_TYPE, COMPLEX
 from . import have_cuda, only_if_cuda_available
 
 if have_cuda():
-    from ptypy.accelerate.cuda import constraints as gcon
+    from archive.cuda_extension.accelerate.cuda import constraints as gcon
 
 @only_if_cuda_available
 class ConstraintsRegressionTest(unittest.TestCase):

@@ -2,7 +2,7 @@ import unittest
 
 def have_cuda():
     try:
-        from ptypy.accelerate.cuda import gpu_extension
+        from archive.cuda_extension.accelerate.cuda import gpu_extension
         return True
     except:
         return False

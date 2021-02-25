@@ -120,7 +120,7 @@ and to avoid re-attempting optimisations that were not beneficial.
 #### Atomic Version Optimisations
 
 1. Starting Point:
-    - Version based on 2018 CUDA effort [extract_array_from_exit_wave.cu](../../../cuda/func/extract_array_from_exit_wave.cu)
+    - Version based on 2018 CUDA effort [extract_array_from_exit_wave.cu](../../../archive/cuda_extension/cuda/func/extract_array_from_exit_wave.cu)
 2. Coalesced Access:
     - Swap loop order to iterate of the `threadIdx.x` dimension in the inner loop (this is the fast-running index between threads)
     - This makes sure that the global memory loads and stores are coalesced

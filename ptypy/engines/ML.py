@@ -19,8 +19,7 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from .utils import Cnorm2, Cdot
 from . import register
-from .base import PositionCorrectionEngine
-from .. import defaults_tree
+from ptypy.engines.base import PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 __all__ = ['ML']
