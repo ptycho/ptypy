@@ -13,7 +13,6 @@ import numpy as np
 
 from ..utils import parallel
 from . import BaseEngine, register
-from .. import defaults_tree
 from ..core.manager import Full, Vanilla
 
 __all__ = ['Dummy']
