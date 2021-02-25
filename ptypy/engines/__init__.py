@@ -48,9 +48,6 @@ from . import dummy
 from . import ePIE
 from . import Bragg3d_engines
 
-from . import DM_serial
-from . import ML_serial
-from . import DM_serial_stream
 try:
     from . import DM_pycuda
     from . import DM_pycuda_streams
