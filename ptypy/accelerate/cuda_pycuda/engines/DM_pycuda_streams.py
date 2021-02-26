@@ -13,14 +13,11 @@ import time
 from pycuda import gpuarray
 import pycuda.driver as cuda
 
-from .. import utils as u
-from ..utils.verbose import logger, log
-from ..utils import parallel
-from . import register, DM_pycuda
-from ..accelerate import py_cuda as gpu
-from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel
-
-from pycuda.tools import DeviceMemoryPool
+from ptypy import utils as u
+from ptypy.utils.verbose import logger, log
+from ptypy.utils import parallel
+from ptypy.engines import register
+from . import DM_pycuda
 
 MPI = parallel.size > 1
 MPI = True

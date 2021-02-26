@@ -12,23 +12,22 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-import time
 from pycuda import gpuarray
 import pycuda.driver as cuda
 from pycuda.tools import DeviceMemoryPool
 from collections import deque
 
-from . import register
+from ptypy.engines import register
 from .ML import ML, BaseModel, prepare_smoothing_preconditioner
-from .ML_serial import ML_serial, BaseModelSerial
-from .. import utils as u
-from ..utils.verbose import logger
-from ..utils import parallel
-from ..accelerate import py_cuda as gpu
-from ..accelerate.py_cuda.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
-from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel
+from ptypy.engines.ML_serial import ML_serial, BaseModelSerial
+from ptypy import utils as u
+from ptypy.utils.verbose import logger
+from ptypy.utils import parallel
+from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, \
+    PositionCorrectionKernel, PropagationKernel
+from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel
 
-from ..accelerate.array_based import address_manglers
+from ptypy.accelerate.array_based import address_manglers
 
 __all__ = ['ML_pycuda']
 

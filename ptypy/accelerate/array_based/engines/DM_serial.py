@@ -14,14 +14,13 @@ from __future__ import division
 import numpy as np
 import time
 
-from .. import utils as u
-from ..utils.verbose import logger, log
-from ..utils import parallel
-from . import BaseEngine, register, DM
-from .. import defaults_tree
-from ..accelerate.array_based.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ..accelerate.array_based import address_manglers
-from ..accelerate.array_based import array_utils as au
+from ptypy import utils as u
+from ptypy.utils.verbose import logger, log
+from ptypy.utils import parallel
+from ptypy.engines import BaseEngine, register, DM
+from ptypy.accelerate.array_based.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ptypy.accelerate.array_based import address_manglers
+from ptypy.accelerate.array_based import array_utils as au
 
 
 ### TODOS 

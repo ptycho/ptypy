@@ -14,16 +14,16 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 
-from .ML import ML, BaseModel, prepare_smoothing_preconditioner, Regul_del2
+from ptypy.engines.ML import ML, BaseModel
 from .DM_serial import serialize_array_access
-from .. import utils as u
-from ..utils.verbose import logger
-from ..utils import parallel
-from .utils import Cnorm2, Cdot
-from . import register
-from ..accelerate.array_based.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, \
+from ptypy import utils as u
+from ptypy.utils.verbose import logger
+from ptypy.utils import parallel
+from ptypy.engines.utils import Cnorm2, Cdot
+from ptypy.engines import register
+from ptypy.accelerate.array_based.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, \
     PositionCorrectionKernel
-from ..accelerate.array_based import address_manglers
+from ptypy.accelerate.array_based import address_manglers
 
 __all__ = ['ML_serial']
 

@@ -13,14 +13,15 @@ import time
 from pycuda import gpuarray
 import pycuda.driver as cuda
 
-from .. import utils as u
-from ..utils.verbose import logger, log
-from ..utils import parallel
-from . import BaseEngine, register, DM_serial, DM
-from ..accelerate import py_cuda as gpu
-from ..accelerate.py_cuda.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
-from ..accelerate.py_cuda.array_utils import ArrayUtilsKernel, GaussianSmoothingKernel
-from ..accelerate.array_based import address_manglers
+from ptypy import utils as u
+from ptypy.utils.verbose import logger, log
+from ptypy.utils import parallel
+from ptypy.engines import register
+from ptypy.accelerate.array_based.engines import DM_serial
+from ptypy.accelerate.array_based import address_manglers
+from ..import py_cuda as gpu
+from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
+from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel
 
 MPI = parallel.size > 1
 MPI = True

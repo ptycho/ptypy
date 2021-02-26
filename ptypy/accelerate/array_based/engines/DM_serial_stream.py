@@ -13,18 +13,12 @@ from __future__ import division
 
 import numpy as np
 import time
-from ptypy.accelerate.ocl.npy_kernels import Fourier_update_kernel
-from ptypy.accelerate.ocl.npy_kernels import PO_update_kernel
 
-from .. import utils as u
-from ..utils.verbose import logger, log
-from ..utils import parallel
-from . import register
+from ptypy import utils as u
+from ptypy.utils.verbose import logger, log
+from ptypy.utils import parallel
+from ptypy.engines import register
 from .DM_serial import DM_serial
-from .. import defaults_tree
-from ..accelerate.ocl.npy_kernels_for_block import FourierUpdateKernel
-from ..accelerate.ocl.npy_kernels_for_block import PoUpdateKernel
-from ..accelerate.ocl.npy_kernels_for_block import AuxiliaryWaveKernel
 
 ### TODOS 
 # 
