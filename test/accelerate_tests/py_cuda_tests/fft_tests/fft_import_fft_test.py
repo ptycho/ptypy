@@ -7,7 +7,7 @@ from distutils import sysconfig
 if have_pycuda():
     import pycuda.driver as cuda
     from pycuda import gpuarray
-    from ptypy.accelerate.py_cuda import import_fft
+    from ptypy.accelerate.cuda_pycuda import import_fft
     from pycuda.tools import make_default_context
 
 class ImportFFTTest(PyCudaTest):

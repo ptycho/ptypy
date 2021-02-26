@@ -19,7 +19,7 @@ from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.accelerate.array_based.engines import DM_serial
 from ptypy.accelerate.array_based import address_manglers
-from ..import py_cuda as gpu
+from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel
 
@@ -59,7 +59,7 @@ class DM_pycuda(DM_serial.DM_serial):
         """
         Prepare for reconstruction.
         """
-        self.context, self.queue = gpu.get_context(new_context=True, new_queue=True)
+        self.context, self.queue = get_context(new_context=True, new_queue=True)
         # allocator for READ only buffers
         # self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
         ## gaussian filter

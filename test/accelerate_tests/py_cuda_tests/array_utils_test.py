@@ -10,7 +10,7 @@ from ptypy.accelerate.array_based import array_utils as au
 
 if have_pycuda():
     from pycuda import gpuarray
-    import ptypy.accelerate.py_cuda.array_utils as gau
+    import ptypy.accelerate.cuda_pycuda.array_utils as gau
 
 class ArrayUtilsTest(PyCudaTest):
 

@@ -9,7 +9,7 @@ from . import PyCudaTest, have_pycuda
 
 if have_pycuda():
     from pycuda import gpuarray
-    from ptypy.accelerate.py_cuda.kernels import PropagationKernel
+    from ptypy.accelerate.cuda_pycuda.kernels import PropagationKernel
 
 from ptypy.core import geometry
 from ptypy.core import Base as theBase

@@ -9,7 +9,7 @@ from . import perfrun, PyCudaTest, have_pycuda
 
 if have_pycuda():
     from pycuda import gpuarray
-    from ptypy.accelerate.py_cuda.array_utils import DerivativesKernel
+    from ptypy.accelerate.cuda_pycuda.array_utils import DerivativesKernel
 from ptypy.utils.math_utils import delxf, delxb 
 
 COMPLEX_TYPE = np.complex64

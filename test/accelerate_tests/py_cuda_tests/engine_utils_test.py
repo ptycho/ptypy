@@ -9,7 +9,7 @@ from . import perfrun, PyCudaTest, have_pycuda
 
 if have_pycuda():
     from pycuda import gpuarray
-    from ptypy.engines.ML_pycuda import Regul_del2_pycuda
+    from ptypy.accelerate.cuda_pycuda.engines.ML_pycuda import Regul_del2_pycuda
     from ptypy.engines.ML import Regul_del2
     from pycuda.tools import make_default_context
     from pycuda.driver import mem_alloc

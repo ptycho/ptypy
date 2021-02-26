@@ -15,7 +15,7 @@ if have_pycuda():
     import pycuda.driver as cuda
     from pycuda import gpuarray
     from pycuda.tools import make_default_context
-    from ptypy.accelerate import py_cuda
+    from ptypy.accelerate import cuda_pycuda
 
     # make sure this is called once
     cuda.init()
@@ -30,14 +30,14 @@ class PyCudaTest(unittest.TestCase):
         self.stream = cuda.Stream()
         # enable assertions in CUDA kernels for testing
         if not 'perf' in self._testMethodName:
-            self.opts_old = py_cuda.debug_options.copy()
-            if '-DNDEBUG' in py_cuda.debug_options:
-                py_cuda.debug_options.remove('-DNDEBUG')
+            self.opts_old = cuda_pycuda.debug_options.copy()
+            if '-DNDEBUG' in cuda_pycuda.debug_options:
+               cuda_pycuda.debug_options.remove('-DNDEBUG')
 
     def tearDown(self):
         np.set_printoptions()
         self.ctx.pop()
         self.ctx.detach()
         if not 'perf' in self._testMethodName:
-            py_cuda.debug_options = self.opts_old
+           cuda_pycuda.debug_options = self.opts_old
 

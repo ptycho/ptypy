@@ -23,10 +23,10 @@ class PropagationKernel:
         aux = self.aux
 
         try:
-            from ptypy.accelerate.py_cuda.cufft import FFT
+            from ptypy.accelerate.cuda_pycuda.cufft import FFT
         except:
             logger.warning('Unable to import cuFFT version - using Reikna instead')
-            from ptypy.accelerate.py_cuda.fft import FFT
+            from ptypy.accelerate.cuda_pycuda.fft import FFT
 
         if self.prop_type == 'farfield':
             self._fft1 = FFT(aux, self.queue,

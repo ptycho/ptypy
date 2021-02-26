@@ -6,8 +6,8 @@ import time
 if have_pycuda():
     import pycuda.driver as cuda
     from pycuda import gpuarray
-    from ptypy.accelerate.py_cuda.fft import FFT as ReiknaFFT
-    from ptypy.accelerate.py_cuda.cufft import FFT as cuFFT
+    from ptypy.accelerate.cuda_pycuda.fft import FFT as ReiknaFFT
+    from ptypy.accelerate.cuda_pycuda.cufft import FFT as cuFFT
 
     COMPLEX_TYPE = np.complex64
     FLOAT_TYPE = np.float32

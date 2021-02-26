@@ -18,11 +18,11 @@ from pycuda.tools import DeviceMemoryPool
 from collections import deque
 
 from ptypy.engines import register
-from .ML import ML, BaseModel, prepare_smoothing_preconditioner
-from ptypy.engines.ML_serial import ML_serial, BaseModelSerial
+from ptypy.accelerate.array_based.engines.ML_serial import ML_serial, BaseModelSerial
 from ptypy import utils as u
 from ptypy.utils.verbose import logger
 from ptypy.utils import parallel
+from .. import get_context
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, \
     PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel
@@ -148,7 +148,7 @@ class ML_pycuda(ML_serial):
         """
         Prepare for ML reconstruction.
         """
-        self.context, self.queue = gpu.get_context(new_context=True, new_queue=True)
+        self.context, self.queue = get_context(new_context=True, new_queue=True)
 
         if self.p.use_cuda_device_memory_pool:
             self._dmp = DeviceMemoryPool()

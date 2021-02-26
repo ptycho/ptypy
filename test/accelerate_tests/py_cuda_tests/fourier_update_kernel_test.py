@@ -10,7 +10,7 @@ from . import PyCudaTest, have_pycuda
 
 if have_pycuda():
     from pycuda import gpuarray
-    from ptypy.accelerate.py_cuda.kernels import FourierUpdateKernel
+    from ptypy.accelerate.cuda_pycuda.kernels import FourierUpdateKernel
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
