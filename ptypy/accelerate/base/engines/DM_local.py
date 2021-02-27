@@ -10,16 +10,16 @@ This file is part of the PTYPY package.
 import numpy as np
 import time
 
-from .. import utils as u
-from ..utils.verbose import logger, log
-from ..utils import parallel
-from .. import defaults_tree
-from . import register, DM_serial
-from .base import PositionCorrectionEngine
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
-from ..accelerate.array_based.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ..accelerate.array_based import address_manglers
-from ..accelerate.array_based import array_utils as au
+from ptypy import utils as u
+from ptypy.utils.verbose import logger, log
+from ptypy.utils import parallel
+from ptypy import defaults_tree
+from ptypy.engines import register, DM_serial
+from ptypy.engines.base import PositionCorrectionEngine
+from ptypy.core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
+from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ptypy.accelerate.base import address_manglers
+from ptypy.accelerate.base import array_utils as au
 
 __all__ = ['DM_local']
 
