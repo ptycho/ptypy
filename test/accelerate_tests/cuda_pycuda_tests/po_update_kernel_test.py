@@ -160,7 +160,7 @@ class PoUpdateKernelTest(PyCudaTest):
 
 
         POUK = PoUpdateKernel()
-        from ptypy.accelerate.array_based.kernels import PoUpdateKernel as npPoUpdateKernel
+        from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
         nPOUK = npPoUpdateKernel()
         # print("object array denom before:")
         # print(object_array_denominator)
@@ -298,7 +298,7 @@ class PoUpdateKernelTest(PyCudaTest):
 
         POUK = PoUpdateKernel()
 
-        from ptypy.accelerate.array_based.kernels import PoUpdateKernel as npPoUpdateKernel
+        from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
         nPOUK = npPoUpdateKernel()
 
         object_array_dev = gpuarray.to_gpu(object_array)
@@ -524,7 +524,7 @@ class PoUpdateKernelTest(PyCudaTest):
             probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2) + 1j * np.ones((E, F)) * (5 * idx + 2)
 
         POUK = PoUpdateKernel()
-        from ptypy.accelerate.array_based.kernels import PoUpdateKernel as npPoUpdateKernel
+        from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
         nPOUK = npPoUpdateKernel()
 
         # print("probe array before:")

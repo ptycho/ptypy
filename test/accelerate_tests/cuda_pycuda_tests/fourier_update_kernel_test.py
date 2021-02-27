@@ -81,7 +81,7 @@ class FourierUpdateKernelTest(PyCudaTest):
         mask_sum = mask.sum(-1).sum(-1)
 
         err_fmag = np.zeros(N, dtype=FLOAT_TYPE)
-        from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
+        from ptypy.accelerate.base.kernels import FourierUpdateKernel as npFourierUpdateKernel
         pbound_set = 0.9
         nFUK = npFourierUpdateKernel(f, nmodes=total_number_modes)
         FUK = FourierUpdateKernel(f, nmodes=total_number_modes)
@@ -173,7 +173,7 @@ class FourierUpdateKernelTest(PyCudaTest):
         '''
         mask_sum = mask.sum(-1).sum(-1)
 
-        from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
+        from ptypy.accelerate.base.kernels import FourierUpdateKernel as npFourierUpdateKernel
         f_d = gpuarray.to_gpu(f)
         fmag_d = gpuarray.to_gpu(fmag)
         mask_d = gpuarray.to_gpu(mask)
@@ -267,7 +267,7 @@ class FourierUpdateKernelTest(PyCudaTest):
         err_fmag = np.zeros(N, dtype=FLOAT_TYPE)
         mask_sum = mask.sum(-1).sum(-1)
 
-        from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
+        from ptypy.accelerate.base.kernels import FourierUpdateKernel as npFourierUpdateKernel
         f_d = gpuarray.to_gpu(f)
         fmag_d = gpuarray.to_gpu(fmag)
         mask_d = gpuarray.to_gpu(mask)
@@ -413,7 +413,7 @@ class FourierUpdateKernelTest(PyCudaTest):
         addr_d = gpuarray.to_gpu(addr)
         LLerr_d = gpuarray.to_gpu(LLerr)
 
-        from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
+        from ptypy.accelerate.base.kernels import FourierUpdateKernel as npFourierUpdateKernel
         nFUK = npFourierUpdateKernel(f, nmodes=total_number_modes)
         nFUK.allocate()
         nFUK.log_likelihood(f, addr, fmag, mask, LLerr)
@@ -477,7 +477,7 @@ class FourierUpdateKernelTest(PyCudaTest):
         '''
         test
         '''
-        from ptypy.accelerate.array_based.kernels import FourierUpdateKernel as npFourierUpdateKernel
+        from ptypy.accelerate.base.kernels import FourierUpdateKernel as npFourierUpdateKernel
         aux_d = gpuarray.to_gpu(aux)
         addr_d = gpuarray.to_gpu(addr)
 

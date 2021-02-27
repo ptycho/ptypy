@@ -10,7 +10,7 @@ from . import PyCudaTest, have_pycuda
 if have_pycuda():
     from pycuda import gpuarray
     from ptypy.accelerate.cuda_pycuda.kernels import PositionCorrectionKernel
-    from ptypy.accelerate.array_based.kernels import PositionCorrectionKernel as abPositionCorrectionKernel
+    from ptypy.accelerate.base.kernels import PositionCorrectionKernel as abPositionCorrectionKernel
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32

@@ -4,7 +4,7 @@
 import unittest
 import numpy as np
 import scipy.fft as fft
-from test.accelerate_tests.py_cuda_tests import PyCudaTest, have_pycuda
+from test.accelerate_tests.cuda_pycuda_tests import PyCudaTest, have_pycuda
 
 
 if have_pycuda():
