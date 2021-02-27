@@ -467,7 +467,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         test
         '''
         auxiliary_wave = np.zeros_like(ex_npy)
-        from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        from ptypy.accelerate.base.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
         AWK = AuxiliaryWaveKernel()
         alpha_set = 1.0
@@ -749,7 +749,7 @@ class FourierUpdateKernelTest(unittest.TestCase):
         auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
         ex_npy_dev = gpuarray.to_gpu(ex_npy)
 
-        from ptypy.accelerate.array_based.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        from ptypy.accelerate.base.auxiliary_wave_kernel import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
 
         AWK = AuxiliaryWaveKernel()

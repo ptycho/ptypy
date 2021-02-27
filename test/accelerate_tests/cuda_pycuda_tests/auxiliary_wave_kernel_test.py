@@ -177,7 +177,7 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         auxiliary_wave_dev = gpuarray.zeros_like(exit_wave_dev)
         
         ## Act
-        from ptypy.accelerate.array_based.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
         AWK = AuxiliaryWaveKernel(self.stream)
         alpha_set = FLOAT_TYPE(1.0)
@@ -314,7 +314,7 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         auxiliary_wave_dev = gpuarray.zeros_like(exit_wave_dev)
 
         ## Act
-        from ptypy.accelerate.array_based.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
         AWK = AuxiliaryWaveKernel(self.stream)
 
@@ -404,7 +404,7 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         AWK.allocate()
         AWK.build_aux_no_ex(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, 
             fac=1.0, add=False)
-        from ptypy.accelerate.array_based.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
         nAWK.allocate()
         nAWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, fac=1.0, add=False)
@@ -491,7 +491,7 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         AWK.allocate()
         AWK.build_aux_no_ex(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, 
             fac=2.0, add=True)
-        from ptypy.accelerate.array_based.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
         nAWK.allocate()
         nAWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, fac=2.0, add=True)
