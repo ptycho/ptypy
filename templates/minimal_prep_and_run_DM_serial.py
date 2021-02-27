@@ -6,6 +6,7 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
+from ptypy.accelerate.base.engines import DM_serial
 p = u.Param()
 
 # for verbose output
@@ -25,7 +26,7 @@ p.scans.MF.name = 'BlockFull' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
-p.scans.MF.data.num_frames = 1000
+p.scans.MF.data.num_frames = 400
 p.scans.MF.data.save = None
 
 p.scans.MF.illumination = u.Param(diversity=None)
@@ -40,7 +41,7 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_pycuda_stream'
+p.engines.engine00.name = 'DM_serial'
 p.engines.engine00.numiter = 60
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.probe_update_start = 1

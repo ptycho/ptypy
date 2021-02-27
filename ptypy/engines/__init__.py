@@ -11,8 +11,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 
-from .. import utils as u
-from .. import defaults_tree
 from .utils import *
 
 
@@ -50,21 +48,18 @@ from . import dummy
 from . import ePIE
 from . import Bragg3d_engines
 
-from . import DM_serial
-from . import ML_serial
-from . import DM_serial_stream
-from . import DM_local
-try:
-    from . import DM_pycuda
-    from . import DM_pycuda_streams
-    from . import ML_pycuda
-    from . import DM_pycuda_stream
-except:
-    pass
-try:
-    from . import DM_ocl
-except:
-    pass
+# TODO: make this better / explicit
+# try:
+#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda
+#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_streams
+#     from ptypy.accelerate.cuda_pycuda.engines import ML_pycuda
+#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream
+# except:
+#     pass
+# try:
+#     from ptypy.accelerate.ocl_pyopencl.engines import DM_ocl
+# except:
+#     pass
 
 
 # dynamic load, maybe discarded in future
