@@ -18,9 +18,9 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import BaseEngine, register, DM
-from ptypy.accelerate.array_based.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ptypy.accelerate.array_based import address_manglers
-from ptypy.accelerate.array_based import array_utils as au
+from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ptypy.accelerate.base import address_manglers
+from ptypy.accelerate.base import array_utils as au
 
 
 ### TODOS 

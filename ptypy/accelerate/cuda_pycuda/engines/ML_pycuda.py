@@ -18,7 +18,7 @@ from pycuda.tools import DeviceMemoryPool
 from collections import deque
 
 from ptypy.engines import register
-from ptypy.accelerate.array_based.engines.ML_serial import ML_serial, BaseModelSerial
+from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
 from ptypy import utils as u
 from ptypy.utils.verbose import logger
 from ptypy.utils import parallel
@@ -27,7 +27,7 @@ from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel
     PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel
 
-from ptypy.accelerate.array_based import address_manglers
+from ptypy.accelerate.base import address_manglers
 
 __all__ = ['ML_pycuda']
 

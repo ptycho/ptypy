@@ -3,8 +3,8 @@ from inspect import getfullargspec
 from pycuda import gpuarray
 from ptypy.utils.verbose import log, logger
 from . import load_kernel
-from ..array_based import kernels as ab
-from ..array_based.base import Adict
+from ..base import kernels as ab
+from archive.base.base import Adict
 
 class PropagationKernel:
 

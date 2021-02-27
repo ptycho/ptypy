@@ -7,9 +7,9 @@ import numpy as np
 from . import utils as tu
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.array_based.constraints import difference_map_realspace_constraint, scan_and_multiply
-from ptypy.accelerate.array_based.propagation import farfield_propagator
+from archive.array_based.propagation import farfield_propagator
 import ptypy.accelerate.array_based.array_utils  as au
-from ptypy.accelerate.array_based.error_metrics import log_likelihood, far_field_error, realspace_error
+from archive.array_based.error_metrics import log_likelihood, far_field_error, realspace_error
 from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 
 from . import have_cuda, only_if_cuda_available

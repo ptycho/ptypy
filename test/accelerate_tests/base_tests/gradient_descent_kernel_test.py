@@ -5,7 +5,7 @@
 
 import unittest
 import numpy as np
-from ptypy.accelerate.array_based.kernels import GradientDescentKernel
+from ptypy.accelerate.base.kernels import GradientDescentKernel
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32

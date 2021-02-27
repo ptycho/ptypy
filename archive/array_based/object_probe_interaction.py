@@ -6,9 +6,9 @@ Should have all the engine updates
 '''
 
 import numpy as np
-from .array_utils import norm2, complex_gaussian_filter, abs2, mass_center, interpolated_shift, clip_complex_magnitudes_to_range
+from ptypy.accelerate.array_based.array_utils import norm2, complex_gaussian_filter, abs2, mass_center, interpolated_shift, clip_complex_magnitudes_to_range
 from copy import deepcopy
-from . import COMPLEX_TYPE
+from ptypy.accelerate.array_based import COMPLEX_TYPE
 
 
 def difference_map_realspace_constraint(probe_and_object, exit_wave, alpha):

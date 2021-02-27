@@ -5,7 +5,7 @@ Created on 4 Jan 2018
 '''
 
 import numpy as np
-from . import FLOAT_TYPE
+from ptypy.accelerate.array_based import FLOAT_TYPE
 
 
 def _vectorise_array_access(diff_storage):

@@ -5,7 +5,7 @@ The tests for the constraints
 
 import unittest
 import numpy as np
-from . import utils as tu
+from test.archive_tests.array_based_tests import utils as tu
 from ptypy.accelerate.array_based import data_utils as du
 from collections import OrderedDict
 from ptypy.engines.utils import basic_fourier_update

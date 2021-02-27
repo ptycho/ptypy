@@ -21,9 +21,9 @@ from ptypy.utils.verbose import logger
 from ptypy.utils import parallel
 from ptypy.engines.utils import Cnorm2, Cdot
 from ptypy.engines import register
-from ptypy.accelerate.array_based.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, \
+from ptypy.accelerate.base.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, \
     PositionCorrectionKernel
-from ptypy.accelerate.array_based import address_manglers
+from ptypy.accelerate.base import address_manglers
 
 __all__ = ['ML_serial']
 

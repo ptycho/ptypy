@@ -2,7 +2,7 @@
 All propagation based kernels 
 '''
 import numpy as np
-from . import COMPLEX_TYPE
+from ptypy.accelerate.array_based import COMPLEX_TYPE
 
 def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None, direction='forward'):
     '''

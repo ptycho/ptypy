@@ -5,7 +5,7 @@
 
 import unittest
 import numpy as np
-from ptypy.accelerate.array_based.kernels import PositionCorrectionKernel
+from ptypy.accelerate.base.kernels import PositionCorrectionKernel
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
 INT_TYPE = np.int32

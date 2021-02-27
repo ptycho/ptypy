@@ -5,7 +5,7 @@ tests for the object-probe interactions, including the specific DM, ePIE etc upd
 
 import unittest
 import numpy as np
-from . import utils as tu
+from test.archive_tests.array_based_tests import utils as tu
 from copy import deepcopy
 from ptypy.accelerate.array_based import COMPLEX_TYPE, FLOAT_TYPE
 from ptypy.accelerate.array_based import data_utils as du

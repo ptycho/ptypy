@@ -3,8 +3,6 @@ utils to help with position refinement
 '''
 
 import numpy as np
-from ...utils.verbose import logger
-from copy import deepcopy as copy
 np.random.seed(0)
 class RandomIntMangle(object):
     '''

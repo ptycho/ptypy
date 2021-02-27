@@ -1,7 +1,7 @@
 import unittest
 import sys
 import numpy as np
-from ptypy.accelerate.array_based.address_manglers import RandomIntMangle
+from ptypy.accelerate.base.address_manglers import RandomIntMangle
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32

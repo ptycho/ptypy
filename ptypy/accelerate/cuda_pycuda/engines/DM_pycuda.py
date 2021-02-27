@@ -17,8 +17,8 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
-from ptypy.accelerate.array_based.engines import DM_serial
-from ptypy.accelerate.array_based import address_manglers
+from ptypy.accelerate.base.engines import DM_serial
+from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel

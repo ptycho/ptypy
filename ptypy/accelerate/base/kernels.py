@@ -1,5 +1,4 @@
 import numpy as np
-from collections import OrderedDict
 from ptypy.utils.verbose import logger, log
 
 class Adict(object):
@@ -13,7 +12,7 @@ class BaseKernel(object):
     def __init__(self):
         self.verbose = False
         self.npy = Adict()
-        self.benchmark = OrderedDict()
+        self.benchmark = {}
 
     def log(self, x):
         if self.verbose:

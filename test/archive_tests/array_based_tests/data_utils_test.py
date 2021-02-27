@@ -4,7 +4,7 @@ Created on 4 Jan 2018
 @author: clb02321
 '''
 import unittest
-from . import utils as tu
+from test.archive_tests.array_based_tests import utils as tu
 import numpy as np
 
 from ptypy.accelerate.array_based import data_utils as du

@@ -7,7 +7,7 @@ import numpy as np
 from . import utils as tu
 from ptypy.accelerate.array_based import data_utils as du
 from ptypy.accelerate.array_based import object_probe_interaction as opi
-from ptypy.accelerate.array_based import propagation as prop
+from archive.array_based import propagation as prop
 import time
 
 from . import have_cuda, only_if_cuda_available

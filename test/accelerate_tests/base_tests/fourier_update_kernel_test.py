@@ -6,9 +6,9 @@
 import unittest
 import numpy as np
 import ptypy.utils as u
-from . import utils as tu
-from ptypy.accelerate.array_based import data_utils as du
-from ptypy.accelerate.array_based.kernels import FourierUpdateKernel, AuxiliaryWaveKernel
+from test.archive_tests.base_tests import utils as tu
+from ptypy.accelerate.base import data_utils as du
+from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel
 
 
 COMPLEX_TYPE = np.complex64
