@@ -15,7 +15,6 @@ from .utils import basic_fourier_update
 from . import BaseEngine, register
 from ..utils.verbose import logger
 from ..utils import parallel
-from .. import defaults_tree
 from ..core.manager import Full, Vanilla
 
 __all__ = ['DM_simple']

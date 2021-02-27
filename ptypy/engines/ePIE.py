@@ -30,7 +30,6 @@ from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
 from . import BaseEngine, register
-from .. import defaults_tree
 from ..core.manager import Full, Vanilla
 
 __all__ = ['EPIE']

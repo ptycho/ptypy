@@ -10,7 +10,6 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 from .. import utils as u
-from ..utils.verbose import logger
 from ..utils import parallel
 from .utils import reduce_dimension
 from . import register
