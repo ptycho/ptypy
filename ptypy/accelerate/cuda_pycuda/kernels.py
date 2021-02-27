@@ -4,7 +4,7 @@ from pycuda import gpuarray
 from ptypy.utils.verbose import log, logger
 from . import load_kernel
 from ..base import kernels as ab
-from archive.base.base import Adict
+from ..base.kernels import Adict
 
 class PropagationKernel:
 

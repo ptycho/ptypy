@@ -6,6 +6,7 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
+from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda
 p = u.Param()
 
 # for verbose output

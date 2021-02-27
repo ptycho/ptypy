@@ -49,17 +49,17 @@ from . import ePIE
 from . import Bragg3d_engines
 
 # TODO: make this better / explicit
-try:
-    from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda
-    from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_streams
-    from ptypy.accelerate.cuda_pycuda.engines import ML_pycuda
-    from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream
-except:
-    pass
-try:
-    from ptypy.accelerate.ocl_pyopencl.engines import DM_ocl
-except:
-    pass
+# try:
+#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda
+#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_streams
+#     from ptypy.accelerate.cuda_pycuda.engines import ML_pycuda
+#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream
+# except:
+#     pass
+# try:
+#     from ptypy.accelerate.ocl_pyopencl.engines import DM_ocl
+# except:
+#     pass
 
 
 # dynamic load, maybe discarded in future
