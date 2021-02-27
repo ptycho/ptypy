@@ -170,10 +170,10 @@ class ML_pycuda(ML_serial):
         """
 
         try:
-            from ptypy.accelerate.py_cuda.cufft import FFT
+            from ptypy.accelerate.cuda_pycuda.cufft import FFT
         except:
             logger.warning('Unable to import cuFFT version - using Reikna instead')
-            from ptypy.accelerate.py_cuda.fft import FFT
+            from ptypy.accelerate.cuda_pycuda.fft import FFT
 
         AUK = ArrayUtilsKernel(queue=self.queue)
         self._dot_kernel = AUK.dot
