@@ -14,9 +14,10 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy import defaults_tree
-from ptypy.engines import register, DM_serial
+from ptypy.engines import register
 from ptypy.engines.base import PositionCorrectionEngine
 from ptypy.core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
+from ptypy.accelerate.base.engines import DM_serial
 from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
