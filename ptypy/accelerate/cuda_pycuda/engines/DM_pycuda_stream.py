@@ -44,10 +44,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
     def __init__(self, ptycho_parent, pars = None):
 
         super(DM_pycuda_stream, self).__init__(ptycho_parent, pars)
-        self.dmp = DeviceMemoryPool()
-        self.qu_htod = cuda.Stream()
-        self.qu_dtoh = cuda.Stream()
-
         self.ma_data = None
         self.mag_data = None
         self.ex_data = None
@@ -55,6 +51,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         self._ex_blocks_on_device = {}
         self._data_blocks_on_device = {}
 
+    def engine_initialize(self):
+        super().engine_initialize()
+        self.dmp = DeviceMemoryPool()
+        self.qu_htod = cuda.Stream()
+        self.qu_dtoh = cuda.Stream()
 
     def _setup_kernels(self):
 
@@ -290,15 +291,16 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     # #ex = prep.ex_gpu
                     
                     # Make sure the ex array is on GPU
-                    ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod, self.qu_dtoh)
+                    ev_ex, ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod, self.qu_dtoh)
 
                     # Fourier update.
                     if do_update_fourier:
+                        self.ex_data.syncback = True
                         log(4, '----- Fourier update -----', True)
 
                         # Make sure our data arrays are on device
-                        ma = self.ma_data.to_gpu(prep.ma, dID, self.qu_htod, self.qu_dtoh)
-                        mag = self.mag_data.to_gpu(prep.mag, dID, self.qu_htod, self.qu_dtoh)
+                        ev_ma, ma = self.ma_data.to_gpu(prep.ma, dID, self.qu_htod, self.qu_dtoh)
+                        ev_mag, mag = self.mag_data.to_gpu(prep.mag, dID, self.qu_htod, self.qu_dtoh)
 
                         #ev_ma_set, ma = dp.set_array(prep.ma)
                         #ev_mag_set, mag = dp.set_array(prep.mag)
@@ -306,6 +308,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         ## compute log-likelihood
                         if self.p.compute_log_likelihood:
+                            self.queue.wait_for_event(ev_mag)
                             t1 = time.time()
                             AWK.build_aux_no_ex(aux, addr, ob, pr)
                             PROP.fw(aux, aux)
@@ -313,6 +316,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                             FUK.log_likelihood(aux, addr, mag, ma, err_phot)
                             self.benchmark.F_LLerror += time.time() - t1
 
+                        self.queue.wait_for_event(ev_mag)
                         t1 = time.time()
                         AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                         self.benchmark.A_Build_aux += time.time() - t1
@@ -326,6 +330,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         ## Deviation from measured data
                         #self.queue.wait_for_event(ev_ma_set) # this is technically not needed as we cross cuda-queues
                         #self.queue.wait_for_event(ev_mag_set)
+                        self.queue.wait_for_event(ev_mag)
                         FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
                         FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
@@ -426,6 +431,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 if not do_update_probe:
                     break
 
+                self.ex_data.syncback = False
                 # Update probe
                 log(4, prestr + '----- probe update -----', True)
                 change = self.probe_update(MPI=MPI)
@@ -481,7 +487,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
 
-            ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod, self.qu_dtoh)
+            ev, ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod, self.qu_dtoh)
+            self.queue.wait_for_event(ev)
             # self.gpu_swap_ex(upload=True)
             # prep.ev_ex_h2d.synchronize()
             # scan for-loop
@@ -546,3 +553,16 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
         return np.sqrt(change)
 
+    def engine_finalize(self):
+        """
+        Clear all GPU data, pinned memory, etc
+        """
+        self.ex_data = None
+        self.ma_data = None
+        self.mag_data = None
+
+        # copy data to cpu
+        for name, s in self.pr.S.items():
+            s.data = np.copy(s.data) # is this the same as s.data.get()?
+
+        super().engine_finalize()

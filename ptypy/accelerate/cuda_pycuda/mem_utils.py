@@ -231,7 +231,7 @@ class GpuData2(GpuData):
         """
         super().__init__(nbytes, syncback)
 
-    def to_gpu(self, cpu, stream, upstream=None, ident=None):
+    def to_gpu(self, cpu, ident, stream, upstream=None):
         """
         Transfer cpu array to GPU on stream (async), keeping track of its id
         """
@@ -239,7 +239,7 @@ class GpuData2(GpuData):
         upstream = stream if upstream is None else upstream
         if self.gpuId != ident:
             # wait for any action recorded with that array
-            if self.ev_done is None:
+            if self.ev_done is not None:
                 stream.wait_for_event(self.ev_done)
                 upstream.wait_for_event(self.ev_done)
             if self.syncback:
@@ -250,7 +250,7 @@ class GpuData2(GpuData):
             self.cpu = cpu
             self.gpu = gpuarray.to_gpu_async(cpu, allocator=self._allocator, stream=stream)
             self.record_done(stream)
-        return self.gpu
+        return self.ev_done, self.gpu
 
     def from_gpu(self, stream):
         """
