@@ -98,8 +98,8 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.gpu.ferr = None
 
     def allocate(self):
-        self.gpu.fdev  = gpuarray.zeros(self.fshape, dtype=np.float32)
-        self.gpu.ferr  = gpuarray.zeros(self.fshape, dtype=np.float32)
+        self.gpu.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
+        self.gpu.ferr = gpuarray.zeros(self.fshape, dtype=np.float32)
 
     def fourier_error(self, f, addr, fmag, fmask, mask_sum):
         fdev = self.gpu.fdev

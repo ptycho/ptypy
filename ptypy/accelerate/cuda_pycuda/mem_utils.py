@@ -151,6 +151,9 @@ class GpuDataManager:
             m += d.nbytes_buffer
         return m
 
+    def __len__(self):
+        return len(self.data)
+
     def reset(self, nbytes, num):
         """
         Reset this object as if these parameters were given to the constructor.
