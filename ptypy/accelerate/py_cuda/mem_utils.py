@@ -1,6 +1,7 @@
 import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
+from pycuda.tools import DeviceMemoryPool
 
 def make_pagelocked_paired_arrays(ar, flags=0):
     mem = cuda.pagelocked_empty(ar.shape, ar.dtype, order="C", mem_flags=flags)
@@ -206,3 +207,96 @@ class GpuDataManager:
         """
         for x in self.data:
             x.from_gpu(stream)
+
+class EvData:
+
+    def __init__(self):
+        self.ev_download = None
+        self.ev_upload = None
+        self.ev_cycle = None
+        self.ev_compute = None
+
+    def record_download(self, stream):
+        ev = cuda.Event()
+        ev.record(stream)
+        self.ev_download = ev
+        return ev
+
+    def record_upload(self, stream):
+        ev = cuda.Event()
+        ev.record(stream)
+        self.ev_upload = ev
+        return ev
+
+    def record_compute(self, stream):
+        ev = cuda.Event()
+        ev.record(stream)
+        self.ev_cycle = ev
+        return ev
+
+    def record_cycle(self, stream):
+        ev = cuda.Event()
+        ev.record(stream)
+        self.ev_compute = ev
+        return ev
+
+    @property
+    def is_on_dev(self):
+        ev_d = self.ev_download
+        ev_u = self.ev_upload
+        if ev_d is not None and ev_d.query():
+            if ev_u is None:
+                return True
+            else:
+                if ev_u.query():
+                    # upload event has happened
+                    if ev_d.time_since(ev_u) > 0:
+                        return True
+        return False
+
+    @property
+    def computed(self):
+
+class ManagedPool:
+
+    def __init__(self, nbytes=None):
+
+        self.dmp = DeviceMemoryPool()
+        self.nbytes_allocated = 0
+        self.nbytes = nbytes if nbytes is not None else cuda.mem_get_info()[0]
+        # this one keeps the refs alive
+        self.dev_data = {}
+        self.upstream = None
+        self.downstream = None
+        self.ev_computed = {}
+        self.set_io_streams()
+
+    def set_io_streams(self, downstream=None, upstream=None):
+        self.upstream = cuda.Stream() if upstream is not None else upstream
+        self.downstream = cuda.Stream() if downstream is not None else downstream
+
+    def computed(self, ary, ev):
+        self.ev_computed[id(ary)]=ev
+
+    def _allocator(self, nbytes):
+        # this one gets called if
+        return self.dmp.allocate(nbytes)
+
+    def get_array(self, ary, stream=None):
+
+    def set_array(self, ary, synchback=None, stream=None):
+        """
+        Schedule an (asynchronous) array transfer to gpu or return array if the data is already there.
+        """
+        if stream is None:
+            stream = self.downstream
+        n = id(ary)
+        if synchback is not None:
+            # get the last event
+            if n in self.ev_computed:
+                self.upstream.wait_for_event(self.ev_computed[n])
+            self.dev_data[n].get_async(self.upstream, synchback)
+            ev = cuda.Event()
+            ev.record(self.upstream)
+        gpu = gpuarray.to_gpu_async(ary, allocator=self._allocater, stream=stream)
+        self.dev_data[id] = gpu

@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Difference Map reconstruction engine.
+Difference Map reconstruction engine for NVIDIA GPUs.
+
+This engine uses three streams, one for the compute queue and one for each I/O queue.
+Events are used to synchronize download / compute/ upload. we cannot manipulate memory
+for each loop over the state vector, a certain number of memory sections is preallocated
+and reused.
 
 This file is part of the PTYPY package.
 
@@ -231,25 +236,33 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     obb = self.ob_buf.S[oID].gpu
                     pr = self.pr.S[pID].gpu
 
-                    self.gpu_swap_ex()
-                    prep.ev_ex_h2d.synchronize()
-                    ex = prep.ex_gpu
+                    # get me the next exit wave
+                    ev_ex_set, ex = ep.set_array(prep.ex, synchback=True)
+                    #self.gpu_swap_ex()
+                    #prep.ev_ex_h2d.synchronize()
+                    #ex = prep.ex_gpu
                     
                     # Fourier update.
                     if do_update_fourier:
                         log(4, '----- Fourier update -----', True)
-                        
-                        self.gpu_swap_data()
+
+                        ev_ma_set, ma = dp.set_array(prep.ma)
+                        ev_mag_set, mag = dp.set_array(prep.mag)
+                        #self.gpu_swap_data()
 
                         ## compute log-likelihood
                         if self.p.compute_log_likelihood:
                             t1 = time.time()
                             AWK.build_aux_no_ex(aux, addr, ob, pr)
                             PROP.fw(aux, aux)
+                            # synchronize h2d stream
+                            FUK.queue.wait_for_event(ev_ma_set)
+                            FUK.queue.wait_for_event(ev_mag_set)
                             FUK.log_likelihood(aux, addr, mag, ma, err_phot)
                             self.benchmark.F_LLerror += time.time() - t1
 
                         t1 = time.time()
+                        AWK.queue.wait_for_event(ex_ev)
                         AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                         self.benchmark.A_Build_aux += time.time() - t1
 
@@ -259,20 +272,24 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         PROP.fw(aux, aux)
                         self.benchmark.B_Prop += time.time() - t1
 
-                        prep.ev_data_h2d.synchronize()
-                        ma = prep.ma_gpu
-                        mag = prep.mag_gpu
+                        #prep.ev_data_h2d.synchronize()
+                        #ma = prep.ma_gpu
+                        #mag = prep.mag_gpu
 
                         ## Deviation from measured data
-                        t1 = time.time()
+                        self.queue.wait_for_event(ev_ma_set) # this is technically not needed as we cross cuda-queues
+                        self.queue.wait_for_event(ev_mag_set)
                         FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
                         FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
                         self.benchmark.C_Fourier_update += time.time() - t1
-                        
+
+                        ev = cuda.Event()
+                        ev.record(self.queue)
                         # Mark computed
-                        self._data_blocks_on_device[dID] = 3
-                        
+                        dp.computed(prep.ma, ev)
+                        dp.computed(prep.mag, ev)
+
                         t1 = time.time()
                         PROP.bw(aux, aux)
                         ## apply changes
@@ -296,24 +313,31 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self.benchmark.object_update += time.time() - t1
                         self.benchmark.calls_object += 1
 
+                    ev = cuda.Event()
+                    ev.record(self.queue)
+                    ep.computed(prep.ex, ev)
                     # mark as computed
-                    prep.ev_ex_d2h = cuda.Event()
-                    prep.ev_ex_d2h.record(self.queue)
-                    self._ex_blocks_on_device[dID] = 3
+                    #prep.ev_ex_d2h = cuda.Event()
+                    #prep.ev_ex_d2h.record(self.queue)
+                    #self._ex_blocks_on_device[dID] = 3
 
-                for _dID, stat in self._ex_blocks_on_device.items():
-                    if stat == 3: self._ex_blocks_on_device[_dID] = 2
-                    elif stat == 0: self._ex_blocks_on_device[_dID] = 1
-
-                for _dID, stat in self._data_blocks_on_device.items():
-                    if stat == 3: self._data_blocks_on_device[_dID] = 2
-                    elif stat == 0: self._data_blocks_on_device[_dID] = 1
+                # for _dID, stat in self._ex_blocks_on_device.items():
+                #     if stat == 3: self._ex_blocks_on_device[_dID] = 2
+                #     elif stat == 0: self._ex_blocks_on_device[_dID] = 1
+                #
+                # for _dID, stat in self._data_blocks_on_device.items():
+                #     if stat == 3: self._data_blocks_on_device[_dID] = 2
+                #     elif stat == 0: self._data_blocks_on_device[_dID] = 1
 
                 # swap direction
                 if do_update_fourier:
                     self.dID_list.reverse()
 
+                # wait for compute stream to finish
+                self.queue.synchronize()
+
                 if do_update_object:
+
                     for oID, ob in self.ob.storages.items():
                         obn = self.ob_nrm.S[oID]
                         obb = self.ob_buf.S[oID]
@@ -380,7 +404,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             #pr.gpu *= np.float64(cfact)
             pr.gpu._axpbz(np.complex64(cfact), 0, pr.gpu, stream=queue)
             prn.gpu.fill(np.float32(cfact), stream=self.queue)
-
 
         for dID in self.dID_list:
             prep = self.diff_info[dID]
