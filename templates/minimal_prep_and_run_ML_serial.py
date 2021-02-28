@@ -6,6 +6,8 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
+from ptypy.accelerate.base.engines import ML_serial
+
 p = u.Param()
 
 # for verbose output

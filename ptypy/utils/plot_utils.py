@@ -353,6 +353,8 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
             vmin = a.min()
         if vmax is None:
             vmax = a.max()
+        if vmin == vmax:
+            vmin, vmax = 0.9 * vmin, 1.1 * vmax
         im = Image.fromarray((255*(a.clip(vmin,vmax)-vmin)/(vmax-vmin)).astype('uint8'))
         if cmap is not None:
             r = im.point(lambda x: cmap(x/255.0)[0] * 255)
@@ -814,8 +816,8 @@ class PtyAxis(object):
         self.cax.set_position((b[0], a[1], self.cax_width, a[3]))
 
         if self.channel == 'c':
+            self.cax.xaxis.set_major_locator(mpl.ticker.FixedLocator([0,np.pi, 2*np.pi]))
             self.cax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(['0', '$\pi$', '2$\pi$']))
-            self.cax.xaxis.set_major_locator(mpl.ticker.LinearLocator(3))
             self.cax.set_xlabel('phase [rad]', fontsize=self.fontsize+2)
             self.cax.xaxis.set_label_position("top")
 

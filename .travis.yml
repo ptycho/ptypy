@@ -44,7 +44,7 @@ script:
   - echo $PYTHONPATH
   - conda list
   - python setup.py install # install ptypy
-  - py.test ptypy/test -v --ignore=ptypy/test/accelerate_tests --cov ptypy --cov-report term-missing # now run the tests
+  - py.test test -v --ignore=ptypy/test/accelerate_tests --cov ptypy --cov-report term-missing # now run the tests
 
 after_script:
   - coveralls

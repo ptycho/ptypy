@@ -13,9 +13,7 @@ import time
 from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline, log
-from ..utils.descriptor import EvalDescriptor
 from .posref import AnnealingRefine
-import gc
 
 __all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info', 'PositionCorrectionEngine']
 

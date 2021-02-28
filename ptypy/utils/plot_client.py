@@ -525,11 +525,11 @@ class MPLplotter(object):
                 err_phot = error[:, 1]
                 err_exit = error[:, 2]
                 axis.clear()
-                fmag = err_fmag/np.max(err_fmag)
+                fmag = err_fmag/np.max(err_fmag) if np.max(err_fmag) > 0 else err_fmag
                 axis.plot(fmag, label='err_fmag %2.2f%% of %.2e' % (fmag[-1]*100, np.max(err_fmag)))
-                phot = err_phot/np.max(err_phot)
+                phot = err_phot/np.max(err_phot) if np.max(err_phot) > 0 else err_phot
                 axis.plot(phot, label='err_phot %2.2f%% of %.2e' % (phot[-1]*100, np.max(err_phot)))
-                ex = err_exit/np.max(err_exit)
+                ex = err_exit/np.max(err_exit) if np.max(err_exit) > 0 else err_exit
                 axis.plot(ex, label='err_exit %2.2f%% of %.2e' % (ex[-1]*100, np.max(err_exit)))
                 axis.legend(loc=1, fontsize=10) #('err_fmag %.2e' % np.max(err_fmag),'err_phot %.2e' % np.max(err_phot),'err_exit %.2e' % np.max(err_exit)),
                 plt.setp(axis.get_xticklabels(), fontsize=10)
