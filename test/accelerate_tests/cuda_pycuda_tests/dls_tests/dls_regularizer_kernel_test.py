@@ -44,7 +44,7 @@ class DlsRegularizerTest(PyCudaTest):
         ## Assert
         np.testing.assert_allclose(obr, obr_dev.get(),  atol=self.atol, rtol=self.rtol, 
             err_msg="The object array has not been updated as expected")
-        np.testing.assert_allclose(regul.LL, regul_pycuda.LL.get(),  atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(regul.LL, regul_pycuda.LL,  atol=self.atol, rtol=self.rtol, 
             err_msg="The LL array has not been updated as expected")
 
 
@@ -65,8 +65,8 @@ class DlsRegularizerTest(PyCudaTest):
 
         # GPU Kernel
         regul_pycuda = Regul_del2_pycuda(0.1, queue=self.stream, allocator=cuda.mem_alloc)
-        res_dev = regul_pycuda.poly_line_coeffs(obh_dev, ob_dev)
+        res_pycuda = regul_pycuda.poly_line_coeffs(obh_dev, ob_dev)
 
         ## Assert
-        np.testing.assert_allclose(res, res_dev.get(),  atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(res, res_pycuda,  atol=self.atol, rtol=self.rtol, 
             err_msg="The B array has not been updated as expected")

@@ -44,7 +44,7 @@ class DlsPoUpdateKernelTest(PyCudaTest):
 
         # GPU Kernel
         POK = PoUpdateKernel()
-        POK.ob_update_ML(addr_dev, obg_dev, pr_dev, aux_dev)
+        POK.ob_update_ML(addr_dev, obg_dev, pr_dev, aux_dev, atomics=True)
 
         ## Assert
         np.testing.assert_allclose(obg, obg_dev.get(),  atol=self.atol, rtol=self.rtol, 
@@ -71,7 +71,7 @@ class DlsPoUpdateKernelTest(PyCudaTest):
 
         # GPU Kernel
         POK = PoUpdateKernel()
-        POK.ob_update_ML(addr_dev, prg_dev, ob_dev, aux_dev)
+        POK.pr_update_ML(addr_dev, prg_dev, ob_dev, aux_dev, atomics=True)
         
         ## Assert
         np.testing.assert_allclose(prg, prg_dev.get(),  atol=self.atol, rtol=self.rtol, 

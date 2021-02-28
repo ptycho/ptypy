@@ -17,7 +17,6 @@ COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
 INT_TYPE = np.int32
 
-
 class DlsGradientDescentKernelTest(PyCudaTest):
 
     datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data/"
@@ -47,7 +46,7 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         GDK.make_model(aux_dev, addr_dev)
 
         ## Assert
-        np.testing.assert_allclose(BGDK.cpu.Imodel, GDK.gpu.Imodel.get(), atol=self.atol, rtol=self.rtol,
+        np.testing.assert_allclose(BGDK.npy.Imodel, GDK.gpu.Imodel.get(), atol=self.atol, rtol=self.rtol,
             err_msg="`Imodel` buffer has not been updated as expected")
 
 
@@ -80,7 +79,7 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         GDK.floating_intensity(addr_dev, w_dev, I_dev, fic_dev)
 
         ## Assert
-        np.testing.assert_allclose(BGDK.cpu.Imodel, GDK.gpu.Imodel.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(BGDK.npy.Imodel, GDK.gpu.Imodel.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="`Imodel` buffer has not been updated as expected")
         np.testing.assert_allcolse(fic, fic_dev.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="floating intensity coeff (fic) has not been updated as expected")
@@ -120,7 +119,7 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         ## Assert
         np.testing.assert_allclose(aux, aux_dev.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="Auxiliary has not been updated as expected")
-        np.testing.assert_allclose(BGDK.cpu.LLerr, GDK.gpu.LLerr.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(BGDK.npy.LLerr, GDK.gpu.LLerr.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="LogLikelihood error has not been updated as expected")
         np.testing.assert_array_allclose(err_phot, err_phot_dev.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="`err_phot` has not been updated as expected")
@@ -159,11 +158,11 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         GDK.make_a012(f_dev, a_dev, b_dev, addr_dev, I_dev, fic_dev)
 
         ## Assert
-        np.testing.assert_allclose(BGDK.cpu.Imodel, GDK.gpu.Imodel.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(BGDK.npy.Imodel, GDK.gpu.Imodel.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="Imodel error has not been updated as expected")
-        np.testing.assert_allclose(BGDK.cpu.LLerr, GDK.gpu.LLerr.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(BGDK.npy.LLerr, GDK.gpu.LLerr.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="LLerr error has not been updated as expected")
-        np.testing.assert_allclose(BGDK.cpu.LLden, GDK.gpu.LLden.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(BGDK.npy.LLden, GDK.gpu.LLden.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="LLden error has not been updated as expected")
 
 

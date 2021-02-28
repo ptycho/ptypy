@@ -47,13 +47,13 @@ class DLsPropagationKernelTest(PyCudaTest):
 
         # Load data
         with h5py.File(self.datadir + "forward_%04d.h5" %self.iter, "r") as f:
-            aux = f["aux"][:]
+            aux = f["aux"][0]
 
         # Copy data to device
         aux_dev = gpuarray.to_gpu(aux)
 
         # Geometry
-        geo = self.set_up_farfield(aux.shape[1:])
+        geo = self.set_up_farfield(aux.shape)
 
         # CPU kernel
         aux = geo.propagator.fw(aux)
@@ -65,20 +65,20 @@ class DLsPropagationKernelTest(PyCudaTest):
 
         ## Assert
         np.testing.assert_allclose(aux, aux_dev.get(), atol=self.atol, rtol=self.rtol, 
-            err_msg="CPU aux is \n%s, \nbut GPU aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))
+            err_msg="Forward propagation was not as expected")
 
 
-    def test_ackward_UNITY(self):
+    def test_backward_UNITY(self):
 
         # Load data
         with h5py.File(self.datadir + "backward_%04d.h5" %self.iter, "r") as f:
-            aux = f["aux"][:]
+            aux = f["aux"][0]
 
         # Copy data to device
         aux_dev = gpuarray.to_gpu(aux)
 
         # Geometry
-        geo = self.set_up_farfield(aux.shape[1:])
+        geo = self.set_up_farfield(aux.shape)
 
         # CPU kernel
         aux = geo.propagator.bw(aux)
@@ -90,4 +90,4 @@ class DLsPropagationKernelTest(PyCudaTest):
 
         ## Assert
         np.testing.assert_allclose(aux, aux_dev.get(), atol=self.atol, rtol=self.rtol, 
-            err_msg="CPU aux is \n%s, \nbut GPU aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))
+            err_msg="Backward propagation was not as expected")
