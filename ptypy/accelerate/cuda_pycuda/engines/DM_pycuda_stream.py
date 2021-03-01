@@ -210,12 +210,12 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         #ma_buf = ma_c = np.zeros(FUK.fshape, dtype=np.float32)
         self.dID_list = list(self.di.S.keys())
 
-        self._ex_blocks_on_device = dict.fromkeys(self.dID_list,1)
-        self._data_blocks_on_device = dict.fromkeys(self.dID_list,1)
-        # 0: used, freed
-        # 1: unused, not on device
-        # 2: transfer to or on device
-        # 3: used, on device
+        # self._ex_blocks_on_device = dict.fromkeys(self.dID_list,1)
+        # self._data_blocks_on_device = dict.fromkeys(self.dID_list,1)
+        # # 0: used, freed
+        # # 1: unused, not on device
+        # # 2: transfer to or on device
+        # # 3: used, on device
 
         # atomics or tiled version for probe / object update kernels
         atomics_probe = self.p.probe_update_cuda_atomics
@@ -291,7 +291,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     # #ex = prep.ex_gpu
                     
                     # Make sure the ex array is on GPU
-                    ev_ex, ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod, self.qu_dtoh)
+                    ev_ex, ex, data_ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod)
 
                     # Fourier update.
                     if do_update_fourier:
@@ -299,8 +299,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         log(4, '----- Fourier update -----', True)
 
                         # Make sure our data arrays are on device
-                        ev_ma, ma = self.ma_data.to_gpu(prep.ma, dID, self.qu_htod, self.qu_dtoh)
-                        ev_mag, mag = self.mag_data.to_gpu(prep.mag, dID, self.qu_htod, self.qu_dtoh)
+                        ev_ma, ma, data_ma = self.ma_data.to_gpu(prep.ma, dID, self.qu_htod)
+                        ev_mag, mag, data_mag = self.mag_data.to_gpu(prep.mag, dID, self.qu_htod)
 
                         #ev_ma_set, ma = dp.set_array(prep.ma)
                         #ev_mag_set, mag = dp.set_array(prep.mag)
@@ -316,7 +316,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                             FUK.log_likelihood(aux, addr, mag, ma, err_phot)
                             self.benchmark.F_LLerror += time.time() - t1
 
-                        self.queue.wait_for_event(ev_mag)
+                        self.queue.wait_for_event(ev_ex)
                         t1 = time.time()
                         AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                         self.benchmark.A_Build_aux += time.time() - t1
@@ -328,37 +328,17 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self.benchmark.B_Prop += time.time() - t1
 
                         ## Deviation from measured data
-                        #self.queue.wait_for_event(ev_ma_set) # this is technically not needed as we cross cuda-queues
-                        #self.queue.wait_for_event(ev_mag_set)
                         self.queue.wait_for_event(ev_mag)
                         FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
                         FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
 
                         # We are partially synchronous with compute
-                        self.queue.synchronize()
+                        #self.queue.synchronize()
                         self.benchmark.C_Fourier_update += time.time() - t1
 
-                        # Mark ma and mag release for release
-                        self.swap_gpu_data(self.ma_data,'ma', iblock)
-                        self.swap_gpu_data(self.mag_data,'mag', iblock)
-
-                        # # Suggest the block which will replace this one
-                        # if iblock+len(self.ma_data)<len(self.dID_list):
-                        #     dID = self.dID_list[iblock+len(self.ma_data)]
-                        #     ma = self.diff_info[dID].ma
-                        #     self.ma_data.to_gpu(ma, dID, self.qu_htod, self.qu_dtoh)
-                        #
-                        # if iblock+len(self.mag_data) < len(self.dID_list):
-                        #     dID = self.dID_list[iblock + len(self.mag_data)]
-                        #     mag = self.diff_info[dID].mag
-                        #     self.mag_data.to_gpu(mag, dID, self.qu_htod, self.qu_dtoh)
-
-                        #ev = cuda.Event()
-                        #ev.record(self.queue)
-                        # Mark computed
-                        #dp.computed(prep.ma, ev)
-                        #dp.computed(prep.mag, ev)
+                        data_mag.record_done(self.queue, 'compute')
+                        data_ma.record_done(self.queue, 'compute')
 
                         t1 = time.time()
                         PROP.bw(aux, aux)
@@ -367,7 +347,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         FUK.exit_error(aux, addr)
                         FUK.error_reduce(addr, err_exit)
 
-                        self.queue.synchronize()
                         self.benchmark.E_Build_exit += time.time() - t1
                         self.benchmark.calls_fourier += 1
 
@@ -383,7 +362,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self.benchmark.object_update += time.time() - t1
                         self.benchmark.calls_object += 1
 
-                    self.swap_gpu_data(self.ex_data,'ex', iblock)
+                    data_ex.record_done(self.queue, 'compute')
+                    if iblock + len(self.ex_data) < len(self.dID_list):
+                        data_ex.from_gpu(self.qu_dtoh)
+
+                    #self.swap_gpu_data(self.ex_data,'ex', iblock)
 
                     # ev = cuda.Event()
                     # ev.record(self.queue)
@@ -402,7 +385,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 #     elif stat == 0: self._data_blocks_on_device[_dID] = 1
 
                 # swap direction
-                if do_update_fourier:
+                if do_update_fourier or do_update_object:
                     self.dID_list.reverse()
 
                 # wait for compute stream to finish
@@ -487,7 +470,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
 
-            ev, ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod, self.qu_dtoh)
+            ev, ex, data_ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod)
             self.queue.wait_for_event(ev)
             # self.gpu_swap_ex(upload=True)
             # prep.ev_ex_h2d.synchronize()
@@ -500,7 +483,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                                ex,
                                atomics=use_atomics)
 
-            self.swap_gpu_data(self.ex_data, 'ex', iblock)
+            data_ex.record_done(self.queue, 'compute')
+            if iblock + len(self.ex_data) < len(self.dID_list):
+                data_ex.from_gpu(self.qu_dtoh)
+
+            #self.swap_gpu_data(self.ex_data, 'ex', iblock)
 
         #     # mark as computed
         #     prep.ev_ex_d2h = cuda.Event()
@@ -515,6 +502,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
         self.dID_list.reverse()
 
+        self.queue.synchronize()
         for pID, pr in self.pr.storages.items():
 
             buf = self.pr_buf.S[pID]

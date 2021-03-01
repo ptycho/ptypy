@@ -229,27 +229,31 @@ class GpuData2(GpuData):
         :param nbytes: Number of bytes held by this instance.
         :param syncback: Should the data be synced back to CPU any time it's swapped out
         """
+        self.done_what = None
         super().__init__(nbytes, syncback)
 
-    def to_gpu(self, cpu, ident, stream, upstream=None):
+    def record_done(self, stream, what):
+        assert what in ['dtoh','htod','compute']
+        self.ev_done = cuda.Event()
+        self.ev_done.record(stream)
+        self.done_what = what
+
+    def to_gpu(self, cpu, ident, stream):
         """
         Transfer cpu array to GPU on stream (async), keeping track of its id
         """
         ident = id(cpu) if ident is None else ident
-        upstream = stream if upstream is None else upstream
         if self.gpuId != ident:
-            # wait for any action recorded with that array
             if self.ev_done is not None:
                 stream.wait_for_event(self.ev_done)
-                upstream.wait_for_event(self.ev_done)
-            if self.syncback:
-                ev = self.from_gpu(upstream)
-                if ev is not None:
-                    stream.wait_for_event(ev)
+            # safety measure. this is asynchronous, but it should still work
+            if self.done_what != 'dtoh' and self.syncback:
+                # uploads on the download stream, easy to spot in nsight-sys
+                self.from_gpu(stream)
             self.gpuId = ident
             self.cpu = cpu
             self.gpu = gpuarray.to_gpu_async(cpu, allocator=self._allocator, stream=stream)
-            self.record_done(stream)
+            self.record_done(stream, 'htod')
         return self.ev_done, self.gpu
 
     def from_gpu(self, stream):
@@ -258,12 +262,14 @@ class GpuData2(GpuData):
         before.
         """
         if self.cpu is not None and self.gpuId is not None and self.gpu is not None:
+            # Wait for any action recorded with this array
             if self.ev_done is not None:
                 stream.wait_for_event(self.ev_done)
             self.gpu.get_async(stream, self.cpu)
-            ev = cuda.Event()
-            ev.record(stream)
-            return ev
+            self.record_done(stream, 'dtoh')
+            # Mark for reuse
+            self.gpuId = None
+            return self.ev_done
         else:
             return None
 
@@ -361,7 +367,7 @@ class GpuDataManager2:
         self.reset(0, 0)
 
 
-    def to_gpu(self, cpu, id, stream, upstream=None, pop_id=None):
+    def to_gpu(self, cpu, id, stream, pop_id=None):
         """
         Transfer a block to the GPU, given its ID and CPU data array
         """
@@ -376,7 +382,10 @@ class GpuDataManager2:
             pass
         m = self.data.pop(idx)
         self.data.append(m)
-        return m.to_gpu(cpu, id, stream, upstream)
+        print("Swap %s for %s and move from %d to %d" % (m.gpuId,id,idx,len(self.data)))
+        ev, gpu = m.to_gpu(cpu, id, stream)
+        # return the wait event, the gpu array and the function to register a finished computation
+        return ev, gpu, m
 
     def sync_to_cpu(self, stream):
         """
