@@ -25,10 +25,9 @@ MPI = True
 
 # factor how many more exit waves we wanna keep on GPU compared to 
 # ma / mag data
-EX_MA_BLOCKS_RATIO = 1
+EX_MA_BLOCKS_RATIO = 2
 MAX_STREAMS = 500   # max number of streams to use
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
-MAX_BLOCKS = 3
 
 __all__ = ['DM_pycuda_streams']
 

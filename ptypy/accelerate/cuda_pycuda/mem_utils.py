@@ -277,23 +277,27 @@ class GpuDataManager2:
     """
     Manages a set of GpuData instances, to keep several blocks on device.
 
+    Currently all blocks must be the same size.
+
     Note that the syncback property is used so that during fourier updates,
     the exit wave array is synced bck to cpu (it is updated),
     while during probe update, it's not.
     """
 
-    def __init__(self, nbytes, num, syncback=False):
+    def __init__(self, nbytes, num, max=None, syncback=False):
         """
         Create an instance of GpuDataManager.
         Parameters are the same as for GpuData, and num is the number of
         GpuData instances to create (blocks on device).
         """
         self._syncback = syncback
+        self._nbytes = nbytes
         self.data = []
+        self.max = max
         for i in range(num):
-            self.add_data_block(nbytes)
+            self.add_data_block()
 
-    def add_data_block(self, nbytes):
+    def add_data_block(self, nbytes=None):
         """
         Add a GpuData block.
 
@@ -304,7 +308,9 @@ class GpuDataManager2:
         Returns
         -------
         """
-        self.data.append(GpuData2(nbytes, self._syncback))
+        if self.max is None or len(self)<=self.max:
+            nbytes=nbytes if nbytes is not None else self._nbytes
+            self.data.append(GpuData2(nbytes, self._syncback))
 
     @property
     def syncback(self):

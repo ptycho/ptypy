@@ -33,7 +33,7 @@ MPI = True
 
 EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
-MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
+#MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
 
 __all__ = ['DM_pycuda_stream']
 
@@ -65,17 +65,16 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         mem = cuda.mem_get_info()[0]
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
         fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
-        fit = min(MAX_BLOCKS, fit)
-        blocks = MAX_BLOCKS
-        # TODO grow blocks dynamically
-        nex = min(fit * EX_MA_BLOCKS_RATIO, blocks)
-        nma = min(fit, blocks)
 
-        log(3, 'PyCUDA blocks fitting on GPU: exit arrays={}, ma_arrays={}, totalblocks={}'.format(nex, nma, blocks))
+        # TODO grow blocks dynamically
+        nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
+        nma = min(fit, MAX_BLOCKS)
+
+        log(3, 'PyCUDA max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
         # reset memory or create new
-        self.ex_data = GpuDataManager2(ex_mem, nex, True)
-        self.ma_data = GpuDataManager2(ma_mem, nma, False)
-        self.mag_data = GpuDataManager2(mag_mem, nma, False)
+        self.ex_data = GpuDataManager2(ex_mem, 0, nex, True)
+        self.ma_data = GpuDataManager2(ma_mem, 0, nma, False)
+        self.mag_data = GpuDataManager2(mag_mem, 0, nma, False)
 
     def engine_prepare(self):
 
@@ -101,7 +100,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             if use_tiles:
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
-                
+
         for label, d in self.ptycho.new_data:
             dID = d.ID
             prep = self.diff_info[dID]
@@ -123,6 +122,10 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             mag = prep.mag
             prep.mag = cuda.pagelocked_empty(mag.shape, mag.dtype, order="C", mem_flags=4)
             prep.mag[:] = mag
+
+            self.ex_data.add_data_block()
+            self.ma_data.add_data_block()
+            self.mag_data.add_data_block()
 
     def engine_iterate(self, num=1):
         """
