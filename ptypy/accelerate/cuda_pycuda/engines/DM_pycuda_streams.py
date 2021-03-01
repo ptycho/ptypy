@@ -594,8 +594,4 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         self.ma_data = None
         self.mag_data = None
 
-        # copy data to cpu
-        for name, s in self.pr.S.items():
-            s.data = np.copy(s.data) # is this the same as s.data.get()?
-
         super().engine_finalize()

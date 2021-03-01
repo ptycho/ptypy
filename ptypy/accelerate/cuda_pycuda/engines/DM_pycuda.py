@@ -471,15 +471,22 @@ class DM_pycuda(DM_serial.DM_serial):
         """
         clear GPU data and destroy context.
         """
-        for name, s in self.pr.S.items():
-            del s.gpu
         for name, s in self.ob.S.items():
             del s.gpu
-        
+        for name, s in self.ob_buf.S.items():
+            del s.gpu
+        for name, s in self.ob_nrm.S.items():
+            del s.gpu
+        for name, s in self.pr.S.items():
+            del s.gpu
+        for name, s in self.pr_nrm.S.items():
+            del s.gpu
         for dID, prep in self.diff_info.items():
             prep.addr = prep.addr_gpu.get()
 
+        # copy data to cpu
+        for name, s in self.pr.S.items():
+            s.data = np.copy(s.data) # is this the same as s.data.get()?
+
         self.context.detach()
-        # might call gpu frees after context is destroyed
-        # error?
         super(DM_pycuda, self).engine_finalize()
