@@ -22,6 +22,7 @@ from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel
+from ..mem_utils import make_pagelocked_paired_arrays as mppa
 
 MPI = parallel.size > 1
 MPI = True
@@ -145,35 +146,34 @@ class DM_pycuda(DM_serial.DM_serial):
 
         super(DM_pycuda, self).engine_prepare()
 
-        use_atomics = self.p.probe_update_cuda_atomics or self.p.object_update_cuda_atomics
+        for name, s in self.ob.S.items():
+            s.gpu = gpuarray.to_gpu(s.data)
+        for name, s in self.ob_buf.S.items():
+            s.gpu, s.data = mppa(s.data)
+        for name, s in self.ob_nrm.S.items():
+            s.gpu, s.data = mppa(s.data)
+        for name, s in self.pr.S.items():
+            s.gpu, s.data = mppa(s.data)
+        for name, s in self.pr_nrm.S.items():
+            s.gpu, s.data = mppa(s.data)
+
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
-        ## The following should be restricted to new data
-
-        # recursive copy to gpu
-        for _cname, c in self.ptycho.containers.items():
-            for _sname, s in c.S.items():
-                # convert data here
-                if s.data.dtype.name == 'bool':
-                    data = s.data.astype(np.float32)
-                else:
-                    #if _cname == 'Cobj_nrm' or _cname == 'Cprobe_nrm':
-                    #    s.data = np.ascontiguousarray(s.data, dtype=np.float32)
-                    data = s.data
-
-                s.gpu = gpuarray.to_gpu(data)
+        # TODO : like the serialization this one is needed due to object reformatting
+        for label, d in self.di.storages.items():
+            prep = self.diff_info[d.ID]
+            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
+            if use_tiles:
+                prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
+                prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
 
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
-
-            if use_tiles:
-                prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
-
-            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
-
-            # Todo: Which address to pick?
-            if use_tiles:
-                prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
+            pID, oID, eID = prep.poe_IDs
+            s = self.ex.S[eID]
+            s.gpu = gpuarray.to_gpu(s.data)
+            s = self.ma.S[d.ID]
+            s.gpu = gpuarray.to_gpu(s.data.astype(np.float32))
 
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)

@@ -141,7 +141,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
             s.data[:] = d
             s.gpu = gpuarray.to_gpu(s.data)
 
-        use_atomics = self.p.probe_update_cuda_atomics or self.p.object_update_cuda_atomics
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         ex_mem = ma_mem = mag_mem = 0

@@ -48,12 +48,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         self.mag_data = None
         self.ex_data = None
 
-        self._ex_blocks_on_device = {}
-        self._data_blocks_on_device = {}
-
     def engine_initialize(self):
         super().engine_initialize()
-        self.dmp = DeviceMemoryPool()
         self.qu_htod = cuda.Stream()
         self.qu_dtoh = cuda.Stream()
 
@@ -96,18 +92,20 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for name, s in self.pr_nrm.S.items():
             s.gpu, s.data = mppa(s.data)
 
-        use_atomics = self.p.probe_update_cuda_atomics or self.p.object_update_cuda_atomics
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
-        for label, d in self.ptycho.new_data:
-            dID = d.ID
-            prep = self.diff_info[dID]
-            pID, oID, eID = prep.poe_IDs
-
+        # TODO : like the serialization this one is needed due to object reformatting
+        for label, d in self.di.storages.items():
+            prep = self.diff_info[d.ID]
             prep.addr_gpu = gpuarray.to_gpu(prep.addr)
             if use_tiles:
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
+                
+        for label, d in self.ptycho.new_data:
+            dID = d.ID
+            prep = self.diff_info[dID]
+            pID, oID, eID = prep.poe_IDs
 
             prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
             # prepare page-locked mems:
@@ -341,8 +339,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         # err_fourier.get_async(streamdata.queue, error_state)
                         cuda.memcpy_dtod(dest=prep.error_state_gpu.ptr,
                                          src=prep.err_fourier_gpu.ptr,
-                                         size=prep.err_fourier_gpu.nbytes,
-                                         stream=self.queue)
+                                         size=prep.err_fourier_gpu.nbytes)#, stream=self.queue)
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                         for i in range(self.p.position_refinement.nshifts):
                             mangled_addr = PCK.address_mangler.mangle_address(addr.get(), original_addr, self.curiter)
@@ -363,8 +360,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         data_ma.record_done(self.queue, 'compute')
                         cuda.memcpy_dtod(dest=prep.err_fourier_gpu.ptr,
                                          src=prep.error_state_gpu.ptr,
-                                         size=prep.err_fourier_gpu.nbytes,
-                                         stream=self.queue)
+                                         size=prep.err_fourier_gpu.nbytes) #stream=self.queue)
                         if use_tiles:
                             s1 = prep.addr_gpu.shape[0] * prep.addr_gpu.shape[1]
                             s2 = prep.addr_gpu.shape[2] * prep.addr_gpu.shape[3]
