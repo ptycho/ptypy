@@ -219,7 +219,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         # atomics or tiled version for probe / object update kernels
         atomics_probe = self.p.probe_update_cuda_atomics
         atomics_object = self.p.object_update_cuda_atomics
-        use_atomics = atomics_object or atomics_probe
         use_tiles = (not atomics_object) or (not atomics_probe)
 
         for it in range(num):

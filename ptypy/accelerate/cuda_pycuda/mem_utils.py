@@ -382,7 +382,7 @@ class GpuDataManager2:
             pass
         m = self.data.pop(idx)
         self.data.append(m)
-        print("Swap %s for %s and move from %d to %d" % (m.gpuId,id,idx,len(self.data)))
+        #print("Swap %s for %s and move from %d to %d" % (m.gpuId,id,idx,len(self.data)))
         ev, gpu = m.to_gpu(cpu, id, stream)
         # return the wait event, the gpu array and the function to register a finished computation
         return ev, gpu, m

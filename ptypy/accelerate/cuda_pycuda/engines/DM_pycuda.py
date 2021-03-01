@@ -105,22 +105,28 @@ class DM_pycuda(DM_serial.DM_serial):
             kern.aux = gpuarray.to_gpu(aux)
 
             # setup kernels, one for each SCAN.
+            logger.info("Setting up FourierUpdateKernel")
             kern.FUK = FourierUpdateKernel(aux, nmodes, queue_thread=self.queue)
             kern.FUK.allocate()
 
+            logger.info("Setting up PoUpdateKernel")
             kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type=np.float32)
             kern.POK.allocate()
 
+            logger.info("Setting up AuxiliaryWaveKernel")
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
 
+            logger.info("Setting up ArrayUtilsKernel")
             kern.AUK = ArrayUtilsKernel(queue=self.queue)
 
+            logger.info("Setting up PropagationKernel")
             kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue)
             kern.PROP.allocate()
             kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
+                logger.info("Setting up position correction")
                 addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
                                                                 self.p.position_refinement.start,
                                                                 self.p.position_refinement.stop,
@@ -133,6 +139,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 kern.PCK.allocate()
                 kern.PCK.address_mangler = addr_mangler
             #self.queue.synchronize()
+            logger.info("Kernel setup completed")
 
     def engine_prepare(self):
 
@@ -312,11 +319,6 @@ class DM_pycuda(DM_serial.DM_serial):
                             s1 = addr.shape[0] * addr.shape[1]
                             s2 = addr.shape[2] * addr.shape[3]
                             AUK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
-
-                        # prep.addr = addr
-
-
-
 
             self.curiter += 1
             queue.synchronize()

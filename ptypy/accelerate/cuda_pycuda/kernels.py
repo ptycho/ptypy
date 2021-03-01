@@ -8,7 +8,7 @@ from ..base.kernels import Adict
 
 class PropagationKernel:
 
-    def __init__(self, aux, propagator, queue_thread=None):
+    def __init__(self, aux, propagator, queue_thread=None, fft='reikna'):
         self.aux = aux
         self._queue = queue_thread
         self.prop_type = propagator.p.propagation
@@ -17,15 +17,19 @@ class PropagationKernel:
         self._fft1 = None
         self._fft2 = None
         self._p = propagator
+        self._fft_type = fft
 
     def allocate(self):
 
         aux = self.aux
 
-        try:
-            from ptypy.accelerate.cuda_pycuda.cufft import FFT
-        except:
-            logger.warning('Unable to import cuFFT version - using Reikna instead')
+        if self._fft_type!='reikna':
+            try:
+                from ptypy.accelerate.cuda_pycuda.cufft import FFT
+            except:
+                logger.warning('Unable to import cuFFT version - using Reikna instead')
+                from ptypy.accelerate.cuda_pycuda.fft import FFT
+        else:
             from ptypy.accelerate.cuda_pycuda.fft import FFT
 
         if self.prop_type == 'farfield':
