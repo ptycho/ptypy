@@ -19,8 +19,9 @@ INT_TYPE = np.int32
 class DlsAuxiliaryWaveKernelTest(PyCudaTest):
 
     datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data/"
-    iter = 10
+    iter = 0
     rtol = 1e-6
+    atol = 1e-6
 
     def test_build_aux_no_ex_noadd_UNITY(self):
 
@@ -48,4 +49,5 @@ class DlsAuxiliaryWaveKernelTest(PyCudaTest):
         AWK.build_aux_no_ex(aux_dev, addr_dev, ob_dev, pr_dev, add=False)
 
         ## Assert
-        np.testing.assert_allclose(aux_dev.get(), aux, rtol=self.rtol, err_msg="The auxiliary_wave does not match the base kernel output")
+        np.testing.assert_allclose(aux_dev.get(), aux, rtol=self.rtol, atol=self.atol, 
+            err_msg="The auxiliary_wave does not match the base kernel output")
