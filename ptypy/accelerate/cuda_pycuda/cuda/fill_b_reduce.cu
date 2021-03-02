@@ -1,12 +1,21 @@
+/** fill_b_reduce - for second-stage reduction used after fill_b.
+ * 
+ * Note that the IN_TYPE here must match what's produced by the fill_b kernel
+ * Data types:
+ * - IN_TYPE: the data type for the inputs
+ * - OUT_TYPE: the data type for the outputs
+ * - ACC_TYPE: the accumulator type for summing
+ */
+
 #include <cassert>
 
-extern "C" __global__ void fill_b_reduce(const double* in, FTYPE* B, int blocks)
+extern "C" __global__ void fill_b_reduce(const IN_TYPE* in, OUT_TYPE* B, int blocks)
 {
   // always a single thread block for 2nd stage
   assert(gridDim.x == 1);
   int tx = threadIdx.x;
 
-  __shared__ double smem[3][BDIM_X];
+  __shared__ ACC_TYPE smem[3][BDIM_X];
 
   double sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
   for (int ix = tx; ix < blocks; ix += blockDim.x)
@@ -37,8 +46,8 @@ extern "C" __global__ void fill_b_reduce(const double* in, FTYPE* B, int blocks)
 
   if (tx == 0)
   {
-    B[0] += FTYPE(smem[0][0]);
-    B[1] += FTYPE(smem[1][0]);
-    B[2] += FTYPE(smem[2][0]);
+    B[0] += OUT_TYPE(smem[0][0]);
+    B[1] += OUT_TYPE(smem[1][0]);
+    B[2] += OUT_TYPE(smem[2][0]);
   }
 }

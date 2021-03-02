@@ -335,25 +335,42 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
 class GradientDescentKernel(ab.GradientDescentKernel):
 
-    def __init__(self, aux, nmodes=1, queue=None):
+    def __init__(self, aux, nmodes=1, queue=None, accumulate_type = 'double', math_type='float'):
         super().__init__(aux, nmodes)
         self.queue = queue
-
+        self.accumulate_type = accumulate_type
+        self.math_type = math_type
+        if (accumulate_type not in ['double', 'float']) or (math_type not in ['double', 'float']):
+            raise ValueError("accumulate and math types must be double for float")
+ 
         self.gpu = Adict()
         self.gpu.LLden = None
         self.gpu.LLerr = None
         self.gpu.Imodel = None
 
         subs = {
+            # temporarily until all kernels are ported to be flexible with unified naming
             'CTYPE': 'complex<float>' if self.ctype == np.complex64 else 'complex<double>',
-            'FTYPE': 'float' if self.ftype == np.float32 else 'double'
+            'FTYPE': 'float' if self.ftype == np.float32 else 'double',
+            'IN_TYPE': 'float' if self.ftype == np.float32 else 'double',
+            'ACC_TYPE': self.accumulate_type,
+            'MATH_TYPE': self.math_type
         }
         self.make_model_cuda = load_kernel('make_model', subs)
         self.make_a012_cuda = load_kernel('make_a012', subs)
         self.error_reduce_cuda = load_kernel('error_reduce', subs)
-        self.fill_b_cuda = load_kernel('fill_b', {**subs, 'BDIM_X': 1024})
+        self.fill_b_cuda = load_kernel('fill_b', {
+            **subs, 
+            'BDIM_X': 1024, 
+            'OUT_TYPE': self.accumulate_type
+        })
         self.fill_b_reduce_cuda = load_kernel(
-            'fill_b_reduce', {**subs, 'BDIM_X': 1024})
+            'fill_b_reduce', {
+                **subs, 
+                'BDIM_X': 1024, 
+                'IN_TYPE': self.accumulate_type,  # must match out-type of fill_b
+                'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double'
+            })
         self.main_cuda = load_kernel('gd_main', subs)
         self.floating_intensity_cuda_step1 = load_kernel('step1', subs,'intens_renorm.cu')
         self.floating_intensity_cuda_step2 = load_kernel('step2', subs,'intens_renorm.cu')
@@ -367,7 +384,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
 
         # temporary array for the reduction in fill_b
         sh = (3, int((np.prod(self.fshape)*self.nmodes + 1023) // 1024))
-        self.gpu.Btmp = gpuarray.zeros(sh, dtype=np.float64)
+        self.gpu.Btmp = gpuarray.zeros(sh, dtype=np.float64 if self.accumulate_type == 'double' else np.float32)
 
     def make_model(self, b_aux, addr):
         # reference shape
