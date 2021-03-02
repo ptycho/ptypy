@@ -92,12 +92,15 @@ class PropagationKernel:
 
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 
-    def __init__(self, aux, nmodes=1, queue_thread=None, accumulate_type='float'):
+    def __init__(self, aux, nmodes=1, queue_thread=None, accumulate_type='float', math_type='float'):
         super(FourierUpdateKernel, self).__init__(aux,  nmodes=nmodes)
 
         if accumulate_type not in ['float', 'double']:
             raise ValueError('Only float or double types are supported')
+        if math_type not in ['float', 'double']:
+            raise ValueError('Only float or double types are supported')
         self.accumulate_type = accumulate_type
+        self.math_type = math_type
         self.queue = queue_thread
         self.fmag_all_update_cuda = load_kernel("fmag_all_update")
         self.fourier_error_cuda = load_kernel("fourier_error")
@@ -109,7 +112,11 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         })
         self.fourier_update_cuda = None
         self.log_likelihood_cuda = load_kernel("log_likelihood")
-        self.exit_error_cuda = load_kernel("exit_error")
+        self.exit_error_cuda = load_kernel("exit_error", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
 
         self.gpu = Adict()
         self.gpu.fdev = None
