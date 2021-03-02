@@ -1,3 +1,10 @@
+/** difference along any axis
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs 
+ * - OUT_TYPE: the data type for the outputs 
+ */
+
 #include <thrust/complex.h>
 using thrust::complex;
 
@@ -40,8 +47,8 @@ using thrust::complex;
  * zero if it's the end of the input.
  *
  */
-extern "C" __global__ void delx_mid(const DTYPE *__restrict__ input,
-                                    DTYPE *output,
+extern "C" __global__ void delx_mid(const IN_TYPE *__restrict__ input,
+                                    OUT_TYPE *output,
                                     int lower_dim,   // x for 3D
                                     int higher_dim,  // z for 3D
                                     int axis_dim)
@@ -49,8 +56,8 @@ extern "C" __global__ void delx_mid(const DTYPE *__restrict__ input,
   // reinterpret to avoid compiler warning that
   // constructor of complex<float>() cannot be called if it's
   // shared memory - polluting the outputs
-  __shared__ char shr[BDIM_X * BDIM_Y * sizeof(DTYPE)];
-  auto shared_data = reinterpret_cast<DTYPE *>(shr);
+  __shared__ char shr[BDIM_X * BDIM_Y * sizeof(IN_TYPE)];
+  auto shared_data = reinterpret_cast<IN_TYPE *>(shr);
 
   unsigned int tx = threadIdx.x;
   unsigned int ty = threadIdx.y;
@@ -82,7 +89,7 @@ extern "C" __global__ void delx_mid(const DTYPE *__restrict__ input,
     {
       if (IS_FORWARD)
       {
-        DTYPE plus1;
+        IN_TYPE plus1;
         if (ty < BDIM_Y - 1 &&
             iy < axis_dim - 1)  // we have a next element in shared data
         {
@@ -100,7 +107,7 @@ extern "C" __global__ void delx_mid(const DTYPE *__restrict__ input,
       }
       else
       {
-        DTYPE minus1;
+        IN_TYPE minus1;
         if (ty > 0)  // we have a previous element in shared
         {
           minus1 = shared_data[(ty - 1) * BDIM_X + tx];
