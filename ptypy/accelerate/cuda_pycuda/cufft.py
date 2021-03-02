@@ -72,14 +72,30 @@ class FFT(object):
         self.fftobj.ifft(input.gpudata, output.gpudata)
         
     def _load_separate_knls(self, array, pre_fft, post_fft, symmetric, forward):
+        assert(array.dtype in [np.complex64, np.complex128])
+        assert(pre_fft.dtype in [np.complex64, np.complex128] if pre_fft is not None else True)
+        assert(post_fft.dtype in [np.complex64, np.complex128] if post_fft is not None else True)
+
+        math_type = 'float' if array.dtype == np.complex64 else 'double'
+        if pre_fft is not None:
+            math_type = 'float' if pre_fft.dtype == np.complex64 else 'double'
         self.pre_fft_knl = load_kernel("batched_multiply", {
             'MPY_DO_SCALE': 'false',
-            'MPY_DO_FILT': 'true'
+            'MPY_DO_FILT': 'true',
+            'IN_TYPE': 'float' if array.dtype == np.complex64 else 'double',
+            'OUT_TYPE': 'float' if array.dtype == np.complex64 else 'double',
+            'MATH_TYPE': math_type
         }) if pre_fft is not None else None
 
+        math_type = 'float' if array.dtype == np.complex64 else 'double'
+        if post_fft is not None:
+            math_type = 'float' if post_fft.dtype == np.complex64 else 'double'
         self.post_fft_knl = load_kernel("batched_multiply", {
             'MPY_DO_SCALE': 'true' if (not forward and not symmetric) or symmetric else 'false',
-            'MPY_DO_FILT': 'true' if post_fft is not None else 'false'
+            'MPY_DO_FILT': 'true' if post_fft is not None else 'false',
+            'IN_TYPE': 'float' if array.dtype == np.complex64 else 'double',
+            'OUT_TYPE': 'float' if array.dtype == np.complex64 else 'double',
+            'MATH_TYPE': math_type
         }) if (not (forward and not symmetric) or post_fft is not None) else None
 
         self.block = (32, 32, 1)
