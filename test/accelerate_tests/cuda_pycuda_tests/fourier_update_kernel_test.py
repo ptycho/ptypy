@@ -109,7 +109,7 @@ class FourierUpdateKernelTest(PyCudaTest):
         nFUK.fmag_all_update(f, addr, fmag, mask, err_fmag, pbound=pbound_set)
         expected_f = f
         measured_f = f_d.get()
-        np.testing.assert_array_equal(expected_f, measured_f, err_msg="Numpy f "
+        np.testing.assert_allclose(expected_f, measured_f, rtol=1e-6, err_msg="Numpy f "
                                                                       "is \n%s, \nbut gpu f is \n %s, \n mask is:\n %s \n" %  (repr(expected_f),
                                                                                                                                repr(measured_f),
                                                                                                                                repr(mask)))

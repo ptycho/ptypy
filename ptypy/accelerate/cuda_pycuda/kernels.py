@@ -102,7 +102,11 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.accumulate_type = accumulate_type
         self.math_type = math_type
         self.queue = queue_thread
-        self.fmag_all_update_cuda = load_kernel("fmag_all_update")
+        self.fmag_all_update_cuda = load_kernel("fmag_all_update", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
         self.fourier_error_cuda = load_kernel("fourier_error")
         self.fourier_error2_cuda = None
         self.error_reduce_cuda = load_kernel("error_reduce", {
