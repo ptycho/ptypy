@@ -7,15 +7,12 @@ if have_pycuda():
     import pycuda.driver as cuda
     from pycuda import gpuarray
     from ptypy.accelerate.cuda_pycuda.fft import FFT as ReiknaFFT
-    from ptypy.accelerate.cuda_pycuda.cufft import FFT as cuFFT
+    from ptypy.accelerate.cuda_pycuda.cufft import FFT_cuda as cuFFT
+    from ptypy.accelerate.cuda_pycuda.cufft import FFT_skcuda as SkcudaCuFFT
 
     COMPLEX_TYPE = np.complex64
     FLOAT_TYPE = np.float32
     INT_TYPE = np.int32
-
-    class SkcudaCuFFT(cuFFT):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs, use_external=False)
 
 class FftSetStreamTest(PyCudaTest):
 

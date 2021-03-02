@@ -8,13 +8,15 @@ import numpy as np
 from ptypy.core import Ptycho
 from ptypy import utils as u
 
+from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream, DM_pycuda_streams, DM_pycuda
+from ptypy.accelerate.base.engines import DM_serial
 
 
 p = u.Param()
 
 # for verbose output
 p.verbose_level = 3
-p.frames_per_block = 500
+p.frames_per_block = 300
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
@@ -50,7 +52,7 @@ p.scans.MF.data.add_poisson_noise = False
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_pycuda_stream'
+p.engines.engine00.name = 'DM_pycuda'
 p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.position_refinement = u.Param()

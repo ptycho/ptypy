@@ -10,7 +10,7 @@ from . import PyCudaTest, have_pycuda
 if have_pycuda():
     from pycuda import gpuarray
     from ptypy.accelerate.cuda_pycuda.fft import FFT as ReiknaFFT
-    from ptypy.accelerate.cuda_pycuda.cufft import FFT as cuFFT
+    from ptypy.accelerate.cuda_pycuda.cufft import FFT_cuda, FFT_skcuda
 
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
@@ -19,16 +19,22 @@ INT_TYPE = np.int32
 def get_forward_cuFFT(f, stream,
                       pre_fft, post_fft, inplace, 
                       symmetric, external=True):
-    return cuFFT(f, stream,
-               pre_fft=pre_fft, post_fft=post_fft, inplace=inplace, symmetric=symmetric, forward=True,
-               use_external=external).ft
+    if external:
+        return FFT_cuda(f, stream, pre_fft=pre_fft, post_fft=post_fft, inplace=inplace,
+                        symmetric=symmetric, forward=True).ft
+    else:
+        return FFT_skcuda(f, stream, pre_fft=pre_fft, post_fft=post_fft, inplace=inplace,
+                        symmetric=symmetric, forward=True).ft
 
 def get_reverse_cuFFT(f, stream,
                       pre_fft, post_fft, inplace, 
                       symmetric, external=True):
-    return cuFFT(f, stream,
-               pre_fft=pre_fft, post_fft=post_fft, inplace=inplace, symmetric=symmetric, forward=False,
-               use_external=external).ift
+    if external:
+        return FFT_cuda(f, stream, pre_fft=pre_fft, post_fft=post_fft, inplace=inplace,
+                        symmetric=symmetric, forward=False).ift
+    else:
+        return FFT_skcuda(f, stream, pre_fft=pre_fft, post_fft=post_fft, inplace=inplace,
+                        symmetric=symmetric, forward=False).ift
 
 def get_forward_Reikna(f, stream,
                       pre_fft, post_fft, inplace, 

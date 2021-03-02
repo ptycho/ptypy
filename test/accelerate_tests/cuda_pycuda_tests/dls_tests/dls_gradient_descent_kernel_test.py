@@ -20,7 +20,7 @@ INT_TYPE = np.int32
 class DlsGradientDescentKernelTest(PyCudaTest):
 
     datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data/"
-    iter = 0
+    iter = 50
     rtol = 1e-6
     atol = 1e-6
 
@@ -81,7 +81,7 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         ## Assert
         np.testing.assert_allclose(BGDK.npy.Imodel, GDK.gpu.Imodel.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="`Imodel` buffer has not been updated as expected")
-        np.testing.assert_allcolse(fic, fic_dev.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(fic, fic_dev.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="floating intensity coeff (fic) has not been updated as expected")
 
 
@@ -121,27 +121,31 @@ class DlsGradientDescentKernelTest(PyCudaTest):
             err_msg="Auxiliary has not been updated as expected")
         np.testing.assert_allclose(BGDK.npy.LLerr, GDK.gpu.LLerr.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="LogLikelihood error has not been updated as expected")
-        np.testing.assert_array_allclose(err_phot, err_phot_dev.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(err_phot, err_phot_dev.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="`err_phot` has not been updated as expected")
 
 
     def test_make_a012_UNITY(self):
 
+        Nmax = 10
+        Ymax = 128
+        Xmax = 128
+
         # Load data
         with h5py.File(self.datadir + "make_a012_%04d.h5" %self.iter, "r") as g:
             addr = g["addr"][:]
-            I = g["I"][:]
-            f = g["f"][:]
-            a = g["a"][:]
-            b = g["b"][:]
-            fic = g["fic"][:]
+            I = g["I"][:Nmax,:Ymax,:Xmax]
+            f = g["f"][:Nmax,:Ymax,:Xmax]
+            a = g["a"][:Nmax,:Ymax,:Xmax]
+            b = g["b"][:Nmax,:Ymax,:Xmax]
+            fic = g["fic"][:Nmax]
         with h5py.File(self.datadir + "make_model_%04d.h5" %self.iter, "r") as h:
-            aux = h["aux"][:]
+            aux = h["aux"][:Nmax,:Ymax,:Xmax]
 
         # Copy data to device
         aux_dev = gpuarray.to_gpu(aux)
         addr_dev = gpuarray.to_gpu(addr)
-        I_dev = gpuarray.to_gpu(I)
+        I_dev = gpuarray.to_gpu(addr)
         f_dev = gpuarray.to_gpu(f)
         a_dev = gpuarray.to_gpu(a)
         b_dev = gpuarray.to_gpu(b)
@@ -152,8 +156,8 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         BGDK.allocate()
         BGDK.make_a012(f, a, b, addr, I, fic)
 
-        # GPU kernel
-        GDK = GradientDescentKernel(aux_dev, addr.shape[1])
+        # GPU kernel        
+        GDK = GradientDescentKernel(aux_dev, addr.shape[1], queue=self.stream)
         GDK.allocate()
         GDK.make_a012(f_dev, a_dev, b_dev, addr_dev, I_dev, fic_dev)
 
@@ -168,30 +172,45 @@ class DlsGradientDescentKernelTest(PyCudaTest):
 
     def test_fill_b_UNITY(self):
 
+        Nmax = 10
+        Ymax = 128
+        Xmax = 128
+
         # Load data
         with h5py.File(self.datadir + "fill_b_%04d.h5" %self.iter, "r") as f:
-            w = f["w"][:]
+            w = f["w"][:Nmax, :Ymax, :Xmax]
             addr = f["addr"][:]
             B = f["B"][:]
             Brenorm = f["Brenorm"][...]
+            A0 = f["A0"][:Nmax, :Ymax, :Xmax]
+            A1 = f["A1"][:Nmax, :Ymax, :Xmax]
+            A2 = f["A2"][:Nmax, :Ymax, :Xmax]
         with h5py.File(self.datadir + "make_model_%04d.h5" %self.iter, "r") as f:
-            aux = f["aux"][:]
-        print(B)
+            aux = f["aux"][:Nmax, :Ymax, :Xmax]
 
         # Copy data to device
         aux_dev = gpuarray.to_gpu(aux)
         w_dev = gpuarray.to_gpu(w)
         addr_dev = gpuarray.to_gpu(addr)
         B_dev = gpuarray.to_gpu(B.astype(np.float32))
+        A0_dev = gpuarray.to_gpu(A0)
+        A1_dev = gpuarray.to_gpu(A1)
+        A2_dev = gpuarray.to_gpu(A2)
 
         # CPU Kernel
         BGDK = BaseGradientDescentKernel(aux, addr.shape[1])
         BGDK.allocate()
+        BGDK.npy.Imodel = A0
+        BGDK.npy.LLerr = A1
+        BGDK.npy.LLden = A2
         BGDK.fill_b(addr, Brenorm, w, B)
 
         # GPU kernel
         GDK = GradientDescentKernel(aux_dev, addr.shape[1])
         GDK.allocate()
+        GDK.gpu.Imodel = A0_dev
+        GDK.gpu.LLerr = A1_dev
+        GDK.gpu.LLden = A2_dev
         GDK.fill_b(addr_dev, Brenorm, w_dev, B_dev)
 
         ## Assert

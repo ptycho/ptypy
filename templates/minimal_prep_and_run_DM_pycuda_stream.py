@@ -6,8 +6,7 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
-from ptypy.accelerate.base.engines import DM_serial
-
+from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream, DM_pycuda_streams, DM_pycuda
 p = u.Param()
 
 # for verbose output
@@ -17,7 +16,7 @@ p.frames_per_block = 200
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
 p.io.autosave = u.Param(active=True)
-p.io.autoplot = u.Param(active=True)
+p.io.autoplot = u.Param(active=False)
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
 p.scans.MF = u.Param()
@@ -29,10 +28,9 @@ p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
 p.scans.MF.data.num_frames = 1000
 p.scans.MF.data.save = None
-p.scans.MF.data.block_wait_count = 1
 
 p.scans.MF.illumination = u.Param(diversity=None)
-p.scans.MF.coherence = u.Param(num_probe_modes=1)
+p.scans.MF.coherence = u.Param(num_probe_modes=4)
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
@@ -43,9 +41,9 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_serial'
-p.engines.engine00.numiter = 60
-p.engines.engine00.numiter_contiguous = 2
+p.engines.engine00.name = 'DM_pycuda_stream'
+p.engines.engine00.numiter = 20
+p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.probe_update_start = 1
 
 # prepare and run

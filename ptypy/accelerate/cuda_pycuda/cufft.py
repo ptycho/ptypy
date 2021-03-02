@@ -1,34 +1,28 @@
 import skcuda.fft as cu_fft
 from skcuda.fft import cufft as cufftlib
-from pycuda.compiler import SourceModule
 from pycuda import gpuarray
 from . import load_kernel
 import numpy as np
 
-class FFT(object):
+class FFT_cuda(object):
 
     def __init__(self, array, queue=None,
                  inplace=False,
                  pre_fft=None,
                  post_fft=None,
                  symmetric=True,
-                 forward=True,
-                 use_external=True):
+                 forward=True):
         self._queue = queue
         dims = array.ndim
         if dims < 2:
             raise AssertionError('Input array must be at least 2-dimensional')
         self.arr_shape = (array.shape[-2], array.shape[-1])
         self.batches = int(np.product(array.shape[0:dims-2]) if dims > 2 else 1)
-        self.use_external = use_external
         self.forward = forward
 
-        if use_external:
-            self._load_filtered_fft(array, pre_fft, post_fft, symmetric, forward)
-        else:
-            self._load_separate_knls(array, pre_fft, post_fft, symmetric, forward)
+        self._load(array, pre_fft, post_fft, symmetric, forward)
 
-    def _load_filtered_fft(self, array, pre_fft, post_fft, symmetric, forward):
+    def _load(self, array, pre_fft, post_fft, symmetric, forward):
         if pre_fft is not None:
             self.pre_fft = gpuarray.to_gpu(pre_fft)
             self.pre_fft_ptr = self.pre_fft.gpudata
@@ -50,8 +44,8 @@ class FFT(object):
                 self.post_fft_ptr, 
                 self._queue.handle)
 
-        self.ft = self._ft_ext
-        self.ift = self._ift_ext
+        self.ft = self._ft
+        self.ift = self._ift
 
     @property
     def queue(self):
@@ -60,18 +54,27 @@ class FFT(object):
     @queue.setter
     def queue(self, queue):
         self._queue = queue
-        if not self.use_external:
-            cufftlib.cufftSetStream(self.plan.handle, queue.handle)
-        else:
-            self.fftobj.queue = queue.handle
+        self.fftobj.queue = queue.handle
     
-    def _ft_ext(self, input, output):
+    def _ft(self, input, output):
         self.fftobj.fft(input.gpudata, output.gpudata)
     
-    def _ift_ext(self, input, output):
+    def _ift(self, input, output):
         self.fftobj.ifft(input.gpudata, output.gpudata)
         
-    def _load_separate_knls(self, array, pre_fft, post_fft, symmetric, forward):
+
+class FFT_skcuda(FFT_cuda):
+
+    @property
+    def queue(self):
+        return self._queue
+
+    @queue.setter
+    def queue(self, queue):
+        self._queue = queue
+        cufftlib.cufftSetStream(self.plan.handle, queue.handle)
+
+    def _load(self, array, pre_fft, post_fft, symmetric, forward):
         assert(array.dtype in [np.complex64, np.complex128])
         assert(pre_fft.dtype in [np.complex64, np.complex128] if pre_fft is not None else True)
         assert(post_fft.dtype in [np.complex64, np.complex128] if post_fft is not None else True)
@@ -109,7 +112,7 @@ class FFT(object):
             array.dtype,
             array.dtype,
             self.batches,
-            self.queue
+            self._queue
         )
         # with cuFFT, we need to scale ifft
         if not symmetric and not forward:
@@ -118,7 +121,7 @@ class FFT(object):
             self.scale = 1.0
         else:
             self.scale = 1 / np.sqrt(np.product(self.arr_shape))
-        
+
         if pre_fft is not None:
             self.pre_fft = gpuarray.to_gpu(pre_fft)
         else:
@@ -127,14 +130,13 @@ class FFT(object):
             self.post_fft = gpuarray.to_gpu(post_fft)
         else:
             self.post_fft = np.intp(0)
-        
-        self.ft = self._ft_separate
-        self.ift = self._ift_separate
 
+        self.ft = self._ft
+        self.ift = self._ift
 
     def _prefilt(self, x, y):
         if self.pre_fft_knl:
-            self.pre_fft_knl(x, y, self.pre_fft, 
+            self.pre_fft_knl(x, y, self.pre_fft,
                              np.float32(self.scale),
                              np.int32(self.batches),
                              np.int32(self.arr_shape[0]),
@@ -152,17 +154,18 @@ class FFT(object):
             assert self.scale is not None
             self.post_fft_knl(y, y, self.post_fft, np.float32(self.scale),
                               np.int32(self.batches),
-                              np.int32(self.arr_shape[0]), 
+                              np.int32(self.arr_shape[0]),
                               np.int32(self.arr_shape[1]),
                               block=self.block, grid=self.grid,
                               stream=self._queue)
 
-    def _ft_separate(self, x, y):
-        d = self._prefilt(x, y)            
+    def _ft(self, x, y):
+        d = self._prefilt(x, y)
         cu_fft.fft(d, y, self.plan)
         self._postfilt(y)
-    
-    def _ift_separate(self, x, y):
+
+    def _ift(self, x, y):
         d = self._prefilt(x, y)
         cu_fft.ifft(d, y, self.plan)
         self._postfilt(y)
+

@@ -22,6 +22,7 @@ from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel
+from ..mem_utils import make_pagelocked_paired_arrays as mppa
 
 MPI = parallel.size > 1
 MPI = True
@@ -47,6 +48,17 @@ class DM_pycuda(DM_serial.DM_serial):
     default = True
     type = bool
     help = For GPU, use the atomics version for object update kernel
+
+    [fft_lib]
+    default = reikna
+    type = str
+    help = Choose the pycuda-compatible FFT module.
+    doc = One of:
+      - ``'reikna'`` : the reikna packaga (fast load, competitive compute for streaming)
+      - ``'cuda'`` : ptypy's cuda wrapper (delayed load, but fastest compute if all data is on GPU)
+      - ``'skcuda'`` : scikit-cuda (fast load, slowest compute due to additional store/load stages)
+    choices = 'reikna','cuda','skcuda'
+    userlevel = 2
 
     """
     def __init__(self, ptycho_parent, pars=None):
@@ -105,22 +117,28 @@ class DM_pycuda(DM_serial.DM_serial):
             kern.aux = gpuarray.to_gpu(aux)
 
             # setup kernels, one for each SCAN.
+            logger.info("Setting up FourierUpdateKernel")
             kern.FUK = FourierUpdateKernel(aux, nmodes, queue_thread=self.queue)
             kern.FUK.allocate()
 
+            logger.info("Setting up PoUpdateKernel")
             kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type=np.float32)
             kern.POK.allocate()
 
+            logger.info("Setting up AuxiliaryWaveKernel")
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
 
+            logger.info("Setting up ArrayUtilsKernel")
             kern.AUK = ArrayUtilsKernel(queue=self.queue)
 
-            kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue)
+            logger.info("Setting up PropagationKernel")
+            kern.PROP = PropagationKernel(aux, geo.propagator, self.queue, self.p.fft_lib)
             kern.PROP.allocate()
             kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
+                logger.info("Setting up position correction")
                 addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
                                                                 self.p.position_refinement.start,
                                                                 self.p.position_refinement.stop,
@@ -133,40 +151,40 @@ class DM_pycuda(DM_serial.DM_serial):
                 kern.PCK.allocate()
                 kern.PCK.address_mangler = addr_mangler
             #self.queue.synchronize()
+            logger.info("Kernel setup completed")
 
     def engine_prepare(self):
 
         super(DM_pycuda, self).engine_prepare()
 
-        use_atomics = self.p.probe_update_cuda_atomics or self.p.object_update_cuda_atomics
+        for name, s in self.ob.S.items():
+            s.gpu = gpuarray.to_gpu(s.data)
+        for name, s in self.ob_buf.S.items():
+            s.gpu, s.data = mppa(s.data)
+        for name, s in self.ob_nrm.S.items():
+            s.gpu, s.data = mppa(s.data)
+        for name, s in self.pr.S.items():
+            s.gpu, s.data = mppa(s.data)
+        for name, s in self.pr_nrm.S.items():
+            s.gpu, s.data = mppa(s.data)
+
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
-        ## The following should be restricted to new data
-
-        # recursive copy to gpu
-        for _cname, c in self.ptycho.containers.items():
-            for _sname, s in c.S.items():
-                # convert data here
-                if s.data.dtype.name == 'bool':
-                    data = s.data.astype(np.float32)
-                else:
-                    #if _cname == 'Cobj_nrm' or _cname == 'Cprobe_nrm':
-                    #    s.data = np.ascontiguousarray(s.data, dtype=np.float32)
-                    data = s.data
-
-                s.gpu = gpuarray.to_gpu(data)
+        # TODO : like the serialization this one is needed due to object reformatting
+        for label, d in self.di.storages.items():
+            prep = self.diff_info[d.ID]
+            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
+            if use_tiles:
+                prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
+                prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
 
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
-
-            if use_tiles:
-                prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
-
-            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
-
-            # Todo: Which address to pick?
-            if use_tiles:
-                prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
+            pID, oID, eID = prep.poe_IDs
+            s = self.ex.S[eID]
+            s.gpu = gpuarray.to_gpu(s.data)
+            s = self.ma.S[d.ID]
+            s.gpu = gpuarray.to_gpu(s.data.astype(np.float32))
 
             prep.mag = gpuarray.to_gpu(prep.mag)
             prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
@@ -312,11 +330,6 @@ class DM_pycuda(DM_serial.DM_serial):
                             s1 = addr.shape[0] * addr.shape[1]
                             s2 = addr.shape[2] * addr.shape[3]
                             AUK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
-
-                        # prep.addr = addr
-
-
-
 
             self.curiter += 1
             queue.synchronize()
@@ -469,15 +482,22 @@ class DM_pycuda(DM_serial.DM_serial):
         """
         clear GPU data and destroy context.
         """
-        for name, s in self.pr.S.items():
-            del s.gpu
         for name, s in self.ob.S.items():
             del s.gpu
-        
+        for name, s in self.ob_buf.S.items():
+            del s.gpu
+        for name, s in self.ob_nrm.S.items():
+            del s.gpu
+        for name, s in self.pr.S.items():
+            del s.gpu
+        for name, s in self.pr_nrm.S.items():
+            del s.gpu
         for dID, prep in self.diff_info.items():
             prep.addr = prep.addr_gpu.get()
 
+        # copy data to cpu
+        for name, s in self.pr.S.items():
+            s.data = np.copy(s.data) # is this the same as s.data.get()?
+
         self.context.detach()
-        # might call gpu frees after context is destroyed
-        # error?
         super(DM_pycuda, self).engine_finalize()
