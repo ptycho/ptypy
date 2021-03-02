@@ -19,7 +19,7 @@ INT_TYPE = np.int32
 class DlsAuxiliaryWaveKernelTest(PyCudaTest):
 
     datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data/"
-    iter = 0
+    iter = 50
     rtol = 1e-6
     atol = 1e-6
 

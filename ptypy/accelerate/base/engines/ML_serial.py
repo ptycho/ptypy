@@ -548,6 +548,9 @@ class GaussianModel(BaseModelSerial):
                     f["Brenorm"] = Brenorm
                     f["w"] = w
                     f["B"] = B
+                    f["A0"] = GDK.npy.Imodel
+                    f["A1"] = GDK.npy.LLerr
+                    f["A2"] = GDK.npy.LLden
 
             GDK.fill_b(addr, Brenorm, w, B)
 
