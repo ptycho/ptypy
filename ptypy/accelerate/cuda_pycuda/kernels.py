@@ -23,11 +23,17 @@ class PropagationKernel:
 
         aux = self.aux
 
-        if self._fft_type!='reikna':
+        if self._fft_type=='cuda':
             try:
-                from ptypy.accelerate.cuda_pycuda.cufft import FFT
+                from ptypy.accelerate.cuda_pycuda.cufft import FFT_cuda as FFT
             except:
-                logger.warning('Unable to import cuFFT version - using Reikna instead')
+                logger.warning('Unable to import cufft version - using Reikna instead')
+                from ptypy.accelerate.cuda_pycuda.fft import FFT
+        elif self._fft_type=='skcuda':
+            try:
+                from ptypy.accelerate.cuda_pycuda.cufft import FFT_skcuda as FFT
+            except:
+                logger.warning('Unable to import skcuda.fft version - using Reikna instead')
                 from ptypy.accelerate.cuda_pycuda.fft import FFT
         else:
             from ptypy.accelerate.cuda_pycuda.fft import FFT

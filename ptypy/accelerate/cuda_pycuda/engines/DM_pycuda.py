@@ -49,6 +49,17 @@ class DM_pycuda(DM_serial.DM_serial):
     type = bool
     help = For GPU, use the atomics version for object update kernel
 
+    [fft_lib]
+    default = reikna
+    type = str
+    help = Choose the pycuda-compatible FFT module.
+    doc = One of:
+      - ``'reikna'`` : the reikna packaga (fast load, competitive compute for streaming)
+      - ``'cuda'`` : ptypy's cuda wrapper (delayed load, but fastest compute if all data is on GPU)
+      - ``'skcuda'`` : scikit-cuda (fast load, slowest compute due to additional store/load stages)
+    choices = 'reikna','cuda','skcuda'
+    userlevel = 2
+
     """
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -122,7 +133,7 @@ class DM_pycuda(DM_serial.DM_serial):
             kern.AUK = ArrayUtilsKernel(queue=self.queue)
 
             logger.info("Setting up PropagationKernel")
-            kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue)
+            kern.PROP = PropagationKernel(aux, geo.propagator, self.queue, self.p.fft_lib)
             kern.PROP.allocate()
             kern.resolution = geo.resolution[0]
 

@@ -22,8 +22,8 @@ import numpy as np
 import pycuda.driver as cuda
 from pycuda import gpuarray
 from pycuda.tools import make_default_context
-from ptypy.accelerate.py_cuda.fft import FFT
-from ptypy.accelerate.py_cuda.cufft import FFT as cuFFT
+from ptypy.accelerate.cuda_pyucda.fft import FFT
+from ptypy.accelerate.cuda_pycuda.cufft import FFT_cuda as cuFFT
 import time
 
 ctx = make_default_context()

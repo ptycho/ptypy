@@ -95,6 +95,22 @@ class GpuStreamData:
 @register()
 class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
+    """
+    Defaults:
+
+    [fft_lib]
+    default = cuda
+    type = str
+    help = Choose the pycuda-compatible FFT module.
+    doc = One of:
+      - ``'reikna'`` : the reikna packaga (fast load, competitive compute for streaming)
+      - ``'cuda'`` : ptypy's cuda wrapper (delayed load, but fastest compute if all data is on GPU)
+      - ``'skcuda'`` : scikit-cuda (fast load, slowest compute due to additional store/load stages)
+    choices = 'reikna','cuda','skcuda'
+    userlevel = 2
+
+    """
+
     def __init__(self, ptycho_parent, pars = None):
 
         super(DM_pycuda_streams, self).__init__(ptycho_parent, pars)
