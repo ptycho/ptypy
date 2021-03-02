@@ -6,7 +6,7 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
-from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda
+from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream, DM_pycuda_streams, DM_pycuda
 p = u.Param()
 
 # for verbose output
@@ -41,7 +41,7 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_pycuda'
+p.engines.engine00.name = 'DM_pycuda_stream'
 p.engines.engine00.numiter = 20
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.probe_update_start = 1
