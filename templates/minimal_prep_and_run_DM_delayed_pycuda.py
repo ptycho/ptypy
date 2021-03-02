@@ -6,6 +6,7 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
+from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda, DM_pycuda_stream
 from ptypy.accelerate.base.engines import DM_serial
 
 p = u.Param()
@@ -43,9 +44,9 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_serial'
-p.engines.engine00.numiter = 60
-p.engines.engine00.numiter_contiguous = 2
+p.engines.engine00.name = 'DM_pycuda_stream'
+p.engines.engine00.numiter = 120
+p.engines.engine00.numiter_contiguous = 5
 p.engines.engine00.probe_update_start = 1
 
 # prepare and run

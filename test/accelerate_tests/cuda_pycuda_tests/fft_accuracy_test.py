@@ -10,7 +10,7 @@ from . import PyCudaTest, have_pycuda
 if have_pycuda():
     from pycuda import gpuarray
     from ptypy.accelerate.cuda_pycuda.fft import FFT as ReiknaFFT
-    from ptypy.accelerate.cuda_pycuda.cufft import FFT as cuFFT
+    from ptypy.accelerate.cuda_pycuda.cufft import FFT_cuda as cuFFT
 
 class FftAccurracyTest(PyCudaTest):
 
