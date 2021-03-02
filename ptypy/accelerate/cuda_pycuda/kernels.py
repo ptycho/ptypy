@@ -92,13 +92,21 @@ class PropagationKernel:
 
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 
-    def __init__(self, aux, nmodes=1, queue_thread=None):
+    def __init__(self, aux, nmodes=1, queue_thread=None, accumulate_type='float'):
         super(FourierUpdateKernel, self).__init__(aux,  nmodes=nmodes)
+
+        if accumulate_type not in ['float', 'double']:
+            raise ValueError('Only float or double types are supported')
+        self.accumulate_type = accumulate_type
         self.queue = queue_thread
         self.fmag_all_update_cuda = load_kernel("fmag_all_update")
         self.fourier_error_cuda = load_kernel("fourier_error")
         self.fourier_error2_cuda = None
-        self.error_reduce_cuda = load_kernel("error_reduce")
+        self.error_reduce_cuda = load_kernel("error_reduce", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'ACC_TYPE': self.accumulate_type
+        })
         self.fourier_update_cuda = None
         self.log_likelihood_cuda = load_kernel("log_likelihood")
         self.exit_error_cuda = load_kernel("exit_error")
@@ -380,7 +388,10 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         }
         self.make_model_cuda = load_kernel('make_model', subs)
         self.make_a012_cuda = load_kernel('make_a012', subs)
-        self.error_reduce_cuda = load_kernel('error_reduce', subs)
+        self.error_reduce_cuda = load_kernel('error_reduce', {
+            **subs,
+            'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double'
+        })
         self.fill_b_cuda = load_kernel('fill_b', {
             **subs, 
             'BDIM_X': 1024, 
@@ -744,18 +755,25 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
 
 class PositionCorrectionKernel(ab.PositionCorrectionKernel):
-    def __init__(self, aux, nmodes, queue_thread=None, math_type='float'):
+    def __init__(self, aux, nmodes, queue_thread=None, math_type='float', accumulate_type='float'):
         super(PositionCorrectionKernel, self).__init__(aux, nmodes)
         if math_type not in ['float', 'double']:
+            raise ValueError('Only float or double math is supported')
+        if accumulate_type not in ['float', 'double']:
             raise ValueError('Only float or double math is supported')
         
         # add kernels
         self.math_type = math_type
+        self.accumulate_type = accumulate_type
         self.queue = queue_thread
         self._ob_shape = None
         self._ob_id = None
         self.fourier_error_cuda = load_kernel("fourier_error")
-        self.error_reduce_cuda = load_kernel("error_reduce")
+        self.error_reduce_cuda = load_kernel("error_reduce", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'ACC_TYPE': self.accumulate_type
+        })
         self.build_aux_pc_cuda = load_kernel("build_aux_position_correction", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
