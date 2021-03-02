@@ -8,12 +8,12 @@ class ArrayUtilsKernel:
         self.queue = queue
         self.acc_dtype = acc_dtype
         self.cdot_cuda = load_kernel("dot", {
-            'INTYPE': 'complex<float>',
-            'ACCTYPE': 'double' if acc_dtype==np.float64 else 'float'
+            'IN_TYPE': 'complex<float>',
+            'ACC_TYPE': 'double' if acc_dtype==np.float64 else 'float'
         })
         self.dot_cuda = load_kernel("dot", {
-            'INTYPE': 'float',
-            'ACCTYPE': 'double' if acc_dtype==np.float64 else 'float'
+            'IN_TYPE': 'float',
+            'ACC_TYPE': 'double' if acc_dtype==np.float64 else 'float'
         })
         self.full_reduce_cuda = load_kernel("full_reduce", {
             'DTYPE': 'double' if acc_dtype==np.float64 else 'float',

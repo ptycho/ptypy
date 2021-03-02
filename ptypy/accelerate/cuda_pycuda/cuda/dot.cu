@@ -15,15 +15,15 @@ __device__ inline T dotmul(const complex<T>& a, const complex<T>& b)
   return a.real() * b.real() + a.imag() * b.imag();
 }
 
-extern "C" __global__ void dot(const INTYPE* a,
-                               const INTYPE* b,
+extern "C" __global__ void dot(const IN_TYPE* a,
+                               const IN_TYPE* b,
                                int size,
-                               ACCTYPE* out)
+                               ACC_TYPE* out)
 {
   int tx = threadIdx.x;
   int ix = tx + blockIdx.x * blockDim.x;
 
-  __shared__ ACCTYPE sh[1024];
+  __shared__ ACC_TYPE sh[1024];
 
   if (ix < size)
   {
@@ -31,7 +31,7 @@ extern "C" __global__ void dot(const INTYPE* a,
   }
   else
   {
-    sh[tx] = ACCTYPE(0);
+    sh[tx] = ACC_TYPE(0);
   }
   __syncthreads();
 
