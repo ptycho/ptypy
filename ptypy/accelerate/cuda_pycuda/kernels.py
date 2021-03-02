@@ -275,7 +275,11 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
         })
-        self.build_exit_cuda = load_kernel("build_exit")
+        self.build_exit_cuda = load_kernel("build_exit", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
         self.build_aux_no_ex_cuda = load_kernel("build_aux_no_ex", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
