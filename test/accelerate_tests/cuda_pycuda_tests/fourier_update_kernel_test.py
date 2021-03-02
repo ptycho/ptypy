@@ -191,7 +191,7 @@ class FourierUpdateKernelTest(PyCudaTest):
 
         expected_fdev = nFUK.npy.fdev
         measured_fdev = FUK.gpu.fdev.get()
-        np.testing.assert_array_equal(expected_fdev, measured_fdev, err_msg="Numpy fdev "
+        np.testing.assert_allclose(expected_fdev, measured_fdev, rtol=1e-6, err_msg="Numpy fdev "
                                                                             "is \n%s, \nbut gpu fdev is \n %s, \n " % (
                                                                             repr(expected_fdev),
                                                                             repr(measured_fdev)))

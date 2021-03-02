@@ -107,7 +107,11 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
         })
-        self.fourier_error_cuda = load_kernel("fourier_error")
+        self.fourier_error_cuda = load_kernel("fourier_error", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
         self.fourier_error2_cuda = None
         self.error_reduce_cuda = load_kernel("error_reduce", {
             'IN_TYPE': 'float',
@@ -779,7 +783,11 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         self.queue = queue_thread
         self._ob_shape = None
         self._ob_id = None
-        self.fourier_error_cuda = load_kernel("fourier_error")
+        self.fourier_error_cuda = load_kernel("fourier_error",{
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
         self.error_reduce_cuda = load_kernel("error_reduce", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
