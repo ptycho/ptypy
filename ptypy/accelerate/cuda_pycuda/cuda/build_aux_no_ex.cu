@@ -1,23 +1,32 @@
+/** build_aux without exit wave kernel.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double - for aux wave)
+ * - MATH_TYPE: the data type used for computation 
+ */
+
 #include <thrust/complex.h>
 using thrust::complex;
 
-extern "C" __global__ void build_aux_no_ex(CTYPE* auxilliary_wave,
+extern "C" __global__ void build_aux_no_ex(complex<OUT_TYPE>* auxilliary_wave,
                                            int aRows,
                                            int aCols,
-                                           const CTYPE* __restrict__ probe,
+                                           const complex<IN_TYPE>* __restrict__ probe,
                                            int pRows,
                                            int pCols,
-                                           const CTYPE* __restrict__ obj,
+                                           const complex<IN_TYPE>* __restrict__ obj,
                                            int oRows,
                                            int oCols,
                                            const int* __restrict__ addr,
-                                           FTYPE fac,
+                                           IN_TYPE fac_,
                                            int doAdd)
 {
   int bid = blockIdx.x;
   int tx = threadIdx.x;
   int ty = threadIdx.y;
   const int addr_stride = 15;
+  const MATH_TYPE fac = fac_;   // type conversion
 
   const int* oa = addr + 3 + bid * addr_stride;
   const int* pa = addr + bid * addr_stride;
@@ -32,7 +41,9 @@ extern "C" __global__ void build_aux_no_ex(CTYPE* auxilliary_wave,
 #   pragma unroll(4)
     for (int c = tx; c < aCols; c += blockDim.x)
     {
-      auto tmp = obj[b * oCols + c] * probe[b * pCols + c] * fac;
+      complex<MATH_TYPE> t_obj = obj[b * oCols + c];
+      complex<MATH_TYPE> t_probe = probe[b * pCols + c];
+      auto tmp = t_obj * t_probe * fac;
       if (doAdd)
       {
         auxilliary_wave[b * aCols + c] += tmp;

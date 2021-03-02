@@ -251,17 +251,25 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
 
 class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
-    def __init__(self, queue_thread=None):
+    def __init__(self, queue_thread=None, math_type = 'float'):
         super(AuxiliaryWaveKernel, self).__init__()
         # and now initialise the cuda
         self.queue = queue_thread
         self._ob_shape = None
         self._ob_id = None
-        self.build_aux_cuda = load_kernel("build_aux")
+        self.math_type = math_type
+        if math_type not in ['float', 'double']:
+            raise ValueError('Only double or float math is supported')
+        self.build_aux_cuda = load_kernel("build_aux", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
         self.build_exit_cuda = load_kernel("build_exit")
         self.build_aux_no_ex_cuda = load_kernel("build_aux_no_ex", {
-            'CTYPE': 'complex<float>',
-            'FTYPE': 'float'
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
         })
 
     # DEPRECATED?
@@ -288,7 +296,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                             ob,
                             obr, obc,
                             addr,
-                            np.float32(alpha),
+                            np.float32(alpha) if ex.dtype == np.complex64 else np.float64(alpha),
                             block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
 
     def build_exit(self, b_aux, addr, ob, pr, ex):
@@ -317,7 +325,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                                   ob,
                                   obr, obc,
                                   addr,
-                                  np.float32(fac),
+                                  np.float32(fac) if pr.dtype == np.complex64 else np.float64(fac),
                                   np.int32(add),
                                   block=(32, 32, 1),
                                   grid=(int(maxz * nmodes), 1, 1),
@@ -722,15 +730,23 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
 
 class PositionCorrectionKernel(ab.PositionCorrectionKernel):
-    def __init__(self, aux, nmodes, queue_thread=None):
+    def __init__(self, aux, nmodes, queue_thread=None, math_type='float'):
         super(PositionCorrectionKernel, self).__init__(aux, nmodes)
+        if math_type not in ['float', 'double']:
+            raise ValueError('Only float or double math is supported')
+        
         # add kernels
+        self.math_type = math_type
         self.queue = queue_thread
         self._ob_shape = None
         self._ob_id = None
         self.fourier_error_cuda = load_kernel("fourier_error")
         self.error_reduce_cuda = load_kernel("error_reduce")
-        self.build_aux_pc_cuda = load_kernel("build_aux_position_correction")
+        self.build_aux_pc_cuda = load_kernel("build_aux_position_correction", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
         self.update_addr_and_error_state_cuda = load_kernel("update_addr_error_state")
 
         self.gpu = Adict()
