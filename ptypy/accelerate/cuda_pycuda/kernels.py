@@ -398,9 +398,6 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.gpu.Imodel = None
 
         subs = {
-            # temporarily until all kernels are ported to be flexible with unified naming
-            'CTYPE': 'complex<float>' if self.ctype == np.complex64 else 'complex<double>',
-            'FTYPE': 'float' if self.ftype == np.float32 else 'double',
             'IN_TYPE': 'float' if self.ftype == np.float32 else 'double',
             'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double',
             'ACC_TYPE': self.accumulate_type,
