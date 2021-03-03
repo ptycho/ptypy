@@ -194,13 +194,17 @@ class DerivativesKernel:
 
 
 class GaussianSmoothingKernel:
-    def __init__(self, queue=None, num_stdevs=4):
+    def __init__(self, queue=None, num_stdevs=4, kernel_type='float'):
+        if kernel_type not in ['float', 'double']:
+            raise ValueError('Invalid data type for kernel')
+        self.kernel_type = kernel_type
         self.dtype = np.complex64
         self.stype = "complex<float>"
         self.queue = queue
         self.num_stdevs = num_stdevs
         self.blockdim_x = 4
         self.blockdim_y = 16
+
         
         # At least 2 blocks per SM
         self.max_shared_per_block = 48 * 1024 // 2 
@@ -210,12 +214,14 @@ class GaussianSmoothingKernel:
         self.convolution_row = load_kernel("convolution_row", file="convolution.cu", subs={
             'BDIM_X': self.blockdim_x,
             'BDIM_Y': self.blockdim_y,
-            'DTYPE': self.stype
+            'DTYPE': self.stype,
+            'MATH_TYPE': self.kernel_type
         })
         self.convolution_col = load_kernel("convolution_col", file="convolution.cu", subs={
             'BDIM_X': self.blockdim_y,
             'BDIM_Y': self.blockdim_x,
-            'DTYPE': self.stype
+            'DTYPE': self.stype,
+            'MATH_TYPE': self.kernel_type
         })
 
     
@@ -244,7 +250,7 @@ class GaussianSmoothingKernel:
             r = int(self.num_stdevs * stdx + 0.5)
             g = gaussian(np.arange(-r,r+1), stdx)
             g /= g.sum()
-            kernel = gpuarray.to_gpu(g[r:].astype(np.float32))
+            kernel = gpuarray.to_gpu(g[r:].astype(np.float32 if self.kernel_type == 'float' else np.float64))
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
 
@@ -269,7 +275,7 @@ class GaussianSmoothingKernel:
             r = int(self.num_stdevs * stdy + 0.5)
             g = gaussian(np.arange(-r,r+1), stdy)
             g /= g.sum()
-            kernel = gpuarray.to_gpu(g[r:].astype(np.float32))
+            kernel = gpuarray.to_gpu(g[r:].astype(np.float32 if self.kernel_type == 'float' else np.float64))
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
 
