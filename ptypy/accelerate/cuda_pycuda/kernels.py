@@ -609,8 +609,12 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             dtype = 'complex<float>'
         elif denom_type == np.float32:
             dtype = 'float'
+        elif denom_type == np.complex128:
+            dtype = 'complex<double>'
+        elif denom_type == np.float64:
+            dtype = 'double'
         else:
-            raise ValueError('only complex64 and float32 types supported')
+            raise ValueError('invalid type for denominator')
         if math_type not in ['double', 'float']:
             raise ValueError('only float and double are supported for math_type')
         
@@ -618,7 +622,10 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         self.dtype = dtype
         self.queue = queue_thread
         self.ob_update_cuda = load_kernel("ob_update", {
-            'DENOM_TYPE': dtype
+            'DENOM_TYPE': dtype,
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
         })
         self.ob_update2_cuda = None  # load_kernel("ob_update2")
         self.pr_update_cuda = load_kernel("pr_update", {
