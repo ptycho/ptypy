@@ -18,13 +18,13 @@ using thrust::complex;
 #define obj_roi_row(k) addr[4 * num_pods + (k)]
 #define obj_roi_column(k) addr[5 * num_pods + (k)]
 
-template <class T>
-__device__ inline void set_real(complex<T>& v, T r)
+template <class T, class U>
+__device__ inline void set_real(complex<T>& v, U r)
 {
-  v.real(r);
+  v.real(T(r));
 }
-template <class T>
-__device__ inline void set_real(T& v, T r)
+template <class T, class U>
+__device__ inline void set_real(T& v, U r)
 {
   v = r;
 }
