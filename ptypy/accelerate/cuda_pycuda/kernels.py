@@ -602,7 +602,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
 
 class PoUpdateKernel(ab.PoUpdateKernel):
 
-    def __init__(self, queue_thread=None, denom_type=np.complex64):
+    def __init__(self, queue_thread=None, denom_type=np.complex64, math_type='float'):
         super(PoUpdateKernel, self).__init__()
         # and now initialise the cuda
         if denom_type == np.complex64:
@@ -611,6 +611,10 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             dtype = 'float'
         else:
             raise ValueError('only complex64 and float32 types supported')
+        if math_type not in ['double', 'float']:
+            raise ValueError('only float and double are supported for math_type')
+        
+        self.math_type = math_type
         self.dtype = dtype
         self.queue = queue_thread
         self.ob_update_cuda = load_kernel("ob_update", {
@@ -622,8 +626,9 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         })
         self.pr_update2_cuda = None
         self.ob_update_ML_cuda = load_kernel("ob_update_ML", {
-            'CTYPE': 'complex<float>',
-            'FTYPE': 'float'
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
         })
         self.ob_update2_ML_cuda = None
         self.pr_update_ML_cuda = load_kernel("pr_update_ML", {
