@@ -1,3 +1,12 @@
+/** ob_update.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double)
+ * - MATH_TYPE: the data type used for computation
+ */
+
+
 #include <cassert>
 #include <thrust/complex.h>
 using thrust::complex;
@@ -16,17 +25,19 @@ extern "C" __global__ void ob_update2_ML(int pr_sh,
                                          int ex_0,
                                          int ex_1,
                                          int ex_2,
-                                         CTYPE* ob_g,
-                                         const CTYPE* __restrict__ pr_g,
-                                         const CTYPE* __restrict__ ex_g,
+                                         complex<OUT_TYPE>* ob_g,
+                                         const complex<IN_TYPE>* __restrict__ pr_g,
+                                         const complex<IN_TYPE>* __restrict__ ex_g,
                                          const int* addr,
-                                         FTYPE fac)
+                                         IN_TYPE fac_)
 {
   int y = blockIdx.y * BDIM_Y + threadIdx.y;
   int dy = ob_sh;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
   int dz = ob_sh;
-  CTYPE ob[NUM_MODES];
+  MATH_TYPE fac = fac_;
+  complex<MATH_TYPE> ob[NUM_MODES];
+
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(ob_modes <= NUM_MODES);
@@ -81,13 +92,14 @@ extern "C" __global__ void ob_update2_ML(int pr_sh,
       {
         auto pridx = ad[0] * pr_sh * pr_sh + v1 * pr_sh + v2;
         assert(pridx < pr_modes * pr_sh * pr_sh);
-        auto pr = pr_g[pridx];
+        complex<MATH_TYPE> pr = pr_g[pridx];
         int idx = ad[2];
         assert(idx < NUM_MODES);
         auto cpr = conj(pr);
         auto exidx = ad[1] * pr_sh * pr_sh + v1 * pr_sh + v2;
         assert(exidx < ex_0 * ex_1 * ex_2);
-        ob[idx] += cpr * ex_g[exidx] * fac;
+        complex<MATH_TYPE> t_ex_g = ex_g[exidx];
+        ob[idx] += cpr * t_ex_g * fac;
       }
     }
   }
