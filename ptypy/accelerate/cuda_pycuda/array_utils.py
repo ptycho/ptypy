@@ -16,7 +16,9 @@ class ArrayUtilsKernel:
             'ACC_TYPE': 'double' if acc_dtype==np.float64 else 'float'
         })
         self.full_reduce_cuda = load_kernel("full_reduce", {
-            'DTYPE': 'double' if acc_dtype==np.float64 else 'float',
+            'IN_TYPE': 'double' if acc_dtype==np.float64 else 'float',
+            'OUT_TYPE': 'double' if acc_dtype==np.float64 else 'float',
+            'ACC_TYPE': 'double' if acc_dtype==np.float64 else 'float',
             'BDIM_X': 1024
         })
         self.transpose_cuda = load_kernel("transpose", {
