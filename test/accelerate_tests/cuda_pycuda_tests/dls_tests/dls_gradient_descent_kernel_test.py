@@ -143,13 +143,14 @@ class DlsGradientDescentKernelTest(PyCudaTest):
     ])
     def test_make_a012_UNITY(self, name, iter):
 
-        Nmax = 10
+        # Reduce the array size to make the tests run faster
+        Nmax = 10 
         Ymax = 128
         Xmax = 128
 
         # Load data
         with h5py.File(self.datadir %name + "make_a012_%04d.h5" %iter, "r") as g:
-            addr = g["addr"][:]
+            addr = g["addr"][:Nmax]
             I = g["I"][:Nmax,:Ymax,:Xmax]
             f = g["f"][:Nmax,:Ymax,:Xmax]
             a = g["a"][:Nmax,:Ymax,:Xmax]
@@ -175,6 +176,9 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         # GPU kernel        
         GDK = GradientDescentKernel(aux_dev, addr.shape[1], queue=self.stream)
         GDK.allocate()
+        GDK.gpu.Imodel.fill(np.nan)
+        GDK.gpu.LLerr.fill(np.nan)
+        GDK.gpu.LLden.fill(np.nan)
         GDK.make_a012(f_dev, a_dev, b_dev, addr_dev, I_dev, fic_dev)
 
         ## Assert
