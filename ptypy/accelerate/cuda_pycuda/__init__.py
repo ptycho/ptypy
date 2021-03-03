@@ -42,6 +42,9 @@ def load_kernel(name, subs={}, file=None):
         kernel = f.read()
     for k,v in list(subs.items()):
         kernel = kernel.replace(k, str(v))
+    # insert a preprocessor line directive to assist compiler errors
+    escaped = fn.replace("\\", "\\\\")
+    kernel = '#line 1 "{}"\n'.format(escaped) + kernel
     mod = SourceModule(kernel, include_dirs=[np.get_include()], no_extern_c=True, options=debug_options)
     return mod.get_function(name)
 
