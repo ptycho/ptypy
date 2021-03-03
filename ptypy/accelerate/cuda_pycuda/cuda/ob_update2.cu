@@ -1,3 +1,13 @@
+/** ob_update.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double)
+ * - MATH_TYPE: the data type used for computation
+ * - DENOM_TYPE: type for the denominator (can be real/complex float/double)
+ */
+
+
 #include <cassert>
 #include <thrust/complex.h>
 using thrust::complex;
@@ -29,6 +39,7 @@ __device__ inline T get_real(const T& v)
   return v;
 }
 
+
 extern "C" __global__ void ob_update2(
     int pr_sh,
     int ob_modes,
@@ -38,18 +49,18 @@ extern "C" __global__ void ob_update2(
     int ex_0,
     int ex_1,
     int ex_2,
-    complex<float>* ob_g,
+    complex<OUT_TYPE>* ob_g,
     DENOM_TYPE* obn_g,
-    const complex<float>* __restrict__ pr_g,  // 2, 5, 5
-    const complex<float>* __restrict__ ex_g,  // 16, 5, 5
+    const complex<IN_TYPE>* __restrict__ pr_g,  // 2, 5, 5
+    const complex<IN_TYPE>* __restrict__ ex_g,  // 16, 5, 5
     const int* addr)
 {
   int y = blockIdx.y * BDIM_Y + threadIdx.y;
   int dy = ob_sh;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
   int dz = ob_sh;
-  complex<float> ob[NUM_MODES];
-  DENOM_TYPE obn[NUM_MODES];
+  complex<MATH_TYPE> ob[NUM_MODES];
+  MATH_TYPE obn[NUM_MODES];
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(ob_modes <= NUM_MODES);
@@ -62,7 +73,7 @@ extern "C" __global__ void ob_update2(
       auto idx = i * dy * dz + y * dz + z;
       assert(idx < ob_modes * ob_sh * ob_sh);
       ob[i] = ob_g[idx];
-      obn[i] = obn_g[idx];
+      obn[i] = get_real(obn_g[idx]);
     }
   }
 
@@ -105,16 +116,17 @@ extern "C" __global__ void ob_update2(
       {
         auto pridx = ad[0] * pr_sh * pr_sh + v1 * pr_sh + v2;
         assert(pridx < pr_modes * pr_sh * pr_sh);
-        auto pr = pr_g[pridx];
+        complex<MATH_TYPE> pr = pr_g[pridx];
         int idx = ad[2];
         assert(idx < NUM_MODES);
         auto cpr = conj(pr);
         auto exidx = ad[1] * pr_sh * pr_sh + v1 * pr_sh + v2;
         assert(exidx < ex_0 * ex_1 * ex_2);
-        ob[idx] += cpr * ex_g[exidx];
-        auto rr = get_real(obn[idx]);
+        complex<MATH_TYPE> t_ex_g = ex_g[exidx];
+        ob[idx] += cpr * t_ex_g;
+        auto rr = obn[idx];
         rr += pr.real() * pr.real() + pr.imag() * pr.imag();
-        set_real(obn[idx], rr);
+        obn[idx] = rr;
       }
     }
   }
@@ -124,7 +136,7 @@ extern "C" __global__ void ob_update2(
     for (int i = 0; i < NUM_MODES; ++i)
     {
       ob_g[i * dy * dz + y * dz + z] = ob[i];
-      obn_g[i * dy * dz + y * dz + z] = obn[i];
+      set_real(obn_g[i * dy * dz + y * dz + z], obn[i]);
     }
   }
 }
