@@ -398,6 +398,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
             'CTYPE': 'complex<float>' if self.ctype == np.complex64 else 'complex<double>',
             'FTYPE': 'float' if self.ftype == np.float32 else 'double',
             'IN_TYPE': 'float' if self.ftype == np.float32 else 'double',
+            'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double',
             'ACC_TYPE': self.accumulate_type,
             'MATH_TYPE': self.math_type
         }
