@@ -1,3 +1,11 @@
+/** pr_update.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double)
+ * - MATH_TYPE: the data type used for computation
+ */
+
 #include <cassert>
 #include <thrust/complex.h>
 using thrust::complex;
@@ -16,17 +24,18 @@ extern "C" __global__ void pr_update2_ML(int pr_sh,
                                          int pr_modes,
                                          int ob_modes,
                                          int num_pods,
-                                         CTYPE* pr_g,
-                                         const CTYPE* __restrict__ ob_g,
-                                         const CTYPE* __restrict__ ex_g,
+                                         complex<OUT_TYPE>* pr_g,
+                                         const complex<IN_TYPE>* __restrict__ ob_g,
+                                         const complex<IN_TYPE>* __restrict__ ex_g,
                                          const int* addr,
-                                         FTYPE fac)
+                                         IN_TYPE fac_)
 {
   int y = blockIdx.y * BDIM_Y + threadIdx.y;
   int dy = pr_sh;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
   int dz = pr_sh;
-  CTYPE pr[NUM_MODES];
+  MATH_TYPE fac = fac_;
+  complex<MATH_TYPE> pr[NUM_MODES];
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(pr_modes <= NUM_MODES);
@@ -81,12 +90,14 @@ extern "C" __global__ void pr_update2_ML(int pr_sh,
       {
         auto obidx = ad[2] * ob_sh_row * ob_sh_col + v1 * ob_sh_col + v2;
         assert(obidx < ob_modes * ob_sh_row * ob_sh_col);
-        auto ob = ob_g[obidx];
+        complex<MATH_TYPE> ob = ob_g[obidx];
 
         int idx = ad[0];
         assert(idx < NUM_MODES);
         auto cob = conj(ob);
-        pr[idx] += cob * ex_g[ad[1] * pr_sh * pr_sh + y * pr_sh + z] * fac;
+        complex<MATH_TYPE> ex_val = ex_g[ad[1] * pr_sh * pr_sh + y * pr_sh + z];
+        complex<MATH_TYPE> add_val = cob * ex_val * fac;
+        pr[idx] += add_val;
       }
     }
   }

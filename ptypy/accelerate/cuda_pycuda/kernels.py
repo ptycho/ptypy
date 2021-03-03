@@ -782,8 +782,9 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "NUM_MODES": prsh[0],
                     "BDIM_X": 16,
                     "BDIM_Y": 16,
-                    'CTYPE': 'complex<float>',
-                    'FTYPE': 'float'
+                    'IN_TYPE': 'float',
+                    'OUT_TYPE': 'float',
+                    'MATH_TYPE': self.math_type
                 })
 
             grid = [int((x+15)//16) for x in pr.shape[-2:]]
