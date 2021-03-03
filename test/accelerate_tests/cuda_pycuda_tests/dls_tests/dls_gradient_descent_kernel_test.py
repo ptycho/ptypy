@@ -5,8 +5,8 @@ Testing on real data
 import h5py
 import unittest
 import numpy as np
+from parameterized import parameterized
 from .. import perfrun, PyCudaTest, have_pycuda
-
 
 if have_pycuda():
     from pycuda import gpuarray
@@ -19,15 +19,19 @@ INT_TYPE = np.int32
 
 class DlsGradientDescentKernelTest(PyCudaTest):
 
-    datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data/"
-    iter = 50
+    datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data-%s/"
     rtol = 1e-6
     atol = 1e-6
 
-    def test_make_model_UNITY(self):
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_make_model_UNITY(self, name, iter):
 
         # Load data
-        with h5py.File(self.datadir + "make_model_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir %name + "make_model_%04d.h5" %iter, "r") as f:
             aux = f["aux"][:]
             addr = f["addr"][:]
 
@@ -49,16 +53,20 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         np.testing.assert_allclose(BGDK.npy.Imodel, GDK.gpu.Imodel.get(), atol=self.atol, rtol=self.rtol,
             err_msg="`Imodel` buffer has not been updated as expected")
 
-
-    def test_floating_intensity_UNITY(self):
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_floating_intensity_UNITY(self, name, iter):
 
         # Load data
-        with h5py.File(self.datadir + "floating_intensities_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir %name + "floating_intensities_%04d.h5" %iter, "r") as f:
             w = f["w"][:]
             addr = f["addr"][:]
             I = f["I"][:]
             fic = f["fic"][:]
-        with h5py.File(self.datadir + "make_model_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir %name + "make_model_%04d.h5" %iter, "r") as f:
             aux = f["aux"][:]
         
         # Copy data to device
@@ -84,17 +92,21 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         np.testing.assert_allclose(fic, fic_dev.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="floating intensity coeff (fic) has not been updated as expected")
 
-
-    def test_main_and_error_reduce_UNITY(self):
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_main_and_error_reduce_UNITY(self, name, iter):
 
         # Load data
-        with h5py.File(self.datadir + "main_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir %name + "main_%04d.h5" %iter, "r") as f:
             aux = f["aux"][:]
             addr = f["addr"][:]
             w = f["w"][:]
             I = f["I"][:]
         # Load data
-        with h5py.File(self.datadir + "error_reduce_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir %name + "error_reduce_%04d.h5" %iter, "r") as f:
             err_phot = f["err_phot"][:]
 
         # Copy data to device
@@ -124,22 +136,27 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         np.testing.assert_allclose(err_phot, err_phot_dev.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="`err_phot` has not been updated as expected")
 
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_make_a012_UNITY(self, name, iter):
 
-    def test_make_a012_UNITY(self):
-
-        Nmax = 10
+        # Reduce the array size to make the tests run faster
+        Nmax = 10 
         Ymax = 128
         Xmax = 128
 
         # Load data
-        with h5py.File(self.datadir + "make_a012_%04d.h5" %self.iter, "r") as g:
-            addr = g["addr"][:]
+        with h5py.File(self.datadir %name + "make_a012_%04d.h5" %iter, "r") as g:
+            addr = g["addr"][:Nmax]
             I = g["I"][:Nmax,:Ymax,:Xmax]
             f = g["f"][:Nmax,:Ymax,:Xmax]
             a = g["a"][:Nmax,:Ymax,:Xmax]
             b = g["b"][:Nmax,:Ymax,:Xmax]
             fic = g["fic"][:Nmax]
-        with h5py.File(self.datadir + "make_model_%04d.h5" %self.iter, "r") as h:
+        with h5py.File(self.datadir %name + "make_model_%04d.h5" %iter, "r") as h:
             aux = h["aux"][:Nmax,:Ymax,:Xmax]
 
         # Copy data to device
@@ -159,6 +176,9 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         # GPU kernel        
         GDK = GradientDescentKernel(aux_dev, addr.shape[1], queue=self.stream)
         GDK.allocate()
+        GDK.gpu.Imodel.fill(np.nan)
+        GDK.gpu.LLerr.fill(np.nan)
+        GDK.gpu.LLden.fill(np.nan)
         GDK.make_a012(f_dev, a_dev, b_dev, addr_dev, I_dev, fic_dev)
 
         ## Assert
@@ -169,15 +189,19 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         np.testing.assert_allclose(BGDK.npy.LLden, GDK.gpu.LLden.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="LLden error has not been updated as expected")
 
-
-    def test_fill_b_UNITY(self):
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_fill_b_UNITY(self, name, iter):
 
         Nmax = 10
         Ymax = 128
         Xmax = 128
 
         # Load data
-        with h5py.File(self.datadir + "fill_b_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir %name + "fill_b_%04d.h5" %iter, "r") as f:
             w = f["w"][:Nmax, :Ymax, :Xmax]
             addr = f["addr"][:]
             B = f["B"][:]
@@ -185,7 +209,7 @@ class DlsGradientDescentKernelTest(PyCudaTest):
             A0 = f["A0"][:Nmax, :Ymax, :Xmax]
             A1 = f["A1"][:Nmax, :Ymax, :Xmax]
             A2 = f["A2"][:Nmax, :Ymax, :Xmax]
-        with h5py.File(self.datadir + "make_model_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir %name + "make_model_%04d.h5" %iter, "r") as f:
             aux = f["aux"][:Nmax, :Ymax, :Xmax]
 
         # Copy data to device
