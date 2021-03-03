@@ -803,7 +803,10 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
         })
-        self.update_addr_and_error_state_cuda = load_kernel("update_addr_error_state")
+        self.update_addr_and_error_state_cuda = load_kernel("update_addr_error_state", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float'
+        })
 
         self.gpu = Adict()
         self.gpu.fdev = None
