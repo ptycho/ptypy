@@ -25,9 +25,7 @@ class DlsRegularizerTest(PyCudaTest):
     atol = 1e-6
 
     @parameterized.expand([
-        ["base", 10],
-        ["regul", 50],
-        ["floating", 0],
+        ["regul", 50]
     ])
     def test_regularizer_grad_UNITY(self, name, iter):
 
@@ -53,9 +51,7 @@ class DlsRegularizerTest(PyCudaTest):
             err_msg="The LL array has not been updated as expected")
 
     @parameterized.expand([
-        ["base", 10],
         ["regul", 50],
-        ["floating", 0],
     ])
     def test_regularizer_poly_line_ceoffs_UNITY(self, name, iter):
 
