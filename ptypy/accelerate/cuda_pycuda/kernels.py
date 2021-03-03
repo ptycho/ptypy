@@ -639,8 +639,9 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         })
         self.ob_update2_ML_cuda = None
         self.pr_update_ML_cuda = load_kernel("pr_update_ML", {
-            'CTYPE': 'complex<float>',
-            'FTYPE': 'float'
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
         })
         self.pr_update2_ML_cuda = None
 
