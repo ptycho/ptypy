@@ -495,9 +495,10 @@ class DM_pycuda(DM_serial.DM_serial):
         for dID, prep in self.diff_info.items():
             prep.addr = prep.addr_gpu.get()
 
-        # copy data to cpu
+        # copy data to cpu 
+        # this kills the pagelock memory (otherwise we get segfaults in h5py)
         for name, s in self.pr.S.items():
-            s.data = np.copy(s.data) # is this the same as s.data.get()?
+            s.data = np.copy(s.data)
 
         self.context.detach()
         super(DM_pycuda, self).engine_finalize()

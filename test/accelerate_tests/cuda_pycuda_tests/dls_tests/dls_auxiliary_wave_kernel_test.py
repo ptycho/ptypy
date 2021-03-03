@@ -4,6 +4,7 @@ Testing based on real data
 import h5py
 import unittest
 import numpy as np
+from parameterized import parameterized
 from .. import perfrun, PyCudaTest, have_pycuda
 
 if have_pycuda():
@@ -11,22 +12,25 @@ if have_pycuda():
     from ptypy.accelerate.cuda_pycuda.kernels import AuxiliaryWaveKernel
 from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as BaseAuxiliaryWaveKernel
 
-
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
 INT_TYPE = np.int32
 
 class DlsAuxiliaryWaveKernelTest(PyCudaTest):
 
-    datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data/"
-    iter = 50
+    datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data-%s/"
     rtol = 1e-6
     atol = 1e-6
 
-    def test_build_aux_no_ex_noadd_UNITY(self):
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_build_aux_no_ex_noadd_UNITY(self, name, iter):
 
         # Load data
-        with h5py.File(self.datadir + "build_aux_no_ex_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir % name + "build_aux_no_ex_%04d.h5" %iter, "r") as f:
             aux = f["aux"][:]
             addr = f["addr"][:]
             ob = f["ob"][:]
