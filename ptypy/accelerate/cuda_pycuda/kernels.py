@@ -119,7 +119,11 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
             'ACC_TYPE': self.accumulate_type
         })
         self.fourier_update_cuda = None
-        self.log_likelihood_cuda = load_kernel("log_likelihood")
+        self.log_likelihood_cuda = load_kernel("log_likelihood", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
         self.exit_error_cuda = load_kernel("exit_error", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
