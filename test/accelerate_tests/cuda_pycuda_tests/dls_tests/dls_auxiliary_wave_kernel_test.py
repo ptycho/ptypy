@@ -24,7 +24,7 @@ class DlsAuxiliaryWaveKernelTest(PyCudaTest):
 
     @parameterized.expand([
         ["base", 10],
-        #["regul", 50],
+        ["regul", 50],
         ["floating", 0],
     ])
     def test_build_aux_no_ex_noadd_UNITY(self, name, iter):
