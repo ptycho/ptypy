@@ -5,13 +5,14 @@ testing on real data
 import h5py
 import unittest
 import numpy as np
-import ptypy.utils as u
+from parameterized import parameterized
 from .. import PyCudaTest, have_pycuda
 
 if have_pycuda():
     from pycuda import gpuarray
     from ptypy.accelerate.cuda_pycuda.kernels import PropagationKernel
 
+import ptypy.utils as u
 from ptypy.core import geometry
 from ptypy.core import Base as theBase
 
@@ -24,8 +25,7 @@ INT_TYPE = np.int32
 
 class DLsPropagationKernelTest(PyCudaTest):
 
-    datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data/"
-    iter = 50
+    datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data-%s/"
     rtol = 1e-6
     atol = 1e-6
 
@@ -43,10 +43,15 @@ class DLsPropagationKernelTest(PyCudaTest):
         G = geometry.Geo(owner=P, pars=g)
         return G
 
-    def test_forward_UNITY(self):
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_forward_UNITY(self, name, iter):
 
         # Load data
-        with h5py.File(self.datadir + "forward_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir % name + "forward_%04d.h5" %iter, "r") as f:
             aux = f["aux"][0]
 
         # Copy data to device
@@ -67,11 +72,15 @@ class DLsPropagationKernelTest(PyCudaTest):
         np.testing.assert_allclose(aux, aux_dev.get(), atol=self.atol, rtol=self.rtol, 
             err_msg="Forward propagation was not as expected")
 
-
-    def test_backward_UNITY(self):
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_backward_UNITY(self, name, iter):
 
         # Load data
-        with h5py.File(self.datadir + "backward_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir % name + "backward_%04d.h5" %iter, "r") as f:
             aux = f["aux"][0]
 
         # Copy data to device

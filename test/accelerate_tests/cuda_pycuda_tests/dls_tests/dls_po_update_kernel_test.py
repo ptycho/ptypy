@@ -5,6 +5,7 @@ Testing on real data
 import h5py
 import unittest
 import numpy as np
+from parameterized import parameterized
 from .. import PyCudaTest, have_pycuda
 
 if have_pycuda():
@@ -18,15 +19,19 @@ INT_TYPE = np.int32
 
 class DlsPoUpdateKernelTest(PyCudaTest):
 
-    datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data/"
-    iter = 50
+    datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data-%s/"
     rtol = 1e-6
     atol = 1e-6
 
-    def test_op_update_ml_UNITY(self):
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_op_update_ml_UNITY(self, name, iter):
 
         # Load data
-        with h5py.File(self.datadir + "op_update_ml_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir %name + "op_update_ml_%04d.h5" %iter, "r") as f:
             aux = f["aux"][:]
             addr = f["addr"][:]
             obg = f["obg"][:]
@@ -50,10 +55,15 @@ class DlsPoUpdateKernelTest(PyCudaTest):
         np.testing.assert_allclose(obg, obg_dev.get(),  atol=self.atol, rtol=self.rtol, 
             err_msg="The object array has not been updated as expected")
 
-    def test_pr_update_ml_UNITY(self):
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_pr_update_ml_UNITY(self, name, iter):
 
         # Load data
-        with h5py.File(self.datadir + "pr_update_ml_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir %name + "pr_update_ml_%04d.h5" %iter, "r") as f:
             aux = f["aux"][:]
             addr = f["addr"][:]
             ob = f["ob"][:]

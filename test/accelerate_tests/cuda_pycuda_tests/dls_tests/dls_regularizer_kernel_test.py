@@ -5,6 +5,7 @@ Testing on real data
 import h5py
 import unittest
 import numpy as np
+from parameterized import parameterized
 from .. import PyCudaTest, have_pycuda
 
 if have_pycuda():
@@ -19,15 +20,19 @@ INT_TYPE = np.int32
 
 class DlsRegularizerTest(PyCudaTest):
 
-    datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data/"
-    iter = 50
+    datadir = "/dls/science/users/iat69393/gpu-hackathon/test-data-%s/"
     rtol = 1e-6
     atol = 1e-6
 
-    def test_regularizer_grad_UNITY(self):
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_regularizer_grad_UNITY(self, name, iter):
 
         # Load data
-        with h5py.File(self.datadir + "regul_grad_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir %name + "regul_grad_%04d.h5" %iter, "r") as f:
             ob = f["ob"][:]
 
         # Copy data to device
@@ -47,11 +52,15 @@ class DlsRegularizerTest(PyCudaTest):
         np.testing.assert_allclose(regul.LL, regul_pycuda.LL,  atol=self.atol, rtol=self.rtol, 
             err_msg="The LL array has not been updated as expected")
 
-
-    def test_regularizer_poly_line_ceoffs_UNITY(self):
+    @parameterized.expand([
+        ["base", 10],
+        ["regul", 50],
+        ["floating", 0],
+    ])
+    def test_regularizer_poly_line_ceoffs_UNITY(self, name, iter):
 
         # Load data
-        with h5py.File(self.datadir + "regul_poly_line_coeffs_%04d.h5" %self.iter, "r") as f:
+        with h5py.File(self.datadir % name + "regul_poly_line_coeffs_%04d.h5" %iter, "r") as f:
             ob  = f["ob"][:]
             obh = f["obh"][:]
 
