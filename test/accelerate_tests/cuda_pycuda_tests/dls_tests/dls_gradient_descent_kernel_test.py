@@ -162,7 +162,7 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         # Copy data to device
         aux_dev = gpuarray.to_gpu(aux)
         addr_dev = gpuarray.to_gpu(addr)
-        I_dev = gpuarray.to_gpu(addr)
+        I_dev = gpuarray.to_gpu(I)
         f_dev = gpuarray.to_gpu(f)
         a_dev = gpuarray.to_gpu(a)
         b_dev = gpuarray.to_gpu(b)
