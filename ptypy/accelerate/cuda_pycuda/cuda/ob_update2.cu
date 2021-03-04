@@ -4,6 +4,7 @@
  * - IN_TYPE: the data type for the inputs (float or double)
  * - OUT_TYPE: the data type for the outputs (float or double)
  * - MATH_TYPE: the data type used for computation
+ * - ACC_TYPE: accumulator type for the local ob accumulation
  * - DENOM_TYPE: type for the denominator (can be real/complex float/double)
  */
 
@@ -59,8 +60,8 @@ extern "C" __global__ void ob_update2(
   int dy = ob_sh;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
   int dz = ob_sh;
-  complex<MATH_TYPE> ob[NUM_MODES];
-  MATH_TYPE obn[NUM_MODES];
+  complex<ACC_TYPE> ob[NUM_MODES];
+  ACC_TYPE obn[NUM_MODES];
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(ob_modes <= NUM_MODES);
@@ -123,10 +124,9 @@ extern "C" __global__ void ob_update2(
         auto exidx = ad[1] * pr_sh * pr_sh + v1 * pr_sh + v2;
         assert(exidx < ex_0 * ex_1 * ex_2);
         complex<MATH_TYPE> t_ex_g = ex_g[exidx];
-        ob[idx] += cpr * t_ex_g;
-        auto rr = obn[idx];
-        rr += pr.real() * pr.real() + pr.imag() * pr.imag();
-        obn[idx] = rr;
+        complex<ACC_TYPE> add_val = cpr * t_ex_g;
+        ob[idx] += add_val;
+        obn[idx] += pr.real() * pr.real() + pr.imag() * pr.imag();
       }
     }
   }

@@ -599,7 +599,8 @@ class GradientDescentKernel(ab.GradientDescentKernel):
 
 class PoUpdateKernel(ab.PoUpdateKernel):
 
-    def __init__(self, queue_thread=None, denom_type=np.complex64, math_type='float'):
+    def __init__(self, queue_thread=None, denom_type=np.complex64, 
+        math_type='float', accumulator_type='float'):
         super(PoUpdateKernel, self).__init__()
         # and now initialise the cuda
         if denom_type == np.complex64:
@@ -614,8 +615,11 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             raise ValueError('invalid type for denominator')
         if math_type not in ['double', 'float']:
             raise ValueError('only float and double are supported for math_type')
+        if accumulator_type not in ['double', 'float']:
+            raise ValueError('only float and double are supported for accumulator_type')
         
         self.math_type = math_type
+        self.accumulator_type = accumulator_type
         self.dtype = dtype
         self.queue = queue_thread
         self.ob_update_cuda = load_kernel("ob_update", {
@@ -671,7 +675,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     'DENOM_TYPE': self.dtype,
                     'IN_TYPE': 'float',
                     'OUT_TYPE': 'float',
-                    'MATH_TYPE': self.math_type
+                    'MATH_TYPE': self.math_type,
+                    'ACC_TYPE': self.accumulator_type
                 })
 
             grid = [int((x+15)//16) for x in ob.shape[-2:]]
@@ -711,7 +716,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     'DENOM_TYPE': self.dtype,
                     'IN_TYPE': 'float',
                     'OUT_TYPE': 'float',
-                    'MATH_TYPE': self.math_type
+                    'MATH_TYPE': self.math_type,
+                    'ACC_TYPE': self.accumulator_type
                 })
 
             grid = [int((x+15)//16) for x in pr.shape[-2:]]
@@ -748,7 +754,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "BDIM_Y": 16,
                     'IN_TYPE': 'float',
                     'OUT_TYPE': 'float',
-                    'MATH_TYPE': self.math_type
+                    'MATH_TYPE': self.math_type,
+                    'ACC_TYPE': self.accumulator_type
                 })
             grid = [int((x+15)//16) for x in ob.shape[-2:]]
             grid = (grid[0], grid[1], int(1))
@@ -784,7 +791,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "BDIM_Y": 16,
                     'IN_TYPE': 'float',
                     'OUT_TYPE': 'float',
-                    'MATH_TYPE': self.math_type
+                    'MATH_TYPE': self.math_type,
+                    'ACC_TYPE': self.accumulator_type
                 })
 
             grid = [int((x+15)//16) for x in pr.shape[-2:]]

@@ -4,6 +4,7 @@
  * - IN_TYPE: the data type for the inputs (float or double)
  * - OUT_TYPE: the data type for the outputs (float or double)
  * - MATH_TYPE: the data type used for computation
+ * - ACC_TYPE: accumulator for the ob field
  */
 
 
@@ -36,7 +37,7 @@ extern "C" __global__ void ob_update2_ML(int pr_sh,
   int z = blockIdx.x * BDIM_X + threadIdx.x;
   int dz = ob_sh;
   MATH_TYPE fac = fac_;
-  complex<MATH_TYPE> ob[NUM_MODES];
+  complex<ACC_TYPE> ob[NUM_MODES];
 
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
@@ -99,7 +100,8 @@ extern "C" __global__ void ob_update2_ML(int pr_sh,
         auto exidx = ad[1] * pr_sh * pr_sh + v1 * pr_sh + v2;
         assert(exidx < ex_0 * ex_1 * ex_2);
         complex<MATH_TYPE> t_ex_g = ex_g[exidx];
-        ob[idx] += cpr * t_ex_g * fac;
+        complex<ACC_TYPE> add_val = cpr * t_ex_g * fac;
+        ob[idx] += add_val;
       }
     }
   }
