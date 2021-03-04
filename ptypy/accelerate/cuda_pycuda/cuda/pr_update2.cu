@@ -1,4 +1,4 @@
-/** ob_update.
+/** pr_update.
  *
  * Data types:
  * - IN_TYPE: the data type for the inputs (float or double)
