@@ -226,6 +226,13 @@ class ML(PositionCorrectionEngine):
             new_ob_grad, new_pr_grad = self.ob_grad_new, self.pr_grad_new
             tg += time.time() - t1
 
+            if self.p.debug and parallel.master and (self.curiter % self.p.debug_iter == 0):
+                pID = list(self.pr_grad.S.keys())[0]
+                oID = list(self.ob_grad.S.keys())[0]
+                with h5py.File(self.p.debug + "/ml_grad_%04d.h5" %self.curiter, "w") as f:
+                    f["pr_grad"] = self.pr_grad.S[pID].data
+                    f["ob_grad"] = self.ob_grad.S[oID].data
+
             if self.p.probe_update_start <= self.curiter:
                 # Apply probe support if needed
                 for name, s in new_pr_grad.storages.items():
@@ -246,7 +253,7 @@ class ML(PositionCorrectionEngine):
             if self.p.scale_precond:
                 cn2_new_pr_grad = Cnorm2(new_pr_grad)
                 cn2_new_ob_grad = Cnorm2(new_ob_grad)
-                if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
+                if self.p.debug and parallel.master and (self.curiter % self.p.debug_iter == 0):
                     with h5py.File(self.p.debug + "/ml_o_p_norm_%04d.h5" %self.curiter, "w") as f:
                         f["cn2_new_pr_grad"] = cn2_new_pr_grad
                         f["cn2_new_ob_grad"] = cn2_new_ob_grad
