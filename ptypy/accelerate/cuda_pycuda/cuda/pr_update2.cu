@@ -6,6 +6,13 @@
  * - MATH_TYPE: the data type used for computation
  * - DENOM_TYPE: data type for the denominator (double,float,complex<double>,complex<float>)
  * - ACC_TYPE: accumulator type for local pr array
+ * 
+ * NOTE: This version of ob_update goes over all tiles that need to be accumulated
+ * in a single thread block to avoid global atomic additions (as in pr_update.cu).
+ * This requires a local array of NUM_MODES size to store the local updates.
+ * GPU registers per thread are limited (255 32bit registers on V100), 
+ * and at some point the registers will spill into shared or global memory
+ * and the kernel will get considerably slower.
  */
 
 #include <cassert>

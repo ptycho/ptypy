@@ -5,6 +5,13 @@
  * - OUT_TYPE: the data type for the outputs (float or double)
  * - MATH_TYPE: the data type used for computation
  * - ACC_TYPE: accumulator for the ob field
+ * 
+ * NOTE: This version of ob_update goes over all tiles that need to be accumulated
+ * in a single thread block to avoid global atomic additions (as in ob_update_ML.cu).
+ * This requires a local array of NUM_MODES size to store the local updates.
+ * GPU registers per thread are limited (255 32bit registers on V100), 
+ * and at some point the registers will spill into shared or global memory
+ * and the kernel will get considerably slower.
  */
 
 
