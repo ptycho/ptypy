@@ -61,7 +61,7 @@ extern "C" __global__ void make_a012(const complex<IN_TYPE>* f,
 
   MATH_TYPE Iv = I[iz * x + ix];
   MATH_TYPE ficv = fic[iz];
-  A0[iz * x + ix] = OUT_TYPE(sumtf0 * ficv - Iv);
-  A1[iz * x + ix] = OUT_TYPE(sumtf1 * ficv);
-  A2[iz * x + ix] = OUT_TYPE(sumtf2 * ficv);
+  A0[iz * x + ix] = OUT_TYPE(MATH_TYPE(sumtf0) * ficv - Iv);
+  A1[iz * x + ix] = OUT_TYPE(MATH_TYPE(sumtf1) * ficv);
+  A2[iz * x + ix] = OUT_TYPE(MATH_TYPE(sumtf2) * ficv);
 }
