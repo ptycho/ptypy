@@ -509,11 +509,23 @@ class GaussianModel(BaseModel):
                 f[name] = pod.fw(pod.probe * pod.object)
                 Imodel += pod.downsample(u.abs2(f[name]))
 
+            # # debugging
+            # if self.p.debug and parallel.master and (self.engine.curiter % self.p.debug_iter == 0):
+            #     with h5py.File(self.p.debug + "/ml_model_%04d.h5" %self.engine.curiter, "w") as f:
+            #         f["Imodel"] = Imodel
+
             # Floating intensity option
             if self.p.floating_intensities:
                 self.float_intens_coeff[dname] = ((w * Imodel * I).sum()
                                                 / (w * Imodel**2).sum())
                 Imodel *= self.float_intens_coeff[dname]
+
+            # # debugging
+            # if self.p.debug and parallel.master and (self.engine.curiter % self.p.debug_iter == 0):
+            #     with h5py.File(self.p.debug + "/ml_model_floating_%04d.h5" %self.engine.curiter, "w") as f:
+            #         f["Imodel"] = Imodel
+
+            #print("Imodel sum: ", Imodel.sum())
 
             DI = Imodel - I
 
@@ -523,6 +535,12 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
+
+                # # debugging
+                # if self.p.debug and parallel.master and (self.engine.curiter % self.p.debug_iter == 0):
+                #     with h5py.File(self.p.debug + "/ml_main_%04d.h5" %self.engine.curiter, "w") as f:
+                #         f["aux"] = xi
+
                 self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
                 self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 

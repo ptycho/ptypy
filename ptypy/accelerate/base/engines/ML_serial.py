@@ -396,6 +396,11 @@ class GaussianModel(BaseModelSerial):
             GDK.make_model(aux, addr)
 
             # # debugging
+            # if self.p.debug and parallel.master and (self.engine.curiter % self.p.debug_iter == 0):
+            #     with h5py.File(self.p.debug + "/ml_serial_model_%04d.h5" %self.engine.curiter, "w") as f:
+            #         f["Imodel"] = GDK.npy.Imodel
+
+            # # debugging
             # if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
             #     with h5py.File(self.p.debug + "/floating_intensities_%04d.h5" %self.engine.curiter, "w") as f:
             #         f["w"] = w
@@ -407,12 +412,19 @@ class GaussianModel(BaseModelSerial):
                 GDK.floating_intensity(addr, w, I, fic)
 
             # # debugging
+            # if self.p.debug and parallel.master and (self.engine.curiter % self.p.debug_iter == 0):
+            #     with h5py.File(self.p.debug + "/ml_serial_model_floating_%04d.h5" %self.engine.curiter, "w") as f:
+            #         f["Imodel"] = GDK.npy.Imodel
+
+            # # debugging
             # if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
             #     with h5py.File(self.p.debug + "/main_%04d.h5" %self.engine.curiter, "w") as f:
             #         f["aux"] = aux
             #         f["addr"] = addr
             #         f["w"] = w
             #         f["I"] = I
+
+            #print("Imodel sum: ", GDK.npy.Imodel.sum(axis=(1,2)))
 
             GDK.main(aux, addr, w, I)
             
@@ -430,6 +442,11 @@ class GaussianModel(BaseModelSerial):
             #         f["aux"] = aux
 
             aux[:] = BW(aux)
+
+            # # debugging
+            # if self.p.debug and parallel.master and (self.engine.curiter % self.p.debug_iter == 0):
+            #     with h5py.File(self.p.debug + "/ml_main_%04d.h5" %self.engine.curiter, "w") as f:
+            #         f["aux"] = aux
 
             # # debugging
             # if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
@@ -469,10 +486,10 @@ class GaussianModel(BaseModelSerial):
         if self.regularizer:
             for name, s in self.engine.ob.storages.items():
 
-                # debugging
-                if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                    with h5py.File(self.p.debug + "/regul_grad_%04d.h5" %self.engine.curiter, "w") as f:
-                        f["ob"] = s.data
+                # # debugging
+                # if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
+                #     with h5py.File(self.p.debug + "/regul_grad_%04d.h5" %self.engine.curiter, "w") as f:
+                #         f["ob"] = s.data
 
                 ob_grad.storages[name].data += self.regularizer.grad(s.data)
                 LL += self.regularizer.LL
