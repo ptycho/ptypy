@@ -28,7 +28,7 @@ class DlsPoUpdateKernelTest(PyCudaTest):
         ["regul", 50],
         ["floating", 0],
     ])
-    def test_op_update_ml_UNITY(self, name, iter):
+    def test_op_update_ml_UNITY(self, name, iter, atomics=False):
 
         # Load data
         with h5py.File(self.datadir %name + "op_update_ml_%04d.h5" %iter, "r") as f:
@@ -39,9 +39,15 @@ class DlsPoUpdateKernelTest(PyCudaTest):
 
         # Copy data to device
         aux_dev = gpuarray.to_gpu(aux)
-        addr_dev = gpuarray.to_gpu(addr)
         obg_dev = gpuarray.to_gpu(obg)
         pr_dev = gpuarray.to_gpu(pr)
+
+        # If not using atomics we need to change the addresses
+        if not atomics:
+            addr2 = np.ascontiguousarray(np.transpose(addr, (2, 3, 0, 1)))
+            addr_dev = gpuarray.to_gpu(addr2)
+        else:
+            addr_dev = gpuarray.to_gpu(addr)
 
         # CPU Kernel
         BPOK = BasePoUpdateKernel()
@@ -49,10 +55,10 @@ class DlsPoUpdateKernelTest(PyCudaTest):
 
         # GPU Kernel
         POK = PoUpdateKernel()
-        POK.ob_update_ML(addr_dev, obg_dev, pr_dev, aux_dev, atomics=True)
+        POK.ob_update_ML(addr_dev, obg_dev, pr_dev, aux_dev, atomics=atomics)
 
         ## Assert
-        np.testing.assert_allclose(obg, obg_dev.get(),  atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(obg, obg_dev.get(),  atol=self.atol, rtol=self.rtol, verbose=False,
             err_msg="The object array has not been updated as expected")
 
     @parameterized.expand([
@@ -60,7 +66,7 @@ class DlsPoUpdateKernelTest(PyCudaTest):
         ["regul", 50],
         ["floating", 0],
     ])
-    def test_pr_update_ml_UNITY(self, name, iter):
+    def test_pr_update_ml_UNITY(self, name, iter, atomics=False):
 
         # Load data
         with h5py.File(self.datadir %name + "pr_update_ml_%04d.h5" %iter, "r") as f:
@@ -70,10 +76,16 @@ class DlsPoUpdateKernelTest(PyCudaTest):
             prg = f["prg"][:]
 
         # Copy data to device
-        aux_dev = gpuarray.to_gpu(aux)
-        addr_dev = gpuarray.to_gpu(addr)
+        aux_dev = gpuarray.to_gpu(aux) 
         ob_dev = gpuarray.to_gpu(ob)
         prg_dev = gpuarray.to_gpu(prg)
+
+        # If not using atomics we need to change the addresses
+        if not atomics:
+            addr2 = np.ascontiguousarray(np.transpose(addr, (2, 3, 0, 1)))
+            addr_dev = gpuarray.to_gpu(addr2)
+        else:
+            addr_dev = gpuarray.to_gpu(addr)
 
         # CPU Kernel
         BPOK = BasePoUpdateKernel()
@@ -81,8 +93,8 @@ class DlsPoUpdateKernelTest(PyCudaTest):
 
         # GPU Kernel
         POK = PoUpdateKernel()
-        POK.pr_update_ML(addr_dev, prg_dev, ob_dev, aux_dev, atomics=True)
+        POK.pr_update_ML(addr_dev, prg_dev, ob_dev, aux_dev, atomics=atomics)
         
         ## Assert
-        np.testing.assert_allclose(prg, prg_dev.get(),  atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(prg, prg_dev.get(),  atol=self.atol, rtol=self.rtol, verbose=False, 
             err_msg="The probe array has not been updated as expected")
