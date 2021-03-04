@@ -92,16 +92,43 @@ class PropagationKernel:
 
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 
-    def __init__(self, aux, nmodes=1, queue_thread=None):
+    def __init__(self, aux, nmodes=1, queue_thread=None, accumulate_type='float', math_type='float'):
         super(FourierUpdateKernel, self).__init__(aux,  nmodes=nmodes)
+
+        if accumulate_type not in ['float', 'double']:
+            raise ValueError('Only float or double types are supported')
+        if math_type not in ['float', 'double']:
+            raise ValueError('Only float or double types are supported')
+        self.accumulate_type = accumulate_type
+        self.math_type = math_type
         self.queue = queue_thread
-        self.fmag_all_update_cuda = load_kernel("fmag_all_update")
-        self.fourier_error_cuda = load_kernel("fourier_error")
+        self.fmag_all_update_cuda = load_kernel("fmag_all_update", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
+        self.fourier_error_cuda = load_kernel("fourier_error", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
         self.fourier_error2_cuda = None
-        self.error_reduce_cuda = load_kernel("error_reduce")
+        self.error_reduce_cuda = load_kernel("error_reduce", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'ACC_TYPE': self.accumulate_type
+        })
         self.fourier_update_cuda = None
-        self.log_likelihood_cuda = load_kernel("log_likelihood")
-        self.exit_error_cuda = load_kernel("exit_error")
+        self.log_likelihood_cuda = load_kernel("log_likelihood", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
+        self.exit_error_cuda = load_kernel("exit_error", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
 
         self.gpu = Adict()
         self.gpu.fdev = None
@@ -261,17 +288,29 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
 
 class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
-    def __init__(self, queue_thread=None):
+    def __init__(self, queue_thread=None, math_type = 'float'):
         super(AuxiliaryWaveKernel, self).__init__()
         # and now initialise the cuda
         self.queue = queue_thread
         self._ob_shape = None
         self._ob_id = None
-        self.build_aux_cuda = load_kernel("build_aux")
-        self.build_exit_cuda = load_kernel("build_exit")
+        self.math_type = math_type
+        if math_type not in ['float', 'double']:
+            raise ValueError('Only double or float math is supported')
+        self.build_aux_cuda = load_kernel("build_aux", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
+        self.build_exit_cuda = load_kernel("build_exit", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
         self.build_aux_no_ex_cuda = load_kernel("build_aux_no_ex", {
-            'CTYPE': 'complex<float>',
-            'FTYPE': 'float'
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
         })
 
     # DEPRECATED?
@@ -298,7 +337,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                             ob,
                             obr, obc,
                             addr,
-                            np.float32(alpha),
+                            np.float32(alpha) if ex.dtype == np.complex64 else np.float64(alpha),
                             block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
 
     def build_exit(self, b_aux, addr, ob, pr, ex):
@@ -327,7 +366,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                                   ob,
                                   obr, obc,
                                   addr,
-                                  np.float32(fac),
+                                  np.float32(fac) if pr.dtype == np.complex64 else np.float64(fac),
                                   np.int32(add),
                                   block=(32, 32, 1),
                                   grid=(int(maxz * nmodes), 1, 1),
@@ -345,25 +384,43 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
 class GradientDescentKernel(ab.GradientDescentKernel):
 
-    def __init__(self, aux, nmodes=1, queue=None):
+    def __init__(self, aux, nmodes=1, queue=None, accumulate_type = 'double', math_type='float'):
         super().__init__(aux, nmodes)
         self.queue = queue
-
+        self.accumulate_type = accumulate_type
+        self.math_type = math_type
+        if (accumulate_type not in ['double', 'float']) or (math_type not in ['double', 'float']):
+            raise ValueError("accumulate and math types must be double for float")
+ 
         self.gpu = Adict()
         self.gpu.LLden = None
         self.gpu.LLerr = None
         self.gpu.Imodel = None
 
         subs = {
-            'CTYPE': 'complex<float>' if self.ctype == np.complex64 else 'complex<double>',
-            'FTYPE': 'float' if self.ftype == np.float32 else 'double'
+            'IN_TYPE': 'float' if self.ftype == np.float32 else 'double',
+            'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double',
+            'ACC_TYPE': self.accumulate_type,
+            'MATH_TYPE': self.math_type
         }
         self.make_model_cuda = load_kernel('make_model', subs)
         self.make_a012_cuda = load_kernel('make_a012', subs)
-        self.error_reduce_cuda = load_kernel('error_reduce', subs)
-        self.fill_b_cuda = load_kernel('fill_b', {**subs, 'BDIM_X': 1024})
+        self.error_reduce_cuda = load_kernel('error_reduce', {
+            **subs,
+            'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double'
+        })
+        self.fill_b_cuda = load_kernel('fill_b', {
+            **subs, 
+            'BDIM_X': 1024, 
+            'OUT_TYPE': self.accumulate_type
+        })
         self.fill_b_reduce_cuda = load_kernel(
-            'fill_b_reduce', {**subs, 'BDIM_X': 1024})
+            'fill_b_reduce', {
+                **subs, 
+                'BDIM_X': 1024, 
+                'IN_TYPE': self.accumulate_type,  # must match out-type of fill_b
+                'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double'
+            })
         self.main_cuda = load_kernel('gd_main', subs)
         self.floating_intensity_cuda_step1 = load_kernel('step1', subs,'intens_renorm.cu')
         self.floating_intensity_cuda_step2 = load_kernel('step2', subs,'intens_renorm.cu')
@@ -377,7 +434,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
 
         # temporary array for the reduction in fill_b
         sh = (3, int((np.prod(self.fshape)*self.nmodes + 1023) // 1024))
-        self.gpu.Btmp = gpuarray.zeros(sh, dtype=np.float64)
+        self.gpu.Btmp = gpuarray.zeros(sh, dtype=np.float64 if self.accumulate_type == 'double' else np.float32)
 
     def make_model(self, b_aux, addr):
         # reference shape
@@ -542,33 +599,53 @@ class GradientDescentKernel(ab.GradientDescentKernel):
 
 class PoUpdateKernel(ab.PoUpdateKernel):
 
-    def __init__(self, queue_thread=None, denom_type=np.complex64):
+    def __init__(self, queue_thread=None, denom_type=np.complex64, 
+        math_type='float', accumulator_type='float'):
         super(PoUpdateKernel, self).__init__()
         # and now initialise the cuda
         if denom_type == np.complex64:
             dtype = 'complex<float>'
         elif denom_type == np.float32:
             dtype = 'float'
+        elif denom_type == np.complex128:
+            dtype = 'complex<double>'
+        elif denom_type == np.float64:
+            dtype = 'double'
         else:
-            raise ValueError('only complex64 and float32 types supported')
+            raise ValueError('invalid type for denominator')
+        if math_type not in ['double', 'float']:
+            raise ValueError('only float and double are supported for math_type')
+        if accumulator_type not in ['double', 'float']:
+            raise ValueError('only float and double are supported for accumulator_type')
+        
+        self.math_type = math_type
+        self.accumulator_type = accumulator_type
         self.dtype = dtype
         self.queue = queue_thread
         self.ob_update_cuda = load_kernel("ob_update", {
-            'DENOM_TYPE': dtype
+            'DENOM_TYPE': dtype,
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
         })
         self.ob_update2_cuda = None  # load_kernel("ob_update2")
         self.pr_update_cuda = load_kernel("pr_update", {
-            'DENOM_TYPE': dtype
+            'DENOM_TYPE': dtype,
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
         })
         self.pr_update2_cuda = None
         self.ob_update_ML_cuda = load_kernel("ob_update_ML", {
-            'CTYPE': 'complex<float>',
-            'FTYPE': 'float'
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
         })
         self.ob_update2_ML_cuda = None
         self.pr_update_ML_cuda = load_kernel("pr_update_ML", {
-            'CTYPE': 'complex<float>',
-            'FTYPE': 'float'
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
         })
         self.pr_update2_ML_cuda = None
 
@@ -595,7 +672,11 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "NUM_MODES": obsh[0],
                     "BDIM_X": 16,
                     "BDIM_Y": 16,
-                    'DENOM_TYPE': self.dtype
+                    'DENOM_TYPE': self.dtype,
+                    'IN_TYPE': 'float',
+                    'OUT_TYPE': 'float',
+                    'MATH_TYPE': self.math_type,
+                    'ACC_TYPE': self.accumulator_type
                 })
 
             grid = [int((x+15)//16) for x in ob.shape[-2:]]
@@ -632,7 +713,11 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "NUM_MODES": prsh[0],
                     "BDIM_X": 16,
                     "BDIM_Y": 16,
-                    'DENOM_TYPE': self.dtype
+                    'DENOM_TYPE': self.dtype,
+                    'IN_TYPE': 'float',
+                    'OUT_TYPE': 'float',
+                    'MATH_TYPE': self.math_type,
+                    'ACC_TYPE': self.accumulator_type
                 })
 
             grid = [int((x+15)//16) for x in pr.shape[-2:]]
@@ -667,8 +752,10 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "NUM_MODES": obsh[0],
                     "BDIM_X": 16,
                     "BDIM_Y": 16,
-                    'CTYPE': 'complex<float>',
-                    'FTYPE': 'float'
+                    'IN_TYPE': 'float',
+                    'OUT_TYPE': 'float',
+                    'MATH_TYPE': self.math_type,
+                    'ACC_TYPE': self.accumulator_type
                 })
             grid = [int((x+15)//16) for x in ob.shape[-2:]]
             grid = (grid[0], grid[1], int(1))
@@ -702,8 +789,10 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "NUM_MODES": prsh[0],
                     "BDIM_X": 16,
                     "BDIM_Y": 16,
-                    'CTYPE': 'complex<float>',
-                    'FTYPE': 'float'
+                    'IN_TYPE': 'float',
+                    'OUT_TYPE': 'float',
+                    'MATH_TYPE': self.math_type,
+                    'ACC_TYPE': self.accumulator_type
                 })
 
             grid = [int((x+15)//16) for x in pr.shape[-2:]]
@@ -715,16 +804,38 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
 
 class PositionCorrectionKernel(ab.PositionCorrectionKernel):
-    def __init__(self, aux, nmodes, queue_thread=None):
+    def __init__(self, aux, nmodes, queue_thread=None, math_type='float', accumulate_type='float'):
         super(PositionCorrectionKernel, self).__init__(aux, nmodes)
+        if math_type not in ['float', 'double']:
+            raise ValueError('Only float or double math is supported')
+        if accumulate_type not in ['float', 'double']:
+            raise ValueError('Only float or double math is supported')
+        
         # add kernels
+        self.math_type = math_type
+        self.accumulate_type = accumulate_type
         self.queue = queue_thread
         self._ob_shape = None
         self._ob_id = None
-        self.fourier_error_cuda = load_kernel("fourier_error")
-        self.error_reduce_cuda = load_kernel("error_reduce")
-        self.build_aux_pc_cuda = load_kernel("build_aux_position_correction")
-        self.update_addr_and_error_state_cuda = load_kernel("update_addr_error_state")
+        self.fourier_error_cuda = load_kernel("fourier_error",{
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
+        self.error_reduce_cuda = load_kernel("error_reduce", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'ACC_TYPE': self.accumulate_type
+        })
+        self.build_aux_pc_cuda = load_kernel("build_aux_position_correction", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
+        self.update_addr_and_error_state_cuda = load_kernel("update_addr_error_state", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float'
+        })
 
         self.gpu = Adict()
         self.gpu.fdev = None

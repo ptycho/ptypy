@@ -8,15 +8,17 @@ class ArrayUtilsKernel:
         self.queue = queue
         self.acc_dtype = acc_dtype
         self.cdot_cuda = load_kernel("dot", {
-            'INTYPE': 'complex<float>',
-            'ACCTYPE': 'double' if acc_dtype==np.float64 else 'float'
+            'IN_TYPE': 'complex<float>',
+            'ACC_TYPE': 'double' if acc_dtype==np.float64 else 'float'
         })
         self.dot_cuda = load_kernel("dot", {
-            'INTYPE': 'float',
-            'ACCTYPE': 'double' if acc_dtype==np.float64 else 'float'
+            'IN_TYPE': 'float',
+            'ACC_TYPE': 'double' if acc_dtype==np.float64 else 'float'
         })
         self.full_reduce_cuda = load_kernel("full_reduce", {
-            'DTYPE': 'double' if acc_dtype==np.float64 else 'float',
+            'IN_TYPE': 'double' if acc_dtype==np.float64 else 'float',
+            'OUT_TYPE': 'double' if acc_dtype==np.float64 else 'float',
+            'ACC_TYPE': 'double' if acc_dtype==np.float64 else 'float',
             'BDIM_X': 1024
         })
         self.transpose_cuda = load_kernel("transpose", {
@@ -103,25 +105,29 @@ class DerivativesKernel:
             'IS_FORWARD': 'true',
             'BDIM_X': str(self.last_axis_block[0]),
             'BDIM_Y': str(self.last_axis_block[1]),
-            'DTYPE': stype
+            'IN_TYPE': stype,
+            'OUT_TYPE': stype
         })
         self.delxb_last = load_kernel("delx_last", file="delx_last.cu", subs={
             'IS_FORWARD': 'false',
             'BDIM_X': str(self.last_axis_block[0]),
             'BDIM_Y': str(self.last_axis_block[1]),
-            'DTYPE': stype
+            'IN_TYPE': stype,
+            'OUT_TYPE': stype
         })
         self.delxf_mid = load_kernel("delx_mid", file="delx_mid.cu", subs={
             'IS_FORWARD': 'true',
             'BDIM_X': str(self.mid_axis_block[0]),
             'BDIM_Y': str(self.mid_axis_block[1]),
-            'DTYPE': stype
+            'IN_TYPE': stype,
+            'OUT_TYPE': stype
         })
         self.delxb_mid = load_kernel("delx_mid", file="delx_mid.cu", subs={
             'IS_FORWARD': 'false',
             'BDIM_X': str(self.mid_axis_block[0]),
             'BDIM_Y': str(self.mid_axis_block[1]),
-            'DTYPE': stype
+            'IN_TYPE': stype,
+            'OUT_TYPE': stype
         })
 
     def delxf(self, input, out, axis=-1):
@@ -188,13 +194,17 @@ class DerivativesKernel:
 
 
 class GaussianSmoothingKernel:
-    def __init__(self, queue=None, num_stdevs=4):
+    def __init__(self, queue=None, num_stdevs=4, kernel_type='float'):
+        if kernel_type not in ['float', 'double']:
+            raise ValueError('Invalid data type for kernel')
+        self.kernel_type = kernel_type
         self.dtype = np.complex64
         self.stype = "complex<float>"
         self.queue = queue
         self.num_stdevs = num_stdevs
         self.blockdim_x = 4
         self.blockdim_y = 16
+
         
         # At least 2 blocks per SM
         self.max_shared_per_block = 48 * 1024 // 2 
@@ -204,12 +214,14 @@ class GaussianSmoothingKernel:
         self.convolution_row = load_kernel("convolution_row", file="convolution.cu", subs={
             'BDIM_X': self.blockdim_x,
             'BDIM_Y': self.blockdim_y,
-            'DTYPE': self.stype
+            'DTYPE': self.stype,
+            'MATH_TYPE': self.kernel_type
         })
         self.convolution_col = load_kernel("convolution_col", file="convolution.cu", subs={
             'BDIM_X': self.blockdim_y,
             'BDIM_Y': self.blockdim_x,
-            'DTYPE': self.stype
+            'DTYPE': self.stype,
+            'MATH_TYPE': self.kernel_type
         })
 
     
@@ -238,7 +250,7 @@ class GaussianSmoothingKernel:
             r = int(self.num_stdevs * stdx + 0.5)
             g = gaussian(np.arange(-r,r+1), stdx)
             g /= g.sum()
-            kernel = gpuarray.to_gpu(g[r:].astype(np.float32))
+            kernel = gpuarray.to_gpu(g[r:].astype(np.float32 if self.kernel_type == 'float' else np.float64))
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
 
@@ -263,7 +275,7 @@ class GaussianSmoothingKernel:
             r = int(self.num_stdevs * stdy + 0.5)
             g = gaussian(np.arange(-r,r+1), stdy)
             g /= g.sum()
-            kernel = gpuarray.to_gpu(g[r:].astype(np.float32))
+            kernel = gpuarray.to_gpu(g[r:].astype(np.float32 if self.kernel_type == 'float' else np.float64))
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
 

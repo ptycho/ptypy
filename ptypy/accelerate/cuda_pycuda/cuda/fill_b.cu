@@ -1,28 +1,40 @@
-extern "C" __global__ void fill_b(const FTYPE* A0,
-                                  const FTYPE* A1,
-                                  const FTYPE* A2,
-                                  const FTYPE* w,
-                                  FTYPE Brenorm,
+/** fill_b kernel.
+ * Data types:
+ * - IN_TYPE: the data type for the inputs
+ * - OUT_TYPE: the data type for the outputs
+ * - MATH_TYPE: the data type used for computation
+ * - ACC_TYPE: the accumulator type for summing
+ */
+
+extern "C" __global__ void fill_b(const IN_TYPE* A0,
+                                  const IN_TYPE* A1,
+                                  const IN_TYPE* A2,
+                                  const IN_TYPE* w,
+                                  IN_TYPE Brenorm,
                                   int size,
-                                  double* out)
+                                  OUT_TYPE* out)
 {
   int tx = threadIdx.x;
   int ix = tx + blockIdx.x * blockDim.x;
-  __shared__ double smem[3][BDIM_X];
+  __shared__ ACC_TYPE smem[3][BDIM_X];
 
   if (ix < size)
   {
-    // FTYPE(2) to make sure it's float in single precision and doesn't
+    // MATHTYPE(2) to make sure it's float in single precision and doesn't
     // accidentally promote the equation to double
-    smem[0][tx] = w[ix] * A0[ix] * A0[ix];
-    smem[1][tx] = w[ix] * FTYPE(2) * A0[ix] * A1[ix];
-    smem[2][tx] = w[ix] * (A1[ix] * A1[ix] + FTYPE(2) * A0[ix] * A2[ix]);
+    MATH_TYPE t_a0 = A0[ix];
+    MATH_TYPE t_a1 = A1[ix];
+    MATH_TYPE t_a2 = A2[ix];
+    MATH_TYPE t_w = w[ix];
+    smem[0][tx] = t_w * t_a0 * t_a0;
+    smem[1][tx] = t_w * MATH_TYPE(2) * t_a0 * t_a1;
+    smem[2][tx] = t_w * (t_a1 * t_a1 + MATH_TYPE(2) * t_a0 * t_a2);
   }
   else
   {
-    smem[0][tx] = FTYPE(0);
-    smem[1][tx] = FTYPE(0);
-    smem[2][tx] = FTYPE(0);
+    smem[0][tx] = ACC_TYPE(0);
+    smem[1][tx] = ACC_TYPE(0);
+    smem[2][tx] = ACC_TYPE(0);
   }
   __syncthreads();
 
@@ -43,8 +55,8 @@ extern "C" __global__ void fill_b(const FTYPE* A0,
 
   if (tx == 0)
   {
-    out[blockIdx.x * 3 + 0] = smem[0][0] * double(Brenorm);
-    out[blockIdx.x * 3 + 1] = smem[1][0] * double(Brenorm);
-    out[blockIdx.x * 3 + 2] = smem[2][0] * double(Brenorm);
+    out[blockIdx.x * 3 + 0] = MATH_TYPE(smem[0][0]) * MATH_TYPE(Brenorm);
+    out[blockIdx.x * 3 + 1] = MATH_TYPE(smem[1][0]) * MATH_TYPE(Brenorm);
+    out[blockIdx.x * 3 + 2] = MATH_TYPE(smem[2][0]) * MATH_TYPE(Brenorm);
   }
 }

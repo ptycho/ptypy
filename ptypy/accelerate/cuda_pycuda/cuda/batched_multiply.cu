@@ -1,13 +1,19 @@
 /** This kernel was used for FFT pre- and post-scaling,
     to test if cuFFT via python is worthwhile.
     It turned out it wasn't.
-*/
+ * 
+ * Data types:
+ * - IN_TYPE: the data type for the inputs
+ * - OUT_TYPE: the data type for the outputs
+ * - MATH_TYPE: the data type used for computation (filter)
+ */
+
 #include <thrust/complex.h>
 using thrust::complex;
 
-extern "C" __global__ void batched_multiply(const complex<float>* input,
-                                            complex<float>* output,
-                                            const complex<float>* filter,
+extern "C" __global__ void batched_multiply(const complex<IN_TYPE>* input,
+                                            complex<OUT_TYPE>* output,
+                                            const complex<MATH_TYPE>* filter,
                                             float scale,
                                             int nBatches,
                                             int rows,

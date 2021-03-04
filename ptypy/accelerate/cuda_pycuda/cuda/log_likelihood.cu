@@ -1,3 +1,11 @@
+/** log_likelihood kernel.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double)
+ * - MATH_TYPE: the data type used for computation
+ */
+
 #include <cassert>
 #include <cmath>
 #include <thrust/complex.h>
@@ -11,13 +19,13 @@ using thrust::complex;
 // (guided by profiler)
 extern "C" __global__ void __launch_bounds__(1024, 2)
     log_likelihood(int nmodes,
-                  complex<float> *aux,
-                  const float *fmask,
-                  const float *fmag,
-                  const int *addr,
-                  float *llerr,
-                  int A,
-                  int B)
+                   complex<OUT_TYPE> *aux,
+                   const IN_TYPE *fmask,
+                   const IN_TYPE *fmag,
+                   const int *addr,
+                   IN_TYPE *llerr,
+                   int A,
+                   int B)
 {
   int tx = threadIdx.x;
   int ty = threadIdx.y;
@@ -31,22 +39,24 @@ extern "C" __global__ void __launch_bounds__(1024, 2)
   fmag += da[0] * A * B;
   fmask += ma[0] * A * B;
   llerr += da[0] * A * B;
-  float norm = A * B;
+  MATH_TYPE norm = A * B;
 
   for (int a = ty; a < A; a += blockDim.y)
   {
     for (int b = tx; b < B; b += blockDim.x)
     {
-      float acc = 0.0;
+      MATH_TYPE acc = 0.0;
       for (int idx = 0; idx < nmodes; ++idx)
       {
-        float abs_exit_wave = abs(aux[a * B + b + idx * A * B]);
+        complex<MATH_TYPE> t_aux = aux[a * B + b + idx * A * B];
+        MATH_TYPE abs_exit_wave = abs(t_aux);
         acc += abs_exit_wave *
                abs_exit_wave;  // if we do this manually (real*real +imag*imag)
                                // we get differences to numpy due to rounding
       }
-      auto I = fmag[a * B + b] * fmag[a * B + b];
-      llerr[a * B + b] = fmask[a * B + b] * (acc - I) * (acc - I) / (I + 1) / norm;
+      auto I = MATH_TYPE(fmag[a * B + b]) * MATH_TYPE(fmag[a * B + b]);
+      llerr[a * B + b] =
+          MATH_TYPE(fmask[a * B + b]) * (acc - I) * (acc - I) / (I + 1) / norm;
     }
   }
 }

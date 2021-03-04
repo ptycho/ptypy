@@ -1,24 +1,40 @@
+/** pr_update.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double)
+ * - MATH_TYPE: the data type used for computation
+ * - DENOM_TYPE: type of the denominator (real/complex, float/double)
+ */
+
 #include <thrust/complex.h>
 using thrust::complex;
 
 template <class T>
-__device__ inline void atomicAdd(complex<T>* x, complex<T> y)
+__device__ inline void atomicAdd(complex<T>* x, const complex<T>& y)
 {
   auto xf = reinterpret_cast<T*>(x);
   atomicAdd(xf, y.real());
   atomicAdd(xf + 1, y.imag());
 }
 
+// return a pointer to the real part of the argument
+template <class T>
+__device__ inline T* get_denom_real_ptr(complex<T>* den)
+{
+  return reinterpret_cast<T*>(den);
+}
+
 extern "C" __global__ void pr_update(
-    const complex<float>* __restrict__ exit_wave,
+    const complex<IN_TYPE>* __restrict__ exit_wave,
     int A,
     int B,
     int C,
-    complex<float>* probe,
+    complex<OUT_TYPE>* probe,
     int D,
     int E,
     int F,
-    const complex<float>* __restrict__ obj,
+    const complex<IN_TYPE>* __restrict__ obj,
     int G,
     int H,
     int I,
@@ -48,10 +64,13 @@ extern "C" __global__ void pr_update(
   {
     for (int c = tx; c < C; c += blockDim.x)
     {
-      auto obj_val = obj[b * I + c];
-      atomicAdd(&probe[b * F + c], conj(obj_val) * exit_wave[b * C + c]);
-      auto denomreal = reinterpret_cast<float*>(&denominator[b * F + c]);
-      auto upd_obj =
+      complex<MATH_TYPE> obj_val = obj[b * I + c];
+      complex<MATH_TYPE> exit_val = exit_wave[b * C + c];
+      complex<MATH_TYPE> add_val_m = conj(obj_val) * exit_val;
+      complex<OUT_TYPE> add_val = add_val_m;
+      atomicAdd(&probe[b * F + c], add_val);
+      auto denomreal = get_denom_real_ptr(&denominator[b * F + c]);
+      MATH_TYPE upd_obj =
           obj_val.real() * obj_val.real() + obj_val.imag() * obj_val.imag();
       atomicAdd(denomreal, upd_obj);
     }

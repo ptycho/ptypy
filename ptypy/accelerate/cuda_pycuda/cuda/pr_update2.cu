@@ -1,3 +1,20 @@
+/** pr_update.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double)
+ * - MATH_TYPE: the data type used for computation
+ * - DENOM_TYPE: data type for the denominator (double,float,complex<double>,complex<float>)
+ * - ACC_TYPE: accumulator type for local pr array
+ * 
+ * NOTE: This version of ob_update goes over all tiles that need to be accumulated
+ * in a single thread block to avoid global atomic additions (as in pr_update.cu).
+ * This requires a local array of NUM_MODES size to store the local updates.
+ * GPU registers per thread are limited (255 32bit registers on V100), 
+ * and at some point the registers will spill into shared or global memory
+ * and the kernel will get considerably slower.
+ */
+
 #include <cassert>
 #include <thrust/complex.h>
 using thrust::complex;
@@ -10,14 +27,14 @@ using thrust::complex;
 #define obj_roi_row(k) addr[4 * num_pods + (k)]
 #define obj_roi_column(k) addr[5 * num_pods + (k)]
 
-template <class T>
-__device__ inline void set_real(complex<T>& v, T r)
+template <class T, class U>
+__device__ inline void set_real(complex<T>& v, U r)
 {
-  v.real(r);
+  v.real(T(r));
 }
 
-template <class T>
-__device__ inline void set_real(T& v, T r)
+template <class T, class U>
+__device__ inline void set_real(T& v, U r)
 {
   v = r;
 }
@@ -40,18 +57,18 @@ extern "C" __global__ void pr_update2(int pr_sh,
                                       int pr_modes,
                                       int ob_modes,
                                       int num_pods,
-                                      complex<float>* pr_g,
+                                      complex<OUT_TYPE>* pr_g,
                                       DENOM_TYPE* prn_g,
-                                      const complex<float>* __restrict__ ob_g,
-                                      const complex<float>* __restrict__ ex_g,
+                                      const complex<IN_TYPE>* __restrict__ ob_g,
+                                      const complex<IN_TYPE>* __restrict__ ex_g,
                                       const int* addr)
 {
   int y = blockIdx.y * BDIM_Y + threadIdx.y;
   int dy = pr_sh;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
   int dz = pr_sh;
-  complex<float> pr[NUM_MODES];
-  DENOM_TYPE prn[NUM_MODES];
+  complex<ACC_TYPE> pr[NUM_MODES];
+  ACC_TYPE prn[NUM_MODES];
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(pr_modes <= NUM_MODES);
@@ -64,7 +81,7 @@ extern "C" __global__ void pr_update2(int pr_sh,
       auto idx = i * dy * dz + y * dz + z;
       assert(idx < pr_modes * pr_sh * pr_sh);
       pr[i] = pr_g[idx];
-      prn[i] = prn_g[idx];
+      prn[i] = get_real(prn_g[idx]);
     }
   }
 
@@ -107,15 +124,15 @@ extern "C" __global__ void pr_update2(int pr_sh,
       {
         auto obidx = ad[2] * ob_sh_row * ob_sh_col + v1 * ob_sh_col + v2;
         assert(obidx < ob_modes * ob_sh_row * ob_sh_col);
-        auto ob = ob_g[obidx];
+        complex<MATH_TYPE> ob = ob_g[obidx];
 
         int idx = ad[0];
         assert(idx < NUM_MODES);
         auto cob = conj(ob);
-        pr[idx] += cob * ex_g[ad[1] * pr_sh * pr_sh + y * pr_sh + z];
-        auto rr = get_real(prn[idx]);
-        rr += ob.real() * ob.real() + ob.imag() * ob.imag();
-        set_real(prn[idx], rr);
+        complex<MATH_TYPE> ex_val = ex_g[ad[1] * pr_sh * pr_sh + y * pr_sh + z];
+        complex<ACC_TYPE> add_val = cob * ex_val;
+        pr[idx] += add_val;
+        prn[idx] += ob.real() * ob.real() + ob.imag() * ob.imag();
       }
     }
   }
@@ -125,7 +142,7 @@ extern "C" __global__ void pr_update2(int pr_sh,
     for (int i = 0; i < NUM_MODES; ++i)
     {
       pr_g[i * dy * dz + y * dz + z] = pr[i];
-      prn_g[i * dy * dz + y * dz + z] = prn[i];
+      set_real(prn_g[i * dy * dz + y * dz + z], prn[i]);
     }
   }
 }

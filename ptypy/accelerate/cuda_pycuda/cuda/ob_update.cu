@@ -1,24 +1,40 @@
+/** ob_update.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double)
+ * - MATH_TYPE: the data type used for computation
+ * - DENOM_TYPE: data type for the denominator (double,float,complex<double>,complex<float>)
+ */
+
 #include <thrust/complex.h>
 using thrust::complex;
 
 template <class T>
-__device__ inline void atomicAdd(complex<T>* x, complex<T> y)
+__device__ inline void atomicAdd(complex<T>* x, const complex<T>& y)
 {
   auto xf = reinterpret_cast<T*>(x);
   atomicAdd(xf, y.real());
   atomicAdd(xf + 1, y.imag());
 }
 
+// return a pointer to the real part of the argument
+template <class T>
+__device__ inline T* get_denom_real_ptr(complex<T>* den)
+{
+  return reinterpret_cast<T*>(den);
+}
+
 extern "C" __global__ void ob_update(
-    const complex<float>* __restrict__ exit_wave,
+    const complex<IN_TYPE>* __restrict__ exit_wave,
     int A,
     int B,
     int C,
-    const complex<float>* __restrict__ probe,
+    const complex<IN_TYPE>* __restrict__ probe,
     int D,
     int E,
     int F,
-    complex<float>* obj,
+    complex<OUT_TYPE>* obj,
     int G,
     int H,
     int I,
@@ -46,12 +62,16 @@ extern "C" __global__ void ob_update(
   {
     for (int c = tx; c < C; c += blockDim.x)
     {
-      auto probe_val = probe[b * F + c];
-      atomicAdd(&obj[b * I + c], conj(probe_val) * exit_wave[b * C + c]);
-      auto denomreal = reinterpret_cast<float*>(&denominator[b * I + c]);
+      complex<MATH_TYPE> probe_val = probe[b * F + c];
+      complex<MATH_TYPE> exit_val = exit_wave[b * C + c];
+      auto add_val_m = conj(probe_val) * exit_val;
+      complex<OUT_TYPE> add_val = add_val_m;
+      atomicAdd(&obj[b * I + c], add_val);
+
+      auto denomreal_ptr = get_denom_real_ptr(&denominator[b * I + c]);
       auto upd_probe = probe_val.real() * probe_val.real() +
                        probe_val.imag() * probe_val.imag();
-      atomicAdd(denomreal, upd_probe);
+      atomicAdd(denomreal_ptr, upd_probe);
     }
   }
 }
