@@ -4,7 +4,6 @@
  * - IN_TYPE: the data type for the inputs (float or double)
  * - OUT_TYPE: the data type for the outputs (float or double)
  * - MATH_TYPE: the data type used for computation
- * - DENOM_TYPE: data type for the denominator (double,float,complex<double>,complex<float>)
  * - ACC_TYPE: accumulator type for local pr array
  * 
  * NOTE: This version of ob_update goes over all tiles that need to be accumulated
@@ -27,29 +26,6 @@ using thrust::complex;
 #define obj_roi_row(k) addr[4 * num_pods + (k)]
 #define obj_roi_column(k) addr[5 * num_pods + (k)]
 
-template <class T, class U>
-__device__ inline void set_real(complex<T>& v, U r)
-{
-  v.real(T(r));
-}
-
-template <class T, class U>
-__device__ inline void set_real(T& v, U r)
-{
-  v = r;
-}
-
-template <class T>
-__device__ inline T get_real(const complex<T>& v)
-{
-  return v.real();
-}
-
-template <class T>
-__device__ inline T get_real(const T& v)
-{
-  return v;
-}
 
 extern "C" __global__ void pr_update2(int pr_sh,
                                       int ob_sh_row,
@@ -58,7 +34,7 @@ extern "C" __global__ void pr_update2(int pr_sh,
                                       int ob_modes,
                                       int num_pods,
                                       complex<OUT_TYPE>* pr_g,
-                                      DENOM_TYPE* prn_g,
+                                      OUT_TYPE* prn_g,
                                       const complex<IN_TYPE>* __restrict__ ob_g,
                                       const complex<IN_TYPE>* __restrict__ ex_g,
                                       const int* addr)
@@ -81,7 +57,7 @@ extern "C" __global__ void pr_update2(int pr_sh,
       auto idx = i * dy * dz + y * dz + z;
       assert(idx < pr_modes * pr_sh * pr_sh);
       pr[i] = pr_g[idx];
-      prn[i] = get_real(prn_g[idx]);
+      prn[i] = prn_g[idx];
     }
   }
 
@@ -142,7 +118,7 @@ extern "C" __global__ void pr_update2(int pr_sh,
     for (int i = 0; i < NUM_MODES; ++i)
     {
       pr_g[i * dy * dz + y * dz + z] = pr[i];
-      set_real(prn_g[i * dy * dz + y * dz + z], prn[i]);
+      prn_g[i * dy * dz + y * dz + z] = prn[i];
     }
   }
 }

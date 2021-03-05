@@ -5,7 +5,6 @@
  * - OUT_TYPE: the data type for the outputs (float or double)
  * - MATH_TYPE: the data type used for computation
  * - ACC_TYPE: accumulator type for the local ob accumulation
- * - DENOM_TYPE: type for the denominator (can be real/complex float/double)
  * 
  * NOTE: This version of ob_update goes over all tiles that need to be accumulated
  * in a single thread block to avoid global atomic additions (as in ob_update.cu).
@@ -26,27 +25,6 @@ using thrust::complex;
 #define obj_roi_row(k) addr[4 * num_pods + (k)]
 #define obj_roi_column(k) addr[5 * num_pods + (k)]
 
-template <class T, class U>
-__device__ inline void set_real(complex<T>& v, U r)
-{
-  v.real(T(r));
-}
-template <class T, class U>
-__device__ inline void set_real(T& v, U r)
-{
-  v = r;
-}
-template <class T>
-__device__ inline T get_real(const complex<T>& v)
-{
-  return v.real();
-}
-template <class T>
-__device__ inline T get_real(const T& v)
-{
-  return v;
-}
-
 
 extern "C" __global__ void ob_update2(
     int pr_sh,
@@ -59,7 +37,7 @@ extern "C" __global__ void ob_update2(
     int ex_1,
     int ex_2,
     complex<OUT_TYPE>* ob_g,
-    DENOM_TYPE* obn_g,
+    OUT_TYPE* obn_g,
     const complex<IN_TYPE>* __restrict__ pr_g,  // 2, 5, 5
     const complex<IN_TYPE>* __restrict__ ex_g,  // 16, 5, 5
     const int* addr)
@@ -82,7 +60,7 @@ extern "C" __global__ void ob_update2(
       auto idx = i * dy * dz + y * dz + z;
       assert(idx < ob_modes * ob_sh_rows * ob_sh_cols);
       ob[i] = ob_g[idx];
-      obn[i] = get_real(obn_g[idx]);
+      obn[i] = obn_g[idx];
     }
   }
 
@@ -144,7 +122,7 @@ extern "C" __global__ void ob_update2(
     for (int i = 0; i < NUM_MODES; ++i)
     {
       ob_g[i * dy * dz + y * dz + z] = ob[i];
-      set_real(obn_g[i * dy * dz + y * dz + z], obn[i]);
+      obn_g[i * dy * dz + y * dz + z] = obn[i];
     }
   }
 }

@@ -599,29 +599,24 @@ class GradientDescentKernel(ab.GradientDescentKernel):
 
 class PoUpdateKernel(ab.PoUpdateKernel):
 
-    def __init__(self, queue_thread=None, denom_type='float', 
+    def __init__(self, queue_thread=None, 
         math_type='float', accumulator_type='float'):
         super(PoUpdateKernel, self).__init__()
         # and now initialise the cuda
-        if denom_type not in ['double', 'float']:
-            raise ValueError('only float and double are supported for denom_type')
         if math_type not in ['double', 'float']:
             raise ValueError('only float and double are supported for math_type')
         if accumulator_type not in ['double', 'float']:
             raise ValueError('only float and double are supported for accumulator_type')
-        self.denom_type = denom_type
         self.math_type = math_type
         self.accumulator_type = accumulator_type
         self.queue = queue_thread
         self.ob_update_cuda = load_kernel("ob_update", {
-            'DENOM_TYPE': self.denom_type,
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
         })
         self.ob_update2_cuda = None  # load_kernel("ob_update2")
         self.pr_update_cuda = load_kernel("pr_update", {
-            'DENOM_TYPE': self.denom_type,
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
@@ -643,6 +638,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
     def ob_update(self, addr, ob, obn, pr, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
+        if obn.dtype != np.float32:
+            raise ValueError("Denominator must be float32 in current implementation")
 
         if atomics:
             if addr.shape[3] != 3 or addr.shape[2] != 5:
@@ -663,7 +660,6 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "NUM_MODES": obsh[0],
                     "BDIM_X": 16,
                     "BDIM_Y": 16,
-                    'DENOM_TYPE': self.denom_type,
                     'IN_TYPE': 'float',
                     'OUT_TYPE': 'float',
                     'MATH_TYPE': self.math_type,
@@ -683,6 +679,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
     def pr_update(self, addr, pr, prn, ob, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
+        if prn.dtype != np.float32:
+            raise ValueError("Denominator must be float32 in current implementation")
         if atomics:
             if addr.shape[3] != 3 or addr.shape[2] != 5:
                 raise ValueError('Address not in required shape for atomics pr_update')
@@ -704,7 +702,6 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "NUM_MODES": prsh[0],
                     "BDIM_X": 16,
                     "BDIM_Y": 16,
-                    'DENOM_TYPE': self.denom_type,
                     'IN_TYPE': 'float',
                     'OUT_TYPE': 'float',
                     'MATH_TYPE': self.math_type,
