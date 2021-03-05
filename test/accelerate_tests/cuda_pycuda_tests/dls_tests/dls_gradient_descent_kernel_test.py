@@ -185,7 +185,7 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         BGDK.make_a012(f, a, b, addr, I, fic)
 
         # GPU kernel        
-        GDK = GradientDescentKernel(aux_dev, addr.shape[1], queue=self.stream, accumulate_type='float', math_type='float')
+        GDK = GradientDescentKernel(aux_dev, addr.shape[1], queue=self.stream)
         GDK.allocate()
         GDK.gpu.Imodel.fill(np.nan)
         GDK.gpu.LLerr.fill(np.nan)
