@@ -168,13 +168,6 @@ class ML_pycuda(ML_serial):
         """
         Setup kernels, one for each scan. Derive scans from ptycho class
         """
-
-        try:
-            from ptypy.accelerate.cuda_pycuda.cufft import FFT
-        except:
-            logger.warning('Unable to import cuFFT version - using Reikna instead')
-            from ptypy.accelerate.cuda_pycuda.fft import FFT
-
         AUK = ArrayUtilsKernel(queue=self.queue)
         self._dot_kernel = AUK.dot
         # get the scans
