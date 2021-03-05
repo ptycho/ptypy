@@ -372,6 +372,12 @@ class GaussianModel(BaseModelSerial):
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
 
+            # debugging
+            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
+                with h5py.File(self.p.debug + "/ml_serial_debug_%04d.h5" %self.engine.curiter, "w") as f:
+                    f["aux"] = aux
+                    f["addr"] = addr
+
             # # debugging
             # if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
             #     with h5py.File(self.p.debug + "/forward_%04d.h5" %self.engine.curiter, "w") as f:

@@ -171,13 +171,6 @@ class ML_pycuda(ML_serial):
         """
         Setup kernels, one for each scan. Derive scans from ptycho class
         """
-
-        try:
-            from ptypy.accelerate.cuda_pycuda.cufft import FFT
-        except:
-            logger.warning('Unable to import cuFFT version - using Reikna instead')
-            from ptypy.accelerate.cuda_pycuda.fft import FFT
-
         AUK = ArrayUtilsKernel(queue=self.queue)
         self._dot_kernel = AUK.dot
         # get the scans
@@ -466,6 +459,12 @@ class GaussianModel(BaseModelSerial):
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
+
+            # debugging
+            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
+                with h5py.File(self.p.debug + "/ml_pycuda_debug_%04d.h5" %self.engine.curiter, "w") as f:
+                    f["aux"] = aux.get()
+                    f["addr"] = addr.get()
 
             # forward prop
             FW(aux, aux)
