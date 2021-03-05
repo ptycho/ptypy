@@ -680,8 +680,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                 })
 
             grid = [int((x+15)//16) for x in ob.shape[-2:]]
-            grid = (grid[0], grid[1], int(1))
-            self.ob_update2_cuda(prsh[-1], obsh[0], num_pods, obsh[-2],
+            grid = (grid[1], grid[0], int(1))
+            self.ob_update2_cuda(prsh[-1], obsh[0], num_pods, obsh[-2], obsh[-1],
                                  prsh[0],
                                  np.int32(ex.shape[0]),
                                  np.int32(ex.shape[1]),
@@ -730,17 +730,18 @@ class PoUpdateKernel(ab.PoUpdateKernel):
     def ob_update_ML(self, addr, ob, pr, ex, fac=2.0, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
+        exsh = [np.int32(ax) for ax in ex.shape]
 
         if atomics:
             if addr.shape[3] != 3 or addr.shape[2] != 5:
                 raise ValueError('Address not in required shape for tiled ob_update')
 
             num_pods = np.int32(addr.shape[0] * addr.shape[1])
-            self.ob_update_ML_cuda(ex, num_pods, prsh[1], prsh[2],
+            self.ob_update_ML_cuda(ex, num_pods, exsh[1], exsh[2],
                                    pr, prsh[0], prsh[1], prsh[2],
                                    ob, obsh[0], obsh[1], obsh[2],
                                    addr,
-                                   np.float32(fac),
+                                   np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                    block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
         else:
             if addr.shape[0] != 5 or addr.shape[1] != 3:
@@ -758,13 +759,14 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     'ACC_TYPE': self.accumulator_type
                 })
             grid = [int((x+15)//16) for x in ob.shape[-2:]]
-            grid = (grid[0], grid[1], int(1))
-            self.ob_update2_ML_cuda(prsh[-1], obsh[0], num_pods, obsh[-2],
+            grid = (grid[1], grid[0], int(1))
+            self.ob_update2_ML_cuda(prsh[-1], obsh[0], num_pods, obsh[-2], obsh[-1],
                                     prsh[0],
                                     np.int32(ex.shape[0]),
                                     np.int32(ex.shape[1]),
                                     np.int32(ex.shape[2]),
-                                    ob, pr, ex, addr, np.float32(fac),
+                                    ob, pr, ex, addr, 
+                                    np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                     block=(16, 16, 1), grid=grid, stream=self.queue)
 
     def pr_update_ML(self, addr, pr, ob, ex, fac=2.0, atomics=False):
@@ -778,7 +780,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                 pr, prsh[0], prsh[1], prsh[2],
                                 ob, obsh[0], obsh[1], obsh[2],
                                 addr,
-                                np.float32(fac),
+                                np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                 block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
         else:
             if addr.shape[0] != 5 or addr.shape[1] != 3:
@@ -799,7 +801,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             grid = (grid[0], grid[1], int(1))
             self.pr_update2_ML_cuda(prsh[-1], obsh[-2], obsh[-1],
                                  prsh[0], obsh[0], num_pods,
-                                 pr, ob, ex, addr, np.float32(fac),
+                                 pr, ob, ex, addr, 
+                                 np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                  block=(16, 16, 1), grid=grid, stream=self.queue)
 
 
