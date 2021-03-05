@@ -52,7 +52,8 @@ extern "C" __global__ void ob_update2(
     int pr_sh,
     int ob_modes,
     int num_pods,
-    int ob_sh,
+    int ob_sh_rows,
+    int ob_sh_cols,
     int pr_modes,
     int ex_0,
     int ex_1,
@@ -64,22 +65,22 @@ extern "C" __global__ void ob_update2(
     const int* addr)
 {
   int y = blockIdx.y * BDIM_Y + threadIdx.y;
-  int dy = ob_sh;
+  int dy = ob_sh_rows;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
-  int dz = ob_sh;
+  int dz = ob_sh_cols;
   complex<ACC_TYPE> ob[NUM_MODES];
   ACC_TYPE obn[NUM_MODES];
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(ob_modes <= NUM_MODES);
 
-  if (y < ob_sh && z < ob_sh)
+  if (y < dy && z < dz)
   {
 #pragma unroll
     for (int i = 0; i < NUM_MODES; ++i)
     {
       auto idx = i * dy * dz + y * dz + z;
-      assert(idx < ob_modes * ob_sh * ob_sh);
+      assert(idx < ob_modes * ob_sh_rows * ob_sh_cols);
       ob[i] = ob_g[idx];
       obn[i] = get_real(obn_g[idx]);
     }
@@ -111,7 +112,7 @@ extern "C" __global__ void ob_update2(
 
     __syncthreads();
 
-    if (y >= ob_sh || z >= ob_sh)
+    if (y >= dy || z >= dz)
       continue;
 
 #pragma unroll 4
@@ -138,7 +139,7 @@ extern "C" __global__ void ob_update2(
     }
   }
 
-  if (y < ob_sh && z < ob_sh)
+  if (y < dy && z < dz)
   {
     for (int i = 0; i < NUM_MODES; ++i)
     {

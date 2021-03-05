@@ -24,11 +24,14 @@ class DlsPoUpdateKernelTest(PyCudaTest):
     atol = 1e-6
 
     @parameterized.expand([
-        ["base", 10],
-        ["regul", 50],
-        ["floating", 0],
+        ["base", 10, False],
+        ["regul", 50, False],
+        ["floating", 0, False],
+        ["base", 10, True],
+        ["regul", 50, True],
+        ["floating", 0, True],
     ])
-    def test_op_update_ml_UNITY(self, name, iter, atomics=False):
+    def test_op_update_ml_UNITY(self, name, iter, atomics):
 
         # Load data
         with h5py.File(self.datadir %name + "op_update_ml_%04d.h5" %iter, "r") as f:
@@ -58,15 +61,18 @@ class DlsPoUpdateKernelTest(PyCudaTest):
         POK.ob_update_ML(addr_dev, obg_dev, pr_dev, aux_dev, atomics=atomics)
 
         ## Assert
-        np.testing.assert_allclose(obg, obg_dev.get(),  atol=self.atol, rtol=self.rtol, verbose=False,
+        np.testing.assert_allclose(obg_dev.get(), obg, atol=self.atol, rtol=self.rtol, verbose=False,
             err_msg="The object array has not been updated as expected")
 
     @parameterized.expand([
-        ["base", 10],
-        ["regul", 50],
-        ["floating", 0],
+        ["base", 10, False],
+        ["regul", 50, False],
+        ["floating", 0, False],
+        ["base", 10, True],
+        ["regul", 50, True],
+        ["floating", 0, True],
     ])
-    def test_pr_update_ml_UNITY(self, name, iter, atomics=False):
+    def test_pr_update_ml_UNITY(self, name, iter, atomics):
 
         # Load data
         with h5py.File(self.datadir %name + "pr_update_ml_%04d.h5" %iter, "r") as f:
