@@ -208,7 +208,7 @@ class ML_pycuda(ML_serial):
             kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue)
             kern.GDK.allocate()
 
-            kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type=np.float32)
+            kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type='float')
             kern.POK.allocate()
 
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
