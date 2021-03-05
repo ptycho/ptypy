@@ -105,6 +105,9 @@ class ML_serial(ML):
 
             kern.FW = geo.propagator.fw
             kern.BW = geo.propagator.bw
+            print(geo.lam)
+            print(geo.distance)
+            print(geo.psize)
 
             if self.do_position_refinement:
                 addr_mangler = address_manglers.RandomIntMangle(

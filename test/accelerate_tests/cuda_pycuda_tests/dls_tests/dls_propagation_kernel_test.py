@@ -29,15 +29,15 @@ class DLsPropagationKernelTest(PyCudaTest):
     rtol = 1e-6
     atol = 1e-6
 
-    def set_up_farfield(self,shape):
+    def set_up_geometry(self,shape):
         P = Base()
         P.CType = COMPLEX_TYPE
         P.Ftype = FLOAT_TYPE
         g = u.Param()
         g.energy = None # u.keV2m(1.0)/6.32e-7
-        g.lam = 5.32e-7
-        g.distance = 15e-2
-        g.psize = 24e-6
+        g.lam = 1.2781875567010311e-10
+        g.distance = 14.65 
+        g.psize = 5.5e-05
         g.shape = shape
         g.propagation = "farfield"
         G = geometry.Geo(owner=P, pars=g)
@@ -58,7 +58,7 @@ class DLsPropagationKernelTest(PyCudaTest):
         aux_dev = gpuarray.to_gpu(aux)
 
         # Geometry
-        geo = self.set_up_farfield(aux.shape)
+        geo = self.set_up_geometry(aux.shape)
 
         # CPU kernel
         aux = geo.propagator.fw(aux)
@@ -69,7 +69,7 @@ class DLsPropagationKernelTest(PyCudaTest):
         PropK.fw(aux_dev, aux_dev)
 
         ## Assert
-        np.testing.assert_allclose(aux, aux_dev.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(aux_dev.get(), aux, atol=self.atol, rtol=self.rtol, verbose=False, 
             err_msg="Forward propagation was not as expected")
 
     @parameterized.expand([
@@ -87,7 +87,7 @@ class DLsPropagationKernelTest(PyCudaTest):
         aux_dev = gpuarray.to_gpu(aux)
 
         # Geometry
-        geo = self.set_up_farfield(aux.shape)
+        geo = self.set_up_geometry(aux.shape)
 
         # CPU kernel
         aux = geo.propagator.bw(aux)
@@ -98,5 +98,5 @@ class DLsPropagationKernelTest(PyCudaTest):
         PropK.bw(aux_dev, aux_dev)
 
         ## Assert
-        np.testing.assert_allclose(aux, aux_dev.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(aux_dev.get(), aux, atol=self.atol, rtol=self.rtol, verbose=False, 
             err_msg="Backward propagation was not as expected")
