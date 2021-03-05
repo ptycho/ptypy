@@ -122,7 +122,7 @@ class DM_pycuda(DM_serial.DM_serial):
             kern.FUK.allocate()
 
             logger.info("Setting up PoUpdateKernel")
-            kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type='float')
+            kern.POK = PoUpdateKernel(queue_thread=self.queue)
             kern.POK.allocate()
 
             logger.info("Setting up AuxiliaryWaveKernel")
