@@ -27,7 +27,7 @@ extern "C" __global__ void error_reduce(const IN_TYPE* ferr,
     {
       int idx = batch * M * N + m * N +
                 n;  // idx is index qwith respect to the full stack
-      sum += ferr[idx];
+      sum += ACC_TYPE(ferr[idx]);
     }
   }
 

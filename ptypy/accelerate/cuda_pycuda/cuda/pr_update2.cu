@@ -1,10 +1,18 @@
-/** ob_update.
+/** pr_update.
  *
  * Data types:
  * - IN_TYPE: the data type for the inputs (float or double)
  * - OUT_TYPE: the data type for the outputs (float or double)
  * - MATH_TYPE: the data type used for computation
  * - DENOM_TYPE: data type for the denominator (double,float,complex<double>,complex<float>)
+ * - ACC_TYPE: accumulator type for local pr array
+ * 
+ * NOTE: This version of ob_update goes over all tiles that need to be accumulated
+ * in a single thread block to avoid global atomic additions (as in pr_update.cu).
+ * This requires a local array of NUM_MODES size to store the local updates.
+ * GPU registers per thread are limited (255 32bit registers on V100), 
+ * and at some point the registers will spill into shared or global memory
+ * and the kernel will get considerably slower.
  */
 
 #include <cassert>
@@ -59,8 +67,8 @@ extern "C" __global__ void pr_update2(int pr_sh,
   int dy = pr_sh;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
   int dz = pr_sh;
-  complex<MATH_TYPE> pr[NUM_MODES];
-  MATH_TYPE prn[NUM_MODES];
+  complex<ACC_TYPE> pr[NUM_MODES];
+  ACC_TYPE prn[NUM_MODES];
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(pr_modes <= NUM_MODES);
@@ -122,7 +130,8 @@ extern "C" __global__ void pr_update2(int pr_sh,
         assert(idx < NUM_MODES);
         auto cob = conj(ob);
         complex<MATH_TYPE> ex_val = ex_g[ad[1] * pr_sh * pr_sh + y * pr_sh + z];
-        pr[idx] += cob * ex_val;
+        complex<ACC_TYPE> add_val = cob * ex_val;
+        pr[idx] += add_val;
         prn[idx] += ob.real() * ob.real() + ob.imag() * ob.imag();
       }
     }

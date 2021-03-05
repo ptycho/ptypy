@@ -4,7 +4,15 @@
  * - IN_TYPE: the data type for the inputs (float or double)
  * - OUT_TYPE: the data type for the outputs (float or double)
  * - MATH_TYPE: the data type used for computation
+ * - ACC_TYPE: accumulator type for the local ob accumulation
  * - DENOM_TYPE: type for the denominator (can be real/complex float/double)
+ * 
+ * NOTE: This version of ob_update goes over all tiles that need to be accumulated
+ * in a single thread block to avoid global atomic additions (as in ob_update.cu).
+ * This requires a local array of NUM_MODES size to store the local updates.
+ * GPU registers per thread are limited (255 32bit registers on V100), 
+ * and at some point the registers will spill into shared or global memory
+ * and the kernel will get considerably slower.
  */
 
 
@@ -44,7 +52,8 @@ extern "C" __global__ void ob_update2(
     int pr_sh,
     int ob_modes,
     int num_pods,
-    int ob_sh,
+    int ob_sh_rows,
+    int ob_sh_cols,
     int pr_modes,
     int ex_0,
     int ex_1,
@@ -56,22 +65,22 @@ extern "C" __global__ void ob_update2(
     const int* addr)
 {
   int y = blockIdx.y * BDIM_Y + threadIdx.y;
-  int dy = ob_sh;
+  int dy = ob_sh_rows;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
-  int dz = ob_sh;
-  complex<MATH_TYPE> ob[NUM_MODES];
-  MATH_TYPE obn[NUM_MODES];
+  int dz = ob_sh_cols;
+  complex<ACC_TYPE> ob[NUM_MODES];
+  ACC_TYPE obn[NUM_MODES];
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(ob_modes <= NUM_MODES);
 
-  if (y < ob_sh && z < ob_sh)
+  if (y < dy && z < dz)
   {
 #pragma unroll
     for (int i = 0; i < NUM_MODES; ++i)
     {
       auto idx = i * dy * dz + y * dz + z;
-      assert(idx < ob_modes * ob_sh * ob_sh);
+      assert(idx < ob_modes * ob_sh_rows * ob_sh_cols);
       ob[i] = ob_g[idx];
       obn[i] = get_real(obn_g[idx]);
     }
@@ -103,7 +112,7 @@ extern "C" __global__ void ob_update2(
 
     __syncthreads();
 
-    if (y >= ob_sh || z >= ob_sh)
+    if (y >= dy || z >= dz)
       continue;
 
 #pragma unroll 4
@@ -123,15 +132,14 @@ extern "C" __global__ void ob_update2(
         auto exidx = ad[1] * pr_sh * pr_sh + v1 * pr_sh + v2;
         assert(exidx < ex_0 * ex_1 * ex_2);
         complex<MATH_TYPE> t_ex_g = ex_g[exidx];
-        ob[idx] += cpr * t_ex_g;
-        auto rr = obn[idx];
-        rr += pr.real() * pr.real() + pr.imag() * pr.imag();
-        obn[idx] = rr;
+        complex<ACC_TYPE> add_val = cpr * t_ex_g;
+        ob[idx] += add_val;
+        obn[idx] += pr.real() * pr.real() + pr.imag() * pr.imag();
       }
     }
   }
 
-  if (y < ob_sh && z < ob_sh)
+  if (y < dy && z < dz)
   {
     for (int i = 0; i < NUM_MODES; ++i)
     {
