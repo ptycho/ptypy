@@ -29,6 +29,9 @@ from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothing
 
 from ptypy.accelerate.base import address_manglers
 
+# for debugging
+import h5py
+
 __all__ = ['ML_pycuda']
 
 
@@ -205,7 +208,7 @@ class ML_pycuda(ML_serial):
             kern.b = gpuarray.zeros(ash, dtype=np.complex64)
 
             # setup kernels, one for each SCAN.
-            kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue)
+            kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue, math_type='double')
             kern.GDK.allocate()
 
             kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type=np.float32)
@@ -470,14 +473,32 @@ class GaussianModel(BaseModelSerial):
 
             GDK.queue.wait_for_event(ev)
 
+            # debugging
+            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
+                with h5py.File(self.p.debug + "/ml_pycuda_before_floating_%04d.h5" %self.engine.curiter, "w") as f:
+                    f["Imodel"] = GDK.gpu.Imodel.get()
+                    f["fic"] = fic.get()
+
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
 
+            # debugging
+            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
+                with h5py.File(self.p.debug + "/ml_pycuda_after_floating_%04d.h5" %self.engine.curiter, "w") as f:
+                    f["Imodel"] = GDK.gpu.Imodel.get()
+                    f["fic"] = fic.get()
+            
             GDK.main(aux, addr, w, I)
             ev = cuda.Event()
             ev.record(GDK.queue)
 
             GDK.error_reduce(addr, err_phot)
+
+            # debugging
+            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
+                with h5py.File(self.p.debug + "/ml_pycuda_after_error_reduce_%04d.h5" %self.engine.curiter, "w") as f:
+                    f["LLerr"] = GDK.gpu.LLerr.get()
+                    f["err_phot"] = err_phot.get()
 
             BW(aux, aux)
 
