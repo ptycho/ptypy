@@ -162,11 +162,22 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         # Copy data to device
         aux_dev = gpuarray.to_gpu(aux)
         addr_dev = gpuarray.to_gpu(addr)
-        I_dev = gpuarray.to_gpu(addr)
+        I_dev = gpuarray.to_gpu(I)
         f_dev = gpuarray.to_gpu(f)
         a_dev = gpuarray.to_gpu(a)
         b_dev = gpuarray.to_gpu(b)
         fic_dev = gpuarray.to_gpu(fic)
+        
+        # double versions
+        # aux_dbl = aux.astype(np.complex128)
+        # I_dbl = I.astype(np.float64)
+        # f_dbl = f.astype(np.complex128)
+        # a_dbl = a.astype(np.complex128)
+        # b_dbl = b.astype(np.complex128)
+        # fic_dbl = fic.astype(np.float64)
+        # BGDK = BaseGradientDescentKernel(aux_dbl, addr.shape[1])
+        # BGDK.allocate()
+        # BGDK.make_a012(f_dbl, a_dbl, b_dbl, addr, I_dbl, fic_dbl)
 
         # CPU Kernel
         BGDK = BaseGradientDescentKernel(aux, addr.shape[1])
@@ -182,11 +193,11 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         GDK.make_a012(f_dev, a_dev, b_dev, addr_dev, I_dev, fic_dev)
 
         ## Assert
-        np.testing.assert_allclose(BGDK.npy.Imodel, GDK.gpu.Imodel.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(GDK.gpu.Imodel.get(), BGDK.npy.Imodel, atol=self.atol, rtol=self.rtol, 
             err_msg="Imodel error has not been updated as expected")
-        np.testing.assert_allclose(BGDK.npy.LLerr, GDK.gpu.LLerr.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(GDK.gpu.LLerr.get(), BGDK.npy.LLerr, atol=self.atol, rtol=self.rtol, 
             err_msg="LLerr error has not been updated as expected")
-        np.testing.assert_allclose(BGDK.npy.LLden, GDK.gpu.LLden.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(GDK.gpu.LLden.get(), BGDK.npy.LLden, atol=self.atol, rtol=self.rtol, 
             err_msg="LLden error has not been updated as expected")
 
     @parameterized.expand([
