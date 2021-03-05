@@ -72,11 +72,11 @@ class PoUpdateKernelTest(PyCudaTest):
 
         object_array_denominator = np.empty_like(object_array, dtype=FLOAT_TYPE)
         for idx in range(G):
-            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2)  # + 1j * np.ones((H, I)) * (5 * idx + 2)
+            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2) 
 
         probe_denominator = np.empty_like(probe, dtype=FLOAT_TYPE)
         for idx in range(D):
-            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2)  # + 1j * np.ones((E, F)) * (5 * idx + 2)
+            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2) 
 
         return (gpuarray.to_gpu(addr), 
             gpuarray.to_gpu(object_array), 
@@ -154,9 +154,9 @@ class PoUpdateKernelTest(PyCudaTest):
         '''
         test
         '''
-        object_array_denominator = np.empty_like(object_array)
+        object_array_denominator = np.empty_like(object_array, dtype=FLOAT_TYPE)
         for idx in range(G):
-            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2) + 1j * np.ones((H, I)) * (5 * idx + 2)
+            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2)
 
 
         POUK = PoUpdateKernel()
@@ -204,22 +204,22 @@ class PoUpdateKernelTest(PyCudaTest):
         np.testing.assert_array_equal(object_array, expected_object_array,
                                       err_msg="The object array has not been updated as expected")
 
-        expected_object_array_denominator = np.array([[[12.+2.j, 22.+2.j, 22.+2.j, 22.+2.j, 22.+2.j, 12.+2.j,  2.+2.j],
-                                                       [22.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 22.+2.j,  2.+2.j],
-                                                       [22.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 22.+2.j,  2.+2.j],
-                                                       [22.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 22.+2.j,  2.+2.j],
-                                                       [22.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 22.+2.j,  2.+2.j],
-                                                       [12.+2.j, 22.+2.j, 22.+2.j, 22.+2.j, 22.+2.j, 12.+2.j,  2.+2.j],
-                                                       [ 2.+2.j,  2.+2.j,  2.+2.j,  2.+2.j,  2.+2.j,  2.+2.j,  2.+2.j]],
+        expected_object_array_denominator = np.array([[[12., 22., 22., 22., 22., 12.,  2.],
+                                                       [22., 42., 42., 42., 42., 22.,  2.],
+                                                       [22., 42., 42., 42., 42., 22.,  2.],
+                                                       [22., 42., 42., 42., 42., 22.,  2.],
+                                                       [22., 42., 42., 42., 42., 22.,  2.],
+                                                       [12., 22., 22., 22., 22., 12.,  2.],
+                                                       [ 2.,  2.,  2.,  2.,  2.,  2.,  2.]],
 
-                                                      [[17.+7.j, 27.+7.j, 27.+7.j, 27.+7.j, 27.+7.j, 17.+7.j,  7.+7.j],
-                                                       [27.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 27.+7.j,  7.+7.j],
-                                                       [27.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 27.+7.j,  7.+7.j],
-                                                       [27.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 27.+7.j,  7.+7.j],
-                                                       [27.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 27.+7.j,  7.+7.j],
-                                                       [17.+7.j, 27.+7.j, 27.+7.j, 27.+7.j, 27.+7.j, 17.+7.j,  7.+7.j],
-                                                       [ 7.+7.j,  7.+7.j,  7.+7.j,  7.+7.j,  7.+7.j,  7.+7.j,  7.+7.j]]],
-                                                     dtype=COMPLEX_TYPE)
+                                                      [[17., 27., 27., 27., 27., 17.,  7.],
+                                                       [27., 47., 47., 47., 47., 27.,  7.],
+                                                       [27., 47., 47., 47., 47., 27.,  7.],
+                                                       [27., 47., 47., 47., 47., 27.,  7.],
+                                                       [27., 47., 47., 47., 47., 27.,  7.],
+                                                       [17., 27., 27., 27., 27., 17.,  7.],
+                                                       [ 7.,  7.,  7.,  7.,  7.,  7.,  7.]]],
+                                                     dtype=FLOAT_TYPE)
 
 
         np.testing.assert_array_equal(object_array_denominator_dev.get(), expected_object_array_denominator,
@@ -291,9 +291,9 @@ class PoUpdateKernelTest(PyCudaTest):
         '''
         test
         '''
-        object_array_denominator = np.empty_like(object_array)
+        object_array_denominator = np.empty_like(object_array, dtype=FLOAT_TYPE)
         for idx in range(G):
-            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2) + 1j * np.ones((H, I)) * (5 * idx + 2)
+            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2) 
 
 
         POUK = PoUpdateKernel()
@@ -394,9 +394,9 @@ class PoUpdateKernelTest(PyCudaTest):
         '''
         test
         '''
-        probe_denominator = np.empty_like(probe)
+        probe_denominator = np.empty_like(probe, dtype=FLOAT_TYPE)
         for idx in range(D):
-            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2) + 1j * np.ones((E, F)) * (5 * idx + 2)
+            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2) 
 
         POUK = PoUpdateKernel()
 
@@ -438,18 +438,18 @@ class PoUpdateKernelTest(PyCudaTest):
         np.testing.assert_array_equal(probe_dev.get(), expected_probe,
                                       err_msg="The probe has not been updated as expected")
 
-        expected_probe_denominator = np.array([[[138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j],
-                                                [138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j],
-                                                [138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j],
-                                                [138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j],
-                                                [138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j]],
+        expected_probe_denominator = np.array([[[138., 138., 138., 138., 138.],
+                                                [138., 138., 138., 138., 138.],
+                                                [138., 138., 138., 138., 138.],
+                                                [138., 138., 138., 138., 138.],
+                                                [138., 138., 138., 138., 138.]],
 
-                                               [[143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j],
-                                                [143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j],
-                                                [143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j],
-                                                [143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j],
-                                                [143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j]]],
-                                              dtype=COMPLEX_TYPE)
+                                               [[143., 143., 143., 143., 143.],
+                                                [143., 143., 143., 143., 143.],
+                                                [143., 143., 143., 143., 143.],
+                                                [143., 143., 143., 143., 143.],
+                                                [143., 143., 143., 143., 143.]]],
+                                              dtype=FLOAT_TYPE)
 
         np.testing.assert_array_equal(probe_denominator_dev.get(), expected_probe_denominator,
                                       err_msg="The probe denominatorhas not been updated as expected")
@@ -519,9 +519,9 @@ class PoUpdateKernelTest(PyCudaTest):
         '''
         test
         '''
-        probe_denominator = np.empty_like(probe)
+        probe_denominator = np.empty_like(probe, dtype=FLOAT_TYPE)
         for idx in range(D):
-            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2) + 1j * np.ones((E, F)) * (5 * idx + 2)
+            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2)
 
         POUK = PoUpdateKernel()
         from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel

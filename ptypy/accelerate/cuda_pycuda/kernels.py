@@ -599,38 +599,29 @@ class GradientDescentKernel(ab.GradientDescentKernel):
 
 class PoUpdateKernel(ab.PoUpdateKernel):
 
-    def __init__(self, queue_thread=None, denom_type=np.complex64, 
+    def __init__(self, queue_thread=None, denom_type='float', 
         math_type='float', accumulator_type='float'):
         super(PoUpdateKernel, self).__init__()
         # and now initialise the cuda
-        if denom_type == np.complex64:
-            dtype = 'complex<float>'
-        elif denom_type == np.float32:
-            dtype = 'float'
-        elif denom_type == np.complex128:
-            dtype = 'complex<double>'
-        elif denom_type == np.float64:
-            dtype = 'double'
-        else:
-            raise ValueError('invalid type for denominator')
+        if denom_type not in ['double', 'float']:
+            raise ValueError('only float and double are supported for denom_type')
         if math_type not in ['double', 'float']:
             raise ValueError('only float and double are supported for math_type')
         if accumulator_type not in ['double', 'float']:
             raise ValueError('only float and double are supported for accumulator_type')
-        
+        self.denom_type = denom_type
         self.math_type = math_type
         self.accumulator_type = accumulator_type
-        self.dtype = dtype
         self.queue = queue_thread
         self.ob_update_cuda = load_kernel("ob_update", {
-            'DENOM_TYPE': dtype,
+            'DENOM_TYPE': self.denom_type,
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
         })
         self.ob_update2_cuda = None  # load_kernel("ob_update2")
         self.pr_update_cuda = load_kernel("pr_update", {
-            'DENOM_TYPE': dtype,
+            'DENOM_TYPE': self.denom_type,
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
@@ -672,7 +663,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "NUM_MODES": obsh[0],
                     "BDIM_X": 16,
                     "BDIM_Y": 16,
-                    'DENOM_TYPE': self.dtype,
+                    'DENOM_TYPE': self.denom_type,
                     'IN_TYPE': 'float',
                     'OUT_TYPE': 'float',
                     'MATH_TYPE': self.math_type,
@@ -713,7 +704,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                     "NUM_MODES": prsh[0],
                     "BDIM_X": 16,
                     "BDIM_Y": 16,
-                    'DENOM_TYPE': self.dtype,
+                    'DENOM_TYPE': self.denom_type,
                     'IN_TYPE': 'float',
                     'OUT_TYPE': 'float',
                     'MATH_TYPE': self.math_type,
