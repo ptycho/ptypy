@@ -16,6 +16,52 @@ class DLsFloatingIntensityTest(unittest.TestCase):
         ["base", 0],
         ["floating", 0],
     ])
+    def test_before_fft(self, name, iter=0):
+
+        # Load data ML_serial
+        with h5py.File(self.datadir %name + "ml_serial_before_fft_%04d.h5" %iter, "r") as f:
+            aux1 = f["aux"][:]
+            addr1 = f["addr"][:]
+        print(aux1.shape)
+
+        # Load data ML_pycuda
+        with h5py.File(self.datadir %name + "ml_pycuda_before_fft_%04d.h5" %iter, "r") as f:
+            aux2 = f["aux"][:]
+            addr2 = f["addr"][:]
+        print(aux2.shape)
+
+        np.testing.assert_allclose(aux2, aux1, atol=self.atol, rtol=self.rtol, verbose=False, 
+            err_msg = "The auxilliary waves are not matching")
+        np.testing.assert_allclose(addr2, addr1, atol=self.atol, rtol=self.rtol, verbose=False,
+            err_msg = "The addr book is not matching")
+
+    @parameterized.expand([
+        ["base", 0],
+        ["floating", 0],
+    ])
+    def test_after_fft(self, name, iter=0):
+
+        # Load data ML_serial
+        with h5py.File(self.datadir %name + "ml_serial_after_fft_%04d.h5" %iter, "r") as f:
+            aux1 = f["aux"][:]
+            addr1 = f["addr"][:]
+        print(aux1.shape)
+
+        # Load data ML_pycuda
+        with h5py.File(self.datadir %name + "ml_pycuda_after_fft_%04d.h5" %iter, "r") as f:
+            aux2 = f["aux"][:]
+            addr2 = f["addr"][:]
+        print(aux2.shape)
+
+        np.testing.assert_allclose(aux2, aux1, atol=self.atol, rtol=self.rtol, verbose=False, 
+            err_msg = "The auxilliary waves are not matching")
+        np.testing.assert_allclose(addr2, addr1, atol=self.atol, rtol=self.rtol, verbose=False,
+            err_msg = "The addr book is not matching")
+
+    @parameterized.expand([
+        ["base", 0],
+        ["floating", 0],
+    ])
     def test_before_fic_model_update(self, name, iter=0):
 
         # Load data ML_serial

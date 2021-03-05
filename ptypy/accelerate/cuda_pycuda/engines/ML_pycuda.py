@@ -462,12 +462,18 @@ class GaussianModel(BaseModelSerial):
 
             # debugging
             if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/ml_pycuda_debug_%04d.h5" %self.engine.curiter, "w") as f:
-                    f["aux"] = aux.get()
+                with h5py.File(self.p.debug + "/ml_pycuda_before_fft_%04d.h5" %self.engine.curiter, "w") as f:
+                    f["aux"] = aux.get()[0]
                     f["addr"] = addr.get()
 
             # forward prop
             FW(aux, aux)
+
+            # debugging
+            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
+                with h5py.File(self.p.debug + "/ml_pycuda_after_fft_%04d.h5" %self.engine.curiter, "w") as f:
+                    f["aux"] = aux.get()[0]
+                    f["addr"] = addr.get()
             GDK.make_model(aux, addr)
 
             GDK.queue.wait_for_event(ev)
