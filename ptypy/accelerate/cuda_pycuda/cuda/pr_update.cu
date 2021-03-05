@@ -25,6 +25,12 @@ __device__ inline T* get_denom_real_ptr(complex<T>* den)
   return reinterpret_cast<T*>(den);
 }
 
+template <class T>
+__device__ inline T* get_denom_real_ptr(T* den)
+{
+  return den;
+}
+
 extern "C" __global__ void pr_update(
     const complex<IN_TYPE>* __restrict__ exit_wave,
     int A,
