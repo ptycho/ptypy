@@ -395,6 +395,7 @@ class GaussianModel(BaseModelSerial):
                     f["addr"] = addr
                     f["I"] = I
                     f["fic"] = fic
+                    f["Imodel"] = GDK.npy.Imodel
 
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
