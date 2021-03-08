@@ -28,7 +28,8 @@ extern "C" __global__ void step1(const IN_TYPE* Imodel,
   den[iz * x + ix] = tmp * MATH_TYPE(Imodel[iz * x + ix]);
 }
 
-extern "C" __global__ void step2(const IN_TYPE* fic_tmp,
+extern "C" __global__ void step2(const IN_TYPE* fic_nom,
+                                 const IN_TYPE* fic_den,
                                  OUT_TYPE* fic,
                                  OUT_TYPE* Imodel,
                                  int z,
@@ -40,7 +41,7 @@ extern "C" __global__ void step2(const IN_TYPE* fic_tmp,
   if (iz >= z || ix >= x)
     return;
   //probably not so clever having all threads read from the same locations
-  auto tmp = MATH_TYPE(fic[iz]) / MATH_TYPE(fic_tmp[iz]);
+  auto tmp = MATH_TYPE(fic_nom[iz]) / MATH_TYPE(fic_den[iz]);
   Imodel[iz * x + ix] *= tmp;
   // race condition if write is not restricted to one thread
   // learned this the hard way

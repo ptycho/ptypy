@@ -430,7 +430,8 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.gpu.LLerr = gpuarray.zeros(self.fshape, dtype=self.ftype)
         self.gpu.Imodel = gpuarray.zeros(self.fshape, dtype=self.ftype)
         tmp = np.ones((self.fshape[0],), dtype=self.ftype)
-        self.gpu.fic_tmp = gpuarray.to_gpu(tmp)
+        self.gpu.fic_nom = gpuarray.to_gpu(tmp)
+        self.gpu.fic_den = gpuarray.to_gpu(tmp)
 
         # temporary array for the reduction in fill_b
         sh = (3, int((np.prod(self.fshape)*self.nmodes + 1023) // 1024))
@@ -535,7 +536,8 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         num = self.gpu.LLerr
         den = self.gpu.LLden
         Imodel = self.gpu.Imodel
-        fic_tmp = self.gpu.fic_tmp
+        fic_nom = self.gpu.fic_nom
+        fic_den = self.gpu.fic_den
 
         ## math ##
         x = np.int32(sh[1] * sh[2])
@@ -548,7 +550,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                        grid=(int((x + bx - 1) // bx), 1, int(z)),
                        stream=self.queue)
 
-        self.error_reduce_cuda(num, fic,
+        self.error_reduce_cuda(num, fic_nom,
                                np.int32(num.shape[-2]),
                                np.int32(num.shape[-1]),
                                block=(32, 32, 1),
@@ -556,7 +558,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                shared=32*32*4,
                                stream=self.queue)
 
-        self.error_reduce_cuda(den, fic_tmp,
+        self.error_reduce_cuda(den, fic_den,
                                np.int32(den.shape[-2]),
                                np.int32(den.shape[-1]),
                                block=(32, 32, 1),
@@ -564,7 +566,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                shared=32*32*4,
                                stream=self.queue)
 
-        self.floating_intensity_cuda_step2(fic_tmp, fic, Imodel,
+        self.floating_intensity_cuda_step2(fic_nom, fic_den, fic, Imodel,
                        z, x,
                        block=(bx, 1, 1),
                        grid=(int((x + bx - 1) // bx), 1, int(z)),

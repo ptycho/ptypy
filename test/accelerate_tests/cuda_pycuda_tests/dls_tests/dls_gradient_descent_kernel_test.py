@@ -60,14 +60,17 @@ class DlsGradientDescentKernelTest(PyCudaTest):
     ])
     def test_floating_intensity_UNITY(self, name, iter):
 
+        maxz = 128
+
         # Load data
         with h5py.File(self.datadir %name + "floating_intensities_%04d.h5" %iter, "r") as f:
-            w = f["w"][:]
-            addr = f["addr"][:]
-            I = f["I"][:]
-            fic = f["fic"][:]
+            w = f["w"][:maxz]
+            addr = f["addr"][:maxz]
+            I = f["I"][:maxz]
+            fic = f["fic"][:maxz]
+            Imodel = f["Imodel"][:maxz]
         with h5py.File(self.datadir %name + "make_model_%04d.h5" %iter, "r") as f:
-            aux = f["aux"][:]
+            aux = f["aux"][:maxz]
         
         # Copy data to device
         aux_dev = gpuarray.to_gpu(aux)
@@ -75,21 +78,24 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         addr_dev = gpuarray.to_gpu(addr)
         I_dev = gpuarray.to_gpu(I)
         fic_dev = gpuarray.to_gpu(fic)
+        Imodel_dev = gpuarray.to_gpu(Imodel)
 
         # CPU Kernel
         BGDK = BaseGradientDescentKernel(aux, addr.shape[1])
         BGDK.allocate()
+        BGDK.npy.Imodel = Imodel
         BGDK.floating_intensity(addr, w, I, fic)
 
         # GPU kernel
         GDK = GradientDescentKernel(aux_dev, addr.shape[1])
         GDK.allocate()
+        GDK.gpu.Imodel = Imodel_dev
         GDK.floating_intensity(addr_dev, w_dev, I_dev, fic_dev)
 
         ## Assert
-        np.testing.assert_allclose(BGDK.npy.Imodel, GDK.gpu.Imodel.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(GDK.gpu.Imodel.get(), BGDK.npy.Imodel, atol=self.atol, rtol=self.rtol, 
             err_msg="`Imodel` buffer has not been updated as expected")
-        np.testing.assert_allclose(fic, fic_dev.get(), atol=self.atol, rtol=self.rtol, 
+        np.testing.assert_allclose(fic_dev.get(), fic, atol=self.atol, rtol=self.rtol, 
             err_msg="floating intensity coeff (fic) has not been updated as expected")
 
     @parameterized.expand([

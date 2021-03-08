@@ -204,7 +204,8 @@ class GradientDescentKernel(BaseKernel):
         self.npy.LLerr = np.zeros(self.fshape, dtype=self.ftype)
         self.npy.Imodel = np.zeros(self.fshape, dtype=self.ftype)
 
-        self.npy.fic_tmp = np.ones((self.fshape[0],), dtype=self.ftype)
+        self.npy.fic_nom = np.ones((self.fshape[0],), dtype=self.ftype)
+        self.npy.fic_den = np.ones((self.fshape[0],), dtype=self.ftype)
 
     def make_model(self, b_aux, addr):
 
@@ -300,14 +301,15 @@ class GradientDescentKernel(BaseKernel):
         num = self.npy.LLerr[:maxz]
         den = self.npy.LLden[:maxz]
         Imodel = self.npy.Imodel[:maxz]
-        fic_tmp = self.npy.fic_tmp[:maxz]
+        fic_nom = self.npy.fic_nom[:maxz]
+        fic_den = self.npy.fic_den[:maxz]
 
         ## math ##
         num[:] = w * Imodel * I
         den[:] = w * Imodel ** 2
-        fic[:] = num.sum(-1).sum(-1)
-        fic_tmp[:]= den.sum(-1).sum(-1)
-        fic/=fic_tmp
+        fic_nom[:] = num.sum(-1).sum(-1)
+        fic_den[:] = den.sum(-1).sum(-1)
+        fic[:] = fic_nom / fic_den
         Imodel *= fic.reshape(Imodel.shape[0], 1, 1)
 
     def main(self, b_aux, addr, w, I):
