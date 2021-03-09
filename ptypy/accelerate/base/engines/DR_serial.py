@@ -22,19 +22,18 @@ from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKern
 from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
 
-__all__ = ['DM_local']
+__all__ = ['DR_serial']
 
 @register()
-class DM_local(PositionCorrectionEngine):
+class DR_serial(PositionCorrectionEngine):
     """
-    A local version of the Difference Map engine
+    An implementation of the Douglas-Rachford algorithm
     that can be operated like the ePIE algorithm.
-
 
     Defaults:
 
     [name]
-    default = DM_local
+    default = DR_serial
     type = str
     help =
     doc =
@@ -43,7 +42,7 @@ class DM_local(PositionCorrectionEngine):
     default = 1
     type = float
     lowlim = 0.0
-    help = Difference map tuning parameter, a value of 0 makes it equal to ePIE.
+    help = Tuning parameter, a value of 0 makes it equal to ePIE.
 
     [tau]
     default = 1
@@ -93,7 +92,7 @@ class DM_local(PositionCorrectionEngine):
         """
         Local difference map reconstruction engine.
         """
-        super(DM_local, self).__init__(ptycho_parent, pars)
+        super(DR_serial, self).__init__(ptycho_parent, pars)
 
         # Instance attributes
         self.error = None
@@ -109,11 +108,22 @@ class DM_local(PositionCorrectionEngine):
         self.pr_cfact = {}
         self.kernels = {}
 
+        self.ptycho.citations.add_article(
+            title='Semi-implicit relaxed Douglas-Rachford algorithm (sDR) for ptychography',
+            author='Pham et al.',
+            journal='Opt. Express',
+            volume=27,
+            year=2019,
+            page=31246,
+            doi='10.1364/OE.27.031246',
+            comment='The local douglas-rachford reconstruction algorithm',
+        )
+
     def engine_initialize(self):
         """
         Prepare for reconstruction.
         """
-        super(DM_local, self).engine_initialize()
+        super(DR_serial, self).engine_initialize()
 
         self.error = []
         self._reset_benchmarks()
