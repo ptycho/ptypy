@@ -190,7 +190,6 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                np.int32(self.fshape[2]),
                                block=(32, 32, 1),
                                grid=(int(err_sum.shape[0]), 1, 1),
-                               shared=32*32*4,
                                stream=self.queue)
 
     def fmag_all_update(self, f, addr, fmag, fmask, err_fmag, pbound=0.0):
@@ -407,7 +406,9 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.make_a012_cuda = load_kernel('make_a012', subs)
         self.error_reduce_cuda = load_kernel('error_reduce', {
             **subs,
-            'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double'
+            'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double',
+            'BDIM_X': 32,
+            'BDIM_Y': 32
         })
         self.fill_b_cuda = load_kernel('fill_b', {
             **subs, 
@@ -520,7 +521,6 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                np.int32(ferr.shape[-1]),
                                block=(32, 32, 1),
                                grid=(int(maxz), 1, 1),
-                               shared=32*32*4,
                                stream=self.queue)
 
     def floating_intensity(self, addr, w, I, fic):
@@ -538,14 +538,13 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         fic_tmp = self.gpu.fic_tmp
 
         ## math ##
-        x = np.int32(sh[1] * sh[2])
-        z = np.int32(maxz)
+        xall = np.int32(maxz * sh[1] * sh[2])
         bx = 1024
 
         self.floating_intensity_cuda_step1(Imodel, I, w, num, den,
-                       z, x,
+                       xall,
                        block=(bx, 1, 1),
-                       grid=(int((x + bx - 1) // bx), 1, int(z)),
+                       grid=(int((xall + bx - 1) // bx), 1, 1),
                        stream=self.queue)
 
         self.error_reduce_cuda(num, fic,
@@ -553,7 +552,6 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                np.int32(num.shape[-1]),
                                block=(32, 32, 1),
                                grid=(int(maxz), 1, 1),
-                               shared=32*32*4,
                                stream=self.queue)
 
         self.error_reduce_cuda(den, fic_tmp,
@@ -561,13 +559,13 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                np.int32(den.shape[-1]),
                                block=(32, 32, 1),
                                grid=(int(maxz), 1, 1),
-                               shared=32*32*4,
                                stream=self.queue)
 
         self.floating_intensity_cuda_step2(fic_tmp, fic, Imodel,
-                       z, x,
-                       block=(bx, 1, 1),
-                       grid=(int((x + bx - 1) // bx), 1, int(z)),
+                       np.int32(Imodel.shape[-2]),
+                       np.int32(Imodel.shape[-1]),
+                       block=(32, 32, 1),
+                       grid=(1, 1, int(maxz)),
                        stream=self.queue)
 
 
@@ -874,7 +872,6 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
                                np.int32(self.fshape[2]),
                                block=(32, 32, 1),
                                grid=(int(err_fmag.shape[0]), 1, 1),
-                               shared=32*32*4,
                                stream=self.queue)
 
     def update_addr_and_error_state_old(self, addr, error_state, mangled_addr, err_sum):

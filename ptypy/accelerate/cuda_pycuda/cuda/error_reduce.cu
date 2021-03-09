@@ -14,7 +14,7 @@ extern "C" __global__ void error_reduce(const IN_TYPE* ferr,
   int tx = threadIdx.x;
   int ty = threadIdx.y;
   int batch = blockIdx.x;
-  extern __shared__ ACC_TYPE sum_v[1024];
+  __shared__ ACC_TYPE sum_v[BDIM_X*BDIM_Y];
 
   int shidx =
       ty * blockDim.x + tx;  // shidx: index in shared memory for this block
@@ -35,7 +35,7 @@ extern "C" __global__ void error_reduce(const IN_TYPE* ferr,
 
   __syncthreads();
 
-  int nt = blockDim.x * blockDim.y;
+  int nt = BDIM_X * BDIM_Y;
   int c = nt;
 
   while (c > 1)
