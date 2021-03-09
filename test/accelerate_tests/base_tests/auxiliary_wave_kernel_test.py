@@ -76,25 +76,17 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         return addr, object_array, probe, exit_wave
 
     def test_build_aux_same_as_exit(self):
-        '''
-        setup
-        '''
-
-        '''
-        test
-        '''
+        # setup
         addr, object_array, probe, exit_wave = self.prepare_arrays()
         auxiliary_wave = np.zeros_like(exit_wave)
 
+        # test
         AWK = AuxiliaryWaveKernel()
         alpha_set = 1.0
         AWK.allocate()  # doesn't actually do anything at the moment
-
         AWK.build_aux(auxiliary_wave, addr, object_array, probe, exit_wave, alpha=alpha_set)
 
-        # print("auxiliary_wave after")
-        # print(repr(auxiliary_wave))
-
+        # expected outcome
         expected_auxiliary_wave = np.array([[[-1. + 3.j, -1. + 3.j, -1. + 3.j],
                                              [-1. + 3.j, -1. + 3.j, -1. + 3.j],
                                              [-1. + 3.j, -1. + 3.j, -1. + 3.j]],
@@ -144,31 +136,21 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                              [-16. + 16.j, -16. + 16.j, -16. + 16.j],
                                              [-16. + 16.j, -16. + 16.j, -16. + 16.j]]], dtype=COMPLEX_TYPE)
 
+        # assert
         np.testing.assert_array_equal(expected_auxiliary_wave, expected_auxiliary_wave,
                                       err_msg="The auxiliary_wave has not been updated as expected")
 
     def test_build_exit_aux_same_as_exit(self):
-        '''
-        setup
-        '''
+        # setup
         addr, object_array, probe, exit_wave = self.prepare_arrays()
-
-        '''
-        test
-        '''
         auxiliary_wave = np.zeros_like(exit_wave)
 
+        # test
         AWK = AuxiliaryWaveKernel()
         AWK.allocate()
-
         AWK.build_exit(auxiliary_wave, addr, object_array, probe, exit_wave)
-        #
-        # print("auxiliary_wave after")
-        # print(repr(auxiliary_wave))
-        #
-        # print("exit_wave after")
-        # print(repr(exit_wave))
 
+        # expected outcome
         expected_auxiliary_wave = np.array([[[0. - 2.j, 0. - 2.j, 0. - 2.j],
                                              [0. - 2.j, 0. - 2.j, 0. - 2.j],
                                              [0. - 2.j, 0. - 2.j, 0. - 2.j]],
@@ -217,9 +199,6 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                             [[0. - 16.j, 0. - 16.j, 0. - 16.j],
                                              [0. - 16.j, 0. - 16.j, 0. - 16.j],
                                              [0. - 16.j, 0. - 16.j, 0. - 16.j]]], dtype=COMPLEX_TYPE)
-
-        np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
-                                      err_msg="The auxiliary_wave has not been updated as expected")
 
         expected_exit_wave = np.array([[[1. - 1.j, 1. - 1.j, 1. - 1.j],
                                         [1. - 1.j, 1. - 1.j, 1. - 1.j],
@@ -270,23 +249,23 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                         [16. + 0.j, 16. + 0.j, 16. + 0.j],
                                         [16. + 0.j, 16. + 0.j, 16. + 0.j]]], dtype=COMPLEX_TYPE)
 
+        # assert
+        np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
+                                      err_msg="The auxiliary_wave has not been updated as expected")
         np.testing.assert_array_equal(exit_wave, expected_exit_wave,
                                       err_msg="The exit_wave has not been updated as expected")
 
     def test_build_aux_no_ex(self):
-        '''
-        setup
-        '''
+        # setup
         addr, object_array, probe, exit_wave = self.prepare_arrays()
-
-        '''
-        test
-        '''
         auxiliary_wave = np.zeros_like(exit_wave)
 
+        # test
         AWK = AuxiliaryWaveKernel()
         AWK.allocate()
         AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, fac=1.0, add=False)
+
+        # expected outcome
         expected_auxiliary_wave = np.array([[[0. + 2.j, 0. + 2.j, 0. + 2.j],
                                              [0. + 2.j, 0. + 2.j, 0. + 2.j],
                                              [0. + 2.j, 0. + 2.j, 0. + 2.j]],
@@ -335,11 +314,15 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                             [[0. + 16.j, 0. + 16.j, 0. + 16.j],
                                              [0. + 16.j, 0. + 16.j, 0. + 16.j],
                                              [0. + 16.j, 0. + 16.j, 0. + 16.j]]], dtype=np.complex64)
+        # assert
         np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
                                       err_msg="The auxiliary_wave has not been updated as expected")
+        
+        # test
         auxiliary_wave = exit_wave
         AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, fac=2.0, add=True)
 
+        # expected outcome
         expected_auxiliary_wave = np.array([[[1. + 5.j, 1. + 5.j, 1. + 5.j],
                                              [1. + 5.j, 1. + 5.j, 1. + 5.j],
                                              [1. + 5.j, 1. + 5.j, 1. + 5.j]],
@@ -388,8 +371,26 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                             [[16. + 48.j, 16. + 48.j, 16. + 48.j],
                                              [16. + 48.j, 16. + 48.j, 16. + 48.j],
                                              [16. + 48.j, 16. + 48.j, 16. + 48.j]]], dtype=np.complex64)
+
+        # assert
         np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
                                       err_msg="The auxiliary_wave has not been updated as expected")
+
+
+    def test_build_exit_alpha_tau(self):
+        
+        # setup
+        addr, object_array, probe, exit_wave = self.prepare_arrays()
+        auxiliary_wave = np.zeros_like(exit_wave)
+
+        # test
+        AWK = AuxiliaryWaveKernel()
+        AWK.allocate()
+        AWK.build_exit_alpha_tau(auxiliary_wave, addr, object_array, probe, exit_wave)
+
+        print(expected_auxiliary_wave.shape)
+        print(repr(exit_wave))
+        assert False
 
 if __name__ == '__main__':
     unittest.main()
