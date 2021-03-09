@@ -346,6 +346,11 @@ class DR_serial(PositionCorrectionEngine):
                     if self.p.rescale_probe:
                         pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
 
+                    ## build auxilliary wave (ob * pr product)
+                    t1 = time.time()
+                    AWK.build_aux(aux, addr, ob, pr, ex, alpha=0)
+                    self.benchmark.A_Build_aux += time.time() - t1
+
                     # object update
                     t1 = time.time()
                     POK.ob_update_local(addr, ob, pr, ex, aux)
