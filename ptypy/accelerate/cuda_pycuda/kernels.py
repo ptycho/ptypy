@@ -3,6 +3,7 @@ from inspect import getfullargspec
 from pycuda import gpuarray
 from ptypy.utils.verbose import log, logger
 from . import load_kernel
+from .array_utils import ArrayUtilsKernel
 from ..base import kernels as ab
 from ..base.kernels import Adict
 
@@ -39,18 +40,46 @@ class PropagationKernel:
             from ptypy.accelerate.cuda_pycuda.fft import FFT
 
         if self.prop_type == 'farfield':
-            self._fft1 = FFT(aux, self.queue,
+
+            self._do_crop_pad = (self._p.crop_pad != 0).any()
+            if self._do_crop_pad:
+                self._tmp = np.zeros(aux.shape + self._p.crop_pad, dtype=aux.dtype)
+                self._AUK = ArrayUtilsKernel(queue=self._queue) 
+            else:
+                self._tmp = aux
+
+            self._fft1 = FFT(self._tmp, self.queue,
                              pre_fft=self._p.pre_fft,
                              post_fft=self._p.post_fft,
                              symmetric=True,
                              forward=True)
-            self._fft2 = FFT(aux, self.queue,
+            self._fft2 = FFT(self._tmp, self.queue,
                              pre_fft=self._p.pre_ifft,
                              post_fft=self._p.post_ifft,
                              symmetric=True,
                              forward=False)
-            self.fw = self._fft1.ft
-            self.bw = self._fft2.ift
+            if self._do_crop_pad:
+                self._tmp = gpuarray.to_gpu(self._tmp)
+
+            def _fw(x,y):
+                if self._do_crop_pad:
+                    self._AUK.crop_pad_2d_simple(self._tmp, x)
+                    self._fft1.ft(self._tmp, self._tmp)
+                    self._AUK.crop_pad_2d_simple(y, self._tmp)
+                else:
+                    self._fft1.ft(x,y)
+
+            def _bw(x,y):
+                if self._do_crop_pad:
+                    self._AUK.crop_pad_2d_simple(self._tmp, x)
+                    self._fft2.ift(self._tmp, self._tmp)
+                    self._AUK.crop_pad_2d_simple(y, self._tmp)
+                else:
+                    self._fft2.ift(x,y)
+            
+            self.fw = _fw
+            self.bw = _bw
+
         elif self.prop_type == "nearfield":
             self._fft1 = FFT(aux, self.queue,
                              post_fft=self._p.kernel,
