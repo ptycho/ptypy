@@ -63,7 +63,7 @@ class PropagationKernelTest(PyCudaTest):
 
         # test
         aux = geo.propagator.fw(aux)
-        PropK = PropagationKernel(aux_d, geo.propagator, queue_thread=self.stream, fft='cuda')
+        PropK = PropagationKernel(aux_d, geo.propagator, queue_thread=self.stream)
         PropK.allocate()
         PropK.fw(aux_d, aux_d)
 
@@ -80,7 +80,7 @@ class PropagationKernelTest(PyCudaTest):
 
         # test
         aux = geo.propagator.bw(aux)
-        PropK = PropagationKernel(aux_d, geo.propagator, queue_thread=self.stream, fft='cuda')
+        PropK = PropagationKernel(aux_d, geo.propagator, queue_thread=self.stream)
         PropK.allocate()
         PropK.bw(aux_d, aux_d)
 
@@ -116,7 +116,7 @@ class PropagationKernelTest(PyCudaTest):
 
         # test
         aux = geo.propagator.bw(aux)
-        PropK = PropagationKernel(aux_d, geo.propagator, queue_thread=self.stream, fft='cuda')
+        PropK = PropagationKernel(aux_d, geo.propagator, queue_thread=self.stream)
         PropK.allocate()
         PropK.bw(aux_d, aux_d)
 
