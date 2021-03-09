@@ -268,3 +268,47 @@ class ArrayUtilsTest(PyCudaTest):
         out_exp = au.complex_gaussian_filter(inp, mfs)
         out = out_dev.get()        
         np.testing.assert_allclose(out_exp, out, rtol=1e-4)
+
+
+    def test_crop_pad_simple_1(self):
+        # pad, integer, 2D
+        B = np.indices((4, 4), dtype=np.int).sum(0)
+        A = np.zeros((6, 6), dtype=B.dtype)
+        B_dev = gpuarray.to_gpu(B)
+        A_dev = gpuarray.to_gpu(A)
+
+        # Act
+        au.crop_pad_2d_simple(A, B)
+        gau.crop_pad_2d_simple(A_dev, B_dev)
+
+        # Assert
+        np.testing.assert_all_close(A_dev.get(), A, rtol=1e-6, atol=1e-6)
+
+    def test_crop_pad_simple_2(self):
+        # crop, float, 3D
+        B = np.indices((4, 4), dtype=np.float32)
+        A = np.zeros((2, 2, 2), dtype=B.dtype)
+        B_dev = gpuarray.to_gpu(B)
+        A_dev = gpuarray.to_gpu(A)
+
+        # Act
+        au.crop_pad_2d_simple(A, B)
+        gau.crop_pad_2d_simple(A_dev, B_dev)
+
+        # Assert
+        np.testing.assert_all_close(A_dev.get(), A, rtol=1e-6, atol=1e-6)
+
+    def test_crop_pad_simple_3(self):
+        # crop/pad, complex, 3D
+        B = np.indices((4, 3), dtype=np.complex64)
+        B = np.indices((4, 3), dtype=np.complex64) + 1j * B[::-1, :, :]
+        A = np.zeros((2, 2, 5), dtype=B.dtype)
+        B_dev = gpuarray.to_gpu(B)
+        A_dev = gpuarray.to_gpu(A)
+
+        # Act
+        au.crop_pad_2d_simple(A, B)
+        gau.crop_pad_2d_simple(A_dev, B_dev)
+
+        # Assert
+        np.testing.assert_all_close(A_dev.get(), A, rtol=1e-6, atol=1e-6)
