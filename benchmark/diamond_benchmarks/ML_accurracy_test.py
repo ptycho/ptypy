@@ -148,6 +148,8 @@ class GradientDescentAccuracyTester:
                     print(line)
                     res.append(line)
 
+        return res
+
     def test_main_and_error_reduce(self, name, iter,
                                    math_type={'float', 'double'},
                                    data_type={'float', 'double'},
@@ -218,6 +220,8 @@ class GradientDescentAccuracyTester:
                             a, 'err_phot', num, num_mis, max_rel, max_abs]
                     print(line)
                     res.append(line)
+
+        return res
 
     def test_make_a012(self, name, iter,
                        math_type={'float', 'double'},
