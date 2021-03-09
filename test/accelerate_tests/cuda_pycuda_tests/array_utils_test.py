@@ -321,7 +321,6 @@ class ArrayUtilsTest(PyCudaTest):
         # crop/pad, 4D
         B = np.indices((2, 4, 3), dtype=np.float32)
         A = np.ones((3, 2, 2, 5), dtype=B.dtype)
-        print('{} vs {}'.format(B.shape, A.shape))
         B_dev = gpuarray.to_gpu(B)
         A_dev = gpuarray.to_gpu(A)
 
