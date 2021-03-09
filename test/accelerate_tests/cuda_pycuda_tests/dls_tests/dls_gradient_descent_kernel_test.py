@@ -186,17 +186,6 @@ class DlsGradientDescentKernelTest(PyCudaTest):
         b_dev = gpuarray.to_gpu(b)
         fic_dev = gpuarray.to_gpu(fic)
         
-        # double versions
-        # aux_dbl = aux.astype(np.complex128)
-        # I_dbl = I.astype(np.float64)
-        # f_dbl = f.astype(np.complex128)
-        # a_dbl = a.astype(np.complex128)
-        # b_dbl = b.astype(np.complex128)
-        # fic_dbl = fic.astype(np.float64)
-        # BGDK = BaseGradientDescentKernel(aux_dbl, addr.shape[1])
-        # BGDK.allocate()
-        # BGDK.make_a012(f_dbl, a_dbl, b_dbl, addr, I_dbl, fic_dbl)
-
         # CPU Kernel
         BGDK = BaseGradientDescentKernel(aux, addr.shape[1])
         BGDK.allocate()
