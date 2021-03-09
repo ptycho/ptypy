@@ -86,7 +86,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         AWK.allocate()  # doesn't actually do anything at the moment
         AWK.build_aux(auxiliary_wave, addr, object_array, probe, exit_wave, alpha=alpha_set)
 
-        # expected outcome
+        # assert
         expected_auxiliary_wave = np.array([[[-1. + 3.j, -1. + 3.j, -1. + 3.j],
                                              [-1. + 3.j, -1. + 3.j, -1. + 3.j],
                                              [-1. + 3.j, -1. + 3.j, -1. + 3.j]],
@@ -135,8 +135,6 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                             [[-16. + 16.j, -16. + 16.j, -16. + 16.j],
                                              [-16. + 16.j, -16. + 16.j, -16. + 16.j],
                                              [-16. + 16.j, -16. + 16.j, -16. + 16.j]]], dtype=COMPLEX_TYPE)
-
-        # assert
         np.testing.assert_array_equal(expected_auxiliary_wave, expected_auxiliary_wave,
                                       err_msg="The auxiliary_wave has not been updated as expected")
 
@@ -150,7 +148,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         AWK.allocate()
         AWK.build_exit(auxiliary_wave, addr, object_array, probe, exit_wave)
 
-        # expected outcome
+        # assert
         expected_auxiliary_wave = np.array([[[0. - 2.j, 0. - 2.j, 0. - 2.j],
                                              [0. - 2.j, 0. - 2.j, 0. - 2.j],
                                              [0. - 2.j, 0. - 2.j, 0. - 2.j]],
@@ -199,7 +197,10 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                             [[0. - 16.j, 0. - 16.j, 0. - 16.j],
                                              [0. - 16.j, 0. - 16.j, 0. - 16.j],
                                              [0. - 16.j, 0. - 16.j, 0. - 16.j]]], dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
+                                      err_msg="The auxiliary_wave has not been updated as expected")
 
+        # assert                             
         expected_exit_wave = np.array([[[1. - 1.j, 1. - 1.j, 1. - 1.j],
                                         [1. - 1.j, 1. - 1.j, 1. - 1.j],
                                         [1. - 1.j, 1. - 1.j, 1. - 1.j]],
@@ -248,10 +249,6 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                        [[16. + 0.j, 16. + 0.j, 16. + 0.j],
                                         [16. + 0.j, 16. + 0.j, 16. + 0.j],
                                         [16. + 0.j, 16. + 0.j, 16. + 0.j]]], dtype=COMPLEX_TYPE)
-
-        # assert
-        np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
-                                      err_msg="The auxiliary_wave has not been updated as expected")
         np.testing.assert_array_equal(exit_wave, expected_exit_wave,
                                       err_msg="The exit_wave has not been updated as expected")
 
@@ -265,7 +262,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         AWK.allocate()
         AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, fac=1.0, add=False)
 
-        # expected outcome
+        # assert
         expected_auxiliary_wave = np.array([[[0. + 2.j, 0. + 2.j, 0. + 2.j],
                                              [0. + 2.j, 0. + 2.j, 0. + 2.j],
                                              [0. + 2.j, 0. + 2.j, 0. + 2.j]],
@@ -314,7 +311,6 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                             [[0. + 16.j, 0. + 16.j, 0. + 16.j],
                                              [0. + 16.j, 0. + 16.j, 0. + 16.j],
                                              [0. + 16.j, 0. + 16.j, 0. + 16.j]]], dtype=np.complex64)
-        # assert
         np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
                                       err_msg="The auxiliary_wave has not been updated as expected")
         
@@ -322,7 +318,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         auxiliary_wave = exit_wave
         AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, fac=2.0, add=True)
 
-        # expected outcome
+        # assert
         expected_auxiliary_wave = np.array([[[1. + 5.j, 1. + 5.j, 1. + 5.j],
                                              [1. + 5.j, 1. + 5.j, 1. + 5.j],
                                              [1. + 5.j, 1. + 5.j, 1. + 5.j]],
@@ -371,8 +367,6 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                             [[16. + 48.j, 16. + 48.j, 16. + 48.j],
                                              [16. + 48.j, 16. + 48.j, 16. + 48.j],
                                              [16. + 48.j, 16. + 48.j, 16. + 48.j]]], dtype=np.complex64)
-
-        # assert
         np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
                                       err_msg="The auxiliary_wave has not been updated as expected")
 
@@ -388,7 +382,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         AWK.allocate()
         AWK.build_exit_alpha_tau(auxiliary_wave, addr, object_array, probe, exit_wave)
 
-        # expected outcome
+        # assert
         expected_auxiliary_wave = np.array([[[0. -2.j, 0. -2.j, 0. -2.j],
                                             [0. -2.j, 0. -2.j, 0. -2.j],
                                             [0. -2.j, 0. -2.j, 0. -2.j]],
@@ -452,7 +446,10 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                             [[0.-16.j, 0.-16.j, 0.-16.j],
                                             [0.-16.j, 0.-16.j, 0.-16.j],
                                             [0.-16.j, 0.-16.j, 0.-16.j]]], dtype=np.complex64)
+        np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
+                                      err_msg="The auxiliary_wave has not been updated as expected")
 
+        # assert
         expected_exit_wave = np.array([[[ 1. -1.j,  1. -1.j,  1. -1.j],
                                         [ 1. -1.j,  1. -1.j,  1. -1.j],
                                         [ 1. -1.j,  1. -1.j,  1. -1.j]],
@@ -516,10 +513,6 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
                                         [[16. +0.j, 16. +0.j, 16. +0.j],
                                         [16. +0.j, 16. +0.j, 16. +0.j],
                                         [16. +0.j, 16. +0.j, 16. +0.j]]], dtype=np.complex64)
-
-        # assert
-        np.testing.assert_array_equal(auxiliary_wave, expected_auxiliary_wave,
-                                      err_msg="The auxiliary_wave has not been updated as expected")
         np.testing.assert_array_equal(exit_wave, expected_exit_wave,
                                       err_msg="The exit_wave has not been updated as expected")
 

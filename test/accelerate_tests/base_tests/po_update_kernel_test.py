@@ -91,26 +91,15 @@ class PoUpdateKernelTest(unittest.TestCase):
         return addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator
 
     def test_ob_update(self):
-        '''
-        setup
-        '''
+        # setup
         addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
-        '''
-        test
-        '''
 
+        # test
         POUK = PoUpdateKernel()
-
         POUK.allocate()  # doesn't do anything but is the call signature
-
-        # print("object array denom before:")
-        # print(object_array_denominator)
-
         POUK.ob_update(addr, object_array, object_array_denominator, probe, exit_wave)
 
-        # print("object array denom after:")
-        # print(repr(object_array_denominator))
-
+        # assert
         expected_object_array = np.array([[[15. + 1.j, 53. + 1.j, 53. + 1.j, 53. + 1.j, 53. + 1.j, 39. + 1.j, 1. + 1.j],
                                            [77. + 1.j, 201. + 1.j, 201. + 1.j, 201. + 1.j, 201. + 1.j, 125. + 1.j,
                                             1. + 1.j],
@@ -136,10 +125,10 @@ class PoUpdateKernelTest(unittest.TestCase):
                                             4. + 4.j],
                                            [4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j]]],
                                          dtype=COMPLEX_TYPE)
-
         np.testing.assert_array_equal(object_array, expected_object_array,
                                       err_msg="The object array has not been updated as expected")
 
+        # assert
         expected_object_array_denominator = np.array([[[12., 22., 22., 22., 22., 12., 2.],
                                                        [22., 42., 42., 42., 42., 22., 2.],
                                                        [22., 42., 42., 42., 42., 22., 2.],
@@ -159,29 +148,15 @@ class PoUpdateKernelTest(unittest.TestCase):
                                       err_msg="The object array denominatorhas not been updated as expected")
 
     def test_pr_update(self):
-        '''
-        setup
-        '''
+        # setup
         addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
-        '''
-        test
-        '''
+
+        # test
         POUK = PoUpdateKernel()
-
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
-
-        # print("probe array before:")
-        # print(repr(probe))
-        # print("probe denominator array before:")
-        # print(repr(probe_denominator))
-
         POUK.pr_update(addr, probe, probe_denominator, object_array, exit_wave)
 
-        # print("probe array after:")
-        # print(repr(probe))
-        # print("probe denominator array after:")
-        # print(repr(probe_denominator))
-
+        # assert
         expected_probe = np.array([[[313. + 1.j, 313. + 1.j, 313. + 1.j, 313. + 1.j, 313. + 1.j],
                                     [313. + 1.j, 313. + 1.j, 313. + 1.j, 313. + 1.j, 313. + 1.j],
                                     [313. + 1.j, 313. + 1.j, 313. + 1.j, 313. + 1.j, 313. + 1.j],
@@ -194,9 +169,10 @@ class PoUpdateKernelTest(unittest.TestCase):
                                     [394. + 2.j, 394. + 2.j, 394. + 2.j, 394. + 2.j, 394. + 2.j],
                                     [394. + 2.j, 394. + 2.j, 394. + 2.j, 394. + 2.j, 394. + 2.j]]],
                                   dtype=COMPLEX_TYPE)
-
         np.testing.assert_array_equal(probe, expected_probe,
                                       err_msg="The probe has not been updated as expected")
+
+        # assert
         expected_probe_denominator = np.array([[[138., 138., 138., 138., 138.],
                                                 [138., 138., 138., 138., 138.],
                                                 [138., 138., 138., 138., 138.],
@@ -212,19 +188,15 @@ class PoUpdateKernelTest(unittest.TestCase):
                                       err_msg="The probe denominatorhas not been updated as expected")
 
     def test_pr_update_ML(self):
-        '''
-        setup
-        '''
+        # setup  
         addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
-        '''
-        test
-        '''
+
+        # test
         POUK = PoUpdateKernel()
-
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
-
         POUK.pr_update_ML(addr, probe, object_array, exit_wave)
 
+        # assert
         expected_probe = np.array([[[625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
                                     [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
                                     [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
@@ -237,26 +209,19 @@ class PoUpdateKernelTest(unittest.TestCase):
                                     [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
                                     [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j]]],
                                   dtype=COMPLEX_TYPE)
-
         np.testing.assert_array_equal(probe, expected_probe,
                                       err_msg="The probe has not been updated as expected")
 
     def test_ob_update_ML(self):
-        '''
-        setup
-        '''
+        # setup
         addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
-        '''
-        test
-        '''
+
+        # test
         POUK = PoUpdateKernel()
-
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
-
         POUK.ob_update_ML(addr, object_array, probe, exit_wave)
 
-        print(repr(object_array))
-
+        # assert
         expected_object_array = np.array(
             [[[29. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 77. + 1.j, 1. + 1.j],
               [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
@@ -274,7 +239,6 @@ class PoUpdateKernelTest(unittest.TestCase):
               [140. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 188. + 4.j, 4. + 4.j],
               [4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j]]],
             dtype=COMPLEX_TYPE)
-
         np.testing.assert_array_equal(object_array, expected_object_array,
                                       err_msg="The object array has not been updated as expected")
 
@@ -289,7 +253,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
         POUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave)
 
-        # expected outcome
+        # assert
         expected_probe = np.array(
                 [[[-17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j],
                 [-17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j],
@@ -303,8 +267,6 @@ class PoUpdateKernelTest(unittest.TestCase):
                 [-21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j],
                 [-21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j]]], 
                 dtype=COMPLEX_TYPE)
-
-        # assert
         np.testing.assert_array_equal(probe, expected_probe,
                                       err_msg="The probe has not been updated as expected")
 
@@ -318,7 +280,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
         POUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave)
 
-        # expected outcome
+        # assert
         expected_object_array = np.array(
                 [[[-1.5000004e+00+1.j, -1.0000002e+01+1.j, -1.0000002e+01+1.j, -1.0000002e+01+1.j, -1.0000002e+01+1.j, -7.5000010e+00+1.j,  1.0000000e+00+1.j],
                 [-1.6000002e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -2.8000004e+01+1.j,  1.0000000e+00+1.j],
@@ -336,8 +298,6 @@ class PoUpdateKernelTest(unittest.TestCase):
                 [-1.2000002e+01+4.j, -3.4000004e+01+4.j, -3.4000004e+01+4.j, -3.4000004e+01+4.j, -3.4000004e+01+4.j, -1.8000004e+01+4.j,  4.0000000e+00+4.j],
                 [ 4.0000000e+00+4.j,  4.0000000e+00+4.j,  4.0000000e+00+4.j,  4.0000000e+00+4.j,  4.0000000e+00+4.j,  4.0000000e+00+4.j,  4.0000000e+00+4.j]]], 
                 dtype=COMPLEX_TYPE)
-
-        # assert
         np.testing.assert_array_equal(object_array, expected_object_array,
                                       err_msg="The object array has not been updated as expected")
 
