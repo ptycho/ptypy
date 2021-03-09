@@ -391,10 +391,10 @@ print(tester.headings)
 
 res = [tester.headings]
 for ver in [("base", 10), ("regul", 50), ("floating", 0)]:
-    res.append(tester.test_make_model(*ver))
-    res.append(tester.test_floating_intensity(*ver))
-    res.append(tester.test_main_and_error_reduce(*ver))
-    res.append(tester.test_make_a012(*ver))
+    res += tester.test_make_model(*ver)
+    res += tester.test_floating_intensity(*ver)
+    res += tester.test_main_and_error_reduce(*ver)
+    res += tester.test_make_a012(*ver)
     res += tester.test_fill_b(*ver)
 
 with open('ML_accuracy_test_results.csv', 'w', newline='') as f:
