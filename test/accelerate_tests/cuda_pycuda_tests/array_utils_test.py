@@ -279,10 +279,11 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         au.crop_pad_2d_simple(A, B)
-        gau.crop_pad_2d_simple(A_dev, B_dev)
+        k = gau.ArrayUtilsKernel(queue=self.stream)
+        k.crop_pad_2d_simple(A_dev, B_dev)
 
         # Assert
-        np.testing.assert_all_close(A_dev.get(), A, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(A, A_dev.get(), rtol=1e-6, atol=1e-6)
 
     def test_crop_pad_simple_2(self):
         # crop, float, 3D
@@ -293,10 +294,12 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         au.crop_pad_2d_simple(A, B)
-        gau.crop_pad_2d_simple(A_dev, B_dev)
+        k = gau.ArrayUtilsKernel(queue=self.stream)
+        k.crop_pad_2d_simple(A_dev, B_dev)
+
 
         # Assert
-        np.testing.assert_all_close(A_dev.get(), A, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(A, A_dev.get(), rtol=1e-6, atol=1e-6)
 
     def test_crop_pad_simple_3(self):
         # crop/pad, complex, 3D
@@ -308,7 +311,24 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         au.crop_pad_2d_simple(A, B)
-        gau.crop_pad_2d_simple(A_dev, B_dev)
+        k = gau.ArrayUtilsKernel(queue=self.stream)
+        k.crop_pad_2d_simple(A_dev, B_dev)
 
         # Assert
-        np.testing.assert_all_close(A_dev.get(), A, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(A, A_dev.get(), rtol=1e-6, atol=1e-6)
+
+    def test_crop_pad_simple_4(self):
+        # crop/pad, 4D
+        B = np.indices((2, 4, 3), dtype=np.float32)
+        A = np.ones((3, 2, 2, 5), dtype=B.dtype)
+        print('{} vs {}'.format(B.shape, A.shape))
+        B_dev = gpuarray.to_gpu(B)
+        A_dev = gpuarray.to_gpu(A)
+
+        # Act
+        au.crop_pad_2d_simple(A, B)
+        k = gau.ArrayUtilsKernel(queue=self.stream)
+        k.crop_pad_2d_simple(A_dev, B_dev)
+
+        # Assert
+        np.testing.assert_allclose(A, A_dev.get(), rtol=1e-6, atol=1e-6)
