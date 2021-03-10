@@ -659,6 +659,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         self.math_type = math_type
         self.accumulator_type = accumulator_type
         self.queue = queue_thread
+        self.norm = None
         self.ob_update_cuda = load_kernel("ob_update", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -690,30 +691,12 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             'BDIM_X': 32,
             'BDIM_Y': 32
         })
-
-    def max_abs2_obj(self, addr, ex, ob, ob_norm):
-        addroffs = np.int32(3)  # offset in addr for object
-        Y = np.int32(ob.shape[-2])
-        X = np.int32(ob.shape[-1])
-        rows = np.int32(ex.shape[-2])
-        cols = np.int32(ex.shape[-1])
-        num_pods = int(addr.shape[0] * addr.shape[1])
-        self.max_abs2_cuda(ob, Y, Y, addr, addroffs, rows, cols, ob_norm,
-            block=(32, 32, 1),
-            grid=(num_pods, 1, 1), 
-            stream=self.queue)
-
-    def max_abs2_probe(self, addr, ex, pr, pr_norm):
-        addroffs = np.int32(0)  # offset in addr for probe
-        Y = np.int32(pr.shape[-2])
-        X = np.int32(pr.shape[-1])
-        rows = np.int32(ex.shape[-2])
-        cols = np.int32(ex.shape[-1])
-        num_pods = int(addr.shape[0] * addr.shape[1])
-        self.max_abs2_cuda(pr, Y, Y, addr, addroffs, rows, cols, pr_norm,
-            block=(32, 32, 1),
-            grid=(num_pods, 1, 1), 
-            stream=self.queue)
+        self.ob_update_local_cuda = load_kernel("ob_update_local", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
 
     def ob_update(self, addr, ob, obn, pr, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
@@ -872,6 +855,57 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                  pr, ob, ex, addr, 
                                  np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                  block=(16, 16, 1), grid=grid, stream=self.queue)
+
+    def max_abs2_obj(self, addr, ex, ob, ob_norm):
+        addroffs = np.int32(3)  # offset in addr for object
+        Y = np.int32(ob.shape[-2])
+        X = np.int32(ob.shape[-1])
+        rows = np.int32(ex.shape[-2])
+        cols = np.int32(ex.shape[-1])
+        num_pods = int(addr.shape[0] * addr.shape[1])
+        self.max_abs2_cuda(ob, Y, Y, addr, addroffs, rows, cols, ob_norm,
+            block=(32, 32, 1),
+            grid=(num_pods, 1, 1), 
+            stream=self.queue)
+
+    def max_abs2_probe(self, addr, ex, pr, pr_norm):
+        addroffs = np.int32(0)  # offset in addr for probe
+        Y = np.int32(pr.shape[-2])
+        X = np.int32(pr.shape[-1])
+        rows = np.int32(ex.shape[-2])
+        cols = np.int32(ex.shape[-1])
+        num_pods = int(addr.shape[0] * addr.shape[1])
+        self.max_abs2_cuda(pr, Y, Y, addr, addroffs, rows, cols, pr_norm,
+            block=(32, 32, 1),
+            grid=(num_pods, 1, 1), 
+            stream=self.queue)
+
+    def ob_update_local(self, addr, ob, pr, ex, aux):
+        # lazy allocation of temporary
+        if self.norm is None or self.norm.shape[0] != addr.shape[0] * addr.shape[1]:
+            self.norm = gpuarray.zeros((addr.shape[0] * addr.shape[1]), 
+                dtype=np.float32 if self.accumulator_type == 'float' else np.float64)
+        self.max_abs2_probe(addr, ex, pr, self.norm)
+        
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        exsh = [np.int32(ax) for ax in ex.shape]
+        # atomics version only
+        if addr.shape[3] != 3 or addr.shape[2] != 5:
+            raise ValueError('Address not in required shape for tiled pr_update')
+        num_pods = np.int32(addr.shape[0] * addr.shape[1])
+
+        self.ob_update_local_cuda(ex, aux,
+            exsh[0], exsh[1], exsh[2],
+            pr,
+            prsh[0], prsh[1], prsh[2],
+            self.norm,
+            ob,
+            obsh[0], obsh[1], obsh[2],
+            addr,
+            block=(32, 32, 1),
+            grid=(int(num_pods), 1, 1),
+            stream=self.queue)
 
 
 class PositionCorrectionKernel(ab.PositionCorrectionKernel):

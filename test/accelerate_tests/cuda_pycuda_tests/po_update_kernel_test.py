@@ -730,7 +730,6 @@ class PoUpdateKernelTest(PyCudaTest):
             err_msg="The object norm array has not been updated as expected")
 
 
-
     def test_ob_update_local_UNITY(self):
         '''
         setup
@@ -793,7 +792,7 @@ class PoUpdateKernelTest(PyCudaTest):
         '''
         from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
         nPOUK = npPoUpdateKernel()
-        POUK = PoUpdateKernel()
+        POUK = PoUpdateKernel(queue_thread=self.stream)
 
         object_array_dev = gpuarray.to_gpu(object_array)
         probe_dev = gpuarray.to_gpu(probe)
@@ -801,10 +800,10 @@ class PoUpdateKernelTest(PyCudaTest):
         auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
         addr_dev = gpuarray.to_gpu(addr)
 
-        #POUK.ob_update_local(addr_dev, object_array_dev, probe_dev, exit_wave_dev, auxiliary_wave_dev)
+        POUK.ob_update_local(addr_dev, object_array_dev, probe_dev, exit_wave_dev, auxiliary_wave_dev)
         nPOUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave)
 
-        np.testing.assert_array_equal(object_array_dev.get(), object_array, 
+        np.testing.assert_allclose(object_array_dev.get(), object_array, rtol=1e-6, atol=1e-6,
                                       err_msg="The object array has not been updated as expected")
 
     def test_pr_update_local_UNITY(self):
