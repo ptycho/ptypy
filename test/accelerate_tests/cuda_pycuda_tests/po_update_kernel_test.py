@@ -6,6 +6,8 @@
 import unittest
 import numpy as np
 from . import PyCudaTest, have_pycuda
+from ptypy.accelerate.base.array_utils import max_abs2
+from parameterized import parameterized
 
 if have_pycuda():
     from pycuda import gpuarray
@@ -646,6 +648,87 @@ class PoUpdateKernelTest(PyCudaTest):
 
     def test_ob_update_ML_tiled_REGRESSION(self):
         self.ob_update_ML_tester(False)
+
+    @parameterized.expand(["probe", "object"])
+    def test_max_abs2_REGRESSION(self, field):
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  #  object size y
+        I = C + npts_greater_than  #  object size x
+
+        scan_pts = 2  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):  #
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        object_array_dev = gpuarray.to_gpu(object_array)
+        probe_dev = gpuarray.to_gpu(probe)
+        exit_wave_dev = gpuarray.to_gpu(exit_wave)
+        addr_dev = gpuarray.to_gpu(addr)
+        norm_dev = gpuarray.zeros((addr.shape[0]*addr.shape[1],), dtype=np.float32)
+
+        POUK = PoUpdateKernel(queue_thread=self.stream)
+        POUK.allocate()
+        if field == "object":
+            POUK.max_abs2_obj(addr_dev, exit_wave_dev, object_array_dev, norm_dev)
+        else:
+            POUK.max_abs2_probe(addr_dev, exit_wave_dev, probe_dev, norm_dev)
+        
+        # reference
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = exit_wave.shape[-2:]
+
+        norm = np.zeros(flat_addr.shape[0], dtype=np.float32)
+
+        if field == "object":
+            for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+                norm[ind] = max_abs2(object_array[obc[0]])
+        else:
+            for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+                norm[ind] = max_abs2(probe[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols])            
+
+        np.testing.assert_allclose(norm_dev.get(), norm, rtol=1e-6, atol=1e-6,
+            err_msg="The object norm array has not been updated as expected")
+
 
 
     def test_ob_update_local_UNITY(self):

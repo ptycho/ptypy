@@ -683,6 +683,37 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             'MATH_TYPE': self.math_type
         })
         self.pr_update2_ML_cuda = None
+        self.max_abs2_cuda = load_kernel("max_abs2", {
+            'IN_TYPE': 'complex<float>',
+            'OUT_TYPE': 'float',
+            'ACC_TYPE': self.accumulator_type,
+            'BDIM_X': 32,
+            'BDIM_Y': 32
+        })
+
+    def max_abs2_obj(self, addr, ex, ob, ob_norm):
+        addroffs = np.int32(3)  # offset in addr for object
+        Y = np.int32(ob.shape[-2])
+        X = np.int32(ob.shape[-1])
+        rows = np.int32(ex.shape[-2])
+        cols = np.int32(ex.shape[-1])
+        num_pods = int(addr.shape[0] * addr.shape[1])
+        self.max_abs2_cuda(ob, Y, Y, addr, addroffs, rows, cols, ob_norm,
+            block=(32, 32, 1),
+            grid=(num_pods, 1, 1), 
+            stream=self.queue)
+
+    def max_abs2_probe(self, addr, ex, pr, pr_norm):
+        addroffs = np.int32(0)  # offset in addr for probe
+        Y = np.int32(pr.shape[-2])
+        X = np.int32(pr.shape[-1])
+        rows = np.int32(ex.shape[-2])
+        cols = np.int32(ex.shape[-1])
+        num_pods = int(addr.shape[0] * addr.shape[1])
+        self.max_abs2_cuda(pr, Y, Y, addr, addroffs, rows, cols, pr_norm,
+            block=(32, 32, 1),
+            grid=(num_pods, 1, 1), 
+            stream=self.queue)
 
     def ob_update(self, addr, ob, obn, pr, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
