@@ -28,7 +28,7 @@ class PoUpdateKernelTest(unittest.TestCase):
                                 ['pr_update', 'ob_update'],
                                 err_msg='PoUpdateKernel does not have the correct functions registered.')
 
-    def prepare_arrays(self, scan_points=None):
+    def prepare_arrays(self):
         B = 5  # frame size y
         C = 5  # frame size x
 
@@ -41,10 +41,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         H = B + npts_greater_than  # object size y
         I = C + npts_greater_than  # object size x
 
-        if scan_points is None:
-            scan_pts = 2  # one dimensional scan point number
-        else:
-            scan_pts = scan_points
+        scan_pts = 2  # one dimensional scan point number
 
         total_number_scan_positions = scan_pts ** 2
         total_number_modes = G * D
@@ -248,8 +245,57 @@ class PoUpdateKernelTest(unittest.TestCase):
 
     def test_pr_update_local(self):
         # setup
-        addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 1  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 1  # number of object modes
+        H = B + npts_greater_than  # object size y
+        I = C + npts_greater_than  # object size x
+
+        scan_pts = 1  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
         auxiliary_wave = exit_wave.copy() * 1.5
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):  #
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
 
         # test
         POUK = PoUpdateKernel()
@@ -258,25 +304,67 @@ class PoUpdateKernelTest(unittest.TestCase):
 
         # assert
         expected_probe = np.array(
-                [[[-17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j],
-                [-17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j],
-                [-17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j],
-                [-17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j],
-                [-17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j, -17.000002+1.j]],
-
-                [[-21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j],
-                [-21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j],
-                [-21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j],
-                [-21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j],
-                [-21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j, -21.000004+2.j]]], 
-                dtype=COMPLEX_TYPE)
+                [[[0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j],
+                [0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j],
+                [0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j],
+                [0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j],
+                [0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j]]], dtype=COMPLEX_TYPE)
         np.testing.assert_array_equal(probe, expected_probe,
                                       err_msg="The probe has not been updated as expected")
 
     def test_ob_update_local(self):
         # setup
-        addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 1  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 1  # number of object modes
+        H = B + npts_greater_than  # object size y
+        I = C + npts_greater_than  # object size x
+
+        scan_pts = 1  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
         auxiliary_wave = exit_wave.copy() * 2
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):  #
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
 
         # test
         POUK = PoUpdateKernel()
@@ -285,22 +373,13 @@ class PoUpdateKernelTest(unittest.TestCase):
 
         # assert
         expected_object_array = np.array(
-                [[[-1.5000004e+00+1.j, -1.0000002e+01+1.j, -1.0000002e+01+1.j, -1.0000002e+01+1.j, -1.0000002e+01+1.j, -7.5000010e+00+1.j,  1.0000000e+00+1.j],
-                [-1.6000002e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -2.8000004e+01+1.j,  1.0000000e+00+1.j],
-                [-1.6000002e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -2.8000004e+01+1.j,  1.0000000e+00+1.j],
-                [-1.6000002e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -2.8000004e+01+1.j,  1.0000000e+00+1.j],
-                [-1.6000002e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -4.5000008e+01+1.j, -2.8000004e+01+1.j,  1.0000000e+00+1.j],
-                [-1.3500002e+01+1.j, -3.4000004e+01+1.j, -3.4000004e+01+1.j, -3.4000004e+01+1.j, -3.4000004e+01+1.j, -1.9500004e+01+1.j,  1.0000000e+00+1.j],
-                [ 1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j]],
-
-                [[-4.7683716e-07+4.j, -1.0000002e+01+4.j, -1.0000002e+01+4.j, -1.0000002e+01+4.j, -1.0000002e+01+4.j, -6.0000014e+00+4.j,  4.0000000e+00+4.j],
-                [-1.6000004e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -2.8000004e+01+4.j,  4.0000000e+00+4.j],
-                [-1.6000004e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -2.8000004e+01+4.j,  4.0000000e+00+4.j],
-                [-1.6000004e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -2.8000004e+01+4.j,  4.0000000e+00+4.j],
-                [-1.6000004e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -4.8000008e+01+4.j, -2.8000004e+01+4.j,  4.0000000e+00+4.j],
-                [-1.2000002e+01+4.j, -3.4000004e+01+4.j, -3.4000004e+01+4.j, -3.4000004e+01+4.j, -3.4000004e+01+4.j, -1.8000004e+01+4.j,  4.0000000e+00+4.j],
-                [ 4.0000000e+00+4.j,  4.0000000e+00+4.j,  4.0000000e+00+4.j,  4.0000000e+00+4.j,  4.0000000e+00+4.j,  4.0000000e+00+4.j,  4.0000000e+00+4.j]]], 
-                dtype=COMPLEX_TYPE)
+                    [[[-1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
+                    [-1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
+                    [-1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
+                    [-1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
+                    [-1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
+                    [ 1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
+                    [ 1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j]]], dtype=COMPLEX_TYPE)
         np.testing.assert_array_equal(object_array, expected_object_array,
                                       err_msg="The object array has not been updated as expected")
 
