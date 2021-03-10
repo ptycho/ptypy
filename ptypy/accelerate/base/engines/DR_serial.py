@@ -248,6 +248,19 @@ class DR_serial(PositionCorrectionEngine):
             # Keep a list of view indices
             prep.vieworder = np.arange(prep.addr.shape[0])
 
+            # Transform addr array into a list
+            prep.addr = [prep.addr[i,None] for i in range(prep.addr.shape[0])]
+
+            # Transform mag, ma, ma_sum into lists
+            prep.mag = [prep.mag[i,None] for i in range(prep.mag.shape[0])]
+            prep.ma  = [prep.ma[i,None] for i in range(prep.ma.shape[0])]
+            prep.ma_sum = [prep.ma_sum[i,None] for i in range(prep.ma_sum.shape[0])]
+
+            # Transform errors into lists
+            prep.err_phot = [prep.err_phot[i,None] for i in range(prep.err_phot.shape[0])]
+            prep.err_fourier = [prep.err_fourier[i,None] for i in range(prep.err_fourier.shape[0])]
+            prep.err_exit = [prep.err_exit[i,None] for i in range(prep.err_exit.shape[0])]
+
             # calculate c_facts
             #cfact = self.p.object_inertia * self.mean_power
             #self.ob_cfact[oID] = cfact / u.parallel.size
@@ -296,14 +309,14 @@ class DR_serial(PositionCorrectionEngine):
                 for i in vieworder:
 
                     # Get local adress and arrays
-                    addr = prep.addr[i,None]
-                    mag = prep.mag[i,None]
-                    ma = prep.ma[i,None]
-                    ma_sum = prep.ma_sum[i,None]
+                    addr = prep.addr[i]
+                    mag = prep.mag[i]
+                    ma = prep.ma[i]
+                    ma_sum = prep.ma_sum[i]
 
-                    err_phot = prep.err_phot[i,None]
-                    err_fourier = prep.err_fourier[i,None]
-                    err_exit = prep.err_exit[i,None]
+                    err_phot = prep.err_phot[i]
+                    err_fourier = prep.err_fourier[i]
+                    err_exit = prep.err_exit[i]
 
                     ## compute log-likelihood
                     t1 = time.time()
@@ -343,8 +356,8 @@ class DR_serial(PositionCorrectionEngine):
                     self.benchmark.calls_fourier += 1
 
                     ## probe/object rescale
-                    if self.p.rescale_probe:
-                        pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
+                    #if self.p.rescale_probe:
+                    #    pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
 
                     ## build auxilliary wave (ob * pr product)
                     t1 = time.time()
@@ -364,7 +377,9 @@ class DR_serial(PositionCorrectionEngine):
                     self.benchmark.calls_probe += 1
 
                 # update errors
-                errs = np.ascontiguousarray(np.vstack([prep.err_fourier, prep.err_phot, prep.err_exit]).T)
+                errs = np.ascontiguousarray(np.vstack([np.hstack(prep.err_fourier), 
+                                                       np.hstack(prep.err_phot), 
+                                                       np.hstack(prep.err_exit)]).T)
                 error_dct.update(zip(prep.view_IDs, errs))
 
             self.curiter += 1

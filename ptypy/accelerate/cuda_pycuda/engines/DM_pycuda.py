@@ -29,10 +29,6 @@ MPI = True
 
 __all__ = ['DM_pycuda']
 
-serialize_array_access = DM_serial.serialize_array_access
-gaussian_kernel = DM_serial.gaussian_kernel
-
-
 @register()
 class DM_pycuda(DM_serial.DM_serial):
 
@@ -74,19 +70,11 @@ class DM_pycuda(DM_serial.DM_serial):
         self.context, self.queue = get_context(new_context=True, new_queue=True)
         # allocator for READ only buffers
         # self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
-        ## gaussian filter
-        # dummy kernel
-        # if not self.p.obj_smooth_std:
-        #     gauss_kernel = gaussian_kernel(1, 1).astype(np.float32)
-        # else:
-        #     gauss_kernel = gaussian_kernel(self.p.obj_smooth_std, self.p.obj_smooth_std).astype(np.float32)
-        # self.gauss_kernel_gpu = gpuarray.to_gpu(gauss_kernel)
 
         # Gaussian Smoothing Kernel
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
 
         super(DM_pycuda, self).engine_initialize()
-        self.error = []
 
     def _setup_kernels(self):
         """
@@ -153,7 +141,6 @@ class DM_pycuda(DM_serial.DM_serial):
                 kern.PCK = PositionCorrectionKernel(aux, nmodes, queue_thread=self.queue)
                 kern.PCK.allocate()
                 kern.PCK.address_mangler = addr_mangler
-            #self.queue.synchronize()
             logger.info("Kernel setup completed")
 
     def engine_prepare(self):
