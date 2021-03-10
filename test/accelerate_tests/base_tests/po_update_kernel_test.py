@@ -28,7 +28,7 @@ class PoUpdateKernelTest(unittest.TestCase):
                                 ['pr_update', 'ob_update'],
                                 err_msg='PoUpdateKernel does not have the correct functions registered.')
 
-    def prepare_arrays(self):
+    def prepare_arrays(self, scan_points=None):
         B = 5  # frame size y
         C = 5  # frame size x
 
@@ -41,7 +41,10 @@ class PoUpdateKernelTest(unittest.TestCase):
         H = B + npts_greater_than  # object size y
         I = C + npts_greater_than  # object size x
 
-        scan_pts = 2  # one dimensional scan point number
+        if scan_points is None:
+            scan_pts = 2  # one dimensional scan point number
+        else:
+            scan_pts = scan_points
 
         total_number_scan_positions = scan_pts ** 2
         total_number_modes = G * D
