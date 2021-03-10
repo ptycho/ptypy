@@ -382,6 +382,9 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                              addr,
                              block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
 
+    def build_exit_alpha_tau(self, b_aux, addr, ob, pr, ex, alpha=1, tau=1):
+        pass
+
     def build_aux_no_ex(self, b_aux, addr, ob, pr, fac=1.0, add=False):
         obr, obc = self._cache_object_shape(ob)
         sh = addr.shape
@@ -402,6 +405,8 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                                   grid=(int(maxz * nmodes), 1, 1),
                                   stream=self.queue)
 
+    
+    
     def _cache_object_shape(self, ob):
         oid = id(ob)
 
