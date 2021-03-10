@@ -342,6 +342,11 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
         })
+        self.build_exit_alpha_tau_cuda = load_kernel("build_exit_alpha_tau", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
 
     # DEPRECATED?
     def load(self, aux, ob, pr, ex, addr):
@@ -383,7 +388,17 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                              block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
 
     def build_exit_alpha_tau(self, b_aux, addr, ob, pr, ex, alpha=1, tau=1):
-        pass
+        obr, obc = self._cache_object_shape(ob)
+        self.build_exit_alpha_tau_cuda(b_aux,
+                                       ex,
+                                       np.int32(ex.shape[1]), np.int32(ex.shape[2]),
+                                       pr,
+                                       np.int32(ex.shape[1]), np.int32(ex.shape[2]),
+                                       ob,
+                                       obr, obc,
+                                       addr,
+                                       np.float32(alpha), np.float32(tau),
+                                       block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
 
     def build_aux_no_ex(self, b_aux, addr, ob, pr, fac=1.0, add=False):
         obr, obc = self._cache_object_shape(ob)
