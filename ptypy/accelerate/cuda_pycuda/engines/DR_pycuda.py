@@ -60,7 +60,7 @@ class DR_pycuda(DR_serial.DR_serial):
         """
         self.context, self.queue = get_context(new_context=True, new_queue=True)
 
-        super(DM_pycuda, self).engine_initialize()
+        super(DR_pycuda, self).engine_initialize()
 
     def _setup_kernels(self):
         """
@@ -131,7 +131,7 @@ class DR_pycuda(DR_serial.DR_serial):
 
     def engine_prepare(self):
 
-        super(DM_pycuda, self).engine_prepare()
+        super(DR_pycuda, self).engine_prepare()
 
         for name, s in self.ob.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
@@ -141,7 +141,7 @@ class DR_pycuda(DR_serial.DR_serial):
         # TODO : like the serialization this one is needed due to object reformatting
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
-            prep.addr_gpu = [gpuarray.to_gpu(prep.addr[i,None]) for i in range(len(prep.addr))]
+            prep.addr_gpu = [gpuarray.to_gpu(prep.addr[i]) for i in range(len(prep.addr))]
 
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
@@ -151,11 +151,12 @@ class DR_pycuda(DR_serial.DR_serial):
             s = self.ma.S[d.ID]
             s.gpu = gpuarray.to_gpu(s.data.astype(np.float32))
 
-            prep.mag = [gpuarray.to_gpu(prep.mag[i,None]) for i in range(len(prep.mag))]
-            prep.ma_sum = [gpuarray.to_gpu(prep.ma_sum[i,None]) for i in range(len(prep.ma_sum))]
-            prep.err_fourier_gpu = [gpuarray.to_gpu(prep.err_fourier[i,None]) for i in range(len(prep.err_fourier))]
-            prep.err_phot_gpu = [gpuarray.to_gpu(prep.err_phot[i,None]) for i in range(len(prep.err_phot))]
-            prep.err_exit_gpu = [gpuarray.to_gpu(prep.err_exit[i,None]) for i in range(len(prep.err_exit))]
+            prep.mag = [gpuarray.to_gpu(prep.mag[i]) for i in range(len(prep.mag))]
+            prep.ma = [gpuarray.to_gpu(prep.ma[i]) for i in range(len(prep.ma))]
+            prep.ma_sum = [gpuarray.to_gpu(prep.ma_sum[i]) for i in range(len(prep.ma_sum))]
+            prep.err_fourier_gpu = [gpuarray.to_gpu(prep.err_fourier[i]) for i in range(len(prep.err_fourier))]
+            prep.err_phot_gpu = [gpuarray.to_gpu(prep.err_phot[i]) for i in range(len(prep.err_phot))]
+            prep.err_exit_gpu = [gpuarray.to_gpu(prep.err_exit[i]) for i in range(len(prep.err_exit))]
             # if self.do_position_refinement:
             #     prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
 
@@ -182,12 +183,12 @@ class DR_pycuda(DR_serial.DR_serial):
                 PROP = kern.PROP
                 
                 # get addresses and buffers
-                addr = prep.addr_gpu
-                mag = prep.mag
-                ma_sum = prep.ma_sum
-                err_fourier = prep.err_fourier_gpu
-                err_phot = prep.err_phot_gpu
-                err_exit = prep.err_exit_gpu
+                #addr = prep.addr_gpu
+                #mag = prep.mag
+                #ma_sum = prep.ma_sum
+                #err_fourier = prep.err_fourier_gpu
+                #err_phot = prep.err_phot_gpu
+                #err_exit = prep.err_exit_gpu
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
                 vieworder = prep.vieworder
@@ -205,21 +206,21 @@ class DR_pycuda(DR_serial.DR_serial):
                 for i in vieworder:
 
                     # Get local adress and arrays
-                    addr = prep.addr[i]
+                    addr = prep.addr_gpu[i]
                     mag = prep.mag[i]
                     ma = prep.ma[i]
                     ma_sum = prep.ma_sum[i]
-
-                    err_phot = prep.err_phot[i]
-                    err_fourier = prep.err_fourier[i]
-                    err_exit = prep.err_exit[i]                   
+                    err_phot = prep.err_phot_gpu[i]
+                    err_fourier = prep.err_fourier_gpu[i]
+                    err_exit = prep.err_exit_gpu[i]
 
                     ## compute log-likelihood
-                    t1 = time.time()
-                    AWK.build_aux_no_ex(aux, addr, ob, pr)
-                    aux[:] = FW(aux)
-                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)
-                    self.benchmark.F_LLerror += time.time() - t1
+                    if self.p.compute_log_likelihood:
+                        t1 = time.time()
+                        AWK.build_aux_no_ex(aux, addr, ob, pr)
+                        PROP.fw(aux, aux)
+                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                        self.benchmark.F_LLerror += time.time() - t1
 
                     ## build auxilliary wave
                     t1 = time.time()
@@ -228,7 +229,7 @@ class DR_pycuda(DR_serial.DR_serial):
 
                     ## forward FFT
                     t1 = time.time()
-                    aux[:] = FW(aux)
+                    PROP.fw(aux, aux)
                     self.benchmark.B_Prop += time.time() - t1
 
                     ## Deviation from measured data
@@ -240,7 +241,7 @@ class DR_pycuda(DR_serial.DR_serial):
 
                     ## backward FFT
                     t1 = time.time()
-                    aux[:] = BW(aux)
+                    PROP.bw(aux, aux)
                     self.benchmark.D_iProp += time.time() - t1
 
                     ## build exit wave
@@ -262,6 +263,7 @@ class DR_pycuda(DR_serial.DR_serial):
 
                     # object update
                     t1 = time.time()
+                    print(i, addr.shape, ob.shape, pr.shape, ex.shape, aux.shape)
                     POK.ob_update_local(addr, ob, pr, ex, aux)
                     self.benchmark.object_update += time.time() - t1
                     self.benchmark.calls_object += 1
@@ -271,6 +273,8 @@ class DR_pycuda(DR_serial.DR_serial):
                     POK.pr_update_local(addr, pr, ob, ex, aux)
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1
+
+                    #self.queue.synchronize()
 
             self.curiter += 1
             queue.synchronize()
