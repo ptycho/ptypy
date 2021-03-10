@@ -507,12 +507,7 @@ class PoUpdateKernel(BaseKernel):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]
-
-        pr_norm = np.zeros(flat_addr.shape[0], dtype=np.float32)
-        # we should be able to get rid of this loop
-        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            pr_norm[ind] = max_abs2(pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols])
-
+        pr_norm = max_abs2(pr)
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
                 pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
@@ -524,12 +519,7 @@ class PoUpdateKernel(BaseKernel):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]
-
-        ob_norm = np.zeros(flat_addr.shape[0], dtype=np.float32)
-        # we should be able to get rid of this loop
-        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            ob_norm[ind] = max_abs2(ob[obc[0]])
-
+        ob_norm = max_abs2(ob)
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
                 ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
