@@ -21,7 +21,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
     def tearDown(self):
         np.set_printoptions()
 
-    def prepare_arrays(self):
+    def prepare_arrays(self, scan_points = None):
         B = 3  # frame size y
         C = 3  # frame size x
 
@@ -34,7 +34,10 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
         H = B + npts_greater_than  # object size y
         I = C + npts_greater_than  # object size x
 
-        scan_pts = 2  # one dimensional scan point number
+        if scan_points is None:
+            scan_pts = 2  # one dimensional scan point number
+        else:
+            scan_points = scan_points
 
         total_number_scan_positions = scan_pts ** 2
         total_number_modes = G * D
@@ -374,7 +377,7 @@ class AuxiliaryWaveKernelTest(unittest.TestCase):
     def test_build_exit_alpha_tau(self):
         
         # setup
-        addr, object_array, probe, exit_wave = self.prepare_arrays()
+        addr, object_array, probe, exit_wave = self.prepare_arrays(scan_points=1)
         auxiliary_wave = np.zeros_like(exit_wave)
 
         # test

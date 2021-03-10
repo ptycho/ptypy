@@ -17,7 +17,7 @@ INT_TYPE = np.int32
 
 class AuxiliaryWaveKernelTest(PyCudaTest):
 
-    def prepare_arrays(self, performance=False):
+    def prepare_arrays(self, performance=False, scan_points=None):
         if not performance:
             B = 3  # frame size y
             C = 3  # frame size x
@@ -27,8 +27,10 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
 
             npts_greater_than = 2  # how many points bigger than the probe the object is.
             G = 2  # number of object modes
-
-            scan_pts = 2  # one dimensional scan point number
+            if scan_points is None:
+                scan_pts = 2  # one dimensional scan point number
+            else:
+                scan_pts = scan_points
         else:
             B = 128
             C = 128
@@ -37,7 +39,10 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
             F = C
             npts_greater_than = 1215
             G = 4
-            scan_pts = 14
+            if scan_points is None:
+                scan_pts = 14
+            else:
+                scan_pts = scan_points
 
         H = B + npts_greater_than  # object size y
         I = C + npts_greater_than  # object size x
@@ -511,6 +516,184 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         AWK.allocate()
         AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, 
             fac=1.0, add=False)
+
+
+    def test_build_exit_alpha_tau_REGRESSION(self):
+        ## Arrange
+        addr, object_array, probe, exit_wave = self.prepare_arrays(scan_points=1)
+        addr, object_array, probe, exit_wave = self.copy_to_gpu(addr, object_array, probe, exit_wave)
+        auxiliary_wave = gpuarray.ones_like(exit_wave)
+
+        ## Act
+        AWK = AuxiliaryWaveKernel(self.stream)
+        AWK.allocate()
+        AWK.build_exit_alpha_tau(auxiliary_wave, addr, object_array, probe, exit_wave)
+
+        # Assert
+        expected_auxiliary_wave = np.array([[[0. -2.j, 0. -2.j, 0. -2.j],
+                                            [0. -2.j, 0. -2.j, 0. -2.j],
+                                            [0. -2.j, 0. -2.j, 0. -2.j]],
+
+                                            [[0. -8.j, 0. -8.j, 0. -8.j],
+                                            [0. -8.j, 0. -8.j, 0. -8.j],
+                                            [0. -8.j, 0. -8.j, 0. -8.j]],
+
+                                            [[0. -4.j, 0. -4.j, 0. -4.j],
+                                            [0. -4.j, 0. -4.j, 0. -4.j],
+                                            [0. -4.j, 0. -4.j, 0. -4.j]],
+
+                                            [[0.-16.j, 0.-16.j, 0.-16.j],
+                                            [0.-16.j, 0.-16.j, 0.-16.j],
+                                            [0.-16.j, 0.-16.j, 0.-16.j]],
+
+                                            [[0. -2.j, 0. -2.j, 0. -2.j],
+                                            [0. -2.j, 0. -2.j, 0. -2.j],
+                                            [0. -2.j, 0. -2.j, 0. -2.j]],
+
+                                            [[0. -8.j, 0. -8.j, 0. -8.j],
+                                            [0. -8.j, 0. -8.j, 0. -8.j],
+                                            [0. -8.j, 0. -8.j, 0. -8.j]],
+
+                                            [[0. -4.j, 0. -4.j, 0. -4.j],
+                                            [0. -4.j, 0. -4.j, 0. -4.j],
+                                            [0. -4.j, 0. -4.j, 0. -4.j]],
+
+                                            [[0.-16.j, 0.-16.j, 0.-16.j],
+                                            [0.-16.j, 0.-16.j, 0.-16.j],
+                                            [0.-16.j, 0.-16.j, 0.-16.j]],
+
+                                            [[0. -2.j, 0. -2.j, 0. -2.j],
+                                            [0. -2.j, 0. -2.j, 0. -2.j],
+                                            [0. -2.j, 0. -2.j, 0. -2.j]],
+
+                                            [[0. -8.j, 0. -8.j, 0. -8.j],
+                                            [0. -8.j, 0. -8.j, 0. -8.j],
+                                            [0. -8.j, 0. -8.j, 0. -8.j]],
+
+                                            [[0. -4.j, 0. -4.j, 0. -4.j],
+                                            [0. -4.j, 0. -4.j, 0. -4.j],
+                                            [0. -4.j, 0. -4.j, 0. -4.j]],
+
+                                            [[0.-16.j, 0.-16.j, 0.-16.j],
+                                            [0.-16.j, 0.-16.j, 0.-16.j],
+                                            [0.-16.j, 0.-16.j, 0.-16.j]],
+
+                                            [[0. -2.j, 0. -2.j, 0. -2.j],
+                                            [0. -2.j, 0. -2.j, 0. -2.j],
+                                            [0. -2.j, 0. -2.j, 0. -2.j]],
+
+                                            [[0. -8.j, 0. -8.j, 0. -8.j],
+                                            [0. -8.j, 0. -8.j, 0. -8.j],
+                                            [0. -8.j, 0. -8.j, 0. -8.j]],
+
+                                            [[0. -4.j, 0. -4.j, 0. -4.j],
+                                            [0. -4.j, 0. -4.j, 0. -4.j],
+                                            [0. -4.j, 0. -4.j, 0. -4.j]],
+
+                                            [[0.-16.j, 0.-16.j, 0.-16.j],
+                                            [0.-16.j, 0.-16.j, 0.-16.j],
+                                            [0.-16.j, 0.-16.j, 0.-16.j]]], dtype=np.complex64)
+        np.testing.assert_array_equal(auxiliary_wave.get(), expected_auxiliary_wave,
+                                      err_msg="The auxiliary_wave has not been updated as expected")
+
+        expected_exit_wave = np.array([[[ 1. -1.j,  1. -1.j,  1. -1.j],
+                                        [ 1. -1.j,  1. -1.j,  1. -1.j],
+                                        [ 1. -1.j,  1. -1.j,  1. -1.j]],
+
+                                        [[ 2. -6.j,  2. -6.j,  2. -6.j],
+                                        [ 2. -6.j,  2. -6.j,  2. -6.j],
+                                        [ 2. -6.j,  2. -6.j,  2. -6.j]],
+
+                                        [[ 3. -1.j,  3. -1.j,  3. -1.j],
+                                        [ 3. -1.j,  3. -1.j,  3. -1.j],
+                                        [ 3. -1.j,  3. -1.j,  3. -1.j]],
+
+                                        [[ 4.-12.j,  4.-12.j,  4.-12.j],
+                                        [ 4.-12.j,  4.-12.j,  4.-12.j],
+                                        [ 4.-12.j,  4.-12.j,  4.-12.j]],
+
+                                        [[ 5. +3.j,  5. +3.j,  5. +3.j],
+                                        [ 5. +3.j,  5. +3.j,  5. +3.j],
+                                        [ 5. +3.j,  5. +3.j,  5. +3.j]],
+
+                                        [[ 6. -2.j,  6. -2.j,  6. -2.j],
+                                        [ 6. -2.j,  6. -2.j,  6. -2.j],
+                                        [ 6. -2.j,  6. -2.j,  6. -2.j]],
+
+                                        [[ 7. +3.j,  7. +3.j,  7. +3.j],
+                                        [ 7. +3.j,  7. +3.j,  7. +3.j],
+                                        [ 7. +3.j,  7. +3.j,  7. +3.j]],
+
+                                        [[ 8. -8.j,  8. -8.j,  8. -8.j],
+                                        [ 8. -8.j,  8. -8.j,  8. -8.j],
+                                        [ 8. -8.j,  8. -8.j,  8. -8.j]],
+
+                                        [[ 9. +7.j,  9. +7.j,  9. +7.j],
+                                        [ 9. +7.j,  9. +7.j,  9. +7.j],
+                                        [ 9. +7.j,  9. +7.j,  9. +7.j]],
+
+                                        [[10. +2.j, 10. +2.j, 10. +2.j],
+                                        [10. +2.j, 10. +2.j, 10. +2.j],
+                                        [10. +2.j, 10. +2.j, 10. +2.j]],
+
+                                        [[11. +7.j, 11. +7.j, 11. +7.j],
+                                        [11. +7.j, 11. +7.j, 11. +7.j],
+                                        [11. +7.j, 11. +7.j, 11. +7.j]],
+
+                                        [[12. -4.j, 12. -4.j, 12. -4.j],
+                                        [12. -4.j, 12. -4.j, 12. -4.j],
+                                        [12. -4.j, 12. -4.j, 12. -4.j]],
+
+                                        [[13.+11.j, 13.+11.j, 13.+11.j],
+                                        [13.+11.j, 13.+11.j, 13.+11.j],
+                                        [13.+11.j, 13.+11.j, 13.+11.j]],
+
+                                        [[14. +6.j, 14. +6.j, 14. +6.j],
+                                        [14. +6.j, 14. +6.j, 14. +6.j],
+                                        [14. +6.j, 14. +6.j, 14. +6.j]],
+
+                                        [[15.+11.j, 15.+11.j, 15.+11.j],
+                                        [15.+11.j, 15.+11.j, 15.+11.j],
+                                        [15.+11.j, 15.+11.j, 15.+11.j]],
+
+                                        [[16. +0.j, 16. +0.j, 16. +0.j],
+                                        [16. +0.j, 16. +0.j, 16. +0.j],
+                                        [16. +0.j, 16. +0.j, 16. +0.j]]], dtype=np.complex64)
+        np.testing.assert_array_equal(exit_wave.get(), expected_exit_wave,
+                                      err_msg="The exit_wave has not been updated as expected")
+                              
+    def test_build_exit_alpha_tau_UNITY(self):
+        ## Arrange
+        addr, object_array, probe, exit_wave = self.prepare_arrays(scan_points=1)
+        addr_dev, object_array_dev, probe_dev, exit_wave_dev = self.copy_to_gpu(addr, object_array, probe, exit_wave)
+        auxiliary_wave_dev = gpuarray.ones_like(exit_wave_dev)
+        auxiliary_wave = np.ones_like(exit_wave)
+        
+        ## Act
+        AWK = AuxiliaryWaveKernel(self.stream)
+        AWK.allocate()
+        AWK.build_exit_alpha_tau(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, exit_wave_dev)
+        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        nAWK = npAuxiliaryWaveKernel()
+        nAWK.allocate()
+        nAWK.build_exit_alpha_tau(auxiliary_wave, addr, object_array, probe, exit_wave)
+
+        ## Assert
+        np.testing.assert_array_equal(auxiliary_wave_dev.get(), auxiliary_wave,
+                                      err_msg="The auxiliary_wave does not match numpy")
+        ## Assert
+        np.testing.assert_array_equal(exit_wave_dev.get(), exit_wave,
+                                      err_msg="The exit_wave does not match numpy")
+
+    @unittest.skipIf(not perfrun, "performance test")
+    def test_build_exit_alpha_tau_performance(self):
+        addr, object_array, probe, exit_wave = self.prepare_arrays(performance=True, scan_points=1)
+        addr, object_array, probe, exit_wave = self.copy_to_gpu(addr, object_array, probe, exit_wave)
+        auxiliary_wave = gpuarray.zeros_like(exit_wave)
+
+        AWK = AuxiliaryWaveKernel(self.stream)
+        AWK.allocate()
+        AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, exit_wave)
 
 if __name__ == '__main__':
     unittest.main()
