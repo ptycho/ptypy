@@ -21,7 +21,7 @@ from ptypy.accelerate.base.engines import DM_serial
 from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
-from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel
+from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 
 MPI = parallel.size > 1
@@ -131,6 +131,9 @@ class DM_pycuda(DM_serial.DM_serial):
 
             logger.info("Setting up ArrayUtilsKernel")
             kern.AUK = ArrayUtilsKernel(queue=self.queue)
+
+            logger.info("Setting up TransposeKernel")
+            kern.TK = TransposeKernel(queue=self.queue)
 
             logger.info("Setting up PropagationKernel")
             kern.PROP = PropagationKernel(aux, geo.propagator, self.queue, self.p.fft_lib)
@@ -329,7 +332,7 @@ class DM_pycuda(DM_serial.DM_serial):
                         if use_tiles:
                             s1 = addr.shape[0] * addr.shape[1]
                             s2 = addr.shape[2] * addr.shape[3]
-                            AUK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+                            kern.TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
             self.curiter += 1
             queue.synchronize()

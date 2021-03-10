@@ -88,7 +88,7 @@ class ArrayUtilsTest(PyCudaTest):
         out_dev = gpuarray.empty((3,5), dtype=np.int32)
         
         ## Act
-        AU = gau.ArrayUtilsKernel()
+        AU = gau.TransposeKernel()
         AU.transpose(inp_dev, out_dev)
 
         ## Assert
@@ -103,7 +103,7 @@ class ArrayUtilsTest(PyCudaTest):
         out_dev = gpuarray.empty((61,137), dtype=np.int32)
         
         ## Act
-        AU = gau.ArrayUtilsKernel()
+        AU = gau.TransposeKernel()
         AU.transpose(inp_dev, out_dev)
 
         ## Assert
@@ -118,7 +118,7 @@ class ArrayUtilsTest(PyCudaTest):
         out_dev = gpuarray.empty((5, 3, 250, 3), dtype=np.int32)
 
         ## Act
-        AU = gau.ArrayUtilsKernel()
+        AU = gau.TransposeKernel()
         AU.transpose(inp_dev.reshape(750, 15), out_dev.reshape(15, 750))
 
         ## Assert
@@ -270,7 +270,7 @@ class ArrayUtilsTest(PyCudaTest):
         np.testing.assert_allclose(out_exp, out, rtol=1e-4)
 
 
-    def test_crop_pad_simple_1(self):
+    def test_crop_pad_simple_1_UNITY(self):
         # pad, integer, 2D
         B = np.indices((4, 4), dtype=np.int).sum(0)
         A = np.zeros((6, 6), dtype=B.dtype)
@@ -279,13 +279,13 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         au.crop_pad_2d_simple(A, B)
-        k = gau.ArrayUtilsKernel(queue=self.stream)
+        k = gau.CropPadKernel(queue=self.stream)
         k.crop_pad_2d_simple(A_dev, B_dev)
 
         # Assert
         np.testing.assert_allclose(A, A_dev.get(), rtol=1e-6, atol=1e-6)
 
-    def test_crop_pad_simple_2(self):
+    def test_crop_pad_simple_2_UNITY(self):
         # crop, float, 3D
         B = np.indices((4, 4), dtype=np.float32)
         A = np.zeros((2, 2, 2), dtype=B.dtype)
@@ -294,14 +294,14 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         au.crop_pad_2d_simple(A, B)
-        k = gau.ArrayUtilsKernel(queue=self.stream)
+        k = gau.CropPadKernel(queue=self.stream)
         k.crop_pad_2d_simple(A_dev, B_dev)
 
 
         # Assert
         np.testing.assert_allclose(A, A_dev.get(), rtol=1e-6, atol=1e-6)
 
-    def test_crop_pad_simple_3(self):
+    def test_crop_pad_simple_3_UNITY(self):
         # crop/pad, complex, 3D
         B = np.indices((4, 3), dtype=np.complex64)
         B = np.indices((4, 3), dtype=np.complex64) + 1j * B[::-1, :, :]
@@ -311,22 +311,45 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Act
         au.crop_pad_2d_simple(A, B)
-        k = gau.ArrayUtilsKernel(queue=self.stream)
+        k = gau.CropPadKernel(queue=self.stream)
         k.crop_pad_2d_simple(A_dev, B_dev)
 
         # Assert
         np.testing.assert_allclose(A, A_dev.get(), rtol=1e-6, atol=1e-6)
 
-    def test_crop_pad_simple_4(self):
+    def test_crop_pad_simple_difflike_UNITY(self):
+        np.random.seed(1983)
         # crop/pad, 4D
-        B = np.indices((2, 4, 3), dtype=np.float32)
-        A = np.ones((3, 2, 2, 5), dtype=B.dtype)
+        D = np.random.randint(0, 3000, (100,256,256)).astype(np.float32)
+        A = np.zeros((100,260,260), dtype=D.dtype)
+        B = np.zeros((100,250,250), dtype=D.dtype)
+        B_dev = gpuarray.to_gpu(B)
+        A_dev = gpuarray.to_gpu(A)
+        D_dev = gpuarray.to_gpu(D)
+
+        # Act
+        au.crop_pad_2d_simple(A, D)
+        au.crop_pad_2d_simple(B, D)
+        k = gau.CropPadKernel(queue=self.stream)
+        k.crop_pad_2d_simple(A_dev, D_dev)
+        k.crop_pad_2d_simple(B_dev, D_dev)
+
+        # Assert
+        np.testing.assert_allclose(A, A_dev.get(), rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(B, B_dev.get(), rtol=1e-6, atol=1e-6)
+
+    def test_crop_pad_simple_oblike_UNITY(self):
+        np.random.seed(1983)
+        # crop/pad, 4D
+        B = np.random.rand(2,1230,1434).astype(np.complex64) \
+           +2j * np.pi * np.random.randn(2,1230,1434).astype(np.complex64)
+        A = np.ones((2,1000,1500), dtype=B.dtype)
         B_dev = gpuarray.to_gpu(B)
         A_dev = gpuarray.to_gpu(A)
 
         # Act
         au.crop_pad_2d_simple(A, B)
-        k = gau.ArrayUtilsKernel(queue=self.stream)
+        k = gau.CropPadKernel(queue=self.stream)
         k.crop_pad_2d_simple(A_dev, B_dev)
 
         # Assert

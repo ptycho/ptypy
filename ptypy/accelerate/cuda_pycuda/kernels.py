@@ -3,7 +3,7 @@ from inspect import getfullargspec
 from pycuda import gpuarray
 from ptypy.utils.verbose import log, logger
 from . import load_kernel
-from .array_utils import ArrayUtilsKernel
+from .array_utils import CropPadKernel
 from ..base import kernels as ab
 from ..base.kernels import Adict
 
@@ -44,7 +44,7 @@ class PropagationKernel:
             self._do_crop_pad = (self._p.crop_pad != 0).any()
             if self._do_crop_pad:
                 self._tmp = np.zeros(aux.shape + self._p.crop_pad, dtype=aux.dtype)
-                self._AUK = ArrayUtilsKernel(queue=self._queue) 
+                self._CPK = CropPadKernel(queue=self._queue)
             else:
                 self._tmp = aux
 
@@ -63,17 +63,17 @@ class PropagationKernel:
 
             def _fw(x,y):
                 if self._do_crop_pad:
-                    self._AUK.crop_pad_2d_simple(self._tmp, x)
+                    self._CPK.crop_pad_2d_simple(self._tmp, x)
                     self._fft1.ft(self._tmp, self._tmp)
-                    self._AUK.crop_pad_2d_simple(y, self._tmp)
+                    self._CPK.crop_pad_2d_simple(y, self._tmp)
                 else:
                     self._fft1.ft(x,y)
 
             def _bw(x,y):
                 if self._do_crop_pad:
-                    self._AUK.crop_pad_2d_simple(self._tmp, x)
+                    self._CPK.crop_pad_2d_simple(self._tmp, x)
                     self._fft2.ift(self._tmp, self._tmp)
-                    self._AUK.crop_pad_2d_simple(y, self._tmp)
+                    self._CPK.crop_pad_2d_simple(y, self._tmp)
                 else:
                     self._fft2.ift(x,y)
             

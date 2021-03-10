@@ -21,12 +21,6 @@ class ArrayUtilsKernel:
             'ACC_TYPE': 'double' if acc_dtype==np.float64 else 'float',
             'BDIM_X': 1024
         })
-        self.transpose_cuda = load_kernel("transpose", {
-            'DTYPE': 'int',
-            'BDIM': 16
-        })
-        # we lazy-load this depending on the data types we get
-        self.fill3D_cuda = {}
         self.Ctmp = None
         
     def dot(self, A, B, out=None):
@@ -64,6 +58,18 @@ class ArrayUtilsKernel:
         
         return out
 
+    def norm2(self, A, out=None):
+        return self.dot(A, A, out)
+
+class TransposeKernel:
+
+    def __init__(self, queue=None):
+        self.queue = queue
+        self.transpose_cuda = load_kernel("transpose", {
+            'DTYPE': 'int',
+            'BDIM': 16
+        })
+
     def transpose(self, input, output):
         # only for int at the moment (addr array), and 2D (reshape pls)
         if len(input.shape) != 2:
@@ -84,8 +90,14 @@ class ArrayUtilsKernel:
         self.transpose_cuda(input, output, np.int32(width), np.int32(height),
             block=blk, grid=grd, stream=self.queue)
 
-    def norm2(self, A, out=None):
-        return self.dot(A, A, out)
+
+
+class CropPadKernel:
+
+    def __init__(self, queue=None):
+        self.queue = queue
+        # we lazy-load this depending on the data types we get
+        self.fill3D_cuda = {}
 
     def fill3D(self, A, B, offset=[0, 0, 0]):
         """
