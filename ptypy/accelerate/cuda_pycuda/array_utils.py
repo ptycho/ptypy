@@ -21,10 +21,6 @@ class ArrayUtilsKernel:
             'ACC_TYPE': 'double' if acc_dtype==np.float64 else 'float',
             'BDIM_X': 1024
         })
-        self.transpose_cuda = load_kernel("transpose", {
-            'DTYPE': 'int',
-            'BDIM': 16
-        })
         self.Ctmp = None
         
     def dot(self, A, B, out=None):
@@ -62,6 +58,18 @@ class ArrayUtilsKernel:
         
         return out
 
+    def norm2(self, A, out=None):
+        return self.dot(A, A, out)
+
+class TransposeKernel:
+
+    def __init__(self, queue=None):
+        self.queue = queue
+        self.transpose_cuda = load_kernel("transpose", {
+            'DTYPE': 'int',
+            'BDIM': 16
+        })
+
     def transpose(self, input, output):
         # only for int at the moment (addr array), and 2D (reshape pls)
         if len(input.shape) != 2:
@@ -82,8 +90,108 @@ class ArrayUtilsKernel:
         self.transpose_cuda(input, output, np.int32(width), np.int32(height),
             block=blk, grid=grd, stream=self.queue)
 
-    def norm2(self, A, out=None):
-        return self.dot(A, A, out)
+
+
+class CropPadKernel:
+
+    def __init__(self, queue=None):
+        self.queue = queue
+        # we lazy-load this depending on the data types we get
+        self.fill3D_cuda = {}
+
+    def fill3D(self, A, B, offset=[0, 0, 0]):
+        """
+        Fill 3-dimensional array A with B.
+        """
+        if A.ndim < 3 or B.ndim < 3:
+            raise ValueError('Input arrays must each be at least 3D')
+        assert A.ndim == B.ndim, "Input and Output must have the same number of dimensions."
+        ash = A.shape
+        bsh = B.shape
+        misfit = np.array(bsh) - np.array(ash)
+        assert not misfit[:-3].any(), "Input and Output must have the same shape everywhere but the last three axes."
+
+        Alim = np.array(A.shape[-3:])
+        Blim = np.array(B.shape[-3:])
+        off = np.array(offset)
+        Ao = off.copy()
+        Ao[Ao < 0] = 0
+        Bo = -off.copy()
+        Bo[Bo < 0] = 0
+        assert (Bo < Blim).all() and (Ao < Alim).all(), "At least one dimension lacks overlap"
+        Ao = Ao.astype(np.int32)
+        Bo =     Bo.astype(np.int32)
+        lengths = np.array([
+            min(off[0] + Blim[0], Alim[0]) - Ao[0],
+            min(off[1] + Blim[1], Alim[1]) - Ao[1],
+            min(off[2] + Blim[2], Alim[2]) - Ao[2],
+        ], dtype=np.int32)
+        lengths2 = np.array([
+            min(Alim[0] - off[0], Blim[0]) - Bo[0],
+            min(Alim[1] - off[1], Blim[1]) - Bo[1],
+            min(Alim[2] - off[2], Blim[2]) - Bo[2],
+        ], dtype=np.int32)
+        assert (lengths == lengths2).all(), "left and right lenghts are not matching"
+        batch = int(np.prod(A.shape[:-3]))
+        
+        # lazy loading depending on data type
+        
+        def map_type(dt):
+            if dt == np.float32:
+                return 'float'
+            elif dt == np.float64: 
+                return 'double'
+            elif dt == np.complex64: 
+                return 'complex<float>'
+            elif dt == np.complex128: 
+                return 'complex<double>'
+            elif dt == np.int32:
+                return 'int'
+            elif dt == np.int64:
+                return 'long long'
+            else:
+                raise ValueError('No mapping for {}'.format(dt))
+
+        version = '{},{}'.format(map_type(B.dtype), map_type(A.dtype))
+        if version not in self.fill3D_cuda:
+            self.fill3D_cuda[version] = load_kernel("fill3D", {
+              'IN_TYPE': map_type(B.dtype),
+              'OUT_TYPE': map_type(A.dtype)
+            })
+        bx = by = 32
+        self.fill3D_cuda[version](
+            A, B, 
+            np.int32(A.shape[-3]), np.int32(A.shape[-2]), np.int32(A.shape[-1]),
+            np.int32(B.shape[-3]), np.int32(B.shape[-2]), np.int32(B.shape[-1]),
+            Ao[0], Ao[1], Ao[2],
+            Bo[0], Bo[1], Bo[2],
+            lengths[0], lengths[1], lengths[2],
+            block=(int(bx), int(by), int(1)),
+            grid=(
+                int((lengths[2] + bx - 1)//bx),
+                int((lengths[1] + by - 1)//by),
+                int(batch)),
+            stream=self.queue
+        )
+
+
+    def crop_pad_2d_simple(self, A, B):
+        """
+        Places B in A centered around the last two axis. A and B must be of the same shape
+        anywhere but the last two dims.
+        """
+        assert A.ndim >= 2, "Arrays must have more than 2 dimensions."
+        assert A.ndim == B.ndim, "Input and Output must have the same number of dimensions."
+        misfit = np.array(A.shape) - np.array(B.shape)
+        assert not misfit[:-2].any(), "Input and Output must have the same shape everywhere but the last two axes."
+        if A.ndim == 2:
+            A = A.reshape((1,) + A.shape)
+        if B.ndim == 2:
+            B = B.reshape((1,) + B.shape)
+        a1, a2 = A.shape[-2:]
+        b1, b2 = B.shape[-2:]
+        offset = [0, a1 // 2 - b1 // 2, a2 // 2 - b2 // 2]
+        self.fill3D(A, B, offset)
 
 
 class DerivativesKernel:
