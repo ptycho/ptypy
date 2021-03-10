@@ -22,6 +22,9 @@ from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKern
 from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
 
+# for debugging
+import h5py
+
 __all__ = ['DR_serial']
 
 @register()
@@ -83,6 +86,16 @@ class DR_serial(PositionCorrectionEngine):
     default = True
     type = bool
     help = A switch for computing the log-likelihood error (this can impact the performance of the engine)
+
+    [debug]
+    default = None
+    type = str
+    help = For debugging purposes, dump arrays into given directory
+
+    [debug_iter]
+    default = 0
+    type = int
+    help = For debugging purposes, dump arrays at this iteration
 
     """
 
@@ -313,10 +326,20 @@ class DR_serial(PositionCorrectionEngine):
                     mag = prep.mag[i]
                     ma = prep.ma[i]
                     ma_sum = prep.ma_sum[i]
-
                     err_phot = prep.err_phot[i]
                     err_fourier = prep.err_fourier[i]
                     err_exit = prep.err_exit[i]
+
+                    # debugging
+                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
+                        with h5py.File(self.p.debug + "/before_%04d.h5" %self.curiter, "w") as f:
+                            f["aux"] = aux
+                            f["addr"] = addr
+                            f["ob"] = ob
+                            f["pr"] = pr
+                            f["mag"] = mag
+                            f["ma"] = ma
+                            f["ma_sum"] = ma_sum
 
                     ## compute log-likelihood
                     t1 = time.time()
