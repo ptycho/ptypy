@@ -377,9 +377,9 @@ class DR_serial(PositionCorrectionEngine):
                     self.benchmark.calls_probe += 1
 
                 # update errors
-                errs = np.ascontiguousarray(np.vstack([np.array(prep.err_fourier), 
-                                                       np.array(prep.err_phot), 
-                                                       np.array(prep.err_exit)]).T)
+                errs = np.ascontiguousarray(np.vstack([np.hstack(prep.err_fourier), 
+                                                       np.hstack(prep.err_phot), 
+                                                       np.hstack(prep.err_exit)]).T)
                 error_dct.update(zip(prep.view_IDs, errs))
 
             self.curiter += 1
