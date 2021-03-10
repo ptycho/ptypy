@@ -145,7 +145,9 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.error_reduce_cuda = load_kernel("error_reduce", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
-            'ACC_TYPE': self.accumulate_type
+            'ACC_TYPE': self.accumulate_type,
+            'BDIM_X': 32,
+            'BDIM_Y': 32,
         })
         self.fourier_update_cuda = None
         self.log_likelihood_cuda = load_kernel("log_likelihood", {
@@ -843,6 +845,8 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         self.error_reduce_cuda = load_kernel("error_reduce", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
+            'BDIM_X': 32,
+            'BDIM_Y': 32,
             'ACC_TYPE': self.accumulate_type
         })
         self.build_aux_pc_cuda = load_kernel("build_aux_position_correction", {
