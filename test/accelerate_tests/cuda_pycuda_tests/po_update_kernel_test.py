@@ -876,10 +876,10 @@ class PoUpdateKernelTest(PyCudaTest):
         auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
         addr_dev = gpuarray.to_gpu(addr)
 
-        #POUK.pr_update_local(addr_dev,  probe_dev, object_array_dev,exit_wave_dev, auxiliary_wave_dev)
+        POUK.pr_update_local(addr_dev,  probe_dev, object_array_dev,exit_wave_dev, auxiliary_wave_dev)
         nPOUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave)
 
-        np.testing.assert_array_equal(probe_dev.get(), probe, 
+        np.testing.assert_allclose(probe_dev.get(), probe, rtol=1e-6, atol=1e-6,
                                       err_msg="The probe has not been updated as expected")
 
 
