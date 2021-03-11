@@ -354,3 +354,35 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Assert
         np.testing.assert_allclose(A, A_dev.get(), rtol=1e-6, atol=1e-6)
+
+    def test_max_abs2_complex_UNITY(self):
+        np.random.seed(1983)
+        X = (np.random.randint(-1000, 1000, (10,100,200)).astype(np.float32) + \
+            1j * np.random.randint(-1000, 1000, (10,100,200)).astype(np.float32)).astype(np.complex64)
+        out = np.zeros((X.shape[0],), dtype=np.float32)
+        X_dev = gpuarray.to_gpu(X)
+        out_dev = gpuarray.to_gpu(out)
+
+        out = au.max_abs2(X)
+
+        MAK = gau.MaxAbs2Kernel(queue=self.stream)
+        MAK.max_abs2(X_dev, out_dev)
+        
+        np.testing.assert_allclose(out_dev.get(), out, rtol=1e-6, atol=1e-6,
+            err_msg="The object norm array has not been updated as expected")
+
+    def test_max_abs2_float_UNITY(self):
+        np.random.seed(1983)
+        X = np.random.randint(-1000, 1000, (10,100,200)).astype(np.float32)
+            
+        out = np.zeros((X.shape[0],), dtype=np.float32)
+        X_dev = gpuarray.to_gpu(X)
+        out_dev = gpuarray.to_gpu(out)
+
+        out = au.max_abs2(X)
+
+        MAK = gau.MaxAbs2Kernel(queue=self.stream)
+        MAK.max_abs2(X_dev, out_dev)
+        
+        np.testing.assert_allclose(out_dev.get(), out, rtol=1e-6, atol=1e-6,
+            err_msg="The object norm array has not been updated as expected")
