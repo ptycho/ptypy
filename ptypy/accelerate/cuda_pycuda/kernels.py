@@ -357,14 +357,9 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
     def build_aux(self, b_aux, addr, ob, pr, ex, alpha=1.0):
         obr, obc = self._cache_object_shape(ob)
-        # print('grid={}, 1, 1'.format(int(ex.shape[0])))
-        # print('b_aux={}, sh={}'.format(type(b_aux), b_aux.shape))
-        # print('ex={}, sh={}'.format(type(ex), ex.shape))
-        # print('pr={}, sh={}'.format(type(pr), pr.shape))
-        # print('ob={}, sh={}'.format(type(ob), ob.shape))
-        # print('obr={}, obc={}'.format(obr, obc))
-        # print('addr={}, sh={}'.format(type(addr), addr.shape))
-        # print('stream={}'.format(self.queue))
+        sh = addr.shape
+        nmodes = sh[1]
+        maxz = sh[0]
         self.build_aux_cuda(b_aux,
                             ex,
                             np.int32(ex.shape[1]), np.int32(ex.shape[2]),
@@ -374,10 +369,13 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                             obr, obc,
                             addr,
                             np.float32(alpha) if ex.dtype == np.complex64 else np.float64(alpha),
-                            block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
+                            block=(32, 32, 1), grid=(int(maxz * nmodes), 1, 1), stream=self.queue)
 
     def build_exit(self, b_aux, addr, ob, pr, ex):
         obr, obc = self._cache_object_shape(ob)
+        sh = addr.shape
+        nmodes = sh[1]
+        maxz = sh[0]
         self.build_exit_cuda(b_aux,
                              ex,
                              np.int32(ex.shape[1]), np.int32(ex.shape[2]),
@@ -386,10 +384,13 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                              ob,
                              obr, obc,
                              addr,
-                             block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
+                             block=(32, 32, 1), grid=(int(maxz * nmodes), 1, 1), stream=self.queue)
 
     def build_exit_alpha_tau(self, b_aux, addr, ob, pr, ex, alpha=1, tau=1):
         obr, obc = self._cache_object_shape(ob)
+        sh = addr.shape
+        nmodes = sh[1]
+        maxz = sh[0]
         self.build_exit_alpha_tau_cuda(b_aux,
                                        ex,
                                        np.int32(ex.shape[1]), np.int32(ex.shape[2]),
@@ -399,7 +400,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                                        obr, obc,
                                        addr,
                                        np.float32(alpha), np.float32(tau),
-                                       block=(32, 32, 1), grid=(int(ex.shape[0]), 1, 1), stream=self.queue)
+                                       block=(32, 32, 1), grid=(int(maxz * nmodes), 1, 1), stream=self.queue)
 
     def build_aux_no_ex(self, b_aux, addr, ob, pr, fac=1.0, add=False):
         obr, obc = self._cache_object_shape(ob)
@@ -958,13 +959,16 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
 
     def build_aux(self, b_aux, addr, ob, pr):
         obr, obc = self._cache_object_shape(ob)
+        sh = addr.shape
+        nmodes = sh[1]
+        maxz = sh[0]
         self.build_aux_pc_cuda(b_aux,
                                pr,
                                np.int32(pr.shape[1]), np.int32(pr.shape[2]),
                                ob,
                                obr, obc,
                                addr,
-                               block=(32, 32, 1), grid=(int(np.prod(addr.shape[:1])), 1, 1), stream=self.queue)
+                               block=(32, 32, 1), grid=(int(maxz * nmodes), 1, 1), stream=self.queue)
 
     def fourier_error(self, f, addr, fmag, fmask, mask_sum):
         fdev = self.gpu.fdev

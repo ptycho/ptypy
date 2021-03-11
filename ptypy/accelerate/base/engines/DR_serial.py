@@ -342,11 +342,12 @@ class DR_serial(PositionCorrectionEngine):
                             f["ma_sum"] = ma_sum
 
                     ## compute log-likelihood
-                    t1 = time.time()
-                    AWK.build_aux_no_ex(aux, addr, ob, pr)
-                    aux[:] = FW(aux)
-                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)
-                    self.benchmark.F_LLerror += time.time() - t1
+                    if self.p.compute_log_likelihood:
+                        t1 = time.time()
+                        AWK.build_aux_no_ex(aux, addr, ob, pr)
+                        aux[:] = FW(aux)
+                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                        self.benchmark.F_LLerror += time.time() - t1
 
                     ## build auxilliary wave
                     t1 = time.time()
