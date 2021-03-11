@@ -166,9 +166,9 @@ class DR_pycuda(DR_serial.DR_serial):
         Compute one iteration.
         """
         queue = self.queue
-
+        error = {}
         for it in range(num):
-            error = {}
+            
             for dID in self.di.S.keys():
 
                 # find probe, object and exit ID in dependence of dID
@@ -263,7 +263,6 @@ class DR_pycuda(DR_serial.DR_serial):
 
                     # object update
                     t1 = time.time()
-                    print(i, addr.shape, ob.shape, pr.shape, ex.shape, aux.shape)
                     POK.ob_update_local(addr, ob, pr, ex, aux)
                     self.benchmark.object_update += time.time() - t1
                     self.benchmark.calls_object += 1
@@ -274,7 +273,7 @@ class DR_pycuda(DR_serial.DR_serial):
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1
 
-                    #self.queue.synchronize()
+                    self.queue.synchronize()
 
             self.curiter += 1
             queue.synchronize()
