@@ -27,7 +27,7 @@ extern "C" __global__ void ob_update_local(
     int D,
     int E,
     int F,
-    const ACC_TYPE* __restrict__ pr_norm,
+    const IN_TYPE* __restrict__ pr_norm,
     complex<OUT_TYPE>* obj,
     int G,
     int H,
