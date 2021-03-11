@@ -26,6 +26,9 @@ from ..mem_utils import make_pagelocked_paired_arrays as mppa
 
 MPI = False
 
+# debugging
+import sys
+
 __all__ = ['DR_pycuda']
 
 @register()
@@ -84,6 +87,7 @@ class DR_pycuda(DR_serial.DR_serial):
             nmodes = 1
 
             # create buffer arrays
+            fpc = 1
             ash = (fpc * nmodes,) + tuple(geo.shape)
             aux = np.zeros(ash, dtype=np.complex64)
             kern.aux = gpuarray.to_gpu(aux)
@@ -95,7 +99,7 @@ class DR_pycuda(DR_serial.DR_serial):
             kern.FUK.allocate()
 
             logger.info("Setting up PoUpdateKernel")
-            kern.POK = PoUpdateKernel(queue_thread=self.queue)
+            kern.POK = PoUpdateKernel(queue_thread=self.queue, math_type="float", accumulator_type="float")
             kern.POK.allocate()
 
             logger.info("Setting up AuxiliaryWaveKernel")
@@ -143,17 +147,18 @@ class DR_pycuda(DR_serial.DR_serial):
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
             for i in range(len(prep.addr)):
-                prep.addr[i][:,:,3:,0] = 0
+                prep.addr[i][:,:,2:,0] = 0
             prep.addr_gpu = [gpuarray.to_gpu(prep.addr[i]) for i in range(len(prep.addr))]
 
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
-            pID, oID, eID = prep.poe_IDs
-            s = self.ex.S[eID]
-            s.gpu = gpuarray.to_gpu(s.data)
-            s = self.ma.S[d.ID]
-            s.gpu = gpuarray.to_gpu(s.data.astype(np.float32))
+            # pID, oID, eID = prep.poe_IDs
+            # s = self.ex.S[eID]
+            # s.gpu = gpuarray.to_gpu(s.data)
+            # s = self.ma.S[d.ID]
+            # s.gpu = gpuarray.to_gpu(s.data.astype(np.float32))
 
+            prep.ex = [gpuarray.to_gpu(prep.ex[i]) for i in range(len(prep.ex))]
             prep.mag = [gpuarray.to_gpu(prep.mag[i]) for i in range(len(prep.mag))]
             prep.ma = [gpuarray.to_gpu(prep.ma[i]) for i in range(len(prep.ma))]
             prep.ma_sum = [gpuarray.to_gpu(prep.ma_sum[i]) for i in range(len(prep.ma_sum))]
@@ -186,21 +191,13 @@ class DR_pycuda(DR_serial.DR_serial):
                 PROP = kern.PROP
                 
                 # get addresses and buffers
-                #addr = prep.addr_gpu
-                #mag = prep.mag
-                #ma_sum = prep.ma_sum
-                #err_fourier = prep.err_fourier_gpu
-                #err_phot = prep.err_phot_gpu
-                #err_exit = prep.err_exit_gpu
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
                 vieworder = prep.vieworder
 
                 # local references
-                ma = self.ma.S[dID].gpu
                 ob = self.ob.S[oID].gpu
                 pr = self.pr.S[pID].gpu
-                ex = self.ex.S[eID].gpu
 
                 # randomly shuffle view order
                 np.random.shuffle(vieworder)
@@ -210,6 +207,7 @@ class DR_pycuda(DR_serial.DR_serial):
 
                     # Get local adress and arrays
                     addr = prep.addr_gpu[i]
+                    ex = prep.ex[i]
                     mag = prep.mag[i]
                     ma = prep.ma[i]
                     ma_sum = prep.ma_sum[i]
@@ -275,8 +273,6 @@ class DR_pycuda(DR_serial.DR_serial):
                     POK.pr_update_local(addr, pr, ob, ex, aux)
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1
-
-                    #queue.synchronize()
 
             self.curiter += 1
 

@@ -23,7 +23,7 @@ from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
 
 # for debugging
-import h5py
+import h5py, sys
 
 __all__ = ['DR_serial']
 
@@ -239,7 +239,7 @@ class DR_serial(PositionCorrectionEngine):
             prep.err_phot = np.zeros_like(prep.ma_sum)
             prep.err_fourier = np.zeros_like(prep.ma_sum)
             prep.err_exit = np.zeros_like(prep.ma_sum)
-
+            
         # Unfortunately this needs to be done for all pods, since
         # the shape of the probe / object was modified.
         # TODO: possible scaling issue, remove the need for padding
@@ -262,7 +262,11 @@ class DR_serial(PositionCorrectionEngine):
             prep.vieworder = np.arange(prep.addr.shape[0])
 
             # Transform addr array into a list
+            prep.addr[:,:,2:,0] = 0
             prep.addr = [prep.addr[i,None] for i in range(prep.addr.shape[0])]
+
+            # Transform ex in to list
+            prep.ex = [self.ex.S[eID].data[i,None] for i in range(self.ex.S[eID].shape[0])]
 
             # Transform mag, ma, ma_sum into lists
             prep.mag = [prep.mag[i,None] for i in range(prep.mag.shape[0])]
@@ -310,10 +314,9 @@ class DR_serial(PositionCorrectionEngine):
                 aux = kern.aux
                 vieworder = prep.vieworder
 
-                # references for ob, pr, ex
+                # references for ob, pr
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
-                ex = self.ex.S[eID].data
 
                 # randomly shuffle view order
                 np.random.shuffle(vieworder)
@@ -321,8 +324,12 @@ class DR_serial(PositionCorrectionEngine):
                 # Iterate through views
                 for i in vieworder:
 
+                    # reference to ex
+                    ex = self.ex.S[eID].data[i,None]
+
                     # Get local adress and arrays
                     addr = prep.addr[i]
+                    ex = prep.ex[i]
                     mag = prep.mag[i]
                     ma = prep.ma[i]
                     ma_sum = prep.ma_sum[i]
@@ -388,11 +395,29 @@ class DR_serial(PositionCorrectionEngine):
                     AWK.build_aux(aux, addr, ob, pr, ex, alpha=0)
                     self.benchmark.A_Build_aux += time.time() - t1
 
+                    # debugging
+                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
+                        with h5py.File(self.p.debug + "/ob_update_local_%04d.h5" %self.curiter, "w") as f:
+                            f["aux"] = aux
+                            f["addr"] = addr
+                            f["ob"] = ob
+                            f["pr"] = pr
+                            f["ex"] = ex
+
                     # object update
                     t1 = time.time()
                     POK.ob_update_local(addr, ob, pr, ex, aux)
                     self.benchmark.object_update += time.time() - t1
                     self.benchmark.calls_object += 1
+
+                    # debugging
+                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
+                        with h5py.File(self.p.debug + "/pr_update_local_%04d.h5" %self.curiter, "w") as f:
+                            f["aux"] = aux
+                            f["addr"] = addr
+                            f["ob"] = ob
+                            f["pr"] = pr
+                            f["ex"] = ex
 
                     # probe update
                     t1 = time.time()
