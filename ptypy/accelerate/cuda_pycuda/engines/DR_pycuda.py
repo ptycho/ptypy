@@ -91,6 +91,7 @@ class DR_pycuda(DR_serial.DR_serial):
             # setup kernels, one for each SCAN.
             logger.info("Setting up FourierUpdateKernel")
             kern.FUK = FourierUpdateKernel(aux, nmodes, queue_thread=self.queue)
+            kern.FUK.fshape = (1,) + kern.FUK.fshape[1:]
             kern.FUK.allocate()
 
             logger.info("Setting up PoUpdateKernel")
@@ -141,6 +142,8 @@ class DR_pycuda(DR_serial.DR_serial):
         # TODO : like the serialization this one is needed due to object reformatting
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
+            for i in range(len(prep.addr)):
+                prep.addr[i][:,:,3:,0] = 0
             prep.addr_gpu = [gpuarray.to_gpu(prep.addr[i]) for i in range(len(prep.addr))]
 
         for label, d in self.ptycho.new_data:
@@ -273,11 +276,11 @@ class DR_pycuda(DR_serial.DR_serial):
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1
 
-                    self.queue.synchronize()
+                    #queue.synchronize()
 
             self.curiter += 1
-            queue.synchronize()
 
+        queue.synchronize()
         for name, s in self.ob.S.items():
             s.data[:] = s.gpu.get()
         for name, s in self.pr.S.items():
