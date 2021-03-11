@@ -3,6 +3,24 @@ from pycuda import gpuarray
 from ptypy.utils import gaussian
 import numpy as np
 
+# maps a numpy dtype to the corresponding C type
+def map2ctype(dt):
+    if dt == np.float32:
+        return 'float'
+    elif dt == np.float64: 
+        return 'double'
+    elif dt == np.complex64: 
+        return 'complex<float>'
+    elif dt == np.complex128: 
+        return 'complex<double>'
+    elif dt == np.int32:
+        return 'int'
+    elif dt == np.int64:
+        return 'long long'
+    else:
+        raise ValueError('No mapping for {}'.format(dt))
+
+
 class ArrayUtilsKernel:
     def __init__(self, acc_dtype=np.float64, queue=None):
         self.queue = queue
@@ -90,7 +108,34 @@ class TransposeKernel:
         self.transpose_cuda(input, output, np.int32(width), np.int32(height),
             block=blk, grid=grd, stream=self.queue)
 
+class MaxAbs2Kernel:
 
+    def __init__(self, queue=None):
+        self.queue = queue
+        # we lazy-load this depending on the data types we get
+        self.max_abs2_cuda = {}
+
+    def max_abs2(self, X, out):
+        """ Calculate max(abs(x)**2) across the final 2 dimensions"""
+        # lazy-loading
+        
+        version = '{},{}'.format(map2ctype(X.dtype), map2ctype(out.dtype))
+        if version not in self.max_abs2_cuda:
+            self.max_abs2_cuda[version] = load_kernel("max_abs2", {
+                'IN_TYPE': map2ctype(X.dtype),
+                'OUT_TYPE': map2ctype(out.dtype),
+                'BDIM_X': 32,
+                'BDIM_Y': 32
+            })
+        
+        rows = np.int32(X.shape[-2])
+        cols = np.int32(X.shape[-1])
+        firstdims = int(np.prod(X.shape[:-2]))
+        self.max_abs2_cuda[version](X, rows, cols, out,
+            block=(32, 32, 1), grid=(firstdims, 1, 1),
+            stream=self.queue)
+        
+    
 
 class CropPadKernel:
 
@@ -135,28 +180,11 @@ class CropPadKernel:
         batch = int(np.prod(A.shape[:-3]))
         
         # lazy loading depending on data type
-        
-        def map_type(dt):
-            if dt == np.float32:
-                return 'float'
-            elif dt == np.float64: 
-                return 'double'
-            elif dt == np.complex64: 
-                return 'complex<float>'
-            elif dt == np.complex128: 
-                return 'complex<double>'
-            elif dt == np.int32:
-                return 'int'
-            elif dt == np.int64:
-                return 'long long'
-            else:
-                raise ValueError('No mapping for {}'.format(dt))
-
-        version = '{},{}'.format(map_type(B.dtype), map_type(A.dtype))
+        version = '{},{}'.format(map2ctype(B.dtype), map2ctype(A.dtype))
         if version not in self.fill3D_cuda:
             self.fill3D_cuda[version] = load_kernel("fill3D", {
-              'IN_TYPE': map_type(B.dtype),
-              'OUT_TYPE': map_type(A.dtype)
+              'IN_TYPE': map2ctype(B.dtype),
+              'OUT_TYPE': mapctype(A.dtype)
             })
         bx = by = 32
         self.fill3D_cuda[version](

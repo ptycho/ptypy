@@ -1,5 +1,5 @@
 /** max_abs2 kernel, calculating the maximum abs(x)**2 value in the last
- * two dimensions for each index in the address array
+ * two dimensions 
  * 
  * Data types:
  * - IN_TYPE: can be float/double or complex<float>/complex<double>
@@ -10,41 +10,36 @@
 using thrust::complex;
 using thrust::norm;
 
-inline __device__ ACC_TYPE norm(const float& in) {
+inline __device__ OUT_TYPE norm(const float& in) {
     return in*in;
 }
 
-inline __device__ ACC_TYPE norm(const double& in) {
+inline __device__ OUT_TYPE norm(const double& in) {
     return in*in;
 }
 
 extern "C" __global__ void max_abs2(const IN_TYPE* a,
-                                    int Y,
-                                    int X,
-                                    const int* __restrict addr,
-                                    int addroffs,
                                     int rows,
                                     int cols,
-                                    ACC_TYPE* out)
+                                    OUT_TYPE* out)
 {
     int bid = blockIdx.x;
     int tx = threadIdx.x;
     int ty = threadIdx.y;
-    const int addr_stride = 15;
 
-    __shared__ ACC_TYPE sh[BDIM_X*BDIM_Y];
-
-    const int* oa = addr + addroffs + bid * addr_stride;
-    a += oa[0]*X*Y + oa[1]*X + oa[2];
+    // offset a to get to the current row
+    a += bid * rows * cols;
     
+    __shared__ OUT_TYPE sh[BDIM_X*BDIM_Y];
+
     // initialise to zero
-    ACC_TYPE maxv = ACC_TYPE(0);
+    OUT_TYPE maxv = OUT_TYPE(0);
 
     for (int iy = ty; iy < rows; iy += blockDim.y)
     {
         for (int ix = tx; ix < cols; ix += blockDim.x)
         {
-            auto v = norm(a[iy * X + ix]);
+            auto v = norm(a[iy * cols + ix]);
             if (maxv < v)
                 maxv = v;
         }
@@ -55,7 +50,6 @@ extern "C" __global__ void max_abs2(const IN_TYPE* a,
     __syncthreads();
 
     // reduce:
-
     const int nt = BDIM_X*BDIM_Y;
     int c = nt;
     

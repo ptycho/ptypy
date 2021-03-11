@@ -4,6 +4,7 @@ from pycuda import gpuarray
 from ptypy.utils.verbose import log, logger
 from . import load_kernel
 from .array_utils import CropPadKernel
+from .array_utils import MaxAbs2Kernel
 from ..base import kernels as ab
 from ..base.kernels import Adict
 
@@ -660,6 +661,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         self.accumulator_type = accumulator_type
         self.queue = queue_thread
         self.norm = None
+        self.MAK = MaxAbs2Kernel(self.queue)
         self.ob_update_cuda = load_kernel("ob_update", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -684,13 +686,6 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             'MATH_TYPE': self.math_type
         })
         self.pr_update2_ML_cuda = None
-        self.max_abs2_cuda = load_kernel("max_abs2", {
-            'IN_TYPE': 'complex<float>',
-            'OUT_TYPE': 'float',
-            'ACC_TYPE': self.accumulator_type,
-            'BDIM_X': 32,
-            'BDIM_Y': 32
-        })
         self.ob_update_local_cuda = load_kernel("ob_update_local", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -862,36 +857,12 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                  np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                  block=(16, 16, 1), grid=grid, stream=self.queue)
 
-    def max_abs2_obj(self, addr, ex, ob, ob_norm):
-        addroffs = np.int32(3)  # offset in addr for object
-        Y = np.int32(ob.shape[-2])
-        X = np.int32(ob.shape[-1])
-        rows = np.int32(ex.shape[-2])
-        cols = np.int32(ex.shape[-1])
-        num_pods = int(addr.shape[0] * addr.shape[1])
-        self.max_abs2_cuda(ob, Y, Y, addr, addroffs, rows, cols, ob_norm,
-            block=(32, 32, 1),
-            grid=(num_pods, 1, 1), 
-            stream=self.queue)
-
-    def max_abs2_probe(self, addr, ex, pr, pr_norm):
-        addroffs = np.int32(0)  # offset in addr for probe
-        Y = np.int32(pr.shape[-2])
-        X = np.int32(pr.shape[-1])
-        rows = np.int32(ex.shape[-2])
-        cols = np.int32(ex.shape[-1])
-        num_pods = int(addr.shape[0] * addr.shape[1])
-        self.max_abs2_cuda(pr, Y, Y, addr, addroffs, rows, cols, pr_norm,
-            block=(32, 32, 1),
-            grid=(num_pods, 1, 1), 
-            stream=self.queue)
 
     def ob_update_local(self, addr, ob, pr, ex, aux):
         # lazy allocation of temporary
         if self.norm is None or self.norm.shape[0] != addr.shape[0] * addr.shape[1]:
-            self.norm = gpuarray.zeros((addr.shape[0] * addr.shape[1]), 
-                dtype=np.float32 if self.accumulator_type == 'float' else np.float64)
-        self.max_abs2_probe(addr, ex, pr, self.norm)
+            self.norm = gpuarray.zeros((addr.shape[0] * addr.shape[1]), dtype=np.float32)
+        self.MAK.max_abs2(pr, self.norm)
         
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
@@ -916,9 +887,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
     def pr_update_local(self, addr, pr, ob, ex, aux):
         # lazy allocation of temporary
         if self.norm is None or self.norm.shape[0] != addr.shape[0] * addr.shape[1]:
-            self.norm = gpuarray.zeros((addr.shape[0] * addr.shape[1]), 
-                dtype=np.float32 if self.accumulator_type == 'float' else np.float64)
-        self.max_abs2_obj(addr, ex, ob, self.norm)
+            self.norm = gpuarray.zeros((addr.shape[0] * addr.shape[1]), dtype=np.float32)
+        self.MAK.max_abs2(ob, self.norm)
         
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
