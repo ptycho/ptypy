@@ -215,64 +215,43 @@ class DR_pycuda(DR_serial.DR_serial):
                     err_fourier = prep.err_fourier_gpu[i]
                     err_exit = prep.err_exit_gpu[i]
 
-                    ## compute log-likelihood
-                    if self.p.compute_log_likelihood:
-                        t1 = time.time()
-                        AWK.build_aux_no_ex(aux, addr, ob, pr)
-                        PROP.fw(aux, aux)
-                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
-                        self.benchmark.F_LLerror += time.time() - t1
-
                     ## build auxilliary wave
-                    t1 = time.time()
                     AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                    self.benchmark.A_Build_aux += time.time() - t1
 
                     ## forward FFT
-                    t1 = time.time()
                     PROP.fw(aux, aux)
-                    self.benchmark.B_Prop += time.time() - t1
 
                     ## Deviation from measured data
-                    t1 = time.time()
                     FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                     FUK.error_reduce(addr, err_fourier)
                     FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
-                    self.benchmark.C_Fourier_update += time.time() - t1
 
                     ## backward FFT
-                    t1 = time.time()
                     PROP.bw(aux, aux)
-                    self.benchmark.D_iProp += time.time() - t1
 
                     ## build exit wave
-                    t1 = time.time()
                     AWK.build_exit_alpha_tau(aux, addr, ob, pr, ex, alpha=self.p.alpha, tau=self.p.tau)
-                    FUK.exit_error(aux,addr)
-                    FUK.error_reduce(addr, err_exit)
-                    self.benchmark.E_Build_exit += time.time() - t1
-                    self.benchmark.calls_fourier += 1
+                    if self.p.compute_exit_error:
+                        FUK.exit_error(aux,addr)
+                        FUK.error_reduce(addr, err_exit)
 
                     ## probe/object rescale
                     #if self.p.rescale_probe:
                     #    pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
 
                     ## build auxilliary wave (ob * pr product)
-                    t1 = time.time()
-                    AWK.build_aux(aux, addr, ob, pr, ex, alpha=0)
-                    self.benchmark.A_Build_aux += time.time() - t1
+                    AWK.build_aux_no_ex(aux, addr, ob, pr)
 
                     # object update
-                    t1 = time.time()
                     POK.ob_update_local(addr, ob, pr, ex, aux)
-                    self.benchmark.object_update += time.time() - t1
-                    self.benchmark.calls_object += 1
 
                     # probe update
-                    t1 = time.time()
                     POK.pr_update_local(addr, pr, ob, ex, aux)
-                    self.benchmark.probe_update += time.time() - t1
-                    self.benchmark.calls_probe += 1
+
+                    ## compute log-likelihood
+                    if self.p.compute_log_likelihood:
+                        PROP.fw(aux, aux)
+                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
 
             self.curiter += 1
 

@@ -87,6 +87,11 @@ class DR_serial(PositionCorrectionEngine):
     type = bool
     help = A switch for computing the log-likelihood error (this can impact the performance of the engine)
 
+    [compute_exit_error]
+    default = True
+    type = bool
+    help = A switch for computing the exitwave error (this can impact the performance of the engine)
+
     [debug]
     default = None
     type = str
@@ -345,14 +350,6 @@ class DR_serial(PositionCorrectionEngine):
                             f["ma"] = ma
                             f["ma_sum"] = ma_sum
 
-                    ## compute log-likelihood
-                    if self.p.compute_log_likelihood:
-                        t1 = time.time()
-                        AWK.build_aux_no_ex(aux, addr, ob, pr)
-                        aux[:] = FW(aux)
-                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
-                        self.benchmark.F_LLerror += time.time() - t1
-
                     ## build auxilliary wave
                     t1 = time.time()
                     AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
@@ -378,8 +375,9 @@ class DR_serial(PositionCorrectionEngine):
                     ## build exit wave
                     t1 = time.time()
                     AWK.build_exit_alpha_tau(aux, addr, ob, pr, ex, alpha=self.p.alpha, tau=self.p.tau)
-                    FUK.exit_error(aux,addr)
-                    FUK.error_reduce(addr, err_exit)
+                    if self.p.compute_exit_error:
+                        FUK.exit_error(aux,addr)
+                        FUK.error_reduce(addr, err_exit)
                     self.benchmark.E_Build_exit += time.time() - t1
                     self.benchmark.calls_fourier += 1
 
@@ -389,7 +387,7 @@ class DR_serial(PositionCorrectionEngine):
 
                     ## build auxilliary wave (ob * pr product)
                     t1 = time.time()
-                    AWK.build_aux(aux, addr, ob, pr, ex, alpha=0)
+                    AWK.build_aux_no_ex(aux, addr, ob, pr)
                     self.benchmark.A_Build_aux += time.time() - t1
 
                     # debugging
@@ -421,6 +419,14 @@ class DR_serial(PositionCorrectionEngine):
                     POK.pr_update_local(addr, pr, ob, ex, aux)
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1
+
+                    ## compute log-likelihood
+                    if self.p.compute_log_likelihood:
+                        t1 = time.time()
+                        #AWK.build_aux_no_ex(aux, addr, ob, pr)
+                        aux[:] = FW(aux)
+                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                        self.benchmark.F_LLerror += time.time() - t1
 
                 # update errors
                 errs = np.ascontiguousarray(np.vstack([np.hstack(prep.err_fourier), 
