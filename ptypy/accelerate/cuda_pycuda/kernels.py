@@ -137,6 +137,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
         })
+        self.fourier_deviation_cuda = None
         self.fourier_error_cuda = load_kernel("fourier_error", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -214,6 +215,28 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                      grid=grd,
                                      shared=int(bx*by*bz*4),
                                      stream=self.queue)
+
+    def fourier_deviation(self, f, addr, fmag):
+        fdev = self.gpu.fdev
+        if self.fourier_deviation_cuda is None:
+            self.fourier_deviation_cuda = load_kernel("fourier_deviation",{
+                'IN_TYPE': 'float',
+                'OUT_TYPE': 'float',
+                'MATH_TYPE': self.math_type
+            })
+        bx = 64
+        by = 1
+        self.fourier_deviation_cuda(np.int32(self.nmodes),
+                                f,
+                                fmag,
+                                fdev,
+                                addr,
+                                np.int32(self.fshape[1]),
+                                np.int32(self.fshape[2]),
+                                block=(bx, by, 1),
+                                grid=(1, int((self.fshape[2] + by - 1)//by), int(fmag.shape[0])),
+                                stream=self.queue)
+
 
     def error_reduce(self, addr, err_sum):
         self.error_reduce_cuda(self.gpu.ferr,
