@@ -114,27 +114,43 @@ class MaxAbs2Kernel:
         self.queue = queue
         # we lazy-load this depending on the data types we get
         self.max_abs2_cuda = {}
+        self.max_abs2_step1_cuda = {}
+        self.max_abs2_step2_cuda = {}
+        self.tmp = None
 
     def max_abs2(self, X, out):
         """ Calculate max(abs(x)**2) across the final 2 dimensions"""
         # lazy-loading
-        
+        bx = int(64)
         version = '{},{}'.format(map2ctype(X.dtype), map2ctype(out.dtype))
-        if version not in self.max_abs2_cuda:
-            self.max_abs2_cuda[version] = load_kernel("max_abs2", {
+        if version not in self.max_abs2_step1_cuda:
+            self.max_abs2_step1_cuda[version] = load_kernel("max_abs2_step1", {
                 'IN_TYPE': map2ctype(X.dtype),
                 'OUT_TYPE': map2ctype(out.dtype),
-                'BDIM_X': 32,
-                'BDIM_Y': 32
-            })
-        
+                'BDIM_X': bx,
+            }, "max_abs2.cu")
+        if version not in self.max_abs2_step2_cuda:
+            self.max_abs2_step2_cuda[version] = load_kernel("max_abs2_step2", {
+                'IN_TYPE': map2ctype(X.dtype),
+                'OUT_TYPE': map2ctype(out.dtype),
+                'BDIM_X': bx,
+            }, "max_abs2.cu")
+
         rows = np.int32(X.shape[-2])
         cols = np.int32(X.shape[-1])
         firstdims = int(np.prod(X.shape[:-2]))
-        self.max_abs2_cuda[version](X, rows, cols, out,
-            block=(32, 32, 1), grid=(firstdims, 1, 1),
-            stream=self.queue)
+        gy = int(rows)
         
+        if self.tmp is None or self.tmp.shape[0] != gy * firstdims or self.tmp.dtype != out.dtype:
+            self.tmp = gpuarray.empty((gy*firstdims,), dtype=out.dtype)
+
+        self.max_abs2_step1_cuda[version](X, rows, cols, self.tmp,
+            block=(bx, 1, 1), grid=(1, gy, firstdims),
+            stream=self.queue)
+        self.max_abs2_step2_cuda[version](self.tmp, np.int32(gy), out,
+            block=(bx, 1, 1), grid=(firstdims, 1, 1),
+            stream=self.queue
+        )
     
 
 class CropPadKernel:

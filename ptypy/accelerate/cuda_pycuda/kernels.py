@@ -400,7 +400,9 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                                        obr, obc,
                                        addr,
                                        np.float32(alpha), np.float32(tau),
-                                       block=(32, 32, 1), grid=(int(maxz * nmodes), 1, 1), stream=self.queue)
+                                       block=(64, 1, 1), 
+                                       grid=(1, int(ex.shape[1]), int(maxz * nmodes)), 
+                                       stream=self.queue)
 
     def build_aux_no_ex(self, b_aux, addr, ob, pr, fac=1.0, add=False):
         obr, obc = self._cache_object_shape(ob)
@@ -881,8 +883,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             ob,
             obsh[0], obsh[1], obsh[2],
             addr,
-            block=(32, 32, 1),
-            grid=(int(num_pods), 1, 1),
+            block=(64, 1, 1),
+            grid=(1, int(exsh[1]), int(num_pods)),
             stream=self.queue)
 
     def pr_update_local(self, addr, pr, ob, ex, aux):
@@ -907,8 +909,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             ob,
             obsh[0], obsh[1], obsh[2],
             addr,
-            block=(32, 32, 1),
-            grid=(int(num_pods), 1, 1),
+            block=(64, 1, 1),
+            grid=(1, int(exsh[1]), int(num_pods)),
             stream=self.queue)
 
 

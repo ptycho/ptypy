@@ -18,49 +18,47 @@ inline __device__ OUT_TYPE norm(const double& in) {
     return in*in;
 }
 
-extern "C" __global__ void max_abs2(const IN_TYPE* a,
-                                    int rows,
-                                    int cols,
-                                    OUT_TYPE* out)
+extern "C" __global__ void max_abs2_step1(const IN_TYPE* a,
+                                          int rows,
+                                          int cols,
+                                          OUT_TYPE* out)
 {
-    int bid = blockIdx.x;
+    
+    int bid = blockIdx.z;
     int tx = threadIdx.x;
-    int ty = threadIdx.y;
-
+    const int iy = blockIdx.y;
+    
     // offset a to get to the current row
     a += bid * rows * cols;
     
-    __shared__ OUT_TYPE sh[BDIM_X*BDIM_Y];
+    __shared__ OUT_TYPE sh[BDIM_X];
 
-    // initialise to zero
+    
     OUT_TYPE maxv = OUT_TYPE(0);
 
-    for (int iy = ty; iy < rows; iy += blockDim.y)
-    {
-        for (int ix = tx; ix < cols; ix += blockDim.x)
-        {
-            auto v = norm(a[iy * cols + ix]);
-            if (maxv < v)
-                maxv = v;
-        }
+    for (int ix = tx; ix < cols; ix += BDIM_X) {
+        auto v = norm(a[iy * cols + ix]);
+        if (v > maxv)
+            maxv = v;
     }
 
-    int txy = ty * BDIM_X + tx;
-    sh[txy] = maxv;
+    
+    sh[tx] = maxv; 
+    
     __syncthreads();
 
     // reduce:
-    const int nt = BDIM_X*BDIM_Y;
+    const int nt = BDIM_X;
     int c = nt;
     
     while (c > 1)
     {
         int half = c / 2;
-        if (txy < half)
+        if (tx < half)
         {
-            auto v = sh[c - txy - 1];
+            auto v = sh[c - tx - 1];
             if (maxv < v) {
-                sh[txy] = v;
+                sh[tx] = v;
                 maxv = v;
             }
         }
@@ -68,7 +66,52 @@ extern "C" __global__ void max_abs2(const IN_TYPE* a,
         c = c - half;
     }
 
-    if (txy == 0)
+    if (tx == 0)
+    {
+        out[bid * gridDim.y + blockIdx.y] = sh[0];
+    }
+}
+
+extern "C" __global__ void max_abs2_step2(const OUT_TYPE* in,
+                                          int n,
+                                          OUT_TYPE* out)
+{
+    int tx = threadIdx.x;
+    int bid = blockIdx.x;
+
+    in += blockIdx.x * n;
+
+    __shared__ OUT_TYPE sh[BDIM_X];
+
+    OUT_TYPE maxv = OUT_TYPE(0);
+    for (int i = tx; i < n; ++i) {
+        auto v = in[i];
+        if (v > maxv)
+            maxv = v;
+    }
+    sh[tx] = maxv;
+    __syncthreads();
+
+    // reduce:
+    const int nt = BDIM_X;
+    int c = nt;
+    
+    while (c > 1)
+    {
+        int half = c / 2;
+        if (tx < half)
+        {
+            auto v = sh[c - tx - 1];
+            if (maxv < v) {
+                sh[tx] = v;
+                maxv = v;
+            }
+        }
+        __syncthreads();
+        c = c - half;
+    }
+
+    if (tx == 0)
     {
         out[bid] = sh[0];
     }
