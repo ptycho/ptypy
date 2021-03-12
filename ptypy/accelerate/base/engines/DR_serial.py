@@ -76,21 +76,20 @@ class DR_serial(PositionCorrectionEngine):
     lowlim = 0
     help = Normalise probe power according to data
 
-    [fourier_power_bound]
-    default = None
-    type = float
-    help = If rms error of model vs diffraction data is smaller than this value, Fourier constraint is met
-    doc = For Poisson-sampled data, the theoretical value for this parameter is 1/4. Set this value higher for noisy data.
-
     [compute_log_likelihood]
     default = True
     type = bool
     help = A switch for computing the log-likelihood error (this can impact the performance of the engine)
 
     [compute_exit_error]
-    default = True
+    default = False
     type = bool
     help = A switch for computing the exitwave error (this can impact the performance of the engine)
+
+    [compute_fourier_error]
+    default = False
+    type = bool
+    help = A switch for computing the fourier error (this can impact the performance of the engine)
 
     [debug]
     default = None
@@ -114,7 +113,6 @@ class DR_serial(PositionCorrectionEngine):
 
         # Instance attributes
         self.error = None
-        self.pbound = None
         self.mean_power = None
 
         # keep track of timings
@@ -227,9 +225,7 @@ class DR_serial(PositionCorrectionEngine):
 
             # recalculate everything
             mean_power = 0.
-            self.pbound_scan = {}
-            for s in self.di.storages.values():            
-                self.pbound_scan[s.label] = self.p.fourier_power_bound
+            for s in self.di.storages.values():
                 mean_power += s.mean_power
             self.mean_power = mean_power / len(self.di.storages)
 
@@ -242,7 +238,7 @@ class DR_serial(PositionCorrectionEngine):
             prep.ma = self.ma.S[d.ID].data.astype(np.float32)
             prep.ma_sum = prep.ma.sum(-1).sum(-1)
             prep.err_phot = np.zeros_like(prep.ma_sum)
-            prep.err_fourier = np.zeros_like(prep.ma_sum)
+            prep.err_fourier = np.ones_like(prep.ma_sum)
             prep.err_exit = np.zeros_like(prep.ma_sum)
             
         # Unfortunately this needs to be done for all pods, since
@@ -315,7 +311,6 @@ class DR_serial(PositionCorrectionEngine):
                 BW = kern.BW
 
                 # global buffers
-                pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
                 vieworder = prep.vieworder
 
@@ -363,8 +358,9 @@ class DR_serial(PositionCorrectionEngine):
                     ## Deviation from measured data
                     t1 = time.time()
                     FUK.fourier_error(aux, addr, mag, ma, ma_sum)
-                    FUK.error_reduce(addr, err_fourier)
-                    FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
+                    if self.p.compute_fourier_error:
+                        FUK.error_reduce(addr, err_fourier)
+                    FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, 0)
                     self.benchmark.C_Fourier_update += time.time() - t1
 
                     ## backward FFT

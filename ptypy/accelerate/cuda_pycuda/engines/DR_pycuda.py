@@ -191,7 +191,6 @@ class DR_pycuda(DR_serial.DR_serial):
                 PROP = kern.PROP
                 
                 # get addresses and buffers
-                pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
                 vieworder = prep.vieworder
 
@@ -223,8 +222,9 @@ class DR_pycuda(DR_serial.DR_serial):
 
                     ## Deviation from measured data
                     FUK.fourier_error(aux, addr, mag, ma, ma_sum)
-                    FUK.error_reduce(addr, err_fourier)
-                    FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
+                    if self.p.compute_fourier_error:
+                        FUK.error_reduce(addr, err_fourier)
+                    FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, 0)
 
                     ## backward FFT
                     PROP.bw(aux, aux)
