@@ -146,25 +146,17 @@ class DR_pycuda(DR_serial.DR_serial):
         # TODO : like the serialization this one is needed due to object reformatting
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
-            for i in range(len(prep.addr)):
-                prep.addr[i][:,:,2:,0] = 0
-            prep.addr_gpu = [gpuarray.to_gpu(prep.addr[i]) for i in range(len(prep.addr))]
+            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
 
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
-            # pID, oID, eID = prep.poe_IDs
-            # s = self.ex.S[eID]
-            # s.gpu = gpuarray.to_gpu(s.data)
-            # s = self.ma.S[d.ID]
-            # s.gpu = gpuarray.to_gpu(s.data.astype(np.float32))
-
-            prep.ex = [gpuarray.to_gpu(prep.ex[i]) for i in range(len(prep.ex))]
-            prep.mag = [gpuarray.to_gpu(prep.mag[i]) for i in range(len(prep.mag))]
-            prep.ma = [gpuarray.to_gpu(prep.ma[i]) for i in range(len(prep.ma))]
-            prep.ma_sum = [gpuarray.to_gpu(prep.ma_sum[i]) for i in range(len(prep.ma_sum))]
-            prep.err_fourier_gpu = [gpuarray.to_gpu(prep.err_fourier[i]) for i in range(len(prep.err_fourier))]
-            prep.err_phot_gpu = [gpuarray.to_gpu(prep.err_phot[i]) for i in range(len(prep.err_phot))]
-            prep.err_exit_gpu = [gpuarray.to_gpu(prep.err_exit[i]) for i in range(len(prep.err_exit))]
+            prep.ex = gpuarray.to_gpu(prep.ex)
+            prep.mag = gpuarray.to_gpu(prep.mag)
+            prep.ma = gpuarray.to_gpu(prep.ma)
+            prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
+            prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
+            prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
+            prep.err_exit_gpu = gpuarray.to_gpu(prep.err_exit)
             # if self.do_position_refinement:
             #     prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
 
@@ -205,14 +197,14 @@ class DR_pycuda(DR_serial.DR_serial):
                 for i in vieworder:
 
                     # Get local adress and arrays
-                    addr = prep.addr_gpu[i]
-                    ex = prep.ex[i]
-                    mag = prep.mag[i]
-                    ma = prep.ma[i]
-                    ma_sum = prep.ma_sum[i]
-                    err_phot = prep.err_phot_gpu[i]
-                    err_fourier = prep.err_fourier_gpu[i]
-                    err_exit = prep.err_exit_gpu[i]
+                    addr = prep.addr_gpu[i,None]
+                    ex = prep.ex[i,None]
+                    mag = prep.mag[i,None]
+                    ma = prep.ma[i,None]
+                    ma_sum = prep.ma_sum[i,None]
+                    err_phot = prep.err_phot_gpu[i,None]
+                    err_fourier = prep.err_fourier_gpu[i,None]
+                    err_exit = prep.err_exit_gpu[i,None]
 
                     ## build auxilliary wave
                     AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)

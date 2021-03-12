@@ -262,22 +262,11 @@ class DR_serial(PositionCorrectionEngine):
             # Keep a list of view indices
             prep.vieworder = np.arange(prep.addr.shape[0])
 
-            # Transform addr array into a list
+            # Modify addresses
             prep.addr[:,:,2:,0] = 0
-            prep.addr = [prep.addr[i,None] for i in range(prep.addr.shape[0])]
 
-            # Transform ex in to list
-            prep.ex = [self.ex.S[eID].data[i,None] for i in range(self.ex.S[eID].shape[0])]
-
-            # Transform mag, ma, ma_sum into lists
-            prep.mag = [prep.mag[i,None] for i in range(prep.mag.shape[0])]
-            prep.ma  = [prep.ma[i,None] for i in range(prep.ma.shape[0])]
-            prep.ma_sum = [prep.ma_sum[i,None] for i in range(prep.ma_sum.shape[0])]
-
-            # Transform errors into lists
-            prep.err_phot = [prep.err_phot[i,None] for i in range(prep.err_phot.shape[0])]
-            prep.err_fourier = [prep.err_fourier[i,None] for i in range(prep.err_fourier.shape[0])]
-            prep.err_exit = [prep.err_exit[i,None] for i in range(prep.err_exit.shape[0])]
+            # Reference to ex
+            prep.ex = self.ex.S[eID].data
 
             # calculate c_facts
             #cfact = self.p.object_inertia * self.mean_power
@@ -325,14 +314,14 @@ class DR_serial(PositionCorrectionEngine):
                 for i in vieworder:
 
                     # Get local adress and arrays
-                    addr = prep.addr[i]
-                    ex = prep.ex[i]
-                    mag = prep.mag[i]
-                    ma = prep.ma[i]
-                    ma_sum = prep.ma_sum[i]
-                    err_phot = prep.err_phot[i]
-                    err_fourier = prep.err_fourier[i]
-                    err_exit = prep.err_exit[i]
+                    addr = prep.addr[i,None]
+                    ex = prep.ex[i,None]
+                    mag = prep.mag[i,None]
+                    ma = prep.ma[i,None]
+                    ma_sum = prep.ma_sum[i,None]
+                    err_phot = prep.err_phot[i,None]
+                    err_fourier = prep.err_fourier[i,None]
+                    err_exit = prep.err_exit[i,None]
 
                     # debugging
                     if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
