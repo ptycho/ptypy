@@ -254,9 +254,9 @@ class DR_pycuda(DR_serial.DR_serial):
             s.data[:] = s.gpu.get()
 
         for dID, prep in self.diff_info.items():
-            err_fourier = np.hstack([prep.err_fourier_gpu[i].get() for i in range(len(prep.err_fourier_gpu))])
-            err_phot = np.hstack([prep.err_phot_gpu[i].get() for i in range(len(prep.err_phot_gpu))])
-            err_exit = np.hstack([prep.err_exit_gpu[i].get() for i in range(len(prep.err_exit_gpu))])
+            err_fourier = prep.err_fourier_gpu[i].get()
+            err_phot = prep.err_phot_gpu[i].get()
+            err_exit = prep.err_exit_gpu[i].get()
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error.update(zip(prep.view_IDs, errs))
 
