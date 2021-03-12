@@ -26,9 +26,9 @@ extern "C" __global__ void build_exit_alpha_tau(
                                       IN_TYPE alpha_,
                                       IN_TYPE tau_)
 {
-  int bid = blockIdx.x;
+  int bid = blockIdx.z;
   int tx = threadIdx.x;
-  int ty = threadIdx.y;
+  const int b = blockIdx.y;
   const int addr_stride = 15;
   MATH_TYPE alpha = alpha_;
   MATH_TYPE tau = tau_;
@@ -42,12 +42,8 @@ extern "C" __global__ void build_exit_alpha_tau(
   exit_wave += ea[0] * B * C;
   auxiliary_wave += ea[0] * B * C;
 
-  for (int b = ty; b < B; b += blockDim.y)
+  for (int c = tx; c < C; c += blockDim.x)
   {
-#pragma unroll(4)  // we use blockDim.x = 32, and C is typically more than 128
-                   // (it will work for less as well)
-    for (int c = tx; c < C; c += blockDim.x)
-    {
       complex<MATH_TYPE> t_aux = auxiliary_wave[b * C + c];
       complex<MATH_TYPE> t_probe = probe[b * F + c];
       complex<MATH_TYPE> t_obj = obj[b * I + c];
@@ -58,6 +54,5 @@ extern "C" __global__ void build_exit_alpha_tau(
 
       exit_wave[b * C + c] += dex;
       auxiliary_wave[b * C + c] = dex;
-    }
   }
 }

@@ -37,9 +37,9 @@ extern "C" __global__ void pr_update_local(
 {
   assert(B == E);  // prsh[1]
   assert(C == F);  // prsh[2]
-  const int bid = blockIdx.x;
+  const int bid = blockIdx.z;
   const int tx = threadIdx.x;
-  const int ty = threadIdx.y;
+  const int b = blockIdx.y;
   const int addr_stride = 15;
 
   const int* oa = addr + 3 + bid * addr_stride;
@@ -55,10 +55,8 @@ extern "C" __global__ void pr_update_local(
 
   exit_wave += ea[0] * B * C;
 
-  for (int b = ty; b < B; b += blockDim.y)
+  for (int c = tx; c < C; c += blockDim.x)
   {
-    for (int c = tx; c < C; c += blockDim.x)
-    {
       complex<MATH_TYPE> obj_val = obj[b * I + c];
       complex<MATH_TYPE> exit_val = exit_wave[b * C + c];
       complex<MATH_TYPE> aux_val = aux[b * C + c];
@@ -66,6 +64,6 @@ extern "C" __global__ void pr_update_local(
       complex<MATH_TYPE> add_val_m = conj(obj_val) * (exit_val - aux_val) / norm_val;
       complex<OUT_TYPE> add_val = add_val_m;
       atomicAdd(&probe[b * F + c], add_val);
-    }
   }
+
 }

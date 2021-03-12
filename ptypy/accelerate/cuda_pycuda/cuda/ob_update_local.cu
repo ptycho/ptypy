@@ -34,9 +34,9 @@ extern "C" __global__ void ob_update_local(
     int I,
     const int* __restrict__ addr)
 {
-  const int bid = blockIdx.x;
+  const int bid = blockIdx.z;
   const int tx = threadIdx.x;
-  const int ty = threadIdx.y;
+  const int b = blockIdx.y;
   const int addr_stride = 15;
 
   const int* oa = addr + 3 + bid * addr_stride;
@@ -52,10 +52,8 @@ extern "C" __global__ void ob_update_local(
 
   exit_wave += ea[0] * B * C;
 
-  for (int b = ty; b < B; b += blockDim.y)
+  for (int c = tx; c < C; c += blockDim.x)
   {
-    for (int c = tx; c < C; c += blockDim.x)
-    {
       complex<MATH_TYPE> probe_val = probe[b * F + c];
       complex<MATH_TYPE> exit_val = exit_wave[b * C + c];
       complex<MATH_TYPE> aux_val = aux[b * C + c];
@@ -63,6 +61,5 @@ extern "C" __global__ void ob_update_local(
       auto add_val_m = conj(probe_val) * (exit_val - aux_val) / norm_val;
       complex<OUT_TYPE> add_val = add_val_m;
       atomicAdd(&obj[b * I + c], add_val);
-    }
   }
 }
