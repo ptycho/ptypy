@@ -11,14 +11,13 @@
 using std::sqrt;
 using thrust::complex;
 
-extern "C" __global__ void fmag_all_update_nopbound(complex<OUT_TYPE>* f,
-                                                    const IN_TYPE* fmask,
-                                                    const IN_TYPE* fmag,
-                                                    const IN_TYPE* fdev,
-                                                    const IN_TYPE* err_fmag,
-                                                    const int* addr_info,
-                                                    int A,
-                                                    int B)
+extern "C" __global__ void fmag_update_nopbound(complex<OUT_TYPE>* f,
+                                                const IN_TYPE* fmask,
+                                                const IN_TYPE* fmag,
+                                                const IN_TYPE* fdev,
+                                                const int* addr_info,
+                                                int A,
+                                                int B)
 {
   const int bid = blockIdx.z;
   const int tx = threadIdx.x;
@@ -32,7 +31,6 @@ extern "C" __global__ void fmag_all_update_nopbound(complex<OUT_TYPE>* f,
   const int* ma = addr_info + bid * addr_stride + 12;
 
   fmask += ma[0] * A * B;
-  MATH_TYPE err = err_fmag[da[0]];
   fdev += da[0] * A * B;
   fmag += da[0] * A * B;
   f += ea[0] * A * B;

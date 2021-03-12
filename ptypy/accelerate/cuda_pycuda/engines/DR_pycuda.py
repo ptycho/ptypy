@@ -218,7 +218,7 @@ class DR_pycuda(DR_serial.DR_serial):
                         FUK.error_reduce(addr, err_fourier)
                     else:
                         FUK.fourier_deviation(aux, addr, mag)
-                    FUK.fmag_all_update_nopbound(aux, addr, mag, ma, err_fourier)
+                    FUK.fmag_update_nopbound(aux, addr, mag, ma)
 
                     ## backward FFT
                     PROP.bw(aux, aux)

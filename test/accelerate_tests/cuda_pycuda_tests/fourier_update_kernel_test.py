@@ -189,7 +189,6 @@ class FourierUpdateKernelTest(PyCudaTest):
         f_d = gpuarray.to_gpu(f)
         fmag_d = gpuarray.to_gpu(fmag)
         mask_d = gpuarray.to_gpu(mask)
-        err_fmag_d = gpuarray.to_gpu(err_fmag)
         addr_d = gpuarray.to_gpu(addr)
 
         # now set the state for both.
@@ -197,7 +196,7 @@ class FourierUpdateKernelTest(PyCudaTest):
         FUK.gpu.fdev = gpuarray.to_gpu(nFUK.npy.fdev)
         FUK.gpu.ferr = gpuarray.to_gpu(nFUK.npy.ferr)
 
-        FUK.fmag_all_update_nopbound(f_d, addr_d, fmag_d, mask_d, err_fmag_d)
+        FUK.fmag_update_nopbound(f_d, addr_d, fmag_d, mask_d)
 
 
         nFUK.fmag_all_update(f, addr, fmag, mask, err_fmag)

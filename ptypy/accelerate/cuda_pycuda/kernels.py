@@ -137,7 +137,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
         })
-        self.fmag_all_update_nopbound_cuda = None
+        self.fmag_update_nopbound_cuda = None
         self.fourier_deviation_cuda = None
         self.fourier_error_cuda = load_kernel("fourier_error", {
             'IN_TYPE': 'float',
@@ -263,21 +263,20 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                   grid=(int(fmag.shape[0]*self.nmodes), 1, 1),
                                   stream=self.queue)
     
-    def fmag_all_update_nopbound(self, f, addr, fmag, fmask, err_fmag):
+    def fmag_update_nopbound(self, f, addr, fmag, fmask):
         fdev = self.gpu.fdev
         bx = 64
         by = 1
-        if self.fmag_all_update_nopbound_cuda is None:
-            self.fmag_all_update_nopbound_cuda = load_kernel("fmag_all_update_nopbound", {
+        if self.fmag_update_nopbound_cuda is None:
+            self.fmag_update_nopbound_cuda = load_kernel("fmag_update_nopbound", {
                 'IN_TYPE': 'float',
                 'OUT_TYPE': 'float',
                 'MATH_TYPE': self.math_type
             })
-        self.fmag_all_update_nopbound_cuda(f,
+        self.fmag_update_nopbound_cuda(f,
                                   fmask,
                                   fmag,
                                   fdev,
-                                  err_fmag,
                                   addr,
                                   np.int32(self.fshape[1]),
                                   np.int32(self.fshape[2]),
