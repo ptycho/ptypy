@@ -28,7 +28,7 @@ extern "C" __global__ void build_exit_alpha_tau(
 {
   int bid = blockIdx.z;
   int tx = threadIdx.x;
-  const int b = blockIdx.y;
+  const int b = threadIdx.y + blockIdx.y * blockDim.y;
   const int addr_stride = 15;
   MATH_TYPE alpha = alpha_;
   MATH_TYPE tau = tau_;

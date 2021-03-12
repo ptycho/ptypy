@@ -391,6 +391,8 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         sh = addr.shape
         nmodes = sh[1]
         maxz = sh[0]
+        bx = 64
+        by = 1
         self.build_exit_alpha_tau_cuda(b_aux,
                                        ex,
                                        np.int32(ex.shape[1]), np.int32(ex.shape[2]),
@@ -400,8 +402,8 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                                        obr, obc,
                                        addr,
                                        np.float32(alpha), np.float32(tau),
-                                       block=(64, 1, 1), 
-                                       grid=(1, int(ex.shape[1]), int(maxz * nmodes)), 
+                                       block=(bx, by, 1), 
+                                       grid=(1, int((ex.shape[1] + by - 1) // by), int(maxz * nmodes)), 
                                        stream=self.queue)
 
     def build_aux_no_ex(self, b_aux, addr, ob, pr, fac=1.0, add=False):
@@ -874,7 +876,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         if addr.shape[3] != 3 or addr.shape[2] != 5:
             raise ValueError('Address not in required shape for tiled pr_update')
         num_pods = np.int32(addr.shape[0] * addr.shape[1])
-
+        bx = 64
+        by = 1
         self.ob_update_local_cuda(ex, aux,
             exsh[0], exsh[1], exsh[2],
             pr,
@@ -883,8 +886,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             ob,
             obsh[0], obsh[1], obsh[2],
             addr,
-            block=(64, 1, 1),
-            grid=(1, int(exsh[1]), int(num_pods)),
+            block=(bx, by, 1),
+            grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
             stream=self.queue)
 
     def pr_update_local(self, addr, pr, ob, ex, aux):
@@ -901,6 +904,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             raise ValueError('Address not in required shape for tiled pr_update')
         num_pods = np.int32(addr.shape[0] * addr.shape[1])
 
+        bx = 64
+        by = 1
         self.pr_update_local_cuda(ex, aux,
             exsh[0], exsh[1], exsh[2],
             pr,
@@ -909,8 +914,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             ob,
             obsh[0], obsh[1], obsh[2],
             addr,
-            block=(64, 1, 1),
-            grid=(1, int(exsh[1]), int(num_pods)),
+            block=(bx, by, 1),
+            grid=(1, int((exsh[1] + by - 1) // by), int(num_pods)),
             stream=self.queue)
 
 

@@ -36,7 +36,7 @@ extern "C" __global__ void ob_update_local(
 {
   const int bid = blockIdx.z;
   const int tx = threadIdx.x;
-  const int b = blockIdx.y;
+  const int b = threadIdx.y + blockIdx.y * blockDim.y;
   const int addr_stride = 15;
 
   const int* oa = addr + 3 + bid * addr_stride;
