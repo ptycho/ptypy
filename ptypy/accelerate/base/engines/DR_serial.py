@@ -260,7 +260,11 @@ class DR_serial(PositionCorrectionEngine):
                 ob.shape = ob.data.shape
 
             # Keep a list of view indices
-            prep.vieworder = np.arange(prep.addr.shape[0])
+            rng = np.random.default_rng()
+            prep.vieworder = np.repeat(np.arange(prep.addr.shape[0])[:,None],10,axis=1).T
+            for i in range(prep.vieworder.shape[0]):
+                rng.shuffle(prep.vieworder[i])
+            prep.vieworder_rank = 0
 
             # Modify addresses
             prep.addr[:,:,2:,0] = 0
@@ -299,16 +303,16 @@ class DR_serial(PositionCorrectionEngine):
                 FW = kern.FW
                 BW = kern.BW
 
-                # global buffers
+                # global aux buffer
                 aux = kern.aux
-                vieworder = prep.vieworder
 
                 # references for ob, pr
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
 
-                # randomly shuffle view order
-                np.random.shuffle(vieworder)
+                # access randomly pre-shuffled view order
+                vieworder = prep.vieworder[prep.vieworder_rank]
+                prep.vieworder_rank = (prep.vieworder_rank +1) %10
 
                 # Iterate through views
                 for i in vieworder:

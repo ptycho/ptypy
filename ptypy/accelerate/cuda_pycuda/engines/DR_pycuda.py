@@ -182,16 +182,16 @@ class DR_pycuda(DR_serial.DR_serial):
                 POK = kern.POK
                 PROP = kern.PROP
                 
-                # get addresses and buffers
+                # get aux buffer
                 aux = kern.aux
-                vieworder = prep.vieworder
 
                 # local references
                 ob = self.ob.S[oID].gpu
                 pr = self.pr.S[pID].gpu
 
-                # randomly shuffle view order
-                np.random.shuffle(vieworder)
+                # access randomly pre-shuffled view order
+                vieworder = prep.vieworder[prep.vieworder_rank]
+                prep.vieworder_rank = (prep.vieworder_rank +1) %10
 
                 # Iterate through views
                 for i in vieworder:
