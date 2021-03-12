@@ -213,9 +213,11 @@ class DR_pycuda(DR_serial.DR_serial):
                     PROP.fw(aux, aux)
 
                     ## Deviation from measured data
-                    FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                     if self.p.compute_fourier_error:
+                        FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
+                    else:
+                        FUK.fourier_deviation(aux, addr, mag)
                     FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, 0)
 
                     ## backward FFT
