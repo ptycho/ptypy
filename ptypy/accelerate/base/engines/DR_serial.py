@@ -324,9 +324,6 @@ class DR_serial(PositionCorrectionEngine):
                 # Iterate through views
                 for i in vieworder:
 
-                    # reference to ex
-                    ex = self.ex.S[eID].data[i,None]
-
                     # Get local adress and arrays
                     addr = prep.addr[i]
                     ex = prep.ex[i]
