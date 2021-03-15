@@ -523,7 +523,7 @@ class FourierUpdateKernelTest(PyCudaTest):
                                                                    "is not behaving as expected.")
 
 
-    def test_log_likelihood_UNITY(self):
+    def log_likelihood_UNITY_tester(self, use_version2=False):
         '''
         setup
         '''
@@ -595,7 +595,10 @@ class FourierUpdateKernelTest(PyCudaTest):
 
         FUK = FourierUpdateKernel(f, nmodes=total_number_modes)
         FUK.allocate()
-        FUK.log_likelihood(f_d, addr_d, fmag_d, mask_d, LLerr_d)
+        if use_version2:
+            FUK.log_likelihood2(f_d, addr_d, fmag_d, mask_d, LLerr_d)
+        else:
+            FUK.log_likelihood(f_d, addr_d, fmag_d, mask_d, LLerr_d)
 
         expected_err_phot = LLerr
         measured_err_phot = LLerr_d.get()
@@ -604,6 +607,11 @@ class FourierUpdateKernelTest(PyCudaTest):
                                                                                  "is \n%s, \nbut gpu log-likelihood error is \n%s, \n " % (
                                                                                  repr(expected_err_phot),
                                                                                  repr(measured_err_phot)), rtol=1e-5)
+    def test_log_likelihood_UNITY(self):
+        self.log_likelihood_UNITY_tester(False)
+
+    def test_log_likelihood2_UNITY(self):
+        self.log_likelihood_UNITY_tester(True)
 
     def test_exit_error_UNITY(self):
         '''

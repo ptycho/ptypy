@@ -245,7 +245,7 @@ class DR_pycuda(DR_serial.DR_serial):
                     ## compute log-likelihood
                     if self.p.compute_log_likelihood:
                         PROP.fw(aux, aux)
-                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                        FUK.log_likelihood2(aux, addr, mag, ma, err_phot)
 
             self.curiter += 1
 

@@ -153,11 +153,13 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
             'BDIM_Y': 32,
         })
         self.fourier_update_cuda = None
-        self.log_likelihood_cuda = load_kernel("log_likelihood", {
-            'IN_TYPE': 'float',
-            'OUT_TYPE': 'float',
-            'MATH_TYPE': self.math_type
-        })
+        self.log_likelihood_cuda, self.log_likelihood2_cuda = load_kernel(
+            ("log_likelihood", "log_likelihood2"), {
+                'IN_TYPE': 'float',
+                'OUT_TYPE': 'float',
+                'MATH_TYPE': self.math_type
+            },
+            "log_likelihood.cu")
         self.exit_error_cuda = load_kernel("exit_error", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -330,6 +332,24 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                  np.int32(self.fshape[2]),
                                  block=(32, 32, 1),
                                  grid=(int(mag.shape[0]), 1, 1),
+                                 stream=self.queue)
+        # TODO: we might want to move this call outside of here
+        self.error_reduce(addr, err_phot)
+
+    def log_likelihood2(self, b_aux, addr, mag, mask, err_phot):
+        ferr = self.gpu.ferr
+        bx = 64
+        by = 1
+        self.log_likelihood2_cuda(np.int32(self.nmodes),
+                                 b_aux,
+                                 mask,
+                                 mag,
+                                 addr,
+                                 ferr,
+                                 np.int32(self.fshape[1]),
+                                 np.int32(self.fshape[2]),
+                                 block=(bx, by, 1),
+                                 grid=(1, int((self.fshape[1] + by - 1) // by), int(mag.shape[0])),
                                  stream=self.queue)
         # TODO: we might want to move this call outside of here
         self.error_reduce(addr, err_phot)
