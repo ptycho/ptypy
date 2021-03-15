@@ -207,7 +207,7 @@ class DR_pycuda(DR_serial.DR_serial):
                     err_exit = prep.err_exit_gpu[i,None]
 
                     ## build auxilliary wave
-                    AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                    AWK.build_aux2(aux, addr, ob, pr, ex, alpha=self.p.alpha)
 
                     ## forward FFT
                     PROP.fw(aux, aux)
@@ -234,7 +234,7 @@ class DR_pycuda(DR_serial.DR_serial):
                     #    pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
 
                     ## build auxilliary wave (ob * pr product)
-                    AWK.build_aux_no_ex(aux, addr, ob, pr)
+                    AWK.build_aux2_no_ex(aux, addr, ob, pr)
 
                     # object update
                     POK.ob_update_local(addr, ob, pr, ex, aux)
