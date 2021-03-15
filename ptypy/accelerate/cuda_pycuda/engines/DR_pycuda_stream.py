@@ -138,9 +138,9 @@ class DR_pycuda_stream(DR_pycuda.DR_pycuda):
                 ob = self.ob.S[oID].gpu
                 pr = self.pr.S[pID].gpu
 
-                # access randomly pre-shuffled view order
-                vieworder = prep.vieworder[prep.vieworder_rank]
-                prep.vieworder_rank = (prep.vieworder_rank +1) %10
+                # shuffle view order
+                vieworder = prep.vieworder
+                prep.rng.shuffle(vieworder)
 
                 # Schedule ex, ma, mag to device
                 ev_ex, ex_full, data_ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod)
