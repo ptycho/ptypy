@@ -114,7 +114,7 @@ class FourierUpdateKernelTest(PyCudaTest):
                                                                                                                                repr(measured_f),
                                                                                                                                repr(mask)))
 
-    def test_fmag_all_update_nopbound_UNITY(self):
+    def test_fmag_update_nopbound_UNITY(self):
         '''
         setup
         '''
@@ -197,9 +197,8 @@ class FourierUpdateKernelTest(PyCudaTest):
         FUK.gpu.ferr = gpuarray.to_gpu(nFUK.npy.ferr)
 
         FUK.fmag_update_nopbound(f_d, addr_d, fmag_d, mask_d)
+        nFUK.fmag_update_nopbound(f, addr, fmag, mask)
 
-
-        nFUK.fmag_all_update(f, addr, fmag, mask, err_fmag)
         expected_f = f
         measured_f = f_d.get()
         np.testing.assert_allclose(measured_f, expected_f, rtol=1e-6, err_msg="Numpy f "
@@ -367,7 +366,7 @@ class FourierUpdateKernelTest(PyCudaTest):
         nFUK.allocate()
         FUK.allocate()
 
-        nFUK.fourier_error(f, addr, fmag, mask, mask_sum)
+        nFUK.fourier_deviation(f, addr, fmag)
         FUK.fourier_deviation(f_d, addr_d, fmag_d)
 
         expected_fdev = nFUK.npy.fdev

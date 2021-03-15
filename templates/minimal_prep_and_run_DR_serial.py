@@ -40,9 +40,9 @@ p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
 p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
-p.scans.MF.data.psf = 0.0
+p.scans.MF.data.psf = 0.
 p.scans.MF.coherence = u.Param()
-p.scans.MF.coherence.num_probe_modes = 1
+p.scans.MF.coherence.num_probe_modes = 2
 
 # attach a reconstrucion engine
 p.engines = u.Param()

@@ -347,10 +347,12 @@ class DR_serial(PositionCorrectionEngine):
 
                     ## Deviation from measured data
                     t1 = time.time()
-                    FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                     if self.p.compute_fourier_error:
+                        FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
-                    FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, 0)
+                    else:
+                        FUK.fourier_deviation(aux, addr, mag)
+                    FUK.fmag_update_nopbound(aux, addr, mag, ma)
                     self.benchmark.C_Fourier_update += time.time() - t1
 
                     ## backward FFT
