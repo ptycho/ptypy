@@ -238,7 +238,7 @@ class DR_serial(PositionCorrectionEngine):
             prep.ma = self.ma.S[d.ID].data.astype(np.float32)
             prep.ma_sum = prep.ma.sum(-1).sum(-1)
             prep.err_phot = np.zeros_like(prep.ma_sum)
-            prep.err_fourier = np.ones_like(prep.ma_sum)
+            prep.err_fourier = np.zeros_like(prep.ma_sum)
             prep.err_exit = np.zeros_like(prep.ma_sum)
             
         # Unfortunately this needs to be done for all pods, since
@@ -260,11 +260,8 @@ class DR_serial(PositionCorrectionEngine):
                 ob.shape = ob.data.shape
 
             # Keep a list of view indices
-            rng = np.random.default_rng()
-            prep.vieworder = np.repeat(np.arange(prep.addr.shape[0])[:,None],10,axis=1).T
-            for i in range(prep.vieworder.shape[0]):
-                rng.shuffle(prep.vieworder[i])
-            prep.vieworder_rank = 0
+            prep.rng = np.random.default_rng()
+            prep.vieworder = np.arange(prep.addr.shape[0])
 
             # Modify addresses
             prep.addr[:,:,2:,0] = 0
@@ -310,9 +307,9 @@ class DR_serial(PositionCorrectionEngine):
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
 
-                # access randomly pre-shuffled view order
-                vieworder = prep.vieworder[prep.vieworder_rank]
-                prep.vieworder_rank = (prep.vieworder_rank +1) %10
+                # shuffle view order
+                vieworder = prep.vieworder
+                prep.rng.shuffle(vieworder)
 
                 # Iterate through views
                 for i in vieworder:
