@@ -3,11 +3,21 @@
  * Data types:
  * - IN_TYPE: the data type for the inputs (float or double)
  * - OUT_TYPE: the data type for the outputs (float or double - for aux wave)
- * - MATH_TYPE: the data type used for computation 
+ * - MATH_TYPE: the data type used for computation
  */
 
 #include <thrust/complex.h>
 using thrust::complex;
+
+// core calculation function - used by both kernels and inlined
+inline __device__ complex<MATH_TYPE> calculate(
+    const complex<MATH_TYPE>& t_obj,
+    const complex<MATH_TYPE>& t_probe,
+    const complex<MATH_TYPE>& t_ex,
+    MATH_TYPE alpha)
+{
+  return t_obj * t_probe * (MATH_TYPE(1) + alpha) - t_ex * alpha;
+}
 
 extern "C" __global__ void build_aux(
     complex<OUT_TYPE>* auxiliary_wave,
@@ -27,7 +37,7 @@ extern "C" __global__ void build_aux(
   int tx = threadIdx.x;
   int ty = threadIdx.y;
   int addr_stride = 15;
-  const MATH_TYPE alpha = alpha_;   // type conversion
+  const MATH_TYPE alpha = alpha_;  // type conversion
 
   const int* oa = addr + 3 + bid * addr_stride;
   const int* pa = addr + bid * addr_stride;
@@ -44,18 +54,11 @@ extern "C" __global__ void build_aux(
                    // (it will work for less as well)
     for (int c = tx; c < C; c += blockDim.x)
     {
-      // temporaries to convert to MATH_TYPE in case it's different to storage type
-      complex<MATH_TYPE> t_obj = obj[b * I + c];
-      complex<MATH_TYPE> t_probe = probe[b * F + c];
-      complex<MATH_TYPE> t_ex = exit_wave[b * C + c];
-
-      auxiliary_wave[b * C + c] =
-         t_obj * t_probe * (MATH_TYPE(1) + alpha) -
-          t_ex * alpha;
+      auxiliary_wave[b * C + c] = calculate(
+          obj[b * I + c], probe[b * F + c], exit_wave[b * C + c], alpha);
     }
   }
 }
-
 
 extern "C" __global__ void build_aux2(
     complex<OUT_TYPE>* auxiliary_wave,
@@ -77,7 +80,7 @@ extern "C" __global__ void build_aux2(
   if (b >= B)
     return;
   int addr_stride = 15;
-  const MATH_TYPE alpha = alpha_;   // type conversion
+  const MATH_TYPE alpha = alpha_;  // type conversion
 
   const int* oa = addr + 3 + bid * addr_stride;
   const int* pa = addr + bid * addr_stride;
@@ -90,13 +93,7 @@ extern "C" __global__ void build_aux2(
 
   for (int c = tx; c < C; c += blockDim.x)
   {
-    // temporaries to convert to MATH_TYPE in case it's different to storage type
-    complex<MATH_TYPE> t_obj = obj[b * I + c];
-    complex<MATH_TYPE> t_probe = probe[b * F + c];
-    complex<MATH_TYPE> t_ex = exit_wave[b * C + c];
-
-    auxiliary_wave[b * C + c] =
-        t_obj * t_probe * (MATH_TYPE(1) + alpha) -
-        t_ex * alpha;
+    auxiliary_wave[b * C + c] = calculate(
+        obj[b * I + c], probe[b * F + c], exit_wave[b * C + c], alpha);
   }
 }

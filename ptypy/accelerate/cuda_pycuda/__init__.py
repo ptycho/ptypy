@@ -40,10 +40,13 @@ def get_context(new_context=False, new_queue=False):
 def load_kernel(name, subs={}, file=None):
 
     if file is None:
-        fn = "%s/cuda/%s.cu" % (os.path.dirname(__file__), name)
+        if isinstance(name, str):
+            fn = "%s/cuda/%s.cu" % (os.path.dirname(__file__), name)
+        else:
+            raise ValueError("name parameter must be a string if not filename is given")
     else:
         fn = "%s/cuda/%s" % (os.path.dirname(__file__), file)
-        
+
     with open(fn, 'r') as f:
         kernel = f.read()
     for k,v in list(subs.items()):
@@ -52,5 +55,9 @@ def load_kernel(name, subs={}, file=None):
     escaped = fn.replace("\\", "\\\\")
     kernel = '#line 1 "{}"\n'.format(escaped) + kernel
     mod = SourceModule(kernel, include_dirs=[np.get_include()], no_extern_c=True, options=debug_options)
-    return mod.get_function(name)
+    
+    if isinstance(name, str):
+        return mod.get_function(name)
+    else:  # tuple
+        return tuple(mod.get_function(n) for n in name)
 

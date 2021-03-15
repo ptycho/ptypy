@@ -253,34 +253,27 @@ class DerivativesKernel:
         self.last_axis_block = (256, 4, 1)
         self.mid_axis_block = (256, 4, 1)
 
-        self.delxf_last = load_kernel("delx_last", file="delx_last.cu", subs={
-            'IS_FORWARD': 'true',
-            'BDIM_X': str(self.last_axis_block[0]),
-            'BDIM_Y': str(self.last_axis_block[1]),
-            'IN_TYPE': stype,
-            'OUT_TYPE': stype
-        })
-        self.delxb_last = load_kernel("delx_last", file="delx_last.cu", subs={
-            'IS_FORWARD': 'false',
-            'BDIM_X': str(self.last_axis_block[0]),
-            'BDIM_Y': str(self.last_axis_block[1]),
-            'IN_TYPE': stype,
-            'OUT_TYPE': stype
-        })
-        self.delxf_mid = load_kernel("delx_mid", file="delx_mid.cu", subs={
-            'IS_FORWARD': 'true',
-            'BDIM_X': str(self.mid_axis_block[0]),
-            'BDIM_Y': str(self.mid_axis_block[1]),
-            'IN_TYPE': stype,
-            'OUT_TYPE': stype
-        })
-        self.delxb_mid = load_kernel("delx_mid", file="delx_mid.cu", subs={
-            'IS_FORWARD': 'false',
-            'BDIM_X': str(self.mid_axis_block[0]),
-            'BDIM_Y': str(self.mid_axis_block[1]),
-            'IN_TYPE': stype,
-            'OUT_TYPE': stype
-        })
+        self.delxf_last, self.delxf_mid = load_kernel(
+            ("delx_last", "delx_mid"), 
+            file="delx.cu", 
+            subs={
+                'IS_FORWARD': 'true',
+                'BDIM_X': str(self.last_axis_block[0]),
+                'BDIM_Y': str(self.last_axis_block[1]),
+                'IN_TYPE': stype,
+                'OUT_TYPE': stype
+            })
+        self.delxb_last, self.delxb_mid  = load_kernel(
+            ("delx_last", "delx_mid"), 
+            file="delx.cu", 
+            subs={
+                'IS_FORWARD': 'false',
+                'BDIM_X': str(self.last_axis_block[0]),
+                'BDIM_Y': str(self.last_axis_block[1]),
+                'IN_TYPE': stype,
+                'OUT_TYPE': stype
+            })
+        
 
     def delxf(self, input, out, axis=-1):
         if input.dtype != self.dtype:

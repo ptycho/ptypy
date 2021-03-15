@@ -375,23 +375,23 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         self.math_type = math_type
         if math_type not in ['float', 'double']:
             raise ValueError('Only double or float math is supported')
-        self.build_aux_cuda = load_kernel("build_aux", {
-            'IN_TYPE': 'float',
-            'OUT_TYPE': 'float',
-            'MATH_TYPE': self.math_type
-        })
-        self.build_aux2_cuda = None
+        self.build_aux_cuda, self.build_aux2_cuda = load_kernel(
+            ("build_aux", "build_aux2"), {
+                'IN_TYPE': 'float',
+                'OUT_TYPE': 'float',
+                'MATH_TYPE': self.math_type
+            }, "build_aux.cu")
         self.build_exit_cuda = load_kernel("build_exit", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
         })
-        self.build_aux_no_ex_cuda = load_kernel("build_aux_no_ex", {
-            'IN_TYPE': 'float',
-            'OUT_TYPE': 'float',
-            'MATH_TYPE': self.math_type
-        })
-        self.build_aux2_no_ex_cuda = None
+        self.build_aux_no_ex_cuda, self.build_aux2_no_ex_cuda = load_kernel(
+            ("build_aux_no_ex", "build_aux2_no_ex"), {
+                'IN_TYPE': 'float',
+                'OUT_TYPE': 'float',
+                'MATH_TYPE': self.math_type
+            }, "build_aux_no_ex.cu")
         self.build_exit_alpha_tau_cuda = load_kernel("build_exit_alpha_tau", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -421,12 +421,6 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                             block=(32, 32, 1), grid=(int(maxz * nmodes), 1, 1), stream=self.queue)
 
     def build_aux2(self, b_aux, addr, ob, pr, ex, alpha=1.0):
-        if self.build_aux2_cuda is None:
-            self.build_aux2_cuda = load_kernel("build_aux2", {
-                'IN_TYPE': 'float',
-                'OUT_TYPE': 'float',
-                'MATH_TYPE': self.math_type
-            }, "build_aux.cu")
         obr, obc = self._cache_object_shape(ob)
         sh = addr.shape
         nmodes = sh[1]
@@ -506,12 +500,6 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
 
     def build_aux2_no_ex(self, b_aux, addr, ob, pr, fac=1.0, add=False):
-        if self.build_aux2_no_ex_cuda is None:
-            self.build_aux2_no_ex_cuda = load_kernel("build_aux2_no_ex", {
-                'IN_TYPE': 'float',
-                'OUT_TYPE': 'float',
-                'MATH_TYPE': self.math_type
-            }, "build_aux_no_ex.cu")
         obr, obc = self._cache_object_shape(ob)
         sh = addr.shape
         nmodes = sh[1]
@@ -573,21 +561,17 @@ class GradientDescentKernel(ab.GradientDescentKernel):
             'BDIM_X': 32,
             'BDIM_Y': 32
         })
-        self.fill_b_cuda = load_kernel('fill_b', {
-            **subs, 
-            'BDIM_X': 1024, 
-            'OUT_TYPE': self.accumulate_type
-        })
-        self.fill_b_reduce_cuda = load_kernel(
-            'fill_b_reduce', {
+        self.fill_b_cuda, self.fill_b_reduce_cuda = load_kernel(
+            ('fill_b', 'fill_b_reduce'), 
+            {
                 **subs, 
-                'BDIM_X': 1024, 
-                'IN_TYPE': self.accumulate_type,  # must match out-type of fill_b
+                'BDIM_X': 1024,
                 'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double'
-            })
+            },
+            file="fill_b.cu")
         self.main_cuda = load_kernel('gd_main', subs)
-        self.floating_intensity_cuda_step1 = load_kernel('step1', subs,'intens_renorm.cu')
-        self.floating_intensity_cuda_step2 = load_kernel('step2', subs,'intens_renorm.cu')
+        self.floating_intensity_cuda_step1, self.floating_intensity_cuda_step2 = \
+            load_kernel(('step1', 'step2'), subs,'intens_renorm.cu')
 
     def allocate(self):
         self.gpu.LLden = gpuarray.zeros(self.fshape, dtype=self.ftype)
