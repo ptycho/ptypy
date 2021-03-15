@@ -99,7 +99,7 @@ class DR_pycuda(DR_serial.DR_serial):
             kern.FUK.allocate()
 
             logger.info("Setting up PoUpdateKernel")
-            kern.POK = PoUpdateKernel(queue_thread=self.queue, math_type="float", accumulator_type="float")
+            kern.POK = PoUpdateKernel(queue_thread=self.queue)
             kern.POK.allocate()
 
             logger.info("Setting up AuxiliaryWaveKernel")
@@ -189,9 +189,9 @@ class DR_pycuda(DR_serial.DR_serial):
                 ob = self.ob.S[oID].gpu
                 pr = self.pr.S[pID].gpu
 
-                # access randomly pre-shuffled view order
-                vieworder = prep.vieworder[prep.vieworder_rank]
-                prep.vieworder_rank = (prep.vieworder_rank +1) %10
+                # shuffle view order
+                vieworder = prep.vieworder
+                prep.rng.shuffle(vieworder)
 
                 # Iterate through views
                 for i in vieworder:
