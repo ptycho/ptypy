@@ -954,9 +954,9 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
 
     def ob_update_local(self, addr, ob, pr, ex, aux):
-        # lazy allocation of temporary
-        if self.norm is None or self.norm.shape[0] != addr.shape[0] * addr.shape[1]:
-            self.norm = gpuarray.zeros((addr.shape[0] * addr.shape[1]), dtype=np.float32)
+        # lazy allocation of temporary 1-element array
+        if self.norm is None:
+            self.norm = gpuarray.empty((1,), dtype=np.float32)
         self.MAK.max_abs2(pr, self.norm)
         
         obsh = [np.int32(ax) for ax in ob.shape]
@@ -981,9 +981,9 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             stream=self.queue)
 
     def pr_update_local(self, addr, pr, ob, ex, aux):
-        # lazy allocation of temporary
-        if self.norm is None or self.norm.shape[0] != addr.shape[0] * addr.shape[1]:
-            self.norm = gpuarray.zeros((addr.shape[0] * addr.shape[1]), dtype=np.float32)
+        # lazy allocation of temporary 1-element array
+        if self.norm is None:
+            self.norm = gpuarray.empty((1,), dtype=np.float32)
         self.MAK.max_abs2(ob, self.norm)
         
         obsh = [np.int32(ax) for ax in ob.shape]

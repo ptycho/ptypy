@@ -114,41 +114,42 @@ class MaxAbs2Kernel:
         self.queue = queue
         # we lazy-load this depending on the data types we get
         self.max_abs2_cuda = {}
-        self.max_abs2_step1_cuda = {}
-        self.max_abs2_step2_cuda = {}
-        self.tmp = None
 
     def max_abs2(self, X, out):
         """ Calculate max(abs(x)**2) across the final 2 dimensions"""
-        # lazy-loading
+        # lazy-loading, keeping scratch memory and both kernels in the same dictionary
         bx = int(64)
         version = '{},{}'.format(map2ctype(X.dtype), map2ctype(out.dtype))
-        if version not in self.max_abs2_step1_cuda:
-            self.max_abs2_step1_cuda[version] = load_kernel("max_abs2_step1", {
-                'IN_TYPE': map2ctype(X.dtype),
-                'OUT_TYPE': map2ctype(out.dtype),
-                'BDIM_X': bx,
-            }, "max_abs2.cu")
-        if version not in self.max_abs2_step2_cuda:
-            self.max_abs2_step2_cuda[version] = load_kernel("max_abs2_step2", {
-                'IN_TYPE': map2ctype(X.dtype),
-                'OUT_TYPE': map2ctype(out.dtype),
-                'BDIM_X': bx,
-            }, "max_abs2.cu")
+        if version not in self.max_abs2_cuda:
+            step1, step2 = load_kernel(
+                    ("max_abs2_step1", "max_abs2_step2"), 
+                    {
+                        'IN_TYPE': map2ctype(X.dtype),
+                        'OUT_TYPE': map2ctype(out.dtype),
+                        'BDIM_X': bx,
+                    }, "max_abs2.cu")
+            self.max_abs2_cuda[version] = {
+                'step1': step1,
+                'step2': step2,
+                'scratchmem': None
+            }
 
         rows = np.int32(X.shape[-2])
         cols = np.int32(X.shape[-1])
-        firstdims = int(np.prod(X.shape[:-2]))
+        firstdims = np.int32(np.prod(X.shape[:-2]))
         gy = int(rows)
         
-        if self.tmp is None or self.tmp.shape[0] != gy * firstdims or self.tmp.dtype != out.dtype:
-            self.tmp = gpuarray.empty((gy*firstdims,), dtype=out.dtype)
+        if self.max_abs2_cuda[version]['scratchmem'] is None \
+            or self.max_abs2_cuda[version]['scratchmem'].shape[0] != gy:
+            self.max_abs2_cuda[version]['scratchmem'] = gpuarray.empty((gy,), dtype=out.dtype)
+        scratch = self.max_abs2_cuda[version]['scratchmem']
 
-        self.max_abs2_step1_cuda[version](X, rows, cols, self.tmp,
-            block=(bx, 1, 1), grid=(1, gy, firstdims),
+        
+        self.max_abs2_cuda[version]['step1'](X, firstdims, rows, cols, scratch,
+            block=(bx, 1, 1), grid=(1, gy, 1),
             stream=self.queue)
-        self.max_abs2_step2_cuda[version](self.tmp, np.int32(gy), out,
-            block=(bx, 1, 1), grid=(firstdims, 1, 1),
+        self.max_abs2_cuda[version]['step2'](scratch, np.int32(gy), out,
+            block=(bx, 1, 1), grid=(1, 1, 1),
             stream=self.queue
         )
     

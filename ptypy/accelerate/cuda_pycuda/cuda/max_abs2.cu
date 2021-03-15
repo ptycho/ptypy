@@ -1,5 +1,5 @@
-/** max_abs2 kernel, calculating the maximum abs(x)**2 value in the last
- * two dimensions 
+/** max_abs2 kernel, calculating the sum of abs(x)**2 value in the first dimension
+ * and then the maximum across the last 2 dimensions
  * 
  * Data types:
  * - IN_TYPE: can be float/double or complex<float>/complex<double>
@@ -19,25 +19,23 @@ inline __device__ OUT_TYPE norm(const double& in) {
 }
 
 extern "C" __global__ void max_abs2_step1(const IN_TYPE* a,
+                                          int n,
                                           int rows,
                                           int cols,
                                           OUT_TYPE* out)
 {
-    
-    int bid = blockIdx.z;
     int tx = threadIdx.x;
     const int iy = blockIdx.y;
     
-    // offset a to get to the current row
-    a += bid * rows * cols;
-    
     __shared__ OUT_TYPE sh[BDIM_X];
-
     
     OUT_TYPE maxv = OUT_TYPE(0);
 
     for (int ix = tx; ix < cols; ix += BDIM_X) {
-        auto v = norm(a[iy * cols + ix]);
+        OUT_TYPE v = OUT_TYPE(0); 
+        for (int in = 0; in < n; ++in) {
+            v += norm(a[in * rows * cols + iy * cols + ix]);
+        }
         if (v > maxv)
             maxv = v;
     }
@@ -68,7 +66,7 @@ extern "C" __global__ void max_abs2_step1(const IN_TYPE* a,
 
     if (tx == 0)
     {
-        out[bid * gridDim.y + blockIdx.y] = sh[0];
+        out[iy] = sh[0];
     }
 }
 
@@ -77,7 +75,6 @@ extern "C" __global__ void max_abs2_step2(const OUT_TYPE* in,
                                           OUT_TYPE* out)
 {
     int tx = threadIdx.x;
-    int bid = blockIdx.x;
 
     in += blockIdx.x * n;
 
@@ -113,6 +110,6 @@ extern "C" __global__ void max_abs2_step2(const OUT_TYPE* in,
 
     if (tx == 0)
     {
-        out[bid] = sh[0];
+        out[0] = sh[0];
     }
 }

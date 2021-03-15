@@ -357,9 +357,9 @@ class ArrayUtilsTest(PyCudaTest):
 
     def test_max_abs2_complex_UNITY(self):
         np.random.seed(1983)
-        X = (np.random.randint(-1000, 1000, (10,100,200)).astype(np.float32) + \
-            1j * np.random.randint(-1000, 1000, (10,100,200)).astype(np.float32)).astype(np.complex64)
-        out = np.zeros((X.shape[0],), dtype=np.float32)
+        X = (np.random.randint(-1000, 1000, (3,100,200)).astype(np.float32) + \
+            1j * np.random.randint(-1000, 1000, (3,100,200)).astype(np.float32)).astype(np.complex64)
+        out = np.zeros((1,), dtype=np.float32)
         X_dev = gpuarray.to_gpu(X)
         out_dev = gpuarray.to_gpu(out)
 
@@ -373,9 +373,9 @@ class ArrayUtilsTest(PyCudaTest):
 
     def test_max_abs2_float_UNITY(self):
         np.random.seed(1983)
-        X = np.random.randint(-1000, 1000, (10,100,200)).astype(np.float32)
+        X = np.random.randint(-1000, 1000, (3,100,200)).astype(np.float32)
             
-        out = np.zeros((X.shape[0],), dtype=np.float32)
+        out = np.zeros((1,), dtype=np.float32)
         X_dev = gpuarray.to_gpu(X)
         out_dev = gpuarray.to_gpu(out)
 
