@@ -251,9 +251,9 @@ class DR_pycuda(DR_serial.DR_serial):
 
         queue.synchronize()
         for name, s in self.ob.S.items():
-            s.data[:] = s.gpu.get()
+            s.gpu.get(s.data)
         for name, s in self.pr.S.items():
-            s.data[:] = s.gpu.get()
+            s.gpu.get(s.data)
 
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
