@@ -82,9 +82,13 @@ class DR_pycuda(DR_serial.DR_serial):
             fpc = self.ptycho.frames_per_block
 
             # Currently modes not implemented for DR algorithm 
-            assert scan.p.coherence.num_probe_modes == 1
-            assert scan.p.coherence.num_object_modes == 1
-            nmodes = 1
+            #assert scan.p.coherence.num_probe_modes == 1
+            #assert scan.p.coherence.num_object_modes == 1
+            try:
+                nmodes = scan.p.coherence.num_probe_modes * \
+                         scan.p.coherence.num_object_modes
+            except:
+                nmodes = 1
 
             # create buffer arrays
             fpc = 1
