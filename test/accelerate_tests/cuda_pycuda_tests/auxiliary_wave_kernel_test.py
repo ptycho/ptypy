@@ -194,6 +194,25 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         np.testing.assert_array_equal(auxiliary_wave, auxiliary_wave_dev.get(),
                                       err_msg="The gpu auxiliary_wave does not look the same as the numpy version")
 
+    def test_build_aux2_same_as_exit_UNITY(self):
+        ## Arrange
+        addr, object_array, probe, exit_wave = self.prepare_arrays()
+        addr_dev, object_array_dev, probe_dev, exit_wave_dev = self.copy_to_gpu(addr, object_array, probe, exit_wave)
+        auxiliary_wave = np.zeros_like(exit_wave)
+        auxiliary_wave_dev = gpuarray.zeros_like(exit_wave_dev)
+        
+        ## Act
+        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        nAWK = npAuxiliaryWaveKernel()
+        AWK = AuxiliaryWaveKernel(self.stream)
+        alpha_set = FLOAT_TYPE(1.0)
+
+        AWK.build_aux2(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, exit_wave_dev, alpha=alpha_set)
+        nAWK.build_aux(auxiliary_wave, addr, object_array, probe, exit_wave, alpha=alpha_set)
+        
+        ## Assert
+        np.testing.assert_array_equal(auxiliary_wave, auxiliary_wave_dev.get(),
+                                      err_msg="The gpu auxiliary_wave does not look the same as the numpy version")
 
     def test_build_exit_aux_same_as_exit_REGRESSION(self):
         ## Arrange
