@@ -437,6 +437,27 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         np.testing.assert_array_equal(auxiliary_wave_dev.get(), auxiliary_wave,
                                       err_msg="The auxiliary_wave does not match numpy")
 
+    def test_build_aux2_no_ex_noadd_UNITY(self):
+        ## Arrange
+        addr, object_array, probe, exit_wave = self.prepare_arrays()
+        addr_dev, object_array_dev, probe_dev, exit_wave_dev = self.copy_to_gpu(addr, object_array, probe, exit_wave)
+        auxiliary_wave_dev = gpuarray.zeros_like(exit_wave_dev)
+        auxiliary_wave = np.zeros_like(exit_wave)
+
+        ## Act
+        AWK = AuxiliaryWaveKernel(self.stream)
+        AWK.allocate()
+        AWK.build_aux2_no_ex(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, 
+            fac=1.0, add=False)
+        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        nAWK = npAuxiliaryWaveKernel()
+        nAWK.allocate()
+        nAWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, fac=1.0, add=False)
+
+        ## Assert
+        np.testing.assert_array_equal(auxiliary_wave_dev.get(), auxiliary_wave,
+                                      err_msg="The auxiliary_wave does not match numpy")
+
 
     def test_build_aux_no_ex_add_REGRESSION(self):
         ## Arrange
@@ -514,6 +535,27 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         AWK = AuxiliaryWaveKernel(self.stream)
         AWK.allocate()
         AWK.build_aux_no_ex(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, 
+            fac=2.0, add=True)
+        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
+        nAWK = npAuxiliaryWaveKernel()
+        nAWK.allocate()
+        nAWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, fac=2.0, add=True)
+
+        ## Assert
+        np.testing.assert_array_equal(auxiliary_wave_dev.get(), auxiliary_wave,
+                                      err_msg="The auxiliary_wave does not match numpy")
+
+    def test_build_aux2_no_ex_add_UNITY(self):
+        ## Arrange
+        addr, object_array, probe, exit_wave = self.prepare_arrays()
+        addr_dev, object_array_dev, probe_dev, exit_wave_dev = self.copy_to_gpu(addr, object_array, probe, exit_wave)
+        auxiliary_wave_dev = gpuarray.ones_like(exit_wave_dev)
+        auxiliary_wave = np.ones_like(exit_wave)
+
+        ## Act
+        AWK = AuxiliaryWaveKernel(self.stream)
+        AWK.allocate()
+        AWK.build_aux2_no_ex(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, 
             fac=2.0, add=True)
         from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()

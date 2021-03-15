@@ -391,6 +391,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
         })
+        self.build_aux2_no_ex_cuda = None
         self.build_exit_alpha_tau_cuda = load_kernel("build_exit_alpha_tau", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -503,6 +504,34 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                                   grid=(int(maxz * nmodes), 1, 1),
                                   stream=self.queue)
 
+
+    def build_aux2_no_ex(self, b_aux, addr, ob, pr, fac=1.0, add=False):
+        if self.build_aux2_no_ex_cuda is None:
+            self.build_aux2_no_ex_cuda = load_kernel("build_aux2_no_ex", {
+                'IN_TYPE': 'float',
+                'OUT_TYPE': 'float',
+                'MATH_TYPE': self.math_type
+            }, "build_aux_no_ex.cu")
+        obr, obc = self._cache_object_shape(ob)
+        sh = addr.shape
+        nmodes = sh[1]
+        maxz = sh[0]
+        bx = 64
+        by = 1
+        self.build_aux2_no_ex_cuda(b_aux,
+                                  np.int32(b_aux.shape[-2]),
+                                  np.int32(b_aux.shape[-1]),
+                                  pr,
+                                  np.int32(pr.shape[-2]),
+                                  np.int32(pr.shape[-1]),
+                                  ob,
+                                  obr, obc,
+                                  addr,
+                                  np.float32(fac) if pr.dtype == np.complex64 else np.float64(fac),
+                                  np.int32(add),
+                                  block=(bx, by, 1),
+                                  grid=(1, int((b_aux.shape[-2] + by - 1)//by), int(maxz * nmodes)),
+                                  stream=self.queue)
     
     
     def _cache_object_shape(self, ob):
