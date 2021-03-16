@@ -202,7 +202,8 @@ class DR_pycuda(DR_serial.DR_serial):
 
                     # Get local adress and arrays
                     addr = prep.addr_gpu[i,None]
-                    ex = prep.ex[i,None]
+                    ex_from, ex_to = prep.addr_ex[i]
+                    ex = prep.ex[ex_from:ex_to]
                     mag = prep.mag[i,None]
                     ma = prep.ma[i,None]
                     ma_sum = prep.ma_sum[i,None]
