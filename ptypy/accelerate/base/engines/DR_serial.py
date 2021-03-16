@@ -263,8 +263,10 @@ class DR_serial(PositionCorrectionEngine):
             prep.rng = np.random.default_rng()
             prep.vieworder = np.arange(prep.addr.shape[0])
 
-            # Modify addresses
-            prep.addr[:,:,2:,0] = 0
+            # Modify addresses, copy pa into ea and remove da/ma
+            prep.addr_ex = np.vstack([prep.addr[:,0,2,0], prep.addr[:,-1,2,0]+1]).T
+            prep.addr[:,:,2] = prep.addr[:,:,0]
+            prep.addr[:,:,3:,0] = 0
 
             # Reference to ex
             prep.ex = self.ex.S[eID].data
@@ -316,7 +318,8 @@ class DR_serial(PositionCorrectionEngine):
 
                     # Get local adress and arrays
                     addr = prep.addr[i,None]
-                    ex = prep.ex[i,None]
+                    ex_from, ex_to = prep.addr_ex[i]
+                    ex = prep.ex[ex_from:ex_to]
                     mag = prep.mag[i,None]
                     ma = prep.ma[i,None]
                     ma_sum = prep.ma_sum[i,None]
@@ -347,10 +350,12 @@ class DR_serial(PositionCorrectionEngine):
 
                     ## Deviation from measured data
                     t1 = time.time()
-                    FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                     if self.p.compute_fourier_error:
+                        FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
-                    FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, 0)
+                    else:
+                        FUK.fourier_deviation(aux, addr, mag)
+                    FUK.fmag_update_nopbound(aux, addr, mag, ma)
                     self.benchmark.C_Fourier_update += time.time() - t1
 
                     ## backward FFT
@@ -370,6 +375,14 @@ class DR_serial(PositionCorrectionEngine):
                     ## probe/object rescale
                     #if self.p.rescale_probe:
                     #    pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
+
+                    # debugging
+                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
+                        with h5py.File(self.p.debug + "/before_aux_no_ex_%04d.h5" %self.curiter, "w") as f:
+                            f["aux"] = aux
+                            f["addr"] = addr
+                            f["ob"] = ob
+                            f["pr"] = pr
 
                     ## build auxilliary wave (ob * pr product)
                     t1 = time.time()

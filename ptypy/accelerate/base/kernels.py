@@ -74,6 +74,28 @@ class FourierUpdateKernel(BaseKernel):
         ferr[:] = mask * np.abs(fdev) ** 2 / mask_sum.reshape((maxz, 1, 1))
         return
 
+    def fourier_deviation(self, b_aux, addr, mag):
+        # reference shape (write-to shape)
+        sh = self.fshape
+        # stopper
+        maxz = mag.shape[0]
+
+        # batch buffers
+        fdev = self.npy.fdev[:maxz]
+        aux = b_aux[:maxz * self.nmodes]
+
+        ## Actual math ##
+
+        # build model from complex fourier magnitudes, summing up 
+        # all modes incoherently
+        tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
+        af = np.sqrt((np.abs(tf) ** 2).sum(1))
+
+        # calculate difference to real data (g_mag)
+        fdev[:] = af - mag
+
+        return
+
     def error_reduce(self, addr, err_sum):
         # reference shape (write-to shape)
         sh = self.fshape
@@ -130,6 +152,33 @@ class FourierUpdateKernel(BaseKernel):
         fm[:] = (1 - mask) + mask * (mag + fdev * renorm) / (af + self.denom)
 
         #fm[:] = mag / (af + 1e-6)
+        # upcasting
+        aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
+        return
+
+    def fmag_update_nopbound(self, b_aux, addr, mag, mask):
+
+        sh = self.fshape
+        nmodes = self.nmodes
+
+        # stopper
+        maxz = mag.shape[0]
+
+        # batch buffers
+        fdev = self.npy.fdev[:maxz]
+        aux = b_aux[:maxz * nmodes]
+
+        # write-to shape
+        ish = aux.shape
+
+        ## Actual math ##
+
+        # local values
+        fm = np.ones((maxz, sh[1], sh[2]), np.float32)
+
+        af = fdev + mag
+        fm[:] = (1 - mask) + mask * mag / (af + self.denom)
+
         # upcasting
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
         return

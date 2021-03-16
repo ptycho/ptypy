@@ -656,12 +656,12 @@ class PoUpdateKernelTest(PyCudaTest):
         B = 5  # frame size y
         C = 5  # frame size x
 
-        D = 1  # number of probe modes
+        D = 2  # number of probe modes
         E = B  # probe size y
         F = C  # probe size x
 
         npts_greater_than = 2  # how many points bigger than the probe the object is.
-        G = 1  # number of object modes
+        G = 2  # number of object modes
         H = B + npts_greater_than  #  object size y
         I = C + npts_greater_than  #  object size x
 
@@ -732,12 +732,12 @@ class PoUpdateKernelTest(PyCudaTest):
         B = 5  # frame size y
         C = 5  # frame size x
 
-        D = 1  # number of probe modes
+        D = 2  # number of probe modes
         E = B  # probe size y
         F = C  # probe size x
 
         npts_greater_than = 2  # how many points bigger than the probe the object is.
-        G = 1  # number of object modes
+        G = 2  # number of object modes
         H = B + npts_greater_than  #  object size y
         I = C + npts_greater_than  #  object size x
 
