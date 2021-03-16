@@ -279,7 +279,7 @@ class DR_pycuda(DR_serial.DR_serial):
         for name, s in self.pr.S.items():
             del s.gpu
         for dID, prep in self.diff_info.items():
-            prep.addr = np.array([prep.addr_gpu[i].get() for i in range(len(prep.addr_gpu))])
+            prep.addr = prep.addr_gpu.get()
 
         # copy data to cpu 
         # this kills the pagelock memory (otherwise we get segfaults in h5py)

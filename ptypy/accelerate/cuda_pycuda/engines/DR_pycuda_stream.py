@@ -31,7 +31,7 @@ MPI = False
 
 EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
-MAX_BLOCKS = 4  # can be used to limit the number of blocks, simulating that they don't fit
+#MAX_BLOCKS = 4  # can be used to limit the number of blocks, simulating that they don't fit
 
 __all__ = ['DR_pycuda_stream']
 
