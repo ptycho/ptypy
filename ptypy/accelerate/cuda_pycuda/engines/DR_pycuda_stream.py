@@ -31,7 +31,7 @@ MPI = False
 
 EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
-#MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
+MAX_BLOCKS = 4  # can be used to limit the number of blocks, simulating that they don't fit
 
 __all__ = ['DR_pycuda_stream']
 
@@ -40,7 +40,7 @@ class DR_pycuda_stream(DR_pycuda.DR_pycuda):
 
     def __init__(self, ptycho_parent, pars=None):
 
-        super(DM_pycuda_stream, self).__init__(ptycho_parent, pars)
+        super(DR_pycuda_stream, self).__init__(ptycho_parent, pars)
         self.ma_data = None
         self.mag_data = None
         self.ex_data = None
@@ -54,9 +54,10 @@ class DR_pycuda_stream(DR_pycuda.DR_pycuda):
         super()._setup_kernels()
         ex_mem = 0
         mag_mem = 0
+        fpc = self.ptycho.frames_per_block
         for scan, kern in self.kernels.items():
-            ex_mem = max(kern.aux.nbytes, ex_mem)
-            mag_mem = max(kern.FUK.gpu.fdev.nbytes, mag_mem)
+            ex_mem = max(kern.aux.nbytes * fpc, ex_mem)
+            mag_mem = max(kern.FUK.gpu.fdev.nbytes * fpc, mag_mem)
         ma_mem = mag_mem
         mem = cuda.mem_get_info()[0]
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
@@ -77,7 +78,7 @@ class DR_pycuda_stream(DR_pycuda.DR_pycuda):
         super(DR_pycuda.DR_pycuda, self).engine_prepare()
 
         for name, s in self.ob.S.items():
-            s.gpu = gpuarray.to_gpu(s.data)
+            s.gpu, s.data = mppa(s.data)
         for name, s in self.pr.S.items():
             s.gpu, s.data = mppa(s.data)
 
@@ -215,21 +216,27 @@ class DR_pycuda_stream(DR_pycuda.DR_pycuda):
             self.dID_list.reverse()
             
             self.curiter += 1
-            # self.ex_data.syncback = False
+            self.ex_data.syncback = False
 
+        # finish all the compute
         self.queue.synchronize()
         
         for name, s in self.ob.S.items():
-            s.gpu.get(s.data)
+            s.gpu.get_async(stream=self.qu_dtoh, ary=s.data)
         for name, s in self.pr.S.items():
-            s.gpu.get(s.data)
+            s.gpu.get(stream=self.qu_dtoh, ary=s.data)
 
         for dID, prep in self.diff_info.items():
-            err_fourier = prep.err_fourier_gpu.get()
-            err_phot = prep.err_phot_gpu.get()
-            err_exit = prep.err_exit_gpu.get()
-            errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
+            prep.err_fourier_gpu.get(prep.err_fourier)
+            prep.err_phot_gpu.get(prep.err_phot)
+            prep.err_exit_gpu.get(prep.err_exit)
+            errs = np.ascontiguousarray(np.vstack([
+                prep.err_fourier, prep.err_phot, prep.err_exit
+                ]).T)
             error.update(zip(prep.view_IDs, errs))
+
+        # wait for the async transfers
+        self.qu_dtoh.synchronize()
 
         self.error = error
         return error
@@ -241,10 +248,6 @@ class DR_pycuda_stream(DR_pycuda.DR_pycuda):
         self.ex_data = None
         self.ma_data = None
         self.mag_data = None
-
-        # copy data to cpu
-        for name, s in self.pr.S.items():
-            s.data = s.data.get()
 
         super().engine_finalize()
         
