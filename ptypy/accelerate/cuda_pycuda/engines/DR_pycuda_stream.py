@@ -224,7 +224,7 @@ class DR_pycuda_stream(DR_pycuda.DR_pycuda):
         for name, s in self.ob.S.items():
             s.gpu.get_async(stream=self.qu_dtoh, ary=s.data)
         for name, s in self.pr.S.items():
-            s.gpu.get(stream=self.qu_dtoh, ary=s.data)
+            s.gpu.get_async(stream=self.qu_dtoh, ary=s.data)
 
         for dID, prep in self.diff_info.items():
             prep.err_fourier_gpu.get(prep.err_fourier)
@@ -248,6 +248,13 @@ class DR_pycuda_stream(DR_pycuda.DR_pycuda):
         self.ex_data = None
         self.ma_data = None
         self.mag_data = None
+
+        # replacing page-locked data with normal npy to avoid
+        # crash on context destroy
+        for name, s in self.pr.S.items():
+            s.data = np.copy(s.data)
+        for name, s in self.ob.S.items():
+            s.data = np.copy(s.data)
 
         super().engine_finalize()
         
