@@ -1,4 +1,4 @@
-name: ptypy_full
+name: ptypy_pyopencl
 channels:
   - conda-forge
 dependencies:
@@ -17,3 +17,4 @@ dependencies:
     - pytest-cov
     - coveralls
     - fabio
+    - pyopencl==2020.1
