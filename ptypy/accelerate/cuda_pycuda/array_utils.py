@@ -3,6 +3,24 @@ from pycuda import gpuarray
 from ptypy.utils import gaussian
 import numpy as np
 
+# maps a numpy dtype to the corresponding C type
+def map2ctype(dt):
+    if dt == np.float32:
+        return 'float'
+    elif dt == np.float64: 
+        return 'double'
+    elif dt == np.complex64: 
+        return 'complex<float>'
+    elif dt == np.complex128: 
+        return 'complex<double>'
+    elif dt == np.int32:
+        return 'int'
+    elif dt == np.int64:
+        return 'long long'
+    else:
+        raise ValueError('No mapping for {}'.format(dt))
+
+
 class ArrayUtilsKernel:
     def __init__(self, acc_dtype=np.float64, queue=None):
         self.queue = queue
@@ -90,7 +108,51 @@ class TransposeKernel:
         self.transpose_cuda(input, output, np.int32(width), np.int32(height),
             block=blk, grid=grd, stream=self.queue)
 
+class MaxAbs2Kernel:
 
+    def __init__(self, queue=None):
+        self.queue = queue
+        # we lazy-load this depending on the data types we get
+        self.max_abs2_cuda = {}
+
+    def max_abs2(self, X, out):
+        """ Calculate max(abs(x)**2) across the final 2 dimensions"""
+        # lazy-loading, keeping scratch memory and both kernels in the same dictionary
+        bx = int(64)
+        version = '{},{}'.format(map2ctype(X.dtype), map2ctype(out.dtype))
+        if version not in self.max_abs2_cuda:
+            step1, step2 = load_kernel(
+                    ("max_abs2_step1", "max_abs2_step2"), 
+                    {
+                        'IN_TYPE': map2ctype(X.dtype),
+                        'OUT_TYPE': map2ctype(out.dtype),
+                        'BDIM_X': bx,
+                    }, "max_abs2.cu")
+            self.max_abs2_cuda[version] = {
+                'step1': step1,
+                'step2': step2,
+                'scratchmem': None
+            }
+
+        rows = np.int32(X.shape[-2])
+        cols = np.int32(X.shape[-1])
+        firstdims = np.int32(np.prod(X.shape[:-2]))
+        gy = int(rows)
+        
+        if self.max_abs2_cuda[version]['scratchmem'] is None \
+            or self.max_abs2_cuda[version]['scratchmem'].shape[0] != gy:
+            self.max_abs2_cuda[version]['scratchmem'] = gpuarray.empty((gy,), dtype=out.dtype)
+        scratch = self.max_abs2_cuda[version]['scratchmem']
+
+        
+        self.max_abs2_cuda[version]['step1'](X, firstdims, rows, cols, scratch,
+            block=(bx, 1, 1), grid=(1, gy, 1),
+            stream=self.queue)
+        self.max_abs2_cuda[version]['step2'](scratch, np.int32(gy), out,
+            block=(bx, 1, 1), grid=(1, 1, 1),
+            stream=self.queue
+        )
+    
 
 class CropPadKernel:
 
@@ -135,28 +197,11 @@ class CropPadKernel:
         batch = int(np.prod(A.shape[:-3]))
         
         # lazy loading depending on data type
-        
-        def map_type(dt):
-            if dt == np.float32:
-                return 'float'
-            elif dt == np.float64: 
-                return 'double'
-            elif dt == np.complex64: 
-                return 'complex<float>'
-            elif dt == np.complex128: 
-                return 'complex<double>'
-            elif dt == np.int32:
-                return 'int'
-            elif dt == np.int64:
-                return 'long long'
-            else:
-                raise ValueError('No mapping for {}'.format(dt))
-
-        version = '{},{}'.format(map_type(B.dtype), map_type(A.dtype))
+        version = '{},{}'.format(map2ctype(B.dtype), map2ctype(A.dtype))
         if version not in self.fill3D_cuda:
             self.fill3D_cuda[version] = load_kernel("fill3D", {
-              'IN_TYPE': map_type(B.dtype),
-              'OUT_TYPE': map_type(A.dtype)
+              'IN_TYPE': map2ctype(B.dtype),
+              'OUT_TYPE': map2ctype(A.dtype)
             })
         bx = by = 32
         self.fill3D_cuda[version](
@@ -209,34 +254,27 @@ class DerivativesKernel:
         self.last_axis_block = (256, 4, 1)
         self.mid_axis_block = (256, 4, 1)
 
-        self.delxf_last = load_kernel("delx_last", file="delx_last.cu", subs={
-            'IS_FORWARD': 'true',
-            'BDIM_X': str(self.last_axis_block[0]),
-            'BDIM_Y': str(self.last_axis_block[1]),
-            'IN_TYPE': stype,
-            'OUT_TYPE': stype
-        })
-        self.delxb_last = load_kernel("delx_last", file="delx_last.cu", subs={
-            'IS_FORWARD': 'false',
-            'BDIM_X': str(self.last_axis_block[0]),
-            'BDIM_Y': str(self.last_axis_block[1]),
-            'IN_TYPE': stype,
-            'OUT_TYPE': stype
-        })
-        self.delxf_mid = load_kernel("delx_mid", file="delx_mid.cu", subs={
-            'IS_FORWARD': 'true',
-            'BDIM_X': str(self.mid_axis_block[0]),
-            'BDIM_Y': str(self.mid_axis_block[1]),
-            'IN_TYPE': stype,
-            'OUT_TYPE': stype
-        })
-        self.delxb_mid = load_kernel("delx_mid", file="delx_mid.cu", subs={
-            'IS_FORWARD': 'false',
-            'BDIM_X': str(self.mid_axis_block[0]),
-            'BDIM_Y': str(self.mid_axis_block[1]),
-            'IN_TYPE': stype,
-            'OUT_TYPE': stype
-        })
+        self.delxf_last, self.delxf_mid = load_kernel(
+            ("delx_last", "delx_mid"), 
+            file="delx.cu", 
+            subs={
+                'IS_FORWARD': 'true',
+                'BDIM_X': str(self.last_axis_block[0]),
+                'BDIM_Y': str(self.last_axis_block[1]),
+                'IN_TYPE': stype,
+                'OUT_TYPE': stype
+            })
+        self.delxb_last, self.delxb_mid  = load_kernel(
+            ("delx_last", "delx_mid"), 
+            file="delx.cu", 
+            subs={
+                'IS_FORWARD': 'false',
+                'BDIM_X': str(self.last_axis_block[0]),
+                'BDIM_Y': str(self.last_axis_block[1]),
+                'IN_TYPE': stype,
+                'OUT_TYPE': stype
+            })
+        
 
     def delxf(self, input, out, axis=-1):
         if input.dtype != self.dtype:

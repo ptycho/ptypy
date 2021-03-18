@@ -22,19 +22,21 @@ from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKern
 from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
 
-__all__ = ['DM_local']
+# for debugging
+import h5py, sys
+
+__all__ = ['DR_serial']
 
 @register()
-class DM_local(PositionCorrectionEngine):
+class DR_serial(PositionCorrectionEngine):
     """
-    A local version of the Difference Map engine
+    An implementation of the Douglas-Rachford algorithm
     that can be operated like the ePIE algorithm.
-
 
     Defaults:
 
     [name]
-    default = DM_local
+    default = DR_serial
     type = str
     help =
     doc =
@@ -43,7 +45,7 @@ class DM_local(PositionCorrectionEngine):
     default = 1
     type = float
     lowlim = 0.0
-    help = Difference map tuning parameter, a value of 0 makes it equal to ePIE.
+    help = Tuning parameter, a value of 0 makes it equal to ePIE.
 
     [tau]
     default = 1
@@ -74,16 +76,30 @@ class DM_local(PositionCorrectionEngine):
     lowlim = 0
     help = Normalise probe power according to data
 
-    [fourier_power_bound]
-    default = None
-    type = float
-    help = If rms error of model vs diffraction data is smaller than this value, Fourier constraint is met
-    doc = For Poisson-sampled data, the theoretical value for this parameter is 1/4. Set this value higher for noisy data.
-
     [compute_log_likelihood]
     default = True
     type = bool
     help = A switch for computing the log-likelihood error (this can impact the performance of the engine)
+
+    [compute_exit_error]
+    default = False
+    type = bool
+    help = A switch for computing the exitwave error (this can impact the performance of the engine)
+
+    [compute_fourier_error]
+    default = False
+    type = bool
+    help = A switch for computing the fourier error (this can impact the performance of the engine)
+
+    [debug]
+    default = None
+    type = str
+    help = For debugging purposes, dump arrays into given directory
+
+    [debug_iter]
+    default = 0
+    type = int
+    help = For debugging purposes, dump arrays at this iteration
 
     """
 
@@ -93,11 +109,10 @@ class DM_local(PositionCorrectionEngine):
         """
         Local difference map reconstruction engine.
         """
-        super(DM_local, self).__init__(ptycho_parent, pars)
+        super(DR_serial, self).__init__(ptycho_parent, pars)
 
         # Instance attributes
         self.error = None
-        self.pbound = None
         self.mean_power = None
 
         # keep track of timings
@@ -109,11 +124,22 @@ class DM_local(PositionCorrectionEngine):
         self.pr_cfact = {}
         self.kernels = {}
 
+        self.ptycho.citations.add_article(
+            title='Semi-implicit relaxed Douglas-Rachford algorithm (sDR) for ptychography',
+            author='Pham et al.',
+            journal='Opt. Express',
+            volume=27,
+            year=2019,
+            page=31246,
+            doi='10.1364/OE.27.031246',
+            comment='The local douglas-rachford reconstruction algorithm',
+        )
+
     def engine_initialize(self):
         """
         Prepare for reconstruction.
         """
-        super(DM_local, self).engine_initialize()
+        super(DR_serial, self).engine_initialize()
 
         self.error = []
         self._reset_benchmarks()
@@ -199,9 +225,7 @@ class DM_local(PositionCorrectionEngine):
 
             # recalculate everything
             mean_power = 0.
-            self.pbound_scan = {}
-            for s in self.di.storages.values():            
-                self.pbound_scan[s.label] = self.p.fourier_power_bound
+            for s in self.di.storages.values():
                 mean_power += s.mean_power
             self.mean_power = mean_power / len(self.di.storages)
 
@@ -216,7 +240,7 @@ class DM_local(PositionCorrectionEngine):
             prep.err_phot = np.zeros_like(prep.ma_sum)
             prep.err_fourier = np.zeros_like(prep.ma_sum)
             prep.err_exit = np.zeros_like(prep.ma_sum)
-
+            
         # Unfortunately this needs to be done for all pods, since
         # the shape of the probe / object was modified.
         # TODO: possible scaling issue, remove the need for padding
@@ -236,7 +260,16 @@ class DM_local(PositionCorrectionEngine):
                 ob.shape = ob.data.shape
 
             # Keep a list of view indices
+            prep.rng = np.random.default_rng()
             prep.vieworder = np.arange(prep.addr.shape[0])
+
+            # Modify addresses, copy pa into ea and remove da/ma
+            prep.addr_ex = np.vstack([prep.addr[:,0,2,0], prep.addr[:,-1,2,0]+1]).T
+            prep.addr[:,:,2] = prep.addr[:,:,0]
+            prep.addr[:,:,3:,0] = 0
+
+            # Reference to ex
+            prep.ex = self.ex.S[eID].data
 
             # calculate c_facts
             #cfact = self.p.object_inertia * self.mean_power
@@ -269,38 +302,41 @@ class DM_local(PositionCorrectionEngine):
                 FW = kern.FW
                 BW = kern.BW
 
-                # global buffers
-                pbound = self.pbound_scan[prep.label]
+                # global aux buffer
                 aux = kern.aux
-                vieworder = prep.vieworder
 
-                # references for ob, pr, ex
+                # references for ob, pr
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
-                ex = self.ex.S[eID].data
 
-                # randomly shuffle view order
-                np.random.shuffle(vieworder)
+                # shuffle view order
+                vieworder = prep.vieworder
+                prep.rng.shuffle(vieworder)
 
                 # Iterate through views
                 for i in vieworder:
 
                     # Get local adress and arrays
                     addr = prep.addr[i,None]
+                    ex_from, ex_to = prep.addr_ex[i]
+                    ex = prep.ex[ex_from:ex_to]
                     mag = prep.mag[i,None]
                     ma = prep.ma[i,None]
                     ma_sum = prep.ma_sum[i,None]
-
                     err_phot = prep.err_phot[i,None]
                     err_fourier = prep.err_fourier[i,None]
                     err_exit = prep.err_exit[i,None]
 
-                    ## compute log-likelihood
-                    t1 = time.time()
-                    AWK.build_aux_no_ex(aux, addr, ob, pr)
-                    aux[:] = FW(aux)
-                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)
-                    self.benchmark.F_LLerror += time.time() - t1
+                    # debugging
+                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
+                        with h5py.File(self.p.debug + "/before_%04d.h5" %self.curiter, "w") as f:
+                            f["aux"] = aux
+                            f["addr"] = addr
+                            f["ob"] = ob
+                            f["pr"] = pr
+                            f["mag"] = mag
+                            f["ma"] = ma
+                            f["ma_sum"] = ma_sum
 
                     ## build auxilliary wave
                     t1 = time.time()
@@ -314,9 +350,12 @@ class DM_local(PositionCorrectionEngine):
 
                     ## Deviation from measured data
                     t1 = time.time()
-                    FUK.fourier_error(aux, addr, mag, ma, ma_sum)
-                    FUK.error_reduce(addr, err_fourier)
-                    FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
+                    if self.p.compute_fourier_error:
+                        FUK.fourier_error(aux, addr, mag, ma, ma_sum)
+                        FUK.error_reduce(addr, err_fourier)
+                    else:
+                        FUK.fourier_deviation(aux, addr, mag)
+                    FUK.fmag_update_nopbound(aux, addr, mag, ma)
                     self.benchmark.C_Fourier_update += time.time() - t1
 
                     ## backward FFT
@@ -327,14 +366,37 @@ class DM_local(PositionCorrectionEngine):
                     ## build exit wave
                     t1 = time.time()
                     AWK.build_exit_alpha_tau(aux, addr, ob, pr, ex, alpha=self.p.alpha, tau=self.p.tau)
-                    FUK.exit_error(aux,addr)
-                    FUK.error_reduce(addr, err_exit)
+                    if self.p.compute_exit_error:
+                        FUK.exit_error(aux,addr)
+                        FUK.error_reduce(addr, err_exit)
                     self.benchmark.E_Build_exit += time.time() - t1
                     self.benchmark.calls_fourier += 1
 
                     ## probe/object rescale
-                    if self.p.rescale_probe:
-                        pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
+                    #if self.p.rescale_probe:
+                    #    pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
+
+                    # debugging
+                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
+                        with h5py.File(self.p.debug + "/before_aux_no_ex_%04d.h5" %self.curiter, "w") as f:
+                            f["aux"] = aux
+                            f["addr"] = addr
+                            f["ob"] = ob
+                            f["pr"] = pr
+
+                    ## build auxilliary wave (ob * pr product)
+                    t1 = time.time()
+                    AWK.build_aux_no_ex(aux, addr, ob, pr)
+                    self.benchmark.A_Build_aux += time.time() - t1
+
+                    # debugging
+                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
+                        with h5py.File(self.p.debug + "/ob_update_local_%04d.h5" %self.curiter, "w") as f:
+                            f["aux"] = aux
+                            f["addr"] = addr
+                            f["ob"] = ob
+                            f["pr"] = pr
+                            f["ex"] = ex
 
                     # object update
                     t1 = time.time()
@@ -342,14 +404,33 @@ class DM_local(PositionCorrectionEngine):
                     self.benchmark.object_update += time.time() - t1
                     self.benchmark.calls_object += 1
 
+                    # debugging
+                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
+                        with h5py.File(self.p.debug + "/pr_update_local_%04d.h5" %self.curiter, "w") as f:
+                            f["aux"] = aux
+                            f["addr"] = addr
+                            f["ob"] = ob
+                            f["pr"] = pr
+                            f["ex"] = ex
+
                     # probe update
                     t1 = time.time()
                     POK.pr_update_local(addr, pr, ob, ex, aux)
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1
 
+                    ## compute log-likelihood
+                    if self.p.compute_log_likelihood:
+                        t1 = time.time()
+                        #AWK.build_aux_no_ex(aux, addr, ob, pr)
+                        aux[:] = FW(aux)
+                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                        self.benchmark.F_LLerror += time.time() - t1
+
                 # update errors
-                errs = np.ascontiguousarray(np.vstack([prep.err_fourier, prep.err_phot, prep.err_exit]).T)
+                errs = np.ascontiguousarray(np.vstack([np.hstack(prep.err_fourier), 
+                                                       np.hstack(prep.err_phot), 
+                                                       np.hstack(prep.err_exit)]).T)
                 error_dct.update(zip(prep.view_IDs, errs))
 
             self.curiter += 1

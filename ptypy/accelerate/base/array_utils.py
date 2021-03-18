@@ -17,6 +17,12 @@ def dot(A, B, acc_dtype=np.float64):
 def norm2(A):
     return dot(A, A)
 
+def max_abs2(A):
+    '''
+    A has ndim = 3.
+    compute abs2, sum along first dimension and take maximum along last two dims
+    '''
+    return np.max(np.sum(np.abs(A)**2,axis=0),axis=(-2,-1))
 
 def abs2(input):
     '''

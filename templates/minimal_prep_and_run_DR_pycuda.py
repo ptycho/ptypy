@@ -6,7 +6,7 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
-from ptypy.accelerate.base.engines import DM_local
+from ptypy.accelerate.cuda_pycuda.engines import DR_pycuda
 p = u.Param()
 
 # for verbose output
@@ -19,7 +19,7 @@ p.frames_per_block = 200
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
 p.io.autosave = u.Param(active=False)
-p.io.interaction = u.Param(active=True)
+p.io.interaction = u.Param(active=False)
 p.io.interaction.client = u.Param()
 p.io.interaction.client.poll_timeout = 1
 
@@ -42,17 +42,15 @@ p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
 p.scans.MF.data.psf = 0.0
 p.scans.MF.coherence = u.Param()
-p.scans.MF.coherence.num_probe_modes = 1
+p.scans.MF.coherence.num_probe_modes = 3
 
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_local'
+p.engines.engine00.name = 'DR_pycuda'
 p.engines.engine00.numiter = 100
 p.engines.engine00.alpha = 0 # alpha=0, tau=1 behaves like ePIE
 p.engines.engine00.tau = 1
-p.engines.engine00.rescale_probe = False
-p.engines.engine00.fourier_power_bound = 0.0
 
 # prepare and run
 P = Ptycho(p,level=5)
