@@ -32,28 +32,28 @@ p.io.interaction.server = u.Param(active=False)
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
-p.scans.i14_2 = u.Param()
+p.scans.i14_3 = u.Param()
 # now you have to specify which ScanModel to use with scans.XX.name,
 # just as you have to give 'name' for engines and PtyScan subclasses.
-p.scans.i14_2.name = 'BlockFull' # or 'Full'
-p.scans.i14_2.data= u.Param()
-p.scans.i14_2.data.name = 'MoonFlowerScan'
-p.scans.i14_2.data.shape = 512
-p.scans.i14_2.data.num_frames = 4000 #50000 is the real value
-p.scans.i14_2.data.save = None
+p.scans.i14_3.name = 'BlockFull' # or 'Full'
+p.scans.i14_3.data= u.Param()
+p.scans.i14_3.data.name = 'MoonFlowerScan'
+p.scans.i14_3.data.shape = 512
+p.scans.i14_3.data.num_frames = 4000 #50000 is the real value
+p.scans.i14_3.data.save = None
 
-p.scans.i14_2.illumination = u.Param()
-p.scans.i14_2.coherence = u.Param(num_probe_modes=10)
-p.scans.i14_2.illumination.diversity = u.Param()
-p.scans.i14_2.illumination.diversity.noise = (0.5, 1.0)
-p.scans.i14_2.illumination.diversity.power = 0.1
+p.scans.i14_3.illumination = u.Param()
+p.scans.i14_3.coherence = u.Param(num_probe_modes=10)
+p.scans.i14_3.illumination.diversity = u.Param()
+p.scans.i14_3.illumination.diversity.noise = (0.5, 1.0)
+p.scans.i14_3.illumination.diversity.power = 0.1
 
 # position distance in fraction of illumination frame
-p.scans.i14_2.data.density = 0.2
+p.scans.i14_3.data.density = 0.2
 # total number of photon in empty beam
-p.scans.i14_2.data.photons = 1e8
+p.scans.i14_3.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
-p.scans.i14_2.data.psf = 0.4
+p.scans.i14_3.data.psf = 0.4
 
 # attach a reconstrucion engine
 p.engines = u.Param()
