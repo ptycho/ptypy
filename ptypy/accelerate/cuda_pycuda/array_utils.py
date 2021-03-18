@@ -201,7 +201,7 @@ class CropPadKernel:
         if version not in self.fill3D_cuda:
             self.fill3D_cuda[version] = load_kernel("fill3D", {
               'IN_TYPE': map2ctype(B.dtype),
-              'OUT_TYPE': mapctype(A.dtype)
+              'OUT_TYPE': map2ctype(A.dtype)
             })
         bx = by = 32
         self.fill3D_cuda[version](
