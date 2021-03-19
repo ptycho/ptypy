@@ -7,6 +7,8 @@ of actual data. It uses the test Scan class
 from ptypy.core import Ptycho
 from ptypy import utils as u
 from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream, DM_pycuda_streams, DM_pycuda
+DM_pycuda_stream.MAX_BLOCKS=3
+DM_pycuda_streams.MAX_BLOCKS=3
 p = u.Param()
 
 # for verbose output
@@ -15,7 +17,7 @@ p.frames_per_block = 200
 # set home path
 p.io = u.Param()
 p.io.home = "~/dumps/ptypy/"
-p.io.autosave = u.Param(active=True)
+p.io.autosave = u.Param(active=False)
 p.io.autoplot = u.Param(active=False)
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
@@ -26,7 +28,7 @@ p.scans.MF.name = 'BlockFull' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
-p.scans.MF.data.num_frames = 1000
+p.scans.MF.data.num_frames = 1800
 p.scans.MF.data.save = None
 
 p.scans.MF.illumination = u.Param(diversity=None)
@@ -41,7 +43,7 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_pycuda_stream'
+p.engines.engine00.name = 'DM_pycuda'
 p.engines.engine00.numiter = 20
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.probe_update_start = 1

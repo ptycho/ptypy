@@ -202,6 +202,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
         fit = int(mem - 200*1024*1024) // blk  # leave 200MB room for safety
         fit = min(MAX_BLOCKS, fit)
+        blocks = min(blocks, MAX_BLOCKS)
         nex = min(fit * EX_MA_BLOCKS_RATIO, blocks)
         nma = min(fit, blocks)
         nstreams = min(MAX_STREAMS, blocks)
