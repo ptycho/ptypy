@@ -213,17 +213,17 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         ## compute log-likelihood
                         if self.p.compute_log_likelihood:
                             t1 = time.time()
-                            AWK.build_aux_no_ex(aux, addr, ob, pr)
+                            AWK.build_aux2_no_ex(aux, addr, ob, pr)
                             PROP.fw(aux, aux)
                             # synchronize h2d stream with compute stream
                             self.queue.wait_for_event(ev_mag)
-                            FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                            FUK.log_likelihood2(aux, addr, mag, ma, err_phot)
                             self.benchmark.F_LLerror += time.time() - t1
 
                         # synchronize h2d stream with compute stream
                         self.queue.wait_for_event(ev_ex)
                         t1 = time.time()
-                        AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        AWK.build_aux2(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                         self.benchmark.A_Build_aux += time.time() - t1
 
                         ## FFT
@@ -234,9 +234,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         ## Deviation from measured data
                         # synchronize h2d stream with compute stream
                         self.queue.wait_for_event(ev_mag)
-                        FUK.fourier_error(aux, addr, mag, ma, ma_sum)
+                        FUK.fourier_error2(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
-                        FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
+                        FUK.fmag_all_update2(aux, addr, mag, ma, err_fourier, pbound)
 
                         self.benchmark.C_Fourier_update += time.time() - t1
                         data_mag.record_done(self.queue, 'compute')
@@ -245,8 +245,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         t1 = time.time()
                         PROP.bw(aux, aux)
                         ## apply changes
-                        AWK.build_exit(aux, addr, ob, pr, ex)
-                        FUK.exit_error(aux, addr)
+                        AWK.build_exit2(aux, addr, ob, pr, ex)
+                        FUK.exit_error2(aux, addr)
                         FUK.error_reduce(addr, err_exit)
 
                         self.benchmark.E_Build_exit += time.time() - t1
@@ -261,7 +261,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         addrt = addr if atomics_object else addr2
                         self.queue.wait_for_event(ev_ex)
-                        POK.ob_update(addrt, obb, obn, pr, ex, atomics=atomics_object)
+                        POK.ob_update2(addrt, obb, obn, pr, ex, atomics=atomics_object)
                         self.benchmark.object_update += time.time() - t1
                         self.benchmark.calls_object += 1
 

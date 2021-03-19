@@ -59,3 +59,45 @@ extern "C" __global__ void build_exit(complex<OUT_TYPE>* auxiliary_wave,
     }
   }
 }
+
+
+extern "C" __global__ void build_exit2(complex<OUT_TYPE>* auxiliary_wave,
+                                      complex<OUT_TYPE>* exit_wave,
+                                      int B,
+                                      int C,
+                                      const complex<IN_TYPE>* __restrict__ probe,
+                                      int E,
+                                      int F,
+                                      const complex<IN_TYPE>* __restrict__ obj,
+                                      int H,
+                                      int I,
+                                      const int* __restrict__ addr)
+{
+  int bid = blockIdx.z;
+  int tx = threadIdx.x;
+  int b = threadIdx.y + blockIdx.y * blockDim.y;
+  if (b >= B)
+    return;
+  const int addr_stride = 15;
+
+  const int* oa = addr + 3 + bid * addr_stride;
+  const int* pa = addr + bid * addr_stride;
+  const int* ea = addr + 6 + bid * addr_stride;
+
+  probe += pa[0] * E * F + pa[1] * F + pa[2];
+  obj += oa[0] * H * I + oa[1] * I + oa[2];
+  exit_wave += ea[0] * B * C;
+  auxiliary_wave += ea[0] * B * C;
+
+#pragma unroll(4)  // we use blockDim.x = 32, and C is typically more than 128
+                   // (it will work for less as well)
+    for (int c = tx; c < C; c += blockDim.x)
+    {
+      complex<MATH_TYPE> auxv = auxiliary_wave[b * C + c];
+      complex<MATH_TYPE> t_probe = probe[b * F + c];
+      complex<MATH_TYPE> t_obj = obj[b * I + c];
+      auxv -= t_probe * t_obj;
+      exit_wave[b * C + c] += auxv;
+      auxiliary_wave[b * C + c] = auxv;
+    }
+}

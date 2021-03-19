@@ -132,19 +132,21 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.accumulate_type = accumulate_type
         self.math_type = math_type
         self.queue = queue_thread
-        self.fmag_all_update_cuda = load_kernel("fmag_all_update", {
+        self.fmag_all_update_cuda, self.fmag_all_update2_cuda = load_kernel(
+            ["fmag_all_update", "fmag_all_update2"], {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
-        })
+        }, "fmag_all_update.cu")
         self.fmag_update_nopbound_cuda = None
         self.fourier_deviation_cuda = None
-        self.fourier_error_cuda = load_kernel("fourier_error", {
+        self.fourier_error_cuda, self.fourier_error2_cuda = load_kernel(
+            ["fourier_error", "fourier_error2"], {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
-        })
-        self.fourier_error2_cuda = None
+        }, "fourier_error.cu")
+        # self.fourier_error2_cuda = None
         self.error_reduce_cuda = load_kernel("error_reduce", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -160,11 +162,12 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                 'MATH_TYPE': self.math_type
             },
             "log_likelihood.cu")
-        self.exit_error_cuda = load_kernel("exit_error", {
+        self.exit_error_cuda, self.exit_error2_cuda = load_kernel(
+            ["exit_error", "exit_error2"], {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
-        })
+        }, "exit_error.cu")
 
         self.gpu = Adict()
         self.gpu.fdev = None
@@ -219,6 +222,27 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                      shared=int(bx*by*bz*4),
                                      stream=self.queue)
 
+    def fourier_error2(self, f, addr, fmag, fmask, mask_sum):
+        fdev = self.gpu.fdev
+        ferr = self.gpu.ferr
+        bx = 64
+        by = 1
+        self.fourier_error2_cuda(np.int32(self.nmodes),
+                                f,
+                                fmask,
+                                fmag,
+                                fdev,
+                                ferr,
+                                mask_sum,
+                                addr,
+                                np.int32(self.fshape[1]),
+                                np.int32(self.fshape[2]),
+                                block=(bx, by, 1),
+                                grid=(1, 
+                                    int((self.fshape[1] + by - 1) // by), 
+                                    int(fmag.shape[0])),
+                                stream=self.queue)
+
     def fourier_deviation(self, f, addr, fmag):
         fdev = self.gpu.fdev
         if self.fourier_deviation_cuda is None:
@@ -265,6 +289,25 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                   grid=(int(fmag.shape[0]*self.nmodes), 1, 1),
                                   stream=self.queue)
     
+    def fmag_all_update2(self, f, addr, fmag, fmask, err_fmag, pbound=0.0):
+        fdev = self.gpu.fdev
+        bx = 64
+        by = 1
+        self.fmag_all_update2_cuda(f,
+                                  fmask,
+                                  fmag,
+                                  fdev,
+                                  err_fmag,
+                                  addr,
+                                  np.float32(pbound),
+                                  np.int32(self.fshape[1]),
+                                  np.int32(self.fshape[2]),
+                                  block=(bx, by, 1),
+                                  grid=(1, 
+                                    int((self.fshape[2] + by - 1) // by), 
+                                    int(fmag.shape[0]*self.nmodes)),
+                                  stream=self.queue)
+
     def fmag_update_nopbound(self, f, addr, fmag, fmask):
         fdev = self.gpu.fdev
         bx = 64
@@ -368,6 +411,22 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                              grid=(int(maxz), 1, 1),
                              stream=self.queue)
 
+    def exit_error2(self, aux, addr):
+        sh = addr.shape
+        maxz = sh[0]
+        ferr = self.gpu.ferr
+        bx = 64
+        by = 1
+        self.exit_error2_cuda(np.int32(self.nmodes),
+                             aux,
+                             ferr,
+                             addr,
+                             np.int32(self.fshape[1]),
+                             np.int32(self.fshape[2]),
+                             block=(bx, by, 1),
+                             grid=(1, int((self.fshape[1]+by-1)//by), int(maxz)),
+                             stream=self.queue)
+
     # DEPRECATED?
     def execute(self, kernel_name=None, compare=False, sync=False):
 
@@ -401,11 +460,12 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                 'OUT_TYPE': 'float',
                 'MATH_TYPE': self.math_type
             }, "build_aux.cu")
-        self.build_exit_cuda = load_kernel("build_exit", {
+        self.build_exit_cuda, self.build_exit2_cuda = load_kernel(
+            ("build_exit", "build_exit2"), {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
-        })
+        }, "build_exit.cu")
         self.build_aux_no_ex_cuda, self.build_aux2_no_ex_cuda = load_kernel(
             ("build_aux_no_ex", "build_aux2_no_ex"), {
                 'IN_TYPE': 'float',
@@ -477,6 +537,25 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                              obr, obc,
                              addr,
                              block=(32, 32, 1), grid=(int(maxz * nmodes), 1, 1), stream=self.queue)
+
+    def build_exit2(self, b_aux, addr, ob, pr, ex):
+        obr, obc = self._cache_object_shape(ob)
+        sh = addr.shape
+        nmodes = sh[1]
+        maxz = sh[0]
+        bx = 64
+        by = 1
+        self.build_exit2_cuda(b_aux,
+                             ex,
+                             np.int32(ex.shape[1]), np.int32(ex.shape[2]),
+                             pr,
+                             np.int32(ex.shape[1]), np.int32(ex.shape[2]),
+                             ob,
+                             obr, obc,
+                             addr,
+                             block=(bx, by, 1), 
+                             grid=(1, int((ex.shape[1] + by - 1) // by), int(maxz * nmodes)), 
+                             stream=self.queue)
 
     def build_exit_alpha_tau(self, b_aux, addr, ob, pr, ex, alpha=1, tau=1):
         obr, obc = self._cache_object_shape(ob)
@@ -777,12 +856,13 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         self.queue = queue_thread
         self.norm = None
         self.MAK = MaxAbs2Kernel(self.queue)
-        self.ob_update_cuda = load_kernel("ob_update", {
+        self.ob_update_cuda, self.ob_update2_cuda = load_kernel(
+            ("ob_update", "ob_update2"), {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
-        })
-        self.ob_update2_cuda = None  # load_kernel("ob_update2")
+        }, "ob_update.cu")
+        # self.ob_update2_cuda = None  # load_kernel("ob_update2")
         self.pr_update_cuda = load_kernel("pr_update", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -854,6 +934,32 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                  np.int32(ex.shape[2]),
                                  ob, obn, pr, ex, addr,
                                  block=(16, 16, 1), grid=grid, stream=self.queue)
+
+    def ob_update2(self, addr, ob, obn, pr, ex, atomics=True):
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        if obn.dtype != np.float32:
+            raise ValueError("Denominator must be float32 in current implementation")
+
+        if atomics:
+            if addr.shape[3] != 3 or addr.shape[2] != 5:
+                raise ValueError('Address not in required shape for atomics ob_update')
+            num_pods = np.int32(addr.shape[0] * addr.shape[1])
+            bx = 64
+            by = 1
+            self.ob_update2_cuda(ex, num_pods, prsh[1], prsh[2],
+                                pr, prsh[0], prsh[1], prsh[2],
+                                ob, obsh[0], obsh[1], obsh[2],
+                                addr,
+                                obn,
+                                block=(bx, by, 1), 
+                                grid=(
+                                    1, 
+                                    int((prsh[1] + by - 1) // by), 
+                                    int(num_pods)), 
+                                stream=self.queue)
+        else:
+            raise NotImplemented("ob_update2 Not implemented for non-atomics")
 
     def pr_update(self, addr, pr, prn, ob, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
@@ -1044,11 +1150,12 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
         self.queue = queue_thread
         self._ob_shape = None
         self._ob_id = None
-        self.fourier_error_cuda = load_kernel("fourier_error",{
+        self.fourier_error_cuda, self.fourier_error2_cuda = load_kernel(
+            ["fourier_error", "fourier_error2"],{
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
-        })
+        }, "fourier_error.cu")
         self.error_reduce_cuda = load_kernel("error_reduce", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -1102,6 +1209,28 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
                                 np.int32(self.fshape[2]),
                                 block=(32, 32, 1),
                                 grid=(int(fmag.shape[0]), 1, 1),
+                                stream=self.queue)
+
+    def fourier_error2(self, f, addr, fmag, fmask, mask_sum):
+        fdev = self.gpu.fdev
+        ferr = self.gpu.ferr
+        bx = 64
+        by = 1
+        self.fourier_error2_cuda(np.int32(self.nmodes),
+                                f,
+                                fmask,
+                                fmag,
+                                fdev,
+                                ferr,
+                                mask_sum,
+                                addr,
+                                np.int32(self.fshape[1]),
+                                np.int32(self.fshape[2]),
+                                block=(bx, by, 1),
+                                grid=(
+                                    1, 
+                                    int((self.fshape[1] + by - 1) // by), 
+                                    int(fmag.shape[0])),
                                 stream=self.queue)
 
     def error_reduce(self, addr, err_fmag):

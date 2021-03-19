@@ -63,3 +63,49 @@ extern "C" __global__ void __launch_bounds__(1024, 2)
     }
   }
 }
+
+
+extern "C" __global__ void 
+    fourier_error2(int nmodes,
+                  const complex<IN_TYPE> *f,
+                  const IN_TYPE *fmask,
+                  const IN_TYPE *fmag,
+                  OUT_TYPE *fdev,
+                  OUT_TYPE *ferr,
+                  const IN_TYPE *mask_sum,
+                  const int *addr,
+                  int A,
+                  int B)
+{
+  int tx = threadIdx.x;
+  int a = threadIdx.y + blockIdx.y * blockDim.y;
+  if (a >= A)
+    return;
+  int addr_stride = 15;
+
+  const int *ea = addr + 6 + (blockIdx.z * nmodes) * addr_stride;
+  const int *da = addr + 9 + (blockIdx.z * nmodes) * addr_stride;
+  const int *ma = addr + 12 + (blockIdx.z * nmodes) * addr_stride;
+
+  f += ea[0] * A * B;
+  fdev += da[0] * A * B;
+  fmag += da[0] * A * B;
+  fmask += ma[0] * A * B;
+  ferr += da[0] * A * B;
+
+  for (int b = tx; b < B; b += blockDim.x)
+  {
+    MATH_TYPE acc = MATH_TYPE(0);
+    for (int idx = 0; idx < nmodes; ++idx)
+    {
+      complex<MATH_TYPE> t_f = f[a * B + b + idx * A * B];
+      MATH_TYPE abs_exit_wave = abs(t_f);
+      acc += abs_exit_wave *
+              abs_exit_wave;  // if we do this manually (real*real +imag*imag)
+                              // we get differences to numpy due to rounding
+    }
+    auto fdevv = sqrt(acc) - MATH_TYPE(fmag[a * B + b]);
+    ferr[a * B + b] = (fmask[a * B + b] * fdevv * fdevv) / mask_sum[ma[0]];
+    fdev[a * B + b] = fdevv;
+  }
+}
