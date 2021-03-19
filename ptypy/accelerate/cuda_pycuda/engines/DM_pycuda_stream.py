@@ -69,7 +69,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         # TODO grow blocks dynamically
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
         nma = min(fit, MAX_BLOCKS)
-
+        log(3, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
         log(3, 'PyCUDA max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
         # reset memory or create new
         self.ex_data = GpuDataManager2(ex_mem, 0, nex, True)
@@ -123,6 +123,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             prep.mag = cuda.pagelocked_empty(mag.shape, mag.dtype, order="C", mem_flags=4)
             prep.mag[:] = mag
 
+            log(3, 'Free memory on device: %.2f GB' % (float(cuda.mem_get_info()[0])/1e9))
             self.ex_data.add_data_block()
             self.ma_data.add_data_block()
             self.mag_data.add_data_block()
