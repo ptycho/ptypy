@@ -438,6 +438,10 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         PROP.queue = streamdata.queue
                         AUK.queue = streamdata.queue
 
+                        # Keep track of object boundaries
+                        max_oby = ob.shape[-2] - aux.shape[-2] - 1
+                        max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
                         # We need to re-calculate the current error
                         PCK.build_aux(aux, addr, ob, pr)
                         PROP.fw(aux, aux)
@@ -454,18 +458,16 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
                         for i in range(PCK.mangler.nshifts):
                             # This can potentially be move to GPU
-
                             addr_cpu = addr.get_async(streamdata.queue)
                             streamdata.queue.synchronize()
                             mangled_addr = addr_cpu.copy()
-                            PCK.mangler.get_address(i, addr.get(), original_addr, mangled_addr)
+                            PCK.mangler.get_address(i, addr.get(), mangled_addr, max_oby, max_obx)
                             mangled_addr_gpu = gpuarray.to_gpu_async(mangled_addr, stream=streamdata.queue)
 
                             PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
                             PROP.fw(aux, aux)
                             PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
                             PCK.error_reduce(mangled_addr_gpu, prep.err_fourier_gpu)
-                            # err_fourier_cpu = err_fourier.get_async(streamdata.queue)
                             PCK.update_addr_and_error_state(addr, 
                                 prep.error_state_gpu, 
                                 mangled_addr_gpu, 

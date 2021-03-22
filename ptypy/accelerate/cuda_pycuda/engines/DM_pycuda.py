@@ -285,8 +285,11 @@ class DM_pycuda(DM_serial.DM_serial):
                         PCK = kern.PCK
                         AUK = kern.AUK
 
-                        #error_state = np.zeros(err_fourier.shape, dtype=np.float32)
-                        #error_state[:] = err_fourier.get()
+                        # Keep track of object boundaries
+                        max_oby = ob.shape[-2] - aux.shape[-2] - 1
+                        max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
+                        # We need to re-calculate the current error 
                         PCK.build_aux(aux, addr, ob, pr)
                         PROP.fw(aux, aux)
                         PCK.fourier_error(aux, addr, mag, ma, ma_sum)
@@ -302,7 +305,7 @@ class DM_pycuda(DM_serial.DM_serial):
                             # This can potentially be move to GPU
                             addr_cpu = addr.get()
                             mangled_addr = addr_cpu.copy()
-                            PCK.mangler.get_address(i, addr.get(), original_addr, mangled_addr)
+                            PCK.mangler.get_address(i, addr.get(), mangled_addr, max_oby, max_obx)
                             mangled_addr_gpu = gpuarray.to_gpu(mangled_addr)
 
                             PCK.build_aux(aux, mangled_addr_gpu, ob, pr)

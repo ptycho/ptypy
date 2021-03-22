@@ -17,7 +17,7 @@ class BaseMangler(object):
         self.nshifts = nshifts
         self.delta = 0
 
-    def get_address(self, index, addr_current, addr_original, mangled_addr):
+    def get_address(self, index, addr_current, mangled_addr, max_oby, max_obx):
         '''
         Mangles with the address given a delta shift
         '''
@@ -26,18 +26,17 @@ class BaseMangler(object):
         new_positions = np.zeros((addr_current.shape[0],2))
         new_positions[:] = old_positions + self.delta[index]  # first mode is same as all of them.
         #  now update the main matrix (Same for all modes)
-        for idx in range(addr_original.shape[1]):
+        for idx in range(addr_current.shape[1]):
             mangled_addr[:, idx, 1, 1:] = new_positions
+        self.apply_bounding_box(mangled_addr[:,:,1,1], 0, max_oby)
+        self.apply_bounding_box(mangled_addr[:,:,1,2], 0, max_obx)
 
-    def apply_bounding_box(self, new_positions, old_positions, addr_original):
+    def apply_bounding_box(self, addr, min, max):
         '''
-        Checks if the new co-ordinates lie within the bounding box. If not, we undo this move.
+        Check if the mangled addresses are within valid bounds
         '''
-        distances_from_original = new_positions - addr_original[:, 0, 1, 1:]
-        norms = np.linalg.norm(distances_from_original, axis=-1)
-        for i in range(len(new_positions)):
-            if norms[i]> self.max_bound:
-                new_positions[i] = old_positions[i]
+        addr[addr<min] = min
+        addr[addr>max] = max
 
     def setup_shifts(self, current_iteration, nframes=1):
         ''' 

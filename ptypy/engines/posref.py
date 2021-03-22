@@ -306,7 +306,7 @@ class GridSearchRefine(PositionRefine):
                 coord = new_coord
                 log(4, "Position correction: %s, coord: %s, delta: %s" % (di_view.ID, coord, delta))
 
-            # if di_view.ID == "V0044":
+            # if di_view.ID == "V0001":
             #     print("%s: %d %f %f %f/%f" %(di_view.ID, i, new_error, error, delta[0]/psize[0], delta[1]/psize[1]))
                 
         ob_view.coord = coord

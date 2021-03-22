@@ -357,7 +357,7 @@ class DM_serial(DM.DM):
                         kern = self.kernels[prep.label]
                         aux = kern.aux
                         addr = prep.addr
-                        original_addr = prep.original_addr # use this instead of the one in the address mangler.
+                        original_addr = prep.original_addr
                         mangled_addr = addr.copy()
                         mag = prep.mag
                         ma_sum = prep.ma_sum
@@ -366,6 +366,11 @@ class DM_serial(DM.DM):
                         PCK = kern.PCK
                         FW = kern.FW
 
+                        # Keep track of object boundaries
+                        max_oby = ob.shape[-2] - aux.shape[-2] - 1
+                        max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
+                        # We need to re-calculate the current error 
                         PCK.build_aux(aux, original_addr, ob, pr)
                         aux[:] = FW(aux)
                         PCK.fourier_error(aux, original_addr, mag, ma, ma_sum)
@@ -376,15 +381,15 @@ class DM_serial(DM.DM):
 
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                         for i in range(PCK.mangler.nshifts):
-                            PCK.mangler.get_address(i, addr, original_addr, mangled_addr)
+                            PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
                             PCK.build_aux(aux, mangled_addr, ob, pr)
                             aux[:] = FW(aux)
                             PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
                             PCK.error_reduce(mangled_addr, err_fourier)
                             PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
                             # for j in range(len(error_state)):
-                            #     if j == 44:
-                            #         print("V%04d: %d %f %f %f/%f" %(j, i, err_fourier[j], error_state[j], delta[j,0,0], delta[j,0,1]))
+                            #     if j == 1:
+                            #         print("V%04d: %d %f %f %f/%f" %(j, i, err_fourier[j], error_state[j], PCK.mangler.delta[i,j,0], PCK.mangler.delta[i,j,1]))
                         prep.err_fourier = error_state
                         prep.addr = addr
 

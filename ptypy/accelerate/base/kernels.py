@@ -682,20 +682,6 @@ class PositionCorrectionKernel(BaseKernel):
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
 
-    def get_shift(self, index, current_iteration):
-        '''
-        Returns the next shift to be applied.
-        '''
-        pass
-
-    def get_address(self, current_addr, original_addr, shift):
-        '''
-        Return the mangled address associated with the shift to be applied.
-        '''
-        pass
-
-
-
     def update_addr_and_error_state(self, addr, error_state, mangled_addr, err_sum):
         '''
         updates the addresses and err state vector corresponding to the smallest error. I think this can be done on the cpu
