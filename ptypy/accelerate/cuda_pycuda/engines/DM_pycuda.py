@@ -18,7 +18,6 @@ from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.accelerate.base.engines import DM_serial
-from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel
@@ -130,17 +129,9 @@ class DM_pycuda(DM_serial.DM_serial):
 
             if self.do_position_refinement:
                 logger.info("Setting up position correction")
-                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
-                                                                self.p.position_refinement.start,
-                                                                self.p.position_refinement.stop,
-                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
-                                                                randomseed=0)
-                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
-                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
-
-                kern.PCK = PositionCorrectionKernel(aux, nmodes, queue_thread=self.queue)
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
                 kern.PCK.allocate()
-                kern.PCK.address_mangler = addr_mangler
+                #kern.PCK.address_mangler = addr_mangler
             logger.info("Kernel setup completed")
 
     def engine_prepare(self):
@@ -296,13 +287,24 @@ class DM_pycuda(DM_serial.DM_serial):
 
                         #error_state = np.zeros(err_fourier.shape, dtype=np.float32)
                         #error_state[:] = err_fourier.get()
+                        PCK.build_aux(aux, addr, ob, pr)
+                        PROP.fw(aux, aux)
+                        PCK.fourier_error(aux, addr, mag, ma, ma_sum)
+                        PCK.error_reduce(addr, err_fourier)
                         cuda.memcpy_dtod(dest=prep.error_state_gpu.ptr,
                                          src=err_fourier.ptr,
                                          size=err_fourier.nbytes)
+
+                        PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+                                        
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
-                        for i in range(self.p.position_refinement.nshifts):
-                            mangled_addr = PCK.address_mangler.mangle_address(addr.get(), original_addr, self.curiter)
+                        for i in range(PCK.mangler.nshifts):
+                            # This can potentially be move to GPU
+                            addr_cpu = addr.get()
+                            mangled_addr = addr_cpu.copy()
+                            PCK.mangler.get_address(i, addr.get(), original_addr, mangled_addr)
                             mangled_addr_gpu = gpuarray.to_gpu(mangled_addr)
+
                             PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
                             PROP.fw(aux, aux)
                             PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)

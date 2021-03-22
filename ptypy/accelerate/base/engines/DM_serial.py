@@ -15,7 +15,6 @@ from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import BaseEngine, register, DM
 from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
 
 
@@ -196,17 +195,9 @@ class DM_serial(DM.DM):
             kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
-                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
-                                                                self.p.position_refinement.start,
-                                                                self.p.position_refinement.stop,
-                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
-                                                                randomseed=0)
-                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
-                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
-
-                kern.PCK = PositionCorrectionKernel(aux, nmodes)
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution)
                 kern.PCK.allocate()
-                kern.PCK.address_mangler = addr_mangler
+                #kern.PCK.address_mangler = addr_mangler
 
     def engine_prepare(self):
 
@@ -346,7 +337,7 @@ class DM_serial(DM.DM):
             self.overlap_update(MPI=True)
             parallel.barrier()
 
-            if self.do_position_refinement and (self.curiter):
+            if self.do_position_refinement:
                 do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
                 do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
 
@@ -367,6 +358,7 @@ class DM_serial(DM.DM):
                         aux = kern.aux
                         addr = prep.addr
                         original_addr = prep.original_addr # use this instead of the one in the address mangler.
+                        mangled_addr = addr.copy()
                         mag = prep.mag
                         ma_sum = prep.ma_sum
                         err_fourier = prep.err_fourier
@@ -374,16 +366,25 @@ class DM_serial(DM.DM):
                         PCK = kern.PCK
                         FW = kern.FW
 
+                        PCK.build_aux(aux, original_addr, ob, pr)
+                        aux[:] = FW(aux)
+                        PCK.fourier_error(aux, original_addr, mag, ma, ma_sum)
+                        PCK.error_reduce(original_addr, err_fourier)
                         error_state = np.zeros_like(err_fourier)
                         error_state[:] = err_fourier
+                        PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
-                        for i in range(self.p.position_refinement.nshifts):
-                            mangled_addr = PCK.address_mangler.mangle_address(addr, original_addr, self.curiter)
+                        for i in range(PCK.mangler.nshifts):
+                            PCK.mangler.get_address(i, addr, original_addr, mangled_addr)
                             PCK.build_aux(aux, mangled_addr, ob, pr)
                             aux[:] = FW(aux)
                             PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
                             PCK.error_reduce(mangled_addr, err_fourier)
                             PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
+                            # for j in range(len(error_state)):
+                            #     if j == 44:
+                            #         print("V%04d: %d %f %f %f/%f" %(j, i, err_fourier[j], error_state[j], delta[j,0,0], delta[j,0,1]))
                         prep.err_fourier = error_state
                         prep.addr = addr
 
@@ -460,18 +461,18 @@ class DM_serial(DM.DM):
                 parallel.allreduce(ob.data)
                 parallel.allreduce(obn.data)
                 ob.data /= obn.data
-
-                # Clip object (This call takes like one ms. Not time critical)
-                if self.p.clip_object is not None:
-                    clip_min, clip_max = self.p.clip_object
-                    ampl_obj = np.abs(ob.data)
-                    phase_obj = np.exp(1j * np.angle(ob.data))
-                    too_high = (ampl_obj > clip_max)
-                    too_low = (ampl_obj < clip_min)
-                    ob.data[too_high] = clip_max * phase_obj[too_high]
-                    ob.data[too_low] = clip_min * phase_obj[too_low]
             else:
                 ob.data /= obn.data
+
+            # Clip object (This call takes like one ms. Not time critical)
+            if self.p.clip_object is not None:
+                clip_min, clip_max = self.p.clip_object
+                ampl_obj = np.abs(ob.data)
+                phase_obj = np.exp(1j * np.angle(ob.data))
+                too_high = (ampl_obj > clip_max)
+                too_low = (ampl_obj < clip_min)
+                ob.data[too_high] = clip_max * phase_obj[too_high]
+                ob.data[too_low] = clip_min * phase_obj[too_low]
 
         self.benchmark.object_update += time.time() - t1
         self.benchmark.calls_object += 1
@@ -559,7 +560,7 @@ class DM_serial(DM.DM):
                 res = self.kernels[prep.label].resolution
                 for i,view in enumerate(d.views):
                     for j,(pname, pod) in enumerate(view.pods.items()):
-                        delta = (prep.original_addr[i][j][1][1:] - prep.addr[i][j][1][1:]) * res
+                        delta = (prep.addr[i][j][1][1:] - prep.original_addr[i][j][1][1:]) * res
                         pod.ob_view.coord += delta 
                         pod.ob_view.storage.update_views(pod.ob_view)
 

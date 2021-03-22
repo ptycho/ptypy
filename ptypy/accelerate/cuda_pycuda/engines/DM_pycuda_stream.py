@@ -340,13 +340,24 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         ev_mag, mag, data_mag = self.mag_data.to_gpu(prep.mag, dID, self.qu_htod)
                         # error_state = np.zeros(err_fourier.shape, dtype=np.float32)
                         # err_fourier.get_async(streamdata.queue, error_state)
+                        PCK.build_aux(aux, addr, ob, pr)
+                        PROP.fw(aux, aux)
+                        PCK.fourier_error(aux, addr, mag, ma, ma_sum)
+                        PCK.error_reduce(addr, err_fourier)
                         cuda.memcpy_dtod(dest=prep.error_state_gpu.ptr,
                                          src=prep.err_fourier_gpu.ptr,
-                                         size=prep.err_fourier_gpu.nbytes)#, stream=self.queue)
+                                         size=prep.err_fourier_gpu.nbytes)
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
-                        for i in range(self.p.position_refinement.nshifts):
-                            mangled_addr = PCK.address_mangler.mangle_address(addr.get(), original_addr, self.curiter)
+
+                        PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+
+                        for i in range(PCK.mangler.nshifts):
+                            # This can potentially be move to GPU
+                            addr_cpu = addr.get()
+                            mangled_addr = addr_cpu.copy()
+                            PCK.mangler.get_address(i, addr.get(), original_addr, mangled_addr)
                             mangled_addr_gpu = gpuarray.to_gpu(mangled_addr)
+
                             PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
                             PROP.fw(aux, aux)
                             # wait for data to arrive

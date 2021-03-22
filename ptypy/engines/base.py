@@ -25,11 +25,6 @@ DEFAULT_iter_info = u.Param(
     error=np.zeros((3,))
 )
 
-POSREF_ENGINES = {
-    "Annealing": AnnealingRefine,
-    "GridSearch": GridSearchRefine
-}
-
 class BaseEngine(object):
     """
     Base reconstruction engine.
@@ -367,6 +362,11 @@ class PositionCorrectionEngine(BaseEngine):
     help = record movement of positions
     """
 
+    POSREF_ENGINES = {
+        "Annealing": AnnealingRefine,
+        "GridSearch": GridSearchRefine
+    }
+
     def __init__(self, ptycho_parent, pars):
         """
         Position Correction engine.
@@ -405,7 +405,7 @@ class PositionCorrectionEngine(BaseEngine):
                 s.reformat()
 
             # Choose position refinement engine from dictionary
-            PosrefEngine = POSREF_ENGINES[self.p.position_refinement.method]
+            PosrefEngine = self.POSREF_ENGINES[self.p.position_refinement.method]
             self.position_refinement = PosrefEngine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
             log(3, "Position refinement (%s) initialised" %self.p.position_refinement.method)
             self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)

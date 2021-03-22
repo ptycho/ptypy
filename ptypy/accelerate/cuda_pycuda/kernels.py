@@ -1031,8 +1031,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
 
 class PositionCorrectionKernel(ab.PositionCorrectionKernel):
-    def __init__(self, aux, nmodes, queue_thread=None, math_type='float', accumulate_type='float'):
-        super(PositionCorrectionKernel, self).__init__(aux, nmodes)
+    def __init__(self, aux, nmodes, parameters, resolution, queue_thread=None, math_type='float', accumulate_type='float'):
+        super(PositionCorrectionKernel, self).__init__(aux, nmodes, parameters, resolution)
         if math_type not in ['float', 'double']:
             raise ValueError('Only float or double math is supported')
         if accumulate_type not in ['float', 'double']:

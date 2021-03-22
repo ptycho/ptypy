@@ -577,7 +577,14 @@ class PoUpdateKernel(BaseKernel):
         return
 
 class PositionCorrectionKernel(BaseKernel):
-    def __init__(self, aux, nmodes):
+    from ptypy.accelerate.base import address_manglers
+
+    MANGLERS = {
+        'Annealing': address_manglers.RandomIntMangler,
+        'GridSearch': address_manglers.GridSearchMangler
+    }
+
+    def __init__(self, aux, nmodes, parameters, resolution):
         super(PositionCorrectionKernel, self).__init__()
         ash = aux.shape
         self.fshape = (ash[0] // nmodes, ash[1], ash[2])
@@ -585,11 +592,23 @@ class PositionCorrectionKernel(BaseKernel):
         self.npy.fdev = None
         self.addr = None
         self.nmodes = nmodes
+        self.param = parameters
+        self.nshifts = parameters.nshifts
+        self.resolution = resolution
         self.address_mangler = None
         self.kernels = ['build_aux',
                         'fourier_error',
                         'error_reduce',
                         'update_addr']
+        self.setup()
+
+    def setup(self):
+        Mangler = self.MANGLERS[self.param.method]
+        self.mangler = Mangler(int(self.param.amplitude // self.resolution[0]), self.param.start, self.param.stop,
+                               self.param.nshifts,
+                               max_bound=int(self.param.max_shift // self.resolution[0]), randomseed=0)
+        logger.warning("amplitude is %s " % (self.param.amplitude // self.resolution[0]))
+        logger.warning("max bound is %s " % (self.param.max_shift // self.resolution[0]))
 
     def allocate(self):
         self.npy.fdev = np.zeros(self.fshape, dtype=np.float32) # we won't use this again but preallocate for speed
@@ -663,11 +682,28 @@ class PositionCorrectionKernel(BaseKernel):
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
 
+    def get_shift(self, index, current_iteration):
+        '''
+        Returns the next shift to be applied.
+        '''
+        pass
+
+    def get_address(self, current_addr, original_addr, shift):
+        '''
+        Return the mangled address associated with the shift to be applied.
+        '''
+        pass
+
+
+
     def update_addr_and_error_state(self, addr, error_state, mangled_addr, err_sum):
         '''
         updates the addresses and err state vector corresponding to the smallest error. I think this can be done on the cpu
         '''
         update_indices = err_sum < error_state
         log(4, "updating %s indices" % np.sum(update_indices))
+        # for i in range(len(error_state)):
+        #     if i == 44:
+        #         print("Updating %d: %d" %(i, update_indices[i]))
         addr[update_indices] = mangled_addr[update_indices]
         error_state[update_indices] = err_sum[update_indices]
