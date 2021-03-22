@@ -24,8 +24,8 @@ class RandomIntMangle(object):
         max_step = self.max_step(iteration)
         deltas = np.random.randint(0, max_step + 1, (addr_current.shape[0], 2))
         # the following improves things a lot!
-        deltas[:, 0] = (-1)**self.call_no
-        deltas[:, 1] = (-1)**(self.call_no//2)
+        deltas[:, 0] *= (-1)**self.call_no 
+        deltas[:, 1] *= (-1)**(self.call_no//2)
         self.call_no += 1
 
         # deltas = np.zeros((addr_current.shape[0], 2)) # for testing
