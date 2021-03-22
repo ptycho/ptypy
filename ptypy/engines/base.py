@@ -13,7 +13,7 @@ import time
 from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline, log
-from .posref import AnnealingRefine
+from .posref import AnnealingRefine, GridSearchRefine
 
 __all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info', 'PositionCorrectionEngine']
 
@@ -24,6 +24,11 @@ DEFAULT_iter_info = u.Param(
     duration=0.,
     error=np.zeros((3,))
 )
+
+POSREF_ENGINES = {
+    "Annealing": AnnealingRefine,
+    "GridSearch": GridSearchRefine
+}
 
 class BaseEngine(object):
     """
@@ -314,6 +319,11 @@ class PositionCorrectionEngine(BaseEngine):
     type = Param, bool
     help = If True refine scan positions
 
+    [position_refinement.method]
+    default = Annealing
+    type = str
+    help = Annealing or GridSearch
+
     [position_refinement.start]
     default = None
     type = int
@@ -394,9 +404,10 @@ class PositionCorrectionEngine(BaseEngine):
                 s.padding = int(self.p.position_refinement.max_shift // np.max(s.psize))
                 s.reformat()
 
-            # this could be some kind of dictionary lookup if we want to add more
-            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
-            log(3, "Position refinement initialised")
+            # Choose position refinement engine from dictionary
+            PosrefEngine = POSREF_ENGINES[self.p.position_refinement.method]
+            self.position_refinement = PosrefEngine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
+            log(3, "Position refinement (%s) initialised" %self.p.position_refinement.method)
             self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
             if self.p.position_refinement.stop is None:
                 self.p.position_refinement.stop = self.p.numiter
