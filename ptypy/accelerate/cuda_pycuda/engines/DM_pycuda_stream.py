@@ -368,7 +368,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         if use_tiles:
                             s1 = prep.addr_gpu.shape[0] * prep.addr_gpu.shape[1]
                             s2 = prep.addr_gpu.shape[2] * prep.addr_gpu.shape[3]
-                            AUK.transpose(prep.addr_gpu.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+                            kern.TK.transpose(prep.addr_gpu.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
             self.curiter += 1
             self.queue.synchronize()
