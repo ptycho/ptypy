@@ -5,14 +5,8 @@ from pycuda import gpuarray
 
 class BaseMangler(npam.BaseMangler):
 
-    def __init__(self, max_step_per_shift,  start, stop, nshifts, max_bound=None, randomseed=None, queue_thread=None):
-        super().__init__(
-            max_step_per_shift=max_step_per_shift, 
-            start=start, 
-            stop=stop,
-            nshifts=nshifts,
-            max_bound=max_bound,
-            randomseed=randomseed)
+    def __init__(self, *args, queue_thread=None, **kwargs):
+        super().__init__(*args, **kwargs)
         self.queue = queue_thread
         self.get_address_cuda = load_kernel("get_address")
         self.delta = None
@@ -21,7 +15,7 @@ class BaseMangler(npam.BaseMangler):
     def _setup_delta_gpu(self):
         assert self.delta is not None, "Setup delta using the setup_shifts method first"
         
-        if self.delta_gpu is None or self.delta_gpu.shape[0] != self.delta.shape[0]:
+        if self.delta_gpu is None or self.delta_gpu.shape[0] > self.delta.shape[0]:
             self.delta_gpu = gpuarray.empty(self.delta.shape, dtype=np.int32)
         self.delta_gpu.set(self.delta.astype(np.int32))
 
@@ -49,15 +43,17 @@ class BaseMangler(npam.BaseMangler):
 
 # with multiple inheritance, we have to be explicit which super class 
 # we are calling in the methods
-
 class RandomIntMangler(BaseMangler, npam.RandomIntMangler):
 
     def __init__(self, *args, **kwargs):
         BaseMangler.__init__(self, *args, **kwargs)
 
-    def setup_shifts(self, current_iteration, nframes):
-        npam.RandomIntMangler.setup_shifts(self, current_iteration, nframes=nframes)
+    def setup_shifts(self, *args, **kwargs):
+        npam.RandomIntMangler.setup_shifts(self, *args, **kwargs)
         self._setup_delta_gpu()
+
+    def get_address(self, *args, **kwargs):
+        BaseMangler.get_address(self, *args, **kwargs)
 
 
 class GridSearchMangler(BaseMangler, npam.GridSearchMangler):
@@ -65,9 +61,9 @@ class GridSearchMangler(BaseMangler, npam.GridSearchMangler):
     def __init__(self, *args, **kwargs):
         BaseMangler.__init__(self, *args, **kwargs)
 
-    def setup_shifts(self, current_iteration, nframes):
-        npam.GridSearchMangler.setup_shifts(self, current_iteration, nframes=nframes)
+    def setup_shifts(self, *args, **kwargs):
+        npam.GridSearchMangler.setup_shifts(self, *args, **kwargs)
         self._setup_delta_gpu()
 
-    def get_address(self, index, addr_current, mangled_addr, max_oby, max_obx):
-        BaseMangler.get_address(self, index, addr_current, mangled_addr, max_oby, max_obx)
+    def get_address(self, *args, **kwargs):
+        BaseMangler.get_address(self, *args, **kwargs)
