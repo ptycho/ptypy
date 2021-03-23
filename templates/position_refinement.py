@@ -41,7 +41,6 @@ p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
 p.engines.engine00.probe_support = 1
-# p.engines.engine00.probe_center_tol = 0.5
 p.engines.engine00.numiter = 1000
 p.engines.engine00.position_refinement = u.Param()
 p.engines.engine00.position_refinement.start = 50
@@ -58,26 +57,24 @@ P = Ptycho(p, level=4)
 a = 0.
 
 coords = []
+coords_start = []
 for pname, pod in P.pods.items():
+
     # Save real position
     coords.append(np.copy(pod.ob_view.coord))
     before = pod.ob_view.coord
     psize = pod.pr_view.psize
-    # print(pname)
-    # print(before)
     perturbation = psize * ((3e-7 * np.array([np.sin(a), np.cos(a)])) // psize)
-
     new_coord = before + perturbation # make sure integer number of pixels shift
-
-
     pod.ob_view.coord = new_coord
-
-    #pod.diff *= np.random.uniform(0.1,1)y
+    coords_start.append(np.copy(pod.ob_view.coord))
+    #pod.diff *= np.random.uniform(0.1,1)
     a += 4.
 
 np.savetxt("positions_theory.txt", coords)
+np.savetxt("positions_start.txt", coords_start)
 P.obj.reformat()
-
 
 # Run
 P.run()
+P.finalize()

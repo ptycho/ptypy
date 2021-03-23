@@ -51,7 +51,7 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_serial'
+p.engines.engine00.name = 'DM_pycuda'
 p.engines.engine00.probe_support = 1
 p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 10
@@ -84,8 +84,8 @@ for pname, pod in P.pods.items():
     #pod.diff *= np.random.uniform(0.1,1)y
     a += 4.
 
-np.savetxt("positions_theory_serial.txt", coords)
-np.savetxt("positions_start_serial.txt", coords_start)
+np.savetxt("positions_theory_pycuda.txt", coords)
+np.savetxt("positions_start_pycuda.txt", coords_start)
 P.obj.reformat()# update the object storage
 
 # Run
