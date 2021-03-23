@@ -158,6 +158,8 @@ class DM_pycuda(DM_serial.DM_serial):
             if use_tiles:
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
+            if self.do_position_refinement:
+                prep.mangled_addr_gpu = gpuarray.empty_like(prep.addr_gpu, dtype=np.int32)
 
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
@@ -302,19 +304,17 @@ class DM_pycuda(DM_serial.DM_serial):
                                         
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                         for i in range(PCK.mangler.nshifts):
-                            # This can potentially be move to GPU
-                            addr_cpu = addr.get()
-                            mangled_addr = addr_cpu.copy()
-                            PCK.mangler.get_address(i, addr.get(), mangled_addr, max_oby, max_obx)
-                            mangled_addr_gpu = gpuarray.to_gpu(mangled_addr)
-
-                            PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
+                            cuda.memcpy_dtod(dest=prep.mangled_addr_gpu.ptr,
+                                             src=prep.addr_gpu.ptr,
+                                             size=prep.addr_gpu.nbytes)
+                            PCK.mangler.get_address(i, addr, prep.mangled_addr_gpu, max_oby, max_obx)
+                            PCK.build_aux(aux, prep.mangled_addr_gpu, ob, pr)
                             PROP.fw(aux, aux)
-                            PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
-                            PCK.error_reduce(mangled_addr_gpu, err_fourier)
+                            PCK.fourier_error(aux, prep.mangled_addr_gpu, mag, ma, ma_sum)
+                            PCK.error_reduce(prep.mangled_addr_gpu, err_fourier)
                             PCK.update_addr_and_error_state(addr,
                                 prep.error_state_gpu,
-                                mangled_addr_gpu,
+                                prep.mangled_addr_gpu,
                                 err_fourier)
                         
                         # prep.err_fourier_gpu.set(error_state)

@@ -100,6 +100,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             if use_tiles:
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
+            if self.do_position_refinement:
+                prep.mangled_addr_gpu = gpuarray.empty_like(prep.addr_gpu, dtype=np.int32)
 
         for label, d in self.ptycho.new_data:
             dID = d.ID
@@ -358,22 +360,20 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
 
                         for i in range(PCK.mangler.nshifts):
-                            # This can potentially be move to GPU
-                            addr_cpu = addr.get()
-                            mangled_addr = addr_cpu.copy()
-                            PCK.mangler.get_address(i, addr.get(), mangled_addr, max_oby, max_obx)
-                            mangled_addr_gpu = gpuarray.to_gpu(mangled_addr)
-
-                            PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
+                            cuda.memcpy_dtod(dest=prep.mangled_addr_gpu.ptr,
+                                             src=prep.addr_gpu.ptr,
+                                             size=prep.addr_gpu.nbytes)
+                            PCK.mangler.get_address(i, addr, prep.mangled_addr_gpu, max_oby, max_obx)
+                            PCK.build_aux(aux, prep.mangled_addr_gpu, ob, pr)
                             PROP.fw(aux, aux)
                             # wait for data to arrive
                             self.queue.wait_for_event(ev_mag)
-                            PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
-                            PCK.error_reduce(mangled_addr_gpu, prep.err_fourier_gpu)
+                            PCK.fourier_error(aux, prep.mangled_addr_gpu, mag, ma, ma_sum)
+                            PCK.error_reduce(prep.mangled_addr_gpu, prep.err_fourier_gpu)
                             # err_fourier_cpu = err_fourier.get_async(streamdata.queue)
                             PCK.update_addr_and_error_state(addr,
                                                             prep.error_state_gpu,
-                                                            mangled_addr_gpu,
+                                                            prep.mangled_addr_gpu,
                                                             prep.err_fourier_gpu)
 
                         data_mag.record_done(self.queue, 'compute')

@@ -24,6 +24,7 @@ class BaseMangler(npam.BaseMangler):
         assert addr_current.shape == mangled_addr.shape, "output addresses must be pre-allocated"
         assert self.delta is not None, "Deltas are not set yet - call setup_shifts first"
         assert index < self.delta.shape[0], "Index out of range for deltas"
+        assert isinstance(self.delta, gpuarray.GPUArray), "Only GPU arrays are supported for delta"
 
         # only using a single thread block here as it's not enough work
         # otherwise

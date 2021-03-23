@@ -1031,6 +1031,14 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
 
 class PositionCorrectionKernel(ab.PositionCorrectionKernel):
+    from ptypy.accelerate.cuda_pycuda import address_manglers
+
+    # these are used by the self.setup method - replacing them with the GPU implementation
+    MANGLERS = {
+        'Annealing': address_manglers.RandomIntMangler,
+        'GridSearch': address_manglers.GridSearchMangler
+    }
+
     def __init__(self, aux, nmodes, parameters, resolution, queue_thread=None, math_type='float', accumulate_type='float'):
         super(PositionCorrectionKernel, self).__init__(aux, nmodes, parameters, resolution)
         if math_type not in ['float', 'double']:
