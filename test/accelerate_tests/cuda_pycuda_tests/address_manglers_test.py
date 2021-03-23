@@ -50,10 +50,11 @@ class AddressManglersTest(PyCudaTest):
         step_size=2
         mglr = gam.BaseMangler(step_size, 50, 100, nshifts, max_bound=2)
         # 2 shifts, with positive/negative shifting
-        mglr.delta = gpuarray.to_gpu(np.array([
+        mglr.delta = np.array([
             [1, 2], 
             [-4, -2]
-        ], dtype=np.int32))
+        ], dtype=np.int32)
+        mglr._setup_delta_gpu()
         
         addr1 = addr_original_dev.copy()
         mglr.get_address(0, addr_original_dev, addr1, 10, 9)
