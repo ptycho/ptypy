@@ -401,8 +401,8 @@ class PositionCorrectionEngine(BaseEngine):
             # Enlarge object arrays, 
             # This can be skipped though if the boundary is less important
             for name, s in self.ob.storages.items():
-                s.padding = int(self.p.position_refinement.max_shift // np.max(s.psize))
-                s.reformat()
+               s.padding = int(self.p.position_refinement.max_shift // np.max(s.psize))
+               s.reformat()
 
             # Choose position refinement engine from dictionary
             PosrefEngine = self.POSREF_ENGINES[self.p.position_refinement.method]

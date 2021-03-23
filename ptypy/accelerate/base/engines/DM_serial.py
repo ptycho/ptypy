@@ -371,10 +371,10 @@ class DM_serial(DM.DM):
                         max_obx = ob.shape[-1] - aux.shape[-1] - 1
 
                         # We need to re-calculate the current error 
-                        PCK.build_aux(aux, original_addr, ob, pr)
+                        PCK.build_aux(aux, addr, ob, pr)
                         aux[:] = FW(aux)
-                        PCK.fourier_error(aux, original_addr, mag, ma, ma_sum)
-                        PCK.error_reduce(original_addr, err_fourier)
+                        PCK.fourier_error(aux, addr, mag, ma, ma_sum)
+                        PCK.error_reduce(addr, err_fourier)
                         error_state = np.zeros_like(err_fourier)
                         error_state[:] = err_fourier
                         PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
@@ -387,9 +387,7 @@ class DM_serial(DM.DM):
                             PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
                             PCK.error_reduce(mangled_addr, err_fourier)
                             PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
-                            # for j in range(len(error_state)):
-                            #     if j == 1:
-                            #         print("V%04d: %d %f %f %f/%f" %(j, i, err_fourier[j], error_state[j], PCK.mangler.delta[i,j,0], PCK.mangler.delta[i,j,1]))
+                            
                         prep.err_fourier = error_state
                         prep.addr = addr
 
