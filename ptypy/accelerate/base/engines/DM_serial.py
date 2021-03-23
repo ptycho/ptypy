@@ -197,7 +197,6 @@ class DM_serial(DM.DM):
             if self.do_position_refinement:
                 kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution)
                 kern.PCK.allocate()
-                #kern.PCK.address_mangler = addr_mangler
 
     def engine_prepare(self):
 
@@ -387,7 +386,7 @@ class DM_serial(DM.DM):
                             PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
                             PCK.error_reduce(mangled_addr, err_fourier)
                             PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
-                            
+
                         prep.err_fourier = error_state
                         prep.addr = addr
 

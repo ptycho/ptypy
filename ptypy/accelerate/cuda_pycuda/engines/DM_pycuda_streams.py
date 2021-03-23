@@ -170,7 +170,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
             if self.do_position_refinement:
-                prep.mangled_addr_gpu = gpuarray.empty_like(prep.addr_gpu, dtype=np.int32)
+                prep.mangled_addr_gpu = prep.addr_gpu.copy()
 
             prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
             # prepare page-locked mems:
@@ -459,9 +459,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
 
                         for i in range(PCK.mangler.nshifts):
-                            cuda.memcpy_dtod(dest=prep.mangled_addr_gpu.ptr,
-                                             src=prep.addr_gpu.ptr,
-                                             size=prep.addr_gpu.nbytes)
                             PCK.mangler.get_address(i, addr, prep.mangled_addr_gpu, max_oby, max_obx)
                             PCK.build_aux(aux, prep.mangled_addr_gpu, ob, pr)
                             PROP.fw(aux, aux)

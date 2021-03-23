@@ -396,7 +396,7 @@ class PositionCorrectionEngine(BaseEngine):
             self.do_position_refinement = False
         else:
             self.do_position_refinement = True
-            log(3, "Initialising position refinement")
+            log(3, "Initialising position refinement (%s)" %self.p.position_refinement.method)
             
             # Enlarge object arrays, 
             # This can be skipped though if the boundary is less important
@@ -407,7 +407,6 @@ class PositionCorrectionEngine(BaseEngine):
             # Choose position refinement engine from dictionary
             PosrefEngine = self.POSREF_ENGINES[self.p.position_refinement.method]
             self.position_refinement = PosrefEngine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
-            log(3, "Position refinement (%s) initialised" %self.p.position_refinement.method)
             self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
             if self.p.position_refinement.stop is None:
                 self.p.position_refinement.stop = self.p.numiter

@@ -101,7 +101,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
             if self.do_position_refinement:
-                prep.mangled_addr_gpu = gpuarray.empty_like(prep.addr_gpu, dtype=np.int32)
+                prep.mangled_addr_gpu = prep.addr_gpu.copy()
 
         for label, d in self.ptycho.new_data:
             dID = d.ID
@@ -336,7 +336,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         original_addr = prep.original_addr
                         ma_sum = prep.ma_sum_gpu
                         PCK = kern.PCK
-                        AUK = kern.AUK
+                        TK = kern.AUK
                         PROP = kern.PROP
 
                         # Make sure our data arrays are on device
@@ -350,27 +350,23 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         # We need to re-calculate the current error
                         PCK.build_aux(aux, addr, ob, pr)
                         PROP.fw(aux, aux)
+                        # wait for data to arrive
+                        self.queue.wait_for_event(ev_mag)
                         PCK.fourier_error(aux, addr, mag, ma, ma_sum)
                         PCK.error_reduce(addr, err_fourier)
-                        cuda.memcpy_dtod(dest=prep.error_state_gpu.ptr,
-                                         src=prep.err_fourier_gpu.ptr,
-                                         size=prep.err_fourier_gpu.nbytes)
+                        cuda.memcpy_dtod_async(dest=prep.error_state_gpu.ptr,
+                                               src=prep.err_fourier_gpu.ptr,
+                                               size=prep.err_fourier_gpu.nbytes, stream=self.queue)
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
 
                         PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
 
                         for i in range(PCK.mangler.nshifts):
-                            cuda.memcpy_dtod(dest=prep.mangled_addr_gpu.ptr,
-                                             src=prep.addr_gpu.ptr,
-                                             size=prep.addr_gpu.nbytes)
                             PCK.mangler.get_address(i, addr, prep.mangled_addr_gpu, max_oby, max_obx)
                             PCK.build_aux(aux, prep.mangled_addr_gpu, ob, pr)
                             PROP.fw(aux, aux)
-                            # wait for data to arrive
-                            self.queue.wait_for_event(ev_mag)
                             PCK.fourier_error(aux, prep.mangled_addr_gpu, mag, ma, ma_sum)
                             PCK.error_reduce(prep.mangled_addr_gpu, prep.err_fourier_gpu)
-                            # err_fourier_cpu = err_fourier.get_async(streamdata.queue)
                             PCK.update_addr_and_error_state(addr,
                                                             prep.error_state_gpu,
                                                             prep.mangled_addr_gpu,
@@ -378,13 +374,13 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         data_mag.record_done(self.queue, 'compute')
                         data_ma.record_done(self.queue, 'compute')
-                        cuda.memcpy_dtod(dest=prep.err_fourier_gpu.ptr,
-                                         src=prep.error_state_gpu.ptr,
-                                         size=prep.err_fourier_gpu.nbytes) #stream=self.queue)
+                        cuda.memcpy_dtod_async(dest=prep.err_fourier_gpu.ptr,
+                                               src=prep.error_state_gpu.ptr,
+                                               size=prep.err_fourier_gpu.nbytes, stream=self.queue)
                         if use_tiles:
                             s1 = prep.addr_gpu.shape[0] * prep.addr_gpu.shape[1]
                             s2 = prep.addr_gpu.shape[2] * prep.addr_gpu.shape[3]
-                            kern.TK.transpose(prep.addr_gpu.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+                            TK.transpose(prep.addr_gpu.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
             self.curiter += 1
             self.queue.synchronize()

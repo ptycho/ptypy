@@ -128,10 +128,9 @@ class DM_pycuda(DM_serial.DM_serial):
             kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
-                logger.info("Setting up position correction")
+                logger.info("Setting up PositionCorrectionKernel")
                 kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
                 kern.PCK.allocate()
-                #kern.PCK.address_mangler = addr_mangler
             logger.info("Kernel setup completed")
 
     def engine_prepare(self):
@@ -159,7 +158,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
             if self.do_position_refinement:
-                prep.mangled_addr_gpu = gpuarray.empty_like(prep.addr_gpu, dtype=np.int32)
+                prep.mangled_addr_gpu = prep.addr_gpu.copy()
 
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
@@ -285,7 +284,7 @@ class DM_pycuda(DM_serial.DM_serial):
                         err_fourier = prep.err_fourier_gpu
 
                         PCK = kern.PCK
-                        AUK = kern.AUK
+                        TK  = kern.TK
 
                         # Keep track of object boundaries
                         max_oby = ob.shape[-2] - aux.shape[-2] - 1
@@ -304,9 +303,6 @@ class DM_pycuda(DM_serial.DM_serial):
                                         
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                         for i in range(PCK.mangler.nshifts):
-                            cuda.memcpy_dtod(dest=prep.mangled_addr_gpu.ptr,
-                                             src=prep.addr_gpu.ptr,
-                                             size=prep.addr_gpu.nbytes)
                             PCK.mangler.get_address(i, addr, prep.mangled_addr_gpu, max_oby, max_obx)
                             PCK.build_aux(aux, prep.mangled_addr_gpu, ob, pr)
                             PROP.fw(aux, aux)
@@ -317,14 +313,13 @@ class DM_pycuda(DM_serial.DM_serial):
                                 prep.mangled_addr_gpu,
                                 err_fourier)
                         
-                        # prep.err_fourier_gpu.set(error_state)
                         cuda.memcpy_dtod(dest=prep.err_fourier_gpu.ptr,
                             src=prep.error_state_gpu.ptr,
                             size=prep.err_fourier_gpu.nbytes)
                         if use_tiles:
                             s1 = addr.shape[0] * addr.shape[1]
                             s2 = addr.shape[2] * addr.shape[3]
-                            kern.TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+                            TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
             self.curiter += 1
             queue.synchronize()
