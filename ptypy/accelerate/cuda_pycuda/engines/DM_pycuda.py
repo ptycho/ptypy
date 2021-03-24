@@ -279,12 +279,15 @@ class DM_pycuda(DM_serial.DM_serial):
                         aux = kern.aux
                         addr = prep.addr_gpu
                         original_addr = prep.original_addr
+                        mangled_addr = prep.mangled_addr_gpu
                         mag = prep.mag
                         ma_sum = prep.ma_sum
                         err_fourier = prep.err_fourier_gpu
+                        error_state = prep.error_state_gpu
 
                         PCK = kern.PCK
                         TK  = kern.TK
+                        PROP = kern.PROP
 
                         # Keep track of object boundaries
                         max_oby = ob.shape[-2] - aux.shape[-2] - 1
@@ -293,9 +296,12 @@ class DM_pycuda(DM_serial.DM_serial):
                         # We need to re-calculate the current error 
                         PCK.build_aux(aux, addr, ob, pr)
                         PROP.fw(aux, aux)
-                        PCK.fourier_error(aux, addr, mag, ma, ma_sum)
-                        PCK.error_reduce(addr, err_fourier)
-                        cuda.memcpy_dtod(dest=prep.error_state_gpu.ptr,
+                        if self.p.position_refinement.metric == "fourier":
+                            PCK.fourier_error(aux, addr, mag, ma, ma_sum)
+                            PCK.error_reduce(addr, err_fourier)
+                        if self.p.position_refinement.metric == "photon":
+                            PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
+                        cuda.memcpy_dtod(dest=error_state.ptr,
                                          src=err_fourier.ptr,
                                          size=err_fourier.nbytes)
 
@@ -303,19 +309,19 @@ class DM_pycuda(DM_serial.DM_serial):
                                         
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                         for i in range(PCK.mangler.nshifts):
-                            PCK.mangler.get_address(i, addr, prep.mangled_addr_gpu, max_oby, max_obx)
-                            PCK.build_aux(aux, prep.mangled_addr_gpu, ob, pr)
+                            PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
+                            PCK.build_aux(aux, mangled_addr, ob, pr)
                             PROP.fw(aux, aux)
-                            PCK.fourier_error(aux, prep.mangled_addr_gpu, mag, ma, ma_sum)
-                            PCK.error_reduce(prep.mangled_addr_gpu, err_fourier)
-                            PCK.update_addr_and_error_state(addr,
-                                prep.error_state_gpu,
-                                prep.mangled_addr_gpu,
-                                err_fourier)
+                            if self.p.position_refinement.metric == "fourier":
+                                PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
+                                PCK.error_reduce(mangled_addr, err_fourier)
+                            if self.p.position_refinement.metric == "photon":
+                                PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
+                            PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
                         
-                        cuda.memcpy_dtod(dest=prep.err_fourier_gpu.ptr,
-                            src=prep.error_state_gpu.ptr,
-                            size=prep.err_fourier_gpu.nbytes)
+                        cuda.memcpy_dtod(dest=err_fourier.ptr,
+                                         src=error_state.ptr,
+                                         size=err_fourier.nbytes)
                         if use_tiles:
                             s1 = addr.shape[0] * addr.shape[1]
                             s2 = addr.shape[2] * addr.shape[3]
