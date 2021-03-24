@@ -607,8 +607,6 @@ class PositionCorrectionKernel(BaseKernel):
         self.mangler = Mangler(int(self.param.amplitude // self.resolution[0]), self.param.start, self.param.stop,
                                self.param.nshifts,
                                max_bound=int(self.param.max_shift // self.resolution[0]), randomseed=0)
-        logger.warning("amplitude is %s " % (self.param.amplitude // self.resolution[0]))
-        logger.warning("max bound is %s " % (self.param.max_shift // self.resolution[0]))
 
     def allocate(self):
         self.npy.fdev = np.zeros(self.fshape, dtype=np.float32) # we won't use this again but preallocate for speed
