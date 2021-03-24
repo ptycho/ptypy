@@ -336,7 +336,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         original_addr = prep.original_addr
                         ma_sum = prep.ma_sum_gpu
                         PCK = kern.PCK
-                        TK = kern.AUK
+                        TK = kern.TK
                         PROP = kern.PROP
 
                         # Make sure our data arrays are on device
