@@ -2,6 +2,7 @@ from ptypy.accelerate.cuda_pycuda import load_kernel
 import numpy as np
 from ptypy.accelerate.base import address_manglers as npam
 from pycuda import gpuarray
+import pycuda.driver as cuda
 
 class BaseMangler(npam.BaseMangler):
 
@@ -14,10 +15,15 @@ class BaseMangler(npam.BaseMangler):
 
     def _setup_delta_gpu(self):
         assert self.delta is not None, "Setup delta using the setup_shifts method first"
+        assert self.delta.dtype == np.int32, "Delta must be int32"
         
         if self.delta_gpu is None or self.delta_gpu.shape[0] > self.delta.shape[0]:
             self.delta_gpu = gpuarray.empty(self.delta.shape, dtype=np.int32)
-        self.delta_gpu.set(self.delta.astype(np.int32))
+        # in case self.delta is smaller than delta_gpu, this will only copy the
+        # relevant part
+        cuda.memcpy_htod(dest=self.delta_gpu.ptr,
+                               src=self.delta.data,
+                               size=self.delta.nbytes)
 
     def get_address(self, index, addr_current, mangled_addr, max_oby, max_obx):
         assert addr_current.dtype == np.int32, "addresses must be int32"
