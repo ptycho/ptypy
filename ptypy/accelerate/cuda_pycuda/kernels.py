@@ -1041,6 +1041,8 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
 
     def __init__(self, aux, nmodes, parameters, resolution, queue_thread=None, math_type='float', accumulate_type='float'):
         super(PositionCorrectionKernel, self).__init__(aux, nmodes, parameters, resolution)
+        # make sure we set the right stream in the mangler
+        self.mangler.queue = queue_thread
         if math_type not in ['float', 'double']:
             raise ValueError('Only float or double math is supported')
         if accumulate_type not in ['float', 'double']:
