@@ -465,6 +465,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                         PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
                         for i in range(PCK.mangler.nshifts):
+                            streamdata.queue.synchronize()
                             PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
                             PCK.build_aux(aux, mangled_addr, ob, pr)
                             PROP.fw(aux, aux)
