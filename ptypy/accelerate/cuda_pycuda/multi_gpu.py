@@ -3,41 +3,73 @@ Multi-GPU AllReduce Wrapper, that uses NCCL via cupy if it's available,
 and otherwise falls back to MPI + host/device copies
 """
 
+import mpi4py
+from pkg_resources import parse_version
 import numpy as np
 from pycuda import gpuarray
 from ptypy.utils import parallel
+import os
 
 try:
     from cupy.cuda import nccl
     import cupy as cp
 except ImportError:
-    import sys
-    print("NCCL could not be loaded - falling back to MPI", file=sys.stderr)
     nccl = None
-    del sys
+
+# properties to check which versions are available
+have_nccl = (nccl is not None)
+
+# at the moment, we require the OpenMPI env var to be set,
+# mpi4py >= 3.1.0
+# pycuda with __cuda_array_interface__
+#
+# -> we ideally want to allow enabling support from a parameter in ptypy
+have_cuda_mpi = "OMPI_MCA_opal_cuda_support" in os.environ and \
+    os.environ["OMPI_MCA_opal_cuda_support"] == "true" and \
+    parse_version(parse_version(mpi4py.__version__).base_version) >= parse_version("3.1.0") and \
+    hasattr(gpuarray.GPUArray, '__cuda_array_interface__')
 
 
-class MultiGpuCommunicatorMpi:
-    """Communicator for AllReduce that uses MPI on the CPU, i.e. D2H, allreduce, H2D"""
+class MultiGpuCommunicatorBase:
+    """Base class for multi-GPU communicator options, to aggregate common bits"""
 
     def __init__(self):
         self.rank = parallel.rank
         self.ndev = parallel.size
 
-    def allReduceSum(self, send_arr, recv_arr):
-        """Call MPI.all_reduce from send to recv array, with both arrays on GPU"""
+    def allReduceSum(self, arr):
+        """Call MPI.all_reduce in-place, with array on GPU"""
+        # base class only checks properties of arrays
+        assert isinstance(arr, gpuarray.GPUArray), "Input must be a GPUArray"
 
-        if not isinstance(send_arr, gpuarray.GPUArray) \
-            or not isinstance(recv_arr, gpuarray.GPUArray):
-            raise NotImplementedError("AllReduce only implemented for gpuarrays")
 
-        if self.ndev > 1:
+class MultiGpuCommunicatorMpi(MultiGpuCommunicatorBase):
+    """Communicator for AllReduce that uses MPI on the CPU, i.e. D2H, allreduce, H2D"""
+
+    def allReduceSum(self, arr):
+        """Call MPI.all_reduce in-place, with array on GPU"""
+        super().allReduceSum(arr)
+
+        if parallel.MPIenabled:
             # note: this creates a temporary CPU array
-            data = send_arr.get()
+            data = arr.get()
             parallel.allreduce(data)
-            recv_arr.set(data)
+            arr.set(data)
+
+class MultiGpuCommunicatorCudaMpi(MultiGpuCommunicatorBase):
+
+    def allReduceSum(self, arr):
+        """Call MPI.all_reduce in-place, with array on GPU"""
+
+        assert hasattr(arr, '__cuda_array_interface__'), "input array should have a cuda array interface"
+
+        if parallel.MPIenabled:
+            comm = parallel.comm
+            comm.Allreduce(parallel.MPI.IN_PLACE, arr)
+            
     
-class MultiGpuCommunicatorNccl(MultiGpuCommunicatorMpi):
+class MultiGpuCommunicatorNccl(MultiGpuCommunicatorBase):
+    
     def __init__(self):
         super().__init__()
         # get a unique identifier for the NCCL communicator and 
@@ -50,20 +82,17 @@ class MultiGpuCommunicatorNccl(MultiGpuCommunicatorMpi):
         self.id = parallel.bcast(self.id)
         self.com = nccl.NcclCommunicator(self.ndev, self.id, self.rank)
 
-    def allReduceSum(self, send_arr, recv_arr):
-        """Call MPI.all_reduce from send to recv array, with both arrays on GPU"""
-        if not isinstance(send_arr, gpuarray.GPUArray) \
-            or not isinstance(recv_arr, gpuarray.GPUArray):
-            raise NotImplementedError("AllReduce only implemented for gpuarrays")
-        sendbuf = int(send_arr.gpudata)
-        recvbuf = int(recv_arr.gpudata)
-        count, datatype = self.__get_NCCL_count_dtype(send_arr)
+    def allReduceSum(self, arr):
+        """Call MPI.all_reduce in-place, with array on GPU"""
+
+        buf = int(arr.gpudata)
+        count, datatype = self.__get_NCCL_count_dtype(arr)
         
         # no stream support here for now - it fails in NCCL when 
         # pycuda.Stream.handle is used for some unexplained reason
         stream = cp.cuda.Stream.null.ptr
-        
-        self.com.allReduce(sendbuf, recvbuf, count, datatype, nccl.NCCL_SUM, stream)
+       
+        self.com.allReduce(buf, buf, count, datatype, nccl.NCCL_SUM, stream)
 
     def __get_NCCL_count_dtype(self, arr):
             if arr.dtype == np.complex64:
@@ -77,9 +106,13 @@ class MultiGpuCommunicatorNccl(MultiGpuCommunicatorMpi):
             else:
                 raise ValueError("This dtype is not supported by NCCL.")
 
-# pick the appropriate communicator depending on installed packages
-if nccl is None:
-    MultiGpuCommunicator = MultiGpuCommunicatorMpi
-else:
+
+
+# pick the appropriate communicator depending on installed packages 
+if have_nccl:
     MultiGpuCommunicator = MultiGpuCommunicatorNccl
-            
+elif have_cuda_mpi:
+    MultiGpuCommunicator = MultiGpuCommunicatorCudaMpi
+else:
+    MultiGpuCommunicator = MultiGpuCommunicatorMpi
+    
