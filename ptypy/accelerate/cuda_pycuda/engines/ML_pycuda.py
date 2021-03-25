@@ -210,19 +210,9 @@ class ML_pycuda(ML_serial):
             kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue)
             kern.PROP.allocate()
 
-
             if self.do_position_refinement:
-                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
-                                                                self.p.position_refinement.start,
-                                                                self.p.position_refinement.stop,
-                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
-                                                                randomseed=0)
-                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
-                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
-
-                kern.PCK = PositionCorrectionKernel(aux, nmodes, queue_thread=self.queue)
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
                 kern.PCK.allocate()
-                kern.PCK.address_mangler = addr_mangler
 
     def _initialize_model(self):
 

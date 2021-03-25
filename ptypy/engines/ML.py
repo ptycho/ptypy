@@ -318,6 +318,9 @@ class ML(PositionCorrectionEngine):
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
 
+            # Position correction
+            self.position_update()
+
             # Allow for customized modifications at the end of each iteration
             self._post_iterate_update()
 
