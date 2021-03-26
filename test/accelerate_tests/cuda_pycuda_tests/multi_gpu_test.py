@@ -49,6 +49,14 @@ class GpuDataTest(PyCudaTest):
 
         self.assertGreaterEqual(v2, v1)
 
+    def test_compute_mode(self):
+        attr = cuda.Context.get_device().get_attributes()
+        self.assertIn(cuda.device_attribute.COMPUTE_MODE, attr)
+        mode = attr[cuda.device_attribute.COMPUTE_MODE]
+        self.assertIn(mode, 
+            [cuda.compute_mode.DEFAULT, cuda.compute_mode.PROHIBITED, cuda.compute_mode.EXCLUSIVE_PROCESS]
+        )
+
     def multigpu_tester(self, com):
         if self.ctx is None:
             return

@@ -1,12 +1,37 @@
 """
 Multi-GPU AllReduce Wrapper, that uses NCCL via cupy if it's available,
-and otherwise falls back to MPI + host/device copies
+and otherwise falls back to CUDA-aware MPI,
+and if that doesn't work, uses host/device copies with regular MPI.
+
+Findings:
+
+1) NCCL works with unit tests, but not in the engines. It seems to 
+add something to the existing pycuda Context or create a new one,
+as a later event recording on an exit wave transfer fails with
+'ivalid resource handle' Cuda Error. This error typically happens if for example
+a CUDA event is created in a different context than what it is used in,
+or on a different device. PyCuda uses the driver API, NCCL uses the runtime.
+Even though those are interoperable, there seems to be an issue.
+Note that this is before any allreduce call - straight after initialising.
+
+2) NCCL requires cupy - the Python wrapper is in there
+
+3) OpenMPI with CUDA support needs to be available, and:
+  - mpi4py needs to be compiled from master (3.1.0a - latest stable release 3.0.x doesn't have it)
+  - pycuda needs to be compile from master (for __cuda_array_interface__ - 2020.1 version doesn't have it)
+  - OpenMPI in a conda install needs to have the environment variable
+  --> if cuda support isn't enabled, the application simply crashes with a seg fault
+
+4) For NCCL peer-to-peer transfers, the EXCLUSIVE compute mode cannot be used. 
+   It should be in DEFAULT mode.
+
 """
 
 import mpi4py
 from pkg_resources import parse_version
 import numpy as np
 from pycuda import gpuarray
+import pycuda.driver as cuda
 from ptypy.utils import parallel
 import os
 
@@ -80,6 +105,9 @@ class MultiGpuCommunicatorNccl(MultiGpuCommunicatorBase):
     
     def __init__(self):
         super().__init__()
+        
+        #assert cuda.Context.get_device().get_attributes()[cuda.device_attribute.COMPUTE_MODE] == cuda.compute_mode.DEFAULT, "compute mode must be default in order to use NCCL"
+        
         # get a unique identifier for the NCCL communicator and 
         # broadcast it to all MPI processes (assuming one device per process)
         if self.rank == 0:
@@ -88,6 +116,7 @@ class MultiGpuCommunicatorNccl(MultiGpuCommunicatorBase):
             self.id = None
 
         self.id = parallel.bcast(self.id)
+
         self.com = nccl.NcclCommunicator(self.ndev, self.id, self.rank)
 
     def allReduceSum(self, arr):
