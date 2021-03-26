@@ -15,7 +15,8 @@ p.verbose_level = 4
 # set home path
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.autosave = u.Param()
+p.io.autosave = u.Param(active=False)
+p.io.interaction = u.Param(active=False)
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
@@ -44,11 +45,12 @@ p.engines.engine00.probe_support = 1
 p.engines.engine00.numiter = 1000
 p.engines.engine00.position_refinement = u.Param()
 p.engines.engine00.position_refinement.start = 50
-p.engines.engine00.position_refinement.stop = 990
+p.engines.engine00.position_refinement.stop = 950
 p.engines.engine00.position_refinement.interval = 10
 p.engines.engine00.position_refinement.nshifts = 32
-p.engines.engine00.position_refinement.amplitude = 1e-6
-p.engines.engine00.position_refinement.max_shift = 2e-6
+p.engines.engine00.position_refinement.amplitude = 5e-7
+p.engines.engine00.position_refinement.max_shift = 1e-4
+p.engines.engine00.position_refinement.method = "GridSearch"
 
 # prepare and run
 P = Ptycho(p, level=4)
