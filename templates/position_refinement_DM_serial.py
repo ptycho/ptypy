@@ -8,7 +8,6 @@ import numpy as np
 from ptypy.core import Ptycho
 from ptypy import utils as u
 
-from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream, DM_pycuda_streams, DM_pycuda
 from ptypy.accelerate.base.engines import DM_serial
 
 
@@ -62,7 +61,7 @@ p.engines.engine00.position_refinement.stop = 950
 p.engines.engine00.position_refinement.interval = 10
 p.engines.engine00.position_refinement.nshifts = 32
 p.engines.engine00.position_refinement.amplitude = 5e-7
-p.engines.engine00.position_refinement.max_shift = 1e-4
+p.engines.engine00.position_refinement.max_shift = 1e-6
 p.engines.engine00.position_refinement.method = "GridSearch"
 
 # prepare and run

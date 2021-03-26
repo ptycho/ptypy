@@ -19,7 +19,7 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from .utils import Cnorm2, Cdot
 from . import register
-from .base import PositionCorrectionEngine
+from .base import BaseEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 # for debugging
@@ -29,7 +29,7 @@ __all__ = ['ML']
 
 
 @register()
-class ML(PositionCorrectionEngine):
+class ML(BaseEngine):
     """
     Maximum likelihood reconstruction engine.
 
@@ -166,7 +166,6 @@ class ML(PositionCorrectionEngine):
         """
         Prepare for ML reconstruction.
         """
-        super(ML, self).engine_initialize()
         
         # Object gradient and minimization direction
         self.ob_grad = self.ob.copy(self.ob.ID + '_grad', fill=0.)
@@ -318,9 +317,6 @@ class ML(PositionCorrectionEngine):
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
 
-            # Position correction
-            self.position_update()
-
             # Allow for customized modifications at the end of each iteration
             self._post_iterate_update()
 
@@ -341,7 +337,6 @@ class ML(PositionCorrectionEngine):
         """
         Delete temporary containers.
         """
-        super(ML, self).engine_finalize()
         del self.ptycho.containers[self.ob_grad.ID]
         del self.ob_grad
         del self.ptycho.containers[self.ob_grad_new.ID]

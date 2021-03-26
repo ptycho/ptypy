@@ -23,8 +23,7 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger
 from ptypy.utils import parallel
 from .. import get_context
-from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, \
-    PositionCorrectionKernel, PropagationKernel
+from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel
 
 from ptypy.accelerate.base import address_manglers
@@ -209,10 +208,6 @@ class ML_pycuda(ML_serial):
 
             kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue)
             kern.PROP.allocate()
-
-            if self.do_position_refinement:
-                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
-                kern.PCK.allocate()
 
     def _initialize_model(self):
 
