@@ -24,6 +24,7 @@ from ptypy.utils.verbose import log, logger
 from ptypy.utils import parallel
 from ptypy.engines import register
 from . import DM_pycuda
+from ..multi_gpu import MultiGpuCommunicator
 
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager2
@@ -47,11 +48,13 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         self.ma_data = None
         self.mag_data = None
         self.ex_data = None
+        self.multigpu = None
 
     def engine_initialize(self):
         super().engine_initialize()
         self.qu_htod = cuda.Stream()
         self.qu_dtoh = cuda.Stream()
+        self.multigpu = MultiGpuCommunicator()
 
     def _setup_kernels(self):
 
@@ -127,7 +130,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             self.ex_data.add_data_block()
             self.ma_data.add_data_block()
             self.mag_data.add_data_block()
-
+        
     def engine_iterate(self, num=1):
         """
         Compute one iteration.
@@ -137,7 +140,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         atomics_probe = self.p.probe_update_cuda_atomics
         atomics_object = self.p.object_update_cuda_atomics
         use_tiles = (not atomics_object) or (not atomics_probe)
-
+        
         for it in range(num):
 
             error = {}
@@ -281,18 +284,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     for oID, ob in self.ob.storages.items():
                         obn = self.ob_nrm.S[oID]
                         obb = self.ob_buf.S[oID]
-                        # MPI test
-                        if MPI:
-                            obb.data[:] = obb.gpu.get()
-                            obn.data[:] = obn.gpu.get()
-                            parallel.allreduce(obb.data)
-                            parallel.allreduce(obn.data)
-                            obb.data /= obn.data
-                            self.clip_object(obb)
-                            ob.gpu.set(obb.data)
-                        else:
-                            obb.gpu /= obn.gpu
-                            ob.gpu[:] = obb.gpu
+                        self.multigpu.allReduceSum(obb.gpu)
+                        self.multigpu.allReduceSum(obn.gpu)
+                        # TODO: self.clip_object(obb)
+                        obb.gpu /= obn.gpu
+                        ob.gpu[:] = obb.gpu
 
                 # Exit if probe should not yet be updated
                 if not do_update_probe:
@@ -435,28 +431,14 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             buf = self.pr_buf.S[pID]
             prn = self.pr_nrm.S[pID]
 
-            # MPI test
-            if MPI:
-                # if False:
-                pr.data[:] = pr.gpu.get()
-                prn.data[:] = prn.gpu.get()
-                # queue.synchronize()
-                parallel.allreduce(pr.data)
-                parallel.allreduce(prn.data)
-                pr.data /= prn.data
+            self.multigpu.allReduceSum(pr.gpu)
+            self.multigpu.allReduceSum(prn.gpu)
+            pr.gpu /= prn.gpu
+            # TODO: self.support_constraint(pr)
+            pr.gpu.get(pr.data)
 
-                self.support_constraint(pr)
+            ## TODO: this should be done on GPU
 
-                pr.gpu.set(pr.data)
-            else:
-                pr.gpu /= prn.gpu
-                # ca. 0.3 ms
-                # self.pr.S[pID].gpu = probe_gpu
-                pr.data[:] = pr.gpu.get()
-
-            ## this should be done on GPU
-
-            # queue.synchronize()
             change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
             buf.data[:] = pr.data
             if MPI:

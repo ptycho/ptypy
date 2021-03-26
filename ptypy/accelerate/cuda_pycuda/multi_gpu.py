@@ -17,17 +17,25 @@ except ImportError:
     nccl = None
 
 # properties to check which versions are available
-have_nccl = (nccl is not None)
 
-# at the moment, we require the OpenMPI env var to be set,
+# use NCCL is it is available, and the user didn't override the
+# default selection with environment variables
+have_nccl = (nccl is not None) and \
+    (not 'PTYPY_USE_CUDAMPI' in os.environ) and \
+    (not 'PTYPY_USE_MPI' in os.environ)
+
+# At the moment, we require:
+# the OpenMPI env var OMPI_MCA_opal_cuda_support to be set to true,
 # mpi4py >= 3.1.0
 # pycuda with __cuda_array_interface__
+# and not setting the PTYPY_USE_MPI environment variable
 #
 # -> we ideally want to allow enabling support from a parameter in ptypy
 have_cuda_mpi = "OMPI_MCA_opal_cuda_support" in os.environ and \
     os.environ["OMPI_MCA_opal_cuda_support"] == "true" and \
     parse_version(parse_version(mpi4py.__version__).base_version) >= parse_version("3.1.0") and \
-    hasattr(gpuarray.GPUArray, '__cuda_array_interface__')
+    hasattr(gpuarray.GPUArray, '__cuda_array_interface__') and \
+    not ('PTYPY_USE_MPI' in os.environ)
 
 
 class MultiGpuCommunicatorBase:

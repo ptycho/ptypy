@@ -31,9 +31,9 @@ class GpuDataTest(PyCudaTest):
 
     def setUp(self):
         if parallel.rank_local < cuda.Device.count():
-            self.ctx = cuda.Device(parallel.rank_local).make_context()
+            self.device = cuda.Device(parallel.rank_local)
+            self.ctx = self.device.make_context()
             self.ctx.push()
-            self.stream = cuda.Stream()
         else:
             self.ctx = None
 
