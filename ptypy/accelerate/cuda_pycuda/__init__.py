@@ -27,13 +27,18 @@ def get_context(new_context=False, new_queue=False):
         if parallel.rank_local < cuda.Device.count():
             context = cuda.Device(parallel.rank_local).make_context()
             context.push()
-        # print("made context %s on rank %s" % (str(context), str(parallel.rank)))
-        # print("The cuda device count on %s is:%s" % (str(parallel.rank),
-        #                                              str(cuda.Device.count())))
-        # print("parallel.rank:%s, parallel.rank_local:%s" % (str(parallel.rank),
-        #                                                     str(parallel.rank_local)))
-    if queue is None or new_queue:
-        queue = cuda.Stream()
+            # print("made context %s on rank %s" % (str(context), str(parallel.rank)))
+            # print("The cuda device count on %s is:%s" % (str(parallel.rank),
+            #                                              str(cuda.Device.count())))
+            # print("parallel.rank:%s, parallel.rank_local:%s" % (str(parallel.rank),
+            #                                                     str(parallel.rank_local)))
+            if queue is None or new_queue:
+                queue = cuda.Stream()
+        else:
+            raise Exception('Could not create cuda context, rank={}, rank_local={}, device_count={}'.format(
+                parallel.rank, parallel.rank_local, cuda.Device.count()
+            ))
+    
     return context, queue
 
 
