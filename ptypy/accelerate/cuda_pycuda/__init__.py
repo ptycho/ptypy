@@ -25,7 +25,7 @@ def get_context(new_context=False, new_queue=False):
     if context is None or new_context:
         cuda.init()
         if parallel.rank_local >= cuda.Device.count():
-            raise Exception('Local rank cannot be larger than total device count, \
+            raise Exception('Local rank must be smaller than total device count, \
                 rank={}, rank_local={}, device_count={}'.format(
                 parallel.rank, parallel.rank_local, cuda.Device.count()
             ))
