@@ -17,6 +17,10 @@ class FFT_cuda(object):
         if dims < 2:
             raise AssertionError('Input array must be at least 2-dimensional')
         self.arr_shape = (array.shape[-2], array.shape[-1])
+        rows = self.arr_shape[0]
+        columns = self.arr_shape[1]
+        if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
+            raise ValueError("CUDA FFT only supports powers of 2 for rows/columns, from 16 to 2048")
         self.batches = int(np.product(array.shape[0:dims-2]) if dims > 2 else 1)
         self.forward = forward
 
@@ -35,9 +39,11 @@ class FFT_cuda(object):
             self.post_fft_ptr = 0
 
         from . import import_fft
-        mod = import_fft.ImportFFT(self.arr_shape[0], self.arr_shape[1]).get_mod()
+        mod = import_fft.ImportFFT().get_mod()
         self.fftobj = mod.FilteredFFT(
                 self.batches, 
+                self.arr_shape[0], 
+                self.arr_shape[1],
                 symmetric, 
                 forward,
                 self.pre_fft_ptr,
