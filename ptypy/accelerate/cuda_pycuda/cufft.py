@@ -38,8 +38,9 @@ class FFT_cuda(object):
         else:
             self.post_fft_ptr = 0
 
-        from ptypy import filtered_cufft
-        self.fftobj = filtered_cufft.FilteredFFT(
+        from . import import_fft
+        mod = import_fft.ImportFFT().get_mod()
+        self.fftobj = mod.FilteredFFT(
                 self.batches, 
                 self.arr_shape[0], 
                 self.arr_shape[1],

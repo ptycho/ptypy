@@ -59,18 +59,8 @@ class NvccCompiler(UnixCCompiler):
         super(NvccCompiler, self).__init__(*args, **kwargs)
         self.CUDA = locate_cuda()
         module_dir = os.path.join(__file__.strip('import_fft.py'), 'cuda', 'filtered_fft') 
-        try:
-            cmp = cuda_driver.Context.get_device().compute_capability()
-            archflag = '-arch=sm_{}{}'.format(cmp[0], cmp[1])
-        except cuda_driver.LogicError:
-             # by default, compile for all of these 
-            archflag = '-gencode=arch=compute_50,code=sm_50' + \
-                ' -gencode=arch=compute_52,code=sm_52' + \
-                ' -gencode=arch=compute_60,code=sm_60' + \
-                ' -gencode=arch=compute_61,code=sm_61' + \
-                ' -gencode=arch=compute_70,code=sm_70' + \
-                ' -gencode=arch=compute_75,code=sm_75' + \
-                ' -gencode=arch=compute_75,code=compute_75'
+        cmp = cuda_driver.Context.get_device().compute_capability()
+        archflag = '-arch=sm_{}{}'.format(cmp[0], cmp[1])
         self.src_extensions.append('.cu')
         self.LD_FLAGS = [archflag, "-lcufft_static", "-lculibos", "-ldl", "-lrt", "-lpthread", "-cudart shared"]
         self.NVCC_FLAGS = ["-dc", archflag]
@@ -112,18 +102,13 @@ class NvccCompiler(UnixCCompiler):
         self.linker_so = default_linker_so
 
 class CustomBuildExt(build_ext):
-
-    def build_extension(self, ext):
-        has_cu = any([src.endswith('.cu') for src in ext.sources])
-        if has_cu:
-            old_compiler = self.compiler
-            self.compiler = NvccCompiler(verbose=old_compiler.verbose,
-                                        dry_run=old_compiler.dry_run,
-                                        force=old_compiler.force) # this is our bespoke compiler
-            super(CustomBuildExt, self).build_extension(ext)
-            self.compiler=old_compiler
-        else:
-            super(CustomBuildExt, self).build_extension(ext)
+    def build_extensions(self):
+        old_compiler = self.compiler
+        self.compiler = NvccCompiler(verbose=old_compiler.verbose,
+                                     dry_run=old_compiler.dry_run,
+                                     force=old_compiler.force) # this is our bespoke compiler
+        super(CustomBuildExt, self).build_extensions()
+        self.compiler=old_compiler
 
 @contextlib.contextmanager
 def stdchannel_redirected(stdchannel):
@@ -148,7 +133,7 @@ class ImportFFT:
             self.build_path = tempfile.mkdtemp(prefix="ptypy_fft")
             self.cleanup_build_path = True
 
-        full_module_name = "filtered_cufft"
+        full_module_name = "module"
         module_dir = os.path.join(__file__.strip('import_fft.py'), 'cuda', 'filtered_fft')
         # If we specify the libraries through the extension we soon run into trouble since distutils adds a -l infront of all of these (add_library_option:https://github.com/python/cpython/blob/1c1e68cf3e3a2a19a0edca9a105273e11ddddc6e/Lib/distutils/ccompiler.py#L1115)
         ext = distutils.extension.Extension(full_module_name,
