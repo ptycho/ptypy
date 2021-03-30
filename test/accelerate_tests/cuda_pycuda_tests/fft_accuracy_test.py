@@ -44,5 +44,5 @@ class FftAccurracyTest(PyCudaTest):
             # print('{}: {}\t{}\t{}\t{}'.format(i, cufft_diff, reikna_diff, cufft_rdiff, reikna_rdiff))
         
             # Note: check if this tolerance and test case is ok
-            np.testing.assert_allclose(y, y_cufft, atol=1e-6, rtol=5e-5, err_msg='cuFFT error at index {}'.format(i))
-            np.testing.assert_allclose(y, y_reikna, atol=1e-6, rtol=5e-5, err_msg='reikna FFT error at index {}'.format(i))
+            np.testing.assert_allclose(y, y_cufft, rtol=5e-5, err_msg='cuFFT error at index {}'.format(i))
+            np.testing.assert_allclose(y, y_reikna, rtol=5e-5, err_msg='reikna FFT error at index {}'.format(i))

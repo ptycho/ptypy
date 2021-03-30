@@ -23,7 +23,6 @@ public:
 // Note that cudaStream_t (runtime API) and CUStream (driver API) are
 // the same type
 FilteredFFT* make_filtered(int batches, 
-  int rows, int columns,
   bool symmetricScaling,
   bool isForward,
   complex<float>* prefilt, complex<float>* postfilt, 

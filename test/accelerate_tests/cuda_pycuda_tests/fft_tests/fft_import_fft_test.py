@@ -1,34 +1,26 @@
 
-import unittest
+import unittest, pytest
 from test.accelerate_tests.cuda_pycuda_tests import PyCudaTest, have_pycuda
+import os, shutil
+from distutils import sysconfig
 
 if have_pycuda():
+    import pycuda.driver as cuda
+    from pycuda import gpuarray
     from ptypy.accelerate.cuda_pycuda import import_fft
+    from pycuda.tools import make_default_context
 
 class ImportFFTTest(PyCudaTest):
 
     def test_import_fft(self):
-        mod = import_fft.ImportFFT().get_mod()
-        ft = mod.FilteredFFT(2, 32, 32, False, True, 0, 0, 0)
+        import_fft.ImportFFT(32, 32)
     
     
     def test_import_fft_different_shape(self):
-        mod = import_fft.ImportFFT(quiet=False).get_mod()
-        ft = mod.FilteredFFT(2, 128, 128, False, True, 0, 0, 0)
+        import_fft.ImportFFT(128, 128)
     
     def test_import_fft_same_module_again(self):
-        mod = import_fft.ImportFFT().get_mod()
-        ft = mod.FilteredFFT(2, 32, 32, False, True, 0, 0, 0)
-
-    @unittest.expectedFailure
-    def test_import_fft_not_square(self):
-        mod = import_fft.ImportFFT().get_mod()
-        ft = mod.FilteredFFT(2, 32, 64, False, True, 0, 0, 0)
-    
-    @unittest.expectedFailure
-    def test_import_fft_not_pow2(self):
-        mod = import_fft.ImportFFT().get_mod()
-        ft = mod.FilteredFFT(2, 40, 40, False, True, 0, 0, 0)
+        import_fft.ImportFFT(32, 32)
 
 
 if __name__=="__main__":
