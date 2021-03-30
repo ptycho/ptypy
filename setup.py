@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
+import distutils
+from ptypy.accelerate.cuda_pycuda.import_fft import CustomBuildExt
 import setuptools #, setuptools.command.build_ext
 from distutils.core import setup
+import os
 
 CLASSIFIERS = """\
 Development Status :: 3 - Alpha
@@ -62,6 +65,17 @@ if __name__ == '__main__':
     except:
         vers = VERSION
 
+module_dir = os.path.join(__file__.strip('setup.py'), 
+    'ptypy', 'accelerate', 'cuda_pycuda', 'cuda', 'filtered_fft')
+
+ext_modules = [
+    distutils.core.Extension("ptypy.filtered_cufft",
+        sources=[os.path.join(module_dir, "module.cpp"),
+                 os.path.join(module_dir, "filtered_fft.cu")]
+    )
+]
+cmdclass = {"build_ext": CustomBuildExt}
+
 
 exclude_packages = []
 package_list = setuptools.find_packages(exclude=exclude_packages)
@@ -82,4 +96,6 @@ setup(
              'scripts/ptypy.new',
              'scripts/ptypy.csv2cp',
              'scripts/ptypy.run'],
+    ext_modules=ext_modules,
+    cmdclass=cmdclass
 )

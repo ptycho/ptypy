@@ -71,7 +71,7 @@ private:
 namespace py = pybind11;
 
 
-PYBIND11_MODULE(module, m) {
+PYBIND11_MODULE(filtered_cufft, m) {
     m.doc() = "Filtered FFT for PtyPy";
 
     py::class_<FilteredFFTPython>(m, "FilteredFFT", py::module_local())
