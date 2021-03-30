@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import distutils
-from setupext_nvidia import CustomBuildExt
 import setuptools #, setuptools.command.build_ext
 from distutils.core import setup
 import os
+import sys
 
 CLASSIFIERS = """\
 Development Status :: 3 - Alpha
@@ -65,15 +65,21 @@ if __name__ == '__main__':
     except:
         vers = VERSION
 
+ext_modules = []
+cmdclass = {}
 # filtered Cuda FFT extension module
-cufft_dir = os.path.join('ptypy', 'accelerate', 'cuda_pycuda', 'cuda', 'filtered_fft')
-ext_modules = [
-    distutils.core.Extension("ptypy.filtered_cufft",
-        sources=[os.path.join(cufft_dir, "module.cpp"),
-                 os.path.join(cufft_dir, "filtered_fft.cu")]
+if '--no-cufft' not in sys.argv:
+    from setupext_nvidia import CustomBuildExt
+    cufft_dir = os.path.join('ptypy', 'accelerate', 'cuda_pycuda', 'cuda', 'filtered_fft')
+    ext_modules.append(
+        distutils.core.Extension("ptypy.filtered_cufft",
+            sources=[os.path.join(cufft_dir, "module.cpp"),
+                    os.path.join(cufft_dir, "filtered_fft.cu")]
+        )
     )
-]
-cmdclass = {"build_ext": CustomBuildExt}
+    cmdclass = {"build_ext": CustomBuildExt}
+else:
+    sys.argv.remove('--no-cufft')
 
 
 exclude_packages = []
