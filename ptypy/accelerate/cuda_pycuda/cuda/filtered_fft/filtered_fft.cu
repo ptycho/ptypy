@@ -277,8 +277,8 @@ static FilteredFFT* make(int batches, int rows, int cols, complex<float>* prefil
         case 128: return new FilteredFFTImpl<128, 128, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
         case 256: return new FilteredFFTImpl<256, 256, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
         case 512: return new FilteredFFTImpl<512, 512, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
-        case 1024: return new FilteredFFTImpl<512, 512, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
-        case 2048: return new FilteredFFTImpl<512, 512, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
+        case 1024: return new FilteredFFTImpl<1024, 1024, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
+        case 2048: return new FilteredFFTImpl<2048, 2048, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
         default: throw std::runtime_error("Only powers of 2 from 16 to 2048 are supported");
     }
 }
