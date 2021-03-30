@@ -149,6 +149,12 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
             s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=0)
             s.data[:] = d
             s.gpu = gpuarray.to_gpu(s.data)
+        for name, s in self.pr_buf.S.items():
+            # pr
+            d = s.data
+            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=0)
+            s.data[:] = d
+            s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.pr_nrm.S.items():
             # prn
             d = s.data
@@ -569,31 +575,19 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
             buf = self.pr_buf.S[pID]
             prn = self.pr_nrm.S[pID]
+            
+            self.multigpu.allReduceSum(pr.gpu)
+            self.multigpu.allReduceSum(prn.gpu)
+            pr.gpu /= prn.gpu
+            # TODO: self.support_constraint(pr)
 
-            # MPI test
-            if MPI:
-                # if False:
-                pr.gpu.get(pr.data)
-                prn.gpu.get(prn.data)
-                parallel.allreduce(pr.data)
-                parallel.allreduce(prn.data)
-                pr.data /= prn.data
-                self.support_constraint(pr)
-                pr.gpu.set(pr.data)
-            else:
-                pr.gpu /= prn.gpu
-                # ca. 0.3 ms
-                # self.pr.S[pID].gpu = probe_gpu
-                pr.gpu.get(pr.data)
-
-            ## this should be done on GPU
-            tt1 = time.time()
-            change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
-            buf.data[:] = pr.data
-            if MPI:
-                change = parallel.allreduce(change) / parallel.size
-            tt2 = time.time()
-            #print('time for pr change: {}s'.format(tt2-tt1))
+            ## calculate change on GPU
+            AUK = self.kernels[list(self.kernels)[0]].AUK # this is very ugly, any better idea?
+            buf.gpu -= pr.gpu
+            change += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu)).get().item()
+            cuda.memcpy_dtod(dest=buf.gpu.ptr,
+                    src=pr.gpu.ptr,
+                    size=pr.gpu.nbytes)
 
         # print 'probe update: ' + str(time.time()-t1)
         self.benchmark.probe_update += time.time() - t1

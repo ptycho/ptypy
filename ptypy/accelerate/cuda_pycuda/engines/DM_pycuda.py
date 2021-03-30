@@ -23,6 +23,7 @@ from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
+from ..multi_gpu import MultiGpuCommunicator
 
 MPI = parallel.size > 1
 MPI = True
@@ -62,6 +63,7 @@ class DM_pycuda(DM_serial.DM_serial):
         Difference map reconstruction engine.
         """
         super(DM_pycuda, self).__init__(ptycho_parent, pars)
+        self.multigpu = None
 
     def engine_initialize(self):
         """
@@ -73,6 +75,8 @@ class DM_pycuda(DM_serial.DM_serial):
 
         # Gaussian Smoothing Kernel
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
+
+        self.multigpu = MultiGpuCommunicator()
 
         super(DM_pycuda, self).engine_initialize()
 
@@ -154,6 +158,8 @@ class DM_pycuda(DM_serial.DM_serial):
         for name, s in self.ob_nrm.S.items():
             s.gpu, s.data = mppa(s.data)
         for name, s in self.pr.S.items():
+            s.gpu, s.data = mppa(s.data)
+        for name, s in self.pr_buf.S.items():
             s.gpu, s.data = mppa(s.data)
         for name, s in self.pr_nrm.S.items():
             s.gpu, s.data = mppa(s.data)
@@ -440,25 +446,19 @@ class DM_pycuda(DM_serial.DM_serial):
             buf = self.pr_buf.S[pID]
             prn = self.pr_nrm.S[pID]
 
-            if MPI:
-                pr.data[:] = pr.gpu.get()
-                prn.data[:] = prn.gpu.get()
-                queue.synchronize()
-                parallel.allreduce(pr.data)
-                parallel.allreduce(prn.data)
-                pr.data /= prn.data
-                self.support_constraint(pr)
-                pr.gpu.set(pr.data)
-            else:
-                pr.gpu /= prn.gpu
-                pr.data[:] = pr.gpu.get()
-                self.support_constraint(pr)
-                pr.gpu.set(pr.data)
+            self.multigpu.allReduceSum(pr.gpu)
+            self.multigpu.allReduceSum(prn.gpu)
+            pr.gpu /= prn.gpu
+            # TODO: self.support_constraint(pr)
 
-            ## this should be done on GPU
-            queue.synchronize()
-            change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
-            buf.data[:] = pr.data
+            ## calculate change on GPU
+            #queue.synchronize()
+            AUK = self.kernels[list(self.kernels)[0]].AUK # this is very ugly, any better idea?
+            buf.gpu -= pr.gpu
+            change += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu)).get().item()
+            cuda.memcpy_dtod(dest=buf.gpu.ptr,
+                    src=pr.gpu.ptr,
+                    size=pr.gpu.nbytes)
             if MPI:
                 change = parallel.allreduce(change) / parallel.size
 

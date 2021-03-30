@@ -48,13 +48,13 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         self.ma_data = None
         self.mag_data = None
         self.ex_data = None
-        self.multigpu = None
+        #self.multigpu = None
 
     def engine_initialize(self):
         super().engine_initialize()
         self.qu_htod = cuda.Stream()
         self.qu_dtoh = cuda.Stream()
-        self.multigpu = MultiGpuCommunicator()
+        #self.multigpu = MultiGpuCommunicator()
 
     def _setup_kernels(self):
 
@@ -90,6 +90,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for name, s in self.ob_nrm.S.items():
             s.gpu, s.data = mppa(s.data)
         for name, s in self.pr.S.items():
+            s.gpu, s.data = mppa(s.data)
+        for name, s in self.pr_buf.S.items():
             s.gpu, s.data = mppa(s.data)
         for name, s in self.pr_nrm.S.items():
             s.gpu, s.data = mppa(s.data)
@@ -435,12 +437,14 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             self.multigpu.allReduceSum(prn.gpu)
             pr.gpu /= prn.gpu
             # TODO: self.support_constraint(pr)
-            pr.gpu.get(pr.data)
 
-            ## TODO: this should be done on GPU
-
-            change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
-            buf.data[:] = pr.data
+            ## calculate change on GPU
+            AUK = self.kernels[list(self.kernels)[0]].AUK # this is very ugly, any better idea?
+            buf.gpu -= pr.gpu
+            change += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu)).get().item()
+            cuda.memcpy_dtod(dest=buf.gpu.ptr,
+                    src=pr.gpu.ptr,
+                    size=pr.gpu.nbytes)
             if MPI:
                 change = parallel.allreduce(change) / parallel.size
 
