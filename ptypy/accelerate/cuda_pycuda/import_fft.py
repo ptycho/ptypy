@@ -126,7 +126,7 @@ def stdchannel_redirected(stdchannel):
 
 
 class ImportFFT:
-    def __init__(self, rows, columns, build_path=None, quiet=True):
+    def __init__(self, build_path=None, quiet=True):
         self.build_path = build_path
         self.cleanup_build_path = None
         if self.build_path is None:
@@ -138,8 +138,7 @@ class ImportFFT:
         # If we specify the libraries through the extension we soon run into trouble since distutils adds a -l infront of all of these (add_library_option:https://github.com/python/cpython/blob/1c1e68cf3e3a2a19a0edca9a105273e11ddddc6e/Lib/distutils/ccompiler.py#L1115)
         ext = distutils.extension.Extension(full_module_name,
                                             sources=[os.path.join(module_dir, "module.cpp"),
-                                                        os.path.join(module_dir, "filtered_fft.cu")],
-                                            extra_compile_args=["-DMY_FFT_COLS=%s" % str(columns) , "-DMY_FFT_ROWS=%s" % str(rows)])
+                                                        os.path.join(module_dir, "filtered_fft.cu")])
 
         script_args = ['build_ext',
                        '--build-temp=%s' % self.build_path,
