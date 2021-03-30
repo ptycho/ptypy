@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import distutils
-from ptypy.accelerate.cuda_pycuda.import_fft import CustomBuildExt
+from setupext_nvidia import CustomBuildExt
 import setuptools #, setuptools.command.build_ext
 from distutils.core import setup
 import os
@@ -65,13 +65,12 @@ if __name__ == '__main__':
     except:
         vers = VERSION
 
-module_dir = os.path.join(__file__.strip('setup.py'), 
-    'ptypy', 'accelerate', 'cuda_pycuda', 'cuda', 'filtered_fft')
-
+# filtered Cuda FFT extension module
+cufft_dir = os.path.join('ptypy', 'accelerate', 'cuda_pycuda', 'cuda', 'filtered_fft')
 ext_modules = [
     distutils.core.Extension("ptypy.filtered_cufft",
-        sources=[os.path.join(module_dir, "module.cpp"),
-                 os.path.join(module_dir, "filtered_fft.cu")]
+        sources=[os.path.join(cufft_dir, "module.cpp"),
+                 os.path.join(cufft_dir, "filtered_fft.cu")]
     )
 ]
 cmdclass = {"build_ext": CustomBuildExt}
@@ -88,8 +87,7 @@ setup(
     package_dir={'ptypy': 'ptypy'},
     packages=package_list,
     package_data={'ptypy': ['resources/*',],
-                  'ptypy.accelerate.cuda_pycuda.cuda': ['*.cu'],
-                  'ptypy.accelerate.cuda_pycuda.cuda.filtered_fft': ['*.hpp', '*.cpp', 'Makefile', '*.cu', '*.h']},
+                  'ptypy.accelerate.cuda_pycuda.cuda': ['*.cu']},
     scripts=['scripts/ptypy.plot',
              'scripts/ptypy.inspect',
              'scripts/ptypy.plotclient',
