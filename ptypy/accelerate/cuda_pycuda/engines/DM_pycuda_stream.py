@@ -289,7 +289,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         self.multigpu.allReduceSum(obb.gpu)
                         self.multigpu.allReduceSum(obn.gpu)
                         obb.gpu /= obn.gpu
-                        
+
                         # TODO: self.clip_object(obb)
                         ob.gpu[:] = obb.gpu
 
@@ -437,7 +437,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             self.multigpu.allReduceSum(pr.gpu)
             self.multigpu.allReduceSum(prn.gpu)
             pr.gpu /= prn.gpu
-            # TODO: self.support_constraint(pr)
+            self.support_constraint(pr)
 
             ## calculate change on GPU
             AUK = self.kernels[list(self.kernels)[0]].AUK # this is very ugly, any better idea?

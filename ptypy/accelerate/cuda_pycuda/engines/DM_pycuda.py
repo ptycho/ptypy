@@ -20,7 +20,8 @@ from ptypy.engines import register
 from ptypy.accelerate.base.engines import DM_serial
 from ptypy.accelerate.base import address_manglers
 from .. import get_context
-from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
+from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..multi_gpu import MultiGpuCommunicator
@@ -76,7 +77,12 @@ class DM_pycuda(DM_serial.DM_serial):
         # Gaussian Smoothing Kernel
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
 
+        # Multi GPU communicator
         self.multigpu = MultiGpuCommunicator()
+
+        # Real/Fourier Support Kernel
+        self.RSK = {}
+        self.FSK = {}
 
         super(DM_pycuda, self).engine_initialize()
 
@@ -440,7 +446,7 @@ class DM_pycuda(DM_serial.DM_serial):
             self.multigpu.allReduceSum(pr.gpu)
             self.multigpu.allReduceSum(prn.gpu)
             pr.gpu /= prn.gpu
-            # TODO: self.support_constraint(pr)
+            self.support_constraint(pr)
 
             ## calculate change on GPU
             queue.synchronize()
@@ -458,6 +464,31 @@ class DM_pycuda(DM_serial.DM_serial):
         self.benchmark.calls_probe += 1
 
         return np.sqrt(change)
+
+    def support_constraint(self, storage=None):
+        """
+        Enforces 2D support contraint on probe.
+        """
+        if storage is None:
+            for s in self.pr.storages.values():
+                self.support_constraint(s)
+
+        # Real space
+        support = self._probe_support.get(storage.ID)
+        if support is not None:
+            if storage.ID not in self.RSK:
+                self.RSK[storage.ID] = RealSupportKernel(support.astype(np.complex64))
+                self.RSK[storage.ID].allocate()
+            self.RSK[storage.ID].apply_real_support(storage.gpu)
+
+        # Fourier space
+        support = self._probe_fourier_support.get(storage.ID)
+        if support is not None:
+            if storage.ID not in self.FSK:
+                supp = support.astype(np.complex64)
+                self.FSK[storage.ID] = FourierSupportKernel(supp, self.queue, self.p.fft_lib)
+                self.FSK[storage.ID].allocate()
+            self.FSK[storage.ID].apply_fourier_support(storage.gpu)
 
     def engine_finalize(self):
         """
