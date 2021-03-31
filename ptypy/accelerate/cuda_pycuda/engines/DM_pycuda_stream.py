@@ -288,8 +288,9 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         obb = self.ob_buf.S[oID]
                         self.multigpu.allReduceSum(obb.gpu)
                         self.multigpu.allReduceSum(obn.gpu)
-                        # TODO: self.clip_object(obb)
                         obb.gpu /= obn.gpu
+                        
+                        # TODO: self.clip_object(obb)
                         ob.gpu[:] = obb.gpu
 
                 # Exit if probe should not yet be updated

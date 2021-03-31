@@ -513,20 +513,12 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
             obb = self.ob_buf.S[oID]
-            if MPI:
-                obb.gpu.get(obb.data)
-                obn.gpu.get(obn.data)
-                parallel.allreduce(obb.data)
-                parallel.allreduce(obn.data)
-                obb.data /= obn.data
-                self.clip_object(obb)
-                tt1 = time.time()
-                ob.gpu.set(obb.data)  # async tx on same stream?
-                
-            else:
-                obb.gpu /= obn.gpu
-                ob.gpu[:] = obb.gpu
-
+            self.multigpu.allReduceSum(obb.gpu)
+            self.multigpu.allReduceSum(obn.gpu)
+            obb.gpu /= obn.gpu
+            
+            # TODO: self.clip_object(obb)
+            ob.gpu[:] = obb.gpu
 
     ## probe update
     def probe_update(self, MPI=False):

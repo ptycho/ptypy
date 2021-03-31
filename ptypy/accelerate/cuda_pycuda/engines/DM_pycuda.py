@@ -389,20 +389,11 @@ class DM_pycuda(DM_serial.DM_serial):
 
         for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
-            # MPI test
-            if MPI:
-                ob.data[:] = ob.gpu.get()
-                obn.data[:] = obn.gpu.get()
-                queue.synchronize()
-                parallel.allreduce(ob.data)
-                parallel.allreduce(obn.data)
-                ob.data /= obn.data
+            self.multigpu.allReduceSum(ob.gpu)
+            self.multigpu.allReduceSum(obn.gpu)
+            ob.gpu /= obn.gpu
 
-                self.clip_object(ob)
-                ob.gpu.set(ob.data)
-            else:
-                ob.gpu /= obn.gpu
-
+            # TODO: self.clip_object(ob)
             queue.synchronize()
 
         # print 'object update: ' + str(time.time()-t1)
@@ -452,7 +443,7 @@ class DM_pycuda(DM_serial.DM_serial):
             # TODO: self.support_constraint(pr)
 
             ## calculate change on GPU
-            #queue.synchronize()
+            queue.synchronize()
             AUK = self.kernels[list(self.kernels)[0]].AUK # this is very ugly, any better idea?
             buf.gpu -= pr.gpu
             change += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu)).get().item()
