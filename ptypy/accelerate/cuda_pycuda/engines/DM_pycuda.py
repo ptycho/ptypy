@@ -84,6 +84,9 @@ class DM_pycuda(DM_serial.DM_serial):
         self.RSK = {}
         self.FSK = {}
 
+        # Clip Magnitudes Kernel
+        self.CMK = ClipMagnitudesKernel(queue=self.queue)
+
         super(DM_pycuda, self).engine_initialize()
 
     def _setup_kernels(self):
@@ -489,6 +492,14 @@ class DM_pycuda(DM_serial.DM_serial):
                 self.FSK[storage.ID] = FourierSupportKernel(supp, self.queue, self.p.fft_lib)
                 self.FSK[storage.ID].allocate()
             self.FSK[storage.ID].apply_fourier_support(storage.gpu)
+
+    def clip_object(self, ob):
+        """
+        Clips magnitudes of object into given range.
+        """
+        if self.p.clip_object is not None:
+            cmin, cmax = self.p.clip_object
+            self.CMK.clip_magnitudes_to_range(ob, cmin, cmax)
 
     def engine_finalize(self):
         """
