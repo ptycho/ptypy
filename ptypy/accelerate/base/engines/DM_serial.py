@@ -430,7 +430,7 @@ class DM_serial(DM.DM):
             cfact = self.p.object_inertia * self.mean_power
             
             if self.p.obj_smooth_std is not None:
-                logger.info('Smoothing object, cfact is %.2f' % cfact)
+                log(4, 'Smoothing object, cfact is %.2f' % cfact)
                 smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
                 ob.data = cfact * au.complex_gaussian_filter(ob.data, smooth_mfs)
             else:

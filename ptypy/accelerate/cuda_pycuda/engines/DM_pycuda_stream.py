@@ -163,7 +163,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         obb = self.ob_buf.S[oID]
 
                         if self.p.obj_smooth_std is not None:
-                            logger.info('Smoothing object, cfact is %.2f' % cfact)
+                            log(4, 'Smoothing object, cfact is %.2f' % cfact)
                             smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
                             self.GSK.convolution(ob.gpu, obb.gpu, smooth_mfs)
                         # obb.gpu[:] = ob.gpu * cfactf32
