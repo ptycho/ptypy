@@ -439,3 +439,23 @@ class GaussianSmoothingKernel:
         # TODO: is this threshold acceptable in all cases?
         if (stdx <= 0.1 and stdy <= 0.1):
             output[:] = input[:]
+
+class ClipMagnitudesKernel:
+
+    def __init__(self, queue=None):
+        self.queue = queue
+        self.clip_magnitudes_cuda = load_kernel("clip_magnitudes", {
+            'IN_TYPE': 'complex<float>',
+        })
+
+    def clip_magnitudes_to_range(self, array, clip_min, clip_max):
+
+        cmin = np.float32(clip_min)
+        cmax = np.float32(clip_max)
+
+        self.clip_magnitudes_cuda(array, cmin, cmax,
+                np.int32(array.shape[-2]),
+                np.int32(array.shape[-1]),
+                block=(32, 32, 1),
+                grid=(1, 1, 1),
+                stream=self.queue)
