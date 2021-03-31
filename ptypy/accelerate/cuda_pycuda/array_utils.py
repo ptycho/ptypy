@@ -1,5 +1,6 @@
 from . import load_kernel
 from pycuda import gpuarray
+import pycuda.driver as cuda
 from ptypy.utils import gaussian
 import numpy as np
 
@@ -354,25 +355,33 @@ class GaussianSmoothingKernel:
         # At least 2 blocks per SM
         self.max_shared_per_block = 48 * 1024 // 2 
         self.max_shared_per_block_complex = self.max_shared_per_block / 2 * np.dtype(np.float32).itemsize
-        self.max_kernel_radius = self.max_shared_per_block_complex / self.blockdim_y
+        self.max_kernel_radius = int(self.max_shared_per_block_complex / self.blockdim_y)
 
-        self.convolution_row = load_kernel("convolution_row", file="convolution.cu", subs={
-            'BDIM_X': self.blockdim_x,
-            'BDIM_Y': self.blockdim_y,
-            'DTYPE': self.stype,
-            'MATH_TYPE': self.kernel_type
+        self.convolution_row, self.convolution_col = load_kernel(
+            ["convolution_row","convolution_col"], file="convolution.cu", subs={
+                'BDIM_X': self.blockdim_x,
+                'BDIM_Y': self.blockdim_y,
+                'DTYPE': self.stype,
+                'MATH_TYPE': self.kernel_type
         })
-        self.convolution_col = load_kernel("convolution_col", file="convolution.cu", subs={
-            'BDIM_X': self.blockdim_y,
-            'BDIM_Y': self.blockdim_x,
-            'DTYPE': self.stype,
-            'MATH_TYPE': self.kernel_type
-        })
+        # pre-allocate kernel memory on gpu, with max-radius to accomodate
+        dtype=np.float32 if self.kernel_type == 'float' else np.float64
+        self.kernel_gpu = gpuarray.empty((self.max_kernel_radius,), dtype=dtype)
+        # keep track of previus radius and std to determine if we need to transfer again
+        self.r = 0
+        self.std = 0
 
     
-    def convolution(self, input, output, mfs):
-        ndims = input.ndim
-        shape = input.shape
+    def convolution(self, data, mfs, tmp):
+        """
+        Calculates a stacked 2D convolution for smoothing, with the standard deviations
+        given in mfs (stdx, stdy). It works in-place in the data array,
+        and tmp is a gpu-allocated array of the same size and type as data,
+        used internally for temporary storage
+        """
+        ndims = data.ndim
+        shape = data.shape
+        assert shape == tmp.shape and data.dtype == tmp.dtype
 
         # Check input dimensions        
         if ndims == 3:
@@ -389,15 +398,23 @@ class GaussianSmoothingKernel:
         else:
             raise NotImplementedError("input needs to be of dimensions 0 < ndims <= 3")
 
+        input = data
+        output = tmp
+
         # Row convolution kernel
         # TODO: is this threshold acceptable in all cases?
         if stdx > 0.1:
             r = int(self.num_stdevs * stdx + 0.5)
-            g = gaussian(np.arange(-r,r+1), stdx)
-            g /= g.sum()
-            kernel = gpuarray.to_gpu(g[r:].astype(np.float32 if self.kernel_type == 'float' else np.float64))
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
+            if r != self.r or stdx != self.std:
+                # recalculate + transfer
+                g = gaussian(np.arange(-r,r+1), stdx)
+                g /= g.sum()
+                k = np.ascontiguousarray(g[r:].astype(np.float32 if self.kernel_type == 'float' else np.float64))
+                self.kernel_gpu[:r+1] = k[:]
+                self.r = r
+                self.std = stdx
 
             bx = self.blockdim_x
             by = self.blockdim_y
@@ -408,21 +425,27 @@ class GaussianSmoothingKernel:
 
             blk = (bx, by, 1)
             grd = (int((y + bx -1)// bx), int((x + by-1)// by), batches)
-            self.convolution_row(input, output, np.int32(y), np.int32(x), kernel, np.int32(r), 
+            self.convolution_row(input, output, np.int32(y), np.int32(x), self.kernel_gpu, np.int32(r), 
                                  block=blk, grid=grd, shared=shared, stream=self.queue)
 
-            # Overwrite input
             input = output
-
+            output = data
+        
         # Column convolution kernel
         # TODO: is this threshold acceptable in all cases?
         if stdy > 0.1:
             r = int(self.num_stdevs * stdy + 0.5)
-            g = gaussian(np.arange(-r,r+1), stdy)
-            g /= g.sum()
-            kernel = gpuarray.to_gpu(g[r:].astype(np.float32 if self.kernel_type == 'float' else np.float64))
             if r > self.max_kernel_radius:
                 raise ValueError("Size of Gaussian kernel too large")
+            if r != self.r or stdy != self.std:
+                # recalculate + transfer
+                g = gaussian(np.arange(-r,r+1), stdy)
+                g /= g.sum()
+                k = np.ascontiguousarray(g[r:].astype(np.float32 if self.kernel_type == 'float' else np.float64))
+                self.kernel_gpu[:r+1] = k[:]
+                self.r = r
+                self.std = stdy
+                
 
             bx = self.blockdim_y
             by = self.blockdim_x
@@ -433,9 +456,13 @@ class GaussianSmoothingKernel:
 
             blk = (bx, by, 1)
             grd = (int((y + bx -1)// bx), int((x + by-1)// by), batches)
-            self.convolution_col(input, output, np.int32(y), np.int32(x), kernel, np.int32(r), 
+            self.convolution_col(input, output, np.int32(y), np.int32(x), self.kernel_gpu, np.int32(r), 
                                  block=blk, grid=grd, shared=shared, stream=self.queue)
             
         # TODO: is this threshold acceptable in all cases?
         if (stdx <= 0.1 and stdy <= 0.1):
-            output[:] = input[:]
+            return   # nothing to do
+        elif (stdx > 0.1 and stdy > 0.1):
+            return   # both parts have run, output is back in data
+        else:
+            data[:] = tmp[:]  # only one of them has run, output is in tmp
