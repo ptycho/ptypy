@@ -1031,8 +1031,18 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
 
 class PositionCorrectionKernel(ab.PositionCorrectionKernel):
-    def __init__(self, aux, nmodes, queue_thread=None, math_type='float', accumulate_type='float'):
-        super(PositionCorrectionKernel, self).__init__(aux, nmodes)
+    from ptypy.accelerate.cuda_pycuda import address_manglers
+
+    # these are used by the self.setup method - replacing them with the GPU implementation
+    MANGLERS = {
+        'Annealing': address_manglers.RandomIntMangler,
+        'GridSearch': address_manglers.GridSearchMangler
+    }
+
+    def __init__(self, *args, queue_thread=None, math_type='float', accumulate_type='float', **kwargs):
+        super(PositionCorrectionKernel, self).__init__(*args, **kwargs)
+        # make sure we set the right stream in the mangler
+        self.mangler.queue = queue_thread
         if math_type not in ['float', 'double']:
             raise ValueError('Only float or double math is supported')
         if accumulate_type not in ['float', 'double']:
@@ -1056,6 +1066,11 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
             'BDIM_Y': 32,
             'ACC_TYPE': self.accumulate_type
         })
+        self.log_likelihood_cuda = load_kernel("log_likelihood", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        }, "log_likelihood.cu")
         self.build_aux_pc_cuda = load_kernel("build_aux_position_correction", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -1117,19 +1132,21 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
                                grid=(int(err_fmag.shape[0]), 1, 1),
                                stream=self.queue)
 
-    def update_addr_and_error_state_old(self, addr, error_state, mangled_addr, err_sum):
-        '''
-        updates the addresses and err state vector corresponding to the smallest error. I think this can be done on the cpu
-        '''
-        update_indices = err_sum < error_state
-        log(4, "updating %s indices" % np.sum(update_indices))
-        print('update ind {}, addr {}, mangled {}'.format(update_indices.shape, addr.shape, mangled_addr.shape))
-        addr_cpu = addr.get_async(self.queue)
-        self.queue.synchronize()
-        addr_cpu[update_indices] = mangled_addr[update_indices]
-        addr.set_async(ary=addr_cpu, stream=self.queue)
-
-        error_state[update_indices] = err_sum[update_indices]
+    def log_likelihood(self, b_aux, addr, mag, mask, err_phot):
+        ferr = self.gpu.ferr
+        self.log_likelihood_cuda(np.int32(self.nmodes),
+                                 b_aux,
+                                 mask,
+                                 mag,
+                                 addr,
+                                 ferr,
+                                 np.int32(self.fshape[1]),
+                                 np.int32(self.fshape[2]),
+                                 block=(32, 32, 1),
+                                 grid=(int(mag.shape[0]), 1, 1),
+                                 stream=self.queue)
+        # TODO: we might want to move this call outside of here
+        self.error_reduce(addr, err_phot)
 
     def update_addr_and_error_state(self, addr, error_state, mangled_addr, err_sum):
         # assume all data is on GPU!
