@@ -22,7 +22,7 @@ from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
-from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel
+from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel, ClipMagnitudesKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..multi_gpu import MultiGpuCommunicator
 
@@ -402,7 +402,7 @@ class DM_pycuda(DM_serial.DM_serial):
             self.multigpu.allReduceSum(obn.gpu)
             ob.gpu /= obn.gpu
 
-            # TODO: self.clip_object(ob)
+            self.clip_object(ob.gpu)
             queue.synchronize()
 
         # print 'object update: ' + str(time.time()-t1)
