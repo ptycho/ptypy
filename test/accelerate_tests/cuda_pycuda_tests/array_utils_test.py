@@ -392,6 +392,7 @@ class ArrayUtilsTest(PyCudaTest):
         np.random.seed(1987)
         A = np.random.random((2,10,10))
         B = A[0] + 1j* A[1]
+        B = B.astype(np.complex64)
         B_gpu = gpuarray.to_gpu(B)
 
         au.clip_complex_magnitudes_to_range(B, 0.2,0.8)
