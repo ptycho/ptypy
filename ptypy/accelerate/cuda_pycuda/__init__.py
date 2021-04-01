@@ -3,7 +3,7 @@ from pycuda.compiler import SourceModule
 import numpy as np
 import os
 # debug_options = []
-# debug_options = ['-O0', '-G', '-g', ]
+# debug_options = ['-O0', '-G', '-g']
 debug_options = ['-O3', '-DNDEBUG', '-lineinfo'] # release mode flags
 
 # C++14 support was added with CUDA 9, so we only enable the flag there
