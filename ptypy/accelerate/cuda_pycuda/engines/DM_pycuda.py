@@ -528,5 +528,6 @@ class DM_pycuda(DM_serial.DM_serial):
         for name, s in self.pr.S.items():
             s.data = np.copy(s.data)
 
+        self.context.pop()
         self.context.detach()
         super(DM_pycuda, self).engine_finalize()
