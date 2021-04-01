@@ -379,7 +379,7 @@ class GaussianSmoothingKernel:
         self.std = 0
 
     
-    def convolution(self, data, mfs, tmp):
+    def convolution(self, data, mfs, tmp=None):
         """
         Calculates a stacked 2D convolution for smoothing, with the standard deviations
         given in mfs (stdx, stdy). It works in-place in the data array,
@@ -388,6 +388,10 @@ class GaussianSmoothingKernel:
         """
         ndims = data.ndim
         shape = data.shape
+
+        # Create temporary array (if not given)
+        if tmp is None:
+            tmp = gpuarray.empty(shape, dtype=data.dtype)
         assert shape == tmp.shape and data.dtype == tmp.dtype
 
         # Check input dimensions        

@@ -218,11 +218,11 @@ class ArrayUtilsTest(PyCudaTest):
         data[3:5, 3:5] = 2.0+2.0j
         mfs = 3.0,4.0
         data_dev = gpuarray.to_gpu(data)
-        tmp_dev = gpuarray.empty((8,8), dtype=np.complex64)
+        #tmp_dev = gpuarray.empty((8,8), dtype=np.complex64)
 
         # Act
         GS = gau.GaussianSmoothingKernel()
-        GS.convolution(data_dev, mfs, tmp=tmp_dev)
+        GS.convolution(data_dev, mfs)
 
         # Assert
         out_exp = au.complex_gaussian_filter(data, mfs)
