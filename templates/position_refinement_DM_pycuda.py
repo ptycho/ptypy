@@ -8,8 +8,7 @@ import numpy as np
 from ptypy.core import Ptycho
 from ptypy import utils as u
 
-from ptypy.accelerate.base.engines import DM_serial
-
+from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream, DM_pycuda_streams, DM_pycuda
 
 p = u.Param()
 
@@ -18,10 +17,9 @@ p.verbose_level = 3
 p.frames_per_block = 100
 # set home path
 p.io = u.Param()
-p.io.home = "~/dumps/ptypy/"
+p.io.home = "/tmp/ptypy/"
 p.io.autosave = u.Param(active=True, interval=500)
 p.io.autoplot = u.Param(active=False)#True, interval=100)
-p.io.interaction = u.Param(active=False)
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
@@ -51,9 +49,9 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_serial'
+p.engines.engine00.name = 'DM_pycuda'
 p.engines.engine00.probe_support = 1
-p.engines.engine00.numiter = 100
+p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.position_refinement = u.Param()
 p.engines.engine00.position_refinement.start = 50
@@ -86,7 +84,7 @@ for pname, pod in P.pods.items():
     a += 4.
 
 np.savetxt("positions_theory.txt", coords)
-np.savetxt("positions_start.txt", coords_start)
+np.savetxt("positions_start", coords_start)
 P.obj.reformat()# update the object storage
 
 # Run

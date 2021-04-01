@@ -3,7 +3,7 @@ from pycuda.compiler import SourceModule
 import numpy as np
 import os
 # debug_options = []
-#debug_options = ['-O0', '-G', '-g', '-std=c++11', '--keep']
+# debug_options = ['-O0', '-G', '-g', ]
 debug_options = ['-O3', '-DNDEBUG', '-lineinfo'] # release mode flags
 
 # C++14 support was added with CUDA 9, so we only enable the flag there
@@ -24,9 +24,13 @@ def get_context(new_context=False, new_queue=False):
 
     if context is None or new_context:
         cuda.init()
-        if parallel.rank_local < cuda.Device.count():
-            context = cuda.Device(parallel.rank_local).make_context()
-            context.push()
+        if parallel.rank_local >= cuda.Device.count():
+            raise Exception('Local rank must be smaller than total device count, \
+                rank={}, rank_local={}, device_count={}'.format(
+                parallel.rank, parallel.rank_local, cuda.Device.count()
+            ))
+        context = cuda.Device(parallel.rank_local).make_context()
+        context.push()
         # print("made context %s on rank %s" % (str(context), str(parallel.rank)))
         # print("The cuda device count on %s is:%s" % (str(parallel.rank),
         #                                              str(cuda.Device.count())))
@@ -34,6 +38,7 @@ def get_context(new_context=False, new_queue=False):
         #                                                     str(parallel.rank_local)))
     if queue is None or new_queue:
         queue = cuda.Stream()
+    
     return context, queue
 
 
