@@ -1,18 +1,9 @@
 '''
-"Just-in-time" compilation for callbacks in cufft.
+Compilation tools for Nvidia builds of extension modules.
 '''
 import os
-import sys
-import importlib
-import tempfile
-import setuptools
 import sysconfig
-from pycuda import driver as cuda_driver
 import pybind11
-import contextlib
-from io import StringIO
-from ptypy.utils.verbose import log
-import distutils
 from distutils.unixccompiler import UnixCCompiler
 from distutils.command.build_ext import build_ext
 
@@ -59,8 +50,14 @@ class NvccCompiler(UnixCCompiler):
         super(NvccCompiler, self).__init__(*args, **kwargs)
         self.CUDA = locate_cuda()
         module_dir = os.path.join(__file__.strip('import_fft.py'), 'cuda', 'filtered_fft') 
-        cmp = cuda_driver.Context.get_device().compute_capability()
-        archflag = '-arch=sm_{}{}'.format(cmp[0], cmp[1])
+        # by default, compile for all of these 
+        archflag = '-gencode=arch=compute_50,code=sm_50' + \
+            ' -gencode=arch=compute_52,code=sm_52' + \
+            ' -gencode=arch=compute_60,code=sm_60' + \
+            ' -gencode=arch=compute_61,code=sm_61' + \
+            ' -gencode=arch=compute_70,code=sm_70' + \
+            ' -gencode=arch=compute_75,code=sm_75' + \
+            ' -gencode=arch=compute_75,code=compute_75'
         self.src_extensions.append('.cu')
         self.LD_FLAGS = [archflag, "-lcufft_static", "-lculibos", "-ldl", "-lrt", "-lpthread", "-cudart shared"]
         self.NVCC_FLAGS = ["-dc", archflag]
@@ -102,75 +99,17 @@ class NvccCompiler(UnixCCompiler):
         self.linker_so = default_linker_so
 
 class CustomBuildExt(build_ext):
-    def build_extensions(self):
-        old_compiler = self.compiler
-        self.compiler = NvccCompiler(verbose=old_compiler.verbose,
-                                     dry_run=old_compiler.dry_run,
-                                     force=old_compiler.force) # this is our bespoke compiler
-        super(CustomBuildExt, self).build_extensions()
-        self.compiler=old_compiler
 
-@contextlib.contextmanager
-def stdchannel_redirected(stdchannel):
-    """
-    Redirects stdout or stderr to a StringIO object. As of python 3.4, there is a
-    standard library contextmanager for this, but backwards compatibility!
-    """
-    old = getattr(sys, stdchannel)
-    try:
-        s = StringIO()
-        setattr(sys, stdchannel, s)
-        yield s
-    finally:
-        setattr(sys, stdchannel, old)
-
-
-class ImportFFT:
-    def __init__(self, rows, columns, build_path=None, quiet=True):
-        self.build_path = build_path
-        self.cleanup_build_path = None
-        if self.build_path is None:
-            self.build_path = tempfile.mkdtemp(prefix="ptypy_fft")
-            self.cleanup_build_path = True
-
-        full_module_name = "module"
-        module_dir = os.path.join(__file__.strip('import_fft.py'), 'cuda', 'filtered_fft')
-        # If we specify the libraries through the extension we soon run into trouble since distutils adds a -l infront of all of these (add_library_option:https://github.com/python/cpython/blob/1c1e68cf3e3a2a19a0edca9a105273e11ddddc6e/Lib/distutils/ccompiler.py#L1115)
-        ext = distutils.extension.Extension(full_module_name,
-                                            sources=[os.path.join(module_dir, "module.cpp"),
-                                                        os.path.join(module_dir, "filtered_fft.cu")],
-                                            extra_compile_args=["-DMY_FFT_COLS=%s" % str(columns) , "-DMY_FFT_ROWS=%s" % str(rows)])
-
-        script_args = ['build_ext',
-                       '--build-temp=%s' % self.build_path,
-                       '--build-lib=%s' % self.build_path]
-        # do I need full_module_name here?
-        setuptools_args = {"name": full_module_name,
-                           "ext_modules": [ext],
-                           "script_args": script_args,
-                           "cmdclass":{"build_ext": CustomBuildExt
-                           }}
-
-        if quiet:
-            # we really don't care about the make print for almost all cases so we redirect
-            with stdchannel_redirected("stdout"):
-                with stdchannel_redirected("stderr"):
-                    setuptools.setup(**setuptools_args)
+    def build_extension(self, ext):
+        has_cu = any([src.endswith('.cu') for src in ext.sources])
+        if has_cu:
+            old_compiler = self.compiler
+            self.compiler = NvccCompiler(verbose=old_compiler.verbose,
+                                        dry_run=old_compiler.dry_run,
+                                        force=old_compiler.force) # this is our bespoke compiler
+            super(CustomBuildExt, self).build_extension(ext)
+            self.compiler=old_compiler
         else:
-            setuptools.setup(**setuptools_args)
+            super(CustomBuildExt, self).build_extension(ext)
 
-        spec = importlib.util.spec_from_file_location(full_module_name,
-                                                      os.path.join(self.build_path,
-                                                                   "module" + distutils.sysconfig.get_config_var('EXT_SUFFIX')
-                                                                   )
-                                                      )
-        self.mod = importlib.util.module_from_spec(spec)
 
-    def get_mod(self):
-        return self.mod
-
-    def __del__(self):
-        import shutil
-        if self.cleanup_build_path:
-            log(5, "cleaning up the build directory")
-            shutil.rmtree(self.build_path)
