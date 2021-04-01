@@ -357,10 +357,17 @@ class GaussianSmoothingKernel:
         self.max_shared_per_block_complex = self.max_shared_per_block / 2 * np.dtype(np.float32).itemsize
         self.max_kernel_radius = int(self.max_shared_per_block_complex / self.blockdim_y)
 
-        self.convolution_row, self.convolution_col = load_kernel(
-            ["convolution_row","convolution_col"], file="convolution.cu", subs={
+        self.convolution_row = load_kernel(
+            "convolution_row", file="convolution.cu", subs={
                 'BDIM_X': self.blockdim_x,
                 'BDIM_Y': self.blockdim_y,
+                'DTYPE': self.stype,
+                'MATH_TYPE': self.kernel_type
+        })
+        self.convolution_col = load_kernel(
+        "convolution_col", file="convolution.cu", subs={
+                'BDIM_X': self.blockdim_y,   # NOTE: we swap x and y in this columns
+                'BDIM_Y': self.blockdim_x,
                 'DTYPE': self.stype,
                 'MATH_TYPE': self.kernel_type
         })
