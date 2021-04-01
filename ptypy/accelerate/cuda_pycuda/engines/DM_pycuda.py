@@ -457,12 +457,13 @@ class DM_pycuda(DM_serial.DM_serial):
 
             ## calculate change on GPU
             queue.synchronize()
-            AUK = self.kernels[list(self.kernels)[0]].AUK # this is very ugly, any better idea?
+            AUK = self.kernels[list(self.kernels)[0]].AUK
             buf.gpu -= pr.gpu
             change += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu)).get().item()
-            cuda.memcpy_dtod(dest=buf.gpu.ptr,
-                    src=pr.gpu.ptr,
-                    size=pr.gpu.nbytes)
+            buf.gpu[:] = pr.gpu
+            # cuda.memcpy_dtod(dest=buf.gpu.ptr,
+            #         src=pr.gpu.ptr,
+            #         size=pr.gpu.nbytes)
             if MPI:
                 change = parallel.allreduce(change) / parallel.size
 
