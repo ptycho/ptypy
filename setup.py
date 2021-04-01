@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+# we should aim to remove the distutils dependency
 import distutils
 import setuptools #, setuptools.command.build_ext
 from distutils.core import setup
@@ -80,9 +81,9 @@ Alternative options for this switch:
    or detect if cuda is available on the system and enable it in this case, etc.
 """
 try:
-    from ptypy.accelerate.setupext_nvidia import locate_cuda # this raises an error if pybind11 is not available
+    from extensions import locate_cuda # this raises an error if pybind11 is not available
     CUDA = locate_cuda() # this raises an error if CUDA is not available
-    from ptypy.accelerate.setupext_nvidia import CustomBuildExt
+    from extensions import CustomBuildExt
     cufft_dir = os.path.join('ptypy', 'accelerate', 'cuda_pycuda', 'cuda', 'filtered_fft')
     ext_modules.append(
         distutils.core.Extension("ptypy.filtered_cufft",
@@ -94,7 +95,7 @@ try:
     EXTBUILD_MESSAGE = "ptypy has been successfully installed with the pre-compiled cufft extension.\n"
 except:
     EXTBUILD_MESSAGE = '*' * 75 + "\n"
-    EXTBUILD_MESSAGE += "Warning: ptypy has been installed without the pre-compiled cufft extension.\n"
+    EXTBUILD_MESSAGE += "ptypy has been installed without the pre-compiled cufft extension.\n"
     EXTBUILD_MESSAGE += "If you require cufft, make sure to have CUDA and pybind11 installed.\n"
     EXTBUILD_MESSAGE += '*' * 75 + "\n"
 
