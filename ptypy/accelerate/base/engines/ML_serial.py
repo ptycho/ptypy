@@ -17,12 +17,11 @@ import time
 from ptypy.engines.ML import ML, BaseModel
 from .DM_serial import serialize_array_access
 from ptypy import utils as u
-from ptypy.utils.verbose import logger
+from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines.utils import Cnorm2, Cdot
 from ptypy.engines import register
-from ptypy.accelerate.base.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, \
-    PositionCorrectionKernel
+from ptypy.accelerate.base.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel
 from ptypy.accelerate.base import address_manglers
 
 # for debugging
@@ -106,20 +105,6 @@ class ML_serial(ML):
             kern.FW = geo.propagator.fw
             kern.BW = geo.propagator.bw
 
-            if self.do_position_refinement:
-                addr_mangler = address_manglers.RandomIntMangle(
-                    int(self.p.position_refinement.amplitude // geo.resolution[0]),
-                    self.p.position_refinement.start,
-                    self.p.position_refinement.stop,
-                    max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
-                    randomseed=0)
-                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
-                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
-
-                kern.PCK = PositionCorrectionKernel(aux, nmodes)
-                kern.PCK.allocate()
-                kern.PCK.address_mangler = addr_mangler
-
     def engine_prepare(self):
 
         ## Serialize new data ##
@@ -139,9 +124,6 @@ class ML_serial(ML):
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
             prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
-            if self.do_position_refinement:
-                prep.original_addr = np.zeros_like(prep.addr)
-                prep.original_addr[:] = prep.addr
 
         self.ML_model.prepare()
 

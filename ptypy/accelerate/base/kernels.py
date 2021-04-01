@@ -577,7 +577,14 @@ class PoUpdateKernel(BaseKernel):
         return
 
 class PositionCorrectionKernel(BaseKernel):
-    def __init__(self, aux, nmodes):
+    from ptypy.accelerate.base import address_manglers
+
+    MANGLERS = {
+        'Annealing': address_manglers.RandomIntMangler,
+        'GridSearch': address_manglers.GridSearchMangler
+    }
+
+    def __init__(self, aux, nmodes, parameters, resolution):
         super(PositionCorrectionKernel, self).__init__()
         ash = aux.shape
         self.fshape = (ash[0] // nmodes, ash[1], ash[2])
@@ -585,11 +592,20 @@ class PositionCorrectionKernel(BaseKernel):
         self.npy.fdev = None
         self.addr = None
         self.nmodes = nmodes
-        self.address_mangler = None
+        self.param = parameters
+        self.nshifts = parameters.nshifts
+        self.resolution = resolution
         self.kernels = ['build_aux',
                         'fourier_error',
                         'error_reduce',
                         'update_addr']
+        self.setup()
+
+    def setup(self):
+        Mangler = self.MANGLERS[self.param.method]
+        self.mangler = Mangler(int(self.param.amplitude // self.resolution[0]), self.param.start, self.param.stop,
+                               self.param.nshifts,
+                               max_bound=int(self.param.max_shift // self.resolution[0]), randomseed=0)
 
     def allocate(self):
         self.npy.fdev = np.zeros(self.fshape, dtype=np.float32) # we won't use this again but preallocate for speed
@@ -663,11 +679,32 @@ class PositionCorrectionKernel(BaseKernel):
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
 
+    def log_likelihood(self, b_aux, addr, mag, mask, err_sum):
+        # reference shape (write-to shape)
+        sh = self.fshape
+        # stopper
+        maxz = mag.shape[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * self.nmodes]
+
+        # build model from complex fourier magnitudes, summing up 
+        # all modes incoherently
+        tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
+        LL = (np.abs(tf) ** 2).sum(1)
+
+        # Intensity data
+        I = mag**2
+
+        # Calculate log likelihood error
+        err_sum[:] = ((mask * (LL - I)**2 / (I + 1.)).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
+        return
+
     def update_addr_and_error_state(self, addr, error_state, mangled_addr, err_sum):
         '''
         updates the addresses and err state vector corresponding to the smallest error. I think this can be done on the cpu
         '''
         update_indices = err_sum < error_state
-        log(4, "updating %s indices" % np.sum(update_indices))
+        log(4, "Position correction: updating %s indices" % np.sum(update_indices))
         addr[update_indices] = mangled_addr[update_indices]
         error_state[update_indices] = err_sum[update_indices]

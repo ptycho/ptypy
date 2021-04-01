@@ -18,7 +18,6 @@ from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.accelerate.base.engines import DM_serial
-from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel
@@ -129,18 +128,9 @@ class DM_pycuda(DM_serial.DM_serial):
             kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
-                logger.info("Setting up position correction")
-                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
-                                                                self.p.position_refinement.start,
-                                                                self.p.position_refinement.stop,
-                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
-                                                                randomseed=0)
-                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
-                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
-
-                kern.PCK = PositionCorrectionKernel(aux, nmodes, queue_thread=self.queue)
+                logger.info("Setting up PositionCorrectionKernel")
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
                 kern.PCK.allocate()
-                kern.PCK.address_mangler = addr_mangler
             logger.info("Kernel setup completed")
 
     def engine_prepare(self):
@@ -167,6 +157,8 @@ class DM_pycuda(DM_serial.DM_serial):
             if use_tiles:
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
+            if self.do_position_refinement:
+                prep.mangled_addr_gpu = prep.addr_gpu.copy()
 
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
@@ -287,39 +279,53 @@ class DM_pycuda(DM_serial.DM_serial):
                         aux = kern.aux
                         addr = prep.addr_gpu
                         original_addr = prep.original_addr
+                        mangled_addr = prep.mangled_addr_gpu
                         mag = prep.mag
                         ma_sum = prep.ma_sum
                         err_fourier = prep.err_fourier_gpu
+                        error_state = prep.error_state_gpu
 
                         PCK = kern.PCK
-                        AUK = kern.AUK
+                        TK  = kern.TK
+                        PROP = kern.PROP
 
-                        #error_state = np.zeros(err_fourier.shape, dtype=np.float32)
-                        #error_state[:] = err_fourier.get()
-                        cuda.memcpy_dtod(dest=prep.error_state_gpu.ptr,
+                        # Keep track of object boundaries
+                        max_oby = ob.shape[-2] - aux.shape[-2] - 1
+                        max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
+                        # We need to re-calculate the current error 
+                        PCK.build_aux(aux, addr, ob, pr)
+                        PROP.fw(aux, aux)
+                        if self.p.position_refinement.metric == "fourier":
+                            PCK.fourier_error(aux, addr, mag, ma, ma_sum)
+                            PCK.error_reduce(addr, err_fourier)
+                        if self.p.position_refinement.metric == "photon":
+                            PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
+                        cuda.memcpy_dtod(dest=error_state.ptr,
                                          src=err_fourier.ptr,
                                          size=err_fourier.nbytes)
+
+                        PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+                                        
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
-                        for i in range(self.p.position_refinement.nshifts):
-                            mangled_addr = PCK.address_mangler.mangle_address(addr.get(), original_addr, self.curiter)
-                            mangled_addr_gpu = gpuarray.to_gpu(mangled_addr)
-                            PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
+                        for i in range(PCK.mangler.nshifts):
+                            PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
+                            PCK.build_aux(aux, mangled_addr, ob, pr)
                             PROP.fw(aux, aux)
-                            PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
-                            PCK.error_reduce(mangled_addr_gpu, err_fourier)
-                            PCK.update_addr_and_error_state(addr,
-                                prep.error_state_gpu,
-                                mangled_addr_gpu,
-                                err_fourier)
+                            if self.p.position_refinement.metric == "fourier":
+                                PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
+                                PCK.error_reduce(mangled_addr, err_fourier)
+                            if self.p.position_refinement.metric == "photon":
+                                PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
+                            PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
                         
-                        # prep.err_fourier_gpu.set(error_state)
-                        cuda.memcpy_dtod(dest=prep.err_fourier_gpu.ptr,
-                            src=prep.error_state_gpu.ptr,
-                            size=prep.err_fourier_gpu.nbytes)
+                        cuda.memcpy_dtod(dest=err_fourier.ptr,
+                                         src=error_state.ptr,
+                                         size=err_fourier.nbytes)
                         if use_tiles:
                             s1 = addr.shape[0] * addr.shape[1]
                             s2 = addr.shape[2] * addr.shape[3]
-                            kern.TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+                            TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
             self.curiter += 1
             queue.synchronize()
