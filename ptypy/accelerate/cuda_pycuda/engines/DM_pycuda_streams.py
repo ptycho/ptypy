@@ -255,14 +255,14 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                     for oID, ob in self.ob.storages.items():
                         cfact = self.ob_cfact[oID]
                         obn = self.ob_nrm.S[oID]
-                        obb = self.ob_buf.S[oID]
-                        
+
                         if self.p.obj_smooth_std is not None:
                             logger.info('Smoothing object, cfact is %.2f' % cfact)
+                            obb = self.ob_buf.S[oID]
                             smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
-                            self.GSK.convolution(ob.gpu, obb.gpu, smooth_mfs)
+                            self.GSK.convolution(ob.gpu, smooth_mfs, tmp=obb.gpu)
                         
-                        obb.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=streamdata.queue)
+                        ob.gpu._axpbz(np.complex64(cfact), 0, ob.gpu, stream=streamdata.queue)
                         obn.gpu.fill(np.float32(cfact), stream=streamdata.queue)
                 
                 self.ex_data.syncback = True
