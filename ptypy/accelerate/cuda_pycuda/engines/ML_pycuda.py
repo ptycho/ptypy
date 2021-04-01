@@ -160,6 +160,7 @@ class ML_pycuda(ML_serial):
         self.queue_transfer = cuda.Stream()
         
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
+        self.GSK.tmp = None
         
         super().engine_initialize()
         #self._setup_kernels()
@@ -257,8 +258,9 @@ class ML_pycuda(ML_serial):
                 self._set_pr_ob_ref_for_data(dev=dev, container=container, sync_copy=sync_copy)
 
     def _get_smooth_gradient(self, data, sigma):
-        tmp = gpuarray.empty(data.shape, dtype=np.complex64)
-        self.GSK.convolution(data, [sigma, sigma], tmp=tmp)
+        if self.GSK.tmp is None:
+            self.GSK.tmp = gpuarray.empty(data.shape, dtype=np.complex64)
+        self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
         return data
 
     def _replace_ob_grad(self):
