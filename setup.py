@@ -80,9 +80,9 @@ Alternative options for this switch:
    or detect if cuda is available on the system and enable it in this case, etc.
 """
 try:
-    from setupext_nvidia import locate_cuda # this raises an error if pybind11 is not available
+    from ptypy.accelerate.setupext_nvidia import locate_cuda # this raises an error if pybind11 is not available
     CUDA = locate_cuda() # this raises an error if CUDA is not available
-    from setupext_nvidia import CustomBuildExt
+    from ptypy.accelerate.setupext_nvidia import CustomBuildExt
     cufft_dir = os.path.join('ptypy', 'accelerate', 'cuda_pycuda', 'cuda', 'filtered_fft')
     ext_modules.append(
         distutils.core.Extension("ptypy.filtered_cufft",
