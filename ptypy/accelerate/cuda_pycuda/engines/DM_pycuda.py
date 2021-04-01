@@ -402,7 +402,7 @@ class DM_pycuda(DM_serial.DM_serial):
             self.multigpu.allReduceSum(obn.gpu)
             ob.gpu /= obn.gpu
 
-            self.clip_object(ob)
+            self.clip_object(ob.gpu)
             queue.synchronize()
 
         # print 'object update: ' + str(time.time()-t1)
