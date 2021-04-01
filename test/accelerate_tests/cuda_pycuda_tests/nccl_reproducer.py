@@ -7,6 +7,7 @@ from ptypy.accelerate.cuda_pycuda.multi_gpu import MultiGpuCommunicatorNccl
 from ptypy.utils import parallel
 from ptypy.accelerate.cuda_pycuda import get_context
 from ptypy.accelerate.cuda_pycuda.array_utils import TransposeKernel
+from ptypy.accelerate.cuda_pycuda.kernels import AuxiliaryWaveKernel
 
 context, queue = get_context(new_context=True, new_queue=True)
 multigpu = MultiGpuCommunicatorNccl()
@@ -24,6 +25,17 @@ TSP.transpose(inta, intb)
 ev.record(str)
 a2_dev = gpuarray.to_gpu(np.array((2,2), dtype=np.complex64))
 ev.synchronize()
+
+AWK = AuxiliaryWaveKernel(queue_thread=str)
+AWK.allocate()
+
+ob = gpuarray.zeros((2, 256, 256), dtype=np.complex64)
+pr = gpuarray.zeros((2, 256, 256), dtype=np.complex64)
+aux = gpuarray.zeros((2, 256, 256), dtype=np.complex64)
+addr = gpuarray.zeros((2, 1, 5, 3), dtype=np.int32)
+
+AWK.build_aux_no_ex(aux, addr, ob, pr)
+
 
 print("rank {}: done synchronising...".format(parallel.rank))
 
