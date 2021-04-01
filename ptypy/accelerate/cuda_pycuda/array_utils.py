@@ -453,9 +453,11 @@ class ClipMagnitudesKernel:
         cmin = np.float32(clip_min)
         cmax = np.float32(clip_max)
 
+        npixel = np.int32(np.prod(array.shape))
+        bx = 256
+        gx = int((npixel + bx - 1) // bx)
         self.clip_magnitudes_cuda(array, cmin, cmax,
-                np.int32(array.shape[-2]),
-                np.int32(array.shape[-1]),
-                block=(32, 32, 1),
-                grid=(1, 1, 1),
+                npixel,
+                block=(bx, 1, 1),
+                grid=(gx, 1, 1),
                 stream=self.queue)

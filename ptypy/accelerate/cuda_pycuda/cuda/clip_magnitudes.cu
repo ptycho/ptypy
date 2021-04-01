@@ -1,38 +1,30 @@
 /** clip_magnitudes.
  *
  */
-
  #include <cassert>
  #include <cmath>
  #include <thrust/complex.h>
- using thrust::abs;
- using thrust::arg;
- using thrust::exp;
  using thrust::complex;
  
- extern "C" __global__ void __launch_bounds__(1024, 2)
-     clip_magnitudes(IN_TYPE *arr,
-                    float clip_min,
-                    float clip_max,
-                    int X,
-                    int Y)
+ extern "C" __global__ void clip_magnitudes(IN_TYPE *arr,
+                                            float clip_min,
+                                            float clip_max,
+                                            int N)                                             
 {
-  int tx = threadIdx.x;
-  int ty = threadIdx.y;
- 
-  for (int iy = ty; iy < Y; iy += blockDim.y) {
-    #pragma unroll(4)
-    for (int ix = tx; ix < X; ix += blockDim.x) {
-        float abs_arr = abs(arr[iy * X +ix]);
-        auto phase_arr = IN_TYPE(arg(arr[iy * X +ix]));
+  int id = threadIdx.x + blockIdx.x * blockDim.x;
 
-        if (abs_arr > clip_max) {
-            abs_arr = clip_max;
-        }
-        if (abs_arr < clip_min) {
-            abs_arr = clip_min;
-        }
-        arr[iy * X + ix] = IN_TYPE(abs_arr * exp(phase_arr));
-    }
-  }
+  if (id >= N)
+    return;
+  
+  auto v = arr[id];
+  auto mag = abs(v);
+  auto theta = arg(v);
+
+  if (mag > clip_max)
+    mag = clip_max;
+  if (mag < clip_min)
+    mag = clip_min;
+
+  v = thrust::polar(mag, theta);
+  arr[id] = v;
 }
