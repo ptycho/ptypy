@@ -45,13 +45,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         self.ma_data = None
         self.mag_data = None
         self.ex_data = None
-        #self.multigpu = None
 
     def engine_initialize(self):
         super().engine_initialize()
         self.qu_htod = cuda.Stream()
         self.qu_dtoh = cuda.Stream()
-        #self.multigpu = MultiGpuCommunicator()
 
     def _setup_kernels(self):
 

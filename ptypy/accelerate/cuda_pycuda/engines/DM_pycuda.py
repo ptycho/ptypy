@@ -66,19 +66,13 @@ class DM_pycuda(DM_serial.DM_serial):
         """
         Prepare for reconstruction.
         """
+        # Context, Multi GPU communicator and Stream (needs to be in this order)
         self.context, self.queue = get_context(new_context=True, new_queue=False)
-        # allocator for READ only buffers
-        # self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
-
-        # Multi GPU communicator
         self.multigpu = MultiGpuCommunicator()
-
-        self.queue = cuda.Stream()
+        self.context, self.queue = get_context(new_context=False, new_queue=True)
 
         # Gaussian Smoothing Kernel
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
-
-
 
         # Real/Fourier Support Kernel
         self.RSK = {}
