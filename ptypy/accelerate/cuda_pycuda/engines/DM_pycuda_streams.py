@@ -211,7 +211,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         nma = min(fit, blocks)
         nstreams = min(MAX_STREAMS, blocks)
 
-        log(3, 'PyCUDA blocks fitting on GPU: exit arrays={}, ma_arrays={}, streams={}, totalblocks={}'.format(nex, nma, nstreams, blocks))
+        log(4, 'PyCUDA blocks fitting on GPU: exit arrays={}, ma_arrays={}, streams={}, totalblocks={}'.format(nex, nma, nstreams, blocks))
         # reset memory or create new
         if self.ex_data is not None:
             self.ex_data.reset(ex_mem, nex)
@@ -420,7 +420,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                     """
                     Iterates through all positions and refines them by a given algorithm. 
                     """
-                    log(3, "----------- START POS REF -------------")
+                    log(4, "----------- START POS REF -------------")
                     prev_event = None
                     for dID in self.di.S.keys():
                         streamdata = self.streams[self.cur_stream]
@@ -595,7 +595,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
         return np.sqrt(change)
 
-    def engine_finalize(self):
+    def engine_finalize(self, benchmark=False):
         """
         Clear all GPU data, pinned memory, etc
         """ 
@@ -604,4 +604,4 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         self.ma_data = None
         self.mag_data = None
 
-        super().engine_finalize()
+        super().engine_finalize(benchmark)

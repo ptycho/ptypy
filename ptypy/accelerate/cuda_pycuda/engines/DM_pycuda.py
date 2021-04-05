@@ -118,34 +118,34 @@ class DM_pycuda(DM_serial.DM_serial):
             kern.aux = gpuarray.to_gpu(aux)
 
             # setup kernels, one for each SCAN.
-            logger.info("Setting up FourierUpdateKernel")
+            log(4, "Setting up FourierUpdateKernel")
             kern.FUK = FourierUpdateKernel(aux, nmodes, queue_thread=self.queue)
             kern.FUK.allocate()
 
-            logger.info("Setting up PoUpdateKernel")
+            log(4, "Setting up PoUpdateKernel")
             kern.POK = PoUpdateKernel(queue_thread=self.queue)
             kern.POK.allocate()
 
-            logger.info("Setting up AuxiliaryWaveKernel")
+            log(4, "Setting up AuxiliaryWaveKernel")
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
 
-            logger.info("Setting up ArrayUtilsKernel")
+            log(4, "Setting up ArrayUtilsKernel")
             kern.AUK = ArrayUtilsKernel(queue=self.queue)
 
-            logger.info("Setting up TransposeKernel")
+            log(4, "Setting up TransposeKernel")
             kern.TK = TransposeKernel(queue=self.queue)
 
-            logger.info("Setting up PropagationKernel")
+            log(4, "Setting up PropagationKernel")
             kern.PROP = PropagationKernel(aux, geo.propagator, self.queue, self.p.fft_lib)
             kern.PROP.allocate()
             kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
-                logger.info("Setting up PositionCorrectionKernel")
+                log(4, "Setting up PositionCorrectionKernel")
                 kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
                 kern.PCK.allocate()
-            logger.info("Kernel setup completed")
+            log(4, "Kernel setup completed")
 
     def engine_prepare(self):
 
@@ -231,42 +231,28 @@ class DM_pycuda(DM_serial.DM_serial):
 
                 ## compute log-likelihood
                 if self.p.compute_log_likelihood:
-                    t1 = time.time()
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
                     PROP.fw(aux, aux)
                     FUK.log_likelihood(aux, addr, mag, ma, err_phot)
-                    self.benchmark.F_LLerror += time.time() - t1
 
                 ## build auxilliary wave
-                t1 = time.time()
                 AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                self.benchmark.A_Build_aux += time.time() - t1
 
                 ## forward FFT
-                t1 = time.time()
                 PROP.fw(aux, aux)
-                self.benchmark.B_Prop += time.time() - t1
 
                 ## Deviation from measured data
-                t1 = time.time()
                 FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                 FUK.error_reduce(addr, err_fourier)
                 FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
-                self.benchmark.C_Fourier_update += time.time() - t1
 
                 ## backward FFT
-                t1 = time.time()
                 PROP.bw(aux, aux)
-                self.benchmark.D_iProp += time.time() - t1
 
                 ## build exit wave
-                t1 = time.time()
                 AWK.build_exit(aux, addr, ob, pr, ex)
                 FUK.exit_error(aux, addr)
                 FUK.error_reduce(addr, err_exit)
-                self.benchmark.E_Build_exit += time.time() - t1
-
-                self.benchmark.calls_fourier += 1
 
             parallel.barrier()
 
@@ -283,7 +269,7 @@ class DM_pycuda(DM_serial.DM_serial):
                     """
                     Iterates through all positions and refines them by a given algorithm.
                     """
-                    log(3, "----------- START POS REF -------------")
+                    log(4, "----------- START POS REF -------------")
                     for dID in self.di.S.keys():
 
                         prep = self.diff_info[dID]
@@ -366,7 +352,6 @@ class DM_pycuda(DM_serial.DM_serial):
 
     ## object update
     def object_update(self, MPI=False):
-        t1 = time.time()
         use_atomics = self.p.object_update_cuda_atomics
         queue = self.queue
         queue.synchronize()
@@ -411,13 +396,8 @@ class DM_pycuda(DM_serial.DM_serial):
             self.clip_object(ob.gpu)
             queue.synchronize()
 
-        # print 'object update: ' + str(time.time()-t1)
-        self.benchmark.object_update += time.time() - t1
-        self.benchmark.calls_object += 1
-
     ## probe update
     def probe_update(self, MPI=False):
-        t1 = time.time()
         queue = self.queue
 
         # storage for-loop
@@ -466,10 +446,6 @@ class DM_pycuda(DM_serial.DM_serial):
             self.multigpu.allReduceSum(change_gpu)
             change = change_gpu.get().item() / parallel.size
 
-        # print 'probe update: ' + str(time.time()-t1)
-        self.benchmark.probe_update += time.time() - t1
-        self.benchmark.calls_probe += 1
-
         return np.sqrt(change)
 
     def support_constraint(self, storage=None):
@@ -505,7 +481,7 @@ class DM_pycuda(DM_serial.DM_serial):
             cmin, cmax = self.p.clip_object
             self.CMK.clip_magnitudes_to_range(ob, cmin, cmax)
 
-    def engine_finalize(self):
+    def engine_finalize(self, benchmark=False):
         """
         clear GPU data and destroy context.
         """
@@ -529,4 +505,4 @@ class DM_pycuda(DM_serial.DM_serial):
 
         self.context.pop()
         self.context.detach()
-        super(DM_pycuda, self).engine_finalize()
+        super(DM_pycuda, self).engine_finalize(benchmark)

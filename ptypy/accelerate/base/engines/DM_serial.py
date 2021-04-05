@@ -536,11 +536,11 @@ class DM_serial(DM.DM):
 
         return np.sqrt(change)
 
-    def engine_finalize(self):
+    def engine_finalize(self, benchmark=True):
         """
         try deleting ever helper contianer
         """
-        if parallel.master:
+        if parallel.master and benchmark:
             print("----- BENCHMARKS ----")
             acc = 0.
             for name in sorted(self.benchmark.keys()):
