@@ -24,12 +24,10 @@ from ptypy.utils.verbose import log, logger
 from ptypy.utils import parallel
 from ptypy.engines import register
 from . import DM_pycuda
+from ..multi_gpu import MultiGpuCommunicator
 
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager2
-
-MPI = parallel.size > 1
-MPI = True
 
 EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
@@ -69,8 +67,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         # TODO grow blocks dynamically
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
         nma = min(fit, MAX_BLOCKS)
-        log(3, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
-        log(3, 'PyCUDA max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
+        log(4, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
+        log(4, 'PyCUDA max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
         # reset memory or create new
         self.ex_data = GpuDataManager2(ex_mem, 0, nex, True)
         self.ma_data = GpuDataManager2(ma_mem, 0, nma, False)
@@ -87,6 +85,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for name, s in self.ob_nrm.S.items():
             s.gpu, s.data = mppa(s.data)
         for name, s in self.pr.S.items():
+            s.gpu, s.data = mppa(s.data)
+        for name, s in self.pr_buf.S.items():
             s.gpu, s.data = mppa(s.data)
         for name, s in self.pr_nrm.S.items():
             s.gpu, s.data = mppa(s.data)
@@ -125,11 +125,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             prep.mag = cuda.pagelocked_empty(mag.shape, mag.dtype, order="C", mem_flags=4)
             prep.mag[:] = mag
 
-            log(3, 'Free memory on device: %.2f GB' % (float(cuda.mem_get_info()[0])/1e9))
+            log(4, 'Free memory on device: %.2f GB' % (float(cuda.mem_get_info()[0])/1e9))
             self.ex_data.add_data_block()
             self.ma_data.add_data_block()
             self.mag_data.add_data_block()
-
+        
     def engine_iterate(self, num=1):
         """
         Compute one iteration.
@@ -139,7 +139,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         atomics_probe = self.p.probe_update_cuda_atomics
         atomics_object = self.p.object_update_cuda_atomics
         use_tiles = (not atomics_object) or (not atomics_probe)
-
+        
         for it in range(num):
 
             error = {}
@@ -159,8 +159,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         obn = self.ob_nrm.S[oID]
 
                         if self.p.obj_smooth_std is not None:
+                            log(4, 'Smoothing object, cfact is %.2f' % cfact)
                             obb = self.ob_buf.S[oID]
-                            logger.info('Smoothing object, cfact is %.2f' % cfact)
                             smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
                             self.GSK.convolution(ob.gpu, smooth_mfs, tmp=obb.gpu)
                         # obb.gpu[:] = ob.gpu * cfactf32
@@ -170,7 +170,6 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                 # First cycle: Fourier + object update
                 for iblock, dID in enumerate(self.dID_list):
-                    t1 = time.time()
                     prep = self.diff_info[dID]
 
                     # find probe, object in exit ID in dependence of dID
@@ -214,24 +213,18 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         ## compute log-likelihood
                         if self.p.compute_log_likelihood:
-                            t1 = time.time()
                             AWK.build_aux_no_ex(aux, addr, ob, pr)
                             PROP.fw(aux, aux)
                             # synchronize h2d stream with compute stream
                             self.queue.wait_for_event(ev_mag)
                             FUK.log_likelihood(aux, addr, mag, ma, err_phot)
-                            self.benchmark.F_LLerror += time.time() - t1
 
                         # synchronize h2d stream with compute stream
                         self.queue.wait_for_event(ev_ex)
-                        t1 = time.time()
                         AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                        self.benchmark.A_Build_aux += time.time() - t1
 
                         ## FFT
-                        t1 = time.time()
                         PROP.fw(aux, aux)
-                        self.benchmark.B_Prop += time.time() - t1
 
                         ## Deviation from measured data
                         # synchronize h2d stream with compute stream
@@ -240,32 +233,23 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         FUK.error_reduce(addr, err_fourier)
                         FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
 
-                        self.benchmark.C_Fourier_update += time.time() - t1
                         data_mag.record_done(self.queue, 'compute')
                         data_ma.record_done(self.queue, 'compute')
 
-                        t1 = time.time()
                         PROP.bw(aux, aux)
                         ## apply changes
                         AWK.build_exit(aux, addr, ob, pr, ex)
                         FUK.exit_error(aux, addr)
                         FUK.error_reduce(addr, err_exit)
 
-                        self.benchmark.E_Build_exit += time.time() - t1
-                        self.benchmark.calls_fourier += 1
-
                     prestr = '%d Iteration (Overlap) #%02d:  ' % (parallel.rank, inner)
 
                     # Update object
                     if do_update_object:
                         log(4, prestr + '----- object update -----', True)
-                        t1 = time.time()
-
                         addrt = addr if atomics_object else addr2
                         self.queue.wait_for_event(ev_ex)
                         POK.ob_update(addrt, obb, obn, pr, ex, atomics=atomics_object)
-                        self.benchmark.object_update += time.time() - t1
-                        self.benchmark.calls_object += 1
 
                     data_ex.record_done(self.queue, 'compute')
                     if iblock + len(self.ex_data) < len(self.dID_list):
@@ -283,29 +267,21 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     for oID, ob in self.ob.storages.items():
                         obn = self.ob_nrm.S[oID]
                         obb = self.ob_buf.S[oID]
-                        # MPI test
-                        if MPI:
-                            obb.data[:] = obb.gpu.get()
-                            obn.data[:] = obn.gpu.get()
-                            parallel.allreduce(obb.data)
-                            parallel.allreduce(obn.data)
-                            obb.data /= obn.data
-                            self.clip_object(obb)
-                            ob.gpu.set(obb.data)
-                        else:
-                            obb.gpu /= obn.gpu
-                            ob.gpu[:] = obb.gpu
+                        self.multigpu.allReduceSum(obb.gpu)
+                        self.multigpu.allReduceSum(obn.gpu)
+                        obb.gpu /= obn.gpu
+
+                        self.clip_object(obb.gpu)
+                        ob.gpu[:] = obb.gpu
 
                 # Exit if probe should not yet be updated
                 if not do_update_probe:
                     break
-
                 self.ex_data.syncback = False
+
                 # Update probe
                 log(4, prestr + '----- probe update -----', True)
-                change = self.probe_update(MPI=MPI)
-                # change = self.probe_update(MPI=(parallel.size>1 and MPI))
-
+                change = self.probe_update()
                 log(4, prestr + 'change in probe is %.3f' % change, True)
 
                 # stop iteration if probe change is small
@@ -323,7 +299,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     """
                     Iterates through all positions and refines them by a given algorithm. 
                     """
-                    log(3, "----------- START POS REF -------------")
+                    log(4, "----------- START POS REF -------------")
                     for dID in self.di.S.keys():
 
                         prep = self.diff_info[dID]
@@ -413,11 +389,10 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
     ## probe update
     def probe_update(self, MPI=False):
-        t1 = time.time()
         queue = self.queue
         use_atomics = self.p.probe_update_cuda_atomics
         # storage for-loop
-        change = 0
+        change_gpu = gpuarray.zeros((1,), dtype=np.float32)
         for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
             cfact = self.pr_cfact[pID]
@@ -455,40 +430,22 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             buf = self.pr_buf.S[pID]
             prn = self.pr_nrm.S[pID]
 
-            # MPI test
-            if MPI:
-                # if False:
-                pr.data[:] = pr.gpu.get()
-                prn.data[:] = prn.gpu.get()
-                # queue.synchronize()
-                parallel.allreduce(pr.data)
-                parallel.allreduce(prn.data)
-                pr.data /= prn.data
+            self.multigpu.allReduceSum(pr.gpu)
+            self.multigpu.allReduceSum(prn.gpu)
+            pr.gpu /= prn.gpu
+            self.support_constraint(pr)
 
-                self.support_constraint(pr)
-
-                pr.gpu.set(pr.data)
-            else:
-                pr.gpu /= prn.gpu
-                # ca. 0.3 ms
-                # self.pr.S[pID].gpu = probe_gpu
-                pr.data[:] = pr.gpu.get()
-
-            ## this should be done on GPU
-
-            # queue.synchronize()
-            change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
-            buf.data[:] = pr.data
-            if MPI:
-                change = parallel.allreduce(change) / parallel.size
-
-        # print 'probe update: ' + str(time.time()-t1)
-        self.benchmark.probe_update += time.time() - t1
-        self.benchmark.calls_probe += 1
+            ## calculate change on GPU
+            AUK = self.kernels[list(self.kernels)[0]].AUK
+            buf.gpu -= pr.gpu
+            change_gpu += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu))
+            buf.gpu[:] = pr.gpu
+            self.multigpu.allReduceSum(change_gpu)
+            change = change_gpu.get().item() / parallel.size
 
         return np.sqrt(change)
 
-    def engine_finalize(self):
+    def engine_finalize(self, benchmark=False):
         """
         Clear all GPU data, pinned memory, etc
         """
@@ -500,4 +457,4 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         for name, s in self.pr.S.items():
             s.data = np.copy(s.data)  # is this the same as s.data.get()?
 
-        super().engine_finalize()
+        super().engine_finalize(benchmark)

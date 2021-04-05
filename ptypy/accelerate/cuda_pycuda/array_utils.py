@@ -477,3 +477,25 @@ class GaussianSmoothingKernel:
             return   # both parts have run, output is back in data
         else:
             data[:] = tmp[:]  # only one of them has run, output is in tmp
+
+class ClipMagnitudesKernel:
+
+    def __init__(self, queue=None):
+        self.queue = queue
+        self.clip_magnitudes_cuda = load_kernel("clip_magnitudes", {
+            'IN_TYPE': 'complex<float>',
+        })
+
+    def clip_magnitudes_to_range(self, array, clip_min, clip_max):
+
+        cmin = np.float32(clip_min)
+        cmax = np.float32(clip_max)
+
+        npixel = np.int32(np.prod(array.shape))
+        bx = 256
+        gx = int((npixel + bx - 1) // bx)
+        self.clip_magnitudes_cuda(array, cmin, cmax,
+                npixel,
+                block=(bx, 1, 1),
+                grid=(gx, 1, 1),
+                stream=self.queue)

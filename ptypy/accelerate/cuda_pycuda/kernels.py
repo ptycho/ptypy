@@ -8,6 +8,23 @@ from .array_utils import MaxAbs2Kernel
 from ..base import kernels as ab
 from ..base.kernels import Adict
 
+def choose_fft(fft_type):
+    if fft_type=='cuda':
+        try:
+            from ptypy.accelerate.cuda_pycuda.cufft import FFT_cuda as FFT
+        except:
+            logger.warning('Unable to import cufft version - using Reikna instead')
+            from ptypy.accelerate.cuda_pycuda.fft import FFT
+    elif fft_type=='skcuda':
+        try:
+            from ptypy.accelerate.cuda_pycuda.cufft import FFT_skcuda as FFT
+        except:
+            logger.warning('Unable to import skcuda.fft version - using Reikna instead')
+            from ptypy.accelerate.cuda_pycuda.fft import FFT
+    else:
+        from ptypy.accelerate.cuda_pycuda.fft import FFT
+    return FFT
+
 class PropagationKernel:
 
     def __init__(self, aux, propagator, queue_thread=None, fft='reikna'):
@@ -24,21 +41,7 @@ class PropagationKernel:
     def allocate(self):
 
         aux = self.aux
-
-        if self._fft_type=='cuda':
-            try:
-                from ptypy.accelerate.cuda_pycuda.cufft import FFT_cuda as FFT
-            except:
-                logger.warning('Unable to import cufft version - using Reikna instead')
-                from ptypy.accelerate.cuda_pycuda.fft import FFT
-        elif self._fft_type=='skcuda':
-            try:
-                from ptypy.accelerate.cuda_pycuda.cufft import FFT_skcuda as FFT
-            except:
-                logger.warning('Unable to import skcuda.fft version - using Reikna instead')
-                from ptypy.accelerate.cuda_pycuda.fft import FFT
-        else:
-            from ptypy.accelerate.cuda_pycuda.fft import FFT
+        FFT = choose_fft(self._fft_type)
 
         if self.prop_type == 'farfield':
 
@@ -119,6 +122,33 @@ class PropagationKernel:
         self._fft2.queue = queue
         if self.prop_type == "nearfield":
             self._fft3.queue = queue
+
+class FourierSupportKernel:
+    def __init__(self, support, queue_thread=None, fft='reikna'):
+        self.support = support
+        self.queue = queue_thread
+        self._fft_type = fft
+    def allocate(self):
+        FFT = choose_fft(self._fft_type)
+
+        self._fft1 = FFT(self.support, self.queue,
+                        post_fft=self.support,
+                        symmetric=True,
+                        forward=True)
+        self._fft2 = FFT(self.support, self.queue,
+                        symmetric=True,
+                        forward=False)
+    def apply_fourier_support(self,x):
+        self._fft1.ft(x,x)
+        self._fft2.ift(x,x)
+
+class RealSupportKernel:
+    def __init__(self, support):
+        self.support = support
+    def allocate(self):
+        self.support = gpuarray.to_gpu(self.support)
+    def apply_real_support(self, x):
+        x *= self.support
 
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 

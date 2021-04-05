@@ -423,8 +423,6 @@ class DM_serial(DM.DM):
             # Update probe
             log(4, prestr + '----- probe update -----', True)
             change = self.probe_update(MPI=(parallel.size > 1 and MPI))
-            # change = self.probe_update(MPI=(parallel.size>1 and MPI))
-
             log(4, prestr + 'change in probe is %.3f' % change, True)
 
             # stop iteration if probe change is small
@@ -439,7 +437,7 @@ class DM_serial(DM.DM):
             cfact = self.p.object_inertia * self.mean_power
             
             if self.p.obj_smooth_std is not None:
-                logger.info('Smoothing object, cfact is %.2f' % cfact)
+                log(4, 'Smoothing object, cfact is %.2f' % cfact)
                 smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
                 ob.data = cfact * au.complex_gaussian_filter(ob.data, smooth_mfs)
             else:
@@ -538,11 +536,11 @@ class DM_serial(DM.DM):
 
         return np.sqrt(change)
 
-    def engine_finalize(self):
+    def engine_finalize(self, benchmark=True):
         """
         try deleting ever helper contianer
         """
-        if parallel.master:
+        if parallel.master and benchmark:
             print("----- BENCHMARKS ----")
             acc = 0.
             for name in sorted(self.benchmark.keys()):

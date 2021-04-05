@@ -386,3 +386,20 @@ class ArrayUtilsTest(PyCudaTest):
         
         np.testing.assert_allclose(out_dev.get(), out, rtol=1e-6, atol=1e-6,
             err_msg="The object norm array has not been updated as expected")
+
+
+    def test_clip_magnitudes_to_range_UNITY(self):
+        np.random.seed(1987)
+        A = np.random.random((2,10,10))
+        B = A[0] + 1j* A[1]
+        B = B.astype(np.complex64)
+        B_gpu = gpuarray.to_gpu(B)
+
+        au.clip_complex_magnitudes_to_range(B, 0.2,0.8)
+        CMK = gau.ClipMagnitudesKernel()
+        CMK.clip_magnitudes_to_range(B_gpu, 0.2, 0.8)
+
+        np.testing.assert_allclose(B_gpu.get(), B, rtol=1e-6, atol=1e-6,
+            err_msg="The magnitudes of the array have not been clipped as expected")
+
+
