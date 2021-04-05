@@ -25,9 +25,6 @@ from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKe
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..multi_gpu import MultiGpuCommunicator
 
-MPI = parallel.size > 1
-MPI = True
-
 __all__ = ['DM_pycuda']
 
 @register()
@@ -274,7 +271,7 @@ class DM_pycuda(DM_serial.DM_serial):
             parallel.barrier()
 
             sync = (self.curiter % 1 == 0)
-            self.overlap_update(MPI=MPI)
+            self.overlap_update()
 
             parallel.barrier()
             if self.do_position_refinement and (self.curiter):
@@ -424,7 +421,7 @@ class DM_pycuda(DM_serial.DM_serial):
         queue = self.queue
 
         # storage for-loop
-        change = 0
+        change_gpu = gpuarray.zeros((1,), dtype=np.float32)
         cfact = self.p.probe_inertia
         use_atomics = self.p.probe_update_cuda_atomics
         for pID, pr in self.pr.storages.items():
@@ -464,13 +461,10 @@ class DM_pycuda(DM_serial.DM_serial):
             queue.synchronize()
             AUK = self.kernels[list(self.kernels)[0]].AUK
             buf.gpu -= pr.gpu
-            change += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu)).get().item()
+            change_gpu += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu))
             buf.gpu[:] = pr.gpu
-            # cuda.memcpy_dtod(dest=buf.gpu.ptr,
-            #         src=pr.gpu.ptr,
-            #         size=pr.gpu.nbytes)
-            if MPI:
-                change = parallel.allreduce(change) / parallel.size
+            self.multigpu.allReduceSum(change_gpu)
+            change = change_gpu.get().item() / parallel.size
 
         # print 'probe update: ' + str(time.time()-t1)
         self.benchmark.probe_update += time.time() - t1

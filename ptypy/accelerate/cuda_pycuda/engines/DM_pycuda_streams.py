@@ -20,9 +20,6 @@ from ptypy.engines import register
 from . import DM_pycuda
 from ..mem_utils import GpuDataManager
 
-MPI = parallel.size > 1
-MPI = True
-
 # factor how many more exit waves we wanna keep on GPU compared to 
 # ma / mag data
 EX_MA_BLOCKS_RATIO = 2
@@ -399,8 +396,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                 # Update probe
                 log(4, prestr + '----- probe update -----', True)
                 self.ex_data.syncback = False
-                change = self.probe_update(MPI=MPI)
-                # change = self.probe_update(MPI=(parallel.size>1 and MPI))
+                change = self.probe_update()
                 
                 # swap direction for next time
                 self.dID_list.reverse()
@@ -507,7 +503,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         for name, s in self.pr.S.items():
             s.gpu.get(s.data)
 
-
         # FIXXME: copy to pinned memory
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
@@ -519,7 +514,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         self.error = error
         return error
     
-
     def _object_allreduce(self):
         # make sure that all transfers etc are finished
         for sd in self.streams:
@@ -541,7 +535,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         streamdata = self.streams[self.cur_stream]
         use_atomics = self.p.probe_update_cuda_atomics
         # storage for-loop
-        change = 0
+        change_gpu = gpuarray.zeros((1,), dtype=np.float32)
         prev_event = None
         for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
@@ -573,7 +567,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
             prev_event = streamdata.end_compute()
             self.cur_stream = (self.cur_stream + self.stream_direction) % len(self.streams)
 
-            
         # sync all streams first
         for sd in self.streams:
             sd.synchronize()
@@ -591,11 +584,10 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
             ## calculate change on GPU
             AUK = self.kernels[list(self.kernels)[0]].AUK
             buf.gpu -= pr.gpu
-            change += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu)).get().item()
+            change_gpu += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu))
             buf.gpu[:] = pr.gpu
-            # cuda.memcpy_dtod(dest=buf.gpu.ptr,
-            #         src=pr.gpu.ptr,
-            #         size=pr.gpu.nbytes)
+            self.multigpu.allReduceSum(change_gpu)
+            change = change_gpu.get().item() / parallel.size
 
         # print 'probe update: ' + str(time.time()-t1)
         self.benchmark.probe_update += time.time() - t1

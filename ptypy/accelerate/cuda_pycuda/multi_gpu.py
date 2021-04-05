@@ -33,6 +33,7 @@ import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
 from ptypy.utils import parallel
+from ptypy.utils.verbose import logger, log
 import os
 
 try:
@@ -148,8 +149,11 @@ class MultiGpuCommunicatorNccl(MultiGpuCommunicatorBase):
 # pick the appropriate communicator depending on installed packages 
 if have_nccl:
     MultiGpuCommunicator = MultiGpuCommunicatorNccl
+    log(4, "Using NCCL communicator")
 elif have_cuda_mpi:
     MultiGpuCommunicator = MultiGpuCommunicatorCudaMpi
+    log(4, "Using CUDA-aware MPI communicator")
 else:
     MultiGpuCommunicator = MultiGpuCommunicatorMpi
+    log(4, "Using MPI communicator")
     

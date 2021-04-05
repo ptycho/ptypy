@@ -29,9 +29,6 @@ from ..multi_gpu import MultiGpuCommunicator
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager2
 
-MPI = parallel.size > 1
-MPI = True
-
 EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
 #MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
@@ -298,13 +295,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                 # Exit if probe should not yet be updated
                 if not do_update_probe:
                     break
-
                 self.ex_data.syncback = False
+
                 # Update probe
                 log(4, prestr + '----- probe update -----', True)
-                change = self.probe_update(MPI=MPI)
-                # change = self.probe_update(MPI=(parallel.size>1 and MPI))
-
+                change = self.probe_update()
                 log(4, prestr + 'change in probe is %.3f' % change, True)
 
                 # stop iteration if probe change is small
@@ -416,7 +411,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         queue = self.queue
         use_atomics = self.p.probe_update_cuda_atomics
         # storage for-loop
-        change = 0
+        change_gpu = gpuarray.zeros((1,), dtype=np.float32)
         for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
             cfact = self.pr_cfact[pID]
@@ -462,13 +457,10 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             ## calculate change on GPU
             AUK = self.kernels[list(self.kernels)[0]].AUK
             buf.gpu -= pr.gpu
-            change += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu)).get().item()
+            change_gpu += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu))
             buf.gpu[:] = pr.gpu
-            # cuda.memcpy_dtod(dest=buf.gpu.ptr,
-            #         src=pr.gpu.ptr,
-            #         size=pr.gpu.nbytes)
-            if MPI:
-                change = parallel.allreduce(change) / parallel.size
+            self.multigpu.allReduceSum(change_gpu)
+            change = change_gpu.get().item() / parallel.size
 
         # print 'probe update: ' + str(time.time()-t1)
         self.benchmark.probe_update += time.time() - t1

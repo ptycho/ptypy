@@ -423,8 +423,6 @@ class DM_serial(DM.DM):
             # Update probe
             log(4, prestr + '----- probe update -----', True)
             change = self.probe_update(MPI=(parallel.size > 1 and MPI))
-            # change = self.probe_update(MPI=(parallel.size>1 and MPI))
-
             log(4, prestr + 'change in probe is %.3f' % change, True)
 
             # stop iteration if probe change is small
