@@ -1,4 +1,4 @@
-name: ptypy_full_dependencies
+name: ptypy_pycuda
 channels:
   - conda-forge
 dependencies:
@@ -9,11 +9,19 @@ dependencies:
   - h5py
   - pyzmq
   - pep8
+  - openmpi
   - mpi4py
   - pillow
   - pyfftw
+  - cmake>=3.8.0
+  - pybind11
+  - reikna
   - pip
   - pip:
     - pytest-cov
     - coveralls
     - fabio
+    - pycuda
+    - scikit-cuda
+
+
