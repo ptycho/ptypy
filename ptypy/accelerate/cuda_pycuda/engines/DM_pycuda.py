@@ -23,7 +23,7 @@ from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, 
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel, ClipMagnitudesKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
-from ..multi_gpu import MultiGpuCommunicator
+from ..multi_gpu import get_multi_gpu_communicator
 
 __all__ = ['DM_pycuda']
 
@@ -68,7 +68,7 @@ class DM_pycuda(DM_serial.DM_serial):
         """
         # Context, Multi GPU communicator and Stream (needs to be in this order)
         self.context, self.queue = get_context(new_context=True, new_queue=False)
-        self.multigpu = MultiGpuCommunicator()
+        self.multigpu = get_multi_gpu_communicator()
         self.context, self.queue = get_context(new_context=False, new_queue=True)
 
         # Gaussian Smoothing Kernel

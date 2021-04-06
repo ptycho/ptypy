@@ -70,9 +70,8 @@ class GpuDataTest(PyCudaTest):
         np.testing.assert_allclose(out, sz * data, rtol=1e-6)
 
     def test_multigpu_auto(self):
-        self.multigpu_tester(mgpu.MultiGpuCommunicator())
+        self.multigpu_tester(mgpu.get_multi_gpu_communicator())
         
-
     def test_multigpu_mpi(self):
         self.multigpu_tester(mgpu.MultiGpuCommunicatorMpi())
 

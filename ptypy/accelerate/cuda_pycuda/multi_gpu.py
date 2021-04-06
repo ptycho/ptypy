@@ -95,7 +95,9 @@ class MultiGpuCommunicatorCudaMpi(MultiGpuCommunicatorBase):
     def allReduceSum(self, arr):
         """Call MPI.all_reduce in-place, with array on GPU"""
 
-        assert hasattr(arr, '__cuda_array_interface__'), "input array should have a cuda array interface"
+        # Check if cuda array interface is available
+        if not hasattr(arr, '__cuda_array_interface__'):
+            raise RuntimeError("input array should have a cuda array interface")
 
         if parallel.MPIenabled:
             comm = parallel.comm
@@ -106,8 +108,10 @@ class MultiGpuCommunicatorNccl(MultiGpuCommunicatorBase):
     
     def __init__(self):
         super().__init__()
-        
-        #assert cuda.Context.get_device().get_attributes()[cuda.device_attribute.COMPUTE_MODE] == cuda.compute_mode.DEFAULT, "compute mode must be default in order to use NCCL"
+
+        # Check if GPUs are in default mode        
+        if cuda.Context.get_device().get_attributes()[cuda.device_attribute.COMPUTE_MODE] != cuda.compute_mode.DEFAULT:
+            raise RuntimeError("Compute mode must be default in order to use NCCL")
         
         # get a unique identifier for the NCCL communicator and 
         # broadcast it to all MPI processes (assuming one device per process)
@@ -145,15 +149,22 @@ class MultiGpuCommunicatorNccl(MultiGpuCommunicatorBase):
                 raise ValueError("This dtype is not supported by NCCL.")
 
 
-
-# pick the appropriate communicator depending on installed packages 
-if have_nccl:
-    MultiGpuCommunicator = MultiGpuCommunicatorNccl
-    log(4, "Using NCCL communicator")
-elif have_cuda_mpi:
-    MultiGpuCommunicator = MultiGpuCommunicatorCudaMpi
-    log(4, "Using CUDA-aware MPI communicator")
-else:
-    MultiGpuCommunicator = MultiGpuCommunicatorMpi
+# pick the appropriate communicator depending on installed packages
+def get_multi_gpu_communicator(use_nccl=True, use_cuda_mpi=True):
+    if have_nccl and use_nccl:
+        try:
+            comm = MultiGpuCommunicatorNccl()
+            log(4, "Using NCCL communicator")
+            return comm
+        except RuntimeError:
+            pass
+    if have_cuda_mpi and use_cuda_mpi:
+        try:
+            comm = MultiGpuCommunicatorCudaMpi()
+            log(4, "Using CUDA-aware MPI communicator")
+            return comm
+        except RuntimeError:
+            pass
+    comm = MultiGpuCommunicatorMpi()
     log(4, "Using MPI communicator")
-    
+    return comm

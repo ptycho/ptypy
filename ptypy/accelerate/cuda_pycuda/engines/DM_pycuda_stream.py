@@ -24,7 +24,6 @@ from ptypy.utils.verbose import log, logger
 from ptypy.utils import parallel
 from ptypy.engines import register
 from . import DM_pycuda
-from ..multi_gpu import MultiGpuCommunicator
 
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager2
