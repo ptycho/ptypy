@@ -145,6 +145,14 @@ class BaseEngine(object):
             if not pod_.model.__class__ in self.SUPPORTED_MODELS:
                 raise Exception('Model %s not supported by engine' % pod_.model.__class__)
 
+        supp = self.p.probe_fourier_support
+        if supp is not None:
+            for s in self.pr.storages.values():
+                sh = s.data.shape
+                ll, xx, yy = u.grids(sh, center='fft',FFTlike=True)
+                support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
+                self._probe_fourier_support[s.ID] = support
+
         # Calculate probe support
         # an individual support for each storage is calculated in saved
         # in the dict self.probe_support
@@ -155,14 +163,6 @@ class BaseEngine(object):
                 ll, xx, yy = u.grids(sh, FFTlike=False)
                 support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
                 self._probe_support[s.ID] = support
-
-        supp = self.p.probe_fourier_support
-        if supp is not None:
-            for s in self.pr.storages.values():
-                sh = s.data.shape
-                ll, xx, yy = u.grids(sh, center='fft',FFTlike=True)
-                support = (np.pi * (xx**2 + yy**2) < supp * sh[1] * sh[2])
-                self._probe_fourier_support[s.ID] = support
 
         # Call engine specific preparation
         self.engine_prepare()
