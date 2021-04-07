@@ -17,7 +17,7 @@ class BaseMangler(npam.BaseMangler):
         assert self.delta is not None, "Setup delta using the setup_shifts method first"
         self.delta = np.ascontiguousarray(self.delta, dtype=np.int32)
         
-        if self.delta_gpu is None or self.delta_gpu.shape[0] > self.delta.shape[0]:
+        if self.delta_gpu is None or self.delta_gpu.shape[0] < self.delta.shape[0]:
             self.delta_gpu = gpuarray.empty(self.delta.shape, dtype=np.int32)
         # in case self.delta is smaller than delta_gpu, this will only copy the
         # relevant part

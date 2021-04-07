@@ -13,7 +13,7 @@ class BaseMangler(object):
         # can be initialised in the engine.init
 
         self.max_bound = max_bound  # maximum distance from the starting positions
-        self.max_step = lambda it: (max_step_per_shift * (stop - it) / (stop - start)) # maximum step per iteration, decreases with progression
+        self.max_step = lambda it: np.ceil(max_step_per_shift * (stop - it) / (stop - start)) # maximum step per iteration, decreases with progression
         self.nshifts = nshifts
         self.delta = 0
 
@@ -75,6 +75,7 @@ class GridSearchMangler(BaseMangler):
         delta = np.mgrid[-max_step:max_step+1:1,
                          -max_step:max_step+1:1]
         within_bound = (delta[0]**2 + delta[1]**2) < (self.max_bound**2)
+        print(max_step, self.max_bound, within_bound.sum())
         self.delta = np.tile(delta[:,within_bound].T.reshape(within_bound.sum(),1,2), (1,nframes,1))
         self.nshifts = self.delta.shape[0]
 
