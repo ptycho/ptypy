@@ -13,9 +13,7 @@ import time
 from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline, log
-from ..utils.descriptor import EvalDescriptor
-from .posref import AnnealingRefine
-import gc
+from .posref import AnnealingRefine, GridSearchRefine
 
 __all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info', 'PositionCorrectionEngine']
 
@@ -316,6 +314,11 @@ class PositionCorrectionEngine(BaseEngine):
     type = Param, bool
     help = If True refine scan positions
 
+    [position_refinement.method]
+    default = Annealing
+    type = str
+    help = Annealing or GridSearch
+
     [position_refinement.start]
     default = None
     type = int
@@ -359,6 +362,11 @@ class PositionCorrectionEngine(BaseEngine):
     help = record movement of positions
     """
 
+    POSREF_ENGINES = {
+        "Annealing": AnnealingRefine,
+        "GridSearch": GridSearchRefine
+    }
+
     def __init__(self, ptycho_parent, pars):
         """
         Position Correction engine.
@@ -388,17 +396,17 @@ class PositionCorrectionEngine(BaseEngine):
             self.do_position_refinement = False
         else:
             self.do_position_refinement = True
-            log(3, "Initialising position refinement")
+            log(3, "Initialising position refinement (%s)" %self.p.position_refinement.method)
             
             # Enlarge object arrays, 
             # This can be skipped though if the boundary is less important
             for name, s in self.ob.storages.items():
-                s.padding = int(self.p.position_refinement.max_shift // np.max(s.psize))
-                s.reformat()
+               s.padding = int(self.p.position_refinement.max_shift // np.max(s.psize))
+               s.reformat()
 
-            # this could be some kind of dictionary lookup if we want to add more
-            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
-            log(3, "Position refinement initialised")
+            # Choose position refinement engine from dictionary
+            PosrefEngine = self.POSREF_ENGINES[self.p.position_refinement.method]
+            self.position_refinement = PosrefEngine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
             self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
             if self.p.position_refinement.stop is None:
                 self.p.position_refinement.stop = self.p.numiter

@@ -150,6 +150,21 @@ doc =
 userlevel = 2
 type = float
 
+[engine.DM.probe_update_cuda_atomics]
+help = For GPU, use the atomics version for probe updates kernel
+default = False
+type = bool
+userlevel = 2
+doc =
+
+[engine.DM.object_update_cuda_atomics]
+help = For GPU, use the atomics version for object updates kernel
+default = True
+type = bool
+userlevel = 2
+doc =
+
+
 [engine.common]
 help = Parameters common to all engines
 default = None

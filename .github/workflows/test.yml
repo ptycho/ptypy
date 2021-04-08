@@ -34,7 +34,7 @@ jobs:
         echo $CONDA/bin >> $GITHUB_PATH
     - name: Install dependencies
       run: |
-        conda env update --file ptypy_core_dependencies.yml --name base
+        conda env update --file core_dependencies.yml --name base
     - name: Prepare ptypy
       run: |
         # Dry install to create ptypy/version.py
@@ -50,8 +50,8 @@ jobs:
       run: |
         conda install pytest
         conda install pytest-cov
-        # pytest ptypy/test --doctest-modules --junitxml=junit/test-results.xml --cov=ptypy --cov-report=xml --cov-report=html --cov-config=.coveragerc
-        pytest
+        # pytest ptypy/test -v --doctest-modules --junitxml=junit/test-results.xml --cov=ptypy --cov-report=xml --cov-report=html --cov-config=.coveragerc
+        pytest test -v --ignore=test/accelerate_tests --ignore=test/archive_tests
 #    - name: cobertura-report
 #      if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize')
 #      uses: 5monkeys/cobertura-action@v7

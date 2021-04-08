@@ -10,9 +10,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from .. import utils as u
-from .. import defaults_tree
+
 from .utils import *
+
+
 
 ENGINES = dict()
 
@@ -46,6 +47,19 @@ from . import MLOPR
 from . import dummy
 from . import ePIE
 from . import Bragg3d_engines
+
+# TODO: make this better / explicit
+# try:
+#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda
+#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_streams
+#     from ptypy.accelerate.cuda_pycuda.engines import ML_pycuda
+#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream
+# except:
+#     pass
+# try:
+#     from ptypy.accelerate.ocl_pyopencl.engines import DM_ocl
+# except:
+#     pass
 
 
 # dynamic load, maybe discarded in future
