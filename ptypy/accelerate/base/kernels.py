@@ -417,7 +417,7 @@ class AuxiliaryWaveKernel(BaseKernel):
             aux[ind, :, :] = tmp
         return
 
-    def build_exit(self, b_aux, addr, ob, pr, ex):
+    def build_exit(self, b_aux, addr, ob, pr, ex, alpha=1):
 
         sh = addr.shape
 
@@ -433,9 +433,10 @@ class AuxiliaryWaveKernel(BaseKernel):
         rows, cols = ex.shape[-2:]
 
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            dex = aux[ind, :, :] - \
+            dex = aux[ind, :, :] - alpha * \
                   ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
-                  pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]
+                  pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] + (alpha - 1) * \
+                  ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
 
             ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] += dex
             aux[ind, :, :] = dex

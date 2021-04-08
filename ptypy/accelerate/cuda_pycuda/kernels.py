@@ -493,7 +493,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                                 int(maxz * nmodes)), 
                             stream=self.queue)
 
-    def build_exit(self, b_aux, addr, ob, pr, ex):
+    def build_exit(self, b_aux, addr, ob, pr, ex, alpha=1):
         obr, obc = self._cache_object_shape(ob)
         sh = addr.shape
         nmodes = sh[1]
@@ -506,6 +506,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                              ob,
                              obr, obc,
                              addr,
+                             np.float32(alpha) if ex.dtype == np.complex64 else np.float64(alpha),
                              block=(32, 32, 1), grid=(int(maxz * nmodes), 1, 1), stream=self.queue)
 
     def build_exit_alpha_tau(self, b_aux, addr, ob, pr, ex, alpha=1, tau=1):

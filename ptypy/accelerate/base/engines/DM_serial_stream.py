@@ -139,7 +139,7 @@ class DM_serial_stream(DM_serial):
 
                         ## apply changes #2
                         t1 = time.time()
-                        AWK.build_exit(aux, addr, ob, pr, ex)
+                        AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                         self.benchmark.E_Build_exit += time.time() - t1
 
                         err_phot = np.zeros_like(err_fourier)
