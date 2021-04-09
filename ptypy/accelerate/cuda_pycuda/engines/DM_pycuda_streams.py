@@ -355,7 +355,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         t1 = time.time()
                         PROP.bw(aux, aux)
                         ## apply changes
-                        AWK.build_exit(aux, addr, ob, pr, ex)
+                        AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                         FUK.exit_error(aux, addr)
                         FUK.error_reduce(addr, err_exit)
                         self.benchmark.E_Build_exit += time.time() - t1
