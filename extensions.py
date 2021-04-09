@@ -1,115 +1,102 @@
 '''
-Compilation tools for Nvidia builds of extension modules.
+These are the optional extensions for ptypy
 '''
+
+
+from distutils.version import LooseVersion
+from distutils.extension import Extension
 import os
-import sysconfig
-import pybind11
-from distutils.unixccompiler import UnixCCompiler
-from distutils.command.build_ext import build_ext
+import multiprocessing
+import subprocess
+import re
+import numpy as np
 
 
-def find_in_path(name, path):
-    "Find a file in a search path"
-    # adapted fom http://code.activestate.com/recipes/52224-find-a-file-given-a-search-path/
-    for dir in path.split(os.pathsep):
-        binpath = os.path.join(dir, name)
-        if os.path.exists(binpath):
-            return os.path.abspath(binpath)
-    return None
+# this is a hacky version, but is the desired behaviour
+class AccelerationExtension(object):
+    def __init__(self, debug=False):
+        self.debug = debug
+        self._options = None
 
-def locate_cuda():
-    """
-    Locate the CUDA environment on the system
-    Returns a dict with keys 'home', 'nvcc', 'include', and 'lib64'
-    and values giving the absolute path to each directory.
-    Starts by looking for the CUDAHOME env variable. If not found, everything
-    is based on finding 'nvcc' in the PATH.
-    """
-    # first check if the CUDAHOME env variable is in use
-    if 'CUDAHOME' in os.environ:
-        home = os.environ['CUDAHOME']
-        nvcc = os.path.join(home, 'bin', 'nvcc')
-    else:
-        # otherwise, search the PATH for NVCC
-        nvcc = find_in_path('nvcc', os.environ['PATH'])
-        if nvcc is None:
-            raise EnvironmentError('The nvcc binary could not be '
-                                   'located in your $PATH. Either add it to your path, or set $CUDAHOME')
-        home = os.path.dirname(os.path.dirname(nvcc))
+    def get_full_options(self):
+        return self._options
 
-    cudaconfig = {'home': home, 'nvcc': nvcc,
-                  'include': os.path.join(home, 'include'),
-                  'lib64': os.path.join(home, 'lib64')}
-    for k, v in cudaconfig.items():
-        if not os.path.exists(v):
-            raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))
-    return cudaconfig
+    def get_reflection_options(self):
+        user_options = []
+        boolean_options = []
+        for name, description in self._options.items():
+            if isinstance(description['default'], str):
+                user_options.append((name+'=', None, description['doc']))
+            elif isinstance(description['default'], bool):
+                user_options.append((name, None, description['doc']))
+                boolean_options.append(name)
+            else:
+                raise NotImplementedError("Don't know what to do with parameter:%s of type: %s" % (name, type(description['default'])))
+        return user_options, boolean_options
 
-class NvccCompiler(UnixCCompiler):
+    def build(self, options):
+        raise NotImplementedError('You need to implement the build method!')
+
+    def getExtension(self):
+        raise NotImplementedError('You need to return cython extension object.')
+
+
+class CudaExtension(AccelerationExtension): # probably going to inherit from something.
     def __init__(self, *args, **kwargs):
-        super(NvccCompiler, self).__init__(*args, **kwargs)
-        self.CUDA = locate_cuda()
-        module_dir = os.path.join(__file__.strip('import_fft.py'), 'cuda', 'filtered_fft') 
-        # by default, compile for all of these 
-        archflag = '-gencode=arch=compute_50,code=sm_50' + \
-            ' -gencode=arch=compute_52,code=sm_52' + \
-            ' -gencode=arch=compute_60,code=sm_60' + \
-            ' -gencode=arch=compute_61,code=sm_61' + \
-            ' -gencode=arch=compute_70,code=sm_70' + \
-            ' -gencode=arch=compute_75,code=sm_75' + \
-            ' -gencode=arch=compute_75,code=compute_75'
-        self.src_extensions.append('.cu')
-        self.LD_FLAGS = [archflag, "-lcufft_static", "-lculibos", "-ldl", "-lrt", "-lpthread", "-cudart shared"]
-        self.NVCC_FLAGS = ["-dc", archflag]
-        self.CXXFLAGS = ['"-fPIC"']
-        pybind_includes = [pybind11.get_include(), sysconfig.get_path('include')]  
-        INCLUDES = pybind_includes + [self.CUDA['lib64'], module_dir]
-        self.INCLUDES = ["-I%s" % ix for ix in INCLUDES]
-        self.OPTFLAGS = ["-O3", "-std=c++14"]
+        super(CudaExtension, self).__init__(*args, **kwargs)
+        self._options = {'cudadir': {'default': '',
+                                     'doc': 'CUDA directory'},
+                         'cudaflags': {'default': '-gencode arch=compute_35,\\"code=sm_35\\" ' +
+                                                  '-gencode arch=compute_37,\\"code=sm_37\\" ' +
+                                                  '-gencode arch=compute_52,\\"code=sm_52\\" ' +
+                                                  '-gencode arch=compute_60,\\"code=sm_60\\" ' +
+                                                  '-gencode arch=compute_70,\\"code=sm_70\\" ',
+                                       'doc': 'Flags to the CUDA compiler'},
+                         'gputiming': {'default': False,
+                                       'doc': 'Do GPU timing'}}
 
-    def _compile(self, obj, src, ext, cc_args, extra_postargs, pp_opts):
-        default_compiler_so = self.compiler_so
-        CPPFLAGS = self.INCLUDES + extra_postargs # little hack here, since postargs usually goes at the end, which we won't do.
-        # makefile line is
-        # $(NVCC) $(NVCC_FLAGS) $(OPTFLAGS) -Xcompiler "$(CXXFLAGS)" $(CPPFLAGS)
-        compiler_command = [self.CUDA["nvcc"]] + self.NVCC_FLAGS + self.OPTFLAGS + ["-Xcompiler"] + self.CXXFLAGS + CPPFLAGS
-        compiler_exec = " ".join(compiler_command)
-        self.set_executable('compiler_so', compiler_exec)
-        postargs = [] # we don't actually have any postargs
-        super(NvccCompiler, self)._compile(obj, src, ext, cc_args, postargs, pp_opts) # the _compile method
-        # reset the default compiler_so, which we might have changed for cuda
-        self.compiler_so = default_compiler_so
-    
-    def link(self, target_desc, objects,
-             output_filename, output_dir=None, libraries=None,
-             library_dirs=None, runtime_library_dirs=None,
-             export_symbols=None, debug=0, extra_preargs=None,
-             extra_postargs=None, build_temp=None, target_lang=None):
-        default_linker_so = self.linker_so
-        # make file line is
-        # $(NVCC) $(OPTFLAGS) -shared $(LD_FLAGS) $(OBJ) $(OBJ_MOD) -o $@
-        linker_command = [self.CUDA["nvcc"]] + self.OPTFLAGS + ["-shared"] + self.LD_FLAGS
-        linker_exec = " ".join(linker_command)
-        self.set_executable('linker_so', linker_exec)
-        super(NvccCompiler, self).link(target_desc, objects,
-             output_filename, output_dir=None, libraries=None,
-             library_dirs=None, runtime_library_dirs=None,
-             export_symbols=None, debug=0, extra_preargs=None,
-             extra_postargs=None, build_temp=None, target_lang=None)
-        self.linker_so = default_linker_so
+    def build(self, options):
+        cudadir = options['cudadir']
+        cudaflags = options['cudaflags']
+        gputiming = options['gputiming']
+        try:
+            out = subprocess.check_output(['cmake', '--version'])
+        except OSError:
+            raise RuntimeError(
+                "CMake must be installed to build the CUDA extensions.")
 
-class CustomBuildExt(build_ext):
+        cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)',
+                                               out.decode()).group(1))
+        if cmake_version < '3.8.0':
+            raise RuntimeError("CMake >= 3.8.0 is required")
 
-    def build_extension(self, ext):
-        has_cu = any([src.endswith('.cu') for src in ext.sources])
-        if has_cu:
-            old_compiler = self.compiler
-            self.compiler = NvccCompiler(verbose=old_compiler.verbose,
-                                        dry_run=old_compiler.dry_run,
-                                        force=old_compiler.force) # this is our bespoke compiler
-            super(CustomBuildExt, self).build_extension(ext)
-            self.compiler=old_compiler
-        else:
-            super(CustomBuildExt, self).build_extension(ext)
+        srcdir = os.path.abspath('cuda')
+        buildtmp = os.path.abspath(os.path.join('build', 'cuda'))
+        cmake_args = [
+            "-DCMAKE_BUILD_TYPE=" + ("Debug" if self.debug else "Release"),
+            '-DCMAKE_CUDA_FLAGS={}'.format(cudaflags),
+            '-DGPU_TIMING={}'.format("ON" if gputiming else "OFF")
+        ]
+        if cudadir:
+            cmake_args += '-DCMAKE_CUDA_COMPILER="{}/bin/nvcc"'.format(cudadir)
+        build_args = ["--config", "Debug" if self.debug else "Release", "--", "-j{}".format(multiprocessing.cpu_count() + 1)]
+        if not os.path.exists(buildtmp):
+            os.makedirs(buildtmp)
+        env = os.environ.copy()
+        subprocess.check_call(['cmake', srcdir] + cmake_args,
+                              cwd=buildtmp, env=env)
+        subprocess.check_call(['cmake', '--build', '.'] + build_args,
+                              cwd=buildtmp)
+        print("Complete.")
 
-
+    def getExtension(self):
+        libdirs = ['build/cuda']
+        if 'LD_LIBRARY_PATH' in os.environ:
+            libdirs += os.environ['LD_LIBRARY_PATH'].split(':')
+        return Extension('*',
+                         sources=['ptypy/accelerate/cuda/gpu_extension.pyx'],
+                         include_dirs=[np.get_include()],
+                         libraries=['gpu_extension', 'cudart', 'cufft'],
+                         library_dirs=libdirs,
+                         depends=['build/cuda/libgpu_extension.a', ],
+                         language="c++")

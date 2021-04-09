@@ -29,6 +29,8 @@ from .DM_serial import DM_serial
 # - Propagator needs to be reconfigurable for a certain batch size, gpyfft hates that.
 # - Fourier_update_kernel needs to allow batched execution
 
+## for debugging
+#from matplotlib import pyplot as plt
 
 __all__ = ['DM_serial_stream']
 
@@ -137,7 +139,7 @@ class DM_serial_stream(DM_serial):
 
                         ## apply changes #2
                         t1 = time.time()
-                        AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        AWK.build_exit(aux, addr, ob, pr, ex)
                         self.benchmark.E_Build_exit += time.time() - t1
 
                         err_phot = np.zeros_like(err_fourier)

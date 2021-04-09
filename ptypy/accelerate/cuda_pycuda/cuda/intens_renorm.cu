@@ -1,66 +1,41 @@
-/** intens_renorm - with 2 steps as separate kernels.
- *
- * Data types:
- * - IN_TYPE: the data type for the inputs (float or double)
- * - OUT_TYPE: the data type for the outputs (float or double)
- * - MATH_TYPE: the data type used for computation 
- */
-
 #include <thrust/complex.h>
 using thrust::complex;
 
-extern "C" __global__ void step1(const IN_TYPE* Imodel,
-                                 const IN_TYPE* I,
-                                 const IN_TYPE* w,
-                                 OUT_TYPE* num,
-                                 OUT_TYPE* den,
-                                 int n)
-{
-  int i = threadIdx.x + blockIdx.x * blockDim.x;
-
-  if (i >= n)
-    return;
-
-  auto tmp = MATH_TYPE(w[i]) * MATH_TYPE(Imodel[i]);
-  num[i] = tmp * MATH_TYPE(I[i]);
-  den[i] = tmp * MATH_TYPE(Imodel[i]);
-}
-
-extern "C" __global__ void step2(const IN_TYPE* fic_tmp,
-                                 OUT_TYPE* fic,
-                                 OUT_TYPE* Imodel,
-                                 int X,
-                                 int Y)
+extern "C" __global__ void step1(const FTYPE* Imodel,
+                                   const FTYPE* I,
+                                   const FTYPE* w,
+                                   FTYPE* num,
+                                   FTYPE* den,
+                                   int z,
+                                   int x)
 {
   int iz = blockIdx.z;
-  int tx = threadIdx.x;
-  int ty = threadIdx.y;
-  
-  // one thread block per fic data point - we want the first thread to read this
-  // into shared memory and then sync the block, so we don't get into data races
-  // with writing it back to global memory in the end (and we read the value only
-  // once)
-  //
-  __shared__ MATH_TYPE shfic[1];
-  if (tx == 0 && ty == 0) {
-    shfic[0] = MATH_TYPE(fic[iz]) / MATH_TYPE(fic_tmp[iz]);
-  } 
-  __syncthreads();
+  int ix = threadIdx.x + blockIdx.x * blockDim.x;
 
-  // now all threads can access that value
-  auto tmp = shfic[0];
+  if (iz >= z || ix >= x)
+    return;
 
-  // offset Imodel for current z
-  Imodel += iz * X * Y;
-  
-  for (int iy = ty; iy < Y; iy += blockDim.y) {
-    #pragma unroll(4)
-    for (int ix = tx; ix < X; ix += blockDim.x) {
-      Imodel[iy * X + ix] *= tmp;
-    }
-  }
-    
+  auto tmp = w[iz * x + ix] * Imodel[iz * x + ix];
+  num[iz * x + ix] = tmp * I[iz * x + ix];
+  den[iz * x + ix] = tmp * Imodel[iz * x + ix];
+}
+
+extern "C" __global__ void step2(const FTYPE* fic_tmp,
+                                 FTYPE* fic,
+                                 FTYPE* Imodel,
+                                 int z,
+                                 int x)
+{
+  int iz = blockIdx.z;
+  int ix = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (iz >= z || ix >= x)
+    return;
+  //probably not so clever having all threads read from the same locations
+  auto tmp = fic[iz] / fic_tmp[iz];
+  Imodel[iz * x + ix] *= tmp;
   // race condition if write is not restricted to one thread
-  if (tx==0 && ty == 0)
+  // learned this the hard way
+  if (ix==0)
     fic[iz] = tmp;
 }

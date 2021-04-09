@@ -7,6 +7,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
+
+# from .. import core
+from __future__ import division
+
 import numpy as np
 import time
 
@@ -15,6 +19,7 @@ from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import BaseEngine, register, DM
 from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
 
 
@@ -27,6 +32,8 @@ from ptypy.accelerate.base import array_utils as au
 # - Propagator needs to be reconfigurable for a certain batch size, gpyfft hates that.
 # - Fourier_update_kernel needs to allow batched execution
 
+## for debugging
+#from matplotlib import pyplot as plt
 
 __all__ = ['DM_serial']
 
@@ -193,8 +200,17 @@ class DM_serial(DM.DM):
             kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
-                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution)
+                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
+                                                                self.p.position_refinement.start,
+                                                                self.p.position_refinement.stop,
+                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
+                                                                randomseed=0)
+                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
+                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
+
+                kern.PCK = PositionCorrectionKernel(aux, nmodes)
                 kern.PCK.allocate()
+                kern.PCK.address_mangler = addr_mangler
 
     def engine_prepare(self):
 
@@ -317,7 +333,7 @@ class DM_serial(DM.DM):
 
                 ## build exit wave
                 t1 = time.time()
-                AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                AWK.build_exit(aux, addr, ob, pr, ex)
                 FUK.exit_error(aux,addr)
                 FUK.error_reduce(addr, err_exit)
                 self.benchmark.E_Build_exit += time.time() - t1
@@ -334,7 +350,7 @@ class DM_serial(DM.DM):
             self.overlap_update(MPI=True)
             parallel.barrier()
 
-            if self.do_position_refinement:
+            if self.do_position_refinement and (self.curiter):
                 do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
                 do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
 
@@ -354,8 +370,7 @@ class DM_serial(DM.DM):
                         kern = self.kernels[prep.label]
                         aux = kern.aux
                         addr = prep.addr
-                        original_addr = prep.original_addr
-                        mangled_addr = addr.copy()
+                        original_addr = prep.original_addr # use this instead of the one in the address mangler.
                         mag = prep.mag
                         ma_sum = prep.ma_sum
                         err_fourier = prep.err_fourier
@@ -363,34 +378,16 @@ class DM_serial(DM.DM):
                         PCK = kern.PCK
                         FW = kern.FW
 
-                        # Keep track of object boundaries
-                        max_oby = ob.shape[-2] - aux.shape[-2] - 1
-                        max_obx = ob.shape[-1] - aux.shape[-1] - 1
-
-                        # We need to re-calculate the current error 
-                        PCK.build_aux(aux, addr, ob, pr)
-                        aux[:] = FW(aux)
-                        if self.p.position_refinement.metric == "fourier":
-                            PCK.fourier_error(aux, addr, mag, ma, ma_sum)
-                            PCK.error_reduce(addr, err_fourier)
-                        if self.p.position_refinement.metric == "photon":
-                            PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
                         error_state = np.zeros_like(err_fourier)
                         error_state[:] = err_fourier
-                        PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
-
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
-                        for i in range(PCK.mangler.nshifts):
-                            PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
+                        for i in range(self.p.position_refinement.nshifts):
+                            mangled_addr = PCK.address_mangler.mangle_address(addr, original_addr, self.curiter)
                             PCK.build_aux(aux, mangled_addr, ob, pr)
                             aux[:] = FW(aux)
-                            if self.p.position_refinement.metric == "fourier":
-                                PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
-                                PCK.error_reduce(mangled_addr, err_fourier)
-                            if self.p.position_refinement.metric == "photon":
-                                PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
+                            PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
+                            PCK.error_reduce(mangled_addr, err_fourier)
                             PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
-
                         prep.err_fourier = error_state
                         prep.addr = addr
 
@@ -421,6 +418,8 @@ class DM_serial(DM.DM):
             # Update probe
             log(4, prestr + '----- probe update -----', True)
             change = self.probe_update(MPI=(parallel.size > 1 and MPI))
+            # change = self.probe_update(MPI=(parallel.size>1 and MPI))
+
             log(4, prestr + 'change in probe is %.3f' % change, True)
 
             # stop iteration if probe change is small
@@ -435,7 +434,7 @@ class DM_serial(DM.DM):
             cfact = self.p.object_inertia * self.mean_power
             
             if self.p.obj_smooth_std is not None:
-                log(4, 'Smoothing object, cfact is %.2f' % cfact)
+                logger.info('Smoothing object, cfact is %.2f' % cfact)
                 smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
                 ob.data = cfact * au.complex_gaussian_filter(ob.data, smooth_mfs)
             else:
@@ -465,18 +464,18 @@ class DM_serial(DM.DM):
                 parallel.allreduce(ob.data)
                 parallel.allreduce(obn.data)
                 ob.data /= obn.data
+
+                # Clip object (This call takes like one ms. Not time critical)
+                if self.p.clip_object is not None:
+                    clip_min, clip_max = self.p.clip_object
+                    ampl_obj = np.abs(ob.data)
+                    phase_obj = np.exp(1j * np.angle(ob.data))
+                    too_high = (ampl_obj > clip_max)
+                    too_low = (ampl_obj < clip_min)
+                    ob.data[too_high] = clip_max * phase_obj[too_high]
+                    ob.data[too_low] = clip_min * phase_obj[too_low]
             else:
                 ob.data /= obn.data
-
-            # Clip object (This call takes like one ms. Not time critical)
-            if self.p.clip_object is not None:
-                clip_min, clip_max = self.p.clip_object
-                ampl_obj = np.abs(ob.data)
-                phase_obj = np.exp(1j * np.angle(ob.data))
-                too_high = (ampl_obj > clip_max)
-                too_low = (ampl_obj < clip_min)
-                ob.data[too_high] = clip_max * phase_obj[too_high]
-                ob.data[too_low] = clip_min * phase_obj[too_low]
 
         self.benchmark.object_update += time.time() - t1
         self.benchmark.calls_object += 1
@@ -534,11 +533,11 @@ class DM_serial(DM.DM):
 
         return np.sqrt(change)
 
-    def engine_finalize(self, benchmark=True):
+    def engine_finalize(self):
         """
         try deleting ever helper contianer
         """
-        if parallel.master and benchmark:
+        if parallel.master:
             print("----- BENCHMARKS ----")
             acc = 0.
             for name in sorted(self.benchmark.keys()):
@@ -564,7 +563,7 @@ class DM_serial(DM.DM):
                 res = self.kernels[prep.label].resolution
                 for i,view in enumerate(d.views):
                     for j,(pname, pod) in enumerate(view.pods.items()):
-                        delta = (prep.addr[i][j][1][1:] - prep.original_addr[i][j][1][1:]) * res
+                        delta = (prep.original_addr[i][j][1][1:] - prep.addr[i][j][1][1:]) * res
                         pod.ob_view.coord += delta 
                         pod.ob_view.storage.update_views(pod.ob_view)
 

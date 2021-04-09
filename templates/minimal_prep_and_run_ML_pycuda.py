@@ -11,7 +11,7 @@ from ptypy.accelerate.cuda_pycuda.engines import ML_pycuda
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 3
+p.verbose_level = 2
 p.frames_per_block = 400
 # set home path
 p.io = u.Param()
@@ -27,7 +27,7 @@ p.scans.MF.name = 'BlockFull' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
-p.scans.MF.data.num_frames = 100
+p.scans.MF.data.num_frames = 600
 p.scans.MF.data.save = None
 
 p.scans.MF.illumination = u.Param(diversity=None)
@@ -43,14 +43,15 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'ML_pycuda'
-p.engines.engine00.numiter = 300
+p.engines.engine00.numiter = 10
 p.engines.engine00.numiter_contiguous = 5
 p.engines.engine00.reg_del2 = True                      # Whether to use a Gaussian prior (smoothing) regularizer
 p.engines.engine00.reg_del2_amplitude = 1.             # Amplitude of the Gaussian prior if used
-p.engines.engine00.scale_precond = True
-p.engines.engine00.smooth_gradient = 20.
-p.engines.engine00.smooth_gradient_decay = 1/50.
-p.engines.engine00.floating_intensities = False
+p.engines.engine00.floating_intensities = True
+
 
 # prepare and run
 P = Ptycho(p,level=5)
+#P.run()
+P.print_stats()
+#u.pause(10)

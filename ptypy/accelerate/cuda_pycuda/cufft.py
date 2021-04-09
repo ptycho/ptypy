@@ -17,10 +17,6 @@ class FFT_cuda(object):
         if dims < 2:
             raise AssertionError('Input array must be at least 2-dimensional')
         self.arr_shape = (array.shape[-2], array.shape[-1])
-        rows = self.arr_shape[0]
-        columns = self.arr_shape[1]
-        if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
-            raise ValueError("CUDA FFT only supports powers of 2 for rows/columns, from 16 to 2048")
         self.batches = int(np.product(array.shape[0:dims-2]) if dims > 2 else 1)
         self.forward = forward
 
@@ -38,11 +34,10 @@ class FFT_cuda(object):
         else:
             self.post_fft_ptr = 0
 
-        from ptypy import filtered_cufft
-        self.fftobj = filtered_cufft.FilteredFFT(
+        from . import import_fft
+        mod = import_fft.ImportFFT(self.arr_shape[0], self.arr_shape[1]).get_mod()
+        self.fftobj = mod.FilteredFFT(
                 self.batches, 
-                self.arr_shape[0], 
-                self.arr_shape[1],
                 symmetric, 
                 forward,
                 self.pre_fft_ptr,
@@ -80,30 +75,14 @@ class FFT_skcuda(FFT_cuda):
         cufftlib.cufftSetStream(self.plan.handle, queue.handle)
 
     def _load(self, array, pre_fft, post_fft, symmetric, forward):
-        assert(array.dtype in [np.complex64, np.complex128])
-        assert(pre_fft.dtype in [np.complex64, np.complex128] if pre_fft is not None else True)
-        assert(post_fft.dtype in [np.complex64, np.complex128] if post_fft is not None else True)
-
-        math_type = 'float' if array.dtype == np.complex64 else 'double'
-        if pre_fft is not None:
-            math_type = 'float' if pre_fft.dtype == np.complex64 else 'double'
         self.pre_fft_knl = load_kernel("batched_multiply", {
             'MPY_DO_SCALE': 'false',
-            'MPY_DO_FILT': 'true',
-            'IN_TYPE': 'float' if array.dtype == np.complex64 else 'double',
-            'OUT_TYPE': 'float' if array.dtype == np.complex64 else 'double',
-            'MATH_TYPE': math_type
+            'MPY_DO_FILT': 'true'
         }) if pre_fft is not None else None
 
-        math_type = 'float' if array.dtype == np.complex64 else 'double'
-        if post_fft is not None:
-            math_type = 'float' if post_fft.dtype == np.complex64 else 'double'
         self.post_fft_knl = load_kernel("batched_multiply", {
             'MPY_DO_SCALE': 'true' if (not forward and not symmetric) or symmetric else 'false',
-            'MPY_DO_FILT': 'true' if post_fft is not None else 'false',
-            'IN_TYPE': 'float' if array.dtype == np.complex64 else 'double',
-            'OUT_TYPE': 'float' if array.dtype == np.complex64 else 'double',
-            'MATH_TYPE': math_type
+            'MPY_DO_FILT': 'true' if post_fft is not None else 'false'
         }) if (not (forward and not symmetric) or post_fft is not None) else None
 
         self.block = (32, 32, 1)

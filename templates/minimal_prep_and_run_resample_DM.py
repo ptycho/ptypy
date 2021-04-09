@@ -14,7 +14,7 @@ p.verbose_level = 3
 # set home path
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.autosave = u.Param(active=False)
+p.io.autosave = None
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()

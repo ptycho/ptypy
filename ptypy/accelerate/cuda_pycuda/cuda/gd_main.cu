@@ -1,19 +1,11 @@
-/** gd_main kernel.
- *
- * Data types:
- * - IN_TYPE: the data type for the inputs (float or double)
- * - OUT_TYPE: the data type for the outputs (float or double - for aux wave)
- * - MATH_TYPE: the data type used for computation 
- */
-
 #include <thrust/complex.h>
 using thrust::complex;
 
-extern "C" __global__ void gd_main(const IN_TYPE* Imodel,
-                                   const IN_TYPE* I,
-                                   const IN_TYPE* w,
-                                   OUT_TYPE* err,
-                                   complex<OUT_TYPE>* aux,
+extern "C" __global__ void gd_main(const FTYPE* Imodel,
+                                   const FTYPE* I,
+                                   const FTYPE* w,
+                                   FTYPE* err,
+                                   CTYPE* aux,
                                    int z,
                                    int modes,
                                    int x)
@@ -24,8 +16,8 @@ extern "C" __global__ void gd_main(const IN_TYPE* Imodel,
   if (iz >= z || ix >= x)
     return;
 
-  auto DI = MATH_TYPE(Imodel[iz * x + ix]) - MATH_TYPE(I[iz * x + ix]);
-  auto tmp = MATH_TYPE(w[iz * x + ix]) * MATH_TYPE(DI);
+  auto DI = Imodel[iz * x + ix] - I[iz * x + ix];
+  auto tmp = w[iz * x + ix] * DI;
   err[iz * x + ix] = tmp * DI;
 
   // now set this for all modes (promote)

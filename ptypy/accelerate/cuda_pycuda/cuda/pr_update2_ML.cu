@@ -1,19 +1,3 @@
-/** pr_update.
- *
- * Data types:
- * - IN_TYPE: the data type for the inputs (float or double)
- * - OUT_TYPE: the data type for the outputs (float or double)
- * - MATH_TYPE: the data type used for computation
- * - ACC_TYPE: accumulator type for local pr array
- * 
- * NOTE: This version of ob_update goes over all tiles that need to be accumulated
- * in a single thread block to avoid global atomic additions (as in pr_update_ML.cu).
- * This requires a local array of NUM_MODES size to store the local updates.
- * GPU registers per thread are limited (255 32bit registers on V100), 
- * and at some point the registers will spill into shared or global memory
- * and the kernel will get considerably slower.
- */
-
 #include <cassert>
 #include <thrust/complex.h>
 using thrust::complex;
@@ -32,18 +16,17 @@ extern "C" __global__ void pr_update2_ML(int pr_sh,
                                          int pr_modes,
                                          int ob_modes,
                                          int num_pods,
-                                         complex<OUT_TYPE>* pr_g,
-                                         const complex<IN_TYPE>* __restrict__ ob_g,
-                                         const complex<IN_TYPE>* __restrict__ ex_g,
+                                         CTYPE* pr_g,
+                                         const CTYPE* __restrict__ ob_g,
+                                         const CTYPE* __restrict__ ex_g,
                                          const int* addr,
-                                         IN_TYPE fac_)
+                                         FTYPE fac)
 {
   int y = blockIdx.y * BDIM_Y + threadIdx.y;
   int dy = pr_sh;
   int z = blockIdx.x * BDIM_X + threadIdx.x;
   int dz = pr_sh;
-  MATH_TYPE fac = fac_;
-  complex<ACC_TYPE> pr[NUM_MODES];
+  CTYPE pr[NUM_MODES];
 
   int txy = threadIdx.y * BDIM_X + threadIdx.x;
   assert(pr_modes <= NUM_MODES);
@@ -98,15 +81,12 @@ extern "C" __global__ void pr_update2_ML(int pr_sh,
       {
         auto obidx = ad[2] * ob_sh_row * ob_sh_col + v1 * ob_sh_col + v2;
         assert(obidx < ob_modes * ob_sh_row * ob_sh_col);
-        complex<MATH_TYPE> ob = ob_g[obidx];
+        auto ob = ob_g[obidx];
 
         int idx = ad[0];
         assert(idx < NUM_MODES);
         auto cob = conj(ob);
-        complex<MATH_TYPE> ex_val = ex_g[ad[1] * pr_sh * pr_sh + y * pr_sh + z];
-        complex<MATH_TYPE> add_val_m = cob * ex_val * fac;
-        complex<ACC_TYPE> add_val = add_val_m;
-        pr[idx] += add_val;
+        pr[idx] += cob * ex_g[ad[1] * pr_sh * pr_sh + y * pr_sh + z] * fac;
       }
     }
   }

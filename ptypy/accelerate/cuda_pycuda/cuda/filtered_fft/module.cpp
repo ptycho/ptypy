@@ -13,7 +13,7 @@
 class FilteredFFTPython
 {
 public:
-    FilteredFFTPython(int batches, int rows, int columns, bool symmetric, 
+    FilteredFFTPython(int batches, bool symmetric, 
         bool is_forward,
         std::size_t prefilt_ptr,
         std::size_t postfilt_ptr,
@@ -21,7 +21,6 @@ public:
     {
         fft_ = make_filtered(
             batches, 
-            rows, columns,
             symmetric,
             is_forward,
             reinterpret_cast<complex<float>*>(prefilt_ptr),
@@ -71,14 +70,12 @@ private:
 namespace py = pybind11;
 
 
-PYBIND11_MODULE(filtered_cufft, m) {
+PYBIND11_MODULE(module, m) {
     m.doc() = "Filtered FFT for PtyPy";
 
     py::class_<FilteredFFTPython>(m, "FilteredFFT", py::module_local())
-        .def(py::init<int, int, int, bool, bool, std::size_t, std::size_t,std::size_t>(),
+        .def(py::init<int, bool, bool, std::size_t, std::size_t,std::size_t>(),
              py::arg("batches"), 
-             py::arg("rows"),
-             py::arg("columns"),
              py::arg("symmetricScaling"), 
              py::arg("is_forward"),
              py::arg("prefilt"), 

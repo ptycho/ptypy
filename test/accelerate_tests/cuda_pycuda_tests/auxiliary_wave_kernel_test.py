@@ -17,7 +17,7 @@ INT_TYPE = np.int32
 
 class AuxiliaryWaveKernelTest(PyCudaTest):
 
-    def prepare_arrays(self, performance=False, scan_points=None):
+    def prepare_arrays(self, performance=False):
         if not performance:
             B = 3  # frame size y
             C = 3  # frame size x
@@ -27,10 +27,8 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
 
             npts_greater_than = 2  # how many points bigger than the probe the object is.
             G = 2  # number of object modes
-            if scan_points is None:
-                scan_pts = 2  # one dimensional scan point number
-            else:
-                scan_pts = scan_points
+
+            scan_pts = 2  # one dimensional scan point number
         else:
             B = 128
             C = 128
@@ -39,10 +37,7 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
             F = C
             npts_greater_than = 1215
             G = 4
-            if scan_points is None:
-                scan_pts = 14
-            else:
-                scan_pts = scan_points
+            scan_pts = 14
 
         H = B + npts_greater_than  # object size y
         I = C + npts_greater_than  # object size x
@@ -194,25 +189,6 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         np.testing.assert_array_equal(auxiliary_wave, auxiliary_wave_dev.get(),
                                       err_msg="The gpu auxiliary_wave does not look the same as the numpy version")
 
-    def test_build_aux2_same_as_exit_UNITY(self):
-        ## Arrange
-        addr, object_array, probe, exit_wave = self.prepare_arrays()
-        addr_dev, object_array_dev, probe_dev, exit_wave_dev = self.copy_to_gpu(addr, object_array, probe, exit_wave)
-        auxiliary_wave = np.zeros_like(exit_wave)
-        auxiliary_wave_dev = gpuarray.zeros_like(exit_wave_dev)
-        
-        ## Act
-        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
-        nAWK = npAuxiliaryWaveKernel()
-        AWK = AuxiliaryWaveKernel(self.stream)
-        alpha_set = FLOAT_TYPE(1.0)
-
-        AWK.build_aux2(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, exit_wave_dev, alpha=alpha_set)
-        nAWK.build_aux(auxiliary_wave, addr, object_array, probe, exit_wave, alpha=alpha_set)
-        
-        ## Assert
-        np.testing.assert_array_equal(auxiliary_wave, auxiliary_wave_dev.get(),
-                                      err_msg="The gpu auxiliary_wave does not look the same as the numpy version")
 
     def test_build_exit_aux_same_as_exit_REGRESSION(self):
         ## Arrange
@@ -437,27 +413,6 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         np.testing.assert_array_equal(auxiliary_wave_dev.get(), auxiliary_wave,
                                       err_msg="The auxiliary_wave does not match numpy")
 
-    def test_build_aux2_no_ex_noadd_UNITY(self):
-        ## Arrange
-        addr, object_array, probe, exit_wave = self.prepare_arrays()
-        addr_dev, object_array_dev, probe_dev, exit_wave_dev = self.copy_to_gpu(addr, object_array, probe, exit_wave)
-        auxiliary_wave_dev = gpuarray.zeros_like(exit_wave_dev)
-        auxiliary_wave = np.zeros_like(exit_wave)
-
-        ## Act
-        AWK = AuxiliaryWaveKernel(self.stream)
-        AWK.allocate()
-        AWK.build_aux2_no_ex(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, 
-            fac=1.0, add=False)
-        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
-        nAWK = npAuxiliaryWaveKernel()
-        nAWK.allocate()
-        nAWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, fac=1.0, add=False)
-
-        ## Assert
-        np.testing.assert_array_equal(auxiliary_wave_dev.get(), auxiliary_wave,
-                                      err_msg="The auxiliary_wave does not match numpy")
-
 
     def test_build_aux_no_ex_add_REGRESSION(self):
         ## Arrange
@@ -545,27 +500,6 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         np.testing.assert_array_equal(auxiliary_wave_dev.get(), auxiliary_wave,
                                       err_msg="The auxiliary_wave does not match numpy")
 
-    def test_build_aux2_no_ex_add_UNITY(self):
-        ## Arrange
-        addr, object_array, probe, exit_wave = self.prepare_arrays()
-        addr_dev, object_array_dev, probe_dev, exit_wave_dev = self.copy_to_gpu(addr, object_array, probe, exit_wave)
-        auxiliary_wave_dev = gpuarray.ones_like(exit_wave_dev)
-        auxiliary_wave = np.ones_like(exit_wave)
-
-        ## Act
-        AWK = AuxiliaryWaveKernel(self.stream)
-        AWK.allocate()
-        AWK.build_aux2_no_ex(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, 
-            fac=2.0, add=True)
-        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
-        nAWK = npAuxiliaryWaveKernel()
-        nAWK.allocate()
-        nAWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, fac=2.0, add=True)
-
-        ## Assert
-        np.testing.assert_array_equal(auxiliary_wave_dev.get(), auxiliary_wave,
-                                      err_msg="The auxiliary_wave does not match numpy")
-
 
     @unittest.skipIf(not perfrun, "performance test")
     def test_build_aux_no_ex_performance(self):
@@ -577,90 +511,6 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         AWK.allocate()
         AWK.build_aux_no_ex(auxiliary_wave, addr, object_array, probe, 
             fac=1.0, add=False)
-
-
-    def test_build_exit_alpha_tau_REGRESSION(self):
-        ## Arrange
-        addr, object_array, probe, exit_wave = self.prepare_arrays(scan_points=1)
-        addr, object_array, probe, exit_wave = self.copy_to_gpu(addr, object_array, probe, exit_wave)
-        auxiliary_wave = gpuarray.zeros_like(exit_wave)
-
-        ## Act
-        AWK = AuxiliaryWaveKernel(self.stream)
-        AWK.allocate()
-        AWK.build_exit_alpha_tau(auxiliary_wave, addr, object_array, probe, exit_wave)
-
-        # Assert
-        expected_auxiliary_wave = np.array(
-                [[[0. -2.j, 0. -2.j, 0. -2.j],
-                [0. -2.j, 0. -2.j, 0. -2.j],
-                [0. -2.j, 0. -2.j, 0. -2.j]],
-
-                [[0. -8.j, 0. -8.j, 0. -8.j],
-                [0. -8.j, 0. -8.j, 0. -8.j],
-                [0. -8.j, 0. -8.j, 0. -8.j]],
-
-                [[0. -4.j, 0. -4.j, 0. -4.j],
-                [0. -4.j, 0. -4.j, 0. -4.j],
-                [0. -4.j, 0. -4.j, 0. -4.j]],
-
-                [[0.-16.j, 0.-16.j, 0.-16.j],
-                [0.-16.j, 0.-16.j, 0.-16.j],
-                [0.-16.j, 0.-16.j, 0.-16.j]]], dtype=np.complex64)
-        np.testing.assert_allclose(auxiliary_wave.get(), expected_auxiliary_wave, rtol=1e-6, atol=1e-6,
-                                      err_msg="The auxiliary_wave has not been updated as expected")
-
-        expected_exit_wave = np.array(
-                [[[1. -1.j, 1. -1.j, 1. -1.j],
-                [1. -1.j, 1. -1.j, 1. -1.j],
-                [1. -1.j, 1. -1.j, 1. -1.j]],
-
-                [[2. -6.j, 2. -6.j, 2. -6.j],
-                [2. -6.j, 2. -6.j, 2. -6.j],
-                [2. -6.j, 2. -6.j, 2. -6.j]],
-
-                [[3. -1.j, 3. -1.j, 3. -1.j],
-                [3. -1.j, 3. -1.j, 3. -1.j],
-                [3. -1.j, 3. -1.j, 3. -1.j]],
-
-                [[4.-12.j, 4.-12.j, 4.-12.j],
-                [4.-12.j, 4.-12.j, 4.-12.j],
-                [4.-12.j, 4.-12.j, 4.-12.j]]], dtype=np.complex64)
-        np.testing.assert_allclose(exit_wave.get(), expected_exit_wave, rtol=1e-6, atol=1e-6,
-                                      err_msg="The exit_wave has not been updated as expected")
-                              
-    def test_build_exit_alpha_tau_UNITY(self):
-        ## Arrange
-        addr, object_array, probe, exit_wave = self.prepare_arrays(scan_points=1)
-        addr_dev, object_array_dev, probe_dev, exit_wave_dev = self.copy_to_gpu(addr, object_array, probe, exit_wave)
-        auxiliary_wave_dev = gpuarray.ones_like(exit_wave_dev)
-        auxiliary_wave = np.ones_like(exit_wave)
-        
-        ## Act
-        AWK = AuxiliaryWaveKernel(self.stream)
-        AWK.allocate()
-        AWK.build_exit_alpha_tau(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, exit_wave_dev, alpha=0.8, tau=0.6)
-        from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
-        nAWK = npAuxiliaryWaveKernel()
-        nAWK.allocate()
-        nAWK.build_exit_alpha_tau(auxiliary_wave, addr, object_array, probe, exit_wave, alpha=0.8, tau=0.6)
-
-        ## Assert
-        np.testing.assert_allclose(auxiliary_wave_dev.get(), auxiliary_wave, rtol=1e-6, atol=1e-6,
-                                      err_msg="The auxiliary_wave does not match numpy")
-        ## Assert
-        np.testing.assert_allclose(exit_wave_dev.get(), exit_wave, rtol=1e-6, atol=1e-6,
-                                      err_msg="The exit_wave does not match numpy")
-
-    @unittest.skipIf(not perfrun, "performance test")
-    def test_build_exit_alpha_tau_performance(self):
-        addr, object_array, probe, exit_wave = self.prepare_arrays(performance=True, scan_points=1)
-        addr, object_array, probe, exit_wave = self.copy_to_gpu(addr, object_array, probe, exit_wave)
-        auxiliary_wave = gpuarray.zeros_like(exit_wave)
-
-        AWK = AuxiliaryWaveKernel(self.stream)
-        AWK.allocate()
-        AWK.build_exit_alpha_tau(auxiliary_wave, addr, object_array, probe, exit_wave, alpha=0.8, tau=0.6)
 
 if __name__ == '__main__':
     unittest.main()

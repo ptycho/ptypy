@@ -17,15 +17,16 @@ import time
 from ptypy.engines.ML import ML, BaseModel
 from .DM_serial import serialize_array_access
 from ptypy import utils as u
-from ptypy.utils.verbose import logger, log
+from ptypy.utils.verbose import logger
 from ptypy.utils import parallel
 from ptypy.engines.utils import Cnorm2, Cdot
 from ptypy.engines import register
-from ptypy.accelerate.base.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel
+from ptypy.accelerate.base.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, \
+    PositionCorrectionKernel
 from ptypy.accelerate.base import address_manglers
 
-
 __all__ = ['ML_serial']
+
 
 @register()
 class ML_serial(ML):
@@ -103,6 +104,20 @@ class ML_serial(ML):
             kern.FW = geo.propagator.fw
             kern.BW = geo.propagator.bw
 
+            if self.do_position_refinement:
+                addr_mangler = address_manglers.RandomIntMangle(
+                    int(self.p.position_refinement.amplitude // geo.resolution[0]),
+                    self.p.position_refinement.start,
+                    self.p.position_refinement.stop,
+                    max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
+                    randomseed=0)
+                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
+                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
+
+                kern.PCK = PositionCorrectionKernel(aux, nmodes)
+                kern.PCK.allocate()
+                kern.PCK.address_mangler = addr_mangler
+
     def engine_prepare(self):
 
         ## Serialize new data ##
@@ -122,6 +137,9 @@ class ML_serial(ML):
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
             prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
+            if self.do_position_refinement:
+                prep.original_addr = np.zeros_like(prep.addr)
+                prep.original_addr[:] = prep.addr
 
         self.ML_model.prepare()
 
@@ -176,6 +194,7 @@ class ML_serial(ML):
 
             # probe/object rescaling
             if self.p.scale_precond:
+                cn2_new_pr_grad = cn2_new_pr_grad
                 if cn2_new_pr_grad > 1e-5:
                     scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad
                                  / cn2_new_pr_grad)
@@ -343,8 +362,10 @@ class GaussianModel(BaseModelSerial):
             aux[:] = FW(aux)
 
             GDK.make_model(aux, addr)
+
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
+
             GDK.main(aux, addr, w, I)
             GDK.error_reduce(addr, err_phot)
 
@@ -427,6 +448,7 @@ class GaussianModel(BaseModelSerial):
             b[:] = FW(b)
 
             GDK.make_a012(f, a, b, addr, I, fic)
+
             GDK.fill_b(addr, Brenorm, w, B)
 
         parallel.allreduce(B)

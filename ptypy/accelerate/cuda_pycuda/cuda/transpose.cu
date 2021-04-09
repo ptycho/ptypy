@@ -5,11 +5,6 @@
  * and shared memory access has no bank conflicts.
  */
 
-/**
- * Data types:
- * - DTYPE - any pod type
- */
-
 #include <thrust/complex.h>
 using thrust::complex;
 

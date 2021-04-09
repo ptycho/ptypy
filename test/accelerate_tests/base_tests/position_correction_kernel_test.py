@@ -6,7 +6,6 @@
 import unittest
 import numpy as np
 from ptypy.accelerate.base.kernels import PositionCorrectionKernel
-from ptypy import utils as u
 COMPLEX_TYPE = np.complex64
 FLOAT_TYPE = np.float32
 INT_TYPE = np.int32
@@ -17,14 +16,6 @@ class PositionCorrectionKernelTest(unittest.TestCase):
     def setUp(self):
         import sys
         np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
-        self.params = u.Param()
-        self.params.nshifts = 4
-        self.params.method = "Annealing"
-        self.params.amplitude = 2e-9
-        self.params.start = 0
-        self.params.stop = 10
-        self.params.max_shift = 2e-9
-        self.resolution = [1e-9,1e-9]
 
     def tearDown(self):
         np.set_printoptions()
@@ -86,7 +77,7 @@ class PositionCorrectionKernelTest(unittest.TestCase):
         '''
         auxiliary_wave = np.zeros((A, B, C), dtype=COMPLEX_TYPE)
 
-        PCK = PositionCorrectionKernel(auxiliary_wave, total_number_modes, self.params, self.resolution)
+        PCK = PositionCorrectionKernel(auxiliary_wave, total_number_modes)
         PCK.allocate()  # doesn't actually do anything at the moment
         PCK.build_aux(auxiliary_wave, addr, object_array, probe)
 
@@ -214,7 +205,7 @@ class PositionCorrectionKernelTest(unittest.TestCase):
         mask_sum = mask.sum(-1).sum(-1)
 
 
-        PCK = PositionCorrectionKernel(auxiliary_wave, total_number_modes, self.params, self.resolution)
+        PCK = PositionCorrectionKernel(auxiliary_wave, nmodes=total_number_modes)
         PCK.allocate()
         PCK.fourier_error(auxiliary_wave, addr, fmag, mask, mask_sum)
 
@@ -285,7 +276,7 @@ class PositionCorrectionKernelTest(unittest.TestCase):
 
         addr = np.zeros((N, 1, 5, 3))
 
-        PCK = PositionCorrectionKernel(fake_aux, 1, self.params, self.resolution)
+        PCK = PositionCorrectionKernel(fake_aux, nmodes=1)
         PCK.allocate()
         err_fmag = np.zeros(N, dtype=FLOAT_TYPE)
         PCK.error_reduce(addr, err_fmag)

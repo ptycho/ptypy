@@ -7,8 +7,6 @@ of actual data. It uses the test Scan class
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import time
-from ptypy.accelerate.cuda_pycuda.engines.DM_pycuda_stream import DM_pycuda_stream
-from ptypy.accelerate.cuda_pycuda.engines.DM_pycuda_streams import DM_pycuda_streams
 
 import os
 import getpass

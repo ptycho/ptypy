@@ -363,7 +363,8 @@ class DM(PositionCorrectionEngine):
                 # array and therefore underestimate the strength of the probe terms.
                 cfact = self.p.object_inertia * self.mean_power
                 if self.p.obj_smooth_std is not None:
-                    log(4, 'Smoothing object, average cfact is %.2f'
+                    logger.info(
+                        'Smoothing object, average cfact is %.2f'
                         % np.mean(cfact).real)
                     smooth_mfs = [0,
                                   self.p.obj_smooth_std,

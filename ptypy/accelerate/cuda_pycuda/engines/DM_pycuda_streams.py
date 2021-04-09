@@ -20,6 +20,9 @@ from ptypy.engines import register
 from . import DM_pycuda
 from ..mem_utils import GpuDataManager
 
+MPI = parallel.size > 1
+MPI = True
+
 # factor how many more exit waves we wanna keep on GPU compared to 
 # ma / mag data
 EX_MA_BLOCKS_RATIO = 2
@@ -146,12 +149,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
             s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=0)
             s.data[:] = d
             s.gpu = gpuarray.to_gpu(s.data)
-        for name, s in self.pr_buf.S.items():
-            # pr
-            d = s.data
-            s.data = cuda.pagelocked_empty(d.shape, d.dtype, order="C", mem_flags=0)
-            s.data[:] = d
-            s.gpu = gpuarray.to_gpu(s.data)
         for name, s in self.pr_nrm.S.items():
             # prn
             d = s.data
@@ -172,8 +169,6 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
             if use_tiles:
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
-            if self.do_position_refinement:
-                prep.mangled_addr_gpu = prep.addr_gpu.copy()
 
             prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
             # prepare page-locked mems:
@@ -211,7 +206,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         nma = min(fit, blocks)
         nstreams = min(MAX_STREAMS, blocks)
 
-        log(4, 'PyCUDA blocks fitting on GPU: exit arrays={}, ma_arrays={}, streams={}, totalblocks={}'.format(nex, nma, nstreams, blocks))
+        log(3, 'PyCUDA blocks fitting on GPU: exit arrays={}, ma_arrays={}, streams={}, totalblocks={}'.format(nex, nma, nstreams, blocks))
         # reset memory or create new
         if self.ex_data is not None:
             self.ex_data.reset(ex_mem, nex)
@@ -261,13 +256,13 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         cfact = self.ob_cfact[oID]
                         obn = self.ob_nrm.S[oID]
                         obb = self.ob_buf.S[oID]
-
-                        if self.p.obj_smooth_std is not None:
-                            log(4,'Smoothing object, cfact is %.2f' % cfact)
-                            smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
-                            self.GSK.convolution(ob.gpu, smooth_mfs, tmp=obb.gpu)
                         
-                        ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=streamdata.queue)
+                        if self.p.obj_smooth_std is not None:
+                            logger.info('Smoothing object, cfact is %.2f' % cfact)
+                            smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
+                            self.GSK.convolution(ob.gpu, obb.gpu, smooth_mfs)
+                        
+                        obb.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=streamdata.queue)
                         obn.gpu.fill(np.float32(cfact), stream=streamdata.queue)
                 
                 self.ex_data.syncback = True
@@ -355,7 +350,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         t1 = time.time()
                         PROP.bw(aux, aux)
                         ## apply changes
-                        AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        AWK.build_exit(aux, addr, ob, pr, ex)
                         FUK.exit_error(aux, addr)
                         FUK.error_reduce(addr, err_exit)
                         self.benchmark.E_Build_exit += time.time() - t1
@@ -396,7 +391,8 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                 # Update probe
                 log(4, prestr + '----- probe update -----', True)
                 self.ex_data.syncback = False
-                change = self.probe_update()
+                change = self.probe_update(MPI=MPI)
+                # change = self.probe_update(MPI=(parallel.size>1 and MPI))
                 
                 # swap direction for next time
                 self.dID_list.reverse()
@@ -420,7 +416,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                     """
                     Iterates through all positions and refines them by a given algorithm. 
                     """
-                    log(4, "----------- START POS REF -------------")
+                    log(3, "----------- START POS REF -------------")
                     prev_event = None
                     for dID in self.di.S.keys():
                         streamdata = self.streams[self.cur_stream]
@@ -433,59 +429,46 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         aux = kern.aux
                         addr = prep.addr_gpu
                         original_addr = prep.original_addr
-                        mangled_addr = prep.mangled_addr_gpu
                         ma_sum = prep.ma_sum_gpu
                         ma, mag = streamdata.ma_to_gpu(dID, prep.ma, prep.mag)
-                        err_fourier = prep.err_fourier_gpu
-                        error_state = prep.error_state_gpu
 
                         PCK = kern.PCK
-                        TK = kern.TK
-                        PROP = kern.PROP
+                        AUK = kern.AUK
                         PCK.queue = streamdata.queue
-                        TK.queue = streamdata.queue
                         PROP.queue = streamdata.queue
+                        AUK.queue = streamdata.queue
 
-                        # Keep track of object boundaries
-                        max_oby = ob.shape[-2] - aux.shape[-2] - 1
-                        max_obx = ob.shape[-1] - aux.shape[-1] - 1
-
-                        # We need to re-calculate the current error
-                        PCK.build_aux(aux, addr, ob, pr)
-                        PROP.fw(aux, aux)
-                        if self.p.position_refinement.metric == "fourier":
-                            PCK.fourier_error(aux, addr, mag, ma, ma_sum)
-                            PCK.error_reduce(addr, err_fourier)
-                        if self.p.position_refinement.metric == "photon":
-                            PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
-                        cuda.memcpy_dtod_async(dest=error_state.ptr,
-                                               src=err_fourier.ptr,
-                                               size=err_fourier.nbytes,
+                        #error_state = np.zeros(err_fourier.shape, dtype=np.float32)
+                        #err_fourier.get_async(streamdata.queue, error_state)
+                        cuda.memcpy_dtod_async(dest=prep.error_state_gpu.ptr,
+                                               src=prep.err_fourier_gpu.ptr,
+                                               size=prep.err_fourier_gpu.nbytes,
                                                stream=streamdata.queue)
                         streamdata.start_compute(prev_event)
 
                         log(4, 'Position refinement trial: iteration %s' % (self.curiter))
-                        PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
-                        for i in range(PCK.mangler.nshifts):
+                        for i in range(self.p.position_refinement.nshifts):
+                            addr_cpu = addr.get_async(streamdata.queue)
                             streamdata.queue.synchronize()
-                            PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
-                            PCK.build_aux(aux, mangled_addr, ob, pr)
+                            mangled_addr = PCK.address_mangler.mangle_address(addr_cpu, original_addr, self.curiter)
+                            mangled_addr_gpu = gpuarray.to_gpu_async(mangled_addr, stream=streamdata.queue)
+                            PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
                             PROP.fw(aux, aux)
-                            if self.p.position_refinement.metric == "fourier":
-                                PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
-                                PCK.error_reduce(mangled_addr, err_fourier)
-                            if self.p.position_refinement.metric == "photon":
-                                PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
-                            PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
-
-                        cuda.memcpy_dtod_async(dest=err_fourier.ptr,
-                                               src=error_state.ptr,
-                                               size=err_fourier.nbytes,
+                            PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
+                            PCK.error_reduce(mangled_addr_gpu, prep.err_fourier_gpu)
+                            # err_fourier_cpu = err_fourier.get_async(streamdata.queue)
+                            PCK.update_addr_and_error_state(addr, 
+                                prep.error_state_gpu, 
+                                mangled_addr_gpu, 
+                                prep.err_fourier_gpu)
+                        cuda.memcpy_dtod_async(dest=prep.err_fourier_gpu.ptr,
+                                               src=prep.error_state_gpu.ptr,
+                                               size=prep.err_fourier_gpu.nbytes,
                                                stream=streamdata.queue)
                         if use_tiles:
                             s1 = prep.addr_gpu.shape[0] * prep.addr_gpu.shape[1]
                             s2 = prep.addr_gpu.shape[2] * prep.addr_gpu.shape[3]
-                            TK.transpose(prep.addr_gpu.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+                            AUK.transpose(prep.addr_gpu.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
                         prev_event = streamdata.end_compute()
                         
@@ -503,6 +486,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         for name, s in self.pr.S.items():
             s.gpu.get(s.data)
 
+
         # FIXXME: copy to pinned memory
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
@@ -514,6 +498,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         self.error = error
         return error
     
+
     def _object_allreduce(self):
         # make sure that all transfers etc are finished
         for sd in self.streams:
@@ -522,12 +507,20 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
             obb = self.ob_buf.S[oID]
-            self.multigpu.allReduceSum(obb.gpu)
-            self.multigpu.allReduceSum(obn.gpu)
-            obb.gpu /= obn.gpu
-            
-            self.clip_object(obb.gpu)
-            ob.gpu[:] = obb.gpu
+            if MPI:
+                obb.gpu.get(obb.data)
+                obn.gpu.get(obn.data)
+                parallel.allreduce(obb.data)
+                parallel.allreduce(obn.data)
+                obb.data /= obn.data
+                self.clip_object(obb)
+                tt1 = time.time()
+                ob.gpu.set(obb.data)  # async tx on same stream?
+                
+            else:
+                obb.gpu /= obn.gpu
+                ob.gpu[:] = obb.gpu
+
 
     ## probe update
     def probe_update(self, MPI=False):
@@ -535,7 +528,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         streamdata = self.streams[self.cur_stream]
         use_atomics = self.p.probe_update_cuda_atomics
         # storage for-loop
-        change_gpu = gpuarray.zeros((1,), dtype=np.float32)
+        change = 0
         prev_event = None
         for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
@@ -567,6 +560,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
             prev_event = streamdata.end_compute()
             self.cur_stream = (self.cur_stream + self.stream_direction) % len(self.streams)
 
+            
         # sync all streams first
         for sd in self.streams:
             sd.synchronize()
@@ -575,19 +569,31 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
             buf = self.pr_buf.S[pID]
             prn = self.pr_nrm.S[pID]
-            
-            self.multigpu.allReduceSum(pr.gpu)
-            self.multigpu.allReduceSum(prn.gpu)
-            pr.gpu /= prn.gpu
-            self.support_constraint(pr)
 
-            ## calculate change on GPU
-            AUK = self.kernels[list(self.kernels)[0]].AUK
-            buf.gpu -= pr.gpu
-            change_gpu += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu))
-            buf.gpu[:] = pr.gpu
-            self.multigpu.allReduceSum(change_gpu)
-            change = change_gpu.get().item() / parallel.size
+            # MPI test
+            if MPI:
+                # if False:
+                pr.gpu.get(pr.data)
+                prn.gpu.get(prn.data)
+                parallel.allreduce(pr.data)
+                parallel.allreduce(prn.data)
+                pr.data /= prn.data
+                self.support_constraint(pr)
+                pr.gpu.set(pr.data)
+            else:
+                pr.gpu /= prn.gpu
+                # ca. 0.3 ms
+                # self.pr.S[pID].gpu = probe_gpu
+                pr.gpu.get(pr.data)
+
+            ## this should be done on GPU
+            tt1 = time.time()
+            change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
+            buf.data[:] = pr.data
+            if MPI:
+                change = parallel.allreduce(change) / parallel.size
+            tt2 = time.time()
+            #print('time for pr change: {}s'.format(tt2-tt1))
 
         # print 'probe update: ' + str(time.time()-t1)
         self.benchmark.probe_update += time.time() - t1
@@ -595,7 +601,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
         return np.sqrt(change)
 
-    def engine_finalize(self, benchmark=False):
+    def engine_finalize(self):
         """
         Clear all GPU data, pinned memory, etc
         """ 
@@ -604,4 +610,4 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         self.ma_data = None
         self.mag_data = None
 
-        super().engine_finalize(benchmark)
+        super().engine_finalize()

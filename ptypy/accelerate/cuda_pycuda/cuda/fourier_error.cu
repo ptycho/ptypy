@@ -1,12 +1,3 @@
-/** fourier_error.
- *
- * Data types:
- * - IN_TYPE: the data type for the inputs (float or double)
- * - OUT_TYPE: the data type for the outputs (float or double)
- * - MATH_TYPE: the data type used for computation 
- */
-
-
 #include <cassert>
 #include <cmath>
 #include <thrust/complex.h>
@@ -20,12 +11,12 @@ using thrust::complex;
 // (guided by profiler)
 extern "C" __global__ void __launch_bounds__(1024, 2)
     fourier_error(int nmodes,
-                  const complex<IN_TYPE> *f,
-                  const IN_TYPE *fmask,
-                  const IN_TYPE *fmag,
-                  OUT_TYPE *fdev,
-                  OUT_TYPE *ferr,
-                  const IN_TYPE *mask_sum,
+                  complex<float> *f,
+                  const float *fmask,
+                  const float *fmag,
+                  float *fdev,
+                  float *ferr,
+                  const float *mask_sum,
                   const int *addr,
                   int A,
                   int B)
@@ -48,16 +39,15 @@ extern "C" __global__ void __launch_bounds__(1024, 2)
   {
     for (int b = tx; b < B; b += blockDim.x)
     {
-      MATH_TYPE acc = MATH_TYPE(0);
+      float acc = 0.0;
       for (int idx = 0; idx < nmodes; ++idx)
       {
-        complex<MATH_TYPE> t_f = f[a * B + b + idx * A * B];
-        MATH_TYPE abs_exit_wave = abs(t_f);
+        float abs_exit_wave = abs(f[a * B + b + idx * A * B]);
         acc += abs_exit_wave *
                abs_exit_wave;  // if we do this manually (real*real +imag*imag)
                                // we get differences to numpy due to rounding
       }
-      auto fdevv = sqrt(acc) - MATH_TYPE(fmag[a * B + b]);
+      auto fdevv = sqrt(acc) - fmag[a * B + b];
       ferr[a * B + b] = (fmask[a * B + b] * fdevv * fdevv) / mask_sum[ma[0]];
       fdev[a * B + b] = fdevv;
     }

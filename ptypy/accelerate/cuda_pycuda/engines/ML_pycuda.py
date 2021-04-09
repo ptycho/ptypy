@@ -23,7 +23,8 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger
 from ptypy.utils import parallel
 from .. import get_context
-from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PropagationKernel
+from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, \
+    PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel
 
 from ptypy.accelerate.base import address_manglers
@@ -159,7 +160,6 @@ class ML_pycuda(ML_serial):
         self.queue_transfer = cuda.Stream()
         
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
-        self.GSK.tmp = None
         
         super().engine_initialize()
         #self._setup_kernels()
@@ -168,6 +168,13 @@ class ML_pycuda(ML_serial):
         """
         Setup kernels, one for each scan. Derive scans from ptycho class
         """
+
+        try:
+            from ptypy.accelerate.cuda_pycuda.cufft import FFT
+        except:
+            logger.warning('Unable to import cuFFT version - using Reikna instead')
+            from ptypy.accelerate.cuda_pycuda.fft import FFT
+
         AUK = ArrayUtilsKernel(queue=self.queue)
         self._dot_kernel = AUK.dot
         # get the scans
@@ -201,7 +208,7 @@ class ML_pycuda(ML_serial):
             kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue)
             kern.GDK.allocate()
 
-            kern.POK = PoUpdateKernel(queue_thread=self.queue)
+            kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type=np.float32)
             kern.POK.allocate()
 
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
@@ -209,6 +216,20 @@ class ML_pycuda(ML_serial):
 
             kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue)
             kern.PROP.allocate()
+
+
+            if self.do_position_refinement:
+                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
+                                                                self.p.position_refinement.start,
+                                                                self.p.position_refinement.stop,
+                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
+                                                                randomseed=0)
+                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
+                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
+
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, queue_thread=self.queue)
+                kern.PCK.allocate()
+                kern.PCK.address_mangler = addr_mangler
 
     def _initialize_model(self):
 
@@ -243,10 +264,9 @@ class ML_pycuda(ML_serial):
                 self._set_pr_ob_ref_for_data(dev=dev, container=container, sync_copy=sync_copy)
 
     def _get_smooth_gradient(self, data, sigma):
-        if self.GSK.tmp is None:
-            self.GSK.tmp = gpuarray.empty(data.shape, dtype=np.complex64)
-        self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
-        return data
+        tmp = gpuarray.empty(data.shape, dtype=np.complex64)
+        self.GSK.convolution(data, tmp, [sigma, sigma])
+        return tmp
 
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new

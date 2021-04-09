@@ -1,13 +1,5 @@
-/** difference along axes (last and mid axis kernels)
- *
- * Data types:
- * - IN_TYPE: the data type for the inputs 
- * - OUT_TYPE: the data type for the outputs 
- */
-
 #include <thrust/complex.h>
 using thrust::complex;
-
 
 /** Finite difference for forward/backward for any axis that is not the
  * last one, assuring that the reads and writes are coalesced.
@@ -48,8 +40,8 @@ using thrust::complex;
  * zero if it's the end of the input.
  *
  */
-extern "C" __global__ void delx_mid(const IN_TYPE *__restrict__ input,
-                                    OUT_TYPE *output,
+extern "C" __global__ void delx_mid(const DTYPE *__restrict__ input,
+                                    DTYPE *output,
                                     int lower_dim,   // x for 3D
                                     int higher_dim,  // z for 3D
                                     int axis_dim)
@@ -57,8 +49,8 @@ extern "C" __global__ void delx_mid(const IN_TYPE *__restrict__ input,
   // reinterpret to avoid compiler warning that
   // constructor of complex<float>() cannot be called if it's
   // shared memory - polluting the outputs
-  __shared__ char shr[BDIM_X * BDIM_Y * sizeof(IN_TYPE)];
-  auto shared_data = reinterpret_cast<IN_TYPE *>(shr);
+  __shared__ char shr[BDIM_X * BDIM_Y * sizeof(DTYPE)];
+  auto shared_data = reinterpret_cast<DTYPE *>(shr);
 
   unsigned int tx = threadIdx.x;
   unsigned int ty = threadIdx.y;
@@ -90,7 +82,7 @@ extern "C" __global__ void delx_mid(const IN_TYPE *__restrict__ input,
     {
       if (IS_FORWARD)
       {
-        IN_TYPE plus1;
+        DTYPE plus1;
         if (ty < BDIM_Y - 1 &&
             iy < axis_dim - 1)  // we have a next element in shared data
         {
@@ -108,7 +100,7 @@ extern "C" __global__ void delx_mid(const IN_TYPE *__restrict__ input,
       }
       else
       {
-        IN_TYPE minus1;
+        DTYPE minus1;
         if (ty > 0)  // we have a previous element in shared
         {
           minus1 = shared_data[(ty - 1) * BDIM_X + tx];
@@ -122,88 +114,6 @@ extern "C" __global__ void delx_mid(const IN_TYPE *__restrict__ input,
           minus1 = input[(iy - 1) * lower_dim + ix];
         }
         output[iy * lower_dim + ix] = shared_data[ty * BDIM_X + tx] - minus1;
-      }
-    }
-  }
-}
-
-
-
-/** This is the special case for when we diff along the last axis.
- * 
- * Here, flat_dim is all other dims multiplied together, and axis_dim
- * is the dimension along which we diff. 
- * To ensure that we stay coalesced (compared to delx_mid), 
- * we use the x index to iterate within each thread block (the loop).
- * Otherwise it follows the same ideas as delx_mid - please read the
- * description there.
-  */
-extern "C" __global__ void delx_last(const IN_TYPE *__restrict__ input,
-                                     OUT_TYPE *output,
-                                     int flat_dim,
-                                     int axis_dim)
-{
-  // reinterpret to avoid constructor of complex<float>() + compiler warning
-  __shared__ char shr[BDIM_X * BDIM_Y * sizeof(IN_TYPE)];
-  auto shared_data = reinterpret_cast<IN_TYPE *>(shr);
-
-  unsigned int tx = threadIdx.x;
-  unsigned int ty = threadIdx.y;
-
-  unsigned int ix = tx;
-  unsigned int iy = ty + blockIdx.x * BDIM_Y;  // we always use x in grid
-
-  int stride_y = axis_dim;
-
-  auto maxblocks = (axis_dim + BDIM_X - 1) / BDIM_X;
-  for (int bidx = 0; bidx < maxblocks; ++bidx)
-  {
-    ix = tx + bidx * BDIM_X;
-
-    if (iy < flat_dim && ix < axis_dim)
-    {
-      shared_data[ty * BDIM_X + tx] = input[iy * stride_y + ix];
-    }
-
-    __syncthreads();
-
-    if (iy < flat_dim && ix < axis_dim)
-    {
-      if (IS_FORWARD)
-      {
-        IN_TYPE plus1;
-        if (tx < BDIM_X - 1 &&
-            ix < axis_dim - 1)  // we have a next element in shared data
-        {
-          plus1 = shared_data[ty * BDIM_X + tx + 1];
-        }
-        else if (ix == axis_dim - 1)  // end of axis - same as current to get 0
-        {
-          plus1 = shared_data[ty * BDIM_X + tx];
-        }
-        else  // end of block, but nore input is there
-        {
-          plus1 = input[iy * stride_y + ix + 1];
-        }
-
-        output[iy * stride_y + ix] = plus1 - shared_data[ty * BDIM_X + tx];
-      }
-      else
-      {
-        IN_TYPE minus1;
-        if (tx > 0)  // we have a previous element in shared
-        {
-          minus1 = shared_data[ty * BDIM_X + tx - 1];
-        }
-        else if (ix == 0)  // use same as next to get zero
-        {
-          minus1 = shared_data[ty * BDIM_X + tx];
-        }
-        else  // read previous input (ty == 0 but iy > 0)
-        {
-          minus1 = input[iy * stride_y + ix - 1];
-        }
-        output[iy * stride_y + ix] = shared_data[ty * BDIM_X + tx] - minus1;
       }
     }
   }
