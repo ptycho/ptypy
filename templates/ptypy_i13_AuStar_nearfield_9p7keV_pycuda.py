@@ -4,6 +4,8 @@ from ptypy.core import Ptycho
 from ptypy import utils as u
 import numpy as np
 
+from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda
+
 ### PTYCHO PARAMETERS
 p = u.Param()
 p.verbose_level = 3
