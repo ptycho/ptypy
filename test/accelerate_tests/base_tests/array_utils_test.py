@@ -291,6 +291,69 @@ class ArrayUtilsTest(unittest.TestCase):
                          dtype=np.complex64)
         np.testing.assert_array_almost_equal(A, exp_A)
 
+    def test_downsample_factor_2(self):
+        # downsample, complex, 3D
+        B = np.indices((4,4), dtype=np.complex64)
+        B = np.indices((4,4), dtype=np.complex64) + 1j * B[::-1, :, :]
+        A = np.zeros((2,2,2), dtype=B.dtype)
+        au.resample(A,B)
+        exp_A = np.array([[[ 2. +2.j,  2.+10.j],
+                           [10. +2.j, 10.+10.j]],
+                          [[ 2. +2.j, 10.+ 2.j],
+                           [ 2.+10.j, 10.+10.j]]], dtype=np.complex64)
+        np.testing.assert_almost_equal(A.sum(), B.sum())            
+        np.testing.assert_array_almost_equal(A, exp_A)
+
+    def test_upsample_factor_2(self):
+        # upsample, complex, 3D
+        B = np.indices((2,2), dtype=np.complex64)
+        B = np.indices((2,2), dtype=np.complex64) + 1j * B[::-1, :, :]
+        A = np.zeros((2,4,4), dtype=B.dtype)
+        au.resample(A,B)
+        exp_A = np.array([[[0.  +0.j  , 0.  +0.j  , 0.  +0.25j, 0.  +0.25j],
+                           [0.  +0.j  , 0.  +0.j  , 0.  +0.25j, 0.  +0.25j],
+                           [0.25+0.j  , 0.25+0.j  , 0.25+0.25j, 0.25+0.25j],
+                           [0.25+0.j  , 0.25+0.j  , 0.25+0.25j, 0.25+0.25j]],
+                          [[0.  +0.j  , 0.  +0.j  , 0.25+0.j  , 0.25+0.j  ],
+                           [0.  +0.j  , 0.  +0.j  , 0.25+0.j  , 0.25+0.j  ],
+                           [0.  +0.25j, 0.  +0.25j, 0.25+0.25j, 0.25+0.25j],
+                           [0.  +0.25j, 0.  +0.25j, 0.25+0.25j, 0.25+0.25j]]], dtype=np.complex64)
+        np.testing.assert_almost_equal(A.sum(), B.sum())
+        np.testing.assert_array_almost_equal(A, exp_A)
+
+    def test_downsample_factor_4(self):
+        # downsample, complex, 3D
+        B = np.indices((8,8), dtype=np.complex64)
+        B = np.indices((8,8), dtype=np.complex64) + 1j * B[::-1, :, :]
+        A = np.zeros((2,2,2), dtype=B.dtype)
+        au.resample(A,B)
+        exp_A = np.array([[[24.+24.j, 24.+88.j],
+                           [88.+24.j, 88.+88.j]],
+                          [[24.+24.j, 88.+24.j],
+                           [24.+88.j, 88.+88.j]]], dtype=np.complex64)
+        np.testing.assert_almost_equal(A.sum(), B.sum())
+        np.testing.assert_array_almost_equal(A, exp_A)
+
+    def test_upsample_factor_4(self):
+        # upsample, complex, 3D
+        Bshape = (2,4,4)
+        B = np.reshape(np.arange(0, np.prod(Bshape)), Bshape).astype(np.complex64) * 16
+        B = B + 1j * B
+        A = np.zeros((Bshape[0], Bshape[1]*4, Bshape[2]*4), dtype=B.dtype)
+        au.resample(A, B)
+        exp_A = np.zeros_like(A)
+        
+        # building the expected value element-wise, to ensure correctness
+        for z in range(A.shape[0]):
+            for y in range(A.shape[1]):
+                for x in range(A.shape[2]):
+                    exp_A[z, y, x] = B[z, y//4, x//4] / 16
+                    if np.abs(A[z, y, x]-exp_A[z, y, x]) > 1e-6:
+                        print("mismatch! i=({},{},{}): act={}, exp={}".format(z, y, x, A[z, y, x], exp_A[z, y, x]))
+
+        np.testing.assert_almost_equal(A.sum(), B.sum())
+        np.testing.assert_array_almost_equal(A, exp_A)
+
 
 if __name__ == '__main__':
     unittest.main()
