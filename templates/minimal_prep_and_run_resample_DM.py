@@ -48,3 +48,4 @@ p.engines.engine00.probe_support = 0.05
 # prepare and run
 P = Ptycho(p,level=4)
 P.run()
+P.finalize()

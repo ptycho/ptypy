@@ -12,16 +12,17 @@ import numpy as np
 import time
 from pycuda import gpuarray
 import pycuda.driver as cuda
+from pycuda.elementwise import ElementwiseKernel
 
 from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.accelerate.base.engines import DM_serial
-from .. import get_context
+from .. import get_context, debug_options
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
-from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel, ClipMagnitudesKernel
+from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, ResampleKernel, TransposeKernel, ClipMagnitudesKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..multi_gpu import get_multi_gpu_communicator
 
@@ -111,9 +112,19 @@ class DM_pycuda(DM_serial.DM_serial):
             aux = np.zeros(ash, dtype=np.complex64)
             kern.aux = gpuarray.to_gpu(aux)
 
+            # create extra array for resampling (if needed)
+            kern.resample = scan.resample > 1
+            if kern.resample:
+                ish = (ash[0],) + tuple(geo.shape//scan.resample)
+                kern.aux_tmp1 = np.zeros(ash, dtype=np.float32)
+                kern.aux_tmp2 = np.zeros(ish, dtype=np.float32)
+                aux_f = kern.aux_tmp2 # making sure to pass the correct shapes to FUK 
+            else:
+                aux_f = aux
+
             # setup kernels, one for each SCAN.
             log(4, "Setting up FourierUpdateKernel")
-            kern.FUK = FourierUpdateKernel(aux, nmodes, queue_thread=self.queue)
+            kern.FUK = FourierUpdateKernel(aux_f, nmodes, queue_thread=self.queue)
             kern.FUK.allocate()
 
             log(4, "Setting up PoUpdateKernel")
@@ -134,6 +145,18 @@ class DM_pycuda(DM_serial.DM_serial):
             kern.PROP = PropagationKernel(aux, geo.propagator, self.queue, self.p.fft_lib)
             kern.PROP.allocate()
             kern.resolution = geo.resolution[0]
+
+            if kern.resample:
+                logger.info("Setting up Resample kernel")
+                kern.RSMP = ResampleKernel(queue=self.queue)
+
+                logger.info("Setting up abs**2 kernel")
+                kern.ABS_SQR = ElementwiseKernel(
+                    "pycuda::complex<float>* in, float* out",
+                    "float abst = abs(in[i]); out[i] = abst*abst;",
+                    "abs_sqr",
+                    options=debug_options
+                )
 
             if self.do_position_refinement:
                 log(4, "Setting up PositionCorrectionKernel")
@@ -186,6 +209,11 @@ class DM_pycuda(DM_serial.DM_serial):
             if self.do_position_refinement:
                 prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
 
+            kern = self.kernels[prep.label]
+            if kern.resample:
+                kern.aux_tmp1_gpu = gpuarray.to_gpu(kern.aux_tmp1)
+                kern.aux_tmp2_gpu = gpuarray.to_gpu(kern.aux_tmp2)
+
     def engine_iterate(self, num=1):
         """
         Compute one iteration.
@@ -206,6 +234,9 @@ class DM_pycuda(DM_serial.DM_serial):
                 FUK = kern.FUK
                 AWK = kern.AWK
                 PROP = kern.PROP
+                if kern.resample:
+                    ABS_SQR = kern.ABS_SQR
+                    RSMP = kern.RSMP
 
                 # get addresses and buffers
                 addr = prep.addr_gpu
@@ -217,6 +248,12 @@ class DM_pycuda(DM_serial.DM_serial):
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
 
+                # resampling
+                resample = kern.resample
+                if resample:
+                    aux_tmp1 = kern.aux_tmp1_gpu
+                    aux_tmp2 = kern.aux_tmp2_gpu
+
                 # local references
                 ma = self.ma.S[dID].gpu
                 ob = self.ob.S[oID].gpu
@@ -227,7 +264,12 @@ class DM_pycuda(DM_serial.DM_serial):
                 if self.p.compute_log_likelihood:
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
                     PROP.fw(aux, aux)
-                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                    if resample:
+                        ABS_SQR(aux, aux_tmp1, stream=self.queue)
+                        RSMP.resample(aux_tmp2, aux_tmp1)
+                        FUK.log_likelihood(aux_tmp2, addr, mag, ma, err_phot, aux_is_intensity=True)
+                    else:
+                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
 
                 ## build auxilliary wave
                 AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
@@ -236,16 +278,31 @@ class DM_pycuda(DM_serial.DM_serial):
                 PROP.fw(aux, aux)
 
                 ## Deviation from measured data
-                FUK.fourier_error(aux, addr, mag, ma, ma_sum)
-                FUK.error_reduce(addr, err_fourier)
-                FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
+                if resample:
+                    ABS_SQR(aux, aux_tmp1, stream=self.queue)
+                    RSMP.resample(aux_tmp2, aux_tmp1)
+                    FUK.fourier_error(aux_tmp2, addr, mag, ma, ma_sum, aux_is_intensity=True)
+                    FUK.error_reduce(addr, err_fourier)
+                    FUK.fmag_all_update(aux_tmp2, addr, mag, ma, err_fourier, pbound, mult=False)
+                    RSMP.resample(aux_tmp1, aux_tmp2)
+                    # aux *= aux_tmp1 , but with stream
+                    aux._elwise_multiply(aux_tmp1, aux, stream=self.queue)
+                else:
+                    FUK.fourier_error(aux, addr, mag, ma, ma_sum)
+                    FUK.error_reduce(addr, err_fourier)
+                    FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
 
                 ## backward FFT
                 PROP.bw(aux, aux)
 
                 ## build exit wave
                 AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                FUK.exit_error(aux, addr)
+                if resample:
+                    ABS_SQR(aux, aux_tmp1, stream=self.queue)
+                    RSMP.resample(aux_tmp2, aux_tmp1)
+                    FUK.exit_error(aux_tmp2, addr, aux_is_intensity=True)
+                else:
+                    FUK.exit_error(aux, addr)
                 FUK.error_reduce(addr, err_exit)
 
             parallel.barrier()

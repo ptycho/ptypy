@@ -187,6 +187,11 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
             prep.err_exit_gpu = gpuarray.to_gpu(prep.err_exit)
             if self.do_position_refinement:
                 prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
+            kern = self.kernels[prep.label]
+            if kern.resample:
+                kern.aux_tmp1_gpu = gpuarray.to_gpu(kern.aux_tmp1)
+                kern.aux_tmp2_gpu = gpuarray.to_gpu(kern.aux_tmp2)
+                
             ma = self.ma.S[dID].data.astype(np.float32)
             prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
             prep.ma[:] = ma   
@@ -304,13 +309,20 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                     pbound = self.pbound_scan[prep.label]
                     aux = kern.aux
                     PROP = kern.PROP
-
+                    
                     # set streams
                     queue = streamdata.queue
                     FUK.queue = queue
                     AWK.queue = queue
                     POK.queue = queue
                     PROP.queue = queue
+                    resample = kern.resample
+                    if resample:
+                        ABS_SQR = kern.ABS_SQR
+                        RSMP = kern.RSMP
+                        RSMP.queue = queue
+                        aux_tmp1 = kern.aux_tmp1_gpu
+                        aux_tmp2 = kern.aux_tmp2_gpu
 
                     # get addresses and auxilliary array
                     addr = prep.addr_gpu
@@ -345,7 +357,12 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                             t1 = time.time()
                             AWK.build_aux_no_ex(aux, addr, ob, pr)
                             PROP.fw(aux, aux)
-                            FUK.log_likelihood(aux, addr, mag, ma, err_phot)                    
+                            if resample:
+                                ABS_SQR(aux, aux_tmp1, stream=queue)
+                                RSMP.resample(aux_tmp2, aux_tmp1)
+                                FUK.log_likelihood(aux_tmp2, addr, mag, ma, err_phot, aux_is_intensity=True)
+                            else:
+                                FUK.log_likelihood(aux, addr, mag, ma, err_phot)                    
                             self.benchmark.F_LLerror += time.time() - t1
 
                         ## prep + forward FFT
@@ -359,9 +376,19 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
                         ## Deviation from measured data
                         t1 = time.time()
-                        FUK.fourier_error(aux, addr, mag, ma, ma_sum)
-                        FUK.error_reduce(addr, err_fourier)
-                        FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
+                        if resample:
+                            ABS_SQR(aux, aux_tmp1, stream=queue)
+                            RSMP.resample(aux_tmp2, aux_tmp1)
+                            FUK.fourier_error(aux_tmp2, addr, mag, ma, ma_sum, aux_is_intensity=True)
+                            FUK.error_reduce(addr, err_fourier)
+                            FUK.fmag_all_update(aux_tmp2, addr, mag, ma, err_fourier, pbound, mult=False)
+                            RSMP.resample(aux_tmp1, aux_tmp2)
+                            # aux *= aux_tmp1 , but with stream
+                            aux._elwise_multiply(aux_tmp1, aux, stream=queue)
+                        else:
+                            FUK.fourier_error(aux, addr, mag, ma, ma_sum)
+                            FUK.error_reduce(addr, err_fourier)
+                            FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
                         self.benchmark.C_Fourier_update += time.time() - t1
                         streamdata.record_done_ma(dID)
 
@@ -370,7 +397,12 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         PROP.bw(aux, aux)
                         ## apply changes
                         AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                        FUK.exit_error(aux, addr)
+                        if resample:
+                            ABS_SQR(aux, aux_tmp1, stream=queue)
+                            RSMP.resample(aux_tmp2, aux_tmp1)
+                            FUK.exit_error(aux_tmp2, addr, aux_is_intensity=True)
+                        else:
+                            FUK.exit_error(aux, addr)
                         FUK.error_reduce(addr, err_exit)
                         self.benchmark.E_Build_exit += time.time() - t1
                         
