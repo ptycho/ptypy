@@ -22,8 +22,6 @@ from . import register
 from .base import BaseEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
-# for debugging
-import h5py
 
 __all__ = ['ML']
 
@@ -101,17 +99,7 @@ class ML(BaseEngine):
     type = int
     lowlim = 0
     help = Number of iterations before probe update starts
-
-    [debug]
-    default = None
-    type = str
-    help = For debugging purposes, dump arrays into given directory
-
-    [debug_iter]
-    default = 0
-    type = int
-    help = For debugging purposes, dump arrays at this iteration
-
+    
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
@@ -245,11 +233,6 @@ class ML(BaseEngine):
             if self.p.scale_precond:
                 cn2_new_pr_grad = Cnorm2(new_pr_grad)
                 cn2_new_ob_grad = Cnorm2(new_ob_grad)
-                if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
-                    with h5py.File(self.p.debug + "/ml_o_p_norm_%04d.h5" %self.curiter, "w") as f:
-                        f["cn2_new_pr_grad"] = cn2_new_pr_grad
-                        f["cn2_new_ob_grad"] = cn2_new_ob_grad
-
                 if cn2_new_pr_grad > 1e-5:
                     scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad 
                                  / cn2_new_pr_grad)

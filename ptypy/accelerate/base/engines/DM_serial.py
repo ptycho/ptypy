@@ -27,8 +27,6 @@ from ptypy.accelerate.base import array_utils as au
 # - Propagator needs to be reconfigurable for a certain batch size, gpyfft hates that.
 # - Fourier_update_kernel needs to allow batched execution
 
-## for debugging
-#from matplotlib import pyplot as plt
 
 __all__ = ['DM_serial']
 

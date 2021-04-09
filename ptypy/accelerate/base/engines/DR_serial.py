@@ -22,8 +22,6 @@ from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKern
 from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
 
-# for debugging
-import h5py, sys
 
 __all__ = ['DR_serial']
 
@@ -90,16 +88,6 @@ class DR_serial(PositionCorrectionEngine):
     default = False
     type = bool
     help = A switch for computing the fourier error (this can impact the performance of the engine)
-
-    [debug]
-    default = None
-    type = str
-    help = For debugging purposes, dump arrays into given directory
-
-    [debug_iter]
-    default = 0
-    type = int
-    help = For debugging purposes, dump arrays at this iteration
 
     """
 
@@ -327,17 +315,6 @@ class DR_serial(PositionCorrectionEngine):
                     err_fourier = prep.err_fourier[i,None]
                     err_exit = prep.err_exit[i,None]
 
-                    # debugging
-                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
-                        with h5py.File(self.p.debug + "/before_%04d.h5" %self.curiter, "w") as f:
-                            f["aux"] = aux
-                            f["addr"] = addr
-                            f["ob"] = ob
-                            f["pr"] = pr
-                            f["mag"] = mag
-                            f["ma"] = ma
-                            f["ma_sum"] = ma_sum
-
                     ## build auxilliary wave
                     t1 = time.time()
                     AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
@@ -376,42 +353,16 @@ class DR_serial(PositionCorrectionEngine):
                     #if self.p.rescale_probe:
                     #    pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
 
-                    # debugging
-                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
-                        with h5py.File(self.p.debug + "/before_aux_no_ex_%04d.h5" %self.curiter, "w") as f:
-                            f["aux"] = aux
-                            f["addr"] = addr
-                            f["ob"] = ob
-                            f["pr"] = pr
-
                     ## build auxilliary wave (ob * pr product)
                     t1 = time.time()
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
                     self.benchmark.A_Build_aux += time.time() - t1
-
-                    # debugging
-                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
-                        with h5py.File(self.p.debug + "/ob_update_local_%04d.h5" %self.curiter, "w") as f:
-                            f["aux"] = aux
-                            f["addr"] = addr
-                            f["ob"] = ob
-                            f["pr"] = pr
-                            f["ex"] = ex
 
                     # object update
                     t1 = time.time()
                     POK.ob_update_local(addr, ob, pr, ex, aux)
                     self.benchmark.object_update += time.time() - t1
                     self.benchmark.calls_object += 1
-
-                    # debugging
-                    if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
-                        with h5py.File(self.p.debug + "/pr_update_local_%04d.h5" %self.curiter, "w") as f:
-                            f["aux"] = aux
-                            f["addr"] = addr
-                            f["ob"] = ob
-                            f["pr"] = pr
-                            f["ex"] = ex
 
                     # probe update
                     t1 = time.time()
@@ -422,7 +373,6 @@ class DR_serial(PositionCorrectionEngine):
                     ## compute log-likelihood
                     if self.p.compute_log_likelihood:
                         t1 = time.time()
-                        #AWK.build_aux_no_ex(aux, addr, ob, pr)
                         aux[:] = FW(aux)
                         FUK.log_likelihood(aux, addr, mag, ma, err_phot)
                         self.benchmark.F_LLerror += time.time() - t1

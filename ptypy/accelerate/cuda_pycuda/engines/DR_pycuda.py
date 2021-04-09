@@ -26,8 +26,6 @@ from ..mem_utils import make_pagelocked_paired_arrays as mppa
 
 MPI = False
 
-# debugging
-import sys
 
 __all__ = ['DR_pycuda']
 

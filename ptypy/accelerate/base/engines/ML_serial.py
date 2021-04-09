@@ -24,8 +24,6 @@ from ptypy.engines import register
 from ptypy.accelerate.base.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel
 from ptypy.accelerate.base import address_manglers
 
-# for debugging
-import h5py
 
 __all__ = ['ML_serial']
 
@@ -178,11 +176,6 @@ class ML_serial(ML):
 
             # probe/object rescaling
             if self.p.scale_precond:
-                if self.p.debug and parallel.master and (self.curiter == self.p.debug_iter):
-                    with h5py.File(self.p.debug + "/ml_serial_o_p_norm_%04d.h5" %self.curiter, "w") as f:
-                        f["cn2_new_pr_grad"] = cn2_new_pr_grad
-                        f["cn2_new_ob_grad"] = cn2_new_ob_grad
-
                 if cn2_new_pr_grad > 1e-5:
                     scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad
                                  / cn2_new_pr_grad)
@@ -343,88 +336,21 @@ class GaussianModel(BaseModelSerial):
             prg = pr_grad.S[pID].data
             I = self.engine.di.S[dID].data
 
-            # debugging
-            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/build_aux_no_ex_%04d.h5" %self.engine.curiter, "w") as f:
-                    f["aux"] = aux
-                    f["addr"] = addr
-                    f["ob"] = ob
-                    f["pr"] = pr
-
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
-
-            # debugging
-            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/forward_%04d.h5" %self.engine.curiter, "w") as f:
-                    f["aux"] = aux
 
             # forward prop
             aux[:] = FW(aux)
 
-            # debugging
-            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/make_model_%04d.h5" %self.engine.curiter, "w") as f:
-                    f["aux"] = aux
-                    f["addr"] = addr
-
             GDK.make_model(aux, addr)
-
-            # debugging
-            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/floating_intensities_%04d.h5" %self.engine.curiter, "w") as f:
-                    f["w"] = w
-                    f["addr"] = addr
-                    f["I"] = I
-                    f["fic"] = fic
-                    f["Imodel"] = GDK.npy.Imodel
-
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
-
-            # debugging
-            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/main_%04d.h5" %self.engine.curiter, "w") as f:
-                    f["aux"] = aux
-                    f["addr"] = addr
-                    f["w"] = w
-                    f["I"] = I
-
             GDK.main(aux, addr, w, I)
-            
-            # debugging
-            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/error_reduce_%04d.h5" %self.engine.curiter, "w") as f:
-                    f["addr"] = addr
-                    f["err_phot"] = err_phot
-
             GDK.error_reduce(addr, err_phot)
-
-            # debugging
-            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/backward_%04d.h5" %self.engine.curiter, "w") as f:
-                    f["aux"] = aux
 
             aux[:] = BW(aux)
 
-            # debugging
-            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/op_update_ml_%04d.h5" %self.engine.curiter, "w") as f:
-                    f["aux"] = aux
-                    f["addr"] = addr
-                    f["obg"] = obg
-                    f["pr"] = pr
-
             POK.ob_update_ML(addr, obg, pr, aux)
-
-            # debugging
-            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/pr_update_ml_%04d.h5" %self.engine.curiter, "w") as f:
-                    f["aux"] = aux
-                    f["addr"] = addr
-                    f["ob"] = ob
-                    f["prg"] = prg
-
             POK.pr_update_ML(addr, prg, ob, aux)
 
         for dID, prep in self.engine.diff_info.items():
@@ -444,12 +370,6 @@ class GaussianModel(BaseModelSerial):
         # Object regularizer
         if self.regularizer:
             for name, s in self.engine.ob.storages.items():
-
-                # debugging
-                if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                    with h5py.File(self.p.debug + "/regul_grad_%04d.h5" %self.engine.curiter, "w") as f:
-                        f["ob"] = s.data
-
                 ob_grad.storages[name].data += self.regularizer.grad(s.data)
                 LL += self.regularizer.LL
 
@@ -506,29 +426,7 @@ class GaussianModel(BaseModelSerial):
             a[:] = FW(a)
             b[:] = FW(b)
 
-            # debugging
-            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/make_a012_%04d.h5" %self.engine.curiter, "w") as g:
-                    g["addr"] = addr
-                    g["a"] = a
-                    g["b"] = b
-                    g["f"] = f
-                    g["I"] = I
-                    g["fic"] = fic
-
             GDK.make_a012(f, a, b, addr, I, fic)
-
-            # debugging
-            if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                with h5py.File(self.p.debug + "/fill_b_%04d.h5" %self.engine.curiter, "w") as f:
-                    f["addr"] = addr
-                    f["Brenorm"] = Brenorm
-                    f["w"] = w
-                    f["B"] = B
-                    f["A0"] = GDK.npy.Imodel
-                    f["A1"] = GDK.npy.LLerr
-                    f["A2"] = GDK.npy.LLden
-
             GDK.fill_b(addr, Brenorm, w, B)
 
         parallel.allreduce(B)
@@ -536,13 +434,6 @@ class GaussianModel(BaseModelSerial):
         # Object regularizer
         if self.regularizer:
             for name, s in self.ob.storages.items():
-
-                # debugging
-                if self.p.debug and parallel.master and (self.engine.curiter == self.p.debug_iter):
-                    with h5py.File(self.p.debug + "/regul_poly_line_coeffs_%04d.h5" %self.engine.curiter, "w") as f:
-                        f["ob"] = s.data
-                        f["obh"] = c_ob_h.storages[name].data
-
                 B += Brenorm * self.regularizer.poly_line_coeffs(
                     c_ob_h.storages[name].data, s.data)
 
