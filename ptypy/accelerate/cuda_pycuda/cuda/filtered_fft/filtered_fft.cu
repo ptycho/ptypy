@@ -29,18 +29,6 @@
 #include <cmath>
 #include <cassert>
 
-#ifndef MY_FFT_ROWS
-# define MY_FFT_ROWS 128
-# pragma GCC warning "MY_FFT_ROWS not set in preprocessor - defaulting to 128"
-#endif
-
-#ifndef MY_FFT_COLS
-# define MY_FFT_COLS 128
-# pragma GCC warning "MY_FFT_COLS not set in preprocessor - defaulting to 128"
-#endif
-
-
-
 template <int ROWS, int COLUMNS, bool SYMMETRIC, bool IS_FORWARD>
 class FilteredFFTImpl : public FilteredFFT {
 public:
@@ -274,9 +262,37 @@ void FilteredFFTImpl<ROWS,COLUMNS,SYMMETRIC,IS_FORWARD>::setupPlan() {
     }
 }
 
+template <bool SYMMETRIC, bool FORWARD>
+static FilteredFFT* make(int batches, int rows, int cols, complex<float>* prefilt, complex<float>* postfilt, 
+  cudaStream_t stream)
+{
+    // we only support rows / colums are equal and powers of 2, from 16x16 to 512x512
+    if (rows != cols) 
+      throw std::runtime_error("Only equal numbers of rows and columns are supported");
+    switch (rows)
+    {
+        case 16: return new FilteredFFTImpl<16, 16, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
+        case 32: return new FilteredFFTImpl<32, 32, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
+        case 64: return new FilteredFFTImpl<64, 64, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
+        case 128: return new FilteredFFTImpl<128, 128, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
+        case 256: return new FilteredFFTImpl<256, 256, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
+        case 512: return new FilteredFFTImpl<512, 512, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
+        case 1024: return new FilteredFFTImpl<1024, 1024, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
+        case 2048: return new FilteredFFTImpl<2048, 2048, SYMMETRIC, FORWARD>(batches, prefilt, postfilt, stream);
+        default: throw std::runtime_error("Only powers of 2 from 16 to 2048 are supported");
+    }
+}
+
 //////////// Factory Functions for Python
 
-FilteredFFT* make_filtered(int batches, bool symmetricScaling,
+// Note: This will instantiate templates for 8 powers of 2, with 4 combinations of forward/reverse, symmetric/not,
+// i.e. 32 different FFTs into the binary. Compile time might be quite long, but we intend to do this once
+// during installation
+
+FilteredFFT* make_filtered(
+  int batches, 
+  int rows, int cols,
+  bool symmetricScaling,
   bool isForward,
   complex<float>* prefilt, complex<float>* postfilt, 
   cudaStream_t stream)
@@ -284,21 +300,17 @@ FilteredFFT* make_filtered(int batches, bool symmetricScaling,
     if (symmetricScaling)
     {
         if (isForward) {
-            return new FilteredFFTImpl<MY_FFT_ROWS, MY_FFT_COLS, true, true>(batches, 
-                prefilt, postfilt, stream);
+            return make<true, true>(batches, rows, cols, prefilt, postfilt, stream);
         } else {
-            return new FilteredFFTImpl<MY_FFT_ROWS, MY_FFT_COLS, true, false>(batches, 
-                prefilt, postfilt, stream);
+            return make<true, false>(batches, rows, cols, prefilt, postfilt, stream);
         }
     }
     else
     {
         if (isForward) {
-            return new FilteredFFTImpl<MY_FFT_ROWS, MY_FFT_COLS, false, true>(batches, 
-                prefilt, postfilt, stream);
+            return make<false, true>(batches, rows, cols, prefilt, postfilt, stream);
         } else {
-            return new FilteredFFTImpl<MY_FFT_ROWS, MY_FFT_COLS, false, false>(batches, 
-                prefilt, postfilt, stream);
+            return make<false, false>(batches, rows, cols, prefilt, postfilt, stream);
         }
     }
     

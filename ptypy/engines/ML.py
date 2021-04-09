@@ -19,14 +19,15 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from .utils import Cnorm2, Cdot
 from . import register
-from .base import PositionCorrectionEngine
+from .base import BaseEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
+
 
 __all__ = ['ML']
 
 
 @register()
-class ML(PositionCorrectionEngine):
+class ML(BaseEngine):
     """
     Maximum likelihood reconstruction engine.
 
@@ -98,7 +99,7 @@ class ML(PositionCorrectionEngine):
     type = int
     lowlim = 0
     help = Number of iterations before probe update starts
-
+    
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
@@ -153,7 +154,6 @@ class ML(PositionCorrectionEngine):
         """
         Prepare for ML reconstruction.
         """
-        super(ML, self).engine_initialize()
         
         # Object gradient and minimization direction
         self.ob_grad = self.ob.copy(self.ob.ID + '_grad', fill=0.)
@@ -232,9 +232,10 @@ class ML(PositionCorrectionEngine):
             # probe/object rescaling
             if self.p.scale_precond:
                 cn2_new_pr_grad = Cnorm2(new_pr_grad)
+                cn2_new_ob_grad = Cnorm2(new_ob_grad)
                 if cn2_new_pr_grad > 1e-5:
-                    scale_p_o = (self.p.scale_probe_object * Cnorm2(new_ob_grad)
-                                 / Cnorm2(new_pr_grad))
+                    scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad 
+                                 / cn2_new_pr_grad)
                 else:
                     scale_p_o = self.p.scale_probe_object
                 if self.scale_p_o is None:
@@ -319,7 +320,6 @@ class ML(PositionCorrectionEngine):
         """
         Delete temporary containers.
         """
-        super(ML, self).engine_finalize()
         del self.ptycho.containers[self.ob_grad.ID]
         del self.ob_grad
         del self.ptycho.containers[self.ob_grad_new.ID]

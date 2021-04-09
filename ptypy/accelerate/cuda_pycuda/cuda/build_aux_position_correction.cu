@@ -1,12 +1,20 @@
+/** build_aux for position correction.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double - for aux wave)
+ * - MATH_TYPE: the data type used for computation 
+ */
+
 #include <thrust/complex.h>
 using thrust::complex;
 
 extern "C" __global__ void build_aux_position_correction(
-    complex<float>* auxiliary_wave,
-    const complex<float>* __restrict__ probe,
+    complex<OUT_TYPE>* auxiliary_wave,
+    const complex<IN_TYPE>* __restrict__ probe,
     int B,
     int C,
-    const complex<float>* __restrict__ obj,
+    const complex<IN_TYPE>* __restrict__ obj,
     int H,
     int I,
     const int* __restrict__ addr)
@@ -30,7 +38,9 @@ extern "C" __global__ void build_aux_position_correction(
                    // (it will work for less as well)
     for (int c = tx; c < C; c += blockDim.x)
     {
-      auxiliary_wave[b * C + c] = obj[b * I + c] * probe[b * C + c];
+      complex<MATH_TYPE> t_obj = obj[b * I + c];
+      complex<MATH_TYPE> t_probe = probe[b * C + c];
+      auxiliary_wave[b * C + c] = t_obj * t_probe;
     }
   }
 }
