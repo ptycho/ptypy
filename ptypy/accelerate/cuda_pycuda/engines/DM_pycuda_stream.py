@@ -114,6 +114,10 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             prep.err_exit_gpu = gpuarray.to_gpu(prep.err_exit)
             if self.do_position_refinement:
                 prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
+            kern = self.kernels[prep.label]
+            if kern.resample:
+                kern.aux_tmp1_gpu = gpuarray.to_gpu(kern.aux_tmp1)
+                kern.aux_tmp2_gpu = gpuarray.to_gpu(kern.aux_tmp2)
             ma = self.ma.S[dID].data.astype(np.float32)
             prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
             prep.ma[:] = ma
@@ -179,10 +183,19 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                     FUK = kern.FUK
                     AWK = kern.AWK
                     POK = kern.POK
+                    PROP = kern.PROP
+                    if kern.resample:
+                        ABS_SQR = kern.ABS_SQR
+                        RSMP = kern.RSMP
 
                     pbound = self.pbound_scan[prep.label]
                     aux = kern.aux
-                    PROP = kern.PROP
+
+                    # resampling
+                    resample = kern.resample
+                    if resample:
+                        aux_tmp1 = kern.aux_tmp1_gpu
+                        aux_tmp2 = kern.aux_tmp2_gpu                    
 
                     # get addresses and auxilliary array
                     addr = prep.addr_gpu
@@ -214,6 +227,17 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         if self.p.compute_log_likelihood:
                             AWK.build_aux_no_ex(aux, addr, ob, pr)
                             PROP.fw(aux, aux)
+                            if resample:
+                                ABS_SQR(aux, aux_tmp1, stream=self.queue)
+                                RSMP.resample(aux_tmp2, aux_tmp1)
+                                # synchronize h2d stream with compute stream
+                                self.queue.wait_for_event(ev_mag)
+                                FUK.log_likelihood(aux_tmp2, addr, mag, ma, err_phot, aux_is_intensity=True)
+                            else:
+                                # synchronize h2d stream with compute stream
+                                self.queue.wait_for_event(ev_mag)
+                                FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+
                             # synchronize h2d stream with compute stream
                             self.queue.wait_for_event(ev_mag)
                             FUK.log_likelihood(aux, addr, mag, ma, err_phot)
@@ -226,11 +250,23 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         PROP.fw(aux, aux)
 
                         ## Deviation from measured data
-                        # synchronize h2d stream with compute stream
-                        self.queue.wait_for_event(ev_mag)
-                        FUK.fourier_error(aux, addr, mag, ma, ma_sum)
-                        FUK.error_reduce(addr, err_fourier)
-                        FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
+                        if resample:
+                            ABS_SQR(aux, aux_tmp1, stream=self.queue)
+                            RSMP.resample(aux_tmp2, aux_tmp1)
+                            # synchronize h2d stream with compute stream
+                            self.queue.wait_for_event(ev_mag)
+                            FUK.fourier_error(aux_tmp2, addr, mag, ma, ma_sum, aux_is_intensity=True)
+                            FUK.error_reduce(addr, err_fourier)
+                            FUK.fmag_all_update(aux_tmp2, addr, mag, ma, err_fourier, pbound, mult=False)
+                            RSMP.resample(aux_tmp1, aux_tmp2)
+                            # aux *= aux_tmp1 , but with stream
+                            aux._elwise_multiply(aux_tmp1, aux, stream=self.queue)
+                        else:
+                            # synchronize h2d stream with compute stream
+                            self.queue.wait_for_event(ev_mag)
+                            FUK.fourier_error(aux, addr, mag, ma, ma_sum)
+                            FUK.error_reduce(addr, err_fourier)
+                            FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
 
                         data_mag.record_done(self.queue, 'compute')
                         data_ma.record_done(self.queue, 'compute')
@@ -238,7 +274,12 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         PROP.bw(aux, aux)
                         ## apply changes
                         AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                        FUK.exit_error(aux, addr)
+                        if resample:
+                            ABS_SQR(aux, aux_tmp1, stream=self.queue)
+                            RSMP.resample(aux_tmp2, aux_tmp1)
+                            FUK.exit_error(aux_tmp2, addr, aux_is_intensity=True)
+                        else:
+                            FUK.exit_error(aux, addr)
                         FUK.error_reduce(addr, err_exit)
 
                     prestr = '%d Iteration (Overlap) #%02d:  ' % (parallel.rank, inner)

@@ -6,11 +6,13 @@ of actual data. It uses the test Scan class
 #import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
+from ptypy.accelerate.base.engines import ML_serial
 
 p = u.Param()
 
 # for verbose output
 p.verbose_level = 4
+p.frames_per_block = 100
 
 # set home path
 p.io = u.Param()
@@ -40,18 +42,17 @@ p.scans.MF.data.psf = 0.
 # Resample by a factor of 2
 p.scans.MF.resample = 2
 
-# attach a reconstrucion engine
 p.engines = u.Param()
-p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'ML'
-p.engines.engine00.reg_del2 = True                  # Whether to use a Gaussian prior (smoothing) regularizer
-p.engines.engine00.reg_del2_amplitude = 1.             # Amplitude of the Gaussian prior if used
-p.engines.engine00.scale_precond = True
-p.engines.engine00.scale_probe_object = 1.
-p.engines.engine00.smooth_gradient = 20.
-p.engines.engine00.smooth_gradient_decay = 1/50.
-p.engines.engine00.floating_intensities = True
-p.engines.engine00.numiter = 300
+p.engines.engine01 = u.Param()
+p.engines.engine01.name = 'ML_serial'
+p.engines.engine01.reg_del2 = True                  # Whether to use a Gaussian prior (smoothing) regularizer
+p.engines.engine01.reg_del2_amplitude = 1.             # Amplitude of the Gaussian prior if used
+p.engines.engine01.scale_precond = True
+p.engines.engine01.scale_probe_object = 1.
+p.engines.engine01.smooth_gradient = 20.
+p.engines.engine01.smooth_gradient_decay = 1/50.
+p.engines.engine01.floating_intensities = True
+p.engines.engine01.numiter = 300
 
 # prepare and run
 P = Ptycho(p,level=4)
