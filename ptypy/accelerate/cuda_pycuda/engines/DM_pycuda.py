@@ -450,14 +450,6 @@ class DM_pycuda(DM_serial.DM_serial):
             for s in self.pr.storages.values():
                 self.support_constraint(s)
 
-        # Real space
-        support = self._probe_support.get(storage.ID)
-        if support is not None:
-            if storage.ID not in self.RSK:
-                self.RSK[storage.ID] = RealSupportKernel(support.astype(np.complex64))
-                self.RSK[storage.ID].allocate()
-            self.RSK[storage.ID].apply_real_support(storage.gpu)
-
         # Fourier space
         support = self._probe_fourier_support.get(storage.ID)
         if support is not None:
@@ -466,6 +458,14 @@ class DM_pycuda(DM_serial.DM_serial):
                 self.FSK[storage.ID] = FourierSupportKernel(supp, self.queue, self.p.fft_lib)
                 self.FSK[storage.ID].allocate()
             self.FSK[storage.ID].apply_fourier_support(storage.gpu)
+
+        # Real space
+        support = self._probe_support.get(storage.ID)
+        if support is not None:
+            if storage.ID not in self.RSK:
+                self.RSK[storage.ID] = RealSupportKernel(support.astype(np.complex64))
+                self.RSK[storage.ID].allocate()
+            self.RSK[storage.ID].apply_real_support(storage.gpu)
 
     def clip_object(self, ob):
         """

@@ -175,15 +175,15 @@ class BaseEngine(object):
             for s in self.pr.storages.values():
                 self.support_contraint(s)
 
-        # Real space
-        support = self._probe_support.get(storage.ID)
-        if support is not None:
-            storage.data *= support
-
         # Fourier space
         support = self._probe_fourier_support.get(storage.ID)
         if support is not None:
             storage.data[:] = np.fft.ifft2(support * np.fft.fft2(storage.data))
+
+        # Real space
+        support = self._probe_support.get(storage.ID)
+        if support is not None:
+            storage.data *= support
 
     def iterate(self, num=None):
         """
