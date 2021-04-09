@@ -413,7 +413,7 @@ franzmap_cm = {'red':   ((0.000,   0,    0),
                                                       (0.650,   0,    0),
                                                       (1.000,   0,    0))}
                                                       
-mpl.cm.register_cmap(cmap=LinearSegmentedColormap(name='franzmap', segmentdata=franzmap_cm), lut=256)
+mpl.cm.register_cmap(cmap=LinearSegmentedColormap(name='franzmap', segmentdata=franzmap_cm, N=256))
 
 def franzmap():
     """\
