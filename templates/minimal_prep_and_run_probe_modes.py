@@ -14,7 +14,10 @@ p.verbose_level = 3
 # set home path
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.autosave = None
+p.io.autosave = u.Param(active=False)
+p.io.interaction = u.Param(active=True)
+p.io.interaction.client = u.Param()
+p.io.interaction.client.poll_timeout = 1
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()

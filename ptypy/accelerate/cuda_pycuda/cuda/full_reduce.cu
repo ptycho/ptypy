@@ -1,16 +1,25 @@
+/** full_reduce kernel.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double - for aux wave)
+ * - ACC_TYPE: the data type used for internal accumulation
+ */
+
+
 #include <cassert>
 
-extern "C" __global__ void full_reduce(const DTYPE* in, DTYPE* out, int size)
+extern "C" __global__ void full_reduce(const IN_TYPE* in, OUT_TYPE* out, int size)
 {
   assert(gridDim.x == 1);
   int tx = threadIdx.x;
 
-  __shared__ DTYPE smem[BDIM_X];
+  __shared__ ACC_TYPE smem[BDIM_X];
 
-  auto sum = DTYPE();
+  auto sum = ACC_TYPE();
   for (int ix = tx; ix < size; ix += blockDim.x)
   {
-    sum = sum + in[ix];
+    sum = sum + ACC_TYPE(in[ix]);
   }
   smem[tx] = sum;
   __syncthreads();
@@ -30,6 +39,6 @@ extern "C" __global__ void full_reduce(const DTYPE* in, DTYPE* out, int size)
 
   if (tx == 0)
   {
-    out[0] = smem[0];
+    out[0] = OUT_TYPE(smem[0]);
   }
 }

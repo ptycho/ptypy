@@ -6,6 +6,8 @@
 import unittest
 import numpy as np
 from . import PyCudaTest, have_pycuda
+from ptypy.accelerate.base.array_utils import max_abs2
+from parameterized import parameterized
 
 if have_pycuda():
     from pycuda import gpuarray
@@ -18,7 +20,7 @@ INT_TYPE = np.int32
 
 class PoUpdateKernelTest(PyCudaTest):
 
-    def prepare_arrays(self):
+    def prepare_arrays(self, scan_points=None):
         B = 5  # frame size y
         C = 5  # frame size x
 
@@ -31,7 +33,10 @@ class PoUpdateKernelTest(PyCudaTest):
         H = B + npts_greater_than  # object size y
         I = C + npts_greater_than  # object size x
 
-        scan_pts = 2  # one dimensional scan point number
+        if scan_points is None:
+            scan_pts = 2  # one dimensional scan point number
+        else:
+            scan_pts = scan_points
 
         total_number_scan_positions = scan_pts ** 2
         total_number_modes = G * D
@@ -72,11 +77,11 @@ class PoUpdateKernelTest(PyCudaTest):
 
         object_array_denominator = np.empty_like(object_array, dtype=FLOAT_TYPE)
         for idx in range(G):
-            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2)  # + 1j * np.ones((H, I)) * (5 * idx + 2)
+            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2) 
 
         probe_denominator = np.empty_like(probe, dtype=FLOAT_TYPE)
         for idx in range(D):
-            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2)  # + 1j * np.ones((E, F)) * (5 * idx + 2)
+            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2) 
 
         return (gpuarray.to_gpu(addr), 
             gpuarray.to_gpu(object_array), 
@@ -87,17 +92,12 @@ class PoUpdateKernelTest(PyCudaTest):
 
 
     def test_init(self):
-
         POUK = PoUpdateKernel()
-
-        np.testing.assert_equal(POUK.kernels,
-                                ['pr_update', 'ob_update'],
+        np.testing.assert_equal(POUK.kernels, ['pr_update', 'ob_update'],
                                 err_msg='PoUpdateKernel does not have the correct functions registered.')
 
     def ob_update_REGRESSION_tester(self, atomics=True):
-        '''
-        setup
-        '''
+        
         B = 5  # frame size y
         C = 5  # frame size x
 
@@ -149,14 +149,13 @@ class PoUpdateKernelTest(PyCudaTest):
                     mode_idx += 1
                     exit_idx += 1
             position_idx += 1
-        
 
         '''
         test
         '''
-        object_array_denominator = np.empty_like(object_array)
+        object_array_denominator = np.empty_like(object_array, dtype=FLOAT_TYPE)
         for idx in range(G):
-            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2) + 1j * np.ones((H, I)) * (5 * idx + 2)
+            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2)
 
 
         POUK = PoUpdateKernel()
@@ -204,22 +203,22 @@ class PoUpdateKernelTest(PyCudaTest):
         np.testing.assert_array_equal(object_array, expected_object_array,
                                       err_msg="The object array has not been updated as expected")
 
-        expected_object_array_denominator = np.array([[[12.+2.j, 22.+2.j, 22.+2.j, 22.+2.j, 22.+2.j, 12.+2.j,  2.+2.j],
-                                                       [22.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 22.+2.j,  2.+2.j],
-                                                       [22.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 22.+2.j,  2.+2.j],
-                                                       [22.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 22.+2.j,  2.+2.j],
-                                                       [22.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 42.+2.j, 22.+2.j,  2.+2.j],
-                                                       [12.+2.j, 22.+2.j, 22.+2.j, 22.+2.j, 22.+2.j, 12.+2.j,  2.+2.j],
-                                                       [ 2.+2.j,  2.+2.j,  2.+2.j,  2.+2.j,  2.+2.j,  2.+2.j,  2.+2.j]],
+        expected_object_array_denominator = np.array([[[12., 22., 22., 22., 22., 12.,  2.],
+                                                       [22., 42., 42., 42., 42., 22.,  2.],
+                                                       [22., 42., 42., 42., 42., 22.,  2.],
+                                                       [22., 42., 42., 42., 42., 22.,  2.],
+                                                       [22., 42., 42., 42., 42., 22.,  2.],
+                                                       [12., 22., 22., 22., 22., 12.,  2.],
+                                                       [ 2.,  2.,  2.,  2.,  2.,  2.,  2.]],
 
-                                                      [[17.+7.j, 27.+7.j, 27.+7.j, 27.+7.j, 27.+7.j, 17.+7.j,  7.+7.j],
-                                                       [27.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 27.+7.j,  7.+7.j],
-                                                       [27.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 27.+7.j,  7.+7.j],
-                                                       [27.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 27.+7.j,  7.+7.j],
-                                                       [27.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 47.+7.j, 27.+7.j,  7.+7.j],
-                                                       [17.+7.j, 27.+7.j, 27.+7.j, 27.+7.j, 27.+7.j, 17.+7.j,  7.+7.j],
-                                                       [ 7.+7.j,  7.+7.j,  7.+7.j,  7.+7.j,  7.+7.j,  7.+7.j,  7.+7.j]]],
-                                                     dtype=COMPLEX_TYPE)
+                                                      [[17., 27., 27., 27., 27., 17.,  7.],
+                                                       [27., 47., 47., 47., 47., 27.,  7.],
+                                                       [27., 47., 47., 47., 47., 27.,  7.],
+                                                       [27., 47., 47., 47., 47., 27.,  7.],
+                                                       [27., 47., 47., 47., 47., 27.,  7.],
+                                                       [17., 27., 27., 27., 27., 17.,  7.],
+                                                       [ 7.,  7.,  7.,  7.,  7.,  7.,  7.]]],
+                                                     dtype=FLOAT_TYPE)
 
 
         np.testing.assert_array_equal(object_array_denominator_dev.get(), expected_object_array_denominator,
@@ -291,9 +290,9 @@ class PoUpdateKernelTest(PyCudaTest):
         '''
         test
         '''
-        object_array_denominator = np.empty_like(object_array)
+        object_array_denominator = np.empty_like(object_array, dtype=FLOAT_TYPE)
         for idx in range(G):
-            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2) + 1j * np.ones((H, I)) * (5 * idx + 2)
+            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2) 
 
 
         POUK = PoUpdateKernel()
@@ -394,9 +393,9 @@ class PoUpdateKernelTest(PyCudaTest):
         '''
         test
         '''
-        probe_denominator = np.empty_like(probe)
+        probe_denominator = np.empty_like(probe, dtype=FLOAT_TYPE)
         for idx in range(D):
-            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2) + 1j * np.ones((E, F)) * (5 * idx + 2)
+            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2) 
 
         POUK = PoUpdateKernel()
 
@@ -438,18 +437,18 @@ class PoUpdateKernelTest(PyCudaTest):
         np.testing.assert_array_equal(probe_dev.get(), expected_probe,
                                       err_msg="The probe has not been updated as expected")
 
-        expected_probe_denominator = np.array([[[138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j],
-                                                [138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j],
-                                                [138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j],
-                                                [138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j],
-                                                [138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j, 138.+2.j]],
+        expected_probe_denominator = np.array([[[138., 138., 138., 138., 138.],
+                                                [138., 138., 138., 138., 138.],
+                                                [138., 138., 138., 138., 138.],
+                                                [138., 138., 138., 138., 138.],
+                                                [138., 138., 138., 138., 138.]],
 
-                                               [[143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j],
-                                                [143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j],
-                                                [143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j],
-                                                [143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j],
-                                                [143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j, 143.+7.j]]],
-                                              dtype=COMPLEX_TYPE)
+                                               [[143., 143., 143., 143., 143.],
+                                                [143., 143., 143., 143., 143.],
+                                                [143., 143., 143., 143., 143.],
+                                                [143., 143., 143., 143., 143.],
+                                                [143., 143., 143., 143., 143.]]],
+                                              dtype=FLOAT_TYPE)
 
         np.testing.assert_array_equal(probe_denominator_dev.get(), expected_probe_denominator,
                                       err_msg="The probe denominatorhas not been updated as expected")
@@ -519,9 +518,9 @@ class PoUpdateKernelTest(PyCudaTest):
         '''
         test
         '''
-        probe_denominator = np.empty_like(probe)
+        probe_denominator = np.empty_like(probe, dtype=FLOAT_TYPE)
         for idx in range(D):
-            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2) + 1j * np.ones((E, F)) * (5 * idx + 2)
+            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2)
 
         POUK = PoUpdateKernel()
         from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
@@ -649,6 +648,158 @@ class PoUpdateKernelTest(PyCudaTest):
 
     def test_ob_update_ML_tiled_REGRESSION(self):
         self.ob_update_ML_tester(False)
+
+    def test_ob_update_local_UNITY(self):
+        '''
+        setup
+        '''
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  #  object size y
+        I = C + npts_greater_than  #  object size x
+
+        scan_pts = 1  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+        auxiliary_wave = exit_wave.copy() * 2
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):#
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        '''
+        test
+        '''
+        from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
+        nPOUK = npPoUpdateKernel()
+        POUK = PoUpdateKernel(queue_thread=self.stream)
+
+        object_array_dev = gpuarray.to_gpu(object_array)
+        probe_dev = gpuarray.to_gpu(probe)
+        exit_wave_dev = gpuarray.to_gpu(exit_wave)
+        auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
+        addr_dev = gpuarray.to_gpu(addr)
+
+        POUK.ob_update_local(addr_dev, object_array_dev, probe_dev, exit_wave_dev, auxiliary_wave_dev)
+        nPOUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave)
+
+        np.testing.assert_allclose(object_array_dev.get(), object_array, rtol=1e-6, atol=1e-6,
+                                      err_msg="The object array has not been updated as expected")
+
+    def test_pr_update_local_UNITY(self):
+        '''
+        setup
+        '''
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  #  object size y
+        I = C + npts_greater_than  #  object size x
+
+        scan_pts = 1  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+        auxiliary_wave = exit_wave.copy() * 1.5
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):#
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        '''
+        test
+        '''
+        from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
+        nPOUK = npPoUpdateKernel()
+        POUK = PoUpdateKernel()
+
+        object_array_dev = gpuarray.to_gpu(object_array)
+        probe_dev = gpuarray.to_gpu(probe)
+        exit_wave_dev = gpuarray.to_gpu(exit_wave)
+        auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
+        addr_dev = gpuarray.to_gpu(addr)
+
+        POUK.pr_update_local(addr_dev,  probe_dev, object_array_dev,exit_wave_dev, auxiliary_wave_dev)
+        nPOUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave)
+
+        np.testing.assert_allclose(probe_dev.get(), probe, rtol=1e-6, atol=1e-6,
+                                      err_msg="The probe has not been updated as expected")
 
 
 if __name__ == '__main__':

@@ -1,11 +1,18 @@
+/** update_addr_error_state kernel.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double)
+ */
+
 #include <cassert>
 #include <thrust/complex.h>
 using thrust::complex;
 
-extern "C" __global__ void update_addr_error_state(int* addr,
-                                                   const int* mangled_addr,
-                                                   float* error_state,
-                                                   const float* error_sum,
+extern "C" __global__ void update_addr_error_state(int* __restrict addr,
+                                                   const int* __restrict mangled_addr,
+                                                   OUT_TYPE* error_state,
+                                                   const IN_TYPE* __restrict error_sum,
                                                    int nmodes)
 {
   int tx = threadIdx.x;
@@ -23,7 +30,7 @@ extern "C" __global__ void update_addr_error_state(int* addr,
 
   if (err_sum < err_st)
   {
-    for (int i = tx; i < nmodes * 15; i += blockDim.x)
+    for (int i = tx, e = nmodes * 15; i < e; i += blockDim.x)
     {
       addr[i] = mangled_addr[i];
     }
