@@ -58,6 +58,38 @@ class GeometryTest(unittest.TestCase):
         G = self.set_up_nearfield()
         assert (np.round(G.resolution*1e7) == [1.00, 1.00]).all(), "geometry resolution incorrect for the nearfield"
 
+    def test_downsample(self):
+        G = self.set_up_farfield()
+        G.resample = 2
+
+        B = np.indices((4,4), dtype=np.complex64)[0] + 1j * np.indices((4,4), dtype=np.complex64)[1]
+        A = G.downsample(B)
+        exp_A = np.array([[ 2. +2.j,  2.+10.j],
+                          [10. +2.j, 10.+10.j]], dtype=np.complex64)
+        np.testing.assert_almost_equal(A.sum(), B.sum())            
+        np.testing.assert_array_almost_equal(A, exp_A)
+
+    def test_upsample(self):
+        G = self.set_up_farfield()
+        G.resample = 2
+
+        B = np.indices((2,2), dtype=np.complex64)[0] + 1j * np.indices((2,2), dtype=np.complex64)[1]
+        A = G.upsample(B)
+        exp_A = np.array([[0.  +0.j  , 0.  +0.j  , 0.  +0.25j, 0.  +0.25j],
+                          [0.  +0.j  , 0.  +0.j  , 0.  +0.25j, 0.  +0.25j],
+                          [0.25+0.j  , 0.25+0.j  , 0.25+0.25j, 0.25+0.25j],
+                          [0.25+0.j  , 0.25+0.j  , 0.25+0.25j, 0.25+0.25j]], dtype=np.complex64)
+        np.testing.assert_almost_equal(A.sum(), B.sum())            
+        np.testing.assert_array_almost_equal(A, exp_A)
+
+    def test_downsample_upsample(self):
+        G = self.set_up_farfield()
+        G.resample = 2
+
+        A = np.random.random((4,4))
+        B = G.downsample(G.upsample(A))
+        np.testing.assert_almost_equal(A.sum(), B.sum())            
+        np.testing.assert_array_almost_equal(A, B)
 
 if __name__ == '__main__':
     unittest.main()
