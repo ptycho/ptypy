@@ -283,7 +283,7 @@ class GradientDescentKernel(BaseKernel):
         aux = b_aux
 
         ## Actual math ## (subset of FUK.fourier_error)
-        tf = aux.reshape(sh[0], self.nmodes, sh[1], sh[2])
+        tf = aux.reshape(sh[0]//self.nmodes, self.nmodes, sh[1], sh[2])
         if aux_is_intensity:
             Imodel[:] = tf.sum(1)
         else:
