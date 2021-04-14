@@ -92,6 +92,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
+        # Extra object buffer for smoothing kernel
+        if self.p.obj_smooth_std is not None:
+            for name, s in self.ob_buf.S.items():
+                s.tmp = gpuarray.empty(s.gpu.shape, s.gpu.dtype)
+
         # TODO : like the serialization this one is needed due to object reformatting
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
@@ -165,10 +170,13 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         if self.p.obj_smooth_std is not None:
                             log(4, 'Smoothing object, cfact is %.2f' % cfact)
                             smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
-                            self.GSK.convolution(ob.gpu, smooth_mfs, tmp=obb.gpu)
-                        # obb.gpu[:] = ob.gpu * cfactf32
-                        ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=self.queue)
-
+                            # We need a third copy, because we still need ob.gpu for the fourier update
+                            obb.tmp[:] = ob.gpu[:]
+                            self.GSK.convolution(obb.tmp, smooth_mfs, tmp=obb.gpu)
+                            obb.tmp._axpbz(np.complex64(cfact), 0, obb.gpu, stream=self.queue)
+                        else:
+                            # obb.gpu[:] = ob.gpu * cfactf32
+                            self.ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=self.queue)
                         obn.gpu.fill(np.float32(cfact), stream=self.queue)
 
                 # First cycle: Fourier + object update
