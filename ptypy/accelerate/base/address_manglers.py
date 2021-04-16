@@ -75,7 +75,6 @@ class GridSearchMangler(BaseMangler):
         delta = np.mgrid[-max_step:max_step+1:1,
                          -max_step:max_step+1:1]
         within_bound = (delta[0]**2 + delta[1]**2) < (self.max_bound**2)
-        print(max_step, self.max_bound, within_bound.sum())
         self.delta = np.tile(delta[:,within_bound].T.reshape(within_bound.sum(),1,2), (1,nframes,1))
         self.nshifts = self.delta.shape[0]
 
