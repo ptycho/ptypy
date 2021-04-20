@@ -167,13 +167,13 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                             log(4, 'Smoothing object, cfact is %.2f' % cfact)
                             smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
                             # We need a third copy, because we still need ob.gpu for the fourier update
-                            obb.tmp[:] = ob.gpu[:]
-                            self.GSK.convolution(obb.tmp, smooth_mfs, tmp=obb.gpu)
-                            obb.tmp._axpbz(np.complex64(cfact), 0, obb.gpu, stream=self.queue)
+                            obb.gpu[:] = ob.gpu[:]
+                            self.GSK.convolution(obb.gpu, smooth_mfs, tmp=obb.tmp)
+                            obb.gpu *= np.complex64(cfact)
                         else:
-                            # obb.gpu[:] = ob.gpu * cfactf32
-                            self.ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=self.queue)
-                        obn.gpu.fill(np.float32(cfact), stream=self.queue)
+                            # obb.gpu[:] = ob.gpu * np.complex64(cfact)
+                            self.ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu)
+                        obn.gpu.fill(np.float32(cfact))
 
                 # First cycle: Fourier + object update
                 for iblock, dID in enumerate(self.dID_list):

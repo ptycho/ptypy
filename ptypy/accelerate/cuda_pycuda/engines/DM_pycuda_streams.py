@@ -271,9 +271,15 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                             log(4,'Smoothing object, cfact is %.2f' % cfact)
                             smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
                             # We need a third copy, because we still need ob.gpu for the fourier update
-                            obb.tmp[:] = ob.gpu[:]
-                            self.GSK.convolution(obb.tmp, smooth_mfs, tmp=obb.gpu)
-                            obb.tmp._axpbz(np.complex64(cfact), 0, obb.gpu, stream=streamdata.queue)
+                            # obb.gpu[:] = ob.gpu[:]
+                            cuda.memcpy_dtod_async(dest=obb.gpu.ptr,
+                                                   src=ob.gpu.ptr,
+                                                   size=ob.gpu.nbytes,
+                                                   stream=streamdata.queue)
+                            streamdata.queue.synchronize()
+                            self.GSK.queue = streamdata.queue
+                            self.GSK.convolution(obb.gpu, smooth_mfs, tmp=obb.tmp)
+                            obb.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=streamdata.queue)
                         else:
                             ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=streamdata.queue)
                         obn.gpu.fill(np.float32(cfact), stream=streamdata.queue)
