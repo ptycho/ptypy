@@ -172,7 +172,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                             obb.gpu *= np.complex64(cfact)
                         else:
                             # obb.gpu[:] = ob.gpu * np.complex64(cfact)
-                            self.ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu)
+                            ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu)
                         obn.gpu.fill(np.float32(cfact))
 
                 # First cycle: Fourier + object update
