@@ -100,6 +100,9 @@ class DM_pycuda(DM_serial.DM_serial):
             # TODO: make this part of the engine rather than scan
             fpc = self.ptycho.frames_per_block
 
+            # When using MPI, the nr. of frames per block is smaller
+            fpc = fpc // parallel.size
+
             # TODO : make this more foolproof
             try:
                 nmodes = scan.p.coherence.num_probe_modes * \
@@ -259,7 +262,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 ob = self.ob.S[oID].gpu
                 pr = self.pr.S[pID].gpu
                 ex = self.ex.S[eID].gpu
-
+                
                 ## compute log-likelihood
                 if self.p.compute_log_likelihood:
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
