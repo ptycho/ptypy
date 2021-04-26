@@ -183,6 +183,9 @@ class ML_pycuda(ML_serial):
             # TODO: make this part of the engine rather than scan
             fpc = self.ptycho.frames_per_block
 
+            # When using MPI, the nr. of frames per block is smaller
+            fpc = fpc // parallel.size
+
             # TODO : make this more foolproof
             try:
                 nmodes = scan.p.coherence.num_probe_modes * \
