@@ -158,6 +158,9 @@ def get_multi_gpu_communicator(use_nccl=True, use_cuda_mpi=True):
             return comm
         except RuntimeError:
             pass
+        except AttributeError:
+            # see issue #323
+            pass
     if have_cuda_mpi and use_cuda_mpi:
         try:
             comm = MultiGpuCommunicatorCudaMpi()
