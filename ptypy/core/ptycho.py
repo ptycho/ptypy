@@ -919,10 +919,12 @@ class Ptycho(Base):
                 minimal.obj = {ID: S._to_dict()
                                for ID, S in self.obj.storages.items()}
 
+                for ID, S in self.obj.storages.items():
+                    minimal.obj[ID]['grids'] = S.grids()
+
                 if self.record_positions:
                     minimal.positions = {}
                     for ID, S in self.obj.storages.items():
-                        minimal.obj[ID]['grids'] = S.grids()
                         minimal.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
 
                 try:
