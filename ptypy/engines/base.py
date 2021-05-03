@@ -446,6 +446,8 @@ class PositionCorrectionEngine(BaseEngine):
         """
         if self.do_position_refinement is False:
             return
+        if self.p.position_refinement.record is False:
+            return
 
         # Gather all new positions from each node
         coords = {}
@@ -460,6 +462,8 @@ class PositionCorrectionEngine(BaseEngine):
                 for v in S.views:
                     if v.pod.pr_view.layer == 0:
                         v.coord = coords[v.ID]
+
+        self.ptycho.record_positions = True
 
 
 class Base3dBraggEngine(BaseEngine):
