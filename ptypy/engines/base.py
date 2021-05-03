@@ -63,6 +63,11 @@ class BaseEngine(object):
     help = Valid probe area in frequency domain as fraction of the probe frame
     doc = Defines a circular area centered on the probe frame (in frequency domain), in which the probe is allowed to be nonzero.
 
+    [record_local_error]
+    default = False
+    type = bool
+    help = If True, save the local map of errors into the runtime dictionary.
+
     """
 
     # Define with which models this engine can work.
@@ -262,7 +267,8 @@ class BaseEngine(object):
         )
 
         self.ptycho.runtime.iter_info.append(info)
-        self.ptycho.runtime.error_local = local_error
+        if self.p.record_local_error:
+            self.ptycho.runtime.error_local = local_error
 
     def finalize(self):
         """
