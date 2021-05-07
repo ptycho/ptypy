@@ -735,6 +735,10 @@ class _Vanilla(object):
             pod.probe_weight = 1.0
             pod.object_weight = 1.0
 
+            if self.p.coherence.last_probe_mode_empty:
+                if pm == self.p.coherence.num_probe_modes - 1:
+                    pod.is_empty = True
+
             new_pods.append(pod)
 
         return new_pods, new_probe_ids, new_object_ids
@@ -895,6 +899,14 @@ class _Full(object):
     type = str
     userlevel = 2
 
+    [coherence.last_probe_mode_empty]
+    default = False
+    help = Option to declare the last probe mode empty
+    doc = If True, the last probe mode will not interact with the object when the exit wave is formed. 
+          This can help to deal with a background due to parasitic scattering.
+    type = bool
+    userlevel = 2
+
     [resolution]
     default = None
     help = Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
@@ -1014,10 +1026,16 @@ class _Full(object):
                                   views=views,
                                   geometry=geometry)  # , meta=meta)
 
+                        # Option to declare the last probe mode an empty mode (no interaction with object)
+                        if self.p.coherence.last_probe_mode_empty:
+                            if pm == self.p.coherence.num_probe_modes - 1:
+                                pod.is_empty = True
+
                         new_pods.append(pod)
 
                         pod.probe_weight = 1.0
                         pod.object_weight = 1.0
+
 
         return new_pods, new_probe_ids, new_object_ids
 
