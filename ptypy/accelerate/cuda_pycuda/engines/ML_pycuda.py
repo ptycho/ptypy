@@ -20,10 +20,10 @@ from collections import deque
 from ptypy.engines import register
 from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
 from ptypy import utils as u
-from ptypy.utils.verbose import logger
+from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from .. import get_context
-from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PropagationKernel
+from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PropagationKernel, PositionCorrectionKernel
 from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel
 
 from ptypy.accelerate.base import address_manglers
@@ -223,6 +223,11 @@ class ML_pycuda(ML_serial):
 
             kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue, fft=self.p.fft_lib)
             kern.PROP.allocate()
+            kern.resolution = geo.resolution[0]
+
+            if self.do_position_refinement:
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
+                kern.PCK.allocate()
 
     def _initialize_model(self):
 
@@ -336,6 +341,10 @@ class ML_pycuda(ML_serial):
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
 
             prep.addr_gpu = gpuarray.to_gpu(prep.addr)
+            if self.do_position_refinement:
+                prep.original_addr_gpu = gpuarray.to_gpu(prep.original_addr)
+                prep.error_state_gpu = gpuarray.empty_like(prep.err_phot_gpu)
+                prep.mangled_addr_gpu = prep.addr_gpu.copy()
 
             # Todo: Which address to pick?
             if use_tiles:
@@ -343,6 +352,79 @@ class ML_pycuda(ML_serial):
 
             prep.I = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
             prep.I[:] = d.data
+
+            # Todo: avoid that extra copy of data
+            if self.do_position_refinement:
+                prep.mag = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
+                prep.mag = np.sqrt(np.abs(d.data))
+                prep.ma  = cuda.pagelocked_empty(self.ma.S[d.ID].shape, self.ma.S[d.ID].dtype, order="C", mem_flags=4)
+                prep.ma  = self.ma.S[d.ID].data
+
+
+    def position_update(self):
+        """ 
+        Position refinement
+        """
+        if not self.do_position_refinement or (not self.curiter):
+            return
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+
+        # Update positions
+        if do_update_pos:
+            """
+            Iterates through all positions and refines them by a given algorithm.
+            """
+            log(4, "----------- START POS REF -------------")
+            for dID in self.di.S.keys():
+
+                prep = self.diff_info[dID]
+                pID, oID, eID = prep.poe_IDs
+                ma = self.ma.S[dID].gpu
+                ob = self.ob.S[oID].gpu
+                pr = self.pr.S[pID].gpu
+                kern = self.kernels[prep.label]
+                aux = kern.aux
+                addr = prep.addr_gpu
+                original_addr = prep.original_addr
+                mangled_addr = prep.mangled_addr_gpu
+                mag = prep.mag
+                err_phot = prep.err_phot_gpu
+                error_state = prep.error_state_gpu
+
+                PCK = kern.PCK
+                TK  = kern.TK
+                PROP = kern.PROP
+
+                # Keep track of object boundaries
+                max_oby = ob.shape[-2] - aux.shape[-2] - 1
+                max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
+                # We need to re-calculate the current error 
+                PCK.build_aux(aux, addr, ob, pr)
+                PROP.fw(aux, aux)
+                PCK.log_likelihood(aux, addr, mag, ma, err_phot)
+                cuda.memcpy_dtod(dest=error_state.ptr,
+                                    src=err_phot.ptr,
+                                    size=err_phot.nbytes)
+
+                PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+                                
+                log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+                for i in range(PCK.mangler.nshifts):
+                    PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
+                    PCK.build_aux(aux, mangled_addr, ob, pr)
+                    PROP.fw(aux, aux)
+                    PCK.log_likelihood(aux, mangled_addr, mag, ma, err_phot)
+                    PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_phot)
+                
+                cuda.memcpy_dtod(dest=err_phot.ptr,
+                                 src=error_state.ptr,
+                                 size=err_phot.nbytes)
+                if use_tiles:
+                    s1 = addr.shape[0] * addr.shape[1]
+                    s2 = addr.shape[2] * addr.shape[3]
+                    TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
     def engine_finalize(self):
         """

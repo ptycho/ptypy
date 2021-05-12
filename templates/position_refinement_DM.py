@@ -10,7 +10,7 @@ from ptypy import utils as u
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 4
+p.verbose_level = 3
 
 # set home path
 p.io = u.Param()
@@ -43,6 +43,7 @@ p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
 p.engines.engine00.probe_support = 1
 p.engines.engine00.numiter = 1000
+p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.position_refinement = u.Param()
 p.engines.engine00.position_refinement.start = 50
 p.engines.engine00.position_refinement.stop = 950
