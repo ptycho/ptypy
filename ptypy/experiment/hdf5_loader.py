@@ -445,6 +445,8 @@ class Hdf5Loader(PtyScan):
 
         if None not in [self.p.mask.file, self.p.mask.key]:
             self.mask = h5.File(self.p.mask.file, 'r')[self.p.mask.key]
+            if self._is_spectro_scan and self.p.outer_index is not None:
+                self.mask = self.mask[self.p.outer_index]
             log(3, "The mask has shape: {}".format(self.mask.shape))
             if self.mask.shape == data_shape:
                 log(3, "The mask is laid out like the data.")
