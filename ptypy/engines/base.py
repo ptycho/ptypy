@@ -67,6 +67,7 @@ class BaseEngine(object):
     default = False
     type = bool
     help = If True, save the local map of errors into the runtime dictionary.
+    userlevel = 2
 
     """
 
