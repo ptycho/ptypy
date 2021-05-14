@@ -27,7 +27,8 @@ master = (rank == 0)
 
 __all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
            'LoadManager', 'loadmanager','allreduce','send','receive','bcast',
-           'bcast_dict', 'gather_dict', 'gather_list', 'MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
+           'bcast_dict', 'bcast_dict_with_keys', 'gather_dict', 'gather_list', 
+           'MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
 
 
 def useMPI(do=None):
@@ -453,11 +454,30 @@ def bcast(data, source=0):
 
         return thing
 
-def bcast_dict(dct, keys='all', source=0):
+def bcast_dict(dct, source=0):
     """
     Broadcasts or scatters a dict `dct` from ``rank==source``.
-    If value is a numpy ndarray, `comm.Bcast` is used instead `comm.bcast`,
-    such that transfer is accelerated.
+
+    Parameters
+    ----------
+    source : int
+        Rank of node / process which broadcasts / scatters.
+
+    Returns
+    -------
+    dct : dict
+        A smaller dictionary with values to `keys` if that key
+        was in source dictionary.
+    """
+    if not MPIenabled:
+        out = dict(dct)
+        return out
+    dct = comm.bcast(dct)
+    return dct
+
+def bcast_dict_with_keys(dct, keys='all', source=0):
+    """
+    Broadcasts or scatters a dict `dct` from ``rank==source``.
 
     Fills dict `dct` in place for receiving nodes, although this is a
     bit inconsistent compared to :any:`gather_dict`
@@ -525,7 +545,7 @@ def allgather_dict(dct):
     Allgather dict in place.
     """
     gdict = gather_dict(dct)
-    bcast_dict(gdict)
+    gdict = bcast_dict(gdict)
     dct.update(gdict)
 
 def gather_dict(dct, target=0):
@@ -754,7 +774,7 @@ if MPI is not None:
         else:
             hosts_ranks[v].append(k)
             
-    bcast_dict(hosts_ranks)
+    hosts_ranks = bcast_dict(hosts_ranks)
     rank_local = hosts_ranks[host].index(rank)
     del rank_host
 else:

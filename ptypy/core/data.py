@@ -979,12 +979,12 @@ class PtyScan(object):
                 pos = {}
                 weights = {}
             # Distribute raw data across nodes according to indices
-            raw = parallel.bcast_dict(raw, indices.node)
-            weights = parallel.bcast_dict(weights, indices.node)
+            raw = parallel.bcast_dict_with_keys(raw, indices.node)
+            weights = parallel.bcast_dict_with_keys(weights, indices.node)
 
         # (re)distribute position information - every node should now be
         # aware of all positions
-        parallel.bcast_dict(pos)
+        pos = parallel.bcast_dict(pos)
 
         # Prepare data across nodes
         data, weights = self.correct(raw, weights, self.common)
@@ -1419,7 +1419,7 @@ class PtydScan(PtyScan):
         parallel.barrier()
         self._ch_frame_ind = parallel.bcast(self._ch_frame_ind)
         parallel.barrier()
-        parallel.bcast_dict(self._checked)
+        self._checked = parallel.bcast_dict(self._checked)
 
         # Get the coordinates in the chunks
         coords = self._ch_frame_ind[indices]
