@@ -564,6 +564,32 @@ def gather_dict(dct, target=0):
             out.update(d)
     return out
 
+    # for r in range(size):
+    #     if r == target:
+    #         if rank == target:
+    #             #print rank,dct
+    #             out.update(dct)
+    #         continue
+
+    #     if rank == target:
+    #         l = comm.recv(source=r,tag=9999)
+    #         for i in range(l):
+    #             #k = receive(r)
+    #             k = comm.recv(source=r,tag=9999)
+    #             v = receive(r)
+    #             #print rank,str(k),v
+    #             out[k] = v
+    #     elif r == rank:
+    #         # your turn to send
+    #         l = len(dct)
+    #         comm.send(l, dest=target,tag=9999)
+    #         for k,v in dct.items():
+    #             #print rank,str(k),v
+    #             #send(k, dest=target)
+    #             comm.send(k, dest=target,tag=9999)
+    #             send(v, dest=target)
+    #     barrier()
+    # return out
 
 def _send(data, dest=0, tag=0):
     """
