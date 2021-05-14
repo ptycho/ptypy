@@ -60,6 +60,7 @@ p.engines.engine00.position_refinement.amplitude = 5e-7
 p.engines.engine00.position_refinement.max_shift = 1e-6
 p.engines.engine00.position_refinement.method = "GridSearch"
 p.engines.engine00.position_refinement.metric = "photon"
+p.engines.engine00.position_refinement.record = True
 
 # prepare and run
 P = Ptycho(p, level=4)
@@ -82,8 +83,8 @@ for pname, pod in P.pods.items():
     #pod.diff *= np.random.uniform(0.1,1)
     a += 4.
 
-np.savetxt("positions_theory.txt", coords)
-np.savetxt("positions_start.txt", coords_start)
+#np.savetxt("positions_theory.txt", coords)
+#np.savetxt("positions_start.txt", coords_start)
 P.obj.reformat()
 
 # Run

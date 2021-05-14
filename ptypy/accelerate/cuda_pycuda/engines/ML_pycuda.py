@@ -24,7 +24,7 @@ from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from .. import get_context
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PropagationKernel, PositionCorrectionKernel
-from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel
+from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
 
 from ptypy.accelerate.base import address_manglers
 
@@ -221,6 +221,8 @@ class ML_pycuda(ML_serial):
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
 
+            kern.TK = TransposeKernel(queue=self.queue)
+
             kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue, fft=self.p.fft_lib)
             kern.PROP.allocate()
             kern.resolution = geo.resolution[0]
@@ -355,11 +357,11 @@ class ML_pycuda(ML_serial):
 
             # Todo: avoid that extra copy of data
             if self.do_position_refinement:
-                prep.mag = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
-                prep.mag = np.sqrt(np.abs(d.data))
-                prep.ma  = cuda.pagelocked_empty(self.ma.S[d.ID].shape, self.ma.S[d.ID].dtype, order="C", mem_flags=4)
-                prep.ma  = self.ma.S[d.ID].data
-
+                mag = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
+                mag[:] = np.sqrt(np.abs(d.data))
+                prep.mag = gpuarray.to_gpu(mag)
+                s = self.ma.S[d.ID]
+                s.gpu = gpuarray.to_gpu(s.data.astype(np.float32))
 
     def position_update(self):
         """ 
@@ -369,6 +371,7 @@ class ML_pycuda(ML_serial):
             return
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         # Update positions
         if do_update_pos:
@@ -440,6 +443,8 @@ class ML_pycuda(ML_serial):
             # no longer need those
             del s.gpu
             del s.cpu
+        for dID, prep in self.diff_info.items():
+            prep.addr = prep.addr_gpu.get()
 
         #self.queue.synchronize()
         self.context.detach()
