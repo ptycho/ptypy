@@ -402,6 +402,11 @@ class PositionCorrectionEngine(BaseEngine):
         if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
             self.do_position_refinement = False
         else:
+            for label, scan in self.ptycho.model.scans.items():
+                if self.p.position_refinement.amplitude < scan.geometries[0].resolution[0]:
+                    self.do_position_refinement = False
+                    log(3,"Failed to initialise position refinement, search amplitude is smaller than the resolution")
+                    return
             self.do_position_refinement = True
             log(3, "Initialising position refinement (%s)" %self.p.position_refinement.method)
             
