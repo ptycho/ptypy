@@ -1,3 +1,7 @@
+# PtyPy 0.5 release notes (WIP)
+
+ 1. changes to `bcast_dict` and `gather_dict` (further explanations....)
+
 # PtyPy 0.4 release notes
 
 After quite some work we announce ptypy 0.4. Apart from including all the fixes and improvements from 0.3.0 to 0.3.1, it includes two bigger changes
