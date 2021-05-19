@@ -341,8 +341,7 @@ class EPIE(BaseEngine):
         # and that Ptycho expects. In DM, that dict is overwritten on
         # every iteration, so we only gather the dicts corresponding to
         # the last iteration of each contiguous block.
-        error = parallel.gather_dict(error_dct)
-        return error
+        return error_dct
 
     def engine_finalize(self):
         """

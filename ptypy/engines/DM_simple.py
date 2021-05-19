@@ -136,8 +136,7 @@ class DM_simple(BaseEngine):
 
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
-        error = parallel.gather_dict(error_dct)
-        return error
+        return error_dct
 
     def engine_finalize(self):
         """
