@@ -658,7 +658,7 @@ class Storage(Base):
         new_layermap = sorted(layers)
 
         # Update boundaries
-        if not self.distributed:
+        if not self.distributed and u.parallel.MPIenabled:
             dlow_fov[:]  = u.parallel.comm.allreduce(dlow_fov,  u.parallel.MPI.MIN)
             dhigh_fov[:] = u.parallel.comm.allreduce(dhigh_fov, u.parallel.MPI.MAX)
 
