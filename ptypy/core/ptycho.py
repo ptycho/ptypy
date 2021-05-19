@@ -480,9 +480,9 @@ class Ptycho(Base):
         """
         self.probe = Container(self, ID='Cprobe', data_type='complex')
         self.obj = Container(self, ID='Cobj', data_type='complex')
-        self.exit = Container(self, ID='Cexit', data_type='complex')
-        self.diff = Container(self, ID='Cdiff', data_type='real')
-        self.mask = Container(self, ID='Cmask', data_type='bool')
+        self.exit = Container(self, ID='Cexit', data_type='complex', scaling="distributed")
+        self.diff = Container(self, ID='Cdiff', data_type='real', scaling="distributed")
+        self.mask = Container(self, ID='Cmask', data_type='bool', scaling="distributed")
         # Initialize the model manager. This also initializes the
         # containers.
         self.model = ModelManager(self, self.p.scans)

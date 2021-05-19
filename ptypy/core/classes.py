@@ -453,7 +453,7 @@ class Storage(Base):
         self.model_initialized = False
 
         # MPI flag: is the storage distributed across nodes or are all nodes holding the same copy?
-        self._update_distributed(self.layermap,[0],[0])
+        self.distributed = container.distributed
 
         # Instance attributes
         # self._psize = None
@@ -657,7 +657,10 @@ class Storage(Base):
         # A storage is "distributed" if and only if layer maps are different across nodes.
         new_layermap = sorted(layers)
 
-        self._update_distributed(new_layermap, dlow_fov, dhigh_fov)
+        # Update boundaries
+        if not self.distributed:
+            dlow_fov[:]  = u.parallel.comm.allreduce(dlow_fov,  u.parallel.MPI.MIN)
+            dhigh_fov[:] = u.parallel.comm.allreduce(dhigh_fov, u.parallel.MPI.MAX)
 
         # Return if no views, it is important that this only happens after self.distributed is updated 
         if not views:
@@ -749,21 +752,6 @@ class Storage(Base):
         self.data = new_data
         self.shape = new_shape
         self.center = new_center
-
-    def _update_distributed(self, layermap, mn, mx):
-        self.distributed = False
-        if u.parallel.MPIenabled:
-            all_layers = u.parallel.comm.gather(layermap, root=0)
-            if u.parallel.master:
-                for other_layers in all_layers[1:]:
-                    self.distributed |= (other_layers != layermap)
-            self.distributed = u.parallel.comm.bcast(self.distributed, root=0)
-            # synchronize if not distributed, this ensures the data is of the
-            # same shape across the nodes
-            # We could always consider to synchronize
-            if not self.distributed:
-                mn[:] = u.parallel.comm.allreduce(mn, u.parallel.MPI.MIN)
-                mx[:] = u.parallel.comm.allreduce(mx, u.parallel.MPI.MAX)
                 
     def _to_pix(self, coord):
         """
@@ -1558,7 +1546,7 @@ class Container(Base):
     """
     _PREFIX = CONTAINER_PREFIX
 
-    def __init__(self, owner=None, ID=None, data_type='complex', data_dims=2):
+    def __init__(self, owner=None, ID=None, data_type='complex', data_dims=2, scaling="same"):
         """
         Parameters
         ----------
@@ -1571,6 +1559,12 @@ class Container(Base):
         data_type : str or numpy.dtype
             data type - either a numpy.dtype object or 'complex' or
             'real' (precision is taken from ptycho.FType or ptycho.CType)
+
+        data_dims : int
+            dimension of data, can be 2 or 3
+
+        scaling : str
+            Indicates if the data is the "same" in all MPI processes or "distributed"
 
         """
 
@@ -1586,6 +1580,9 @@ class Container(Base):
         # Prepare for copy
         # self.original = original if original is not None else self
         self.original = self
+
+        # boolean parameter for distributed containers
+        self.distributed = (scaling == "distributed")
 
     @property
     def copies(self):
