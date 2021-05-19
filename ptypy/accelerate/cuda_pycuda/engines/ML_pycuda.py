@@ -14,6 +14,7 @@ This file is part of the PTYPY package.
 import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
+import pycuda.cumath
 from pycuda.tools import DeviceMemoryPool
 from collections import deque
 
@@ -357,11 +358,8 @@ class ML_pycuda(ML_serial):
 
             # Todo: avoid that extra copy of data
             if self.do_position_refinement:
-                mag = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
-                mag[:] = np.sqrt(np.abs(d.data))
-                prep.mag = gpuarray.to_gpu(mag)
-                s = self.ma.S[d.ID]
-                s.gpu = gpuarray.to_gpu(s.data.astype(np.float32))
+                prep.ma = cuda.pagelocked_empty(self.ma.S[d.ID].data.shape, self.ma.S[d.ID].data.dtype, order="C", mem_flags=4)
+                prep.ma = self.ma.S[d.ID].data
 
     def position_update(self):
         """ 
@@ -383,7 +381,6 @@ class ML_pycuda(ML_serial):
 
                 prep = self.diff_info[dID]
                 pID, oID, eID = prep.poe_IDs
-                ma = self.ma.S[dID].gpu
                 ob = self.ob.S[oID].gpu
                 pr = self.pr.S[pID].gpu
                 kern = self.kernels[prep.label]
@@ -391,9 +388,18 @@ class ML_pycuda(ML_serial):
                 addr = prep.addr_gpu
                 original_addr = prep.original_addr
                 mangled_addr = prep.mangled_addr_gpu
-                mag = prep.mag
                 err_phot = prep.err_phot_gpu
                 error_state = prep.error_state_gpu
+
+                # # copy intensities and mask to GPU
+                stream = self.queue_transfer
+                mag  = gpuarray.to_gpu_async(prep.I, allocator=self.allocate, stream=stream)
+                ma = gpuarray.to_gpu_async(prep.ma, allocator=self.allocate, stream=stream)
+                ev = cuda.Event()
+                ev.record(stream)
+
+                # for position refinement, we need the magnitude
+                pycuda.cumath.sqrt(mag)
 
                 PCK = kern.PCK
                 TK  = kern.TK
@@ -406,11 +412,15 @@ class ML_pycuda(ML_serial):
                 # We need to re-calculate the current error 
                 PCK.build_aux(aux, addr, ob, pr)
                 PROP.fw(aux, aux)
+                PCK.queue.wait_for_event(ev)
                 PCK.log_likelihood(aux, addr, mag, ma, err_phot)
+                ev = cuda.Event()
+                ev.record(PCK.queue)
+                PCK.queue.synchronize()
                 cuda.memcpy_dtod(dest=error_state.ptr,
                                     src=err_phot.ptr,
                                     size=err_phot.nbytes)
-
+                
                 PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
                                 
                 log(4, 'Position refinement trial: iteration %s' % (self.curiter))
@@ -428,6 +438,8 @@ class ML_pycuda(ML_serial):
                     s1 = addr.shape[0] * addr.shape[1]
                     s2 = addr.shape[2] * addr.shape[3]
                     TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+
+
 
     def engine_finalize(self):
         """

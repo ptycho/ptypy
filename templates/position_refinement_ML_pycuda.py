@@ -13,7 +13,7 @@ from ptypy.accelerate.cuda_pycuda.engines import ML_pycuda
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 3
+p.verbose_level = 4
 p.frames_per_block = 100
 
 # set home path
@@ -64,6 +64,7 @@ p.engines.engine00.position_refinement.amplitude = 5e-7
 p.engines.engine00.position_refinement.max_shift = 1e-6
 p.engines.engine00.position_refinement.method = "GridSearch"
 p.engines.engine00.position_refinement.record = True
+#p.engines.engine00.use_cuda_device_memory_pool = False
 
 # prepare and run
 P = Ptycho(p, level=4)

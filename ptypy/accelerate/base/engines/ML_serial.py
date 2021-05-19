@@ -130,10 +130,11 @@ class ML_serial(ML):
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
             prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
+            prep.I = d.data
             if self.do_position_refinement:
                 prep.original_addr = np.zeros_like(prep.addr)
                 prep.original_addr[:] = prep.addr
-                prep.mag = np.sqrt(np.abs(d.data))
+                prep.ma = self.ma.S[d.ID].data
 
         self.ML_model.prepare()
 
@@ -285,7 +286,6 @@ class ML_serial(ML):
 
                 prep = self.diff_info[dID]
                 pID, oID, eID = prep.poe_IDs
-                ma = self.ma.S[dID].data
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
                 kern = self.kernels[prep.label]
@@ -293,7 +293,8 @@ class ML_serial(ML):
                 addr = prep.addr
                 original_addr = prep.original_addr
                 mangled_addr = addr.copy()
-                mag = prep.mag
+                ma = prep.ma
+                mag = np.sqrt(prep.I)
                 err_phot = prep.err_phot
 
                 PCK = kern.PCK
@@ -419,7 +420,7 @@ class GaussianModel(BaseModelSerial):
             obg = ob_grad.S[oID].data
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
-            I = self.engine.di.S[dID].data
+            I = prep.I
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
