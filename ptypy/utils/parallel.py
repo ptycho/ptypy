@@ -27,7 +27,7 @@ master = (rank == 0)
 
 __all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
            'LoadManager', 'loadmanager','allreduce','send','receive','bcast',
-           'bcast_dict', 'bcast_dict_with_keys', 'gather_dict', 'gather_list', 
+           'bcast_dict', 'gather_dict', 'gather_list', 
            'MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
 
 
@@ -454,33 +454,9 @@ def bcast(data, source=0):
 
         return thing
 
-def bcast_dict(dct, source=0):
+def bcast_dict(dct, keys='all', source=0):
     """
     Broadcasts or scatters a dict `dct` from ``rank==source``.
-
-    Parameters
-    ----------
-    source : int
-        Rank of node / process which broadcasts / scatters.
-
-    Returns
-    -------
-    dct : dict
-        A smaller dictionary with values to `keys` if that key
-        was in source dictionary.
-    """
-    if not MPIenabled:
-        out = dict(dct)
-        return out
-    dct = comm.bcast(dct)
-    return dct
-
-def bcast_dict_with_keys(dct, keys='all', source=0):
-    """
-    Broadcasts or scatters a dict `dct` from ``rank==source``.
-
-    Fills dict `dct` in place for receiving nodes, although this is a
-    bit inconsistent compared to :any:`gather_dict`
 
     Parameters
     ----------
@@ -517,28 +493,30 @@ def bcast_dict_with_keys(dct, keys='all', source=0):
         out = dict(dct)
         return out
 
-    # communicate the dict length
+    # Broadcast all keys (the full dict)
+    if str(keys) == 'all':
+        out = comm.bcast(dct)
+        return out
+
+    # Broadcast only given keys of dict
     if rank == source:
         out = {}
         length = comm.bcast(len(dct), source)
         for k, v in dct.items():
             comm.bcast(k,source)
             bcast(v,source)
-            if str(keys) == 'all' or k in keys:
+            if k in keys:
                 out[k] = v
-
         return out
     else:
-        if dct is None:
-            dct = {}
+        out = {}
         length = comm.bcast(None, source)
         for k in range(length):
             k = comm.bcast(None,source)
             v = bcast(None,source)
-            if str(keys) == 'all' or k in keys:
-                dct[k] = v
-
-        return dct
+            if k in keys:
+                out[k] = v
+        return out
 
 def allgather_dict(dct):
     """

@@ -979,8 +979,8 @@ class PtyScan(object):
                 pos = {}
                 weights = {}
             # Distribute raw data across nodes according to indices
-            raw = parallel.bcast_dict_with_keys(raw, indices.node)
-            weights = parallel.bcast_dict_with_keys(weights, indices.node)
+            raw = parallel.bcast_dict(raw, indices.node)
+            weights = parallel.bcast_dict(weights, indices.node)
 
         # (re)distribute position information - every node should now be
         # aware of all positions
