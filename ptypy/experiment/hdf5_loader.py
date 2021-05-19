@@ -317,6 +317,12 @@ class Hdf5Loader(PtyScan):
     type = int
     default = None
     help = Index for outer dimension (e.g. tomography, spectro scans), default is None.
+
+    [padding]
+    type = int, tuple, list
+    default = None
+    help = Option to pad the detector frames on all sides
+    doc = A tuple of list with padding given as ( top, bottom, left, right)
    
     """
 
@@ -439,6 +445,8 @@ class Hdf5Loader(PtyScan):
 
         if None not in [self.p.mask.file, self.p.mask.key]:
             self.mask = h5.File(self.p.mask.file, 'r')[self.p.mask.key]
+            if self._is_spectro_scan and self.p.outer_index is not None:
+                self.mask = self.mask[self.p.outer_index]
             log(3, "The mask has shape: {}".format(self.mask.shape))
             if self.mask.shape == data_shape:
                 log(3, "The mask is laid out like the data.")
@@ -486,9 +494,16 @@ class Hdf5Loader(PtyScan):
             self.meta.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
 
+        if self.p.padding is None:
+            self.pad = np.array([0,0,0,0])
+            log(3, "No padding will be applied.")
+        else:
+            self.pad = np.array(self.p.padding, dtype=np.int)
+            assert self.pad.size == 4, "self.p.padding needs to of size 4"
+            log(3, "Padding the detector frames by {}".format(self.p.padding))
 
         # now lets figure out the cropping and centering roughly so we don't load the full data in.
-        frame_shape = np.array(data_shape[-2:])
+        frame_shape = np.array(data_shape[-2:]) + self.pad.reshape(2,2).sum(1)
         center = frame_shape // 2 if self.p.center is None else u.expect2(self.p.center)
         center = np.array([_translate_to_pix(frame_shape[ix], center[ix]) for ix in range(len(frame_shape))])
 
@@ -572,7 +587,7 @@ class Hdf5Loader(PtyScan):
         '''
         Corrects the intensities for darkfield, flatfield and normalisations if they exist.
         There is a lot of logic here, I wonder if there is a better way to get rid of it.
-        Limited a bit by the MPI, adn thinking about extension to large data size.
+        Limited a bit by the MPI, and thinking about extension to large data size.
         '''
         if not hasattr(index, '__iter__'):
             index = (index,)
@@ -608,6 +623,11 @@ class Hdf5Loader(PtyScan):
                 mask = self.mask[self.frame_slices].squeeze()
         else:
             mask = np.ones_like(intensity, dtype=np.int)
+
+        if self.p.padding:
+            intensity = np.pad(intensity, tuple(self.pad.reshape(2,2)), mode='constant')
+            mask = np.pad(mask, tuple(self.pad.reshape(2,2)), mode='constant')
+
         return mask, intensity
 
 

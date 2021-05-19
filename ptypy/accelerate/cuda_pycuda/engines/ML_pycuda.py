@@ -135,6 +135,17 @@ class ML_pycuda(ML_serial):
     type = bool
     help = For GPU, use a device memory pool
 
+    [fft_lib]
+    default = reikna
+    type = str
+    help = Choose the pycuda-compatible FFT module.
+    doc = One of:
+      - ``'reikna'`` : the reikna packaga (fast load, competitive compute for streaming)
+      - ``'cuda'`` : ptypy's cuda wrapper (delayed load, but fastest compute if all data is on GPU)
+      - ``'skcuda'`` : scikit-cuda (fast load, slowest compute due to additional store/load stages)
+    choices = 'reikna','cuda','skcuda'
+    userlevel = 2
+
     """
 
     def __init__(self, ptycho_parent, pars=None):
@@ -210,7 +221,7 @@ class ML_pycuda(ML_serial):
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
 
-            kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue)
+            kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue, fft=self.p.fft_lib)
             kern.PROP.allocate()
 
     def _initialize_model(self):
