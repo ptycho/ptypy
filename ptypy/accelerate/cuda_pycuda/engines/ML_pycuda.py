@@ -398,9 +398,6 @@ class ML_pycuda(ML_serial):
                 ev = cuda.Event()
                 ev.record(stream)
 
-                # for position refinement, we need the magnitude
-                pycuda.cumath.sqrt(mag)
-
                 PCK = kern.PCK
                 TK  = kern.TK
                 PROP = kern.PROP
@@ -413,6 +410,8 @@ class ML_pycuda(ML_serial):
                 PCK.build_aux(aux, addr, ob, pr)
                 PROP.fw(aux, aux)
                 PCK.queue.wait_for_event(ev)
+                # mag & ma now on device
+                pycuda.cumath.sqrt(mag, stream=PCK.queue) # for position refinement, we need the magnitude
                 PCK.log_likelihood(aux, addr, mag, ma, err_phot)
                 ev = cuda.Event()
                 ev.record(PCK.queue)
