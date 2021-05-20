@@ -358,8 +358,9 @@ class ML_pycuda(ML_serial):
 
             # Todo: avoid that extra copy of data
             if self.do_position_refinement:
-                prep.ma = cuda.pagelocked_empty(self.ma.S[d.ID].data.shape, self.ma.S[d.ID].data.dtype, order="C", mem_flags=4)
-                prep.ma = self.ma.S[d.ID].data
+                ma = self.ma.S[d.ID].data.astype(np.float32)
+                prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
+                prep.ma[:] = ma
 
     def position_update(self):
         """ 
@@ -413,9 +414,9 @@ class ML_pycuda(ML_serial):
                 # mag & ma now on device
                 pycuda.cumath.sqrt(mag, stream=PCK.queue) # for position refinement, we need the magnitude
                 PCK.log_likelihood(aux, addr, mag, ma, err_phot)
-                ev = cuda.Event()
-                ev.record(PCK.queue)
-                PCK.queue.synchronize()
+                #ev = cuda.Event()
+                #ev.record(PCK.queue)
+                #PCK.queue.synchronize()
                 cuda.memcpy_dtod(dest=error_state.ptr,
                                     src=err_phot.ptr,
                                     size=err_phot.nbytes)
