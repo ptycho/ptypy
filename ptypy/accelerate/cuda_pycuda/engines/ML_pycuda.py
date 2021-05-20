@@ -412,11 +412,8 @@ class ML_pycuda(ML_serial):
                 PROP.fw(aux, aux)
                 PCK.queue.wait_for_event(ev)
                 # mag & ma now on device
-                pycuda.cumath.sqrt(mag, stream=PCK.queue) # for position refinement, we need the magnitude
+                pycuda.cumath.sqrt(mag, out=mag, stream=PCK.queue) # for position refinement, we need the magnitude
                 PCK.log_likelihood(aux, addr, mag, ma, err_phot)
-                #ev = cuda.Event()
-                #ev.record(PCK.queue)
-                #PCK.queue.synchronize()
                 cuda.memcpy_dtod(dest=error_state.ptr,
                                     src=err_phot.ptr,
                                     size=err_phot.nbytes)
@@ -438,7 +435,6 @@ class ML_pycuda(ML_serial):
                     s1 = addr.shape[0] * addr.shape[1]
                     s2 = addr.shape[2] * addr.shape[3]
                     TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
-
 
 
     def engine_finalize(self):
