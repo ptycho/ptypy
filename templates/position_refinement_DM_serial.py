@@ -10,7 +10,6 @@ from ptypy import utils as u
 
 from ptypy.accelerate.base.engines import DM_serial
 
-
 p = u.Param()
 
 # for verbose output
@@ -18,7 +17,7 @@ p.verbose_level = 3
 p.frames_per_block = 100
 # set home path
 p.io = u.Param()
-p.io.home = "~/dumps/ptypy/"
+p.io.home = "/tmp/ptypy/"
 p.io.autosave = u.Param(active=True, interval=500)
 p.io.autoplot = u.Param(active=False)#True, interval=100)
 p.io.interaction = u.Param(active=False)
@@ -53,7 +52,7 @@ p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM_serial'
 p.engines.engine00.probe_support = 1
-p.engines.engine00.numiter = 100
+p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.position_refinement = u.Param()
 p.engines.engine00.position_refinement.start = 50
@@ -63,6 +62,7 @@ p.engines.engine00.position_refinement.nshifts = 32
 p.engines.engine00.position_refinement.amplitude = 5e-7
 p.engines.engine00.position_refinement.max_shift = 1e-6
 p.engines.engine00.position_refinement.method = "GridSearch"
+p.engines.engine00.position_refinement.record = True
 
 # prepare and run
 P = Ptycho(p, level=4)
@@ -85,8 +85,8 @@ for pname, pod in P.pods.items():
     #pod.diff *= np.random.uniform(0.1,1)y
     a += 4.
 
-np.savetxt("positions_theory.txt", coords)
-np.savetxt("positions_start.txt", coords_start)
+#np.savetxt("positions_theory.txt", coords)
+#np.savetxt("positions_start.txt", coords_start)
 P.obj.reformat()# update the object storage
 
 # Run

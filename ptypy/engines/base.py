@@ -429,7 +429,7 @@ class PositionCorrectionEngine(BaseEngine):
         """
         Position refinement update.
         """
-        if self.do_position_refinement is False:
+        if not self.do_position_refinement:
             return
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
