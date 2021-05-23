@@ -460,7 +460,7 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
     useweight = True
     if weight is None:
         useweight = False
-    elif weight == 'abs':
+    elif isinstance(weight,'abs'):
         weight = np.abs(a)
 
     ph = np.exp(1j*np.angle(a))
