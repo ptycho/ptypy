@@ -706,7 +706,8 @@ class NanomaxContrast(NanomaxStepscanSep2019):
             for ind in indices:
                 raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind]
                 if self.info.I0:
-                    raw[ind] = raw[ind] / self.normdata[ind]
+                    print('*** normalizing frame %u by %f ***' % (ind, self.normdata[ind]))
+                    raw[ind] = np.round(raw[ind] / self.normdata[ind]).astype(raw[ind].dtype)
 
         return raw, positions, weights
 
