@@ -8,9 +8,9 @@ logger = u.verbose.logger
 
 import numpy as np
 try:
-	import hdf5plugin
+    import hdf5plugin
 except ImportError:
-	logger.warning('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
+    logger.warning('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
 import h5py
 import os.path
 
@@ -140,6 +140,7 @@ class NanomaxStepscanNov2018(PtyScan):
         if normdata:
             normdata = np.concatenate(normdata)
             self.normdata = normdata / np.mean(normdata)
+
         x = np.concatenate(x)
         y = np.concatenate(y)      
         positions = -np.vstack((y, x)).T * 1e-6
@@ -398,7 +399,7 @@ class NanomaxFlyscanMay2019(PtyScan):
 @register()
 class NanomaxStepscanSep2019(PtyScan):
     """
-	This class loads data written with the nanomax pirate system
+    This class loads data written with the nanomax pirate system
 
     Defaults:
 
@@ -446,14 +447,20 @@ class NanomaxStepscanSep2019(PtyScan):
     [xMotorAngle]
     default = 0.0
     type = float
-    help = Angle of the motor x axis relative to the lab x axis
+    help = Angle of the motor x axis relative to the lab x axis in degree
     doc =
 
     [yMotorAngle]
     default = 0.0
     type = float
-    help = Angle of the motor y axis relative to the lab y axis
+    help = Angle of the motor y axis relative to the lab y axis in degree
     doc =
+
+    [zDetectorAngle]
+    default = 0.0
+    type = float
+    help = Relative rotation angle between the motor x and y axes and the detector pixel rows and columns in degree
+    doc = If the Detector is mounted rotated around the beam axis relative to the scanning motors, use this angle to rotate the motor position into the detector frame of reference. The rotation angle is in mathematical positive sense from the motors to the detector pixel grid.
 
     [detector]
     default = 'pilatus'
@@ -491,8 +498,7 @@ class NanomaxStepscanSep2019(PtyScan):
         # if the x axis is tilted, take that into account.
         xCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
         yCosFactor = np.cos(self.info.yMotorAngle / 180.0 * np.pi)
-        logger.info(
-            "x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
+        logger.info("x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
 
         try:
             self.info.scanNumber = tuple(self.info.scanNumber)
@@ -520,8 +526,17 @@ class NanomaxStepscanSep2019(PtyScan):
         if normdata:
             normdata = np.concatenate(normdata)
             self.normdata = normdata / np.mean(normdata)
+
+        # make list to arrays
         x = np.concatenate(x)
-        y = np.concatenate(y)      
+        y = np.concatenate(y)   
+
+        # if the detector and motor frame of reference are roated around the beam axis
+        if self.info.zDetectorAngle != 0:
+            chi_rad = self.info.zDetectorAngle / 180.0 * np.pi
+            x, y    = np.cos(chi_rad)*x-np.sin(chi_rad)*y, np.sin(chi_rad)*x+np.cos(chi_rad)*y
+            logger.info("x and y motor positions were roated by %.4f degree to align with the detector pixel grid" % (self.info.zDetectorAngle))
+
         positions = -np.vstack((y, x)).T * 1e-6
         return positions
 
@@ -683,12 +698,6 @@ class NanomaxContrast(NanomaxStepscanSep2019):
     type = str
     help =
 
-    [energy]
-    default = None
-    type = float
-    help = photon energy of the incident beam in keV, if None... read from file
-    doc =
-
     """
 
     def load(self, indices):
@@ -698,11 +707,7 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         fullfilename = os.path.join(self.info.path, filename)
 
         with h5py.File(fullfilename, 'r') as fp:
-            if self.info.energy == None: # only if None is given, the energy is read from the file
-            	self.meta.energy = fp['entry/snapshot/energy'][:] * 1e-3
-            else:
-            	self.meta.energy = 1.*self.info.energy
-			
+            self.meta.energy = fp['entry/snapshot/energy'][:] * 1e-3
             for ind in indices:
                 raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind]
                 if self.info.I0:
