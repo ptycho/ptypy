@@ -551,7 +551,10 @@ class Storage(Base):
         """
         # Update the access information for the views
         # (i.e. pcoord, dlow, dhigh and sp)
-        self.update_views()
+        # do this only for the original container 
+        # to avoid iterating through all the views when creating copies
+        if self.owner.original is self.owner:
+            self.update_views()
 
     def update_views(self, v=None):
         """
