@@ -47,7 +47,8 @@ class PropagationKernel:
 
             self._do_crop_pad = (self._p.crop_pad != 0).any()
             if self._do_crop_pad:
-                self._tmp = np.zeros(aux.shape + self._p.crop_pad, dtype=aux.dtype)
+                aux_shape = tuple(np.array(aux.shape) + np.append([0],self._p.crop_pad))
+                self._tmp = np.zeros(aux_shape, dtype=aux.dtype)
                 self._CPK = CropPadKernel(queue=self._queue)
             else:
                 self._tmp = aux

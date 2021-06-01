@@ -239,8 +239,7 @@ class DM(PositionCorrectionEngine):
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
         logger.info('Time spent in Position update: %.2f' % tp)
-        error = parallel.gather_dict(error_dct)
-        return error
+        return error_dct
 
     def engine_finalize(self):
         """

@@ -166,6 +166,9 @@ class DM_serial(DM.DM):
             # TODO: make this part of the engine rather than scan
             fpc = self.ptycho.frames_per_block
 
+            # When using MPI, the nr. of frames per block is smaller
+            fpc = fpc // parallel.size
+
             # TODO : make this more foolproof
             try:
                 nmodes = scan.p.coherence.num_probe_modes * \
@@ -369,70 +372,78 @@ class DM_serial(DM.DM):
             self.overlap_update(MPI=True)
             parallel.barrier()
 
-            if self.do_position_refinement:
-                do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
-                do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
-
-                # Update positions
-                if do_update_pos:
-                    """
-                    Iterates through all positions and refines them by a given algorithm. 
-                    """
-                    log(4, "----------- START POS REF -------------")
-                    for dID in self.di.S.keys():
-
-                        prep = self.diff_info[dID]
-                        pID, oID, eID = prep.poe_IDs
-                        ma = self.ma.S[dID].data
-                        ob = self.ob.S[oID].data
-                        pr = self.pr.S[pID].data
-                        kern = self.kernels[prep.label]
-                        aux = kern.aux
-                        addr = prep.addr
-                        original_addr = prep.original_addr
-                        mangled_addr = addr.copy()
-                        mag = prep.mag
-                        ma_sum = prep.ma_sum
-                        err_fourier = prep.err_fourier
-
-                        PCK = kern.PCK
-                        FW = kern.FW
-
-                        # Keep track of object boundaries
-                        max_oby = ob.shape[-2] - aux.shape[-2] - 1
-                        max_obx = ob.shape[-1] - aux.shape[-1] - 1
-
-                        # We need to re-calculate the current error 
-                        PCK.build_aux(aux, addr, ob, pr)
-                        aux[:] = FW(aux)
-                        if self.p.position_refinement.metric == "fourier":
-                            PCK.fourier_error(aux, addr, mag, ma, ma_sum)
-                            PCK.error_reduce(addr, err_fourier)
-                        if self.p.position_refinement.metric == "photon":
-                            PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
-                        error_state = np.zeros_like(err_fourier)
-                        error_state[:] = err_fourier
-                        PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
-
-                        log(4, 'Position refinement trial: iteration %s' % (self.curiter))
-                        for i in range(PCK.mangler.nshifts):
-                            PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
-                            PCK.build_aux(aux, mangled_addr, ob, pr)
-                            aux[:] = FW(aux)
-                            if self.p.position_refinement.metric == "fourier":
-                                PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
-                                PCK.error_reduce(mangled_addr, err_fourier)
-                            if self.p.position_refinement.metric == "photon":
-                                PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
-                            PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
-
-                        prep.err_fourier = error_state
-                        prep.addr = addr
+            self.position_update()
 
             self.curiter += 1
 
         self.error = error
         return error
+
+    def position_update(self):
+        """ 
+        Position refinement
+        """
+        if not self.do_position_refinement:
+            return
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+
+        # Update positions
+        if do_update_pos:
+            """
+            Iterates through all positions and refines them by a given algorithm. 
+            """
+            log(4, "----------- START POS REF -------------")
+            for dID in self.di.S.keys():
+
+                prep = self.diff_info[dID]
+                pID, oID, eID = prep.poe_IDs
+                ma = self.ma.S[dID].data
+                ob = self.ob.S[oID].data
+                pr = self.pr.S[pID].data
+                kern = self.kernels[prep.label]
+                aux = kern.aux
+                addr = prep.addr
+                original_addr = prep.original_addr
+                mangled_addr = addr.copy()
+                mag = prep.mag
+                ma_sum = prep.ma_sum
+                err_fourier = prep.err_fourier
+
+                PCK = kern.PCK
+                FW = kern.FW
+
+                # Keep track of object boundaries
+                max_oby = ob.shape[-2] - aux.shape[-2] - 1
+                max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
+                # We need to re-calculate the current error 
+                PCK.build_aux(aux, addr, ob, pr)
+                aux[:] = FW(aux)
+                if self.p.position_refinement.metric == "fourier":
+                    PCK.fourier_error(aux, addr, mag, ma, ma_sum)
+                    PCK.error_reduce(addr, err_fourier)
+                if self.p.position_refinement.metric == "photon":
+                    PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
+                error_state = np.zeros_like(err_fourier)
+                error_state[:] = err_fourier
+                PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+
+                log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+                for i in range(PCK.mangler.nshifts):
+                    PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
+                    PCK.build_aux(aux, mangled_addr, ob, pr)
+                    aux[:] = FW(aux)
+                    if self.p.position_refinement.metric == "fourier":
+                        PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
+                        PCK.error_reduce(mangled_addr, err_fourier)
+                    if self.p.position_refinement.metric == "photon":
+                        PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
+                    PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
+
+                prep.err_fourier = error_state
+                prep.addr = addr
+
 
     def overlap_update(self, MPI=True):
         """
@@ -593,7 +604,7 @@ class DM_serial(DM.DM):
 
         self._reset_benchmarks()
 
-        if self.do_position_refinement:
+        if self.do_position_refinement and self.p.position_refinement.record:
             for label, d in self.di.storages.items():
                 prep = self.diff_info[d.ID]
                 res = self.kernels[prep.label].resolution
@@ -602,5 +613,6 @@ class DM_serial(DM.DM):
                         delta = (prep.addr[i][j][1][1:] - prep.original_addr[i][j][1][1:]) * res
                         pod.ob_view.coord += delta 
                         pod.ob_view.storage.update_views(pod.ob_view)
+            self.ptycho.record_positions = True
 
         super(DM_serial, self).engine_finalize()
