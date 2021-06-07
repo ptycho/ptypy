@@ -12,7 +12,7 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
-from .utils import basic_fourier_update
+from .utils import basic_fourier_update, Cnorm2
 from . import register
 from .base import PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
@@ -98,6 +98,12 @@ class DM(PositionCorrectionEngine):
     lowlim = 0.0
     help = A factor used to calculate the Fourier power bound as 0.25 * fourier_relax_factor**2 * maximum power in diffraction data
     doc = Set this value higher for noisy data.
+
+    [floating_intensities]
+    default = False
+    type = bool
+    help = Adaptive diffraction pattern rescaling
+    doc = If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).
 
     [obj_smooth_std]
     default = None
@@ -272,6 +278,10 @@ class DM(PositionCorrectionEngine):
         DM Fourier constraint update (including DM step).
         """
         error_dct = {}
+
+        # Exit wave power could run out of control
+        if self.p.floating_intensities:
+            exit_power = Cnorm2(self.ex)
         for name, di_view in self.di.views.items():
             if not di_view.active:
                 continue
@@ -280,7 +290,11 @@ class DM(PositionCorrectionEngine):
             error_dct[name] = basic_fourier_update(di_view,
                                                    pbound=pbound,
                                                    alpha=self.p.alpha,
-                                                   LL_error=self.p.compute_log_likelihood)
+                                                   LL_error=self.p.compute_log_likelihood,
+                                                   float_intens=self.p.floating_intensities)
+        if self.p.floating_intensities:
+            self.ex *= np.sqrt(exit_power/Cnorm2(self.ex))
+
         return error_dct
 
     def clip_object(self, ob):
