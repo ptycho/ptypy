@@ -30,7 +30,7 @@ class FFT(object):
 
         # attach scaling
         from reikna.transformations import mul_param
-        sc = mul_param(array, np.float)
+        sc = mul_param(array, np.float32)
         ftreikna.parameter.output.connect(sc, sc.input, out=sc.output, scale=sc.param)
         iscale = np.sqrt(np.prod(array.shape[-2:])) if symmetric else 1.0
         scale = 1.0 / iscale
