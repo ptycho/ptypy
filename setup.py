@@ -62,7 +62,7 @@ if __name__ == '__main__':
     write_version_py('doc/version.py')
     try:
         exec(open('ptypy/version.py').read())
-        vers = version
+        vers = version # noqa: F821
     except:
         vers = VERSION
 
