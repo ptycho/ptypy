@@ -1,4 +1,5 @@
 import pkg_resources
+import numpy as np
 
 flowerfile = pkg_resources.resource_filename(__name__,'flowers.png')
 moonfile = pkg_resources.resource_filename(__name__,'moon.png')

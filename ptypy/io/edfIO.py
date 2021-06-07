@@ -125,7 +125,7 @@ def readData(filenameprefix,imgstart=0,imgnumber = 1,xi = 0, xf = 0, bin_fact = 
     meta = []
     if multiple == 1:
         headerlength=2048
-        if (rowTo < rowFrom and rowTo is not 0):
+        if (rowTo < rowFrom and rowTo != 0):
             raise ValueError('The last row has to be equal or larger than the first row.\n')
         for imgnum in range(imgnumber):
             filename = filenameprefix + '_' + utils.num2str(imgstart,'%04d') + '_' + utils.num2str(imgnum,'%04d') + '.edf'

@@ -530,16 +530,16 @@ class Hdf5Loader(PtyScan):
 
 
         # it's much better to have this logic here than in load!
-        if (self._ismapped and (self._scantype is 'arb')):
+        if (self._ismapped and (self._scantype == 'arb')):
             # easy peasy
             log(3, "This scan looks to be a mapped arbitrary trajectory scan.")
             self.load = self.load_mapped_and_arbitrary_scan
 
-        if (self._ismapped and (self._scantype is 'raster')):
+        if (self._ismapped and (self._scantype == 'raster')):
             log(3, "This scan looks to be a mapped raster scan.")
             self.load = self.loaded_mapped_and_raster_scan
 
-        if (self._scantype is 'raster') and not self._ismapped:
+        if (self._scantype == 'raster') and not self._ismapped:
             log(3, "This scan looks to be an unmapped raster scan.")
             self.load = self.load_unmapped_raster_scan
 

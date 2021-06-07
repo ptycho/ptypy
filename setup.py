@@ -61,7 +61,7 @@ if __name__ == '__main__':
     write_version_py()
     write_version_py('doc/version.py')
     try:
-        execfile('ptypy/version.py')
+        exec(open('ptypy/version.py').read())
         vers = version
     except:
         vers = VERSION

@@ -62,7 +62,7 @@ def pod_to_arrays(P, storage_id, scan_model='Full'):
         mask: The diffraction masks
         meta: The meta data, containing an 'addr' array for the addresses
     '''
-    if scan_model is 'Full':
+    if scan_model == 'Full':
         diffraction_storages_to_iterate = P.di.storages[storage_id]
         mask_storages = P.ma.storages[storage_id]
         view_IDs, poe_IDs, addr, probe_weights, object_weights = _vectorise_array_access(diffraction_storages_to_iterate)

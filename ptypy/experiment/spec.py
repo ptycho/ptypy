@@ -28,7 +28,7 @@ class SpecScan(object):
 class SpecInfo(object):
     def __init__(self, spec_filename):
         self.spec_filename = spec_filename
-        self.spec_file = file(spec_filename,'r')
+        self.spec_file = open(spec_filename,'r')
         self.scans = {}
         self.parse()
         global lastSpecInfo
