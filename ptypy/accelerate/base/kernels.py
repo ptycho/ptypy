@@ -605,7 +605,7 @@ class PositionCorrectionKernel(BaseKernel):
     def setup(self):
         Mangler = self.MANGLERS[self.param.method]
         self.mangler = Mangler(int(self.param.amplitude // self.resolution[0]), self.param.start, self.param.stop,
-                               self.param.nshifts,
+                               self.param.nshifts, decay=self.param.decay,
                                max_bound=int(self.param.max_shift // self.resolution[0]), randomseed=0)
 
     def allocate(self):
