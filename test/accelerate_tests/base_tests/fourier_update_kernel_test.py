@@ -445,11 +445,11 @@ class FourierUpdateKernelTest(unittest.TestCase):
     @unittest.skip('This test needs to be redone')
     def test_log_likelihood(self):
         nmodes = 1
-        PtychoInstance = tu.get_ptycho_instance('log_likelihood_test', nmodes)
+        PtychoInstance = tu.get_ptycho_instance('log_likelihood_test', nmodes) # noqa: F821
         ptypy_error_metric = self.get_ptypy_loglikelihood(PtychoInstance)
         LLerr_expected = np.array([LL for LL in ptypy_error_metric.values()]).astype(np.float32)
 
-        vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000')
+        vectorised_scan = du.pod_to_arrays(PtychoInstance, 'S0000') # noqa: F821
         addr = vectorised_scan['meta']['addr'].reshape((len(ptypy_error_metric)//nmodes, nmodes, 5, 3))
         probe = vectorised_scan['probe']
         obj = vectorised_scan['obj']

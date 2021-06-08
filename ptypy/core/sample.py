@@ -238,7 +238,7 @@ def init_storage(storage, sample_pars=None, energy=None):
     elif type(p.model) is np.ndarray:
         model = p.model
     elif p.model in resources.objects:
-        model = resources.objects[p.model](A.shape) # TODO: what is A??
+        model = resources.objects[p.model](s.shape)
     elif str(p.model) == 'recon':
         # Loading from a reconstruction file
         layer = p.recon.get('layer')
