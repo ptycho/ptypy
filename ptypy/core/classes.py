@@ -1368,7 +1368,7 @@ class View(Base):
         
     @property
     def pods(self):
-        """
+        r"""
         Returns all :any:`POD`\ s still connected to this view as a dict.
         """
         if self._pods is not None:
