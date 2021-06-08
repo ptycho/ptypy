@@ -166,7 +166,7 @@ class SpecInfo(object):
                 scans[scannr] = scan
         self.scans = scans
 
-"""
+r"""
         assert scannr > 0
         assert burst > 0
         assert multexp > 0

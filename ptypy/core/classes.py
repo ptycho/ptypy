@@ -950,7 +950,7 @@ class Storage(Base):
 
     def formatted_report(self, table_format=None, offset=8, align='right',
                          separator=" : ", include_header=True):
-        """
+        r"""
         Returns formatted string and a dict with the respective information
 
         Parameters
@@ -1216,7 +1216,7 @@ class View(Base):
 
         # Prepare a dictionary for PODs (volatile!)
         self._pods = None 
-        """ Potential volatile dictionary for all :any:`POD`\ s that 
+        r""" Potential volatile dictionary for all :any:`POD`\ s that 
             connect to this view. Set by :any:`POD` """
 
         # A single pod lookup (weak reference), set by POD instance.
@@ -1841,7 +1841,7 @@ class Container(Base):
 
     def formatted_report(self, table_format=None, offset=8, align='right',
                          separator=" : ", include_header=True):
-        """
+        r"""
         Returns formatted string and a dict with the respective information
 
         Parameters

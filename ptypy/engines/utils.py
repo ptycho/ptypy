@@ -50,7 +50,7 @@ def dynamic_load(path, baselist, fail_silently = True):
     
             # Find classes
             res = re.findall(
-                '^class (.*)\((.*)\)', open(filename, 'r').read(), re.M)
+                r'^class (.*)\((.*)\)', open(filename, 'r').read(), re.M)
     
             for classname, basename in res:
                 if (basename in baselist) and classname not in baselist:

@@ -290,7 +290,7 @@ def expectN(a, N):
         raise ValueError('N must be 2 or 3')
 
 def complex_overload(func):
-    """\
+    r"""\
     Overloads function specified only for floats in the following manner
 
     .. math::
