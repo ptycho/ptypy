@@ -1,6 +1,8 @@
 # PtyPy 0.5 release notes (WIP)
 
  1. changes to `bcast_dict` and `gather_dict` (further explanations....)
+ 2. accelerate engines need to be imported explicitly
+ 3. ptyscan classes (experiment) need to be imported explicitly
 
 # PtyPy 0.4 release notes
 
