@@ -477,20 +477,20 @@ class Hdf5Loader(PtyScan):
 
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
             if self._is_spectro_scan and self.p.outer_index is not None:
-                self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][self.p.outer_index])
+                self.p.energy = float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][self.p.outer_index])
             else:
-                self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()])
+                self.p.energy = float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()])
             self.p.energy = self.p.energy * self.p.recorded_energy.multiplier + self.p.recorded_energy.offset
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
 
         if None not in [self.p.recorded_distance.file, self.p.recorded_distance.key]:
-            self.p.distance = np.float(h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][()] * self.p.recorded_distance.multiplier)
+            self.p.distance = float(h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][()] * self.p.recorded_distance.multiplier)
             self.meta.distance = self.p.distance
             log(3, "loading distance={} from file".format(self.p.distance))
         
         if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
-            self.p.psize = np.float(h5.File(self.p.recorded_psize.file, 'r')[self.p.recorded_psize.key][()] * self.p.recorded_psize.multiplier)
+            self.p.psize = float(h5.File(self.p.recorded_psize.file, 'r')[self.p.recorded_psize.key][()] * self.p.recorded_psize.multiplier)
             self.meta.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
 
@@ -530,16 +530,16 @@ class Hdf5Loader(PtyScan):
 
 
         # it's much better to have this logic here than in load!
-        if (self._ismapped and (self._scantype is 'arb')):
+        if (self._ismapped and (self._scantype == 'arb')):
             # easy peasy
             log(3, "This scan looks to be a mapped arbitrary trajectory scan.")
             self.load = self.load_mapped_and_arbitrary_scan
 
-        if (self._ismapped and (self._scantype is 'raster')):
+        if (self._ismapped and (self._scantype == 'raster')):
             log(3, "This scan looks to be a mapped raster scan.")
             self.load = self.loaded_mapped_and_raster_scan
 
-        if (self._scantype is 'raster') and not self._ismapped:
+        if (self._scantype == 'raster') and not self._ismapped:
             log(3, "This scan looks to be an unmapped raster scan.")
             self.load = self.load_unmapped_raster_scan
 

@@ -190,7 +190,7 @@ def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],
 
 def png2mpg(listoffiles, framefile='frames.txt', fps=5, bitrate=2000,
             codec='wmv2', Encode=True, RemoveImages=False):
-    """
+    r"""
     Makes a movie (\*.mpg) from a collection of \*.png or \*.jpeg frames.
     *Requires* binary of **mencoder** installed on system
 
@@ -303,7 +303,7 @@ def png2mpg(listoffiles, framefile='frames.txt', fps=5, bitrate=2000,
                     # Trying to find similar images.
                     body, imagetype = os.path.splitext(tail)
                     # Replace possible numbers by a wildcard.
-                    newbody = re.sub('\d+', '*', body)
+                    newbody = re.sub(r'\d+', '*', body)
                     wcard = head + os.sep + newbody + imagetype
                     #print wcard
                     imagfiles = glob.glob(wcard)
