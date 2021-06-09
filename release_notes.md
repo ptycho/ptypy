@@ -7,7 +7,7 @@
 # PtyPy 0.4 release notes
 
 After quite some work we announce ptypy 0.4. Apart from including all the fixes and improvements from 0.3.0 to 0.3.1, it includes two bigger changes
- 1. Ptypy has now been converted to python 3 and will be **python 3 only** in future. The python 2 version will not be actively maintained anymore, we keep a branch for it for a while but we don't expect to put in many fixes and certainly not anny new features. Team work by Julio, Alex, Bjoern and Aaron.
+ 1. Ptypy has now been converted to python 3 and will be **python 3 only** in future. The python 2 version will not be actively maintained anymore, we keep a branch for it for a while but we don't expect to put in many fixes and certainly not any new features. Team work by Julio, Alex, Bjoern and Aaron.
  *Please note: all branches that haven’t been converted to python 3 by the end of 2019 will most likely be removed during 2020.* Please rebase your effort on version 0.4. If you need help rebasing your efforts, please let us know soon.
  2. Position correction is now supported in most engines. It has been implemented by Wilhelm Eschen following the annealing approach introduced by A.M. Maiden et al. (Ultramicroscopy, Volume 120, 2012, Pages 64-72). Bjoern, Benedikt and Aaron helped refine and test it.
 
