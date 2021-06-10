@@ -37,7 +37,7 @@ def exp_positions(positions, drift=0.0,scale= 0.0,noise=0.0):
 
     return pos
 
-def make_sim_datasource(model_inst,drift=0.0,scale= 0.0,noise=0.0):
+""" def make_sim_datasource(model_inst,drift=0.0,scale= 0.0,noise=0.0):
 
     labels=[]
     sources =[]
@@ -71,7 +71,7 @@ def framepositions(pos_pixel,probe_shape,frame_overhead=(10,10)):
     pos_pixel += np.round(w.expect2(frame_overhead) /2)
     positions = [(p[0],p[0]+probe_shape[0],p[1],p[1]+probe_shape[1]) for p in pos_pixel]
 
-    return shape,positions
+    return shape,positions """
 
 
 def augment_to_coordlist(a,Npos):

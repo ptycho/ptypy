@@ -1,3 +1,4 @@
+import numpy as np
 
 def flowers(shape=None):
     from ptypy import utils as u

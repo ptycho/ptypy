@@ -73,7 +73,7 @@ def rawread(filename, doglob=None, roi=None):
     return dat,meta
 
 def _read(filename,dtype):
-    f=file(filename)
+    f=open(filename)
     header = []
     header.append(f.readline())
 

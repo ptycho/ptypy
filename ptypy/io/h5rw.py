@@ -609,7 +609,7 @@ def h5info(filename, path='', output=None, depth=8):
                 stringout += _format(d - 1, (key[0] + indent, ''), dset[k])
         return stringout
 
-    def _format_tuple(key, dset):
+    def _format_tuple(d, key, dset):
         stringout = ' ' * key[0] + ' * %s [tuple]:\n' % key[1]
         if d > 0:
             keys = list(dset.keys())

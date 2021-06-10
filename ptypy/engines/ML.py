@@ -674,7 +674,7 @@ class PoissonModel(BaseModel):
 
         self.LL = LL / self.tot_measpts
 
-        return self.ob_grad, self.pr_grad, error_dct
+        return error_dct
 
     def poly_line_coeffs(self, ob_h, pr_h):
         """

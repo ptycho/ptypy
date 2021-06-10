@@ -1524,7 +1524,7 @@ class MoonFlowerScan(PtyScan):
         geo = geometry.Geo(pars=self.meta)
 
         # Derive scan pattern
-        if p.model is 'raster':
+        if p.model == 'raster':
             pos = u.Param()
             pos.spacing = geo.resolution * geo.shape * p.density
             pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1

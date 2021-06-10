@@ -107,7 +107,7 @@ class MemoryManager:
             stream.wait_for_event(ev)
         if to_cpu:
             cpu_ar = self.on_device_inv[id(gpu_ar)]
-            gpu_ar.get_asynch(stream, host_array)
+            gpu_ar.get_asynch(stream, cpu_ar)
 
         ev_out = cuda.Event()
         ev_out.record(stream)
