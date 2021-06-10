@@ -86,11 +86,11 @@ def from_pars(xypars=None):
         return None
     elif str(xypars) == xypars:
         if xypars in TEMPLATES.keys():
-            return from_pars(TEMPLATES[sam])
+            return from_pars(TEMPLATES[xypars])
         else:
             raise RuntimeError(
                 'Template string `%s` for pattern creation is not understood'
-                % sam)
+                % xypars)
     elif type(xypars) in [np.ndarray, list]:
         return np.array(xypars)
     else:

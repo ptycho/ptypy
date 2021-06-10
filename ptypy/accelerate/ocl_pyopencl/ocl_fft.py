@@ -118,7 +118,7 @@ class FFT_2D_ocl_gpyfft(object):
 
     def _ft(self, inarray, outarray=None, forward=True):
         if not self.plan.inplace and outarray is None:
-            raise ArgumentError('Specify an opencl array to store the results')
+            raise RuntimeError('Specify an opencl array to store the results')
 
         elif self.plan.inplace:
             events = self.plan.enqueue_transform((self.queue,), (inarray.data,),
@@ -137,16 +137,16 @@ class FFT_2D_ocl_gpyfft(object):
 
         return self._ft(inarray, outarray, False)
 
-    def print_plan_info(self):
-        plan = self.plan
-        print('in_array.shape:          ', plan.shape)
-        print('in_array.strides/itemsize', tuple(s // in_array.dtype.itemsize for s in in_array.strides))
-        print('shape transform          ', t_shape)
-        print('t_strides                ', t_strides_in)
-        print('distance_in              ', t_distance_in)
-        print('batchsize                ', t_batchsize_in)
-        print('t_stride_out             ', t_strides_out)
-        print('inplace                  ', t_inplace)
+    # def print_plan_info(self):
+    #     plan = self.plan
+    #     print('in_array.shape:          ', plan.shape)
+    #     print('in_array.strides/itemsize', tuple(s // in_array.dtype.itemsize for s in in_array.strides))
+    #     print('shape transform          ', t_shape)
+    #     print('t_strides                ', t_strides_in)
+    #     print('distance_in              ', t_distance_in)
+    #     print('batchsize                ', t_batchsize_in)
+    #     print('t_stride_out             ', t_strides_out)
+    #     print('inplace                  ', t_inplace)
 
 
 class FFT_2D_ocl_reikna(object):

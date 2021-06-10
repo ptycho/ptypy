@@ -551,7 +551,10 @@ class Storage(Base):
         """
         # Update the access information for the views
         # (i.e. pcoord, dlow, dhigh and sp)
-        self.update_views()
+        # do this only for the original container 
+        # to avoid iterating through all the views when creating copies
+        if self.owner.original is self.owner:
+            self.update_views()
 
     def update_views(self, v=None):
         """
@@ -947,7 +950,7 @@ class Storage(Base):
 
     def formatted_report(self, table_format=None, offset=8, align='right',
                          separator=" : ", include_header=True):
-        """
+        r"""
         Returns formatted string and a dict with the respective information
 
         Parameters
@@ -1213,7 +1216,7 @@ class View(Base):
 
         # Prepare a dictionary for PODs (volatile!)
         self._pods = None 
-        """ Potential volatile dictionary for all :any:`POD`\ s that 
+        r""" Potential volatile dictionary for all :any:`POD`\ s that 
             connect to this view. Set by :any:`POD` """
 
         # A single pod lookup (weak reference), set by POD instance.
@@ -1365,7 +1368,7 @@ class View(Base):
         
     @property
     def pods(self):
-        """
+        r"""
         Returns all :any:`POD`\ s still connected to this view as a dict.
         """
         if self._pods is not None:
@@ -1838,7 +1841,7 @@ class Container(Base):
 
     def formatted_report(self, table_format=None, offset=8, align='right',
                          separator=" : ", include_header=True):
-        """
+        r"""
         Returns formatted string and a dict with the respective information
 
         Parameters

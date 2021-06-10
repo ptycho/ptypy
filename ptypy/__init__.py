@@ -72,7 +72,6 @@ del EvalDescriptor
 # Import core modules
 from . import utils
 from . import io
-from . import experiment
 from . import core
 from . import simulations
 from . import resources

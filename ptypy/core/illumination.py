@@ -594,42 +594,42 @@ DEFAULT_old = u.Param(
 )
 
 
-if __name__ == '__main__':
-    energy = 6.
-    shape = 512
-    resolution = 8e-8
-    p = u.Param()
-    p.aperture = u.Param()
-    p.aperture.form = 'circ'
-    p.aperture.diffuser = (10.0, 5, 0.1, 20.0)
-    p.aperture.size = 100e-6
-    # (int) Edge width of aperture in pixel to suppress aliasing
-    p.aperture.edge = 2
-    p.aperture.central_stop = 0.3
-    p.aperture.offset = 0.
-    # (float) rotate aperture by this value
-    p.aperture.rotate = 0.
-    # Parameters for propagation after aperture plane
-    p.propagation = u.Param()
-    # (float) Parallel propagation distance
-    p.propagation.parallel = 0.015
-    # (float) Propagation distance from aperture to focus
-    p.propagation.focussed = 0.1
-    # (float) Focal spot diameter
-    p.propagation.spot_size = None
-    # (float) antialiasing factor
-    p.propagation.antialiasing = None
-    # (str) User-defined probe (if type is None)
-    p.probe = None
-    # (int, float, None) Number of photons in the incident illumination
-    p.photons = None
-    # (float) Noise added on top add the end of initialisation
-    p.noise = None
+# if __name__ == '__main__':
+#     energy = 6.
+#     shape = 512
+#     resolution = 8e-8
+#     p = u.Param()
+#     p.aperture = u.Param()
+#     p.aperture.form = 'circ'
+#     p.aperture.diffuser = (10.0, 5, 0.1, 20.0)
+#     p.aperture.size = 100e-6
+#     # (int) Edge width of aperture in pixel to suppress aliasing
+#     p.aperture.edge = 2
+#     p.aperture.central_stop = 0.3
+#     p.aperture.offset = 0.
+#     # (float) rotate aperture by this value
+#     p.aperture.rotate = 0.
+#     # Parameters for propagation after aperture plane
+#     p.propagation = u.Param()
+#     # (float) Parallel propagation distance
+#     p.propagation.parallel = 0.015
+#     # (float) Propagation distance from aperture to focus
+#     p.propagation.focussed = 0.1
+#     # (float) Focal spot diameter
+#     p.propagation.spot_size = None
+#     # (float) antialiasing factor
+#     p.propagation.antialiasing = None
+#     # (str) User-defined probe (if type is None)
+#     p.probe = None
+#     # (int, float, None) Number of photons in the incident illumination
+#     p.photons = None
+#     # (float) Noise added on top add the end of initialisation
+#     p.noise = None
 
-    probe = from_pars_no_storage(pars=p,
-                                 energy=energy,
-                                 shape=shape,
-                                 resolution=resolution)
+#     probe = from_pars_no_storage(pars=p,
+#                                  energy=energy,
+#                                  shape=shape,
+#                                  resolution=resolution)
 
-    from matplotlib import pyplot as plt
-    plt.imshow(u.imsave(abs(probe[0])))
+#     from matplotlib import pyplot as plt
+#     plt.imshow(u.imsave(abs(probe[0])))

@@ -10,7 +10,7 @@ from .classes import Container, Storage, View
 import numpy as np
 from scipy.ndimage.interpolation import map_coordinates
 
-__all__ = ['DEFAULT', 'Geo_Bragg']
+__all__ = ['Geo_Bragg']
 
 
 local_tree = EvalDescriptor('')

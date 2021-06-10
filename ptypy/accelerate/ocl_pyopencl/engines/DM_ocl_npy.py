@@ -85,11 +85,11 @@ def serialize_array_access(diff_storage):
             address.append(a)
 
             if pod.pr_view.storage.ID != pr.ID:
-                log(1, "Splitting probes for one diffraction stack is not supported in " + self.__class__.__name__)
+                log(1, "Splitting probes for one diffraction stack is not supported in " + __name__)
             if pod.ob_view.storage.ID != ob.ID:
-                log(1, "Splitting objects for one diffraction stack is not supported in " + self.__class__.__name__)
+                log(1, "Splitting objects for one diffraction stack is not supported in " + __name__)
             if pod.ex_view.storage.ID != ex.ID:
-                log(1, "Splitting exit stacks for one diffraction stack is not supported in " + self.__class__.__name__)
+                log(1, "Splitting exit stacks for one diffraction stack is not supported in " + __name__)
 
         ## store data for each view
         # adresses

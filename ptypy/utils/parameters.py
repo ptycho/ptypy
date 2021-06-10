@@ -261,7 +261,7 @@ def validate_standard_param(sp, p=None, prefix=None):
 
         return good
     else:
-        raise NotimplementedError('Checking if a param fits with a standard is not yet implemented')
+        raise NotImplementedError('Checking if a param fits with a standard is not yet implemented')
 
 
 def format_standard_param(p):

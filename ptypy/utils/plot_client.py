@@ -581,7 +581,7 @@ class MPLplotter(object):
                 #ptya._update_colorbar()
                 if channel == 'c':
                     if typ == 'obj':
-                        mm = np.mean(np.abs(data[layer]*plot_mask)**2)
+                        mm = np.mean(np.abs(data[layer]*mask)**2)
                         info = 'T=%.2f' % mm
                     else:
                         mm = np.sum(np.abs(data[layer])**2)

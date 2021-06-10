@@ -222,7 +222,6 @@ class DM_pycuda(DM_serial.DM_serial):
         Compute one iteration.
         """
         queue = self.queue
-        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         for it in range(num):
             error = {}
@@ -345,6 +344,7 @@ class DM_pycuda(DM_serial.DM_serial):
             return
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         # Update positions
         if do_update_pos:
