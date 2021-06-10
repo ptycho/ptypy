@@ -403,7 +403,7 @@ class Hdf5Loader(PtyScan):
             log(3, "Skipping every {:d} positions".format(self.p.positions.skip))
         
         if None not in [self.p.framefilter.file, self.p.framefilter.key]:
-            self.framefilter = h5.File(self.p.framefilter.file, 'r')[self.p.framefilter.key]
+            self.framefilter = h5.File(self.p.framefilter.file, 'r')[self.p.framefilter.key] > 0 # turn into boolean
             if (self.framefilter.shape == self.fast_axis.shape == self.slow_axis.shape):
                 log(3, "The frame filter has the same dimensionality as the axis information.")
             elif self.framefilter.shape[:2] == self.fast_axis.shape == self.slow_axis.shape:
