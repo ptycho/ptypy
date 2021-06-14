@@ -7,7 +7,6 @@ import unittest
 import numpy as np
 from . import PyCudaTest, have_pycuda
 from ptypy.accelerate.base.array_utils import max_abs2
-from parameterized import parameterized
 
 if have_pycuda():
     from pycuda import gpuarray

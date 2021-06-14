@@ -1308,7 +1308,7 @@ class TestView(unittest.TestCase):
         self.assertTrue(
             np.array_equal(
                 self.basic_view_dpt.psize,
-                np.ones(2, dtype=np.float)
+                np.ones(2, dtype=float)
             ),
             'Assigning of instance attribute psize failed.'
         )
@@ -1316,7 +1316,7 @@ class TestView(unittest.TestCase):
         self.assertTrue(
             np.array_equal(
                 self.basic_view_dpt.shape,
-                np.ones(2, dtype=np.int)
+                np.ones(2, dtype=int)
             ),
             'Assigning of instance attribute psize failed.'
         )

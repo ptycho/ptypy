@@ -344,7 +344,7 @@ class MPLplotter(object):
                 try:
                     pars = TEMPLATES[pars]
                 except KeyError:
-                    log(self.log_level,'Plotting template "\%s" not found, using default settings' % str(pars))
+                    log(self.log_level,'Plotting template "\\%s" not found, using default settings' % str(pars))
 
             if hasattr(pars,'items'):
                 self.p.update(pars,in_place_depth=4)

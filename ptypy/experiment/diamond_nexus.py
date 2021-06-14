@@ -214,7 +214,7 @@ class DiamondNexus(PtyScan):
 
 
         if None not in [INPUT_FILE, ENERGY_KEY]:
-            self.p.energy = np.float(h5.File(INPUT_FILE, 'r')[ENERGY_KEY][()] * self.ENERGY_MULTIPLIER)
+            self.p.energy = float(h5.File(INPUT_FILE, 'r')[ENERGY_KEY][()] * self.ENERGY_MULTIPLIER)
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
 
@@ -349,7 +349,7 @@ class DiamondNexus(PtyScan):
             else:
                 mask = self.mask[self.frame_slices].squeeze()
         else:
-            mask = np.ones_like(intensity, dtype=np.int)
+            mask = np.ones_like(intensity, dtype=int)
         return mask, intensity
 
 

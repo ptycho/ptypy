@@ -1527,7 +1527,7 @@ class MoonFlowerScan(PtyScan):
         if p.model == 'raster':
             pos = u.Param()
             pos.spacing = geo.resolution * geo.shape * p.density
-            pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+            pos.steps = int(np.round(np.sqrt(self.num_frames))) + 1
             pos.extent = pos.steps * pos.spacing
             pos.model = p.model
             self.num_frames = pos.steps**2
@@ -1536,7 +1536,7 @@ class MoonFlowerScan(PtyScan):
         else:
             pos = u.Param()
             pos.spacing = geo.resolution * geo.shape * p.density
-            pos.steps = np.int(np.round(np.sqrt(self.num_frames) + 1))
+            pos.steps = int(np.round(np.sqrt(self.num_frames) + 1))
             pos.extent = pos.steps * pos.spacing
             pos.model = p.model
             pos.count = self.num_frames
@@ -1664,7 +1664,7 @@ class QuickScan(PtyScan):
         # Derive scan pattern
         pos = u.Param()
         pos.spacing = geo.resolution * geo.shape * p.density
-        pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+        pos.steps = int(np.round(np.sqrt(self.num_frames))) + 1
         pos.extent = pos.steps * pos.spacing
         pos.model = 'round'
         pos.count = self.num_frames

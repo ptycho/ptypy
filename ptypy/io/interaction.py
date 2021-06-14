@@ -83,7 +83,7 @@ class NumpyEncoder(json.JSONEncoder):
 NE = NumpyEncoder()
 
 # This is the string to match against when decoding
-NPYARRAYmatch = re.compile("NPYARRAY\[([0-9]{3})\]")
+NPYARRAYmatch = re.compile(r"NPYARRAY\[([0-9]{3})\]")
 
 
 def numpy_replace(obj, arraylist):
