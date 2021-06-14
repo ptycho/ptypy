@@ -403,7 +403,7 @@ class Hdf5Loader(PtyScan):
             log(3, "Skipping every {:d} positions".format(self.p.positions.skip))
         
         if None not in [self.p.framefilter.file, self.p.framefilter.key]:
-            self.framefilter = h5.File(self.p.framefilter.file, 'r')[self.p.framefilter.key] > 0 # turn into boolean
+            self.framefilter = h5.File(self.p.framefilter.file, 'r')[self.p.framefilter.key][()] > 0 # turn into boolean
             if (self.framefilter.shape == self.fast_axis.shape == self.slow_axis.shape):
                 log(3, "The frame filter has the same dimensionality as the axis information.")
             elif self.framefilter.shape[:2] == self.fast_axis.shape == self.slow_axis.shape:
@@ -498,7 +498,7 @@ class Hdf5Loader(PtyScan):
             self.pad = np.array([0,0,0,0])
             log(3, "No padding will be applied.")
         else:
-            self.pad = np.array(self.p.padding, dtype=np.int)
+            self.pad = np.array(self.p.padding, dtype=int)
             assert self.pad.size == 4, "self.p.padding needs to of size 4"
             log(3, "Padding the detector frames by {}".format(self.p.padding))
 
@@ -622,7 +622,7 @@ class Hdf5Loader(PtyScan):
             else:
                 mask = self.mask[self.frame_slices].squeeze()
         else:
-            mask = np.ones_like(intensity, dtype=np.int)
+            mask = np.ones_like(intensity, dtype=int)
 
         if self.p.padding:
             intensity = np.pad(intensity, tuple(self.pad.reshape(2,2)), mode='constant')
