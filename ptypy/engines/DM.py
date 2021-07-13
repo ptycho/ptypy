@@ -193,7 +193,8 @@ class DM(PositionCorrectionEngine):
                 if self.p.fourier_power_bound is None:
                     pb = .25 * self.p.fourier_relax_factor**2 * s.pbound_stub
                 else:
-                    pb = self.p.fourier_power_bound            
+                    pb = self.p.fourier_power_bound
+                log(4, "power bound for scan %s = %f" %(s.label, pb))
                 if not self.pbound_scan.get(s.label):
                     self.pbound_scan[s.label] = pb
                 else:
