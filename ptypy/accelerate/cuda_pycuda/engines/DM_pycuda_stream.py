@@ -15,6 +15,7 @@ This file is part of the PTYPY package.
 
 import numpy as np
 import time
+import sys
 from pycuda import gpuarray
 import pycuda.driver as cuda
 from pycuda.tools import DeviceMemoryPool
@@ -62,6 +63,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         mem = cuda.mem_get_info()[0]
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
         fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
+        if not fit:
+            log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
+            self.context.pop()
+            self.context.detach()
+            sys.exit(0)
 
         # TODO grow blocks dynamically
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
