@@ -338,6 +338,13 @@ class ML_serial(ML):
                         pod.ob_view.storage.update_views(pod.ob_view)
             self.ptycho.record_positions = True
 
+        # Save floating intensities into runtime
+        float_intens_coeff = {}
+        for label, d in self.di.storages.items():
+            prep = self.diff_info[d.ID]
+            float_intens_coeff[label] = prep.float_intens_coeff
+        self.ptycho.runtime["float_intens"] = parallel.gather_dict(float_intens_coeff)
+
 
 class BaseModelSerial(BaseModel):
     """
