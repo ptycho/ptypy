@@ -502,21 +502,10 @@ class DM_pycuda(DM_serial.DM_serial):
             del s.gpu
         for name, s in self.pr_nrm.S.items():
             del s.gpu
+
+        # copy addr to cpu
         for dID, prep in self.diff_info.items():
             prep.addr = prep.addr_gpu.get()
-            del prep.mag
-            del prep.ma_sum
-            pID, oID, eID = prep.poe_IDs
-            s = self.ex.S[eID]
-            try:
-                del s.gpu
-            except AttributeError:
-                pass
-            s = self.ma.S[dID]
-            try:
-                del s.gpu
-            except AttributeError:
-                pass
 
         # copy data to cpu 
         # this kills the pagelock memory (otherwise we get segfaults in h5py)
