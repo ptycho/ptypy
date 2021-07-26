@@ -48,7 +48,8 @@ except ImportError:
 # default selection with environment variables
 have_nccl = (nccl is not None) and \
     (not 'PTYPY_USE_CUDAMPI' in os.environ) and \
-    (not 'PTYPY_USE_MPI' in os.environ)
+    (not 'PTYPY_USE_MPI' in os.environ) and \
+    ('PTYPY_USE_NCCL' in os.environ)
 
 # At the moment, we require:
 # the OpenMPI env var OMPI_MCA_opal_cuda_support to be set to true,
