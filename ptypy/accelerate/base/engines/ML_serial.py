@@ -78,6 +78,9 @@ class ML_serial(ML):
             # TODO: make this part of the engine rather than scan
             fpc = self.ptycho.frames_per_block
 
+            # When using MPI, the nr. of frames per block is smaller
+            fpc = fpc // parallel.size
+
             # TODO : make this more foolproof
             try:
                 nmodes = scan.p.coherence.num_probe_modes
@@ -110,6 +113,11 @@ class ML_serial(ML):
 
             kern.FW = geo.propagator.fw
             kern.BW = geo.propagator.bw
+            kern.resolution = geo.resolution[0]
+
+            if self.do_position_refinement:
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution)
+                kern.PCK.allocate()
 
     def engine_prepare(self):
 
@@ -130,6 +138,11 @@ class ML_serial(ML):
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
             prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
+            prep.I = d.data
+            if self.do_position_refinement:
+                prep.original_addr = np.zeros_like(prep.addr)
+                prep.original_addr[:] = prep.addr
+                prep.ma = self.ma.S[d.ID].data
 
         self.ML_model.prepare()
 
@@ -249,6 +262,9 @@ class ML_serial(ML):
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
 
+            # Refine the scan positions
+            self.position_update()
+
             # Allow for customized modifications at the end of each iteration
             self._post_iterate_update()
 
@@ -258,6 +274,84 @@ class ML_serial(ML):
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
+
+    def position_update(self):
+        """ 
+        Position refinement
+        """
+        if not self.do_position_refinement:
+            return
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+
+        # Update positions
+        if do_update_pos:
+            """
+            Iterates through all positions and refines them by a given algorithm. 
+            """
+            log(4, "----------- START POS REF -------------")
+            for dID in self.di.S.keys():
+
+                prep = self.diff_info[dID]
+                pID, oID, eID = prep.poe_IDs
+                ob = self.ob.S[oID].data
+                pr = self.pr.S[pID].data
+                kern = self.kernels[prep.label]
+                aux = kern.aux
+                addr = prep.addr
+                original_addr = prep.original_addr
+                mangled_addr = addr.copy()
+                ma = prep.ma
+                mag = np.sqrt(prep.I)
+                err_phot = prep.err_phot
+
+                PCK = kern.PCK
+                FW = kern.FW
+
+                # Keep track of object boundaries
+                max_oby = ob.shape[-2] - aux.shape[-2] - 1
+                max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
+                # We need to re-calculate the current error 
+                PCK.build_aux(aux, addr, ob, pr)
+                aux[:] = FW(aux)
+                PCK.log_likelihood(aux, addr, mag, ma, err_phot)
+                error_state = np.zeros_like(err_phot)
+                error_state[:] = err_phot
+                PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+
+                log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+                for i in range(PCK.mangler.nshifts):
+                    PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
+                    PCK.build_aux(aux, mangled_addr, ob, pr)
+                    aux[:] = FW(aux)
+                    PCK.log_likelihood(aux, mangled_addr, mag, ma, err_phot)
+                    PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_phot)
+
+                prep.err_phot = error_state
+                prep.addr = addr
+
+    def engine_finalize(self):
+        """
+        try deleting ever helper contianer
+        """
+        if self.do_position_refinement and self.p.position_refinement.record:
+            for label, d in self.di.storages.items():
+                prep = self.diff_info[d.ID]
+                res = self.kernels[prep.label].resolution
+                for i,view in enumerate(d.views):
+                    for j,(pname, pod) in enumerate(view.pods.items()):
+                        delta = (prep.addr[i][j][1][1:] - prep.original_addr[i][j][1][1:]) * res
+                        pod.ob_view.coord += delta 
+                        pod.ob_view.storage.update_views(pod.ob_view)
+            self.ptycho.record_positions = True
+
+        # Save floating intensities into runtime
+        float_intens_coeff = {}
+        for label, d in self.di.storages.items():
+            prep = self.diff_info[d.ID]
+            float_intens_coeff[label] = prep.float_intens_coeff
+        self.ptycho.runtime["float_intens"] = parallel.gather_dict(float_intens_coeff)
 
 
 class BaseModelSerial(BaseModel):
@@ -355,6 +449,8 @@ class GaussianModel(BaseModelSerial):
             if kern.resample:
                 aux_tmp1 = kern.aux_tmp1
                 aux_tmp2 = kern.aux_tmp2
+
+            I = prep.I
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)

@@ -19,7 +19,7 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from .utils import Cnorm2, Cdot
 from . import register
-from .base import BaseEngine
+from .base import BaseEngine, PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 
@@ -27,7 +27,7 @@ __all__ = ['ML']
 
 
 @register()
-class ML(BaseEngine):
+class ML(PositionCorrectionEngine):
     """
     Maximum likelihood reconstruction engine.
 
@@ -153,8 +153,9 @@ class ML(BaseEngine):
     def engine_initialize(self):
         """
         Prepare for ML reconstruction.
-        """
-        
+        """        
+        super(ML, self).engine_initialize()
+
         # Object gradient and minimization direction
         self.ob_grad = self.ob.copy(self.ob.ID + '_grad', fill=0.)
         self.ob_grad_new = self.ob.copy(self.ob.ID + '_grad_new', fill=0.)
@@ -299,6 +300,9 @@ class ML(BaseEngine):
             self.ob += self.ob_h
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
+
+            # Position correction
+            self.position_update()
 
             # Allow for customized modifications at the end of each iteration
             self._post_iterate_update()
@@ -670,7 +674,7 @@ class PoissonModel(BaseModel):
 
         self.LL = LL / self.tot_measpts
 
-        return self.ob_grad, self.pr_grad, error_dct
+        return error_dct
 
     def poly_line_coeffs(self, ob_h, pr_h):
         """

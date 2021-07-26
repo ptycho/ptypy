@@ -63,6 +63,12 @@ class BaseEngine(object):
     help = Valid probe area in frequency domain as fraction of the probe frame
     doc = Defines a circular area centered on the probe frame (in frequency domain), in which the probe is allowed to be nonzero.
 
+    [record_local_error]
+    default = False
+    type = bool
+    help = If True, save the local map of errors into the runtime dictionary.
+    userlevel = 2
+
     """
 
     # Define with which models this engine can work.
@@ -262,7 +268,8 @@ class BaseEngine(object):
         )
 
         self.ptycho.runtime.iter_info.append(info)
-        self.ptycho.runtime.error_local = local_error
+        if self.p.record_local_error:
+            self.ptycho.runtime.error_local = local_error
 
     def finalize(self):
         """
@@ -395,6 +402,11 @@ class PositionCorrectionEngine(BaseEngine):
         if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
             self.do_position_refinement = False
         else:
+            for label, scan in self.ptycho.model.scans.items():
+                if self.p.position_refinement.amplitude < scan.geometries[0].resolution[0]:
+                    self.do_position_refinement = False
+                    log(3,"Failed to initialise position refinement, search amplitude is smaller than the resolution")
+                    return
             self.do_position_refinement = True
             log(3, "Initialising position refinement (%s)" %self.p.position_refinement.method)
             
@@ -417,7 +429,7 @@ class PositionCorrectionEngine(BaseEngine):
         """
         Position refinement update.
         """
-        if self.do_position_refinement is False:
+        if not self.do_position_refinement:
             return
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
@@ -446,6 +458,8 @@ class PositionCorrectionEngine(BaseEngine):
         """
         if self.do_position_refinement is False:
             return
+        if self.p.position_refinement.record is False:
+            return
 
         # Gather all new positions from each node
         coords = {}
@@ -460,6 +474,8 @@ class PositionCorrectionEngine(BaseEngine):
                 for v in S.views:
                     if v.pod.pr_view.layer == 0:
                         v.coord = coords[v.ID]
+
+        self.ptycho.record_positions = True
 
 
 class Base3dBraggEngine(BaseEngine):

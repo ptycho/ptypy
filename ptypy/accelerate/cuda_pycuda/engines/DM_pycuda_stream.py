@@ -15,6 +15,7 @@ This file is part of the PTYPY package.
 
 import numpy as np
 import time
+import sys
 from pycuda import gpuarray
 import pycuda.driver as cuda
 from pycuda.tools import DeviceMemoryPool
@@ -62,6 +63,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
         mem = cuda.mem_get_info()[0]
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
         fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
+        if not fit:
+            log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
+            self.context.pop()
+            self.context.detach()
+            sys.exit(0)
 
         # TODO grow blocks dynamically
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
@@ -91,6 +97,11 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             s.gpu, s.data = mppa(s.data)
 
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
+
+        # Extra object buffer for smoothing kernel
+        if self.p.obj_smooth_std is not None:
+            for name, s in self.ob_buf.S.items():
+                s.tmp = gpuarray.empty(s.gpu.shape, s.gpu.dtype)
 
         # TODO : like the serialization this one is needed due to object reformatting
         for label, d in self.di.storages.items():
@@ -165,11 +176,14 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
                         if self.p.obj_smooth_std is not None:
                             log(4, 'Smoothing object, cfact is %.2f' % cfact)
                             smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
-                            self.GSK.convolution(ob.gpu, smooth_mfs, tmp=obb.gpu)
-                        # obb.gpu[:] = ob.gpu * cfactf32
-                        ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=self.queue)
-
-                        obn.gpu.fill(np.float32(cfact), stream=self.queue)
+                            # We need a third copy, because we still need ob.gpu for the fourier update
+                            obb.gpu[:] = ob.gpu[:]
+                            self.GSK.convolution(obb.gpu, smooth_mfs, tmp=obb.tmp)
+                            obb.gpu *= np.complex64(cfact)
+                        else:
+                            # obb.gpu[:] = ob.gpu * np.complex64(cfact)
+                            ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu)
+                        obn.gpu.fill(np.float32(cfact))
 
                 # First cycle: Fourier + object update
                 for iblock, dID in enumerate(self.dID_list):

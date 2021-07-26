@@ -161,6 +161,11 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
         use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
+        # Extra object buffer for smoothing kernel
+        if self.p.obj_smooth_std is not None:
+            for name, s in self.ob_buf.S.items():
+                s.tmp = gpuarray.empty(s.gpu.shape, s.gpu.dtype)
+
         ex_mem = ma_mem = mag_mem = 0
         idlist = list(self.di.S.keys())
         blocks = len(idlist)
@@ -270,9 +275,18 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         if self.p.obj_smooth_std is not None:
                             log(4,'Smoothing object, cfact is %.2f' % cfact)
                             smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
-                            self.GSK.convolution(ob.gpu, smooth_mfs, tmp=obb.gpu)
-                        
-                        ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=streamdata.queue)
+                            # We need a third copy, because we still need ob.gpu for the fourier update
+                            # obb.gpu[:] = ob.gpu[:]
+                            cuda.memcpy_dtod_async(dest=obb.gpu.ptr,
+                                                   src=ob.gpu.ptr,
+                                                   size=ob.gpu.nbytes,
+                                                   stream=streamdata.queue)
+                            streamdata.queue.synchronize()
+                            self.GSK.queue = streamdata.queue
+                            self.GSK.convolution(obb.gpu, smooth_mfs, tmp=obb.tmp)
+                            obb.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=streamdata.queue)
+                        else:
+                            ob.gpu._axpbz(np.complex64(cfact), 0, obb.gpu, stream=streamdata.queue)
                         obn.gpu.fill(np.float32(cfact), stream=streamdata.queue)
                 
                 self.ex_data.syncback = True

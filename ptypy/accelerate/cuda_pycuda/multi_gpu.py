@@ -48,7 +48,8 @@ except ImportError:
 # default selection with environment variables
 have_nccl = (nccl is not None) and \
     (not 'PTYPY_USE_CUDAMPI' in os.environ) and \
-    (not 'PTYPY_USE_MPI' in os.environ)
+    (not 'PTYPY_USE_MPI' in os.environ) and \
+    ('PTYPY_USE_NCCL' in os.environ)
 
 # At the moment, we require:
 # the OpenMPI env var OMPI_MCA_opal_cuda_support to be set to true,
@@ -157,6 +158,9 @@ def get_multi_gpu_communicator(use_nccl=True, use_cuda_mpi=True):
             log(4, "Using NCCL communicator")
             return comm
         except RuntimeError:
+            pass
+        except AttributeError:
+            # see issue #323
             pass
     if have_cuda_mpi and use_cuda_mpi:
         try:
