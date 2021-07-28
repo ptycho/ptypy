@@ -39,4 +39,5 @@ class DM_object_regul(DM.DM):
         super().object_update()
         if self.p.object_regul_mask is not None:
             for name, s in self.ob.storages.items():
+                assert s.shape == self.p.object_regul_mask.shape, "Object regulariser mask needs to have same shape as object = {}".format(s.shape)
                 s.data[self.p.object_regul_mask.astype(bool)] = self.p.object_regul_fill
