@@ -42,10 +42,14 @@ class DM_pycuda_object_regul(DM_pycuda.DM_pycuda):
     def _setup_kernels(self):
         super()._setup_kernels()
         from pycuda.elementwise import ElementwiseKernel
-        self.obj_regul = ElementwiseKernel(
+        self.obj_regul_complex = ElementwiseKernel(
             "pycuda::complex<float> *in, pycuda::complex<float> *mask, pycuda::complex<float> fill",
             "in[i] = fill*mask[i] + in[i]*(pycuda::complex<float>(1) - mask[i])",
-            "obj_regulariser")
+            "obj_regulariser_complex")
+        self.obj_regul_phase = ElementwiseKernel(
+            "pycuda::complex<float> *in, pycuda::complex<float> *mask, float fill",
+            "in[i] = pycuda::abs(in[i])*mask[i]*pycuda::exp(fill*pycuda::complex<float>(1)) + in[i]*(pycuda::complex<float>(1) - mask[i])",
+            "obj_regulariser_phase")
 
     def object_update(self,*args, **kwargs):
         """
@@ -55,4 +59,7 @@ class DM_pycuda_object_regul(DM_pycuda.DM_pycuda):
         if self.p.object_regul_mask is not None:
             for oID, ob in self.ob.storages.items():
                 assert ob.shape == self.object_mask_gpu.shape, "Object regulariser mask needs to have same shape as object = {}".format(ob.shape)
-                self.obj_regul(ob.gpu, self.object_mask_gpu, self.p.object_regul_fill)
+                if isinstance(self.p.object_regul_fill, complex):
+                    self.obj_regul_complex(ob.gpu, self.object_mask_gpu, self.p.object_regul_fill)
+                elif isinstance(self.p.object_regul_fill, float):
+                    self.obj_regul_phase(ob.gpu, self.object_mask_gpu, self.p.object_regul_fill)
