@@ -17,7 +17,7 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
-from ptypy.accelerate.base.engines import DR_serial
+from ptypy.accelerate.base.engines import SDR_serial
 from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
@@ -27,10 +27,10 @@ from ..mem_utils import make_pagelocked_paired_arrays as mppa
 MPI = False
 
 
-__all__ = ['DR_pycuda']
+__all__ = ['SDR_pycuda']
 
 @register()
-class DR_pycuda(DR_serial.DR_serial):
+class SDR_pycuda(SDR_serial.SDR_serial):
 
     """
     Defaults:
@@ -52,7 +52,7 @@ class DR_pycuda(DR_serial.DR_serial):
         """
         Difference map reconstruction engine.
         """
-        super(DR_pycuda, self).__init__(ptycho_parent, pars)
+        super(SDR_pycuda, self).__init__(ptycho_parent, pars)
 
     
     def engine_initialize(self):
@@ -61,7 +61,7 @@ class DR_pycuda(DR_serial.DR_serial):
         """
         self.context, self.queue = get_context(new_context=True, new_queue=True)
 
-        super(DR_pycuda, self).engine_initialize()
+        super(SDR_pycuda, self).engine_initialize()
 
     def _setup_kernels(self):
         """
@@ -138,7 +138,7 @@ class DR_pycuda(DR_serial.DR_serial):
 
     def engine_prepare(self):
 
-        super(DR_pycuda, self).engine_prepare()
+        super(SDR_pycuda, self).engine_prepare()
 
         for name, s in self.ob.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
@@ -285,4 +285,4 @@ class DR_pycuda(DR_serial.DR_serial):
             s.data = np.copy(s.data)
 
         self.context.detach()
-        super(DR_pycuda, self).engine_finalize()
+        super(SDR_pycuda, self).engine_finalize()

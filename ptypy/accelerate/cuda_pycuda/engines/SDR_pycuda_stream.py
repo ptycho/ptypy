@@ -22,7 +22,7 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
-from . import DR_pycuda
+from . import SDR_pycuda
 
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager2
@@ -33,14 +33,14 @@ EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
 #MAX_BLOCKS = 4  # can be used to limit the number of blocks, simulating that they don't fit
 
-__all__ = ['DR_pycuda_stream']
+__all__ = ['SDR_pycuda_stream']
 
 @register()
-class DR_pycuda_stream(DR_pycuda.DR_pycuda):
+class SDR_pycuda_stream(SDR_pycuda.SDR_pycuda):
 
     def __init__(self, ptycho_parent, pars=None):
 
-        super(DR_pycuda_stream, self).__init__(ptycho_parent, pars)
+        super(SDR_pycuda_stream, self).__init__(ptycho_parent, pars)
         self.ma_data = None
         self.mag_data = None
         self.ex_data = None
@@ -75,7 +75,7 @@ class DR_pycuda_stream(DR_pycuda.DR_pycuda):
 
     def engine_prepare(self):
 
-        super(DR_pycuda.DR_pycuda, self).engine_prepare()
+        super(SDR_pycuda.SDR_pycuda, self).engine_prepare()
 
         for name, s in self.ob.S.items():
             s.gpu, s.data = mppa(s.data)

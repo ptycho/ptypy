@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Local Difference Map/Alternate Projections reconstruction engine.
+Stochastic Douglas-Rachfrod (SDR) reconstruction engine.
 
 This file is part of the PTYPY package.
 
@@ -14,7 +14,7 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy import defaults_tree
-from ptypy.engines import register
+from ptypy.engines import register, SDR
 from ptypy.engines.base import PositionCorrectionEngine
 from ptypy.core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 from ptypy.accelerate.base.engines import DM_serial
@@ -23,18 +23,18 @@ from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
 
 
-__all__ = ['DR_serial']
+__all__ = ['SDR_serial']
 
 @register()
-class DR_serial(PositionCorrectionEngine):
+class SDR_serial(SDR.SDR):
     """
-    An implementation of the Douglas-Rachford algorithm
-    that can be operated like the ePIE algorithm.
+    A serialized implementation of the stochastic Douglas-Rachford algorithm
+    that is equivalent to the ePIE algorithm for alpha=0 and tau=1.
 
     Defaults:
 
     [name]
-    default = DR_serial
+    default = SDR_serial
     type = str
     help =
     doc =
@@ -68,12 +68,6 @@ class DR_serial(PositionCorrectionEngine):
     type = tuple
     help = Clip object amplitude into this interval
 
-    [rescale_probe]
-    default = True
-    type = bool
-    lowlim = 0
-    help = Normalise probe power according to data
-
     [compute_log_likelihood]
     default = True
     type = bool
@@ -95,13 +89,9 @@ class DR_serial(PositionCorrectionEngine):
 
     def __init__(self, ptycho_parent, pars=None):
         """
-        Local difference map reconstruction engine.
+        Stochastic Douglas-Rachford reconstruction engine.
         """
-        super(DR_serial, self).__init__(ptycho_parent, pars)
-
-        # Instance attributes
-        self.error = None
-        self.mean_power = None
+        super(SDR_serial, self).__init__(ptycho_parent, pars)
 
         # keep track of timings
         self.benchmark = u.Param()
@@ -112,22 +102,11 @@ class DR_serial(PositionCorrectionEngine):
         self.pr_cfact = {}
         self.kernels = {}
 
-        self.ptycho.citations.add_article(
-            title='Semi-implicit relaxed Douglas-Rachford algorithm (sDR) for ptychography',
-            author='Pham et al.',
-            journal='Opt. Express',
-            volume=27,
-            year=2019,
-            page=31246,
-            doi='10.1364/OE.27.031246',
-            comment='The local douglas-rachford reconstruction algorithm',
-        )
-
     def engine_initialize(self):
         """
         Prepare for reconstruction.
         """
-        super(DR_serial, self).engine_initialize()
+        super(SDR_serial, self).engine_initialize()
 
         self.error = []
         self._reset_benchmarks()
@@ -349,10 +328,6 @@ class DR_serial(PositionCorrectionEngine):
                     self.benchmark.E_Build_exit += time.time() - t1
                     self.benchmark.calls_fourier += 1
 
-                    ## probe/object rescale
-                    #if self.p.rescale_probe:
-                    #    pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
-
                     ## build auxilliary wave (ob * pr product)
                     t1 = time.time()
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
@@ -385,8 +360,8 @@ class DR_serial(PositionCorrectionEngine):
 
             self.curiter += 1
 
-        error = parallel.gather_dict(error_dct)
-        return error
+        #error = parallel.gather_dict(error_dct)
+        return error_dct
 
 
     def engine_finalize(self):
