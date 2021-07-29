@@ -26,9 +26,9 @@ class DM_object_regul(DM.DM):
     default = 0.0 + 0.0j
     type = float, complex
     help = Fill value for regularisation of the object
-    doc = Providing a complex number, e.g. 1.0 + 0.1j will replace both amplitude and phase \
+    doc = Providing a complex number, e.g. 1.0 + 0.1j will replace both real and imaginary parts\
           Providing a floating number, e.g. 0.5 will replace only the phase
-          
+
     """
 
     def __init__(self, ptycho_parent, pars=None):
