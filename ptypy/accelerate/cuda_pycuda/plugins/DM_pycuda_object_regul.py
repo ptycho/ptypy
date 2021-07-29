@@ -24,11 +24,12 @@ class DM_pycuda_object_regul(DM_pycuda.DM_pycuda):
     doc = Numpy.ndarray with same shape as the object that will be casted to a complex-valued mask
 
     [object_regul_fill]
-    default = 0. + 0.j
+    default = 0.0 + 0.0j
     type = float, complex
     help = Fill value for regularisation of the object
-    doc = Provide a complex number with both real and imaginary part, e.g. 1.2 + 0.1j
-
+    doc = Providing a complex number, e.g. 1.0 + 0.1j will replace both amplitude and phase \
+          Providing a floating number, e.g. 0.5 will replace only the phase
+          
     """
 
     def __init__(self, ptycho_parent, pars=None):

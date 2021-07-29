@@ -26,8 +26,9 @@ class DM_object_regul(DM.DM):
     default = 0.0 + 0.0j
     type = float, complex
     help = Fill value for regularisation of the object
-    doc = Provide a complex number with both real and imaginary part, e.g. 1.0 + 0.1j
-
+    doc = Providing a complex number, e.g. 1.0 + 0.1j will replace both amplitude and phase \
+          Providing a floating number, e.g. 0.5 will replace only the phase
+          
     """
 
     def __init__(self, ptycho_parent, pars=None):
@@ -41,15 +42,7 @@ class DM_object_regul(DM.DM):
         if self.p.object_regul_mask is not None:
             for name, s in self.ob.storages.items():
                 assert s.shape == self.p.object_regul_mask.shape, "Object regulariser mask needs to have same shape as object = {}".format(s.shape)
-                import matplotlib.pyplot as plt
-                #plt.figure()
-                #plt.imshow(np.abs(s.data[0]))
-
                 if isinstance(self.p.object_regul_fill, complex):
                     s.data[self.p.object_regul_mask.astype(bool)] = self.p.object_regul_fill
                 elif isinstance(self.p.object_regul_fill, float):
                     s.data[self.p.object_regul_mask.astype(bool)] = np.abs(s.data[self.p.object_regul_mask.astype(bool)]) * np.exp(1j*self.p.object_regul_fill)
-
-                #plt.figure()
-                #plt.imshow(np.abs(s.data[0]))
-                #plt.show()
