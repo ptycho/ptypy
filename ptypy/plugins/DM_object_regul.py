@@ -64,4 +64,3 @@ class DM_object_regul(DM.DM):
                     s.data[self.p.object_regul_mask.astype(bool)] = self.p.object_regul_fill
                 elif isinstance(self.p.object_regul_fill, float):
                     s.data[self.p.object_regul_mask.astype(bool)] = np.abs(s.data[self.p.object_regul_mask.astype(bool)]) * np.exp(1j*self.p.object_regul_fill)
-            print("regul", self.curiter)
