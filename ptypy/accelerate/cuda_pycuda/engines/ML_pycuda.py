@@ -14,18 +14,18 @@ This file is part of the PTYPY package.
 import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
+import pycuda.cumath
 from pycuda.tools import DeviceMemoryPool
 from collections import deque
 
 from ptypy.engines import register
 from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
 from ptypy import utils as u
-from ptypy.utils.verbose import logger
+from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from .. import get_context
-from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, \
-    PositionCorrectionKernel, PropagationKernel
-from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel
+from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PropagationKernel, PositionCorrectionKernel
+from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
 
 from ptypy.accelerate.base import address_manglers
 
@@ -107,7 +107,7 @@ class MemoryManager:
             stream.wait_for_event(ev)
         if to_cpu:
             cpu_ar = self.on_device_inv[id(gpu_ar)]
-            gpu_ar.get_asynch(stream, host_array)
+            gpu_ar.get_asynch(stream, cpu_ar)
 
         ev_out = cuda.Event()
         ev_out.record(stream)
@@ -136,6 +136,17 @@ class ML_pycuda(ML_serial):
     type = bool
     help = For GPU, use a device memory pool
 
+    [fft_lib]
+    default = reikna
+    type = str
+    help = Choose the pycuda-compatible FFT module.
+    doc = One of:
+      - ``'reikna'`` : the reikna packaga (fast load, competitive compute for streaming)
+      - ``'cuda'`` : ptypy's cuda wrapper (delayed load, but fastest compute if all data is on GPU)
+      - ``'skcuda'`` : scikit-cuda (fast load, slowest compute due to additional store/load stages)
+    choices = 'reikna','cuda','skcuda'
+    userlevel = 2
+
     """
 
     def __init__(self, ptycho_parent, pars=None):
@@ -160,6 +171,7 @@ class ML_pycuda(ML_serial):
         self.queue_transfer = cuda.Stream()
         
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
+        self.GSK.tmp = None
         
         super().engine_initialize()
         #self._setup_kernels()
@@ -168,13 +180,6 @@ class ML_pycuda(ML_serial):
         """
         Setup kernels, one for each scan. Derive scans from ptycho class
         """
-
-        try:
-            from ptypy.accelerate.cuda_pycuda.cufft import FFT
-        except:
-            logger.warning('Unable to import cuFFT version - using Reikna instead')
-            from ptypy.accelerate.cuda_pycuda.fft import FFT
-
         AUK = ArrayUtilsKernel(queue=self.queue)
         self._dot_kernel = AUK.dot
         # get the scans
@@ -189,6 +194,9 @@ class ML_pycuda(ML_serial):
             # Get info to shape buffer arrays
             # TODO: make this part of the engine rather than scan
             fpc = self.ptycho.frames_per_block
+
+            # When using MPI, the nr. of frames per block is smaller
+            fpc = fpc // parallel.size
 
             # TODO : make this more foolproof
             try:
@@ -208,28 +216,21 @@ class ML_pycuda(ML_serial):
             kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue)
             kern.GDK.allocate()
 
-            kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type=np.float32)
+            kern.POK = PoUpdateKernel(queue_thread=self.queue)
             kern.POK.allocate()
 
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
 
-            kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue)
-            kern.PROP.allocate()
+            kern.TK = TransposeKernel(queue=self.queue)
 
+            kern.PROP = PropagationKernel(aux, geo.propagator, queue_thread=self.queue, fft=self.p.fft_lib)
+            kern.PROP.allocate()
+            kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
-                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
-                                                                self.p.position_refinement.start,
-                                                                self.p.position_refinement.stop,
-                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
-                                                                randomseed=0)
-                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
-                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
-
-                kern.PCK = PositionCorrectionKernel(aux, nmodes, queue_thread=self.queue)
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
                 kern.PCK.allocate()
-                kern.PCK.address_mangler = addr_mangler
 
     def _initialize_model(self):
 
@@ -264,9 +265,10 @@ class ML_pycuda(ML_serial):
                 self._set_pr_ob_ref_for_data(dev=dev, container=container, sync_copy=sync_copy)
 
     def _get_smooth_gradient(self, data, sigma):
-        tmp = gpuarray.empty(data.shape, dtype=np.complex64)
-        self.GSK.convolution(data, tmp, [sigma, sigma])
-        return tmp
+        if self.GSK.tmp is None:
+            self.GSK.tmp = gpuarray.empty(data.shape, dtype=np.complex64)
+        self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+        return data
 
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new
@@ -342,6 +344,10 @@ class ML_pycuda(ML_serial):
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
 
             prep.addr_gpu = gpuarray.to_gpu(prep.addr)
+            if self.do_position_refinement:
+                prep.original_addr_gpu = gpuarray.to_gpu(prep.original_addr)
+                prep.error_state_gpu = gpuarray.empty_like(prep.err_phot_gpu)
+                prep.mangled_addr_gpu = prep.addr_gpu.copy()
 
             # Todo: Which address to pick?
             if use_tiles:
@@ -349,6 +355,87 @@ class ML_pycuda(ML_serial):
 
             prep.I = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
             prep.I[:] = d.data
+
+            # Todo: avoid that extra copy of data
+            if self.do_position_refinement:
+                ma = self.ma.S[d.ID].data.astype(np.float32)
+                prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
+                prep.ma[:] = ma
+
+    def position_update(self):
+        """ 
+        Position refinement
+        """
+        if not self.do_position_refinement or (not self.curiter):
+            return
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
+
+        # Update positions
+        if do_update_pos:
+            """
+            Iterates through all positions and refines them by a given algorithm.
+            """
+            log(4, "----------- START POS REF -------------")
+            for dID in self.di.S.keys():
+
+                prep = self.diff_info[dID]
+                pID, oID, eID = prep.poe_IDs
+                ob = self.ob.S[oID].gpu
+                pr = self.pr.S[pID].gpu
+                kern = self.kernels[prep.label]
+                aux = kern.aux
+                addr = prep.addr_gpu
+                original_addr = prep.original_addr
+                mangled_addr = prep.mangled_addr_gpu
+                err_phot = prep.err_phot_gpu
+                error_state = prep.error_state_gpu
+
+                # # copy intensities and mask to GPU
+                stream = self.queue_transfer
+                mag  = gpuarray.to_gpu_async(prep.I, allocator=self.allocate, stream=stream)
+                ma = gpuarray.to_gpu_async(prep.ma, allocator=self.allocate, stream=stream)
+                ev = cuda.Event()
+                ev.record(stream)
+
+                PCK = kern.PCK
+                TK  = kern.TK
+                PROP = kern.PROP
+
+                # Keep track of object boundaries
+                max_oby = ob.shape[-2] - aux.shape[-2] - 1
+                max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
+                # We need to re-calculate the current error 
+                PCK.build_aux(aux, addr, ob, pr)
+                PROP.fw(aux, aux)
+                PCK.queue.wait_for_event(ev)
+                # mag & ma now on device
+                pycuda.cumath.sqrt(mag, out=mag, stream=PCK.queue) # for position refinement, we need the magnitude
+                PCK.log_likelihood(aux, addr, mag, ma, err_phot)
+                cuda.memcpy_dtod(dest=error_state.ptr,
+                                    src=err_phot.ptr,
+                                    size=err_phot.nbytes)
+                
+                PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+                                
+                log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+                for i in range(PCK.mangler.nshifts):
+                    PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
+                    PCK.build_aux(aux, mangled_addr, ob, pr)
+                    PROP.fw(aux, aux)
+                    PCK.log_likelihood(aux, mangled_addr, mag, ma, err_phot)
+                    PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_phot)
+                
+                cuda.memcpy_dtod(dest=err_phot.ptr,
+                                 src=error_state.ptr,
+                                 size=err_phot.nbytes)
+                if use_tiles:
+                    s1 = addr.shape[0] * addr.shape[1]
+                    s2 = addr.shape[2] * addr.shape[3]
+                    TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+
 
     def engine_finalize(self):
         """
@@ -364,6 +451,9 @@ class ML_pycuda(ML_serial):
             # no longer need those
             del s.gpu
             del s.cpu
+        for dID, prep in self.diff_info.items():
+            prep.addr = prep.addr_gpu.get()
+            prep.float_intens_coeff = prep.fic_gpu.get()
 
         #self.queue.synchronize()
         self.context.detach()

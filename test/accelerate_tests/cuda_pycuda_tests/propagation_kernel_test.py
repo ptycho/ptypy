@@ -23,7 +23,7 @@ INT_TYPE = np.int32
 
 class PropagationKernelTest(PyCudaTest):
 
-    def set_up_farfield(self,shape):
+    def set_up_farfield(self,shape, resolution=None):
         P = Base()
         P.CType = COMPLEX_TYPE
         P.Ftype = FLOAT_TYPE
@@ -34,6 +34,8 @@ class PropagationKernelTest(PyCudaTest):
         g.psize = 24e-6
         g.shape = shape
         g.propagation = "farfield"
+        if resolution is not None:
+            g.resolution = resolution
         G = geometry.Geo(owner=P, pars=g)
         return G
 
@@ -53,11 +55,11 @@ class PropagationKernelTest(PyCudaTest):
 
     def test_farfield_propagator_forward_UNITY(self):
         # setup
-        SH = (16,16)
+        SH = (2,16,16)
         aux = np.zeros((SH), dtype=COMPLEX_TYPE)
-        aux[5:11,5:11] = 1. + 2j
+        aux[:,5:11,5:11] = 1. + 2j
         aux_d = gpuarray.to_gpu(aux)
-        geo = self.set_up_farfield(SH)
+        geo = self.set_up_farfield(SH[1:])
 
         # test
         aux = geo.propagator.fw(aux)
@@ -65,15 +67,16 @@ class PropagationKernelTest(PyCudaTest):
         PropK.allocate()
         PropK.fw(aux_d, aux_d)
 
-        np.testing.assert_allclose(aux, aux_d.get(), atol=1e-06, rtol=5e-5, err_msg="Numpy aux is \n%s, \nbut gpu aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))
+        np.testing.assert_allclose(aux_d.get(), aux, atol=1e-06, rtol=5e-5, 
+            err_msg="Numpy aux is \n%s, \nbut gpu aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))
 
     def test_farfield_propagator_backward_UNITY(self):
         # setup
-        SH = (16,16)
+        SH = (2,16,16)
         aux = np.zeros((SH), dtype=COMPLEX_TYPE)
-        aux[5:11,5:11] = 1. + 2j
+        aux[:,5:11,5:11] = 1. + 2j
         aux_d = gpuarray.to_gpu(aux)
-        geo = self.set_up_farfield(SH)
+        geo = self.set_up_farfield(SH[1:])
 
         # test
         aux = geo.propagator.bw(aux)
@@ -81,15 +84,52 @@ class PropagationKernelTest(PyCudaTest):
         PropK.allocate()
         PropK.bw(aux_d, aux_d)
 
-        np.testing.assert_allclose(aux, aux_d.get(), atol=1e-06, rtol=5e-5, err_msg="Numpy aux is \n%s, \nbut gpu aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))
+        np.testing.assert_allclose(aux_d.get(), aux, atol=1e-06, rtol=5e-5, 
+            err_msg="Numpy aux is \n%s, \nbut gpu aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))
+
+    def test_farfield_propagator_forward_crop_pad_UNITY(self):
+        # setup
+        SH = (2,16,16)
+        aux = np.zeros((SH), dtype=COMPLEX_TYPE)
+        aux[:,5:11,5:11] = 1. + 2j
+        aux_d = gpuarray.to_gpu(aux)
+        geo = self.set_up_farfield(SH[1:])
+        geo = self.set_up_farfield(SH[1:], resolution=0.5*geo.resolution)
+
+        # test
+        aux = geo.propagator.fw(aux)
+        PropK = PropagationKernel(aux_d, geo.propagator, queue_thread=self.stream)
+        PropK.allocate()
+        PropK.fw(aux_d, aux_d)
+
+        np.testing.assert_allclose(aux_d.get(), aux, atol=1e-06, rtol=5e-5, 
+            err_msg="Numpy aux is \n%s, \nbut gpu aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))
+
+    def test_farfield_propagator_backward_crop_pad_UNITY(self):
+        # setup
+        SH = (2,16,16)
+        aux = np.zeros((SH), dtype=COMPLEX_TYPE)
+        aux[:,5:11,5:11] = 1. + 2j
+        aux_d = gpuarray.to_gpu(aux)
+        geo = self.set_up_farfield(SH[1:])
+        geo = self.set_up_farfield(SH[1:], resolution=0.5*geo.resolution)
+
+        # test
+        aux = geo.propagator.bw(aux)
+        PropK = PropagationKernel(aux_d, geo.propagator, queue_thread=self.stream)
+        PropK.allocate()
+        PropK.bw(aux_d, aux_d)
+
+        np.testing.assert_allclose(aux_d.get(), aux, atol=1e-06, rtol=5e-5, 
+            err_msg="Numpy aux is \n%s, \nbut gpu aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))
 
     def test_nearfield_propagator_forward_UNITY(self):
         # setup
-        SH = (16,16)
+        SH = (2,16,16)
         aux = np.zeros((SH), dtype=COMPLEX_TYPE)
-        aux[5:11,5:11] = 1. + 2j
+        aux[:,5:11,5:11] = 1. + 2j
         aux_d = gpuarray.to_gpu(aux)
-        geo = self.set_up_nearfield(SH)
+        geo = self.set_up_nearfield(SH[1:])
         
         # test
         aux = geo.propagator.fw(aux)
@@ -97,15 +137,16 @@ class PropagationKernelTest(PyCudaTest):
         PropK.allocate()
         PropK.fw(aux_d, aux_d)
 
-        np.testing.assert_allclose(aux, aux_d.get(), atol=1e-06, rtol=5e-5, err_msg="Numpy aux is \n%s, \nbut gpu aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))
+        np.testing.assert_allclose(aux_d.get(), aux, atol=1e-06, rtol=5e-5, 
+            err_msg="Numpy aux is \n%s, \nbut gpu aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))
 
     def test_nearfield_propagator_backward_UNITY(self):
         # setup
-        SH = (16,16)
+        SH = (2,16,16)
         aux = np.zeros((SH), dtype=COMPLEX_TYPE)
-        aux[5:11,5:11] = 1. + 2j
+        aux[:,5:11,5:11] = 1. + 2j
         aux_d = gpuarray.to_gpu(aux)
-        geo = self.set_up_nearfield(SH)
+        geo = self.set_up_nearfield(SH[1:])
     
         # test
         aux = geo.propagator.bw(aux)
@@ -113,4 +154,5 @@ class PropagationKernelTest(PyCudaTest):
         PropK.allocate()
         PropK.bw(aux_d, aux_d)
 
-        np.testing.assert_allclose(aux, aux_d.get(), atol=1e-06, rtol=5e-5, err_msg="Numpy aux is \n%s, \nbut gpu aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))
+        np.testing.assert_allclose(aux_d.get(), aux, atol=1e-06, rtol=5e-5, 
+            err_msg="Numpy aux is \n%s, \nbut gpu aux is \n %s, \n " % (repr(aux), repr(aux_d.get())))

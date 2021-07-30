@@ -272,4 +272,4 @@ if __name__ == "__main__":
     plt.imshow(A)
     plt.figure()
 
-    plt.imshow(log10(D.expose(I[1])[0]+1))
+    plt.imshow(np.log10(D.expose(I[1])[0]+1))

@@ -193,7 +193,8 @@ class DM(PositionCorrectionEngine):
                 if self.p.fourier_power_bound is None:
                     pb = .25 * self.p.fourier_relax_factor**2 * s.pbound_stub
                 else:
-                    pb = self.p.fourier_power_bound            
+                    pb = self.p.fourier_power_bound
+                log(4, "power bound for scan %s = %f" %(s.label, pb))
                 if not self.pbound_scan.get(s.label):
                     self.pbound_scan[s.label] = pb
                 else:
@@ -239,8 +240,7 @@ class DM(PositionCorrectionEngine):
         logger.info('Time spent in Fourier update: %.2f' % tf)
         logger.info('Time spent in Overlap update: %.2f' % to)
         logger.info('Time spent in Position update: %.2f' % tp)
-        error = parallel.gather_dict(error_dct)
-        return error
+        return error_dct
 
     def engine_finalize(self):
         """
@@ -363,8 +363,7 @@ class DM(PositionCorrectionEngine):
                 # array and therefore underestimate the strength of the probe terms.
                 cfact = self.p.object_inertia * self.mean_power
                 if self.p.obj_smooth_std is not None:
-                    logger.info(
-                        'Smoothing object, average cfact is %.2f'
+                    log(4, 'Smoothing object, average cfact is %.2f'
                         % np.mean(cfact).real)
                     smooth_mfs = [0,
                                   self.p.obj_smooth_std,

@@ -16,7 +16,7 @@ def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None,
     '''
 
     dtype = data_to_be_transformed.dtype
-    if direction is 'forward':
+    if direction == 'forward':
         def fft(x):
             output = np.zeros(x.shape, dtype=dtype)
             for idx in range(output.shape[0]):
@@ -25,7 +25,7 @@ def farfield_propagator(data_to_be_transformed, prefilter=None, postfilter=None,
 
         sc = 1.0 / np.sqrt(np.prod(data_to_be_transformed.shape[-2:]))
 
-    elif direction is 'backward':
+    elif direction == 'backward':
         def fft(x):
             output = np.zeros(x.shape, dtype=dtype)
             for idx in range(output.shape[0]):

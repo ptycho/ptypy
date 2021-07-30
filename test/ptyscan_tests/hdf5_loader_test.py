@@ -34,33 +34,33 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         self.intensity_file = os.path.join(self.outdir, 'intensity.h5')
         self.intensity_key = 'entry/intensity'
-        create_file_and_dataset(path=self.intensity_file, key=self.intensity_key, data_type=np.float)
+        create_file_and_dataset(path=self.intensity_file, key=self.intensity_key, data_type=float)
 
         self.positions_file = os.path.join(self.outdir, 'positions.h5')
         self.positions_slow_key = 'entry/positions_slow'
         self.positions_fast_key = 'entry/positions_fast'
         create_file_and_dataset(path=self.positions_file, key=[self.positions_slow_key, self.positions_fast_key],
-                                data_type=np.float)
+                                data_type=float)
 
         self.mask_file = os.path.join(self.outdir, 'mask.h5')
         self.mask_key = 'entry/mask'
-        create_file_and_dataset(path=self.mask_file, key=self.mask_key, data_type=np.int)
+        create_file_and_dataset(path=self.mask_file, key=self.mask_key, data_type=int)
 
         self.dark_file = os.path.join(self.outdir, 'dark.h5')
         self.dark_key = 'entry/dark'
-        create_file_and_dataset(path=self.dark_file, key=self.dark_key, data_type=np.float)
+        create_file_and_dataset(path=self.dark_file, key=self.dark_key, data_type=float)
 
         self.flat_file = os.path.join(self.outdir, 'flat.h5')
         self.flat_key = 'entry/flat'
-        create_file_and_dataset(path=self.flat_file, key=self.flat_key, data_type=np.float)
+        create_file_and_dataset(path=self.flat_file, key=self.flat_key, data_type=float)
 
         self.normalisation_file = os.path.join(self.outdir, 'normalisation.h5')
         self.normalisation_key = 'entry/normalisation'
-        create_file_and_dataset(path=self.normalisation_file, key=self.normalisation_key, data_type=np.float)
+        create_file_and_dataset(path=self.normalisation_file, key=self.normalisation_key, data_type=float)
 
         self.framefilter_file = os.path.join(self.outdir, 'framefilter.h5')
         self.framefilter_key = 'entry/framefilter'
-        create_file_and_dataset(path=self.framefilter_file, key=self.framefilter_key, data_type=np.bool)
+        create_file_and_dataset(path=self.framefilter_file, key=self.framefilter_key, data_type=bool)
 
         self.top_file = os.path.join(self.outdir, 'top_file.h5')
         self.recorded_energy_key = 'entry/energy'
@@ -370,7 +370,7 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data = np.arange(k*frame_size_m*frame_size_n).reshape((k, frame_size_m, frame_size_n))
         h5.File(self.intensity_file, 'w')[self.intensity_key] = data
 
-        mask = np.ones(data.shape[-2:], dtype=np.float)
+        mask = np.ones(data.shape[-2:], dtype=float)
         mask[::2] = 0
         mask[:, ::2] = 0
         h5.File(self.mask_file, 'w')[self.mask_key] = mask
@@ -1267,7 +1267,7 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data = np.arange(k*frame_size_m*frame_size_n).reshape((k, frame_size_m, frame_size_n))
         h5.File(self.intensity_file, 'w')[self.intensity_key] = data
 
-        mask = np.ones(data.shape[-2:], dtype=np.float)
+        mask = np.ones(data.shape[-2:], dtype=float)
         mask[::2] = 0
         mask[:, ::2] = 0
         h5.File(self.mask_file, 'w')[self.mask_key] = mask

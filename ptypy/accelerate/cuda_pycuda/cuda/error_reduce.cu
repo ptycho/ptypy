@@ -1,17 +1,24 @@
+/** error_reduce kernel.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double)
+ * - ACC_TYPE: the data type used for computation 
+ */
 
-extern "C" __global__ void error_reduce(const float* ferr,
-                                        float* err_fmag,
+extern "C" __global__ void error_reduce(const IN_TYPE* ferr,
+                                        OUT_TYPE* err_fmag,
                                         int M,
                                         int N)
 {
   int tx = threadIdx.x;
   int ty = threadIdx.y;
   int batch = blockIdx.x;
-  extern __shared__ float sum_v[1024];
+  __shared__ ACC_TYPE sum_v[BDIM_X*BDIM_Y];
 
   int shidx =
       ty * blockDim.x + tx;  // shidx: index in shared memory for this block
-  float sum = 0.0f;
+  ACC_TYPE sum = ACC_TYPE(0.0);
 
   for (int m = ty; m < M; m += blockDim.y)
   {
@@ -20,7 +27,7 @@ extern "C" __global__ void error_reduce(const float* ferr,
     {
       int idx = batch * M * N + m * N +
                 n;  // idx is index qwith respect to the full stack
-      sum += ferr[idx];
+      sum += ACC_TYPE(ferr[idx]);
     }
   }
 
@@ -28,7 +35,7 @@ extern "C" __global__ void error_reduce(const float* ferr,
 
   __syncthreads();
 
-  int nt = blockDim.x * blockDim.y;
+  int nt = BDIM_X * BDIM_Y;
   int c = nt;
 
   while (c > 1)
@@ -44,6 +51,6 @@ extern "C" __global__ void error_reduce(const float* ferr,
 
   if (shidx == 0)
   {
-    err_fmag[batch] = float(sum_v[0]);
+    err_fmag[batch] = OUT_TYPE(sum_v[0]);
   }
 }

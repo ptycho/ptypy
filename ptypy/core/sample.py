@@ -238,7 +238,7 @@ def init_storage(storage, sample_pars=None, energy=None):
     elif type(p.model) is np.ndarray:
         model = p.model
     elif p.model in resources.objects:
-        model = resources.objects[p.model](A.shape)
+        model = resources.objects[p.model](s.shape)
     elif str(p.model) == 'recon':
         # Loading from a reconstruction file
         layer = p.recon.get('layer')
@@ -438,104 +438,3 @@ DEFAULT_old = u.Param(
     # more modes requested than weight given
     mode_weights=[1., 0.1]
 )
-
-
-def from_pars_old(shape, lam, pars=None, dtype=np.complex):
-    """
-    *DEPRECATED*
-    """
-    p = u.Param(DEFAULT)
-    if pars is not None and (isinstance(pars, dict)
-                             or isinstance(pars, u.Param)):
-        p.update(pars)
-    if p.obj is not None:
-        # Abort here if object is set
-        return p
-    else:
-        if isinstance(p.source, np.ndarray):
-            logger.info('Found nd-array')
-            obj = p.source
-        else:
-            logger.info('Fill with ones!')
-            obj = np.ones(shape)
-
-        obj = obj.astype(dtype)
-
-        off = u.expect2(p.offset)
-
-        if p.zoom is not None:
-            obj = u.zoom(obj, p.zoom)
-
-        if p.smoothing_mfs is not None:
-            obj = u.gf(obj, p.smoothing_mfs / 2.35)
-
-        k = 2 * np.pi / lam
-        ri = p.ref_index
-        if p.formula is not None or ri is not None:
-            # use only magnitude of obj and scale to [0 1]
-            if ri is None:
-                en = u.keV2m(1e-3)/lam
-                if u.parallel.master:
-                    logger.info(
-                        'Queuing cxro database for refractive index in object '
-                        'creation with parameters:\n'
-                        'Formula=%s Energy=%d Density=%.2f'
-                        % (p.formula, en, p.density))
-                    result = np.array(iofr(p.formula, en, density=p.density))
-                else:
-                    result = None
-                result = u.parallel.bcast(result)
-                energy, delta, beta = result
-                ri = - delta + 1j*beta
-            else:
-                logger.info("using given refractive index in object creation")
-
-            ob = np.abs(obj).astype(np.float)
-            ob -= ob.min()
-            if p.thickness is not None:
-                ob /= ob.max() / p.thickness
-
-            obj = np.exp(1.j * ob * k * ri)
-
-        shape = u.expect2(shape)
-        crops = list(-np.array(obj.shape) + shape + 2*np.abs(off))
-        obj = u.crop_pad(obj, crops, fillpar=p.fill)
-
-        if p.noise_rms is not None:
-            n = u.expect2(p.noise_rms)
-            noise = np.random.normal(1.0, n[0] + 1e-10, obj.shape) * np.exp(
-                2j * np.pi * np.random.normal(0.0, n[1] + 1e-10, obj.shape))
-            if p.noise_mfs is not None:
-                noise = u.gf(noise, p.noise_mfs / 2.35)
-            obj *= noise
-
-        off += np.abs(off)
-        p.obj = obj[off[0]:off[0]+shape[0], off[1]:off[1]+shape[1]]
-
-        return p
-
-
-def _create_modes(layers, pars):
-    """
-    **DEPRECATED**
-    """
-    p = u.Param(pars)
-    pr = p.obj
-    sh_old = pr.shape
-    if pr.ndim == 2:
-        ppr = np.zeros((1,) + pr.shape).astype(pr.dtype)
-        ppr[0] = pr
-        pr = ppr
-    elif pr.ndim == 4:
-        pr = pr[0]
-    w = p.mode_weights
-    # press w into 1d flattened array:
-    w = np.atleast_1d(w).flatten()
-    w = u.crop_pad(w, [[0, layers-w.shape[0]]], filltype='project')
-    w /= w.sum()
-    # make it an array now: flattens
-    pr = u.crop_pad(pr, [[0, layers-pr.shape[0]]], axes=[0], filltype='project')
-    # if p.mode_diversity =='noise'
-    p.mode_weights = w
-    p.obj = pr * w.reshape((layers, 1, 1))
-    return p

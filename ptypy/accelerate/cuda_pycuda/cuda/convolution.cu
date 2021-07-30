@@ -1,3 +1,11 @@
+/**
+ * Data types:
+ * - DTYPE (float/double/complex<float>/complex<double>)
+ * - MATH_TYPE (float/double) - used for the convolution kernel itself
+ * 
+ * A symmetric convolution kernel is assumed here
+ */
+
 #include <thrust/complex.h>
 using thrust::complex;
 
@@ -42,7 +50,7 @@ extern "C" __global__ void convolution_row(const DTYPE *__restrict__ input,
                                            DTYPE *output,
                                            int height,
                                            int width,
-                                           const float* kernel,
+                                           const MATH_TYPE* kernel,
                                            int kernel_radius)
 {
     int tx = threadIdx.x;
@@ -97,7 +105,7 @@ extern "C" __global__ void convolution_row(const DTYPE *__restrict__ input,
     if (gby + ty >= width || gbx + tx >= height)
         return;
 
-    // compute
+    // compute  - will be complex<double> if kernel is double
     auto sum = shm[tx * shwidth + (ty + kernel_radius)] * kernel[0];
     for (int i = 1; i <= kernel_radius; ++i)
     {
@@ -117,7 +125,7 @@ extern "C" __global__ void convolution_col(const DTYPE *__restrict__ input,
                                            DTYPE *output,
                                            int height,
                                            int width,
-                                           const float* kernel,
+                                           const MATH_TYPE* kernel,
                                            int kernel_radius)
 {
     int tx = threadIdx.x;
@@ -169,7 +177,7 @@ extern "C" __global__ void convolution_col(const DTYPE *__restrict__ input,
     if (gby + ty >= width || gbx + tx >= height)
         return;
 
-    // compute
+    // compute - will be complex<double> if kernel is double
     auto sum = shm[(tx + kernel_radius) * BDIM_Y + ty] * kernel[0];
     for (int i = 1; i <= kernel_radius; ++i)
     {

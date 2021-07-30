@@ -18,20 +18,14 @@ from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.accelerate.base.engines import DM_serial
-from ptypy.accelerate.base import address_manglers
 from .. import get_context
-from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
-from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel
+from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
+from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
+from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel, ClipMagnitudesKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
-
-MPI = parallel.size > 1
-MPI = True
+from ..multi_gpu import get_multi_gpu_communicator
 
 __all__ = ['DM_pycuda']
-
-serialize_array_access = DM_serial.serialize_array_access
-gaussian_kernel = DM_serial.gaussian_kernel
-
 
 @register()
 class DM_pycuda(DM_serial.DM_serial):
@@ -66,27 +60,28 @@ class DM_pycuda(DM_serial.DM_serial):
         Difference map reconstruction engine.
         """
         super(DM_pycuda, self).__init__(ptycho_parent, pars)
+        self.multigpu = None
 
     def engine_initialize(self):
         """
         Prepare for reconstruction.
         """
-        self.context, self.queue = get_context(new_context=True, new_queue=True)
-        # allocator for READ only buffers
-        # self.const_allocator = cl.tools.ImmediateAllocator(queue, cl.mem_flags.READ_ONLY)
-        ## gaussian filter
-        # dummy kernel
-        # if not self.p.obj_smooth_std:
-        #     gauss_kernel = gaussian_kernel(1, 1).astype(np.float32)
-        # else:
-        #     gauss_kernel = gaussian_kernel(self.p.obj_smooth_std, self.p.obj_smooth_std).astype(np.float32)
-        # self.gauss_kernel_gpu = gpuarray.to_gpu(gauss_kernel)
+        # Context, Multi GPU communicator and Stream (needs to be in this order)
+        self.context, self.queue = get_context(new_context=True, new_queue=False)
+        self.multigpu = get_multi_gpu_communicator()
+        self.context, self.queue = get_context(new_context=False, new_queue=True)
 
         # Gaussian Smoothing Kernel
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
 
+        # Real/Fourier Support Kernel
+        self.RSK = {}
+        self.FSK = {}
+
+        # Clip Magnitudes Kernel
+        self.CMK = ClipMagnitudesKernel(queue=self.queue)
+
         super(DM_pycuda, self).engine_initialize()
-        self.error = []
 
     def _setup_kernels(self):
         """
@@ -104,6 +99,9 @@ class DM_pycuda(DM_serial.DM_serial):
             # TODO: make this part of the engine rather than scan
             fpc = self.ptycho.frames_per_block
 
+            # When using MPI, the nr. of frames per block is smaller
+            fpc = fpc // parallel.size
+
             # TODO : make this more foolproof
             try:
                 nmodes = scan.p.coherence.num_probe_modes * \
@@ -117,41 +115,34 @@ class DM_pycuda(DM_serial.DM_serial):
             kern.aux = gpuarray.to_gpu(aux)
 
             # setup kernels, one for each SCAN.
-            logger.info("Setting up FourierUpdateKernel")
+            log(4, "Setting up FourierUpdateKernel")
             kern.FUK = FourierUpdateKernel(aux, nmodes, queue_thread=self.queue)
             kern.FUK.allocate()
 
-            logger.info("Setting up PoUpdateKernel")
-            kern.POK = PoUpdateKernel(queue_thread=self.queue, denom_type=np.float32)
+            log(4, "Setting up PoUpdateKernel")
+            kern.POK = PoUpdateKernel(queue_thread=self.queue)
             kern.POK.allocate()
 
-            logger.info("Setting up AuxiliaryWaveKernel")
+            log(4, "Setting up AuxiliaryWaveKernel")
             kern.AWK = AuxiliaryWaveKernel(queue_thread=self.queue)
             kern.AWK.allocate()
 
-            logger.info("Setting up ArrayUtilsKernel")
+            log(4, "Setting up ArrayUtilsKernel")
             kern.AUK = ArrayUtilsKernel(queue=self.queue)
 
-            logger.info("Setting up PropagationKernel")
+            log(4, "Setting up TransposeKernel")
+            kern.TK = TransposeKernel(queue=self.queue)
+
+            log(4, "Setting up PropagationKernel")
             kern.PROP = PropagationKernel(aux, geo.propagator, self.queue, self.p.fft_lib)
             kern.PROP.allocate()
             kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
-                logger.info("Setting up position correction")
-                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
-                                                                self.p.position_refinement.start,
-                                                                self.p.position_refinement.stop,
-                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
-                                                                randomseed=0)
-                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
-                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
-
-                kern.PCK = PositionCorrectionKernel(aux, nmodes, queue_thread=self.queue)
+                log(4, "Setting up PositionCorrectionKernel")
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
                 kern.PCK.allocate()
-                kern.PCK.address_mangler = addr_mangler
-            #self.queue.synchronize()
-            logger.info("Kernel setup completed")
+            log(4, "Kernel setup completed")
 
     def engine_prepare(self):
 
@@ -165,6 +156,8 @@ class DM_pycuda(DM_serial.DM_serial):
             s.gpu, s.data = mppa(s.data)
         for name, s in self.pr.S.items():
             s.gpu, s.data = mppa(s.data)
+        for name, s in self.pr_buf.S.items():
+            s.gpu, s.data = mppa(s.data)
         for name, s in self.pr_nrm.S.items():
             s.gpu, s.data = mppa(s.data)
 
@@ -177,6 +170,8 @@ class DM_pycuda(DM_serial.DM_serial):
             if use_tiles:
                 prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
                 prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
+            if self.do_position_refinement:
+                prep.mangled_addr_gpu = prep.addr_gpu.copy()
 
         for label, d in self.ptycho.new_data:
             prep = self.diff_info[d.ID]
@@ -199,7 +194,6 @@ class DM_pycuda(DM_serial.DM_serial):
         Compute one iteration.
         """
         queue = self.queue
-        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         for it in range(num):
             error = {}
@@ -230,106 +224,39 @@ class DM_pycuda(DM_serial.DM_serial):
                 ob = self.ob.S[oID].gpu
                 pr = self.pr.S[pID].gpu
                 ex = self.ex.S[eID].gpu
-
+                
                 ## compute log-likelihood
                 if self.p.compute_log_likelihood:
-                    t1 = time.time()
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
                     PROP.fw(aux, aux)
                     FUK.log_likelihood(aux, addr, mag, ma, err_phot)
-                    self.benchmark.F_LLerror += time.time() - t1
 
                 ## build auxilliary wave
-                t1 = time.time()
                 AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                self.benchmark.A_Build_aux += time.time() - t1
 
                 ## forward FFT
-                t1 = time.time()
                 PROP.fw(aux, aux)
-                self.benchmark.B_Prop += time.time() - t1
 
                 ## Deviation from measured data
-                t1 = time.time()
                 FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                 FUK.error_reduce(addr, err_fourier)
                 FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
-                self.benchmark.C_Fourier_update += time.time() - t1
 
                 ## backward FFT
-                t1 = time.time()
                 PROP.bw(aux, aux)
-                self.benchmark.D_iProp += time.time() - t1
 
                 ## build exit wave
-                t1 = time.time()
-                AWK.build_exit(aux, addr, ob, pr, ex)
+                AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                 FUK.exit_error(aux, addr)
                 FUK.error_reduce(addr, err_exit)
-                self.benchmark.E_Build_exit += time.time() - t1
-
-                self.benchmark.calls_fourier += 1
 
             parallel.barrier()
 
             sync = (self.curiter % 1 == 0)
-            self.overlap_update(MPI=MPI)
+            self.overlap_update()
 
             parallel.barrier()
-            if self.do_position_refinement and (self.curiter):
-                do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
-                do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
-
-                # Update positions
-                if do_update_pos:
-                    """
-                    Iterates through all positions and refines them by a given algorithm.
-                    """
-                    log(3, "----------- START POS REF -------------")
-                    for dID in self.di.S.keys():
-
-                        prep = self.diff_info[dID]
-                        pID, oID, eID = prep.poe_IDs
-                        ma = self.ma.S[dID].gpu
-                        ob = self.ob.S[oID].gpu
-                        pr = self.pr.S[pID].gpu
-                        kern = self.kernels[prep.label]
-                        aux = kern.aux
-                        addr = prep.addr_gpu
-                        original_addr = prep.original_addr
-                        mag = prep.mag
-                        ma_sum = prep.ma_sum
-                        err_fourier = prep.err_fourier_gpu
-
-                        PCK = kern.PCK
-                        AUK = kern.AUK
-
-                        #error_state = np.zeros(err_fourier.shape, dtype=np.float32)
-                        #error_state[:] = err_fourier.get()
-                        cuda.memcpy_dtod(dest=prep.error_state_gpu.ptr,
-                                         src=err_fourier.ptr,
-                                         size=err_fourier.nbytes)
-                        log(4, 'Position refinement trial: iteration %s' % (self.curiter))
-                        for i in range(self.p.position_refinement.nshifts):
-                            mangled_addr = PCK.address_mangler.mangle_address(addr.get(), original_addr, self.curiter)
-                            mangled_addr_gpu = gpuarray.to_gpu(mangled_addr)
-                            PCK.build_aux(aux, mangled_addr_gpu, ob, pr)
-                            PROP.fw(aux, aux)
-                            PCK.fourier_error(aux, mangled_addr_gpu, mag, ma, ma_sum)
-                            PCK.error_reduce(mangled_addr_gpu, err_fourier)
-                            PCK.update_addr_and_error_state(addr,
-                                prep.error_state_gpu,
-                                mangled_addr_gpu,
-                                err_fourier)
-                        
-                        # prep.err_fourier_gpu.set(error_state)
-                        cuda.memcpy_dtod(dest=prep.err_fourier_gpu.ptr,
-                            src=prep.error_state_gpu.ptr,
-                            size=prep.err_fourier_gpu.nbytes)
-                        if use_tiles:
-                            s1 = addr.shape[0] * addr.shape[1]
-                            s2 = addr.shape[2] * addr.shape[3]
-                            AUK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+            self.position_update()
 
             self.curiter += 1
             queue.synchronize()
@@ -352,9 +279,84 @@ class DM_pycuda(DM_serial.DM_serial):
         self.error = error
         return error
 
+    def position_update(self):
+        """ 
+        Position refinement
+        """
+        if not self.do_position_refinement or (not self.curiter):
+            return
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
+
+        # Update positions
+        if do_update_pos:
+            """
+            Iterates through all positions and refines them by a given algorithm.
+            """
+            log(4, "----------- START POS REF -------------")
+            for dID in self.di.S.keys():
+
+                prep = self.diff_info[dID]
+                pID, oID, eID = prep.poe_IDs
+                ma = self.ma.S[dID].gpu
+                ob = self.ob.S[oID].gpu
+                pr = self.pr.S[pID].gpu
+                kern = self.kernels[prep.label]
+                aux = kern.aux
+                addr = prep.addr_gpu
+                original_addr = prep.original_addr
+                mangled_addr = prep.mangled_addr_gpu
+                mag = prep.mag
+                ma_sum = prep.ma_sum
+                err_fourier = prep.err_fourier_gpu
+                error_state = prep.error_state_gpu
+
+                PCK = kern.PCK
+                TK  = kern.TK
+                PROP = kern.PROP
+
+                # Keep track of object boundaries
+                max_oby = ob.shape[-2] - aux.shape[-2] - 1
+                max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
+                # We need to re-calculate the current error 
+                PCK.build_aux(aux, addr, ob, pr)
+                PROP.fw(aux, aux)
+                if self.p.position_refinement.metric == "fourier":
+                    PCK.fourier_error(aux, addr, mag, ma, ma_sum)
+                    PCK.error_reduce(addr, err_fourier)
+                if self.p.position_refinement.metric == "photon":
+                    PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
+                cuda.memcpy_dtod(dest=error_state.ptr,
+                                    src=err_fourier.ptr,
+                                    size=err_fourier.nbytes)
+
+                PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+                                
+                log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+                for i in range(PCK.mangler.nshifts):
+                    PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
+                    PCK.build_aux(aux, mangled_addr, ob, pr)
+                    PROP.fw(aux, aux)
+                    if self.p.position_refinement.metric == "fourier":
+                        PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
+                        PCK.error_reduce(mangled_addr, err_fourier)
+                    if self.p.position_refinement.metric == "photon":
+                        PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
+                    PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
+                
+                cuda.memcpy_dtod(dest=err_fourier.ptr,
+                                    src=error_state.ptr,
+                                    size=err_fourier.nbytes)
+                if use_tiles:
+                    s1 = addr.shape[0] * addr.shape[1]
+                    s2 = addr.shape[2] * addr.shape[3]
+                    TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+
+
     ## object update
     def object_update(self, MPI=False):
-        t1 = time.time()
         use_atomics = self.p.object_update_cuda_atomics
         queue = self.queue
         queue.synchronize()
@@ -363,11 +365,10 @@ class DM_pycuda(DM_serial.DM_serial):
             cfact = self.ob_cfact[oID]
 
             if self.p.obj_smooth_std is not None:
-                logger.info('Smoothing object, cfact is %.2f' % cfact)
+                log(4, 'Smoothing object, cfact is %.2f' % cfact)
+                obb = self.ob_buf.S[oID]
                 smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
-                ob_gpu_tmp = gpuarray.empty(ob.shape, dtype=np.complex64)
-                self.GSK.convolution(ob.gpu, ob_gpu_tmp, smooth_mfs)
-                ob.gpu = ob_gpu_tmp
+                self.GSK.convolution(ob.gpu, smooth_mfs, tmp=obb.gpu)
 
             ob.gpu *= cfact
             obn.gpu.fill(cfact)
@@ -393,33 +394,19 @@ class DM_pycuda(DM_serial.DM_serial):
 
         for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
-            # MPI test
-            if MPI:
-                ob.data[:] = ob.gpu.get()
-                obn.data[:] = obn.gpu.get()
-                queue.synchronize()
-                parallel.allreduce(ob.data)
-                parallel.allreduce(obn.data)
-                ob.data /= obn.data
+            self.multigpu.allReduceSum(ob.gpu)
+            self.multigpu.allReduceSum(obn.gpu)
+            ob.gpu /= obn.gpu
 
-                self.clip_object(ob)
-                ob.gpu.set(ob.data)
-            else:
-                ob.gpu /= obn.gpu
-
+            self.clip_object(ob.gpu)
             queue.synchronize()
-
-        # print 'object update: ' + str(time.time()-t1)
-        self.benchmark.object_update += time.time() - t1
-        self.benchmark.calls_object += 1
 
     ## probe update
     def probe_update(self, MPI=False):
-        t1 = time.time()
         queue = self.queue
 
         # storage for-loop
-        change = 0
+        change_gpu = gpuarray.zeros((1,), dtype=np.float32)
         cfact = self.p.probe_inertia
         use_atomics = self.p.probe_update_cuda_atomics
         for pID, pr in self.pr.storages.items():
@@ -450,35 +437,56 @@ class DM_pycuda(DM_serial.DM_serial):
             buf = self.pr_buf.S[pID]
             prn = self.pr_nrm.S[pID]
 
-            if MPI:
-                pr.data[:] = pr.gpu.get()
-                prn.data[:] = prn.gpu.get()
-                queue.synchronize()
-                parallel.allreduce(pr.data)
-                parallel.allreduce(prn.data)
-                pr.data /= prn.data
-                self.support_constraint(pr)
-                pr.gpu.set(pr.data)
-            else:
-                pr.gpu /= prn.gpu
-                pr.data[:] = pr.gpu.get()
-                self.support_constraint(pr)
-                pr.gpu.set(pr.data)
+            self.multigpu.allReduceSum(pr.gpu)
+            self.multigpu.allReduceSum(prn.gpu)
+            pr.gpu /= prn.gpu
+            self.support_constraint(pr)
 
-            ## this should be done on GPU
+            ## calculate change on GPU
             queue.synchronize()
-            change += u.norm2(pr.data - buf.data) / u.norm2(pr.data)
-            buf.data[:] = pr.data
-            if MPI:
-                change = parallel.allreduce(change) / parallel.size
-
-        # print 'probe update: ' + str(time.time()-t1)
-        self.benchmark.probe_update += time.time() - t1
-        self.benchmark.calls_probe += 1
+            AUK = self.kernels[list(self.kernels)[0]].AUK
+            buf.gpu -= pr.gpu
+            change_gpu += (AUK.norm2(buf.gpu) / AUK.norm2(pr.gpu))
+            buf.gpu[:] = pr.gpu
+            self.multigpu.allReduceSum(change_gpu)
+            change = change_gpu.get().item() / parallel.size
 
         return np.sqrt(change)
 
-    def engine_finalize(self):
+    def support_constraint(self, storage=None):
+        """
+        Enforces 2D support contraint on probe.
+        """
+        if storage is None:
+            for s in self.pr.storages.values():
+                self.support_constraint(s)
+
+        # Fourier space
+        support = self._probe_fourier_support.get(storage.ID)
+        if support is not None:
+            if storage.ID not in self.FSK:
+                supp = support.astype(np.complex64)
+                self.FSK[storage.ID] = FourierSupportKernel(supp, self.queue, self.p.fft_lib)
+                self.FSK[storage.ID].allocate()
+            self.FSK[storage.ID].apply_fourier_support(storage.gpu)
+
+        # Real space
+        support = self._probe_support.get(storage.ID)
+        if support is not None:
+            if storage.ID not in self.RSK:
+                self.RSK[storage.ID] = RealSupportKernel(support.astype(np.complex64))
+                self.RSK[storage.ID].allocate()
+            self.RSK[storage.ID].apply_real_support(storage.gpu)
+
+    def clip_object(self, ob):
+        """
+        Clips magnitudes of object into given range.
+        """
+        if self.p.clip_object is not None:
+            cmin, cmax = self.p.clip_object
+            self.CMK.clip_magnitudes_to_range(ob, cmin, cmax)
+
+    def engine_finalize(self, benchmark=False):
         """
         clear GPU data and destroy context.
         """
@@ -490,14 +498,20 @@ class DM_pycuda(DM_serial.DM_serial):
             del s.gpu
         for name, s in self.pr.S.items():
             del s.gpu
+        for name, s in self.pr_buf.S.items():
+            del s.gpu
         for name, s in self.pr_nrm.S.items():
             del s.gpu
+
+        # copy addr to cpu
         for dID, prep in self.diff_info.items():
             prep.addr = prep.addr_gpu.get()
 
-        # copy data to cpu
+        # copy data to cpu 
+        # this kills the pagelock memory (otherwise we get segfaults in h5py)
         for name, s in self.pr.S.items():
-            s.data = np.copy(s.data) # is this the same as s.data.get()?
+            s.data = np.copy(s.data)
 
+        self.context.pop()
         self.context.detach()
-        super(DM_pycuda, self).engine_finalize()
+        super(DM_pycuda, self).engine_finalize(benchmark)

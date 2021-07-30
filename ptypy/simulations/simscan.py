@@ -249,32 +249,32 @@ class SimScan(PtyScan):
 
         return ptycho
 
-if __name__ == "__main__":
-    from ptypy import resources
+# if __name__ == "__main__":
+#     from ptypy import resources
     
-    s = scan_DEFAULT.copy()
-    s.xy.model = "round"
-    s.xy.spacing = 1e-6
-    s.xy.steps = 8
-    s.xy.extent = 5e-6 
-    shape = 256
-    s.geometry.energy = 6.2
-    s.geometry.lam = None
-    s.geometry.distance = 7
-    s.geometry.psize = 172e-6
-    s.geometry.shape = shape
-    s.geometry.propagation = "farfield"
-    s.illumination = resources.moon_pr((shape,shape))*1e2
-    s.sample =  resources.flower_obj((shape*2,shape*2))
+#     s = scan_DEFAULT.copy()
+#     s.xy.model = "round"
+#     s.xy.spacing = 1e-6
+#     s.xy.steps = 8
+#     s.xy.extent = 5e-6 
+#     shape = 256
+#     s.geometry.energy = 6.2
+#     s.geometry.lam = None
+#     s.geometry.distance = 7
+#     s.geometry.psize = 172e-6
+#     s.geometry.shape = shape
+#     s.geometry.propagation = "farfield"
+#     s.illumination = resources.moon_pr((shape,shape))*1e2
+#     s.sample =  resources.flower_obj((shape*2,shape*2))
 
 
-    u.verbose.set_level(3)
-    MS = SimScan(None,s)
-    #MS.P.plot_overview()
-    u.verbose.set_level(3)
-    u.pause(10)
-    MS.initialize()
-    for i in range(20):
-        msg = MS.auto(10)
-        u.verbose.logger.info(u.verbose.report(msg), extra={'allprocesses': True})
-        u.parallel.barrier()
+#     u.verbose.set_level(3)
+#     MS = SimScan(None,s)
+#     #MS.P.plot_overview()
+#     u.verbose.set_level(3)
+#     u.pause(10)
+#     MS.initialize()
+#     for i in range(20):
+#         msg = MS.auto(10)
+#         u.verbose.logger.info(u.verbose.report(msg), extra={'allprocesses': True})
+#         u.parallel.barrier()

@@ -1,5 +1,6 @@
 import numpy as np
 from ptypy.utils.verbose import logger, log
+from .array_utils import max_abs2
 
 class Adict(object):
 
@@ -73,6 +74,28 @@ class FourierUpdateKernel(BaseKernel):
         ferr[:] = mask * np.abs(fdev) ** 2 / mask_sum.reshape((maxz, 1, 1))
         return
 
+    def fourier_deviation(self, b_aux, addr, mag):
+        # reference shape (write-to shape)
+        sh = self.fshape
+        # stopper
+        maxz = mag.shape[0]
+
+        # batch buffers
+        fdev = self.npy.fdev[:maxz]
+        aux = b_aux[:maxz * self.nmodes]
+
+        ## Actual math ##
+
+        # build model from complex fourier magnitudes, summing up 
+        # all modes incoherently
+        tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
+        af = np.sqrt((np.abs(tf) ** 2).sum(1))
+
+        # calculate difference to real data (g_mag)
+        fdev[:] = af - mag
+
+        return
+
     def error_reduce(self, addr, err_sum):
         # reference shape (write-to shape)
         sh = self.fshape
@@ -129,6 +152,33 @@ class FourierUpdateKernel(BaseKernel):
         fm[:] = (1 - mask) + mask * (mag + fdev * renorm) / (af + self.denom)
 
         #fm[:] = mag / (af + 1e-6)
+        # upcasting
+        aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
+        return
+
+    def fmag_update_nopbound(self, b_aux, addr, mag, mask):
+
+        sh = self.fshape
+        nmodes = self.nmodes
+
+        # stopper
+        maxz = mag.shape[0]
+
+        # batch buffers
+        fdev = self.npy.fdev[:maxz]
+        aux = b_aux[:maxz * nmodes]
+
+        # write-to shape
+        ish = aux.shape
+
+        ## Actual math ##
+
+        # local values
+        fm = np.ones((maxz, sh[1], sh[2]), np.float32)
+
+        af = fdev + mag
+        fm[:] = (1 - mask) + mask * mag / (af + self.denom)
+
         # upcasting
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
         return
@@ -358,7 +408,6 @@ class AuxiliaryWaveKernel(BaseKernel):
         aux = b_aux[:maxz * nmodes]
         flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
         rows, cols = ex.shape[-2:]
-
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             tmp = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
                   pr[prc[0], :, :] * \
@@ -368,7 +417,7 @@ class AuxiliaryWaveKernel(BaseKernel):
             aux[ind, :, :] = tmp
         return
 
-    def build_exit(self, b_aux, addr, ob, pr, ex):
+    def build_exit(self, b_aux, addr, ob, pr, ex, alpha=1):
 
         sh = addr.shape
 
@@ -384,9 +433,35 @@ class AuxiliaryWaveKernel(BaseKernel):
         rows, cols = ex.shape[-2:]
 
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            dex = aux[ind, :, :] - \
+            dex = aux[ind, :, :] - alpha * \
                   ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
-                  pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]
+                  pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] + (alpha - 1) * \
+                  ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
+
+            ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] += dex
+            aux[ind, :, :] = dex
+        return
+
+    def build_exit_alpha_tau(self, b_aux, addr, ob, pr, ex, alpha=1, tau=1):
+        sh = addr.shape
+
+        nmodes = sh[1]
+
+        # stopper
+        maxz = sh[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * nmodes]
+
+        flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            dex = tau * aux[ind, :, :] + (tau * alpha - 1) * \
+                  ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] + \
+                  (1 - tau * (1 + alpha)) * \
+                  ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
+                  pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] 
 
             ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] += dex
             aux[ind, :, :] = dex
@@ -478,8 +553,39 @@ class PoUpdateKernel(BaseKernel):
                 ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * fac
         return
 
+    def ob_update_local(self, addr, ob, pr, ex, aux):
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        pr_norm = max_abs2(pr)
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
+                pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
+                (ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind,:,:]) / \
+                pr_norm
+        return
+
+    def pr_update_local(self, addr, pr, ob, ex, aux):
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        ob_norm = max_abs2(ob)
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
+                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
+                (ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind,:,:]) / \
+                ob_norm
+        return
+
 class PositionCorrectionKernel(BaseKernel):
-    def __init__(self, aux, nmodes):
+    from ptypy.accelerate.base import address_manglers
+
+    MANGLERS = {
+        'Annealing': address_manglers.RandomIntMangler,
+        'GridSearch': address_manglers.GridSearchMangler
+    }
+
+    def __init__(self, aux, nmodes, parameters, resolution):
         super(PositionCorrectionKernel, self).__init__()
         ash = aux.shape
         self.fshape = (ash[0] // nmodes, ash[1], ash[2])
@@ -487,11 +593,20 @@ class PositionCorrectionKernel(BaseKernel):
         self.npy.fdev = None
         self.addr = None
         self.nmodes = nmodes
-        self.address_mangler = None
+        self.param = parameters
+        self.nshifts = parameters.nshifts
+        self.resolution = resolution
         self.kernels = ['build_aux',
                         'fourier_error',
                         'error_reduce',
                         'update_addr']
+        self.setup()
+
+    def setup(self):
+        Mangler = self.MANGLERS[self.param.method]
+        self.mangler = Mangler(int(self.param.amplitude // self.resolution[0]), self.param.start, self.param.stop,
+                               self.param.nshifts,
+                               max_bound=int(self.param.max_shift // self.resolution[0]), randomseed=0)
 
     def allocate(self):
         self.npy.fdev = np.zeros(self.fshape, dtype=np.float32) # we won't use this again but preallocate for speed
@@ -565,11 +680,32 @@ class PositionCorrectionKernel(BaseKernel):
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
 
+    def log_likelihood(self, b_aux, addr, mag, mask, err_sum):
+        # reference shape (write-to shape)
+        sh = self.fshape
+        # stopper
+        maxz = mag.shape[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * self.nmodes]
+
+        # build model from complex fourier magnitudes, summing up 
+        # all modes incoherently
+        tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
+        LL = (np.abs(tf) ** 2).sum(1)
+
+        # Intensity data
+        I = mag**2
+
+        # Calculate log likelihood error
+        err_sum[:] = ((mask * (LL - I)**2 / (I + 1.)).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
+        return
+
     def update_addr_and_error_state(self, addr, error_state, mangled_addr, err_sum):
         '''
         updates the addresses and err state vector corresponding to the smallest error. I think this can be done on the cpu
         '''
         update_indices = err_sum < error_state
-        log(4, "updating %s indices" % np.sum(update_indices))
+        log(4, "Position correction: updating %s indices" % np.sum(update_indices))
         addr[update_indices] = mangled_addr[update_indices]
         error_state[update_indices] = err_sum[update_indices]

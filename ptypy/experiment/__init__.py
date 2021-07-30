@@ -47,32 +47,3 @@ def _register_PtyScan_class(cls, name=None):
     globals()[name] = cls
     __all__.append(name)
     return cls
-
-
-ptyscan_modules = [('.hdf5_loader', 'Hdf5Loader'),
-                   ('.cSAXS', 'cSAXSScan'),
-                   ('.savu', 'Savu'),
-                   ('.plugin', 'makeScanPlugin'),
-                   ('.ID16Anfp', 'ID16AScan'),
-                   ('.AMO_LCLS', 'AMOScan'),
-                   ('.DiProI_FERMI', 'DiProIFERMIScan'),
-                   ('.optiklabor', 'FliSpecScanMultexp'),
-                   ('.UCL', 'UCLLaserScan'),
-                   ('.nanomax', 'NanomaxStepscanNov2018'),
-                   ('.nanomax', 'NanomaxFlyscanMay2019'),
-                   ('.nanomax', 'NanomaxStepscanSep2019'),
-                   ('.nanomax', 'NanomaxContrast'),
-                   ('.nanomax_streaming', 'NanomaxZmqScan'),
-                   ('.ALS_5321', 'ALS5321Scan'),
-                   ('.Bragg3dSim', 'Bragg3dSimScan')]
-
-for module, obj in ptyscan_modules:
-    try:
-        lib = import_module(module, 'ptypy.experiment')
-    except ImportError as exception:
-        log(2, 'Could not import experiment %s from %s, Reason: %s' % (obj, module, exception))
-        pass
-    else:
-        globals()[obj] = lib.__dict__[obj]
-
-

@@ -308,7 +308,7 @@ class GpuDataManager2:
         Returns
         -------
         """
-        if self.max is None or len(self)<=self.max:
+        if self.max is None or len(self)<self.max:
             nbytes=nbytes if nbytes is not None else self._nbytes
             self.data.append(GpuData2(nbytes, self._syncback))
 

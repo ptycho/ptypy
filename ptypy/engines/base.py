@@ -13,7 +13,7 @@ import time
 from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline, log
-from .posref import AnnealingRefine
+from .posref import AnnealingRefine, GridSearchRefine
 
 __all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info', 'PositionCorrectionEngine']
 
@@ -62,6 +62,12 @@ class BaseEngine(object):
     lowlim = 0.0
     help = Valid probe area in frequency domain as fraction of the probe frame
     doc = Defines a circular area centered on the probe frame (in frequency domain), in which the probe is allowed to be nonzero.
+
+    [record_local_error]
+    default = False
+    type = bool
+    help = If True, save the local map of errors into the runtime dictionary.
+    userlevel = 2
 
     """
 
@@ -175,15 +181,15 @@ class BaseEngine(object):
             for s in self.pr.storages.values():
                 self.support_contraint(s)
 
-        # Real space
-        support = self._probe_support.get(storage.ID)
-        if support is not None:
-            storage.data *= support
-
         # Fourier space
         support = self._probe_fourier_support.get(storage.ID)
         if support is not None:
             storage.data[:] = np.fft.ifft2(support * np.fft.fft2(storage.data))
+
+        # Real space
+        support = self._probe_support.get(storage.ID)
+        if support is not None:
+            storage.data *= support
 
     def iterate(self, num=None):
         """
@@ -262,7 +268,8 @@ class BaseEngine(object):
         )
 
         self.ptycho.runtime.iter_info.append(info)
-        self.ptycho.runtime.error_local = local_error
+        if self.p.record_local_error:
+            self.ptycho.runtime.error_local = local_error
 
     def finalize(self):
         """
@@ -314,6 +321,11 @@ class PositionCorrectionEngine(BaseEngine):
     type = Param, bool
     help = If True refine scan positions
 
+    [position_refinement.method]
+    default = Annealing
+    type = str
+    help = Annealing or GridSearch
+
     [position_refinement.start]
     default = None
     type = int
@@ -357,6 +369,11 @@ class PositionCorrectionEngine(BaseEngine):
     help = record movement of positions
     """
 
+    POSREF_ENGINES = {
+        "Annealing": AnnealingRefine,
+        "GridSearch": GridSearchRefine
+    }
+
     def __init__(self, ptycho_parent, pars):
         """
         Position Correction engine.
@@ -385,18 +402,23 @@ class PositionCorrectionEngine(BaseEngine):
         if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
             self.do_position_refinement = False
         else:
+            for label, scan in self.ptycho.model.scans.items():
+                if self.p.position_refinement.amplitude < scan.geometries[0].resolution[0]:
+                    self.do_position_refinement = False
+                    log(3,"Failed to initialise position refinement, search amplitude is smaller than the resolution")
+                    return
             self.do_position_refinement = True
-            log(3, "Initialising position refinement")
+            log(3, "Initialising position refinement (%s)" %self.p.position_refinement.method)
             
             # Enlarge object arrays, 
             # This can be skipped though if the boundary is less important
             for name, s in self.ob.storages.items():
-                s.padding = int(self.p.position_refinement.max_shift // np.max(s.psize))
-                s.reformat()
+               s.padding = int(self.p.position_refinement.max_shift // np.max(s.psize))
+               s.reformat()
 
-            # this could be some kind of dictionary lookup if we want to add more
-            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
-            log(3, "Position refinement initialised")
+            # Choose position refinement engine from dictionary
+            PosrefEngine = self.POSREF_ENGINES[self.p.position_refinement.method]
+            self.position_refinement = PosrefEngine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
             self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
             if self.p.position_refinement.stop is None:
                 self.p.position_refinement.stop = self.p.numiter
@@ -407,7 +429,7 @@ class PositionCorrectionEngine(BaseEngine):
         """
         Position refinement update.
         """
-        if self.do_position_refinement is False:
+        if not self.do_position_refinement:
             return
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
@@ -436,6 +458,8 @@ class PositionCorrectionEngine(BaseEngine):
         """
         if self.do_position_refinement is False:
             return
+        if self.p.position_refinement.record is False:
+            return
 
         # Gather all new positions from each node
         coords = {}
@@ -450,6 +474,8 @@ class PositionCorrectionEngine(BaseEngine):
                 for v in S.views:
                     if v.pod.pr_view.layer == 0:
                         v.coord = coords[v.ID]
+
+        self.ptycho.record_positions = True
 
 
 class Base3dBraggEngine(BaseEngine):

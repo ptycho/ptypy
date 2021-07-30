@@ -10,12 +10,13 @@ from ptypy import utils as u
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 4
+p.verbose_level = 3
 
 # set home path
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.autosave = u.Param()
+p.io.autosave = u.Param(active=False)
+p.io.interaction = u.Param(active=False)
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
@@ -39,17 +40,27 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM'
-p.engines.engine00.probe_support = 1
-# p.engines.engine00.probe_center_tol = 0.5
+p.engines.engine00.name = 'ML'
+p.engines.engine00.ML_type = 'Gaussian'
+p.engines.engine00.reg_del2 = True
+p.engines.engine00.reg_del2_amplitude = .1 
+p.engines.engine00.scale_precond = True
+p.engines.engine00.scale_probe_object = 1.
+p.engines.engine00.smooth_gradient = 20.
+p.engines.engine00.smooth_gradient_decay = 1/50.
+p.engines.engine00.floating_intensities = False
 p.engines.engine00.numiter = 1000
+p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.position_refinement = u.Param()
 p.engines.engine00.position_refinement.start = 50
-p.engines.engine00.position_refinement.stop = 990
+p.engines.engine00.position_refinement.stop = 950
 p.engines.engine00.position_refinement.interval = 10
 p.engines.engine00.position_refinement.nshifts = 32
-p.engines.engine00.position_refinement.amplitude = 1e-6
-p.engines.engine00.position_refinement.max_shift = 2e-6
+p.engines.engine00.position_refinement.amplitude = 5e-7
+p.engines.engine00.position_refinement.max_shift = 1e-6
+p.engines.engine00.position_refinement.method = "GridSearch"
+p.engines.engine00.position_refinement.metric = "photon"
+p.engines.engine00.position_refinement.record = True
 
 # prepare and run
 P = Ptycho(p, level=4)
@@ -58,26 +69,24 @@ P = Ptycho(p, level=4)
 a = 0.
 
 coords = []
+coords_start = []
 for pname, pod in P.pods.items():
+
     # Save real position
     coords.append(np.copy(pod.ob_view.coord))
     before = pod.ob_view.coord
     psize = pod.pr_view.psize
-    # print(pname)
-    # print(before)
     perturbation = psize * ((3e-7 * np.array([np.sin(a), np.cos(a)])) // psize)
-
     new_coord = before + perturbation # make sure integer number of pixels shift
-
-
     pod.ob_view.coord = new_coord
-
-    #pod.diff *= np.random.uniform(0.1,1)y
+    coords_start.append(np.copy(pod.ob_view.coord))
+    #pod.diff *= np.random.uniform(0.1,1)
     a += 4.
 
-np.savetxt("positions_theory.txt", coords)
+#np.savetxt("positions_theory.txt", coords)
+#np.savetxt("positions_start.txt", coords_start)
 P.obj.reformat()
-
 
 # Run
 P.run()
+P.finalize()
