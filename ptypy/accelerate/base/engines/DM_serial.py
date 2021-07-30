@@ -229,19 +229,6 @@ class DM_serial(DM.DM):
                 prep.original_addr[:] = prep.addr
             pID, oID, eID = prep.poe_IDs
 
-            ob = self.ob.S[oID]
-            obn = self.ob_nrm.S[oID]
-            obv = self.ob_buf.S[oID]
-            misfit = np.asarray(ob.shape[-2:]) % 32
-            if (misfit != 0).any():
-                pad = 32 - np.asarray(ob.shape[-2:]) % 32
-                ob.data = u.crop_pad(ob.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
-                obv.data = u.crop_pad(obv.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
-                obn.data = u.crop_pad(obn.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
-                ob.shape = ob.data.shape
-                obv.shape = obv.data.shape
-                obn.shape = obn.data.shape
-
             # calculate c_facts
             cfact = self.p.object_inertia * self.mean_power
             self.ob_cfact[oID] = cfact / u.parallel.size
