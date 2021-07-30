@@ -30,6 +30,18 @@ class DM_pycuda_object_regul(DM_pycuda.DM_pycuda):
     doc = Providing a complex number, e.g. 1.0 + 0.1j will replace both real and imaginary parts\
           Providing a floating number, e.g. 0.5 will replace only the phase
 
+    [object_regul_start]
+    default = None
+    type = int
+    help = Number of iterations until object regularisation starts
+    doc = If None, object regularisation starts at first iteration
+
+    [object_regul_stop]
+    default = None
+    type = int
+    help = Number of iterations after which object regularisation stops
+    doc = If None, object regularisation stops after last iteration
+
     """
 
     def __init__(self, ptycho_parent, pars=None):
@@ -57,7 +69,12 @@ class DM_pycuda_object_regul(DM_pycuda.DM_pycuda):
         Replace values inside mask with given fill value.
         """
         super().object_update(*args,**kwargs)
-        if self.p.object_regul_mask is not None:
+        do_regul = True
+        if (self.p.object_regul_start is not None): 
+            do_regul &= (self.curiter >= self.p.object_regul_start)
+        if (self.p.object_regul_stop is not None):
+            do_regul &= (self.curiter < self.p.object_regul_stop)
+        if (self.p.object_regul_mask is not None) and do_regul:
             for oID, ob in self.ob.storages.items():
                 assert ob.shape == self.object_mask_gpu.shape, "Object regulariser mask needs to have same shape as object = {}".format(ob.shape)
                 if isinstance(self.p.object_regul_fill, complex):

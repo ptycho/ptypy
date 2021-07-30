@@ -8,13 +8,12 @@ from ptypy.core import Ptycho
 from ptypy import utils as u
 p = u.Param()
 
-from ptypy.plugins import DM_object_regul
-from ptypy.accelerate.cuda_pycuda.plugins import DM_pycuda_object_regul
-from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda
+import DM_object_regul 
+import DM_pycuda_object_regul
 import numpy as np
 
-ny,nx = (512,512)
-#ny,nx = (492,492)
+#ny,nx = (512,512)
+ny,nx = (492,492)
 xx,yy = np.meshgrid(np.arange(nx)-nx//2, np.arange(ny)-ny//2)
 mask = xx**2 + yy**2 > (150)**2
 mask = np.expand_dims(mask,0)
@@ -50,10 +49,12 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_pycuda_object_regul'
-p.engines.engine00.numiter = 10
+p.engines.engine00.name = 'DM_object_regul'
+p.engines.engine00.numiter = 80
 p.engines.engine00.object_regul_mask = mask
 p.engines.engine00.object_regul_fill = 0.
+p.engines.engine00.object_regul_start = 10
+p.engines.engine00.object_regul_stop = 60
 
 # prepare and run
 P = Ptycho(p,level=5)
