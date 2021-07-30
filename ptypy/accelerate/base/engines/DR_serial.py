@@ -240,13 +240,6 @@ class DR_serial(PositionCorrectionEngine):
                 prep.original_addr[:] = prep.addr
             pID, oID, eID = prep.poe_IDs
 
-            ob = self.ob.S[oID]
-            misfit = np.asarray(ob.shape[-2:]) % 32
-            if (misfit != 0).any():
-                pad = 32 - np.asarray(ob.shape[-2:]) % 32
-                ob.data = u.crop_pad(ob.data, [[0, pad[0]], [0, pad[1]]], axes=[-2, -1], filltype='project')
-                ob.shape = ob.data.shape
-
             # Keep a list of view indices
             prep.rng = np.random.default_rng()
             prep.vieworder = np.arange(prep.addr.shape[0])
