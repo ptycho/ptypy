@@ -12,8 +12,7 @@ from ptypy.plugins import DM_object_regul
 from ptypy.accelerate.cuda_pycuda.plugins import DM_pycuda_object_regul
 import numpy as np
 
-ny,nx = (512,512)
-#ny,nx = (492,492)
+ny,nx = (492,492)
 xx,yy = np.meshgrid(np.arange(nx)-nx//2, np.arange(ny)-ny//2)
 mask = xx**2 + yy**2 > (150)**2
 mask = np.expand_dims(mask,0)
