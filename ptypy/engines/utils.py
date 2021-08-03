@@ -94,7 +94,7 @@ def log_likelihood(diff_view):
     LL = np.zeros_like(I)
     for name, pod in diff_view.pods.items():
         LL += pod.downsample(u.abs2(pod.fw(pod.probe * pod.object)))
-    return np.sum(diff_view.mask * (LL - I)**2 / (I + 1.)) / np.prod(LL.shape)
+    return np.sum(diff_view.pod.mask * (LL - I)**2 / (I + 1.)) / np.prod(LL.shape)
 
 
 def projection_update_generalized(diff_view, a, b, c, pbound=None):
@@ -176,16 +176,24 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     for name, pod in diff_view.pods.items():
         if not pod.active:
             continue
+
+        # essentially this is all the same formula
+        # fm = (1 - fmask) + fmask * (fmag + fdev * renorm)
+        # with
+        # renorm = 1.0 for pbound <= err_fmag
+        # renorm = np.sqrt(pbound / err_fmag) for pbound > fmag
+        # renorm = 0.0 for pbound == None (off-switch)
+        # und we use that for GPU and the serial/batched engines.
+        # See the basic_fourier_update_LEGACY function for the original
+        # implementation. We'll save a few FFTs this way but that only
+        # makes a difference if all ranks get similar numbers of diffraction
+        # frames with err_fmag inside the pbound.
         if pbound is None and fm is None:
             fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
         elif err_fmag > pbound and fm is None:
             renorm = np.sqrt(pbound / err_fmag)
             fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
 
-        # This switch isn't exactly needed as fm = 1.0 would have the
-        # exact same effect. The switch is here to avoid unnecessary FFTs.
-        # Large batched FFTs (as for the serial/GPU case) could just
-        # use fm = 1.0 for the same effect (minus precision errors)
         if fm is not None:
             df = pod.bw(pod.upsample(fm) * f[name]) + \
                  a * pod.probe * pod.object - (a + b + c) * pod.exit
