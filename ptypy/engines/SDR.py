@@ -14,16 +14,15 @@ from ..utils.verbose import logger, log
 from ..utils import parallel
 from .utils import basic_fourier_update
 from . import register
-from .base import PositionCorrectionEngine
+from .stochastic import StochasticBaseEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 __all__ = ['SDR']
 
 @register()
-class SDR(PositionCorrectionEngine):
+class SDR(StochasticBaseEngine):
     """
-    An implementation of the stochastic Douglas-Rachford algorithm
-    that is equivalent to the ePIE algorithm for alpha=0 and tau=1.
+    The stochastic Douglas-Rachford algorithm.
 
     Defaults:
 
@@ -33,39 +32,29 @@ class SDR(PositionCorrectionEngine):
     help =
     doc =
 
-    [alpha]
+    [sigma]
     default = 1
     type = float
     lowlim = 0.0
-    help = Tuning parameter, a value of 0 makes it equal to ePIE.
+    help = Relaxed Fourier reflaction parameter.
 
     [tau]
     default = 1
     type = float
     lowlim = 0.0
-    help = fourier update parameter, a value of 0 means no fourier update.
+    help = Relaxed modulus constraint parameter.
 
-    [probe_inertia]
-    default = 1e-9
+    [probe_update_step]
+    default = 0.1
     type = float
     lowlim = 0.0
-    help = Weight of the current probe estimate in the update
+    help = Step size in the probe update
 
-    [object_inertia]
-    default = 1e-4
+    [object_update_step]
+    default = 0.9
     type = float
     lowlim = 0.0
-    help = Weight of the current object in the update
-
-    [clip_object]
-    default = None
-    type = tuple
-    help = Clip object amplitude into this interval
-
-    [compute_log_likelihood]
-    default = True
-    type = bool
-    help = A switch for computing the log-likelihood error (this can impact the performance of the engine)
+    help = Step size in the object update
 
     """
 
@@ -77,10 +66,6 @@ class SDR(PositionCorrectionEngine):
         """
         super(SDR, self).__init__(ptycho_parent, pars)
 
-        # Instance attributes
-        self.error = None
-        self.mean_power = None
-
         self.ptycho.citations.add_article(
             title='Semi-implicit relaxed Douglas-Rachford algorithm (sDR) for ptychography',
             author='Pham et al.',
@@ -91,17 +76,6 @@ class SDR(PositionCorrectionEngine):
             doi='10.1364/OE.27.031246',
             comment='The stochastic douglas-rachford reconstruction algorithm',
         )
-        self.ptycho.citations.add_article(
-            title='An improved ptychographical phase retrieval algorithm for diffractive imaging',
-            author='Maiden A. and Rodenburg J.',
-            journal='Ultramicroscopy',
-            volume=10,
-            year=2009,
-            page=1256,
-            doi='10.1016/j.ultramic.2009.05.012',
-            comment='The ePIE reconstruction algorithm',
-        )
-
 
     def engine_initialize(self):
         """
@@ -109,64 +83,34 @@ class SDR(PositionCorrectionEngine):
         """
         super(SDR, self).engine_initialize()
 
-    def engine_prepare(self):
+    def fourier_update(self, view):
+        """
+        Fourier update for Stochastic Douglas-Rachford (SDR).
+
 
         """
-        Last minute initialization.
+        return basic_fourier_update(view, alpha=self.p.sigma, tau=self.p.tau, 
+                                    LL_error=self.p.compute_log_likelihood)
 
-        Everything that needs to be recalculated when new data arrives.
+    def object_update(self, *args, **kwargs):
         """
-        if self.ptycho.new_data:
-            # recalculate everything
-            mean_power = 0.
-            for s in self.di.storages.values():
-                mean_power += s.mean_power
-            self.mean_power = mean_power / len(self.di.storages)
+        Object update for Stochastic Douglas-Rachford (SDR).
 
-    def engine_iterate(self, num=1):
+        .. math::
+            O^{j+1} += \\alpha * \\bar{P^{j}} * (\\Psi^{\prime} - \\Psi^{j}) / P_{norm}
+            P_{norm} = (1 - \\alpha) * ||P^{j}||^2 + \\alpha * |P^{j}|^2
+
         """
-        Compute one iteration.
+        self.generic_object_update(*args, **kwargs, alpha=self.p.object_update_step, beta=0.0)
+
+
+    def probe_update(self, *args, **kwargs):
         """
-        vieworder = list(self.di.views.keys())
-        vieworder.sort()
-        rng = np.random.default_rng()
+        Probe update for Stochastic Douglas-Rachford (SDR).
 
-        for it in range(num):   
+        .. math::
+            P^{j+1} += \\alpha * \\bar{O^{j}} * (\\Psi^{\prime} - \\Psi^{j}) / O_{norm}
+            O_{norm} = (1 - \\alpha) * ||O^{j}||^2 + \\alpha * |O^{j}|^2
 
-            error_dct = {}
-            rng.shuffle(vieworder)
-
-            for name in vieworder:
-                view = self.di.views[name]
-                if not view.active:
-                    continue
-
-                # Fourier update
-                error_dct[name] = basic_fourier_update(view,  
-                                                       alpha=self.p.alpha, tau=self.p.tau, 
-                                                       LL_error=self.p.compute_log_likelihood)
-                
-                # A copy of the old exit wave
-                exit_ = {}
-                for name, pod in view.pods.items():
-                    exit_[name] = pod.object * pod.probe
-
-                # Object update
-                probe_power = 0
-                for name, pod in view.pods.items():
-                    probe_power += u.abs2(pod.probe)
-                probe_norm = np.max(probe_power)
-                for name, pod in view.pods.items():
-                    pod.object += np.conj(pod.probe) * (pod.exit - exit_[name]) / probe_norm
-
-                # Probe update
-                object_power = 0
-                for name, pod in view.pods.items():
-                    object_power += u.abs2(pod.object)
-                object_norm = np.max(object_power)
-                for name, pod in view.pods.items():
-                    pod.probe += np.conj(pod.object) * (pod.exit - exit_[name]) / object_norm
-
-            self.curiter += 1
-
-        return error_dct
+        """
+        self.generic_probe_update(*args, **kwargs, alpha=self.p.probe_update_step, beta=0.0)

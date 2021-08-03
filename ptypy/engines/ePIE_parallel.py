@@ -32,19 +32,19 @@ from ..utils import parallel
 from . import BaseEngine, register
 from ..core.manager import Full, Vanilla
 
-__all__ = ['EPIE']
+__all__ = ['EPIEParallel']
 
 
-@register(name = 'ePIE')
-class EPIE(BaseEngine):
+@register(name = 'ePIEparallel')
+class EPIEParallel(BaseEngine):
     """
-    ePIE reconstruction engine.
+    Parallel ePIE reconstruction engine.
 
 
     Defaults:
 
     [name]
-    default = ePIE
+    default = ePIEparallel
     type = str
     help =
     doc =

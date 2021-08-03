@@ -46,7 +46,7 @@ from . import ML
 from . import MLOPR
 from . import dummy
 from . import SDR
-from . import ePIE
+from . import EPIE
 from . import Bragg3d_engines
 
 # TODO: make this better / explicit
