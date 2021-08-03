@@ -98,7 +98,7 @@ def log_likelihood(diff_view):
 
 
 def projection_update_generalized(diff_view, a, b, c, pbound=None):
-    """\
+    """
     Generalized projection update of a single view using its associated pods.
     Updates on all pods' exit waves. We assume here that the current state
     is held in pod.exit, while the product of pod.probe & pod.object hold
@@ -207,10 +207,10 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
 
 
 def projection_update_DM_AP(diff_view, alpha=1.0, pbound=None):
-    """\
-    Linear interpolation between Difference MAp algorithm (a,b,c = -1,1,2)
+    """
+    Linear interpolation between Difference Map algorithm (a,b,c = -1,1,2)
     and Alternating Projections algorithm (a,b,c = 0,0,1) with coefficients
-    a = -alpha, b = alpha, c = 1 + alpha. Alpha = 1.0 corresponds to DR and
+    a = -alpha, b = alpha, c = 1 + alpha. Alpha = 1.0 corresponds to DM and
     alpha = 0.0 to AP.
 
     Parameters
@@ -242,7 +242,7 @@ def projection_update_DM_AP(diff_view, alpha=1.0, pbound=None):
 
 
 def projection_update_RAAR(diff_view, beta=0.75, pbound=None):
-    """\
+    """
     RAAR - projection update, see https://journals.iucr.org/j/issues/2016/04/00/jo5020/index.html#sourceBB30
     equation 16.
 
@@ -255,7 +255,7 @@ def projection_update_RAAR(diff_view, beta=0.75, pbound=None):
         View to diffraction data
 
     alpha : float, optional
-        Blend between AP (alpha=0.0 and DR (alpha=1.0) . Valid interval ``[0, 1]``
+        Blend between AP (alpha=0.0 and DM (alpha=1.0) . Valid interval ``[0, 1]``
 
     pbound : float, optional
         Power bound. Fourier update is bypassed if the quadratic deviation
@@ -278,10 +278,10 @@ def projection_update_RAAR(diff_view, beta=0.75, pbound=None):
 
 
 def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
-    """\
+    """
     *** DEPRECATED ***
     Backwards compatible function, for reference only. Contains LL error.
-    Please replace with log_likelihood and projection_update_DR_AP
+    Please replace with log_likelihood and projection_update_DM_AP
 
     See also
     --------
@@ -298,7 +298,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
 
 
 def basic_fourier_update_LEGACY(diff_view, pbound=None, alpha=1., LL_error=True):
-    """\
+    """
     *** DEPRECATED ***
     Fourier update a single view using its associated pods.
     Updates on all pods' exit waves.
@@ -507,7 +507,7 @@ def reduce_dimension(a, dim, local_indices=None):
 
 
 def Cnorm2(c):
-    """\
+    """
     Computes a norm2 on whole container `c`.
 
     :param Container c: Input
@@ -524,7 +524,7 @@ def Cnorm2(c):
 
 
 def Cdot(c1, c2):
-    """\
+    """
     Compute the dot product on two containers `c1` and `c2`.
     No check is made to ensure they are of the same kind.
 
