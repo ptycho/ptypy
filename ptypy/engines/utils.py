@@ -206,9 +206,9 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     return err_fmag, err_exit
 
 
-def projection_update_DR_AP(diff_view, alpha=1.0, pbound=None):
+def projection_update_DM_AP(diff_view, alpha=1.0, pbound=None):
     """\
-    Linear interpolation between Douglas-Rachford algorithm (a,b,c = -1,1,2)
+    Linear interpolation between Difference MAp algorithm (a,b,c = -1,1,2)
     and Alternating Projections algorithm (a,b,c = 0,0,1) with coefficients
     a = -alpha, b = alpha, c = 1 + alpha. Alpha = 1.0 corresponds to DR and
     alpha = 0.0 to AP.
@@ -219,7 +219,7 @@ def projection_update_DR_AP(diff_view, alpha=1.0, pbound=None):
         View to diffraction data
 
     alpha : float, optional
-        Blend between AP (alpha=0.0 and DR (alpha=1.0) . Valid interval ``[0, 1]``
+        Blend between AP (alpha=0.0 and DM (alpha=1.0) . Valid interval ``[0, 1]``
 
     pbound : float, optional
         Power bound. Fourier update is bypassed if the quadratic deviation
@@ -292,7 +292,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     else:
         err_phot = 0.0
 
-    err_fmag, err_exit = projection_update_DR_AP(diff_view, alpha=alpha, pbound=pbound)
+    err_fmag, err_exit = projection_update_DM_AP(diff_view, alpha=alpha, pbound=pbound)
 
     return np.array([err_fmag, err_phot, err_exit])
 
