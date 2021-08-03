@@ -76,8 +76,221 @@ def dynamic_load(path, baselist, fail_silently = True):
             u.logger.warning(traceback.format_exc(tb))
 
 
+def log_likelihood(diff_view):
+    """
+    Calculates the log-likelihood for a diffraction view.
+
+    Parameters
+    ----------
+    diff_view : View
+        View to diffraction data
+
+    Returns
+    -------
+    ll_error :  float
+        Log-likelihood error
+    """
+    LL = np.zeros_like(I)
+    for name, pod in diff_view.pods.items():
+        LL += pod.downsample(u.abs2(pod.fw(pod.probe * pod.object)))
+    return np.sum(diff_view.mask * (LL - I)**2 / (I + 1.)) / np.prod(LL.shape)
+
+
+def projection_update_generalized(diff_view, a, b, c, pbound=None):
+    """\
+    Generalized projection update of a single view using its associated pods.
+    Updates on all pods' exit waves. We assume here that the current state
+    is held in pod.exit, while the product of pod.probe & pod.object hold
+    the state after overlap constraint has been applied. With O() denoting
+    the overlap constraint and F() denoting the Data/Fourier constraint,
+    the general projection update can be expressed with four coefficients
+
+    .. math::
+        \\psi^{j+1} = [x 1 + a O + b F + c F \\circ O](\\psi^{j})
+
+    However, the coefficients aren't all independent as the sum of
+    all constraints must be 1, thus we choose
+
+    .. math::
+        x = -a - b - c
+
+    The choice of a,b,c should enable a wide range of projection based
+    algorithms.
+
+    For memory efficiency, this projection update includes the Fourier update
+    which is why the power bound mechanism is included but deactivated by
+    default.
+
+    Parameters
+    ----------
+    diff_view : View
+        View to diffraction data
+
+    a,b,c : float
+        Coefficients for Overlap, Fourier and Fourier * Overlap constraints,
+        respectively
+
+    pbound : float, optional
+        Power bound. Fourier update is bypassed if the quadratic deviation
+        between diffraction data and `diff_view` is below this value.
+        If ``None``, fourier update always happens.
+
+    Returns
+    -------
+    err_fmag, err_exit : float
+
+        - `err_fmag`, Fourier magnitude error; quadratic deviation from
+          root of experimental data
+        - `err_exit`, quadratic deviation between exit waves before and after
+          projection
+    """
+
+    # Prepare dict for storing propagated waves
+    f = {}
+
+    # Buffer for accumulated photons
+    af2 = np.zeros_like(diff_view.data)
+    # Get measured data
+    I = diff_view.data
+
+    # Get the mask
+    fmask = diff_view.pod.mask
+
+    # Propagate the exit waves
+    for name, pod in diff_view.pods.items():
+        if not pod.active:
+            continue
+        f[name] = pod.fw(b + pod.exit + c * pod.probe * pod.object)
+        af2 += pod.downsample(u.abs2(f[name]))
+
+    fmag = np.sqrt(np.abs(I))
+    af = np.sqrt(af2)
+
+    # Fourier magnitudes deviations
+    fdev = af - fmag
+    err_fmag = np.sum(fmask * fdev**2) / fmask.sum()
+    err_exit = 0.
+
+    fm = None
+    for name, pod in diff_view.pods.items():
+        if not pod.active:
+            continue
+        if pbound is None and fm is None:
+            fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
+        elif err_fmag > pbound and fm is None:
+            renorm = np.sqrt(pbound / err_fmag)
+            fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
+
+        # This switch isn't exactly needed as fm = 1.0 would have the
+        # exact same effect. The switch is here to avoid unnecessary FFTs.
+        # Large batched FFTs (as for the serial/GPU case) could just
+        # use fm = 1.0 for the same effect (minus precision errors)
+        if fm is not None:
+            df = pod.bw(pod.upsample(fm) * f[name]) + \
+                 a * pod.probe * pod.object - (a + b + c) * pod.exit
+        else:
+            df = (a + c) * (pod.probe * pod.object - pod.exit)
+
+        pod.exit += df
+        err_exit += np.mean(u.abs2(df))
+
+    return err_fmag, err_exit
+
+
+def projection_update_DR_AP(diff_view, alpha=1.0, pbound=None):
+    """\
+    Linear interpolation between Douglas-Rachford algorithm (a,b,c = -1,1,2)
+    and Alternating Projections algorithm (a,b,c = 0,0,1) with coefficients
+    a = -alpha, b = alpha, c = 1 + alpha. Alpha = 1.0 corresponds to DR and
+    alpha = 0.0 to AP.
+
+    Parameters
+    ----------
+    diff_view : View
+        View to diffraction data
+
+    alpha : float, optional
+        Blend between AP (alpha=0.0 and DR (alpha=1.0) . Valid interval ``[0, 1]``
+
+    pbound : float, optional
+        Power bound. Fourier update is bypassed if the quadratic deviation
+        between diffraction data and `diff_view` is below this value.
+        If ``None``, fourier update always happens.
+
+    Returns
+    -------
+    err_fmag, err_exit : float
+
+        - `err_fmag`, Fourier magnitude error; quadratic deviation from
+          root of experimental data
+        - `err_exit`, quadratic deviation between exit waves before and after
+          projection
+    """
+    a = -alpha
+    b = alpha
+    c = 1.+alpha
+    return projection_update_generalized(diff_view, a, b, c, pbound=pbound)
+
+
+def projection_update_RAAR(diff_view, beta=0.75, pbound=None):
+    """\
+    RAAR - projection update, see https://journals.iucr.org/j/issues/2016/04/00/jo5020/index.html#sourceBB30
+    equation 16.
+
+    .. math::
+        a, b, c = \\beta, 1 - 2\\beta, 2\\beta
+
+    Parameters
+    ----------
+    diff_view : View
+        View to diffraction data
+
+    alpha : float, optional
+        Blend between AP (alpha=0.0 and DR (alpha=1.0) . Valid interval ``[0, 1]``
+
+    pbound : float, optional
+        Power bound. Fourier update is bypassed if the quadratic deviation
+        between diffraction data and `diff_view` is below this value.
+        If ``None``, fourier update always happens.
+
+    Returns
+    -------
+    err_fmag, err_exit : float
+
+        - `err_fmag`, Fourier magnitude error; quadratic deviation from
+          root of experimental data
+        - `err_exit`, quadratic deviation between exit waves before and after
+          projection
+    """
+    a = beta
+    b = 1. - 2. * beta
+    c = 2. * beta
+    return projection_update_generalized(diff_view, a, b, c, pbound=pbound)
+
+
 def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     """\
+    *** DEPRECATED ***
+    Backwards compatible function, for reference only. Contains LL error.
+    Please replace with log_likelihood and projection_update_DR_AP
+
+    See also
+    --------
+    basic_fourier_update_LEGACY
+    """
+    if LL_error:
+        err_phot = log_likelihood(diff_view)
+    else:
+        err_phot = 0.0
+
+    err_fmag, err_exit = projection_update_DR_AP(diff_view, alpha=alpha, pbound=pbound)
+
+    return np.array([err_fmag, err_phot, err_exit])
+
+
+def basic_fourier_update_LEGACY(diff_view, pbound=None, alpha=1., LL_error=True):
+    """\
+    *** DEPRECATED ***
     Fourier update a single view using its associated pods.
     Updates on all pods' exit waves.
 
