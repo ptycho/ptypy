@@ -90,6 +90,7 @@ def log_likelihood(diff_view):
     ll_error :  float
         Log-likelihood error
     """
+    I = diff_view.data
     LL = np.zeros_like(I)
     for name, pod in diff_view.pods.items():
         LL += pod.downsample(u.abs2(pod.fw(pod.probe * pod.object)))
