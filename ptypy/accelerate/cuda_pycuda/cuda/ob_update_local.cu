@@ -32,7 +32,9 @@ extern "C" __global__ void ob_update_local(
     int G,
     int H,
     int I,
-    const int* __restrict__ addr)
+    const int* __restrict__ addr,
+    const IN_TYPE* __restrict__ pr_norm_sum,
+    IN_TYPE step)
 {
   const int bid = blockIdx.z;
   const int tx = threadIdx.x;
@@ -48,7 +50,8 @@ extern "C" __global__ void ob_update_local(
   probe += pa[0] * E * F + pa[1] * F + pa[2];
   obj += oa[0] * H * I + oa[1] * I + oa[2];
   aux += bid * B * C;
-  MATH_TYPE norm_val = pr_norm[0];
+  MATH_TYPE max_norm_val = pr_norm[0];
+  const MATH_TYPE step_val = step;
   
   assert(oa[0] * H * I + oa[1] * I + oa[2] + (B - 1) * I + C - 1 < G * H * I);
 
@@ -59,6 +62,7 @@ extern "C" __global__ void ob_update_local(
       complex<MATH_TYPE> probe_val = probe[b * F + c];
       complex<MATH_TYPE> exit_val = exit_wave[b * C + c];
       complex<MATH_TYPE> aux_val = aux[b * C + c];
+      MATH_TYPE norm_val = (MATH_TYPE(1) - step_val) * max_norm_val + step_val * pr_norm_sum[b * F + c];
       
       auto add_val_m = conj(probe_val) * (exit_val - aux_val) / norm_val;
       complex<OUT_TYPE> add_val = add_val_m;

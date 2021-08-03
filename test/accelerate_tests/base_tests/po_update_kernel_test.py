@@ -345,6 +345,9 @@ class PoUpdateKernelTest(unittest.TestCase):
             exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
         auxiliary_wave = exit_wave.copy() * 2
 
+        probe_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
+        step = 0.0
+
         X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
         X = X.reshape((total_number_scan_positions))
         Y = Y.reshape((total_number_scan_positions))
@@ -369,7 +372,8 @@ class PoUpdateKernelTest(unittest.TestCase):
         # test
         POUK = PoUpdateKernel()
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
-        POUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave)
+        POUK.pr_norm_local(addr, probe, probe_norm, exit_wave)
+        POUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave, probe_norm, step)
 
         # assert
         expected_object_array = np.array(
@@ -383,6 +387,136 @@ class PoUpdateKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(object_array, expected_object_array,
                                       err_msg="The object array has not been updated as expected")
 
+    def test_pr_norm_local(self):
+        # setup
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 1  # number of object modes
+        H = B + npts_greater_than  # object size y
+        I = C + npts_greater_than  # object size x
+
+        scan_pts = 1  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        probe_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):  #
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        # test
+        POUK = PoUpdateKernel()
+        POUK.allocate()  # this doesn't do anything, but is the call pattern.
+        POUK.pr_norm_local(addr, probe, probe_norm, exit_wave)
+
+        # assert
+        expected_probe_norm = np.array([[[10., 10., 10., 10., 10.],
+                                         [10., 10., 10., 10., 10.],
+                                         [10., 10., 10., 10., 10.],
+                                         [10., 10., 10., 10., 10.],
+                                         [10., 10., 10., 10., 10.]]], dtype=FLOAT_TYPE)
+        np.testing.assert_array_equal(probe_norm, expected_probe_norm,
+                                      err_msg="The probe norm has not been updated as expected")
+
+
+    def test_ob_norm_local(self):
+        # setup
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 1  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  # object size y
+        I = C + npts_greater_than  # object size x
+
+        scan_pts = 1  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes  # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+
+        object_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):  #
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        # test
+        POUK = PoUpdateKernel()
+        POUK.allocate()  # this doesn't do anything, but is the call pattern.
+        POUK.ob_norm_local(addr, object_array, object_norm, exit_wave)
+
+        # assert
+        expected_object_norm = np.array([[[34., 34., 34., 34., 34.],
+                                           [34., 34., 34., 34., 34.],
+                                           [34., 34., 34., 34., 34.],
+                                           [34., 34., 34., 34., 34.],
+                                           [34., 34., 34., 34., 34.]]], dtype=FLOAT_TYPE)
+        np.testing.assert_array_equal(object_norm, expected_object_norm,
+                                      err_msg="The object norm has not been updated as expected")
 
 if __name__ == '__main__':
     unittest.main()

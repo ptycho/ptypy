@@ -240,10 +240,10 @@ class SDR_pycuda(SDR_serial.SDR_serial):
                     AWK.build_aux2_no_ex(aux, addr, ob, pr)
 
                     # object update
-                    POK.ob_update_local(addr, ob, pr, ex, aux)
+                    POK.ob_update_local(addr, ob, pr, ex, aux, self.p.object_update_step)
 
                     # probe update
-                    POK.pr_update_local(addr, pr, ob, ex, aux)
+                    POK.pr_update_local(addr, pr, ob, ex, aux, self.p.probe_update_step)
 
                     ## compute log-likelihood
                     if self.p.compute_log_likelihood:

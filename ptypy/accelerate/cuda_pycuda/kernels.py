@@ -1005,12 +1005,22 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                  block=(16, 16, 1), grid=grid, stream=self.queue)
 
 
-    def ob_update_local(self, addr, ob, pr, ex, aux):
+    def ob_update_local(self, addr, ob, pr, ex, aux, step):
         # lazy allocation of temporary 1-element array
         if self.norm is None:
             self.norm = gpuarray.empty((1,), dtype=np.float32)
         self.MAK.max_abs2(pr, self.norm)
         
+        # TODO: turn this into proper CUDA kernel
+        from pycuda.elementwise import ElementwiseKernel
+        from reikna.algorithms import Reduce, predicate_sum
+        pr_power = pr.copy().__abs__()
+        print("GPU: ", pr.get())
+        print("GPU: ", pr_power.get())
+        pr_power_sum = gpuarray.zeros((pr.shape[-2], pr.shape[-1]), dtype=np.float32)
+        Reduce(pr_power, predicate_sum(np.float32), [0], pr_power_sum)
+        print("GPU: ", pr_power_sum.get())
+
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
         exsh = [np.int32(ax) for ax in ex.shape]
@@ -1028,11 +1038,13 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             ob,
             obsh[0], obsh[1], obsh[2],
             addr,
+            pr_power_sum,
+            np.float32(step),
             block=(bx, by, 1),
             grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
             stream=self.queue)
 
-    def pr_update_local(self, addr, pr, ob, ex, aux):
+    def pr_update_local(self, addr, pr, ob, ex, aux, step):
         # lazy allocation of temporary 1-element array
         if self.norm is None:
             self.norm = gpuarray.empty((1,), dtype=np.float32)

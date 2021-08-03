@@ -1,6 +1,6 @@
 import numpy as np
 from ptypy.utils.verbose import logger, log
-from .array_utils import max_abs2
+from .array_utils import max_abs2, abs2
 
 class Adict(object):
 
@@ -553,29 +553,52 @@ class PoUpdateKernel(BaseKernel):
                 ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * fac
         return
 
-    def ob_update_local(self, addr, ob, pr, ex, aux):
+    def ob_update_local(self, addr, ob, pr, ex, aux, prn, step):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]
-        pr_norm = max_abs2(pr)
+        pr_norm = (1 - step) * prn.max() + step * prn
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
-                pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
+                step * pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
                 (ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind,:,:]) / \
-                pr_norm
+                pr_norm[dic[0], dic[1]:dic[1] + rows, dic[2]:dic[2] + cols]
         return
 
-    def pr_update_local(self, addr, pr, ob, ex, aux):
+    def pr_update_local(self, addr, pr, ob, ex, aux, obn, step):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]
-        ob_norm = max_abs2(ob)
+        ob_norm = (1 - step) * obn.max() + step * obn
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
-                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
+                step * ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
                 (ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind,:,:]) / \
-                ob_norm
+                ob_norm[dic[0], dic[1]:dic[1] + rows, dic[2]:dic[2] + cols]
         return
+
+    def ob_norm_local(self, addr, ob, obn, ex):
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        obn[:] = 0.
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            obn[dic[0],dic[1]:dic[1] + rows, dic[2]:dic[2] + cols] += \
+            (ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
+            ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]).real
+        return
+
+    def pr_norm_local(self, addr, pr, prn, ex):
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        prn[:] = 0.
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            prn[dic[0],dic[1]:dic[1] + rows, dic[2]:dic[2] + cols] += \
+            (pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
+            pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]).real
+        return
+
 
 class PositionCorrectionKernel(BaseKernel):
     from ptypy.accelerate.base import address_manglers

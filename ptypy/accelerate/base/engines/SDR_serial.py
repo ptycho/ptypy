@@ -51,17 +51,17 @@ class SDR_serial(SDR.SDR):
     lowlim = 0.0
     help = fourier update parameter, a value of 0 means no fourier update.
 
-    [probe_inertia]
-    default = 1e-9
+    [probe_update_step]
+    default = 0.1
     type = float
     lowlim = 0.0
-    help = Weight of the current probe estimate in the update
+    help = Step size in the probe update
 
-    [object_inertia]
-    default = 1e-4
+    [object_update_step]
+    default = 0.9
     type = float
     lowlim = 0.0
-    help = Weight of the current object in the update
+    help = Step size in the object update
 
     [clip_object]
     default = None
@@ -231,6 +231,10 @@ class SDR_serial(SDR.SDR):
             # Reference to ex
             prep.ex = self.ex.S[eID].data
 
+            # Object / probe norm
+            prep.obn = np.zeros_like(prep.mag[0,None], dtype=np.float32)
+            prep.prn = np.zeros_like(prep.mag[0,None], dtype=np.float32)
+
             # calculate c_facts
             #cfact = self.p.object_inertia * self.mean_power
             #self.ob_cfact[oID] = cfact / u.parallel.size
@@ -283,6 +287,8 @@ class SDR_serial(SDR.SDR):
                     mag = prep.mag[i,None]
                     ma = prep.ma[i,None]
                     ma_sum = prep.ma_sum[i,None]
+                    obn = prep.obn
+                    prn = prep.prn
                     err_phot = prep.err_phot[i,None]
                     err_fourier = prep.err_fourier[i,None]
                     err_exit = prep.err_exit[i,None]
@@ -328,13 +334,15 @@ class SDR_serial(SDR.SDR):
 
                     # object update
                     t1 = time.time()
-                    POK.ob_update_local(addr, ob, pr, ex, aux)
+                    POK.pr_norm_local(addr, pr, prn, ex)
+                    POK.ob_update_local(addr, ob, pr, ex, aux, prn, self.p.object_update_step)
                     self.benchmark.object_update += time.time() - t1
                     self.benchmark.calls_object += 1
 
                     # probe update
                     t1 = time.time()
-                    POK.pr_update_local(addr, pr, ob, ex, aux)
+                    POK.ob_norm_local(addr, ob, obn, ex)
+                    POK.pr_update_local(addr, pr, ob, ex, aux, obn, self.p.probe_update_step)
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1
 
