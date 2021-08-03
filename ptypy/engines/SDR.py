@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Stochastic Douglas-Rachfrod (SDR) reconstruction engine.
+Semi-implicit relaxed Douglas-Rachfrod (SDR) reconstruction engine.
 
 This file is part of the PTYPY package.
 
@@ -36,7 +36,7 @@ class SDR(StochasticBaseEngine):
     default = 1
     type = float
     lowlim = 0.0
-    help = Relaxed Fourier reflaction parameter.
+    help = Relaxed Fourier reflection parameter.
 
     [tau]
     default = 1
@@ -44,17 +44,17 @@ class SDR(StochasticBaseEngine):
     lowlim = 0.0
     help = Relaxed modulus constraint parameter.
 
-    [probe_update_step]
+    [beta_probe]
     default = 0.1
     type = float
     lowlim = 0.0
-    help = Step size in the probe update
+    help = Parameter for adjusting the step size of the probe update
 
-    [object_update_step]
+    [beta_object]
     default = 0.9
     type = float
     lowlim = 0.0
-    help = Step size in the object update
+    help = Parameter for adjusting the step size of the object update
 
     """
 
@@ -62,9 +62,9 @@ class SDR(StochasticBaseEngine):
 
     def __init__(self, ptycho_parent, pars=None):
         """
-        Stochastic Douglas-Rachford reconstruction engine.
+        Semi-implicit relaxed Douglas-Rachford (SDR) reconstruction engine.
         """
-        super(SDR, self).__init__(ptycho_parent, pars)
+        super().__init__(ptycho_parent, pars)
 
         self.ptycho.citations.add_article(
             title='Semi-implicit relaxed Douglas-Rachford algorithm (sDR) for ptychography',
@@ -74,14 +74,8 @@ class SDR(StochasticBaseEngine):
             year=2019,
             page=31246,
             doi='10.1364/OE.27.031246',
-            comment='The stochastic douglas-rachford reconstruction algorithm',
+            comment='The semi-implicit relaxed Douglas-Rachford reconstruction algorithm',
         )
-
-    def engine_initialize(self):
-        """
-        Prepare for reconstruction.
-        """
-        super(SDR, self).engine_initialize()
 
     def fourier_update(self, view):
         """
@@ -94,23 +88,23 @@ class SDR(StochasticBaseEngine):
 
     def object_update(self, *args, **kwargs):
         """
-        Object update for Stochastic Douglas-Rachford (SDR).
+        Object update for SDR.
 
         .. math::
             O^{j+1} += \\alpha * \\bar{P^{j}} * (\\Psi^{\prime} - \\Psi^{j}) / P_{norm}
-            P_{norm} = (1 - \\alpha) * ||P^{j}||^2 + \\alpha * |P^{j}|^2
+            P_{norm} = (1 - \\alpha) * ||P^{j}||_{max}^2 + \\alpha * |P^{j}|^2
 
         """
-        self.generic_object_update(*args, **kwargs, alpha=self.p.object_update_step, beta=0.0)
+        self.generic_object_update(*args, **kwargs, A=self.p.beta_object, B=0.0)
 
 
     def probe_update(self, *args, **kwargs):
         """
-        Probe update for Stochastic Douglas-Rachford (SDR).
+        Probe update for SDR. 
 
         .. math::
             P^{j+1} += \\alpha * \\bar{O^{j}} * (\\Psi^{\prime} - \\Psi^{j}) / O_{norm}
-            O_{norm} = (1 - \\alpha) * ||O^{j}||^2 + \\alpha * |O^{j}|^2
+            O_{norm} = (1 - \\alpha) * ||O^{j}||_{max}^2 + \\alpha * |O^{j}|^2
 
         """
-        self.generic_probe_update(*args, **kwargs, alpha=self.p.probe_update_step, beta=0.0)
+        self.generic_probe_update(*args, **kwargs, A=self.p.beta_probe, B=0.0)

@@ -12,8 +12,6 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
-from .utils import basic_fourier_update
-from . import register
 from .base import PositionCorrectionEngine
 
 class StochasticBaseEngine(PositionCorrectionEngine):
@@ -39,30 +37,15 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         Stochastic Douglas-Rachford reconstruction engine.
         """
         super(StochasticBaseEngine, self).__init__(ptycho_parent, pars)
-
-        # Instance attributes
-        self.error = None
-        self.mean_power = None
-
-    def engine_initialize(self):
-        """
-        Prepare for reconstruction.
-        """
-        super(StochasticBaseEngine, self).engine_initialize()
+        if parallel.MPIenabled:
+            raise NotImplementedError("The stochastic engines are not compatible with MPI")
 
     def engine_prepare(self):
-
         """
         Last minute initialization.
-
         Everything that needs to be recalculated when new data arrives.
         """
-        if self.ptycho.new_data:
-            # recalculate everything
-            mean_power = 0.
-            for s in self.di.storages.values():
-                mean_power += s.mean_power
-            self.mean_power = mean_power / len(self.di.storages)
+        pass
 
     def engine_iterate(self, num=1):
         """
@@ -96,43 +79,111 @@ class StochasticBaseEngine(PositionCorrectionEngine):
                 # Probe update
                 self.probe_update(view, exit_wave)
 
-
             self.curiter += 1
 
         return error_dct
 
-    def generic_object_update(self, view, exit_wave, alpha=0., beta=1.):
+    def fourier_update(self, view):
+        """
+        Engine-specific implementation of Fourier update
+
+        Parameters
+        ----------
+        view : View
+        View to diffraction data
+        """
+        raise NotImplementedError()
+
+    def object_update(self, view, exit_wave):
+        """
+        Engine-specific implementation of object update
+
+        Parameters
+        ----------
+        view : View
+        View to diffraction data
+
+        exit_wave: dict
+        Collection of exit waves associated with the current view
+        """
+        raise NotImplementedError()
+
+    def probe_update(self, view, exit_wave):
+        """
+        Engine-specific implementation of probe update
+
+        Parameters
+        ----------
+        view : View
+        View to diffraction data
+
+        exit_wave: dict
+        Collection of exit waves associated with the current view
+        """
+        raise NotImplementedError()
+
+    def generic_object_update(self, view, exit_wave, A=0., B=1.):
         """
         A generic object update for stochastic algorithms.
-        alpha = 0, beta = b is the ePIE update with step parameter b.
-        alpha = a, beta = 0 is the SDR update with step parameter a.
+
+        Parameters
+        ----------
+        view : View
+        View to diffraction data
+
+        exit_wave: dict
+        Collection of exit waves associated with the current view
+
+        A : float
+        Generic parameter for adjusting step size of object update
+
+        B : float
+        Generic parameter for adjusting step size of object update
+
+        A = 0, B = \\alpha is the ePIE update with parameter \\alpha.
+        A = \\beta_O, B = 0 is the SDR update with parameter \\beta_O.
 
         .. math::
-            O^{j+1} += (\\alpha + \\beta) * \\bar{P^{j}} * (\\Psi^{\prime} - \\Psi^{j}) / P_{norm}
-            P_{norm} = (1 - \\alpha) * ||P^{j}||^2 + \\alpha * |P^{j}|^2
+            O^{j+1} += (A + B) * \\bar{P^{j}} * (\\Psi^{\\prime} - \\Psi^{j}) / P_{norm}
+            P_{norm} = (1 - A) * ||P^{j}||_{max}^2 + A * |P^{j}|^2
 
         """
         probe_power = 0
         for name, pod in view.pods.items():
             probe_power += u.abs2(pod.probe)
-        probe_norm = (1 - alpha) * np.max(probe_power) + alpha * probe_power
+        probe_norm = (1 - A) * np.max(probe_power) + A * probe_power
         for name, pod in view.pods.items():
-            pod.object += (alpha + beta) * np.conj(pod.probe) * (pod.exit - exit_wave[name]) / probe_norm
+            pod.object += (A + B) * np.conj(pod.probe) * (pod.exit - exit_wave[name]) / probe_norm
 
-    def generic_probe_update(self, view, exit_wave, alpha=0., beta=1.):
+    def generic_probe_update(self, view, exit_wave, A=0., B=1.):
         """
         A generic probe update for stochastic algorithms.
-        alpha = 0, beta = b is the ePIE update with step parameter b.
-        alpha = a, beta = 0 is the SDR update with step parameter a.
+
+        Parameters
+        ----------
+        view : View
+        View to diffraction data
+
+        exit_wave: dict
+        Collection of exit waves associated with the current view
+
+        A : float
+        Generic parameter for adjusting step size of probe update
+
+        B : float
+        Generic parameter for adjusting step size of probe update
+
+        A = 0, B = \\beta is the ePIE update with parameter \\beta.
+        A = \\beta_P, B = 0 is the SDR update with parameter \\beta_P.
 
         .. math::
-            P^{j+1} += (\\alpha + \\beta) * \\bar{O^{j}} * (\\Psi^{\prime} - \\Psi^{j}) / O_{norm}
-            O_{norm} = (1 - \\alpha) * ||O^{j}||^2 + \\alpha * |O^{j}|^2
+            P^{j+1} += (A + B) * \\bar{O^{j}} * (\\Psi^{\\prime} - \\Psi^{j}) / O_{norm}
+            O_{norm} = (1 - A) * ||O^{j}||_{max}^2 + A * |O^{j}|^2
 
         """
         object_power = 0
         for name, pod in view.pods.items():
             object_power += u.abs2(pod.object)
-        object_norm = (1 - alpha) * np.max(object_power) + self.p.probe_update_step * object_power
+        object_norm = (1 - A) * np.max(object_power) + A * object_power
         for name, pod in view.pods.items():
-            pod.probe += (alpha + beta) * np.conj(pod.object) * (pod.exit - exit_wave[name]) / object_norm
+            pod.probe += (A + B) * np.conj(pod.object) * (pod.exit - exit_wave[name]) / object_norm

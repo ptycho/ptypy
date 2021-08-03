@@ -32,17 +32,17 @@ class EPIE(StochasticBaseEngine):
     help =
     doc =
 
-    [probe_update_step]
+    [alpha]
     default = 1.0
     type = float
     lowlim = 0.0
-    help = Step size in the probe update
+    help = Parameter for adjusting the step size of the object update
 
-    [object_update_step]
+    [beta]
     default = 1.0
     type = float
     lowlim = 0.0
-    help = Step size in the object update
+    help = Parameter for adjusting the step size of the probe update
 
     """
 
@@ -52,7 +52,7 @@ class EPIE(StochasticBaseEngine):
         """
         Stochastic Douglas-Rachford reconstruction engine.
         """
-        super(EPIE, self).__init__(ptycho_parent, pars)
+        super().__init__(ptycho_parent, pars)
 
         self.ptycho.citations.add_article(
             title='An improved ptychographical phase retrieval algorithm for diffractive imaging',
@@ -64,12 +64,6 @@ class EPIE(StochasticBaseEngine):
             doi='10.1016/j.ultramic.2009.05.012',
             comment='The ePIE reconstruction algorithm',
         )
-
-    def engine_initialize(self):
-        """
-        Prepare for reconstruction.
-        """
-        super(EPIE, self).engine_initialize()
 
     def fourier_update(self, view):
         """
@@ -84,11 +78,10 @@ class EPIE(StochasticBaseEngine):
         Object update for ePIE.
 
         .. math::
-            O^{j+1} += \\beta * \\bar{P^{j}} * (\\Psi^{\prime} - \\Psi^{j}) / P_{norm}
-            P_{norm} = ||P^{j}||^2 
+            O^{j+1} += \\alpha * \\bar{P^{j}} * (\\Psi^{\\prime} - \\Psi^{j}) / ||P^{j}||_{max}^2
 
         """
-        self.generic_object_update(*args, **kwargs, alpha=0.0, beta=self.p.object_update_step)
+        self.generic_object_update(*args, **kwargs, A=0.0, B=self.p.alpha)
 
 
     def probe_update(self, *args, **kwargs):
@@ -96,8 +89,7 @@ class EPIE(StochasticBaseEngine):
         Probe update for ePIE.
 
         .. math::
-            P^{j+1} += \\beta * \\bar{O^{j}} * (\\Psi^{\prime} - \\Psi^{j}) / O_{norm}
-            O_{norm} = ||O^{j}||^2 
+            P^{j+1} += \\beta * \\bar{O^{j}} * (\\Psi^{\\prime} - \\Psi^{j}) / ||O^{j}||_{max}^2 
 
         """
-        self.generic_probe_update(*args, **kwargs, alpha=0.0, beta=self.p.probe_update_step)
+        self.generic_probe_update(*args, **kwargs, A=0.0, B=self.p.beta)

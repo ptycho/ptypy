@@ -127,7 +127,7 @@ class EPIEParallel(BaseEngine):
         """
         ePIE reconstruction engine.
         """
-        super(EPIE, self).__init__(ptycho_parent, pars)
+        super().__init__(ptycho_parent, pars)
 
         p = self.DEFAULT.copy()
         if pars is not None:
