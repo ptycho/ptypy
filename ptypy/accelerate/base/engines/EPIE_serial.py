@@ -1,32 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-ePIE reconstruction engine.
+Serialized EPIE reconstruction engine.
 
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-import numpy as np
-import time
-from .. import utils as u
-from ..utils.verbose import logger, log
-from ..utils import parallel
-from . import register
-from .stochastic import StochasticBaseEngine
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
-__all__ = ['EPIE']
+from ptypy import utils as u
+from ptypy.utils.verbose import logger, log
+from ptypy import defaults_tree
+from ptypy.engines import register
+from .stochastic_serial import StochasticBaseEngineSerial
+from ptypy.core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 @register()
-class EPIE(StochasticBaseEngine):
+class EPIE_serial(StochasticBaseEngineSerial):
     """
-    The ePIE algorithm.
+    A serialized implementation of the stochastic Douglas-Rachford algorithm
+    that is equivalent to the ePIE algorithm for alpha=0 and tau=1.
 
     Defaults:
 
     [name]
-    default = EPIE
+    default = EPIE_serial
     type = str
     help =
     doc =
@@ -49,7 +47,7 @@ class EPIE(StochasticBaseEngine):
 
     def __init__(self, ptycho_parent, pars=None):
         """
-        ePIE reconstruction engine.
+        ePIE serialized reconstruction engine.
         """
         super().__init__(ptycho_parent, pars)
 

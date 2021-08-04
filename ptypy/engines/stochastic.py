@@ -12,6 +12,7 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
+from .utils import basic_fourier_update
 from .base import PositionCorrectionEngine
 
 class StochasticBaseEngine(PositionCorrectionEngine):
@@ -39,6 +40,18 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         super(StochasticBaseEngine, self).__init__(ptycho_parent, pars)
         if parallel.MPIenabled:
             raise NotImplementedError("The stochastic engines are not compatible with MPI")
+
+        # Adjustment parameters for fourier update
+        self.alpha = 0.0
+        self.tau = 1.0
+
+        # Adjustment parameters for probe update
+        self.prA = 0.0
+        self.prB = 1.0
+
+        # Adjustment parameters for object update
+        self.obA = 0.0
+        self.obB = 1.0
 
     def engine_prepare(self):
         """
@@ -92,7 +105,8 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         view : View
         View to diffraction data
         """
-        raise NotImplementedError()
+        return basic_fourier_update(view, alpha=self.alpha, tau=self.tau, 
+                                    LL_error=self.p.compute_log_likelihood)
 
     def object_update(self, view, exit_wave):
         """
@@ -106,7 +120,7 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         exit_wave: dict
         Collection of exit waves associated with the current view
         """
-        raise NotImplementedError()
+        self._generic_object_update(view, exit_wave, A=self.obA, B=self.obB)
 
     def probe_update(self, view, exit_wave):
         """
@@ -120,9 +134,9 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         exit_wave: dict
         Collection of exit waves associated with the current view
         """
-        raise NotImplementedError()
+        self._generic_probe_update(view, exit_wave, A=self.prA, B=self.prB)
 
-    def generic_object_update(self, view, exit_wave, A=0., B=1.):
+    def _generic_object_update(self, view, exit_wave, A=0., B=1.):
         """
         A generic object update for stochastic algorithms.
 
@@ -155,7 +169,7 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         for name, pod in view.pods.items():
             pod.object += (A + B) * np.conj(pod.probe) * (pod.exit - exit_wave[name]) / probe_norm
 
-    def generic_probe_update(self, view, exit_wave, A=0., B=1.):
+    def _generic_probe_update(self, view, exit_wave, A=0., B=1.):
         """
         A generic probe update for stochastic algorithms.
 

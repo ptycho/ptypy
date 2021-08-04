@@ -553,26 +553,26 @@ class PoUpdateKernel(BaseKernel):
                 ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * fac
         return
 
-    def ob_update_local(self, addr, ob, pr, ex, aux, prn, step):
+    def ob_update_local(self, addr, ob, pr, ex, aux, prn, A=0., B=1.):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]
-        pr_norm = (1 - step) * prn.max() + step * prn
+        pr_norm = (1 - A) * prn.max() + A * prn
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
-                step * pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
+                (A + B) * pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
                 (ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind,:,:]) / \
                 pr_norm[dic[0], dic[1]:dic[1] + rows, dic[2]:dic[2] + cols]
         return
 
-    def pr_update_local(self, addr, pr, ob, ex, aux, obn, step):
+    def pr_update_local(self, addr, pr, ob, ex, aux, obn, A=0., B=1.):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]
-        ob_norm = (1 - step) * obn.max() + step * obn
+        ob_norm = (1 - A) * obn.max() + A * obn
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
-                step * ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
+                (A + B) * ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
                 (ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind,:,:]) / \
                 ob_norm[dic[0], dic[1]:dic[1] + rows, dic[2]:dic[2] + cols]
         return

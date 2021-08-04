@@ -276,6 +276,8 @@ class PoUpdateKernelTest(unittest.TestCase):
             exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
         auxiliary_wave = exit_wave.copy() * 1.5
 
+        object_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
+
         X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
         X = X.reshape((total_number_scan_positions))
         Y = Y.reshape((total_number_scan_positions))
@@ -300,15 +302,15 @@ class PoUpdateKernelTest(unittest.TestCase):
         # test
         POUK = PoUpdateKernel()
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
-        POUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave)
+        POUK.ob_norm_local(addr, object_array, object_norm, exit_wave)
+        POUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave, object_norm)
 
         # assert
-        expected_probe = np.array(
-                [[[0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j],
-                [0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j],
-                [0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j],
-                [0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j],
-                [0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j, 0.49999994+1.j]]], dtype=COMPLEX_TYPE)
+        expected_probe = np.array([[[0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j],
+                                    [0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j],
+                                    [0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j],
+                                    [0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j],
+                                    [0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j]]], dtype=COMPLEX_TYPE)
         np.testing.assert_array_equal(probe, expected_probe,
                                       err_msg="The probe has not been updated as expected")
 
@@ -346,7 +348,6 @@ class PoUpdateKernelTest(unittest.TestCase):
         auxiliary_wave = exit_wave.copy() * 2
 
         probe_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
-        step = 0.0
 
         X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
         X = X.reshape((total_number_scan_positions))
@@ -373,17 +374,16 @@ class PoUpdateKernelTest(unittest.TestCase):
         POUK = PoUpdateKernel()
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
         POUK.pr_norm_local(addr, probe, probe_norm, exit_wave)
-        POUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave, probe_norm, step)
+        POUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave, probe_norm)
 
         # assert
-        expected_object_array = np.array(
-                    [[[-1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
-                    [-1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
-                    [-1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
-                    [-1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
-                    [-1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j, -1.1920929e-07+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
-                    [ 1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j],
-                    [ 1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j,  1.0000000e+00+1.j]]], dtype=COMPLEX_TYPE)
+        expected_object_array = np.array([[[0.+1.j, 0.+1.j, 0.+1.j, 0.+1.j, 0.+1.j, 1.+1.j, 1.+1.j],
+                                           [0.+1.j, 0.+1.j, 0.+1.j, 0.+1.j, 0.+1.j, 1.+1.j, 1.+1.j],
+                                           [0.+1.j, 0.+1.j, 0.+1.j, 0.+1.j, 0.+1.j, 1.+1.j, 1.+1.j],
+                                           [0.+1.j, 0.+1.j, 0.+1.j, 0.+1.j, 0.+1.j, 1.+1.j, 1.+1.j],
+                                           [0.+1.j, 0.+1.j, 0.+1.j, 0.+1.j, 0.+1.j, 1.+1.j, 1.+1.j],
+                                           [1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j],
+                                           [1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j, 1.+1.j]]], dtype=COMPLEX_TYPE)
         np.testing.assert_array_equal(object_array, expected_object_array,
                                       err_msg="The object array has not been updated as expected")
 
