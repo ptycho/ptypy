@@ -18,8 +18,7 @@ from ptypy.core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockF
 @register()
 class SDR_serial(StochasticBaseEngineSerial):
     """
-    A serialized implementation of the stochastic Douglas-Rachford algorithm
-    that is equivalent to the ePIE algorithm for alpha=0 and tau=1.
+    A serialized implemnentation of the semi-implicit relaxed Douglas-Rachford (SDR) algorithm.
 
     Defaults:
 
@@ -58,7 +57,7 @@ class SDR_serial(StochasticBaseEngineSerial):
 
     def __init__(self, ptycho_parent, pars=None):
         """
-        Semi-implicit relaxed Douglas-Rachford (SDR) serialized reconstruction engine.
+        A serialized implemnentation of the Semi-implicit relaxed Douglas-Rachford (SDR) algorithm.
         """
         super().__init__(ptycho_parent, pars)
 

@@ -651,6 +651,7 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         ## Assert
         np.testing.assert_allclose(exit_wave_dev.get(), exit_wave, rtol=1e-6, atol=1e-6,
                                       err_msg="The exit_wave does not match numpy")
+        print(1/0)
 
     @unittest.skipIf(not perfrun, "performance test")
     def test_build_exit_alpha_tau_performance(self):

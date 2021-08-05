@@ -302,7 +302,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         # test
         POUK = PoUpdateKernel()
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
-        POUK.ob_norm_local(addr, object_array, object_norm, exit_wave)
+        POUK.ob_norm_local(addr, object_array, object_norm)
         POUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave, object_norm)
 
         # assert
@@ -373,7 +373,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         # test
         POUK = PoUpdateKernel()
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
-        POUK.pr_norm_local(addr, probe, probe_norm, exit_wave)
+        POUK.pr_norm_local(addr, probe, probe_norm)
         POUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave, probe_norm)
 
         # assert

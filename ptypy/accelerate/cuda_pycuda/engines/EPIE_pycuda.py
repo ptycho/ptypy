@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Serialized EPIE reconstruction engine.
+Accelerated EPIE reconstruction engine.
 
 This file is part of the PTYPY package.
 
@@ -12,18 +12,18 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy import defaults_tree
 from ptypy.engines import register
-from .stochastic_serial import StochasticBaseEngineSerial
+from .stochastic_pycuda import StochasticBaseEnginePycuda
 from ptypy.core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 @register()
-class EPIE_serial(StochasticBaseEngineSerial):
+class EPIE_pycuda(StochasticBaseEnginePycuda):
     """
-    A serialized implementation of the EPIE algorithm.
+    An accelerated implementation of the EPIE algorithm.
 
     Defaults:
 
     [name]
-    default = EPIE_serial
+    default = EPIE_pycuda
     type = str
     help =
     doc =
