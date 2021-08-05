@@ -287,14 +287,14 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
 
                     # object update
                     t1 = time.time()
-                    POK.pr_norm_local(addr, pr, prn, ex)
+                    POK.pr_norm_local(addr, pr, prn)
                     POK.ob_update_local(addr, ob, pr, ex, aux, prn, A=self.obA, B=self.obB)
                     self.benchmark.object_update += time.time() - t1
                     self.benchmark.calls_object += 1
 
                     # probe update
                     t1 = time.time()
-                    POK.ob_norm_local(addr, ob, obn, ex)
+                    POK.ob_norm_local(addr, ob, obn)
                     POK.pr_update_local(addr, pr, ob, ex, aux, obn, A=self.prA, B=self.prB)
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1

@@ -827,11 +827,6 @@ class PoUpdateKernelTest(PyCudaTest):
         object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
         for idx in range(G):
             object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
-
-        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
-        for idx in range(A):
-            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
-
         object_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
 
         X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
@@ -864,11 +859,10 @@ class PoUpdateKernelTest(PyCudaTest):
 
         object_array_dev = gpuarray.to_gpu(object_array)
         object_norm_dev = gpuarray.to_gpu(object_norm)
-        exit_wave_dev = gpuarray.to_gpu(exit_wave)
         addr_dev = gpuarray.to_gpu(addr)
 
-        #POUK.ob_norm_local(addr_dev, object_array_dev, object_norm_dev, exit_wave_dev)
-        nPOUK.ob_norm_local(addr, object_array, object_norm, exit_wave)
+        POUK.ob_norm_local(addr_dev, object_array_dev, object_norm_dev)
+        nPOUK.ob_norm_local(addr, object_array, object_norm)
 
         np.testing.assert_allclose(object_norm_dev.get(), object_norm, rtol=1e-6, atol=1e-6,
                                       err_msg="The object norm has not been updated as expected")
@@ -898,11 +892,6 @@ class PoUpdateKernelTest(PyCudaTest):
         probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
         for idx in range(D):
             probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
-
-        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
-        for idx in range(A):
-            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
-
         probe_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
 
         X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
@@ -935,11 +924,10 @@ class PoUpdateKernelTest(PyCudaTest):
 
         probe_dev = gpuarray.to_gpu(probe)
         probe_norm_dev = gpuarray.to_gpu(probe_norm) 
-        exit_wave_dev = gpuarray.to_gpu(exit_wave)
         addr_dev = gpuarray.to_gpu(addr)
 
-        #POUK.pr_norm_local(addr_dev,  probe_dev, probe_norm_dev, exit_wave_dev)
-        nPOUK.pr_norm_local(addr, probe, probe_norm, exit_wave)
+        POUK.pr_norm_local(addr_dev,  probe_dev, probe_norm_dev)
+        nPOUK.pr_norm_local(addr, probe, probe_norm)
 
         np.testing.assert_allclose(probe_norm_dev.get(), probe_norm, rtol=1e-6, atol=1e-6,
                                       err_msg="The probe norm has not been updated as expected")

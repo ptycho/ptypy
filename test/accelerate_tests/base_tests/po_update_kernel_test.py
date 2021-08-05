@@ -397,7 +397,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         F = C  # probe size x
 
         npts_greater_than = 2  # how many points bigger than the probe the object is.
-        G = 1  # number of object modes
+        G = 2  # number of object modes
         H = B + npts_greater_than  # object size y
         I = C + npts_greater_than  # object size x
 
@@ -410,11 +410,6 @@ class PoUpdateKernelTest(unittest.TestCase):
         probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
         for idx in range(D):
             probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
-
-        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
-        for idx in range(A):
-            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
-
         probe_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
 
         X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
@@ -441,7 +436,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         # test
         POUK = PoUpdateKernel()
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
-        POUK.pr_norm_local(addr, probe, probe_norm, exit_wave)
+        POUK.pr_norm_local(addr, probe, probe_norm)
 
         # assert
         expected_probe_norm = np.array([[[10., 10., 10., 10., 10.],
@@ -458,7 +453,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         B = 5  # frame size y
         C = 5  # frame size x
 
-        D = 1  # number of probe modes
+        D = 2  # number of probe modes
         E = B  # probe size y
         F = C  # probe size x
 
@@ -476,11 +471,6 @@ class PoUpdateKernelTest(unittest.TestCase):
         object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
         for idx in range(G):
             object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
-
-        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
-        for idx in range(A):
-            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
-
         object_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
 
         X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
@@ -507,7 +497,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         # test
         POUK = PoUpdateKernel()
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
-        POUK.ob_norm_local(addr, object_array, object_norm, exit_wave)
+        POUK.ob_norm_local(addr, object_array, object_norm)
 
         # assert
         expected_object_norm = np.array([[[34., 34., 34., 34., 34.],

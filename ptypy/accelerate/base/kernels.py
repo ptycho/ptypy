@@ -577,23 +577,29 @@ class PoUpdateKernel(BaseKernel):
                 ob_norm[dic[0], dic[1]:dic[1] + rows, dic[2]:dic[2] + cols]
         return
 
-    def ob_norm_local(self, addr, ob, obn, ex):
+    def ob_norm_local(self, addr, ob, obn):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
-        rows, cols = ex.shape[-2:]
+        rows, cols = obn.shape[-2:]
         obn[:] = 0.
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            # each object mode should only be counted once
+            if prc[0] > 0:
+                continue
             obn[dic[0],dic[1]:dic[1] + rows, dic[2]:dic[2] + cols] += \
             (ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
             ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]).real
         return
 
-    def pr_norm_local(self, addr, pr, prn, ex):
+    def pr_norm_local(self, addr, pr, prn):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
-        rows, cols = ex.shape[-2:]
+        rows, cols = prn.shape[-2:]
         prn[:] = 0.
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            # each probe mode should only be counted once
+            if obc[0] > 0:
+                continue
             prn[dic[0],dic[1]:dic[1] + rows, dic[2]:dic[2] + cols] += \
             (pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
             pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]).real
